@@ -1927,6 +1927,15 @@ static inline void js_free_shape_null(JSRuntime *rt, JSShape *sh)
 }
 void JS_DumpShapes(JSRuntime *rt);
 
+/* Variables and global environment */
+JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
+JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p, JSAtom atom, BOOL is_lexical);
+
+/* Autoinit handlers */
+JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+
 /* Class finalizers and mark functions */
 void js_array_finalizer(JSRuntime *rt, JSValue val);
 void js_array_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
