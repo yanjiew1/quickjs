@@ -689,13 +689,13 @@ To ensure repository stability and reviewability, migration will proceed in 7 st
 * `quickjs.c` drops from 38,118 lines to 22,941 lines (15,177 lines extracted, 62.7% cumulative reduction from original 61,424 lines).
 * **Verification**: Clean build with `CONFIG_WERROR=1` (`-Werror`), 100% pass rate in `make test` (all 11 test suites), microbenchmark total time 6580.95 ms (outperforming baseline ~6689.59 ms) with strict sub-10ns hot path parity preserved.
 
-### Stage 3: Values, Strings, Atoms & BigInt Extraction
-* Extract `js_bigint.c` (BigInt limb math, lines 11264-13097).
-* Extract `js_value.c` (Value conversions & slow arithmetic, lines 13098-16330).
-* Extract `js_string.c` (Strings, Ropes, StringBuffer, lines 3992-5118).
-* Extract `js_atom.c` (Atoms & Symbols, lines 2868-3821).
-* `quickjs.c` drops from ~22k lines to ~12k lines.
-* **Verification**: `make test`, `test_bigint.js`.
+### Stage 3: Values, Strings, Atoms & BigInt Extraction — COMPLETED
+* Extract `js_bigint.c` (BigInt limb math, lines 11264-13097) — **COMPLETED** (commit `63421aa`).
+* Extract `js_value.c` (Value conversions & slow arithmetic, lines 13098-16330) — **COMPLETED** (commit `240f800`).
+* Extract `js_string.c` (Strings, Ropes, StringBuffer, lines 3992-5118) — **COMPLETED** (commit `0f00892`).
+* Extract `js_atom.c` (Atoms & Symbols, lines 2868-3821) — **COMPLETED** (commit `22f8a91`).
+* `quickjs.c` dropped from 22,941 lines to 16,029 lines (-6,912 lines extracted into `src/value/`).
+* **Verification**: Clean build with `CONFIG_WERROR=1` (`-Werror`), 100% pass rate in `make test` (all 11 test suites), microbenchmark total time 6564-6707 ms with strict sub-10ns hot path parity preserved (`empty_loop` 7.17 ns, `prop_read` 8.67 ns, `prop_write` 7.35 ns, `array_read` 6.51 ns, `array_write` 7.55 ns).
 
 ### Stage 4: Memory Allocator, GC & Runtime Lifecycle Extraction
 * Extract `js_malloc.c` (Segregated arena allocator, lines 1416-1779).
