@@ -1002,6 +1002,16 @@ typedef struct JSProperty {
     } u;
 } JSProperty;
 
+static inline JSContext *js_autoinit_get_realm(const JSProperty *pr)
+{
+    return (JSContext *)(pr->u.init.realm_and_id & ~3);
+}
+
+static inline JSAutoInitIDEnum js_autoinit_get_id(const JSProperty *pr)
+{
+    return (JSAutoInitIDEnum)(pr->u.init.realm_and_id & 3);
+}
+
 #define JS_PROP_INITIAL_SIZE 2
 #define JS_PROP_INITIAL_HASH_SIZE 4 /* must be a power of two */
 
@@ -1123,6 +1133,20 @@ struct JSObject {
         JSGlobalObject global_object;
     } u;
 };
+
+static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(obj);
+    return p->is_HTMLDDA;
+}
+
+BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
+int js_string_rope_compare(JSContext *ctx, JSValueConst op1, JSValueConst op2, BOOL eq_only);
+JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
+const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
 
 typedef struct JSMapRecord {
     int ref_count; /* used during enumeration to avoid freeing the record */
