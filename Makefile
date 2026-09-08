@@ -247,14 +247,15 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
-
 vpath %.c src/runtime src/value src/object src/vm src/compiler src/builtins .
 
-QJS_SRC_OBJS=$(OBJDIR)/js_builtin_json.o $(OBJDIR)/js_builtin_date.o $(OBJDIR)/js_builtin_proxy.o $(OBJDIR)/js_builtin_collections.o $(OBJDIR)/js_builtin_number.o $(OBJDIR)/js_builtin_promise.o $(OBJDIR)/js_builtin_typedarray.o $(OBJDIR)/js_builtin_string.o $(OBJDIR)/js_builtin_array.o $(OBJDIR)/js_builtin_core.o $(OBJDIR)/js_builtin_init.o $(OBJDIR)/js_bc.o $(OBJDIR)/js_lexer.o $(OBJDIR)/js_parser.o $(OBJDIR)/js_codegen.o $(OBJDIR)/js_bigint.o $(OBJDIR)/js_value.o $(OBJDIR)/js_string.o $(OBJDIR)/js_atom.o $(OBJDIR)/js_malloc.o $(OBJDIR)/js_gc.o $(OBJDIR)/js_error.o $(OBJDIR)/js_runtime.o $(OBJDIR)/js_shape.o $(OBJDIR)/js_object.o $(OBJDIR)/js_property.o
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(QJS_SRC_OBJS) $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_SRC_OBJS=$(OBJDIR)/js_builtin_json.o $(OBJDIR)/js_builtin_date.o $(OBJDIR)/js_builtin_proxy.o $(OBJDIR)/js_builtin_collections.o $(OBJDIR)/js_builtin_number.o $(OBJDIR)/js_builtin_promise.o $(OBJDIR)/js_builtin_typedarray.o $(OBJDIR)/js_builtin_string.o $(OBJDIR)/js_builtin_array.o $(OBJDIR)/js_builtin_core.o $(OBJDIR)/js_builtin_init.o $(OBJDIR)/js_bc.o $(OBJDIR)/js_lexer.o $(OBJDIR)/js_parser.o $(OBJDIR)/js_codegen.o $(OBJDIR)/js_bigint.o $(OBJDIR)/js_value.o $(OBJDIR)/js_string.o $(OBJDIR)/js_atom.o $(OBJDIR)/js_malloc.o $(OBJDIR)/js_gc.o $(OBJDIR)/js_error.o $(OBJDIR)/js_runtime.o $(OBJDIR)/js_shape.o $(OBJDIR)/js_object.o $(OBJDIR)/js_property.o $(OBJDIR)/js_iterator.o $(OBJDIR)/js_module.o $(OBJDIR)/js_async.o $(OBJDIR)/js_func.o $(OBJDIR)/js_interp.o
+QJS_CHECK_OBJS=$(patsubst %.o,%.check.o,$(QJS_SRC_OBJS))
+QJS_LIB_OBJS=$(QJS_SRC_OBJS) $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
+
+all: $(OBJDIR) $(QJS_CHECK_OBJS) $(OBJDIR)/qjs.check.o $(PROGS)
 
 HOST_LIBS=-lm -ldl -lpthread
 LIBS=-lm -lpthread

@@ -87,7 +87,7 @@ void js_random_init(JSContext *ctx);
 extern const JSCFunctionListEntry js_math_obj[1];
 int JS_AddIntrinsicBigInt(JSContext *ctx);
 
-/* Global functions in quickjs.c used by js_builtin_number.c */
+/* Global functions in js_builtin_init.c used by js_builtin_number.c */
 JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
                         int argc, JSValueConst *argv);
 JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
@@ -115,7 +115,7 @@ __exception int perform_promise_then(JSContext *ctx,
                                      JSValueConst *resolve_reject,
                                      JSValueConst *cap_resolving_funcs);
 
-/* Functions in quickjs.c used by js_builtin_promise.c */
+/* VM functions used by js_builtin_promise.c */
 JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
                                 int argc, JSValueConst *argv, int magic);
 void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
