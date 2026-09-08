@@ -1623,6 +1623,22 @@ int JS_ToLengthFree(JSContext *ctx, int64_t *plen, JSValue val);
 JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
 int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
+
+static inline size_t count_ascii(const uint8_t *buf, size_t len)
+{
+    const uint8_t *p, *p_end;
+    p = buf;
+    p_end = buf + len;
+    while (p < p_end && *p < 128)
+        p++;
+    return p - buf;
+}
+
+JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
+void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+int string_rope_get(JSValueConst val, uint32_t idx);
+BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2);
+int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2, int pos2, int len);
 int string_buffer_concat(StringBuffer *s, const JSString *p, uint32_t from, uint32_t to);
 
 /* Inline object and property helpers */
