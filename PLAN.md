@@ -697,13 +697,13 @@ To ensure repository stability and reviewability, migration will proceed in 7 st
 * `quickjs.c` dropped from 22,941 lines to 16,029 lines (-6,912 lines extracted into `src/value/`).
 * **Verification**: Clean build with `CONFIG_WERROR=1` (`-Werror`), 100% pass rate in `make test` (all 11 test suites), microbenchmark total time 6564-6707 ms with strict sub-10ns hot path parity preserved (`empty_loop` 7.17 ns, `prop_read` 8.67 ns, `prop_write` 7.35 ns, `array_read` 6.51 ns, `array_write` 7.55 ns).
 
-### Stage 4: Memory Allocator, GC & Runtime Lifecycle Extraction
-* Extract `js_malloc.c` (Segregated arena allocator, lines 1416-1779).
-* Extract `js_gc.c` (Mark-and-sweep cycle collector, lines 6508-7600).
-* Extract `js_error.c` (Exceptions and backtraces, lines 7601-8165).
-* Extract `js_runtime.c` (JSRuntime & JSContext lifecycle, lines 2339-2867).
-* `quickjs.c` drops from ~12k lines to ~7k lines.
-* **Verification**: `make test`, `make CONFIG_ASAN=y test`.
+### Stage 4: Memory Allocator, GC & Runtime Lifecycle Extraction — COMPLETED
+* Extract `js_malloc.c` (Segregated arena allocator, lines 1416-1779) — **COMPLETED** (commit `6759114`).
+* Extract `js_gc.c` (Mark-and-sweep cycle collector, lines 6508-7600) — **COMPLETED** (commit `0eed5b8`).
+* Extract `js_error.c` (Exceptions and backtraces, lines 7601-8165) — **COMPLETED** (commit `2fa81df`).
+* Extract `js_runtime.c` (JSRuntime & JSContext lifecycle, lines 2339-2867) — **COMPLETED** (commit `bd92eda`).
+* `quickjs.c` dropped from 16,029 lines to 13,089 lines (-2,940 lines extracted into `src/runtime/`).
+* **Verification**: Clean build with `CONFIG_WERROR=1` (`-Werror`), 100% pass rate in `make test` (all 11 test suites), 100% pass rate in AddressSanitizer `make CONFIG_ASAN=y test`, microbenchmark total time 6686-6793 ms with strict sub-10ns hot path parity preserved (`empty_loop` 7.36 ns, `prop_read` 8.81 ns, `prop_write` 7.43 ns, `array_read` 6.56 ns, `array_write` 7.76 ns).
 
 ### Stage 5: Object Model, Shapes & Properties Extraction
 * Extract `js_shape.c` (Shapes and shape hash table, lines 5119-5849).
