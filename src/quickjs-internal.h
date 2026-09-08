@@ -1829,4 +1829,19 @@ int js_update_property_flags(JSContext *ctx, JSObject *p, JSShapeProperty **pprs
 JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 
+
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+#define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
+#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+                  uint32_t pc_value, int *pcol_num);
+
+void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
+static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
+}
+
 #endif /* QUICKJS_INTERNAL_H */

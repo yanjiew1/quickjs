@@ -106,6 +106,10 @@ JSGlobalVar *add_global_var(JSContext *ctx, JSFunctionDef *s, JSAtom name);
 int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name, JSVarDefEnum var_def_type);
 int add_private_class_field(JSParseState *s, JSFunctionDef *fd, JSAtom name, JSVarKindEnum var_kind, BOOL is_static);
 
+void free_bytecode_atoms(JSRuntime *rt, const uint8_t *bc_buf, int bc_len, BOOL use_short_opcodes);
+__exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
+                                      JSFunctionBytecode *b, int scope_idx);
+
 JSFunctionDef *js_new_function_def(JSContext *ctx, JSFunctionDef *parent,
                                    BOOL is_eval, BOOL is_func_expr,
                                    const char *filename,

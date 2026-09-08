@@ -265,6 +265,7 @@ static inline BOOL token_is_pseudo_keyword(JSParseState *s, JSAtom atom) {
 }
 
 
+#define GLOBAL_VAR_OFFSET   0x40000000
 #define ARGUMENT_VAR_OFFSET 0x20000000
 
 typedef enum {
