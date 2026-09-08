@@ -251,7 +251,7 @@ all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
 vpath %.c src/runtime src/value src/object src/vm src/compiler src/builtins .
 
-QJS_SRC_OBJS=$(OBJDIR)/js_builtin_json.o $(OBJDIR)/js_builtin_date.o $(OBJDIR)/js_builtin_proxy.o $(OBJDIR)/js_builtin_collections.o $(OBJDIR)/js_builtin_number.o $(OBJDIR)/js_builtin_promise.o $(OBJDIR)/js_builtin_typedarray.o $(OBJDIR)/js_builtin_string.o $(OBJDIR)/js_builtin_array.o $(OBJDIR)/js_builtin_core.o $(OBJDIR)/js_builtin_init.o $(OBJDIR)/js_bc.o $(OBJDIR)/js_lexer.o $(OBJDIR)/js_parser.o $(OBJDIR)/js_codegen.o $(OBJDIR)/js_bigint.o $(OBJDIR)/js_value.o $(OBJDIR)/js_string.o $(OBJDIR)/js_atom.o $(OBJDIR)/js_malloc.o
+QJS_SRC_OBJS=$(OBJDIR)/js_builtin_json.o $(OBJDIR)/js_builtin_date.o $(OBJDIR)/js_builtin_proxy.o $(OBJDIR)/js_builtin_collections.o $(OBJDIR)/js_builtin_number.o $(OBJDIR)/js_builtin_promise.o $(OBJDIR)/js_builtin_typedarray.o $(OBJDIR)/js_builtin_string.o $(OBJDIR)/js_builtin_array.o $(OBJDIR)/js_builtin_core.o $(OBJDIR)/js_builtin_init.o $(OBJDIR)/js_bc.o $(OBJDIR)/js_lexer.o $(OBJDIR)/js_parser.o $(OBJDIR)/js_codegen.o $(OBJDIR)/js_bigint.o $(OBJDIR)/js_value.o $(OBJDIR)/js_string.o $(OBJDIR)/js_atom.o $(OBJDIR)/js_malloc.o $(OBJDIR)/js_gc.o
 QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(QJS_SRC_OBJS) $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)

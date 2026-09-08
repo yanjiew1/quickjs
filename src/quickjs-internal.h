@@ -1012,6 +1012,12 @@ static inline JSAutoInitIDEnum js_autoinit_get_id(const JSProperty *pr)
     return (JSAutoInitIDEnum)(pr->u.init.realm_and_id & 3);
 }
 
+static inline void js_autoinit_mark(JSRuntime *rt, JSProperty *pr,
+                                    JS_MarkFunc *mark_func)
+{
+    mark_func(rt, &js_autoinit_get_realm(pr)->header);
+}
+
 #define JS_PROP_INITIAL_SIZE 2
 #define JS_PROP_INITIAL_HASH_SIZE 4 /* must be a power of two */
 
@@ -1660,6 +1666,12 @@ static inline JSShapeProperty *get_shape_prop(JSShape *sh)
     return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
 }
 
+static inline size_t get_shape_size(size_t hash_size, size_t prop_size)
+{
+    return sizeof(JSShape) + hash_size * sizeof(uint32_t) +
+        prop_size * sizeof(JSShapeProperty);
+}
+
 static inline JSShape *js_dup_shape(JSShape *sh)
 {
     js_rc(sh)->ref_count++;
@@ -1883,5 +1895,13 @@ static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
 {
     dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
 }
+
+/* GC support and object destructors */
+void JS_MarkContext(JSRuntime *rt, JSContext *ctx, JS_MarkFunc *mark_func);
+void js_mark_module_def(JSRuntime *rt, JSModuleDef *m, JS_MarkFunc *mark_func);
+void free_object(JSRuntime *rt, JSObject *p);
+void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
+void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
 
 #endif /* QUICKJS_INTERNAL_H */
