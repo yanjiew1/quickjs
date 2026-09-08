@@ -264,4 +264,21 @@ static inline BOOL token_is_pseudo_keyword(JSParseState *s, JSAtom atom) {
         !s->token.u.ident.has_escape;
 }
 
+
+#define ARGUMENT_VAR_OFFSET 0x20000000
+
+typedef enum {
+    JS_VAR_DEF_WITH,
+    JS_VAR_DEF_LET,
+    JS_VAR_DEF_CONST,
+    JS_VAR_DEF_FUNCTION_DECL, /* function declaration */
+    JS_VAR_DEF_NEW_FUNCTION_DECL, /* async/generator function declaration */
+    JS_VAR_DEF_CATCH,
+    JS_VAR_DEF_VAR,
+} JSVarDefEnum;
+
+JSAtom get_private_setter_name(JSContext *ctx, JSAtom name);
+__exception int js_parse_program(JSParseState *s);
+
 #endif /* QUICKJS_COMPILER_JS_PARSER_H */
+

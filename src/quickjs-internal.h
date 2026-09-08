@@ -206,6 +206,7 @@ typedef struct JSShape JSShape;
 typedef struct JSString JSString;
 typedef struct JSString JSAtomStruct;
 typedef struct JSObject JSObject;
+typedef struct JSParseState JSParseState;
 
 #define JS_VALUE_GET_OBJ(v) ((JSObject *)JS_VALUE_GET_PTR(v))
 #define JS_VALUE_GET_STRING(v) ((JSString *)JS_VALUE_GET_PTR(v))
@@ -1816,6 +1817,16 @@ int get_sleb128(int32_t *pval, const uint8_t *buf, const uint8_t *buf_end);
 
 /* Module internal functions */
 JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
+JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
+                                JSAtom local_name, JSAtom export_name,
+                                JSExportTypeEnum export_type);
+int add_star_export_entry(JSContext *ctx, JSModuleDef *m, int req_module_idx);
+int add_req_module_entry(JSContext *ctx, JSModuleDef *m, JSAtom module_name);
+
 JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+
+int js_update_property_flags(JSContext *ctx, JSObject *p, JSShapeProperty **pprs, int flags);
+JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
+JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 
 #endif /* QUICKJS_INTERNAL_H */
