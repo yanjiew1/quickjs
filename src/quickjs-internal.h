@@ -1912,6 +1912,7 @@ static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
 void JS_MarkContext(JSRuntime *rt, JSContext *ctx, JS_MarkFunc *mark_func);
 void js_mark_module_def(JSRuntime *rt, JSModuleDef *m, JS_MarkFunc *mark_func);
 void free_object(JSRuntime *rt, JSObject *p);
+void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
