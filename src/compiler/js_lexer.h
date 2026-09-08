@@ -157,4 +157,59 @@ typedef struct JSToken {
     } u;
 } JSToken;
 
+typedef struct JSParsePos {
+    BOOL got_lf;
+    const uint8_t *ptr;
+} JSParsePos;
+
+#define SKIP_HAS_SEMI       (1 << 0)
+#define SKIP_HAS_ELLIPSIS   (1 << 1)
+#define SKIP_HAS_ASSIGNMENT (1 << 2)
+
+static inline BOOL token_is_ident(int tok)
+{
+    /* Accept keywords and reserved words as property names */
+    return (tok == TOK_IDENT ||
+            (tok >= TOK_FIRST_KEYWORD &&
+             tok <= TOK_LAST_KEYWORD));
+}
+
+/* Forward declarations */
+typedef struct JSParseState JSParseState;
+
+typedef struct GetLineColCache {
+    /* last source position */
+    const uint8_t *ptr;
+    int line_num;
+    int col_num;
+    const uint8_t *buf_start;
+} GetLineColCache;
+
+/* Lexer prototypes */
+void free_token(JSParseState *s, JSToken *token);
+int get_line_col(int *pcol_num, const uint8_t *buf, size_t len);
+int get_line_col_cached(GetLineColCache *s, int *pcol_num, const uint8_t *ptr);
+__attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState *s, const uint8_t *ptr, const char *fmt, ...);
+__attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...);
+int js_parse_expect(JSParseState *s, int tok);
+int js_parse_expect_semi(JSParseState *s);
+int js_parse_error_reserved_identifier(JSParseState *s);
+__exception int js_parse_template_part(JSParseState *s, const uint8_t *p);
+__exception int js_parse_string(JSParseState *s, int sep, BOOL do_unescape, const uint8_t *p, JSToken *token, const uint8_t **pp);
+__exception int js_parse_regexp(JSParseState *s);
+__exception int ident_realloc(JSContext *ctx, char **pbuf, size_t *psize, char *static_buf);
+void reparse_ident_token(JSParseState *s);
+__exception int next_token(JSParseState *s);
+int simple_next_token(const uint8_t **pp, BOOL no_line_terminator);
+int peek_token(JSParseState *s, BOOL no_line_terminator);
+void skip_shebang(const uint8_t **pp, const uint8_t *buf_end);
+BOOL JS_DetectModule(const char *input, size_t input_len);
+int js_parse_get_pos(JSParseState *s, JSParsePos *sp);
+__exception int js_parse_seek_token(JSParseState *s, const JSParsePos *sp);
+BOOL has_lf_in_range(const uint8_t *p1, const uint8_t *p2);
+int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_terminator);
+void js_parse_init(JSContext *ctx, JSParseState *s,
+                   const char *input, size_t input_len,
+                   const char *filename);
+
 #endif /* QUICKJS_COMPILER_JS_LEXER_H */

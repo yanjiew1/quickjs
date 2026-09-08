@@ -1787,6 +1787,8 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
                      int backtrace_flags);
 JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
                      const char *fmt, va_list ap);
+JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
+                       const char *fmt, va_list ap, BOOL add_backtrace);
 JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv);
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
