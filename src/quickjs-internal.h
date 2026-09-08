@@ -1811,6 +1811,18 @@ static inline BOOL js_class_has_bytecode(JSClassID class_id)
             class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION);
 }
 
+/* return NULL without exception if not a function or no bytecode */
+static inline JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
+        return NULL;
+    p = JS_VALUE_GET_OBJ(val);
+    if (!js_class_has_bytecode(p->class_id))
+        return NULL;
+    return p->u.func.function_bytecode;
+}
+
 static inline void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj)
 {
     JSObject *p;
