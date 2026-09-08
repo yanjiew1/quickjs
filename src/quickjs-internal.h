@@ -1916,4 +1916,51 @@ void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
 
+/* Shape management */
+int init_shape_hash(JSRuntime *rt);
+void js_free_shape(JSRuntime *rt, JSShape *sh);
+static inline void js_free_shape_null(JSRuntime *rt, JSShape *sh)
+{
+    if (sh)
+        js_free_shape(rt, sh);
+}
+void JS_DumpShapes(JSRuntime *rt);
+
+/* Class finalizers and mark functions */
+void js_array_finalizer(JSRuntime *rt, JSValue val);
+void js_array_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_object_data_finalizer(JSRuntime *rt, JSValue val);
+void js_object_data_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_c_function_finalizer(JSRuntime *rt, JSValue val);
+void js_c_function_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
+void js_bound_function_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
+void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
+void js_c_function_data_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_generator_finalizer(JSRuntime *rt, JSValue obj);
+void js_generator_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
+void js_global_object_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+
+/* Class exotic methods and calls */
+extern const JSClassExoticMethods js_arguments_exotic_methods;
+extern const JSClassExoticMethods js_module_ns_exotic_methods;
+JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
+                           JSValueConst this_obj,
+                           int argc, JSValueConst *argv, int flags);
+JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
+                                JSValueConst this_val,
+                                int argc, JSValueConst *argv, int flags);
+JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
+                               JSValueConst this_obj,
+                               int argc, JSValueConst *argv, int flags);
+JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,
+                                   JSValueConst this_obj,
+                                   int argc, JSValueConst *argv,
+                                   int flags);
+
 #endif /* QUICKJS_INTERNAL_H */
