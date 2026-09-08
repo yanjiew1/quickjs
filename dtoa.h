@@ -22,6 +22,9 @@
  * THE SOFTWARE.
  */
 
+#ifndef DTOA_H
+#define DTOA_H
+
 //#define JS_DTOA_DUMP_STATS
 
 /* maximum number of digits for fixed and frac formats */
@@ -81,3 +84,5 @@ size_t u64toa(char *buf, uint64_t n);
 size_t i64toa(char *buf, int64_t n);
 size_t u64toa_radix(char *buf, uint64_t n, unsigned int radix);
 size_t i64toa_radix(char *buf, int64_t n, unsigned int radix);
+
+#endif /* DTOA_H */

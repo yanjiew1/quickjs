@@ -163,7 +163,7 @@ DEFINES+=-DHAVE_CLOSEFROM
 endif
 endif
 
-CFLAGS+=$(DEFINES)
+CFLAGS+=$(DEFINES) -I. -Isrc
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
 CFLAGS_OPT=$(CFLAGS) -O2
@@ -249,7 +249,10 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+vpath %.c src/runtime src/value src/object src/vm src/compiler src/builtins .
+
+QJS_SRC_OBJS=$(OBJDIR)/js_builtin_json.o $(OBJDIR)/js_builtin_date.o $(OBJDIR)/js_builtin_proxy.o $(OBJDIR)/js_builtin_collections.o $(OBJDIR)/js_builtin_number.o $(OBJDIR)/js_builtin_promise.o $(OBJDIR)/js_builtin_typedarray.o $(OBJDIR)/js_builtin_string.o $(OBJDIR)/js_builtin_array.o $(OBJDIR)/js_builtin_core.o $(OBJDIR)/js_builtin_init.o
+QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(QJS_SRC_OBJS) $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
