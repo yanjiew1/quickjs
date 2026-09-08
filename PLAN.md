@@ -705,27 +705,58 @@ To ensure repository stability and reviewability, migration will proceed in 7 st
 * `quickjs.c` dropped from 16,029 lines to 13,089 lines (-2,940 lines extracted into `src/runtime/`).
 * **Verification**: Clean build with `CONFIG_WERROR=1` (`-Werror`), 100% pass rate in `make test` (all 11 test suites), 100% pass rate in AddressSanitizer `make CONFIG_ASAN=y test`, microbenchmark total time 6686-6793 ms with strict sub-10ns hot path parity preserved (`empty_loop` 7.36 ns, `prop_read` 8.81 ns, `prop_write` 7.43 ns, `array_read` 6.56 ns, `array_write` 7.76 ns).
 
-### Stage 5: Object Model, Shapes & Properties Extraction
-* Extract `js_shape.c` (Shapes and shape hash table, lines 5119-5849).
-* Extract `js_object.c` (Object core and allocation, lines 5850-6507).
-* Extract `js_property.c` (Property access and descriptors, lines 8166-11263).
-* Extract `js_iterator.c` (Iterators, lines 16331-16971).
+### Stage 5: Object Model, Shapes & Properties Extraction — COMPLETED
+* Extract `js_shape.c` (Shapes and shape hash table, lines 5119-5849) — **COMPLETED** (commit `2207f65`).
+* Extract `js_object.c` (Object core and allocation, lines 5850-6507) — **COMPLETED** (commit `7c0b6f1`).
+* Extract `js_property.c` (Property access and descriptors, lines 8166-11263) — **COMPLETED** (commit `0b41782`).
+* Extract `js_iterator.c` (Iterators, lines 16331-16971) — **COMPLETED** (live worktree; not yet committed).
 * Place critical inline helpers (`find_own_property`, `get_shape_prop`) into `src/object/js_shape.h`.
-* `quickjs.c` drops to only VM execution frames and interpreter loop (~4.8k lines).
-* **Verification**: `make test`, `make microbench` (verify `prop_read`/`prop_write` parity).
+* `quickjs.c` is 7,974 lines after the actual extraction. The earlier ~4.8k projection was based on stale source-line ranges; VM, async, and module code still remain for Stage 6.
+* **Verification**: Clean build with `CONFIG_WERROR=y`, 100% pass rate in `make test` (all 11 test commands), microbenchmark total time 6735.81 ms with hot-path parity (`empty_loop` 7.20 ns, `prop_read` 8.90 ns, `prop_write` 7.02 ns, `array_read` 6.66 ns, `array_write` 7.78 ns, `func_call` 24.60 ns).
 
-### Stage 6: VM & Bytecode Interpreter Loop Extraction (Final Monolith Removal)
-* Extract `js_func.c` (Frames, variable references, closures, lines 16972-17745, 20724-21019).
-* Extract `js_async.c` (Generators and async state machine, lines 21020-21782).
-* Extract `js_module.c` (Module graph and linking, lines 29851-31850).
-* Extract `js_interp.c` (`JS_CallInternal`, lines 17746-20723).
-* Remove the empty `quickjs.c` and complete the final modular build.
-* **Verification**: Full test suite, full `make microbench`, full `make test2` (Test262).
+### Stage 6: VM & Bytecode Interpreter Loop Extraction (Final Monolith Removal) — COMPLETED
+* Extract `js_func.c` (Frames, variable references, closures, calls, constructors, and bytecode-function destruction) — **COMPLETED** (live worktree; not yet committed).
+* Extract `js_async.c` (Generators and async state machines) — **COMPLETED** (live worktree; not yet committed).
+* Extract `js_module.c` (Module graph, loading, linking, namespaces, and evaluation) — **COMPLETED** (live worktree; not yet committed).
+* Extract `js_interp.c` (the complete, unsplit `JS_CallInternal` dispatch loop) — **COMPLETED** (live worktree; not yet committed).
+* Move residual eval entry points to `src/compiler/js_codegen.c`, function-list/constructor initialization glue to `src/builtins/js_builtin_init.c`, and `JS_ToObject` to `src/object/js_object.c`.
+* Remove `quickjs.c` and `quickjs.o` from the source tree and modular build — **COMPLETED**.
+* Extend `CONFIG_CHECK_JSVALUE` verification from the former monolith to every source in `QJS_SRC_OBJS`.
+* **Verification**: Clean-from-scratch build with `CONFIG_WERROR=y`; all modular `CONFIG_CHECK_JSVALUE` objects compile; 100% pass rate in `make test` (all 11 test commands); non-LTO microbenchmark total 6721.55 ms with hot-path parity (`empty_loop` 7.21 ns, `prop_read` 8.77 ns, `prop_write` 7.32 ns, `array_read` 6.69 ns, `array_write` 7.76 ns, `func_call` 24.71 ns, `int_arith` 12.53 ns, `float_arith` 17.37 ns). Full Test262 remains Stage 7 because the corpus availability must be checked.
 
-### Stage 7: Performance Verification & Benchmark Parity
-* Execute full benchmark comparisons (`make microbench`, Kraken, Octane).
-* Verify zero regressions on Test262 failure set.
-* Test all sanitizer and architecture profiles (ASAN, MSAN, UBSAN, 32-bit, MinGW, Cosmopolitan).
+### Stage 7: Performance Verification & Benchmark Parity — LOCAL VALIDATION COMPLETE; EXTERNAL PORTABILITY MATRIX PENDING
+* `make microbench` is complete for both normal and LTO builds. The normal build
+  reports 6721.55 ms total (about 0.5% above the 6689.59 ms baseline), while the
+  LTO build reports 6615.80 ms. Hot-path measurements remain within the planned
+  5% threshold.
+* Clean GCC `CONFIG_WERROR=y`, debug, and LTO builds pass. The normal and LTO
+  builds each pass all 11 commands in `make test`; the debug executable passes
+  `tests/test_language.js`.
+* ASAN passes all 11 test commands with `ASAN_OPTIONS=detect_leaks=0`; LeakSanitizer
+  cannot run under this container's ptrace restrictions. UBSAN passes all 11 test
+  commands.
+* The 32-bit profile compiles and links every modular source and generated tool,
+  but the container terminates the generated 32-bit `qjsc` with `SIGSYS` before
+  runtime tests. TSAN likewise compiles and links, but its runtime aborts at
+  startup with an unsupported memory mapping.
+* Archive symbol comparison against clean commit `0b41782` finds no missing
+  defined global symbol (734/734 preserved). `quickjs.h` is unchanged. The 24
+  additional archive globals are private cross-module entry points introduced by
+  independent compilation.
+* The repository-pinned Test262 revision
+  (`5c8206929d81b2d3d727ca6aac56c18358c8d790`) was downloaded and patched by
+  `make test2-bootstrap`. The full configured `make test2` run executed 83,558
+  tests with 58 known failures, 3,356 exclusions, and 6,000 skips. It reported
+  zero new, changed, or fixed failures relative to `test262_errors.txt` and
+  exited successfully.
+* Test262-old comparison is pending because that separate legacy corpus is not
+  installed (`make test2o` reports this). The Kraken and Octane corpora are also
+  absent. Clang/MSAN, MinGW, and Cosmopolitan compilers are not installed in the
+  current environment.
+* Remaining work is external validation only: rerun the unavailable corpus and
+  portability profiles in environments that provide them, then compare the exact
+  Test262-old failure list (expected baseline: 0 failures). No locally
+  reproducible implementation failure remains.
 
 ---
 
