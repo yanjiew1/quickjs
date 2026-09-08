@@ -1796,4 +1796,24 @@ JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv,
                           BOOL *pdone, int magic);
 
+/* GC object list functions */
+void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h, JSGCObjectTypeEnum type);
+void remove_gc_object(JSGCObjectHeader *h);
+
+/* String and Atom internal functions */
+void js_free_string(JSRuntime *rt, JSString *str);
+JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+
+/* DynBuf and LEB128 helpers */
+void js_dbuf_init(JSContext *ctx, DynBuf *s);
+void dbuf_put_leb128(DynBuf *s, uint32_t v);
+void dbuf_put_sleb128(DynBuf *s, int32_t v1);
+int get_leb128(uint32_t *pval, const uint8_t *buf, const uint8_t *buf_end);
+int get_sleb128(int32_t *pval, const uint8_t *buf, const uint8_t *buf_end);
+
+/* Module internal functions */
+JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
+JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+
 #endif /* QUICKJS_INTERNAL_H */
