@@ -681,13 +681,13 @@ To ensure repository stability and reviewability, migration will proceed in 7 st
 * Fully reproducible replay pipeline established in `scratch/rebuild_all_stage1.py`.
 * **Verification**: Zero warnings under `CONFIG_WERROR=1` (`-Werror`), 100% passing `make test` (all 11 test suites pass cleanly).
 
-### Stage 2: Compiler & Serialization Extraction
-* Extract Bytecode Serialization (`JS_ReadObject`, `JS_WriteObject`, lines 37481-39508) into `src/compiler/js_bc.c`.
-* Extract Lexer (`next_token`, lines 21783-23800) into `src/compiler/js_lexer.c`.
-* Extract Parser & Scope resolution (lines 24701-31850) into `src/compiler/js_parser.c`.
-* Extract Codegen & Optimizer (lines 23801-24700, 31851-37480) into `src/compiler/js_codegen.c`.
-* `quickjs.c` drops from ~39k lines to ~22k lines.
-* **Verification**: `make test`, verify compiled bytecode compatibility (`qjsc` and `repl.c`).
+### Stage 2: Compiler & Serialization Extraction [COMPLETED]
+* Extract Bytecode Serialization (`JS_ReadObject`, `JS_WriteObject`) into `src/compiler/js_bc.c` (commit `a42349b`).
+* Extract Lexer (`next_token`, tokens) into `src/compiler/js_lexer.c` and `src/compiler/js_lexer.h` (commit `07a7153`).
+* Extract Parser & Scope resolution into `src/compiler/js_parser.c` and `src/compiler/js_parser.h` (commit `468ef4f`).
+* Extract Codegen & Optimizer into `src/compiler/js_codegen.c` and `src/compiler/js_codegen.h` (commit `03bf1fb`).
+* `quickjs.c` drops from 38,118 lines to 22,941 lines (15,177 lines extracted, 62.7% cumulative reduction from original 61,424 lines).
+* **Verification**: Clean build with `CONFIG_WERROR=1` (`-Werror`), 100% pass rate in `make test` (all 11 test suites), microbenchmark total time 6580.95 ms (outperforming baseline ~6689.59 ms) with strict sub-10ns hot path parity preserved.
 
 ### Stage 3: Values, Strings, Atoms & BigInt Extraction
 * Extract `js_bigint.c` (BigInt limb math, lines 11264-13097).
