@@ -230,4 +230,9 @@ JS_INTERNAL int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 JS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                        JSValueConst obj);
 
+/* Create an owned object using a borrowed new_target and its realm/prototype. */
+JS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+
+
 #endif /* QUICKJS_OBJECT_H */

@@ -22,26 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/* Shared engine exception construction. */
-#ifndef QUICKJS_DIAGNOSTICS_H
-#define QUICKJS_DIAGNOSTICS_H
+/* Ordered builtin constructor and prototype installation. */
+#ifndef QUICKJS_BUILTIN_INIT_H
+#define QUICKJS_BUILTIN_INIT_H
 
 #include "config.h"
 #include "quickjs.h"
 
-/* Throw the canonical stack-overflow exception. */
-JS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+#define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
+#define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* the prototype class is 'class_id' instead of JS_CLASS_OBJECT */
+#define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
+#define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
 
-#ifdef DUMP_READ_OBJECT
-struct JSString;
-/* Trace borrowed strings/atoms to stdout; no ownership changes. */
-JS_INTERNAL void JS_DumpString(JSRuntime *rt, const struct JSString *p);
-JS_INTERNAL void print_atom(JSContext *ctx, JSAtom atom);
-#endif
 
-static inline JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx)
-{
-    return JS_ThrowTypeError(ctx, "not an object");
-}
+/* Install constructor/prototype fields and return an owned constructor; arguments are borrowed. */
+JS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                                  JSValueConst parent_ctor,
+                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                                  int flags);
 
-#endif /* QUICKJS_DIAGNOSTICS_H */
+
+#endif /* QUICKJS_BUILTIN_INIT_H */

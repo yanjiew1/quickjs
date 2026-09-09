@@ -106,4 +106,36 @@ static inline BOOL is_be(void)
     return u.b;
 }
 
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+
+/* Consume val and perform primitive conversion with the selected hint. */
+JS_INTERNAL JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
+
+static inline JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint)
+{
+    return JS_ToPrimitiveFree(ctx, JS_DupValue(ctx, val), hint);
+}
+/* Consume val and perform the nontrivial floating-point conversion; -1 on exception. */
+JS_INTERNAL __exception int __JS_ToFloat64Free(JSContext *ctx, double *pres,
+                                          JSValue val);
+
+static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
+{
+    uint32_t tag;
+
+    tag = JS_VALUE_GET_TAG(val);
+    if (tag <= JS_TAG_NULL) {
+        *pres = JS_VALUE_GET_INT(val);
+        return 0;
+    } else if (JS_TAG_IS_FLOAT64(tag)) {
+        *pres = JS_VALUE_GET_FLOAT64(val);
+        return 0;
+    } else {
+        return __JS_ToFloat64Free(ctx, pres, val);
+    }
+}
+
 #endif /* QUICKJS_VALUE_H */

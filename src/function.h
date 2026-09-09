@@ -22,26 +22,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/* Shared engine exception construction. */
-#ifndef QUICKJS_DIAGNOSTICS_H
-#define QUICKJS_DIAGNOSTICS_H
+/* Internal call ownership helpers. */
+#ifndef QUICKJS_FUNCTION_H
+#define QUICKJS_FUNCTION_H
 
 #include "config.h"
 #include "quickjs.h"
 
-/* Throw the canonical stack-overflow exception. */
-JS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+/* Call a function, consuming func_obj; this_obj and argv are borrowed. */
+JS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                           int argc, JSValueConst *argv);
 
-#ifdef DUMP_READ_OBJECT
-struct JSString;
-/* Trace borrowed strings/atoms to stdout; no ownership changes. */
-JS_INTERNAL void JS_DumpString(JSRuntime *rt, const struct JSString *p);
-JS_INTERNAL void print_atom(JSContext *ctx, JSAtom atom);
-#endif
 
-static inline JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx)
-{
-    return JS_ThrowTypeError(ctx, "not an object");
-}
-
-#endif /* QUICKJS_DIAGNOSTICS_H */
+#endif /* QUICKJS_FUNCTION_H */

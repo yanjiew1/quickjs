@@ -22,26 +22,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/* Shared engine exception construction. */
-#ifndef QUICKJS_DIAGNOSTICS_H
-#define QUICKJS_DIAGNOSTICS_H
+/* Date formatting for engine diagnostics. */
+#ifndef QUICKJS_BUILTINS_DATE_H
+#define QUICKJS_BUILTINS_DATE_H
 
 #include "config.h"
 #include "quickjs.h"
 
-/* Throw the canonical stack-overflow exception. */
-JS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+/* Return an owned ISO string for a borrowed Date, without invoking JavaScript. */
+JS_INTERNAL JSValue js_date_to_iso_string(JSContext *ctx, JSValueConst value);
 
-#ifdef DUMP_READ_OBJECT
-struct JSString;
-/* Trace borrowed strings/atoms to stdout; no ownership changes. */
-JS_INTERNAL void JS_DumpString(JSRuntime *rt, const struct JSString *p);
-JS_INTERNAL void print_atom(JSContext *ctx, JSAtom atom);
-#endif
 
-static inline JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx)
-{
-    return JS_ThrowTypeError(ctx, "not an object");
-}
-
-#endif /* QUICKJS_DIAGNOSTICS_H */
+#endif /* QUICKJS_BUILTINS_DATE_H */

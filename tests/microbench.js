@@ -1504,7 +1504,7 @@ function main(argc, argv, g)
     ];
     var tests = [];
     var i, j, n, f, name, found;
-    var ref_file, new_ref_file = "microbench-new.txt";
+    var ref_file, new_ref_file = "microbench-new.txt", save_filtered = false;
 
     if (typeof BigInt === "function") {
         /* BigInt test */
@@ -1539,6 +1539,7 @@ function main(argc, argv, g)
         }
         if (name == "-s") {
             new_ref_file = argv[i++];
+            save_filtered = true;
             continue;
         }
         for (j = 0, found = false; j < test_list.length; j++) {
@@ -1572,7 +1573,7 @@ function main(argc, argv, g)
     else
         log_line("total", "", total[2]);
 
-    if (tests == test_list && new_ref_file)
+    if ((tests == test_list || save_filtered) && new_ref_file)
         save_result(new_ref_file, log_data);
 }
 

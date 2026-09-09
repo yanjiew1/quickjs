@@ -251,7 +251,7 @@ endif
 endif
 
 # All object variants are derived from this source inventory.
-QJS_ENGINE_SRCS=src/quickjs.c src/bytecode.c
+QJS_ENGINE_SRCS=src/quickjs.c src/bytecode.c src/builtins/date.c
 QJS_LIB_SRCS=$(QJS_ENGINE_SRCS) src/dtoa.c src/libregexp.c src/libunicode.c \
              src/cutils.c src/quickjs-libc.c
 QJS_LIB_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QJS_LIB_SRCS))

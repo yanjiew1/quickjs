@@ -28,6 +28,7 @@
 
 #include "memory.h"
 #include <stdlib.h>
+#include <string.h>
 
 #define JS_STRING_LEN_MAX ((1 << 30) - 1)
 #define JS_VALUE_GET_STRING(v) ((JSString *)JS_VALUE_GET_PTR(v))
@@ -177,5 +178,13 @@ JS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_c
 
 /* Consume a string and return an owned atom reference, or JS_ATOM_NULL. */
 JS_INTERNAL JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+
+/* Return an owned Latin-1 string copied from a borrowed span. */
+JS_INTERNAL JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+
+static inline JSValue js_new_string8(JSContext *ctx, const char *buf)
+{
+    return js_new_string8_len(ctx, buf, strlen(buf));
+}
 
 #endif /* QUICKJS_ATOM_STRING_H */
