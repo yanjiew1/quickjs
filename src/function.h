@@ -34,4 +34,43 @@ JS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst t
                            int argc, JSValueConst *argv);
 
 
+#include "runtime.h"
+
+#define JS_MODE_STRICT (1 << 0)
+#define JS_MODE_ASYNC  (1 << 2) /* async function */
+#define JS_MODE_BACKTRACE_BARRIER (1 << 3) /* stop backtrace before this frame */
+
+typedef struct JSStackFrame {
+    struct JSStackFrame *prev_frame; /* NULL if first stack frame */
+    JSValue cur_func; /* current function, JS_UNDEFINED if the frame is detached */
+    JSValue *arg_buf; /* arguments */
+    JSValue *var_buf; /* variables */
+    struct JSVarRef **var_refs; /* references to arguments or local variables */ 
+    const uint8_t *cur_pc; /* only used in bytecode functions : PC of the
+                        instruction after the call */
+    int arg_count;
+    int js_mode; /* not supported for C functions */
+    /* only used in generators. Current stack pointer value. NULL if
+       the function is running. */
+    JSValue *cur_sp;
+} JSStackFrame;
+
+
+static inline BOOL is_strict_mode(JSContext *ctx)
+{
+    JSStackFrame *sf = ctx->rt->current_stack_frame;
+    return (sf && (sf->js_mode & JS_MODE_STRICT));
+}
+/* Return an owned argument vector and length from a borrowed array-like value. */
+JS_INTERNAL JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
+                               JSValueConst array_arg);
+
+/* Release an argument vector and all its owned values. */
+JS_INTERNAL void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
+
+/* Shared Function.apply/Reflect.apply implementation; all inputs are borrowed. */
+JS_INTERNAL JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv, int magic);
+
+
 #endif /* QUICKJS_FUNCTION_H */

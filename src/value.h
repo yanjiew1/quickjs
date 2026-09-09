@@ -138,4 +138,11 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
     }
 }
 
+/* Consume val and return its truth value, or -1 for an exception value. */
+JS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue val);
+
+/* Compare borrowed values with SameValue semantics. */
+JS_INTERNAL BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+
+
 #endif /* QUICKJS_VALUE_H */

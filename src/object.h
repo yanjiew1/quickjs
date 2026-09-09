@@ -235,4 +235,36 @@ JS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                                    int class_id);
 
 
+static inline void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc)
+{
+    JS_FreeValue(ctx, desc->getter);
+    JS_FreeValue(ctx, desc->setter);
+    JS_FreeValue(ctx, desc->value);
+}
+/* Check descriptor flag compatibility without changing either descriptor. */
+JS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
+
+/* Inspect a borrowed object; fill an owned descriptor when present. */
+JS_INTERNAL int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                                     JSObject *p, JSAtom prop);
+
+/* Return an owned property enumeration for a borrowed object. */
+JS_INTERNAL int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+                                                      JSPropertyEnum **ptab,
+                                                      uint32_t *plen,
+                                                      JSObject *p, int flags);
+
+/* Set a borrowed object prototype; throw_flag selects exception behavior. */
+JS_INTERNAL int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                   JSValueConst proto_val,
+                                   BOOL throw_flag);
+
+/* Copy borrowed values into a newly owned array. */
+JS_INTERNAL JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+
+/* Convert a borrowed descriptor object into an owned descriptor. */
+JS_INTERNAL int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
+                          JSValueConst desc);
+
+
 #endif /* QUICKJS_OBJECT_H */

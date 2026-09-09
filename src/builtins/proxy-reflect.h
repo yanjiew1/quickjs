@@ -22,31 +22,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/* Shared engine exception construction. */
-#ifndef QUICKJS_DIAGNOSTICS_H
-#define QUICKJS_DIAGNOSTICS_H
+/* Proxy representation and ordered Reflect installation. */
+#ifndef QUICKJS_BUILTINS_PROXY_REFLECT_H
+#define QUICKJS_BUILTINS_PROXY_REFLECT_H
 
 #include "config.h"
 #include "quickjs.h"
 
-/* Throw the canonical stack-overflow exception. */
-JS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+typedef struct JSProxyData {
+    JSValue target;
+    JSValue handler;
+    uint8_t is_func;
+    uint8_t is_revoked;
+} JSProxyData;
 
-#ifdef DUMP_READ_OBJECT
-struct JSString;
-/* Trace borrowed strings/atoms to stdout; no ownership changes. */
-JS_INTERNAL void JS_DumpString(JSRuntime *rt, const struct JSString *p);
-JS_INTERNAL void print_atom(JSContext *ctx, JSAtom atom);
-#endif
 
-static inline JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx)
+/* Replace a borrowed value with its borrowed ultimate target; -1 on error. */
+JS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);
+
+static inline JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx)
 {
-    return JS_ThrowTypeError(ctx, "not an object");
+    return JS_ThrowTypeError(ctx, "revoked proxy");
 }
-
-/* Throw a constructor error using a borrowed function for its diagnostic name. */
-JS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
-                                                JSValueConst func_obj);
+/* Install Reflect at the BaseObjects initialization point. */
+JS_INTERNAL int js_init_reflect(JSContext *ctx);
 
 
-#endif /* QUICKJS_DIAGNOSTICS_H */
+#endif /* QUICKJS_BUILTINS_PROXY_REFLECT_H */

@@ -44,4 +44,21 @@ JS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char 
                                   int flags);
 
 
+/* GC descriptors are borrowed; call/exotic hooks are installed separately. */
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    const JSClassDef *gc_def;
+} JSClassShortDef;
+
+/* Register classes in table order; return -1 at the first failure. */
+JS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                            int start, int count);
+
+/* Create an owned native function with the borrowed prototype and reserved fields. */
+JS_INTERNAL JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                                const char *name,
+                                int length, JSCFunctionEnum cproto, int magic,
+                                JSValueConst proto_val, int n_fields);
+
+
 #endif /* QUICKJS_BUILTIN_INIT_H */

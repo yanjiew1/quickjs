@@ -202,6 +202,15 @@ static void test_runtime(void)
     eval_ok(ctx, "if (typeof Date !== 'undefined') throw Error('optional Date');");
     assert(JS_AddIntrinsicDate(ctx) == 0);
     eval_ok(ctx, "if (new Date(0).getTime() !== 0) throw Error('Date');");
+    eval_ok(ctx, "if (typeof Proxy !== 'undefined') throw Error('optional Proxy');"
+                 "if (Reflect.get({ answer: 42 }, 'answer') !== 42) throw Error('Reflect');");
+    assert(JS_AddIntrinsicProxy(ctx) == 0);
+    eval_ok(ctx, "let revoked = Proxy.revocable({ answer: 42 }, {});"
+                 "if (Reflect.get(revoked.proxy, 'answer') !== 42) throw Error('Proxy');"
+                 "revoked.revoke(); let threw = false;"
+                 "try { Reflect.get(revoked.proxy, 'answer'); }"
+                 "catch (error) { threw = error instanceof TypeError; }"
+                 "if (!threw) throw Error('revoked Proxy');");
     JS_FreeContext(ctx);
     ctx = JS_NewContext(rt);
     assert(ctx);
