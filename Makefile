@@ -251,7 +251,7 @@ endif
 endif
 
 # All object variants are derived from this source inventory.
-QJS_ENGINE_SRCS=src/quickjs.c
+QJS_ENGINE_SRCS=src/quickjs.c src/bytecode.c
 QJS_LIB_SRCS=$(QJS_ENGINE_SRCS) src/dtoa.c src/libregexp.c src/libunicode.c \
              src/cutils.c src/quickjs-libc.c
 QJS_LIB_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QJS_LIB_SRCS))
@@ -314,16 +314,19 @@ else
 LTOEXT=
 endif
 
-libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS)
-	$(AR) rcs $@ $^
+libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS) Makefile
+	rm -f $@
+	$(AR) rcs $@ $(filter %.o,$^)
 
 ifdef CONFIG_LTO
-libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
-	$(AR) rcs $@ $^
+libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS)) Makefile
+	rm -f $@
+	$(AR) rcs $@ $(filter %.o,$^)
 endif # CONFIG_LTO
 
-libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
-	$(AR) rcs $@ $^
+libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS)) Makefile
+	rm -f $@
+	$(AR) rcs $@ $(filter %.o,$^)
 
 $(OBJDIR)/generated/repl.c: $(QJSC) tools/repl.js
 	@mkdir -p $(@D)
