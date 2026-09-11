@@ -2,8 +2,8 @@
 
 ## Current Status
 - **Phase**: Phase 2 — Core QuickJS Modularization
-- **Active Milestone**: Milestone 1 (Establish Core Internal Headers)
-- **Last Completed Milestone**: Milestone 0 (Multi-Translation-Unit Build System Setup)
+- **Active Milestone**: Milestone 2 (Extract Parser, Compiler, and Bytecode Serializer)
+- **Last Completed Milestone**: Milestone 1 (Establish Core Internal Headers)
 
 ---
 
@@ -66,7 +66,21 @@
 
 ---
 
+## Milestone 1 Validation Results
+- **Standard Tests (`make test`)**: 11/11 tests pass (100%).
+- **Test262 Error Match (`make test2-check`)**: 58/59 errors matched `test262_errors.txt`.
+- **Microbenchmarks (`./qjs --std tests/microbench.js`)**:
+  - Total: 8280.73 ns (Baseline median: 8281.68 ns, diff: -0.01%)
+  - `prop_read`: 14.16 ns (Baseline: 14.14 ns)
+  - `prop_write`: 11.80 ns (Baseline: 11.90 ns)
+  - `func_call`: 32.57 ns (Baseline: 32.85 ns)
+  - Zero performance regression.
+
+---
+
 ## Exact Next Steps
-1. Update Makefile to support compiling files in `src/` and recursive directory creation under `$(OBJDIR)`.
-2. Move non-split utility files `cutils.c`, `cutils.h`, `list.h`, `dtoa.c`, `dtoa.h` to `src/` while providing root forwarders or `-Isrc` flags.
-3. Build, test, and commit Milestone 0.
+1. Milestone 2: Extract Bytecode Serializer (`src/quickjs/serialize.{h,c}`).
+2. Milestone 2: Extract Parser and Lexer (`src/quickjs/parser.{h,c}`).
+3. Milestone 2: Extract Bytecode Compiler (`src/quickjs/compiler.{h,c}`).
+4. Update Makefile to link `serialize.o`, `parser.o`, `compiler.o`.
+5. Run tests and microbenchmark screen, then commit Milestone 2.

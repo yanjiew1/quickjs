@@ -134,7 +134,7 @@ tools/
   - Commit: `build: add multi-translation-unit build support for src hierarchy`.
 
 ### Phase 2: Core QuickJS Modularization
-- `[ ]` **Milestone 1: Core Definitions and Narrow Internal Headers**
+- `[x]` **Milestone 1: Core Definitions and Narrow Internal Headers**
   - Create `src/quickjs/def.h`, `runtime.h`, `atom.h`, `string.h`, `shape.h`, `object.h`, `value.h`, `function.h`.
   - Move hot-path inlines (`find_own_property`, `find_own_property1`) to `shape.h`.
   - Validate clean compilation of `quickjs.c` against internal headers.
