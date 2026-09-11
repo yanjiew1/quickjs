@@ -163,6 +163,7 @@ DEFINES+=-DHAVE_CLOSEFROM
 endif
 endif
 
+CFLAGS+=-Isrc -I.
 CFLAGS+=$(DEFINES)
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
@@ -249,7 +250,7 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -278,7 +279,7 @@ fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 fuzz_compile: $(OBJDIR)/fuzz_compile.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/libregexp.fuzz.o $(OBJDIR)/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
+fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/libregexp.fuzz.o $(OBJDIR)/src/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
@@ -336,34 +337,42 @@ run-test262-debug: $(patsubst %.o, %.debug.o, $(OBJDIR)/run-test262.o $(QJS_LIB_
 # object suffix order: nolto
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) -c -o $@ $<
 
 $(OBJDIR)/fuzz_%.o: fuzz/fuzz_%.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) -c -I. -o $@ $<
 
 $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(HOST_CC) $(CFLAGS_OPT) -c -o $@ $<
 
 $(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
 $(OBJDIR)/%.nolto.o: %.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS_NOLTO) -c -o $@ $<
 
 $(OBJDIR)/%.debug.o: %.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS_DEBUG) -c -o $@ $<
 
 $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) -fsanitize=fuzzer-no-link -c -o $@ $<
 
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: libregexp.c libunicode.c cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
+regexp_test: libregexp.c libunicode.c src/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c src/cutils.c $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
+unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o libunicode.c unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o
 
 clean:
 	rm -f repl.c out.c
