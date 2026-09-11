@@ -1317,17 +1317,7 @@ int js_dtoa(char *buf, double d, int radix, int n_digits, int flags,
     return q - buf;
 }
 
-static inline int to_digit(int c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    else if (c >= 'A' && c <= 'Z')
-        return c - 'A' + 10;
-    else if (c >= 'a' && c <= 'z')
-        return c - 'a' + 10;
-    else
-        return 36;
-}
+/* to_digit defined in cutils.h */
 
 /* r = r * radix_base + a. radix_base = 0 means radix_base = 2^32 */
 static void mpb_mul1_base(mpb_t *r, limb_t radix_base, limb_t a)

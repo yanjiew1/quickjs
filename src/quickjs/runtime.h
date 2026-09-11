@@ -165,4 +165,75 @@ static inline BOOL is_strict_mode(JSContext *ctx)
     return (sf && (sf->js_mode & JS_MODE_STRICT));
 }
 
+static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
+}
+
+static inline int js_realloc_array(JSContext *ctx, void **parray,
+                                  int elem_size, int *psize, int req_size)
+{
+    int new_size;
+    size_t slack;
+    void *new_array;
+    new_size = max_int(req_size, *psize * 3 / 2);
+    new_array = js_realloc2(ctx, *parray, new_size * elem_size, &slack);
+    if (!new_array)
+        return -1;
+    new_size += slack / elem_size;
+    *psize = new_size;
+    *parray = new_array;
+    return 0;
+}
+
+static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
+                                  int *psize, int req_size)
+{
+    if (unlikely(req_size > *psize))
+        return js_realloc_array(ctx, parray, elem_size, psize, req_size);
+    else
+        return 0;
+}
+
+void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h, JSGCObjectTypeEnum type);
+JSValue JS_ThrowStackOverflow(JSContext *ctx);
+
+#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+void build_backtrace(JSContext *ctx, JSValueConst error_obj,
+                     const char *filename, int line_num,
+                     int col_num, int flags);
+JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
+                       const char *fmt, va_list ap, BOOL add_backtrace);
+
+static inline JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                                  int argc, JSValueConst *argv)
+{
+    JSValue res = JS_Call(ctx, func_obj, this_obj, argc, argv);
+    JS_FreeValue(ctx, func_obj);
+    return res;
+}
+
+static inline void remove_gc_object(JSGCObjectHeader *h)
+{
+    list_del(&h->link);
+}
+
+static inline JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
+{
+    char buf[ATOM_GET_STR_BUF_SIZE];
+    return JS_ThrowSyntaxError(ctx, fmt,
+                             JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
+}
+#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+
+static inline JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
+{
+    char buf[ATOM_GET_STR_BUF_SIZE];
+    return JS_ThrowTypeError(ctx, fmt,
+                             JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
+}
+#define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
+
+void js_dump_value_write(void *opaque, const char *buf, size_t len);
+
 #endif /* QUICKJS_RUNTIME_H */

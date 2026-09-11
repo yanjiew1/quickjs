@@ -250,7 +250,7 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/opcode.o $(OBJDIR)/src/quickjs/serialize.o $(OBJDIR)/src/quickjs/parser.o $(OBJDIR)/src/quickjs/compiler.o $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -262,7 +262,7 @@ endif
 LIBS+=$(EXTRA_LIBS)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests
+	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs
 
 qjs$(EXE): $(QJS_OBJS)
 	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)

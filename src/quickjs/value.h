@@ -89,4 +89,27 @@ static inline BOOL tag_is_string(uint32_t tag)
     return tag == JS_TAG_STRING || tag == JS_TAG_STRING_ROPE;
 }
 
+JSBigInt *js_bigint_new(JSContext *ctx, int len);
+JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
+JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
+
+#define ATOD_INT_ONLY        (1 << 0)
+/* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
+#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
+/* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+/* accept _ between digits as a digit separator */
+#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
+/* allow a suffix to override the type */
+#define ATOD_ACCEPT_SUFFIX    (1 << 6)
+/* default type */
+#define ATOD_TYPE_MASK        (3 << 7)
+#define ATOD_TYPE_FLOAT64     (0 << 7)
+#define ATOD_TYPE_BIG_INT     (1 << 7)
+/* accept -0x1 */
+#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+
+JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+                int radix, int flags);
+
 #endif /* QUICKJS_VALUE_H */

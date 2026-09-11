@@ -140,7 +140,7 @@ tools/
   - Validate clean compilation of `quickjs.c` against internal headers.
   - Commit: `refactor: establish core internal headers for quickjs`.
 
-- `[ ]` **Milestone 2: Extract Parser, Compiler, and Bytecode Serializer**
+- `[x]` **Milestone 2: Extract Parser, Compiler, and Bytecode Serializer**
   - Extract `src/quickjs/parser.{h,c}`, `src/quickjs/compiler.{h,c}`, `src/quickjs/serialize.{h,c}`.
   - Verify standalone compilation and link.
   - Run `make test`, `make test2-check`, lightweight microbench screen.

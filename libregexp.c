@@ -115,9 +115,7 @@ static const REOpCode reopcode_info[REOP_COUNT] = {
 
 #define RE_HEADER_LEN 8
 
-static inline int is_digit(int c) {
-    return c >= '0' && c <= '9';
-}
+/* is_digit defined in cutils.h */
 
 /* insert 'len' bytes at position 'pos'. Return < 0 if error. */
 static int dbuf_insert(DynBuf *s, int pos, int len)

@@ -207,6 +207,7 @@ typedef struct JSForInIterator JSForInIterator;
 typedef struct JSRegExp JSRegExp;
 typedef struct JSProxyData JSProxyData;
 typedef struct JSGlobalObject JSGlobalObject;
+typedef struct JSParseState JSParseState;
 typedef enum OPCodeEnum OPCodeEnum;
 
 typedef enum {
@@ -266,6 +267,21 @@ typedef struct JSMallocBlockHeader {
     int ref_count;
     __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t user_data[];
 } JSMallocBlockHeader;
+
+static inline JSMallocBlockHeader *js_rc(void *ptr)
+{
+    return container_of(ptr, JSMallocBlockHeader, user_data);
+}
+
+static inline BOOL is_be(void)
+{
+    union {
+        uint16_t u16;
+        uint8_t u8[2];
+    } u;
+    u.u16 = 1;
+    return u.u8[0] == 0;
+}
 
 typedef struct JSMallocLargeBlockHeader {
 #ifdef JS_MALLOC_USE_ITER    

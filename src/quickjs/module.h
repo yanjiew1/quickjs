@@ -96,4 +96,23 @@ struct JSModuleDef {
     JSValue private_value;
 };
 
+JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
+JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+
+typedef enum JSFreeModuleEnum {
+    JS_FREE_MODULE_ALL,
+    JS_FREE_MODULE_NOT_RESOLVED,
+} JSFreeModuleEnum;
+
+int add_req_module_entry(JSContext *ctx, JSModuleDef *m, JSAtom module_name);
+int add_star_export_entry(JSContext *ctx, JSModuleDef *m, int req_module_idx);
+JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
+                                JSAtom local_name, JSAtom export_name,
+                                JSExportTypeEnum export_type);
+int js_create_module_function(JSContext *ctx, JSModuleDef *m);
+int js_resolve_module(JSContext *ctx, JSModuleDef *m);
+int js_link_module(JSContext *ctx, JSModuleDef *m);
+JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
+void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
+
 #endif /* QUICKJS_MODULE_H */

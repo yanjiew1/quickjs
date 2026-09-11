@@ -10,6 +10,9 @@
 #define JS_MODE_ASYNC  (1 << 2) /* async function */
 #define JS_MODE_BACKTRACE_BARRIER (1 << 3) /* stop backtrace before this frame */
 
+#define GLOBAL_VAR_OFFSET 0x40000000
+#define ARGUMENT_VAR_OFFSET 0x20000000
+
 struct JSStackFrame {
     struct JSStackFrame *prev_frame; /* NULL if first stack frame */
     JSValue cur_func; /* current function, JS_UNDEFINED if the frame is detached */
@@ -158,5 +161,19 @@ struct JSAsyncFunctionState {
     JSValue resolving_funcs[2];
     JSStackFrame frame;
 };
+
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+                  uint32_t pc_value, int *pcol_num);
+JSValue js_closure(JSContext *ctx, JSValue bfunc,
+                   JSVarRef **cur_var_refs, JSStackFrame *sf,
+                   BOOL is_eval);
+static inline BOOL js_class_has_bytecode(JSClassID class_id)
+{
+    return (class_id == JS_CLASS_BYTECODE_FUNCTION ||
+            class_id == JS_CLASS_GENERATOR_FUNCTION ||
+            class_id == JS_CLASS_ASYNC_FUNCTION ||
+            class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION);
+}
+void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 
 #endif /* QUICKJS_FUNCTION_H */

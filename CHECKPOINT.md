@@ -2,8 +2,8 @@
 
 ## Current Status
 - **Phase**: Phase 2 — Core QuickJS Modularization
-- **Active Milestone**: Milestone 2 (Extract Parser, Compiler, and Bytecode Serializer)
-- **Last Completed Milestone**: Milestone 1 (Establish Core Internal Headers)
+- **Active Milestone**: Milestone 3 (Extract Standard Builtins Subsystem)
+- **Last Completed Milestone**: Milestone 2 (Extract Parser, Compiler, and Bytecode Serializer)
 
 ---
 
@@ -78,9 +78,27 @@
 
 ---
 
+## Milestone 2 Validation Results
+- **Extracted Modules**:
+  - `src/quickjs/opcode.{h,c}`: bytecode opcode information, operand tables, and special opcode defines.
+  - `src/quickjs/serialize.{h,c}`: bytecode serialization (`JS_WriteObject`, `JS_ReadObject`).
+  - `src/quickjs/parser.{h,c}`: JavaScript syntax lexer, token scanner, parse state definitions.
+  - `src/quickjs/compiler.{h,c}`: JavaScript AST-to-bytecode compiler, scope management, peephole optimizer, and evaluation entry points (`JS_Eval`, `JS_EvalThis`, `JS_EvalObject`, `JS_EvalInternal`).
+- **Standard Tests (`make test`)**: 11/11 tests pass (100%).
+- **Test262 Error Match (`make test2-check`)**: 58/59 errors matched `test262_errors.txt` (0.20s).
+- **LTO Validation**: `make CONFIG_LTO=y -j && make test` passes 100%.
+- **Microbenchmarks (`./qjs --std tests/microbench.js`)**:
+  - Total: 8238.32 ns (Baseline median: 8281.68 ns, diff: -0.52%)
+  - Zero performance regression.
+- **Binary Sizes (non-LTO)**:
+  - `qjs`: text 959922 (Baseline: 963602)
+  - `qjsc`: text 929745 (Baseline: 937625)
+  - `run-test262`: text 957373 (Baseline: 965253)
+
+---
+
 ## Exact Next Steps
-1. Milestone 2: Extract Bytecode Serializer (`src/quickjs/serialize.{h,c}`).
-2. Milestone 2: Extract Parser and Lexer (`src/quickjs/parser.{h,c}`).
-3. Milestone 2: Extract Bytecode Compiler (`src/quickjs/compiler.{h,c}`).
-4. Update Makefile to link `serialize.o`, `parser.o`, `compiler.o`.
-5. Run tests and microbenchmark screen, then commit Milestone 2.
+1. Milestone 3: Extract Standard Builtins Subsystem (`src/quickjs/builtin/`).
+2. Milestone 3: Separate object, array, string, number, math, regexp, json, map, promise, typedarray, symbol, and global builtins into dedicated translation units.
+3. Validate tests (`make test`, `make test2-check`) and microbenchmarks.
+4. Commit Milestone 3 according to Milestone Git Commits rules.

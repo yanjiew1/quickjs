@@ -133,4 +133,16 @@ static inline JSAtomStruct *atom_set_free(uint32_t v)
     return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
 }
 
+void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+
+#define ATOM_GET_STR_BUF_SIZE 64
+const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size, JSAtom atom);
+const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
+
+JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
+JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
+void print_atom(JSContext *ctx, JSAtom atom);
+
 #endif /* QUICKJS_ATOM_H */

@@ -237,4 +237,21 @@ static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
     JS_FreeValue(ctx, old_val);
 }
 
+int js_get_length32(JSContext *ctx, uint32_t *pres, JSValueConst obj);
+JSValue js_array_buffer_constructor3(JSContext *ctx, JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len,
+                                     JSClassID class_id, uint8_t *buf,
+                                     JSFreeArrayBufferDataFunc *free_func,
+                                     void *opaque, BOOL alloc_flag);
+JSValue js_typed_array_constructor(JSContext *ctx,
+                                   JSValueConst new_target, int argc,
+                                   JSValueConst *argv, int classid);
+JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
+JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
+void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
+int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
+JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
+JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
+int js_update_property_flags(JSContext *ctx, JSObject *p, JSShapeProperty **pprs, int flags);
+
 #endif /* QUICKJS_OBJECT_H */

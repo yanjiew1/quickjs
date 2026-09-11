@@ -77,6 +77,23 @@ static inline void memcpy_no_ub(void *dest, const void *src, size_t n) {
         memcpy(dest, src, n);
 }
 
+static inline int is_digit(int c)
+{
+    return c >= '0' && c <= '9';
+}
+
+static inline int to_digit(int c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'a' && c <= 'z')
+        return c - 'a' + 10;
+    else if (c >= 'A' && c <= 'Z')
+        return c - 'A' + 10;
+    else
+        return 36;
+}
+
 static inline int max_int(int a, int b)
 {
     if (a > b)
@@ -325,6 +342,61 @@ static inline BOOL dbuf_error(DynBuf *s) {
 static inline void dbuf_set_error(DynBuf *s)
 {
     s->error = TRUE;
+}
+
+static inline void dbuf_put_leb128(DynBuf *s, uint32_t v)
+{
+    uint32_t a;
+    for(;;) {
+        a = v & 0x7f;
+        v >>= 7;
+        if (v != 0) {
+            dbuf_putc(s, a | 0x80);
+        } else {
+            dbuf_putc(s, a);
+            break;
+        }
+    }
+}
+
+static inline void dbuf_put_sleb128(DynBuf *s, int32_t v1)
+{
+    uint32_t v = v1;
+    dbuf_put_leb128(s, (2 * v) ^ -(v >> 31));
+}
+
+static inline int get_leb128(uint32_t *pval, const uint8_t *buf,
+                             const uint8_t *buf_end)
+{
+    const uint8_t *ptr = buf;
+    uint32_t v, a, i;
+    v = 0;
+    for(i = 0; i < 5; i++) {
+        if (unlikely(ptr >= buf_end))
+            break;
+        a = *ptr++;
+        v |= (a & 0x7f) << (i * 7);
+        if (!(a & 0x80)) {
+            *pval = v;
+            return ptr - buf;
+        }
+    }
+    *pval = 0;
+    return -1;
+}
+
+static inline int get_sleb128(int32_t *pval, const uint8_t *buf,
+                              const uint8_t *buf_end)
+{
+    int ret;
+    uint32_t val;
+    ret = get_leb128(&val, buf, buf_end);
+    if (ret < 0) {
+        *pval = 0;
+        return -1;
+    }
+    *pval = (val >> 1) ^ -(val & 1);
+    return ret;
 }
 
 #define UTF8_CHAR_LEN_MAX 6
