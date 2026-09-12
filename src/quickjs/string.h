@@ -57,6 +57,7 @@ static inline BOOL JS_IsEmptyString(JSValueConst v)
     return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
 }
 
+JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
 
@@ -142,6 +143,12 @@ JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
 JSValue js_new_string_char(JSContext *ctx, uint16_t c);
 JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
 int js_string_compare(JSContext *ctx, const JSString *p1, const JSString *p2);
+int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2, int pos2, int len);
+BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
+int js_string_rope_compare(JSContext *ctx, JSValueConst op1, JSValueConst op2, BOOL is_strict);
+JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
+BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2);
+int string_rope_get(JSValueConst val, uint32_t idx);
 uint32_t js_string_obj_get_length(JSContext *ctx, JSValueConst obj);
 int string_getc(const JSString *p, int *pidx);
 uint32_t hash_string(const JSString *str, uint32_t h);

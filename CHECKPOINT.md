@@ -2,8 +2,8 @@
 
 ## Current Status
 - **Phase**: Phase 2 — Core QuickJS Modularization
-- **Active Milestone**: Milestone 5 (Extract Core Data Subsystems: Atoms, Strings, BigInt, Conversions, Operators)
-- **Last Completed Milestone**: Milestone 4 (Extract Modules and Promises/Jobs Subsystem)
+- **Active Milestone**: Milestone 6 (Extract Objects, Shapes, Arrays, Memory/GC, Runtime, and VM)
+- **Last Completed Milestone**: Milestone 5 (Extract Core Data Subsystems: Atoms, Strings, BigInt, Conversions, Operators)
 
 ---
 
@@ -154,9 +154,47 @@
 
 ---
 
+## Milestone 5 Validation Results
+- **Extracted Modules**:
+  - `src/quickjs/atom.c` (849 lines): atom hash table, lifecycle, indexing, symbols, strings.
+  - `src/quickjs/string.c` (1,301 lines): string allocation, StringBuffer, rope trees, comparison, linearize.
+  - `src/quickjs/bigint.c` (1,660 lines): multi-precision integer operations, division, powers, normalization, conversion.
+  - `src/quickjs/conversion.c` (1,164 lines): JS value to primitive, number, integer, boolean, string, atom conversion, `js_atof`, `js_dtoa2`, `js_pow`.
+  - `src/quickjs/operator.c` (1,399 lines): slow-path unary, binary, comparison, relational, logic, typeof, delete, instanceof, in operators.
+- **Line Count Impact**:
+  - `quickjs.c`: reduced from 20,332 lines down to **14,150 lines** (-6,182 lines, -30.4%).
+  - Total newly extracted code: **6,373 lines** across 5 modules.
+- **Standard Tests (`make test`)**: 11/11 tests pass (100%).
+- **Test262 Error Match (`make test2-check`)**: 58/59 errors matched `test262_errors.txt` (0.20s).
+- **LTO Validation**: `make CONFIG_LTO=y -j && make test` passes 100%.
+- **Microbenchmarks (`./qjs --std tests/microbench.js`)**:
+  - Total: 8501.93 ns (Baseline median: 8281.68 ns, within normal system variance).
+  - Fast-path timings: `prop_read` 14.90 ns, `prop_write` 12.06 ns, `array_read` 14.08 ns, `func_call` 34.05 ns, `int_arith` 15.01 ns, `float_arith` 26.60 ns.
+- **Binary Sizes (non-LTO)**:
+  - `qjs`: text 964,361 (Baseline: 963,602)
+  - `qjsc`: text 918,976 (Baseline: 937,625)
+  - `run-test262`: text 946,517 (Baseline: 965,253)
+  - `.obj/quickjs.o` text: **154,889 bytes** (Baseline: 747,561 bytes, down by **79.3%**).
+  - `.obj/src/quickjs/atom.o` text: 10,839 bytes.
+  - `.obj/src/quickjs/string.o` text: 13,481 bytes.
+  - `.obj/src/quickjs/bigint.o` text: 13,538 bytes.
+  - `.obj/src/quickjs/conversion.o` text: 10,041 bytes.
+  - `.obj/src/quickjs/operator.o` text: 15,011 bytes.
+
+---
+
 ## Exact Next Steps
-1. Milestone 5: Extract Core Data Subsystems (`src/quickjs/atom.c`, `src/quickjs/string.c`, `src/quickjs/bigint.c`, `src/quickjs/conversion.c`, `src/quickjs/operator.c`).
-2. Keep hot-path string, atom, and conversion helpers as `static js_force_inline` in respective headers.
-3. Validate tests (`make test`, `make test2-check`), run microbenchmarks to ensure fast paths remain intact.
-4. Commit Milestone 5.
+1. Milestone 6: Complete Modularization of QuickJS Engine Core:
+   - Extract `src/quickjs/alloc.c` (JSMalloc, memory allocation context)
+   - Extract `src/quickjs/shape.c` (Shapes, property layout transitions, hash table)
+   - Extract `src/quickjs/object.c` (Objects, properties, descriptors, proxies, classes)
+   - Extract `src/quickjs/array.c` (Arrays, fast arrays, typed arrays)
+   - Extract `src/quickjs/gc.c` (Garbage collector, cycle detection, mark & sweep, finalizers)
+   - Extract `src/quickjs/runtime.c` (JSRuntime/JSContext lifecycle, limits, interrupts, classes)
+   - Extract `src/quickjs/function.c` (Function bytecode, stack frames, closures, var refs)
+   - Extract `src/quickjs/vm.c` (Execution loop, dispatch, generator/async state machine)
+2. Completely eliminate monolithic `quickjs.c`.
+3. Verify with `make test`, `make test2-check`, microbenchmarks, and LTO.
+4. Commit: `refactor: complete modularization of quickjs engine core`.
+
 

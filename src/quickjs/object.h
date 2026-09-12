@@ -278,6 +278,7 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d, JSValueConst desc);
 JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1, int flags, int kind);
 __exception int js_get_length32(JSContext *ctx, uint32_t *pres, JSValueConst obj);
 __exception int js_get_length64(JSContext *ctx, int64_t *pres, JSValueConst obj);
+int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
 
 
 /* Iterators */

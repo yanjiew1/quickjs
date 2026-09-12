@@ -135,7 +135,9 @@ static inline JSAtomStruct *atom_set_free(uint32_t v)
 
 void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
 JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v);
 BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval, JSAtom atom);
 
 #define ATOM_GET_STR_BUF_SIZE 64
 const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size, JSAtom atom);
@@ -145,5 +147,17 @@ JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 void print_atom(JSContext *ctx, JSAtom atom);
 JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
+
+int JS_InitAtoms(JSRuntime *rt);
+JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
+JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len, int atom_type);
+JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len, int atom_type);
+void JS_DumpAtoms(JSRuntime *rt);
+JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
+JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr, int atom_type);
+JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom);
+int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom);
+BOOL JS_AtomSymbolHasDescription(JSContext *ctx, JSAtom v);
+JSAtom js_symbol_to_atom(JSContext *ctx, JSValue val);
 
 #endif /* QUICKJS_ATOM_H */

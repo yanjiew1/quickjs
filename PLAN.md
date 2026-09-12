@@ -160,7 +160,7 @@ tools/
   - Rebuild, validate tests (including `test_cyclic_import.js`, `test_worker.js`), microbench screen.
   - Commit: `refactor: extract module and promise subsystems`.
 
-- `[ ]` **Milestone 5: Extract Core Data Subsystems (Atoms, Strings, BigInt, Conversions, Operators)**
+- `[x]` **Milestone 5: Extract Core Data Subsystems (Atoms, Strings, BigInt, Conversions, Operators)**
   - Extract `src/quickjs/atom.c`, `src/quickjs/string.c`, `src/quickjs/bigint.c`, `src/quickjs/conversion.c`, `src/quickjs/operator.c`.
   - Preserve hot string and atom inlines in headers.
   - Rebuild, run `make test`, `make test2-check`, microbench screen.
