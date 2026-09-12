@@ -12,6 +12,8 @@ hello.c
 microbench*.txt
 qjs
 qjs.exe
+qjs-debug
+qjs-debug.exe
 qjsc
 qjsc.exe
 host-qjsc

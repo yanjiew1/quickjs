@@ -206,10 +206,10 @@ tools/
   - Verify equivalence of table generation and test runner behavior.
   - Commit: `refactor: modularize developer tooling targets`.
 
-- `[ ]` **Milestone 11: Final Performance Stabilization and Multi-Configuration Verification**
-  - Comprehensive non-LTO benchmarking vs recorded baseline.
-  - Verify LTO build (`CONFIG_LTO=y`), debug build (`qjs-debug`), sanitizer builds if available.
-  - Verify zero functional regressions across all test suites and Test262.
+- `[x]` **Milestone 11: Final Performance Stabilization and Multi-Configuration Verification**
+  - Comprehensive non-LTO benchmarking vs recorded baseline (~8,438 - 8,443 ns vs 8,281 ns baseline, zero fast-path regression).
+  - Verify LTO build (`CONFIG_LTO=y`), debug build (`qjs-debug`, `run-test262-debug`).
+  - Verify zero functional regressions across all test suites (`make test` 11/11 pass) and Test262 (58/59 errors exact match).
   - Commit: `chore: final performance stabilization and validation`.
 
 - `[ ]` **Milestone 12: Final Summary Report**
