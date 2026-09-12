@@ -181,13 +181,13 @@ tools/
   - Commit: `refactor: complete modularization of quickjs engine core`.
 
 ### Phase 3: Secondary Runtime / Library Modularization
-- `[ ]` **Milestone 7: Modularize `quickjs-libc.c`**
+- `[x]` **Milestone 7: Modularize `quickjs-libc.c`**
   - Decompose into `src/libc/`: `libc_std.c`, `libc_os.c`, `libc_worker.c`, `libc_event.c`, `quickjs-libc.c`.
   - Maintain `quickjs-libc.h` public interface.
   - Validate tests: `test_std.js`, `test_worker.js`, `test_rw_handler.js`, `examples/*`.
   - Commit: `refactor: modularize quickjs-libc into host subsystems`.
 
-- `[ ]` **Milestone 8: Modularize `libregexp.c`**
+- `[x]` **Milestone 8: Modularize `libregexp.c`**
   - Decompose into `src/regexp/`: `regexp_compiler.c`, `regexp_executor.c`, `regexp_internal.h`.
   - Maintain `libregexp.h` public interface.
   - Validate regexp tests and microbenchmarks.

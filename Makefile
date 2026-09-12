@@ -286,12 +286,15 @@ QJS_CORE_OBJS=$(OBJDIR)/src/quickjs/function.o \
               $(OBJDIR)/src/quickjs/module.o \
               $(OBJDIR)/src/quickjs/promise.o
 
+QJS_REGEXP_OBJS=$(OBJDIR)/src/regexp/regexp_compiler.o \
+                $(OBJDIR)/src/regexp/regexp_executor.o
+
 QJS_LIBC_OBJS=$(OBJDIR)/src/libc/libc_std.o \
               $(OBJDIR)/src/libc/libc_os.o \
               $(OBJDIR)/src/libc/libc_event.o \
               $(OBJDIR)/src/libc/libc_worker.o
 
-QJS_LIB_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(QJS_LIBC_OBJS)
+QJS_LIB_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(QJS_REGEXP_OBJS) $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(QJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -303,7 +306,7 @@ endif
 LIBS+=$(EXTRA_LIBS)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin $(OBJDIR)/src/libc
+	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin $(OBJDIR)/src/libc $(OBJDIR)/src/regexp
 
 qjs$(EXE): $(QJS_OBJS)
 	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
@@ -320,7 +323,7 @@ fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 fuzz_compile: $(OBJDIR)/fuzz_compile.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/libregexp.fuzz.o $(OBJDIR)/src/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
+fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(patsubst %.o, %.fuzz.o, $(QJS_REGEXP_OBJS)) $(OBJDIR)/src/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
@@ -411,8 +414,8 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: libregexp.c libunicode.c src/cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c src/cutils.c $(LIBS)
+regexp_test: src/regexp/regexp_compiler.c src/regexp/regexp_executor.c libunicode.c src/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ src/regexp/regexp_compiler.c src/regexp/regexp_executor.c libunicode.c src/cutils.c $(LIBS)
 
 unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o libunicode.c unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o
