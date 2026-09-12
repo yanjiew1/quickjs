@@ -5,6 +5,7 @@
 #define QUICKJS_RUNTIME_H
 
 #include "quickjs/def.h"
+#include "quickjs/atom.h"
 #include "quickjs/shape.h"
 #include "quickjs/object.h"
 #include "quickjs/function.h"

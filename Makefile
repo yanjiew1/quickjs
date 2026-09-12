@@ -266,7 +266,7 @@ QJS_BUILTIN_OBJS=$(OBJDIR)/src/quickjs/builtin/builtin_json.o \
                  $(OBJDIR)/src/quickjs/builtin/builtin_function.o \
                  $(OBJDIR)/src/quickjs/builtin/builtin.o
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/opcode.o $(OBJDIR)/src/quickjs/serialize.o $(OBJDIR)/src/quickjs/parser.o $(OBJDIR)/src/quickjs/compiler.o $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/opcode.o $(OBJDIR)/src/quickjs/serialize.o $(OBJDIR)/src/quickjs/parser.o $(OBJDIR)/src/quickjs/compiler.o $(OBJDIR)/src/quickjs/module.o $(OBJDIR)/src/quickjs/promise.o $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 

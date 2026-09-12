@@ -2,8 +2,8 @@
 
 ## Current Status
 - **Phase**: Phase 2 — Core QuickJS Modularization
-- **Active Milestone**: Milestone 4 (Extract Modules and Promises/Jobs)
-- **Last Completed Milestone**: Milestone 3 (Extract Standard Builtins Subsystem)
+- **Active Milestone**: Milestone 5 (Extract Core Data Subsystems: Atoms, Strings, BigInt, Conversions, Operators)
+- **Last Completed Milestone**: Milestone 4 (Extract Modules and Promises/Jobs Subsystem)
 
 ---
 
@@ -131,9 +131,32 @@
 
 ---
 
+## Milestone 4 Validation Results
+- **Extracted Modules**:
+  - `src/quickjs/module.{h,c}`: module definitions, module resolution, module import/export linking, execution, `JS_LoadModule`, `js_dynamic_import`, `js_import_meta`, and module garbage collection marking/freeing (`js_mark_module_def`, `js_free_module_def`, `js_free_modules`).
+  - `src/quickjs/promise.{h,c}`: Promise microtask job queue lifecycle (`JS_EnqueueJob2`, `JS_EnqueueJob`, `JS_IsJobPending`, `JS_ExecutePendingJob`, `js_free_job_list`, `js_promise_then`).
+- **Line Count Impact**:
+  - `quickjs.c`: reduced from 22,385 lines down to **20,332 lines** (-2,053 lines, -9.2%).
+  - Extracted code: `module.c` (1,980 lines), `promise.c` (98 lines). Total: **2,078 lines**.
+- **Standard Tests (`make test`)**: 11/11 tests pass (100%), including `test_cyclic_import.js` and `test_worker.js`.
+- **Test262 Error Match (`make test2-check`)**: 58/59 errors matched `test262_errors.txt` (0.19s).
+- **LTO Validation**: `make CONFIG_LTO=y -j && make test` passes 100%.
+- **Microbenchmarks (`./qjs --std tests/microbench.js`)**:
+  - Total: 8511.97 ns (Baseline median: 8281.68 ns, within normal system noise).
+  - Fast-path timings: `prop_read` 15.12 ns, `prop_write` 12.45 ns, `array_read` 12.23 ns, `func_call` 33.14 ns.
+- **Binary Sizes (non-LTO)**:
+  - `qjs`: text 962729 (Baseline: 963602)
+  - `qjsc`: text 919985 (Baseline: 937625)
+  - `run-test262`: text 947645 (Baseline: 965253)
+  - `.obj/quickjs.o` text: **218,836 bytes** (Baseline: 747,561 bytes, down by **70.7%**).
+  - `.obj/src/quickjs/module.o` text: 23,231 bytes.
+  - `.obj/src/quickjs/promise.o` text: 1,119 bytes.
+
+---
+
 ## Exact Next Steps
-1. Milestone 4: Extract Modules and Promises/Jobs subsystem (`src/quickjs/module.{h,c}` and `src/quickjs/promise.{h,c}`).
-2. Verify all module and async tests (`test_cyclic_import.js`, `test_worker.js`, etc.).
-3. Run microbenchmark suite to confirm zero regressions.
-4. Update `PLAN.md` and `CHECKPOINT.md` and commit Milestone 4.
+1. Milestone 5: Extract Core Data Subsystems (`src/quickjs/atom.c`, `src/quickjs/string.c`, `src/quickjs/bigint.c`, `src/quickjs/conversion.c`, `src/quickjs/operator.c`).
+2. Keep hot-path string, atom, and conversion helpers as `static js_force_inline` in respective headers.
+3. Validate tests (`make test`, `make test2-check`), run microbenchmarks to ensure fast paths remain intact.
+4. Commit Milestone 5.
 

@@ -155,7 +155,7 @@ tools/
   - Rebuild, run `make test`, `make test2-check`, lightweight microbench screen.
   - Commit: `refactor: extract standard builtins subsystem`.
 
-- `[ ]` **Milestone 4: Extract Modules and Promises/Jobs**
+- `[x]` **Milestone 4: Extract Modules and Promises/Jobs**
   - Extract `src/quickjs/module.{h,c}` and `src/quickjs/promise.{h,c}`.
   - Rebuild, validate tests (including `test_cyclic_import.js`, `test_worker.js`), microbench screen.
   - Commit: `refactor: extract module and promise subsystems`.

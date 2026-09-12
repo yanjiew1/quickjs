@@ -211,4 +211,13 @@ JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
 JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv);
 
+void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
+JSValue js_closure2(JSContext *ctx, JSValue func_obj,
+                    JSFunctionBytecode *b,
+                    JSVarRef **cur_var_refs,
+                    JSStackFrame *sf,
+                    BOOL is_eval,
+                    JSModuleDef *m);
+
 #endif /* QUICKJS_FUNCTION_H */

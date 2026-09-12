@@ -114,5 +114,11 @@ int js_resolve_module(JSContext *ctx, JSModuleDef *m);
 int js_link_module(JSContext *ctx, JSModuleDef *m);
 JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
 void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
+void js_mark_module_def(JSRuntime *rt, JSModuleDef *m, JS_MarkFunc *mark_func);
+void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
+extern const JSClassExoticMethods js_module_ns_exotic_methods;
+JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+JSValue js_import_meta(JSContext *ctx);
+JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
 
 #endif /* QUICKJS_MODULE_H */

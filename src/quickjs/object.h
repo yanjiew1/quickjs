@@ -253,6 +253,7 @@ int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 int js_update_property_flags(JSContext *ctx, JSObject *p, JSShapeProperty **pprs, int flags);
+JSProperty *add_property(JSContext *ctx, JSObject *p, JSAtom prop, int prop_flags);
 
 int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
 int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj, int64_t idx, JSValue val, int flags);
