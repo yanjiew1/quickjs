@@ -286,7 +286,12 @@ QJS_CORE_OBJS=$(OBJDIR)/src/quickjs/function.o \
               $(OBJDIR)/src/quickjs/module.o \
               $(OBJDIR)/src/quickjs/promise.o
 
-QJS_LIB_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_LIBC_OBJS=$(OBJDIR)/src/libc/libc_std.o \
+              $(OBJDIR)/src/libc/libc_os.o \
+              $(OBJDIR)/src/libc/libc_event.o \
+              $(OBJDIR)/src/libc/libc_worker.o
+
+QJS_LIB_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(QJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -298,7 +303,7 @@ endif
 LIBS+=$(EXTRA_LIBS)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin
+	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin $(OBJDIR)/src/libc
 
 qjs$(EXE): $(QJS_OBJS)
 	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
