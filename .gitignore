@@ -20,12 +20,14 @@ qjscalc.c
 repl.c
 run-test262
 run-test262.exe
-test262
+run-test262-debug
+run-test262-debug.exe
+/test262
 test262_*.txt
 test262o
 test262o_*.txt
 /unicode
-unicode_gen
+/unicode_gen
 run_octane
 run_sunspider_like
 libwinpthread*.dll

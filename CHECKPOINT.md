@@ -1,9 +1,9 @@
 # QuickJS Modularization Checkpoint & Handover Log
 
 ## Current Status
-- **Phase**: Phase 2 — Core QuickJS Modularization
-- **Active Milestone**: Milestone 6 (Extract Objects, Shapes, Arrays, Memory/GC, Runtime, and VM)
-- **Last Completed Milestone**: Milestone 5 (Extract Core Data Subsystems: Atoms, Strings, BigInt, Conversions, Operators)
+- **Phase**: Phase 4 — Tooling Modularization & Final Stabilization
+- **Active Milestone**: Milestone 11 (Final Performance Stabilization and Multi-Configuration Verification)
+- **Last Completed Milestone**: Milestone 10 (Modularize Developer Tooling: unicode_gen & run-test262)
 
 ---
 
@@ -183,18 +183,67 @@
 
 ---
 
+## Milestone 6 Validation Results
+- **Extracted Modules**:
+  - `src/quickjs/alloc.c`, `src/quickjs/shape.c`, `src/quickjs/object.c`, `src/quickjs/array.c`, `src/quickjs/gc.c`, `src/quickjs/runtime.c`, `src/quickjs/function.c`, `src/quickjs/vm.c`.
+- **Monolith Deletion**: `quickjs.c` completely deleted (zero monolithic code remaining).
+- **Commit**: `52b1a57` (`refactor: complete modularization of quickjs engine core`).
+
+---
+
+## Milestone 7 Validation Results
+- **Extracted Modules**:
+  - `src/libc/libc_std.c`, `src/libc/libc_os.c`, `src/libc/libc_event.c`, `src/libc/libc_worker.c`, `src/libc/libc_internal.h`.
+- **Monolith Deletion**: `quickjs-libc.c` reduced to a forwarder/coordinator.
+- **Commit**: `fd67474` (`refactor: modularize quickjs-libc into std, os, event, and worker`).
+
+---
+
+## Milestone 8 Validation Results
+- **Extracted Modules**:
+  - `src/regexp/regexp_compiler.c`, `src/regexp/regexp_executor.c`, `src/regexp/regexp_internal.h`.
+- **Monolith Deletion**: `libregexp.c` reduced to header includes and interface delegation.
+- **Commit**: `8cb51f9` (`refactor: modularize libregexp into compiler and executor`).
+
+---
+
+## Milestone 9 Validation Results
+- **Extracted Modules**:
+  - `src/unicode/unicode_case.c`, `src/unicode/unicode_norm.c`, `src/unicode/unicode_prop.c`, `src/unicode/unicode_internal.h`.
+- **Monolith Deletion**: `libunicode.c` reduced to interface delegation.
+- **Commit**: `fc2260c` (`refactor: modularize libunicode into case, norm, and prop modules`).
+
+---
+
+## Milestone 10 Validation Results
+- **Extracted Modules**:
+  - `src/test262/test262_namelist.{h,c}`: test name lists, string/path utilities, atomic counters, error reporting.
+  - `src/test262/test262_harness.{h,c}`: $262 object helpers, agent threading, YAML metadata parser, module loader.
+  - `run-test262.c`: reduced from 1,827 lines to 880 lines (lean test runner coordinator).
+  - `src/unicode_gen/unicode_gen_common.{h,c}`: common types, globals, string lists, memory, emitters.
+  - `src/unicode_gen/unicode_gen_parser.{h,c}`: file parsers for Unicode specification files.
+  - `src/unicode_gen/unicode_gen_case.{h,c}`: case conversion table generators and verification.
+  - `src/unicode_gen/unicode_gen_prop.{h,c}`: properties, scripts, categories, emoji sequence tables.
+  - `src/unicode_gen/unicode_gen_norm.{h,c}`: combining class, decomposition, composition tables.
+  - `unicode_gen.c`: reduced from 3,782 lines to 127 lines (lean CLI driver).
+- **Validation**:
+  - `make unicode_gen`: builds cleanly with $(HOST_CC).
+  - `make run-test262 && make test2-check`: 58/59 errors match baseline.
+  - `make run-test262-debug`: builds and runs cleanly.
+  - `make test`: 11/11 tests pass.
+  - `tests/microbench.js`: 8438.24 ns (within baseline variance).
+
+---
+
 ## Exact Next Steps
-1. Milestone 6: Complete Modularization of QuickJS Engine Core:
-   - Extract `src/quickjs/alloc.c` (JSMalloc, memory allocation context)
-   - Extract `src/quickjs/shape.c` (Shapes, property layout transitions, hash table)
-   - Extract `src/quickjs/object.c` (Objects, properties, descriptors, proxies, classes)
-   - Extract `src/quickjs/array.c` (Arrays, fast arrays, typed arrays)
-   - Extract `src/quickjs/gc.c` (Garbage collector, cycle detection, mark & sweep, finalizers)
-   - Extract `src/quickjs/runtime.c` (JSRuntime/JSContext lifecycle, limits, interrupts, classes)
-   - Extract `src/quickjs/function.c` (Function bytecode, stack frames, closures, var refs)
-   - Extract `src/quickjs/vm.c` (Execution loop, dispatch, generator/async state machine)
-2. Completely eliminate monolithic `quickjs.c`.
-3. Verify with `make test`, `make test2-check`, microbenchmarks, and LTO.
-4. Commit: `refactor: complete modularization of quickjs engine core`.
+1. Milestone 11: Final Performance Stabilization and Multi-Configuration Verification:
+   - Microbenchmark runs vs baseline across multiple iterations.
+   - Comprehensive LTO build and test validation (`CONFIG_LTO=y`).
+   - Debug configuration validation (`make qjs-debug run-test262-debug`).
+   - Full test suite run.
+   - Commit: `chore: final performance stabilization and validation`.
+2. Milestone 12: Final Summary Report:
+   - Produce exhaustive final report covering all 17 requirements in `task.md`.
+   - Complete task with `<!-- GOAL_COMPLETE -->`.
 
 

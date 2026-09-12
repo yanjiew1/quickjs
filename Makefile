@@ -310,7 +310,7 @@ endif
 LIBS+=$(EXTRA_LIBS)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin $(OBJDIR)/src/libc $(OBJDIR)/src/regexp $(OBJDIR)/src/unicode
+	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin $(OBJDIR)/src/libc $(OBJDIR)/src/regexp $(OBJDIR)/src/unicode $(OBJDIR)/src/test262 $(OBJDIR)/src/unicode_gen
 
 qjs$(EXE): $(QJS_OBJS)
 	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
@@ -378,10 +378,14 @@ libunicode-table.h: unicode_gen
 	./unicode_gen unicode $@
 endif
 
-run-test262$(EXE): $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS)
+TEST262_OBJS=$(OBJDIR)/run-test262.o \
+             $(OBJDIR)/src/test262/test262_namelist.o \
+             $(OBJDIR)/src/test262/test262_harness.o
+
+run-test262$(EXE): $(TEST262_OBJS) $(QJS_LIB_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-run-test262-debug: $(patsubst %.o, %.debug.o, $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS))
+run-test262-debug: $(patsubst %.o, %.debug.o, $(TEST262_OBJS) $(QJS_LIB_OBJS))
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # object suffix order: nolto
@@ -421,8 +425,16 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 regexp_test: src/regexp/regexp_compiler.c src/regexp/regexp_executor.c src/unicode/unicode_case.c src/unicode/unicode_norm.c src/unicode/unicode_prop.c src/cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ $^ $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o src/unicode/unicode_case.c src/unicode/unicode_norm.c src/unicode/unicode_prop.c unicode_gen_def.h
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o
+UNICODE_GEN_OBJS=$(OBJDIR)/unicode_gen.host.o \
+                 $(OBJDIR)/src/unicode_gen/unicode_gen_common.host.o \
+                 $(OBJDIR)/src/unicode_gen/unicode_gen_parser.host.o \
+                 $(OBJDIR)/src/unicode_gen/unicode_gen_case.host.o \
+                 $(OBJDIR)/src/unicode_gen/unicode_gen_prop.host.o \
+                 $(OBJDIR)/src/unicode_gen/unicode_gen_norm.host.o \
+                 $(OBJDIR)/src/cutils.host.o
+
+unicode_gen: $(UNICODE_GEN_OBJS) unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(UNICODE_GEN_OBJS)
 
 clean:
 	rm -f repl.c out.c

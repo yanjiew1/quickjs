@@ -200,9 +200,9 @@ tools/
   - Commit: `refactor: modularize libunicode into case, norm, and prop modules`.
 
 ### Phase 4: Secondary Tooling Modularization & Final Stabilization
-- `[ ]` **Milestone 10: Modularize Developer Tooling (`unicode_gen.c` & `run-test262.c`)**
-  - Decompose `unicode_gen.c` into parser, table generators, and emitter.
-  - Decompose `run-test262.c` into options/namelist, metadata parser, harness agent, and runner.
+- `[x]` **Milestone 10: Modularize Developer Tooling (`unicode_gen.c` & `run-test262.c`)**
+  - Decompose `unicode_gen.c` into parser, table generators, and emitter (`src/unicode_gen/`).
+  - Decompose `run-test262.c` into options/namelist, harness agent/parser, and runner (`src/test262/`).
   - Verify equivalence of table generation and test runner behavior.
   - Commit: `refactor: modularize developer tooling targets`.
 
