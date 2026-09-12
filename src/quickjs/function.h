@@ -219,5 +219,42 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                     JSStackFrame *sf,
                     BOOL is_eval,
                     JSModuleDef *m);
+extern const JSClassExoticMethods js_arguments_exotic_methods;
+
+void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
+void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
+void js_c_function_data_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
+                           JSValueConst this_obj,
+                           int argc, JSValueConst *argv, int flags);
+JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
+                                JSValueConst this_val,
+                                int argc, JSValueConst *argv, int flags);
+JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
+                               JSValueConst this_obj,
+                               int argc, JSValueConst *argv, int flags);
+JSValue js_build_arguments(JSContext *ctx, int argc, JSValueConst *argv);
+JSValue js_build_mapped_arguments(JSContext *ctx, int argc, JSValueConst *argv,
+                                  JSStackFrame *sf, int _arg_count);
+void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+                               JSValueConst home_obj);
+int js_op_define_class(JSContext *ctx, JSValue *sp,
+                       JSAtom class_name, int class_flags,
+                       JSVarRef **cur_var_refs,
+                       JSStackFrame *sf, BOOL is_computed_name);
+void close_var_ref(JSRuntime *rt, JSStackFrame *sf, JSVarRef *var_ref);
+void close_var_refs(JSRuntime *rt, JSFunctionBytecode *b, JSStackFrame *sf);
+void close_lexical_var(JSContext *ctx, JSFunctionBytecode *b,
+                       JSStackFrame *sf, int idx);
+int check_function(JSContext *ctx, JSValueConst obj);
+int check_exception_free(JSContext *ctx, JSValue obj);
+JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx, BOOL is_arg);
+JSValue js_get_function_name(JSContext *ctx, JSAtom name);
+JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
+JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
+                                                 JSAtom atom, BOOL is_lexical);
+int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
+                             JSAtom name, int flags, JSValueConst home_obj);
 
 #endif /* QUICKJS_FUNCTION_H */

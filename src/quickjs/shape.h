@@ -37,9 +37,31 @@ static inline JSShapeProperty *get_shape_prop(JSShape *sh)
     return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
 }
 
-int add_shape_property(JSContext *ctx, JSShape **psh, JSObject *p, JSAtom atom, int prop_flags);
-JSShape *js_dup_shape(JSShape *sh);
+static inline JSShape *js_dup_shape(JSShape *sh)
+{
+    js_rc(sh)->ref_count++;
+    return sh;
+}
+
+int init_shape_hash(JSRuntime *rt);
+void js_shape_hash_link(JSRuntime *rt, JSShape *sh);
+void js_shape_hash_unlink(JSRuntime *rt, JSShape *sh);
+JSShape *js_new_shape_nohash(JSContext *ctx, JSObject *proto, int hash_size, int prop_size);
 JSShape *js_new_shape2(JSContext *ctx, JSObject *proto, int hash_size, int prop_size);
+JSShape *js_new_shape(JSContext *ctx, JSObject *proto);
+JSShape *js_clone_shape(JSContext *ctx, JSShape *sh1);
+void js_free_shape0(JSRuntime *rt, JSShape *sh);
+void js_free_shape(JSRuntime *rt, JSShape *sh);
+void js_free_shape_null(JSRuntime *rt, JSShape *sh);
+int resize_properties(JSContext *ctx, JSShape **psh, JSObject *p, uint32_t count);
+int compact_properties(JSContext *ctx, JSObject *p);
+int add_shape_property(JSContext *ctx, JSShape **psh, JSObject *p, JSAtom atom, int prop_flags);
+JSShape *find_hashed_shape_proto(JSRuntime *rt, JSObject *proto);
+JSShape *find_hashed_shape_prop(JSRuntime *rt, JSShape *sh, JSAtom atom, int prop_flags);
+void JS_DumpShape(JSRuntime *rt, int i, JSShape *sh);
+void JS_DumpShapes(JSRuntime *rt);
+
+int js_shape_prepare_update(JSContext *ctx, JSObject *p, JSShapeProperty **pprs);
 JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id, JSProperty *props);
 
 #endif /* QUICKJS_SHAPE_H */

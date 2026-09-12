@@ -38,6 +38,12 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
 }
 JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
 JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
+int convert_fast_array_to_array(JSContext *ctx, JSObject *p);
+int set_array_length(JSContext *ctx, JSObject *p, JSValue val, int flags);
+int add_fast_array_element(JSContext *ctx, JSObject *p, JSValue val, int flags);
+void js_array_finalizer(JSRuntime *rt, JSValue val);
+void js_array_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
 
 BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
 BOOL typed_array_is_oob(JSObject *p);

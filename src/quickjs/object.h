@@ -78,6 +78,16 @@ struct JSGlobalObject {
     JSValue uninitialized_vars;
 };
 
+static inline JSContext *js_autoinit_get_realm(JSProperty *pr)
+{
+    return (JSContext *)(pr->u.init.realm_and_id & ~3);
+}
+
+static inline JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr)
+{
+    return (JSAutoInitIDEnum)(pr->u.init.realm_and_id & 3);
+}
+
 struct JSMapRecord {
     int ref_count;
     BOOL empty : 8;
@@ -279,7 +289,8 @@ JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1, int flags, in
 __exception int js_get_length32(JSContext *ctx, uint32_t *pres, JSValueConst obj);
 __exception int js_get_length64(JSContext *ctx, int64_t *pres, JSValueConst obj);
 int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
-
+int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
+int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
 
 /* Iterators */
 JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
@@ -289,5 +300,45 @@ JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj, JSValueConst met
 JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj, BOOL *pdone);
 int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj, BOOL is_exception_pending);
 JSValue js_create_iterator_result(JSContext *ctx, JSValue val, BOOL done);
+
+void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
+void js_global_object_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+int remove_global_object_property(JSContext *ctx, JSObject *p, JSShapeProperty *prs, JSProperty *pr);
+JSAtom find_atom(JSContext *ctx, const char *name);
+JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields, int n_fields);
+int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val, JSValueConst obj);
+int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop, JSProperty *pr, JSShapeProperty *prs);
+int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj, JSValueConst name, JSValue val);
+JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj, JSValueConst name);
+int JS_SetPrivateField(JSContext *ctx, JSValueConst obj, JSValueConst name, JSValue val);
+int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
+void JS_FreePropertyEnum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len);
+JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj, JSValue prop);
+int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags);
+int JS_DefineObjectName(JSContext *ctx, JSValueConst obj, JSAtom name, int flags);
+int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj, JSValueConst str, int flags);
+#define DEFINE_GLOBAL_LEX_VAR (1 << 7)
+#define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
+
+int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
+int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
+int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
+int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setProp);
+
+JSValue build_for_in_iterator(JSContext *ctx, JSValue obj);
+__exception int js_for_in_start(JSContext *ctx, JSValue *sp);
+__exception int js_for_in_next(JSContext *ctx, JSValue *sp);
+__exception int js_for_of_start(JSContext *ctx, JSValue *sp, BOOL is_async);
+__exception int js_for_of_next(JSContext *ctx, JSValue *sp, int offset);
+__exception int js_for_await_of_next(JSContext *ctx, JSValue *sp);
+__exception int js_iterator_get_value_done(JSContext *ctx, JSValue *sp);
+__exception int js_append_enumerate(JSContext *ctx, JSValue *sp);
+
+void JS_DumpAtom(JSContext *ctx, const char *str, JSAtom atom);
+void JS_DumpValue(JSContext *ctx, const char *str, JSValueConst val);
+void JS_DumpValueRT(JSRuntime *rt, const char *str, JSValueConst val);
+void JS_DumpObjectHeader(JSRuntime *rt);
+void JS_DumpObject(JSRuntime *rt, JSObject *p);
+void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p);
 
 #endif /* QUICKJS_OBJECT_H */

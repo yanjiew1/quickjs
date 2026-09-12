@@ -248,7 +248,7 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
+all: $(OBJDIR) $(OBJDIR)/src/quickjs/vm.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
 QJS_BUILTIN_OBJS=$(OBJDIR)/src/quickjs/builtin/builtin_json.o \
                  $(OBJDIR)/src/quickjs/builtin/builtin_regexp.o \
@@ -266,7 +266,27 @@ QJS_BUILTIN_OBJS=$(OBJDIR)/src/quickjs/builtin/builtin_json.o \
                  $(OBJDIR)/src/quickjs/builtin/builtin_function.o \
                  $(OBJDIR)/src/quickjs/builtin/builtin.o
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/atom.o $(OBJDIR)/src/quickjs/string.o $(OBJDIR)/src/quickjs/bigint.o $(OBJDIR)/src/quickjs/conversion.o $(OBJDIR)/src/quickjs/operator.o $(OBJDIR)/src/quickjs/opcode.o $(OBJDIR)/src/quickjs/serialize.o $(OBJDIR)/src/quickjs/parser.o $(OBJDIR)/src/quickjs/compiler.o $(OBJDIR)/src/quickjs/module.o $(OBJDIR)/src/quickjs/promise.o $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_CORE_OBJS=$(OBJDIR)/src/quickjs/function.o \
+              $(OBJDIR)/src/quickjs/object.o \
+              $(OBJDIR)/src/quickjs/vm.o \
+              $(OBJDIR)/src/quickjs/alloc.o \
+              $(OBJDIR)/src/quickjs/gc.o \
+              $(OBJDIR)/src/quickjs/runtime.o \
+              $(OBJDIR)/src/quickjs/shape.o \
+              $(OBJDIR)/src/quickjs/array.o \
+              $(OBJDIR)/src/quickjs/atom.o \
+              $(OBJDIR)/src/quickjs/string.o \
+              $(OBJDIR)/src/quickjs/bigint.o \
+              $(OBJDIR)/src/quickjs/conversion.o \
+              $(OBJDIR)/src/quickjs/operator.o \
+              $(OBJDIR)/src/quickjs/opcode.o \
+              $(OBJDIR)/src/quickjs/serialize.o \
+              $(OBJDIR)/src/quickjs/parser.o \
+              $(OBJDIR)/src/quickjs/compiler.o \
+              $(OBJDIR)/src/quickjs/module.o \
+              $(OBJDIR)/src/quickjs/promise.o
+
+QJS_LIB_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -324,10 +344,12 @@ LTOEXT=
 endif
 
 libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS)
+	rm -f $@
 	$(AR) rcs $@ $^
 
 ifdef CONFIG_LTO
 libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
+	rm -f $@
 	$(AR) rcs $@ $^
 endif # CONFIG_LTO
 

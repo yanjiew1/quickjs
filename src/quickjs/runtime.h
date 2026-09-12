@@ -235,6 +235,11 @@ static inline JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorA
 }
 #define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
 
+static inline JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop)
+{
+    return JS_ThrowSyntaxErrorAtom(ctx, "redeclaration of '%s'", prop);
+}
+
 void js_dump_value_write(void *opaque, const char *buf, size_t len);
 int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
 
@@ -260,5 +265,6 @@ void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 void free_zero_refcount(JSRuntime *rt);
 int js_poll_interrupts(JSContext *ctx);
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor, int class_id);
+void JS_MarkContext(JSRuntime *rt, JSContext *ctx, JS_MarkFunc *mark_func);
 
 #endif /* QUICKJS_RUNTIME_H */
