@@ -235,5 +235,29 @@ static inline JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorA
 #define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
 
 void js_dump_value_write(void *opaque, const char *buf, size_t len);
+int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
+
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+
+int init_class_range(JSRuntime *rt, JSClassShortDef const *tab, int start, int count);
+int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func, int argc, JSValueConst *argv, BOOL no_exception);
+JSValueConst JS_GetActiveFunction(JSContext *ctx);
+JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
+JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func, const char *name, int length, JSCFunctionEnum cproto, int magic, JSValueConst proto_val, int n_fields);
+JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val, JSClassID class_id, int n_alloc_props);
+JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type);
+JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num, const char *fmt, va_list ap);
+void JS_ThrowInterrupted(JSContext *ctx);
+JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx, JSValueConst func_obj);
+JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+void set_cycle_flag(JSContext *ctx, JSValueConst obj);
+void free_zero_refcount(JSRuntime *rt);
+int js_poll_interrupts(JSContext *ctx);
+JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor, int class_id);
 
 #endif /* QUICKJS_RUNTIME_H */

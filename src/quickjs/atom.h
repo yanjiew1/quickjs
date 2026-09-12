@@ -144,5 +144,6 @@ const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
 JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 void print_atom(JSContext *ctx, JSAtom atom);
+JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
 
 #endif /* QUICKJS_ATOM_H */

@@ -6,6 +6,14 @@
 
 #include "quickjs/def.h"
 
+typedef struct JSCFunctionDataRecord {
+    JSCFunctionData *func;
+    uint8_t length;
+    uint8_t data_len;
+    uint16_t magic;
+    JSValue data[0];
+} JSCFunctionDataRecord;
+
 #define JS_MODE_STRICT (1 << 0)
 #define JS_MODE_ASYNC  (1 << 2) /* async function */
 #define JS_MODE_BACKTRACE_BARRIER (1 << 3) /* stop backtrace before this frame */
@@ -175,5 +183,32 @@ static inline BOOL js_class_has_bytecode(JSClassID class_id)
             class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION);
 }
 void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
+JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
+JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom, int argc, JSValueConst *argv);
+void js_function_set_properties(JSContext *ctx, JSValueConst func_obj, JSAtom name, int len);
+BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
+JSValue js_function_apply(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic);
+void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
+void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
+void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_async_generator_finalizer(JSRuntime *rt, JSValue obj);
+void js_async_generator_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+JSValue js_async_function_resolve_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic);
+JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv, int magic);
+extern const uint16_t func_kind_to_class_id[];
+
+#define GEN_MAGIC_NEXT   0
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_THROW  2
+
+JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
+                         int argc, JSValueConst *argv,
+                         BOOL *pdone, int magic);
+JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv);
 
 #endif /* QUICKJS_FUNCTION_H */

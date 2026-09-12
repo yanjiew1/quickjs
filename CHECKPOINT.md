@@ -2,8 +2,8 @@
 
 ## Current Status
 - **Phase**: Phase 2 — Core QuickJS Modularization
-- **Active Milestone**: Milestone 3 (Extract Standard Builtins Subsystem)
-- **Last Completed Milestone**: Milestone 2 (Extract Parser, Compiler, and Bytecode Serializer)
+- **Active Milestone**: Milestone 4 (Extract Modules and Promises/Jobs)
+- **Last Completed Milestone**: Milestone 3 (Extract Standard Builtins Subsystem)
 
 ---
 
@@ -97,8 +97,43 @@
 
 ---
 
+## Milestone 3 Validation Results
+- **Extracted Modules (`src/quickjs/builtin/`)**:
+  - `src/quickjs/builtin/builtin.h`: Narrow shared header for builtins.
+  - `src/quickjs/builtin/builtin.c`: Constructor helpers, Error, Generator proto funcs, BigInt intrinsic, and base/basic object intrinsics.
+  - `src/quickjs/builtin/builtin_object.c`: Object constructor, prototype & static methods (`create`, `defineProperty`, `assign`, `keys`, `values`, `entries`, `groupBy`, etc.), `JS_ObjectDefineProperties`, `JS_DefinePropertyDesc`.
+  - `src/quickjs/builtin/builtin_array.c`: Array constructor, prototype & static methods, ArrayIterator, Iterator & Iterator Helpers.
+  - `src/quickjs/builtin/builtin_string.c`: String constructor, prototype methods, StringIterator.
+  - `src/quickjs/builtin/builtin_number.c`: Number, Boolean, Math builtins.
+  - `src/quickjs/builtin/builtin_regexp.c`: RegExp constructor, prototype methods, RegExpStringIterator.
+  - `src/quickjs/builtin/builtin_json.c`: JSON parser and stringifier.
+  - `src/quickjs/builtin/builtin_map.c`: Map, Set, WeakMap, WeakSet, MapIterator, weak reference primitives.
+  - `src/quickjs/builtin/builtin_promise.c`: Promise constructor, prototype methods, reactions, AsyncFunction / AsyncGenerator proto funcs.
+  - `src/quickjs/builtin/builtin_typedarray.c`: TypedArray, ArrayBuffer, SharedArrayBuffer, DataView, Atomics.
+  - `src/quickjs/builtin/builtin_symbol.c`: Symbol, Proxy, Reflect builtins.
+  - `src/quickjs/builtin/builtin_weakref.c`: WeakRef and FinalizationRegistry.
+  - `src/quickjs/builtin/builtin_global.c`: Global object, URI functions, eval, isNaN, isFinite.
+  - `src/quickjs/builtin/builtin_function.c`: Function constructor, prototype methods, argument lists.
+- **Line Count Impact**:
+  - `quickjs.c`: reduced from 40,000+ lines down to **22,384 lines**.
+  - Builtins subsystem total: **21,749 lines** across 15 dedicated translation units.
+- **Standard Tests (`make test`)**: 11/11 tests pass (100%).
+- **Test262 Error Match (`make test2-check`)**: 58/59 errors matched `test262_errors.txt` (0.19s).
+- **LTO Validation**: `make CONFIG_LTO=y -j && make test` passes 100%.
+- **Microbenchmarks (`./qjs --std tests/microbench.js`)**:
+  - Total: 8461.60 ns (Baseline median: 8281.68 ns, within normal system noise).
+  - Fast-path timings: `prop_read` 14.95 ns, `prop_write` 12.73 ns, `array_read` 13.19 ns, `func_call` 32.84 ns.
+- **Binary Sizes (non-LTO)**:
+  - `qjs`: text 961861 (Baseline: 963602)
+  - `qjsc`: text 919641 (Baseline: 937625)
+  - `run-test262`: text 947269 (Baseline: 965253)
+  - `.obj/quickjs.o` text: **242,872 bytes** (Baseline: 747,561 bytes, down by 67.5%).
+
+---
+
 ## Exact Next Steps
-1. Milestone 3: Extract Standard Builtins Subsystem (`src/quickjs/builtin/`).
-2. Milestone 3: Separate object, array, string, number, math, regexp, json, map, promise, typedarray, symbol, and global builtins into dedicated translation units.
-3. Validate tests (`make test`, `make test2-check`) and microbenchmarks.
-4. Commit Milestone 3 according to Milestone Git Commits rules.
+1. Milestone 4: Extract Modules and Promises/Jobs subsystem (`src/quickjs/module.{h,c}` and `src/quickjs/promise.{h,c}`).
+2. Verify all module and async tests (`test_cyclic_import.js`, `test_worker.js`, etc.).
+3. Run microbenchmark suite to confirm zero regressions.
+4. Update `PLAN.md` and `CHECKPOINT.md` and commit Milestone 4.
+

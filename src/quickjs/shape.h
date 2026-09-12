@@ -37,4 +37,9 @@ static inline JSShapeProperty *get_shape_prop(JSShape *sh)
     return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
 }
 
+int add_shape_property(JSContext *ctx, JSShape **psh, JSObject *p, JSAtom atom, int prop_flags);
+JSShape *js_dup_shape(JSShape *sh);
+JSShape *js_new_shape2(JSContext *ctx, JSObject *proto, int hash_size, int prop_size);
+JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id, JSProperty *props);
+
 #endif /* QUICKJS_SHAPE_H */

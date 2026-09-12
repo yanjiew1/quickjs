@@ -254,4 +254,38 @@ JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 int js_update_property_flags(JSContext *ctx, JSObject *p, JSShapeProperty **pprs, int flags);
 
+int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
+int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj, int64_t idx, JSValue val, int flags);
+int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj, JSAtom prop, JSAutoInitIDEnum id, void *opaque, int flags);
+int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc, JSObject *p, JSAtom prop);
+int JS_GetOwnPropertyNamesInternal(JSContext *ctx, JSPropertyEnum **ptab, uint32_t *plen, JSObject *p, int flags);
+JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
+int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
+JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj, JSValue prop);
+JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
+int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val, JSValueConst obj);
+void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
+int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags);
+int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj, JSValueConst proto_val, BOOL throw_flag);
+int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj, int64_t idx, JSValue val, int flags);
+int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags);
+BOOL check_define_prop_flags(int prop_flags, int flags);
+JSObject *get_proto_obj(JSValueConst proto_val);
+void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
+int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d, JSValueConst desc);
+JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1, int flags, int kind);
+__exception int js_get_length32(JSContext *ctx, uint32_t *pres, JSValueConst obj);
+__exception int js_get_length64(JSContext *ctx, int64_t *pres, JSValueConst obj);
+
+
+/* Iterators */
+JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
+JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj, JSValueConst method);
+JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj, JSValueConst method, int argc, JSValueConst *argv, BOOL *pdone);
+JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj, JSValueConst method, int argc, JSValueConst *argv, int *pdone);
+JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj, BOOL *pdone);
+int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj, BOOL is_exception_pending);
+JSValue js_create_iterator_result(JSContext *ctx, JSValue val, BOOL done);
+
 #endif /* QUICKJS_OBJECT_H */

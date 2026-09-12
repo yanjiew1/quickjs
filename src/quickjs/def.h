@@ -64,6 +64,8 @@
 #include <errno.h>
 #endif
 
+#define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
+
 enum {
     /* classid tag        */    /* union usage   | properties */
     JS_CLASS_OBJECT = 1,        /* must be first */
@@ -210,6 +212,10 @@ typedef struct JSGlobalObject JSGlobalObject;
 typedef struct JSParseState JSParseState;
 typedef enum OPCodeEnum OPCodeEnum;
 
+#define GEN_MAGIC_NEXT   0
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_THROW  2
+
 typedef enum {
     JS_GC_PHASE_NONE,
     JS_GC_PHASE_DECREF,
@@ -236,6 +242,17 @@ typedef enum {
     JS_WEAKREF_TYPE_WEAKREF,
     JS_WEAKREF_TYPE_FINREC,
 } JSWeakRefHeaderTypeEnum;
+
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) /* don't try Symbol.toPrimitive */
+
+typedef enum JSStrictEqModeEnum {
+    JS_EQ_STRICT,
+    JS_EQ_SAME_VALUE,
+    JS_EQ_SAME_VALUE_ZERO,
+} JSStrictEqModeEnum;
 
 typedef struct {
     struct list_head link;

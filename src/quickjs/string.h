@@ -134,4 +134,31 @@ static inline int js_string_find_invalid_codepoint(JSString *p)
     return -1;
 }
 
+JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
+JSValue JS_ConcatString3(JSContext *ctx, const char *str1, JSValue str2, const char *str3);
+JSValue js_new_string8(JSContext *ctx, const char *buf);
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
+JSValue js_new_string_char(JSContext *ctx, uint16_t c);
+JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
+int js_string_compare(JSContext *ctx, const JSString *p1, const JSString *p2);
+uint32_t js_string_obj_get_length(JSContext *ctx, JSValueConst obj);
+int string_getc(const JSString *p, int *pidx);
+uint32_t hash_string(const JSString *str, uint32_t h);
+uint32_t hash_string_rope(JSValueConst val, uint32_t h);
+int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
+int string_indexof_char(JSString *p, int c, int from);
+int js_string_GetSubstitution(JSContext *ctx,
+                              StringBuffer *b,
+                              JSValueConst matched,
+                              JSString *sp,
+                              uint32_t position,
+                              JSValueConst captures_val,
+                              JSValueConst namedCaptures,
+                              JSValueConst rep,
+                              uint8_t **captures,
+                              uint32_t captures_len);
+int skip_spaces(const char *pc);
+
+
 #endif /* QUICKJS_STRING_H */

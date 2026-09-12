@@ -146,7 +146,7 @@ tools/
   - Run `make test`, `make test2-check`, lightweight microbench screen.
   - Commit: `refactor: extract parser, compiler, and bytecode serializer`.
 
-- `[ ]` **Milestone 3: Extract Standard Builtins Subsystem**
+- `[x]` **Milestone 3: Extract Standard Builtins Subsystem**
   - Extract `src/quickjs/builtin/`:
     - `builtin.h`, `builtin.c` (registration)
     - `builtin_object.c`, `builtin_array.c`, `builtin_string.c`, `builtin_number.c`

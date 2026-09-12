@@ -250,7 +250,23 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/opcode.o $(OBJDIR)/src/quickjs/serialize.o $(OBJDIR)/src/quickjs/parser.o $(OBJDIR)/src/quickjs/compiler.o $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_BUILTIN_OBJS=$(OBJDIR)/src/quickjs/builtin/builtin_json.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_regexp.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_date.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_map.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_symbol.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_number.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_string.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_promise.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_typedarray.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_weakref.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_global.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_array.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_object.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin_function.o \
+                 $(OBJDIR)/src/quickjs/builtin/builtin.o
+
+QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/opcode.o $(OBJDIR)/src/quickjs/serialize.o $(OBJDIR)/src/quickjs/parser.o $(OBJDIR)/src/quickjs/compiler.o $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -262,7 +278,7 @@ endif
 LIBS+=$(EXTRA_LIBS)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs
+	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin
 
 qjs$(EXE): $(QJS_OBJS)
 	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
