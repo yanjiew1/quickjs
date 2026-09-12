@@ -289,12 +289,16 @@ QJS_CORE_OBJS=$(OBJDIR)/src/quickjs/function.o \
 QJS_REGEXP_OBJS=$(OBJDIR)/src/regexp/regexp_compiler.o \
                 $(OBJDIR)/src/regexp/regexp_executor.o
 
+QJS_UNICODE_OBJS=$(OBJDIR)/src/unicode/unicode_case.o \
+                 $(OBJDIR)/src/unicode/unicode_norm.o \
+                 $(OBJDIR)/src/unicode/unicode_prop.o
+
 QJS_LIBC_OBJS=$(OBJDIR)/src/libc/libc_std.o \
               $(OBJDIR)/src/libc/libc_os.o \
               $(OBJDIR)/src/libc/libc_event.o \
               $(OBJDIR)/src/libc/libc_worker.o
 
-QJS_LIB_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(QJS_REGEXP_OBJS) $(OBJDIR)/libunicode.o $(OBJDIR)/src/cutils.o $(QJS_LIBC_OBJS)
+QJS_LIB_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/dtoa.o $(QJS_REGEXP_OBJS) $(QJS_UNICODE_OBJS) $(OBJDIR)/src/cutils.o $(QJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -306,7 +310,7 @@ endif
 LIBS+=$(EXTRA_LIBS)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin $(OBJDIR)/src/libc $(OBJDIR)/src/regexp
+	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests $(OBJDIR)/src/quickjs $(OBJDIR)/src/quickjs/builtin $(OBJDIR)/src/libc $(OBJDIR)/src/regexp $(OBJDIR)/src/unicode
 
 qjs$(EXE): $(QJS_OBJS)
 	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
@@ -323,7 +327,7 @@ fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 fuzz_compile: $(OBJDIR)/fuzz_compile.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(patsubst %.o, %.fuzz.o, $(QJS_REGEXP_OBJS)) $(OBJDIR)/src/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
+fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(patsubst %.o, %.fuzz.o, $(QJS_REGEXP_OBJS)) $(OBJDIR)/src/cutils.fuzz.o $(patsubst %.o, %.fuzz.o, $(QJS_UNICODE_OBJS))
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
@@ -368,7 +372,7 @@ repl.c: $(QJSC) repl.js
 	$(QJSC) -s -c -o $@ -m repl.js
 
 ifneq ($(wildcard unicode/UnicodeData.txt),)
-$(OBJDIR)/libunicode.o $(OBJDIR)/libunicode.nolto.o: libunicode-table.h
+$(QJS_UNICODE_OBJS) $(patsubst %.o, %.nolto.o, $(QJS_UNICODE_OBJS)): libunicode-table.h
 
 libunicode-table.h: unicode_gen
 	./unicode_gen unicode $@
@@ -414,10 +418,10 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: src/regexp/regexp_compiler.c src/regexp/regexp_executor.c libunicode.c src/cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ src/regexp/regexp_compiler.c src/regexp/regexp_executor.c libunicode.c src/cutils.c $(LIBS)
+regexp_test: src/regexp/regexp_compiler.c src/regexp/regexp_executor.c src/unicode/unicode_case.c src/unicode/unicode_norm.c src/unicode/unicode_prop.c src/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ $^ $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o libunicode.c unicode_gen_def.h
+unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o src/unicode/unicode_case.c src/unicode/unicode_norm.c src/unicode/unicode_prop.c unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/src/cutils.host.o
 
 clean:

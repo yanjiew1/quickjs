@@ -193,7 +193,7 @@ tools/
   - Validate regexp tests and microbenchmarks.
   - Commit: `refactor: modularize libregexp into compiler and executor`.
 
-- `[ ]` **Milestone 9: Modularize `libunicode.c`**
+- `[x]` **Milestone 9: Modularize `libunicode.c`**
   - Decompose into `src/unicode/`: `unicode_case.c`, `unicode_norm.c`, `unicode_prop.c`, `unicode_internal.h`.
   - Maintain `libunicode.h` public interface.
   - Validate Unicode tests and test262.

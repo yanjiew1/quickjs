@@ -24,7 +24,7 @@ test262
 test262_*.txt
 test262o
 test262o_*.txt
-unicode
+/unicode
 unicode_gen
 run_octane
 run_sunspider_like
