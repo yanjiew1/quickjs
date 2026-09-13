@@ -257,6 +257,8 @@ compilation before risky hot-core or builtin subdivisions.
 - [ ] Extract atoms, strings, ropes, and string-buffer operations.  Preserve hot
   atom/string/value accessors as scoped `static inline` helpers when already
   inline or when non-LTO evidence shows the call boundary is material.
+  The private string ownership/API layer is complete; source extraction awaits
+  the coarse core/VM boundary so hot storage paths remain colocated.
 - [ ] Extract shapes/properties/objects together first, then separate conversions
   only if the cross-surface remains narrow.  Property lookup/set, fast arrays,
   primitive conversion, equality, and exception fast paths receive disassembly

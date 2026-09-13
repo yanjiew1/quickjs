@@ -27,42 +27,6 @@
 
 #include "internal-frontend.h"
 
-static inline int qjs_regexp_string_get(const JSString *str, int index)
-{
-    return str->is_wide_char ? str->u.str16[index] : str->u.str8[index];
-}
-
-static inline BOOL qjs_regexp_is_empty_string(JSValueConst value)
-{
-    int tag = JS_VALUE_GET_TAG(value);
-    return (tag == JS_TAG_STRING || tag == JS_TAG_STRING_ROPE) &&
-           JS_VALUE_GET_STRING(value)->len == 0;
-}
-
-QJS_INTERNAL JSValue qjs_regexp_new_string8_len(JSContext *ctx,
-                                                const char *buf, int len);
-QJS_INTERNAL JSValue qjs_regexp_new_string8(JSContext *ctx, const char *buf);
-QJS_INTERNAL JSValue qjs_regexp_sub_string(JSContext *ctx, JSString *str,
-                                           int start, int end);
-QJS_INTERNAL int qjs_regexp_string_buffer_init2(JSContext *ctx,
-                                                StringBuffer *buf, int size,
-                                                int is_wide);
-QJS_INTERNAL int qjs_regexp_string_buffer_putc16(StringBuffer *buf,
-                                                 uint32_t c);
-QJS_INTERNAL int qjs_regexp_string_getc(const JSString *str, int *index);
-QJS_INTERNAL int qjs_regexp_string_buffer_puts8(StringBuffer *buf,
-                                                const char *str);
-QJS_INTERNAL int qjs_regexp_string_buffer_concat(StringBuffer *buf,
-                                                 const JSString *str,
-                                                 int from, int to);
-QJS_INTERNAL int qjs_regexp_string_buffer_concat_value(StringBuffer *buf,
-                                                       JSValueConst value);
-QJS_INTERNAL int qjs_regexp_string_buffer_concat_value_free(
-    StringBuffer *buf, JSValue value);
-QJS_INTERNAL JSValue qjs_regexp_concat_string3(JSContext *ctx,
-                                               const char *prefix,
-                                               JSValue str,
-                                               const char *suffix);
 QJS_INTERNAL JSShape *qjs_regexp_new_shape2(JSContext *ctx, JSObject *proto,
                                             int hash_size, int prop_size);
 QJS_INTERNAL JSShape *qjs_regexp_dup_shape(JSShape *shape);
@@ -117,17 +81,6 @@ QJS_INTERNAL JSValue qjs_regexp_get_this(JSContext *ctx,
                                          JSValueConst this_val);
 QJS_INTERNAL int qjs_regexp_get_length64(JSContext *ctx, int64_t *length,
                                          JSValueConst obj);
-QJS_INTERNAL int qjs_regexp_string_indexof_char(JSString *str, int c,
-                                                int from);
-QJS_INTERNAL int64_t qjs_regexp_string_advance_index(JSString *str,
-                                                     int64_t index,
-                                                     BOOL unicode);
-QJS_INTERNAL int qjs_regexp_string_get_substitution(
-    JSContext *ctx, StringBuffer *buf, JSValueConst matched, JSString *str,
-    uint32_t position, JSValueConst captures_value,
-    JSValueConst named_captures, JSValueConst replacement,
-    uint8_t **captures, uint32_t captures_len);
-
 QJS_INTERNAL void qjs_regexp_finalizer(JSRuntime *rt, JSValue value);
 QJS_INTERNAL void qjs_regexp_string_iterator_finalizer(JSRuntime *rt,
                                                        JSValue value);

@@ -279,6 +279,17 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+String ownership prerequisite completed:
+
+- Added `internal-string.h` as the acyclic runtime -> string -> object layer.
+  It owns atom-tag representation, StringBuffer layout, hot character/empty
+  inlines, allocation/conversion/buffer APIs, debug hooks, invalid-codepoint and
+  RegExp-facing string bridges formerly scattered in object/RegExp headers.
+- GCC 16 and Clang 23 WERROR clean builds/tests pass. This is an ownership-only
+  header change; no executable path or forced-inline policy changed.
+- Primitive extraction remains gated on a genuine numeric/BigInt internal owner;
+  forcing it now would introduce roughly 30 non-string trampolines.
+
 Proxy milestone completed:
 
 - `builtin-proxy.c` owns proxy state callbacks, traps, exotic vtable, descriptor/
