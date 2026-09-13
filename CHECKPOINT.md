@@ -279,6 +279,20 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Builtin composition and Math milestone completed:
+
+- `src/quickjs/builtin.c` owns the exact ordered intrinsic-install sequence;
+  runtime/context creation now calls its two narrow phase entry points.
+- `src/quickjs/builtin-math.c` owns Math functions, sumPrecise iterator handling,
+  random-state initialization, method/constants tables, and installation.
+  VM-shared power remains core-owned; only three iterator adapters cross inward.
+- GCC 16 and Clang 23 WERROR clean builds/tests pass; Test262 remains exactly
+  `58/83558`. Math initialization order and qjsc feature selection are preserved.
+- Ten-run screening: math_min +4.59%, int/float arithmetic -9.98%/-13.42%,
+  array_read -3.14%, string_build2 +8.54%, RegExp ASCII +11.59%, replace +7.55%.
+  These shifting cross-workload results remain classified as intermediate code-
+  layout effects pending the final engine layout, not cancellation by aggregate.
+
 RegExp builtin milestone completed:
 
 - `src/quickjs/builtin-regexp.c` owns RegExp compilation/setup, class and string-
