@@ -30,6 +30,10 @@
 QJS_INTERNAL int qjs_add_intrinsic_basic_objects(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_math(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsics(JSContext *ctx);
+QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx);
+QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx);
+QJS_INTERNAL int qjs_add_intrinsic_bigint(JSContext *ctx);
+QJS_INTERNAL void qjs_primitive_init_classes(JSRuntime *rt);
 
 QJS_INTERNAL JSValue qjs_math_get_iterator(JSContext *ctx,
                                            JSValueConst obj, BOOL is_async);

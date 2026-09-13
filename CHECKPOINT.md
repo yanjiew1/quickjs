@@ -279,6 +279,18 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Numeric ownership and primitive milestone completed:
+
+- Added `internal-number.h` and `builtin-primitive.c`/`internal-primitive.h`.
+  Number, Boolean, String, Symbol and BigInt now share one owner with three exact-
+  order install phases. String exotic behavior stays private; hot string/atom
+  access remains header-inline.
+- GCC 16 and Clang 23 WERROR clean builds/tests pass; Test262 remains exactly
+  `58/83558`. Seven-run focused results include array_read +0.34%, float/int
+  arithmetic -10.85%/-5.86%, string_to_int -6.41%, but int_to_string +7.59%,
+  string_build2 +7.62%, RegExp ASCII +7.70%, replace +7.96%; unresolved layout
+  regressions remain for final stabilization.
+
 String ownership prerequisite completed:
 
 - Added `internal-string.h` as the acyclic runtime -> string -> object layer.

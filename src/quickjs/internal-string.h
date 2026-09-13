@@ -100,6 +100,34 @@ QJS_INTERNAL int qjs_string_buffer_putc8(StringBuffer *buf, uint32_t c);
 QJS_INTERNAL int qjs_string_buffer_putc(StringBuffer *buf, uint32_t c);
 QJS_INTERNAL JSValue qjs_string_buffer_end(StringBuffer *buf);
 QJS_INTERNAL int qjs_string_find_invalid_codepoint(JSString *str);
+QJS_INTERNAL JSAtom qjs_get_atom_index(JSRuntime *rt, JSAtomStruct *str);
+QJS_INTERNAL JSValue qjs_new_symbol(JSContext *ctx, JSString *str,
+                                    int atom_type);
+QJS_INTERNAL JSValue qjs_new_string8_len(JSContext *ctx, const char *buf,
+                                         int len);
+QJS_INTERNAL JSValue qjs_new_string8(JSContext *ctx, const char *buf);
+QJS_INTERNAL JSValue qjs_new_string16_len(JSContext *ctx,
+                                          const uint16_t *buf, int len);
+QJS_INTERNAL JSValue qjs_new_string_char(JSContext *ctx, uint16_t c);
+QJS_INTERNAL JSValue qjs_sub_string(JSContext *ctx, JSString *str,
+                                    int start, int end);
+QJS_INTERNAL int qjs_string_buffer_init2(JSContext *ctx, StringBuffer *buf,
+                                         int size, int is_wide);
+QJS_INTERNAL int qjs_string_buffer_putc16(StringBuffer *buf, uint32_t c);
+QJS_INTERNAL int qjs_string_getc(const JSString *str, int *index);
+QJS_INTERNAL int qjs_string_buffer_puts8(StringBuffer *buf, const char *str);
+QJS_INTERNAL int qjs_string_buffer_concat(StringBuffer *buf,
+                                          const JSString *str,
+                                          int from, int to);
+QJS_INTERNAL int qjs_string_buffer_concat_value(StringBuffer *buf,
+                                                JSValueConst value);
+QJS_INTERNAL int qjs_string_buffer_concat_value_free(StringBuffer *buf,
+                                                     JSValue value);
+QJS_INTERNAL int qjs_string_buffer_fill(StringBuffer *buf, int c, int count);
+QJS_INTERNAL JSValue qjs_concat_string3(JSContext *ctx, const char *prefix,
+                                        JSValue value, const char *suffix);
+QJS_INTERNAL JSValue qjs_concat_string(JSContext *ctx, JSValue left,
+                                       JSValue right);
 
 QJS_INTERNAL JSValue qjs_regexp_new_string8_len(JSContext *ctx,
                                                 const char *buf, int len);
