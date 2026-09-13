@@ -279,11 +279,25 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
-1. Commit the coherent buildable module-extraction milestone with its current
-   non-LTO layout observation recorded.
-2. Mechanically gather the remaining parser/compiler ranges into a coarse
-   frontend TU while leaving `JS_CallInternal` and hot object/value code intact.
-3. Validate each boundary incrementally, then split builtin clusters before hot
+Frontend milestone completed after this section was first written:
+
+- `src/quickjs/frontend.c` now owns lexer/parser/import-export syntax, scopes,
+  lowering/optimization, eval bridges, bytecode metadata/freeing, and JSON token
+  parsing; `JSParseState` and `JSToken` remain TU-private.
+- `internal-frontend.h` exposes only the compact JSON reviver record and five
+  cold adapters needed by the builtin JSON reviver remaining in `quickjs.c`.
+- GCC 16 and Clang 23 WERROR clean parallel builds and `make test` pass;
+  CONFIG_CHECK_JSVALUE compiles all four engine TUs. `DUMP_BYTECODE=127` syntax
+  validation passes. Full Test262 remains exactly `58/83558`.
+- GCC non-LTO qjs text is 1,079,736 bytes versus baseline 1,080,048 (-312).
+  Ten-run interleaved screening: `array_read` -4.54%, `func_call` +1.16%,
+  RegExp ASCII/UTF16 -0.95%/-1.58%, but `string_build2` +9.05% and
+  `regexp_replace` +7.45%. Neither slower path calls frontend code; these are
+  recorded layout regressions for final stabilization after builtin/core splits.
+
+1. Commit the coherent buildable frontend-extraction milestone with current
+   non-LTO layout observations recorded.
+2. Split builtin clusters before hot
    core ownership work. Revisit the recorded branch-miss regression only after
    those boundaries establish the final code layout.
 

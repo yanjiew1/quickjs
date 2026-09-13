@@ -235,8 +235,8 @@ Status: [~] in progress.
   interpreter together initially. Parser/compiler extraction mechanically gathers
   its noncontiguous source ranges around module runtime. Determine crossing
   symbols from actual compiler/link diagnostics and owner-specific declarations.
-  Module runtime is complete and validated; the coarse frontend extraction is
-  the remaining part of this item. A RegExp code-layout observation remains open.
+  Module runtime and the coarse frontend are complete and correctness-validated.
+  Intermediate code-layout observations keep the item `[~]` until stabilization.
 - [x] Verify public header/API and bytecode round-trip behavior, qjsc-generated
   examples, modules, fuzz archive compilation, CONFIG_CHECK_JSVALUE, GCC/Clang,
   clean/parallel builds, tests, Test262 comparison, and microbenchmark screen.

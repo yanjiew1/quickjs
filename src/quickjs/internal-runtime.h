@@ -37,6 +37,11 @@ static inline void qjs_dbuf_init(JSContext *ctx, DynBuf *s)
     dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
 }
 
+static inline int qjs_is_digit(int c)
+{
+    return c >= '0' && c <= '9';
+}
+
 static inline BOOL qjs_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 {
 #if !defined(CONFIG_STACK_CHECK)
@@ -66,6 +71,7 @@ static inline void qjs_set_value(JSContext *ctx, JSValue *slot,
 
 QJS_INTERNAL int qjs_resize_array(JSContext *ctx, void **parray, int elem_size,
                                   int *psize, int req_size);
+QJS_INTERNAL void qjs_dbuf_bytecode_init(JSContext *ctx, DynBuf *buf);
 QJS_INTERNAL void qjs_dbuf_put_leb128(DynBuf *s, uint32_t v);
 QJS_INTERNAL void qjs_dbuf_put_sleb128(DynBuf *s, int32_t v);
 QJS_INTERNAL int qjs_get_leb128(uint32_t *pval, const uint8_t *buf,
@@ -76,5 +82,13 @@ QJS_INTERNAL JSValue qjs_throw_stack_overflow(JSContext *ctx);
 QJS_INTERNAL void qjs_add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                                 JSGCObjectTypeEnum type);
 QJS_INTERNAL void qjs_remove_gc_object(JSGCObjectHeader *h);
+QJS_INTERNAL int qjs_find_line_num(JSContext *ctx, JSFunctionBytecode *bytecode,
+                                   uint32_t pc_value, int *pcol_num);
+QJS_INTERNAL void qjs_build_backtrace(JSContext *ctx, JSValueConst error_obj,
+                                      const char *filename, int line_num,
+                                      int col_num, int flags);
+QJS_INTERNAL JSValue qjs_throw_error2(JSContext *ctx, JSErrorEnum error_num,
+                                      const char *fmt, va_list ap,
+                                      BOOL add_backtrace);
 
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

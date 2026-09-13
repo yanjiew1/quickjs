@@ -247,8 +247,8 @@ endif
 endif
 endif
 
-QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/module.o \
-    $(OBJDIR)/src/quickjs/bytecode.o
+QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/frontend.o \
+    $(OBJDIR)/src/quickjs/module.o $(OBJDIR)/src/quickjs/bytecode.o
 QJS_ENGINE_CHECK_OBJS=$(patsubst %.o, %.check.o, $(QJS_ENGINE_OBJS))
 
 all: $(OBJDIR) $(QJS_ENGINE_CHECK_OBJS) $(OBJDIR)/qjs.check.o $(PROGS)
