@@ -35142,6 +35142,17 @@ QJS_INTERNAL int qjs_to_int32_clamp(JSContext *ctx, int *result,
 QJS_INTERNAL int qjs_to_int64_sat(JSContext *ctx, int64_t *result,
                                   JSValueConst value)
 { return JS_ToInt64Sat(ctx, result, value); }
+QJS_INTERNAL int qjs_to_int64_clamp(JSContext *ctx, int64_t *result,
+                                    JSValueConst value, int64_t min,
+                                    int64_t max, int64_t min_offset)
+{ return JS_ToInt64Clamp(ctx, result, value, min, max, min_offset); }
+QJS_INTERNAL int qjs_to_int64_free(JSContext *ctx, int64_t *result,
+                                   JSValue value)
+{ return JS_ToInt64Free(ctx, result, value); }
+QJS_INTERNAL int qjs_to_array_length_free(JSContext *ctx, uint32_t *length,
+                                          JSValue value,
+                                          BOOL is_array_constructor)
+{ return JS_ToArrayLengthFree(ctx, length, value, is_array_constructor); }
 
 QJS_INTERNAL JSAtom qjs_get_atom_index(JSRuntime *rt, JSAtomStruct *str)
 { return js_get_atom_index(rt, str); }
@@ -35188,6 +35199,8 @@ QJS_INTERNAL JSValue qjs_concat_string3(JSContext *ctx, const char *prefix,
 QJS_INTERNAL JSValue qjs_concat_string(JSContext *ctx, JSValue left,
                                        JSValue right)
 { return JS_ConcatString(ctx, left, right); }
+QJS_INTERNAL JSValue qjs_to_locale_string_free(JSContext *ctx, JSValue value)
+{ return JS_ToLocaleStringFree(ctx, value); }
 
 QJS_INTERNAL int qjs_primitive_throw_not_configurable(JSContext *ctx,
                                                       int flags)
@@ -35248,3 +35261,21 @@ QJS_INTERNAL JSValue qjs_primitive_create_array_iterator(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
     int magic)
 { return js_create_array_iterator(ctx, this_val, argc, argv, magic); }
+
+QJS_INTERNAL JSValue qjs_get_property_value(JSContext *ctx,
+                                            JSValueConst obj,
+                                            JSValue property)
+{ return JS_GetPropertyValue(ctx, obj, property); }
+QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst left,
+                                   JSValueConst right, int mode)
+{ return js_strict_eq2(ctx, left, right, mode); }
+QJS_INTERNAL BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
+                                 JSValueConst right)
+{ return js_same_value(ctx, left, right); }
+QJS_INTERNAL int qjs_ordinary_is_instance_of(JSContext *ctx,
+                                             JSValueConst value,
+                                             JSValueConst constructor)
+{ return JS_OrdinaryIsInstanceOf(ctx, value, constructor); }
+QJS_INTERNAL JSContext *qjs_get_function_realm(JSContext *ctx,
+                                               JSValueConst func_obj)
+{ return JS_GetFunctionRealm(ctx, func_obj); }

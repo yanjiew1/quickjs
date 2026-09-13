@@ -45,9 +45,6 @@ QJS_INTERNAL int qjs_expand_fast_array(JSContext *ctx, JSObject *obj,
                                        uint32_t new_len);
 QJS_INTERNAL JSValue qjs_create_array(JSContext *ctx, int len,
                                       JSValueConst *values);
-QJS_INTERNAL int qjs_set_property_value(JSContext *ctx, JSValueConst obj,
-                                        JSValue property, JSValue value,
-                                        int flags);
 QJS_INTERNAL JSValue qjs_primitive_create_array_iterator(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
     int magic);
@@ -59,6 +56,23 @@ QJS_INTERNAL int qjs_typed_array_get_length_unsafe(JSContext *ctx,
 QJS_INTERNAL JSValue qjs_typed_array_species_create(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 QJS_INTERNAL JSValue qjs_throw_array_buffer_oob(JSContext *ctx);
+QJS_INTERNAL void qjs_array_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void qjs_array_mark(JSRuntime *rt, JSValueConst value,
+                                 JS_MarkFunc *mark_func);
+QJS_INTERNAL void qjs_array_iterator_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void qjs_array_iterator_mark(JSRuntime *rt, JSValueConst value,
+                                          JS_MarkFunc *mark_func);
+QJS_INTERNAL void qjs_iterator_concat_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void qjs_iterator_concat_mark(JSRuntime *rt, JSValueConst value,
+                                           JS_MarkFunc *mark_func);
+QJS_INTERNAL void qjs_iterator_helper_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void qjs_iterator_helper_mark(JSRuntime *rt, JSValueConst value,
+                                           JS_MarkFunc *mark_func);
+QJS_INTERNAL void qjs_iterator_wrap_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void qjs_iterator_wrap_mark(JSRuntime *rt, JSValueConst value,
+                                         JS_MarkFunc *mark_func);
+QJS_INTERNAL int qjs_add_intrinsic_array_basic(JSContext *ctx);
+QJS_INTERNAL int qjs_add_intrinsic_iterators(JSContext *ctx);
 
 QJS_INTERNAL JSValue qjs_throw_detached_array_buffer(JSContext *ctx);
 QJS_INTERNAL JSValue qjs_array_buffer_constructor(

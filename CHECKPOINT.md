@@ -279,6 +279,17 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Array conversion/equality ownership prerequisite completed:
+
+- Rehomed Array-needed integer/length conversion, locale-string conversion,
+  property-value get/set, equality, OrdinaryIsInstanceOf, and realm APIs into
+  number/string/property/function headers with bounded core implementations.
+- GCC 16 WERROR clean build/tests and exact Test262 `58/83558` pass. No hot
+  forced-inline helper changed.
+- A compile-only Array trial was removed: its nominal range crosses JSON and a
+  TypedArray species helper. Source extraction is deferred until those owners
+  are separated; no broken or partial file remains.
+
 Iterator/fast-array ownership prerequisite completed:
 
 - Added `internal-iterator.h`; generic iterator traversal, fast-array views, and
