@@ -279,6 +279,17 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Construction/property ownership prerequisite completed:
+
+- Generic function-list instantiation, constructor linking, and module export-
+  list APIs moved to `builtin.c`; `internal-property.h` now centralizes the
+  object -> property -> function layer and rehomes scattered Proxy/RegExp APIs.
+- Hot find-own-property remains core-local `force_inline`; only three bounded
+  allocation/cycle/C-function adapters were added for generic construction.
+- GCC 16 and Clang 23 WERROR clean builds/tests pass; Test262 remains exactly
+  `58/83558`. Base extraction is intentionally deferred until iterator/error/
+  realm bootstrap seams are owned, avoiding another 30 temporary adapters.
+
 Numeric ownership and primitive milestone completed:
 
 - Added `internal-number.h` and `builtin-primitive.c`/`internal-primitive.h`.

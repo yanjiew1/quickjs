@@ -27,29 +27,10 @@
 
 #include "internal-frontend.h"
 
-QJS_INTERNAL JSShape *qjs_regexp_new_shape2(JSContext *ctx, JSObject *proto,
-                                            int hash_size, int prop_size);
-QJS_INTERNAL JSShape *qjs_regexp_dup_shape(JSShape *shape);
-QJS_INTERNAL int qjs_regexp_add_shape_property(JSContext *ctx,
-                                               JSShape **shape,
-                                               JSObject *obj, JSAtom atom,
-                                               int prop_flags);
-QJS_INTERNAL JSValue qjs_regexp_new_object_from_shape(JSContext *ctx,
-                                                      JSShape *shape,
-                                                      JSClassID class_id,
-                                                      JSProperty *props);
-QJS_INTERNAL JSObject *qjs_regexp_get_proto_obj(JSValueConst proto);
 QJS_INTERNAL JSValue qjs_regexp_throw_type_error_not_object(JSContext *ctx);
 QJS_INTERNAL JSValue qjs_regexp_throw_type_error_invalid_class(JSContext *ctx,
                                                                int class_id);
 QJS_INTERNAL void qjs_regexp_throw_interrupted(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_regexp_get_property_int64(JSContext *ctx,
-                                                   JSValueConst obj,
-                                                   int64_t index);
-QJS_INTERNAL int qjs_regexp_expand_fast_array(JSContext *ctx, JSObject *obj,
-                                              uint32_t new_len);
-QJS_INTERNAL int qjs_regexp_define_property_value_int64(
-    JSContext *ctx, JSValueConst obj, int64_t index, JSValue value, int flags);
 QJS_INTERNAL BOOL qjs_regexp_is_c_function(JSContext *ctx, JSValueConst value,
                                            JSCFunction *func, int magic);
 QJS_INTERNAL int qjs_regexp_to_bool_free(JSContext *ctx, JSValue value);
