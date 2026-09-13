@@ -875,3 +875,93 @@ Stabilization; they do not block subsequent structural work. Logs are under
    validated, proceed to secondary targets despite recorded `[~]` performance
    items, then resolve all confirmed meaningful refactor-induced non-LTO losses
    during Final Performance Stabilization.
+
+## Number/value and operator extraction milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+The numeric/value conversion domain is now an independent 4,449-line
+`src/quickjs/number.c`; the residual `quickjs.c` is 8,695 lines. The new owner
+contains primitive coercion and boolean conversion, numeric parsing, complete
+BigInt/multiprecision arithmetic, number/integer/string conversion, the public
+numeric conversion APIs, equality, and every numeric/operator slow path used by
+the VM. BigInt and the slow operators deliberately remain together because the
+operators directly consume the private multiprecision add/multiply/divide,
+logic, shift, power, normalize, and comparison implementation; splitting them
+would expose that implementation rather than create a natural owner boundary.
+
+The cross-TU interface reuses the already established `internal-number.h` and
+`internal-operator.h` surfaces. `qjs_to_primitive[_free]`, the full Int32 slow
+conversion, BigInt64 conversion, and the small value predicates are the only
+new generic owner entries required by residual object code. The original
+`JS_ToFloat64Free` tagged immediate/float fast path remains a scoped inline shell
+whose uncommon coercion path enters `qjs_to_float64_free_slow`; the Uint32
+conversion remains an inline alias to the Int32 owner entry. The tiny BigInt
+sign layout accessor also remains inline for residual debug printing. No large
+function moved to a header. Public API names and behavior are unchanged.
+
+This finer conversion boundary was retained before moving shapes/properties
+because compilation showed a narrow interface already existed from the VM and
+builtin extractions. Shape/property/object allocation, free-value/GC,
+exceptions/backtraces, and value diagnostics remain cohesive in the residual
+core. The current audit recommends extracting runtime/context/jobs/class
+registry next through cold object-lifecycle hooks, then moving the remaining
+object/value owner without separating its mutually dependent shape, property,
+GC, and exception paths.
+
+### Validation and performance
+
+Acceptance validation on the documented source state:
+
+- independent GCC 16.2 WERROR compilation of `quickjs.c` and `number.c`: PASS;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`, including normal and
+  `CONFIG_CHECK_JSVALUE` compilation of both affected engine TUs: PASS;
+- full GCC repository `make test`: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- Clang 23.1 WERROR syntax for both affected TUs, normal and
+  `CONFIG_CHECK_JSVALUE`: PASS; GCC leak/atom-dump syntax variants: PASS;
+- normal `qjs` dynamic exports exactly match the parent 292-name set;
+  `git diff --check`: PASS.
+
+Current GCC 16 non-LTO sizes are: qjs 5,191,120 bytes with 1,057,598 text
+bytes; qjsc 5,179,288/1,031,526 text; run-test262 5,293,192/1,057,255 text;
+and libquickjs.a 9,932,248 bytes. Relative to exact parent `cb0b0ef`, qjs text
+decreased by 832 bytes; file growth is debug/object metadata for the extra TU.
+
+The seven-run CPU-pinned comparison against an exact freshly built `cb0b0ef`
+parent is: `prop_read` -0.14%, `prop_write` +1.32%, `prop_create` -0.52%,
+`array_push` -5.73%, `array_read` -0.09%, `array_slice` 0.00%, `func_call`
+-0.18%, `int_arith` +0.35%, `float_arith` -0.13%, `typed_array_read` +7.30%,
+`string_to_int` -0.86%, `string_build2` -1.92%, `regexp_ascii` -1.24%,
+`regexp_replace` +3.13%, and `sort_bench` -2.36%.
+
+The only initially meaningful isolated loss was `typed_array_read`. A separate
+nine-run read/write confirmation narrowed it to +4.01% read while write improved
+6.29%. The typed-array owner disassembly is byte-for-byte unchanged and no new
+conversion, call, or trampoline occurs in the fast path. Five-repeat counters
+used a parent calibration count twice the current count; normalized per count,
+current instructions and branches decreased about 2.4%, branch misses were
+flat, and cycles increased about 3.8%. This is recorded as an intermediate
+placement/scheduling-sensitive `[~]` observation rather than prompting code
+alignment work while the object/runtime layout is still changing. It remains
+for Final Performance Stabilization. Logs are under `/tmp/qjs-number-build/`;
+the exact parent checkout is `/tmp/quickjs-cb0b0ef`.
+
+### Exact next steps
+
+1. Extract runtime/context/jobs and class-registry ownership without exporting
+   the standard-class callback table. Keep that table with object/GC and use
+   cold owner-level initialization, GC-shutdown, context mark/release, and
+   shape-hash teardown hooks while preserving teardown order exactly.
+2. Move the remaining natural object/value owner: shapes, properties, object
+   allocation, free-value/GC, exceptions/backtraces, and value diagnostics.
+   Preserve the hot lookup, mutation, array, and free-value paths together.
+3. Validate the stable primary-core decomposition, then proceed to secondary
+   targets despite recorded `[~]` performance issues. Resolve all remaining
+   confirmed meaningful refactor-induced non-LTO losses during Final
+   Performance Stabilization after structural migrations finish. Final formal
+   performance validation uses matched pristine/final normal non-LTO builds and
+   the same isolated repeated methodology separately for GCC 16.2 and Clang
+   23.1; supported LTO builds remain correctness requirements and their
+   performance is diagnostic only.

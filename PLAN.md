@@ -110,7 +110,8 @@ src/
     allocator.c             allocator backend and public allocation API
     runtime.c               runtime/context, jobs, GC/lifetime where separable
     atom-string.c           atoms, strings, ropes and string buffers
-    object.c                shapes, properties, objects, exceptions/conversions
+    object.c                shapes, properties, objects, exceptions
+    number.c                value conversions, BigInt, numeric slow operators
     function-vm.c           calls, closures, bytecode VM, generators/async state
     frontend.c              lexer, parser, scopes and bytecode compiler
     module.c                module resolution, linking and evaluation
@@ -165,9 +166,10 @@ split did not duplicate the large generated `static const` tables.
 
 All primary builds use explicit toolchains under `/home/yanjie/opt`:
 
-- GCC `/home/yanjie/opt/gcc-16.2.0/bin/gcc` for the reference non-LTO build;
-- Clang `/home/yanjie/opt/clang-23.1.1/bin/clang` for compiler portability and
-  diagnostics;
+- GCC `/home/yanjie/opt/gcc-16.2.0/bin/gcc` for the intermediate reference
+  non-LTO build and one final non-LTO performance comparison;
+- Clang `/home/yanjie/opt/clang-23.1.1/bin/clang` for compiler portability,
+  diagnostics, and an independent matched final non-LTO performance comparison;
 - their matching `ar`, `nm`, `size`, and `objdump` tools where applicable.
 
 Before structural edits, record commit/tree status, compiler versions, platform
@@ -191,11 +193,14 @@ functions.  Existing `force_inline`/`js_force_inline` behavior is retained.  A
 new forced inline requires evidence recorded in `CHECKPOINT.md`.
 
 Final configurations include GCC and Clang optimized builds, debug/check builds,
-GCC LTO build/correctness, supported sanitizer builds (ASan and UBSan where the
-repository/toolchain supports them), clean and parallel builds, library/examples,
-and the complete available functional suite.  LTO performance is informational;
-non-LTO correctness and performance are completion gates.  Test262 is compared
-by exact failure names, not totals.
+supported GCC and Clang LTO build/correctness, supported sanitizer builds (ASan
+and UBSan where the repository/toolchain supports them), clean and parallel
+builds, library/examples, and the complete available functional suite. Matched
+pristine-versus-final non-LTO performance comparisons are required separately
+for GCC and Clang with the same affinity, isolation, repetition, and statistical
+methodology. LTO performance is informational; non-LTO correctness and
+performance are completion gates. Test262 is compared by exact failure names,
+not totals.
 
 Binary-size comparisons use unstripped `qjs`, text/data/bss section sizes, and
 `libquickjs.a` member/total size under identical flags.  New public exported
@@ -284,10 +289,17 @@ compilation before risky hot-core or builtin subdivisions.
   classification, numeric-index rejection, string reads/equality, and zero-ref
   decrement shells remain scoped inline; runtime teardown and accounting cross
   through owner-level hooks rather than exposing atom storage.
-- [ ] Extract shapes/properties/objects together first, then separate conversions
-  only if the cross-surface remains narrow.  Property lookup/set, fast arrays,
-  primitive conversion, equality, and exception fast paths receive disassembly
-  and benchmark attention.
+- [~] Extract shapes/properties/objects and separate conversions only where the
+  cross-surface remains narrow. Evidence from the established VM/builtin seams
+  supported extracting `number.c` first: it now owns primitive/number/string
+  conversion, BigInt arithmetic, public numeric conversion APIs, equality, and
+  all numeric/operator slow paths. BigInt and operators remain together because
+  separating them would export the private multiprecision arithmetic layer.
+  The float conversion tagged fast path and Uint32 alias remain scoped inline.
+  Shapes/properties/objects/GC/exceptions remain in the residual core for the
+  next ownership pass. Property lookup/set, fast arrays, exception paths, and
+  the recorded typed-array cycle-only observation still require final
+  disassembly and benchmark attention.
 - [x] Keep calls, bytecode dispatch, closures, var refs, generators, and async
   execution in `function-vm.c` unless evidence supports a call/runtime split.
   The complete direct-threaded interpreter, opcode-adjacent iterator support,
@@ -423,9 +435,11 @@ An intentionally cohesive target receives a documented decision but no churn.
 
 ### 7. Final performance stabilization and completion
 
-- [ ] Rebuild pristine baseline and final states with identical GCC non-LTO flags
-  where practical; run repeated focused microbenchmarks and the available broader
-  ECMAScript-only V8 v7 corpus.  Evaluate aggregate and individual workloads.
+- [ ] Rebuild pristine baseline and final states separately with identical GCC
+  non-LTO flags and identical Clang non-LTO flags. For each compiler, run the
+  same CPU-pinned, isolated, repeated microbenchmark methodology and the
+  available broader ECMAScript-only V8 v7 corpus; evaluate aggregate and
+  individual workloads and record compiler-specific differences.
 - [ ] Revisit every deferred meaningful non-LTO regression.  Inspect missed
   inlining, constants, dead code, linker ordering, code layout, and generated
   instructions; attempt proportionate boundary/header/ordering remedies and
