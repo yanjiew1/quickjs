@@ -1105,3 +1105,81 @@ meaningful regression, so no layout correction was attempted. Logs are under
 3. Evaluate developer-tooling targets last, then run final supported-
    configuration correctness and matched pristine/final GCC and Clang normal
    non-LTO performance stabilization. LTO performance remains diagnostic only.
+
+## Host library modularization milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+The former 4,403-line `quickjs-libc.c` is now four normally compiled owners:
+
+- `src/quickjs-libc/loader.c` owns file loading, shared-library loading,
+  import-meta handling, import attributes, JSON modules, and the public module
+  loader;
+- `src/quickjs-libc/std.c` owns formatting, environment/process helpers exposed
+  by `std`, the FILE class and methods, `urlGet`, and std module composition;
+- `src/quickjs-libc/os.c` owns synchronous descriptor, terminal, filesystem,
+  process, and path services plus public `os` module composition;
+- the residual 1,727-line `quickjs-libc.c` owns handlers, signals, timers,
+  polling, rejected promises, worker/SAB/message transport, runtime thread
+  state, shell helpers, loop/await, and binary evaluation.
+
+`evalScript` remains event/host-owned because it directly manages the runtime
+thread state's worker distinction, interrupt recursion, and pending signal bit.
+The loader boundary exposes only load-script and JSON-module-construction hooks;
+the std owner exposes only its value-printer callback; and the event owner
+exposes two table-level `os` module composition hooks. All are hidden from the
+dynamic interface. Two genuinely shared, small error/option helpers are scoped
+static inline in `internal-base.h`.
+
+A finer event split was rejected after dependency review: rw/signal/timer lists,
+poll descriptor indexes, wakers, message queues, worker ports, promise rejection
+checks, job-loop sleep decisions, and teardown all share `JSThreadState` and
+call bidirectionally. Splitting shell lifecycle or workers would expose that
+state or numerous callbacks. The synchronous OS owner is separate because it
+has no dependency on that representation and composes the event API through two
+narrow hooks.
+
+### Validation and performance
+
+Acceptance validation on this source state:
+
+- independent GCC 16.2 WERROR and Clang 23.1 WERROR compilation of all four
+  affected TUs, both normal and `CONFIG_CHECK_JSVALUE`: PASS;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`: PASS;
+- full repository `make test`: PASS, including std/os, cyclic imports, dynamic
+  modules, workers, rw handlers, binary JSON, and generated examples;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- function inventory matches exact parent `d417176` except for the two intended
+  inline helpers; normal `qjs` dynamic exports remain the exact parent 292-name
+  set; `git diff --check`: PASS.
+
+Current GCC 16 non-LTO sizes are: qjs 5,218,296 bytes with 1,057,998 text
+bytes; qjsc 5,206,456/1,032,022 text; run-test262 5,320,432/1,057,719 text;
+and libquickjs.a 10,035,898 bytes. File-size growth is principally separate-TU
+debug metadata; qjs text is 632 bytes above exact parent.
+
+Five alternating parent/current runs of the focused GCC 16 non-LTO screen were
+executed serially on CPU 2. Like-for-like median changes were: `prop_read`
++0.58%, `prop_write` +0.35%, `prop_create` +0.35%, `array_push` +0.23%,
+`array_read` -0.17%, `array_slice` +1.89%, `func_call` +0.18%, `float_arith`
+-0.13%, `typed_array_read` +0.16%, `typed_array_write` -0.21%,
+`string_to_int` +0.00%, `string_build2` -0.20%, `regexp_ascii` +2.18%,
+`regexp_replace` +0.04%, and `sort_bench` -0.46%. `int_arith` is excluded from
+the comparison because the harness selected 100 parent versus 200 current
+iterations, producing a non-comparable apparent -40.22%; unchanged engine
+objects and all surrounding arithmetic workloads provide no regression signal.
+No confirmed meaningful slowdown exists. Logs are under
+`/tmp/qjs-libc-build/`; the exact parent checkout is `/tmp/quickjs-d417176`.
+
+### Exact next steps
+
+1. Map and implement the natural `libregexp.c` compiler/executor boundary,
+   keeping parse/compiler state and executor state private and sharing only the
+   bytecode contract. Validate standalone RegExp, QuickJS behavior, fuzz
+   compilation, exact Test262, and compile-/execute-focused performance.
+2. Assess Unicode runtime ownership next, preserving unambiguous table and
+   recursion/composition ownership and validating generator compatibility.
+3. Evaluate developer-tooling targets last, then perform the full final
+   correctness matrix and matched GCC/Clang pristine-versus-final normal
+   non-LTO performance stabilization.

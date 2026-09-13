@@ -390,14 +390,19 @@ Commits group only related validated batches, for example:
 
 ### 5. Secondary runtime/library targets
 
-- [ ] `quickjs-libc.c`: first extract cohesive `std`/FILE formatting and file/
-  module loading behind narrow loader hooks; keep `os`, event polling, timers,
-  signals, rejected promises, workers, and thread state together in the host/
-  event owner.
-  Then split host helper/loop lifecycle if its thread-state API is small.  Split
-  worker/event code only if the resulting state owner and wake/message interface
-  are clear.  Exercise std/os, loaders, dynamic modules, workers, rw handlers,
-  promises, and event-loop shutdown.
+- [x] `quickjs-libc.c`: file/module loading is owned by `loader.c`; cohesive
+  formatting, the `std` API, and FILE state are owned by `std.c`; synchronous
+  filesystem/process/terminal services and `os` module composition are owned by
+  `os.c`; and the residual host/event owner retains handlers, signals, timers,
+  polling, rejected promises, workers/transports, runtime thread state, shell
+  helpers, loop/await, and binary evaluation. `evalScript` stays with the thread
+  state it mutates. The event owner exposes two hidden module-composition hooks,
+  while loader/std boundaries use only their narrow cold callbacks. Further
+  event/worker/helper splitting was rejected because polling, wake/message
+  transport, worker ports, rejection checks, and teardown are bidirectionally
+  coupled. Std/os, loaders, dynamic modules, workers, rw handlers, promises,
+  event-loop shutdown, exact Test262, GCC/Clang affected-TU checks, exports, and
+  the GCC non-LTO performance screen pass.
 - [ ] `libregexp.c`: share only opcode enum/order and bytecode-header layout in a
   regexp-only internal header; keep `REParseState` and `REExecContext` TU-private,
   extract compiler/parser and executor TUs, and keep register analysis
