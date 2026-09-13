@@ -296,11 +296,13 @@ Commit: `refactor: define QuickJS frontend and bytecode boundaries`
 
 ### 4. Builtin decomposition
 
-- [ ] Split builtins in dependency-aware batches: base object/function/error;
+- [~] Split builtins in dependency-aware batches: base object/function/error;
   arrays and synchronous iterators; primitive/string/math; RegExp; JSON/Reflect/
   Proxy/Symbol; collections; promise/async; global/date; typed-array/Atomics/weak
   references.  Merge adjacent batches when class tables, finalizers, or helper
   traffic show tighter ownership than the conceptual label.
+  The RegExp integration cluster is extracted and correctness-validated; current
+  non-LTO layout regressions keep this item in progress.
 - [ ] Assign the mixed post-serialization core helpers (`JS_NewObjectProtoList`,
   constructor/function-list setup, `JS_ToObject`, and related functions) to the
   object/composition owner before mechanically slicing builtin source regions.

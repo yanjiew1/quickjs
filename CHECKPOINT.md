@@ -279,6 +279,25 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+RegExp builtin milestone completed:
+
+- `src/quickjs/builtin-regexp.c` owns RegExp compilation/setup, class and string-
+  iterator callbacks/state, execution and string protocol methods, tables, and
+  intrinsic installers. `internal-regexp.h` contains its scoped bridge.
+- Both lastIndex helpers remain TU-local `force_inline`; no new forced inline was
+  added. GCC 16 and Clang 23 WERROR clean parallel builds and `make test` pass;
+  all five engine TUs pass CONFIG_CHECK_JSVALUE. Full Test262 remains exactly
+  `58/83558`.
+- An interleaved ten-run GCC screen currently shows broad layout sensitivity:
+  RegExp ASCII +8.05%, UTF16 +6.44%, replace +6.49%, string_build2 +8.42%,
+  array_read +7.85%, and func_call +2.58%. The boundary does not add work to
+  array/string/call paths, and earlier milestone results changed direction as
+  layout evolved. These remain explicit unresolved non-LTO issues for final
+  stabilization after the remaining core/builtin layout is fixed.
+- The standalone `regexp_test` TEST main has a pre-existing type mismatch:
+  `uint8_t[]` is passed where current `lre_exec` requires `uint8_t **`. It fails
+  unchanged under GCC 16 and is deferred rather than fixed during refactoring.
+
 Frontend milestone completed after this section was first written:
 
 - `src/quickjs/frontend.c` now owns lexer/parser/import-export syntax, scopes,
