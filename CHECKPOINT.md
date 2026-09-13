@@ -279,6 +279,16 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Proxy milestone completed:
+
+- `builtin-proxy.c` owns proxy state callbacks, traps, exotic vtable, descriptor/
+  key checks, call/construct dispatch, revocation, tables, and installer. The
+  class table remains static and core exposes one bounded registration adapter.
+- GCC 16 and Clang 23 WERROR clean builds/tests pass; Test262 remains exactly
+  `58/83558`. Seven-run property/call screening retained the known layout pattern:
+  prop_write neutral, prop_read +1.92%, func_call +5.79%, array_read -3.38%,
+  string_build2 +7.98%, RegExp ASCII +13.77%, replace +5.06%.
+
 Global/URI and Date milestone completed:
 
 - `builtin-global.c` owns eval/isNaN/isFinite, parseInt/parseFloat, URI and legacy
