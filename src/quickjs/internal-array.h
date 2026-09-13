@@ -27,6 +27,39 @@
 
 #include "internal-module.h"
 
+static force_inline BOOL qjs_can_extend_fast_array(JSObject *obj)
+{
+    JSObject *proto;
+    if (!obj->extensible)
+        return FALSE;
+    proto = obj->shape->proto;
+    if (!proto)
+        return TRUE;
+    return proto->is_std_array_prototype;
+}
+
+QJS_INTERNAL JSValue qjs_allocate_fast_array(JSContext *ctx, int64_t len);
+QJS_INTERNAL int qjs_try_get_property_int64(JSContext *ctx, JSValueConst obj,
+                                            int64_t index, JSValue *value);
+QJS_INTERNAL int qjs_expand_fast_array(JSContext *ctx, JSObject *obj,
+                                       uint32_t new_len);
+QJS_INTERNAL JSValue qjs_create_array(JSContext *ctx, int len,
+                                      JSValueConst *values);
+QJS_INTERNAL int qjs_set_property_value(JSContext *ctx, JSValueConst obj,
+                                        JSValue property, JSValue value,
+                                        int flags);
+QJS_INTERNAL JSValue qjs_primitive_create_array_iterator(
+    JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
+    int magic);
+
+/* Neutral TypedArray interoperability used by generic Array algorithms. */
+QJS_INTERNAL BOOL qjs_typed_array_is_oob(JSObject *obj);
+QJS_INTERNAL int qjs_typed_array_get_length_unsafe(JSContext *ctx,
+                                                   JSValueConst obj);
+QJS_INTERNAL JSValue qjs_typed_array_species_create(
+    JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue qjs_throw_array_buffer_oob(JSContext *ctx);
+
 QJS_INTERNAL JSValue qjs_throw_detached_array_buffer(JSContext *ctx);
 QJS_INTERNAL JSValue qjs_array_buffer_constructor(
     JSContext *ctx, JSValueConst new_target, uint64_t len, uint64_t *max_len,

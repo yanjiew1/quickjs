@@ -279,6 +279,16 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Iterator/fast-array ownership prerequisite completed:
+
+- Added `internal-iterator.h`; generic iterator traversal, fast-array views, and
+  CopyDataProperties now have an owner-neutral API. `internal-array.h` owns fast-
+  array allocation/growth plus a four-operation TypedArray bridge.
+- `can_extend_fast_array` remains `static force_inline` in the owner header.
+  GCC 16 and Clang 23 WERROR clean builds/tests pass; Test262 remains `58/83558`.
+- Array source extraction awaits rehoming hot conversion/equality/property APIs;
+  this avoids approximately 45 adapter calls on array/iteration paths.
+
 Construction/property ownership prerequisite completed:
 
 - Generic function-list instantiation, constructor linking, and module export-

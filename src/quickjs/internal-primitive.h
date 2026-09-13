@@ -27,6 +27,7 @@
 
 #include "internal-global.h"
 #include "internal-regexp.h"
+#include "internal-array.h"
 
 #define JS_ToInt32Sat qjs_to_int32_sat
 #define JS_ToInt32Clamp qjs_to_int32_clamp
@@ -73,8 +74,5 @@ QJS_INTERNAL JSValue qjs_primitive_new_c_constructor(
     int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
     const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
     const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags);
-QJS_INTERNAL JSValue qjs_primitive_create_array_iterator(
-    JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
-    int magic);
 
 #endif /* QUICKJS_INTERNAL_PRIMITIVE_H */

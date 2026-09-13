@@ -40,16 +40,6 @@ QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_bigint(JSContext *ctx);
 QJS_INTERNAL void qjs_primitive_init_classes(JSRuntime *rt);
 
-QJS_INTERNAL JSValue qjs_math_get_iterator(JSContext *ctx,
-                                           JSValueConst obj, BOOL is_async);
-QJS_INTERNAL JSValue qjs_math_iterator_next(JSContext *ctx,
-                                            JSValueConst iterator,
-                                            JSValueConst method,
-                                            int argc, JSValueConst *argv,
-                                            BOOL *pdone);
-QJS_INTERNAL int qjs_math_iterator_close(JSContext *ctx,
-                                         JSValueConst iterator,
-                                         BOOL is_exception_pending);
 QJS_INTERNAL double qjs_math_pow(double left, double right);
 QJS_INTERNAL int qjs_check_function(JSContext *ctx, JSValueConst value);
 QJS_INTERNAL int qjs_check_exception_free(JSContext *ctx, JSValue value);

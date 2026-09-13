@@ -25,7 +25,7 @@
 #ifndef QUICKJS_INTERNAL_MODULE_H
 #define QUICKJS_INTERNAL_MODULE_H
 
-#include "internal-function.h"
+#include "internal-iterator.h"
 
 QJS_INTERNAL JSModuleDef *qjs_new_module_def(JSContext *ctx, JSAtom name);
 QJS_INTERNAL JSValue qjs_new_module_value(JSContext *ctx, JSModuleDef *module);

@@ -28,6 +28,7 @@
 #include "src/quickjs/internal-global.h"
 #include "src/quickjs/internal-date.h"
 #include "src/quickjs/internal-proxy.h"
+#include "src/quickjs/internal-array.h"
 
 #define check_function qjs_check_function
 #define check_exception_free qjs_check_exception_free
@@ -35,6 +36,7 @@
 #define JS_InstantiateFunctionListItem2 qjs_instantiate_function_list_item
 #define JS_SetConstructor2 qjs_set_constructor2
 #define JS_NewCConstructor qjs_new_c_constructor
+#define can_extend_fast_array qjs_can_extend_fast_array
 
 static const char js_atom_init[] =
 #define DEF(name, str) str "\0"
@@ -8745,17 +8747,6 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
 }
 
 /* return true if an element can be added to a fast array without further tests */
-static force_inline BOOL can_extend_fast_array(JSObject *p)
-{
-    JSObject *proto;
-    if (!p->extensible)
-        return FALSE;
-    proto = p->shape->proto;
-    if (!proto)
-        return TRUE;
-    return proto->is_std_array_prototype;
-}
-
 /* flags can be JS_PROP_THROW or JS_PROP_THROW_STRICT */
 static int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                                JSValue prop, JSValue val, int flags)
@@ -35033,6 +35024,61 @@ QJS_INTERNAL int qjs_proxy_obj_to_desc(JSContext *ctx,
 {
     return js_obj_to_desc(ctx, desc, value);
 }
+
+QJS_INTERNAL JSValue qjs_get_iterator2(JSContext *ctx, JSValueConst obj,
+                                       JSValueConst method)
+{ return JS_GetIterator2(ctx, obj, method); }
+QJS_INTERNAL JSValue qjs_iterator_next2(JSContext *ctx,
+                                        JSValueConst iterator,
+                                        JSValueConst method, int argc,
+                                        JSValueConst *argv, int *done)
+{ return JS_IteratorNext2(ctx, iterator, method, argc, argv, done); }
+QJS_INTERNAL JSValue qjs_iterator_next(JSContext *ctx,
+                                       JSValueConst iterator,
+                                       JSValueConst method, int argc,
+                                       JSValueConst *argv, BOOL *done)
+{ return JS_IteratorNext(ctx, iterator, method, argc, argv, done); }
+QJS_INTERNAL int qjs_iterator_close(JSContext *ctx, JSValueConst iterator,
+                                    BOOL is_exception_pending)
+{ return JS_IteratorClose(ctx, iterator, is_exception_pending); }
+QJS_INTERNAL BOOL qjs_get_fast_array(JSContext *ctx, JSValueConst obj,
+                                     JSValue **values, uint32_t *count)
+{ return js_get_fast_array(ctx, obj, values, count); }
+QJS_INTERNAL int qjs_copy_data_properties(JSContext *ctx,
+                                          JSValueConst target,
+                                          JSValueConst source,
+                                          JSValueConst excluded,
+                                          BOOL set_property)
+{
+    return JS_CopyDataProperties(ctx, target, source, excluded, set_property);
+}
+
+QJS_INTERNAL JSValue qjs_allocate_fast_array(JSContext *ctx, int64_t len)
+{ return js_allocate_fast_array(ctx, len); }
+QJS_INTERNAL int qjs_try_get_property_int64(JSContext *ctx, JSValueConst obj,
+                                            int64_t index, JSValue *value)
+{ return JS_TryGetPropertyInt64(ctx, obj, index, value); }
+QJS_INTERNAL int qjs_expand_fast_array(JSContext *ctx, JSObject *obj,
+                                       uint32_t new_len)
+{ return expand_fast_array(ctx, obj, new_len); }
+QJS_INTERNAL JSValue qjs_create_array(JSContext *ctx, int len,
+                                      JSValueConst *values)
+{ return js_create_array(ctx, len, values); }
+QJS_INTERNAL int qjs_set_property_value(JSContext *ctx, JSValueConst obj,
+                                        JSValue property, JSValue value,
+                                        int flags)
+{ return JS_SetPropertyValue(ctx, obj, property, value, flags); }
+
+QJS_INTERNAL BOOL qjs_typed_array_is_oob(JSObject *obj)
+{ return typed_array_is_oob(obj); }
+QJS_INTERNAL int qjs_typed_array_get_length_unsafe(JSContext *ctx,
+                                                   JSValueConst obj)
+{ return js_typed_array_get_length_unsafe(ctx, obj); }
+QJS_INTERNAL JSValue qjs_typed_array_species_create(
+    JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{ return js_typed_array___speciesCreate(ctx, this_val, argc, argv); }
+QJS_INTERNAL JSValue qjs_throw_array_buffer_oob(JSContext *ctx)
+{ return JS_ThrowTypeErrorArrayBufferOOB(ctx); }
 
 QJS_INTERNAL JSValue qjs_object_proto_class_alloc(
     JSContext *ctx, JSValueConst proto, JSClassID class_id, int prop_count)
