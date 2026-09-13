@@ -279,6 +279,17 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Global/URI and Date milestone completed:
+
+- `builtin-global.c` owns eval/isNaN/isFinite, parseInt/parseFloat, URI and legacy
+  escape functions plus the global table; its install still precedes Number
+  aliases. `builtin-date.c` owns timezone handling, Date arithmetic/parser/
+  formatting, tables, `JS_NewDate`, and `JS_AddIntrinsicDate`.
+- GCC 16 and Clang 23 WERROR clean builds/tests pass; Test262 remains exactly
+  `58/83558`. Date microbenchmarks are neutral/improved (date_parse -0.08%,
+  date_now -3.61%). Current layout observations remain string_build2 +4.94%,
+  RegExp ASCII +11.44%, replace +9.14%; array_read is neutral (-0.72%).
+
 Builtin composition and Math milestone completed:
 
 - `src/quickjs/builtin.c` owns the exact ordered intrinsic-install sequence;
