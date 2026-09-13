@@ -36,23 +36,25 @@ or developer-tooling source split has begun.
 
 ## Current implementation status (2026-09-14)
 
-The primary `quickjs.c` decomposition is structurally complete and
-correctness-validated. The former residual core is now
-`src/quickjs/object.c`, the cohesive owner for values, objects, shapes,
-properties, fast arrays, free-value/GC, exceptions/backtraces, diagnostics,
-standard-class callbacks, and object adapters. Runtime/context/jobs,
-allocation, atom/string, numeric/operator, function/VM, frontend, module,
-bytecode, composition, and builtin-family owners are all independent normally
-linked translation units. There is no remaining root `quickjs.c` build input.
+All planned structural migrations are complete and correctness-validated:
 
-Recorded intermediate non-LTO layout observations remain `[~]` work for Final
-Performance Stabilization; they do not block the secondary runtime/library and
-developer-tooling assessments. Final formal performance validation will compare
-matched pristine and final normal non-LTO builds separately with GCC and Clang.
-The Unicode table generator and Test262 runner are now modularized and
-validated. All planned structural migrations are complete; supported-
-configuration validation and dual-compiler Final Performance Stabilization
-remain.
+- primary QuickJS engine modularization is complete. There is no remaining root
+  `quickjs.c` build input; allocation, runtime/context/jobs, atoms/strings,
+  object/value/property/GC, numeric/operators, function/VM, frontend, module,
+  bytecode, builtin composition, and builtin families have normally linked
+  owners under `src/quickjs/`;
+- secondary runtime/library modularization is complete. `quickjs-libc`, RegExp,
+  and Unicode runtime ownership domains have normally linked implementations;
+- developer-tooling modularization is complete. The Unicode table generator and
+  Test262 runner now use their reviewed natural ownership boundaries.
+
+Recorded intermediate non-LTO layout/microarchitectural observations remain
+`[~]` work and do not invalidate structural completion. The only remaining task
+phase is Final Performance Stabilization, followed by final supported-
+configuration validation, a fresh adversarial review, and final reporting.
+Formal performance validation must compare matched pristine and final normal
+non-LTO builds separately with GCC and Clang; supported LTO correctness remains
+required, while LTO performance is diagnostic only.
 
 ## Inspected starting architecture
 

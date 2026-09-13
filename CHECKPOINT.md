@@ -2,22 +2,35 @@
 
 ## Current status
 
-Implementation is intentionally paused at commit `f8fa5bc` in a coherent,
-buildable, correctness-validated state. The cold engine and builtin decomposition
-is complete: frontend/compiler, modules, bytecode serialization, builtin
-composition, and every planned builtin family are independent translation units.
+Implementation is intentionally paused after `2436025` in a coherent,
+buildable, correctness-validated state. All planned structural migrations are
+complete:
 
-The residual 21,553-line `quickjs.c` still owns allocator/runtime/context/jobs,
-atoms/strings, shapes/objects/properties/GC/conversions, opcode slow paths, the
-complete `JS_CallInternal` interpreter, and generator/async execution. A bounded
-function/VM extraction was the only work in progress when pause was requested;
-it was fully rolled back because substantial boundary work remained. There is no
-partial VM file, header, Makefile edit, or tracked working-tree diff.
+- the primary QuickJS engine has no root `quickjs.c` build input. Normally
+  linked owners under `src/quickjs/` cover allocation, runtime/context/jobs,
+  atoms/strings, object/value/property/GC, numeric/operators, function/VM
+  (including the complete interpreter and generator/async execution), frontend,
+  module runtime, bytecode serialization, builtin composition, and builtin
+  families;
+- secondary runtime/library modularization is complete for `quickjs-libc`, the
+  RegExp compiler/executor, and Unicode case, character-range, normalization,
+  and property/sequence domains;
+- developer-tooling modularization is complete for the Unicode table generator
+  and Test262 runner.
 
-The overall task is not complete. Current non-LTO RegExp/layout regressions are
-deferred under `task.md`, hot-core extraction remains, and no secondary library
-or tooling target has begun. The only untracked file is the user-supplied
-authoritative `task.md`.
+The latest milestones are `aeb7c25` (Unicode runtime), `c2be331` (Unicode table
+generator), and `2436025` (Test262 runner). The latest acceptance state is a
+clean GCC 16.2 WERROR `all` build, full repository `make test`, and exact full
+Test262 comparison at the unchanged `58/83558` errors, `3356` excluded, and
+`6000` skipped. Affected owners also passed independent GCC 16.2 and Clang 23.1
+WERROR compilation and their milestone-specific matched-parent tests. Generated
+Unicode data remains byte-identical. The working tree has no tracked changes;
+the only untracked file is the user-supplied authoritative `task.md`.
+
+The task is not complete. Final Performance Stabilization, final supported-
+configuration validation, a fresh adversarial review, and final reporting
+remain. Intermediate non-LTO observations listed in the final pause handoff
+below remain `[~]` until formally retested and classified.
 
 Authoritative task: `task.md`. Living roadmap: `PLAN.md`.
 
@@ -1526,3 +1539,125 @@ parent checkout is `/tmp/quickjs-c2be331`.
 3. Request a fresh adversarial final review, correct and revalidate any retained
    issues, update PLAN/CHECKPOINT with final evidence, and complete the task only
    when no confirmed meaningful refactor-induced non-LTO regression remains.
+
+## Final structural pause handoff (2026-09-14; authoritative)
+
+All planned source and build-system migrations are complete. No implementation,
+architecture cleanup, validation matrix, or benchmark run is in progress. The
+repository is deliberately paused before Final Performance Stabilization; the
+historical handoffs above remain useful milestone evidence but their old exact
+next steps are superseded by this section.
+
+### Deferred non-LTO observations
+
+The following are formal-retest candidates, not claims that every workload is
+still regressed in the final layout. Several moved substantially or became
+neutral after later link-layout changes:
+
+- the original pristine comparisons identified `prop_read`, `array_read`/
+  `array_push`, `string_build2`, `regexp_ascii`, `regexp_utf16`, and
+  `regexp_replace` as layout-sensitive at different engine milestones;
+- the numeric-owner milestone isolated `typed_array_read` at +4.01% versus its
+  parent. The fast-path owner disassembly was byte-identical, normalized
+  instructions and branches decreased about 2.4%, branch misses were flat, and
+  normalized cycles increased about 3.8%; no extra call/trampoline or semantic
+  work was found;
+- the Unicode-owner milestone isolated normalization at +5.30% across eleven
+  alternating pairs versus its parent. Fixed-count counters were cycles +5.08%,
+  instructions -0.167%, branches +0.98%, and branch misses +17.22%; call sites
+  were identical and no extra semantic work, missed important inline, or
+  trampoline was found;
+- the last general screen after Unicode modularization was neutral versus its
+  exact parent (`prop_read` -0.14%, `prop_write` +0.70%, `func_call` +0.36%,
+  `array_read` +0.17%, `sort_bench` +0.05%, `string_build2` +0.50%, RegExp
+  ASCII +0.04%, UTF-16 -0.85%, and replace +0.46%). This does not replace the
+  required matched final-versus-pristine comparisons.
+
+Under `task.md`, the cycle-only intermediate cases remain `[~]` likely
+layout/microarchitectural observations after their focused structural checks;
+they did not block later migrations. Final Performance Stabilization must retest
+them with both compilers. Every remaining confirmed meaningful
+refactor-induced regression in a normal non-LTO final build must be resolved
+before completion; compiler-specific results must not be generalized from one
+compiler to the other.
+
+Relevant historical raw logs are under `/tmp/qjs-vm-*`,
+`/tmp/qjs-allocator-*`, `/tmp/qjs-atom-*`, `/tmp/qjs-number-build/`,
+`/tmp/qjs-regexp-*`, and `/tmp/qjs-unicode-*` (including
+`/tmp/qjs-unicode-perf/`). These `/tmp` paths are useful on the current host but
+are not durable repository artifacts.
+
+### Pre-existing issues and environmental limits
+
+- Preserve the tracked exact Test262 failure set: 58 failures. Do not fix an
+  unrelated expected failure as part of performance work.
+- `unicode_gen_test` has the exact pre-existing U+1FD3 case-folding failure
+  documented in its milestone section (`ERROR: F` followed by the U+1FD3
+  mapping line). The exact parent produces the same output and exit status; do
+  not change Unicode semantics incidentally.
+- `test262o`, `tests/bench-v8`, and the external `quickjs-benchmarks` corpus are
+  absent. Record continued absence rather than manufacturing substitutes. If a
+  suitable broader ECMAScript-only corpus becomes available, run it for both
+  compilers.
+- GCC 32-bit multilib and the Clang MSan runtime may be unavailable locally.
+  Probe them during final configuration validation and record genuine toolchain
+  limitations. Clean between configuration/compiler changes because the
+  Makefile shares `.obj` paths.
+
+### Preparation completed immediately before this pause
+
+A bounded build-only preparation step rebuilt pristine `04be246` qjs with GCC
+16.2 and Clang 23.1 normal non-LTO settings. No benchmark was run. The temporary
+pristine worktree is `/tmp/quickjs-final-04be246`; preserved binaries are
+`/tmp/qjs-final-perf/bin/baseline-gcc-qjs` and
+`/tmp/qjs-final-perf/bin/baseline-clang-qjs`. Build logs are:
+
+- `/tmp/qjs-final-perf/logs/baseline-gcc-clean.log`
+- `/tmp/qjs-final-perf/logs/baseline-gcc-build.log`
+- `/tmp/qjs-final-perf/logs/baseline-clang-clean.log`
+- `/tmp/qjs-final-perf/logs/baseline-clang-build.log`
+
+These binaries may be reused only after verifying their compiler versions,
+optimization flags, non-LTO status, and configuration exactly match the final
+comparison builds. The pristine text sizes are 1,080,048 bytes with GCC and
+1,103,434 bytes with Clang.
+
+### Exact first actions on resume
+
+1. Verify `HEAD`, `git status`, this handoff, and the pristine-build logs. Do not
+   change architecture unless performance evidence identifies a concrete
+   structural defect.
+2. Build the final tree separately with GCC 16.2 and Clang 23.1 using the exact
+   compiler-specific pristine flags and normal non-LTO configuration. Preserve
+   each binary before cleaning for the other compiler.
+3. For each compiler independently, run alternating pristine/final repository
+   microbenchmarks pinned to CPU 2 with the same isolation, workload calibration,
+   repetitions, and statistical method. Cover the aggregate and important call,
+   property, array/typed-array, string, RegExp, arithmetic, sort, and Unicode
+   normalization workloads; run the broader ECMAScript-only corpus if available.
+4. Confirm any meaningful result with focused alternating runs and counters.
+   Check semantic work, generated code, inlining, calls/trampolines, and linkage
+   before classifying a cycle-only difference as layout-related. Apply only
+   reasonably scoped remedies and rerun affected correctness validation after
+   each retained change. No confirmed meaningful normal non-LTO regression may
+   remain when stabilization closes.
+5. After performance stabilization, run the final supported-configuration and
+   sanitizer correctness matrix (including supported LTO builds), exact Test262,
+   fresh adversarial review, and final documentation/reporting. LTO performance
+   is informational only.
+
+Core reproduction commands begin with clean, compiler-matched builds:
+
+```sh
+make clean
+make -j12 CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
+  HOST_CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
+  AR=/home/yanjie/opt/gcc-16.2.0/bin/gcc-ar CONFIG_WERROR=y qjs
+make clean
+make -j12 CC=/home/yanjie/opt/clang-23.1.1/bin/clang \
+  HOST_CC=/home/yanjie/opt/clang-23.1.1/bin/clang \
+  AR=ar CONFIG_CLANG=y CONFIG_DEFAULT_AR=y CONFIG_WERROR=y qjs
+taskset -c 2 ./qjs --std tests/microbench.js \
+  prop_read prop_write func_call array_read array_push typed_array_read \
+  string_build2 regexp_ascii regexp_utf16 regexp_replace sort_bench
+```
