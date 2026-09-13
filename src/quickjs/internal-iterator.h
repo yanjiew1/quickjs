@@ -29,6 +29,8 @@
 
 QJS_INTERNAL JSValue qjs_get_iterator2(JSContext *ctx, JSValueConst obj,
                                        JSValueConst method);
+QJS_INTERNAL JSValue qjs_get_iterator(JSContext *ctx, JSValueConst obj,
+                                      BOOL is_async);
 QJS_INTERNAL JSValue qjs_iterator_next2(JSContext *ctx,
                                         JSValueConst iterator,
                                         JSValueConst method, int argc,

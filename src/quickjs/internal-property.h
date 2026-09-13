@@ -72,6 +72,8 @@ QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst left,
                                    JSValueConst right, int mode);
 QJS_INTERNAL BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
                                  JSValueConst right);
+QJS_INTERNAL BOOL qjs_same_value_zero(JSContext *ctx, JSValueConst left,
+                                      JSValueConst right);
 #define QJS_EQ_STRICT 0
 #define QJS_EQ_SAME_VALUE 1
 #define QJS_EQ_SAME_VALUE_ZERO 2

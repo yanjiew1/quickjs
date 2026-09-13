@@ -279,6 +279,15 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Collections/weak-reference milestone completed:
+
+- `builtin-collection.c` owns Map/Set/WeakMap/WeakSet, iterators/algebra, groupBy,
+  weak bookkeeping, WeakRef and FinalizationRegistry jobs/state/tables/installers.
+  Hot map hash/lookup remains TU-local; string/rope hashing is small owner-inline.
+- GCC 16 WERROR clean builds/tests, Clang 23 syntax, and Test262 `58/83558` pass.
+  Seven-run map/weak screens are neutral or improved (-0.64% to -5.47%); sort is
+  -2.39%. Existing RegExp layout observations remain (+9.34%/+6.05%).
+
 Atomic Array/TypedArray milestone completed:
 
 - `builtin-array.c` owns Array, synchronous iterators/wrap/concat/helpers and two

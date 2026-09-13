@@ -32,6 +32,12 @@
 #define JS_NEW_CTOR_PROTO_EXIST (1 << 2)
 #define JS_NEW_CTOR_READONLY    (1 << 3)
 
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+
 QJS_INTERNAL int qjs_add_intrinsic_basic_objects(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_math(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsics(JSContext *ctx);
@@ -61,5 +67,8 @@ QJS_INTERNAL JSValue qjs_new_c_constructor(
 QJS_INTERNAL JSValue qjs_new_c_function3(
     JSContext *ctx, JSCFunction *func, const char *name, int length,
     JSCFunctionEnum cproto, int magic, JSValueConst proto, int prop_count);
+QJS_INTERNAL int qjs_init_class_range(JSRuntime *rt,
+                                      const JSClassShortDef *classes,
+                                      int first_class, int class_count);
 
 #endif /* QUICKJS_INTERNAL_BUILTIN_H */
