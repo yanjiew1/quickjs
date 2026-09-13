@@ -273,14 +273,13 @@ compilation before risky hot-core or builtin subdivisions.
 
 ### 2. Core ownership split
 
-- [~] Extract allocator/runtime/context/job ownership. The allocator backend,
-  default malloc implementation, and public runtime/context allocation API now
-  have an independent owner with a two-function private lifecycle seam. Runtime/
-  context/jobs remain in the residual core pending the atom-string and object
-  ownership passes. Keep GC release/marking,
-  weak-reference hooks, runtime class registration, and context teardown with the
-  object/function lifetime owner until module/bytecode/class callback ownership
-  is explicit.
+- [x] Extract allocator/runtime/context/job ownership. `allocator.c` owns the
+  allocator backend, default malloc implementation, and public runtime/context
+  allocation API. `runtime.c` owns runtime/context/jobs, stack policy, class
+  registration, and exception state. The standard-class callback table,
+  free-value/GC implementation, and shapes remain object-owned; runtime crosses
+  that boundary through cold initialization, GC shutdown, context dump/release,
+  context mark, and shape-hash teardown hooks with original ordering preserved.
 - [x] Extract atoms, strings, ropes, and string-buffer operations.  Preserve hot
   atom/string/value accessors as scoped `static inline` helpers when already
   inline or when non-LTO evidence shows the call boundary is material.

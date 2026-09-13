@@ -965,3 +965,80 @@ the exact parent checkout is `/tmp/quickjs-cb0b0ef`.
    the same isolated repeated methodology separately for GCC 16.2 and Clang
    23.1; supported LTO builds remain correctness requirements and their
    performance is diagnostic only.
+
+## Runtime/context/jobs extraction milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+`src/quickjs/runtime.c` is now an independent 732-line owner for runtime and
+context construction/destruction, job queues, stack policy, runtime/context
+opaque APIs, class-ID allocation and class registration, runtime exception
+state, and cold bytecode-buffer allocation helpers. The residual `quickjs.c` is
+8,018 lines and now consists almost entirely of the cohesive object/value core:
+the standard-class callback table, shapes, object allocation, properties, fast
+arrays, free-value/GC, exceptions/backtraces, value diagnostics, and remaining
+object adapters.
+
+The standard-class table stayed object-owned because it directly names the
+object, function, array, typed-array, collection, and RegExp finalizer/mark
+callbacks. Runtime initialization calls `qjs_object_init_classes()` before the
+existing VM/primitive/module class setup, then `qjs_object_init_shapes()` to
+bind C-function-data call behavior and initialize the shape hash. Runtime
+teardown preserves the exact order: jobs, object GC/leak shutdown, class array,
+atom/string owner, shape hash, allocator report, runtime allocation. Context
+teardown similarly delegates only debug dumping and the five cached-shape
+releases. GC enters the runtime-owned context marker through one cold hook.
+
+Strict-mode property checks continue to use the existing scoped inline helper.
+The interrupt counter fast path also remains inline, while its rare slow path
+and exception construction remain object-owned; this avoids adding an error
+construction interface merely to make the cold runtime file larger. The
+boundary therefore exposes owner-level lifetime operations rather than the
+callback table or individual shape internals.
+
+### Validation and performance
+
+Acceptance validation on the documented source state:
+
+- independent GCC 16.2 WERROR compilation of `quickjs.c` and `runtime.c`: PASS;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`, including normal and checked
+  compilation of the affected TUs: PASS;
+- full GCC repository `make test`: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- Clang 23.1 WERROR syntax for both affected TUs, normal and
+  `CONFIG_CHECK_JSVALUE`: PASS; combined GCC leak/atom/shape/object/memory dump
+  syntax: PASS;
+- normal `qjs` dynamic exports exactly match the parent 292-name set;
+  `git diff --check`: PASS.
+
+Current GCC 16 non-LTO sizes are: qjs 5,202,648 bytes with 1,057,334 text
+bytes; qjsc 5,190,808/1,031,390 text; run-test262 5,304,664/1,057,119 text;
+and libquickjs.a 9,981,912 bytes. Relative to exact parent `e035255`, qjs text
+decreased by 264 bytes; file growth is object/debug metadata for the extra TU.
+
+The five-run CPU-pinned comparison against an exact freshly built `e035255`
+parent is: `prop_read` +0.86%, `prop_write` +0.44%, `prop_create` -0.26%,
+`array_push` -0.38%, `array_read` +0.78%, `array_slice` +2.53%, `func_call`
++1.00%, `int_arith` -0.42%, `float_arith` +0.22%, `typed_array_read` -5.45%,
+`typed_array_write` -4.87%, `string_to_int` -1.05%, `string_build2` +2.55%,
+`regexp_ascii` +4.27%, `regexp_replace` +0.02%, and `sort_bench` -0.83%.
+No runtime-boundary workload has a confirmed meaningful regression, so no
+layout correction was attempted. Logs are under `/tmp/qjs-runtime-build/`; the
+exact parent checkout is `/tmp/quickjs-e035255`.
+
+### Exact next steps
+
+1. Move the residual object/value core into `src/quickjs/object.c`, retaining
+   shapes, properties, object allocation, fast arrays, free-value/GC,
+   exceptions/backtraces, value diagnostics, the standard-class callbacks, and
+   object adapters together. Remove now-unnecessary lifecycle bridges that
+   become owner-local, but keep the runtime-facing cold hooks.
+2. Independently compile and validate the final primary-core owner, run exact
+   Test262 and the focused GCC non-LTO screen, and investigate only confirmed
+   structural defects before recording layout-only issues for final
+   stabilization.
+3. Once primary-core correctness is stable, proceed to secondary runtime/library
+   targets despite recorded `[~]` performance observations, then developer
+   tooling. Final formal non-LTO performance validation remains required for
+   matched GCC and Clang pristine/final builds.
