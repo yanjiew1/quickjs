@@ -272,7 +272,8 @@ all: $(OBJDIR) $(QJS_ENGINE_CHECK_OBJS) $(OBJDIR)/qjs.check.o $(PROGS)
 QJS_LIBC_OBJS=$(OBJDIR)/src/quickjs-libc/loader.o \
     $(OBJDIR)/src/quickjs-libc/std.o $(OBJDIR)/src/quickjs-libc/os.o \
     $(OBJDIR)/quickjs-libc.o
-QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(QJS_LIBC_OBJS)
+QJS_REGEXP_OBJS=$(OBJDIR)/libregexp.o $(OBJDIR)/src/libregexp/exec.o
+QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/dtoa.o $(QJS_REGEXP_OBJS) $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(QJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -301,7 +302,7 @@ fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 fuzz_compile: $(OBJDIR)/fuzz_compile.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/libregexp.fuzz.o $(OBJDIR)/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
+fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(patsubst %.o, %.fuzz.o, $(QJS_REGEXP_OBJS)) $(OBJDIR)/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
@@ -390,8 +391,8 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: libregexp.c libunicode.c cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
+regexp_test: libregexp.c src/libregexp/exec.c libunicode.c cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c src/libregexp/exec.c libunicode.c cutils.c $(LIBS)
 
 unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o

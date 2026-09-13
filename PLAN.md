@@ -403,12 +403,14 @@ Commits group only related validated batches, for example:
   coupled. Std/os, loaders, dynamic modules, workers, rw handlers, promises,
   event-loop shutdown, exact Test262, GCC/Clang affected-TU checks, exports, and
   the GCC non-LTO performance screen pass.
-- [ ] `libregexp.c`: share only opcode enum/order and bytecode-header layout in a
-  regexp-only internal header; keep `REParseState` and `REExecContext` TU-private,
-  extract compiler/parser and executor TUs, and keep register analysis
-  with compilation.  Validate public metadata accessors, fuzz targets, regexp
-  behavior through QuickJS and standalone `regexp_test`; benchmark compile-heavy
-  and execute-heavy cases separately.
+- [x] `libregexp.c`: the compiler/parser, bytecode emission/register analysis,
+  public metadata accessors, and test harness remain in `libregexp.c`; the
+  complete backtracking VM is in `src/libregexp/exec.c`. `REParseState` and
+  `REExecContext` remain TU-private. The regexp-only private header contains
+  only opcode ordering, bytecode-header offsets, and an inline flags read that
+  avoids a new call per execution. Standalone WERROR tests, exact representative
+  bytecode comparison, QuickJS tests/Test262, fuzzer compilation/smoke, and
+  separate compile-/execute-heavy performance screens pass.
 - [ ] `libunicode.c`: extract generic character ranges, case/canonicalization,
   normalization, and property/sequence modules where table ownership stays
   unambiguous. Keep `cr_regexp_canonicalize` with case implementation and

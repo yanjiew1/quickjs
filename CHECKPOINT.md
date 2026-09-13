@@ -1183,3 +1183,80 @@ No confirmed meaningful slowdown exists. Logs are under
 3. Evaluate developer-tooling targets last, then perform the full final
    correctness matrix and matched GCC/Clang pristine-versus-final normal
    non-LTO performance stabilization.
+
+## RegExp compiler/executor milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+`libregexp.c` is now the 2,684-line compiler/bytecode owner: regexp parsing,
+class/string-set construction, bytecode emission and dumping, capture/name
+analysis, register allocation, `lre_compile`, public bytecode metadata
+accessors, and the standalone test harness. `src/libregexp/exec.c` is the
+799-line executor owner: character traversal, private `REExecContext`, timeout
+polling, stack growth, capture rollback, the full backtracking dispatch loop,
+and `lre_exec`.
+
+The only shared representation is `src/libregexp/internal.h`, containing the
+opcode enum generated from the canonical `libregexp-opcode.h`, the eight-byte
+bytecode header offsets, and a small inline flags read. The compiler's opcode
+size/name table remains private; `DUMP_EXEC` generates its own conditional name
+table. Parser/emitter and executor state, macros, allocators, and helpers do not
+cross the boundary. The inline flags read specifically avoids turning the
+former same-TU `lre_get_flags` use into a normal non-LTO call on every match.
+
+The explicit archive/fuzz/standalone build rules include the executor object,
+and release packaging now copies the modular engine, host-library, and RegExp
+source trees rather than the removed root `quickjs.c`.
+
+### Incidental pre-existing test repair
+
+The parent standalone `regexp_test` target failed GCC WERROR before the split:
+its test-only capture buffer was declared `uint8_t *` even though `lre_exec`
+requires `uint8_t **`, causing incompatible accesses and underallocation, and
+the harness omitted the required `lre_check_timeout` callback. These
+`#ifdef TEST`-only defects directly blocked required validation, so the capture
+declaration and no-timeout callback were corrected. Production library behavior
+and public headers are unchanged.
+
+### Validation and performance
+
+Acceptance validation on this source state:
+
+- independent GCC 16.2 and Clang 23.1 WERROR compilation of compiler and
+  executor, including `CONFIG_CHECK_JSVALUE`, `DUMP_REOP`, and `DUMP_EXEC`:
+  PASS;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all` and full `make test`: PASS;
+- standalone GCC WERROR `regexp_test` plus basic capture, named backreference,
+  and Unicode-sets cases: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- five representative compiled regexp bytecode buffers are byte-for-byte
+  identical to exact parent `0c24560`;
+- Clang 23 compiles all fuzzer objects; its installation lacks libFuzzer runtime
+  archives, while the available Clang 21 builds the full target and completes a
+  1,000-run `fuzz_regexp` smoke without failure;
+- normal `qjs` dynamic exports remain the exact parent 292-name set;
+  `release.sh` syntax and `git diff --check`: PASS.
+
+Current GCC 16 non-LTO qjs size is 5,218,408 bytes with 1,058,030 text bytes,
+32 text bytes above exact parent. The compiler and executor object text sizes
+are 26,710 and 7,448 bytes respectively.
+
+Seven alternating parent/current CPU-2 runs show execution medians of
+`regexp_ascii` -1.35%, `regexp_utf16` -0.60%, and `regexp_replace` -0.22%.
+An eleven-pair changing-pattern compile benchmark is +0.06%. No confirmed
+meaningful regression exists. Logs and bytecode comparisons are under
+`/tmp/qjs-regexp-build/`; the exact parent checkout is
+`/tmp/quickjs-0c24560`.
+
+### Exact next steps
+
+1. Map `libunicode.c` into natural case/canonicalization, generic-range,
+   normalization, and property/sequence ownership domains. Share only compact
+   table-index helpers where needed and keep recursion/composition state
+   cohesive.
+2. Validate runtime Unicode behavior, RegExp canonicalization, exact Test262,
+   generator/test integration, generated-table stability, and focused normal
+   non-LTO performance before committing.
+3. Evaluate `unicode_gen.c` and `run-test262.c` developer-tooling ownership last,
+   then perform final configuration and dual-compiler performance stabilization.
