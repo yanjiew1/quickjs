@@ -41,6 +41,15 @@ QJS_INTERNAL JSValue qjs_iterator_next(JSContext *ctx,
                                        JSValueConst *argv, BOOL *done);
 QJS_INTERNAL int qjs_iterator_close(JSContext *ctx, JSValueConst iterator,
                                     BOOL is_exception_pending);
+QJS_INTERNAL JSValue qjs_iterator_get_complete_value(JSContext *ctx,
+                                                     JSValueConst obj,
+                                                     BOOL *done);
+QJS_INTERNAL JSValue qjs_create_iterator_result(JSContext *ctx,
+                                                JSValue value, BOOL done);
+QJS_INTERNAL JSValue qjs_iterator_proto_iterator(JSContext *ctx,
+                                                 JSValueConst this_val,
+                                                 int argc,
+                                                 JSValueConst *argv);
 QJS_INTERNAL BOOL qjs_get_fast_array(JSContext *ctx, JSValueConst obj,
                                      JSValue **values, uint32_t *count);
 QJS_INTERNAL int qjs_copy_data_properties(JSContext *ctx,

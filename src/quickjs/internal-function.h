@@ -69,6 +69,10 @@ QJS_INTERNAL JSValue qjs_async_function_call(JSContext *ctx,
                                              JSValueConst this_obj,
                                              int argc, JSValueConst *argv,
                                              int flags);
+QJS_INTERNAL void qjs_function_set_properties(JSContext *ctx,
+                                               JSValueConst func,
+                                               JSAtom name, int length);
+/* Promise implementation is owned by builtin-async.c. */
 QJS_INTERNAL JSValue qjs_promise_then(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv);
 QJS_INTERNAL JSVarRef *qjs_get_var_ref(JSContext *ctx, JSStackFrame *frame,

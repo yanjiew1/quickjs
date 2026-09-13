@@ -279,6 +279,17 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Promise/async milestone completed:
+
+- `builtin-async.c` owns Promise data/jobs/rejection/public APIs, Generator
+  installation, and AsyncIterator/AsyncFunction/AsyncGenerator tables/classes;
+  VM execution/resume stays core-owned behind typed bridges.
+- GCC 16 WERROR clean builds/tests, DUMP_PROMISE syntax, targeted async/generator
+  smoke, Clang 23 syntax and Test262 `58/83558` pass.
+- Seven-run screen: func_call +0.07%, array_read -1.95%, sort -0.62%,
+  string_build2 +1.36%; only RegExp layout remains materially slow (+9.14% ASCII,
+  +9.35% replace) before final stabilization.
+
 Collections/weak-reference milestone completed:
 
 - `builtin-collection.c` owns Map/Set/WeakMap/WeakSet, iterators/algebra, groupBy,
