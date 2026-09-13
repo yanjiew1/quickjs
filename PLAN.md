@@ -411,14 +411,18 @@ Commits group only related validated batches, for example:
   avoids a new call per execution. Standalone WERROR tests, exact representative
   bytecode comparison, QuickJS tests/Test262, fuzzer compilation/smoke, and
   separate compile-/execute-heavy performance screens pass.
-- [ ] `libunicode.c`: extract generic character ranges, case/canonicalization,
-  normalization, and property/sequence modules where table ownership stays
-  unambiguous. Keep `cr_regexp_canonicalize` with case implementation and
-  sequence properties with property decoding. Keep normalization recursion/
-  composition together, and place only compressed table-index helpers in the
-  small table-private header. Validate case folding,
-  identifier checks, normalization forms, property/category lookup, regexp
-  canonicalization, and sequence properties.
+- [~] `libunicode.c`: generic character ranges, case/canonicalization,
+  normalization, and property/sequence handling are separate natural owners.
+  `cr_regexp_canonicalize` remains with case implementation; sequence
+  properties remain with property decoding; and normalization recursion and
+  composition remain together. Generated table selectors give every compressed
+  table one owner, while only compressed table-index helpers are shared inline.
+  Case folding, identifier checks, all normalization forms, property/category
+  lookup, RegExp canonicalization, sequence properties, fuzz integration,
+  generated-table stability, tests, and exact Test262 pass. A reproducible GCC
+  non-LTO normalization slowdown has unchanged instruction work and a branch-
+  miss/layout signature; it is recorded for final performance stabilization and
+  keeps this item `[~]`.
 
 Likely commits:
 

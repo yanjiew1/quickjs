@@ -1260,3 +1260,94 @@ meaningful regression exists. Logs and bytecode comparisons are under
    non-LTO performance before committing.
 3. Evaluate `unicode_gen.c` and `run-test262.c` developer-tooling ownership last,
    then perform final configuration and dual-compiler performance stabilization.
+
+## Unicode runtime modularization milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+The former 2,124-line `libunicode.c` is now four normally compiled owners:
+
+- the 486-line root `libunicode.c` owns case conversion/folding, RegExp
+  canonicalization, the case-derived range builder, and the hot cased predicate;
+- `src/libunicode/char-range.c` owns the generic `CharRange` allocator and set
+  operations;
+- `src/libunicode/normalize.c` owns canonical combining-class lookup,
+  decomposition recursion, composition, and all normalization forms;
+- `src/libunicode/property.c` owns identifier predicates, Unicode scripts,
+  categories, binary properties, property-stack decoding, code-point
+  categorization, and sequence properties.
+
+The generated `libunicode-table.h` now places case, normalization, and property
+data behind owner selectors, so no large compressed table is emitted into more
+than one object. `Cased1` remains case-owned because `lre_is_cased` directly
+searches the case-conversion table on the final-sigma path. `Case_Ignorable`
+remains property-owned because the generated property pointer table refers to
+it. The only cross-owner behavior interface is the hidden case-range builder
+used by property expressions; compressed-table lookup primitives are static
+inline in a 104-line table-private header. Generic range storage and all larger
+functions remain out of headers.
+
+`unicode_gen.c` emits the owner selectors itself. Regeneration from the pinned
+Unicode inputs is reproducible, with all numeric table data byte-for-byte
+unchanged; only the selector guards differ from exact parent `cff9213`.
+Archive, debug, non-LTO, fuzz, check, and cross-host object variants all depend
+on the generated table. Standalone RegExp and release-packaging rules include
+the new Unicode source directory.
+
+### Validation and performance
+
+Acceptance validation on this source state:
+
+- independent GCC 16.2 and Clang 23.1 WERROR compilation of all four affected
+  Unicode TUs, plus GCC `CONFIG_CHECK_JSVALUE` compilation: PASS;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all` and full repository `make test`:
+  PASS;
+- focused NFC/NFD, case/final-sigma, script/property, Unicode-set, and emoji
+  sequence behavior plus standalone RegExp capture, named-reference, and
+  Unicode-set cases: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- Clang 23 WERROR compilation of all RegExp/Unicode fuzzer objects and a full
+  Clang 21 libFuzzer build with a 1,000-run smoke: PASS;
+- public Unicode global-symbol inventory matches exact parent except for the
+  one intended hidden case-range bridge; normal `qjs` dynamic exports remain
+  the exact parent 292-name set; generated-table reproducibility,
+  `release.sh` syntax, and `git diff --check`: PASS.
+
+Current GCC 16 non-LTO qjs size is 5,211,112 bytes with 1,056,566 text bytes,
+1,464 text bytes below exact parent. The case, character-range, normalization,
+and property objects contain 6,640, 1,638, 20,706, and 33,310 text/data bytes;
+object-symbol inspection confirms each selected compressed table has one owner.
+
+Seven alternating exact-parent/current CPU-2 runs of the general focused screen
+are neutral: `prop_read` -0.14%, `prop_write` +0.70%, `func_call` +0.36%,
+`array_read` +0.17%, `sort_bench` +0.05%, `string_build2` +0.50%,
+`regexp_ascii` +0.04%, `regexp_utf16` -0.85%, and `regexp_replace` +0.46%.
+Unicode-specific medians are case conversion -1.49%, property execution -2.08%,
+and changing-pattern property compilation -0.24%.
+
+Normalization is reproducibly +5.30% across eleven alternating isolated pairs.
+A fixed-count five-repeat `perf stat` check shows cycles +5.08% but instructions
+-0.167%; the parent and current `unicode_normalize` have identical call sites,
+the current function has fewer static branch instructions, and no extra
+semantic work, missed important inline, or trampoline was found. Branches are
++0.98% and branch misses +17.22%, identifying a likely code-placement/branch-
+prediction effect while layout is still changing. This is deferred under the
+intermediate-milestone policy and keeps the Unicode PLAN item `[~]`; it must be
+revisited during final dual-compiler non-LTO stabilization. Raw logs are under
+`/tmp/qjs-unicode-*` and `/tmp/qjs-unicode-perf/`; the exact parent checkout is
+`/tmp/quickjs-cff9213`.
+
+### Exact next steps
+
+1. Assess `unicode_gen.c` developer-tooling ownership, replace `USE_TEST` source
+   inclusion with normal modular linkage/narrow gated hooks, and split only
+   natural generator owners that do not expose its database globally. Validate
+   self-tests and byte-for-byte generated output.
+2. Assess `run-test262.c` ownership and implement only clean runner boundaries;
+   validate bounded serial/threaded/filter/exclusion/reporting behavior before
+   the exact full comparison.
+3. Perform final configuration/correctness validation and matched pristine-vs-
+   final normal non-LTO performance stabilization with both GCC and Clang.
+   Revisit every deferred meaningful regression; LTO performance is diagnostic
+   only, while supported LTO correctness remains required.
