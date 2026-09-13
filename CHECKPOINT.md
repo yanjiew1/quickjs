@@ -2,13 +2,22 @@
 
 ## Current status
 
-Planning, independent plan review, and the pristine pre-refactor baseline are
-complete. The multi-TU build foundation and first independent extraction are
-implemented: binary object/bytecode serialization now compiles as
-`src/quickjs/bytecode.c`. Correctness is validated, but this milestone remains
-`[~]` because GCC non-LTO code-layout observations are deferred to the final
-engine layout. Module lifecycle/resolution/evaluation is also now independently
-compiled and validated. The next structural stage is frontend extraction.
+Implementation is intentionally paused at commit `f8fa5bc` in a coherent,
+buildable, correctness-validated state. The cold engine and builtin decomposition
+is complete: frontend/compiler, modules, bytecode serialization, builtin
+composition, and every planned builtin family are independent translation units.
+
+The residual 21,553-line `quickjs.c` still owns allocator/runtime/context/jobs,
+atoms/strings, shapes/objects/properties/GC/conversions, opcode slow paths, the
+complete `JS_CallInternal` interpreter, and generator/async execution. A bounded
+function/VM extraction was the only work in progress when pause was requested;
+it was fully rolled back because substantial boundary work remained. There is no
+partial VM file, header, Makefile edit, or tracked working-tree diff.
+
+The overall task is not complete. Current non-LTO RegExp/layout regressions are
+deferred under `task.md`, hot-core extraction remains, and no secondary library
+or tooling target has begun. The only untracked file is the user-supplied
+authoritative `task.md`.
 
 Authoritative task: `task.md`. Living roadmap: `PLAN.md`.
 
@@ -277,7 +286,7 @@ Object ordering already failed as a remedy in the preceding milestone. This
 observation stays deferred until the planned RegExp and final engine object
 layout exists; the milestone remains `[~]` under the task's performance policy.
 
-## Exact next steps
+## Milestone history after frontend extraction
 
 Foundational builtin milestone completed:
 
@@ -471,4 +480,132 @@ Useful baseline command prefix:
 make CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
   HOST_CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
   AR=/home/yanjie/opt/gcc-16.2.0/bin/gcc-ar CONFIG_WERROR=y
+```
+
+## Pause handoff snapshot (authoritative current state)
+
+### Completed architecture
+
+The normal engine build links these real independent translation units under
+`src/quickjs/`:
+
+- `frontend.c`: lexer/parser, import/export parsing, scopes, lowering,
+  optimization, eval bridge, bytecode metadata/freeing, JSON token parsing;
+- `module.c`: module lifecycle, namespace behavior, loading, resolution,
+  linking/evaluation and dynamic import;
+- `bytecode.c`: binary object/bytecode writer and reader;
+- `builtin.c`: generic construction/function-list support and ordered intrinsic
+  composition;
+- `builtin-base.c`: Object, Function, Error/AggregateError, Reflect and both
+  foundational bootstrap phases;
+- `builtin-array.c`: Array and synchronous iterator/wrap/concat/helper builtins;
+- `builtin-typed-array.c`: ArrayBuffer/SAB, TypedArray, DataView, codecs, Atomics;
+- `builtin-primitive.c`: Number, Boolean, String, Symbol and BigInt;
+- `builtin-json.c`, `builtin-regexp.c`, `builtin-proxy.c`;
+- `builtin-collection.c`: Map/Set/WeakMap/WeakSet, WeakRef and finalization;
+- `builtin-async.c`: Promise and async/generator builtin tables/jobs;
+- `builtin-math.c`, `builtin-global.c`, and `builtin-date.c`.
+
+Private headers are layered by owner: config/types/opcodes -> runtime -> string
+-> number -> object -> property -> function -> iterator -> modules/frontend,
+with scoped builtin headers. Hot helpers retained inline include atom tags,
+string character access, ref headers, stack/poll checks, shape-property access,
+`qjs_can_extend_fast_array`, RegExp lastIndex access, and small string comparison
+logic. No speculative `always_inline` annotation was added.
+
+The residual `quickjs.c` is 21,553 lines. It deliberately still contains the
+hot/core implementation: allocation/runtime/context/jobs, atoms/strings,
+objects/shapes/properties/GC/conversions, opcode slow paths, the complete
+interpreter, and generator/async execution. `JS_CallInternal` remains whole.
+
+### Current validation
+
+Stopping-state validation on commit `f8fa5bc` plus the documentation edits:
+
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`: PASS;
+- all engine TUs independently compiled with `CONFIG_CHECK_JSVALUE`: PASS;
+- full GCC `make test`: PASS, including modules, workers, std/os/rw handlers,
+  bjson, shared modules and generated qjsc examples;
+- exact full Test262: PASS against the tracked set, `58/83558` errors, `3356`
+  excluded, `6000` skipped; no new or missing failure;
+- latest changed foundational TUs passed Clang 23 WERROR syntax; full Clang 23
+  WERROR builds/tests passed at the preceding major Array/TypedArray state and
+  repeatedly throughout the builtin sequence;
+- Unicode table SHA-256 remains the baseline
+  `cf782bc7a07549e976f606bd3cb8555858482b279574554dcb8d46412986006c`.
+
+Current GCC non-LTO sizes: qjs 5,199,264 bytes and 1,061,294 text bytes; qjsc
+5,187,368/1,035,243 text; run-test262 5,301,320/1,061,047 text;
+libquickjs.a 9,816,096 bytes. Versus baseline, linked qjs text improved by
+18,754 bytes (-1.74%) and unstripped qjs by 111,856 bytes (-2.11%); the archive
+grew 167,856 bytes (+1.74%) due to separate object/debug metadata. This retained
+size improvement is incidental and correctness-validated.
+
+### Current performance and deferred issues
+
+The latest seven-run GCC non-LTO screen at `f8fa5bc` versus baseline measured:
+prop_read +7.35%, prop_write -1.69%, func_call -0.92%, array_read -2.88%,
+sort_bench -0.81%, string_build2 +5.33%, regexp_ascii +5.32%, and
+regexp_replace +9.70%. The RegExp replace slowdown and prop/string observations
+are unresolved meaningful non-LTO issues, so engine/builtin milestones remain
+`[~]`; they must be resolved in final stabilization before completion.
+
+Prior diagnostics showed shifting results as object layout changed, usually with
+near-identical instruction counts and differing branch misses. Remedies already
+attempted include cold-adapter placement, restoring static owner linkage, and
+linking extracted bytecode before core (rejected because it worsened results).
+One direct sort regression was different: +8.94% time and +6.58% instructions.
+Inlining only the small string comparison/length logic in `internal-string.h`
+removed a double cross-TU hop; sort recovered to -1.81% and instructions improved
+from baseline 27.237B to 26.653B. Retain this evidence-backed fix.
+
+The last attempted function/VM extraction mapped current `quickjs.c` lines
+13,414-20,405 as one coherent region, including all opcode slow paths,
+`JS_CallInternal`, calls/closures/iterators and generator/async execution. It was
+fully rolled back on pause because private-boundary integration remained
+substantial. No `function-vm.c`, temporary header, or partial Makefile change is
+present.
+
+Pre-existing issues not to fix incidentally: standalone `regexp_test` has a TEST
+main type mismatch (`uint8_t[]` passed where `lre_exec` expects `uint8_t **`);
+the tracked 58 Test262 failures; absent `test262o`, `tests/bench-v8`, and external
+benchmark corpus; likely unavailable local GCC M32 multilib and Clang MSan
+runtime. Record rather than repair these unless they directly block the refactor.
+
+## Exact next steps
+
+1. Resume the bounded function/VM extraction from current `quickjs.c` lines
+   13,414-20,405. Keep the entire interpreter together, preserve stack/interrupt
+   checks inline, and expose only the rare interrupt slow path. Validate GCC
+   WERROR `all`/`test`, exact Test262, and focused non-LTO call/property/array/
+   string/RegExp screens before committing.
+2. Reassess the residual core after the VM move. Prefer runtime, atom-string and
+   object-value owners only if class/GC callbacks remain group-level and the
+   internal API shrinks; otherwise retain the reviewed minimum defensible
+   coarse `core.c` plus `function-vm.c` architecture.
+3. Complete core correctness and non-LTO stabilization, resolving every confirmed
+   meaningful regression (especially RegExp replace and prop/string observations)
+   before declaring the engine stable.
+4. Only then begin secondary targets in priority order: RegExp compiler/executor,
+   Unicode runtime owners, quickjs-libc host/std/loader split; update special
+   Makefile rules and validate each. Evaluate unicode_gen and run-test262 last,
+   retaining either cohesive file when state ownership makes splitting harmful.
+5. Run final GCC/Clang/LTO/sanitizer/configuration, exact Test262, host, RegExp,
+   Unicode/generator, size/export and broader available benchmark validation;
+   finish PLAN/CHECKPOINT and final report.
+
+Useful commands:
+
+```sh
+make clean
+make -j12 CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
+  HOST_CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
+  AR=/home/yanjie/opt/gcc-16.2.0/bin/gcc-ar CONFIG_WERROR=y all
+make CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
+  HOST_CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
+  AR=/home/yanjie/opt/gcc-16.2.0/bin/gcc-ar CONFIG_WERROR=y test
+timeout 20m ./run-test262 -t -m -c test262.conf -a
+taskset -c 2 ./qjs --std tests/microbench.js \
+  prop_read prop_write func_call array_read sort_bench \
+  string_build2 regexp_ascii regexp_replace
 ```

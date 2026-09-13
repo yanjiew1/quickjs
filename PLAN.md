@@ -18,6 +18,22 @@ retain the original copyright/license notice and should not reformat moved code.
 Progress markers are `[ ]` not started, `[~]` in progress or structurally done
 with an unresolved non-LTO performance issue, and `[x]` completed and validated.
 
+## Paused implementation status (2026-09-13)
+
+Implementation is intentionally paused at commit `f8fa5bc` after completing the
+frontend, module, bytecode, builtin-composition, and all planned builtin-family
+translation units. The residual `quickjs.c` is 21,553 lines and still owns the
+allocator/runtime, atoms/strings, objects/properties/GC/conversions, opcode slow
+paths, the complete interpreter, and generator/async execution. A bounded
+function/VM extraction was attempted after `f8fa5bc` and fully rolled back
+because substantial private-boundary integration remained; there is no partial
+source or header from that attempt in the tree.
+
+The current engine is coherent and correctness-validated, but the overall task
+is not complete. Meaningful non-LTO RegExp/layout observations remain open, so
+the affected engine/builtin milestones stay `[~]`. No secondary runtime/library
+or developer-tooling source split has begun.
+
 ## Inspected starting architecture
 
 The starting tree has one 61,424-line `quickjs.c`, one-object build rules in the
@@ -212,7 +228,8 @@ reviewed plan and checkpoint accompany the first coherent structural commit.
 
 ### 1. Multi-TU engine foundation and low-risk outer extractions
 
-Status: [~] in progress.
+Status: [~] structurally complete for the cold engine/builtin phase; paused with
+performance observations and the hot-core split remaining.
 
 - [x] Create `src/quickjs/` and private configuration/type headers by moving the
   existing preamble and concrete private representations losslessly. Start with
@@ -227,10 +244,10 @@ Status: [~] in progress.
 - [ ] Replace special monolithic compile/link recipes for `regexp_test` and
   `unicode_gen` with the corresponding modular object sets, and preserve the
   generated Unicode-table dependencies in every applicable object variant.
-- [~] First extract binary object/bytecode I/O as one coherent commit. Its narrow
+- [x] First extract binary object/bytecode I/O as one coherent commit. Its narrow
   cross-owner API includes module creation and ArrayBuffer/SAB construction;
   validate module, typed-array and shared-buffer serialization explicitly.
-- [~] Next extract frontend/compiler and module runtime as distinct owners, then
+- [x] Next extract frontend/compiler and module runtime as distinct owners, then
   builtin clusters one coherent commit at a time. Leave the hot runtime/
   interpreter together initially. Parser/compiler extraction mechanically gathers
   its noncontiguous source ranges around module runtime. Determine crossing
@@ -254,7 +271,7 @@ compilation before risky hot-core or builtin subdivisions.
   weak-reference hooks, runtime class registration, and context teardown with the
   object/function lifetime owner until module/bytecode/class callback ownership
   is explicit.
-- [ ] Extract atoms, strings, ropes, and string-buffer operations.  Preserve hot
+- [~] Extract atoms, strings, ropes, and string-buffer operations.  Preserve hot
   atom/string/value accessors as scoped `static inline` helpers when already
   inline or when non-LTO evidence shows the call boundary is material.
   The private string ownership/API layer is complete; source extraction awaits
@@ -267,7 +284,7 @@ compilation before risky hot-core or builtin subdivisions.
   execution in `function-vm.c` unless evidence supports a call/runtime split.
   Interpreter dispatch and opcode handlers must remain within one translation
   unit; no per-opcode modularization.
-- [ ] Resolve `JS_NewContext` -> `JS_AddIntrinsicBasicObjects` and runtime class
+- [x] Resolve `JS_NewContext` -> `JS_AddIntrinsicBasicObjects` and runtime class
   callback dependencies through a small builtin composition entry point and
   narrow lifecycle APIs, not a speculative global registry or dozens of exported
   finalizers.
@@ -283,14 +300,14 @@ Likely commits, adjusted to coherent buildable boundaries:
 
 ### 3. Frontend and bytecode refinement
 
-- [ ] Review the coarse frontend with the compiled dependency graph.  Separate
+- [x] Review the coarse frontend with the compiled dependency graph.  Separate
   module resolution/evaluation only if it does not require exposing parser-local
   state; otherwise keep it with frontend and document why.
-- [ ] Separate lexer/parser from scope/bytecode lowering only if their shared
+- [x] Separate lexer/parser from scope/bytecode lowering only if their shared
   structures can live in `internal-frontend.h` without becoming a second engine
   representation header.  Parsing plus compilation may remain one sizeable but
   cohesive module when that is the more maintainable ownership boundary.
-- [ ] Keep serialization/object-list helpers together unless the object-list API
+- [x] Keep serialization/object-list helpers together unless the object-list API
   demonstrably serves another owner.  Validate byte-for-byte serialized output
   for deterministic fixtures and read/write compatibility in both directions.
 
@@ -303,14 +320,14 @@ Commit: `refactor: define QuickJS frontend and bytecode boundaries`
   Proxy/Symbol; collections; promise/async; global/date; typed-array/Atomics/weak
   references.  Merge adjacent batches when class tables, finalizers, or helper
   traffic show tighter ownership than the conceptual label.
-  The RegExp integration cluster is extracted and correctness-validated; current
-  non-LTO layout regressions keep this item in progress.
-- [ ] Assign the mixed post-serialization core helpers (`JS_NewObjectProtoList`,
+  All listed builtin clusters are extracted and correctness-validated. Current
+  non-LTO RegExp/layout regressions keep this item `[~]`.
+- [x] Assign the mixed post-serialization core helpers (`JS_NewObjectProtoList`,
   constructor/function-list setup, `JS_ToObject`, and related functions) to the
   object/composition owner before mechanically slicing builtin source regions.
-- [ ] Central intrinsic registration remains a small composition layer.  Each
+- [x] Central intrinsic registration remains a small composition layer.  Each
   builtin module owns its method/property tables, class callbacks, and state.
-- [ ] Re-run configuration-sensitive qjsc `-fno-*` examples so optional intrinsic
+- [x] Re-run configuration-sensitive qjsc `-fno-*` examples so optional intrinsic
   installation and dead-code behavior remain correct.  Track archive and final
   executable size after each batch; avoid many thin TUs that add layout/size cost.
 
