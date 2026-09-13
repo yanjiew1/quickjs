@@ -279,6 +279,21 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Atomic Array/TypedArray milestone completed:
+
+- `builtin-array.c` owns Array, synchronous iterators/wrap/concat/helpers and two
+  exact-order bootstrap phases. `builtin-typed-array.c` owns ArrayBuffer/SAB,
+  TypedArray/DataView, codecs, Atomics, species, callbacks/tables/public APIs and
+  the sole typed-size table. `internal-array-algorithm.h` is their neutral seam.
+- GCC 16 and Clang 23 WERROR clean builds/tests pass; Test262 remains `58/83558`.
+  Fast array/view screen is neutral: read -1.61%, write -0.34%, slice +1.27%,
+  typed read +1.81%, typed write -3.10%.
+- Initial sort +8.94% was a confirmed extra-work regression (instructions
+  27.237B -> 29.030B). A focused remedy inlined only the small string comparison/
+  length logic in `internal-string.h`, leaving one hidden memcmp primitive. Sort
+  retested -1.81%; instructions fell to 26.653B. Retain this validated incidental
+  improvement; no new always_inline was added.
+
 JSON milestone completed:
 
 - `builtin-json.c` owns reviver/source records, parse integration, raw JSON,

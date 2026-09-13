@@ -48,6 +48,7 @@ QJS_INTERNAL JSValue qjs_bigint_to_string(JSContext *ctx,
                                           JSValueConst value, int radix);
 QJS_INTERNAL JSValue qjs_to_numeric(JSContext *ctx, JSValueConst value);
 QJS_INTERNAL JSValue qjs_to_number_free(JSContext *ctx, JSValue value);
+QJS_INTERNAL JSValue qjs_to_number(JSContext *ctx, JSValueConst value);
 QJS_INTERNAL int qjs_to_bool_free(JSContext *ctx, JSValue value);
 QJS_INTERNAL int qjs_to_float64_free(JSContext *ctx, double *result,
                                      JSValue value);

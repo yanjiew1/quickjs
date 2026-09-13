@@ -252,10 +252,12 @@ QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/frontend.o \
     $(OBJDIR)/src/quickjs/builtin.o $(OBJDIR)/src/quickjs/builtin-math.o \
     $(OBJDIR)/src/quickjs/builtin-global.o \
     $(OBJDIR)/src/quickjs/builtin-date.o \
+    $(OBJDIR)/src/quickjs/builtin-array.o \
     $(OBJDIR)/src/quickjs/builtin-primitive.o \
     $(OBJDIR)/src/quickjs/builtin-json.o \
     $(OBJDIR)/src/quickjs/builtin-regexp.o \
-    $(OBJDIR)/src/quickjs/builtin-proxy.o
+    $(OBJDIR)/src/quickjs/builtin-proxy.o \
+    $(OBJDIR)/src/quickjs/builtin-typed-array.o
 QJS_ENGINE_CHECK_OBJS=$(patsubst %.o, %.check.o, $(QJS_ENGINE_OBJS))
 
 all: $(OBJDIR) $(QJS_ENGINE_CHECK_OBJS) $(OBJDIR)/qjs.check.o $(PROGS)

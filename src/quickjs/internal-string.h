@@ -79,8 +79,26 @@ QJS_INTERNAL JSString *qjs_alloc_string(JSContext *ctx, int max_len,
 QJS_INTERNAL void qjs_free_string(JSRuntime *rt, JSString *str);
 QJS_INTERNAL const char *qjs_atom_get_str(JSContext *ctx, char *buf,
                                           int buf_size, JSAtom atom);
-QJS_INTERNAL int qjs_string_compare(JSContext *ctx, const JSString *left,
-                                    const JSString *right);
+QJS_INTERNAL int qjs_string_memcmp(const JSString *left, int left_pos,
+                                   const JSString *right, int right_pos,
+                                   int len);
+
+static inline int qjs_string_compare(JSContext *ctx, const JSString *left,
+                                     const JSString *right)
+{
+    int result;
+    int len = min_int(left->len, right->len);
+
+    (void)ctx;
+    result = qjs_string_memcmp(left, 0, right, 0, len);
+    if (result == 0) {
+        if (left->len < right->len)
+            result = -1;
+        else if (left->len > right->len)
+            result = 1;
+    }
+    return result;
+}
 QJS_INTERNAL void qjs_print_atom(JSContext *ctx, JSAtom atom);
 QJS_INTERNAL void qjs_dump_value_write(void *opaque, const char *buf,
                                        size_t len);
