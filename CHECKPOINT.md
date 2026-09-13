@@ -727,3 +727,71 @@ annotation, build, test, and Test262 summaries in the corresponding
    resolve every remaining confirmed meaningful refactor-induced non-LTO
    regression, then run the full supported configuration/sanitizer/correctness/
    export/size review and fresh adversarial audit required by `task.md`.
+
+## Allocator extraction milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+`src/quickjs/allocator.c` is now an independent 582-line owner for the arena and
+large-block allocator, the default system allocator adapter, and the public
+runtime/context allocation API. `quickjs.c` is 15,353 lines. The only new private
+lifecycle surface is `qjs_allocator_init()` plus
+`qjs_default_malloc_functions()` in `internal-allocator.h`; no allocator data
+representation or backend helper was exported.
+
+The context allocation functions moved with the backend after generated-code
+inspection showed that leaving `js_malloc()` in the core introduced an extra
+cross-TU tail-call through `js_malloc_rt()` on every allocation. With one owner,
+GCC again emits a direct call from `js_malloc()` to the private `__js_malloc()`
+backend. GC threshold policy remains in the core because it owns object/runtime
+lifetime rather than raw allocation. Runtime/context/jobs are not yet claimed by
+this milestone.
+
+The residual hot core stays before the cold allocator object in link order. A
+seven-run comparison showed this maintainable ordering recovered the extraction's
+isolated `string_build2` loss; the alternative allocator-first order did not.
+
+### Validation and performance
+
+Acceptance validation on the documented source state:
+
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`, including normal and
+  `CONFIG_CHECK_JSVALUE` compilation of every engine TU: PASS;
+- full GCC repository `make test`: PASS;
+- Clang 21.1 WERROR syntax for `quickjs.c` and `allocator.c`, normal and
+  `CONFIG_CHECK_JSVALUE`: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- `git diff --check`: PASS; normal `qjs` dynamic exports exactly match the
+  baseline 292-name set.
+
+Current GCC non-LTO sizes are: qjs 5,177,376 bytes with 1,059,462 text bytes;
+qjsc 5,165,472/1,033,475 text; run-test262 5,279,432/1,059,279 text; and
+libquickjs.a 9,828,472 bytes.
+
+The final seven-run CPU-pinned comparison against the exact `cbfac5a` VM
+milestone is: `prop_create` -1.15%, `array_slice` +2.26%, `array_push` -11.51%,
+`func_call` -0.01%, `array_read` +0.17%, `string_build2` +0.00%,
+`regexp_ascii` +7.19%, and `regexp_replace` +2.14%. The direct-allocation remedy
+removed confirmed extra work. Both allocator/core link orders were measured;
+the retained core-first order recovered string construction and improved replace,
+but RegExp ASCII remained layout-sensitive. That unresolved non-LTO observation
+is recorded for Final Performance Stabilization and does not block subsequent
+structural work under the task performance policy. Raw build, test, Test262, and
+benchmark logs are `/tmp/qjs-allocator-*` and `/tmp/qjs-allocator-order-*`; the
+fresh comparison checkout is `/tmp/quickjs-cbfac5a`.
+
+### Exact next steps
+
+1. Extract the atom/string owner afresh from the current residual core. Preserve
+   the zero-ref string release fast path, atom-kind and numeric-index checks, and
+   rope/string character hot paths inline where the current dependency and
+   generated-code evidence require them.
+2. Reassess runtime/context/jobs and object/shape/property/GC ownership after the
+   atom-string seam is established. Split only natural ownership domains with
+   narrow dependency direction; keep coupled lifetime and class callbacks
+   together.
+3. When the primary core is structurally stable and correctness-validated,
+   continue to the secondary runtime/library targets even if recorded non-LTO
+   issues remain `[~]`; resolve all confirmed meaningful refactor-induced losses
+   during Final Performance Stabilization.

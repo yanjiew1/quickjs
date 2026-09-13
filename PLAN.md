@@ -107,7 +107,8 @@ src/
     internal-object.h       atom/string/shape/property/object internal API
     internal-function.h     call/interpreter/function internal API
     internal-frontend.h     parser/compiler-only representations and API
-    runtime.c               allocation, runtime/context, jobs, GC/lifetime
+    allocator.c             allocator backend and public allocation API
+    runtime.c               runtime/context, jobs, GC/lifetime where separable
     atom-string.c           atoms, strings, ropes and string buffers
     object.c                shapes, properties, objects, exceptions/conversions
     function-vm.c           calls, closures, bytecode VM, generators/async state
@@ -267,7 +268,11 @@ compilation before risky hot-core or builtin subdivisions.
 
 ### 2. Core ownership split
 
-- [ ] Extract allocator/runtime/context/job ownership. Keep GC release/marking,
+- [~] Extract allocator/runtime/context/job ownership. The allocator backend,
+  default malloc implementation, and public runtime/context allocation API now
+  have an independent owner with a two-function private lifecycle seam. Runtime/
+  context/jobs remain in the residual core pending the atom-string and object
+  ownership passes. Keep GC release/marking,
   weak-reference hooks, runtime class registration, and context teardown with the
   object/function lifetime owner until module/bytecode/class callback ownership
   is explicit.
@@ -297,10 +302,13 @@ compilation before risky hot-core or builtin subdivisions.
   state is correctness-validated and its initially measured array/string/RegExp
   losses received localized hot-placement and direct-owner remediation. Existing
   pristine-baseline string/RegExp layout regressions remain recorded for final
-  stabilization.
+  stabilization. The allocator extraction is also correctness-validated; keeping
+  the core before the cold allocator object recovered its isolated string loss,
+  while an isolated RegExp ASCII layout observation remains recorded.
 
 Likely commits, adjusted to coherent buildable boundaries:
 
+- `refactor: extract QuickJS allocator subsystem`
 - `refactor: extract QuickJS runtime lifecycle`
 - `refactor: extract QuickJS atom and string subsystem`
 - `refactor: extract QuickJS object subsystem`
