@@ -58,6 +58,24 @@ static inline BOOL qjs_class_has_bytecode(JSClassID class_id)
            class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION;
 }
 
+static inline BOOL qjs_is_strict_mode(JSContext *ctx)
+{
+    JSStackFrame *frame = ctx->rt->current_stack_frame;
+    return frame && (frame->js_mode & JS_MODE_STRICT);
+}
+
+QJS_INTERNAL void qjs_function_vm_init_runtime(JSRuntime *rt);
+QJS_INTERNAL void qjs_async_function_gc_free(JSRuntime *rt,
+                                             JSAsyncFunctionState *state);
+QJS_INTERNAL JSValue qjs_instantiate_prototype(JSContext *ctx, JSObject *obj,
+                                               JSAtom atom, void *opaque);
+QJS_INTERNAL JSValueConst qjs_get_active_function(JSContext *ctx);
+QJS_INTERNAL JSVarRef *qjs_global_object_find_uninitialized_var(
+    JSContext *ctx, JSObject *obj, JSAtom atom, BOOL is_lexical);
+QJS_INTERNAL JSValue qjs_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                          JSClassID class_id);
+QJS_INTERNAL JSClassID qjs_function_class_id(int function_kind);
+
 QJS_INTERNAL JSVarRef *qjs_create_var_ref(JSContext *ctx, BOOL is_lexical);
 QJS_INTERNAL JSValue qjs_closure2(JSContext *ctx, JSValue func_obj,
                                  JSFunctionBytecode *bytecode,
@@ -88,6 +106,18 @@ QJS_INTERNAL int qjs_ordinary_is_instance_of(JSContext *ctx,
                                              JSValueConst constructor);
 QJS_INTERNAL JSContext *qjs_get_function_realm(JSContext *ctx,
                                                JSValueConst func_obj);
+QJS_INTERNAL JSValue qjs_invoke_free(JSContext *ctx, JSValue value,
+                                     JSAtom atom, int argc,
+                                     JSValueConst *argv);
+QJS_INTERNAL void qjs_method_set_home_object(JSContext *ctx,
+                                             JSValueConst func,
+                                             JSValueConst home_object);
+QJS_INTERNAL int qjs_method_set_properties(JSContext *ctx,
+                                           JSValueConst func,
+                                           JSAtom name, int flags,
+                                           JSValueConst home_object);
+QJS_INTERNAL BOOL qjs_is_c_function(JSContext *ctx, JSValueConst value,
+                                    JSCFunction *func, int magic);
 
 
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

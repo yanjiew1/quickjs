@@ -228,8 +228,8 @@ reviewed plan and checkpoint accompany the first coherent structural commit.
 
 ### 1. Multi-TU engine foundation and low-risk outer extractions
 
-Status: [~] structurally complete for the cold engine/builtin phase; paused with
-performance observations and the hot-core split remaining.
+Status: [~] structurally complete through the function/VM extraction; residual
+core ownership and deferred final performance stabilization remain.
 
 - [x] Create `src/quickjs/` and private configuration/type headers by moving the
   existing preamble and concrete private representations losslessly. Start with
@@ -280,16 +280,24 @@ compilation before risky hot-core or builtin subdivisions.
   only if the cross-surface remains narrow.  Property lookup/set, fast arrays,
   primitive conversion, equality, and exception fast paths receive disassembly
   and benchmark attention.
-- [ ] Keep calls, bytecode dispatch, closures, var refs, generators, and async
+- [x] Keep calls, bytecode dispatch, closures, var refs, generators, and async
   execution in `function-vm.c` unless evidence supports a call/runtime split.
-  Interpreter dispatch and opcode handlers must remain within one translation
-  unit; no per-opcode modularization.
+  The complete direct-threaded interpreter, opcode-adjacent iterator support,
+  closures/var refs, calls, generators, and async resume paths now have one
+  independent owner. A post-extraction dependency review found that splitting
+  iterator opcode support or generator/async execution would expose additional
+  hot interpreter or call/resume state, so no finer natural boundary is retained
+  at this milestone. Interpreter dispatch and opcode handlers remain within one
+  translation unit; there is no per-opcode modularization.
 - [x] Resolve `JS_NewContext` -> `JS_AddIntrinsicBasicObjects` and runtime class
   callback dependencies through a small builtin composition entry point and
   narrow lifecycle APIs, not a speculative global registry or dozens of exported
   finalizers.
-- [ ] At each extraction, compile/test/measure before the next.  Record any
-  deferred non-LTO issue as `[~]`, with attempted localized remedies.
+- [~] At each extraction, compile/test/measure before the next. The function/VM
+  state is correctness-validated and its initially measured array/string/RegExp
+  losses received localized hot-placement and direct-owner remediation. Existing
+  pristine-baseline string/RegExp layout regressions remain recorded for final
+  stabilization.
 
 Likely commits, adjusted to coherent buildable boundaries:
 

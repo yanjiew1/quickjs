@@ -482,7 +482,7 @@ make CC=/home/yanjie/opt/gcc-16.2.0/bin/gcc \
   AR=/home/yanjie/opt/gcc-16.2.0/bin/gcc-ar CONFIG_WERROR=y
 ```
 
-## Pause handoff snapshot (authoritative current state)
+## Historical pause handoff snapshot (superseded by the milestone below)
 
 ### Completed architecture
 
@@ -609,3 +609,121 @@ taskset -c 2 ./qjs --std tests/microbench.js \
   prop_read prop_write func_call array_read sort_bench \
   string_build2 regexp_ascii regexp_replace
 ```
+
+## Function/VM extraction milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+The next hot-core boundary from the historical pause has been implemented
+afresh. `src/quickjs/function-vm.c` is a real 5,964-line translation unit owning
+arguments/iterator opcode support, closures and variable references, class and
+method setup adjacent to closures, C/bound/bytecode call dispatch, the complete
+direct-threaded `JS_CallInternal`, constructor/invoke paths, generator execution,
+and async function/generator resume machinery. The interpreter and all computed
+goto labels remain together. The residual `quickjs.c` is 15,903 lines and still
+owns allocator/runtime/context/jobs, atoms/strings, values/objects/shapes/
+properties/GC/conversions, and the operator slow layer.
+
+The implemented seam begins after the operator slow layer rather than moving the
+entire historical orientation range. Moving those operators would require
+exporting a broad set of BigInt, string, conversion, and property internals;
+leaving them with their data owners requires only the narrow
+`internal-operator.h` entry points. Hot property lookup, stack overflow and
+interrupt checks, ref-header/value updates, shape-property access, and flat
+string equality remain scoped inline helpers. Only the rare interrupt slow path
+crosses the runtime boundary.
+
+Runtime class callback ownership is installed through one
+`qjs_function_vm_init_runtime()` entry point. VM-owned callbacks and call slots
+remain static. Direct hidden owner entries replace avoidable property and string
+wrapper trampolines. No public API was added: the normal `qjs` dynamic export set
+is exactly the same 292 names as the pristine baseline.
+
+A finer-boundary review was performed after the extraction. Iterator setup is
+interleaved with for-in/for-of opcode helpers; separating it would add several
+hot interpreter-facing interfaces. Generator and async execution share private
+frame/resume state and `JS_CallInternal`; separating them would expose that state
+or the internal call dispatcher. These are not clean independent ownership
+domains at this point, so the cohesive VM owner is retained. This is an
+ownership/coupling decision, not a file-size preference.
+
+### Validation
+
+Acceptance validation on the exact recorded source state:
+
+- independent GCC 16 checked-value compilation of every engine TU: PASS as part
+  of clean `CONFIG_WERROR=y all`;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`: PASS;
+- full GCC repository `make test`: PASS, including closures, language/builtins,
+  loops, BigInt, cyclic modules, workers, std/os/rw handlers, bjson, shared
+  modules, and generated examples;
+- Clang 23 WERROR syntax for `quickjs.c` and `function-vm.c`, normal and
+  `CONFIG_CHECK_JSVALUE`: PASS;
+- exact full Test262 expected-failure comparison: PASS, unchanged at
+  `58/83558` errors, `3356` excluded, and `6000` skipped; no new or missing
+  expected failure;
+- `git diff --check`: PASS; dynamic exported-symbol comparison: exact match.
+
+Current GCC non-LTO sizes are: qjs 5,200,512 bytes with 1,061,910 text bytes;
+qjsc 5,188,616/1,035,923 text; run-test262 5,302,584/1,061,727 text; and
+libquickjs.a 9,871,788 bytes. Relative to `f8fa5bc`, qjs grew 1,248 bytes and
+616 text bytes; the archive grew 55,692 bytes from the additional object/debug
+metadata. Relative to pristine, qjs remains 110,608 bytes smaller and its text
+is 18,138 bytes smaller. The size change is understood and non-blocking.
+
+### Non-LTO performance investigation
+
+The first seven-run interleaved screen against pristine measured `array_read`
++10.06%, `string_build2` +10.54%, `regexp_ascii` +13.01%, and
+`regexp_replace` +7.99%. A direct freshly built `f8fa5bc` comparison isolated
+VM-boundary deltas of +12.40%, +5.07%, +5.36%, and -1.15% respectively. For
+array access, five `perf stat` repeats showed 4.299B versus 4.281B instructions
+(+0.43%) but 1.915B versus 1.722B cycles (+11.2%), with branches and misses
+nearly unchanged. This established compiler placement/scheduling rather than
+semantic extra work as the main cause.
+
+Scoped remedies were measured rather than assumed. A direct property owner entry
+removed a wrapper but did not change the in-range array fast path. Linking the VM
+object before the core did not recover array access and worsened string/RegExp,
+so that ordering was reverted. Direct ownership of `qjs_concat_string` reduced
+the isolated string loss. Aligning the interpreter improved but did not fully
+recover the array path. The retained evidence-backed result marks the central
+interpreter and concatenation routine hot and aligns `JS_CallInternal` to 128
+bytes; this places the two demonstrated hot owners together without LTO or
+moving large functions into headers. The final isolated seven-run comparison
+to `f8fa5bc` is `array_read` -0.78%, `string_build2` +1.63%, and
+`regexp_ascii` +1.73%. `regexp_replace` also improved relative to the handoff
+state in the final pristine comparison.
+
+The final seven-run pristine comparison is: `prop_read` -0.71%, `prop_write`
+-0.09%, `func_call` -4.07%, `array_read` -2.38%, `sort_bench` +0.19%,
+`string_build2` +6.67%, `regexp_ascii` +8.75%, and `regexp_replace` +6.06%.
+Thus the VM extraction has no remaining confirmed meaningful isolated loss, but
+the reproducible string/RegExp pristine-baseline layout group remains deferred.
+The affected engine/builtin performance milestones stay `[~]`; these issues do
+not block subsequent structural work and must be revisited during Final
+Performance Stabilization.
+
+Raw logs for this milestone are under `/tmp/qjs-vm-*.log`, with perf counter,
+annotation, build, test, and Test262 summaries in the corresponding
+`/tmp/qjs-vm-*` files. The freshly rebuilt comparison checkout is
+`/tmp/quickjs-f8fa5bc`.
+
+### Exact next steps
+
+1. Reassess the residual 15,903-line core from actual static-symbol and callback
+   ownership. Split runtime/context/jobs, atom-string, and object/value owners
+   only at natural seams with narrow dependency direction; retain coupled areas
+   when a split would materially broaden APIs, create cycles, or harm hot paths.
+2. Implement and validate any justified residual-core owner one bounded milestone
+   at a time. If the cleanest reviewed result is fewer owners, document that
+   decision rather than splitting for file count.
+3. Once the primary core decomposition is structurally stable and
+   correctness-validated, proceed to secondary targets even if the recorded
+   string/RegExp non-LTO issues remain `[~]`: RegExp compiler/executor, Unicode
+   runtime ownership, and quickjs-libc host/std/loader, followed by assessment of
+   unicode_gen and run-test262.
+4. After all structural migrations, perform Final Performance Stabilization and
+   resolve every remaining confirmed meaningful refactor-induced non-LTO
+   regression, then run the full supported configuration/sanitizer/correctness/
+   export/size review and fresh adversarial audit required by `task.md`.

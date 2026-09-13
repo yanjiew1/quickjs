@@ -247,7 +247,8 @@ endif
 endif
 endif
 
-QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/frontend.o \
+QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/function-vm.o \
+    $(OBJDIR)/src/quickjs/frontend.o \
     $(OBJDIR)/src/quickjs/module.o $(OBJDIR)/src/quickjs/bytecode.o \
     $(OBJDIR)/src/quickjs/builtin.o $(OBJDIR)/src/quickjs/builtin-math.o \
     $(OBJDIR)/src/quickjs/builtin-global.o \

@@ -33,6 +33,26 @@ static inline JSShapeProperty *qjs_get_shape_prop(JSShape *shape)
                                shape->prop_hash_mask + 1);
 }
 
+static force_inline JSShapeProperty *qjs_find_own_property_fast(
+    JSProperty **value, JSObject *obj, JSAtom atom)
+{
+    JSShape *shape = obj->shape;
+    JSShapeProperty *prop = qjs_get_shape_prop(shape);
+    intptr_t hash = (uintptr_t)atom & shape->prop_hash_mask;
+
+    hash = shape->hash_table[hash];
+    while (hash) {
+        JSShapeProperty *shape_prop = &prop[hash - 1];
+        if (likely(shape_prop->atom == atom)) {
+            *value = &obj->prop[hash - 1];
+            return shape_prop;
+        }
+        hash = shape_prop->hash_next;
+    }
+    *value = NULL;
+    return NULL;
+}
+
 QJS_INTERNAL JSShapeProperty *qjs_find_own_property(JSProperty **value,
                                                     JSObject *obj,
                                                     JSAtom atom);
@@ -68,6 +88,51 @@ QJS_INTERNAL int qjs_delete_property_int64(JSContext *ctx, JSValueConst obj,
 QJS_INTERNAL int qjs_set_property_value(JSContext *ctx, JSValueConst obj,
                                         JSValue property, JSValue value,
                                         int flags);
+QJS_INTERNAL int qjs_auto_init_property(JSContext *ctx, JSObject *obj,
+                                        JSAtom atom, JSProperty *property,
+                                        JSShapeProperty *shape_property);
+QJS_INTERNAL int qjs_add_brand(JSContext *ctx, JSValueConst obj,
+                               JSValueConst home_obj);
+QJS_INTERNAL int qjs_check_brand(JSContext *ctx, JSValueConst obj,
+                                 JSValueConst func);
+QJS_INTERNAL int qjs_check_define_global_var(JSContext *ctx, JSAtom atom,
+                                             int flags);
+QJS_INTERNAL int qjs_get_global_var_ref(JSContext *ctx, JSAtom atom,
+                                        JSValue *stack);
+QJS_INTERNAL int qjs_delete_global_var(JSContext *ctx, JSAtom atom);
+QJS_INTERNAL int qjs_define_object_name(JSContext *ctx, JSValueConst obj,
+                                        JSAtom name, int flags);
+QJS_INTERNAL int qjs_define_object_name_computed(
+    JSContext *ctx, JSValueConst obj, JSValueConst name, int flags);
+QJS_INTERNAL int qjs_define_private_field(JSContext *ctx, JSValueConst obj,
+                                          JSValueConst name,
+                                          JSValue value);
+QJS_INTERNAL JSValue qjs_get_private_field(JSContext *ctx, JSValueConst obj,
+                                           JSValueConst name);
+QJS_INTERNAL int qjs_set_private_field(JSContext *ctx, JSValueConst obj,
+                                       JSValueConst name, JSValue value);
+QJS_INTERNAL int qjs_get_own_property_internal(
+    JSContext *ctx, JSPropertyDescriptor *desc, JSObject *obj, JSAtom atom);
+QJS_INTERNAL JSValue qjs_get_prototype_free(JSContext *ctx, JSValue obj);
+QJS_INTERNAL int qjs_set_prototype_internal(JSContext *ctx,
+                                            JSValueConst obj,
+                                            JSValueConst proto,
+                                            BOOL throw_flag);
+QJS_INTERNAL JSValue qjs_new_object_from_shape(JSContext *ctx, JSShape *shape,
+                                               JSClassID class_id,
+                                               JSProperty *properties);
+QJS_INTERNAL JSShape *qjs_dup_shape(JSShape *shape);
+QJS_INTERNAL int qjs_convert_fast_array_to_array(JSContext *ctx,
+                                                 JSObject *obj);
+QJS_INTERNAL int qjs_delete_property(JSContext *ctx, JSObject *obj,
+                                     JSAtom atom);
+QJS_INTERNAL void qjs_free_property(JSRuntime *rt, JSProperty *property,
+                                    int flags);
+QJS_INTERNAL JSValue qjs_create_array_free(JSContext *ctx, int len,
+                                           JSValue *values);
+QJS_INTERNAL int qjs_define_property_value_value(
+    JSContext *ctx, JSValueConst obj, JSValue property, JSValue value,
+    int flags);
 QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst left,
                                    JSValueConst right, int mode);
 QJS_INTERNAL BOOL qjs_same_value(JSContext *ctx, JSValueConst left,

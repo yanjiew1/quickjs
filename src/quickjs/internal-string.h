@@ -104,6 +104,16 @@ QJS_INTERNAL int qjs_string_memcmp(const JSString *left, int left_pos,
                                    const JSString *right, int right_pos,
                                    int len);
 
+static inline BOOL qjs_string_equal(const JSString *left,
+                                    const JSString *right)
+{
+    if (left->len != right->len)
+        return FALSE;
+    if (left == right)
+        return TRUE;
+    return qjs_string_memcmp(left, 0, right, 0, left->len) == 0;
+}
+
 static inline int qjs_string_compare(JSContext *ctx, const JSString *left,
                                      const JSString *right)
 {
@@ -167,6 +177,12 @@ QJS_INTERNAL JSValue qjs_concat_string3(JSContext *ctx, const char *prefix,
                                         JSValue value, const char *suffix);
 QJS_INTERNAL JSValue qjs_concat_string(JSContext *ctx, JSValue left,
                                        JSValue right);
+QJS_INTERNAL BOOL qjs_concat_string_in_place(JSContext *ctx, JSString *left,
+                                             JSValueConst right);
+QJS_INTERNAL BOOL qjs_atom_is_array_index(JSContext *ctx, uint32_t *index,
+                                          JSAtom atom);
+QJS_INTERNAL JSValue qjs_new_symbol_from_atom(JSContext *ctx, JSAtom atom,
+                                              int atom_type);
 QJS_INTERNAL JSValue qjs_to_locale_string_free(JSContext *ctx,
                                                JSValue value);
 QJS_INTERNAL JSValue qjs_to_string_check_object(JSContext *ctx,
