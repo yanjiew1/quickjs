@@ -276,11 +276,14 @@ compilation before risky hot-core or builtin subdivisions.
   weak-reference hooks, runtime class registration, and context teardown with the
   object/function lifetime owner until module/bytecode/class callback ownership
   is explicit.
-- [~] Extract atoms, strings, ropes, and string-buffer operations.  Preserve hot
+- [x] Extract atoms, strings, ropes, and string-buffer operations.  Preserve hot
   atom/string/value accessors as scoped `static inline` helpers when already
   inline or when non-LTO evidence shows the call boundary is material.
-  The private string ownership/API layer is complete; source extraction awaits
-  the coarse core/VM boundary so hot storage paths remain colocated.
+  `atom-string.c` now owns atom tables/lifetime, raw strings, C-string conversion,
+  string buffers, comparison, ropes, and concatenation. Atom kind, tagged/index
+  classification, numeric-index rejection, string reads/equality, and zero-ref
+  decrement shells remain scoped inline; runtime teardown and accounting cross
+  through owner-level hooks rather than exposing atom storage.
 - [ ] Extract shapes/properties/objects together first, then separate conversions
   only if the cross-surface remains narrow.  Property lookup/set, fast arrays,
   primitive conversion, equality, and exception fast paths receive disassembly
@@ -304,7 +307,10 @@ compilation before risky hot-core or builtin subdivisions.
   pristine-baseline string/RegExp layout regressions remain recorded for final
   stabilization. The allocator extraction is also correctness-validated; keeping
   the core before the cold allocator object recovered its isolated string loss,
-  while an isolated RegExp ASCII layout observation remains recorded.
+  while an isolated RegExp ASCII layout observation remains recorded. The
+  atom/string milestone is correctness-validated and isolated property/array/
+  RegExp behavior is neutral, but its confirmed `string_build2` loss remains
+  `[~]` performance work for final stabilization.
 
 Likely commits, adjusted to coherent buildable boundaries:
 

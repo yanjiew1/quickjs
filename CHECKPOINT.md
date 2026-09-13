@@ -795,3 +795,83 @@ fresh comparison checkout is `/tmp/quickjs-cbfac5a`.
    continue to the secondary runtime/library targets even if recorded non-LTO
    issues remain `[~]`; resolve all confirmed meaningful refactor-induced losses
    during Final Performance Stabilization.
+
+## Atom/string extraction milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+`src/quickjs/atom-string.c` is now a separate 2,355-line owner for predefined
+atom data, atom table/hash allocation and lifetime, raw strings, StringBuffer,
+C-string conversion, plain/rope comparison, rope construction/rebalancing, and
+string concatenation. The residual `quickjs.c` is 12,952 lines.
+
+Atoms and strings remain one owner because atoms are string-backed and their
+allocation, comparison, refcounts, predefined empty strings, and zero-ref
+release paths are bidirectionally coupled. Splitting them would expose atom-table
+and string-lifetime details without creating a clean dependency direction.
+Class registration stays in the core and uses cold runtime atom create/dup
+entries; shape/object GC stays in the core.
+
+The owner initializes and tears down its runtime state, finalizes zero-ref
+string/rope/symbol values, and computes atom memory usage through narrow
+lifecycle APIs. The residual core no longer iterates or frees atom storage.
+Tagged-atom conversion, atom kind, complete array-index classification, common
+nonnumeric-index rejection, character reads, hashing, string equality/compare,
+and the zero-ref string decrement remain scoped inline in `internal-string.h`.
+The canonical numeric-index conversion is an owner slow path. The complete rope
+and hot concatenation implementation stays together in the owner.
+
+### Validation and performance
+
+Acceptance validation on the documented source state:
+
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`, including normal and
+  `CONFIG_CHECK_JSVALUE` compilation of every engine TU: PASS;
+- independent GCC 16 WERROR compilation of `quickjs.c` and `atom-string.c`:
+  PASS; leak/atom-dump and combined checked-value syntax variants: PASS;
+- full GCC repository `make test`: PASS;
+- Clang 21.1 WERROR syntax for both affected TUs, normal and
+  `CONFIG_CHECK_JSVALUE`: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- normal `qjs` dynamic exports exactly match the baseline 292-name set;
+  `git diff --check`: PASS.
+
+Current GCC non-LTO sizes are: qjs 5,176,136 bytes with 1,058,430 text bytes;
+qjsc 5,164,296/1,032,390 text; run-test262 5,278,200/1,058,119 text; and
+libquickjs.a 9,870,054 bytes.
+
+The final seven-run CPU-pinned comparison against the exact freshly built
+`b58d08a` parent is: `prop_read` +0.70%, `prop_write` +0.66%, `prop_create`
++2.86%, `array_push` +7.04%, `array_read` -0.22%, `func_call` +0.61%,
+`sort_bench` -8.79%, `regexp_ascii` +4.95%, `regexp_replace` -1.80%, and
+`string_build2` +4.62%. `array_slice` had one 2.96 ns parent outlier; a separate
+seven-run confirmation had stable current samples at 1.59-1.60 ns and one
+reciprocal 2.92 ns parent outlier, establishing neutral normal behavior.
+
+Generated-code review found and removed an extra context-to-runtime release
+adapter in owner-local string code. Atom-kind and numeric/index rejection shells
+were restored inline. Both natural object orders and explicit alignment of
+`JS_ConcatString2` were benchmarked; the retained core-first order was best for
+string construction, and explicit alignment was reverted because it worsened
+the result. The final small array-index header shell avoids moving the complete
+parser into a header; its layout leaves confirmed `array_push`, RegExp ASCII,
+and `string_build2` observations. A final five-repeat `perf stat` comparison for
+`string_build2` measured +0.58% instructions, +0.65% branches, and +1.69%
+cycles. These remaining results are deferred as `[~]` to Final Performance
+Stabilization; they do not block subsequent structural work. Logs are under
+`/tmp/qjs-atom-*`; the exact parent checkout is `/tmp/quickjs-b58d08a`.
+
+### Exact next steps
+
+1. Reassess the 12,952-line residual core for natural runtime/context/jobs and
+   object/shape/property/GC/value ownership after the atom/string seam. Keep
+   context teardown and class/GC callbacks with the lifetime owner when moving
+   them would create broad callback APIs or cycles.
+2. Implement only the defensible residual owner boundaries, validating each as
+   an independent milestone. Large coupled object/value/conversion regions may
+   remain together when a finer split would broaden hot interfaces.
+3. Once primary core decomposition is structurally stable and correctness-
+   validated, proceed to secondary targets despite recorded `[~]` performance
+   items, then resolve all confirmed meaningful refactor-induced non-LTO losses
+   during Final Performance Stabilization.
