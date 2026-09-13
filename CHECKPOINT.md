@@ -6,8 +6,9 @@ Planning, independent plan review, and the pristine pre-refactor baseline are
 complete. The multi-TU build foundation and first independent extraction are
 implemented: binary object/bytecode serialization now compiles as
 `src/quickjs/bytecode.c`. Correctness is validated, but this milestone remains
-`[~]` because a confirmed GCC non-LTO code-layout regression is deferred to the
-final engine layout. The next structural stage is frontend/module extraction.
+`[~]` because GCC non-LTO code-layout observations are deferred to the final
+engine layout. Module lifecycle/resolution/evaluation is also now independently
+compiled and validated. The next structural stage is frontend extraction.
 
 Authoritative task: `task.md`. Living roadmap: `PLAN.md`.
 
@@ -232,15 +233,57 @@ the remaining planned TU boundaries settle. Per task policy, deeper cache/
 branch-predictor layout work is deferred to final performance stabilization;
 this keeps the milestone `[~]` but does not block later structural work.
 
+## Milestone 2: module subsystem extraction
+
+Implemented `src/quickjs/module.c` as the owner of module cleanup and lifecycle,
+module namespace exotic behavior, normalization/loading, export resolution,
+linking/evaluation, dynamic import, and the existing public module APIs. Parser
+and import/export syntax remain in `quickjs.c`; duplicate-export parser errors
+remain parser-owned, with unchecked mutation performed only after the parser's
+existing duplicate check.
+
+`internal-function.h` now defines the narrow module-to-function/promise bridge.
+The module header exposes explicit lifecycle, namespace autoinit, parser mutation,
+resolve, and one link-and-evaluate entry point. Resolver/evaluator state and the
+namespace exotic table remain static in `module.c`. Core hot helpers—including
+the forced-inline property lookup—remain static; module uses cold adapters.
+
+Validation:
+
+- GCC 16 WERROR clean parallel `all` and full `make test`: PASS.
+- Full Test262 exact set: PASS, unchanged `58/83558`, 3356 excluded and 6000
+  skipped.
+- Clang 23 WERROR clean parallel `all` and full `make test`: PASS.
+- CONFIG_CHECK_JSVALUE compiles all three engine TUs independently.
+- `DUMP_MODULE_RESOLVE` and `DUMP_MODULE_EXEC` syntax builds: PASS.
+- Cyclic imports, dynamic/module loading via the full suites, workers and bjson
+  module serialization all pass.
+
+GCC non-LTO linked qjs text is 1,083,712 bytes versus baseline 1,080,048
+(+3,664, +0.34%). The three engine objects contain 812,405 bytes core text,
+24,011 module text, and 19,384 bytecode text.
+
+The module boundary changed final layout again and resolved the earlier deferred
+hot results: an interleaved ten-run screen measured `array_read` 11.515 ns versus
+baseline 11.875 (-3.03%, incidental improvement) and `string_build2` 64.565
+versus 63.985 (+0.91%, neutral). `func_call` was +0.43% (neutral). This confirms
+the prior array/string differences were layout-dependent rather than extra work.
+
+An isolated interleaved ten-run RegExp retest observed `regexp_ascii` 270.865 ns
+versus 258.395 (+4.83%) and `regexp_utf16` 277.460 versus 269.310 (+3.03%);
+`regexp_replace` was +0.47%. Module code is not on these paths and no RegExp call
+boundary changed, so the evidence again indicates final link/code placement.
+Object ordering already failed as a remedy in the preceding milestone. This
+observation stays deferred until the planned RegExp and final engine object
+layout exists; the milestone remains `[~]` under the task's performance policy.
+
 ## Exact next steps
 
-1. Commit the coherent buildable bytecode-extraction milestone with its deferred
-   non-LTO layout issue recorded.
-2. Extract module allocation/lifecycle/resolution/evaluation behind the existing
-   narrow module internal header.
-3. Mechanically gather the noncontiguous parser/compiler ranges into a coarse
+1. Commit the coherent buildable module-extraction milestone with its current
+   non-LTO layout observation recorded.
+2. Mechanically gather the remaining parser/compiler ranges into a coarse
    frontend TU while leaving `JS_CallInternal` and hot object/value code intact.
-4. Validate each boundary incrementally, then split builtin clusters before hot
+3. Validate each boundary incrementally, then split builtin clusters before hot
    core ownership work. Revisit the recorded branch-miss regression only after
    those boundaries establish the final code layout.
 

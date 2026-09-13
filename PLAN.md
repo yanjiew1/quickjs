@@ -230,11 +230,13 @@ Status: [~] in progress.
 - [~] First extract binary object/bytecode I/O as one coherent commit. Its narrow
   cross-owner API includes module creation and ArrayBuffer/SAB construction;
   validate module, typed-array and shared-buffer serialization explicitly.
-- [ ] Next extract frontend/compiler and module runtime as distinct owners, then
+- [~] Next extract frontend/compiler and module runtime as distinct owners, then
   builtin clusters one coherent commit at a time. Leave the hot runtime/
   interpreter together initially. Parser/compiler extraction mechanically gathers
   its noncontiguous source ranges around module runtime. Determine crossing
   symbols from actual compiler/link diagnostics and owner-specific declarations.
+  Module runtime is complete and validated; the coarse frontend extraction is
+  the remaining part of this item. A RegExp code-layout observation remains open.
 - [x] Verify public header/API and bytecode round-trip behavior, qjsc-generated
   examples, modules, fuzz archive compilation, CONFIG_CHECK_JSVALUE, GCC/Clang,
   clean/parallel builds, tests, Test262 comparison, and microbenchmark screen.

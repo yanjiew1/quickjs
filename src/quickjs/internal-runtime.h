@@ -56,6 +56,14 @@ static inline BOOL qjs_is_be(void)
     return endian.byte;
 }
 
+static inline void qjs_set_value(JSContext *ctx, JSValue *slot,
+                                 JSValue value)
+{
+    JSValue old_value = *slot;
+    *slot = value;
+    JS_FreeValue(ctx, old_value);
+}
+
 QJS_INTERNAL int qjs_resize_array(JSContext *ctx, void **parray, int elem_size,
                                   int *psize, int req_size);
 QJS_INTERNAL void qjs_dbuf_put_leb128(DynBuf *s, uint32_t v);
@@ -67,5 +75,6 @@ QJS_INTERNAL int qjs_get_sleb128(int32_t *pval, const uint8_t *buf,
 QJS_INTERNAL JSValue qjs_throw_stack_overflow(JSContext *ctx);
 QJS_INTERNAL void qjs_add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                                 JSGCObjectTypeEnum type);
+QJS_INTERNAL void qjs_remove_gc_object(JSGCObjectHeader *h);
 
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */
