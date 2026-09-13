@@ -1440,3 +1440,89 @@ performance screen was not repeated. Raw validation logs are under
    pristine/final normal non-LTO performance stabilization separately with GCC
    16.2 and Clang 23.1. Revisit every deferred meaningful regression; supported
    LTO correctness remains required and LTO performance remains diagnostic.
+
+## Test262 runner milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+The former 2,555-line `run-test262.c` is now three normally compiled owners:
+
+- the 1,875-line root runner owns config loading, `ftw` discovery, metadata and
+  feature interpretation, module loading/evaluation, expected-error matching,
+  statistics, progress/work scheduling, reporting, and process lifetime;
+- `src/run-test262/namelist.c` owns string/path helpers plus numeric-aware name
+  list allocation, loading, sorting, duplicate removal, and lookup;
+- `src/run-test262/harness.c` owns opaque per-runner agent/report synchronization
+  state, `print`, `$262`, realms, SharedArrayBuffer agent broadcast/reporting,
+  async-completion state, and harness installation/cleanup.
+
+The name-list owner has no runner-global dependency. `ftw` discovery remains in
+the runner because the portable callback has no opaque argument and consumes
+the runner's selected-test list. Parsing test names back out of the expected-
+error text also remains with error/reporting ownership. Numeric subrange sort is
+provided as one list operation rather than exporting its comparator.
+
+The harness representation is opaque. Runner threads allocate it through a
+narrow lifecycle interface, pass it as the QuickJS runtime opaque, and access
+only output selection, async completion, helper installation, exceptional-value
+printing, and agent cleanup. The previous global `outfile` dependency is now an
+explicit per-harness field. All agent structs, callbacks, synchronization, and
+realm composition stay private. The root runner's remaining functions and
+state have static linkage; both private owner interfaces are hidden.
+
+Config, metadata, evaluation, expected-error comparison, statistics, progress,
+and reporting were deliberately not split further. They share most of the
+current mode, feature, output, counter, error-list, and mutex globals; a finer
+split would require a broad `RunnerState` API or artificial callback plumbing.
+A future redesign around explicit runner and metadata values could revisit that
+coupling, but creating it solely for file separation is outside this refactor.
+
+### Validation
+
+Acceptance validation on this source state:
+
+- independent GCC 16.2 and Clang 23.1 WERROR compilation of the root, name-list,
+  and harness TUs: PASS;
+- normal and debug runner links under GCC 16.2 and Clang 23.1: PASS;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all` and full repository
+  `make test`: PASS;
+- matched exact-parent `c2be331` and current focused execution covering
+  `createRealm`, async completion/print output, and Atomics agent start,
+  broadcast, SharedArrayBuffer, and report handling: byte-identical stdout and
+  stderr, PASS;
+- matched parent/current bounded config runs with one and four worker threads:
+  identical at `0/474` errors, `3356` excluded, and `49292` index-skipped;
+- matched stdout reporting, memory statistics, skipped-feature counts, and
+  selection order: identical after separately removing expected wall-time-only
+  report lines;
+- expected-error-only execution: identical at `58/59`; update mode returns the
+  same status and emits byte-identical, deterministically sorted error files
+  (`cf0b47e5...d1955275` SHA-256);
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- release packaging syntax, private symbol inspection, and `git diff --check`:
+  PASS.
+
+The normal GCC 16 run-test262 text size is 1,054,167 bytes, 2,120 bytes below
+exact parent `c2be331`. Normal qjs remains byte-identical with SHA-256
+`e14a2d2c...482db994d` and 1,056,566 text bytes. This tooling-only extraction
+adds no production engine boundary or data change, so the engine performance
+screen was not repeated. Raw logs are under `/tmp/qjs-runner-*`; the exact
+parent checkout is `/tmp/quickjs-c2be331`.
+
+### Exact next steps
+
+1. Begin final supported-configuration validation from this structurally
+   complete state, including GCC and Clang normal/debug/LTO correctness,
+   checked-value, sanitizer, shared-library, host/generator, RegExp, Unicode,
+   bytecode/module, worker, and Test262 paths required by `task.md` where the
+   local toolchain supports them.
+2. Perform formal Final Performance Stabilization against pristine `04be246`
+   with matched normal non-LTO builds separately for GCC 16.2 and Clang 23.1,
+   identical CPU affinity/isolation/repetition/statistics, the repository
+   microbenchmarks, and the broader ECMAScript-only corpus when locally
+   available. Record compiler-specific results and revisit all deferred
+   meaningful regressions.
+3. Request a fresh adversarial final review, correct and revalidate any retained
+   issues, update PLAN/CHECKPOINT with final evidence, and complete the task only
+   when no confirmed meaningful refactor-induced non-LTO regression remains.

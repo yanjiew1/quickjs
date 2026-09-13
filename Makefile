@@ -292,6 +292,9 @@ QJS_UNICODE_TABLE_OBJS=$(QJS_UNICODE_OBJS) \
     $(patsubst %.o, %.host.o, $(QJS_UNICODE_OBJS)) \
     $(patsubst %.o, %.unicode-test.host.o, $(QJS_UNICODE_OBJS))
 QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/dtoa.o $(QJS_REGEXP_OBJS) $(QJS_UNICODE_OBJS) $(OBJDIR)/cutils.o $(QJS_LIBC_OBJS)
+RUN_TEST262_OBJS=$(OBJDIR)/run-test262.o \
+    $(OBJDIR)/src/run-test262/harness.o \
+    $(OBJDIR)/src/run-test262/namelist.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -369,10 +372,11 @@ libunicode-table.h: unicode_gen
 	./unicode_gen unicode $@
 endif
 
-run-test262$(EXE): $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS)
+run-test262$(EXE): $(RUN_TEST262_OBJS) $(QJS_LIB_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-run-test262-debug: $(patsubst %.o, %.debug.o, $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS))
+run-test262-debug: $(patsubst %.o, %.debug.o, \
+    $(RUN_TEST262_OBJS) $(QJS_LIB_OBJS))
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # object suffix order: nolto

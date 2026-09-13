@@ -49,8 +49,10 @@ Recorded intermediate non-LTO layout observations remain `[~]` work for Final
 Performance Stabilization; they do not block the secondary runtime/library and
 developer-tooling assessments. Final formal performance validation will compare
 matched pristine and final normal non-LTO builds separately with GCC and Clang.
-The Unicode table generator is now modularized and validated; `run-test262.c`
-is the remaining developer-tooling assessment.
+The Unicode table generator and Test262 runner are now modularized and
+validated. All planned structural migrations are complete; supported-
+configuration validation and dual-compiler Final Performance Stabilization
+remain.
 
 ## Inspected starting architecture
 
@@ -451,16 +453,20 @@ Likely commits:
   Parsing receives an explicit call-local generator state; case compression is
   call-local; output accounting is explicit; and three hidden normalization
   hooks exist only in the dedicated test build.
-- [ ] `run-test262.c`: map config, metadata, test discovery, agent/worker,
+- [x] `run-test262.c`: map config, metadata, test discovery, agent/worker,
   execution, expected-failure, and reporting state.  Extract metadata/config and
   reporting only if runner state need not become global or broadly exposed.
   Validate serial and threaded runs, filtering, exclusions, expected-failure
   comparison, update ordering, and statistics on a bounded deterministic corpus
-  before full Test262 comparison.
-- [ ] Prefer the low-risk name/path list utility and coherent agent/$262 harness
+  before full Test262 comparison. The private name/path list and `$262` agent
+  harness owners pass matched parent/current bounded tests and exact Test262.
+- [x] Prefer the low-risk name/path list utility and coherent agent/$262 harness
   boundaries. Keep metadata parsing, evaluation, and expected-failure comparison
   together until a real `TestMetadata`/runner-state object replaces the current
   shared globals; otherwise leave the runner cohesive and document the decision.
+  The harness now owns opaque synchronization/agent/report state and receives
+  output explicitly. Config, discovery callback, metadata/evaluation, errors,
+  statistics, progress, and reporting remain in the cohesive runner owner.
 
 Commits are made only for actual beneficial splits:
 

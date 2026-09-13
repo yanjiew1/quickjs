@@ -18,8 +18,10 @@ host-qjsc
 qjscalc
 qjscalc.c
 repl.c
-run-test262
-run-test262.exe
+/run-test262
+/run-test262.exe
+/run-test262-debug
+/run-test262-debug.exe
 test262
 test262_*.txt
 test262o
