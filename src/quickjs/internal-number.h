@@ -75,6 +75,10 @@ QJS_INTERNAL int qjs_to_int64_clamp(JSContext *ctx, int64_t *result,
                                     int64_t max, int64_t min_offset);
 QJS_INTERNAL int qjs_to_int64_free(JSContext *ctx, int64_t *result,
                                    JSValue value);
+QJS_INTERNAL int qjs_to_uint32_free(JSContext *ctx, uint32_t *result,
+                                    JSValue value);
+QJS_INTERNAL int qjs_to_length_free(JSContext *ctx, int64_t *length,
+                                    JSValue value);
 QJS_INTERNAL int qjs_to_array_length_free(JSContext *ctx, uint32_t *length,
                                           JSValue value,
                                           BOOL is_array_constructor);

@@ -45,8 +45,6 @@ QJS_INTERNAL JSValue qjs_typed_to_primitive(JSContext *ctx,
                                             JSValueConst value, int hint);
 QJS_INTERNAL int qjs_to_uint8_clamp_free(JSContext *ctx, int32_t *result,
                                          JSValue value);
-QJS_INTERNAL int qjs_to_length_free(JSContext *ctx, int64_t *length,
-                                    JSValue value);
 QJS_INTERNAL JSValue qjs_to_bigint_free(JSContext *ctx, JSValue value);
 QJS_INTERNAL JSValue qjs_typed_create_from_ctor(JSContext *ctx,
                                                 JSValueConst ctor,

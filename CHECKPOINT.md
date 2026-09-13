@@ -279,6 +279,18 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+Foundational builtin milestone completed:
+
+- `builtin-base.c` owns Object, Function, Error/AggregateError, Reflect,
+  descriptor helpers, debug accessors and both raw/full bootstrap phases. All
+  delegated phase ordering remains identical.
+- GCC 16 WERROR clean builds/tests, targeted base smoke, Clang 23 syntax and
+  Test262 `58/83558` pass. Seven-run screen: prop_write/func/array/sort neutral
+  or improved; prop_read +7.35%, string_build2 +5.33%, RegExp ASCII +5.32%,
+  replace +9.70% remain layout observations for final stabilization.
+- Removed now-unreferenced private `JS_IsEmptyString`, detected by Clang after
+  its last consumer moved; this is extraction cleanup, not semantic change.
+
 Promise/async milestone completed:
 
 - `builtin-async.c` owns Promise data/jobs/rejection/public APIs, Generator
