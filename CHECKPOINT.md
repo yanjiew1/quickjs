@@ -279,6 +279,14 @@ layout exists; the milestone remains `[~]` under the task's performance policy.
 
 ## Exact next steps
 
+JSON milestone completed:
+
+- `builtin-json.c` owns reviver/source records, parse integration, raw JSON,
+  quoting/stringification, tables and public JSON APIs. Parser token state stays
+  frontend-private. Four narrow Array stack/property-list bridges are used.
+- GCC 16 WERROR clean build/tests, Clang 23 WERROR syntax, and exact Test262
+  `58/83558` pass. JSON/bjson focused repository tests pass.
+
 Array conversion/equality ownership prerequisite completed:
 
 - Rehomed Array-needed integer/length conversion, locale-string conversion,
