@@ -22,19 +22,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "src/quickjs/internal-allocator.h"
-#include "src/quickjs/internal-frontend.h"
-#include "src/quickjs/internal-regexp.h"
-#include "src/quickjs/internal-builtin.h"
-#include "src/quickjs/internal-global.h"
-#include "src/quickjs/internal-date.h"
-#include "src/quickjs/internal-proxy.h"
-#include "src/quickjs/internal-collection.h"
-#include "src/quickjs/internal-array.h"
-#include "src/quickjs/internal-typed-array.h"
-#include "src/quickjs/internal-async.h"
-#include "src/quickjs/internal-base.h"
-#include "src/quickjs/internal-operator.h"
+#include "internal-allocator.h"
+#include "internal-frontend.h"
+#include "internal-regexp.h"
+#include "internal-builtin.h"
+#include "internal-global.h"
+#include "internal-date.h"
+#include "internal-proxy.h"
+#include "internal-collection.h"
+#include "internal-array.h"
+#include "internal-typed-array.h"
+#include "internal-async.h"
+#include "internal-base.h"
+#include "internal-operator.h"
 
 #define check_function qjs_check_function
 #define check_exception_free qjs_check_exception_free

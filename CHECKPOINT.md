@@ -1042,3 +1042,66 @@ exact parent checkout is `/tmp/quickjs-e035255`.
    targets despite recorded `[~]` performance observations, then developer
    tooling. Final formal non-LTO performance validation remains required for
    matched GCC and Clang pristine/final builds.
+
+## Object core ownership milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+The primary engine decomposition is structurally complete. The 8,018-line
+residual root `quickjs.c` was moved mechanically to `src/quickjs/object.c`; its
+local private-header includes and the Makefile object path were adjusted, with
+no semantic source changes. This final owner retains values, shapes,
+properties, object allocation, fast arrays, free-value/GC, exceptions and
+backtraces, diagnostics, the standard-class callback table, and object adapters.
+
+Keeping these areas together preserves the private object/value representation,
+hot lookup and mutation paths, free-value/GC coupling, and direct class callback
+references. Further splitting at this point would export representation-heavy
+interfaces or insert boundaries into important hot paths rather than establish
+a distinct natural owner. Runtime-facing initialization, teardown, marking, and
+diagnostic hooks remain the narrow cold interfaces established by the preceding
+runtime milestone. There is no remaining root `quickjs.c` build input.
+
+### Validation and performance
+
+Acceptance validation on this source state:
+
+- independent GCC 16.2 WERROR and Clang 23.1 WERROR compilation of
+  `src/quickjs/object.c`: PASS;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all`, including normal and checked
+  compilation of the object owner: PASS;
+- full GCC repository `make test`: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- normal `qjs` dynamic exports remain exactly 292 names.
+
+Current GCC 16 non-LTO sizes are: qjs 5,202,656 bytes with 1,057,366 text
+bytes; qjsc 5,190,816/1,031,422 text; run-test262 5,304,712/1,057,151 text;
+and libquickjs.a 9,981,984 bytes. Relative to exact parent `37c2d7f`, each
+executable gains 32 text bytes; the path-only source move changes diagnostic
+source strings but introduces no new call or semantic boundary.
+
+Five alternating parent/current runs of the focused GCC 16 non-LTO screen were
+executed serially on CPU 2. Median changes were: `prop_read` +0.36%,
+`prop_write` -0.18%, `prop_create` +0.09%, `array_push` -0.17%, `array_read`
+-0.43%, `array_slice` +1.89%, `func_call` +1.47%, `int_arith` +0.00%,
+`float_arith` +1.17%, `typed_array_read` +0.64%, `typed_array_write` +0.21%,
+`string_to_int` +0.03%, `string_build2` -0.24%, `regexp_ascii` +0.92%,
+`regexp_replace` -1.21%, and `sort_bench` -0.42%. No workload has a confirmed
+meaningful regression, so no layout correction was attempted. Logs are under
+`/tmp/qjs-object-build/`; the exact parent checkout is
+`/tmp/quickjs-37c2d7f`.
+
+### Exact next steps
+
+1. Begin secondary runtime/library work by remapping the current
+   `quickjs-libc.c` ownership and dependency graph. Extract only natural
+   std/file-loader and host/event boundaries with narrow state interfaces;
+   validate std/os, loaders, dynamic modules, workers, handlers, promises, and
+   event-loop shutdown.
+2. Assess and, where clean, implement the RegExp compiler/executor and Unicode
+   runtime ownership splits with their target-specific correctness and focused
+   performance validation.
+3. Evaluate developer-tooling targets last, then run final supported-
+   configuration correctness and matched pristine/final GCC and Clang normal
+   non-LTO performance stabilization. LTO performance remains diagnostic only.

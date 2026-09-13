@@ -18,7 +18,7 @@ retain the original copyright/license notice and should not reformat moved code.
 Progress markers are `[ ]` not started, `[~]` in progress or structurally done
 with an unresolved non-LTO performance issue, and `[x]` completed and validated.
 
-## Paused implementation status (2026-09-13)
+## Historical pause status (2026-09-13)
 
 Implementation is intentionally paused at commit `f8fa5bc` after completing the
 frontend, module, bytecode, builtin-composition, and all planned builtin-family
@@ -33,6 +33,22 @@ The current engine is coherent and correctness-validated, but the overall task
 is not complete. Meaningful non-LTO RegExp/layout observations remain open, so
 the affected engine/builtin milestones stay `[~]`. No secondary runtime/library
 or developer-tooling source split has begun.
+
+## Current implementation status (2026-09-14)
+
+The primary `quickjs.c` decomposition is structurally complete and
+correctness-validated. The former residual core is now
+`src/quickjs/object.c`, the cohesive owner for values, objects, shapes,
+properties, fast arrays, free-value/GC, exceptions/backtraces, diagnostics,
+standard-class callbacks, and object adapters. Runtime/context/jobs,
+allocation, atom/string, numeric/operator, function/VM, frontend, module,
+bytecode, composition, and builtin-family owners are all independent normally
+linked translation units. There is no remaining root `quickjs.c` build input.
+
+Recorded intermediate non-LTO layout observations remain `[~]` work for Final
+Performance Stabilization; they do not block the secondary runtime/library and
+developer-tooling assessments. Final formal performance validation will compare
+matched pristine and final normal non-LTO builds separately with GCC and Clang.
 
 ## Inspected starting architecture
 
@@ -288,17 +304,19 @@ compilation before risky hot-core or builtin subdivisions.
   classification, numeric-index rejection, string reads/equality, and zero-ref
   decrement shells remain scoped inline; runtime teardown and accounting cross
   through owner-level hooks rather than exposing atom storage.
-- [~] Extract shapes/properties/objects and separate conversions only where the
+- [x] Extract shapes/properties/objects and separate conversions only where the
   cross-surface remains narrow. Evidence from the established VM/builtin seams
   supported extracting `number.c` first: it now owns primitive/number/string
   conversion, BigInt arithmetic, public numeric conversion APIs, equality, and
   all numeric/operator slow paths. BigInt and operators remain together because
   separating them would export the private multiprecision arithmetic layer.
   The float conversion tagged fast path and Uint32 alias remain scoped inline.
-  Shapes/properties/objects/GC/exceptions remain in the residual core for the
-  next ownership pass. Property lookup/set, fast arrays, exception paths, and
-  the recorded typed-array cycle-only observation still require final
-  disassembly and benchmark attention.
+  `object.c` now owns shapes/properties/objects, fast arrays, free-value/GC,
+  exceptions/backtraces, diagnostics, standard-class callbacks, and object
+  adapters. This owner remains cohesive because its hot lookup/mutation/value
+  lifetime paths and class callbacks share private object representation state;
+  no residual root `quickjs.c` remains. The recorded typed-array cycle-only and
+  other layout observations still require final benchmark attention.
 - [x] Keep calls, bytecode dispatch, closures, var refs, generators, and async
   execution in `function-vm.c` unless evidence supports a call/runtime split.
   The complete direct-threaded interpreter, opcode-adjacent iterator support,
