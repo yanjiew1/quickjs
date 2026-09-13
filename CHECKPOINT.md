@@ -1351,3 +1351,92 @@ revisited during final dual-compiler non-LTO stabilization. Raw logs are under
    final normal non-LTO performance stabilization with both GCC and Clang.
    Revisit every deferred meaningful regression; LTO performance is diagnostic
    only, while supported LTO correctness remains required.
+
+## Unicode table generator milestone (authoritative current state)
+
+### Architecture and boundary decision
+
+The former 3,792-line `unicode_gen.c`, which included `libunicode.c` in its
+test configuration, is now six normally compiled generator owners:
+
+- the 1,247-line root driver owns Unicode input parsing, database construction,
+  immutable category/script/property metadata, and process lifetime;
+- `src/unicode-gen/case.c` owns case-run analysis and compressed case-table
+  generation;
+- `src/unicode-gen/normalize.c` owns combining-class, decomposition, and
+  composition table generation;
+- `src/unicode-gen/property.c` owns derived flags, category/script/property,
+  and emoji-sequence table generation;
+- `src/unicode-gen/emission.c` owns the two compressed byte/index emitters
+  shared by normalization and property generation;
+- `src/unicode-gen/selftest.c` owns generator/runtime comparison tests and is
+  linked only into the explicit `unicode_gen_test` target.
+
+`UnicodeGenState` contains the database and emoji stores and is call-local to
+the driver; parser and generation owners receive it explicitly. Output size
+accounting is carried by an explicit `UnicodeGenOutput`. Case conversion's
+temporary compressed tables are call-local to the case owner, including on the
+self-test path; there are no mutable cross-TU or file-global generator states.
+The private header exposes immutable metadata and only the narrow helpers used
+across actual owner boundaries. Optional diagnostic switches live in that
+shared generator header so their definitions reach every consuming TU.
+
+The production generator links only its owners and `cutils`. The test target
+normally links the modular Unicode runtime and enables three hidden,
+`CONFIG_UNICODE_TEST`-gated normalization inspection hooks. Production runtime
+objects contain none of those symbols, and no source file includes another
+`.c` file. Release packaging includes both new private source directories.
+
+### Validation and pre-existing self-test issue
+
+Acceptance validation on this source state:
+
+- independent GCC 16.2 and Clang 23.1 WERROR builds of `unicode_gen` and
+  `unicode_gen_test`: PASS;
+- GCC 16.2 and Clang 23.1 WERROR syntax with all generator diagnostic/profile
+  switches enabled: PASS;
+- generation from the pinned `unicode/` inputs under both compilers: PASS,
+  byte-for-byte identical to tracked `libunicode-table.h`;
+- clean parallel GCC 16.2 `CONFIG_WERROR=y all` and full repository
+  `make test`: PASS;
+- exact full Test262 comparison: PASS, unchanged at `58/83558` errors, `3356`
+  excluded, and `6000` skipped;
+- generator global-symbol inspection finds only the narrow declared private
+  interface and immutable metadata, with no mutable generator globals;
+  `release.sh` syntax and `git diff --check`: PASS.
+
+The generator self-test exits 1 at the existing case-folding comparison for
+U+1FD3:
+
+```text
+ERROR: F
+01fd3: U: 00399 00308 00301 L: 01fd3 F: 00390
+```
+
+The exact parent `cff9213` source-inclusion self-test produces the same two
+lines and exit status from the same Unicode inputs. This is therefore a
+pre-existing self-test result, not a modularization regression; unrelated
+case-folding behavior was not changed. The modular test still constructs and
+checks the compressed case tables before performing the same runtime
+comparison sequence as the parent.
+
+Normal qjs text remains exactly 1,056,566 bytes, matching the preceding Unicode
+runtime milestone. This developer-tooling-only extraction adds no production
+runtime call boundary or generated-data change, so the intermediate runtime
+performance screen was not repeated. Raw validation logs are under
+`/tmp/qjs-ugen-*`; the exact parent test binary and comparison logs are under
+`/tmp/qjs-unicode-perf/`.
+
+### Exact next steps
+
+1. Assess `run-test262.c` ownership. Extract only natural runner utilities or
+   state owners with narrow dependency direction; keep metadata, evaluation,
+   expected-failure comparison, and agent execution together where separating
+   them would expose broad runner globals.
+2. Validate bounded deterministic serial/threaded runs, filtering, exclusions,
+   expected-failure reporting/update ordering, and statistics, then repeat the
+   exact full Test262 comparison before committing any retained split.
+3. Perform final supported-configuration correctness validation and matched
+   pristine/final normal non-LTO performance stabilization separately with GCC
+   16.2 and Clang 23.1. Revisit every deferred meaningful regression; supported
+   LTO correctness remains required and LTO performance remains diagnostic.

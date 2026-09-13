@@ -26,6 +26,7 @@ test262o
 test262o_*.txt
 unicode
 unicode_gen
+unicode_gen_test
 run_octane
 run_sunspider_like
 libwinpthread*.dll

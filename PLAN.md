@@ -49,6 +49,8 @@ Recorded intermediate non-LTO layout observations remain `[~]` work for Final
 Performance Stabilization; they do not block the secondary runtime/library and
 developer-tooling assessments. Final formal performance validation will compare
 matched pristine and final normal non-LTO builds separately with GCC and Clang.
+The Unicode table generator is now modularized and validated; `run-test262.c`
+is the remaining developer-tooling assessment.
 
 ## Inspected starting architecture
 
@@ -263,7 +265,7 @@ core ownership and deferred final performance stabilization remain.
   `.debug.o`, `.fuzz.o`, `.check.o`) to compile nested sources and create nested
   object directories.  Replace the single engine object in every consumer with
   an ordered engine-object list and extend dependency inclusion recursively.
-- [ ] Replace special monolithic compile/link recipes for `regexp_test` and
+- [x] Replace special monolithic compile/link recipes for `regexp_test` and
   `unicode_gen` with the corresponding modular object sets, and preserve the
   generated Unicode-table dependencies in every applicable object variant.
 - [x] First extract binary object/bytecode I/O as one coherent commit. Its narrow
@@ -432,17 +434,23 @@ Likely commits:
 
 ### 6. Developer-tooling assessment and extraction
 
-- [ ] `unicode_gen.c`: map generator-wide database state and call graph after the
+- [x] `unicode_gen.c`: map generator-wide database state and call graph after the
   runtime Unicode split.  If clean, separate input/database construction, case
   and normalization generation, property/sequence generation, and emission/self
   tests into a small number of TUs.  Otherwise retain the cohesive file and
   document the coupling.  Compare generated `libunicode-table.h` byte for byte
-  from identical Unicode inputs and run generator self-tests.
-- [ ] Give generator-wide Unicode DB, emoji stores, conversion tables, and size
+  from identical Unicode inputs and run generator self-tests. Input/database,
+  case, normalization, property/sequence, shared emission, and gated self-test
+  owners now link normally and reproduce the generated table byte for byte.
+  The self-test's exact pre-existing U+1FD3 case-folding failure is documented.
+- [x] Give generator-wide Unicode DB, emoji stores, conversion tables, and size
   counters an explicit private context/state owner rather than a broad extern
   header. Replace `USE_TEST`'s inclusion of `libunicode.c` with normal linkage to
   modular Unicode objects and public-behavior tests or narrowly gated private
   test hooks; no `.c` inclusion or public runtime API exposure is acceptable.
+  Parsing receives an explicit call-local generator state; case compression is
+  call-local; output accounting is explicit; and three hidden normalization
+  hooks exist only in the dedicated test build.
 - [ ] `run-test262.c`: map config, metadata, test discovery, agent/worker,
   execution, expected-failure, and reporting state.  Extract metadata/config and
   reporting only if runner state need not become global or broadly exposed.
