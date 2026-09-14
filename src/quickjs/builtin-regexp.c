@@ -34,9 +34,7 @@
 #define js_malloc qjs_malloc_internal
 #define js_free qjs_free_internal
 #define js_realloc qjs_realloc_internal
-#if !defined(__clang__)
 #define JS_FreeAtom qjs_free_atom
-#endif
 
 /* RegExp */
 

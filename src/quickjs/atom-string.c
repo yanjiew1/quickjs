@@ -1622,14 +1622,8 @@ static void copy_str16(uint16_t *dst, const JSString *p, int offset, int len)
     }
 }
 
-#if defined(__clang__)
-static no_inline JSValue JS_ConcatString1(JSContext *ctx,
-                                          const JSString *p1,
-                                          const JSString *p2)
-#else
 static JSValue JS_ConcatString1(JSContext *ctx,
                                 const JSString *p1, const JSString *p2)
-#endif
 {
     JSString *p;
     uint32_t len;
@@ -1690,12 +1684,7 @@ QJS_INTERNAL BOOL qjs_concat_string_in_place(JSContext *ctx, JSString *p1,
     return FALSE;
 }
 
-#if defined(__clang__)
-static force_inline JSValue JS_ConcatString2Inline(JSContext *ctx,
-                                                   JSValue op1, JSValue op2)
-#else
 static JSValue JS_ConcatString2(JSContext *ctx, JSValue op1, JSValue op2)
-#endif
 {
     JSValue ret;
     JSString *p1, *p2;
@@ -1710,16 +1699,6 @@ static JSValue JS_ConcatString2(JSContext *ctx, JSValue op1, JSValue op2)
     JS_FreeValue(ctx, op2);
     return ret;
 }
-
-#if defined(__clang__)
-static no_inline JSValue JS_ConcatString2(JSContext *ctx,
-                                          JSValue op1, JSValue op2)
-{
-    return JS_ConcatString2Inline(ctx, op1, op2);
-}
-#else
-#define JS_ConcatString2Inline JS_ConcatString2
-#endif
 
 /* Return the character at position 'idx'. 'val' must be a string or rope */
 QJS_INTERNAL int string_rope_get(JSValueConst val, uint32_t idx)
@@ -2073,7 +2052,7 @@ JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
             if (JS_VALUE_GET_TAG(op1) == JS_TAG_STRING) {
                 p1 = JS_VALUE_GET_STRING(op1);
                 if (p1->len <= JS_STRING_ROPE_SHORT2_LEN) {
-                    return JS_ConcatString2Inline(ctx, op1, op2);
+                    return JS_ConcatString2(ctx, op1, op2);
                 } else {
                     return js_new_string_rope(ctx, op1, op2);
                 }
@@ -2105,8 +2084,7 @@ JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
         if (JS_VALUE_GET_TAG(r2->left) == JS_TAG_STRING &&
             JS_VALUE_GET_STRING(r2->left)->len <= JS_STRING_ROPE_SHORT_LEN) {
             JSValue val, ret;
-            val = JS_ConcatString2Inline(ctx, op1,
-                                         JS_DupValue(ctx, r2->left));
+            val = JS_ConcatString2(ctx, op1, JS_DupValue(ctx, r2->left));
             if (JS_IsException(val)) {
                 JS_FreeValue(ctx, op2);
                 return JS_EXCEPTION;

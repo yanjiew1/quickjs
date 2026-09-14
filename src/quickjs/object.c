@@ -181,9 +181,7 @@
 #define is_strict_mode qjs_is_strict_mode
 #define js_dbuf_init qjs_dbuf_init
 #define set_value qjs_set_value
-#if !defined(__clang__)
 #define JS_FreeAtom qjs_free_atom
-#endif
 #define JS_FreeAtomRT qjs_free_atom_rt
 #define JS_DupAtom qjs_dup_atom
 #define JS_GetPropertyValue qjs_get_property_value

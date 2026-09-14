@@ -58,7 +58,7 @@ static inline BOOL qjs_atom_is_const(JSAtom atom)
 
 QJS_INTERNAL void qjs_free_atom_struct(JSRuntime *rt, JSAtomStruct *atom);
 
-static force_inline void qjs_free_atom(JSContext *ctx, JSAtom atom)
+static inline void qjs_free_atom(JSContext *ctx, JSAtom atom)
 {
     if (!qjs_atom_is_const(atom)) {
         JSAtomStruct *str = ctx->rt->atom_array[atom];
@@ -140,19 +140,19 @@ static inline BOOL qjs_atom_is_string(JSContext *ctx, JSAtom atom)
     return qjs_atom_get_kind(ctx, atom) == JS_ATOM_KIND_STRING;
 }
 
-static force_inline JSAtom qjs_dup_atom_rt(JSRuntime *rt, JSAtom atom)
+static inline JSAtom qjs_dup_atom_rt(JSRuntime *rt, JSAtom atom)
 {
     if (!qjs_atom_is_const(atom))
         qjs_get_ref_header(rt->atom_array[atom])->ref_count++;
     return atom;
 }
 
-static force_inline JSAtom qjs_dup_atom(JSContext *ctx, JSAtom atom)
+static inline JSAtom qjs_dup_atom(JSContext *ctx, JSAtom atom)
 {
     return qjs_dup_atom_rt(ctx->rt, atom);
 }
 
-static force_inline void qjs_free_atom_rt(JSRuntime *rt, JSAtom atom)
+static inline void qjs_free_atom_rt(JSRuntime *rt, JSAtom atom)
 {
     if (!qjs_atom_is_const(atom)) {
         JSAtomStruct *str = rt->atom_array[atom];

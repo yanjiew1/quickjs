@@ -65,10 +65,6 @@ QJS_INTERNAL JSValue qjs_to_numeric(JSContext *ctx, JSValueConst value);
 QJS_INTERNAL JSValue qjs_to_number_free(JSContext *ctx, JSValue value);
 QJS_INTERNAL JSValue qjs_to_number(JSContext *ctx, JSValueConst value);
 QJS_INTERNAL int qjs_to_bool_free(JSContext *ctx, JSValue value);
-#ifdef __clang__
-/* Clang inlined the monolithic JS_ToInt32Free into the typed-array property
-   setter.  Keep the same implementation visible to split-TU callers so it can
-   retain that generated-code shape without adding a forwarding boundary. */
 static inline int qjs_to_int32_free(JSContext *ctx, int32_t *result,
                                     JSValue value)
 {
@@ -120,10 +116,6 @@ static inline int qjs_to_int32_free(JSContext *ctx, int32_t *result,
     *result = ret;
     return 0;
 }
-#else
-QJS_INTERNAL int qjs_to_int32_free(JSContext *ctx, int32_t *result,
-                                   JSValue value);
-#endif
 QJS_INTERNAL int qjs_to_float64_free_slow(JSContext *ctx, double *result,
                                           JSValue value);
 static inline int qjs_to_float64_free(JSContext *ctx, double *result,

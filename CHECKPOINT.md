@@ -31,6 +31,133 @@ The final working tree is clean except for the user-supplied authoritative
 
 Authoritative task: `task.md`. Living roadmap: `PLAN.md`.
 
+## Inline-policy cleanup follow-up (2026-09-15)
+
+This separate follow-up uses completed modularization commit `af558f1` as its
+immediate baseline. It does not reopen architecture or alter JavaScript
+semantics, public API/ABI, algorithms, representations, or module ownership.
+
+### Audit and resulting policy
+
+The audit found all compiler-identity inline policy introduced during final
+stabilization:
+
+- `JS_ConcatString1` was `no_inline` only for Clang. Clang also used a forced
+  `JS_ConcatString2Inline` at selected sites plus a no-inline
+  `JS_ConcatString2` forwarder, while GCC used one ordinary implementation.
+- `JS_IteratorNext` and `js_for_of_next` were ordinary under Clang and forced
+  under GCC.
+- `qjs_free_value` was ordinary inline under Clang and forced under GCC.
+- `qjs_to_int32_free` exposed its implementation only to Clang and used an
+  out-of-line owner entry for GCC.
+- `object.c`, `function-vm.c`, and `builtin-regexp.c` selected the direct
+  private atom-free helper only outside Clang. `function-vm.c` similarly
+  selected its private allocator adapters only outside Clang.
+
+All of those compiler-name choices are gone. The sole compiler test remaining
+under `src/quickjs/` is the centralized attribute-portability implementation in
+`internal-config.h`; it expresses the same policy portably rather than choosing
+a different policy or call topology.
+
+The canonical source now has ordinary `JS_ConcatString1` and one ordinary
+`JS_ConcatString2`; `JS_ConcatString2Inline`, its forwarding wrapper, and its
+macro alias are gone. The concat algorithm is unchanged. Both iterator helpers
+are normal `static inline`. `qjs_to_int32_free` has one normal static-inline
+definition in its narrow number header, which lets both optimizers see the
+owner helper without forcing an outcome. Atom-free and allocator calls use the
+same private owner interfaces under both compilers.
+
+The final-performance force annotations on atom dup/free helpers, SameValue
+wrappers, GC-list helpers, and the RegExp C-function predicate were reduced to
+normal static inline because this follow-up found no evidence requiring a
+forced result. No new `no_inline` remains from the completed task.
+
+The one follow-up-owned explicit annotation retained is compiler-independent
+`force_inline` on `qjs_free_value`. In a rotated seven-pair fixed-work
+comparison, the otherwise-equivalent ordinary-inline build emitted 23 GCC
+calls/local copies and measured `int_to_string` +5.86% cycles and
+`string_build2` +8.51% cycles versus `af558f1`; forcing the helper reduced those
+to +3.01% and +2.46%, respectively, and restored the direct zero-ref path.
+Clang `func_call` was -4.24% ordinary and -4.51% forced, and Clang typed-array
+read was +5.51% ordinary and +4.39% forced, so forcing introduced no meaningful
+Clang regression. The source-level justification is therefore that failing to
+inline materially harms hot GCC value-release paths, not that a particular
+compiler historically chose to inline.
+
+Other explicit annotations still visible in the repository were already in
+the completed baseline and are compiler-independent. The force-inlined shape
+lookup, fast-array extension predicate, and RegExp `lastIndex` accessors are the
+same tiny per-operation hot fast paths present in the pristine monolithic
+source; their failure to inline would add a call at each lookup/mutation/match.
+The inherited no-inline routines are cold allocation, growth/conversion, slow
+operator, interrupt, or recursion-sensitive paths deliberately kept out of hot
+callers. They were reviewed for compiler-name selection and left unchanged;
+none selects a different policy by compiler.
+
+### Generated code and performance
+
+The final GCC binary uses the same 0x35f-byte `JS_ConcatString2` body as
+`af558f1`. Clang naturally emits one 0x4c3-byte `JS_ConcatString2` and no
+`JS_ConcatString1` symbol instead of the former compiler-selected two-entry
+topology. This difference is accepted because the source and semantics are
+canonical and neither compiler needs its former heuristic shape reproduced.
+Generated-code captures are under `/tmp/qjs-inline-cleanup/generated/`.
+
+Seven alternating complete 72-workload runs, pinned serially to CPU 2 after
+warmup, give a median-ratio geometric mean of **+0.093% for GCC 16.2** and
+**-0.872% for Clang 23.1** against exact `af558f1` normal non-LTO binaries. Raw
+samples and median tables are under:
+
+- `/tmp/qjs-inline-cleanup/perf/final-gcc-full/`
+- `/tmp/qjs-inline-cleanup/perf/final-clang-full/`
+
+Fixed-work counter checks resolved the adaptive outliers. GCC
+`string_build2` is +1.95% cycles with identical instructions/branches;
+`string_to_float` is +4.09% with unchanged work. GCC `string_build3` remains
++5.51% cycles with identical instructions and branches, consistent with layout
+rather than an inline-policy work change. Clang `prop_update` is +0.40%,
+`array_write` -0.02%, and typed-array read +4.86% cycles (+1.28%
+instructions); unrelated `float_toPrecision` and `math_min` cycle outliers have
+identical instruction and branch counts. Fixed logs are under
+`/tmp/qjs-inline-cleanup/perf/final-fixed-confirm/`.
+
+The natural iterator policy has one explicit cross-compiler tradeoff. Normal
+static inline leaves GCC `array_for_of` at +6.15% cycles, +2.93%
+instructions, and +1.49% branches. Forcing both iterator helpers removes the
+GCC work but makes Clang fixed `func_call` +21.75% cycles and +4.19%
+instructions; forcing only the inner helper still makes it +22.56%/+4.19%.
+Ordinary functions were worse for both compilers. Per the follow-up's conflict
+rule, the source retains the simpler normal static-inline form instead of
+encoding opposite compiler policies. Evidence is under
+`/tmp/qjs-inline-cleanup/perf/candidate{1,2,3,5}-*`.
+
+A bounded canonical public-atom-entry variant was also checked. It restored
+Clang's former typed-read generated shape, but caused GCC fixed
+`string_build2` +7.52% cycles with identical executed instructions/branches.
+The final uniform private static-inline owner interface avoids that regression;
+the rejected samples are under `/tmp/qjs-inline-cleanup/perf/atom-topology/`,
+`candidate6-focused/`, and `candidate6-fixed/`.
+
+No general optimization or layout/alignment tuning was introduced. The only
+remaining above-threshold observations are the GCC-only natural-inline
+`array_for_of` work difference and cycle-only GCC `string_build3` layout
+sensitivity; neither is compensated by compiler-specific policy or a new fast
+path.
+
+### Follow-up correctness and interface validation
+
+- GCC 16.2 normal non-LTO clean WERROR `all` and full `make test`: PASS.
+- Clang 23.1 normal non-LTO clean WERROR `all` and full `make test`: PASS.
+- Final measured and final validated binaries are byte-identical for each
+  compiler.
+- Exported dynamic symbol names match `af558f1` exactly: 292 GCC names and 286
+  Clang names.
+- `git diff --check` passes; no stale concat helper or compiler-specific inline
+  branch remains.
+
+Validation logs and symbol lists are under
+`/tmp/qjs-inline-cleanup/final-validation/`.
+
 ## Final restorative-only acceptance state
 
 ### Performance-scope audit and preserved future work

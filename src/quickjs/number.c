@@ -4293,14 +4293,6 @@ QJS_INTERNAL int qjs_to_float64_free_slow(JSContext *ctx, double *result,
     return __JS_ToFloat64Free(ctx, result, value);
 }
 
-#ifndef __clang__
-QJS_INTERNAL int qjs_to_int32_free(JSContext *ctx, int32_t *result,
-                                   JSValue value)
-{
-    return JS_ToInt32Free(ctx, result, value);
-}
-#endif
-
 QJS_INTERNAL JSValue qjs_to_integer_free(JSContext *ctx, JSValue value)
 {
     return JS_ToIntegerFree(ctx, value);

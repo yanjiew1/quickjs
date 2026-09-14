@@ -60,6 +60,17 @@ but caused broader GCC and Clang regressions, so the natural allocator owner
 remains separate. Supported configuration validation and the fresh adversarial
 review are complete. LTO performance remains diagnostic only.
 
+The separate inline-policy follow-up against completion commit `af558f1` is
+also complete. Compiler-name branches used only to reproduce GCC/Clang
+heuristics were removed, concat now has one canonical source topology, and
+small private helpers use normal `static inline` unless measurement establishes
+that forcing is material. The only follow-up-retained explicit force is the
+compiler-independent zero-ref value-free helper; fixed-work measurements show
+that ordinary inline leaves meaningful GCC string/conversion regressions while
+forcing does not harm the corresponding Clang screens. Full evidence and the
+one deliberately accepted natural-inline iterator tradeoff are recorded in
+`CHECKPOINT.md`.
+
 ## Inspected starting architecture
 
 The starting tree has one 61,424-line `quickjs.c`, one-object build rules in the

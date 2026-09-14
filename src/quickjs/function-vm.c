@@ -88,9 +88,7 @@
 #define JS_IsCFunction qjs_is_c_function
 #define JS_NewObjectFromShape qjs_new_object_from_shape
 #define JS_NewSymbolFromAtom qjs_new_symbol_from_atom
-#if !defined(__clang__)
 #define JS_FreeAtom qjs_free_atom
-#endif
 #define JS_SetPrivateField qjs_set_private_field
 #define JS_SetPropertyValue qjs_set_property_value
 #define JS_SetPrototypeInternal qjs_set_prototype_internal
@@ -124,14 +122,12 @@
 #define js_create_array qjs_create_array
 #define js_create_array_free qjs_create_array_free
 #define js_dup_shape qjs_dup_shape
-#if !defined(__clang__)
 #define js_malloc_rt qjs_malloc_rt_internal
 #define js_free_rt qjs_free_rt_internal
 #define js_realloc_rt qjs_realloc_rt_internal
 #define js_malloc qjs_malloc_internal
 #define js_free qjs_free_internal
 #define js_realloc qjs_realloc_internal
-#endif
 #define js_eq_slow qjs_eq_slow
 #define js_free_desc qjs_proxy_free_desc
 #define js_function_set_properties qjs_function_set_properties
@@ -666,17 +662,9 @@ static JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
 }
 
 /* Note: always return JS_UNDEFINED when *pdone = TRUE. */
-#if defined(__clang__)
-static JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                               JSValueConst method,
-                               int argc, JSValueConst *argv, BOOL *pdone)
-#else
-static force_inline JSValue JS_IteratorNext(JSContext *ctx,
-                                            JSValueConst enum_obj,
-                                            JSValueConst method,
-                                            int argc, JSValueConst *argv,
-                                            BOOL *pdone)
-#endif
+static inline JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
+                                     JSValueConst method,
+                                     int argc, JSValueConst *argv, BOOL *pdone)
 {
     JSValue obj, value, done_val;
     int done;
@@ -771,12 +759,8 @@ static __exception int js_for_of_start(JSContext *ctx, JSValue *sp,
    objs. If 'done' is true or in case of exception, 'enum_rec' is set
    to undefined. If 'done' is true, 'value' is always set to
    undefined. */
-#if defined(__clang__)
-static __exception int js_for_of_next(JSContext *ctx, JSValue *sp, int offset)
-#else
-static force_inline __exception int js_for_of_next(JSContext *ctx, JSValue *sp,
-                                                   int offset)
-#endif
+static inline __exception int js_for_of_next(JSContext *ctx, JSValue *sp,
+                                             int offset)
 {
     JSValue value = JS_UNDEFINED;
     int done = 1;

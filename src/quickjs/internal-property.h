@@ -143,15 +143,15 @@ QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst left,
 #define QJS_EQ_SAME_VALUE 1
 #define QJS_EQ_SAME_VALUE_ZERO 2
 
-static force_inline BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
-                                        JSValueConst right)
+static inline BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
+                                  JSValueConst right)
 {
     return qjs_strict_equal(ctx, left, right, QJS_EQ_SAME_VALUE);
 }
 
-static force_inline BOOL qjs_same_value_zero(JSContext *ctx,
-                                             JSValueConst left,
-                                             JSValueConst right)
+static inline BOOL qjs_same_value_zero(JSContext *ctx,
+                                       JSValueConst left,
+                                       JSValueConst right)
 {
     return qjs_strict_equal(ctx, left, right, QJS_EQ_SAME_VALUE_ZERO);
 }

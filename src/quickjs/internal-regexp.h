@@ -31,9 +31,9 @@ QJS_INTERNAL JSValue qjs_regexp_throw_type_error_not_object(JSContext *ctx);
 QJS_INTERNAL JSValue qjs_regexp_throw_type_error_invalid_class(JSContext *ctx,
                                                                int class_id);
 QJS_INTERNAL void qjs_regexp_throw_interrupted(JSContext *ctx);
-static force_inline BOOL qjs_regexp_is_c_function(JSContext *ctx,
-                                                  JSValueConst value,
-                                                  JSCFunction *func, int magic)
+static inline BOOL qjs_regexp_is_c_function(JSContext *ctx,
+                                            JSValueConst value,
+                                            JSCFunction *func, int magic)
 {
     JSObject *obj;
 
