@@ -22,7 +22,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "src/quickjs/internal-allocator.h"
 #include "src/quickjs/internal-object.h"
+
+#define js_malloc_rt qjs_malloc_rt_internal
+#define js_free_rt qjs_free_rt_internal
+#define js_realloc_rt qjs_realloc_rt_internal
+#define js_malloc qjs_malloc_internal
+#define js_free qjs_free_internal
+#define js_realloc qjs_realloc_internal
 
 #define js_rc qjs_get_ref_header
 #define is_digit qjs_is_digit
@@ -30,8 +38,6 @@
 #define JS_ToNumber qjs_to_number
 #define JS_ToStringFree qjs_to_string_free
 
-/* __JS_FreeValue() is exactly the context adapter for __JS_FreeValueRT(). */
-#define JS_FreeValue(ctx, value) JS_FreeValueRT((ctx)->rt, (value))
 #define JS_DupAtomRT qjs_dup_atom_rt
 #define JS_AtomGetKind qjs_atom_get_kind
 #define JS_AtomIsString qjs_atom_is_string
@@ -48,6 +54,7 @@
 #define js_atom_concat_str qjs_atom_concat_str
 #define js_atom_concat_num qjs_atom_concat_num
 #define js_alloc_string qjs_alloc_string
+#define js_alloc_string_rt qjs_alloc_string_rt
 #define js_free_string qjs_free_string
 #define js_new_string8_len qjs_new_string8_len
 #define js_new_string8 qjs_new_string8
@@ -85,8 +92,8 @@ static const char js_atom_init[] =
 ;
 static JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
                                int atom_type);
-static void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
-QJS_INTERNAL JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+QJS_INTERNAL void qjs_free_atom_struct(JSRuntime *rt, JSAtomStruct *p);
+#define JS_FreeAtomStruct qjs_free_atom_struct
 QJS_INTERNAL int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
                             int pos2, int len);
 static inline uint32_t atom_get_free(const JSAtomStruct *p)
@@ -102,36 +109,6 @@ static inline BOOL atom_is_free(const JSAtomStruct *p)
 static inline JSAtomStruct *atom_set_free(uint32_t v)
 {
     return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
-}
-
-/* Note: the string contents are uninitialized */
-static JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char)
-{
-    JSString *str;
-    str = js_malloc_rt(rt, sizeof(JSString) + (max_len << is_wide_char) + 1 - is_wide_char);
-    if (unlikely(!str))
-        return NULL;
-    js_rc(str)->ref_count = 1;
-    str->is_wide_char = is_wide_char;
-    str->len = max_len;
-    str->atom_type = 0;
-    str->hash = 0;          /* optional but costless */
-    str->hash_next = 0;     /* optional */
-#ifdef DUMP_LEAKS
-    list_add_tail(&str->link, &rt->string_list);
-#endif
-    return str;
-}
-
-QJS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
-{
-    JSString *p;
-    p = js_alloc_string_rt(ctx->rt, max_len, is_wide_char);
-    if (unlikely(!p)) {
-        JS_ThrowOutOfMemory(ctx);
-        return NULL;
-    }
-    return p;
 }
 
 QJS_INTERNAL void qjs_free_string_zero_ref(JSRuntime *rt, JSString *str)
@@ -150,14 +127,7 @@ QJS_INTERNAL void qjs_free_string_zero_ref(JSRuntime *rt, JSString *str)
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
 
-static inline BOOL __JS_AtomIsConst(JSAtom v)
-{
-#if defined(DUMP_LEAKS) && DUMP_LEAKS > 1
-        return (int32_t)v <= 0;
-#else
-        return (int32_t)v < JS_ATOM_END;
-#endif
-}
+#define __JS_AtomIsConst qjs_atom_is_const
 
 static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
 {
@@ -367,17 +337,6 @@ static int JS_InitAtoms(JSRuntime *rt)
         p = p + len + 1;
     }
     return 0;
-}
-
-QJS_INTERNAL JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v)
-{
-    JSAtomStruct *p;
-
-    if (!__JS_AtomIsConst(v)) {
-        p = rt->atom_array[v];
-        js_rc(p)->ref_count++;
-    }
-    return v;
 }
 
 JSAtom JS_DupAtom(JSContext *ctx, JSAtom v)
@@ -607,7 +566,7 @@ static JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len,
     return JS_ATOM_NULL;
 }
 
-static void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p)
+QJS_INTERNAL void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p)
 {
 #if 0   /* JS_ATOM_NULL is not refcounted: __JS_AtomIsConst() includes 0 */
     if (unlikely(i == JS_ATOM_NULL)) {
@@ -1024,21 +983,6 @@ QJS_INTERNAL JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n)
     return js_atom_concat_str(ctx, name, buf);
 }
 
-QJS_INTERNAL JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
-{
-    JSString *str;
-
-    if (len <= 0) {
-        return JS_AtomToString(ctx, JS_ATOM_empty_string);
-    }
-    str = js_alloc_string(ctx, len, 0);
-    if (!str)
-        return JS_EXCEPTION;
-    memcpy(str->u.str8, buf, len);
-    str->u.str8[len] = '\0';
-    return JS_MKPTR(JS_TAG_STRING, str);
-}
-
 QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *buf)
 {
     return js_new_string8_len(ctx, buf, strlen(buf));
@@ -1118,15 +1062,23 @@ QJS_INTERNAL int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
     return 0;
 }
 
-QJS_INTERNAL int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
+QJS_INTERNAL int qjs_string_buffer_init(JSContext *ctx, StringBuffer *s,
+                                        int size)
 {
-    return string_buffer_init2(ctx, s, size, 0);
-}
-
-QJS_INTERNAL void string_buffer_free(StringBuffer *s)
-{
-    js_free(s->ctx, s->str);
-    s->str = NULL;
+    s->ctx = ctx;
+    s->size = size;
+    s->len = 0;
+    s->is_wide_char = 0;
+    s->error_status = 0;
+    s->str = js_alloc_string(ctx, size, 0);
+    if (unlikely(!s->str)) {
+        s->size = 0;
+        return s->error_status = -1;
+    }
+#ifdef DUMP_LEAKS
+    list_del(&s->str->link);
+#endif
+    return 0;
 }
 
 static int string_buffer_set_error(StringBuffer *s)
@@ -1235,7 +1187,7 @@ QJS_INTERNAL int string_buffer_putc16(StringBuffer *s, uint32_t c)
     return string_buffer_putc16_slow(s, c);
 }
 
-static int string_buffer_putc_slow(StringBuffer *s, uint32_t c)
+QJS_INTERNAL int qjs_string_buffer_putc_slow(StringBuffer *s, uint32_t c)
 {
     if (unlikely(c >= 0x10000)) {
         /* surrogate pair */
@@ -1247,46 +1199,6 @@ static int string_buffer_putc_slow(StringBuffer *s, uint32_t c)
 }
 
 /* 0 <= c <= 0x10ffff */
-QJS_INTERNAL int string_buffer_putc(StringBuffer *s, uint32_t c)
-{
-    if (likely(s->len < s->size)) {
-        if (s->is_wide_char) {
-            if (c < 0x10000) {
-                s->str->u.str16[s->len++] = c;
-                return 0;
-            } else if (likely((s->len + 1) < s->size)) {
-                s->str->u.str16[s->len++] = get_hi_surrogate(c);
-                s->str->u.str16[s->len++] = get_lo_surrogate(c);
-                return 0;
-            }
-        } else if (c < 0x100) {
-            s->str->u.str8[s->len++] = c;
-            return 0;
-        }
-    }
-    return string_buffer_putc_slow(s, c);
-}
-
-QJS_INTERNAL int string_getc(const JSString *p, int *pidx)
-{
-    int idx, c, c1;
-    idx = *pidx;
-    if (p->is_wide_char) {
-        c = p->u.str16[idx++];
-        if (is_hi_surrogate(c) && idx < p->len) {
-            c1 = p->u.str16[idx];
-            if (is_lo_surrogate(c1)) {
-                c = from_surrogate(c, c1);
-                idx++;
-            }
-        }
-    } else {
-        c = p->u.str8[idx++];
-    }
-    *pidx = idx;
-    return c;
-}
-
 QJS_INTERNAL int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len)
 {
     int i;
@@ -1710,8 +1622,14 @@ static void copy_str16(uint16_t *dst, const JSString *p, int offset, int len)
     }
 }
 
+#if defined(__clang__)
+static no_inline JSValue JS_ConcatString1(JSContext *ctx,
+                                          const JSString *p1,
+                                          const JSString *p2)
+#else
 static JSValue JS_ConcatString1(JSContext *ctx,
                                 const JSString *p1, const JSString *p2)
+#endif
 {
     JSString *p;
     uint32_t len;
@@ -1772,7 +1690,12 @@ QJS_INTERNAL BOOL qjs_concat_string_in_place(JSContext *ctx, JSString *p1,
     return FALSE;
 }
 
+#if defined(__clang__)
+static force_inline JSValue JS_ConcatString2Inline(JSContext *ctx,
+                                                   JSValue op1, JSValue op2)
+#else
 static JSValue JS_ConcatString2(JSContext *ctx, JSValue op1, JSValue op2)
+#endif
 {
     JSValue ret;
     JSString *p1, *p2;
@@ -1787,6 +1710,16 @@ static JSValue JS_ConcatString2(JSContext *ctx, JSValue op1, JSValue op2)
     JS_FreeValue(ctx, op2);
     return ret;
 }
+
+#if defined(__clang__)
+static no_inline JSValue JS_ConcatString2(JSContext *ctx,
+                                          JSValue op1, JSValue op2)
+{
+    return JS_ConcatString2Inline(ctx, op1, op2);
+}
+#else
+#define JS_ConcatString2Inline JS_ConcatString2
+#endif
 
 /* Return the character at position 'idx'. 'val' must be a string or rope */
 QJS_INTERNAL int string_rope_get(JSValueConst val, uint32_t idx)
@@ -2107,8 +2040,8 @@ static JSValue js_rebalancee_string_rope(JSContext *ctx, JSValueConst rope)
 
 /* op1 and op2 are converted to strings. For convenience, op1 or op2 =
    JS_EXCEPTION are accepted and return JS_EXCEPTION.  */
-QJS_INTERNAL __attribute__((hot))
-JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
+QJS_INTERNAL JSValue
+JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
 {
     JSString *p1, *p2;
 
@@ -2140,7 +2073,7 @@ JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
             if (JS_VALUE_GET_TAG(op1) == JS_TAG_STRING) {
                 p1 = JS_VALUE_GET_STRING(op1);
                 if (p1->len <= JS_STRING_ROPE_SHORT2_LEN) {
-                    return JS_ConcatString2(ctx, op1, op2);
+                    return JS_ConcatString2Inline(ctx, op1, op2);
                 } else {
                     return js_new_string_rope(ctx, op1, op2);
                 }
@@ -2172,7 +2105,8 @@ JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
         if (JS_VALUE_GET_TAG(r2->left) == JS_TAG_STRING &&
             JS_VALUE_GET_STRING(r2->left)->len <= JS_STRING_ROPE_SHORT_LEN) {
             JSValue val, ret;
-            val = JS_ConcatString2(ctx, op1, JS_DupValue(ctx, r2->left));
+            val = JS_ConcatString2Inline(ctx, op1,
+                                         JS_DupValue(ctx, r2->left));
             if (JS_IsException(val)) {
                 JS_FreeValue(ctx, op2);
                 return JS_EXCEPTION;
@@ -2297,29 +2231,6 @@ QJS_INTERNAL void qjs_atom_string_free_runtime(JSRuntime *rt)
 #endif
 }
 
-QJS_INTERNAL void qjs_atom_string_free_value_rt(JSRuntime *rt, JSValue value)
-{
-    uint32_t tag = JS_VALUE_GET_TAG(value);
-
-    if (tag == JS_TAG_STRING || tag == JS_TAG_SYMBOL) {
-        JSString *str = JS_VALUE_GET_PTR(value);
-        if (str->atom_type) {
-            JS_FreeAtomStruct(rt, str);
-        } else {
-#ifdef DUMP_LEAKS
-            list_del(&str->link);
-#endif
-            js_free_rt(rt, str);
-        }
-    } else if (tag == JS_TAG_STRING_ROPE) {
-        JSStringRope *rope = JS_VALUE_GET_STRING_ROPE(value);
-        JS_FreeValueRT(rt, rope->left);
-        JS_FreeValueRT(rt, rope->right);
-        js_free_rt(rt, rope);
-    } else {
-        abort();
-    }
-}
 
 QJS_INTERNAL JSAtom qjs_new_atom_rt_ascii(JSRuntime *rt, const char *str,
                                           size_t len, int atom_type)

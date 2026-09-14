@@ -32,6 +32,23 @@ static inline JSMallocBlockHeader *qjs_get_ref_header(void *ptr)
     return container_of(ptr, JSMallocBlockHeader, user_data);
 }
 
+/* Keep the engine-internal zero-ref path direct in normal non-LTO builds. */
+#if defined(__clang__)
+static inline void qjs_free_value(JSContext *ctx, JSValue value)
+#else
+static force_inline void qjs_free_value(JSContext *ctx, JSValue value)
+#endif
+{
+    if (JS_VALUE_HAS_REF_COUNT(value)) {
+        JSRefCountHeader *header = __js_rc(JS_VALUE_GET_PTR(value));
+
+        if (--header->ref_count <= 0)
+            __JS_FreeValueRT(ctx->rt, value);
+    }
+}
+
+#define JS_FreeValue qjs_free_value
+
 static inline void qjs_dbuf_init(JSContext *ctx, DynBuf *s)
 {
     dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
@@ -91,6 +108,19 @@ QJS_INTERNAL JSValue qjs_throw_stack_overflow(JSContext *ctx);
 QJS_INTERNAL void qjs_add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                                 JSGCObjectTypeEnum type);
 QJS_INTERNAL void qjs_remove_gc_object(JSGCObjectHeader *h);
+static force_inline void qjs_add_gc_object_fast(JSRuntime *rt,
+                                                JSGCObjectHeader *header,
+                                                JSGCObjectTypeEnum type)
+{
+    qjs_get_ref_header(header)->mark = 0;
+    qjs_get_ref_header(header)->gc_obj_type = type;
+    list_add_tail(&header->link, &rt->gc_obj_list);
+}
+
+static force_inline void qjs_remove_gc_object_fast(JSGCObjectHeader *header)
+{
+    list_del(&header->link);
+}
 QJS_INTERNAL void qjs_mark_context(JSRuntime *rt, JSContext *ctx,
                                    JS_MarkFunc *mark_func);
 QJS_INTERNAL int qjs_find_line_num(JSContext *ctx, JSFunctionBytecode *bytecode,

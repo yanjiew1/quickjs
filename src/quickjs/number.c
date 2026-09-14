@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-allocator.h"
 #include "internal-function.h"
 #include "internal-operator.h"
 
@@ -37,6 +38,12 @@
 #define js_string_compare qjs_string_compare
 #define js_string_rope_compare qjs_string_rope_compare
 #define js_unary_arith_slow qjs_unary_arith_slow
+#define js_malloc_rt qjs_malloc_rt_internal
+#define js_free_rt qjs_free_rt_internal
+#define js_realloc_rt qjs_realloc_rt_internal
+#define js_malloc qjs_malloc_internal
+#define js_free qjs_free_internal
+#define js_realloc qjs_realloc_internal
 
 #define HINT_STRING 0
 #define HINT_NUMBER 1
@@ -49,8 +56,8 @@ typedef enum JSStrictEqModeEnum {
     JS_EQ_SAME_VALUE_ZERO,
 } JSStrictEqModeEnum;
 
-static BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1,
-                          JSValueConst op2, JSStrictEqModeEnum eq_mode);
+QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst op1,
+                                   JSValueConst op2, int eq_mode);
 
 static inline BOOL js_string_eq(JSContext *ctx,
                                 const JSString *p1, const JSString *p2)
@@ -2647,7 +2654,7 @@ JSValue JS_ToString(JSContext *ctx, JSValueConst val)
     return JS_ToStringInternal(ctx, val, FALSE);
 }
 
-static JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue qjs_to_string_free(JSContext *ctx, JSValue val)
 {
     JSValue ret;
     ret = JS_ToString(ctx, val);
@@ -2658,7 +2665,7 @@ static JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
 static JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val)
 {
     if (JS_IsUndefined(val) || JS_IsNull(val))
-        return JS_ToStringFree(ctx, val);
+        return qjs_to_string_free(ctx, val);
     return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 0, NULL);
 }
 
@@ -3751,7 +3758,7 @@ QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
             res = js_compare_bigint(ctx, OP_eq, op1, op2);
         }
     } else if (tag1 == tag2) {
-        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+        res = qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if ((tag1 == JS_TAG_NULL && tag2 == JS_TAG_UNDEFINED) ||
@@ -3759,7 +3766,7 @@ QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
         res = TRUE;
     } else if (tag_is_string(tag1) && tag_is_string(tag2)) {
         /* needed when comparing strings and ropes */
-        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+        res = qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if ((tag_is_string(tag1) && tag_is_number(tag2)) ||
@@ -3796,7 +3803,7 @@ QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
                 goto exception;
             }
         }
-        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+        res = qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if (tag1 == JS_TAG_BOOL) {
@@ -3880,8 +3887,8 @@ QJS_INTERNAL no_inline int qjs_shr_slow(JSContext *ctx, JSValue *sp)
     return -1;
 }
 
-static BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
-                          JSStrictEqModeEnum eq_mode)
+QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst op1,
+                                   JSValueConst op2, int eq_mode)
 {
     BOOL res;
     int tag1, tag2;
@@ -4003,7 +4010,7 @@ static BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
 
 static BOOL js_strict_eq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+    return qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
 }
 
 BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
@@ -4013,7 +4020,7 @@ BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 
 static BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return js_strict_eq2(ctx, op1, op2, JS_EQ_SAME_VALUE);
+    return qjs_strict_equal(ctx, op1, op2, JS_EQ_SAME_VALUE);
 }
 
 BOOL JS_SameValue(JSContext *ctx, JSValueConst op1, JSValueConst op2)
@@ -4023,7 +4030,7 @@ BOOL JS_SameValue(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 
 static BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return js_strict_eq2(ctx, op1, op2, JS_EQ_SAME_VALUE_ZERO);
+    return qjs_strict_equal(ctx, op1, op2, JS_EQ_SAME_VALUE_ZERO);
 }
 
 BOOL JS_SameValueZero(JSContext *ctx, JSValueConst op1, JSValueConst op2)
@@ -4232,12 +4239,6 @@ QJS_INTERNAL JSBigInt *qjs_bigint_new(JSContext *ctx, int len)
     return js_bigint_new(ctx, len);
 }
 
-QJS_INTERNAL JSBigInt *qjs_bigint_set_short(JSBigIntBuf *buf,
-                                             JSValueConst value)
-{
-    return js_bigint_set_short(buf, value);
-}
-
 QJS_INTERNAL JSValue qjs_compact_bigint(JSContext *ctx, JSBigInt *value)
 {
     return JS_CompactBigInt(ctx, value);
@@ -4292,11 +4293,13 @@ QJS_INTERNAL int qjs_to_float64_free_slow(JSContext *ctx, double *result,
     return __JS_ToFloat64Free(ctx, result, value);
 }
 
+#ifndef __clang__
 QJS_INTERNAL int qjs_to_int32_free(JSContext *ctx, int32_t *result,
-                                    JSValue value)
+                                   JSValue value)
 {
     return JS_ToInt32Free(ctx, result, value);
 }
+#endif
 
 QJS_INTERNAL JSValue qjs_to_integer_free(JSContext *ctx, JSValue value)
 {
@@ -4330,11 +4333,6 @@ QJS_INTERNAL JSValue qjs_to_string_internal(JSContext *ctx,
                                              BOOL is_property_key)
 {
     return JS_ToStringInternal(ctx, value, is_property_key);
-}
-
-QJS_INTERNAL JSValue qjs_to_string_free(JSContext *ctx, JSValue value)
-{
-    return JS_ToStringFree(ctx, value);
 }
 
 QJS_INTERNAL JSValue qjs_to_locale_string_free(JSContext *ctx, JSValue value)
@@ -4418,24 +4416,6 @@ QJS_INTERNAL int qjs_to_length_free(JSContext *ctx, int64_t *length,
                                      JSValue value)
 {
     return JS_ToLengthFree(ctx, length, value);
-}
-
-QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst left,
-                                    JSValueConst right, int mode)
-{
-    return js_strict_eq2(ctx, left, right, mode);
-}
-
-QJS_INTERNAL BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
-                                  JSValueConst right)
-{
-    return js_same_value(ctx, left, right);
-}
-
-QJS_INTERNAL BOOL qjs_same_value_zero(JSContext *ctx, JSValueConst left,
-                                       JSValueConst right)
-{
-    return js_same_value_zero(ctx, left, right);
 }
 
 QJS_INTERNAL double qjs_math_pow(double left, double right)

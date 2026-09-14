@@ -152,7 +152,7 @@ static no_inline void *js_malloc_large(JSMallocContext *s, size_t size)
     return b->header.user_data;
 }
 
-static void *__js_malloc(JSMallocContext *s, size_t size)
+QJS_INTERNAL void *qjs_malloc_raw(JSMallocContext *s, size_t size)
 {
     size_t total_size;
     if (unlikely(size == 0)) {
@@ -198,7 +198,7 @@ static void *__js_malloc(JSMallocContext *s, size_t size)
     }
 }
 
-static void __js_free(JSMallocContext *s, void *ptr)
+QJS_INTERNAL void qjs_free_raw(JSMallocContext *s, void *ptr)
 {
     JSMallocBlockHeader *b;
 
@@ -239,19 +239,19 @@ static void __js_free(JSMallocContext *s, void *ptr)
     }
 }
 
-static void *__js_realloc(JSMallocContext *s, void *ptr, size_t size)
+QJS_INTERNAL void *qjs_realloc_raw(JSMallocContext *s, void *ptr, size_t size)
 {
     JSMallocBlockHeader *b;
     if (ptr == NULL) {
-        return __js_malloc(s, size);
+        return qjs_malloc_raw(s, size);
     } else if (size == 0) {
-        __js_free(s, ptr);
+        qjs_free_raw(s, ptr);
         return NULL;
     }
     b = container_of(ptr, JSMallocBlockHeader, user_data);
     if (b->u.block_idx == FREE_NIL) {
         if (b == get_zero_size_block(s)) {
-            return __js_malloc(s, size);
+            return qjs_malloc_raw(s, size);
         } else {
             JSMallocLargeBlockHeader *lb, *new_lb;
             lb = container_of(ptr, JSMallocLargeBlockHeader, header.user_data);
@@ -284,7 +284,7 @@ static void *__js_realloc(JSMallocContext *s, void *ptr, size_t size)
             sizeof(JSMallocBlockHeader);
         if (total_size <= block_size)
             return ptr;
-        new_ptr = __js_malloc(s, size);
+        new_ptr = qjs_malloc_raw(s, size);
         if (!new_ptr)
             return NULL;
         new_b = container_of(new_ptr, JSMallocBlockHeader, user_data);
@@ -297,7 +297,7 @@ static void *__js_realloc(JSMallocContext *s, void *ptr, size_t size)
         if (size > old_size)
             size = old_size;
         memcpy(new_ptr, ptr, size);
-        __js_free(s, ptr);
+        qjs_free_raw(s, ptr);
         return new_ptr;
     }
 }
@@ -385,17 +385,17 @@ static __maybe_unused void js_malloc_iter(JSMallocContext *s, JSMallocIterFunc *
 
 void *js_malloc_rt(JSRuntime *rt, size_t size)
 {
-    return __js_malloc(&rt->malloc_ctx, size);
+    return qjs_malloc_raw(&rt->malloc_ctx, size);
 }
 
 void js_free_rt(JSRuntime *rt, void *ptr)
 {
-    __js_free(&rt->malloc_ctx, ptr);
+    qjs_free_raw(&rt->malloc_ctx, ptr);
 }
 
 void *js_realloc_rt(JSRuntime *rt, void *ptr, size_t size)
 {
-    return __js_realloc(&rt->malloc_ctx, ptr, size);
+    return qjs_realloc_raw(&rt->malloc_ctx, ptr, size);
 }
 
 size_t js_malloc_usable_size_rt(JSRuntime *rt, const void *ptr)

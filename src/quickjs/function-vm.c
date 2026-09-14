@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "src/quickjs/internal-allocator.h"
 #include "src/quickjs/internal-frontend.h"
 #include "src/quickjs/internal-regexp.h"
 #include "src/quickjs/internal-builtin.h"
@@ -87,6 +88,9 @@
 #define JS_IsCFunction qjs_is_c_function
 #define JS_NewObjectFromShape qjs_new_object_from_shape
 #define JS_NewSymbolFromAtom qjs_new_symbol_from_atom
+#if !defined(__clang__)
+#define JS_FreeAtom qjs_free_atom
+#endif
 #define JS_SetPrivateField qjs_set_private_field
 #define JS_SetPropertyValue qjs_set_property_value
 #define JS_SetPrototypeInternal qjs_set_prototype_internal
@@ -102,14 +106,13 @@
 #define JS_ToObject qjs_to_object
 #define JS_ToObjectFree qjs_to_object_free
 #define __JS_AtomFromUInt32 qjs_atom_from_uint32
-#define add_gc_object qjs_add_gc_object
+#define add_gc_object qjs_add_gc_object_fast
 #define add_property qjs_add_property
 #define build_backtrace qjs_build_backtrace
 #define convert_fast_array_to_array qjs_convert_fast_array_to_array
 #define delete_property qjs_delete_property
 #define find_own_property qjs_find_own_property_fast
 #define free_property qjs_free_property
-#define free_var_ref qjs_free_var_ref
 #define free_zero_refcount qjs_free_zero_refcount
 #define get_shape_prop qjs_get_shape_prop
 #define is_backtrace_needed qjs_is_backtrace_needed
@@ -121,6 +124,14 @@
 #define js_create_array qjs_create_array
 #define js_create_array_free qjs_create_array_free
 #define js_dup_shape qjs_dup_shape
+#if !defined(__clang__)
+#define js_malloc_rt qjs_malloc_rt_internal
+#define js_free_rt qjs_free_rt_internal
+#define js_realloc_rt qjs_realloc_rt_internal
+#define js_malloc qjs_malloc_internal
+#define js_free qjs_free_internal
+#define js_realloc qjs_realloc_internal
+#endif
 #define js_eq_slow qjs_eq_slow
 #define js_free_desc qjs_proxy_free_desc
 #define js_function_set_properties qjs_function_set_properties
@@ -142,7 +153,7 @@
 #define js_strict_eq2 qjs_strict_equal
 #define js_string_eq(ctx, left, right) qjs_string_equal((left), (right))
 #define js_unary_arith_slow qjs_unary_arith_slow
-#define remove_gc_object qjs_remove_gc_object
+#define remove_gc_object qjs_remove_gc_object_fast
 #define set_cycle_flag qjs_set_cycle_flag
 #define set_value qjs_set_value
 
@@ -150,10 +161,10 @@
 #define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
 #define JS_EQ_STRICT QJS_EQ_STRICT
 
-static JSValue __attribute__((hot, aligned(128)))
-JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
-                JSValueConst this_obj, JSValueConst new_target,
-                int argc, JSValue *argv, int flags);
+static JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
+                               JSValueConst this_obj,
+                               JSValueConst new_target,
+                               int argc, JSValue *argv, int flags);
 static JSValue JS_CallConstructorInternal(JSContext *ctx,
                                           JSValueConst func_obj,
                                           JSValueConst new_target,
@@ -173,7 +184,7 @@ static JSValue js_generator_function_call(JSContext *ctx,
                                           int argc, JSValueConst *argv,
                                           int flags);
 
-QJS_INTERNAL void qjs_free_var_ref(JSRuntime *rt, JSVarRef *var_ref)
+static void free_var_ref(JSRuntime *rt, JSVarRef *var_ref)
 {
     if (var_ref) {
         assert(js_rc(var_ref)->ref_count > 0);
@@ -191,9 +202,14 @@ QJS_INTERNAL void qjs_free_var_ref(JSRuntime *rt, JSVarRef *var_ref)
                 }
             }
             remove_gc_object(&var_ref->header);
-            js_free_rt(rt, var_ref);
+            qjs_free_rt_internal(rt, var_ref);
         }
     }
+}
+
+QJS_INTERNAL void qjs_free_var_ref(JSRuntime *rt, JSVarRef *var_ref)
+{
+    free_var_ref(rt, var_ref);
 }
 static int js_arguments_define_own_property(JSContext *ctx,
                                             JSValueConst this_obj,
@@ -239,7 +255,7 @@ static JSValue js_build_arguments(JSContext *ctx, int argc, JSValueConst *argv)
     /* initialize the fast array part */
     tab = NULL;
     if (argc > 0) {
-        tab = js_malloc(ctx, sizeof(tab[0]) * argc);
+        tab = qjs_malloc_internal(ctx, sizeof(tab[0]) * argc);
         if (!tab)
             goto fail;
         for(i = 0; i < argc; i++) {
@@ -261,7 +277,7 @@ static void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val)
     int i;
     for(i = 0; i < p->u.array.count; i++)
         free_var_ref(rt, var_refs[i]);
-    js_free_rt(rt, var_refs);
+    qjs_free_rt_internal(rt, var_refs);
 }
 
 static void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
@@ -299,7 +315,7 @@ static JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
     /* initialize the fast array part */
     tab = NULL;
     if (argc > 0) {
-        tab = js_malloc(ctx, sizeof(tab[0]) * argc);
+        tab = qjs_malloc_internal(ctx, sizeof(tab[0]) * argc);
         if (!tab)
             goto fail;
         for(i = 0; i < arg_count; i++) {
@@ -314,7 +330,7 @@ static JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
             fail1:
                 for(j = 0; j < i; j++)
                     free_var_ref(ctx->rt, tab[j]);
-                js_free(ctx, tab);
+                qjs_free_internal(ctx, tab);
                 goto fail;
             }
             var_ref->value = JS_DupValue(ctx, argv[i]);
@@ -650,9 +666,17 @@ static JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
 }
 
 /* Note: always return JS_UNDEFINED when *pdone = TRUE. */
+#if defined(__clang__)
 static JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
                                JSValueConst method,
                                int argc, JSValueConst *argv, BOOL *pdone)
+#else
+static force_inline JSValue JS_IteratorNext(JSContext *ctx,
+                                            JSValueConst enum_obj,
+                                            JSValueConst method,
+                                            int argc, JSValueConst *argv,
+                                            BOOL *pdone)
+#endif
 {
     JSValue obj, value, done_val;
     int done;
@@ -747,7 +771,12 @@ static __exception int js_for_of_start(JSContext *ctx, JSValue *sp,
    objs. If 'done' is true or in case of exception, 'enum_rec' is set
    to undefined. If 'done' is true, 'value' is always set to
    undefined. */
+#if defined(__clang__)
 static __exception int js_for_of_next(JSContext *ctx, JSValue *sp, int offset)
+#else
+static force_inline __exception int js_for_of_next(JSContext *ctx, JSValue *sp,
+                                                   int offset)
+#endif
 {
     JSValue value = JS_UNDEFINED;
     int done = 1;
@@ -852,22 +881,6 @@ static JSValue js_create_iterator_result(JSContext *ctx,
     return obj;
 }
 
-/* Access an Array's internal JSValue array if available */
-static BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
-                              JSValue **arrpp, uint32_t *countp)
-{
-    /* Try and handle fast arrays explicitly */
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(obj);
-        if (p->class_id == JS_CLASS_ARRAY && p->fast_array) {
-            *countp = p->u.array.count;
-            *arrpp = p->u.array.u.values;
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
 static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
 {
     JSValue iterator, enumobj, method, value;
@@ -909,7 +922,7 @@ static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
     ft.iterator_next = qjs_array_iterator_next;
     if (is_array_iterator
     &&  JS_IsCFunction(ctx, method, ft.generic, 0)
-    &&  js_get_fast_array(ctx, sp[-1], &arrp, &count32)) {
+    &&  qjs_get_fast_array(ctx, sp[-1], &arrp, &count32)) {
         uint32_t len;
         if (qjs_get_length32(ctx, &len, sp[-1]))
             goto exception;
@@ -1035,7 +1048,7 @@ QJS_INTERNAL JSValueConst qjs_get_active_function(JSContext *ctx)
 static JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical)
 {
     JSVarRef *var_ref;
-    var_ref = js_malloc(ctx, sizeof(JSVarRef));
+    var_ref = qjs_malloc_internal(ctx, sizeof(JSVarRef));
     if (!var_ref)
         return NULL;
     js_rc(var_ref)->ref_count = 1;
@@ -1083,7 +1096,7 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
     }
 
     /* create a new one */
-    var_ref = js_malloc(ctx, sizeof(JSVarRef));
+    var_ref = qjs_malloc_internal(ctx, sizeof(JSVarRef));
     if (!var_ref)
         return NULL;
     js_rc(var_ref)->ref_count = 1;
@@ -1788,10 +1801,10 @@ static JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
 #endif
 
 /* argv[] is modified if (flags & JS_CALL_FLAG_COPY_ARGV) = 0. */
-static JSValue __attribute__((hot, aligned(128)))
-JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
-                JSValueConst this_obj, JSValueConst new_target,
-                int argc, JSValue *argv, int flags)
+static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
+                               JSValueConst this_obj,
+                               JSValueConst new_target,
+                               int argc, JSValue *argv, int flags)
 {
     JSRuntime *rt = caller_ctx->rt;
     JSContext *ctx;
@@ -5929,12 +5942,6 @@ QJS_INTERNAL JSValue qjs_create_iterator_result(JSContext *ctx,
                                                 JSValue value, BOOL done)
 {
     return js_create_iterator_result(ctx, value, done);
-}
-
-QJS_INTERNAL BOOL qjs_get_fast_array(JSContext *ctx, JSValueConst obj,
-                                     JSValue **values, uint32_t *count)
-{
-    return js_get_fast_array(ctx, obj, values, count);
 }
 
 QJS_INTERNAL int qjs_copy_data_properties(JSContext *ctx,

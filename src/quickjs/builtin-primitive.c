@@ -23,6 +23,10 @@
  * THE SOFTWARE.
  */
 #include "internal-primitive.h"
+#include "internal-allocator.h"
+
+#define js_malloc qjs_malloc_internal
+#define js_free qjs_free_internal
 
 /* Number */
 
@@ -723,7 +727,7 @@ static int string_cmp(JSString *p1, JSString *p2, int x1, int x2, int len)
     return 0;
 }
 
-static int string_indexof_char(JSString *p, int c, int from)
+QJS_INTERNAL int qjs_regexp_string_indexof_char(JSString *p, int c, int from)
 {
     /* assuming 0 <= from <= p->len */
     int i, len = p->len;
@@ -750,7 +754,7 @@ static int string_indexof(JSString *p1, JSString *p2, int from)
     if (len2 == 0)
         return from;
     for (i = from, c = qjs_string_get(p2, 0); i + len2 <= len1; i = j + 1) {
-        j = string_indexof_char(p1, c, i);
+        j = qjs_regexp_string_indexof_char(p1, c, i);
         if (j < 0 || j + len2 > len1)
             break;
         if (!string_cmp(p1, p2, j + 1, 1, len2 - 1))
@@ -759,7 +763,9 @@ static int string_indexof(JSString *p1, JSString *p2, int from)
     return -1;
 }
 
-static int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode)
+QJS_INTERNAL int64_t qjs_regexp_string_advance_index(JSString *p,
+                                                      int64_t index,
+                                                      BOOL unicode)
 {
     if (!unicode || index >= p->len || !p->is_wide_char) {
         index++;
@@ -994,7 +1000,8 @@ static int check_regexp_g_flag(JSContext *ctx, JSValueConst regexp)
         flags = qjs_to_string_free(ctx, flags);
         if (JS_IsException(flags))
             return -1;
-        ret = string_indexof_char(JS_VALUE_GET_STRING(flags), 'g', 0);
+        ret = qjs_regexp_string_indexof_char(JS_VALUE_GET_STRING(flags),
+                                             'g', 0);
         JS_FreeValue(ctx, flags);
         if (ret < 0) {
             JS_ThrowTypeError(ctx, "regexp must have the 'g' flag");
@@ -1056,16 +1063,11 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
 
 /* if captures != NULL, captures_val and matched are ignored. Otherwise,
    captures_len is ignored */
-static int js_string_GetSubstitution(JSContext *ctx,
-                                     StringBuffer *b,
-                                     JSValueConst matched,
-                                     JSString *sp,
-                                     uint32_t position,
-                                     JSValueConst captures_val,
-                                     JSValueConst namedCaptures,
-                                     JSValueConst rep,
-                                     uint8_t **captures,
-                                     uint32_t captures_len)
+QJS_INTERNAL int qjs_string_get_substitution(
+    JSContext *ctx, StringBuffer *b, JSValueConst matched, JSString *sp,
+    uint32_t position, JSValueConst captures_val,
+    JSValueConst namedCaptures, JSValueConst rep, uint8_t **captures,
+    uint32_t captures_len)
 {
     JSValue capture, name, s;
     uint32_t len, matched_len;
@@ -1095,7 +1097,7 @@ static int js_string_GetSubstitution(JSContext *ctx,
     len = rp->len;
     i = 0;
     for(;;) {
-        j = string_indexof_char(rp, '$', i);
+        j = qjs_regexp_string_indexof_char(rp, '$', i);
         if (j < 0 || j + 1 >= len)
             break;
         qjs_string_buffer_concat(b, rp, i, j);
@@ -1150,7 +1152,7 @@ static int js_string_GetSubstitution(JSContext *ctx,
                 goto norep;
             }
         } else if (c == '<' && !JS_IsUndefined(namedCaptures)) {
-            k = string_indexof_char(rp, '>', j);
+            k = qjs_regexp_string_indexof_char(rp, '>', j);
             if (k < 0)
                 goto norep;
             name = qjs_sub_string(ctx, rp, j, k);
@@ -1263,9 +1265,9 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             qjs_string_buffer_concat_value_free(b, repl_str);
         } else {
-            if (js_string_GetSubstitution(ctx, b, search_str, sp, pos,
-                                          JS_UNDEFINED, JS_UNDEFINED, replaceValue_str,
-                                          NULL, 0)) {
+            if (qjs_string_get_substitution(ctx, b, search_str, sp, pos,
+                                            JS_UNDEFINED, JS_UNDEFINED,
+                                            replaceValue_str, NULL, 0)) {
                 goto exception;
             }
         }
@@ -2487,27 +2489,4 @@ QJS_INTERNAL int qjs_add_intrinsic_bigint(JSContext *ctx)
 QJS_INTERNAL int qjs_string_find_invalid_codepoint(JSString *str)
 {
     return js_string_find_invalid_codepoint(str);
-}
-
-QJS_INTERNAL int qjs_regexp_string_indexof_char(JSString *str, int c, int from)
-{
-    return string_indexof_char(str, c, from);
-}
-
-QJS_INTERNAL int64_t qjs_regexp_string_advance_index(JSString *str,
-                                                     int64_t index,
-                                                     BOOL unicode)
-{
-    return string_advance_index(str, index, unicode);
-}
-
-QJS_INTERNAL int qjs_regexp_string_get_substitution(
-    JSContext *ctx, StringBuffer *buf, JSValueConst matched, JSString *str,
-    uint32_t position, JSValueConst captures_value,
-    JSValueConst named_captures, JSValueConst replacement,
-    uint8_t **captures, uint32_t captures_len)
-{
-    return js_string_GetSubstitution(ctx, buf, matched, str, position,
-                                     captures_value, named_captures,
-                                     replacement, captures, captures_len);
 }

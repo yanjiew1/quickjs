@@ -2,9 +2,13 @@
 
 ## Current status
 
-Implementation is intentionally paused after `2436025` in a coherent,
-buildable, correctness-validated state. All planned structural migrations are
-complete:
+The QuickJS modularization task is complete in the current working tree. All
+planned structural migrations, restorative-only Final Performance
+Stabilization, supported-configuration validation, the fresh adversarial
+review, and final reporting preparation are complete. No implementation work
+remains.
+
+The final architecture is:
 
 - the primary QuickJS engine has no root `quickjs.c` build input. Normally
   linked owners under `src/quickjs/` cover allocation, runtime/context/jobs,
@@ -18,21 +22,190 @@ complete:
 - developer-tooling modularization is complete for the Unicode table generator
   and Test262 runner.
 
-The latest milestones are `aeb7c25` (Unicode runtime), `c2be331` (Unicode table
-generator), and `2436025` (Test262 runner). The latest acceptance state is a
-clean GCC 16.2 WERROR `all` build, full repository `make test`, and exact full
-Test262 comparison at the unchanged `58/83558` errors, `3356` excluded, and
-`6000` skipped. Affected owners also passed independent GCC 16.2 and Clang 23.1
-WERROR compilation and their milestone-specific matched-parent tests. Generated
-Unicode data remains byte-identical. The working tree has no tracked changes;
-the only untracked file is the user-supplied authoritative `task.md`.
-
-The task is not complete. Final Performance Stabilization, final supported-
-configuration validation, a fresh adversarial review, and final reporting
-remain. Intermediate non-LTO observations listed in the final pause handoff
-below remain `[~]` until formally retested and classified.
+The latest completed structural milestones are `aeb7c25` (Unicode runtime),
+`c2be331` (Unicode table generator), and `2436025` (Test262 runner), followed by
+`a5ec7f4` (structural-completion handoff). The final stabilization source and
+documentation are included in the normal descriptive completion milestone.
+The final working tree is clean except for the user-supplied authoritative
+`task.md`, which remains untracked and uncommitted.
 
 Authoritative task: `task.md`. Living roadmap: `PLAN.md`.
+
+## Final restorative-only acceptance state
+
+### Performance-scope audit and preserved future work
+
+Final Performance Stabilization briefly explored general optimization paths.
+The audit classified and removed all such work from the structural-refactor
+tree. The implementation details and numerical evidence are preserved in
+`FUTURE_OPTIMIZATIONS.md`; the exact 1,315-line tracked pre-cleanup diff is:
+
+```text
+/home/yanjie/src/quickjs-final-perf-precleanup.patch
+SHA-256 68d4d8959e664f0b7ef83ab7c2f3cc9b315bf48f026927deb1c9b78aec33c01f
+```
+
+The archive excludes `task.md`, contains both experiments and restorative
+work, and is not applied to the final tree. The removed NEW OPTIMIZATION
+families are direct integer conversion in concat, direct int32/uint32
+typed-array stores, short-BigInt collection equality, direct fast-array pop,
+direct fast-array iteration, interpreter-side direct C-method dispatch, forced
+inline `qjs_get_length32`, and the copied allocator arena algorithm/exported
+block-size table. The unproven Clang `i32toa`/concat placement experiment was
+also removed. Experimental measurements are future-work evidence only and are
+not used for final refactor acceptance.
+
+The retained performance source changes are RESTORATIVE:
+
+- hidden allocator-owner raw entries plus tiny inline allocation adapters
+  restore the monolithic direct adapter shape without copying the allocator
+  algorithm;
+- atom duplicate/free, zero-ref value free, GC-list add/remove, fast-array
+  representation access, and other tiny owner-private helpers restore direct
+  representation operations that were visible in the monolithic TU. GCC's
+  zero-ref value path remains forced inline where generated-code evidence
+  requires it; Clang retains its ordinary pristine inline choice;
+- `free_var_ref` is again static in the VM owner, and owner-local calls replace
+  extraction-added forwarding layers;
+- string allocation/buffer/get/put helpers live in the narrow string private
+  header where this restores pristine caller visibility; allocator arena policy
+  remains solely in `allocator.c`;
+- RegExp callers now use actual owner interfaces rather than RegExp-specific
+  forwarding trampolines. Clang atom-free calls retain the pristine out-of-line
+  shape while GCC retains its pristine direct zero-ref behavior;
+- GCC iterator handling and Clang concat inline/no-inline choices restore their
+  respective pristine compiler shapes. In particular Clang's final concat
+  routine is exactly 0x419 bytes with 20 calls, and normalized disassembly is
+  instruction-identical to pristine;
+- no explicit concat/interpreter alignment or hot-section tuning remains.
+
+The fresh read-only adversarial review found no semantic change, forbidden new
+optimization, license loss, dependency cycle, stale build rule, or public API
+expansion. Its valid concerns were resolved by restoring Clang's out-of-line
+atom-free choice, removing the last four RegExp forwarding trampolines, and
+making Clang's zero-ref value helper an ordinary inline. Its proposed rejection
+of selective Clang concat inlining was not accepted: pristine generated code
+inlines exactly the same two sites and leaves the same third call, so this is
+compiler-specific restoration rather than a new optimization.
+
+### Final normal non-LTO performance
+
+Pristine `04be246` and final binaries were built with identical `-O2`, WERROR,
+normal non-LTO configuration separately with GCC 16.2 and Clang 23.1. Seven
+alternating full `tests/microbench.js` pairs ran serially on CPU 2 after a
+separate warmup. Raw samples and median tables are under:
+
+- `/tmp/qjs-final-perf/runs/final-postaudit-gcc/`
+- `/tmp/qjs-final-perf/runs/final-postaudit-clang/`
+
+Across all 72 workloads the median-ratio geometric mean is **-1.643% with GCC**
+and **-0.254% with Clang** (negative is faster). Representative final deltas
+are:
+
+| Workload | GCC | Clang |
+|---|---:|---:|
+| `prop_read` | -0.99% | -4.52% |
+| `prop_write` | -1.78% | +0.87% |
+| `func_call` | -1.77% | +8.08% adaptive, -0.28% fixed |
+| `array_read` | -3.83% | -9.15% |
+| `array_write` | +2.12% | +5.92% adaptive, +0.07% fixed cycles |
+| `array_push` | -1.26% | -25.55% |
+| `array_pop` | +7.70% | +1.28% |
+| `typed_array_read` | -1.56% | -9.08% |
+| `typed_array_write` | -8.49% | +1.15% |
+| `string_build_large1` | -9.48% | +11.79% |
+| `regexp_ascii` | +4.41% | +0.02% |
+| `regexp_replace` | +1.42% | -3.48% |
+| `int_to_string` | -0.66% | +6.68% adaptive, +0.82% fixed cycles |
+| `arguments_read` | -4.89% | +4.49% adaptive, +3.07% fixed cycles |
+
+Fixed-count confirmation with task-clock, cycles, instructions, branches, and
+branch misses is in `/tmp/qjs-final-perf/perf/final-postaudit-confirm/`.
+Adaptive-only Clang call/write/conversion candidates either disappeared or
+fell below the meaningful threshold. The narrow Clang argument result is
+synthetic and below 5%; a bounded allocator/object owner merge reduced it but
+caused broader regressions under both compilers, so the natural allocator
+owner remains separate. The full rejected merge campaigns are under
+`/tmp/qjs-final-perf/runs/restorative13-final-{gcc,clang}/`.
+
+Two remaining results satisfy the strict irreducible layout/boundary exception:
+
+1. **GCC `array_pop` only.** Seven fixed pairs measured task-clock +9.69%
+   (845 ms to 926 ms), cycles +10.14% (2.947B to 3.245B), instructions +0.35%,
+   branches +0.59%, branch misses +5.02%, and L1-I misses 0.403M to 21.351M.
+   The source performs the same semantic algorithm, the compiled routine has
+   the same 12-call shape, and four additional static instructions account for
+   only the +0.35% executed-work difference. There is no Clang analogue;
+   representative array read/write/push and aggregate GCC performance are not
+   systematically regressed. Direct owner calls, private inline representation
+   access, link-layout changes across the stabilization candidates, and bounded
+   owner-merge placements were investigated. The result varied from +2.79% to
+   +10.24% fixed cycles as unrelated layout changed. Eliminating it would
+   require fragile placement/alignment tuning or the archived new direct-pop
+   algorithm, so no actionable structural defect remains.
+2. **Clang `string_build_large1` only.** Seven fixed pairs measured task-clock
+   +5.22% (991 ms to 1043 ms), cycles +5.85% (3.425B to 3.625B), instructions
+   +2.14%, branches +9.54%, branch misses -3.37%, cache misses -10.00%, L1-I
+   misses -32.57%, and iTLB misses -27.05%. The complete concat routine has
+   identical normalized instruction text, size (0x419), and 20-call shape to
+   pristine. An earlier binary with essentially the same +2.29% instructions
+   and +9.69% branches was 1.90% faster than pristine, demonstrating placement
+   sensitivity. GCC improves the workload by 9.48%. Thin allocator adapters
+   contain no forwarding layer, and the bounded allocator/object merge reduced
+   this local result but caused meaningful broader regressions. Copying the
+   arena algorithm into callers would be the explicitly removed NEW
+   OPTIMIZATION. Further compensation would therefore be disproportionate or
+   out of scope.
+
+The GCC RegExp ASCII fixed screen was +3.94% cycles with -0.23% instructions;
+although branch-miss percentage doubled from a small absolute base, it remains
+below the task's meaningful threshold and Clang is neutral. Historical Unicode
+normalization and typed-array observations are neutral/improved in the final
+compiler-specific evidence. The broader V8 corpus is absent, so no broader run
+was available; aggregate and representative individual repository workloads
+provide the practical cross-check. No similar meaningful regression remains
+under both compilers.
+
+Detailed layout counters and disassembly are under
+`/tmp/qjs-final-perf/perf/final-postaudit-layout/` and
+`/tmp/qjs-final-perf/perf/final-postaudit-confirm/`. These `/tmp` artifacts are
+host-local; the numerical conclusions above are durable here.
+
+### Final correctness and supported configurations
+
+- GCC 16.2 and Clang 23.1 normal non-LTO clean parallel WERROR `all` builds and
+  full repository `make test`: PASS on the final post-audit source. Logs:
+  `/tmp/qjs-final-perf/final-validation-postaudit/{gcc,clang}-{all,test}.log`.
+- Exact final GCC Test262: PASS, unchanged `58/83558` errors, `3356` excluded,
+  `6000` skipped, exit zero. Log:
+  `/tmp/qjs-final-perf/final-validation-postaudit/gcc-final-test262.log`.
+- Standalone final GCC RegExp compile/execute smoke: PASS. Generated Unicode
+  table remains byte-identical to the validated structural milestone.
+- GCC 16.2 LTO WERROR `all`/`make test`: PASS. Clang 23.1 LTO WERROR
+  `all`/`make test`: PASS with lld and llvm-ar. The ordinary GNU linker path
+  cannot load this Clang installation's missing `LLVMgold.so`; the successful
+  qjsc compiler wrapper is `/tmp/qjs-final-perf/clang-lld-cc`. LTO performance
+  is informational and was not used for acceptance.
+- GCC ASan and UBSan WERROR `all`/`make test`: PASS with the custom GCC runtime
+  directory in `LD_LIBRARY_PATH`. Clang ASan/MSan cannot link because this local
+  Clang installation lacks the compiler-rt archives.
+- GCC and Clang debug targets and core/worker/std/read-write smoke tests: PASS.
+  `CONFIG_CHECK_JSVALUE` compilation covers every engine TU in normal `all`.
+- Final exported dynamic symbol names equal pristine exactly (292 GCC names,
+  286 Clang names). Final GCC sizes are 1,065,966 text bytes for `qjs`,
+  1,039,894 for `qjsc`, and 1,063,439 for `run-test262`; pristine `qjs` was
+  1,080,048 text bytes.
+- GCC `CONFIG_M32` WERROR compilation stops at the same `number.c` maybe-
+  uninitialized diagnostic in pristine and final, so this is a pre-existing
+  toolchain/configuration issue rather than a refactor regression.
+- `unicode_gen_test` retains the exact pre-existing U+1FD3 case-folding failure
+  under both compilers. `test262o`, `tests/bench-v8`, and the external
+  `quickjs-benchmarks` corpus remain absent. These issues were not changed.
+
+Useful final reproduction commands remain in the historical pause section near
+the end of this file. There are no exact next implementation steps: clean the
+generated standalone `regexp_test`, review the final diff/status, create the
+normal completion commit, and report completion.
 
 ## Baseline provenance
 
@@ -1540,7 +1713,10 @@ parent checkout is `/tmp/quickjs-c2be331`.
    issues, update PLAN/CHECKPOINT with final evidence, and complete the task only
    when no confirmed meaningful refactor-induced non-LTO regression remains.
 
-## Final structural pause handoff (2026-09-14; authoritative)
+## Historical structural pause handoff (2026-09-14; superseded)
+
+This section records the pre-stabilization handoff for provenance. Its status
+and next steps are superseded by the top-level final acceptance state.
 
 All planned source and build-system migrations are complete. No implementation,
 architecture cleanup, validation matrix, or benchmark run is in progress. The

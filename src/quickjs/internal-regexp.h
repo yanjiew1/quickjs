@@ -31,15 +31,20 @@ QJS_INTERNAL JSValue qjs_regexp_throw_type_error_not_object(JSContext *ctx);
 QJS_INTERNAL JSValue qjs_regexp_throw_type_error_invalid_class(JSContext *ctx,
                                                                int class_id);
 QJS_INTERNAL void qjs_regexp_throw_interrupted(JSContext *ctx);
-QJS_INTERNAL BOOL qjs_regexp_is_c_function(JSContext *ctx, JSValueConst value,
-                                           JSCFunction *func, int magic);
-QJS_INTERNAL int qjs_regexp_to_bool_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL int qjs_regexp_to_length_free(JSContext *ctx, int64_t *length,
-                                           JSValue value);
-QJS_INTERNAL JSValue qjs_regexp_to_string_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL BOOL qjs_regexp_same_value(JSContext *ctx, JSValueConst left,
-                                        JSValueConst right);
-QJS_INTERNAL JSValueConst qjs_regexp_get_active_function(JSContext *ctx);
+static force_inline BOOL qjs_regexp_is_c_function(JSContext *ctx,
+                                                  JSValueConst value,
+                                                  JSCFunction *func, int magic)
+{
+    JSObject *obj;
+
+    (void)ctx;
+    if (JS_VALUE_GET_TAG(value) != JS_TAG_OBJECT)
+        return FALSE;
+    obj = JS_VALUE_GET_OBJ(value);
+    return obj->class_id == JS_CLASS_C_FUNCTION &&
+           obj->u.cfunc.c_function.generic == func &&
+           obj->u.cfunc.magic == magic;
+}
 QJS_INTERNAL JSValue qjs_regexp_create_from_ctor(JSContext *ctx,
                                                  JSValueConst ctor,
                                                  JSClassID class_id);
@@ -54,14 +59,8 @@ QJS_INTERNAL JSValue qjs_regexp_new_c_constructor(
 QJS_INTERNAL JSValue qjs_regexp_species_constructor(JSContext *ctx,
                                                     JSValueConst obj,
                                                     JSValueConst default_ctor);
-QJS_INTERNAL JSValue qjs_regexp_function_apply(JSContext *ctx,
-                                               JSValueConst this_val,
-                                               int argc,
-                                               JSValueConst *argv, int magic);
 QJS_INTERNAL JSValue qjs_regexp_get_this(JSContext *ctx,
                                          JSValueConst this_val);
-QJS_INTERNAL int qjs_regexp_get_length64(JSContext *ctx, int64_t *length,
-                                         JSValueConst obj);
 QJS_INTERNAL void qjs_regexp_finalizer(JSRuntime *rt, JSValue value);
 QJS_INTERNAL void qjs_regexp_string_iterator_finalizer(JSRuntime *rt,
                                                        JSValue value);

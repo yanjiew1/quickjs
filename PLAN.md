@@ -48,13 +48,17 @@ All planned structural migrations are complete and correctness-validated:
 - developer-tooling modularization is complete. The Unicode table generator and
   Test262 runner now use their reviewed natural ownership boundaries.
 
-Recorded intermediate non-LTO layout/microarchitectural observations remain
-`[~]` work and do not invalidate structural completion. The only remaining task
-phase is Final Performance Stabilization, followed by final supported-
-configuration validation, a fresh adversarial review, and final reporting.
-Formal performance validation must compare matched pristine and final normal
-non-LTO builds separately with GCC and Clang; supported LTO correctness remains
-required, while LTO performance is diagnostic only.
+Final Performance Stabilization is complete on the restorative-only source
+state. Matched seven-pair normal non-LTO campaigns with GCC 16.2 and Clang 23.1
+show aggregate improvements of 1.64% and 0.25%, respectively. Adaptive-only
+candidates were resolved by fixed-work confirmation. The remaining GCC-only
+`array_pop` and Clang-only large-string results satisfy the strict irreducible
+layout/boundary exception documented with counters, generated code, corrective
+attempts, and cross-compiler evidence in `CHECKPOINT.md`; neither is offset by
+a new fast path. A bounded allocator/object merge reduced narrow Clang costs
+but caused broader GCC and Clang regressions, so the natural allocator owner
+remains separate. Supported configuration validation and the fresh adversarial
+review are complete. LTO performance remains diagnostic only.
 
 ## Inspected starting architecture
 
@@ -336,7 +340,7 @@ compilation before risky hot-core or builtin subdivisions.
   callback dependencies through a small builtin composition entry point and
   narrow lifecycle APIs, not a speculative global registry or dozens of exported
   finalizers.
-- [~] At each extraction, compile/test/measure before the next. The function/VM
+- [x] At each extraction, compile/test/measure before the next. The function/VM
   state is correctness-validated and its initially measured array/string/RegExp
   losses received localized hot-placement and direct-owner remediation. Existing
   pristine-baseline string/RegExp layout regressions remain recorded for final
@@ -372,7 +376,7 @@ Commit: `refactor: define QuickJS frontend and bytecode boundaries`
 
 ### 4. Builtin decomposition
 
-- [~] Split builtins in dependency-aware batches: base object/function/error;
+- [x] Split builtins in dependency-aware batches: base object/function/error;
   arrays and synchronous iterators; primitive/string/math; RegExp; JSON/Reflect/
   Proxy/Symbol; collections; promise/async; global/date; typed-array/Atomics/weak
   references.  Merge adjacent batches when class tables, finalizers, or helper
@@ -417,7 +421,7 @@ Commits group only related validated batches, for example:
   avoids a new call per execution. Standalone WERROR tests, exact representative
   bytecode comparison, QuickJS tests/Test262, fuzzer compilation/smoke, and
   separate compile-/execute-heavy performance screens pass.
-- [~] `libunicode.c`: generic character ranges, case/canonicalization,
+- [x] `libunicode.c`: generic character ranges, case/canonicalization,
   normalization, and property/sequence handling are separate natural owners.
   `cr_regexp_canonicalize` remains with case implementation; sequence
   properties remain with property decoding; and normalization recursion and
@@ -479,23 +483,23 @@ An intentionally cohesive target receives a documented decision but no churn.
 
 ### 7. Final performance stabilization and completion
 
-- [ ] Rebuild pristine baseline and final states separately with identical GCC
+- [x] Rebuild pristine baseline and final states separately with identical GCC
   non-LTO flags and identical Clang non-LTO flags. For each compiler, run the
   same CPU-pinned, isolated, repeated microbenchmark methodology and the
   available broader ECMAScript-only V8 v7 corpus; evaluate aggregate and
   individual workloads and record compiler-specific differences.
-- [ ] Revisit every deferred meaningful non-LTO regression.  Inspect missed
+- [x] Revisit every deferred meaningful non-LTO regression.  Inspect missed
   inlining, constants, dead code, linker ordering, code layout, and generated
   instructions; attempt proportionate boundary/header/ordering remedies and
   rerun correctness after every retained change.  No confirmed meaningful
   refactor-induced non-LTO regression may remain at completion.
-- [ ] Run the full supported configuration matrix, exact Test262 failure-set
+- [x] Run the full supported configuration matrix, exact Test262 failure-set
   comparison, host/worker, RegExp, Unicode, serialization/generator, qjsc/example,
   archive/API/export, size, and sanitizer validation.
-- [ ] Perform a fresh read-only architectural/diff review for accidental semantic
+- [x] Perform a fresh read-only architectural/diff review for accidental semantic
   edits, over-broad internal APIs, license loss, unsupported public exposure,
   dependency cycles, artificial modules, and stale build rules.
-- [ ] Update this plan and `CHECKPOINT.md` to fully complete, with no implementation
+- [x] Update this plan and `CHECKPOINT.md` to fully complete, with no implementation
   work remaining, and produce the final report required by `task.md`.
 
 Commit: `refactor: finalize modular QuickJS architecture`

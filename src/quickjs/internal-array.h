@@ -44,6 +44,29 @@ static inline BOOL qjs_array_buffer_is_resizable(const JSArrayBuffer *buffer)
     return buffer->max_byte_length >= 0;
 }
 
+static inline void *qjs_array_get_opaque2(JSContext *ctx, JSValueConst value,
+                                          JSClassID class_id)
+{
+    if (likely(JS_VALUE_GET_TAG(value) == JS_TAG_OBJECT)) {
+        JSObject *obj = JS_VALUE_GET_OBJ(value);
+        if (likely(obj->class_id == class_id && obj->u.opaque != NULL))
+            return obj->u.opaque;
+    }
+    return JS_GetOpaque2(ctx, value, class_id);
+}
+
+static inline int qjs_array_get_length32(JSContext *ctx, uint32_t *length,
+                                         JSValueConst obj)
+{
+    JSValue value = JS_GetProperty(ctx, obj, JS_ATOM_length);
+
+    if (JS_IsException(value)) {
+        *length = 0;
+        return -1;
+    }
+    return qjs_to_uint32_free(ctx, length, value);
+}
+
 QJS_INTERNAL JSValue qjs_allocate_fast_array(JSContext *ctx, int64_t len);
 QJS_INTERNAL int qjs_try_get_property_int64(JSContext *ctx, JSValueConst obj,
                                             int64_t index, JSValue *value);
