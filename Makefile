@@ -247,7 +247,8 @@ endif
 endif
 endif
 
-QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/atom-string.o \
+QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/object.o \
+    $(OBJDIR)/src/quickjs/atom-string.o \
     $(OBJDIR)/src/quickjs/number.o $(OBJDIR)/src/quickjs/allocator.o \
     $(OBJDIR)/src/quickjs/runtime.o $(OBJDIR)/src/quickjs/function-vm.o \
     $(OBJDIR)/src/quickjs/frontend.o \
