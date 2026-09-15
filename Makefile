@@ -269,7 +269,10 @@ QJS_ENGINE_CHECK_OBJS=$(patsubst %.o, %.check.o, $(QJS_ENGINE_OBJS))
 
 all: $(OBJDIR) $(QJS_ENGINE_CHECK_OBJS) $(OBJDIR)/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_LIBC_OBJS=$(OBJDIR)/src/quickjs-libc/loader.o \
+    $(OBJDIR)/src/quickjs-libc/std.o $(OBJDIR)/src/quickjs-libc/os.o \
+    $(OBJDIR)/quickjs-libc.o
+QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(QJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
