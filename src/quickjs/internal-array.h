@@ -26,6 +26,7 @@
 #define QUICKJS_INTERNAL_ARRAY_H
 
 #include "internal-module.h"
+#include "internal-array-algorithm.h"
 
 static force_inline BOOL qjs_can_extend_fast_array(JSObject *obj)
 {
@@ -38,6 +39,11 @@ static force_inline BOOL qjs_can_extend_fast_array(JSObject *obj)
     return proto->is_std_array_prototype;
 }
 
+static inline BOOL qjs_array_buffer_is_resizable(const JSArrayBuffer *buffer)
+{
+    return buffer->max_byte_length >= 0;
+}
+
 QJS_INTERNAL JSValue qjs_allocate_fast_array(JSContext *ctx, int64_t len);
 QJS_INTERNAL int qjs_try_get_property_int64(JSContext *ctx, JSValueConst obj,
                                             int64_t index, JSValue *value);
@@ -45,6 +51,20 @@ QJS_INTERNAL int qjs_expand_fast_array(JSContext *ctx, JSObject *obj,
                                        uint32_t new_len);
 QJS_INTERNAL JSValue qjs_create_array(JSContext *ctx, int len,
                                       JSValueConst *values);
+QJS_INTERNAL JSValue qjs_array_object_to_string(JSContext *ctx,
+                                                JSValueConst this_val,
+                                                int argc,
+                                                JSValueConst *argv);
+QJS_INTERNAL JSValue qjs_array_push(JSContext *ctx, JSValueConst this_val,
+                                    int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue qjs_array_iterator_next(JSContext *ctx,
+                                             JSValueConst this_val,
+                                             int argc, JSValueConst *argv,
+                                             BOOL *done, int magic);
+QJS_INTERNAL JSValue qjs_iterator_proto_iterator(JSContext *ctx,
+                                                 JSValueConst this_val,
+                                                 int argc,
+                                                 JSValueConst *argv);
 QJS_INTERNAL JSValue qjs_primitive_create_array_iterator(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
     int magic);

@@ -60,6 +60,11 @@ QJS_INTERNAL JSValue qjs_get_property_value(JSContext *ctx,
 QJS_INTERNAL JSValue qjs_get_property_int64(JSContext *ctx,
                                             JSValueConst obj,
                                             int64_t index);
+QJS_INTERNAL JSValue qjs_throw_type_error_not_object(JSContext *ctx);
+QJS_INTERNAL int qjs_define_property_value_int64(
+    JSContext *ctx, JSValueConst obj, int64_t index, JSValue value, int flags);
+QJS_INTERNAL int qjs_delete_property_int64(JSContext *ctx, JSValueConst obj,
+                                           int64_t index, int flags);
 QJS_INTERNAL int qjs_set_property_value(JSContext *ctx, JSValueConst obj,
                                         JSValue property, JSValue value,
                                         int flags);
