@@ -516,4 +516,23 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
     return out_len;
 }
 
+#ifdef CONFIG_UNICODE_TEST
+#include "internal-test.h"
+
+int qjs_unicode_test_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat)
+{
+    return unicode_decomp_char(res, c, is_compat);
+}
+
+int qjs_unicode_test_compose_pair(uint32_t c0, uint32_t c1)
+{
+    return unicode_compose_pair(c0, c1);
+}
+
+int qjs_unicode_test_get_cc(uint32_t c)
+{
+    return unicode_get_cc(c);
+}
+#endif
+
 #endif /* CONFIG_ALL_UNICODE */

@@ -277,12 +277,20 @@ QJS_UNICODE_OBJS=$(OBJDIR)/libunicode.o \
     $(OBJDIR)/src/libunicode/char-range.o \
     $(OBJDIR)/src/libunicode/normalize.o \
     $(OBJDIR)/src/libunicode/property.o
+UNICODE_GEN_SRCS=unicode_gen.c src/unicode-gen/emission.c \
+    src/unicode-gen/case.c src/unicode-gen/property.c \
+    src/unicode-gen/normalize.c
+UNICODE_GEN_OBJS=$(patsubst %.c, $(OBJDIR)/%.host.o, $(UNICODE_GEN_SRCS))
+UNICODE_GEN_TEST_SRCS=$(UNICODE_GEN_SRCS) src/unicode-gen/selftest.c
+UNICODE_GEN_TEST_OBJS=$(patsubst %.c, $(OBJDIR)/%.unicode-test.host.o, \
+    $(UNICODE_GEN_TEST_SRCS))
 QJS_UNICODE_TABLE_OBJS=$(QJS_UNICODE_OBJS) \
     $(patsubst %.o, %.nolto.o, $(QJS_UNICODE_OBJS)) \
     $(patsubst %.o, %.debug.o, $(QJS_UNICODE_OBJS)) \
     $(patsubst %.o, %.fuzz.o, $(QJS_UNICODE_OBJS)) \
     $(patsubst %.o, %.check.o, $(QJS_UNICODE_OBJS)) \
-    $(patsubst %.o, %.host.o, $(QJS_UNICODE_OBJS))
+    $(patsubst %.o, %.host.o, $(QJS_UNICODE_OBJS)) \
+    $(patsubst %.o, %.unicode-test.host.o, $(QJS_UNICODE_OBJS))
 QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/dtoa.o $(QJS_REGEXP_OBJS) $(QJS_UNICODE_OBJS) $(OBJDIR)/cutils.o $(QJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
@@ -381,6 +389,10 @@ $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
 	mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
 
+$(OBJDIR)/%.unicode-test.host.o: %.c | $(OBJDIR)
+	mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DCONFIG_UNICODE_TEST -c -o $@ $<
+
 $(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
@@ -404,12 +416,17 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 regexp_test: libregexp.c src/libregexp/exec.c libunicode.c src/libunicode/char-range.c src/libunicode/normalize.c src/libunicode/property.c cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ $^ $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
+unicode_gen: $(UNICODE_GEN_OBJS) $(OBJDIR)/cutils.host.o unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(UNICODE_GEN_OBJS) $(OBJDIR)/cutils.host.o
+
+unicode_gen_test: $(UNICODE_GEN_TEST_OBJS) \
+    $(patsubst %.o, %.unicode-test.host.o, $(QJS_UNICODE_OBJS)) \
+    $(OBJDIR)/cutils.host.o
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $^ $(HOST_LIBS)
 
 clean:
 	rm -f repl.c out.c
-	rm -f *.a *.o *.d *~ unicode_gen regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
+	rm -f *.a *.o *.d *~ unicode_gen unicode_gen_test regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
 	rm -f hello.c test_fib.c
 	rm -f examples/*.so tests/*.so
 	rm -rf $(OBJDIR)/ *.dSYM/ qjs-debug$(EXE)
