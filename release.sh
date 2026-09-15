@@ -157,7 +157,8 @@ outdir="/tmp/${d}"
 
 rm -rf $outdir
 mkdir -p $outdir $outdir/doc $outdir/tests $outdir/examples \
-   $outdir/src/quickjs $outdir/src/quickjs-libc $outdir/src/libregexp
+   $outdir/src/quickjs $outdir/src/quickjs-libc $outdir/src/libregexp \
+   $outdir/src/libunicode
 
 cp Makefile VERSION TODO Changelog readme.txt LICENSE \
    release.sh unicode_download.sh \
@@ -176,6 +177,7 @@ cp Makefile VERSION TODO Changelog readme.txt LICENSE \
 cp src/quickjs/*.c src/quickjs/*.h $outdir/src/quickjs
 cp src/quickjs-libc/*.c src/quickjs-libc/*.h $outdir/src/quickjs-libc
 cp src/libregexp/*.c src/libregexp/*.h $outdir/src/libregexp
+cp src/libunicode/*.c src/libunicode/*.h $outdir/src/libunicode
 
 cp tests/*.js tests/*.patch tests/bjson.c $outdir/tests
 

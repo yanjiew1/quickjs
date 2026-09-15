@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#ifdef LIBUNICODE_TABLE_CASE
+
 static const uint32_t case_conv_table1[378] = {
     0x00209a30, 0x00309a00, 0x005a8173, 0x00601730,
     0x006c0730, 0x006f81b3, 0x00701700, 0x007c0700,
@@ -198,6 +200,10 @@ static const uint8_t unicode_prop_Cased1_index[18] = {
     0x15, 0xd7, 0x21,  //  1D715 at 161
     0x8a, 0xf1, 0x01,  //  1F18A at 192 (upper bound)
 };
+
+#endif /* LIBUNICODE_TABLE_CASE */
+
+#ifdef LIBUNICODE_TABLE_PROPERTY
 
 static const uint8_t unicode_prop_Case_Ignorable_table[785] = {
     0xa6, 0x05, 0x80, 0x8a, 0x80, 0xa2, 0x00, 0x80,
@@ -632,7 +638,11 @@ static const uint8_t unicode_prop_ID_Continue1_index[66] = {
     0xf0, 0x01, 0x0e,  //  E01F0 at 704 (upper bound)
 };
 
+#endif /* LIBUNICODE_TABLE_PROPERTY */
+
 #ifdef CONFIG_ALL_UNICODE
+
+#ifdef LIBUNICODE_TABLE_NORMALIZE
 
 static const uint8_t unicode_cc_table[937] = {
     0xb2, 0xcf, 0xd4, 0x00, 0xe8, 0x03, 0xdc, 0x00,
@@ -2369,6 +2379,10 @@ static const uint16_t unicode_comp_table[965] = {
     0x9201, 0x9240, 0x9280, 0x9282, 0x9284, 0x9281, 0x9285, 0x9287,
     0x9286, 0x9283, 0x92c1, 0x92c0, 0x92c2,
 };
+
+#endif /* LIBUNICODE_TABLE_NORMALIZE */
+
+#ifdef LIBUNICODE_TABLE_PROPERTY
 
 typedef enum {
     UNICODE_GC_Cn,
@@ -5201,6 +5215,8 @@ static const uint8_t unicode_rgi_emoji_zwj_sequence[2392] = {
     0x86, 0x02, 0x4b, 0x16, 0x40, 0x86, 0x02, 0x26,
     0x19, 0x42, 0x86, 0x02, 0xd7, 0x19, 0x40, 0x86,
 };
+
+#endif /* LIBUNICODE_TABLE_PROPERTY */
 
 #endif /* CONFIG_ALL_UNICODE */
 /* 71 tables / 36659 bytes, 5 index / 357 bytes */

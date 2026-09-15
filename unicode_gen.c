@@ -1951,9 +1951,13 @@ void build_prop_table(FILE *f, const char *name, int prop_index, BOOL add_index)
     dbuf_free(dbuf2);
 }
 
-void build_flags_tables(FILE *f)
+void build_case_flags_table(FILE *f)
 {
     build_prop_table(f, "Cased1", PROP_Cased1, TRUE);
+}
+
+void build_property_flags_tables(FILE *f)
+{
     build_prop_table(f, "Case_Ignorable", PROP_Case_Ignorable, TRUE);
     build_prop_table(f, "ID_Start", PROP_ID_Start, TRUE);
     build_prop_table(f, "ID_Continue1", PROP_ID_Continue1, TRUE);
@@ -3758,17 +3762,26 @@ int main(int argc, char *argv[])
                 "\n"
                 "#include <stdint.h>\n"
                 "\n");
+        fprintf(fo, "#ifdef LIBUNICODE_TABLE_CASE\n\n");
         dump_case_conv_table(fo);
         compute_internal_props();
-        build_flags_tables(fo);
+        build_case_flags_table(fo);
+        fprintf(fo, "#endif /* LIBUNICODE_TABLE_CASE */\n\n");
+        fprintf(fo, "#ifdef LIBUNICODE_TABLE_PROPERTY\n\n");
+        build_property_flags_tables(fo);
+        fprintf(fo, "#endif /* LIBUNICODE_TABLE_PROPERTY */\n\n");
         fprintf(fo, "#ifdef CONFIG_ALL_UNICODE\n\n");
+        fprintf(fo, "#ifdef LIBUNICODE_TABLE_NORMALIZE\n\n");
         build_cc_table(fo);
         build_decompose_table(fo);
+        fprintf(fo, "#endif /* LIBUNICODE_TABLE_NORMALIZE */\n\n");
+        fprintf(fo, "#ifdef LIBUNICODE_TABLE_PROPERTY\n\n");
         build_general_category_table(fo);
         build_script_table(fo);
         build_script_ext_table(fo);
         build_prop_list_table(fo);
         build_sequence_prop_list_table(fo);
+        fprintf(fo, "#endif /* LIBUNICODE_TABLE_PROPERTY */\n\n");
         fprintf(fo, "#endif /* CONFIG_ALL_UNICODE */\n");
         fprintf(fo, "/* %u tables / %u bytes, %u index / %u bytes */\n",
                 total_tables, total_table_bytes, total_index, total_index_bytes);
