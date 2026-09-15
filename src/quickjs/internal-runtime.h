@@ -91,6 +91,8 @@ QJS_INTERNAL JSValue qjs_throw_stack_overflow(JSContext *ctx);
 QJS_INTERNAL void qjs_add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                                 JSGCObjectTypeEnum type);
 QJS_INTERNAL void qjs_remove_gc_object(JSGCObjectHeader *h);
+QJS_INTERNAL void qjs_mark_context(JSRuntime *rt, JSContext *ctx,
+                                   JS_MarkFunc *mark_func);
 QJS_INTERNAL int qjs_find_line_num(JSContext *ctx, JSFunctionBytecode *bytecode,
                                    uint32_t pc_value, int *pcol_num);
 QJS_INTERNAL void qjs_build_backtrace(JSContext *ctx, JSValueConst error_obj,

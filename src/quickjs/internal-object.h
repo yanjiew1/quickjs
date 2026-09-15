@@ -37,6 +37,12 @@ QJS_INTERNAL __exception int qjs_get_length32(JSContext *ctx, uint32_t *pres,
 QJS_INTERNAL __exception int qjs_get_length64(JSContext *ctx, int64_t *pres,
                                               JSValueConst obj);
 QJS_INTERNAL void qjs_free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+QJS_INTERNAL int qjs_object_init_classes(JSRuntime *rt);
+QJS_INTERNAL int qjs_object_init_shapes(JSRuntime *rt);
+QJS_INTERNAL void qjs_object_gc_shutdown(JSRuntime *rt);
+QJS_INTERNAL void qjs_object_free_shape_hash(JSRuntime *rt);
+QJS_INTERNAL void qjs_object_dump_context(JSContext *ctx);
+QJS_INTERNAL void qjs_object_free_context_shapes(JSContext *ctx);
 
 typedef struct JSArrayIteratorData {
     JSValue obj;
