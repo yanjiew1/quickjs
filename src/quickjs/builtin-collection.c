@@ -28,13 +28,6 @@
 #include "internal-iterator.h"
 #include "internal-array.h"
 
-#define js_malloc_rt qjs_malloc_rt_internal
-#define js_free_rt qjs_free_rt_internal
-#define js_realloc_rt qjs_realloc_rt_internal
-#define js_malloc qjs_malloc_internal
-#define js_free qjs_free_internal
-#define js_realloc qjs_realloc_internal
-
 /* Set/Map/WeakSet/WeakMap */
 
 static BOOL js_weakref_is_target(JSValueConst val)
@@ -64,7 +57,7 @@ static BOOL js_weakref_is_live(JSValueConst val)
     if (JS_IsUndefined(val))
         return TRUE;
     p = JS_VALUE_GET_PTR(val);
-    return (qjs_get_ref_header(p)->ref_count != 0);
+    return (js_rc(p)->ref_count != 0);
 }
 
 /* 'val' can be JS_UNDEFINED */
@@ -76,16 +69,16 @@ static void js_weakref_free(JSRuntime *rt, JSValue val)
         p->weakref_count--;
         /* 'mark' is tested to avoid freeing the object structure when
            it is about to be freed in a cycle or in
-           qjs_free_zero_refcount() */
-        if (p->weakref_count == 0 && qjs_get_ref_header(p)->ref_count == 0 &&
-            qjs_get_ref_header(p)->mark == 0) {
+           free_zero_refcount() */
+        if (p->weakref_count == 0 && js_rc(p)->ref_count == 0 &&
+            js_rc(p)->mark == 0) {
             js_free_rt(rt, p);
         }
     } else if (JS_VALUE_GET_TAG(val) == JS_TAG_SYMBOL) {
         JSString *p = JS_VALUE_GET_STRING(val);
         assert(p->hash >= 1);
         p->hash--;
-        if (p->hash == 0 && qjs_get_ref_header(p)->ref_count == 0) {
+        if (p->hash == 0 && js_rc(p)->ref_count == 0) {
             /* can remove the dummy structure */
             js_free_rt(rt, p);
         }
@@ -123,7 +116,7 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
 
     is_set = magic & MAGIC_SET;
     is_weak = ((magic & MAGIC_WEAK) != 0);
-    obj = qjs_collection_create_from_ctor(ctx, new_target, JS_CLASS_MAP + magic);
+    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_MAP + magic);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     s = js_mallocz(ctx, sizeof(*s));
@@ -158,7 +151,7 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
             goto fail;
         }
 
-        iter = qjs_get_iterator(ctx, arr, FALSE);
+        iter = JS_GetIterator(ctx, arr, FALSE);
         if (JS_IsException(iter))
             goto fail;
         next_method = JS_GetProperty(ctx, iter, JS_ATOM_next);
@@ -166,7 +159,7 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
             goto fail;
 
         for(;;) {
-            item = qjs_iterator_next(ctx, iter, next_method, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next_method, 0, NULL, &done);
             if (JS_IsException(item))
                 goto fail;
             if (done)
@@ -183,7 +176,7 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
                 key = JS_UNDEFINED;
                 value = JS_UNDEFINED;
                 if (!JS_IsObject(item)) {
-                    qjs_collection_throw_not_object(ctx);
+                    JS_ThrowTypeErrorNotAnObject(ctx);
                     goto fail1;
                 }
                 key = JS_GetPropertyUint32(ctx, item, 0);
@@ -215,7 +208,7 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
     return obj;
  fail_close:
     /* close the iterator object, preserving pending exception */
-    qjs_iterator_close(ctx, iter, TRUE);
+    JS_IteratorClose(ctx, iter, TRUE);
  fail:
     JS_FreeValue(ctx, next_method);
     JS_FreeValue(ctx, iter);
@@ -279,7 +272,7 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
         h = map_hash32(JS_VALUE_GET_INT(key) ^ JS_TAG_BOOL, hash_bits);
         break;
     case JS_TAG_STRING:
-        h = map_hash32(qjs_hash_string(JS_VALUE_GET_STRING(key), 0) ^ JS_TAG_STRING, hash_bits);
+        h = map_hash32(hash_string(JS_VALUE_GET_STRING(key), 0) ^ JS_TAG_STRING, hash_bits);
         break;
     case JS_TAG_STRING_ROPE:
         h = map_hash32(hash_string_rope(key, 0) ^ JS_TAG_STRING, hash_bits);
@@ -300,7 +293,7 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
         h = map_hash64(float64_as_uint64(d) ^ JS_TAG_FLOAT64, hash_bits);
         break;
     case JS_TAG_SHORT_BIG_INT:
-        p = qjs_bigint_set_short(&buf, key);
+        p = js_bigint_set_short(&buf, key);
         goto hash_bigint;
     case JS_TAG_BIG_INT:
         p = JS_VALUE_GET_PTR(key);
@@ -333,7 +326,7 @@ static JSMapRecord *map_find_record(JSContext *ctx, JSMapState *s,
         if (mr->empty || (s->is_weak && !js_weakref_is_live(mr->key))) {
             /* cannot match */
         } else {
-            if (qjs_same_value_zero(ctx, mr->key, key))
+            if (js_same_value_zero(ctx, mr->key, key))
                 return mr;
         }
     }
@@ -444,7 +437,7 @@ static void map_decref_record(JSRuntime *rt, JSMapRecord *mr)
     }
 }
 
-static void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh)
+QJS_INTERNAL void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh)
 {
     JSMapState *s = container_of(wh, JSMapState, weakref_header);
     struct list_head *el, *el1;
@@ -538,7 +531,7 @@ static JSValue map_delete_record(JSContext *ctx, JSMapState *s, JSValueConst key
         if (mr->empty || (s->is_weak && !js_weakref_is_live(mr->key))) {
             /* not valid */
         } else {
-            if (qjs_same_value_zero(ctx, mr->key, key))
+            if (js_same_value_zero(ctx, mr->key, key))
                 break;
         }
         pmr = &mr->hash_next;
@@ -655,7 +648,7 @@ static JSValue js_map_forEach(JSContext *ctx, JSValueConst this_val,
         this_arg = argv[1];
     else
         this_arg = JS_UNDEFINED;
-    if (qjs_check_function(ctx, func))
+    if (check_function(ctx, func))
         return JS_EXCEPTION;
     /* Note: the list can be modified while traversing it, but the
        current element is locked */
@@ -687,7 +680,7 @@ static JSValue js_map_forEach(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
-static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv, int is_map)
 {
     JSValueConst cb, args[2];
@@ -698,10 +691,10 @@ static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
 
     // "is function?" check must be observed before argv[0] is accessed
     cb = argv[1];
-    if (qjs_check_function(ctx, cb))
+    if (check_function(ctx, cb))
         return JS_EXCEPTION;
 
-    iter = qjs_get_iterator(ctx, argv[0], /*is_async*/FALSE);
+    iter = JS_GetIterator(ctx, argv[0], /*is_async*/FALSE);
     if (JS_IsException(iter))
         return JS_EXCEPTION;
 
@@ -728,7 +721,7 @@ static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
             JS_ThrowTypeError(ctx, "too many elements");
             goto iterator_close_exception;
         }
-        v = qjs_iterator_next(ctx, iter, next, 0, NULL, &done);
+        v = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(v))
             goto exception;
         if (done)
@@ -772,7 +765,7 @@ static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
                 }
             }
         }
-        res = qjs_array_push(ctx, prop, 1, (JSValueConst *)&v, /*unshift*/0);
+        res = js_array_push(ctx, prop, 1, (JSValueConst *)&v, /*unshift*/0);
         if (JS_IsException(res))
             goto exception;
         // res is an int64
@@ -792,7 +785,7 @@ static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
     return groups;
 
  iterator_close_exception:
-    qjs_iterator_close(ctx, iter, TRUE);
+    JS_IteratorClose(ctx, iter, TRUE);
  exception:
     JS_FreeAtom(ctx, key_atom);
     JS_FreeValue(ctx, prop);
@@ -982,7 +975,7 @@ static JSValue js_map_iterator_next(JSContext *ctx, JSValueConst this_val,
         if (it->kind == JS_ITERATOR_KIND_VALUE) {
             return JS_DupValue(ctx, args[1]);
         } else {
-            return qjs_collection_create_array(ctx, 2, args);
+            return js_create_array(ctx, 2, args);
         }
     }
 }
@@ -1004,7 +997,7 @@ static int get_set_record(JSContext *ctx, JSValueConst obj,
         v = JS_GetProperty(ctx, obj, JS_ATOM_size);
         if (JS_IsException(v))
             goto exception;
-        if (qjs_to_float64_free(ctx, &d, v) < 0)
+        if (JS_ToFloat64Free(ctx, &d, v) < 0)
             goto exception;
         if (isnan(d)) {
             JS_ThrowTypeError(ctx, ".size is not a number");
@@ -1122,7 +1115,7 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
                 break;
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
             JS_FreeValue(ctx, item);
-            ok = qjs_to_bool_free(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+            ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok < 0)
                 goto exception;
             found = (ok > 0);
@@ -1136,7 +1129,7 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
             goto exception;
         found = FALSE;
         for(;;) {
-            item = qjs_iterator_next(ctx, iter, next, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
             if (JS_IsException(item))
                 goto exception;
             if (done) // item is JS_UNDEFINED
@@ -1145,7 +1138,7 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
             found = (NULL != map_find_record(ctx, s, item));
             JS_FreeValue(ctx, item);
             if (found) {
-                qjs_iterator_close(ctx, iter, FALSE);
+                JS_IteratorClose(ctx, iter, FALSE);
                 break;
             }
         }
@@ -1191,7 +1184,7 @@ static JSValue js_set_isSubsetOf(JSContext *ctx, JSValueConst this_val,
             break;
         rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
         JS_FreeValue(ctx, item);
-        ok = qjs_to_bool_free(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+        ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
         if (ok < 0)
             goto exception;
         found = (ok > 0);
@@ -1234,7 +1227,7 @@ static JSValue js_set_isSupersetOf(JSContext *ctx, JSValueConst this_val,
         goto exception;
     found = TRUE;
     for(;;) {
-        item = qjs_iterator_next(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception;
         if (done) // item is JS_UNDEFINED
@@ -1243,7 +1236,7 @@ static JSValue js_set_isSupersetOf(JSContext *ctx, JSValueConst this_val,
         found = (NULL != map_find_record(ctx, s, item));
         JS_FreeValue(ctx, item);
         if (!found) {
-            qjs_iterator_close(ctx, iter, FALSE);
+            JS_IteratorClose(ctx, iter, FALSE);
             break;
         }
     }
@@ -1286,7 +1279,7 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
             goto exception;
         t = JS_GetOpaque(newset, JS_CLASS_SET);
         for (;;) {
-            item = qjs_iterator_next(ctx, iter, next, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
             if (JS_IsException(item))
                 goto exception;
             if (done) // item is JS_UNDEFINED
@@ -1318,7 +1311,7 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
             if (done) // item is JS_UNDEFINED
                 break;
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
-            ok = qjs_to_bool_free(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+            ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok > 0) {
                 item = map_normalize_key(ctx, item);
                 if (map_find_record(ctx, t, item)) {
@@ -1382,7 +1375,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
             if (done) // item is JS_UNDEFINED
                 break;
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
-            ok = qjs_to_bool_free(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+            ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok < 0) {
                 JS_FreeValue(ctx, item);
                 goto exception;
@@ -1400,7 +1393,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(next))
             goto exception;
         for (;;) {
-            item = qjs_iterator_next(ctx, iter, next, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
             if (JS_IsException(item))
                 goto exception;
             if (done) // item is JS_UNDEFINED
@@ -1451,7 +1444,7 @@ static JSValue js_set_symmetricDifference(JSContext *ctx, JSValueConst this_val,
         goto exception;
     t = JS_GetOpaque(newset, JS_CLASS_SET);
     for (;;) {
-        item = qjs_iterator_next(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception;
         if (done) // item is JS_UNDEFINED
@@ -1519,7 +1512,7 @@ static JSValue js_set_union(JSContext *ctx, JSValueConst this_val,
         goto exception;
 
     for (;;) {
-        item = qjs_iterator_next(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception;
         if (done) // item is JS_UNDEFINED
@@ -1543,7 +1536,7 @@ fini:
 
 static const JSCFunctionListEntry js_map_funcs[] = {
     JS_CFUNC_MAGIC_DEF("groupBy", 2, js_object_groupBy, 1 ),
-    JS_CGETSET_DEF("[Symbol.species]", qjs_array_get_this, NULL ),
+    JS_CGETSET_DEF("[Symbol.species]", js_get_this, NULL ),
 };
 
 static const JSCFunctionListEntry js_map_proto_funcs[] = {
@@ -1644,7 +1637,7 @@ int JS_AddIntrinsicMapSet(JSContext *ctx)
         const char *name = JS_AtomGetStr(ctx, buf, sizeof(buf),
                                          JS_ATOM_Map + i);
         ft.constructor_magic = js_map_constructor;
-        obj1 = qjs_new_c_constructor(ctx, JS_CLASS_MAP + i, name,
+        obj1 = JS_NewCConstructor(ctx, JS_CLASS_MAP + i, name,
                                   ft.generic, 0, JS_CFUNC_constructor_magic, i,
                                   JS_UNDEFINED,
                                   js_map_funcs, i < 2 ? countof(js_map_funcs) : 0,
@@ -1657,7 +1650,7 @@ int JS_AddIntrinsicMapSet(JSContext *ctx)
 
     for(i = 0; i < 2; i++) {
         ctx->class_proto[JS_CLASS_MAP_ITERATOR + i] =
-            qjs_new_object_proto_list(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
+            JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
                                   js_map_proto_funcs_ptr[i + 4],
                                   js_map_proto_funcs_count[i + 4]);
         if (JS_IsException(ctx->class_proto[JS_CLASS_MAP_ITERATOR + i]))
@@ -1665,8 +1658,6 @@ int JS_AddIntrinsicMapSet(JSContext *ctx)
     }
     return 0;
 }
-
-
 /* WeakRef */
 
 typedef struct JSWeakRefData {
@@ -1684,7 +1675,8 @@ static void js_weakref_finalizer(JSRuntime *rt, JSValue val)
     js_free_rt(rt, wrd);
 }
 
-static void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
+QJS_INTERNAL void weakref_delete_weakref(JSRuntime *rt,
+                                         JSWeakRefHeader *wh)
 {
     JSWeakRefData *wrd = container_of(wh, JSWeakRefData, weakref_header);
 
@@ -1705,7 +1697,7 @@ static JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
     arg = argv[0];
     if (!js_weakref_is_target(arg))
         return JS_ThrowTypeError(ctx, "invalid target");
-    obj = qjs_collection_create_from_ctor(ctx, new_target, JS_CLASS_WEAK_REF);
+    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_WEAK_REF);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     JSWeakRefData *wrd = js_mallocz(ctx, sizeof(*wrd));
@@ -1793,7 +1785,8 @@ static JSValue js_finrec_job(JSContext *ctx, int argc, JSValueConst *argv)
     return JS_Call(ctx, argv[0], JS_UNDEFINED, 1, &argv[1]);
 }
 
-static void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
+QJS_INTERNAL void finrec_delete_weakref(JSRuntime *rt,
+                                        JSWeakRefHeader *wh)
 {
     JSFinalizationRegistryData *frd = container_of(wh, JSFinalizationRegistryData, weakref_header);
     struct list_head *el, *el1;
@@ -1811,7 +1804,7 @@ static void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
             args[0] = frd->cb;
             args[1] = fre->held_val;
             /* no exception is raised to avoid recursing into the GC */
-            qjs_enqueue_job2(frd->realm, js_finrec_job, 2, args, TRUE);
+            JS_EnqueueJob2(frd->realm, js_finrec_job, 2, args, TRUE);
 
             js_weakref_free(rt, fre->target);
             js_weakref_free(rt, fre->token);
@@ -1835,7 +1828,7 @@ static JSValue js_finrec_constructor(JSContext *ctx, JSValueConst new_target,
     if (!JS_IsFunction(ctx, cb))
         return JS_ThrowTypeError(ctx, "argument must be a function");
 
-    obj = qjs_collection_create_from_ctor(ctx, new_target, JS_CLASS_FINALIZATION_REGISTRY);
+    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_FINALIZATION_REGISTRY);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     frd = js_mallocz(ctx, sizeof(*frd));
@@ -1868,7 +1861,7 @@ static JSValue js_finrec_register(JSContext *ctx, JSValueConst this_val,
 
     if (!js_weakref_is_target(target))
         return JS_ThrowTypeError(ctx, "invalid target");
-    if (qjs_same_value(ctx, target, held_val))
+    if (js_same_value(ctx, target, held_val))
         return JS_ThrowTypeError(ctx, "held value cannot be the target");
     if (!JS_IsUndefined(token) && !js_weakref_is_target(token))
         return JS_ThrowTypeError(ctx, "invalid unregister token");
@@ -1898,7 +1891,7 @@ static JSValue js_finrec_unregister(JSContext *ctx, JSValueConst this_val, int a
     removed = FALSE;
     list_for_each_safe(el, el1, &frd->entries) {
         JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
-        if (js_weakref_is_live(fre->token) && qjs_same_value(ctx, fre->token, token)) {
+        if (js_weakref_is_live(fre->token) && js_same_value(ctx, fre->token, token)) {
             js_weakref_free(ctx->rt, fre->target);
             js_weakref_free(ctx->rt, fre->token);
             JS_FreeValue(ctx, fre->held_val);
@@ -1927,11 +1920,11 @@ int JS_AddIntrinsicWeakRef(JSContext *ctx)
 
     /* WeakRef */
     if (!JS_IsRegisteredClass(rt, JS_CLASS_WEAK_REF)) {
-        if (qjs_init_class_range(rt, js_weakref_class_def, JS_CLASS_WEAK_REF,
+        if (init_class_range(rt, js_weakref_class_def, JS_CLASS_WEAK_REF,
                              countof(js_weakref_class_def)))
             return -1;
     }
-    obj = qjs_new_c_constructor(ctx, JS_CLASS_WEAK_REF, "WeakRef",
+    obj = JS_NewCConstructor(ctx, JS_CLASS_WEAK_REF, "WeakRef",
                              js_weakref_constructor, 1, JS_CFUNC_constructor_or_func, 0,
                              JS_UNDEFINED,
                              NULL, 0,
@@ -1943,12 +1936,12 @@ int JS_AddIntrinsicWeakRef(JSContext *ctx)
 
     /* FinalizationRegistry */
     if (!JS_IsRegisteredClass(rt, JS_CLASS_FINALIZATION_REGISTRY)) {
-        if (qjs_init_class_range(rt, js_finrec_class_def, JS_CLASS_FINALIZATION_REGISTRY,
+        if (init_class_range(rt, js_finrec_class_def, JS_CLASS_FINALIZATION_REGISTRY,
                              countof(js_finrec_class_def)))
             return -1;
     }
 
-    obj = qjs_new_c_constructor(ctx, JS_CLASS_FINALIZATION_REGISTRY, "FinalizationRegistry",
+    obj = JS_NewCConstructor(ctx, JS_CLASS_FINALIZATION_REGISTRY, "FinalizationRegistry",
                              js_finrec_constructor, 1, JS_CFUNC_constructor_or_func, 0,
                              JS_UNDEFINED,
                              NULL, 0,
@@ -1959,17 +1952,3 @@ int JS_AddIntrinsicWeakRef(JSContext *ctx)
     JS_FreeValue(ctx, obj);
     return 0;
 }
-
-
-
-QJS_INTERNAL void qjs_map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *ref)
-{ map_delete_weakrefs(rt, ref); }
-QJS_INTERNAL void qjs_weakref_delete(JSRuntime *rt, JSWeakRefHeader *ref)
-{ weakref_delete_weakref(rt, ref); }
-QJS_INTERNAL void qjs_finrec_delete(JSRuntime *rt, JSWeakRefHeader *ref)
-{ finrec_delete_weakref(rt, ref); }
-QJS_INTERNAL JSValue qjs_object_group_by(JSContext *ctx,
-                                         JSValueConst this_val,
-                                         int argc, JSValueConst *argv,
-                                         int is_map)
-{ return js_object_groupBy(ctx, this_val, argc, argv, is_map); }

@@ -32,22 +32,18 @@ QJS_INTERNAL int qjs_proxy_register_class(JSRuntime *rt,
                                            JSClassGCMark *gc_mark,
                                            const JSClassExoticMethods *exotic,
                                            JSClassCall *call);
-QJS_INTERNAL BOOL qjs_proxy_is_strict_mode(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_proxy_new_c_function3(
+QJS_INTERNAL JSValue JS_NewCFunction3(
     JSContext *ctx, JSCFunction *func, const char *name, int length,
     JSCFunctionEnum cproto, int magic, JSValueConst proto, int prop_count);
-QJS_INTERNAL JSValue qjs_proxy_throw_stack_overflow(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_proxy_throw_type_error_not_object(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_proxy_throw_type_error_not_constructor(
+QJS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(
     JSContext *ctx, JSValueConst value);
-QJS_INTERNAL JSValue qjs_proxy_create_array(JSContext *ctx, int len,
+QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
                                             JSValueConst *values);
-QJS_INTERNAL int qjs_proxy_to_bool_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL BOOL qjs_proxy_same_value(JSContext *ctx, JSValueConst left,
-                                       JSValueConst right);
-
-QJS_INTERNAL JSValue qjs_proxy_throw_revoked(JSContext *ctx);
-QJS_INTERNAL int qjs_resolve_proxy(JSContext *ctx, JSValueConst *value,
+QJS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue value);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
+QJS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *value,
                                    BOOL throw_exception);
 
 #endif /* QUICKJS_INTERNAL_PROXY_H */

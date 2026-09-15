@@ -36,14 +36,14 @@
 #define QJS_LIBC_INTERNAL
 #endif
 
-static inline ssize_t qjs_libc_get_errno(ssize_t ret)
+static inline ssize_t js_get_errno(ssize_t ret)
 {
     if (ret == -1)
         ret = -errno;
     return ret;
 }
 
-static inline int qjs_libc_get_bool_option(JSContext *ctx, BOOL *pbool,
+static inline int get_bool_option(JSContext *ctx, BOOL *pbool,
                                            JSValueConst obj,
                                            const char *option)
 {

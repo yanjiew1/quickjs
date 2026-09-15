@@ -27,9 +27,9 @@
 
 #include "internal-base.h"
 
-QJS_LIBC_INTERNAL JSValue qjs_libc_load_script(
+QJS_LIBC_INTERNAL JSValue js_loadScript(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
-QJS_LIBC_INTERNAL JSModuleDef *qjs_libc_create_json_module(
+QJS_LIBC_INTERNAL JSModuleDef *create_json_module(
     JSContext *ctx, const char *module_name, JSValue val);
 
 #endif /* QJS_LIBC_INTERNAL_LOADER_H */

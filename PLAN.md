@@ -82,6 +82,19 @@ unchanged because resolving those collisions would exceed this follow-up's
 strict identifier-only scope. The exhaustive classification and validation
 record is in `CHECKPOINT.md`.
 
+The subsequent canonical-owner naming cleanup is complete in the working tree.
+It resolves the structural cases deliberately deferred by the identifier-only
+phase: upstream implementations are now the cross-TU entries, consumer-specific
+forwarders and compatibility aliases are removed, and existing public/private
+inline twins use the public API name plus an `_inline` private implementation.
+This changes only the minimum linkage and private-header exposure needed to
+remove duplicate forwarding topology; algorithms, ownership, signatures,
+attributes, inline policy, public ABI, and build configuration are unchanged.
+The `qjs_*` inventory fell from 383 unique identifiers after the strict phase to
+36. All 36 are exhaustively classified in `CHECKPOINT.md` as either genuinely
+new modular lifecycle/composition glue or intentional private fast-boundary
+helpers; no `qjs_*` forwarding adapter remains.
+
 ## Inspected starting architecture
 
 The starting tree has one 61,424-line `quickjs.c`, one-object build rules in the

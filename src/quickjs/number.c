@@ -22,28 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#define QUICKJS_NUMBER_OWNER
 #include "internal-allocator.h"
 #include "internal-function.h"
 #include "internal-operator.h"
-
-#define JS_CallFree qjs_call_free
-#define JS_InvokeFree qjs_invoke_free
-#define JS_ConcatString JS_ConcatString
-#define JS_CheckBrand qjs_check_brand
-#define find_own_property qjs_find_own_property_fast
-#define js_rc qjs_get_ref_header
-#define js_new_string8_len js_new_string8_len
-#define js_new_string8 js_new_string8
-#define js_linearize_string_rope js_linearize_string_rope
-#define js_string_compare js_string_compare
-#define js_string_rope_compare js_string_rope_compare
-#define js_unary_arith_slow js_unary_arith_slow
-#define js_malloc_rt qjs_malloc_rt_internal
-#define js_free_rt qjs_free_rt_internal
-#define js_realloc_rt qjs_realloc_rt_internal
-#define js_malloc qjs_malloc_internal
-#define js_free qjs_free_internal
-#define js_realloc qjs_realloc_internal
 
 #define HINT_STRING 0
 #define HINT_NUMBER 1
@@ -63,7 +45,7 @@ static inline BOOL js_string_eq(JSContext *ctx,
                                 const JSString *p1, const JSString *p2)
 {
     (void)ctx;
-    return qjs_string_equal(p1, p2);
+    return js_string_eq_inline(p1, p2);
 }
 
 static inline int is_digit(int c)
@@ -71,7 +53,7 @@ static inline int is_digit(int c)
     return c >= '0' && c <= '9';
 }
 
-static JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
+QJS_INTERNAL JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
 {
     int i;
     BOOL force_ordinary;
@@ -145,7 +127,7 @@ exception:
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint)
+QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint)
 {
     return JS_ToPrimitiveFree(ctx, JS_DupValue(ctx, val), hint);
 }
@@ -168,7 +150,7 @@ static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
     return p->is_HTMLDDA;
 }
 
-static int JS_ToBoolFree(JSContext *ctx, JSValue val)
+QJS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue val)
 {
     uint32_t tag = JS_VALUE_GET_TAG(val);
     switch(tag) {
@@ -238,7 +220,7 @@ int JS_ToBool(JSContext *ctx, JSValueConst val)
     return JS_ToBoolFree(ctx, JS_DupValue(ctx, val));
 }
 
-static int skip_spaces(const char *pc)
+QJS_INTERNAL int skip_spaces(const char *pc)
 {
     const uint8_t *p, *p_next, *p_start;
     uint32_t c;
@@ -258,18 +240,6 @@ static int skip_spaces(const char *pc)
         }
     }
     return p - p_start;
-}
-
-static inline int to_digit(int c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    else if (c >= 'A' && c <= 'Z')
-        return c - 'A' + 10;
-    else if (c >= 'a' && c <= 'z')
-        return c - 'a' + 10;
-    else
-        return 36;
 }
 
 /* bigint support */
@@ -599,7 +569,7 @@ static js_limb_t mp_shr(js_limb_t *tab_r, const js_limb_t *tab, int n,
     return l & (((js_limb_t)1 << shift) - 1);
 }
 
-static JSBigInt *js_bigint_new(JSContext *ctx, int len)
+QJS_INTERNAL JSBigInt *js_bigint_new(JSContext *ctx, int len)
 {
     JSBigInt *r;
     if (len > JS_BIGINT_MAX_SIZE) {
@@ -762,15 +732,9 @@ static JSBigInt *js_bigint_normalize1(JSContext *ctx, JSBigInt *a, int l)
     return a;
 }
 
-static JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a)
+QJS_INTERNAL JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a)
 {
     return js_bigint_normalize1(ctx, a, a->len);
-}
-
-/* return 0 or 1 depending on the sign */
-static inline int js_bigint_sign(const JSBigInt *a)
-{
-    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
 }
 
 static js_slimb_t js_bigint_get_si_sat(const JSBigInt *a)
@@ -1266,7 +1230,7 @@ static uint64_t shr_rndn(uint64_t a, int n)
 
 /* convert to float64 with round to nearest, ties to even. Return
    +/-infinity if too large. */
-static double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
+QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
 {
     int sgn, e;
     uint64_t mant;
@@ -1299,7 +1263,8 @@ static double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
 
 /* return (1, NULL) if not an integer, (2, NULL) if NaN or Infinity,
    (0, n) if an integer, (0, NULL) in case of memory error */
-static JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1)
+QJS_INTERNAL JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres,
+                                              double a1)
 {
     uint64_t a = float64_as_uint64(a1);
     int sgn, e, shift;
@@ -1642,7 +1607,8 @@ static const js_limb_t radix_base_table[JS_RADIX_MAX - 1] = {
 #endif
 };
 
-static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+QJS_INTERNAL JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val,
+                                          int radix)
 {
     if (JS_VALUE_GET_TAG(val) == JS_TAG_SHORT_BIG_INT) {
         char buf[66];
@@ -1740,7 +1706,7 @@ static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 
 /* if possible transform a BigInt to short big and free it, otherwise
    return a normal bigint */
-static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+QJS_INTERNAL JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
 {
     JSValue res;
     if (p->len == 1) {
@@ -1767,8 +1733,8 @@ static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
 /* return an exception in case of memory error. Return JS_NAN if
    invalid syntax */
 /* XXX: directly use js_atod() */
-static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
-                       int radix, int flags)
+QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+                             int radix, int flags)
 {
     const char *p, *p_start;
     int sep, is_neg;
@@ -2024,7 +1990,7 @@ static JSValue JS_ToNumberHintFree(JSContext *ctx, JSValue val,
     return ret;
 }
 
-static JSValue JS_ToNumberFree(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue JS_ToNumberFree(JSContext *ctx, JSValue val)
 {
     return JS_ToNumberHintFree(ctx, val, TON_FLAG_NUMBER);
 }
@@ -2034,13 +2000,13 @@ static JSValue JS_ToNumericFree(JSContext *ctx, JSValue val)
     return JS_ToNumberHintFree(ctx, val, TON_FLAG_NUMERIC);
 }
 
-static JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val)
 {
     return JS_ToNumericFree(ctx, JS_DupValue(ctx, val));
 }
 
-static __exception int __JS_ToFloat64Free(JSContext *ctx, double *pres,
-                                          JSValue val)
+QJS_INTERNAL __exception int __JS_ToFloat64Free(JSContext *ctx, double *pres,
+                                                JSValue val)
 {
     double d;
     uint32_t tag;
@@ -2087,13 +2053,14 @@ int JS_ToFloat64(JSContext *ctx, double *pres, JSValueConst val)
     return JS_ToFloat64Free(ctx, pres, JS_DupValue(ctx, val));
 }
 
-static JSValue JS_ToNumber(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL JSValue JS_ToNumber(JSContext *ctx, JSValueConst val)
 {
     return JS_ToNumberFree(ctx, JS_DupValue(ctx, val));
 }
 
 /* same as JS_ToNumber() but return 0 in case of NaN/Undefined */
-static __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val)
+QJS_INTERNAL __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx,
+                                                     JSValue val)
 {
     uint32_t tag;
     JSValue ret;
@@ -2258,7 +2225,7 @@ int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
 
 /* Same as JS_ToInt32Free() but with a 64 bit result. Return (<0, 0)
    in case of exception */
-static int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
+QJS_INTERNAL int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
 {
     uint32_t tag;
     int64_t ret;
@@ -2385,7 +2352,8 @@ static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
     return JS_ToInt32Free(ctx, (int32_t *)pres, val);
 }
 
-static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val)
+QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres,
+                                     JSValue val)
 {
     uint32_t tag;
     int res;
@@ -2427,8 +2395,9 @@ static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val)
     return 0;
 }
 
-static __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
-                                            JSValue val, BOOL is_array_ctor)
+QJS_INTERNAL __exception int JS_ToArrayLengthFree(JSContext *ctx,
+                                                  uint32_t *plen, JSValue val,
+                                                  BOOL is_array_ctor)
 {
     uint32_t tag, len;
 
@@ -2491,7 +2460,7 @@ static __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
 
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 
-static BOOL is_safe_integer(double d)
+QJS_INTERNAL BOOL is_safe_integer(double d)
 {
     return isfinite(d) && floor(d) == d &&
         fabs(d) <= (double)MAX_SAFE_INTEGER;
@@ -2513,8 +2482,8 @@ int JS_ToIndex(JSContext *ctx, uint64_t *plen, JSValueConst val)
 
 /* convert a value to a length between 0 and MAX_SAFE_INTEGER.
    return -1 for exception */
-static __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
-                                       JSValue val)
+QJS_INTERNAL __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
+                                             JSValue val)
 {
     int res = JS_ToInt64Clamp(ctx, plen, val, 0, MAX_SAFE_INTEGER, 0);
     JS_FreeValue(ctx, val);
@@ -2522,7 +2491,7 @@ static __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
 }
 
 /* Note: can return an exception */
-static int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
 {
     double d;
     if (!JS_IsNumber(val))
@@ -2532,7 +2501,8 @@ static int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
     return isfinite(d) && floor(d) == d;
 }
 
-static BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx,
+                                                 JSValueConst val)
 {
     uint32_t tag;
 
@@ -2567,8 +2537,8 @@ static JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
     return js_bigint_to_string1(ctx, val, 10);
 }
 
-static JSValue js_dtoa2(JSContext *ctx,
-                        double d, int radix, int n_digits, int flags)
+QJS_INTERNAL JSValue js_dtoa2(JSContext *ctx, double d, int radix,
+                              int n_digits, int flags)
 {
     char static_buf[128], *buf, *tmp_buf;
     int len, len_max;
@@ -2592,7 +2562,8 @@ static JSValue js_dtoa2(JSContext *ctx,
     return res;
 }
 
-static JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToPropertyKey)
+QJS_INTERNAL JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val,
+                                         BOOL is_ToPropertyKey)
 {
     uint32_t tag;
     char buf[32];
@@ -2662,7 +2633,7 @@ QJS_INTERNAL JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
     return ret;
 }
 
-static JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val)
 {
     if (JS_IsUndefined(val) || JS_IsNull(val))
         return JS_ToStringFree(ctx, val);
@@ -2674,7 +2645,7 @@ JSValue JS_ToPropertyKey(JSContext *ctx, JSValueConst val)
     return JS_ToStringInternal(ctx, val, TRUE);
 }
 
-static JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val)
 {
     uint32_t tag = JS_VALUE_GET_TAG(val);
     if (tag == JS_TAG_NULL || tag == JS_TAG_UNDEFINED)
@@ -2682,7 +2653,7 @@ static JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val)
     return JS_ToString(ctx, val);
 }
 
-static double js_pow(double a, double b)
+QJS_INTERNAL double js_pow(double a, double b)
 {
     if (unlikely(!isfinite(b)) && fabs(a) == 1) {
         /* not compatible with IEEE 754 */
@@ -2752,7 +2723,7 @@ static JSValue JS_StringToBigInt(JSContext *ctx, JSValue val)
     return val;
 }
 
-static JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val)
 {
     val = JS_StringToBigInt(ctx, val);
     if (JS_VALUE_IS_NAN(val))
@@ -2761,7 +2732,7 @@ static JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val)
 }
 
 /* JS Numbers are not allowed */
-static JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
 {
     uint32_t tag;
 
@@ -2798,13 +2769,13 @@ static JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
     return val;
 }
 
-static JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val)
 {
     return JS_ToBigIntFree(ctx, JS_DupValue(ctx, val));
 }
 
 /* XXX: merge with JS_ToInt64Free with a specific flag ? */
-static int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
+QJS_INTERNAL int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
 {
     uint64_t res;
 
@@ -4210,212 +4181,3 @@ QJS_INTERNAL __exception int js_operator_delete(JSContext *ctx, JSValue *sp)
 /* XXX: not 100% compatible, but mozilla seems to use a similar
    implementation to ensure that caller in non strict mode does not
    throw (ES5 compatibility) */
-
-QJS_INTERNAL JSValue qjs_to_primitive_free(JSContext *ctx, JSValue value,
-                                            int hint)
-{
-    return JS_ToPrimitiveFree(ctx, value, hint);
-}
-
-QJS_INTERNAL JSValue qjs_to_primitive(JSContext *ctx, JSValueConst value,
-                                       int hint)
-{
-    return JS_ToPrimitive(ctx, value, hint);
-}
-
-QJS_INTERNAL int qjs_to_digit(int c)
-{
-    return to_digit(c);
-}
-
-QJS_INTERNAL JSValue qjs_atof(JSContext *ctx, const char *str,
-                               const char **end, int radix, int flags)
-{
-    return js_atof(ctx, str, end, radix, flags);
-}
-
-QJS_INTERNAL JSBigInt *qjs_bigint_new(JSContext *ctx, int len)
-{
-    return js_bigint_new(ctx, len);
-}
-
-QJS_INTERNAL JSValue qjs_compact_bigint(JSContext *ctx, JSBigInt *value)
-{
-    return JS_CompactBigInt(ctx, value);
-}
-
-QJS_INTERNAL JSBigInt *qjs_bigint_normalize(JSContext *ctx, JSBigInt *value)
-{
-    return js_bigint_normalize(ctx, value);
-}
-
-QJS_INTERNAL double qjs_bigint_to_float64(JSContext *ctx,
-                                           const JSBigInt *value)
-{
-    return js_bigint_to_float64(ctx, value);
-}
-
-QJS_INTERNAL JSBigInt *qjs_bigint_from_float64(JSContext *ctx, int *status,
-                                                double value)
-{
-    return js_bigint_from_float64(ctx, status, value);
-}
-
-QJS_INTERNAL JSValue qjs_bigint_to_string(JSContext *ctx,
-                                           JSValueConst value, int radix)
-{
-    return js_bigint_to_string1(ctx, value, radix);
-}
-
-QJS_INTERNAL JSValue qjs_to_numeric(JSContext *ctx, JSValueConst value)
-{
-    return JS_ToNumeric(ctx, value);
-}
-
-QJS_INTERNAL JSValue qjs_to_number_free(JSContext *ctx, JSValue value)
-{
-    return JS_ToNumberFree(ctx, value);
-}
-
-QJS_INTERNAL JSValue qjs_to_number(JSContext *ctx, JSValueConst value)
-{
-    return JS_ToNumber(ctx, value);
-}
-
-QJS_INTERNAL int qjs_to_bool_free(JSContext *ctx, JSValue value)
-{
-    return JS_ToBoolFree(ctx, value);
-}
-
-QJS_INTERNAL int qjs_to_float64_free_slow(JSContext *ctx, double *result,
-                                           JSValue value)
-{
-    return __JS_ToFloat64Free(ctx, result, value);
-}
-
-QJS_INTERNAL JSValue qjs_to_integer_free(JSContext *ctx, JSValue value)
-{
-    return JS_ToIntegerFree(ctx, value);
-}
-
-QJS_INTERNAL BOOL qjs_is_safe_integer(double value)
-{
-    return is_safe_integer(value);
-}
-
-QJS_INTERNAL int qjs_number_is_integer(JSContext *ctx, JSValueConst value)
-{
-    return JS_NumberIsInteger(ctx, value);
-}
-
-QJS_INTERNAL BOOL qjs_number_is_negative_or_minus_zero(
-    JSContext *ctx, JSValueConst value)
-{
-    return JS_NumberIsNegativeOrMinusZero(ctx, value);
-}
-
-QJS_INTERNAL JSValue qjs_dtoa2(JSContext *ctx, double value, int radix,
-                                int precision, int flags)
-{
-    return js_dtoa2(ctx, value, radix, precision, flags);
-}
-
-QJS_INTERNAL JSValue qjs_to_string_internal(JSContext *ctx,
-                                             JSValueConst value,
-                                             BOOL is_property_key)
-{
-    return JS_ToStringInternal(ctx, value, is_property_key);
-}
-
-QJS_INTERNAL JSValue qjs_to_locale_string_free(JSContext *ctx, JSValue value)
-{
-    return JS_ToLocaleStringFree(ctx, value);
-}
-
-QJS_INTERNAL JSValue qjs_to_string_check_object(JSContext *ctx,
-                                                 JSValueConst value)
-{
-    return JS_ToStringCheckObject(ctx, value);
-}
-
-QJS_INTERNAL JSValue qjs_string_to_bigint_error(JSContext *ctx, JSValue value)
-{
-    return JS_StringToBigIntErr(ctx, value);
-}
-
-QJS_INTERNAL JSValue qjs_to_bigint(JSContext *ctx, JSValueConst value)
-{
-    return JS_ToBigInt(ctx, value);
-}
-
-QJS_INTERNAL JSValue qjs_to_bigint_free(JSContext *ctx, JSValue value)
-{
-    return JS_ToBigIntFree(ctx, value);
-}
-
-QJS_INTERNAL int qjs_to_bigint64_free(JSContext *ctx, int64_t *result,
-                                       JSValue value)
-{
-    return JS_ToBigInt64Free(ctx, result, value);
-}
-
-QJS_INTERNAL int qjs_to_int32_sat(JSContext *ctx, int *result,
-                                   JSValueConst value)
-{
-    return JS_ToInt32Sat(ctx, result, value);
-}
-
-QJS_INTERNAL int qjs_to_int32_clamp(JSContext *ctx, int *result,
-                                     JSValueConst value, int min, int max,
-                                     int min_offset)
-{
-    return JS_ToInt32Clamp(ctx, result, value, min, max, min_offset);
-}
-
-QJS_INTERNAL int qjs_to_int64_sat(JSContext *ctx, int64_t *result,
-                                   JSValueConst value)
-{
-    return JS_ToInt64Sat(ctx, result, value);
-}
-
-QJS_INTERNAL int qjs_to_int64_clamp(JSContext *ctx, int64_t *result,
-                                     JSValueConst value, int64_t min,
-                                     int64_t max, int64_t min_offset)
-{
-    return JS_ToInt64Clamp(ctx, result, value, min, max, min_offset);
-}
-
-QJS_INTERNAL int qjs_to_int64_free(JSContext *ctx, int64_t *result,
-                                    JSValue value)
-{
-    return JS_ToInt64Free(ctx, result, value);
-}
-
-QJS_INTERNAL int qjs_to_uint8_clamp_free(JSContext *ctx, int32_t *result,
-                                          JSValue value)
-{
-    return JS_ToUint8ClampFree(ctx, result, value);
-}
-
-QJS_INTERNAL int qjs_to_array_length_free(JSContext *ctx, uint32_t *length,
-                                           JSValue value,
-                                           BOOL is_array_constructor)
-{
-    return JS_ToArrayLengthFree(ctx, length, value, is_array_constructor);
-}
-
-QJS_INTERNAL int qjs_to_length_free(JSContext *ctx, int64_t *length,
-                                     JSValue value)
-{
-    return JS_ToLengthFree(ctx, length, value);
-}
-
-QJS_INTERNAL double qjs_math_pow(double left, double right)
-{
-    return js_pow(left, right);
-}
-
-QJS_INTERNAL int qjs_global_skip_spaces(const char *str)
-{
-    return skip_spaces(str);
-}

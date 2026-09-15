@@ -559,8 +559,8 @@ static int js_parse_error_v(JSParseState *s, const uint8_t *ptr, const char *fmt
     JSContext *ctx = s->ctx;
     int line_num, col_num;
     line_num = get_line_col(&col_num, s->buf_start, ptr - s->buf_start);
-    qjs_throw_error2(ctx, JS_SYNTAX_ERROR, fmt, ap, FALSE);
-    qjs_build_backtrace(ctx, ctx->rt->current_exception, s->filename,
+    JS_ThrowError2(ctx, JS_SYNTAX_ERROR, fmt, ap, FALSE);
+    build_backtrace(ctx, ctx->rt->current_exception, s->filename,
                     line_num + 1, col_num + 1, 0);
     return -1;
 }
@@ -1239,7 +1239,7 @@ static __exception int next_token(JSParseState *s)
         break;
     case '0':
         /* in strict mode, octal literals are not accepted */
-        if (qjs_is_digit(p[1]) && (s->cur_func->js_mode & JS_MODE_STRICT)) {
+        if (is_digit(p[1]) && (s->cur_func->js_mode & JS_MODE_STRICT)) {
             js_parse_error(s, "octal literals are deprecated in strict mode");
             goto fail;
         }
@@ -1255,7 +1255,7 @@ static __exception int next_token(JSParseState *s)
             int flags;
             flags = ATOD_ACCEPT_BIN_OCT | ATOD_ACCEPT_LEGACY_OCTAL |
                 ATOD_ACCEPT_UNDERSCORES | ATOD_ACCEPT_SUFFIX;
-            ret = qjs_atof(s->ctx, (const char *)p, (const char **)&p, 0,
+            ret = js_atof(s->ctx, (const char *)p, (const char **)&p, 0,
                           flags);
             if (JS_IsException(ret))
                 goto fail;
@@ -1621,7 +1621,7 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
     if (*p == '+' || *p == '-')
         p++;
 
-    if (!qjs_is_digit(*p)) {
+    if (!is_digit(*p)) {
         if (s->ext_json) {
             if (strstart((const char *)p, "Infinity", (const char **)&p)) {
                 d = 1.0 / 0.0;
@@ -1655,7 +1655,7 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
             }
             if (radix != 10) {
                 /* prefix is present */
-                if (qjs_to_digit(*p) >= radix) {
+                if (to_digit(*p) >= radix) {
                 unexpected_token:
                     return js_parse_error_pos(s, p, "Unexpected token '%c'", *p);
                 }
@@ -1664,27 +1664,27 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
                 goto done;
             }
         }
-        if (qjs_is_digit(p[1]))
+        if (is_digit(p[1]))
             return js_parse_error_pos(s, p, "Unexpected number");
     }
 
-    while (qjs_is_digit(*p))
+    while (is_digit(*p))
         p++;
 
     if (*p == '.') {
         p++;
-        if (!qjs_is_digit(*p))
+        if (!is_digit(*p))
             return js_parse_error_pos(s, p, "Unterminated fractional number");
-        while (qjs_is_digit(*p))
+        while (is_digit(*p))
             p++;
     }
     if (*p == 'e' || *p == 'E') {
         p++;
         if (*p == '+' || *p == '-')
             p++;
-        if (!qjs_is_digit(*p))
+        if (!is_digit(*p))
             return js_parse_error_pos(s, p, "Exponent part is missing a number");
-        while (qjs_is_digit(*p))
+        while (is_digit(*p))
             p++;
     }
     d = js_atod((const char *)p_start, NULL, 10, 0, &atod_mem);
@@ -1831,7 +1831,7 @@ static __exception int json_next_token(JSParseState *s)
             goto def_token;
         goto parse_number;
     case '.':
-        if (s->ext_json && qjs_is_digit(p[1]))
+        if (s->ext_json && is_digit(p[1]))
             goto parse_number;
         else
             goto def_token;
@@ -2116,7 +2116,7 @@ static int new_label_fd(JSFunctionDef *fd)
     int label;
     LabelSlot *ls;
 
-    if (qjs_resize_array(fd->ctx, (void *)&fd->label_slots,
+    if (js_resize_array(fd->ctx, (void *)&fd->label_slots,
                         sizeof(fd->label_slots[0]),
                         &fd->label_size, fd->label_count + 1))
         return -1;
@@ -2183,7 +2183,7 @@ static int cpool_add(JSParseState *s, JSValue val)
 {
     JSFunctionDef *fd = s->cur_func;
 
-    if (qjs_resize_array(s->ctx, (void *)&fd->cpool, sizeof(fd->cpool[0]),
+    if (js_resize_array(s->ctx, (void *)&fd->cpool, sizeof(fd->cpool[0]),
                         &fd->cpool_size, fd->cpool_count + 1)) {
         JS_FreeValue(s->ctx, val);
         return -1;
@@ -2202,7 +2202,7 @@ static __exception int emit_push_const(JSParseState *s, JSValueConst val,
         /* warning: JS_NewAtomStr frees the string value */
         JS_DupValue(s->ctx, val);
         atom = JS_NewAtomStr(s->ctx, JS_VALUE_GET_STRING(val));
-        if (atom != JS_ATOM_NULL && !qjs_atom_is_tagged_int(atom)) {
+        if (atom != JS_ATOM_NULL && !__JS_AtomIsTaggedInt(atom)) {
             emit_op(s, OP_push_atom_value);
             emit_u32(s, atom);
             return 0;
@@ -2401,7 +2401,7 @@ static int add_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
         JS_ThrowInternalError(ctx, "too many local variables");
         return -1;
     }
-    if (qjs_resize_array(ctx, (void **)&fd->vars, sizeof(fd->vars[0]),
+    if (js_resize_array(ctx, (void **)&fd->vars, sizeof(fd->vars[0]),
                         &fd->var_size, fd->var_count + 1))
         return -1;
     vd = &fd->vars[fd->var_count++];
@@ -2481,7 +2481,7 @@ static int add_arg(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
         JS_ThrowInternalError(ctx, "too many arguments");
         return -1;
     }
-    if (qjs_resize_array(ctx, (void **)&fd->args, sizeof(fd->args[0]),
+    if (js_resize_array(ctx, (void **)&fd->args, sizeof(fd->args[0]),
                         &fd->arg_size, fd->arg_count + 1))
         return -1;
     vd = &fd->args[fd->arg_count++];
@@ -2497,7 +2497,7 @@ static JSGlobalVar *add_global_var(JSContext *ctx, JSFunctionDef *s,
 {
     JSGlobalVar *hf;
 
-    if (qjs_resize_array(ctx, (void **)&s->global_vars,
+    if (js_resize_array(ctx, (void **)&s->global_vars,
                         sizeof(s->global_vars[0]),
                         &s->global_var_size, s->global_var_count + 1))
         return NULL;
@@ -2699,9 +2699,9 @@ static int seal_template_obj(JSContext *ctx, JSValueConst obj)
     JSShapeProperty *prs;
 
     p = JS_VALUE_GET_OBJ(obj);
-    prs = qjs_find_own_property1(p, JS_ATOM_length);
+    prs = find_own_property1(p, JS_ATOM_length);
     if (prs) {
-        if (qjs_update_property_flags(ctx, p, &prs,
+        if (js_update_property_flags(ctx, p, &prs,
                                      prs->flags & ~(JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)))
             return -1;
     }
@@ -4040,7 +4040,7 @@ static __exception int js_parse_array_literal(JSParseState *s)
             if (js_parse_assign_expr(s))
                 return -1;
             emit_op(s, OP_define_field);
-            emit_u32(s, qjs_atom_from_uint32(idx));
+            emit_u32(s, __JS_AtomFromUInt32(idx));
             need_length = FALSE;
         }
         idx++;
@@ -5117,7 +5117,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
                 /* add the line number info */
                 int line_num, col_num;
                 line_num = get_line_col(&col_num, s->buf_start, s->token.ptr - s->buf_start);
-                qjs_build_backtrace(s->ctx, s->ctx->rt->current_exception,
+                build_backtrace(s->ctx, s->ctx->rt->current_exception,
                                 s->filename, line_num + 1, col_num + 1, 0);
                 return -1;
             }
@@ -7885,13 +7885,13 @@ static JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
                                        JSAtom local_name, JSAtom export_name,
                                        JSExportTypeEnum export_type)
 {
-    if (qjs_module_find_export(m, export_name)) {
+    if (find_export_entry(m, export_name)) {
         char buf[ATOM_GET_STR_BUF_SIZE];
         js_parse_error(s, "duplicate exported name '%s'",
                        JS_AtomGetStr(s->ctx, buf, sizeof(buf), export_name));
         return NULL;
     }
-    return qjs_module_add_export_unchecked(s->ctx, m, local_name,
+    return add_export_entry2(s->ctx, m, local_name,
                                            export_name, export_type);
 }
 
@@ -7989,7 +7989,7 @@ static __exception int js_parse_from_clause(JSParseState *s, JSModuleDef *m)
         return -1;
     }
 
-    idx = qjs_module_add_request(s->ctx, m, module_name);
+    idx = add_req_module_entry(s->ctx, m, module_name);
     JS_FreeAtom(s->ctx, module_name);
     if (idx < 0)
         return -1;
@@ -8042,7 +8042,7 @@ static __exception int js_parse_export(JSParseState *s)
                 if (next_token(s))
                     goto fail;
                 if (s->token.val == TOK_STRING) {
-                    if (qjs_string_find_invalid_codepoint(JS_VALUE_GET_STRING(s->token.u.str.str)) >= 0) {
+                    if (js_string_find_invalid_codepoint(JS_VALUE_GET_STRING(s->token.u.str.str)) >= 0) {
                         js_parse_error(s, "contains unpaired surrogate");
                         goto fail;
                     }
@@ -8115,7 +8115,7 @@ static __exception int js_parse_export(JSParseState *s)
             idx = js_parse_from_clause(s, m);
             if (idx < 0)
                 return -1;
-            if (qjs_module_add_star_export(ctx, m, idx) < 0)
+            if (add_star_export_entry(ctx, m, idx) < 0)
                 return -1;
         }
         break;
@@ -8188,7 +8188,7 @@ static int add_import(JSParseState *s, JSModuleDef *m,
                               local_name, TRUE, TRUE, JS_VAR_NORMAL);
     if (var_idx < 0)
         return -1;
-    if (qjs_resize_array(ctx, (void **)&m->import_entries,
+    if (js_resize_array(ctx, (void **)&m->import_entries,
                         sizeof(JSImportEntry),
                         &m->import_entries_size,
                         m->import_entries_count + 1))
@@ -8219,7 +8219,7 @@ static __exception int js_parse_import(JSParseState *s)
             JS_FreeAtom(ctx, module_name);
             return -1;
         }
-        idx = qjs_module_add_request(ctx, m, module_name);
+        idx = add_req_module_entry(ctx, m, module_name);
         JS_FreeAtom(ctx, module_name);
         if (idx < 0)
             return -1;
@@ -8274,7 +8274,7 @@ static __exception int js_parse_import(JSParseState *s)
                 BOOL is_string;
                 if (s->token.val == TOK_STRING) {
                     is_string = TRUE;
-                    if (qjs_string_find_invalid_codepoint(JS_VALUE_GET_STRING(s->token.u.str.str)) >= 0) {
+                    if (js_string_find_invalid_codepoint(JS_VALUE_GET_STRING(s->token.u.str.str)) >= 0) {
                         js_parse_error(s, "contains unpaired surrogate");
                         return -1;
                     }
@@ -8393,7 +8393,7 @@ static JSFunctionDef *js_new_function_def(JSContext *ctx,
 
     fd->is_eval = is_eval;
     fd->is_func_expr = is_func_expr;
-    qjs_dbuf_bytecode_init(ctx, &fd->byte_code);
+    js_dbuf_bytecode_init(ctx, &fd->byte_code);
     fd->last_opcode_pos = -1;
     fd->func_name = JS_ATOM_NULL;
     fd->var_object_idx = -1;
@@ -8566,7 +8566,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
 
     if (b) {
         int col_num;
-        line_num = qjs_find_line_num(ctx, b, -1, &col_num);
+        line_num = find_line_num(ctx, b, -1, &col_num);
     }
 
     /* scan for jump targets */
@@ -8624,7 +8624,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
         if (source && b) {
             int col_num;
             if (b) {
-                line1 = qjs_find_line_num(ctx, b, pos, &col_num) - line_num + 1;
+                line1 = find_line_num(ctx, b, pos, &col_num) - line_num + 1;
             } else if (op == OP_line_num) {
                 /* XXX: no longer works */
                 line1 = get_u32(tab + pos + 1) - line_num + 1;
@@ -8749,27 +8749,27 @@ static void dump_byte_code(JSContext *ctx, int pass,
         has_pool_idx:
             printf(" %u: ", idx);
             if (idx < cpool_count) {
-                JS_PrintValue(ctx, qjs_dump_value_write, stdout, cpool[idx], NULL);
+                JS_PrintValue(ctx, js_dump_value_write, stdout, cpool[idx], NULL);
             }
             break;
         case OP_FMT_atom:
             printf(" ");
-            qjs_print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx, get_u32(tab + pos));
             break;
         case OP_FMT_atom_u8:
             printf(" ");
-            qjs_print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx, get_u32(tab + pos));
             printf(",%d", get_u8(tab + pos + 4));
             break;
         case OP_FMT_atom_u16:
             printf(" ");
-            qjs_print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx, get_u32(tab + pos));
             printf(",%d", get_u16(tab + pos + 4));
             break;
         case OP_FMT_atom_label_u8:
         case OP_FMT_atom_label_u16:
             printf(" ");
-            qjs_print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx, get_u32(tab + pos));
             addr = get_u32(tab + pos + 4);
             if (pass == 1)
                 printf(",%u:%u", addr, label_slots[addr].pos);
@@ -8793,7 +8793,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
         has_loc:
             printf(" %d: ", idx);
             if (idx < var_count) {
-                qjs_print_atom(ctx, vars ? vars[idx].var_name : vardefs[arg_count + idx].var_name);
+                print_atom(ctx, vars ? vars[idx].var_name : vardefs[arg_count + idx].var_name);
             }
             break;
         case OP_FMT_none_arg:
@@ -8804,7 +8804,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
         has_arg:
             printf(" %d: ", idx);
             if (idx < arg_count) {
-                qjs_print_atom(ctx, args ? args[idx].var_name : vardefs[idx].var_name);
+                print_atom(ctx, args ? args[idx].var_name : vardefs[idx].var_name);
             }
             break;
         case OP_FMT_none_var_ref:
@@ -8815,7 +8815,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
         has_var_ref:
             printf(" %d: ", idx);
             if (idx < closure_var_count) {
-                qjs_print_atom(ctx, closure_var[idx].var_name);
+                print_atom(ctx, closure_var[idx].var_name);
             }
             break;
         default:
@@ -8848,13 +8848,13 @@ static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int 
     p_end = buf + len;
 
     /* get the function line and column numbers */
-    ret = qjs_get_leb128(&val, p, p_end);
+    ret = get_leb128(&val, p, p_end);
     if (ret < 0)
         goto fail;
     p += ret;
     line_num = val + 1;
 
-    ret = qjs_get_leb128(&val, p, p_end);
+    ret = get_leb128(&val, p, p_end);
     if (ret < 0)
         goto fail;
     p += ret;
@@ -8866,12 +8866,12 @@ static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int 
     while (p < p_end) {
         op = *p++;
         if (op == 0) {
-            ret = qjs_get_leb128(&val, p, p_end);
+            ret = get_leb128(&val, p, p_end);
             if (ret < 0)
                 goto fail;
             pc += val;
             p += ret;
-            ret = qjs_get_sleb128(&v, p, p_end);
+            ret = get_sleb128(&v, p, p_end);
             if (ret < 0)
                 goto fail;
             p += ret;
@@ -8881,7 +8881,7 @@ static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int 
             pc += (op / PC2LINE_RANGE);
             line_num += (op % PC2LINE_RANGE) + PC2LINE_BASE;
         }
-        ret = qjs_get_sleb128(&v, p, p_end);
+        ret = get_sleb128(&v, p, p_end);
         if (ret < 0)
             goto fail;
         p += ret;
@@ -8901,7 +8901,7 @@ static __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionB
     if (b->has_debug && b->debug.filename != JS_ATOM_NULL) {
         int line_num, col_num;
         str = JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), b->debug.filename);
-        line_num = qjs_find_line_num(ctx, b, -1, &col_num);
+        line_num = find_line_num(ctx, b, -1, &col_num);
         printf("%s:%d:%d: ", str, line_num, col_num);
     }
 
@@ -9009,7 +9009,7 @@ static int add_closure_var(JSContext *ctx, JSFunctionDef *s,
         return -1;
     }
 
-    if (qjs_resize_array(ctx, (void **)&s->closure_var,
+    if (js_resize_array(ctx, (void **)&s->closure_var,
                         sizeof(s->closure_var[0]),
                         &s->closure_var_size, s->closure_var_count + 1))
         return -1;
@@ -9772,8 +9772,8 @@ static int resolve_scope_private_field1(JSContext *ctx,
                 }
             }
             /* XXX: no line number info */
-            qjs_throw_syntax_error_atom(ctx, var_name,
-                                        "undefined private field '%s'");
+            JS_ThrowSyntaxErrorAtom(ctx, "undefined private field '%s'",
+                                    var_name);
             return -1;
         } else {
             fd = fd->parent;
@@ -10499,7 +10499,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
 
     cc.bc_buf = bc_buf = s->byte_code.buf;
     cc.bc_len = bc_len = s->byte_code.size;
-    qjs_dbuf_bytecode_init(ctx, &bc_out);
+    js_dbuf_bytecode_init(ctx, &bc_out);
 
     /* first pass for runtime checks (must be done before the
        variables are created) */
@@ -10880,8 +10880,8 @@ static void compute_pc2line_info(JSFunctionDef *s)
         last_line_num = get_line_col_cached(s->get_line_col_cache,
                                             &last_col_num,
                                             buf_start + s->source_pos);
-        qjs_dbuf_put_leb128(&s->pc2line, last_line_num); /* line number minus 1 */
-        qjs_dbuf_put_leb128(&s->pc2line, last_col_num); /* column number minus 1 */
+        dbuf_put_leb128(&s->pc2line, last_line_num); /* line number minus 1 */
+        dbuf_put_leb128(&s->pc2line, last_col_num); /* column number minus 1 */
 
         for (i = 0; i < s->line_number_count; i++) {
             uint32_t pc = s->line_number_slots[i].pc;
@@ -10909,10 +10909,10 @@ static void compute_pc2line_info(JSFunctionDef *s)
             } else {
                 /* longer encoding */
                 dbuf_putc(&s->pc2line, 0);
-                qjs_dbuf_put_leb128(&s->pc2line, diff_pc);
-                qjs_dbuf_put_sleb128(&s->pc2line, diff_line);
+                dbuf_put_leb128(&s->pc2line, diff_pc);
+                dbuf_put_sleb128(&s->pc2line, diff_line);
             }
-            qjs_dbuf_put_sleb128(&s->pc2line, diff_col);
+            dbuf_put_sleb128(&s->pc2line, diff_col);
 
             last_pc = pc;
             last_line_num = line_num;
@@ -11116,7 +11116,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
     cc.bc_buf = bc_buf = s->byte_code.buf;
     cc.bc_len = bc_len = s->byte_code.size;
-    qjs_dbuf_bytecode_init(ctx, &bc_out);
+    js_dbuf_bytecode_init(ctx, &bc_out);
 
 #if SHORT_OPCODES
     if (s->jump_size) {
@@ -11753,7 +11753,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                 /* transformation: XXX: also do these:
                    get_loc(n) get_loc(x) add dup put_loc(n) drop -> get_loc(x) add_loc(n)
                    get_loc(n) get_arg(x) add dup put_loc(n) drop -> get_arg(x) add_loc(n)
-                   get_loc(n) qjs_get_var_ref(x) add dup put_loc(n) drop -> qjs_get_var_ref(x) add_loc(n)
+                   get_loc(n) get_var_ref(x) add dup put_loc(n) drop -> get_var_ref(x) add_loc(n)
                  */
                 if (code_match(&cc, pos_next, M3(OP_get_loc, OP_get_arg, OP_get_var_ref), -1, OP_add, OP_dup, OP_put_loc, idx, OP_drop, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
@@ -12047,7 +12047,7 @@ static __exception int ss_check(JSContext *ctx, StackSizeState *s,
     s->catch_pos_tab[pos] = catch_pos;
 
     /* queue the new PC to explore */
-    if (qjs_resize_array(ctx, (void **)&s->pc_stack, sizeof(s->pc_stack[0]),
+    if (js_resize_array(ctx, (void **)&s->pc_stack, sizeof(s->pc_stack[0]),
                         &s->pc_stack_size, s->pc_stack_len + 1))
         return -1;
     s->pc_stack[s->pc_stack_len++] = pos;
@@ -12311,9 +12311,9 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
             if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
                 idx = find_closure_var(ctx, fd, me->local_name);
                 if (idx < 0) {
-                    qjs_throw_syntax_error_atom(
-                        ctx, me->local_name,
-                        "exported variable '%s' does not exist");
+                    JS_ThrowSyntaxErrorAtom(
+                        ctx, "exported variable '%s' does not exist",
+                        me->local_name);
                     return -1;
                 }
                 me->u.local.var_idx = idx;
@@ -12440,7 +12440,7 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     b = js_mallocz(ctx, function_size);
     if (!b)
         goto fail;
-    qjs_get_ref_header(b)->ref_count = 1;
+    js_rc(b)->ref_count = 1;
 
     b->byte_code_buf = (void *)((uint8_t*)b + byte_code_offset);
     b->byte_code_len = fd->byte_code.size;
@@ -12565,7 +12565,7 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
                                      fd->eval_type == JS_EVAL_TYPE_INDIRECT);
     b->realm = JS_DupContext(ctx);
 
-    qjs_add_gc_object(ctx->rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
+    add_gc_object(ctx->rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
 
 #if defined(DUMP_BYTECODE) && (DUMP_BYTECODE & 1)
     if (!fd->strip_debug) {
@@ -12585,7 +12585,7 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     return JS_EXCEPTION;
 }
 
-static void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
+QJS_INTERNAL void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
 {
     int i;
 
@@ -12621,8 +12621,8 @@ static void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
         js_free_rt(rt, b->debug.source);
     }
 
-    qjs_remove_gc_object(&b->header);
-    if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && qjs_get_ref_header(b)->ref_count != 0) {
+    remove_gc_object(&b->header);
+    if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && js_rc(b)->ref_count != 0) {
         list_add_tail(&b->header.link, &rt->gc_zero_ref_count_list);
     } else {
         js_free_rt(rt, b);
@@ -13459,10 +13459,10 @@ static JSValue JS_EvalFunctionInternal(JSContext *ctx, JSValue fun_obj,
 
     tag = JS_VALUE_GET_TAG(fun_obj);
     if (tag == JS_TAG_FUNCTION_BYTECODE) {
-        fun_obj = qjs_closure(ctx, fun_obj, var_refs, sf, TRUE);
+        fun_obj = js_closure(ctx, fun_obj, var_refs, sf, TRUE);
         if (JS_IsException(fun_obj))
             return JS_EXCEPTION;
-        ret_val = qjs_call_free(ctx, fun_obj, this_obj, 0, NULL);
+        ret_val = JS_CallFree(ctx, fun_obj, this_obj, 0, NULL);
     } else if (tag == JS_TAG_MODULE) {
         JSModuleDef *m;
         m = JS_VALUE_GET_PTR(fun_obj);
@@ -13484,9 +13484,11 @@ JSValue JS_EvalFunction(JSContext *ctx, JSValue fun_obj)
 }
 
 /* 'input' must be zero terminated i.e. input[input_len] = '\0'. */
-static JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
-                                 const char *input, size_t input_len,
-                                 const char *filename, int flags, int scope_idx)
+QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx,
+                                       JSValueConst this_obj,
+                                       const char *input, size_t input_len,
+                                       const char *filename, int flags,
+                                       int scope_idx)
 {
     JSParseState s1, *s = &s1;
     int err, js_mode, eval_type;
@@ -13508,7 +13510,7 @@ static JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
         assert(sf != NULL);
         assert(JS_VALUE_GET_TAG(sf->cur_func) == JS_TAG_OBJECT);
         p = JS_VALUE_GET_OBJ(sf->cur_func);
-        assert(qjs_class_has_bytecode(p->class_id));
+        assert(js_class_has_bytecode(p->class_id));
         b = p->u.func.function_bytecode;
         var_refs = p->u.func.var_refs;
         js_mode = b->js_mode;
@@ -13523,7 +13525,7 @@ static JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
             JSAtom module_name = JS_NewAtom(ctx, filename);
             if (module_name == JS_ATOM_NULL)
                 return JS_EXCEPTION;
-            m = qjs_new_module_def(ctx, module_name);
+            m = js_new_module_def(ctx, module_name);
             if (!m)
                 return JS_EXCEPTION;
             js_mode |= JS_MODE_STRICT;
@@ -13582,9 +13584,9 @@ static JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     /* Could add a flag to avoid resolution if necessary */
     if (m) {
         m->func_obj = fun_obj;
-        if (qjs_resolve_module(ctx, m) < 0)
+        if (js_resolve_module(ctx, m) < 0)
             goto fail1;
-        fun_obj = qjs_new_module_value(ctx, m);
+        fun_obj = JS_NewModuleValue(ctx, m);
     }
     if (flags & JS_EVAL_FLAG_COMPILE_ONLY) {
         ret_val = fun_obj;
@@ -13622,7 +13624,7 @@ static JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     return ret;
 }
 
-static JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
+QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                              JSValueConst val, int flags, int scope_idx)
 {
     JSValue ret;
@@ -13664,28 +13666,6 @@ JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
 /*******************************************************************/
 
 
-QJS_INTERNAL void qjs_free_function_bytecode(JSRuntime *rt,
-                                              JSFunctionBytecode *bytecode)
-{
-    free_function_bytecode(rt, bytecode);
-}
-
-QJS_INTERNAL JSValue qjs_eval_internal(JSContext *ctx, JSValueConst this_obj,
-                                       const char *input, size_t input_len,
-                                       const char *filename, int flags,
-                                       int scope_idx)
-{
-    return __JS_EvalInternal(ctx, this_obj, input, input_len, filename, flags,
-                             scope_idx);
-}
-
-QJS_INTERNAL JSValue qjs_eval_object(JSContext *ctx, JSValueConst this_obj,
-                                     JSValueConst value, int flags,
-                                     int scope_idx)
-{
-    return JS_EvalObject(ctx, this_obj, value, flags, scope_idx);
-}
-
 static int json_parse_expect(JSParseState *s, int tok)
 {
     if (s->token.val != tok) {
@@ -13695,7 +13675,7 @@ static int json_parse_expect(JSParseState *s, int tok)
     return json_next_token(s);
 }
 
-static void json_parse_record_init_obj(JSContext *ctx, JSONParseRecord *pr,
+QJS_INTERNAL void json_parse_record_init_obj(JSContext *ctx, JSONParseRecord *pr,
                                        JSValueConst val)
 {
     pr->value = JS_DupValue(ctx, val);
@@ -13744,14 +13724,14 @@ static int json_parse_record_resize_hash(JSContext *ctx, JSONParseRecordObject *
     return 0;
 }
 
-static JSONParseRecord *json_parse_record_add(JSContext *ctx, JSONParseRecord *pr, JSAtom key, int *psize)
+QJS_INTERNAL JSONParseRecord *json_parse_record_add(JSContext *ctx, JSONParseRecord *pr, JSAtom key, int *psize)
 {
     JSONParseRecordObject *po = &pr->u.obj;
     JSONParseRecordEntry *e;
     JSONParseRecord *pr1;
     uint32_t h;
 
-    if (qjs_resize_array(ctx, (void **)&po->entries, sizeof(po->entries[0]),
+    if (js_resize_array(ctx, (void **)&po->entries, sizeof(po->entries[0]),
                         psize, po->count + 1)) {
         return NULL;
     }
@@ -13774,7 +13754,7 @@ static JSONParseRecord *json_parse_record_add(JSContext *ctx, JSONParseRecord *p
     return pr1;
 }
 
-static JSONParseRecord *json_parse_record_find(JSONParseRecord *pr, JSAtom key)
+QJS_INTERNAL JSONParseRecord *json_parse_record_find(JSONParseRecord *pr, JSAtom key)
 {
     JSONParseRecordObject *po = &pr->u.obj;
     JSONParseRecordEntry *e;
@@ -13798,7 +13778,7 @@ static JSONParseRecord *json_parse_record_find(JSONParseRecord *pr, JSAtom key)
     return NULL;
 }
 
-static void json_free_parse_record(JSContext *ctx, JSONParseRecord *pr)
+QJS_INTERNAL void json_free_parse_record(JSContext *ctx, JSONParseRecord *pr)
 {
     int i;
     if (!pr)
@@ -13917,7 +13897,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
                 idx = 0;
                 for(;;) {
                     if (pr) {
-                        if (qjs_resize_array(ctx, (void **)&pr->u.array.elements, sizeof(pr->u.array.elements[0]),
+                        if (js_resize_array(ctx, (void **)&pr->u.array.elements, sizeof(pr->u.array.elements[0]),
                                             &pr_size, pr->u.array.count + 1))
                             goto fail;
                         pr1 = &pr->u.array.elements[pr->u.array.count++];
@@ -14045,38 +14025,6 @@ JSValue JS_ParseJSON(JSContext *ctx, const char *buf, size_t buf_len,
                      const char *filename)
 {
     return JS_ParseJSON3(ctx, buf, buf_len, filename, 0, NULL);
-}
-
-QJS_INTERNAL void qjs_json_parse_record_init_obj(JSContext *ctx,
-                                                 JSONParseRecord *record,
-                                                 JSValueConst value)
-{
-    json_parse_record_init_obj(ctx, record, value);
-}
-
-QJS_INTERNAL JSONParseRecord *qjs_json_parse_record_add(
-    JSContext *ctx, JSONParseRecord *record, JSAtom key, int *psize)
-{
-    return json_parse_record_add(ctx, record, key, psize);
-}
-
-QJS_INTERNAL JSONParseRecord *qjs_json_parse_record_find(
-    JSONParseRecord *record, JSAtom key)
-{
-    return json_parse_record_find(record, key);
-}
-
-QJS_INTERNAL void qjs_json_free_parse_record(JSContext *ctx,
-                                             JSONParseRecord *record)
-{
-    json_free_parse_record(ctx, record);
-}
-
-QJS_INTERNAL JSValue qjs_parse_json3(JSContext *ctx, const char *buf,
-                                     size_t buf_len, const char *filename,
-                                     int flags, JSONParseRecord *record)
-{
-    return JS_ParseJSON3(ctx, buf, buf_len, filename, flags, record);
 }
 
 /* if pr != NULL, then pr->value = holder by construction */

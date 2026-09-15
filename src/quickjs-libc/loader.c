@@ -86,7 +86,7 @@ uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
 }
 
 /* load and evaluate a file */
-JSValue qjs_libc_load_script(JSContext *ctx, JSValueConst this_val,
+JSValue js_loadScript(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
     uint8_t *buf;
@@ -233,7 +233,7 @@ static int json_module_init(JSContext *ctx, JSModuleDef *m)
     return 0;
 }
 
-JSModuleDef *qjs_libc_create_json_module(JSContext *ctx,
+JSModuleDef *create_json_module(JSContext *ctx,
                                         const char *module_name, JSValue val)
 {
     JSModuleDef *m;
@@ -341,7 +341,7 @@ JSModuleDef *js_module_loader(JSContext *ctx,
             js_free(ctx, buf);
             if (JS_IsException(val))
                 return NULL;
-            m = qjs_libc_create_json_module(ctx, module_name, val);
+            m = create_json_module(ctx, module_name, val);
             if (!m)
                 return NULL;
         } else {

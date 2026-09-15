@@ -31,6 +31,89 @@ The final working tree is clean except for the user-supplied authoritative
 
 Authoritative task: `task.md`. Living roadmap: `PLAN.md`.
 
+## Canonical-owner naming cleanup follow-up (2026-09-16)
+
+This phase follows commit `fa7aa5f` and resolves the wrapper/linkage cases that
+the preceding identifier-only cleanup intentionally could not touch. It does
+not reopen module ownership, algorithms, optimization policy, data
+representation, inline policy, public API/ABI, or build configuration.
+
+### Resulting call topology
+
+- Original upstream implementations are now the canonical cross-TU functions.
+  Where extraction requires another owner to call an upstream-local function,
+  its linkage changes minimally from `static` to `QJS_INTERNAL` and the exact
+  upstream declaration is exposed through the existing narrow owner header.
+- Consumer-specific `qjs_date_*`, `qjs_proxy_*`, `qjs_primitive_*`,
+  `qjs_regexp_*`, `qjs_typed_*`, `qjs_async_*`, `qjs_base_*`, collection,
+  object/property, numeric, string, allocator, VM, iterator, and quickjs-libc
+  forwarding bridges are gone. Callers use the canonical owner function
+  directly; no forwarding wrapper replaces them.
+- Existing public/private inline pairs are normalized to the real public API
+  name plus a private `_inline` implementation and a function-like internal
+  macro. Parenthesized public declarations/definitions preserve the exported
+  function, function-pointer use, and ABI. No new inline twin was created and
+  no inline/force-inline/no-inline policy changed. Each narrow private header
+  now orders the exact forward declarations first, then the public-name remaps,
+  then the inline definitions. Inline bodies retain public API call spelling so
+  calls to another existing twin follow its internal inline path automatically.
+  Seven allocator-backend callback invocations use the equivalent parenthesized
+  member-function form to prevent the public-name macro from matching an
+  indirect callback call; the callback targets and control flow are unchanged.
+- The exact upstream `find_own_property`, `find_own_property1`, `to_digit`, and
+  `JS_IteratorNext` inline bodies are shared through their narrow private owner
+  headers where cross-TU optimizer visibility is required. Their bodies and
+  attributes are unchanged; the former copied/forwarding entries are removed.
+- All meaningless self-aliases left by the strict token-only pass are removed.
+  The only upstream-style macros with a `qjs_*` right-hand side are the two
+  VM-local mappings to `qjs_add_gc_object_fast` and
+  `qjs_remove_gc_object_fast`; these deliberately select the existing private
+  direct GC-list boundary, not a forwarding function.
+
+The inventory changed from 383 unique `qjs_*` identifiers (2,035 occurrences)
+after the strict identifier-only phase to 36 unique identifiers (111 source
+occurrences). There are no exact-upstream-name collisions in the resulting
+tree, no self-aliases, and no surviving `qjs_*` whose sole purpose is to forward
+to an existing upstream-named implementation. The exhaustive 36-name
+classification is at the end of this file.
+
+### Validation
+
+- `git diff --check`: PASS.
+- GCC 16.2 normal non-LTO clean WERROR `all` and full `make test`: PASS.
+- Clang 23.1 normal non-LTO clean WERROR `all` and full `make test`: PASS.
+- Exact full Test262 on the GCC build: unchanged at 58/83,558 errors, 3,356
+  excluded, and 6,000 skipped.
+- Exported dynamic symbols: exact match to the accepted completed-tree sets,
+  292 names for GCC and 286 for Clang.
+- No compiler-specific inline/no-inline policy, alignment/section placement,
+  link-order, compiler-flag, or build-system change was introduced. No new
+  optimization or algorithmic path was introduced.
+- A bounded three-pair non-LTO sanity screen was run on CPU 2 against matched
+  `fa7aa5f` GCC and Clang builds after ASLR was disabled and the CPU governor
+  was set to performance. No tuning campaign followed. Median GCC deltas were
+  `func_call` -0.93%, `prop_read` +1.57%, `array_read` -2.04%,
+  `string_build2` -3.83%, `regexp_replace` -1.33%, and aggregate -1.51%.
+  Median Clang deltas were +6.44%, +0.07%, +0.27%, +2.85%, +0.07%, and
+  aggregate +0.58%, respectively.
+- A single bounded fixed-work check investigated the Clang-only `func_call`
+  result. Three pairs measured task-clock +6.85%, cycles +4.80%, instructions
+  +1.77%, branches -0.99%, and branch misses -1.12%. `JS_CallInternal` has
+  fewer static call instructions (349 versus 356), and call-target inspection
+  found renamed/direct canonical targets rather than an added wrapper or
+  trampoline. The pre-header-layout canonical-owner candidate had essentially
+  the baseline instruction and branch counts but was slower in cycles, further
+  indicating placement/compiler sensitivity. Because implementation logic,
+  semantics, build flags, and inline attributes are unchanged, call topology is
+  strictly simpler, and the user-directed header remap ordering is intentional,
+  this isolated result is recorded rather than compensated with layout tuning
+  or a new optimization.
+
+Logs are `/tmp/qjs-wrapper-main-{gcc,clang}-{build,test}.log`, exact Test262 is
+`/tmp/qjs-wrapper-main-gcc-test262.log`, and exported-symbol comparisons are
+`/tmp/qjs-wrapper-main-{gcc,clang}-exports.diff`. Raw bounded performance
+samples and summaries are under `/tmp/qjs-wrapper-perf/`.
+
 ## Upstream-symbol naming cleanup follow-up (2026-09-16)
 
 This follow-up uses inline-policy completion commit `b3da94f` as its immediate
@@ -63,11 +146,13 @@ the same token map to `git show b3da94f:<path>` produces a byte-for-byte match
 with the working file. Therefore function bodies, control flow, `static`,
 `inline`, `force_inline`, `no_inline`, `QJS_INTERNAL`, visibility, attributes,
 types, qualifiers, parameter order, macro structure, TU/header placement, call
-topology, compiler flags, and build configuration are unchanged. The final tree
-has 383 unique `qjs_*` identifiers (2,035 occurrences), 205 remaining
-upstream-style-to-`qjs_*` aliases, and 158 harmless self-aliases created by the
-identifier substitution; deleting or restructuring those macros would violate
-the same invariant.
+topology, compiler flags, and build configuration are unchanged. That
+strict-phase tree had 383 unique `qjs_*` identifiers (2,035 occurrences), 205
+remaining upstream-style-to-`qjs_*` aliases, and 158 harmless self-aliases
+created by the identifier substitution. Those figures describe the historical
+`fa7aa5f` state and are superseded by the canonical-owner cleanup above, whose
+broader scope permits the minimal linkage and call-topology cleanup that was
+then prohibited.
 
 The exhaustive surviving-name classification appears at the end of this file.
 Raw audit maps and rejected-collision compiler logs are under
@@ -2029,11 +2114,12 @@ taskset -c 2 ./qjs --std tests/microbench.js \
   string_build2 regexp_ascii regexp_utf16 regexp_replace sort_bench
 ```
 
-## Exhaustive surviving qjs identifier audit (2026-09-16)
+## Historical strict-phase qjs identifier audit (`fa7aa5f`)
 
-This appendix lists every surviving unique `qjs_*` identifier after the strict
-cleanup. Entries in each table share the precise disposition stated above that
-table; there are no unclassified survivors.
+This historical appendix lists every unique `qjs_*` identifier after the strict
+identifier-only cleanup. It is retained as evidence of the input to the
+canonical-owner phase and does not describe the current source tree. Entries in
+each table share the precise disposition stated above that table.
 
 ### Exact upstream counterparts blocked by identifier-only collisions (193)
 
@@ -2447,3 +2533,57 @@ entries would require a non-identifier structural change.
 | `qjs_typed_species_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
 | `qjs_typed_throw_invalid_class` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
 | `qjs_typed_to_primitive` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+
+## Exhaustive current qjs identifier audit (canonical-owner phase)
+
+Every current survivor has no equivalent upstream implementation to expose.
+The first group is new lifecycle, composition, owner-registration, or test glue
+created by the multi-TU architecture. The second group is a deliberately small
+private boundary that preserves direct access to owner-private representation or
+a hot operation that the monolithic TU performed directly.
+
+### Genuinely new modularization glue (28)
+
+| Surviving name | Modular-only responsibility |
+|---|---|
+| `qjs_add_intrinsic_array_basic` | Installs the array owner's basic intrinsic subset during cross-owner composition. |
+| `qjs_add_intrinsic_generator` | Installs generator/async-owner intrinsics during composition. |
+| `qjs_add_intrinsic_global` | Installs the global owner's private function table. |
+| `qjs_add_intrinsic_iterators` | Installs array/iterator-owner iterator intrinsics. |
+| `qjs_add_intrinsic_math` | Installs the math owner's intrinsic table. |
+| `qjs_add_intrinsic_number_boolean_string` | Installs primitive-owner intrinsic families. |
+| `qjs_add_intrinsic_symbol` | Installs the primitive owner's Symbol family. |
+| `qjs_add_intrinsics` | Coordinates intrinsic composition across builtin owners. |
+| `qjs_atom_string_compute_memory_usage` | Contributes atom/string-owner data to the cross-owner memory report. |
+| `qjs_atom_string_free_runtime` | Atom/string-owner runtime teardown entry. |
+| `qjs_atom_string_init_runtime` | Atom/string-owner runtime initialization entry. |
+| `qjs_function_vm_init_runtime` | Function/VM-owner runtime class initialization entry. |
+| `qjs_libc_add_event_module_exports` | Event-owner export composition for quickjs-libc. |
+| `qjs_libc_init_event_module` | Event-owner module initialization for quickjs-libc. |
+| `qjs_module_init_class` | Module-owner runtime class initialization entry. |
+| `qjs_module_link_and_evaluate` | Cross-owner frontend entry coordinating module link and evaluation. |
+| `qjs_new_atom_rt_ascii` | Runtime-only ASCII atom construction needed by split runtime/class setup. |
+| `qjs_object_dump_context` | Object-owner contribution to cross-owner context diagnostics. |
+| `qjs_object_free_context_shapes` | Object-owner context-shape teardown entry. |
+| `qjs_object_free_shape_hash` | Object-owner runtime shape-hash teardown entry. |
+| `qjs_object_gc_shutdown` | Object/GC-owner runtime shutdown entry. |
+| `qjs_object_init_classes` | Registers the object owner's private class-definition range. |
+| `qjs_object_init_shapes` | Object-owner initial shape setup entry. |
+| `qjs_primitive_init_classes` | Primitive-owner runtime class initialization entry. |
+| `qjs_proxy_register_class` | Registers the proxy owner's class callbacks with the runtime owner. |
+| `qjs_unicode_test_compose_pair` | Test-only bridge to normalization-owner static composition data. |
+| `qjs_unicode_test_decomp_char` | Test-only bridge to normalization-owner static decomposition data. |
+| `qjs_unicode_test_get_cc` | Test-only bridge to normalization-owner combining-class data. |
+
+### Genuinely new private fast-boundary helpers (8)
+
+| Surviving name | Required boundary |
+|---|---|
+| `qjs_add_gc_object_fast` | Header-local direct GC-list insertion used by the VM owner without an out-of-line boundary. |
+| `qjs_async_c_function_data` | Read-only accessor for object-owner private C-function representation used by the async owner. |
+| `qjs_atom_is_array_index_slow` | Slow owner entry behind the header-local tagged-integer/atom fast path. |
+| `qjs_atom_is_numeric_index_slow` | Slow owner entry behind the header-local numeric-index fast path. |
+| `qjs_atom_string_free_value_rt` | Header-local value teardown spanning string/rope owner-private representation. |
+| `qjs_free_string_zero_ref` | Zero-reference slow owner entry behind direct string refcount handling. |
+| `qjs_function_class_id` | Maps split VM-private function kinds to runtime class IDs without exposing the private table. |
+| `qjs_remove_gc_object_fast` | Header-local direct GC-list removal used by the VM owner without an out-of-line boundary. |

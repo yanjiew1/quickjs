@@ -429,7 +429,7 @@ static JSValue js_math_sumPrecise(JSContext *ctx, JSValueConst this_val,
     double d;
     SumPreciseState s_s, *s = &s_s;
 
-    iter = qjs_math_get_iterator(ctx, argv[0], FALSE);
+    iter = JS_GetIterator(ctx, argv[0], FALSE);
     if (JS_IsException(iter))
         return JS_EXCEPTION;
     ret = JS_EXCEPTION;
@@ -438,7 +438,7 @@ static JSValue js_math_sumPrecise(JSContext *ctx, JSValueConst this_val,
         goto fail;
     sum_precise_init(s);
     for (;;) {
-        item = qjs_math_iterator_next(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto fail;
         if (done)
@@ -451,7 +451,7 @@ static JSValue js_math_sumPrecise(JSContext *ctx, JSValueConst this_val,
         } else {
             JS_FreeValue(ctx, item);
             JS_ThrowTypeError(ctx, "not a number");
-            qjs_math_iterator_close(ctx, iter, TRUE);
+            JS_IteratorClose(ctx, iter, TRUE);
             goto fail;
         }
         sum_precise_add(s, d);
@@ -513,7 +513,7 @@ static const JSCFunctionListEntry js_math_funcs[] = {
     JS_CFUNC_SPECIAL_DEF("cos", 1, f_f, cos ),
     JS_CFUNC_SPECIAL_DEF("exp", 1, f_f, exp ),
     JS_CFUNC_SPECIAL_DEF("log", 1, f_f, log ),
-    JS_CFUNC_SPECIAL_DEF("pow", 2, f_f_f, qjs_math_pow ),
+    JS_CFUNC_SPECIAL_DEF("pow", 2, f_f_f, js_pow ),
     JS_CFUNC_SPECIAL_DEF("sin", 1, f_f, sin ),
     JS_CFUNC_SPECIAL_DEF("tan", 1, f_f, tan ),
     /* ES6 */

@@ -55,25 +55,26 @@ typedef struct JSONParseRecordEntry {
     JSONParseRecord parse_record;
 } JSONParseRecordEntry;
 
-QJS_INTERNAL void qjs_free_function_bytecode(JSRuntime *rt,
+QJS_INTERNAL void free_function_bytecode(JSRuntime *rt,
                                               JSFunctionBytecode *bytecode);
-QJS_INTERNAL JSValue qjs_eval_internal(JSContext *ctx, JSValueConst this_obj,
+QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx,
+                                       JSValueConst this_obj,
                                        const char *input, size_t input_len,
                                        const char *filename, int flags,
                                        int scope_idx);
-QJS_INTERNAL JSValue qjs_eval_object(JSContext *ctx, JSValueConst this_obj,
+QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                                      JSValueConst value, int flags,
                                      int scope_idx);
-QJS_INTERNAL void qjs_json_parse_record_init_obj(JSContext *ctx,
+QJS_INTERNAL void json_parse_record_init_obj(JSContext *ctx,
                                                  JSONParseRecord *record,
                                                  JSValueConst value);
-QJS_INTERNAL JSONParseRecord *qjs_json_parse_record_add(
+QJS_INTERNAL JSONParseRecord *json_parse_record_add(
     JSContext *ctx, JSONParseRecord *record, JSAtom key, int *psize);
-QJS_INTERNAL JSONParseRecord *qjs_json_parse_record_find(
+QJS_INTERNAL JSONParseRecord *json_parse_record_find(
     JSONParseRecord *record, JSAtom key);
-QJS_INTERNAL void qjs_json_free_parse_record(JSContext *ctx,
+QJS_INTERNAL void json_free_parse_record(JSContext *ctx,
                                              JSONParseRecord *record);
-QJS_INTERNAL JSValue qjs_parse_json3(JSContext *ctx, const char *buf,
+JSValue JS_ParseJSON3(JSContext *ctx, const char *buf,
                                      size_t buf_len, const char *filename,
                                      int flags, JSONParseRecord *record);
 

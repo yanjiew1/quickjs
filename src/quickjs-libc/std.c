@@ -679,9 +679,9 @@ static JSValue js_std_file_close(JSContext *ctx, JSValueConst this_val,
     if (!s->f)
         return JS_ThrowTypeError(ctx, "invalid file handle");
     if (s->is_popen)
-        err = qjs_libc_get_errno(pclose(s->f));
+        err = js_get_errno(pclose(s->f));
     else
-        err = qjs_libc_get_errno(fclose(s->f));
+        err = js_get_errno(fclose(s->f));
     s->f = NULL;
     return JS_NewInt32(ctx, err);
 }
@@ -695,7 +695,7 @@ static JSValue js_std_file_printf(JSContext *ctx, JSValueConst this_val,
     return js_printf_internal(ctx, argc, argv, f);
 }
 
-void qjs_libc_print_value_write(void *opaque, const char *buf, size_t len)
+void js_print_value_write(void *opaque, const char *buf, size_t len)
 {
     FILE *fo = opaque;
     fwrite(buf, 1, len, fo);
@@ -704,7 +704,7 @@ void qjs_libc_print_value_write(void *opaque, const char *buf, size_t len)
 static JSValue js_std_file_printObject(JSContext *ctx, JSValueConst this_val,
                                        int argc, JSValueConst *argv)
 {
-    JS_PrintValue(ctx, qjs_libc_print_value_write, stdout, argv[0], NULL);
+    JS_PrintValue(ctx, js_print_value_write, stdout, argv[0], NULL);
     return JS_UNDEFINED;
 }
 
@@ -986,10 +986,10 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
     if (argc >= 2) {
         options_obj = argv[1];
 
-        if (qjs_libc_get_bool_option(ctx, &binary_flag, options_obj, "binary"))
+        if (get_bool_option(ctx, &binary_flag, options_obj, "binary"))
             goto fail_obj;
 
-        if (qjs_libc_get_bool_option(ctx, &full_flag, options_obj, "full")) {
+        if (get_bool_option(ctx, &full_flag, options_obj, "full")) {
         fail_obj:
             JS_FreeCString(ctx, url);
             return JS_EXCEPTION;
@@ -1142,8 +1142,8 @@ static const JSCFunctionListEntry js_std_error_props[] = {
 static const JSCFunctionListEntry js_std_funcs[] = {
     JS_CFUNC_DEF("exit", 1, js_std_exit ),
     JS_CFUNC_DEF("gc", 0, js_std_gc ),
-    JS_CFUNC_DEF("evalScript", 1, qjs_libc_eval_script ),
-    JS_CFUNC_DEF("loadScript", 1, qjs_libc_load_script ),
+    JS_CFUNC_DEF("evalScript", 1, js_evalScript ),
+    JS_CFUNC_DEF("loadScript", 1, js_loadScript ),
     JS_CFUNC_DEF("getenv", 1, js_std_getenv ),
     JS_CFUNC_DEF("setenv", 1, js_std_setenv ),
     JS_CFUNC_DEF("unsetenv", 1, js_std_unsetenv ),

@@ -27,13 +27,17 @@
 
 #include "internal-opcode.h"
 
-static inline JSMallocBlockHeader *qjs_get_ref_header(void *ptr)
+static inline JSMallocBlockHeader *js_rc(void *ptr)
 {
     return container_of(ptr, JSMallocBlockHeader, user_data);
 }
 
+static force_inline void JS_FreeValue_inline(JSContext *ctx, JSValue value);
+
+#define JS_FreeValue(ctx, value) JS_FreeValue_inline((ctx), (value))
+
 /* Keep the engine-internal zero-ref path direct in normal non-LTO builds. */
-static force_inline void qjs_free_value(JSContext *ctx, JSValue value)
+static force_inline void JS_FreeValue_inline(JSContext *ctx, JSValue value)
 {
     if (JS_VALUE_HAS_REF_COUNT(value)) {
         JSRefCountHeader *header = __js_rc(JS_VALUE_GET_PTR(value));
@@ -43,17 +47,19 @@ static force_inline void qjs_free_value(JSContext *ctx, JSValue value)
     }
 }
 
-#define JS_FreeValue qjs_free_value
-
 static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
 {
     dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
 }
 
-static inline int qjs_is_digit(int c)
+#ifndef QUICKJS_NUMBER_OWNER
+static inline int is_digit(int c)
 {
     return c >= '0' && c <= '9';
 }
+#else
+static inline int is_digit(int c);
+#endif
 
 static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 {
@@ -65,14 +71,16 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 #endif
 }
 
-QJS_INTERNAL __exception int qjs_poll_interrupts_slow(JSContext *ctx);
+QJS_INTERNAL __exception int __js_poll_interrupts(JSContext *ctx);
 
-static inline __exception int qjs_poll_interrupts(JSContext *ctx)
+#ifndef QUICKJS_OBJECT_OWNER
+static inline __exception int js_poll_interrupts(JSContext *ctx)
 {
     if (unlikely(--ctx->interrupt_counter <= 0))
-        return qjs_poll_interrupts_slow(ctx);
+        return __js_poll_interrupts(ctx);
     return 0;
 }
+#endif
 
 static inline BOOL is_be(void)
 {
@@ -83,7 +91,7 @@ static inline BOOL is_be(void)
     return endian.byte;
 }
 
-static inline void qjs_set_value(JSContext *ctx, JSValue *slot,
+static inline void set_value(JSContext *ctx, JSValue *slot,
                                  JSValue value)
 {
     JSValue old_value = *slot;
@@ -91,25 +99,25 @@ static inline void qjs_set_value(JSContext *ctx, JSValue *slot,
     JS_FreeValue(ctx, old_value);
 }
 
-QJS_INTERNAL int qjs_resize_array(JSContext *ctx, void **parray, int elem_size,
-                                  int *psize, int req_size);
-QJS_INTERNAL void qjs_dbuf_bytecode_init(JSContext *ctx, DynBuf *buf);
-QJS_INTERNAL void qjs_dbuf_put_leb128(DynBuf *s, uint32_t v);
-QJS_INTERNAL void qjs_dbuf_put_sleb128(DynBuf *s, int32_t v);
-QJS_INTERNAL int qjs_get_leb128(uint32_t *pval, const uint8_t *buf,
+QJS_INTERNAL int js_resize_array(JSContext *ctx, void **parray, int elem_size,
+                                 int *psize, int req_size);
+QJS_INTERNAL void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *buf);
+QJS_INTERNAL void dbuf_put_leb128(DynBuf *s, uint32_t v);
+QJS_INTERNAL void dbuf_put_sleb128(DynBuf *s, int32_t v);
+QJS_INTERNAL int get_leb128(uint32_t *pval, const uint8_t *buf,
                             const uint8_t *buf_end);
-QJS_INTERNAL int qjs_get_sleb128(int32_t *pval, const uint8_t *buf,
+QJS_INTERNAL int get_sleb128(int32_t *pval, const uint8_t *buf,
                              const uint8_t *buf_end);
-QJS_INTERNAL JSValue qjs_throw_stack_overflow(JSContext *ctx);
-QJS_INTERNAL void qjs_add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
+QJS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+QJS_INTERNAL void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                                 JSGCObjectTypeEnum type);
-QJS_INTERNAL void qjs_remove_gc_object(JSGCObjectHeader *h);
+QJS_INTERNAL void remove_gc_object(JSGCObjectHeader *h);
 static inline void qjs_add_gc_object_fast(JSRuntime *rt,
                                           JSGCObjectHeader *header,
                                           JSGCObjectTypeEnum type)
 {
-    qjs_get_ref_header(header)->mark = 0;
-    qjs_get_ref_header(header)->gc_obj_type = type;
+    js_rc(header)->mark = 0;
+    js_rc(header)->gc_obj_type = type;
     list_add_tail(&header->link, &rt->gc_obj_list);
 }
 
@@ -119,28 +127,28 @@ static inline void qjs_remove_gc_object_fast(JSGCObjectHeader *header)
 }
 QJS_INTERNAL void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
                                    JS_MarkFunc *mark_func);
-QJS_INTERNAL int qjs_find_line_num(JSContext *ctx, JSFunctionBytecode *bytecode,
+QJS_INTERNAL int find_line_num(JSContext *ctx, JSFunctionBytecode *bytecode,
                                    uint32_t pc_value, int *pcol_num);
-QJS_INTERNAL void qjs_build_backtrace(JSContext *ctx, JSValueConst error_obj,
+QJS_INTERNAL void build_backtrace(JSContext *ctx, JSValueConst error_obj,
                                       const char *filename, int line_num,
                                       int col_num, int flags);
-QJS_INTERNAL JSValue qjs_throw_error2(JSContext *ctx, JSErrorEnum error_num,
+QJS_INTERNAL JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
                                       const char *fmt, va_list ap,
                                       BOOL add_backtrace);
-QJS_INTERNAL BOOL qjs_is_backtrace_needed(JSContext *ctx,
+QJS_INTERNAL BOOL is_backtrace_needed(JSContext *ctx,
                                           JSValueConst obj);
-QJS_INTERNAL JSValue qjs_throw_reference_error_not_defined(
+QJS_INTERNAL JSValue JS_ThrowReferenceErrorNotDefined(
     JSContext *ctx, JSAtom atom);
-QJS_INTERNAL JSValue qjs_throw_reference_error_uninitialized(
+QJS_INTERNAL JSValue JS_ThrowReferenceErrorUninitialized(
     JSContext *ctx, JSAtom atom);
-QJS_INTERNAL JSValue qjs_throw_reference_error_uninitialized2(
+QJS_INTERNAL JSValue JS_ThrowReferenceErrorUninitialized2(
     JSContext *ctx, JSFunctionBytecode *bytecode, int index, BOOL is_arg);
-QJS_INTERNAL JSValue qjs_throw_syntax_error_var_redeclaration(
+QJS_INTERNAL JSValue JS_ThrowSyntaxErrorVarRedeclaration(
     JSContext *ctx, JSAtom atom);
-QJS_INTERNAL int qjs_throw_type_error_read_only(
+QJS_INTERNAL int JS_ThrowTypeErrorReadOnly(
     JSContext *ctx, int flags, JSAtom atom);
-QJS_INTERNAL JSValue qjs_throw_type_error_not_constructor(
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(
     JSContext *ctx, JSValueConst value);
-QJS_INTERNAL JSValue qjs_throw_type_error_not_object(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
 
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

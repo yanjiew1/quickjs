@@ -27,7 +27,7 @@
 
 #include "internal-base.h"
 
-QJS_LIBC_INTERNAL JSValue qjs_libc_eval_script(
+QJS_LIBC_INTERNAL JSValue js_evalScript(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
 #endif /* QJS_LIBC_INTERNAL_HOST_H */

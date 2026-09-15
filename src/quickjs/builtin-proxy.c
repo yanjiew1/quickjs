@@ -46,7 +46,7 @@ static void js_proxy_mark(JSRuntime *rt, JSValueConst val,
     }
 }
 
-static JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx)
+QJS_INTERNAL JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx)
 {
     return JS_ThrowTypeError(ctx, "revoked proxy");
 }
@@ -59,7 +59,7 @@ static JSProxyData *get_proxy_method(JSContext *ctx, JSValue *pmethod,
 
     /* safer to test recursion in all proxy methods */
     if (js_check_stack_overflow(ctx->rt, 0)) {
-        qjs_proxy_throw_stack_overflow(ctx);
+        JS_ThrowStackOverflow(ctx);
         return NULL;
     }
 
@@ -88,7 +88,7 @@ static JSValue js_proxy_get_prototype(JSContext *ctx, JSValueConst obj)
         return JS_EXCEPTION;
     if (JS_IsUndefined(method))
         return JS_GetPrototype(ctx, s->target);
-    ret = qjs_call_free(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
+    ret = JS_CallFree(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
     if (JS_IsException(ret))
         return ret;
     if (JS_VALUE_GET_TAG(ret) != JS_TAG_NULL &&
@@ -107,7 +107,7 @@ static JSValue js_proxy_get_prototype(JSContext *ctx, JSValueConst obj)
             JS_FreeValue(ctx, ret);
             return JS_EXCEPTION;
         }
-        if (!qjs_proxy_same_value(ctx, proto1, ret)) {
+        if (!js_same_value(ctx, proto1, ret)) {
             JS_FreeValue(ctx, proto1);
         fail:
             JS_FreeValue(ctx, ret);
@@ -131,13 +131,13 @@ static int js_proxy_set_prototype(JSContext *ctx, JSValueConst obj,
     if (!s)
         return -1;
     if (JS_IsUndefined(method))
-        return qjs_proxy_set_prototype_internal(ctx, s->target, proto_val, FALSE);
+        return JS_SetPrototypeInternal(ctx, s->target, proto_val, FALSE);
     args[0] = s->target;
     args[1] = proto_val;
-    ret = qjs_call_free(ctx, method, s->handler, 2, args);
+    ret = JS_CallFree(ctx, method, s->handler, 2, args);
     if (JS_IsException(ret))
         return -1;
-    res = qjs_proxy_to_bool_free(ctx, ret);
+    res = JS_ToBoolFree(ctx, ret);
     if (!res)
         return FALSE;
     res2 = JS_IsExtensible(ctx, s->target);
@@ -147,7 +147,7 @@ static int js_proxy_set_prototype(JSContext *ctx, JSValueConst obj,
         proto1 = JS_GetPrototype(ctx, s->target);
         if (JS_IsException(proto1))
             return -1;
-        if (!qjs_proxy_same_value(ctx, proto_val, proto1)) {
+        if (!js_same_value(ctx, proto_val, proto1)) {
             JS_FreeValue(ctx, proto1);
             JS_ThrowTypeError(ctx, "proxy: inconsistent prototype");
             return -1;
@@ -169,10 +169,10 @@ static int js_proxy_is_extensible(JSContext *ctx, JSValueConst obj)
         return -1;
     if (JS_IsUndefined(method))
         return JS_IsExtensible(ctx, s->target);
-    ret = qjs_call_free(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
+    ret = JS_CallFree(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
     if (JS_IsException(ret))
         return -1;
-    res = qjs_proxy_to_bool_free(ctx, ret);
+    res = JS_ToBoolFree(ctx, ret);
     res2 = JS_IsExtensible(ctx, s->target);
     if (res2 < 0)
         return res2;
@@ -195,10 +195,10 @@ static int js_proxy_prevent_extensions(JSContext *ctx, JSValueConst obj)
         return -1;
     if (JS_IsUndefined(method))
         return JS_PreventExtensions(ctx, s->target);
-    ret = qjs_call_free(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
+    ret = JS_CallFree(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
     if (JS_IsException(ret))
         return -1;
-    res = qjs_proxy_to_bool_free(ctx, ret);
+    res = JS_ToBoolFree(ctx, ret);
     if (res) {
         res2 = JS_IsExtensible(ctx, s->target);
         if (res2 < 0)
@@ -232,20 +232,20 @@ static int js_proxy_has(JSContext *ctx, JSValueConst obj, JSAtom atom)
     }
     args[0] = s->target;
     args[1] = atom_val;
-    ret1 = qjs_call_free(ctx, method, s->handler, 2, args);
+    ret1 = JS_CallFree(ctx, method, s->handler, 2, args);
     JS_FreeValue(ctx, atom_val);
     if (JS_IsException(ret1))
         return -1;
-    ret = qjs_proxy_to_bool_free(ctx, ret1);
+    ret = JS_ToBoolFree(ctx, ret1);
     if (!ret) {
         JSPropertyDescriptor desc;
         p = JS_VALUE_GET_OBJ(s->target);
-        res = qjs_proxy_get_own_property_internal(ctx, &desc, p, atom);
+        res = JS_GetOwnPropertyInternal(ctx, &desc, p, atom);
         if (res < 0)
             return -1;
         if (res) {
             res2 = !(desc.flags & JS_PROP_CONFIGURABLE);
-            qjs_proxy_free_desc(ctx, &desc);
+            js_free_desc(ctx, &desc);
             if (res2 || !p->extensible) {
                 JS_ThrowTypeError(ctx, "proxy: inconsistent has");
                 return -1;
@@ -278,29 +278,29 @@ static JSValue js_proxy_get(JSContext *ctx, JSValueConst obj, JSAtom atom,
     args[0] = s->target;
     args[1] = atom_val;
     args[2] = receiver;
-    ret = qjs_call_free(ctx, method, s->handler, 3, args);
+    ret = JS_CallFree(ctx, method, s->handler, 3, args);
     JS_FreeValue(ctx, atom_val);
     if (JS_IsException(ret))
         return JS_EXCEPTION;
-    res = qjs_proxy_get_own_property_internal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);
+    res = JS_GetOwnPropertyInternal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);
     if (res < 0) {
         JS_FreeValue(ctx, ret);
         return JS_EXCEPTION;
     }
     if (res) {
         if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == 0) {
-            if (!qjs_proxy_same_value(ctx, desc.value, ret)) {
+            if (!js_same_value(ctx, desc.value, ret)) {
                 goto fail;
             }
         } else if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE)) == JS_PROP_GETSET) {
             if (JS_IsUndefined(desc.getter) && !JS_IsUndefined(ret)) {
             fail:
-                qjs_proxy_free_desc(ctx, &desc);
+                js_free_desc(ctx, &desc);
                 JS_FreeValue(ctx, ret);
                 return JS_ThrowTypeError(ctx, "proxy: inconsistent get");
             }
         }
-        qjs_proxy_free_desc(ctx, &desc);
+        js_free_desc(ctx, &desc);
     }
     return ret;
 }
@@ -330,32 +330,32 @@ static int js_proxy_set(JSContext *ctx, JSValueConst obj, JSAtom atom,
     args[1] = atom_val;
     args[2] = value;
     args[3] = receiver;
-    ret1 = qjs_call_free(ctx, method, s->handler, 4, args);
+    ret1 = JS_CallFree(ctx, method, s->handler, 4, args);
     JS_FreeValue(ctx, atom_val);
     if (JS_IsException(ret1))
         return -1;
-    ret = qjs_proxy_to_bool_free(ctx, ret1);
+    ret = JS_ToBoolFree(ctx, ret1);
     if (ret) {
         JSPropertyDescriptor desc;
-        res = qjs_proxy_get_own_property_internal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);
+        res = JS_GetOwnPropertyInternal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);
         if (res < 0)
             return -1;
         if (res) {
             if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == 0) {
-                if (!qjs_proxy_same_value(ctx, desc.value, value)) {
+                if (!js_same_value(ctx, desc.value, value)) {
                     goto fail;
                 }
             } else if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE)) == JS_PROP_GETSET && JS_IsUndefined(desc.setter)) {
                 fail:
-                    qjs_proxy_free_desc(ctx, &desc);
+                    js_free_desc(ctx, &desc);
                     JS_ThrowTypeError(ctx, "proxy: inconsistent set");
                     return -1;
             }
-            qjs_proxy_free_desc(ctx, &desc);
+            js_free_desc(ctx, &desc);
         }
     } else {
         if ((flags & JS_PROP_THROW) ||
-            ((flags & JS_PROP_THROW_STRICT) && qjs_proxy_is_strict_mode(ctx))) {
+            ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
             JS_ThrowTypeError(ctx, "proxy: cannot set property");
             return -1;
         }
@@ -416,7 +416,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
         return -1;
     p = JS_VALUE_GET_OBJ(s->target);
     if (JS_IsUndefined(method)) {
-        return qjs_proxy_get_own_property_internal(ctx, pdesc, p, prop);
+        return JS_GetOwnPropertyInternal(ctx, pdesc, p, prop);
     }
     prop_val = JS_AtomToValue(ctx, prop);
     if (JS_IsException(prop_val)) {
@@ -425,7 +425,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
     }
     args[0] = s->target;
     args[1] = prop_val;
-    trap_result_obj = qjs_call_free(ctx, method, s->handler, 2, args);
+    trap_result_obj = JS_CallFree(ctx, method, s->handler, 2, args);
     JS_FreeValue(ctx, prop_val);
     if (JS_IsException(trap_result_obj))
         return -1;
@@ -433,13 +433,13 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
         JS_FreeValue(ctx, trap_result_obj);
         goto fail;
     }
-    target_desc_ret = qjs_proxy_get_own_property_internal(ctx, &target_desc, p, prop);
+    target_desc_ret = JS_GetOwnPropertyInternal(ctx, &target_desc, p, prop);
     if (target_desc_ret < 0) {
         JS_FreeValue(ctx, trap_result_obj);
         return -1;
     }
     if (target_desc_ret)
-        qjs_proxy_free_desc(ctx, &target_desc);
+        js_free_desc(ctx, &target_desc);
     if (JS_IsUndefined(trap_result_obj)) {
         if (target_desc_ret) {
             if (!(target_desc.flags & JS_PROP_CONFIGURABLE) || !p->extensible)
@@ -453,7 +453,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
             JS_FreeValue(ctx, trap_result_obj);
             return -1;
         }
-        res = qjs_proxy_obj_to_desc(ctx, &result_desc, trap_result_obj);
+        res = js_obj_to_desc(ctx, &result_desc, trap_result_obj);
         JS_FreeValue(ctx, trap_result_obj);
         if (res < 0)
             return -1;
@@ -475,7 +475,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
                 flags1 |= JS_PROP_HAS_VALUE | JS_PROP_HAS_WRITABLE;
             /* XXX: not complete check: need to compare value &
                getter/setter as in defineproperty */
-            if (!qjs_proxy_check_define_prop_flags(target_desc.flags, flags1))
+            if (!check_define_prop_flags(target_desc.flags, flags1))
                 goto fail1;
         } else {
             if (!extensible_target)
@@ -490,7 +490,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
                 (target_desc.flags & JS_PROP_WRITABLE) != 0) {
                 /* proxy-missing-checks */
             fail1:
-                qjs_proxy_free_desc(ctx, &result_desc);
+                js_free_desc(ctx, &result_desc);
             fail:
                 JS_ThrowTypeError(ctx, "proxy: inconsistent getOwnPropertyDescriptor");
                 return -1;
@@ -500,7 +500,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
         if (pdesc) {
             *pdesc = result_desc;
         } else {
-            qjs_proxy_free_desc(ctx, &result_desc);
+            js_free_desc(ctx, &result_desc);
         }
     }
     return ret;
@@ -539,12 +539,12 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
     args[0] = s->target;
     args[1] = prop_val;
     args[2] = desc_val;
-    ret1 = qjs_call_free(ctx, method, s->handler, 3, args);
+    ret1 = JS_CallFree(ctx, method, s->handler, 3, args);
     JS_FreeValue(ctx, prop_val);
     JS_FreeValue(ctx, desc_val);
     if (JS_IsException(ret1))
         return -1;
-    ret = qjs_proxy_to_bool_free(ctx, ret1);
+    ret = JS_ToBoolFree(ctx, ret1);
     if (!ret) {
         if (flags & JS_PROP_THROW) {
             JS_ThrowTypeError(ctx, "proxy: defineProperty exception");
@@ -554,7 +554,7 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
         }
     }
     p = JS_VALUE_GET_OBJ(s->target);
-    res = qjs_proxy_get_own_property_internal(ctx, &desc, p, prop);
+    res = JS_GetOwnPropertyInternal(ctx, &desc, p, prop);
     if (res < 0)
         return -1;
     setting_not_configurable = ((flags & (JS_PROP_HAS_CONFIGURABLE |
@@ -564,22 +564,22 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
         if (!p->extensible || setting_not_configurable)
             goto fail;
     } else {
-        if (!qjs_proxy_check_define_prop_flags(desc.flags, flags))
+        if (!check_define_prop_flags(desc.flags, flags))
             goto fail1;
-        /* do the missing check from qjs_proxy_check_define_prop_flags() */
+        /* do the missing check from check_define_prop_flags() */
         if (!(desc.flags & JS_PROP_CONFIGURABLE)) {
             if ((desc.flags & JS_PROP_TMASK) == JS_PROP_GETSET) {
                 if ((flags & JS_PROP_HAS_GET) &&
-                    !qjs_proxy_same_value(ctx, getter, desc.getter)) {
+                    !js_same_value(ctx, getter, desc.getter)) {
                     goto fail1;
                 }
                 if ((flags & JS_PROP_HAS_SET) &&
-                    !qjs_proxy_same_value(ctx, setter, desc.setter)) {
+                    !js_same_value(ctx, setter, desc.setter)) {
                     goto fail1;
                 }
             } else if (!(desc.flags & JS_PROP_WRITABLE)) {
                 if ((flags & JS_PROP_HAS_VALUE) &&
-                    !qjs_proxy_same_value(ctx, val, desc.value)) {
+                    !js_same_value(ctx, val, desc.value)) {
                     goto fail1;
                 }
             }
@@ -593,12 +593,12 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
             (desc.flags & (JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == JS_PROP_WRITABLE &&
             (flags & (JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE)) == JS_PROP_HAS_WRITABLE) {
         fail1:
-            qjs_proxy_free_desc(ctx, &desc);
+            js_free_desc(ctx, &desc);
         fail:
             JS_ThrowTypeError(ctx, "proxy: inconsistent defineProperty");
             return -1;
         }
-        qjs_proxy_free_desc(ctx, &desc);
+        js_free_desc(ctx, &desc);
     }
     return 1;
 }
@@ -624,14 +624,14 @@ static int js_proxy_delete_property(JSContext *ctx, JSValueConst obj,
     }
     args[0] = s->target;
     args[1] = atom_val;
-    ret = qjs_call_free(ctx, method, s->handler, 2, args);
+    ret = JS_CallFree(ctx, method, s->handler, 2, args);
     JS_FreeValue(ctx, atom_val);
     if (JS_IsException(ret))
         return -1;
-    res = qjs_proxy_to_bool_free(ctx, ret);
+    res = JS_ToBoolFree(ctx, ret);
     if (res) {
         JSPropertyDescriptor desc;
-        res2 = qjs_proxy_get_own_property_internal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);
+        res2 = JS_GetOwnPropertyInternal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);
         if (res2 < 0)
             return -1;
         if (res2) {
@@ -645,10 +645,10 @@ static int js_proxy_delete_property(JSContext *ctx, JSValueConst obj,
             fail:
                 JS_ThrowTypeError(ctx, "proxy: inconsistent deleteProperty");
             fail1:
-                qjs_proxy_free_desc(ctx, &desc);
+                js_free_desc(ctx, &desc);
                 return -1;
             }
-            qjs_proxy_free_desc(ctx, &desc);
+            js_free_desc(ctx, &desc);
         }
     }
     return res;
@@ -682,11 +682,11 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
     if (!s)
         return -1;
     if (JS_IsUndefined(method)) {
-        return qjs_get_own_property_names_internal(ctx, ptab, plen,
+        return JS_GetOwnPropertyNamesInternal(ctx, ptab, plen,
                                       JS_VALUE_GET_OBJ(s->target),
                                       JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK);
     }
-    prop_array = qjs_call_free(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
+    prop_array = JS_CallFree(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
     if (JS_IsException(prop_array))
         return -1;
     tab = NULL;
@@ -735,7 +735,7 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
         JS_ThrowTypeErrorRevokedProxy(ctx);
         goto fail;
     }
-    if (qjs_get_own_property_names_internal(ctx, &tab2, &len2, JS_VALUE_GET_OBJ(s->target),
+    if (JS_GetOwnPropertyNamesInternal(ctx, &tab2, &len2, JS_VALUE_GET_OBJ(s->target),
                                JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK))
         goto fail;
     for(i = 0; i < len2; i++) {
@@ -743,12 +743,12 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
             JS_ThrowTypeErrorRevokedProxy(ctx);
             goto fail;
         }
-        res = qjs_proxy_get_own_property_internal(ctx, &desc, JS_VALUE_GET_OBJ(s->target),
+        res = JS_GetOwnPropertyInternal(ctx, &desc, JS_VALUE_GET_OBJ(s->target),
                                 tab2[i].atom);
         if (res < 0)
             goto fail;
         if (res) {  /* safety, property should be found */
-            qjs_proxy_free_desc(ctx, &desc);
+            js_free_desc(ctx, &desc);
             if (!(desc.flags & JS_PROP_CONFIGURABLE) || !is_extensible) {
                 idx = find_prop_key(tab, len, tab2[i].atom);
                 if (idx < 0) {
@@ -795,10 +795,10 @@ static JSValue js_proxy_call_constructor(JSContext *ctx, JSValueConst func_obj,
     if (!s)
         return JS_EXCEPTION;
     if (!JS_IsConstructor(ctx, s->target))
-        return qjs_proxy_throw_type_error_not_constructor(ctx, s->target);
+        return JS_ThrowTypeErrorNotAConstructor(ctx, s->target);
     if (JS_IsUndefined(method))
         return JS_CallConstructor2(ctx, s->target, new_target, argc, argv);
-    arg_array = qjs_proxy_create_array(ctx, argc, argv);
+    arg_array = js_create_array(ctx, argc, argv);
     if (JS_IsException(arg_array)) {
         ret = JS_EXCEPTION;
         goto fail;
@@ -809,7 +809,7 @@ static JSValue js_proxy_call_constructor(JSContext *ctx, JSValueConst func_obj,
     ret = JS_Call(ctx, method, s->handler, 3, args);
     if (!JS_IsException(ret) && JS_VALUE_GET_TAG(ret) != JS_TAG_OBJECT) {
         JS_FreeValue(ctx, ret);
-        ret = qjs_proxy_throw_type_error_not_object(ctx);
+        ret = JS_ThrowTypeErrorNotAnObject(ctx);
     }
  fail:
     JS_FreeValue(ctx, method);
@@ -837,7 +837,7 @@ static JSValue js_proxy_call(JSContext *ctx, JSValueConst func_obj,
     }
     if (JS_IsUndefined(method))
         return JS_Call(ctx, s->target, this_obj, argc, argv);
-    arg_array = qjs_proxy_create_array(ctx, argc, argv);
+    arg_array = js_create_array(ctx, argc, argv);
     if (JS_IsException(arg_array)) {
         ret = JS_EXCEPTION;
         goto fail;
@@ -858,7 +858,7 @@ static JSValue js_proxy_call(JSContext *ctx, JSValueConst func_obj,
    - return -1 in case of error
    - otherwise return 0
  */
-static int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception) {
+QJS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception) {
     int depth = 0;
     JSObject *p;
     JSProxyData *s;
@@ -869,7 +869,7 @@ static int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_excep
             break;
         if (depth++ > 1000) {
             if (throw_exception)
-                qjs_proxy_throw_stack_overflow(ctx);
+                JS_ThrowStackOverflow(ctx);
             return -1;
         }
         s = p->u.opaque;
@@ -908,7 +908,7 @@ static JSValue js_proxy_constructor(JSContext *ctx, JSValueConst this_val,
     handler = argv[1];
     if (JS_VALUE_GET_TAG(target) != JS_TAG_OBJECT ||
         JS_VALUE_GET_TAG(handler) != JS_TAG_OBJECT)
-        return qjs_proxy_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     obj = JS_NewObjectProtoClass(ctx, JS_NULL, JS_CLASS_PROXY);
     if (JS_IsException(obj))
@@ -989,7 +989,7 @@ int JS_AddIntrinsicProxy(JSContext *ctx)
     }
 
     /* additional fields: name, length */
-    obj1 = qjs_proxy_new_c_function3(ctx, js_proxy_constructor, "Proxy", 2,
+    obj1 = JS_NewCFunction3(ctx, js_proxy_constructor, "Proxy", 2,
                             JS_CFUNC_constructor, 0,
                             ctx->function_proto, countof(js_proxy_funcs) + 2);
     if (JS_IsException(obj1))
@@ -1005,17 +1005,4 @@ int JS_AddIntrinsicProxy(JSContext *ctx)
  fail:
     JS_FreeValue(ctx, obj1);
     return -1;
-}
-
-
-
-QJS_INTERNAL JSValue qjs_proxy_throw_revoked(JSContext *ctx)
-{
-    return JS_ThrowTypeErrorRevokedProxy(ctx);
-}
-
-QJS_INTERNAL int qjs_resolve_proxy(JSContext *ctx, JSValueConst *value,
-                                   BOOL throw_exception)
-{
-    return js_resolve_proxy(ctx, value, throw_exception);
 }

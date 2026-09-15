@@ -27,16 +27,16 @@
 
 #include "internal-builtin.h"
 
-QJS_INTERNAL int qjs_enqueue_job2(JSContext *ctx, JSJobFunc *job_func,
+QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                                   int argc, JSValueConst *argv,
                                   BOOL no_exception);
-QJS_INTERNAL void qjs_free_zero_refcount(JSRuntime *rt);
-QJS_INTERNAL JSValue qjs_collection_throw_not_object(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_collection_create_array(JSContext *ctx, int len,
+QJS_INTERNAL void free_zero_refcount(JSRuntime *rt);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
                                                  JSValueConst *values);
-QJS_INTERNAL JSValue qjs_collection_create_from_ctor(JSContext *ctx,
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
                                                      JSValueConst ctor,
-                                                     JSClassID class_id);
+                                                     int class_id);
 
 QJS_INTERNAL void js_map_finalizer(JSRuntime *rt, JSValue value);
 QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst value,
@@ -44,10 +44,10 @@ QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst value,
 QJS_INTERNAL void js_map_iterator_finalizer(JSRuntime *rt, JSValue value);
 QJS_INTERNAL void js_map_iterator_mark(JSRuntime *rt, JSValueConst value,
                                         JS_MarkFunc *mark_func);
-QJS_INTERNAL void qjs_map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *ref);
-QJS_INTERNAL void qjs_weakref_delete(JSRuntime *rt, JSWeakRefHeader *ref);
-QJS_INTERNAL void qjs_finrec_delete(JSRuntime *rt, JSWeakRefHeader *ref);
-QJS_INTERNAL JSValue qjs_object_group_by(JSContext *ctx,
+QJS_INTERNAL void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *ref);
+QJS_INTERNAL void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *ref);
+QJS_INTERNAL void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *ref);
+QJS_INTERNAL JSValue js_object_groupBy(JSContext *ctx,
                                          JSValueConst this_val,
                                          int argc, JSValueConst *argv,
                                          int is_map);

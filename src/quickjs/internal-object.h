@@ -27,7 +27,7 @@
 
 #include "internal-number.h"
 
-QJS_INTERNAL int qjs_set_object_data(JSContext *ctx, JSValueConst obj,
+QJS_INTERNAL int JS_SetObjectData(JSContext *ctx, JSValueConst obj,
                                   JSValue val);
 QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue value);
@@ -36,7 +36,7 @@ QJS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                              JSValueConst obj);
 QJS_INTERNAL __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                               JSValueConst obj);
-QJS_INTERNAL void qjs_free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+QJS_INTERNAL void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 QJS_INTERNAL int qjs_object_init_classes(JSRuntime *rt);
 QJS_INTERNAL int qjs_object_init_shapes(JSRuntime *rt);
 QJS_INTERNAL void qjs_object_gc_shutdown(JSRuntime *rt);

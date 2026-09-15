@@ -28,49 +28,48 @@
 
 #define QJS_BACKTRACE_SKIP_FIRST_LEVEL (1 << 0)
 
-QJS_INTERNAL JSValueConst qjs_base_get_active_function(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_base_create_from_ctor(JSContext *ctx,
+QJS_INTERNAL JSValueConst JS_GetActiveFunction(JSContext *ctx);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
                                                JSValueConst ctor,
-                                               JSClassID class_id);
-QJS_INTERNAL int qjs_base_set_prototype_internal(
+                                               int class_id);
+QJS_INTERNAL int JS_SetPrototypeInternal(
     JSContext *ctx, JSValueConst obj, JSValueConst proto, BOOL throw_flag);
-QJS_INTERNAL int qjs_base_get_own_property_internal(
+QJS_INTERNAL int JS_GetOwnPropertyInternal(
     JSContext *ctx, JSPropertyDescriptor *desc, JSObject *obj, JSAtom atom);
-QJS_INTERNAL int qjs_base_obj_to_desc(JSContext *ctx,
+QJS_INTERNAL int js_obj_to_desc(JSContext *ctx,
                                       JSPropertyDescriptor *desc,
                                       JSValueConst value);
-QJS_INTERNAL void qjs_base_free_desc(JSContext *ctx,
+QJS_INTERNAL void js_free_desc(JSContext *ctx,
                                      JSPropertyDescriptor *desc);
-QJS_INTERNAL int qjs_base_create_data_property_uint32(
+QJS_INTERNAL int JS_CreateDataPropertyUint32(
     JSContext *ctx, JSValueConst obj, int64_t index, JSValue value,
     int flags);
-QJS_INTERNAL int qjs_base_define_property_value(
+int JS_DefinePropertyValueValue(
     JSContext *ctx, JSValueConst obj, JSValue property, JSValue value,
     int flags);
-QJS_INTERNAL JSValue qjs_base_throw_not_constructor(
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(
     JSContext *ctx, JSValueConst value);
-QJS_INTERNAL JSValue qjs_base_get_prototype_free(JSContext *ctx,
+QJS_INTERNAL JSValue JS_GetPrototypeFree(JSContext *ctx,
                                                  JSValue object);
-QJS_INTERNAL int qjs_base_poll_interrupts(JSContext *ctx);
-QJS_INTERNAL JSClassID qjs_base_function_class_id(int function_kind);
-QJS_INTERNAL void qjs_base_set_immutable_prototype(JSContext *ctx,
+QJS_INTERNAL JSClassID qjs_function_class_id(int function_kind);
+QJS_INTERNAL void JS_SetImmutablePrototype(JSContext *ctx,
                                                    JSValueConst obj);
 
-QJS_INTERNAL JSValue qjs_base_function_apply(
+QJS_INTERNAL JSValue js_function_apply(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
     int magic);
-QJS_INTERNAL JSValue qjs_base_error_to_string(
+QJS_INTERNAL JSValue js_error_toString(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
-QJS_INTERNAL JSValue qjs_base_aggregate_error(JSContext *ctx,
+QJS_INTERNAL JSValue js_aggregate_error_constructor(JSContext *ctx,
                                               JSValueConst errors);
-QJS_INTERNAL JSValue qjs_base_species_constructor(
+QJS_INTERNAL JSValue JS_SpeciesConstructor(
     JSContext *ctx, JSValueConst obj, JSValueConst default_ctor);
-QJS_INTERNAL JSValue qjs_base_function_constructor(
+QJS_INTERNAL JSValue js_function_constructor(
     JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv,
     int magic);
-QJS_INTERNAL JSValue *qjs_base_build_arg_list(
+QJS_INTERNAL JSValue *build_arg_list(
     JSContext *ctx, uint32_t *length, JSValueConst array);
-QJS_INTERNAL void qjs_base_free_arg_list(JSContext *ctx, JSValue *args,
+QJS_INTERNAL void free_arg_list(JSContext *ctx, JSValue *args,
                                          uint32_t length);
 
 #endif /* QUICKJS_INTERNAL_BASE_H */

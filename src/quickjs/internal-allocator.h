@@ -27,32 +27,51 @@
 
 #include "internal-types.h"
 
-QJS_INTERNAL void qjs_allocator_init(JSMallocContext *ctx);
-QJS_INTERNAL const JSMallocFunctions *qjs_default_malloc_functions(void);
-QJS_INTERNAL void *qjs_malloc_raw(JSMallocContext *ctx, size_t size);
-QJS_INTERNAL void qjs_free_raw(JSMallocContext *ctx, void *ptr);
-QJS_INTERNAL void *qjs_realloc_raw(JSMallocContext *ctx, void *ptr,
+QJS_INTERNAL void js_malloc_init(JSMallocContext *ctx);
+QJS_INTERNAL extern const JSMallocFunctions def_malloc_funcs;
+QJS_INTERNAL void *__js_malloc(JSMallocContext *ctx, size_t size);
+QJS_INTERNAL void __js_free(JSMallocContext *ctx, void *ptr);
+QJS_INTERNAL void *__js_realloc(JSMallocContext *ctx, void *ptr,
                                    size_t size);
 
-static inline void *qjs_malloc_rt_internal(JSRuntime *rt, size_t size)
+static inline void *js_malloc_rt_inline(JSRuntime *rt, size_t size);
+static inline void js_free_rt_inline(JSRuntime *rt, void *ptr);
+static inline void *js_realloc_rt_inline(JSRuntime *rt, void *ptr,
+                                         size_t size);
+static inline void *js_malloc_inline(JSContext *ctx, size_t size);
+static inline void js_free_inline(JSContext *ctx, void *ptr);
+static inline void *js_realloc_inline(JSContext *ctx, void *ptr, size_t size);
+static inline void *js_realloc2_inline(JSContext *ctx, void *ptr, size_t size,
+                                       size_t *slack);
+
+#define js_malloc_rt(rt, size) js_malloc_rt_inline((rt), (size))
+#define js_free_rt(rt, ptr) js_free_rt_inline((rt), (ptr))
+#define js_realloc_rt(rt, ptr, size) js_realloc_rt_inline((rt), (ptr), (size))
+#define js_malloc(ctx, size) js_malloc_inline((ctx), (size))
+#define js_free(ctx, ptr) js_free_inline((ctx), (ptr))
+#define js_realloc(ctx, ptr, size) js_realloc_inline((ctx), (ptr), (size))
+#define js_realloc2(ctx, ptr, size, slack) \
+    js_realloc2_inline((ctx), (ptr), (size), (slack))
+
+static inline void *js_malloc_rt_inline(JSRuntime *rt, size_t size)
 {
-    return qjs_malloc_raw(&rt->malloc_ctx, size);
+    return __js_malloc(&rt->malloc_ctx, size);
 }
 
-static inline void qjs_free_rt_internal(JSRuntime *rt, void *ptr)
+static inline void js_free_rt_inline(JSRuntime *rt, void *ptr)
 {
-    qjs_free_raw(&rt->malloc_ctx, ptr);
+    __js_free(&rt->malloc_ctx, ptr);
 }
 
-static inline void *qjs_realloc_rt_internal(JSRuntime *rt, void *ptr,
+static inline void *js_realloc_rt_inline(JSRuntime *rt, void *ptr,
                                             size_t size)
 {
-    return qjs_realloc_raw(&rt->malloc_ctx, ptr, size);
+    return __js_realloc(&rt->malloc_ctx, ptr, size);
 }
 
-static inline void *qjs_malloc_internal(JSContext *ctx, size_t size)
+static inline void *js_malloc_inline(JSContext *ctx, size_t size)
 {
-    void *ptr = qjs_malloc_raw(&ctx->rt->malloc_ctx, size);
+    void *ptr = __js_malloc(&ctx->rt->malloc_ctx, size);
 
     if (unlikely(!ptr)) {
         JS_ThrowOutOfMemory(ctx);
@@ -61,15 +80,15 @@ static inline void *qjs_malloc_internal(JSContext *ctx, size_t size)
     return ptr;
 }
 
-static inline void qjs_free_internal(JSContext *ctx, void *ptr)
+static inline void js_free_inline(JSContext *ctx, void *ptr)
 {
-    qjs_free_raw(&ctx->rt->malloc_ctx, ptr);
+    __js_free(&ctx->rt->malloc_ctx, ptr);
 }
 
-static inline void *qjs_realloc_internal(JSContext *ctx, void *ptr,
+static inline void *js_realloc_inline(JSContext *ctx, void *ptr,
                                          size_t size)
 {
-    void *ret = qjs_realloc_raw(&ctx->rt->malloc_ctx, ptr, size);
+    void *ret = __js_realloc(&ctx->rt->malloc_ctx, ptr, size);
 
     if (unlikely(!ret && size != 0)) {
         JS_ThrowOutOfMemory(ctx);
@@ -80,10 +99,10 @@ static inline void *qjs_realloc_internal(JSContext *ctx, void *ptr,
 
 /* js_realloc2 was inlined into the monolithic array-growth path.  Preserve
    that wrapper shape without duplicating the allocator arena algorithm. */
-static inline void *qjs_realloc2_internal(JSContext *ctx, void *ptr,
+static inline void *js_realloc2_inline(JSContext *ctx, void *ptr,
                                           size_t size, size_t *slack)
 {
-    void *ret = qjs_realloc_raw(&ctx->rt->malloc_ctx, ptr, size);
+    void *ret = __js_realloc(&ctx->rt->malloc_ctx, ptr, size);
 
     if (unlikely(!ret && size != 0)) {
         JS_ThrowOutOfMemory(ctx);

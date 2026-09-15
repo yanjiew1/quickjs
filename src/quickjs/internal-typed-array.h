@@ -30,26 +30,21 @@
 
 #define QJS_TYPED_HINT_NONE 2
 
-static inline int qjs_typed_bigint_sign(const JSBigInt *value)
-{
-    return (js_slimb_t)value->tab[value->len - 1] < 0;
-}
-
-QJS_INTERNAL void qjs_array_buffer_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_typed_array_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_typed_array_mark(JSRuntime *rt, JSValueConst value,
+QJS_INTERNAL void js_array_buffer_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_typed_array_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_typed_array_mark(JSRuntime *rt, JSValueConst value,
                                        JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue qjs_typed_throw_invalid_class(JSContext *ctx,
+QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx,
                                                    int class_id);
-QJS_INTERNAL JSValue qjs_typed_to_primitive(JSContext *ctx,
+QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx,
                                             JSValueConst value, int hint);
-QJS_INTERNAL int qjs_to_uint8_clamp_free(JSContext *ctx, int32_t *result,
+QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *result,
                                          JSValue value);
-QJS_INTERNAL JSValue qjs_to_bigint_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL JSValue qjs_typed_create_from_ctor(JSContext *ctx,
+QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue value);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
                                                 JSValueConst ctor,
-                                                JSClassID class_id);
-QJS_INTERNAL JSValue qjs_typed_species_constructor(JSContext *ctx,
+                                                int class_id);
+QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx,
                                                    JSValueConst obj,
                                                    JSValueConst default_ctor);
 

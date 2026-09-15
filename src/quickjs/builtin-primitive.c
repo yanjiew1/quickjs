@@ -25,9 +25,6 @@
 #include "internal-primitive.h"
 #include "internal-allocator.h"
 
-#define js_malloc qjs_malloc_internal
-#define js_free qjs_free_internal
-
 /* Number */
 
 static JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
@@ -37,7 +34,7 @@ static JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
     if (argc == 0) {
         val = JS_NewInt32(ctx, 0);
     } else {
-        val = qjs_to_numeric(ctx, argv[0]);
+        val = JS_ToNumeric(ctx, argv[0]);
         if (JS_IsException(val))
             return val;
         switch(JS_VALUE_GET_TAG(val)) {
@@ -50,7 +47,7 @@ static JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
             {
                 JSBigInt *p = JS_VALUE_GET_PTR(val);
                 double d;
-                d = qjs_bigint_to_float64(ctx, p);
+                d = js_bigint_to_float64(ctx, p);
                 JS_FreeValue(ctx, val);
                 val = JS_NewFloat64(ctx, d);
             }
@@ -60,9 +57,9 @@ static JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
         }
     }
     if (!JS_IsUndefined(new_target)) {
-        obj = qjs_primitive_create_from_ctor(ctx, new_target, JS_CLASS_NUMBER);
+        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_NUMBER);
         if (!JS_IsException(obj))
-            qjs_set_object_data(ctx, obj, val);
+            JS_SetObjectData(ctx, obj, val);
         return obj;
     } else {
         return val;
@@ -73,7 +70,7 @@ static JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
 static JSValue js_number___toInteger(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv)
 {
-    return qjs_to_integer_free(ctx, JS_DupValue(ctx, argv[0]));
+    return JS_ToIntegerFree(ctx, JS_DupValue(ctx, argv[0]));
 }
 
 static JSValue js_number___toLength(JSContext *ctx, JSValueConst this_val,
@@ -91,7 +88,7 @@ static JSValue js_number_isNaN(JSContext *ctx, JSValueConst this_val,
 {
     if (!JS_IsNumber(argv[0]))
         return JS_FALSE;
-    return qjs_global_is_nan(ctx, this_val, argc, argv);
+    return js_global_isNaN(ctx, this_val, argc, argv);
 }
 
 static JSValue js_number_isFinite(JSContext *ctx, JSValueConst this_val,
@@ -99,14 +96,14 @@ static JSValue js_number_isFinite(JSContext *ctx, JSValueConst this_val,
 {
     if (!JS_IsNumber(argv[0]))
         return JS_FALSE;
-    return qjs_global_is_finite(ctx, this_val, argc, argv);
+    return js_global_isFinite(ctx, this_val, argc, argv);
 }
 
 static JSValue js_number_isInteger(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv)
 {
     int ret;
-    ret = qjs_number_is_integer(ctx, argv[0]);
+    ret = JS_NumberIsInteger(ctx, argv[0]);
     if (ret < 0)
         return JS_EXCEPTION;
     else
@@ -121,7 +118,7 @@ static JSValue js_number_isSafeInteger(JSContext *ctx, JSValueConst this_val,
         return JS_FALSE;
     if (unlikely(JS_ToFloat64(ctx, &d, argv[0])))
         return JS_EXCEPTION;
-    return JS_NewBool(ctx, qjs_is_safe_integer(d));
+    return JS_NewBool(ctx, is_safe_integer(d));
 }
 
 static const JSCFunctionListEntry js_number_funcs[] = {
@@ -168,7 +165,7 @@ static JSValue js_number_valueOf(JSContext *ctx, JSValueConst this_val,
 static int js_get_radix(JSContext *ctx, JSValueConst val)
 {
     int radix;
-    if (qjs_to_int32_sat(ctx, &radix, val))
+    if (JS_ToInt32Sat(ctx, &radix, val))
         return -1;
     if (radix < 2 || radix > 36) {
         JS_ThrowRangeError(ctx, "radix must be between 2 and 36");
@@ -200,12 +197,12 @@ static JSValue js_number_toString(JSContext *ctx, JSValueConst this_val,
         len = i64toa_radix(buf1, JS_VALUE_GET_INT(val), base);
         return js_new_string8_len(ctx, buf1, len);
     }
-    if (qjs_to_float64_free(ctx, &d, val))
+    if (JS_ToFloat64Free(ctx, &d, val))
         return JS_EXCEPTION;
     flags = JS_DTOA_FORMAT_FREE;
     if (base != 10)
         flags |= JS_DTOA_EXP_DISABLED;
-    return qjs_dtoa2(ctx, d, base, 0, flags);
+    return js_dtoa2(ctx, d, base, 0, flags);
  fail:
     JS_FreeValue(ctx, val);
     return JS_EXCEPTION;
@@ -221,7 +218,7 @@ static JSValue js_number_toFixed(JSContext *ctx, JSValueConst this_val,
     val = js_thisNumberValue(ctx, this_val);
     if (JS_IsException(val))
         return val;
-    if (qjs_to_float64_free(ctx, &d, val))
+    if (JS_ToFloat64Free(ctx, &d, val))
         return JS_EXCEPTION;
     if (JS_ToInt32Sat(ctx, &f, argv[0]))
         return JS_EXCEPTION;
@@ -231,7 +228,7 @@ static JSValue js_number_toFixed(JSContext *ctx, JSValueConst this_val,
         flags = JS_DTOA_FORMAT_FREE;
     else
         flags = JS_DTOA_FORMAT_FRAC;
-    return qjs_dtoa2(ctx, d, 10, f, flags);
+    return js_dtoa2(ctx, d, 10, f, flags);
 }
 
 static JSValue js_number_toExponential(JSContext *ctx, JSValueConst this_val,
@@ -244,7 +241,7 @@ static JSValue js_number_toExponential(JSContext *ctx, JSValueConst this_val,
     val = js_thisNumberValue(ctx, this_val);
     if (JS_IsException(val))
         return val;
-    if (qjs_to_float64_free(ctx, &d, val))
+    if (JS_ToFloat64Free(ctx, &d, val))
         return JS_EXCEPTION;
     if (JS_ToInt32Sat(ctx, &f, argv[0]))
         return JS_EXCEPTION;
@@ -260,7 +257,7 @@ static JSValue js_number_toExponential(JSContext *ctx, JSValueConst this_val,
         f++;
         flags = JS_DTOA_FORMAT_FIXED;
     }
-    return qjs_dtoa2(ctx, d, 10, f, flags | JS_DTOA_EXP_ENABLED);
+    return js_dtoa2(ctx, d, 10, f, flags | JS_DTOA_EXP_ENABLED);
 }
 
 static JSValue js_number_toPrecision(JSContext *ctx, JSValueConst this_val,
@@ -273,7 +270,7 @@ static JSValue js_number_toPrecision(JSContext *ctx, JSValueConst this_val,
     val = js_thisNumberValue(ctx, this_val);
     if (JS_IsException(val))
         return val;
-    if (qjs_to_float64_free(ctx, &d, val))
+    if (JS_ToFloat64Free(ctx, &d, val))
         return JS_EXCEPTION;
     if (JS_IsUndefined(argv[0]))
         goto to_string;
@@ -285,7 +282,7 @@ static JSValue js_number_toPrecision(JSContext *ctx, JSValueConst this_val,
     }
     if (p < 1 || p > 100)
         return JS_ThrowRangeError(ctx, "invalid number of digits");
-    return qjs_dtoa2(ctx, d, 10, p, JS_DTOA_FORMAT_FIXED);
+    return js_dtoa2(ctx, d, 10, p, JS_DTOA_FORMAT_FIXED);
 }
 
 static const JSCFunctionListEntry js_number_proto_funcs[] = {
@@ -305,9 +302,9 @@ static JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
     JSValue val, obj;
     val = JS_NewBool(ctx, JS_ToBool(ctx, argv[0]));
     if (!JS_IsUndefined(new_target)) {
-        obj = qjs_primitive_create_from_ctor(ctx, new_target, JS_CLASS_BOOLEAN);
+        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_BOOLEAN);
         if (!JS_IsException(obj))
-            qjs_set_object_data(ctx, obj, val);
+            JS_SetObjectData(ctx, obj, val);
         return obj;
     } else {
         return val;
@@ -361,11 +358,11 @@ static int js_string_get_own_property(JSContext *ctx,
     uint32_t idx, ch;
 
     /* This is a class exotic method: obj class_id is JS_CLASS_STRING */
-    if (qjs_atom_is_tagged_int(prop)) {
+    if (__JS_AtomIsTaggedInt(prop)) {
         p = JS_VALUE_GET_OBJ(obj);
         if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_STRING) {
             p1 = JS_VALUE_GET_STRING(p->u.object_data);
-            idx = qjs_atom_to_uint32(prop);
+            idx = __JS_AtomToUInt32(prop);
             if (idx < p1->len) {
                 if (desc) {
                     ch = string_get(p1, idx);
@@ -391,15 +388,15 @@ static int js_string_define_own_property(JSContext *ctx,
     JSObject *p;
     JSString *p1, *p2;
 
-    if (qjs_atom_is_tagged_int(prop)) {
-        idx = qjs_atom_to_uint32(prop);
+    if (__JS_AtomIsTaggedInt(prop)) {
+        idx = __JS_AtomToUInt32(prop);
         p = JS_VALUE_GET_OBJ(this_obj);
         if (JS_VALUE_GET_TAG(p->u.object_data) != JS_TAG_STRING)
             goto def;
         p1 = JS_VALUE_GET_STRING(p->u.object_data);
         if (idx >= p1->len)
             goto def;
-        if (!qjs_primitive_check_define_flags(JS_PROP_ENUMERABLE, flags))
+        if (!check_define_prop_flags(JS_PROP_ENUMERABLE, flags))
             goto fail;
         /* check that the same value is configured */
         if (flags & JS_PROP_HAS_VALUE) {
@@ -410,7 +407,8 @@ static int js_string_define_own_property(JSContext *ctx,
                 goto fail;
             if (string_get(p1, idx) != string_get(p2, 0)) {
             fail:
-                return qjs_primitive_throw_not_configurable(ctx, flags);
+                return JS_ThrowTypeErrorOrFalse(
+                    ctx, flags, "property is not configurable");
             }
         }
         return TRUE;
@@ -426,9 +424,9 @@ static int js_string_delete_property(JSContext *ctx,
 {
     uint32_t idx;
 
-    if (qjs_atom_is_tagged_int(prop)) {
-        idx = qjs_atom_to_uint32(prop);
-        if (idx < qjs_string_object_length(ctx, obj)) {
+    if (__JS_AtomIsTaggedInt(prop)) {
+        idx = __JS_AtomToUInt32(prop);
+        if (idx < js_string_obj_get_length(ctx, obj)) {
             return FALSE;
         }
     }
@@ -460,11 +458,11 @@ static JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
     if (!JS_IsUndefined(new_target)) {
         JSString *p1 = JS_VALUE_GET_STRING(val);
 
-        obj = qjs_primitive_create_from_ctor(ctx, new_target, JS_CLASS_STRING);
+        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_STRING);
         if (JS_IsException(obj)) {
             JS_FreeValue(ctx, val);
         } else {
-            qjs_set_object_data(ctx, obj, val);
+            JS_SetObjectData(ctx, obj, val);
             JS_DefinePropertyValue(ctx, obj, JS_ATOM_length, JS_NewInt32(ctx, p1->len), 0);
         }
         return obj;
@@ -554,14 +552,14 @@ static JSValue js_string_raw(JSContext *ctx, JSValueConst this_val,
     cooked = JS_ToObject(ctx, argv[0]);
     if (JS_IsException(cooked))
         goto exception;
-    raw = qjs_primitive_to_object_free(ctx, JS_GetProperty(ctx, cooked, JS_ATOM_raw));
+    raw = JS_ToObjectFree(ctx, JS_GetProperty(ctx, cooked, JS_ATOM_raw));
     if (JS_IsException(raw))
         goto exception;
     if (js_get_length64(ctx, &n, raw) < 0)
         goto exception;
 
     for (i = 0; i < n; i++) {
-        val = JS_ToStringFree(ctx, qjs_primitive_get_property_int64(ctx, raw, i));
+        val = JS_ToStringFree(ctx, JS_GetPropertyInt64(ctx, raw, i));
         if (JS_IsException(val))
             goto exception;
         string_buffer_concat_value_free(b, val);
@@ -626,7 +624,7 @@ static JSValue js_string_charCodeAt(JSContext *ctx, JSValueConst this_val,
     JSString *p;
     int idx, c;
 
-    val = qjs_primitive_to_string_check_object(ctx, this_val);
+    val = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(val))
         return val;
     p = JS_VALUE_GET_STRING(val);
@@ -651,7 +649,7 @@ static JSValue js_string_charAt(JSContext *ctx, JSValueConst this_val,
     JSString *p;
     int idx, c;
 
-    val = qjs_primitive_to_string_check_object(ctx, this_val);
+    val = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(val))
         return val;
     p = JS_VALUE_GET_STRING(val);
@@ -681,7 +679,7 @@ static JSValue js_string_codePointAt(JSContext *ctx, JSValueConst this_val,
     JSString *p;
     int idx, c;
 
-    val = qjs_primitive_to_string_check_object(ctx, this_val);
+    val = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(val))
         return val;
     p = JS_VALUE_GET_STRING(val);
@@ -708,7 +706,7 @@ static JSValue js_string_concat(JSContext *ctx, JSValueConst this_val,
     /* XXX: Use more efficient method */
     /* XXX: This method is OK if r has a single refcount */
     /* XXX: should use string_buffer? */
-    r = qjs_primitive_to_string_check_object(ctx, this_val);
+    r = JS_ToStringCheckObject(ctx, this_val);
     for (i = 0; i < argc; i++) {
         if (JS_IsException(r))
             break;
@@ -727,7 +725,7 @@ static int string_cmp(JSString *p1, JSString *p2, int x1, int x2, int len)
     return 0;
 }
 
-QJS_INTERNAL int qjs_regexp_string_indexof_char(JSString *p, int c, int from)
+QJS_INTERNAL int string_indexof_char(JSString *p, int c, int from)
 {
     /* assuming 0 <= from <= p->len */
     int i, len = p->len;
@@ -754,7 +752,7 @@ static int string_indexof(JSString *p1, JSString *p2, int from)
     if (len2 == 0)
         return from;
     for (i = from, c = string_get(p2, 0); i + len2 <= len1; i = j + 1) {
-        j = qjs_regexp_string_indexof_char(p1, c, i);
+        j = string_indexof_char(p1, c, i);
         if (j < 0 || j + len2 > len1)
             break;
         if (!string_cmp(p1, p2, j + 1, 1, len2 - 1))
@@ -763,7 +761,7 @@ static int string_indexof(JSString *p1, JSString *p2, int from)
     return -1;
 }
 
-QJS_INTERNAL int64_t qjs_regexp_string_advance_index(JSString *p,
+QJS_INTERNAL int64_t string_advance_index(JSString *p,
                                                       int64_t index,
                                                       BOOL unicode)
 {
@@ -779,7 +777,7 @@ QJS_INTERNAL int64_t qjs_regexp_string_advance_index(JSString *p,
 
 /* return the position of the first invalid character in the string or
    -1 if none */
-static int js_string_find_invalid_codepoint(JSString *p)
+QJS_INTERNAL int js_string_find_invalid_codepoint(JSString *p)
 {
     int i;
     if (!p->is_wide_char)
@@ -805,7 +803,7 @@ static JSValue js_string_isWellFormed(JSContext *ctx, JSValueConst this_val,
     JSString *p;
     BOOL ret;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return JS_EXCEPTION;
     p = JS_VALUE_GET_STRING(str);
@@ -821,7 +819,7 @@ static JSValue js_string_toWellFormed(JSContext *ctx, JSValueConst this_val,
     JSString *p;
     int i;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return JS_EXCEPTION;
 
@@ -859,7 +857,7 @@ static JSValue js_string_indexOf(JSContext *ctx, JSValueConst this_val,
     JSString *p;
     JSString *p1;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return str;
     v = JS_ToString(ctx, argv[0]);
@@ -888,7 +886,7 @@ static JSValue js_string_indexOf(JSContext *ctx, JSValueConst this_val,
     } else {
         pos = 0;
         if (argc > 1) {
-            if (qjs_to_int32_clamp(ctx, &pos, argv[1], 0, len, 0))
+            if (JS_ToInt32Clamp(ctx, &pos, argv[1], 0, len, 0))
                 goto fail;
         }
         start = pos;
@@ -925,10 +923,10 @@ static JSValue js_string_includes(JSContext *ctx, JSValueConst this_val,
     JSString *p;
     JSString *p1;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return str;
-    ret = qjs_is_regexp(ctx, argv[0]);
+    ret = js_is_regexp(ctx, argv[0]);
     if (ret) {
         if (ret > 0)
             JS_ThrowTypeError(ctx, "regexp not supported");
@@ -986,7 +984,7 @@ static int check_regexp_g_flag(JSContext *ctx, JSValueConst regexp)
     int ret;
     JSValue flags;
 
-    ret = qjs_is_regexp(ctx, regexp);
+    ret = js_is_regexp(ctx, regexp);
     if (ret < 0)
         return -1;
     if (ret) {
@@ -1000,7 +998,7 @@ static int check_regexp_g_flag(JSContext *ctx, JSValueConst regexp)
         flags = JS_ToStringFree(ctx, flags);
         if (JS_IsException(flags))
             return -1;
-        ret = qjs_regexp_string_indexof_char(JS_VALUE_GET_STRING(flags),
+        ret = string_indexof_char(JS_VALUE_GET_STRING(flags),
                                              'g', 0);
         JS_FreeValue(ctx, flags);
         if (ret < 0) {
@@ -1034,7 +1032,7 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
             }
         }
         if (!JS_IsUndefined(matcher) && !JS_IsNull(matcher)) {
-            return qjs_call_free(ctx, matcher, regexp, 1, &O);
+            return JS_CallFree(ctx, matcher, regexp, 1, &O);
         }
     }
     S = JS_ToString(ctx, O);
@@ -1056,7 +1054,7 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
         JS_FreeValue(ctx, S);
         return JS_EXCEPTION;
     }
-    result = qjs_primitive_invoke_free(ctx, rx, atom, 1, (JSValueConst *)&S);
+    result = JS_InvokeFree(ctx, rx, atom, 1, (JSValueConst *)&S);
     JS_FreeValue(ctx, S);
     return result;
 }
@@ -1097,7 +1095,7 @@ QJS_INTERNAL int js_string_GetSubstitution(
     len = rp->len;
     i = 0;
     for(;;) {
-        j = qjs_regexp_string_indexof_char(rp, '$', i);
+        j = string_indexof_char(rp, '$', i);
         if (j < 0 || j + 1 >= len)
             break;
         string_buffer_concat(b, rp, i, j);
@@ -1140,7 +1138,7 @@ QJS_INTERNAL int js_string_GetSubstitution(
                         string_buffer_concat(b, sp, start, end);
                     }
                 } else {
-                    s = qjs_primitive_get_property_int64(ctx, captures_val, k);
+                    s = JS_GetPropertyInt64(ctx, captures_val, k);
                     if (JS_IsException(s))
                         goto exception;
                     if (!JS_IsUndefined(s)) {
@@ -1152,13 +1150,13 @@ QJS_INTERNAL int js_string_GetSubstitution(
                 goto norep;
             }
         } else if (c == '<' && !JS_IsUndefined(namedCaptures)) {
-            k = qjs_regexp_string_indexof_char(rp, '>', j);
+            k = string_indexof_char(rp, '>', j);
             if (k < 0)
                 goto norep;
             name = js_sub_string(ctx, rp, j, k);
             if (JS_IsException(name))
                 goto exception;
-            capture = qjs_primitive_get_property_value(ctx, namedCaptures, name);
+            capture = JS_GetPropertyValue(ctx, namedCaptures, name);
             if (JS_IsException(capture))
                 goto exception;
             if (!JS_IsUndefined(capture)) {
@@ -1210,7 +1208,7 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
         if (!JS_IsUndefined(replacer) && !JS_IsNull(replacer)) {
             args[0] = O;
             args[1] = replaceValue;
-            return qjs_call_free(ctx, replacer, searchValue, 2, args);
+            return JS_CallFree(ctx, replacer, searchValue, 2, args);
         }
     }
     string_buffer_init(ctx, b, 0);
@@ -1317,7 +1315,7 @@ static JSValue js_string_split(JSContext *ctx, JSValueConst this_val,
         if (!JS_IsUndefined(splitter) && !JS_IsNull(splitter)) {
             args[0] = O;
             args[1] = limit;
-            return qjs_call_free(ctx, splitter, separator, 2, args);
+            return JS_CallFree(ctx, splitter, separator, 2, args);
         }
     }
     S = JS_ToString(ctx, O);
@@ -1357,7 +1355,7 @@ static JSValue js_string_split(JSContext *ctx, JSValueConst this_val,
         T = js_sub_string(ctx, sp, p, e);
         if (JS_IsException(T))
             goto exception;
-        if (qjs_primitive_create_data_property_uint32(ctx, A, lengthA++, T, 0) < 0)
+        if (JS_CreateDataPropertyUint32(ctx, A, lengthA++, T, 0) < 0)
             goto exception;
         if (lengthA == lim)
             goto done;
@@ -1366,7 +1364,7 @@ add_tail:
     T = js_sub_string(ctx, sp, p, s);
     if (JS_IsException(T))
         goto exception;
-    if (qjs_primitive_create_data_property_uint32(ctx, A, lengthA++, T,0 ) < 0)
+    if (JS_CreateDataPropertyUint32(ctx, A, lengthA++, T,0 ) < 0)
         goto exception;
 done:
     JS_FreeValue(ctx, S);
@@ -1387,7 +1385,7 @@ static JSValue js_string_substring(JSContext *ctx, JSValueConst this_val,
     int a, b, start, end;
     JSString *p;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return str;
     p = JS_VALUE_GET_STRING(str);
@@ -1421,7 +1419,7 @@ static JSValue js_string_substr(JSContext *ctx, JSValueConst this_val,
     int a, len, n;
     JSString *p;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return str;
     p = JS_VALUE_GET_STRING(str);
@@ -1449,7 +1447,7 @@ static JSValue js_string_slice(JSContext *ctx, JSValueConst this_val,
     int len, start, end;
     JSString *p;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return str;
     p = JS_VALUE_GET_STRING(str);
@@ -1478,7 +1476,7 @@ static JSValue js_string_pad(JSContext *ctx, JSValueConst this_val,
     JSString *p, *p1 = NULL;
     int n, len, c = ' ';
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         goto fail1;
     if (JS_ToInt32Sat(ctx, &n, argv[0]))
@@ -1550,10 +1548,10 @@ static JSValue js_string_repeat(JSContext *ctx, JSValueConst this_val,
     int64_t val;
     int n, len;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         goto fail;
-    if (qjs_to_int64_sat(ctx, &val, argv[0]))
+    if (JS_ToInt64Sat(ctx, &val, argv[0]))
         goto fail;
     if (val < 0 || val > 2147483647) {
         JS_ThrowRangeError(ctx, "invalid repeat count");
@@ -1593,7 +1591,7 @@ static JSValue js_string_trim(JSContext *ctx, JSValueConst this_val,
     int a, b, len;
     JSString *p;
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return str;
     p = JS_VALUE_GET_STRING(str);
@@ -1674,7 +1672,7 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
     int i, c, j, l;
     uint32_t res[LRE_CC_RES_LEN_MAX];
 
-    val = qjs_primitive_to_string_check_object(ctx, this_val);
+    val = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(val))
         return val;
     p = JS_VALUE_GET_STRING(val);
@@ -1779,7 +1777,7 @@ static JSValue js_string_normalize(JSContext *ctx, JSValueConst this_val,
     JSValue val;
     uint32_t *out_buf;
 
-    val = qjs_primitive_to_string_check_object(ctx, this_val);
+    val = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(val))
         return val;
 
@@ -1850,7 +1848,7 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
     int cmp, a_len, b_len;
     uint32_t *a_buf, *b_buf;
 
-    a = qjs_primitive_to_string_check_object(ctx, this_val);
+    a = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(a))
         return JS_EXCEPTION;
     b = JS_ToString(ctx, argv[0]);
@@ -1883,7 +1881,7 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
     JSValue a, b;
     int cmp;
 
-    a = qjs_primitive_to_string_check_object(ctx, this_val);
+    a = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(a))
         return JS_EXCEPTION;
     b = JS_ToString(ctx, argv[0]);
@@ -1973,7 +1971,7 @@ static JSValue js_string_CreateHTML(JSContext *ctx, JSValueConst this_val,
         { "sub", NULL }, { "sup", NULL },
     };
 
-    str = qjs_primitive_to_string_check_object(ctx, this_val);
+    str = JS_ToStringCheckObject(ctx, this_val);
     if (JS_IsException(str))
         return JS_EXCEPTION;
     string_buffer_init(ctx, b, 7);
@@ -1987,7 +1985,7 @@ static JSValue js_string_CreateHTML(JSContext *ctx, JSValueConst this_val,
         string_buffer_putc8(b, ' ');
         string_buffer_puts8(b, defs[magic].attr);
         string_buffer_puts8(b, "=\"");
-        value = qjs_primitive_to_string_check_object(ctx, argv[0]);
+        value = JS_ToStringCheckObject(ctx, argv[0]);
         if (JS_IsException(value)) {
             JS_FreeValue(ctx, str);
             string_buffer_free(b);
@@ -2057,7 +2055,7 @@ static const JSCFunctionListEntry js_string_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("toUpperCase", 0, js_string_toLowerCase, 0 ),
     JS_CFUNC_MAGIC_DEF("toLocaleLowerCase", 0, js_string_toLowerCase, 1 ),
     JS_CFUNC_MAGIC_DEF("toLocaleUpperCase", 0, js_string_toLowerCase, 0 ),
-    JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, qjs_primitive_create_array_iterator, JS_ITERATOR_KIND_VALUE | 4 ),
+    JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, js_create_array_iterator, JS_ITERATOR_KIND_VALUE | 4 ),
     /* ES6 Annex B 2.3.2 etc. */
     JS_CFUNC_MAGIC_DEF("anchor", 1, js_string_CreateHTML, magic_string_anchor ),
     JS_CFUNC_MAGIC_DEF("big", 0, js_string_CreateHTML, magic_string_big ),
@@ -2101,7 +2099,7 @@ static JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
     JSString *p;
 
     if (!JS_IsUndefined(new_target))
-        return qjs_primitive_throw_not_constructor(ctx, new_target);
+        return JS_ThrowTypeErrorNotAConstructor(ctx, new_target);
     if (argc == 0 || JS_IsUndefined(argv[0])) {
         p = NULL;
     } else {
@@ -2135,7 +2133,7 @@ static JSValue js_symbol_toString(JSContext *ctx, JSValueConst this_val,
     val = js_thisSymbolValue(ctx, this_val);
     if (JS_IsException(val))
         return val;
-    /* XXX: use qjs_to_string_internal() with a flags */
+    /* XXX: use JS_ToStringInternal() with a flags */
     ret = js_string_constructor(ctx, JS_UNDEFINED, 1, (JSValueConst *)&val);
     JS_FreeValue(ctx, val);
     return ret;
@@ -2238,7 +2236,7 @@ static JSValue JS_ToBigIntCtorFree(JSContext *ctx, JSValue val)
             double d = JS_VALUE_GET_FLOAT64(val);
             JSBigInt *r;
             int res;
-            r = qjs_bigint_from_float64(ctx, &res, d);
+            r = js_bigint_from_float64(ctx, &res, d);
             if (!r) {
                 if (res == 0) {
                     val = JS_EXCEPTION;
@@ -2247,16 +2245,16 @@ static JSValue JS_ToBigIntCtorFree(JSContext *ctx, JSValue val)
                 } else {
                     val = JS_ThrowRangeError(ctx, "cannot convert NaN or Infinity to BigInt");                }
             } else {
-                val = qjs_compact_bigint(ctx, r);
+                val = JS_CompactBigInt(ctx, r);
             }
         }
         break;
     case JS_TAG_STRING:
     case JS_TAG_STRING_ROPE:
-        val = qjs_string_to_bigint_error(ctx, val);
+        val = JS_StringToBigIntErr(ctx, val);
         break;
     case JS_TAG_OBJECT:
-        val = qjs_primitive_to_primitive_free(ctx, val, HINT_NUMBER);
+        val = JS_ToPrimitiveFree(ctx, val, HINT_NUMBER);
         if (JS_IsException(val))
             break;
         goto redo;
@@ -2274,7 +2272,7 @@ static JSValue js_bigint_constructor(JSContext *ctx,
                                      int argc, JSValueConst *argv)
 {
     if (!JS_IsUndefined(new_target))
-        return qjs_primitive_throw_not_constructor(ctx, new_target);
+        return JS_ThrowTypeErrorNotAConstructor(ctx, new_target);
     return JS_ToBigIntCtorFree(ctx, JS_DupValue(ctx, argv[0]));
 }
 
@@ -2310,7 +2308,7 @@ static JSValue js_bigint_toString(JSContext *ctx, JSValueConst this_val,
         if (base < 0)
             goto fail;
     }
-    ret = qjs_bigint_to_string(ctx, val, base);
+    ret = js_bigint_to_string1(ctx, val, base);
     JS_FreeValue(ctx, val);
     return ret;
  fail:
@@ -2333,7 +2331,7 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
 
     if (JS_ToIndex(ctx, &bits, argv[0]))
         return JS_EXCEPTION;
-    a = qjs_to_bigint(ctx, argv[1]);
+    a = JS_ToBigInt(ctx, argv[1]);
     if (JS_IsException(a))
         return JS_EXCEPTION;
     if (bits == 0) {
@@ -2363,7 +2361,7 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
             int len, shift, i;
             js_limb_t v;
             len = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
-            r = qjs_bigint_new(ctx, len);
+            r = js_bigint_new(ctx, len);
             if (!r) {
                 JS_FreeValue(ctx, a);
                 return JS_EXCEPTION;
@@ -2379,9 +2377,9 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
             else
                 v = v >> shift;
             r->tab[len - 1] = v;
-            r = qjs_bigint_normalize(ctx, r);
+            r = js_bigint_normalize(ctx, r);
             JS_FreeValue(ctx, a);
-            res = qjs_compact_bigint(ctx, r);
+            res = JS_CompactBigInt(ctx, r);
         }
     }
     return res;
@@ -2398,11 +2396,11 @@ static const JSCFunctionListEntry js_bigint_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "BigInt", JS_PROP_CONFIGURABLE ),
 };
 
-static int JS_AddIntrinsicBigInt(JSContext *ctx)
+QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx)
 {
     JSValue obj1;
 
-    obj1 = qjs_primitive_new_c_constructor(ctx, JS_CLASS_BIG_INT, "BigInt",
+    obj1 = JS_NewCConstructor(ctx, JS_CLASS_BIG_INT, "BigInt",
                                      js_bigint_constructor, 1, JS_CFUNC_constructor_or_func, 0,
                                      JS_UNDEFINED,
                                      js_bigint_funcs, countof(js_bigint_funcs),
@@ -2420,7 +2418,7 @@ QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx)
 {
     JSValue obj;
 
-    obj = qjs_primitive_new_c_constructor(
+    obj = JS_NewCConstructor(
         ctx, JS_CLASS_NUMBER, "Number", js_number_constructor, 1,
         JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
         js_number_funcs, countof(js_number_funcs),
@@ -2428,22 +2426,22 @@ QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx)
     if (JS_IsException(obj))
         return -1;
     JS_FreeValue(ctx, obj);
-    if (qjs_set_object_data(ctx, ctx->class_proto[JS_CLASS_NUMBER],
+    if (JS_SetObjectData(ctx, ctx->class_proto[JS_CLASS_NUMBER],
                             JS_NewInt32(ctx, 0)))
         return -1;
 
-    obj = qjs_primitive_new_c_constructor(
+    obj = JS_NewCConstructor(
         ctx, JS_CLASS_BOOLEAN, "Boolean", js_boolean_constructor, 1,
         JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED, NULL, 0,
         js_boolean_proto_funcs, countof(js_boolean_proto_funcs), (1 << 1));
     if (JS_IsException(obj))
         return -1;
     JS_FreeValue(ctx, obj);
-    if (qjs_set_object_data(ctx, ctx->class_proto[JS_CLASS_BOOLEAN],
+    if (JS_SetObjectData(ctx, ctx->class_proto[JS_CLASS_BOOLEAN],
                             JS_NewBool(ctx, FALSE)))
         return -1;
 
-    obj = qjs_primitive_new_c_constructor(
+    obj = JS_NewCConstructor(
         ctx, JS_CLASS_STRING, "String", js_string_constructor, 1,
         JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
         js_string_funcs, countof(js_string_funcs),
@@ -2451,12 +2449,12 @@ QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx)
     if (JS_IsException(obj))
         return -1;
     JS_FreeValue(ctx, obj);
-    if (qjs_set_object_data(ctx, ctx->class_proto[JS_CLASS_STRING],
+    if (JS_SetObjectData(ctx, ctx->class_proto[JS_CLASS_STRING],
                             JS_AtomToString(ctx, JS_ATOM_empty_string)))
         return -1;
 
     ctx->class_proto[JS_CLASS_STRING_ITERATOR] =
-        qjs_primitive_new_object_proto_list(
+        JS_NewObjectProtoList(
             ctx, ctx->class_proto[JS_CLASS_ITERATOR],
             js_string_iterator_proto_funcs,
             countof(js_string_iterator_proto_funcs));
@@ -2470,7 +2468,7 @@ QJS_INTERNAL void qjs_primitive_init_classes(JSRuntime *rt)
 
 QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx)
 {
-    JSValue obj = qjs_primitive_new_c_constructor(
+    JSValue obj = JS_NewCConstructor(
         ctx, JS_CLASS_SYMBOL, "Symbol", js_symbol_constructor, 0,
         JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
         js_symbol_funcs, countof(js_symbol_funcs),
@@ -2479,14 +2477,4 @@ QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx)
         return -1;
     JS_FreeValue(ctx, obj);
     return 0;
-}
-
-QJS_INTERNAL int qjs_add_intrinsic_bigint(JSContext *ctx)
-{
-    return JS_AddIntrinsicBigInt(ctx);
-}
-
-QJS_INTERNAL int qjs_string_find_invalid_codepoint(JSString *str)
-{
-    return js_string_find_invalid_codepoint(str);
 }

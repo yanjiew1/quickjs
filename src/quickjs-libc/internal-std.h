@@ -28,7 +28,7 @@
 #include <stddef.h>
 #include "internal-base.h"
 
-QJS_LIBC_INTERNAL void qjs_libc_print_value_write(
+QJS_LIBC_INTERNAL void js_print_value_write(
     void *opaque, const char *buf, size_t len);
 
 #endif /* QJS_LIBC_INTERNAL_STD_H */

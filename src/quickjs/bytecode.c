@@ -82,7 +82,7 @@ static int js_object_list_add(JSContext *ctx, JSObjectList *s, JSObject *obj)
     JSObjectListEntry *e;
     uint32_t h, new_hash_size;
 
-    if (qjs_resize_array(ctx, (void *)&s->object_tab,
+    if (js_resize_array(ctx, (void *)&s->object_tab,
                         sizeof(s->object_tab[0]),
                         &s->object_size, s->object_count + 1))
         return -1;
@@ -226,12 +226,12 @@ static void bc_put_u64(BCWriterState *s, uint64_t v)
 
 static void bc_put_leb128(BCWriterState *s, uint32_t v)
 {
-    qjs_dbuf_put_leb128(&s->dbuf, v);
+    dbuf_put_leb128(&s->dbuf, v);
 }
 
 static void bc_put_sleb128(BCWriterState *s, int32_t v)
 {
-    qjs_dbuf_put_sleb128(&s->dbuf, v);
+    dbuf_put_sleb128(&s->dbuf, v);
 }
 
 static void bc_set_flags(uint32_t *pflags, int *pidx, uint32_t val, int n)
@@ -244,7 +244,7 @@ static int bc_atom_to_idx(BCWriterState *s, uint32_t *pres, JSAtom atom)
 {
     uint32_t v;
 
-    if (atom < s->first_atom || qjs_atom_is_tagged_int(atom)) {
+    if (atom < s->first_atom || __JS_AtomIsTaggedInt(atom)) {
         *pres = atom;
         return 0;
     }
@@ -256,15 +256,15 @@ static int bc_atom_to_idx(BCWriterState *s, uint32_t *pres, JSAtom atom)
     if (atom >= s->atom_to_idx_size) {
         int old_size, i;
         old_size = s->atom_to_idx_size;
-        if (qjs_resize_array(s->ctx, (void **)&s->atom_to_idx,
+        if (js_resize_array(s->ctx, (void **)&s->atom_to_idx,
                             sizeof(s->atom_to_idx[0]), &s->atom_to_idx_size,
                             atom + 1))
             return -1;
-        /* XXX: could add a specific qjs_resize_array() function to do it */
+        /* XXX: could add a specific js_resize_array() function to do it */
         for(i = old_size; i < s->atom_to_idx_size; i++)
             s->atom_to_idx[i] = 0;
     }
-    if (qjs_resize_array(s->ctx, (void **)&s->idx_to_atom,
+    if (js_resize_array(s->ctx, (void **)&s->idx_to_atom,
                         sizeof(s->idx_to_atom[0]),
                         &s->idx_to_atom_size, s->idx_to_atom_count + 1))
         goto fail;
@@ -284,8 +284,8 @@ static int bc_put_atom(BCWriterState *s, JSAtom atom)
 {
     uint32_t v;
 
-    if (qjs_atom_is_tagged_int(atom)) {
-        v = (qjs_atom_to_uint32(atom) << 1) | 1;
+    if (__JS_AtomIsTaggedInt(atom)) {
+        v = (__JS_AtomToUInt32(atom) << 1) | 1;
     } else {
         if (bc_atom_to_idx(s, &v, atom))
             return -1;
@@ -424,7 +424,7 @@ static int JS_WriteBigInt(BCWriterState *s, JSValueConst obj)
     bc_put_u8(s, BC_TAG_BIG_INT);
 
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_SHORT_BIG_INT)
-        p = qjs_bigint_set_short(&buf, obj);
+        p = js_bigint_set_short(&buf, obj);
     else
         p = JS_VALUE_GET_PTR(obj);
     if (p->len == 1 && p->tab[0] == 0) {
@@ -646,7 +646,7 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
             atom = JS_NewAtomUInt32(ctx, i);
             if (atom == JS_ATOM_NULL)
                 goto fail;
-            prs = qjs_find_own_property(&pr, p, atom);
+            prs = find_own_property(&pr, p, atom);
             JS_FreeAtom(ctx, atom);
             if (prs && (prs->flags & JS_PROP_ENUMERABLE)) {
                 if (prs->flags & JS_PROP_TMASK) {
@@ -665,7 +665,7 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
     }
     if (is_template) {
         /* the 'raw' property is not enumerable */
-        prs = qjs_find_own_property(&pr, p, JS_ATOM_raw);
+        prs = find_own_property(&pr, p, JS_ATOM_raw);
         if (prs) {
             if (prs->flags & JS_PROP_TMASK) {
                 JS_ThrowTypeError(ctx, "only value properties are supported");
@@ -700,7 +700,7 @@ static int JS_WriteObjectTag(BCWriterState *s, JSValueConst obj)
     for(pass = 0; pass < 2; pass++) {
         if (pass == 1)
             bc_put_leb128(s, prop_count);
-        for(i = 0, pr = qjs_get_shape_prop(sh); i < sh->prop_count; i++, pr++) {
+        for(i = 0, pr = get_shape_prop(sh); i < sh->prop_count; i++, pr++) {
             atom = pr->atom;
             if (atom != JS_ATOM_NULL &&
                 JS_AtomIsString(s->ctx, atom) &&
@@ -743,7 +743,7 @@ static int JS_WriteArrayBuffer(BCWriterState *s, JSValueConst obj)
     JSObject *p = JS_VALUE_GET_OBJ(obj);
     JSArrayBuffer *abuf = p->u.array_buffer;
     if (abuf->detached) {
-        qjs_throw_detached_array_buffer(s->ctx);
+        JS_ThrowTypeErrorDetachedArrayBuffer(s->ctx);
         return -1;
     }
     bc_put_u8(s, BC_TAG_ARRAY_BUFFER);
@@ -762,7 +762,7 @@ static int JS_WriteSharedArrayBuffer(BCWriterState *s, JSValueConst obj)
     bc_put_leb128(s, abuf->byte_length);
     bc_put_leb128(s, abuf->max_byte_length);
     bc_put_u64(s, (uintptr_t)abuf->data);
-    if (qjs_resize_array(s->ctx, (void **)&s->sab_tab, sizeof(s->sab_tab[0]),
+    if (js_resize_array(s->ctx, (void **)&s->sab_tab, sizeof(s->sab_tab[0]),
                         &s->sab_tab_size, s->sab_tab_len + 1))
         return -1;
     /* keep the SAB pointer so that the user can clone it or free it */
@@ -775,7 +775,7 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
     uint32_t tag;
 
     if (js_check_stack_overflow(s->ctx->rt, 0)) {
-        qjs_throw_stack_overflow(s->ctx);
+        JS_ThrowStackOverflow(s->ctx);
         return -1;
     }
 
@@ -1121,7 +1121,7 @@ static int bc_get_u64(BCReaderState *s, uint64_t *pval)
 static int bc_get_leb128(BCReaderState *s, uint32_t *pval)
 {
     int ret;
-    ret = qjs_get_leb128(pval, s->ptr, s->buf_end);
+    ret = get_leb128(pval, s->ptr, s->buf_end);
     if (unlikely(ret < 0))
         return bc_read_error_end(s);
     s->ptr += ret;
@@ -1131,7 +1131,7 @@ static int bc_get_leb128(BCReaderState *s, uint32_t *pval)
 static int bc_get_sleb128(BCReaderState *s, int32_t *pval)
 {
     int ret;
-    ret = qjs_get_sleb128(pval, s->ptr, s->buf_end);
+    ret = get_sleb128(pval, s->ptr, s->buf_end);
     if (unlikely(ret < 0))
         return bc_read_error_end(s);
     s->ptr += ret;
@@ -1170,7 +1170,7 @@ static int bc_idx_to_atom(BCReaderState *s, JSAtom *patom, uint32_t idx)
 {
     JSAtom atom;
 
-    if (qjs_atom_is_tagged_int(idx)) {
+    if (__JS_AtomIsTaggedInt(idx)) {
         atom = idx;
     } else if (idx < s->first_atom) {
         atom = JS_DupAtom(s->ctx, idx);
@@ -1194,7 +1194,7 @@ static int bc_get_atom(BCReaderState *s, JSAtom *patom)
     if (bc_get_leb128(s, &v))
         return -1;
     if (v & 1) {
-        *patom = qjs_atom_from_uint32(v >> 1);
+        *patom = __JS_AtomFromUInt32(v >> 1);
         return 0;
     } else {
         return bc_idx_to_atom(s, patom, v >> 1);
@@ -1327,7 +1327,7 @@ static JSValue JS_ReadBigInt(BCReaderState *s)
         bc_read_trace(s, "}\n");
         return __JS_NewShortBigInt(s->ctx, 0);
     }
-    p = qjs_bigint_new(s->ctx, (len - 1) / (JS_LIMB_BITS / 8) + 1);
+    p = js_bigint_new(s->ctx, (len - 1) / (JS_LIMB_BITS / 8) + 1);
     if (!p)
         goto fail;
     for(i = 0; i < len / (JS_LIMB_BITS / 8); i++) {
@@ -1357,7 +1357,7 @@ static JSValue JS_ReadBigInt(BCReaderState *s)
         p->tab[p->len - 1] = v;
     }
     bc_read_trace(s, "}\n");
-    return qjs_compact_bigint(s->ctx, p);
+    return JS_CompactBigInt(s->ctx, p);
  fail:
     JS_FreeValue(s->ctx, obj);
     return JS_EXCEPTION;
@@ -1368,7 +1368,7 @@ static JSValue JS_ReadObjectRec(BCReaderState *s);
 static int BC_add_object_ref1(BCReaderState *s, JSObject *p)
 {
     if (s->allow_reference) {
-        if (qjs_resize_array(s->ctx, (void *)&s->objects,
+        if (js_resize_array(s->ctx, (void *)&s->objects,
                             sizeof(s->objects[0]),
                             &s->objects_size, s->objects_count + 1))
             return -1;
@@ -1469,8 +1469,8 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
         b->cpool = (void *)((uint8_t*)b + cpool_offset);
     }
 
-    qjs_get_ref_header(b)->ref_count = 1;
-    qjs_add_gc_object(ctx->rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
+    js_rc(b)->ref_count = 1;
+    add_gc_object(ctx->rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
 
     obj = JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
 
@@ -1598,10 +1598,10 @@ static JSValue JS_ReadModule(BCReaderState *s)
 #ifdef DUMP_READ_OBJECT
     bc_read_trace(s, "name: "); print_atom(s->ctx, module_name); printf("\n");
 #endif
-    m = qjs_new_module_def(ctx, module_name);
+    m = js_new_module_def(ctx, module_name);
     if (!m)
         goto fail;
-    obj = qjs_new_module_value(ctx, m);
+    obj = JS_NewModuleValue(ctx, m);
     if (bc_get_leb128_int(s, &m->req_module_entries_count))
         goto fail;
     if (m->req_module_entries_count != 0) {
@@ -1803,14 +1803,14 @@ static JSValue JS_ReadTypedArray(BCReaderState *s)
     array_buffer = JS_ReadObjectRec(s);
     if (JS_IsException(array_buffer))
         return JS_EXCEPTION;
-    if (!qjs_get_array_buffer(ctx, array_buffer)) {
+    if (!js_get_array_buffer(ctx, array_buffer)) {
         JS_FreeValue(ctx, array_buffer);
         return JS_EXCEPTION;
     }
     args[0] = array_buffer;
     args[1] = JS_NewInt64(ctx, offset);
     args[2] = JS_NewInt64(ctx, len);
-    obj = qjs_typed_array_constructor(ctx, JS_UNDEFINED,
+    obj = js_typed_array_constructor(ctx, JS_UNDEFINED,
                                      3, args,
                                      JS_CLASS_UINT8C_ARRAY + array_tag);
     if (JS_IsException(obj))
@@ -1848,11 +1848,11 @@ static JSValue JS_ReadArrayBuffer(BCReaderState *s)
         return JS_EXCEPTION;
     }
     // makes a copy of the input
-    obj = qjs_array_buffer_constructor(ctx, JS_UNDEFINED,
+    obj = js_array_buffer_constructor3(ctx, JS_UNDEFINED,
                                        byte_length, pmax_byte_length,
                                        JS_CLASS_ARRAY_BUFFER,
                                        (uint8_t*)s->ptr,
-                                       qjs_array_buffer_free, NULL,
+                                       js_array_buffer_free, NULL,
                                        /*alloc_flag*/TRUE);
     if (JS_IsException(obj))
         goto fail;
@@ -1888,7 +1888,7 @@ static JSValue JS_ReadSharedArrayBuffer(BCReaderState *s)
         return JS_EXCEPTION;
     data_ptr = (uint8_t *)(uintptr_t)u64;
     /* the SharedArrayBuffer is cloned */
-    obj = qjs_array_buffer_constructor(ctx, JS_UNDEFINED,
+    obj = js_array_buffer_constructor3(ctx, JS_UNDEFINED,
                                        byte_length, pmax_byte_length,
                                        JS_CLASS_SHARED_ARRAY_BUFFER,
                                        data_ptr,
@@ -1921,7 +1921,7 @@ static JSValue JS_ReadDate(BCReaderState *s)
         goto fail;
     if (BC_add_object_ref(s, obj))
         goto fail;
-    qjs_set_object_data(ctx, obj, val);
+    JS_SetObjectData(ctx, obj, val);
     return obj;
  fail:
     JS_FreeValue(ctx, val);
@@ -1957,7 +1957,7 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
     JSValue obj = JS_UNDEFINED;
 
     if (js_check_stack_overflow(ctx->rt, 0))
-        return qjs_throw_stack_overflow(ctx);
+        return JS_ThrowStackOverflow(ctx);
 
     if (bc_get_u8(s, &tag))
         return JS_EXCEPTION;

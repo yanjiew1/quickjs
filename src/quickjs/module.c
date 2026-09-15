@@ -24,13 +24,8 @@
  */
 #include "internal-module.h"
 
-typedef enum JSFreeModuleEnum {
-    JS_FREE_MODULE_ALL,
-    JS_FREE_MODULE_NOT_RESOLVED,
-} JSFreeModuleEnum;
-
 /* XXX: would be more efficient with separate module lists */
-static void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
+QJS_INTERNAL void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
 {
     struct list_head *el, *el1;
     list_for_each_safe(el, el1, &ctx->loaded_modules) {
@@ -49,7 +44,7 @@ static void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
 }
 
 /* 'name' is freed. The module is referenced by 'ctx->loaded_modules' */
-static JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
+QJS_INTERNAL JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
 {
     JSModuleDef *m;
     m = js_mallocz(ctx, sizeof(*m));
@@ -57,8 +52,8 @@ static JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
         JS_FreeAtom(ctx, name);
         return NULL;
     }
-    qjs_get_ref_header(m)->ref_count = 1;
-    qjs_add_gc_object(ctx->rt, &m->header, JS_GC_OBJ_TYPE_MODULE);
+    js_rc(m)->ref_count = 1;
+    add_gc_object(ctx->rt, &m->header, JS_GC_OBJ_TYPE_MODULE);
     m->module_name = name;
     m->module_ns = JS_UNDEFINED;
     m->func_obj = JS_UNDEFINED;
@@ -72,7 +67,7 @@ static JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
     return m;
 }
 
-static void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
+QJS_INTERNAL void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
                                JS_MarkFunc *mark_func)
 {
     int i;
@@ -100,7 +95,7 @@ static void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
     JS_MarkValue(rt, m->private_value, mark_func);
 }
 
-static void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
+QJS_INTERNAL void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
 {
     int i;
 
@@ -116,7 +111,7 @@ static void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
     for(i = 0; i < m->export_entries_count; i++) {
         JSExportEntry *me = &m->export_entries[i];
         if (me->export_type == JS_EXPORT_TYPE_LOCAL)
-            qjs_free_var_ref(rt, me->u.local.var_ref);
+            free_var_ref(rt, me->u.local.var_ref);
         JS_FreeAtomRT(rt, me->export_name);
         JS_FreeAtomRT(rt, me->local_name);
     }
@@ -144,20 +139,20 @@ static void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
     if (m->link.next) {
         list_del(&m->link);
     }
-    qjs_remove_gc_object(&m->header);
-    if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && qjs_get_ref_header(m)->ref_count != 0) {
+    remove_gc_object(&m->header);
+    if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && js_rc(m)->ref_count != 0) {
         list_add_tail(&m->header.link, &rt->gc_zero_ref_count_list);
     } else {
         js_free_rt(rt, m);
     }
 }
 
-static int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
+QJS_INTERNAL int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
                                 JSAtom module_name)
 {
     JSReqModuleEntry *rme;
 
-    if (qjs_resize_array(ctx, (void **)&m->req_module_entries,
+    if (js_resize_array(ctx, (void **)&m->req_module_entries,
                         sizeof(JSReqModuleEntry),
                         &m->req_module_entries_size,
                         m->req_module_entries_count + 1))
@@ -169,7 +164,7 @@ static int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
     return m->req_module_entries_count - 1;
 }
 
-static JSExportEntry *find_export_entry(JSModuleDef *m, JSAtom export_name)
+QJS_INTERNAL JSExportEntry *find_export_entry(JSModuleDef *m, JSAtom export_name)
 {
     JSExportEntry *me;
     int i;
@@ -181,18 +176,19 @@ static JSExportEntry *find_export_entry(JSModuleDef *m, JSAtom export_name)
     return NULL;
 }
 
-static JSExportEntry *add_export_entry2(JSContext *ctx, JSModuleDef *m,
+QJS_INTERNAL JSExportEntry *add_export_entry2(JSContext *ctx, JSModuleDef *m,
                                         JSAtom local_name, JSAtom export_name,
                                         JSExportTypeEnum export_type)
 {
     JSExportEntry *me;
 
     if (find_export_entry(m, export_name)) {
-        qjs_throw_duplicate_export(ctx, export_name);
+        JS_ThrowSyntaxErrorAtom(ctx, "duplicate exported name '%s'",
+                                export_name);
         return NULL;
     }
 
-    if (qjs_resize_array(ctx, (void **)&m->export_entries,
+    if (js_resize_array(ctx, (void **)&m->export_entries,
                         sizeof(JSExportEntry),
                         &m->export_entries_size,
                         m->export_entries_count + 1))
@@ -205,12 +201,12 @@ static JSExportEntry *add_export_entry2(JSContext *ctx, JSModuleDef *m,
     return me;
 }
 
-static int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
+QJS_INTERNAL int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
                                  int req_module_idx)
 {
     JSStarExportEntry *se;
 
-    if (qjs_resize_array(ctx, (void **)&m->star_export_entries,
+    if (js_resize_array(ctx, (void **)&m->star_export_entries,
                         sizeof(JSStarExportEntry),
                         &m->star_export_entries_size,
                         m->star_export_entries_count + 1))
@@ -264,7 +260,7 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
     JS_FreeAtom(ctx, name);
     if (!me)
         goto fail;
-    qjs_set_value(ctx, me->u.local.var_ref->pvalue, val);
+    set_value(ctx, me->u.local.var_ref->pvalue, val);
     return 0;
  fail:
     JS_FreeValue(ctx, val);
@@ -273,7 +269,7 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
 
 int JS_SetModulePrivateValue(JSContext *ctx, JSModuleDef *m, JSValue val)
 {
-    qjs_set_value(ctx, &m->private_value, val);
+    set_value(ctx, &m->private_value, val);
     return 0;
 }
 
@@ -483,7 +479,7 @@ static int add_resolve_entry(JSContext *ctx, JSResolveState *s,
 {
     JSResolveEntry *re;
 
-    if (qjs_resize_array(ctx, (void **)&s->array,
+    if (js_resize_array(ctx, (void **)&s->array,
                         sizeof(JSResolveEntry),
                         &s->size, s->count + 1))
         return -1;
@@ -677,7 +673,7 @@ static __exception int get_exported_names(JSContext *ctx,
         if (s->modules[i] == m)
             return 0;
     }
-    if (qjs_resize_array(ctx, (void **)&s->modules, sizeof(s->modules[0]),
+    if (js_resize_array(ctx, (void **)&s->modules, sizeof(s->modules[0]),
                         &s->modules_size, s->modules_count + 1))
         return -1;
     s->modules[s->modules_count++] = m;
@@ -688,7 +684,7 @@ static __exception int get_exported_names(JSContext *ctx,
             continue;
         j = find_exported_name(s, me->export_name);
         if (j < 0) {
-            if (qjs_resize_array(ctx, (void **)&s->exported_names, sizeof(s->exported_names[0]),
+            if (js_resize_array(ctx, (void **)&s->exported_names, sizeof(s->exported_names[0]),
                                 &s->exported_names_size,
                                 s->exported_names_count + 1))
                 return -1;
@@ -717,7 +713,7 @@ static __exception int get_exported_names(JSContext *ctx,
 /* Unfortunately, the spec gives a different behavior from GetOwnProperty ! */
 static int js_module_ns_has(JSContext *ctx, JSValueConst obj, JSAtom atom)
 {
-    return (qjs_find_own_property1(JS_VALUE_GET_OBJ(obj), atom) != NULL);
+    return (find_own_property1(JS_VALUE_GET_OBJ(obj), atom) != NULL);
 }
 
 static const JSClassExoticMethods js_module_ns_exotic_methods = {
@@ -747,7 +743,7 @@ static int exported_names_cmp(const void *p1, const void *p2, void *opaque)
     return ret;
 }
 
-static JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
+QJS_INTERNAL JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
                                      void *opaque)
 {
     JSModuleDef *m = opaque;
@@ -844,19 +840,19 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
         case EXPORTED_NAME_NORMAL:
             {
                 JSVarRef *var_ref = en->u.var_ref;
-                pr = qjs_add_property(ctx, p, en->export_name,
+                pr = add_property(ctx, p, en->export_name,
                                   JS_PROP_ENUMERABLE | JS_PROP_WRITABLE |
                                   JS_PROP_VARREF);
                 if (!pr)
                     goto fail;
-                qjs_get_ref_header(var_ref)->ref_count++;
+                js_rc(var_ref)->ref_count++;
                 pr->u.var_ref = var_ref;
             }
             break;
         case EXPORTED_NAME_DELAYED:
             /* the exported namespace or reference may depend on
                circular references, so we resolve it lazily */
-            if (qjs_define_auto_init_property(ctx, obj,
+            if (JS_DefineAutoInitProperty(ctx, obj,
                                           en->export_name,
                                           JS_AUTOINIT_ID_MODULE_NS,
                                           m, JS_PROP_ENUMERABLE | JS_PROP_WRITABLE) < 0)
@@ -894,7 +890,7 @@ JSValue JS_GetModuleNamespace(JSContext *ctx, JSModuleDef *m)
 }
 
 /* Load all the required modules for module 'm' */
-static int js_resolve_module(JSContext *ctx, JSModuleDef *m)
+QJS_INTERNAL int js_resolve_module(JSContext *ctx, JSModuleDef *m)
 {
     int i;
     JSModuleDef *m1;
@@ -939,7 +935,7 @@ static int js_create_module_bytecode_function(JSContext *ctx, JSModuleDef *m)
         return -1;
     m->func_obj = func_obj;
     b = JS_VALUE_GET_PTR(bfunc);
-    func_obj = qjs_closure2(ctx, func_obj, b, NULL, NULL, TRUE, m);
+    func_obj = js_closure2(ctx, func_obj, b, NULL, NULL, TRUE, m);
     if (JS_IsException(func_obj)) {
         m->func_obj = JS_UNDEFINED; /* XXX: keep it ? */
         JS_FreeValue(ctx, func_obj);
@@ -965,7 +961,7 @@ static int js_create_module_function(JSContext *ctx, JSModuleDef *m)
         for(i = 0; i < m->export_entries_count; i++) {
             JSExportEntry *me = &m->export_entries[i];
             if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
-                var_ref = qjs_create_var_ref(ctx, FALSE);
+                var_ref = js_create_var_ref(ctx, FALSE);
                 if (!var_ref)
                     return -1;
                 me->u.local.var_ref = var_ref;
@@ -1003,7 +999,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
     JSValue ret_val;
 
     if (js_check_stack_overflow(ctx->rt, 0)) {
-        qjs_throw_stack_overflow(ctx);
+        JS_ThrowStackOverflow(ctx);
         return -1;
     }
 
@@ -1073,8 +1069,8 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
         printf("exported bindings:\n");
         for(i = 0; i < m->export_entries_count; i++) {
             JSExportEntry *me = &m->export_entries[i];
-            printf(" name="); qjs_print_atom(ctx, me->export_name);
-            printf(" local="); qjs_print_atom(ctx, me->local_name);
+            printf(" name="); print_atom(ctx, me->export_name);
+            printf(" local="); print_atom(ctx, me->local_name);
             printf(" type=%d idx=%d\n", me->export_type, me->u.local.var_idx);
         }
     }
@@ -1090,7 +1086,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
             mi = &m->import_entries[i];
 #ifdef DUMP_MODULE_RESOLVE
             printf("import var_idx=%d name=", mi->var_idx);
-            qjs_print_atom(ctx, mi->import_name);
+            print_atom(ctx, mi->import_name);
             printf(": ");
 #endif
             m1 = m->req_module_entries[mi->req_module_idx].module;
@@ -1100,7 +1096,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                 val = JS_GetModuleNamespace(ctx, m1);
                 if (JS_IsException(val))
                     goto fail;
-                qjs_set_value(ctx, &var_refs[mi->var_idx]->value, val);
+                set_value(ctx, &var_refs[mi->var_idx]->value, val);
 #ifdef DUMP_MODULE_RESOLVE
                 printf("namespace\n");
 #endif
@@ -1124,12 +1120,12 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                     val = JS_GetModuleNamespace(ctx, m2);
                     if (JS_IsException(val))
                         goto fail;
-                    var_ref = qjs_create_var_ref(ctx, TRUE);
+                    var_ref = js_create_var_ref(ctx, TRUE);
                     if (!var_ref) {
                         JS_FreeValue(ctx, val);
                         goto fail;
                     }
-                    qjs_set_value(ctx, &var_ref->value, val);
+                    set_value(ctx, &var_ref->value, val);
                     var_refs[mi->var_idx] = var_ref;
 #ifdef DUMP_MODULE_RESOLVE
                     printf("namespace from\n");
@@ -1140,7 +1136,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                         p1 = JS_VALUE_GET_OBJ(res_m->func_obj);
                         var_ref = p1->u.func.var_refs[res_me->u.local.var_idx];
                     }
-                    qjs_get_ref_header(var_ref)->ref_count++;
+                    js_rc(var_ref)->ref_count++;
                     var_refs[mi->var_idx] = var_ref;
 #ifdef DUMP_MODULE_RESOLVE
                     printf("local export (var_ref=%p)\n", var_ref);
@@ -1156,7 +1152,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
             JSExportEntry *me = &m->export_entries[i];
             if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
                 var_ref = var_refs[me->u.local.var_idx];
-                qjs_get_ref_header(var_ref)->ref_count++;
+                js_rc(var_ref)->ref_count++;
                 me->u.local.var_ref = var_ref;
             }
         }
@@ -1243,7 +1239,7 @@ JSAtom JS_GetScriptOrModuleName(JSContext *ctx, int n_stack_levels)
         if (JS_VALUE_GET_TAG(sf->cur_func) != JS_TAG_OBJECT)
             return JS_ATOM_NULL;
         p = JS_VALUE_GET_OBJ(sf->cur_func);
-        if (!qjs_class_has_bytecode(p->class_id))
+        if (!js_class_has_bytecode(p->class_id))
             return JS_ATOM_NULL;
         b = p->u.func.function_bytecode;
         if (!b->is_direct_or_indirect_eval) {
@@ -1277,7 +1273,7 @@ JSValue JS_GetImportMeta(JSContext *ctx, JSModuleDef *m)
     return JS_DupValue(ctx, obj);
 }
 
-static JSValue js_import_meta(JSContext *ctx)
+QJS_INTERNAL JSValue js_import_meta(JSContext *ctx)
 {
     JSAtom filename;
     JSModuleDef *m;
@@ -1298,7 +1294,7 @@ static JSValue js_import_meta(JSContext *ctx)
     return JS_GetImportMeta(ctx, m);
 }
 
-static JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m)
+QJS_INTERNAL JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m)
 {
     return JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
 }
@@ -1442,7 +1438,7 @@ static JSValue js_dynamic_import_job(JSContext *ctx,
     return JS_UNDEFINED;
 }
 
-static JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options)
+QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options)
 {
     JSAtom basename;
     JSValue promise, resolving_funcs[2], basename_val, err, ret;
@@ -1487,7 +1483,7 @@ static JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValue
                 goto exception;
             }
             attributes = JS_NewObjectProto(ctx, JS_NULL);
-            if (qjs_get_own_property_names_internal(ctx, &atoms, &atoms_len, JS_VALUE_GET_OBJ(attributes_obj),
+            if (JS_GetOwnPropertyNamesInternal(ctx, &atoms, &atoms_len, JS_VALUE_GET_OBJ(attributes_obj),
                                                JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY)) {
                 goto exception;
             }
@@ -1578,7 +1574,7 @@ static int gather_available_ancestors(JSContext *ctx, JSModuleDef *module,
     int i;
 
     if (js_check_stack_overflow(ctx->rt, 0)) {
-        qjs_throw_stack_overflow(ctx);
+        JS_ThrowStackOverflow(ctx);
         return -1;
     }
     for(i = 0; i < module->async_parent_modules_count; i++) {
@@ -1591,7 +1587,7 @@ static int gather_available_ancestors(JSContext *ctx, JSModuleDef *module,
             assert(m->pending_async_dependencies > 0);
             m->pending_async_dependencies--;
             if (m->pending_async_dependencies == 0) {
-                if (qjs_resize_array(ctx, (void **)&exec_list->tab, sizeof(exec_list->tab[0]), &exec_list->size, exec_list->count + 1)) {
+                if (js_resize_array(ctx, (void **)&exec_list->tab, sizeof(exec_list->tab[0]), &exec_list->size, exec_list->count + 1)) {
                     return -1;
                 }
                 exec_list->tab[exec_list->count++] = m;
@@ -1636,7 +1632,7 @@ static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst t
     js_dump_module(ctx, __func__, module);
 #endif
     if (js_check_stack_overflow(ctx->rt, 0))
-        return qjs_throw_stack_overflow(ctx);
+        return JS_ThrowStackOverflow(ctx);
 
     if (module->status == JS_MODULE_STATUS_EVALUATED) {
         assert(module->eval_has_exception);
@@ -1804,7 +1800,7 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
 #endif
 
     if (js_check_stack_overflow(ctx->rt, 0)) {
-        qjs_throw_stack_overflow(ctx);
+        JS_ThrowStackOverflow(ctx);
         *pvalue = JS_GetException(ctx);
         return -1;
     }
@@ -1857,7 +1853,7 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
         }
         if (m1->async_evaluation) {
             m->pending_async_dependencies++;
-            if (qjs_resize_array(ctx, (void **)&m1->async_parent_modules, sizeof(m1->async_parent_modules[0]), &m1->async_parent_modules_size, m1->async_parent_modules_count + 1)) {
+            if (js_resize_array(ctx, (void **)&m1->async_parent_modules, sizeof(m1->async_parent_modules[0]), &m1->async_parent_modules_size, m1->async_parent_modules_count + 1)) {
                 *pvalue = JS_GetException(ctx);
                 return -1;
             }
@@ -1978,73 +1974,10 @@ int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
 
 
 
-QJS_INTERNAL void qjs_module_free_all(JSContext *ctx)
-{
-    js_free_modules(ctx, JS_FREE_MODULE_ALL);
-}
-
-QJS_INTERNAL void qjs_free_module_def(JSRuntime *rt, JSModuleDef *module)
-{
-    js_free_module_def(rt, module);
-}
-
-QJS_INTERNAL void qjs_mark_module_def(JSRuntime *rt, JSModuleDef *module,
-                                      JS_MarkFunc *mark_func)
-{
-    js_mark_module_def(rt, module, mark_func);
-}
-
 QJS_INTERNAL void qjs_module_init_class(JSRuntime *rt)
 {
     rt->class_array[JS_CLASS_MODULE_NS].exotic =
         &js_module_ns_exotic_methods;
-}
-
-QJS_INTERNAL JSValue qjs_module_ns_autoinit(JSContext *ctx, JSObject *obj,
-                                            JSAtom atom, void *opaque)
-{
-    return js_module_ns_autoinit(ctx, obj, atom, opaque);
-}
-
-QJS_INTERNAL JSModuleDef *qjs_new_module_def(JSContext *ctx, JSAtom name)
-{
-    return js_new_module_def(ctx, name);
-}
-
-QJS_INTERNAL JSValue qjs_new_module_value(JSContext *ctx, JSModuleDef *module)
-{
-    return JS_NewModuleValue(ctx, module);
-}
-
-QJS_INTERNAL int qjs_module_add_request(JSContext *ctx, JSModuleDef *module,
-                                        JSAtom module_name)
-{
-    return add_req_module_entry(ctx, module, module_name);
-}
-
-QJS_INTERNAL JSExportEntry *qjs_module_find_export(JSModuleDef *module,
-                                                   JSAtom export_name)
-{
-    return find_export_entry(module, export_name);
-}
-
-QJS_INTERNAL JSExportEntry *qjs_module_add_export_unchecked(
-    JSContext *ctx, JSModuleDef *module, JSAtom local_name,
-    JSAtom export_name, JSExportTypeEnum export_type)
-{
-    return add_export_entry2(ctx, module, local_name, export_name, export_type);
-}
-
-QJS_INTERNAL int qjs_module_add_star_export(JSContext *ctx,
-                                            JSModuleDef *module,
-                                            int req_module_idx)
-{
-    return add_star_export_entry(ctx, module, req_module_idx);
-}
-
-QJS_INTERNAL int qjs_resolve_module(JSContext *ctx, JSModuleDef *module)
-{
-    return js_resolve_module(ctx, module);
 }
 
 QJS_INTERNAL JSValue qjs_module_link_and_evaluate(JSContext *ctx,
@@ -2055,16 +1988,4 @@ QJS_INTERNAL JSValue qjs_module_link_and_evaluate(JSContext *ctx,
     if (js_link_module(ctx, module) < 0)
         return JS_EXCEPTION;
     return js_evaluate_module(ctx, module);
-}
-
-QJS_INTERNAL JSValue qjs_import_meta(JSContext *ctx)
-{
-    return js_import_meta(ctx);
-}
-
-QJS_INTERNAL JSValue qjs_dynamic_import(JSContext *ctx,
-                                        JSValueConst specifier,
-                                        JSValueConst options)
-{
-    return js_dynamic_import(ctx, specifier, options);
 }

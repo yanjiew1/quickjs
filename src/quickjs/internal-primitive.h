@@ -29,47 +29,42 @@
 #include "internal-regexp.h"
 #include "internal-array.h"
 
-#define JS_ToInt32Sat qjs_to_int32_sat
-#define JS_ToInt32Clamp qjs_to_int32_clamp
-#define JS_ToInt64Sat qjs_to_int64_sat
 #define HINT_NUMBER 1
 
 QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx);
-QJS_INTERNAL int qjs_add_intrinsic_bigint(JSContext *ctx);
+QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx);
 
-QJS_INTERNAL int qjs_primitive_throw_not_configurable(JSContext *ctx,
-                                                      int flags);
-QJS_INTERNAL JSValue qjs_primitive_throw_not_constructor(
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(
     JSContext *ctx, JSValueConst value);
-QJS_INTERNAL uint32_t qjs_string_object_length(JSContext *ctx,
+QJS_INTERNAL uint32_t js_string_obj_get_length(JSContext *ctx,
                                                JSValueConst value);
-QJS_INTERNAL JSValue qjs_primitive_get_property_value(JSContext *ctx,
+QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx,
                                                       JSValueConst obj,
                                                       JSValue property);
-QJS_INTERNAL JSValue qjs_primitive_get_property_int64(JSContext *ctx,
+QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx,
                                                       JSValueConst obj,
                                                       int64_t index);
-QJS_INTERNAL BOOL qjs_primitive_check_define_flags(int prop_flags, int flags);
-QJS_INTERNAL int qjs_primitive_create_data_property_uint32(
+QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
+QJS_INTERNAL int JS_CreateDataPropertyUint32(
     JSContext *ctx, JSValueConst obj, uint32_t index, JSValue value,
     int flags);
-QJS_INTERNAL JSValue qjs_primitive_to_primitive_free(JSContext *ctx,
+QJS_INTERNAL JSValue JS_ToPrimitiveFree(JSContext *ctx,
                                                     JSValue value, int hint);
-QJS_INTERNAL JSValue qjs_primitive_to_string_check_object(
+QJS_INTERNAL JSValue JS_ToStringCheckObject(
     JSContext *ctx, JSValueConst value);
-QJS_INTERNAL JSValue qjs_primitive_create_from_ctor(JSContext *ctx,
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
                                                     JSValueConst ctor,
-                                                    JSClassID class_id);
-QJS_INTERNAL JSValue qjs_primitive_invoke_free(JSContext *ctx, JSValue value,
+                                                    int class_id);
+QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue value,
                                                JSAtom atom, int argc,
                                                JSValueConst *argv);
-QJS_INTERNAL JSValue qjs_primitive_to_object_free(JSContext *ctx,
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx,
                                                   JSValue value);
-QJS_INTERNAL JSValue qjs_primitive_new_object_proto_list(
+QJS_INTERNAL JSValue JS_NewObjectProtoList(
     JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
     int field_count);
-QJS_INTERNAL JSValue qjs_primitive_new_c_constructor(
+QJS_INTERNAL JSValue JS_NewCConstructor(
     JSContext *ctx, int class_id, const char *name, JSCFunction *func,
     int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
     const JSCFunctionListEntry *ctor_fields, int ctor_field_count,

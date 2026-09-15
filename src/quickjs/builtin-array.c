@@ -25,7 +25,10 @@
 #include "internal-array.h"
 #include "internal-primitive.h"
 
-static void js_array_finalizer(JSRuntime *rt, JSValue val)
+#define js_get_length32(ctx, length, value) \
+    js_get_length32_inline((ctx), (length), (value))
+
+QJS_INTERNAL void js_array_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     int i;
@@ -36,7 +39,7 @@ static void js_array_finalizer(JSRuntime *rt, JSValue val)
     js_free_rt(rt, p->u.array.u.values);
 }
 
-static void js_array_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_array_mark(JSRuntime *rt, JSValueConst val,
                           JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -86,20 +89,20 @@ static int JS_CopySubArray(JSContext *ctx,
                 l = min_int64(l, from + 1);
                 l = min_int64(l, to + 1);
                 for(j = 0; j < l; j++) {
-                    qjs_set_value(ctx, &p->u.array.u.values[to - j],
+                    set_value(ctx, &p->u.array.u.values[to - j],
                               JS_DupValue(ctx, p->u.array.u.values[from - j]));
                 }
             } else {
                 l = min_int64(l, len - from);
                 l = min_int64(l, len - to);
                 for(j = 0; j < l; j++) {
-                    qjs_set_value(ctx, &p->u.array.u.values[to + j],
+                    set_value(ctx, &p->u.array.u.values[to + j],
                               JS_DupValue(ctx, p->u.array.u.values[from + j]));
                 }
             }
             i += l;
         } else {
-            fromPresent = qjs_try_get_property_int64(ctx, obj, from, &val);
+            fromPresent = JS_TryGetPropertyInt64(ctx, obj, from, &val);
             if (fromPresent < 0)
                 goto exception;
 
@@ -107,7 +110,7 @@ static int JS_CopySubArray(JSContext *ctx,
                 if (JS_SetPropertyInt64(ctx, obj, to, val) < 0)
                     goto exception;
             } else {
-                if (qjs_delete_property_int64(ctx, obj, to, JS_PROP_THROW) < 0)
+                if (JS_DeletePropertyInt64(ctx, obj, to, JS_PROP_THROW) < 0)
                     goto exception;
             }
             i++;
@@ -125,12 +128,12 @@ static JSValue js_array_constructor(JSContext *ctx, JSValueConst new_target,
     JSValue obj;
     int i;
 
-    obj = qjs_primitive_create_from_ctor(ctx, new_target, JS_CLASS_ARRAY);
+    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_ARRAY);
     if (JS_IsException(obj))
         return obj;
     if (argc == 1 && JS_IsNumber(argv[0])) {
         uint32_t len;
-        if (qjs_to_array_length_free(ctx, &len, JS_DupValue(ctx, argv[0]), TRUE))
+        if (JS_ToArrayLengthFree(ctx, &len, JS_DupValue(ctx, argv[0]), TRUE))
             goto fail;
         if (JS_SetProperty(ctx, obj, JS_ATOM_length, JS_NewUint32(ctx, len)) < 0)
             goto fail;
@@ -168,7 +171,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
     if (argc > 1) {
         mapfn = argv[1];
         if (!JS_IsUndefined(mapfn)) {
-            if (qjs_check_function(ctx, mapfn))
+            if (check_function(ctx, mapfn))
                 goto exception;
             mapping = 1;
             if (argc > 2)
@@ -189,14 +192,14 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
             r = JS_NewArray(ctx);
         if (JS_IsException(r))
             goto exception;
-        enum_obj = qjs_get_iterator2(ctx, items, iter);
+        enum_obj = JS_GetIterator2(ctx, items, iter);
         if (JS_IsException(enum_obj))
             goto exception;
         next_method = JS_GetProperty(ctx, enum_obj, JS_ATOM_next);
         if (JS_IsException(next_method))
             goto exception;
         for (k = 0;; k++) {
-            v = qjs_iterator_next(ctx, enum_obj, next_method, 0, NULL, &done);
+            v = JS_IteratorNext(ctx, enum_obj, next_method, 0, NULL, &done);
             if (JS_IsException(v))
                 goto exception;
             if (done)
@@ -210,7 +213,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
                 if (JS_IsException(v))
                     goto exception_close;
             }
-            if (qjs_define_property_value_int64(ctx, r, k, v,
+            if (JS_DefinePropertyValueInt64(ctx, r, k, v,
                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                 goto exception_close;
         }
@@ -231,7 +234,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(r))
             goto exception;
         for(k = 0; k < len; k++) {
-            v = qjs_get_property_int64(ctx, arrayLike, k);
+            v = JS_GetPropertyInt64(ctx, arrayLike, k);
             if (JS_IsException(v))
                 goto exception;
             if (mapping) {
@@ -243,7 +246,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
                 if (JS_IsException(v))
                     goto exception;
             }
-            if (qjs_define_property_value_int64(ctx, r, k, v,
+            if (JS_DefinePropertyValueInt64(ctx, r, k, v,
                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                 goto exception;
         }
@@ -253,7 +256,7 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
     goto done;
 
  exception_close:
-    qjs_iterator_close(ctx, enum_obj, TRUE);
+    JS_IteratorClose(ctx, enum_obj, TRUE);
  exception:
     JS_FreeValue(ctx, r);
     r = JS_EXCEPTION;
@@ -280,7 +283,7 @@ static JSValue js_array_of(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     for(i = 0; i < argc; i++) {
-        if (qjs_primitive_create_data_property_uint32(ctx, obj, i, JS_DupValue(ctx, argv[i]),
+        if (JS_CreateDataPropertyUint32(ctx, obj, i, JS_DupValue(ctx, argv[i]),
                                         JS_PROP_THROW) < 0) {
             goto fail;
         }
@@ -304,7 +307,7 @@ static JSValue js_array_isArray(JSContext *ctx, JSValueConst this_val,
         return JS_NewBool(ctx, ret);
 }
 
-static JSValue js_get_this(JSContext *ctx,
+QJS_INTERNAL JSValue js_get_this(JSContext *ctx,
                            JSValueConst this_val)
 {
     return JS_DupValue(ctx, this_val);
@@ -327,13 +330,13 @@ static JSValue JS_ArraySpeciesGetCtor(JSContext *ctx, JSValueConst obj)
         return ctor;
     if (JS_IsConstructor(ctx, ctor)) {
         /* legacy web compatibility */
-        realm = qjs_get_function_realm(ctx, ctor);
+        realm = JS_GetFunctionRealm(ctx, ctor);
         if (!realm) {
             JS_FreeValue(ctx, ctor);
             return JS_EXCEPTION;
         }
         if (realm != ctx &&
-            qjs_same_value(ctx, ctor, realm->array_ctor)) {
+            js_same_value(ctx, ctor, realm->array_ctor)) {
             JS_FreeValue(ctx, ctor);
             ctor = JS_UNDEFINED;
         }
@@ -348,7 +351,7 @@ static JSValue JS_ArraySpeciesGetCtor(JSContext *ctx, JSValueConst obj)
             ctor = JS_UNDEFINED;
     }
     if (!JS_IsUndefined(ctor) &&
-        qjs_same_value(ctx, ctor, ctx->array_ctor)) {
+        js_same_value(ctx, ctor, ctx->array_ctor)) {
         JS_FreeValue(ctx, ctor);
         ctor = JS_UNDEFINED;
     }
@@ -399,7 +402,7 @@ static int JS_isConcatSpreadable(JSContext *ctx, JSValueConst obj)
     if (JS_IsException(val))
         return -1;
     if (!JS_IsUndefined(val))
-        return qjs_to_bool_free(ctx, val);
+        return JS_ToBoolFree(ctx, val);
     return JS_IsArray(ctx, obj);
 }
 
@@ -415,7 +418,7 @@ static JSValue js_array_at(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
-    if (qjs_to_int64_sat(ctx, &idx, argv[0]))
+    if (JS_ToInt64Sat(ctx, &idx, argv[0]))
         goto exception;
 
     if (idx < 0)
@@ -425,7 +428,7 @@ static JSValue js_array_at(JSContext *ctx, JSValueConst this_val,
     } else if (js_get_fast_array(ctx, obj, &arrp, &count) && idx < count) {
         ret = JS_DupValue(ctx, arrp[idx]);
     } else {
-        int present = qjs_try_get_property_int64(ctx, obj, idx, &ret);
+        int present = JS_TryGetPropertyInt64(ctx, obj, idx, &ret);
         if (present < 0)
             goto exception;
         if (!present)
@@ -452,7 +455,7 @@ static JSValue js_array_with(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
-    if (qjs_to_int64_sat(ctx, &idx, argv[0]))
+    if (JS_ToInt64Sat(ctx, &idx, argv[0]))
         goto exception;
 
     if (idx < 0)
@@ -463,7 +466,7 @@ static JSValue js_array_with(JSContext *ctx, JSValueConst this_val,
         goto exception;
     }
 
-    arr = qjs_allocate_fast_array(ctx, len);
+    arr = js_allocate_fast_array(ctx, len);
     if (JS_IsException(arr))
         goto exception;
 
@@ -478,11 +481,11 @@ static JSValue js_array_with(JSContext *ctx, JSValueConst this_val,
             *pval = JS_DupValue(ctx, arrp[i]);
     } else {
         for (; i < idx; i++, pval++)
-            if (-1 == qjs_try_get_property_int64(ctx, obj, i, pval))
+            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
                 goto exception;
         *pval = JS_DupValue(ctx, argv[1]);
         for (i++, pval++; i < len; i++, pval++) {
-            if (-1 == qjs_try_get_property_int64(ctx, obj, i, pval))
+            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
                 goto exception;
         }
     }
@@ -530,11 +533,11 @@ static JSValue js_array_concat(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             }
             for (k = 0; k < len; k++, n++) {
-                res = qjs_try_get_property_int64(ctx, e, k, &val);
+                res = JS_TryGetPropertyInt64(ctx, e, k, &val);
                 if (res < 0)
                     goto exception;
                 if (res) {
-                    if (qjs_define_property_value_int64(ctx, arr, n, val,
+                    if (JS_DefinePropertyValueInt64(ctx, arr, n, val,
                                                     JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                         goto exception;
                 }
@@ -544,7 +547,7 @@ static JSValue js_array_concat(JSContext *ctx, JSValueConst this_val,
                 JS_ThrowTypeError(ctx, "Array loo long");
                 goto exception;
             }
-            if (qjs_define_property_value_int64(ctx, arr, n, JS_DupValue(ctx, e),
+            if (JS_DefinePropertyValueInt64(ctx, arr, n, JS_DupValue(ctx, e),
                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                 goto exception;
             n++;
@@ -562,7 +565,7 @@ exception:
     return JS_EXCEPTION;
 }
 
-static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv, int special)
 {
     JSValue obj, val, index_val, res, ret;
@@ -575,7 +578,7 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
     val = JS_UNDEFINED;
     if (special & QJS_ARRAY_TYPED) {
         obj = JS_DupValue(ctx, this_val);
-        len = qjs_typed_array_get_length_unsafe(ctx, obj);
+        len = js_typed_array_get_length_unsafe(ctx, obj);
         if (len < 0)
             goto exception;
     } else {
@@ -588,7 +591,7 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
     if (argc > 1)
         this_arg = argv[1];
 
-    if (qjs_check_function(ctx, func))
+    if (check_function(ctx, func))
         goto exception;
 
     switch (special) {
@@ -613,7 +616,7 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
     case QJS_ARRAY_MAP | QJS_ARRAY_TYPED:
         args[0] = obj;
         args[1] = JS_NewInt32(ctx, len);
-        ret = qjs_typed_array_species_create(ctx, JS_UNDEFINED, 2, args);
+        ret = js_typed_array___speciesCreate(ctx, JS_UNDEFINED, 2, args);
         if (JS_IsException(ret))
             goto exception;
         break;
@@ -627,12 +630,12 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
 
     for(k = 0; k < len; k++) {
         if (special & QJS_ARRAY_TYPED) {
-            val = qjs_get_property_int64(ctx, obj, k);
+            val = JS_GetPropertyInt64(ctx, obj, k);
             if (JS_IsException(val))
                 goto exception;
             present = TRUE;
         } else {
-            present = qjs_try_get_property_int64(ctx, obj, k, &val);
+            present = JS_TryGetPropertyInt64(ctx, obj, k, &val);
             if (present < 0)
                 goto exception;
         }
@@ -650,20 +653,20 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
             switch (special) {
             case QJS_ARRAY_EVERY:
             case QJS_ARRAY_EVERY | QJS_ARRAY_TYPED:
-                if (!qjs_to_bool_free(ctx, res)) {
+                if (!JS_ToBoolFree(ctx, res)) {
                     ret = JS_FALSE;
                     goto done;
                 }
                 break;
             case QJS_ARRAY_SOME:
             case QJS_ARRAY_SOME | QJS_ARRAY_TYPED:
-                if (qjs_to_bool_free(ctx, res)) {
+                if (JS_ToBoolFree(ctx, res)) {
                     ret = JS_TRUE;
                     goto done;
                 }
                 break;
             case QJS_ARRAY_MAP:
-                if (qjs_define_property_value_int64(ctx, ret, k, res,
+                if (JS_DefinePropertyValueInt64(ctx, ret, k, res,
                                                 JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                     goto exception;
                 break;
@@ -673,8 +676,8 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                 break;
             case QJS_ARRAY_FILTER:
             case QJS_ARRAY_FILTER | QJS_ARRAY_TYPED:
-                if (qjs_to_bool_free(ctx, res)) {
-                    if (qjs_define_property_value_int64(ctx, ret, n++, JS_DupValue(ctx, val),
+                if (JS_ToBoolFree(ctx, res)) {
+                    if (JS_DefinePropertyValueInt64(ctx, ret, n++, JS_DupValue(ctx, val),
                                                     JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                         goto exception;
                 }
@@ -692,12 +695,12 @@ done:
         JSValue arr;
         args[0] = obj;
         args[1] = JS_NewInt32(ctx, n);
-        arr = qjs_typed_array_species_create(ctx, JS_UNDEFINED, 2, args);
+        arr = js_typed_array___speciesCreate(ctx, JS_UNDEFINED, 2, args);
         if (JS_IsException(arr))
             goto exception;
         args[0] = ret;
         res = JS_Invoke(ctx, arr, JS_ATOM_set, 1, args);
-        if (qjs_check_exception_free(ctx, res)) {
+        if (check_exception_free(ctx, res)) {
             JS_FreeValue(ctx, arr);
             goto exception;
         }
@@ -715,7 +718,7 @@ exception:
     return JS_EXCEPTION;
 }
 
-static JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv, int special)
 {
     JSValue obj, val, index_val, acc, acc1;
@@ -728,7 +731,7 @@ static JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
     val = JS_UNDEFINED;
     if (special & QJS_ARRAY_TYPED) {
         obj = JS_DupValue(ctx, this_val);
-        len = qjs_typed_array_get_length_unsafe(ctx, obj);
+        len = js_typed_array_get_length_unsafe(ctx, obj);
         if (len < 0)
             goto exception;
     } else {
@@ -738,7 +741,7 @@ static JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
     }
     func = argv[0];
 
-    if (qjs_check_function(ctx, func))
+    if (check_function(ctx, func))
         goto exception;
 
     k = 0;
@@ -753,12 +756,12 @@ static JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
             k1 = (special & QJS_ARRAY_REDUCE_RIGHT) ? len - k - 1 : k;
             k++;
             if (special & QJS_ARRAY_TYPED) {
-                acc = qjs_get_property_int64(ctx, obj, k1);
+                acc = JS_GetPropertyInt64(ctx, obj, k1);
                 if (JS_IsException(acc))
                     goto exception;
                 break;
             } else {
-                present = qjs_try_get_property_int64(ctx, obj, k1, &acc);
+                present = JS_TryGetPropertyInt64(ctx, obj, k1, &acc);
                 if (present < 0)
                     goto exception;
                 if (present)
@@ -769,12 +772,12 @@ static JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
     for (; k < len; k++) {
         k1 = (special & QJS_ARRAY_REDUCE_RIGHT) ? len - k - 1 : k;
         if (special & QJS_ARRAY_TYPED) {
-            val = qjs_get_property_int64(ctx, obj, k1);
+            val = JS_GetPropertyInt64(ctx, obj, k1);
             if (JS_IsException(val))
                 goto exception;
             present = TRUE;
         } else {
-            present = qjs_try_get_property_int64(ctx, obj, k1, &val);
+            present = JS_TryGetPropertyInt64(ctx, obj, k1, &val);
             if (present < 0)
                 goto exception;
         }
@@ -818,13 +821,13 @@ static JSValue js_array_fill(JSContext *ctx, JSValueConst this_val,
 
     start = 0;
     if (argc > 1 && !JS_IsUndefined(argv[1])) {
-        if (qjs_to_int64_clamp(ctx, &start, argv[1], 0, len, len))
+        if (JS_ToInt64Clamp(ctx, &start, argv[1], 0, len, len))
             goto exception;
     }
 
     end = len;
     if (argc > 2 && !JS_IsUndefined(argv[2])) {
-        if (qjs_to_int64_clamp(ctx, &end, argv[2], 0, len, len))
+        if (JS_ToInt64Clamp(ctx, &end, argv[2], 0, len, len))
             goto exception;
     }
 
@@ -842,7 +845,7 @@ static JSValue js_array_fill(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
-static JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv)
 {
     JSValue obj, val;
@@ -859,7 +862,7 @@ static JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
     if (len > 0) {
         n = 0;
         if (argc > 1) {
-            if (qjs_to_int64_clamp(ctx, &n, argv[1], 0, len, len))
+            if (JS_ToInt64Clamp(ctx, &n, argv[1], 0, len, len))
                 goto exception;
         }
         if (js_get_fast_array(ctx, obj, &arrp, &count)) {
@@ -872,7 +875,7 @@ static JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
             }
         }
         for (; n < len; n++) {
-            val = qjs_get_property_int64(ctx, obj, n);
+            val = JS_GetPropertyInt64(ctx, obj, n);
             if (JS_IsException(val))
                 goto exception;
             if (js_strict_eq2(ctx, argv[0], val,
@@ -909,7 +912,7 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
     if (len > 0) {
         n = 0;
         if (argc > 1) {
-            if (qjs_to_int64_clamp(ctx, &n, argv[1], 0, len, len))
+            if (JS_ToInt64Clamp(ctx, &n, argv[1], 0, len, len))
                 goto exception;
         }
         if (js_get_fast_array(ctx, obj, &arrp, &count)) {
@@ -921,7 +924,7 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
             }
         }
         for (; n < len; n++) {
-            int present = qjs_try_get_property_int64(ctx, obj, n, &val);
+            int present = JS_TryGetPropertyInt64(ctx, obj, n, &val);
             if (present < 0)
                 goto exception;
             if (present) {
@@ -958,12 +961,12 @@ static JSValue js_array_lastIndexOf(JSContext *ctx, JSValueConst this_val,
     if (len > 0) {
         n = len - 1;
         if (argc > 1) {
-            if (qjs_to_int64_clamp(ctx, &n, argv[1], -1, len - 1, len))
+            if (JS_ToInt64Clamp(ctx, &n, argv[1], -1, len - 1, len))
                 goto exception;
         }
         /* XXX: should special case fast arrays */
         for (; n >= 0; n--) {
-            present = qjs_try_get_property_int64(ctx, obj, n, &val);
+            present = JS_TryGetPropertyInt64(ctx, obj, n, &val);
             if (present < 0)
                 goto exception;
             if (present) {
@@ -1000,7 +1003,7 @@ static JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
         goto exception;
 
     func = argv[0];
-    if (qjs_check_function(ctx, func))
+    if (check_function(ctx, func))
         goto exception;
 
     this_arg = JS_UNDEFINED;
@@ -1030,7 +1033,7 @@ static JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
         res = JS_Call(ctx, func, this_arg, 3, args);
         if (JS_IsException(res))
             goto exception;
-        if (qjs_to_bool_free(ctx, res)) {
+        if (JS_ToBoolFree(ctx, res)) {
             if (mode == QJS_ARRAY_FIND_INDEX || mode == QJS_ARRAY_FIND_LAST_INDEX) {
                 JS_FreeValue(ctx, val);
                 JS_FreeValue(ctx, obj);
@@ -1072,9 +1075,9 @@ static JSValue js_array_toString(JSContext *ctx, JSValueConst this_val,
     if (!JS_IsFunction(ctx, method)) {
         /* Use intrinsic Object.prototype.toString */
         JS_FreeValue(ctx, method);
-        ret = qjs_array_object_to_string(ctx, obj, 0, NULL);
+        ret = js_object_toString(ctx, obj, 0, NULL);
     } else {
-        ret = qjs_call_free(ctx, method, obj, 0, NULL);
+        ret = JS_CallFree(ctx, method, obj, 0, NULL);
     }
     JS_FreeValue(ctx, obj);
     return ret;
@@ -1119,7 +1122,7 @@ static JSValue js_array_join(JSContext *ctx, JSValueConst this_val,
             goto fail;
         if (!JS_IsNull(el) && !JS_IsUndefined(el)) {
             if (toLocaleString) {
-                el = qjs_to_locale_string_free(ctx, el);
+                el = JS_ToLocaleStringFree(ctx, el);
             }
             if (string_buffer_concat_value_free(b, el))
                 goto fail;
@@ -1137,7 +1140,7 @@ exception:
     return JS_EXCEPTION;
 }
 
-static JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv, int shift)
 {
     JSValue obj, res = JS_UNDEFINED;
@@ -1164,17 +1167,17 @@ static JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
             }
         } else {
             if (shift) {
-                res = qjs_get_property_int64(ctx, obj, 0);
+                res = JS_GetPropertyInt64(ctx, obj, 0);
                 if (JS_IsException(res))
                     goto exception;
                 if (JS_CopySubArray(ctx, obj, 0, 1, len - 1, +1))
                     goto exception;
             } else {
-                res = qjs_get_property_int64(ctx, obj, newLen);
+                res = JS_GetPropertyInt64(ctx, obj, newLen);
                 if (JS_IsException(res))
                     goto exception;
             }
-            if (qjs_delete_property_int64(ctx, obj, newLen, JS_PROP_THROW) < 0)
+            if (JS_DeletePropertyInt64(ctx, obj, newLen, JS_PROP_THROW) < 0)
                 goto exception;
         }
     }
@@ -1190,7 +1193,7 @@ static JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
-static JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv, int unshift)
 {
     JSValue obj;
@@ -1203,7 +1206,7 @@ static JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
                    can_extend_fast_array(p) &&
                    JS_VALUE_GET_TAG(p->prop[0].u.value) == JS_TAG_INT &&
                    JS_VALUE_GET_INT(p->prop[0].u.value) == p->u.array.count &&
-                   (qjs_get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE) != 0)) {
+                   (get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE) != 0)) {
             /* fast case */
             uint32_t new_len;
             new_len = p->u.array.count + argc;
@@ -1279,10 +1282,10 @@ static JSValue js_array_reverse(JSContext *ctx, JSValueConst this_val,
     }
 
     for (l = 0, h = len - 1; l < h; l++, h--) {
-        l_present = qjs_try_get_property_int64(ctx, obj, l, &lval);
+        l_present = JS_TryGetPropertyInt64(ctx, obj, l, &lval);
         if (l_present < 0)
             goto exception;
-        h_present = qjs_try_get_property_int64(ctx, obj, h, &hval);
+        h_present = JS_TryGetPropertyInt64(ctx, obj, h, &hval);
         if (h_present < 0)
             goto exception;
         if (h_present) {
@@ -1296,12 +1299,12 @@ static JSValue js_array_reverse(JSContext *ctx, JSValueConst this_val,
                 }
                 lval = JS_UNDEFINED;
             } else {
-                if (qjs_delete_property_int64(ctx, obj, h, JS_PROP_THROW) < 0)
+                if (JS_DeletePropertyInt64(ctx, obj, h, JS_PROP_THROW) < 0)
                     goto exception;
             }
         } else {
             if (l_present) {
-                if (qjs_delete_property_int64(ctx, obj, l, JS_PROP_THROW) < 0)
+                if (JS_DeletePropertyInt64(ctx, obj, l, JS_PROP_THROW) < 0)
                     goto exception;
                 if (JS_SetPropertyInt64(ctx, obj, h, lval) < 0) {
                     lval = JS_UNDEFINED;
@@ -1337,7 +1340,7 @@ static JSValue js_array_toReversed(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
-    arr = qjs_allocate_fast_array(ctx, len);
+    arr = js_allocate_fast_array(ctx, len);
     if (JS_IsException(arr))
         goto exception;
 
@@ -1352,7 +1355,7 @@ static JSValue js_array_toReversed(JSContext *ctx, JSValueConst this_val,
         } else {
             // Query order is observable; test262 expects descending order.
             for (; i >= 0; i--, pval++) {
-                if (-1 == qjs_try_get_property_int64(ctx, obj, i, pval))
+                if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
                     goto exception;
             }
         }
@@ -1381,12 +1384,12 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
-    if (qjs_to_int64_clamp(ctx, &start, argv[0], 0, len, len))
+    if (JS_ToInt64Clamp(ctx, &start, argv[0], 0, len, len))
         goto exception;
 
     final = len;
     if (!JS_IsUndefined(argv[1])) {
-        if (qjs_to_int64_clamp(ctx, &final, argv[1], 0, len, len))
+        if (JS_ToInt64Clamp(ctx, &final, argv[1], 0, len, len))
             goto exception;
     }
     count = max_int64(final - start, 0);
@@ -1400,7 +1403,7 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
         js_get_fast_array(ctx, obj, &arrp, &count32) &&
         final <= count32) {
         /* fast case */
-        arr = qjs_create_array(ctx, count, (JSValueConst *)arrp + start);
+        arr = js_create_array(ctx, count, (JSValueConst *)arrp + start);
     } else {
         arr = JS_ArrayCreateFromCtor(ctx, ctor, count);
         JS_FreeValue(ctx, ctor);
@@ -1409,11 +1412,11 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
 
         n = 0;
         for (k = start; k < final; k++, n++) {
-            kPresent = qjs_try_get_property_int64(ctx, obj, k, &val);
+            kPresent = JS_TryGetPropertyInt64(ctx, obj, k, &val);
             if (kPresent < 0)
                 goto exception;
             if (kPresent) {
-                if (qjs_primitive_create_data_property_uint32(ctx, arr, n, val, JS_PROP_THROW) < 0)
+                if (JS_CreateDataPropertyUint32(ctx, arr, n, val, JS_PROP_THROW) < 0)
                     goto exception;
             }
         }
@@ -1443,7 +1446,7 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
-    if (qjs_to_int64_clamp(ctx, &start, argv[0], 0, len, len))
+    if (JS_ToInt64Clamp(ctx, &start, argv[0], 0, len, len))
         goto exception;
 
     if (argc == 0) {
@@ -1454,7 +1457,7 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
         del_count = len - start;
     } else {
         item_count = argc - 2;
-        if (qjs_to_int64_clamp(ctx, &del_count, argv[1], 0, len - start, 0))
+        if (JS_ToInt64Clamp(ctx, &del_count, argv[1], 0, len - start, 0))
             goto exception;
     }
     if (len + item_count - del_count > QJS_MAX_SAFE_INTEGER) {
@@ -1475,13 +1478,13 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
         p->class_id == JS_CLASS_ARRAY &&
         p->fast_array &&
         final <= p->u.array.count &&
-        (qjs_get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE) && /* writable array length */
+        (get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE) && /* writable array length */
         can_extend_fast_array(p)) {
         uint32_t count32 = p->u.array.count;
         JSValue *arrp = p->u.array.u.values;
 
         /* fast case */
-        arr = qjs_create_array(ctx, del_count, (JSValueConst *)arrp + start);
+        arr = js_create_array(ctx, del_count, (JSValueConst *)arrp + start);
         if (JS_IsException(arr))
             goto exception;
 
@@ -1508,7 +1511,7 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
             p->u.array.count = new_count32;
         }
         for(i = 0; i < item_count; i++)
-            qjs_set_value(ctx, &arrp[start + i], JS_DupValue(ctx, argv[i + 2]));
+            set_value(ctx, &arrp[start + i], JS_DupValue(ctx, argv[i + 2]));
     } else {
         arr = JS_ArrayCreateFromCtor(ctx, ctor, del_count);
         JS_FreeValue(ctx, ctor);
@@ -1517,11 +1520,11 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
 
         n = 0;
         for (k = start; k < final; k++, n++) {
-            kPresent = qjs_try_get_property_int64(ctx, obj, k, &val);
+            kPresent = JS_TryGetPropertyInt64(ctx, obj, k, &val);
             if (kPresent < 0)
                 goto exception;
             if (kPresent) {
-                if (qjs_primitive_create_data_property_uint32(ctx, arr, n, val, JS_PROP_THROW) < 0)
+                if (JS_CreateDataPropertyUint32(ctx, arr, n, val, JS_PROP_THROW) < 0)
                     goto exception;
             }
         }
@@ -1535,7 +1538,7 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
                 goto exception;
 
             for (k = len; k-- > new_len; ) {
-                if (qjs_delete_property_int64(ctx, obj, k, JS_PROP_THROW) < 0)
+                if (JS_DeletePropertyInt64(ctx, obj, k, JS_PROP_THROW) < 0)
                     goto exception;
             }
         }
@@ -1574,14 +1577,14 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
 
     start = 0;
     if (argc > 0)
-        if (qjs_to_int64_clamp(ctx, &start, argv[0], 0, len, len))
+        if (JS_ToInt64Clamp(ctx, &start, argv[0], 0, len, len))
             goto exception;
 
     del = 0;
     if (argc > 0)
         del = len - start;
     if (argc > 1)
-        if (qjs_to_int64_clamp(ctx, &del, argv[1], 0, del, 0))
+        if (JS_ToInt64Clamp(ctx, &del, argv[1], 0, del, 0))
             goto exception;
 
     add = 0;
@@ -1594,7 +1597,7 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
         goto exception;
     }
 
-    arr = qjs_allocate_fast_array(ctx, newlen);
+    arr = js_allocate_fast_array(ctx, newlen);
     if (JS_IsException(arr))
         goto exception;
 
@@ -1614,12 +1617,12 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
             *pval = JS_DupValue(ctx, arrp[i]);
     } else {
         for (i = 0; i < start; i++, pval++)
-            if (-1 == qjs_try_get_property_int64(ctx, obj, i, pval))
+            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
                 goto exception;
         for (j = 0; j < add; j++, pval++)
             *pval = JS_DupValue(ctx, argv[2 + j]);
         for (i += del; i < len; i++, pval++)
-            if (-1 == qjs_try_get_property_int64(ctx, obj, i, pval))
+            if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
                 goto exception;
     }
 
@@ -1645,15 +1648,15 @@ static JSValue js_array_copyWithin(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
-    if (qjs_to_int64_clamp(ctx, &to, argv[0], 0, len, len))
+    if (JS_ToInt64Clamp(ctx, &to, argv[0], 0, len, len))
         goto exception;
 
-    if (qjs_to_int64_clamp(ctx, &from, argv[1], 0, len, len))
+    if (JS_ToInt64Clamp(ctx, &from, argv[1], 0, len, len))
         goto exception;
 
     final = len;
     if (argc > 2 && !JS_IsUndefined(argv[2])) {
-        if (qjs_to_int64_clamp(ctx, &final, argv[2], 0, len, len))
+        if (JS_ToInt64Clamp(ctx, &final, argv[2], 0, len, len))
             goto exception;
     }
 
@@ -1681,12 +1684,12 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
     int present, is_array;
 
     if (js_check_stack_overflow(ctx->rt, 0)) {
-        qjs_throw_stack_overflow(ctx);
+        JS_ThrowStackOverflow(ctx);
         return -1;
     }
 
     for (sourceIndex = 0; sourceIndex < sourceLen; sourceIndex++) {
-        present = qjs_try_get_property_int64(ctx, source, sourceIndex, &element);
+        present = JS_TryGetPropertyInt64(ctx, source, sourceIndex, &element);
         if (present < 0)
             return -1;
         if (!present)
@@ -1720,7 +1723,7 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
             JS_ThrowTypeError(ctx, "Array too long");
             goto fail;
         }
-        if (qjs_define_property_value_int64(ctx, target, targetIndex, element,
+        if (JS_DefinePropertyValueInt64(ctx, target, targetIndex, element,
                                         JS_PROP_C_W_E | JS_PROP_THROW) < 0)
             return -1;
         targetIndex++;
@@ -1753,11 +1756,11 @@ static JSValue js_array_flatten(JSContext *ctx, JSValueConst this_val,
         if (argc > 1) {
             thisArg = argv[1];
         }
-        if (qjs_check_function(ctx, mapperFunction))
+        if (check_function(ctx, mapperFunction))
             goto exception;
     } else {
         if (argc > 0 && !JS_IsUndefined(argv[0])) {
-            if (qjs_to_int32_sat(ctx, &depthNum, argv[0]) < 0)
+            if (JS_ToInt32Sat(ctx, &depthNum, argv[0]) < 0)
                 goto exception;
         }
     }
@@ -1819,7 +1822,7 @@ static int js_array_cmp_generic(const void *a, const void *b, void *opaque) {
             cmp = (val > 0) - (val < 0);
         } else {
             double val;
-            if (qjs_to_float64_free(ctx, &val, res) < 0)
+            if (JS_ToFloat64Free(ctx, &val, res) < 0)
                 goto exception;
             cmp = (val > 0) - (val < 0);
         }
@@ -1863,7 +1866,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
     int present;
 
     if (!JS_IsUndefined(asc.method)) {
-        if (qjs_check_function(ctx, asc.method))
+        if (check_function(ctx, asc.method))
             goto exception;
         asc.has_method = 1;
     }
@@ -1884,7 +1887,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
             array = new_array;
             array_size = new_size;
         }
-        present = qjs_try_get_property_int64(ctx, obj, i, &array[pos].val);
+        present = JS_TryGetPropertyInt64(ctx, obj, i, &array[pos].val);
         if (present < 0)
             goto exception;
         if (present == 0)
@@ -1921,7 +1924,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
             goto fail;
     }
     for (; i < len; i++) {
-        if (qjs_delete_property_int64(ctx, obj, i, JS_PROP_THROW) < 0)
+        if (JS_DeletePropertyInt64(ctx, obj, i, JS_PROP_THROW) < 0)
             goto fail;
     }
     return obj;
@@ -1961,7 +1964,7 @@ static JSValue js_array_toSorted(JSContext *ctx, JSValueConst this_val,
     if (js_get_length64(ctx, &len, obj))
         goto exception;
 
-    arr = qjs_allocate_fast_array(ctx, len);
+    arr = js_allocate_fast_array(ctx, len);
     if (JS_IsException(arr))
         goto exception;
 
@@ -1974,7 +1977,7 @@ static JSValue js_array_toSorted(JSContext *ctx, JSValueConst this_val,
                 *pval = JS_DupValue(ctx, arrp[i]);
         } else {
             for (; i < len; i++, pval++) {
-                if (-1 == qjs_try_get_property_int64(ctx, obj, i, pval))
+                if (-1 == JS_TryGetPropertyInt64(ctx, obj, i, pval))
                     goto exception;
             }
         }
@@ -1994,7 +1997,7 @@ exception:
     return ret;
 }
 
-static void js_array_iterator_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_array_iterator_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSArrayIteratorData *it = p->u.array_iterator_data;
@@ -2004,7 +2007,7 @@ static void js_array_iterator_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-static void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
                                    JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -2014,7 +2017,7 @@ static void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
     }
 }
 
-static JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
                                         int argc, JSValueConst *argv, int magic)
 {
     JSValue enum_obj, arr;
@@ -2025,7 +2028,7 @@ static JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
     kind = magic & 3;
     if (magic & 4) {
         /* string iterator case */
-        arr = qjs_to_string_check_object(ctx, this_val);
+        arr = JS_ToStringCheckObject(ctx, this_val);
         class_id = JS_CLASS_STRING_ITERATOR;
     } else {
         arr = JS_ToObject(ctx, this_val);
@@ -2061,7 +2064,7 @@ QJS_INTERNAL JSValue js_array_iterator_next(JSContext *ctx,
     JSValue val, obj;
     JSObject *p;
 
-    it = qjs_array_get_opaque2(ctx, this_val, JS_CLASS_ARRAY_ITERATOR);
+    it = JS_GetOpaque2(ctx, this_val, JS_CLASS_ARRAY_ITERATOR);
     if (!it)
         goto fail1;
     if (JS_IsUndefined(it->obj))
@@ -2069,13 +2072,13 @@ QJS_INTERNAL JSValue js_array_iterator_next(JSContext *ctx,
     p = JS_VALUE_GET_OBJ(it->obj);
     if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
         p->class_id <= JS_CLASS_FLOAT64_ARRAY) {
-        if (qjs_typed_array_is_oob(p)) {
-            qjs_throw_array_buffer_oob(ctx);
+        if (typed_array_is_oob(p)) {
+            JS_ThrowTypeErrorArrayBufferOOB(ctx);
             goto fail1;
         }
         len = p->u.array.count;
     } else {
-        if (qjs_array_get_length32(ctx, &len, it->obj)) {
+        if (js_get_length32(ctx, &len, it->obj)) {
         fail1:
             *pdone = FALSE;
             return JS_EXCEPTION;
@@ -2105,7 +2108,7 @@ QJS_INTERNAL JSValue js_array_iterator_next(JSContext *ctx,
             num = JS_NewUint32(ctx, idx);
             args[0] = num;
             args[1] = val;
-            obj = qjs_create_array(ctx, 2, args);
+            obj = js_create_array(ctx, 2, args);
             JS_FreeValue(ctx, val);
             JS_FreeValue(ctx, num);
             return obj;
@@ -2120,7 +2123,7 @@ typedef struct JSIteratorWrapData {
     JSValue wrapped_next;
 } JSIteratorWrapData;
 
-static void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSIteratorWrapData *it = p->u.iterator_wrap_data;
@@ -2131,7 +2134,7 @@ static void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-static void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
                                   JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -2152,7 +2155,7 @@ static JSValue js_iterator_wrap_next(JSContext *ctx, JSValueConst this_val,
     if (!it)
         return JS_EXCEPTION;
     if (magic == QJS_ITERATOR_NEXT) {
-        return qjs_iterator_next(ctx, it->wrapped_iter, it->wrapped_next, 0, NULL, pdone);
+        return JS_IteratorNext(ctx, it->wrapped_iter, it->wrapped_next, 0, NULL, pdone);
     } else {
         method = JS_GetProperty(ctx, it->wrapped_iter, JS_ATOM_return);
         if (JS_IsException(method))
@@ -2161,7 +2164,7 @@ static JSValue js_iterator_wrap_next(JSContext *ctx, JSValueConst this_val,
             *pdone = TRUE;
             return JS_UNDEFINED;
         }
-        ret = qjs_iterator_next2(ctx, it->wrapped_iter, method, 0, NULL, pdone);
+        ret = JS_IteratorNext2(ctx, it->wrapped_iter, method, 0, NULL, pdone);
         JS_FreeValue(ctx, method);
         return ret;
     }
@@ -2184,7 +2187,7 @@ static JSValue js_iterator_constructor_getset(JSContext *ctx,
 
     if (argc > 0) { // if setter
         if (!JS_IsObject(argv[0]))
-            return qjs_throw_type_error_not_object(ctx);
+            return JS_ThrowTypeErrorNotAnObject(ctx);
         ret = JS_DefinePropertyValue(ctx, this_val, JS_ATOM_constructor,
                                      JS_DupValue(ctx, argv[0]),
                                      JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
@@ -2208,7 +2211,7 @@ static JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
         p->u.cfunc.c_function.generic == js_iterator_constructor) {
         return JS_ThrowTypeError(ctx, "abstract class not constructable");
     }
-    return qjs_primitive_create_from_ctor(ctx, new_target, JS_CLASS_ITERATOR);
+    return js_create_from_ctor(ctx, new_target, JS_CLASS_ITERATOR);
 }
 
 // note: deliberately doesn't use space-saving bit fields for
@@ -2219,7 +2222,7 @@ typedef struct JSIteratorConcatData {
     JSValue iter, next, values[]; // array of (object, method) pairs
 } JSIteratorConcatData;
 
-static void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSIteratorConcatData *it = p->u.iterator_concat_data;
@@ -2232,7 +2235,7 @@ static void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-static void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
                                     JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -2272,7 +2275,7 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
         meth = &it->values[it->index + 1];
         iter = it->iter;
         if (JS_IsUndefined(iter)) {
-            iter = qjs_get_iterator2(ctx, *obj, *meth);
+            iter = JS_GetIterator2(ctx, *obj, *meth);
             if (JS_IsException(iter))
                 goto fail;
             it->iter = iter;
@@ -2284,7 +2287,7 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
                 goto fail;
             it->next = next;
         }
-        item = qjs_iterator_next2(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext2(ctx, iter, next, 0, NULL, &done);
         if (JS_IsException(item))
             goto fail;
         if (done == 0) {
@@ -2298,7 +2301,7 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
                 ret = JS_EXCEPTION;
                 break;
             }
-            done = qjs_to_bool_free(ctx, val);
+            done = JS_ToBoolFree(ctx, val);
             if (done)
                 goto done_next;
             ret = JS_GetProperty(ctx, item, JS_ATOM_value);
@@ -2339,7 +2342,7 @@ static JSValue js_iterator_concat_return(JSContext *ctx, JSValueConst this_val,
             it->running = FALSE;
             return JS_EXCEPTION;
         }
-        ret = qjs_call_free(ctx, ret, it->iter, 0, NULL);
+        ret = JS_CallFree(ctx, ret, it->iter, 0, NULL);
         it->running = FALSE;
     }
     while (it->index < it->count)
@@ -2374,7 +2377,7 @@ static JSValue js_iterator_concat(JSContext *ctx, JSValueConst this_val,
     for (int i = 0; i < argc; i++) {
         JSValueConst obj = argv[i];
         if (!JS_IsObject(obj)) {
-            qjs_throw_type_error_not_object(ctx);
+            JS_ThrowTypeErrorNotAnObject(ctx);
             goto fail;
         }
         method = JS_GetProperty(ctx, obj, JS_ATOM_Symbol_iterator);
@@ -2418,7 +2421,7 @@ static JSValue js_iterator_from(JSContext *ctx, JSValueConst this_val,
     if (JS_IsNull(method) || JS_IsUndefined(method)) {
         iter = JS_DupValue(ctx, obj);
     } else {
-        iter = qjs_get_iterator2(ctx, obj, method);
+        iter = JS_GetIterator2(ctx, obj, method);
         JS_FreeValue(ctx, method);
         if (JS_IsException(iter))
             return JS_EXCEPTION;
@@ -2429,7 +2432,7 @@ static JSValue js_iterator_from(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(method))
         goto fail;
 
-    ret = qjs_ordinary_is_instance_of(ctx, iter, ctx->iterator_ctor);
+    ret = JS_OrdinaryIsInstanceOf(ctx, iter, ctx->iterator_ctor);
     if (ret < 0)
         goto fail;
     if (ret) {
@@ -2487,7 +2490,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
     JSIteratorHelperData *it;
 
     if (!JS_IsObject(this_val))
-        return qjs_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
     func = JS_UNDEFINED;
     count = 0;
 
@@ -2497,7 +2500,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
         {
             JSValue v;
             double dlimit;
-            v = qjs_to_number(ctx, argv[0]);
+            v = JS_ToNumber(ctx, argv[0]);
             if (JS_IsException(v))
                 goto fail;
             // Check for Infinity.
@@ -2516,10 +2519,10 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
                 else
                     count = QJS_MAX_SAFE_INTEGER;
             } else {
-                v = qjs_to_integer_free(ctx, v);
+                v = JS_ToIntegerFree(ctx, v);
                 if (JS_IsException(v))
                     goto fail;
-                if (qjs_to_int64_free(ctx, &count, v))
+                if (JS_ToInt64Free(ctx, &count, v))
                     goto fail;
             }
             if (count < 0)
@@ -2531,7 +2534,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_MAP:
         {
             func = argv[0];
-            if (qjs_check_function(ctx, func))
+            if (check_function(ctx, func))
                 goto fail;
         }
         break;
@@ -2567,7 +2570,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
 range_error:
     JS_ThrowRangeError(ctx, "must be positive");
 fail:
-    qjs_iterator_close(ctx, this_val, TRUE);
+    JS_IteratorClose(ctx, this_val, TRUE);
     return JS_EXCEPTION;
 }
 
@@ -2580,11 +2583,11 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     int done;
 
     if (!JS_IsObject(this_val))
-        return qjs_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
     func = JS_UNDEFINED;
     method = JS_UNDEFINED;
 
-    if (qjs_check_function(ctx, argv[0]))
+    if (check_function(ctx, argv[0]))
         goto fail;
     func = JS_DupValue(ctx, argv[0]);
     method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
@@ -2598,7 +2601,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
         {
             r = JS_TRUE;
             for (idx = 0; /*empty*/; idx++) {
-                item = qjs_iterator_next(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -2611,8 +2614,8 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                 JS_FreeValue(ctx, index_val);
                 if (JS_IsException(ret))
                     goto fail;
-                if (!qjs_to_bool_free(ctx, ret)) {
-                    if (qjs_iterator_close(ctx, this_val, FALSE) < 0)
+                if (!JS_ToBoolFree(ctx, ret)) {
+                    if (JS_IteratorClose(ctx, this_val, FALSE) < 0)
                         r = JS_EXCEPTION;
                     else
                         r = JS_FALSE;
@@ -2627,7 +2630,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_FIND:
         {
             for (idx = 0; /*empty*/; idx++) {
-                item = qjs_iterator_next(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -2641,8 +2644,8 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                     JS_FreeValue(ctx, item);
                     goto fail;
                 }
-                if (qjs_to_bool_free(ctx, ret)) {
-                    if (qjs_iterator_close(ctx, this_val, FALSE) < 0) {
+                if (JS_ToBoolFree(ctx, ret)) {
+                    if (JS_IteratorClose(ctx, this_val, FALSE) < 0) {
                         JS_FreeValue(ctx, item);
                         r = JS_EXCEPTION;
                     } else {
@@ -2660,7 +2663,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_FOR_EACH:
         {
             for (idx = 0; /*empty*/; idx++) {
-                item = qjs_iterator_next(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -2684,7 +2687,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
         {
             r = JS_FALSE;
             for (idx = 0; /*empty*/; idx++) {
-                item = qjs_iterator_next(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -2697,8 +2700,8 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                 JS_FreeValue(ctx, index_val);
                 if (JS_IsException(ret))
                     goto fail;
-                if (qjs_to_bool_free(ctx, ret)) {
-                    if (qjs_iterator_close(ctx, this_val, FALSE) < 0)
+                if (JS_ToBoolFree(ctx, ret)) {
+                    if (JS_IteratorClose(ctx, this_val, FALSE) < 0)
                         r = JS_EXCEPTION;
                     else
                         r = JS_TRUE;
@@ -2719,7 +2722,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     JS_FreeValue(ctx, method);
     return r;
  fail:
-    qjs_iterator_close(ctx, this_val, TRUE);
+    JS_IteratorClose(ctx, this_val, TRUE);
  fail_no_close:
     JS_FreeValue(ctx, func);
     JS_FreeValue(ctx, method);
@@ -2735,11 +2738,11 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
     int done;
 
     if (!JS_IsObject(this_val))
-        return qjs_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
     acc = JS_UNDEFINED;
     func = JS_UNDEFINED;
     method = JS_UNDEFINED;
-    if (qjs_check_function(ctx, argv[0]))
+    if (check_function(ctx, argv[0]))
         goto exception;
     func = JS_DupValue(ctx, argv[0]);
     method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
@@ -2749,7 +2752,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
         acc = JS_DupValue(ctx, argv[1]);
         idx = 0;
     } else {
-        acc = qjs_iterator_next(ctx, this_val, method, 0, NULL, &done);
+        acc = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
         if (JS_IsException(acc))
             goto exception_no_close;
         if (done) {
@@ -2759,7 +2762,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
         idx = 1;
     }
     for (/* empty */; /*empty*/; idx++) {
-        item = qjs_iterator_next(ctx, this_val, method, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception_no_close;
         if (done)
@@ -2783,7 +2786,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
     JS_FreeValue(ctx, method);
     return acc;
  exception:
-    qjs_iterator_close(ctx, this_val, TRUE);
+    JS_IteratorClose(ctx, this_val, TRUE);
  exception_no_close:
     JS_FreeValue(ctx, acc);
     JS_FreeValue(ctx, func);
@@ -2800,7 +2803,7 @@ static JSValue js_iterator_proto_toArray(JSContext *ctx, JSValueConst this_val,
 
     result = JS_UNDEFINED;
     if (!JS_IsObject(this_val))
-        return qjs_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
     method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
     if (JS_IsException(method))
         return JS_EXCEPTION;
@@ -2808,12 +2811,12 @@ static JSValue js_iterator_proto_toArray(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(result))
         goto exception;
     for (idx = 0; /*empty*/; idx++) {
-        item = qjs_iterator_next(ctx, this_val, method, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception;
         if (done)
             break;
-        if (qjs_define_property_value_int64(ctx, result, idx, item,
+        if (JS_DefinePropertyValueInt64(ctx, result, idx, item,
                                         JS_PROP_C_W_E | JS_PROP_THROW) < 0)
             goto exception;
     }
@@ -2827,7 +2830,7 @@ exception:
     return JS_EXCEPTION;
 }
 
-static JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
                                           int argc, JSValueConst *argv)
 {
     return JS_DupValue(ctx, this_val);
@@ -2843,8 +2846,8 @@ static JSValue js_iterator_proto_set_toStringTag(JSContext *ctx, JSValueConst th
     int res;
 
     if (!JS_IsObject(this_val))
-        return qjs_throw_type_error_not_object(ctx);
-    if (qjs_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_ITERATOR]))
+        return JS_ThrowTypeErrorNotAnObject(ctx);
+    if (js_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_ITERATOR]))
         return JS_ThrowTypeError(ctx, "Cannot assign to read only property");
     res = JS_GetOwnProperty(ctx, NULL, this_val, JS_ATOM_Symbol_toStringTag);
     if (res < 0)
@@ -2861,7 +2864,7 @@ static JSValue js_iterator_proto_set_toStringTag(JSContext *ctx, JSValueConst th
 
 /* Iterator Helper */
 
-static void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSIteratorHelperData *it = p->u.iterator_helper_data;
@@ -2874,7 +2877,7 @@ static void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-static void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
                                    JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -2921,7 +2924,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             }
             while (it->count > 0) {
                 it->count--;
-                item = qjs_iterator_next(ctx, it->obj, method, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, method, 0, NULL, pdone);
                 if (JS_IsException(item)) {
                     JS_FreeValue(ctx, method);
                     goto fail_no_close;
@@ -2936,7 +2939,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 }
             }
 
-            item = qjs_iterator_next(ctx, it->obj, method, 0, NULL, pdone);
+            item = JS_IteratorNext(ctx, it->obj, method, 0, NULL, pdone);
             JS_FreeValue(ctx, method);
             if (JS_IsException(item))
                 goto fail_no_close;
@@ -2956,7 +2959,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     goto fail;
             }
         filter_again:
-            item = qjs_iterator_next(ctx, it->obj, method, 0, NULL, pdone);
+            item = JS_IteratorNext(ctx, it->obj, method, 0, NULL, pdone);
             if (JS_IsException(item)) {
                 JS_FreeValue(ctx, method);
                 goto fail_no_close;
@@ -2976,7 +2979,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 JS_FreeValue(ctx, method);
                 goto fail;
             }
-            if (qjs_to_bool_free(ctx, selected)) {
+            if (JS_ToBoolFree(ctx, selected)) {
                 JS_FreeValue(ctx, method);
                 ret = item;
                 goto done;
@@ -2998,7 +3001,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     if (JS_IsException(method))
                         goto fail;
                 }
-                item = qjs_iterator_next(ctx, it->obj, method, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, method, 0, NULL, pdone);
                 JS_FreeValue(ctx, method);
                 if (JS_IsException(item))
                     goto fail_no_close;
@@ -3028,7 +3031,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     JS_FreeValue(ctx, method);
                     iter = ret;
                 } else {
-                    iter = qjs_get_iterator2(ctx, ret, method);
+                    iter = JS_GetIterator2(ctx, ret, method);
                     JS_FreeValue(ctx, method);
                     JS_FreeValue(ctx, ret);
                     if (JS_IsException(iter))
@@ -3044,7 +3047,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 method = JS_GetProperty(ctx, it->inner, JS_ATOM_return);
             if (JS_IsException(method)) {
             inner_fail:
-                qjs_iterator_close(ctx, it->inner, FALSE);
+                JS_IteratorClose(ctx, it->inner, FALSE);
                 JS_FreeValue(ctx, it->inner);
                 it->inner = JS_UNDEFINED;
                 goto fail;
@@ -3052,7 +3055,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             if (magic == QJS_ITERATOR_RETURN && (JS_IsUndefined(method) || JS_IsNull(method))) {
                 goto inner_end;
             } else {
-                item = qjs_iterator_next(ctx, it->inner, method, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->inner, method, 0, NULL, pdone);
                 JS_FreeValue(ctx, method);
                 if (JS_IsException(item))
                     goto inner_fail;
@@ -3060,7 +3063,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             if (*pdone) {
             inner_end:
                 *pdone = FALSE; // The outer iterator must continue.
-                qjs_iterator_close(ctx, it->inner, FALSE);
+                JS_IteratorClose(ctx, it->inner, FALSE);
                 JS_FreeValue(ctx, it->inner);
                 it->inner = JS_UNDEFINED;
                 goto flat_map_again;
@@ -3080,7 +3083,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 if (JS_IsException(method))
                     goto fail;
             }
-            item = qjs_iterator_next(ctx, it->obj, method, 0, NULL, pdone);
+            item = JS_IteratorNext(ctx, it->obj, method, 0, NULL, pdone);
             JS_FreeValue(ctx, method);
             if (JS_IsException(item))
                 goto fail_no_close;
@@ -3111,7 +3114,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                         goto fail;
                 }
                 it->count--;
-                item = qjs_iterator_next(ctx, it->obj, method, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, method, 0, NULL, pdone);
                 JS_FreeValue(ctx, method);
                 if (JS_IsException(item))
                     goto fail_no_close;
@@ -3120,7 +3123,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             }
 
             *pdone = TRUE;
-            if (qjs_iterator_close(ctx, it->obj, FALSE))
+            if (JS_IteratorClose(ctx, it->obj, FALSE))
                 ret = JS_EXCEPTION;
             else
                 ret = JS_UNDEFINED;
@@ -3137,7 +3140,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     return ret;
  fail:
     /* close the iterator object, preserving pending exception */
-    qjs_iterator_close(ctx, it->obj, TRUE);
+    JS_IteratorClose(ctx, it->obj, TRUE);
  fail_no_close:
     ret = JS_EXCEPTION;
     goto done;
@@ -3239,75 +3242,9 @@ static const JSCFunctionListEntry js_array_iterator_proto_funcs[] = {
 
 
 
-QJS_INTERNAL void qjs_array_finalizer(JSRuntime *rt, JSValue value)
-{ js_array_finalizer(rt, value); }
-QJS_INTERNAL void qjs_array_mark(JSRuntime *rt, JSValueConst value,
-                                 JS_MarkFunc *mark_func)
-{ js_array_mark(rt, value, mark_func); }
-QJS_INTERNAL void qjs_array_iterator_finalizer(JSRuntime *rt, JSValue value)
-{ js_array_iterator_finalizer(rt, value); }
-QJS_INTERNAL void qjs_array_iterator_mark(JSRuntime *rt, JSValueConst value,
-                                          JS_MarkFunc *mark_func)
-{ js_array_iterator_mark(rt, value, mark_func); }
-QJS_INTERNAL void qjs_iterator_concat_finalizer(JSRuntime *rt, JSValue value)
-{ js_iterator_concat_finalizer(rt, value); }
-QJS_INTERNAL void qjs_iterator_concat_mark(JSRuntime *rt, JSValueConst value,
-                                           JS_MarkFunc *mark_func)
-{ js_iterator_concat_mark(rt, value, mark_func); }
-QJS_INTERNAL void qjs_iterator_helper_finalizer(JSRuntime *rt, JSValue value)
-{ js_iterator_helper_finalizer(rt, value); }
-QJS_INTERNAL void qjs_iterator_helper_mark(JSRuntime *rt, JSValueConst value,
-                                           JS_MarkFunc *mark_func)
-{ js_iterator_helper_mark(rt, value, mark_func); }
-QJS_INTERNAL void qjs_iterator_wrap_finalizer(JSRuntime *rt, JSValue value)
-{ js_iterator_wrap_finalizer(rt, value); }
-QJS_INTERNAL void qjs_iterator_wrap_mark(JSRuntime *rt, JSValueConst value,
-                                         JS_MarkFunc *mark_func)
-{ js_iterator_wrap_mark(rt, value, mark_func); }
-QJS_INTERNAL JSValue qjs_array_every(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv, int magic)
-{ return js_array_every(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_array_reduce(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv, int magic)
-{ return js_array_reduce(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_create_array_iterator(JSContext *ctx,
-                                               JSValueConst this_val,
-                                               int argc, JSValueConst *argv,
-                                               int magic)
-{ return js_create_array_iterator(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_array_get_this(JSContext *ctx,
-                                        JSValueConst this_val)
-{ return js_get_this(ctx, this_val); }
-QJS_INTERNAL JSValue qjs_primitive_create_array_iterator(
-    JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
-    int magic)
-{ return js_create_array_iterator(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_json_array_includes(JSContext *ctx,
-                                             JSValueConst this_val,
-                                             int argc, JSValueConst *argv)
-{ return js_array_includes(ctx, this_val, argc, argv); }
-QJS_INTERNAL JSValue qjs_json_array_pop(JSContext *ctx,
-                                        JSValueConst this_val,
-                                        int argc, JSValueConst *argv,
-                                        int magic)
-{ return js_array_pop(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_json_array_push(JSContext *ctx,
-                                         JSValueConst this_val,
-                                         int argc, JSValueConst *argv,
-                                         int magic)
-{ return js_array_push(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_array_push(JSContext *ctx, JSValueConst this_val,
-                                    int argc, JSValueConst *argv, int magic)
-{ return js_array_push(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_iterator_proto_iterator(JSContext *ctx,
-                                                 JSValueConst this_val,
-                                                 int argc,
-                                                 JSValueConst *argv)
-{ return js_iterator_proto_iterator(ctx, this_val, argc, argv); }
-
 QJS_INTERNAL int qjs_add_intrinsic_array_basic(JSContext *ctx)
 {
-    JSValue obj = qjs_new_c_constructor(
+    JSValue obj = JS_NewCConstructor(
         ctx, JS_CLASS_ARRAY, "Array", js_array_constructor, 1,
         JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
         js_array_funcs, countof(js_array_funcs),
@@ -3318,40 +3255,40 @@ QJS_INTERNAL int qjs_add_intrinsic_array_basic(JSContext *ctx)
     ctx->array_ctor = obj;
     JS_VALUE_GET_OBJ(ctx->class_proto[JS_CLASS_ARRAY])->is_std_array_prototype = TRUE;
 
-    ctx->array_shape = qjs_regexp_new_shape2(
-        ctx, qjs_regexp_get_proto_obj(ctx->class_proto[JS_CLASS_ARRAY]),
+    ctx->array_shape = js_new_shape2(
+        ctx, get_proto_obj(ctx->class_proto[JS_CLASS_ARRAY]),
         JS_PROP_INITIAL_HASH_SIZE, 1);
     if (!ctx->array_shape ||
-        qjs_regexp_add_shape_property(ctx, &ctx->array_shape, NULL,
+        add_shape_property(ctx, &ctx->array_shape, NULL,
                                       JS_ATOM_length,
                                       JS_PROP_WRITABLE | JS_PROP_LENGTH))
         return -1;
 
-    ctx->arguments_shape = qjs_regexp_new_shape2(
-        ctx, qjs_regexp_get_proto_obj(ctx->class_proto[JS_CLASS_OBJECT]),
+    ctx->arguments_shape = js_new_shape2(
+        ctx, get_proto_obj(ctx->class_proto[JS_CLASS_OBJECT]),
         JS_PROP_INITIAL_HASH_SIZE, 3);
     if (!ctx->arguments_shape ||
-        qjs_regexp_add_shape_property(ctx, &ctx->arguments_shape, NULL,
+        add_shape_property(ctx, &ctx->arguments_shape, NULL,
                                       JS_ATOM_length,
                                       JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) ||
-        qjs_regexp_add_shape_property(ctx, &ctx->arguments_shape, NULL,
+        add_shape_property(ctx, &ctx->arguments_shape, NULL,
                                       JS_ATOM_Symbol_iterator,
                                       JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) ||
-        qjs_regexp_add_shape_property(ctx, &ctx->arguments_shape, NULL,
+        add_shape_property(ctx, &ctx->arguments_shape, NULL,
                                       JS_ATOM_callee, JS_PROP_GETSET))
         return -1;
 
-    ctx->mapped_arguments_shape = qjs_regexp_new_shape2(
-        ctx, qjs_regexp_get_proto_obj(ctx->class_proto[JS_CLASS_OBJECT]),
+    ctx->mapped_arguments_shape = js_new_shape2(
+        ctx, get_proto_obj(ctx->class_proto[JS_CLASS_OBJECT]),
         JS_PROP_INITIAL_HASH_SIZE, 3);
     if (!ctx->mapped_arguments_shape ||
-        qjs_regexp_add_shape_property(ctx, &ctx->mapped_arguments_shape, NULL,
+        add_shape_property(ctx, &ctx->mapped_arguments_shape, NULL,
                                       JS_ATOM_length,
                                       JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) ||
-        qjs_regexp_add_shape_property(ctx, &ctx->mapped_arguments_shape, NULL,
+        add_shape_property(ctx, &ctx->mapped_arguments_shape, NULL,
                                       JS_ATOM_Symbol_iterator,
                                       JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) ||
-        qjs_regexp_add_shape_property(ctx, &ctx->mapped_arguments_shape, NULL,
+        add_shape_property(ctx, &ctx->mapped_arguments_shape, NULL,
                                       JS_ATOM_callee,
                                       JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE))
         return -1;
@@ -3362,7 +3299,7 @@ QJS_INTERNAL int qjs_add_intrinsic_iterators(JSContext *ctx)
 {
     JSValue ctor, accessor;
 
-    ctor = qjs_new_c_constructor(
+    ctor = JS_NewCConstructor(
         ctx, JS_CLASS_ITERATOR, "Iterator", js_iterator_constructor, 0,
         JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
         js_iterator_funcs, countof(js_iterator_funcs),
@@ -3387,13 +3324,13 @@ QJS_INTERNAL int qjs_add_intrinsic_iterators(JSContext *ctx)
     JS_FreeValue(ctx, accessor);
     ctx->iterator_ctor = ctor;
 
-    ctx->class_proto[JS_CLASS_ITERATOR_CONCAT] = qjs_new_object_proto_list(
+    ctx->class_proto[JS_CLASS_ITERATOR_CONCAT] = JS_NewObjectProtoList(
         ctx, ctx->class_proto[JS_CLASS_ITERATOR],
         js_iterator_concat_proto_funcs, countof(js_iterator_concat_proto_funcs));
-    ctx->class_proto[JS_CLASS_ITERATOR_HELPER] = qjs_new_object_proto_list(
+    ctx->class_proto[JS_CLASS_ITERATOR_HELPER] = JS_NewObjectProtoList(
         ctx, ctx->class_proto[JS_CLASS_ITERATOR],
         js_iterator_helper_proto_funcs, countof(js_iterator_helper_proto_funcs));
-    ctx->class_proto[JS_CLASS_ITERATOR_WRAP] = qjs_new_object_proto_list(
+    ctx->class_proto[JS_CLASS_ITERATOR_WRAP] = JS_NewObjectProtoList(
         ctx, ctx->class_proto[JS_CLASS_ITERATOR],
         js_iterator_wrap_proto_funcs, countof(js_iterator_wrap_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ITERATOR_CONCAT]) ||
@@ -3405,7 +3342,7 @@ QJS_INTERNAL int qjs_add_intrinsic_iterators(JSContext *ctx)
         ctx, ctx->class_proto[JS_CLASS_ARRAY], JS_ATOM_values);
     if (JS_IsException(ctx->array_proto_values))
         return -1;
-    ctx->class_proto[JS_CLASS_ARRAY_ITERATOR] = qjs_new_object_proto_list(
+    ctx->class_proto[JS_CLASS_ARRAY_ITERATOR] = JS_NewObjectProtoList(
         ctx, ctx->class_proto[JS_CLASS_ITERATOR],
         js_array_iterator_proto_funcs, countof(js_array_iterator_proto_funcs));
     return JS_IsException(ctx->class_proto[JS_CLASS_ARRAY_ITERATOR]) ? -1 : 0;

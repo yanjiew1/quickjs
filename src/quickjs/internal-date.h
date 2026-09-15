@@ -32,25 +32,18 @@
 #define QJS_DATE_HINT_NONE           2
 #define QJS_DATE_HINT_FORCE_ORDINARY (1 << 4)
 
-static inline int qjs_date_string_get(const JSString *str, int index)
-{
-    return str->is_wide_char ? str->u.str16[index] : str->u.str8[index];
-}
-
-QJS_INTERNAL JSValue qjs_date_get_string(JSContext *ctx,
+QJS_INTERNAL JSValue get_date_string(JSContext *ctx,
                                          JSValueConst this_val,
                                          int argc, JSValueConst *argv,
                                          int magic);
-QJS_INTERNAL JSValue qjs_date_new_string8(JSContext *ctx, const char *str);
-QJS_INTERNAL JSValue qjs_date_throw_type_error_not_object(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_date_to_primitive(JSContext *ctx, JSValueConst value,
+QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *str);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst value,
                                            int hint);
-QJS_INTERNAL int qjs_date_to_float64_free(JSContext *ctx, double *result,
-                                          JSValue value);
-QJS_INTERNAL JSValue qjs_date_create_from_ctor(JSContext *ctx,
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
                                                JSValueConst ctor,
-                                               JSClassID class_id);
-QJS_INTERNAL JSValue qjs_date_new_c_constructor(
+                                               int class_id);
+QJS_INTERNAL JSValue JS_NewCConstructor(
     JSContext *ctx, int class_id, const char *name, JSCFunction *func,
     int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
     const JSCFunctionListEntry *ctor_fields, int ctor_field_count,

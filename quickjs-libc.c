@@ -147,7 +147,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque)
     return (os_pending_signals >> SIGINT) & 1;
 }
 
-JSValue qjs_libc_eval_script(JSContext *ctx, JSValueConst this_val,
+JSValue js_evalScript(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
     JSRuntime *rt = JS_GetRuntime(ctx);
@@ -162,10 +162,10 @@ JSValue qjs_libc_eval_script(JSContext *ctx, JSValueConst this_val,
 
     if (argc >= 2) {
         options_obj = argv[1];
-        if (qjs_libc_get_bool_option(ctx, &backtrace_barrier, options_obj,
+        if (get_bool_option(ctx, &backtrace_barrier, options_obj,
                                     "backtrace_barrier"))
             return JS_EXCEPTION;
-        if (qjs_libc_get_bool_option(ctx, &is_async, options_obj, "async"))
+        if (get_bool_option(ctx, &is_async, options_obj, "async"))
             return JS_EXCEPTION;
     }
 
@@ -1402,7 +1402,7 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val,
             fwrite(str, 1, len, stdout);
             JS_FreeCString(ctx, str);
         } else {
-            JS_PrintValue(ctx, qjs_libc_print_value_write, stdout, v, NULL);
+            JS_PrintValue(ctx, js_print_value_write, stdout, v, NULL);
         }
     }
     putchar('\n');
@@ -1448,7 +1448,7 @@ void js_std_add_helpers(JSContext *ctx, int argc, char **argv)
     JS_SetPropertyStr(ctx, global_obj, "print",
                       JS_NewCFunction(ctx, js_print, "print", 1));
     JS_SetPropertyStr(ctx, global_obj, "__loadScript",
-                      JS_NewCFunction(ctx, qjs_libc_load_script, "__loadScript", 1));
+                      JS_NewCFunction(ctx, js_loadScript, "__loadScript", 1));
 
     JS_FreeValue(ctx, global_obj);
 }
@@ -1534,7 +1534,7 @@ void js_std_free_handlers(JSRuntime *rt)
 
 static void js_std_dump_error1(JSContext *ctx, JSValueConst exception_val)
 {
-    JS_PrintValue(ctx, qjs_libc_print_value_write, stderr, exception_val, NULL);
+    JS_PrintValue(ctx, js_print_value_write, stderr, exception_val, NULL);
     fputc('\n', stderr);
 }
 
@@ -1716,7 +1716,7 @@ void js_std_eval_binary_json_module(JSContext *ctx,
     obj = JS_ReadObject(ctx, buf, buf_len, 0);
     if (JS_IsException(obj))
         goto exception;
-    m = qjs_libc_create_json_module(ctx, module_name, obj);
+    m = create_json_module(ctx, module_name, obj);
     if (!m) {
     exception:
         js_std_dump_error(ctx);

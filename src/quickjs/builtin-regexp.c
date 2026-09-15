@@ -28,17 +28,9 @@
 #include "internal-base.h"
 #include "internal-number.h"
 
-#define js_malloc_rt qjs_malloc_rt_internal
-#define js_free_rt qjs_free_rt_internal
-#define js_realloc_rt qjs_realloc_rt_internal
-#define js_malloc qjs_malloc_internal
-#define js_free qjs_free_internal
-#define js_realloc qjs_realloc_internal
-#define JS_FreeAtom qjs_free_atom
-
 /* RegExp */
 
-static void js_regexp_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_regexp_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSRegExp *re = &p->u.regexp;
@@ -129,7 +121,7 @@ static JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
 }
 
 /* fast regexp creation */
-static JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc)
+QJS_INTERNAL JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc)
 {
     JSValue obj;
     JSProperty props[1];
@@ -143,7 +135,7 @@ static JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc)
         goto fail;
     }
     props[0].u.value = JS_NewInt32(ctx, 0); /* lastIndex */
-    obj = JS_NewObjectFromShape(ctx, qjs_dup_shape(ctx->regexp_shape),
+    obj = JS_NewObjectFromShape(ctx, js_dup_shape(ctx->regexp_shape),
                                     JS_CLASS_REGEXP, props);
     if (JS_IsException(obj))
         goto fail;
@@ -194,13 +186,13 @@ static JSRegExp *js_get_regexp(JSContext *ctx, JSValueConst obj, BOOL throw_erro
             return &p->u.regexp;
     }
     if (throw_error) {
-        qjs_regexp_throw_type_error_invalid_class(ctx, JS_CLASS_REGEXP);
+        JS_ThrowTypeErrorInvalidClass(ctx, JS_CLASS_REGEXP);
     }
     return NULL;
 }
 
 /* return < 0 if exception or TRUE/FALSE */
-static int js_is_regexp(JSContext *ctx, JSValueConst obj)
+QJS_INTERNAL int js_is_regexp(JSContext *ctx, JSValueConst obj)
 {
     JSValue m;
 
@@ -210,7 +202,7 @@ static int js_is_regexp(JSContext *ctx, JSValueConst obj)
     if (JS_IsException(m))
         return -1;
     if (!JS_IsUndefined(m))
-        return qjs_to_bool_free(ctx, m);
+        return JS_ToBoolFree(ctx, m);
     return js_get_regexp(ctx, obj, FALSE) != NULL;
 }
 
@@ -236,7 +228,7 @@ static JSValue js_regexp_constructor(JSContext *ctx, JSValueConst new_target,
             ctor = JS_GetProperty(ctx, pat, JS_ATOM_constructor);
             if (JS_IsException(ctor))
                 return ctor;
-            res = qjs_same_value(ctx, ctor, new_target);
+            res = js_same_value(ctx, ctor, new_target);
             JS_FreeValue(ctx, ctor);
             if (res)
                 return JS_DupValue(ctx, pat);
@@ -248,7 +240,7 @@ static JSValue js_regexp_constructor(JSContext *ctx, JSValueConst new_target,
         pattern = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING, re->pattern));
         if (JS_IsUndefined(flags1)) {
             bc = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING, re->bytecode));
-            obj = qjs_regexp_create_from_ctor(ctx, new_target, JS_CLASS_REGEXP);
+            obj = js_create_from_ctor(ctx, new_target, JS_CLASS_REGEXP);
             if (JS_IsException(obj))
                 goto fail;
             goto no_compilation;
@@ -281,7 +273,7 @@ static JSValue js_regexp_constructor(JSContext *ctx, JSValueConst new_target,
                 goto fail;
         }
     }
-    obj = qjs_regexp_create_from_ctor(ctx, new_target, JS_CLASS_REGEXP);
+    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_REGEXP);
     if (JS_IsException(obj))
         goto fail;
     bc = js_compile_regexp(ctx, pattern, flags);
@@ -349,9 +341,9 @@ static JSValue js_regexp_get_source(JSContext *ctx, JSValueConst this_val)
     int i, n, c, c2, bra;
 
     if (JS_VALUE_GET_TAG(this_val) != JS_TAG_OBJECT)
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
-    if (qjs_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_REGEXP]))
+    if (js_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_REGEXP]))
         goto empty_regex;
 
     re = js_get_regexp(ctx, this_val, TRUE);
@@ -370,18 +362,18 @@ static JSValue js_regexp_get_source(JSContext *ctx, JSValueConst this_val)
     bra = 0;
     for (i = 0, n = p->len; i < n;) {
         c2 = -1;
-        switch (c = qjs_regexp_string_get(p, i++)) {
+        switch (c = string_get(p, i++)) {
         case '\\':
             if (i < n)
-                c2 = qjs_regexp_string_get(p, i++);
+                c2 = string_get(p, i++);
             break;
         case ']':
             bra = 0;
             break;
         case '[':
             if (!bra) {
-                if (i < n && qjs_regexp_string_get(p, i) == ']')
-                    c2 = qjs_regexp_string_get(p, i++);
+                if (i < n && string_get(p, i) == ']')
+                    c2 = string_get(p, i++);
                 bra = 1;
             }
             break;
@@ -413,14 +405,14 @@ static JSValue js_regexp_get_flag(JSContext *ctx, JSValueConst this_val, int mas
     int flags;
 
     if (JS_VALUE_GET_TAG(this_val) != JS_TAG_OBJECT)
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     re = js_get_regexp(ctx, this_val, FALSE);
     if (!re) {
-        if (qjs_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_REGEXP]))
+        if (js_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_REGEXP]))
             return JS_UNDEFINED;
         else
-            return qjs_regexp_throw_type_error_invalid_class(ctx, JS_CLASS_REGEXP);
+            return JS_ThrowTypeErrorInvalidClass(ctx, JS_CLASS_REGEXP);
     }
 
     flags = lre_get_flags(re->bytecode->u.str8);
@@ -446,10 +438,10 @@ static JSValue js_regexp_get_flags(JSContext *ctx, JSValueConst this_val)
     static const char flag_char[RE_FLAG_COUNT] = { 'd', 'g', 'i', 'm', 's', 'u', 'v', 'y' };
 
     if (JS_VALUE_GET_TAG(this_val) != JS_TAG_OBJECT)
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     for(i = 0; i < RE_FLAG_COUNT; i++) {
-        res = qjs_to_bool_free(ctx,
+        res = JS_ToBoolFree(ctx,
                                JS_GetProperty(ctx, this_val, flag_atom[i]));
         if (res < 0)
             goto exception;
@@ -469,7 +461,7 @@ static JSValue js_regexp_toString(JSContext *ctx, JSValueConst this_val,
     StringBuffer b_s, *b = &b_s;
 
     if (!JS_IsObject(this_val))
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     string_buffer_init(ctx, b, 0);
     string_buffer_putc8(b, '/');
@@ -573,7 +565,7 @@ static force_inline int js_regexp_get_lastIndex(JSContext *ctx, int64_t *plast_i
         *plast_index = max_int(JS_VALUE_GET_INT(p->prop[0].u.value), 0);
         return 0;
     } else {
-        return qjs_to_length_free(ctx, plast_index,
+        return JS_ToLengthFree(ctx, plast_index,
                                   JS_DupValue(ctx, p->prop[0].u.value));
     }
 }
@@ -586,8 +578,8 @@ static force_inline int js_regexp_set_lastIndex(JSContext *ctx, JSValueConst thi
 
     /* lastIndex is always the first property (it is not configurable) */
     if (likely(JS_VALUE_GET_TAG(p->prop[0].u.value) == JS_TAG_INT &&
-               (qjs_get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE))) {
-        qjs_set_value(ctx, &p->prop[0].u.value, JS_NewInt32(ctx, last_index));
+               (get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE))) {
+        set_value(ctx, &p->prop[0].u.value, JS_NewInt32(ctx, last_index));
     } else {
         if (JS_SetProperty(ctx, this_val, JS_ATOM_lastIndex,
                            JS_NewInt32(ctx, last_index)) < 0)
@@ -659,7 +651,7 @@ static JSValue js_regexp_exec(JSContext *ctx, JSValueConst this_val,
             }
         } else {
             if (rc == LRE_RET_TIMEOUT) {
-                qjs_regexp_throw_interrupted(ctx);
+                JS_ThrowInterrupted(ctx);
             } else {
                 JS_ThrowInternalError(ctx, "out of memory in regexp execution");
             }
@@ -699,7 +691,7 @@ static JSValue js_regexp_exec(JSContext *ctx, JSValueConst this_val,
 
         str_val = JS_UNDEFINED;
         obj = JS_NewObjectFromShape(ctx,
-                                        qjs_dup_shape(ctx->regexp_result_shape),
+                                        js_dup_shape(ctx->regexp_result_shape),
                                         JS_CLASS_ARRAY, props);
         if (JS_IsException(obj))
             goto fail;
@@ -886,7 +878,7 @@ static JSValue js_regexp_replace(JSContext *ctx, JSValueConst this_val, JSValueC
                 }
             } else {
                 if (ret == LRE_RET_TIMEOUT) {
-                    qjs_regexp_throw_interrupted(ctx);
+                    JS_ThrowInterrupted(ctx);
                 } else {
                     JS_ThrowInternalError(ctx, "out of memory in regexp execution");
                 }
@@ -917,7 +909,7 @@ static JSValue js_regexp_replace(JSContext *ctx, JSValueConst this_val, JSValueC
             break;
         }
         if (end == start) {
-            end = qjs_regexp_string_advance_index(str, end, fullUnicode);
+            end = string_advance_index(str, end, fullUnicode);
         }
         last_index = end;
     }
@@ -941,7 +933,7 @@ static JSValue JS_RegExpExec(JSContext *ctx, JSValueConst r, JSValueConst s)
     if (JS_IsException(method))
         return method;
     if (JS_IsFunction(ctx, method)) {
-        ret = qjs_call_free(ctx, method, r, 1, &s);
+        ret = JS_CallFree(ctx, method, r, 1, &s);
         if (JS_IsException(ret))
             return ret;
         if (!JS_IsObject(ret) && !JS_IsNull(ret)) {
@@ -978,7 +970,7 @@ static JSValue js_regexp_Symbol_match(JSContext *ctx, JSValueConst this_val,
     JSString *p;
 
     if (!JS_IsObject(rx))
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     A = JS_UNDEFINED;
     flags = JS_UNDEFINED;
@@ -996,12 +988,12 @@ static JSValue js_regexp_Symbol_match(JSContext *ctx, JSValueConst this_val,
         goto exception;
     p = JS_VALUE_GET_STRING(flags);
 
-    global = (-1 != qjs_regexp_string_indexof_char(p, 'g', 0));
+    global = (-1 != string_indexof_char(p, 'g', 0));
     if (!global) {
         A = JS_RegExpExec(ctx, rx, S);
     } else {
-        fullUnicode = (qjs_regexp_string_indexof_char(p, 'u', 0) >= 0 ||
-                       qjs_regexp_string_indexof_char(p, 'v', 0) >= 0);
+        fullUnicode = (string_indexof_char(p, 'u', 0) >= 0 ||
+                       string_indexof_char(p, 'v', 0) >= 0);
 
         if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, JS_NewInt32(ctx, 0)) < 0)
             goto exception;
@@ -1017,20 +1009,20 @@ static JSValue js_regexp_Symbol_match(JSContext *ctx, JSValueConst this_val,
             if (JS_IsNull(result))
                 break;
             matchStr = JS_ToStringFree(ctx,
-                                          qjs_get_property_int64(ctx, result, 0));
+                                          JS_GetPropertyInt64(ctx, result, 0));
             if (JS_IsException(matchStr))
                 goto exception;
-            isEmpty = qjs_regexp_is_empty_string(matchStr);
-            if (qjs_define_property_value_int64(ctx, A, n++, matchStr,
+            isEmpty = JS_IsEmptyString(matchStr);
+            if (JS_DefinePropertyValueInt64(ctx, A, n++, matchStr,
                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                 goto exception;
             if (isEmpty) {
                 int64_t thisIndex, nextIndex;
-                if (qjs_to_length_free(ctx, &thisIndex,
+                if (JS_ToLengthFree(ctx, &thisIndex,
                                     JS_GetProperty(ctx, rx, JS_ATOM_lastIndex)) < 0)
                     goto exception;
                 p = JS_VALUE_GET_STRING(S);
-                nextIndex = qjs_regexp_string_advance_index(p, thisIndex, fullUnicode);
+                nextIndex = string_advance_index(p, thisIndex, fullUnicode);
                 if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, JS_NewInt64(ctx, nextIndex)) < 0)
                     goto exception;
             }
@@ -1061,7 +1053,7 @@ typedef struct JSRegExpStringIteratorData {
     BOOL done;
 } JSRegExpStringIteratorData;
 
-static void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSRegExpStringIteratorData *it = p->u.regexp_string_iterator_data;
@@ -1072,7 +1064,7 @@ static void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-static void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
                                            JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -1111,16 +1103,16 @@ static JSValue js_regexp_string_iterator_next(JSContext *ctx,
         return JS_UNDEFINED;
     } else if (it->global) {
         matchStr = JS_ToStringFree(ctx,
-                                      qjs_get_property_int64(ctx, match, 0));
+                                      JS_GetPropertyInt64(ctx, match, 0));
         if (JS_IsException(matchStr))
             goto exception;
-        if (qjs_regexp_is_empty_string(matchStr)) {
+        if (JS_IsEmptyString(matchStr)) {
             int64_t thisIndex, nextIndex;
-            if (qjs_to_length_free(ctx, &thisIndex,
+            if (JS_ToLengthFree(ctx, &thisIndex,
                                 JS_GetProperty(ctx, R, JS_ATOM_lastIndex)) < 0)
                 goto exception;
             sp = JS_VALUE_GET_STRING(S);
-            nextIndex = qjs_regexp_string_advance_index(sp, thisIndex, it->unicode);
+            nextIndex = string_advance_index(sp, thisIndex, it->unicode);
             if (JS_SetProperty(ctx, R, JS_ATOM_lastIndex,
                                JS_NewInt64(ctx, nextIndex)) < 0)
                 goto exception;
@@ -1150,7 +1142,7 @@ static JSValue js_regexp_Symbol_matchAll(JSContext *ctx, JSValueConst this_val,
     JSRegExpStringIteratorData *it;
 
     if (!JS_IsObject(R))
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     C = JS_UNDEFINED;
     flags = JS_UNDEFINED;
@@ -1160,7 +1152,7 @@ static JSValue js_regexp_Symbol_matchAll(JSContext *ctx, JSValueConst this_val,
     S = JS_ToString(ctx, argv[0]);
     if (JS_IsException(S))
         goto exception;
-    C = qjs_regexp_species_constructor(ctx, R, ctx->regexp_ctor);
+    C = JS_SpeciesConstructor(ctx, R, ctx->regexp_ctor);
     if (JS_IsException(C))
         goto exception;
     flags = JS_ToStringFree(ctx, JS_GetProperty(ctx, R, JS_ATOM_flags));
@@ -1171,7 +1163,7 @@ static JSValue js_regexp_Symbol_matchAll(JSContext *ctx, JSValueConst this_val,
     matcher = JS_CallConstructor(ctx, C, 2, args);
     if (JS_IsException(matcher))
         goto exception;
-    if (qjs_to_length_free(ctx, &lastIndex,
+    if (JS_ToLengthFree(ctx, &lastIndex,
                         JS_GetProperty(ctx, R, JS_ATOM_lastIndex)))
         goto exception;
     if (JS_SetProperty(ctx, matcher, JS_ATOM_lastIndex,
@@ -1187,9 +1179,9 @@ static JSValue js_regexp_Symbol_matchAll(JSContext *ctx, JSValueConst this_val,
     it->iterating_regexp = matcher;
     it->iterated_string = S;
     strp = JS_VALUE_GET_STRING(flags);
-    it->global = qjs_regexp_string_indexof_char(strp, 'g', 0) >= 0;
-    it->unicode = (qjs_regexp_string_indexof_char(strp, 'u', 0) >= 0 ||
-                   qjs_regexp_string_indexof_char(strp, 'v', 0) >= 0);
+    it->global = string_indexof_char(strp, 'g', 0) >= 0;
+    it->unicode = (string_indexof_char(strp, 'u', 0) >= 0 ||
+                   string_indexof_char(strp, 'v', 0) >= 0);
     it->done = FALSE;
     JS_SetOpaque(iter, it);
 
@@ -1272,7 +1264,7 @@ static JSShapeProperty *find_property_regexp(JSProperty **ppr,
     JSShapeProperty *prs;
 
     for(;;) {
-        prs = qjs_find_own_property_fast(ppr, p, atom);
+        prs = find_own_property(ppr, p, atom);
         if (prs)
             return prs;
         p = p->shape->proto;
@@ -1297,7 +1289,7 @@ static BOOL check_regexp_getter(JSContext *ctx,
         return FALSE;
     if (!pr->u.getset.getter)
         return FALSE;
-    return qjs_regexp_is_c_function(ctx, JS_MKPTR(JS_TAG_OBJECT, pr->u.getset.getter),
+    return JS_IsCFunction(ctx, JS_MKPTR(JS_TAG_OBJECT, pr->u.getset.getter),
                           func, magic);
 }
 
@@ -1314,7 +1306,7 @@ static BOOL js_is_standard_regexp(JSContext *ctx, JSValueConst obj)
     if (p->class_id != JS_CLASS_REGEXP)
         return FALSE;
     /* check that the lastIndex is a number (no side effect while getting it) */
-    prs = qjs_find_own_property_fast(&pr, p, JS_ATOM_lastIndex);
+    prs = find_own_property(&pr, p, JS_ATOM_lastIndex);
     if (!prs)
         return FALSE;
     if (!JS_IsNumber(pr->u.value))
@@ -1326,7 +1318,7 @@ static BOOL js_is_standard_regexp(JSContext *ctx, JSValueConst obj)
         return FALSE;
     if ((prs->flags & JS_PROP_TMASK) != JS_PROP_NORMAL)
         return FALSE;
-    if (!qjs_regexp_is_c_function(ctx, pr->u.value, js_regexp_exec, 0))
+    if (!JS_IsCFunction(ctx, pr->u.value, js_regexp_exec, 0))
         return FALSE;
     /* check the flag getters */
     ft.getter = js_regexp_get_flags;
@@ -1356,7 +1348,7 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
     int64_t position;
 
     if (!JS_IsObject(rx))
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     string_buffer_init(ctx, b, 0);
     value_buffer_init(ctx, results);
@@ -1396,10 +1388,10 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_STRING(flags);
 
     fullUnicode = 0;
-    is_global = (-1 != qjs_regexp_string_indexof_char(p, 'g', 0));
+    is_global = (-1 != string_indexof_char(p, 'g', 0));
     if (is_global) {
-        fullUnicode = (qjs_regexp_string_indexof_char(p, 'u', 0) >= 0 ||
-                       qjs_regexp_string_indexof_char(p, 'v', 0) >= 0);
+        fullUnicode = (string_indexof_char(p, 'u', 0) >= 0 ||
+                       string_indexof_char(p, 'v', 0) >= 0);
         if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, JS_NewInt32(ctx, 0)) < 0)
             goto exception;
     }
@@ -1417,16 +1409,16 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
             break;
         JS_FreeValue(ctx, matched);
         matched = JS_ToStringFree(ctx,
-                                     qjs_get_property_int64(ctx, result, 0));
+                                     JS_GetPropertyInt64(ctx, result, 0));
         if (JS_IsException(matched))
             goto exception;
-        if (qjs_regexp_is_empty_string(matched)) {
+        if (JS_IsEmptyString(matched)) {
             /* always advance of at least one char */
             int64_t thisIndex, nextIndex;
-            if (qjs_to_length_free(ctx, &thisIndex,
+            if (JS_ToLengthFree(ctx, &thisIndex,
                                    JS_GetProperty(ctx, rx, JS_ATOM_lastIndex)) < 0)
                 goto exception;
-            nextIndex = qjs_regexp_string_advance_index(sp, thisIndex, fullUnicode);
+            nextIndex = string_advance_index(sp, thisIndex, fullUnicode);
             if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, JS_NewInt64(ctx, nextIndex)) < 0)
                 goto exception;
         }
@@ -1439,10 +1431,10 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
             goto exception;
         JS_FreeValue(ctx, matched);
         matched = JS_ToStringFree(ctx,
-                                     qjs_get_property_int64(ctx, result, 0));
+                                     JS_GetPropertyInt64(ctx, result, 0));
         if (JS_IsException(matched))
             goto exception;
-        if (qjs_to_length_free(ctx, &position,
+        if (JS_ToLengthFree(ctx, &position,
                                JS_GetProperty(ctx, result, JS_ATOM_index)))
             goto exception;
         if (position > sp->len)
@@ -1455,13 +1447,13 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
         tab = JS_NewArray(ctx);
         if (JS_IsException(tab))
             goto exception;
-        if (qjs_define_property_value_int64(ctx, tab, 0,
+        if (JS_DefinePropertyValueInt64(ctx, tab, 0,
                                             JS_DupValue(ctx, matched),
                                         JS_PROP_C_W_E | JS_PROP_THROW) < 0)
             goto exception;
         for(n = 1; n < nCaptures; n++) {
             JSValue capN;
-            capN = qjs_get_property_int64(ctx, result, n);
+            capN = JS_GetPropertyInt64(ctx, result, n);
             if (JS_IsException(capN))
                 goto exception;
             if (!JS_IsUndefined(capN)) {
@@ -1469,7 +1461,7 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
                 if (JS_IsException(capN))
                     goto exception;
             }
-            if (qjs_define_property_value_int64(ctx, tab, n, capN,
+            if (JS_DefinePropertyValueInt64(ctx, tab, n, capN,
                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                 goto exception;
         }
@@ -1478,16 +1470,16 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(namedCaptures))
             goto exception;
         if (functionalReplace) {
-            if (qjs_define_property_value_int64(ctx, tab, n++,
+            if (JS_DefinePropertyValueInt64(ctx, tab, n++,
                                             JS_NewInt32(ctx, position),
                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                 goto exception;
-            if (qjs_define_property_value_int64(ctx, tab, n++,
+            if (JS_DefinePropertyValueInt64(ctx, tab, n++,
                                             JS_DupValue(ctx, str),
                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                 goto exception;
             if (!JS_IsUndefined(namedCaptures)) {
-                if (qjs_define_property_value_int64(ctx, tab, n++,
+                if (JS_DefinePropertyValueInt64(ctx, tab, n++,
                                                 JS_DupValue(ctx, namedCaptures),
                                                 JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                     goto exception;
@@ -1496,7 +1488,7 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
             args[1] = tab;
             JS_FreeValue(ctx, rep_str);
             rep_str = JS_ToStringFree(
-                ctx, qjs_base_function_apply(ctx, rep, 2, args, 0));
+                ctx, js_function_apply(ctx, rep, 2, args, 0));
         } else {
             JSValue namedCaptures1;
             StringBuffer b1_s, *b1 = &b1_s;
@@ -1555,7 +1547,7 @@ static JSValue js_regexp_Symbol_search(JSContext *ctx, JSValueConst this_val,
     JSValue str, previousLastIndex, currentLastIndex, result, index;
 
     if (!JS_IsObject(rx))
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     result = JS_UNDEFINED;
     currentLastIndex = JS_UNDEFINED;
@@ -1568,7 +1560,7 @@ static JSValue js_regexp_Symbol_search(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(previousLastIndex))
         goto exception;
 
-    if (!qjs_same_value(ctx, previousLastIndex, JS_NewInt32(ctx, 0))) {
+    if (!js_same_value(ctx, previousLastIndex, JS_NewInt32(ctx, 0))) {
         if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, JS_NewInt32(ctx, 0)) < 0) {
             goto exception;
         }
@@ -1579,7 +1571,7 @@ static JSValue js_regexp_Symbol_search(JSContext *ctx, JSValueConst this_val,
     currentLastIndex = JS_GetProperty(ctx, rx, JS_ATOM_lastIndex);
     if (JS_IsException(currentLastIndex))
         goto exception;
-    if (qjs_same_value(ctx, currentLastIndex, previousLastIndex)) {
+    if (js_same_value(ctx, currentLastIndex, previousLastIndex)) {
         JS_FreeValue(ctx, previousLastIndex);
     } else {
         if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, previousLastIndex) < 0) {
@@ -1619,7 +1611,7 @@ static JSValue js_regexp_Symbol_split(JSContext *ctx, JSValueConst this_val,
     int64_t lengthA, e, numberOfCaptures, i;
 
     if (!JS_IsObject(rx))
-        return qjs_regexp_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     ctor = JS_UNDEFINED;
     splitter = JS_UNDEFINED;
@@ -1629,16 +1621,16 @@ static JSValue js_regexp_Symbol_split(JSContext *ctx, JSValueConst this_val,
     str = JS_ToString(ctx, argv[0]);
     if (JS_IsException(str))
         goto exception;
-    ctor = qjs_regexp_species_constructor(ctx, rx, ctx->regexp_ctor);
+    ctor = JS_SpeciesConstructor(ctx, rx, ctx->regexp_ctor);
     if (JS_IsException(ctor))
         goto exception;
     flags = JS_ToStringFree(ctx, JS_GetProperty(ctx, rx, JS_ATOM_flags));
     if (JS_IsException(flags))
         goto exception;
     strp = JS_VALUE_GET_STRING(flags);
-    unicodeMatching = (qjs_regexp_string_indexof_char(strp, 'u', 0) >= 0 ||
-                       qjs_regexp_string_indexof_char(strp, 'v', 0) >= 0);
-    if (qjs_regexp_string_indexof_char(strp, 'y', 0) < 0) {
+    unicodeMatching = (string_indexof_char(strp, 'u', 0) >= 0 ||
+                       string_indexof_char(strp, 'v', 0) >= 0);
+    if (string_indexof_char(strp, 'y', 0) < 0) {
         flags = JS_ConcatString3(ctx, "", flags, "y");
         if (JS_IsException(flags))
             goto exception;
@@ -1679,21 +1671,21 @@ static JSValue js_regexp_Symbol_split(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(z))
             goto exception;
         if (JS_IsNull(z)) {
-            q = qjs_regexp_string_advance_index(strp, q, unicodeMatching);
+            q = string_advance_index(strp, q, unicodeMatching);
         } else {
-            if (qjs_to_length_free(ctx, &e,
+            if (JS_ToLengthFree(ctx, &e,
                                    JS_GetProperty(ctx, splitter,
                                                   JS_ATOM_lastIndex)))
                 goto exception;
             if (e > size)
                 e = size;
             if (e == p) {
-                q = qjs_regexp_string_advance_index(strp, q, unicodeMatching);
+                q = string_advance_index(strp, q, unicodeMatching);
             } else {
                 sub = js_sub_string(ctx, strp, p, q);
                 if (JS_IsException(sub))
                     goto exception;
-                if (qjs_define_property_value_int64(ctx, A, lengthA++, sub,
+                if (JS_DefinePropertyValueInt64(ctx, A, lengthA++, sub,
                                                 JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                     goto exception;
                 if (lengthA == lim)
@@ -1702,10 +1694,10 @@ static JSValue js_regexp_Symbol_split(JSContext *ctx, JSValueConst this_val,
                 if (js_get_length64(ctx, &numberOfCaptures, z))
                     goto exception;
                 for(i = 1; i < numberOfCaptures; i++) {
-                    sub = qjs_get_property_int64(ctx, z, i);
+                    sub = JS_GetPropertyInt64(ctx, z, i);
                     if (JS_IsException(sub))
                         goto exception;
-                    if (qjs_define_property_value_int64(ctx, A, lengthA++, sub,
+                    if (JS_DefinePropertyValueInt64(ctx, A, lengthA++, sub,
                                                     JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                         goto exception;
                     if (lengthA == lim)
@@ -1721,7 +1713,7 @@ add_tail:
     sub = js_sub_string(ctx, strp, p, size);
     if (JS_IsException(sub))
         goto exception;
-    if (qjs_define_property_value_int64(ctx, A, lengthA++, sub,
+    if (JS_DefinePropertyValueInt64(ctx, A, lengthA++, sub,
                                     JS_PROP_C_W_E | JS_PROP_THROW) < 0)
         goto exception;
     goto done;
@@ -1739,7 +1731,7 @@ done:
 
 static const JSCFunctionListEntry js_regexp_funcs[] = {
     JS_CFUNC_DEF("escape", 1, js_regexp_escape ),
-    JS_CGETSET_DEF("[Symbol.species]", qjs_regexp_get_this, NULL ),
+    JS_CGETSET_DEF("[Symbol.species]", js_get_this, NULL ),
 };
 
 static const JSCFunctionListEntry js_regexp_proto_funcs[] = {
@@ -1780,7 +1772,7 @@ int JS_AddIntrinsicRegExp(JSContext *ctx)
 
     JS_AddIntrinsicRegExpCompiler(ctx);
 
-    obj = qjs_regexp_new_c_constructor(ctx, JS_CLASS_REGEXP, "RegExp",
+    obj = JS_NewCConstructor(ctx, JS_CLASS_REGEXP, "RegExp",
                                     js_regexp_constructor, 2, JS_CFUNC_constructor_or_func, 0,
                                     JS_UNDEFINED,
                                     js_regexp_funcs, countof(js_regexp_funcs),
@@ -1791,55 +1783,36 @@ int JS_AddIntrinsicRegExp(JSContext *ctx)
     ctx->regexp_ctor = obj;
 
     ctx->class_proto[JS_CLASS_REGEXP_STRING_ITERATOR] =
-        qjs_regexp_new_object_proto_list(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
+        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
                               js_regexp_string_iterator_proto_funcs,
                               countof(js_regexp_string_iterator_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_REGEXP_STRING_ITERATOR]))
         return -1;
 
-    ctx->regexp_shape = qjs_regexp_new_shape2(ctx, qjs_regexp_get_proto_obj(ctx->class_proto[JS_CLASS_REGEXP]),
+    ctx->regexp_shape = js_new_shape2(ctx, get_proto_obj(ctx->class_proto[JS_CLASS_REGEXP]),
                                      JS_PROP_INITIAL_HASH_SIZE, 1);
     if (!ctx->regexp_shape)
         return -1;
-    if (qjs_regexp_add_shape_property(ctx, &ctx->regexp_shape, NULL,
+    if (add_shape_property(ctx, &ctx->regexp_shape, NULL,
                            JS_ATOM_lastIndex, JS_PROP_WRITABLE))
         return -1;
 
-    ctx->regexp_result_shape = qjs_regexp_new_shape2(ctx, qjs_regexp_get_proto_obj(ctx->class_proto[JS_CLASS_ARRAY]),
+    ctx->regexp_result_shape = js_new_shape2(ctx, get_proto_obj(ctx->class_proto[JS_CLASS_ARRAY]),
                                      JS_PROP_INITIAL_HASH_SIZE, 4);
     if (!ctx->regexp_result_shape)
         return -1;
-    if (qjs_regexp_add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
+    if (add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
                            JS_ATOM_length, JS_PROP_WRITABLE | JS_PROP_LENGTH))
         return -1;
-    if (qjs_regexp_add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
+    if (add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
                            JS_ATOM_index, JS_PROP_C_W_E))
         return -1;
-    if (qjs_regexp_add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
+    if (add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
                            JS_ATOM_input, JS_PROP_C_W_E))
         return -1;
-    if (qjs_regexp_add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
+    if (add_shape_property(ctx, &ctx->regexp_result_shape, NULL,
                            JS_ATOM_groups, JS_PROP_C_W_E))
         return -1;
 
     return 0;
 }
-
-QJS_INTERNAL void qjs_regexp_finalizer(JSRuntime *rt, JSValue value)
-{ js_regexp_finalizer(rt, value); }
-
-QJS_INTERNAL void qjs_regexp_string_iterator_finalizer(JSRuntime *rt,
-                                                       JSValue value)
-{ js_regexp_string_iterator_finalizer(rt, value); }
-
-QJS_INTERNAL void qjs_regexp_string_iterator_mark(JSRuntime *rt,
-                                                  JSValueConst value,
-                                                  JS_MarkFunc *mark_func)
-{ js_regexp_string_iterator_mark(rt, value, mark_func); }
-
-QJS_INTERNAL JSValue qjs_new_regexp(JSContext *ctx, JSValue pattern,
-                                    JSValue bytecode)
-{ return JS_NewRegexp(ctx, pattern, bytecode); }
-
-QJS_INTERNAL int qjs_is_regexp(JSContext *ctx, JSValueConst value)
-{ return js_is_regexp(ctx, value); }

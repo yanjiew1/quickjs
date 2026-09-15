@@ -27,11 +27,11 @@
 static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
 {
-    return qjs_eval_object(ctx, ctx->global_obj, argv[0],
+    return JS_EvalObject(ctx, ctx->global_obj, argv[0],
                            JS_EVAL_TYPE_INDIRECT, -1);
 }
 
-static JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv)
 {
     double d;
@@ -41,7 +41,7 @@ static JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
     return JS_NewBool(ctx, isnan(d));
 }
 
-static JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv)
 {
     double d;
@@ -69,9 +69,9 @@ static JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
         ret = JS_NAN;
     } else {
         p = str;
-        p += qjs_global_skip_spaces(p);
+        p += skip_spaces(p);
         flags = QJS_ATOD_INT_ONLY | QJS_ATOD_ACCEPT_PREFIX_AFTER_SIGN;
-        ret = qjs_global_atof(ctx, p, NULL, radix, flags);
+        ret = js_atof(ctx, p, NULL, radix, flags);
     }
     JS_FreeCString(ctx, str);
     return ret;
@@ -87,8 +87,8 @@ static JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
     if (!str)
         return JS_EXCEPTION;
     p = str;
-    p += qjs_global_skip_spaces(p);
-    ret = qjs_global_atof(ctx, p, NULL, 10, 0);
+    p += skip_spaces(p);
+    ret = js_atof(ctx, p, NULL, 10, 0);
     JS_FreeCString(ctx, str);
     return ret;
 }
@@ -98,7 +98,7 @@ static JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
 static int string_get_hex(JSString *p, int k, int n) {
     int c = 0, h;
     while (n-- > 0) {
-        if ((h = from_hex(qjs_global_string_get(p, k++))) < 0)
+        if ((h = from_hex(string_get(p, k++))) < 0)
             return -1;
         c = (c << 4) | h;
     }
@@ -114,7 +114,7 @@ static int __attribute__((format(printf, 2, 3))) js_throw_URIError(JSContext *ct
     va_list ap;
 
     va_start(ap, fmt);
-    qjs_global_throw_error(ctx, JS_URI_ERROR, fmt, ap);
+    JS_ThrowError(ctx, JS_URI_ERROR, fmt, ap);
     va_end(ap);
     return -1;
 }
@@ -122,7 +122,7 @@ static int __attribute__((format(printf, 2, 3))) js_throw_URIError(JSContext *ct
 static int hex_decode(JSContext *ctx, JSString *p, int k) {
     int c;
 
-    if (k >= p->len || qjs_global_string_get(p, k) != '%')
+    if (k >= p->len || string_get(p, k) != '%')
         return js_throw_URIError(ctx, "expecting %%");
     if (k + 2 >= p->len || (c = string_get_hex(p, k + 1, 2)) < 0)
         return js_throw_URIError(ctx, "expecting hex digit");
@@ -146,7 +146,7 @@ static JSValue js_global_decodeURI(JSContext *ctx, JSValueConst this_val,
 
     p = JS_VALUE_GET_STRING(str);
     for (k = 0; k < p->len;) {
-        c = qjs_global_string_get(p, k);
+        c = string_get(p, k);
         if (c == '%') {
             c = hex_decode(ctx, p, k);
             if (c < 0)
@@ -238,7 +238,7 @@ static int encodeURI_hex(StringBuffer *b, int c) {
     }
     buf[n++] = hex[(c >> 4) & 15];
     buf[n++] = hex[(c >> 0) & 15];
-    return qjs_global_string_buffer_write8(b, buf, n);
+    return string_buffer_write8(b, buf, n);
 }
 
 static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
@@ -257,10 +257,10 @@ static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_STRING(str);
     string_buffer_init(ctx, b, p->len);
     for (k = 0; k < p->len;) {
-        c = qjs_global_string_get(p, k);
+        c = string_get(p, k);
         k++;
         if (isURIUnescaped(c, isComponent)) {
-            qjs_global_string_buffer_putc16(b, c);
+            string_buffer_putc16(b, c);
         } else {
             if (is_lo_surrogate(c)) {
                 js_throw_URIError(ctx, "invalid character");
@@ -270,7 +270,7 @@ static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
                     js_throw_URIError(ctx, "expecting surrogate pair");
                     goto fail;
                 }
-                c1 = qjs_global_string_get(p, k);
+                c1 = string_get(p, k);
                 k++;
                 if (!is_lo_surrogate(c1)) {
                     js_throw_URIError(ctx, "expecting surrogate pair");
@@ -321,9 +321,9 @@ static JSValue js_global_escape(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_STRING(str);
     string_buffer_init(ctx, b, p->len);
     for (i = 0, len = p->len; i < len; i++) {
-        c = qjs_global_string_get(p, i);
+        c = string_get(p, i);
         if (isUnescaped(c)) {
-            qjs_global_string_buffer_putc16(b, c);
+            string_buffer_putc16(b, c);
         } else {
             encodeURI_hex(b, c);
         }
@@ -347,10 +347,10 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
     string_buffer_init(ctx, b, 0);
     p = JS_VALUE_GET_STRING(str);
     for (i = 0, len = p->len; i < len; i++) {
-        c = qjs_global_string_get(p, i);
+        c = string_get(p, i);
         if (c == '%') {
             if (i + 6 <= len
-            &&  qjs_global_string_get(p, i + 1) == 'u'
+            &&  string_get(p, i + 1) == 'u'
             &&  (n = string_get_hex(p, i + 2, 4)) >= 0) {
                 c = n;
                 i += 6 - 1;
@@ -361,7 +361,7 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
                 i += 3 - 1;
             }
         }
-        qjs_global_string_buffer_putc16(b, c);
+        string_buffer_putc16(b, c);
     }
     JS_FreeValue(ctx, str);
     return string_buffer_end(b);
@@ -393,18 +393,4 @@ QJS_INTERNAL int qjs_add_intrinsic_global(JSContext *ctx)
 {
     return JS_SetPropertyFunctionList(ctx, ctx->global_obj, js_global_funcs,
                                       countof(js_global_funcs));
-}
-
-QJS_INTERNAL JSValue qjs_global_is_nan(JSContext *ctx,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv)
-{
-    return js_global_isNaN(ctx, this_val, argc, argv);
-}
-
-QJS_INTERNAL JSValue qjs_global_is_finite(JSContext *ctx,
-                                          JSValueConst this_val,
-                                          int argc, JSValueConst *argv)
-{
-    return js_global_isFinite(ctx, this_val, argc, argv);
 }

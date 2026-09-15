@@ -26,7 +26,7 @@
 
 /* runtime functions & objects */
 
-static int check_function(JSContext *ctx, JSValueConst obj)
+QJS_INTERNAL int check_function(JSContext *ctx, JSValueConst obj)
 {
     if (likely(JS_IsFunction(ctx, obj)))
         return 0;
@@ -34,7 +34,7 @@ static int check_function(JSContext *ctx, JSValueConst obj)
     return -1;
 }
 
-static int check_exception_free(JSContext *ctx, JSValue obj)
+QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue obj)
 {
     JS_FreeValue(ctx, obj);
     return JS_IsException(obj);
@@ -63,11 +63,11 @@ static JSAtom find_atom(JSContext *ctx, const char *name)
     return atom;
 }
 
-static JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
+QJS_INTERNAL JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
                                      const JSCFunctionListEntry *fields, int n_fields)
 {
     JSValue obj;
-    obj = qjs_object_proto_class_alloc(ctx, proto, JS_CLASS_OBJECT, n_fields);
+    obj = JS_NewObjectProtoClassAlloc(ctx, proto, JS_CLASS_OBJECT, n_fields);
     if (JS_IsException(obj))
         return obj;
     if (JS_SetPropertyFunctionList(ctx, obj, fields, n_fields)) {
@@ -77,7 +77,7 @@ static JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
     return obj;
 }
 
-static JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
+QJS_INTERNAL JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
                                                JSAtom atom, void *opaque)
 {
     const JSCFunctionListEntry *e = opaque;
@@ -150,7 +150,7 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
             /* Function.prototype[Symbol.hasInstance] is not writable nor configurable */
             prop_flags = 0;
         }
-        if (qjs_define_auto_init_property(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
+        if (JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
                                       (void *)e, prop_flags) < 0)
             return -1;
         return 0;
@@ -205,7 +205,7 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
         break;
     case JS_DEF_PROP_STRING:
     case JS_DEF_OBJECT:
-        if (qjs_define_auto_init_property(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
+        if (JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
                                       (void *)e, prop_flags) < 0)
             return -1;
         return 0;
@@ -285,7 +285,7 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
 }
 
 /* Note: 'func_obj' is not necessarily a constructor */
-static int JS_SetConstructor2(JSContext *ctx,
+QJS_INTERNAL int JS_SetConstructor2(JSContext *ctx,
                               JSValueConst func_obj,
                               JSValueConst proto,
                               int proto_flags, int ctor_flags)
@@ -297,8 +297,8 @@ static int JS_SetConstructor2(JSContext *ctx,
                                JS_DupValue(ctx, func_obj),
                                ctor_flags) < 0)
         return -1;
-    qjs_set_cycle_flag(ctx, func_obj);
-    qjs_set_cycle_flag(ctx, proto);
+    set_cycle_flag(ctx, func_obj);
+    set_cycle_flag(ctx, proto);
     return 0;
 }
 
@@ -314,7 +314,7 @@ int JS_SetConstructor(JSContext *ctx, JSValueConst func_obj,
    JS_NEW_CTOR_NO_GLOBAL is set. The new class inherit from
    parent_ctor if it is not JS_UNDEFINED. if class_id is != -1,
    class_proto[class_id] is set. */
-static JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
                                   JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
                                   JSValueConst parent_ctor,
                                   const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
@@ -348,7 +348,7 @@ static JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name
         else
             proto_class_id = JS_CLASS_OBJECT;
         /* one additional field: constructor */
-        proto = qjs_object_proto_class_alloc(ctx, parent_proto, proto_class_id,
+        proto = JS_NewObjectProtoClassAlloc(ctx, parent_proto, proto_class_id,
                                             n_proto_fields + 1);
         if (JS_IsException(proto))
             goto fail;
@@ -359,7 +359,7 @@ static JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name
         goto fail;
 
     /* additional fields: name, length, prototype */
-    ctor = qjs_new_c_function3(ctx, func, name, length, cproto, magic, parent_ctor,
+    ctor = JS_NewCFunction3(ctx, func, name, length, cproto, magic, parent_ctor,
                             n_ctor_fields + 3);
     if (JS_IsException(ctor))
         goto fail;
@@ -383,36 +383,6 @@ static JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name
     return JS_EXCEPTION;
 }
 
-
-
-QJS_INTERNAL int qjs_check_function(JSContext *ctx, JSValueConst value)
-{ return check_function(ctx, value); }
-QJS_INTERNAL int qjs_check_exception_free(JSContext *ctx, JSValue value)
-{ return check_exception_free(ctx, value); }
-QJS_INTERNAL JSValue qjs_new_object_proto_list(
-    JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
-    int field_count)
-{ return JS_NewObjectProtoList(ctx, proto, fields, field_count); }
-QJS_INTERNAL JSValue qjs_instantiate_function_list_item(
-    JSContext *ctx, JSObject *obj, JSAtom atom, void *opaque)
-{ return JS_InstantiateFunctionListItem2(ctx, obj, atom, opaque); }
-QJS_INTERNAL int qjs_set_constructor2(JSContext *ctx,
-                                      JSValueConst constructor,
-                                      JSValueConst prototype,
-                                      int prototype_flags,
-                                      int constructor_flags)
-{ return JS_SetConstructor2(ctx, constructor, prototype,
-                            prototype_flags, constructor_flags); }
-QJS_INTERNAL JSValue qjs_new_c_constructor(
-    JSContext *ctx, int class_id, const char *name, JSCFunction *func,
-    int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
-    const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
-    const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags)
-{
-    return JS_NewCConstructor(ctx, class_id, name, func, length, cproto, magic,
-                              parent_ctor, ctor_fields, ctor_field_count,
-                              proto_fields, proto_field_count, flags);
-}
 
 
 QJS_INTERNAL int qjs_add_intrinsics(JSContext *ctx)

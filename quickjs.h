@@ -413,17 +413,17 @@ int JS_AddIntrinsicWeakRef(JSContext *ctx);
 JSValue js_string_codePointRange(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv);
 
-void *js_malloc_rt(JSRuntime *rt, size_t size);
-void js_free_rt(JSRuntime *rt, void *ptr);
-void *js_realloc_rt(JSRuntime *rt, void *ptr, size_t size);
+void *(js_malloc_rt)(JSRuntime *rt, size_t size);
+void (js_free_rt)(JSRuntime *rt, void *ptr);
+void *(js_realloc_rt)(JSRuntime *rt, void *ptr, size_t size);
 size_t js_malloc_usable_size_rt(JSRuntime *rt, const void *ptr);
 void *js_mallocz_rt(JSRuntime *rt, size_t size);
 
-void *js_malloc(JSContext *ctx, size_t size);
-void js_free(JSContext *ctx, void *ptr);
-void *js_realloc(JSContext *ctx, void *ptr, size_t size);
+void *(js_malloc)(JSContext *ctx, size_t size);
+void (js_free)(JSContext *ctx, void *ptr);
+void *(js_realloc)(JSContext *ctx, void *ptr, size_t size);
 size_t js_malloc_usable_size(JSContext *ctx, const void *ptr);
-void *js_realloc2(JSContext *ctx, void *ptr, size_t size, size_t *pslack);
+void *(js_realloc2)(JSContext *ctx, void *ptr, size_t size, size_t *pslack);
 void *js_mallocz(JSContext *ctx, size_t size);
 char *js_strdup(JSContext *ctx, const char *str);
 char *js_strndup(JSContext *ctx, const char *s, size_t n);
@@ -453,9 +453,9 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt);
 JSAtom JS_NewAtomLen(JSContext *ctx, const char *str, size_t len);
 JSAtom JS_NewAtom(JSContext *ctx, const char *str);
 JSAtom JS_NewAtomUInt32(JSContext *ctx, uint32_t n);
-JSAtom JS_DupAtom(JSContext *ctx, JSAtom v);
-void JS_FreeAtom(JSContext *ctx, JSAtom v);
-void JS_FreeAtomRT(JSRuntime *rt, JSAtom v);
+JSAtom (JS_DupAtom)(JSContext *ctx, JSAtom v);
+void (JS_FreeAtom)(JSContext *ctx, JSAtom v);
+void (JS_FreeAtomRT)(JSRuntime *rt, JSAtom v);
 JSValue JS_AtomToValue(JSContext *ctx, JSAtom atom);
 JSValue JS_AtomToString(JSContext *ctx, JSAtom atom);
 const char *JS_AtomToCStringLen(JSContext *ctx, size_t *plen, JSAtom atom);
@@ -855,7 +855,7 @@ int JS_DefinePropertyGetSet(JSContext *ctx, JSValueConst this_obj,
                             int flags);
 void JS_SetOpaque(JSValue obj, void *opaque);
 void *JS_GetOpaque(JSValueConst obj, JSClassID class_id);
-void *JS_GetOpaque2(JSContext *ctx, JSValueConst obj, JSClassID class_id);
+void *(JS_GetOpaque2)(JSContext *ctx, JSValueConst obj, JSClassID class_id);
 void *JS_GetAnyOpaque(JSValueConst obj, JSClassID *class_id);
 
 /* 'buf' must be zero terminated i.e. buf[buf_len] = '\0'. */

@@ -112,7 +112,7 @@ static JSValue js_os_open(JSContext *ctx, JSValueConst this_val,
     if (!(flags & O_TEXT))
         flags |= O_BINARY;
 #endif
-    ret = qjs_libc_get_errno(open(filename, flags, mode));
+    ret = js_get_errno(open(filename, flags, mode));
     JS_FreeCString(ctx, filename);
     return JS_NewInt32(ctx, ret);
 }
@@ -123,7 +123,7 @@ static JSValue js_os_close(JSContext *ctx, JSValueConst this_val,
     int fd, ret;
     if (JS_ToInt32(ctx, &fd, argv[0]))
         return JS_EXCEPTION;
-    ret = qjs_libc_get_errno(close(fd));
+    ret = js_get_errno(close(fd));
     return JS_NewInt32(ctx, ret);
 }
 
@@ -171,9 +171,9 @@ static JSValue js_os_read_write(JSContext *ctx, JSValueConst this_val,
     if (pos + len > size)
         return JS_ThrowRangeError(ctx, "read/write array buffer overflow");
     if (magic)
-        ret = qjs_libc_get_errno(write(fd, buf + pos, len));
+        ret = js_get_errno(write(fd, buf + pos, len));
     else
-        ret = qjs_libc_get_errno(read(fd, buf + pos, len));
+        ret = js_get_errno(read(fd, buf + pos, len));
     return JS_NewInt64(ctx, ret);
 }
 
@@ -312,7 +312,7 @@ static JSValue js_os_remove(JSContext *ctx, JSValueConst this_val,
 #else
     ret = remove(filename);
 #endif
-    ret = qjs_libc_get_errno(ret);
+    ret = js_get_errno(ret);
     JS_FreeCString(ctx, filename);
     return JS_NewInt32(ctx, ret);
 }
@@ -331,7 +331,7 @@ static JSValue js_os_rename(JSContext *ctx, JSValueConst this_val,
         JS_FreeCString(ctx, oldpath);
         return JS_EXCEPTION;
     }
-    ret = qjs_libc_get_errno(rename(oldpath, newpath));
+    ret = js_get_errno(rename(oldpath, newpath));
     JS_FreeCString(ctx, oldpath);
     JS_FreeCString(ctx, newpath);
     return JS_NewInt32(ctx, ret);
@@ -362,7 +362,7 @@ static JSValue js_os_chdir(JSContext *ctx, JSValueConst this_val,
     target = JS_ToCString(ctx, argv[0]);
     if (!target)
         return JS_EXCEPTION;
-    err = qjs_libc_get_errno(chdir(target));
+    err = js_get_errno(chdir(target));
     JS_FreeCString(ctx, target);
     return JS_NewInt32(ctx, err);
 }
@@ -384,9 +384,9 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
 #if defined(_WIN32)
     (void)mode;
-    ret = qjs_libc_get_errno(mkdir(path));
+    ret = js_get_errno(mkdir(path));
 #else
-    ret = qjs_libc_get_errno(mkdir(path, mode));
+    ret = js_get_errno(mkdir(path, mode));
 #endif
     JS_FreeCString(ctx, path);
     return JS_NewInt32(ctx, ret);
@@ -565,14 +565,14 @@ static JSValue js_os_utimes(JSContext *ctx, JSValueConst this_val,
         struct _utimbuf times;
         times.actime = atime / 1000;
         times.modtime = mtime / 1000;
-        ret = qjs_libc_get_errno(_utime(path, &times));
+        ret = js_get_errno(_utime(path, &times));
     }
 #else
     {
         struct timeval times[2];
         ms_to_timeval(&times[0], atime);
         ms_to_timeval(&times[1], mtime);
-        ret = qjs_libc_get_errno(utimes(path, times));
+        ret = js_get_errno(utimes(path, times));
     }
 #endif
     JS_FreeCString(ctx, path);
@@ -603,7 +603,7 @@ static JSValue js_os_sleep(JSContext *ctx, JSValueConst this_val,
 
         ts.tv_sec = delay / 1000;
         ts.tv_nsec = (delay % 1000) * 1000000;
-        ret = qjs_libc_get_errno(nanosleep(&ts, NULL));
+        ret = js_get_errno(nanosleep(&ts, NULL));
     }
 #endif
     return JS_NewInt32(ctx, ret);
@@ -658,7 +658,7 @@ static JSValue js_os_symlink(JSContext *ctx, JSValueConst this_val,
         JS_FreeCString(ctx, target);
         return JS_EXCEPTION;
     }
-    err = qjs_libc_get_errno(symlink(target, linkpath));
+    err = js_get_errno(symlink(target, linkpath));
     JS_FreeCString(ctx, target);
     JS_FreeCString(ctx, linkpath);
     return JS_NewInt32(ctx, err);
@@ -849,9 +849,9 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val,
     if (argc >= 2) {
         options = argv[1];
 
-        if (qjs_libc_get_bool_option(ctx, &block_flag, options, "block"))
+        if (get_bool_option(ctx, &block_flag, options, "block"))
             goto exception;
-        if (qjs_libc_get_bool_option(ctx, &use_path, options, "usePath"))
+        if (get_bool_option(ctx, &use_path, options, "usePath"))
             goto exception;
 
         val = JS_GetPropertyStr(ctx, options, "file");
@@ -1082,7 +1082,7 @@ static JSValue js_os_kill(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (JS_ToInt32(ctx, &sig, argv[1]))
         return JS_EXCEPTION;
-    ret = qjs_libc_get_errno(kill(pid, sig));
+    ret = js_get_errno(kill(pid, sig));
     return JS_NewInt32(ctx, ret);
 }
 
@@ -1094,7 +1094,7 @@ static JSValue js_os_dup(JSContext *ctx, JSValueConst this_val,
 
     if (JS_ToInt32(ctx, &fd, argv[0]))
         return JS_EXCEPTION;
-    ret = qjs_libc_get_errno(dup(fd));
+    ret = js_get_errno(dup(fd));
     return JS_NewInt32(ctx, ret);
 }
 
@@ -1108,7 +1108,7 @@ static JSValue js_os_dup2(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (JS_ToInt32(ctx, &fd2, argv[1]))
         return JS_EXCEPTION;
-    ret = qjs_libc_get_errno(dup2(fd, fd2));
+    ret = js_get_errno(dup2(fd, fd2));
     return JS_NewInt32(ctx, ret);
 }
 

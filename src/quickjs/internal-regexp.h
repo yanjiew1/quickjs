@@ -27,11 +27,17 @@
 
 #include "internal-frontend.h"
 
-QJS_INTERNAL JSValue qjs_regexp_throw_type_error_not_object(JSContext *ctx);
-QJS_INTERNAL JSValue qjs_regexp_throw_type_error_invalid_class(JSContext *ctx,
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx,
                                                                int class_id);
-QJS_INTERNAL void qjs_regexp_throw_interrupted(JSContext *ctx);
-static inline BOOL qjs_regexp_is_c_function(JSContext *ctx,
+QJS_INTERNAL void JS_ThrowInterrupted(JSContext *ctx);
+static inline BOOL JS_IsCFunction_inline(JSContext *ctx, JSValueConst value,
+                                         JSCFunction *func, int magic);
+
+#define JS_IsCFunction(ctx, value, func, magic) \
+    JS_IsCFunction_inline((ctx), (value), (func), (magic))
+
+static inline BOOL JS_IsCFunction_inline(JSContext *ctx,
                                             JSValueConst value,
                                             JSCFunction *func, int magic)
 {
@@ -45,30 +51,30 @@ static inline BOOL qjs_regexp_is_c_function(JSContext *ctx,
            obj->u.cfunc.c_function.generic == func &&
            obj->u.cfunc.magic == magic;
 }
-QJS_INTERNAL JSValue qjs_regexp_create_from_ctor(JSContext *ctx,
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
                                                  JSValueConst ctor,
-                                                 JSClassID class_id);
-QJS_INTERNAL JSValue qjs_regexp_new_object_proto_list(
+                                                 int class_id);
+QJS_INTERNAL JSValue JS_NewObjectProtoList(
     JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
     int field_count);
-QJS_INTERNAL JSValue qjs_regexp_new_c_constructor(
+QJS_INTERNAL JSValue JS_NewCConstructor(
     JSContext *ctx, int class_id, const char *name, JSCFunction *func,
     int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
     const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
     const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags);
-QJS_INTERNAL JSValue qjs_regexp_species_constructor(JSContext *ctx,
+QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx,
                                                     JSValueConst obj,
                                                     JSValueConst default_ctor);
-QJS_INTERNAL JSValue qjs_regexp_get_this(JSContext *ctx,
+QJS_INTERNAL JSValue js_get_this(JSContext *ctx,
                                          JSValueConst this_val);
-QJS_INTERNAL void qjs_regexp_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_regexp_string_iterator_finalizer(JSRuntime *rt,
+QJS_INTERNAL void js_regexp_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_regexp_string_iterator_finalizer(JSRuntime *rt,
                                                        JSValue value);
-QJS_INTERNAL void qjs_regexp_string_iterator_mark(JSRuntime *rt,
+QJS_INTERNAL void js_regexp_string_iterator_mark(JSRuntime *rt,
                                                   JSValueConst value,
                                                   JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue qjs_new_regexp(JSContext *ctx, JSValue pattern,
+QJS_INTERNAL JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern,
                                     JSValue bytecode);
-QJS_INTERNAL int qjs_is_regexp(JSContext *ctx, JSValueConst value);
+QJS_INTERNAL int js_is_regexp(JSContext *ctx, JSValueConst value);
 
 #endif /* QUICKJS_INTERNAL_REGEXP_H */

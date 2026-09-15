@@ -22,68 +22,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#define QUICKJS_ATOM_STRING_OWNER
 #include "src/quickjs/internal-allocator.h"
 #include "src/quickjs/internal-object.h"
-
-#define js_malloc_rt qjs_malloc_rt_internal
-#define js_free_rt qjs_free_rt_internal
-#define js_realloc_rt qjs_realloc_rt_internal
-#define js_malloc qjs_malloc_internal
-#define js_free qjs_free_internal
-#define js_realloc qjs_realloc_internal
-
-#define js_rc qjs_get_ref_header
-#define is_digit qjs_is_digit
-#define string_get string_get
-#define JS_ToNumber qjs_to_number
-#define JS_ToStringFree JS_ToStringFree
-
-#define JS_DupAtomRT JS_DupAtomRT
-#define JS_AtomGetKind JS_AtomGetKind
-#define JS_AtomIsString JS_AtomIsString
-#define js_get_atom_index js_get_atom_index
-#define JS_NewAtomStr JS_NewAtomStr
-#define JS_NewAtomInt64 JS_NewAtomInt64
-#define JS_NewSymbol JS_NewSymbol
-#define JS_NewSymbolFromAtom JS_NewSymbolFromAtom
-#define JS_AtomGetStrRT JS_AtomGetStrRT
-#define JS_AtomGetStr JS_AtomGetStr
-#define JS_AtomIsArrayIndex qjs_atom_is_array_index_slow
-#define JS_AtomIsNumericIndex1 qjs_atom_is_numeric_index_slow
-#define JS_AtomSymbolHasDescription JS_AtomSymbolHasDescription
-#define js_atom_concat_str js_atom_concat_str
-#define js_atom_concat_num js_atom_concat_num
-#define js_alloc_string js_alloc_string
-#define js_alloc_string_rt js_alloc_string_rt
-#define js_free_string js_free_string
-#define js_new_string8_len js_new_string8_len
-#define js_new_string8 js_new_string8
-#define js_new_string16_len js_new_string16_len
-#define js_new_string_char js_new_string_char
-#define js_sub_string js_sub_string
-#define string_buffer_init2 string_buffer_init2
-#define string_buffer_init string_buffer_init
-#define string_buffer_free string_buffer_free
-#define string_buffer_putc8 string_buffer_putc8
-#define string_buffer_putc16 string_buffer_putc16
-#define string_buffer_putc string_buffer_putc
-#define string_getc string_getc
-#define string_buffer_write8 string_buffer_write8
-#define string_buffer_puts8 string_buffer_puts8
-#define string_buffer_concat string_buffer_concat
-#define string_buffer_concat_value string_buffer_concat_value
-#define string_buffer_concat_value_free string_buffer_concat_value_free
-#define string_buffer_fill string_buffer_fill
-#define string_buffer_end string_buffer_end
-#define JS_ConcatString3 JS_ConcatString3
-#define js_string_memcmp js_string_memcmp
-#define js_string_eq qjs_string_equal
-#define js_string_compare js_string_compare
-#define string_rope_get string_rope_get
-#define js_string_rope_compare js_string_rope_compare
-#define js_linearize_string_rope js_linearize_string_rope
-#define JS_ConcatString JS_ConcatString
-#define JS_ConcatStringInPlace JS_ConcatStringInPlace
 
 static const char js_atom_init[] =
 #define DEF(name, str) str "\0"
@@ -93,7 +34,6 @@ static const char js_atom_init[] =
 static JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
                                int atom_type);
 QJS_INTERNAL void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
-#define JS_FreeAtomStruct JS_FreeAtomStruct
 QJS_INTERNAL int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
                             int pos2, int len);
 static inline uint32_t atom_get_free(const JSAtomStruct *p)
@@ -127,22 +67,6 @@ QJS_INTERNAL void qjs_free_string_zero_ref(JSRuntime *rt, JSString *str)
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
 
-#define __JS_AtomIsConst __JS_AtomIsConst
-
-static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
-{
-    return (v & JS_ATOM_TAG_INT) != 0;
-}
-
-static inline JSAtom __JS_AtomFromUInt32(uint32_t v)
-{
-    return v | JS_ATOM_TAG_INT;
-}
-
-static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
-{
-    return atom & ~JS_ATOM_TAG_INT;
-}
 
 static inline int is_num(int c)
 {
@@ -245,7 +169,7 @@ static __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p)
     putchar(sep);
 }
 
-static __maybe_unused void JS_DumpAtoms(JSRuntime *rt)
+QJS_INTERNAL __maybe_unused void JS_DumpAtoms(JSRuntime *rt)
 {
     JSAtomStruct *p;
     int h, i;
@@ -339,7 +263,7 @@ static int JS_InitAtoms(JSRuntime *rt)
     return 0;
 }
 
-JSAtom JS_DupAtom(JSContext *ctx, JSAtom v)
+JSAtom (JS_DupAtom)(JSContext *ctx, JSAtom v)
 {
     JSRuntime *rt;
     JSAtomStruct *p;
@@ -823,8 +747,8 @@ JSValue JS_AtomToString(JSContext *ctx, JSAtom atom)
 }
 
 /* Return TRUE for an array index in the range 0 through 2^32 - 2. */
-QJS_INTERNAL BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval,
-                                      JSAtom atom)
+QJS_INTERNAL BOOL qjs_atom_is_array_index_slow(JSContext *ctx,
+                                               uint32_t *pval, JSAtom atom)
 {
     JSRuntime *rt = ctx->rt;
     JSAtomStruct *str;
@@ -845,7 +769,8 @@ QJS_INTERNAL BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval,
 /* This test must be fast if atom is not a numeric index (e.g. a
    method name). Return JS_UNDEFINED if not a numeric
    index. JS_EXCEPTION can also be returned. */
-QJS_INTERNAL JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom)
+QJS_INTERNAL JSValue qjs_atom_is_numeric_index_slow(JSContext *ctx,
+                                                    JSAtom atom)
 {
     JSRuntime *rt = ctx->rt;
     JSAtomStruct *p1;
@@ -886,7 +811,7 @@ QJS_INTERNAL JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom)
         JS_FreeValue(ctx, num);
         return str;
     }
-    ret = qjs_string_equal(p, JS_VALUE_GET_STRING(str));
+    ret = js_string_eq_inline(p, JS_VALUE_GET_STRING(str));
     JS_FreeValue(ctx, str);
     if (ret) {
         return num;
@@ -896,13 +821,13 @@ QJS_INTERNAL JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom)
     }
 }
 
-void JS_FreeAtom(JSContext *ctx, JSAtom v)
+void (JS_FreeAtom)(JSContext *ctx, JSAtom v)
 {
     if (!__JS_AtomIsConst(v))
         __JS_FreeAtom(ctx->rt, v);
 }
 
-void JS_FreeAtomRT(JSRuntime *rt, JSAtom v)
+void (JS_FreeAtomRT)(JSRuntime *rt, JSAtom v)
 {
     if (!__JS_AtomIsConst(v))
         __JS_FreeAtom(rt, v);
@@ -2218,11 +2143,6 @@ QJS_INTERNAL JSAtom qjs_new_atom_rt_ascii(JSRuntime *rt, const char *str,
     if (atom == JS_ATOM_NULL)
         atom = __JS_NewAtomInit(rt, str, len, atom_type);
     return atom;
-}
-
-QJS_INTERNAL void qjs_dump_atoms(JSRuntime *rt)
-{
-    JS_DumpAtoms(rt);
 }
 
 QJS_INTERNAL void qjs_atom_string_compute_memory_usage(

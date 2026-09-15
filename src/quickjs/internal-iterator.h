@@ -27,26 +27,57 @@
 
 #include "internal-function.h"
 
-QJS_INTERNAL JSValue qjs_get_iterator2(JSContext *ctx, JSValueConst obj,
+QJS_INTERNAL JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
                                        JSValueConst method);
-QJS_INTERNAL JSValue qjs_get_iterator(JSContext *ctx, JSValueConst obj,
+QJS_INTERNAL JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj,
                                       BOOL is_async);
-QJS_INTERNAL JSValue qjs_iterator_next2(JSContext *ctx,
+QJS_INTERNAL JSValue JS_IteratorNext2(JSContext *ctx,
                                         JSValueConst iterator,
                                         JSValueConst method, int argc,
                                         JSValueConst *argv, int *done);
-QJS_INTERNAL JSValue qjs_iterator_next(JSContext *ctx,
-                                       JSValueConst iterator,
-                                       JSValueConst method, int argc,
-                                       JSValueConst *argv, BOOL *done);
-QJS_INTERNAL int qjs_iterator_close(JSContext *ctx, JSValueConst iterator,
+/* Note: always return JS_UNDEFINED when *pdone = TRUE. */
+static inline JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
+                                     JSValueConst method,
+                                     int argc, JSValueConst *argv, BOOL *pdone)
+{
+    JSValue obj, value, done_val;
+    int done;
+
+    obj = JS_IteratorNext2(ctx, enum_obj, method, argc, argv, &done);
+    if (JS_IsException(obj))
+        goto fail;
+    if (likely(done == 0)) {
+        *pdone = FALSE;
+        return obj;
+    } else if (done != 2) {
+        JS_FreeValue(ctx, obj);
+        *pdone = TRUE;
+        return JS_UNDEFINED;
+    } else {
+        done_val = JS_GetProperty(ctx, obj, JS_ATOM_done);
+        if (JS_IsException(done_val))
+            goto fail;
+        *pdone = JS_ToBoolFree(ctx, done_val);
+        value = JS_UNDEFINED;
+        if (!*pdone) {
+            value = JS_GetProperty(ctx, obj, JS_ATOM_value);
+        }
+        JS_FreeValue(ctx, obj);
+        return value;
+    }
+ fail:
+    JS_FreeValue(ctx, obj);
+    *pdone = FALSE;
+    return JS_EXCEPTION;
+}
+QJS_INTERNAL int JS_IteratorClose(JSContext *ctx, JSValueConst iterator,
                                     BOOL is_exception_pending);
-QJS_INTERNAL JSValue qjs_iterator_get_complete_value(JSContext *ctx,
+QJS_INTERNAL JSValue JS_IteratorGetCompleteValue(JSContext *ctx,
                                                      JSValueConst obj,
                                                      BOOL *done);
-QJS_INTERNAL JSValue qjs_create_iterator_result(JSContext *ctx,
+QJS_INTERNAL JSValue js_create_iterator_result(JSContext *ctx,
                                                 JSValue value, BOOL done);
-QJS_INTERNAL JSValue qjs_iterator_proto_iterator(JSContext *ctx,
+QJS_INTERNAL JSValue js_iterator_proto_iterator(JSContext *ctx,
                                                  JSValueConst this_val,
                                                  int argc,
                                                  JSValueConst *argv);
@@ -67,22 +98,10 @@ static inline BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
     }
     return FALSE;
 }
-QJS_INTERNAL int qjs_copy_data_properties(JSContext *ctx,
+QJS_INTERNAL int JS_CopyDataProperties(JSContext *ctx,
                                           JSValueConst target,
                                           JSValueConst source,
                                           JSValueConst excluded,
                                           BOOL set_property);
-
-/* Compatibility entry points for the already extracted Math consumer. */
-QJS_INTERNAL JSValue qjs_math_get_iterator(JSContext *ctx,
-                                           JSValueConst obj, BOOL is_async);
-QJS_INTERNAL JSValue qjs_math_iterator_next(JSContext *ctx,
-                                            JSValueConst iterator,
-                                            JSValueConst method,
-                                            int argc, JSValueConst *argv,
-                                            BOOL *done);
-QJS_INTERNAL int qjs_math_iterator_close(JSContext *ctx,
-                                         JSValueConst iterator,
-                                         BOOL is_exception_pending);
 
 #endif /* QUICKJS_INTERNAL_ITERATOR_H */

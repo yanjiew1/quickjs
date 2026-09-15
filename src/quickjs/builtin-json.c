@@ -38,7 +38,7 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
     JSPropertyEnum *atoms = NULL;
 
     if (js_check_stack_overflow(ctx->rt, 0)) {
-        return qjs_throw_stack_overflow(ctx);
+        return JS_ThrowStackOverflow(ctx);
     }
 
     val = JS_GetProperty(ctx, holder, name);
@@ -47,8 +47,8 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
 
     if (pr) {
         if (JS_IsArray(ctx, pr->value)) {
-            if (qjs_atom_is_tagged_int(name)) {
-                uint32_t idx = qjs_atom_to_uint32(name);
+            if (__JS_AtomIsTaggedInt(name)) {
+                uint32_t idx = __JS_AtomToUInt32(name);
                 if (idx < pr->u.array.count) {
                     pr = &pr->u.array.elements[idx];
                 } else {
@@ -56,9 +56,9 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
                 }
             }
         } else {
-            pr = qjs_json_parse_record_find(pr, name);
+            pr = json_parse_record_find(pr, name);
         }
-        if (pr && !qjs_same_value(ctx, pr->value, val)) {
+        if (pr && !js_same_value(ctx, pr->value, val)) {
             pr = NULL;
         }
     }
@@ -75,7 +75,7 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
             if (js_get_length32(ctx, &len, val))
                 goto fail;
         } else {
-            ret = qjs_get_own_property_names_internal(ctx, &atoms, &len, JS_VALUE_GET_OBJ(val), JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
+            ret = JS_GetOwnPropertyNamesInternal(ctx, &atoms, &len, JS_VALUE_GET_OBJ(val), JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
             if (ret < 0)
                 goto fail;
         }
@@ -151,13 +151,13 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
         root = JS_NewObject(ctx);
         if (JS_IsException(root))
             goto fail;
-        qjs_json_parse_record_init_obj(ctx, pr, root);
+        json_parse_record_init_obj(ctx, pr, root);
         size = 0;
-        pr1 = qjs_json_parse_record_add(ctx, pr, JS_ATOM_empty_string, &size);
+        pr1 = json_parse_record_add(ctx, pr, JS_ATOM_empty_string, &size);
         if (!pr1)
             goto fail1;
 
-        obj = qjs_parse_json3(ctx, str, len, "<input>", 0, pr1);
+        obj = JS_ParseJSON3(ctx, str, len, "<input>", 0, pr1);
         if (JS_IsException(obj))
             goto fail1;
 
@@ -165,17 +165,17 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
                                    JS_PROP_C_W_E) < 0) {
             JS_FreeValue(ctx, obj);
         fail1:
-            qjs_json_free_parse_record(ctx, pr);
+            json_free_parse_record(ctx, pr);
             JS_FreeValue(ctx, root);
             goto fail;
         }
 
         obj = internalize_json_property(ctx, root, JS_ATOM_empty_string,
                                         reviver, str, pr);
-        qjs_json_free_parse_record(ctx, pr);
+        json_free_parse_record(ctx, pr);
         JS_FreeValue(ctx, root);
     } else {
-        obj = qjs_parse_json3(ctx, str, len, "<input>", 0, NULL);
+        obj = JS_ParseJSON3(ctx, str, len, "<input>", 0, NULL);
     }
     JS_FreeCString(ctx, str);
     return obj;
@@ -258,7 +258,7 @@ static int JS_ToQuotedString(JSContext *ctx, StringBuffer *b, JSValueConst val1)
     uint32_t c;
     char buf[16];
 
-    val = qjs_to_string_check_object(ctx, val1);
+    val = JS_ToStringCheckObject(ctx, val1);
     if (JS_IsException(val))
         return -1;
     p = JS_VALUE_GET_STRING(val);
@@ -331,7 +331,7 @@ static JSValue js_json_check(JSContext *ctx, JSONStringifyContext *jsc,
         if (JS_IsException(f))
             goto exception;
         if (JS_IsFunction(ctx, f)) {
-            v = qjs_call_free(ctx, f, val, 1, &key);
+            v = JS_CallFree(ctx, f, val, 1, &key);
             JS_FreeValue(ctx, val);
             val = v;
             if (JS_IsException(val))
@@ -393,7 +393,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
     prop = JS_UNDEFINED;
 
     if (js_check_stack_overflow(ctx->rt, 0)) {
-        qjs_throw_stack_overflow(ctx);
+        JS_ThrowStackOverflow(ctx);
         goto exception;
     }
 
@@ -406,13 +406,13 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                 goto exception;
             goto concat_primitive;
         } else if (cl == JS_CLASS_NUMBER) {
-            val = qjs_to_number_free(ctx, val);
+            val = JS_ToNumberFree(ctx, val);
             if (JS_IsException(val))
                 goto exception;
             goto concat_primitive;
         } else if (cl == JS_CLASS_BOOLEAN || cl == JS_CLASS_BIG_INT) {
             /* This will thow the same error as for the primitive object */
-            qjs_set_value(ctx, &val, JS_DupValue(ctx, p->u.object_data));
+            set_value(ctx, &val, JS_DupValue(ctx, p->u.object_data));
             goto concat_primitive;
         } else if (cl == JS_CLASS_RAWJSON) {
             JSValue val1;
@@ -423,10 +423,10 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             val = val1;
             goto concat_value;
         }
-        v = qjs_json_array_includes(ctx, jsc->stack, 1, (JSValueConst *)&val);
+        v = js_array_includes(ctx, jsc->stack, 1, (JSValueConst *)&val);
         if (JS_IsException(v))
             goto exception;
-        if (qjs_to_bool_free(ctx, v)) {
+        if (JS_ToBoolFree(ctx, v)) {
             JS_ThrowTypeError(ctx, "circular reference");
             goto exception;
         }
@@ -444,8 +444,8 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             sep = JS_DupValue(ctx, jsc->empty);
             sep1 = JS_DupValue(ctx, jsc->empty);
         }
-        v = qjs_json_array_push(ctx, jsc->stack, 1, (JSValueConst *)&val, 0);
-        if (qjs_check_exception_free(ctx, v))
+        v = js_array_push(ctx, jsc->stack, 1, (JSValueConst *)&val, 0);
+        if (check_exception_free(ctx, v))
             goto exception;
         ret = JS_IsArray(ctx, val);
         if (ret < 0)
@@ -458,7 +458,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                 if (i > 0)
                     string_buffer_putc8(jsc->b, ',');
                 string_buffer_concat_value(jsc->b, sep);
-                v = qjs_get_property_int64(ctx, val, i);
+                v = JS_GetPropertyInt64(ctx, val, i);
                 if (JS_IsException(v))
                     goto exception;
                 /* XXX: could do this string conversion only when needed */
@@ -484,7 +484,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             if (!JS_IsUndefined(jsc->property_list))
                 tab = JS_DupValue(ctx, jsc->property_list);
             else
-                tab = qjs_json_object_keys(ctx, JS_UNDEFINED, 1, (JSValueConst *)&val, JS_ITERATOR_KIND_KEY);
+                tab = js_object_keys(ctx, JS_UNDEFINED, 1, (JSValueConst *)&val, JS_ITERATOR_KIND_KEY);
             if (JS_IsException(tab))
                 goto exception;
             if (js_get_length64(ctx, &len, tab))
@@ -493,7 +493,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             has_content = FALSE;
             for(i = 0; i < len; i++) {
                 JS_FreeValue(ctx, prop);
-                prop = qjs_get_property_int64(ctx, tab, i);
+                prop = JS_GetPropertyInt64(ctx, tab, i);
                 if (JS_IsException(prop))
                     goto exception;
                 v = JS_GetPropertyValue(ctx, val, JS_DupValue(ctx, prop));
@@ -523,8 +523,8 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             }
             string_buffer_putc8(jsc->b, '}');
         }
-        if (qjs_check_exception_free(ctx,
-                                    qjs_json_array_pop(ctx, jsc->stack,
+        if (check_exception_free(ctx,
+                                    js_array_pop(ctx, jsc->stack,
                                                        0, NULL, 0)))
             goto exception;
         JS_FreeValue(ctx, val);
@@ -607,7 +607,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                 goto exception;
             for (i = j = 0; i < n; i++) {
                 JSValue present;
-                v = qjs_get_property_int64(ctx, replacer, i);
+                v = JS_GetPropertyInt64(ctx, replacer, i);
                 if (JS_IsException(v))
                     goto exception;
                 if (JS_IsObject(v)) {
@@ -629,13 +629,13 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                     JS_FreeValue(ctx, v);
                     continue;
                 }
-                present = qjs_json_array_includes(ctx, jsc->property_list,
+                present = js_array_includes(ctx, jsc->property_list,
                                             1, (JSValueConst *)&v);
                 if (JS_IsException(present)) {
                     JS_FreeValue(ctx, v);
                     goto exception;
                 }
-                if (!qjs_to_bool_free(ctx, present)) {
+                if (!JS_ToBoolFree(ctx, present)) {
                     JS_SetPropertyInt64(ctx, jsc->property_list, j++, v);
                 } else {
                     JS_FreeValue(ctx, v);
@@ -647,7 +647,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
     if (JS_IsObject(space)) {
         JSObject *p = JS_VALUE_GET_OBJ(space);
         if (p->class_id == JS_CLASS_NUMBER) {
-            space = qjs_to_number_free(ctx, space);
+            space = JS_ToNumberFree(ctx, space);
         } else if (p->class_id == JS_CLASS_STRING) {
             space = JS_ToStringFree(ctx, space);
         }
@@ -658,7 +658,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
     }
     if (JS_IsNumber(space)) {
         int n;
-        if (qjs_to_int32_clamp(ctx, &n, space, 0, 10, 0))
+        if (JS_ToInt32Clamp(ctx, &n, space, 0, 10, 0))
             goto exception;
         jsc->gap = js_new_string8_len(ctx, "          ", n);
     } else if (JS_IsString(space)) {

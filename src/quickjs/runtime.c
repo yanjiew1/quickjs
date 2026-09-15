@@ -29,10 +29,6 @@
 #include "internal-object.h"
 #include "internal-primitive.h"
 
-#define JS_DupAtomRT JS_DupAtomRT
-#define js_rc qjs_get_ref_header
-#define add_gc_object qjs_add_gc_object
-#define remove_gc_object qjs_remove_gc_object
 
 static JSClassID js_class_id_alloc = JS_CLASS_INIT_COUNT;
 static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
@@ -56,8 +52,8 @@ static no_inline int js_realloc_array(JSContext *ctx, void **parray,
 }
 
 /* resize the array and update its size if req_size > *psize */
-static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
-                                  int *psize, int req_size)
+QJS_INTERNAL int js_resize_array(JSContext *ctx, void **parray, int elem_size,
+                                 int *psize, int req_size)
 {
     if (unlikely(req_size > *psize))
         return js_realloc_array(ctx, parray, elem_size, psize, req_size);
@@ -77,11 +73,11 @@ static void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size)
     }
 }
 
-static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
+QJS_INTERNAL void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
 {
     dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
 }
-static int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
                             int start, int count)
 {
     JSClassDef cm_s, *cm = &cm_s;
@@ -123,11 +119,11 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     ms.opaque = opaque;
     ms.malloc_limit = -1;
 
-    rt = mf->js_malloc(&ms, sizeof(JSRuntime));
+    rt = (mf->js_malloc)(&ms, sizeof(JSRuntime));
     if (!rt)
         return NULL;
     memset(rt, 0, sizeof(*rt));
-    qjs_allocator_init(&rt->malloc_ctx);
+    js_malloc_init(&rt->malloc_ctx);
     rt->malloc_ctx.mf = *mf;
     rt->malloc_ctx.malloc_state = ms;
     rt->malloc_gc_threshold = 256 * 1024;
@@ -174,7 +170,7 @@ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque)
 
 JSRuntime *JS_NewRuntime(void)
 {
-    return JS_NewRuntime2(qjs_default_malloc_functions(), NULL);
+    return JS_NewRuntime2(&def_malloc_funcs, NULL);
 }
 
 void JS_SetMemoryLimit(JSRuntime *rt, size_t limit)
@@ -219,7 +215,7 @@ int JS_GetStripInfo(JSRuntime *rt)
     return rt->strip_flags;
 }
 
-static int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
+QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                           int argc, JSValueConst *argv, BOOL no_exception)
 {
     JSRuntime *rt = ctx->rt;
@@ -344,7 +340,7 @@ void JS_FreeRuntime(JSRuntime *rt)
 
     {
         JSMallocState ms = rt->malloc_ctx.malloc_state;
-        rt->malloc_ctx.mf.js_free(&ms, rt);
+        (rt->malloc_ctx.mf.js_free)(&ms, rt);
     }
 }
 
@@ -405,16 +401,6 @@ void *JS_GetContextOpaque(JSContext *ctx)
 void JS_SetContextOpaque(JSContext *ctx, void *opaque)
 {
     ctx->user_opaque = opaque;
-}
-
-/* set the new value and free the old value after (freeing the value
-   can reallocate the object data) */
-static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
-{
-    JSValue old_val;
-    old_val = *pval;
-    *pval = new_val;
-    JS_FreeValue(ctx, old_val);
 }
 
 void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj)
@@ -497,7 +483,7 @@ void JS_FreeContext(JSContext *ctx)
 
     qjs_object_dump_context(ctx);
 
-    qjs_module_free_all(ctx);
+    js_free_modules(ctx, JS_FREE_MODULE_ALL);
 
     JS_FreeValue(ctx, ctx->global_obj);
     JS_FreeValue(ctx, ctx->global_var_obj);
@@ -689,18 +675,6 @@ JS_BOOL JS_HasException(JSContext *ctx)
     return !JS_IsUninitialized(ctx->rt->current_exception);
 }
 
-QJS_INTERNAL int qjs_resize_array(JSContext *ctx, void **parray, int elem_size,
-                                  int *psize, int req_size)
-{
-    return js_resize_array(ctx, parray, elem_size, psize, req_size);
-}
-
-QJS_INTERNAL void qjs_dbuf_bytecode_init(JSContext *ctx, DynBuf *buf)
-{
-    js_dbuf_bytecode_init(ctx, buf);
-}
-
-
 QJS_INTERNAL int qjs_proxy_register_class(JSRuntime *rt,
                                            JSClassFinalizer *finalizer,
                                            JSClassGCMark *gc_mark,
@@ -714,19 +688,3 @@ QJS_INTERNAL int qjs_proxy_register_class(JSRuntime *rt,
     rt->class_array[JS_CLASS_PROXY].call = call;
     return 0;
 }
-
-QJS_INTERNAL BOOL qjs_proxy_is_strict_mode(JSContext *ctx)
-{
-    return is_strict_mode(ctx);
-}
-
-QJS_INTERNAL int qjs_init_class_range(JSRuntime *rt,
-                                      const JSClassShortDef *classes,
-                                      int first_class, int class_count)
-{ return init_class_range(rt, classes, first_class, class_count); }
-QJS_INTERNAL int qjs_enqueue_job2(JSContext *ctx, JSJobFunc *job_func,
-                                  int argc, JSValueConst *argv,
-                                  BOOL no_exception)
-{ return JS_EnqueueJob2(ctx, job_func, argc, argv, no_exception); }
-QJS_INTERNAL int qjs_base_poll_interrupts(JSContext *ctx)
-{ return qjs_poll_interrupts(ctx); }

@@ -31,20 +31,18 @@ typedef enum QJSGeneratorMagic {
 } QJSGeneratorMagic;
 
 QJS_INTERNAL int qjs_add_intrinsic_generator(JSContext *ctx);
-QJS_INTERNAL int qjs_async_to_int32_free(JSContext *ctx, int32_t *result,
-                                         JSValue value);
-QJS_INTERNAL JSValue qjs_async_invoke_free(JSContext *ctx, JSValue value,
+QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue value,
                                            JSAtom atom, int argc,
                                            JSValueConst *argv);
-QJS_INTERNAL JSValue qjs_async_create_from_ctor(JSContext *ctx,
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
                                                 JSValueConst ctor,
                                                 int class_id);
-QJS_INTERNAL JSValue qjs_async_species_constructor(JSContext *ctx,
+QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx,
                                                    JSValueConst obj,
                                                    JSValueConst default_ctor);
-QJS_INTERNAL JSValue qjs_async_aggregate_error_constructor(
+QJS_INTERNAL JSValue js_aggregate_error_constructor(
     JSContext *ctx, JSValueConst errors);
-QJS_INTERNAL void qjs_async_dump_value(JSContext *ctx, const char *name,
+QJS_INTERNAL void JS_DumpValue(JSContext *ctx, const char *name,
                                        JSValueConst value);
 QJS_INTERNAL JSValueConst qjs_async_c_function_data(
     JSValueConst function, int index);
@@ -53,13 +51,13 @@ QJS_INTERNAL JSValue js_generator_next(JSContext *ctx,
                                         JSValueConst this_val,
                                         int argc, JSValueConst *argv,
                                         BOOL *done, int magic);
-QJS_INTERNAL void qjs_async_bytecode_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_async_bytecode_mark(JSRuntime *rt, JSValueConst value,
+QJS_INTERNAL void js_bytecode_function_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_bytecode_function_mark(JSRuntime *rt, JSValueConst value,
                                           JS_MarkFunc *mark_func);
-QJS_INTERNAL void qjs_async_resolve_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_async_resolve_mark(JSRuntime *rt, JSValueConst value,
+QJS_INTERNAL void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst value,
                                          JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue qjs_async_resolve_call(JSContext *ctx,
+QJS_INTERNAL JSValue js_async_function_resolve_call(JSContext *ctx,
                                             JSValueConst func_obj,
                                             JSValueConst this_obj,
                                             int argc, JSValueConst *argv,
@@ -74,17 +72,17 @@ QJS_INTERNAL JSValue js_async_generator_next(JSContext *ctx,
                                               JSValueConst this_val,
                                               int argc, JSValueConst *argv,
                                               int magic);
-QJS_INTERNAL JSValue qjs_async_function_constructor(
+QJS_INTERNAL JSValue js_function_constructor(
     JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv,
     int magic);
 
-QJS_INTERNAL int qjs_async_perform_promise_then(
+QJS_INTERNAL int perform_promise_then(
     JSContext *ctx, JSValueConst promise, JSValueConst *resolve_reject,
     JSValueConst *cap_resolving_funcs);
-QJS_INTERNAL JSValue qjs_async_promise_resolve(
+QJS_INTERNAL JSValue js_promise_resolve(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
     int magic);
-QJS_INTERNAL JSValue qjs_async_create_from_sync_iterator(
+QJS_INTERNAL JSValue JS_CreateAsyncFromSyncIterator(
     JSContext *ctx, JSValueConst sync_iterator);
 QJS_INTERNAL JSValue js_promise_then(JSContext *ctx,
                                       JSValueConst this_val,

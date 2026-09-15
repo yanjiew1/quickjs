@@ -43,31 +43,31 @@ QJS_INTERNAL int qjs_add_intrinsic_math(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsics(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx);
-QJS_INTERNAL int qjs_add_intrinsic_bigint(JSContext *ctx);
+QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx);
 QJS_INTERNAL void qjs_primitive_init_classes(JSRuntime *rt);
 
-QJS_INTERNAL double qjs_math_pow(double left, double right);
-QJS_INTERNAL int qjs_check_function(JSContext *ctx, JSValueConst value);
-QJS_INTERNAL int qjs_check_exception_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL JSValue qjs_new_object_proto_list(
+QJS_INTERNAL double js_pow(double left, double right);
+QJS_INTERNAL int check_function(JSContext *ctx, JSValueConst value);
+QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue value);
+QJS_INTERNAL JSValue JS_NewObjectProtoList(
     JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
     int field_count);
-QJS_INTERNAL JSValue qjs_instantiate_function_list_item(
+QJS_INTERNAL JSValue JS_InstantiateFunctionListItem2(
     JSContext *ctx, JSObject *obj, JSAtom atom, void *opaque);
-QJS_INTERNAL int qjs_set_constructor2(JSContext *ctx,
+QJS_INTERNAL int JS_SetConstructor2(JSContext *ctx,
                                       JSValueConst constructor,
                                       JSValueConst prototype,
                                       int prototype_flags,
                                       int constructor_flags);
-QJS_INTERNAL JSValue qjs_new_c_constructor(
+QJS_INTERNAL JSValue JS_NewCConstructor(
     JSContext *ctx, int class_id, const char *name, JSCFunction *func,
     int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
     const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
     const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags);
-QJS_INTERNAL JSValue qjs_new_c_function3(
+QJS_INTERNAL JSValue JS_NewCFunction3(
     JSContext *ctx, JSCFunction *func, const char *name, int length,
     JSCFunctionEnum cproto, int magic, JSValueConst proto, int prop_count);
-QJS_INTERNAL int qjs_init_class_range(JSRuntime *rt,
+QJS_INTERNAL int init_class_range(JSRuntime *rt,
                                       const JSClassShortDef *classes,
                                       int first_class, int class_count);
 

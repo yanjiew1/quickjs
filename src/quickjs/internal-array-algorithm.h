@@ -53,15 +53,15 @@ typedef enum QJSArrayFindMode {
 #define QJS_ITERATOR_NEXT   0
 #define QJS_ITERATOR_RETURN 1
 
-QJS_INTERNAL JSValue qjs_array_every(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv, int magic);
-QJS_INTERNAL JSValue qjs_array_reduce(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv, int magic);
-QJS_INTERNAL JSValue qjs_create_array_iterator(JSContext *ctx,
+QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx,
                                                JSValueConst this_val,
                                                int argc, JSValueConst *argv,
                                                int magic);
-QJS_INTERNAL JSValue qjs_array_get_this(JSContext *ctx,
+QJS_INTERNAL JSValue js_get_this(JSContext *ctx,
                                         JSValueConst this_val);
 
 #endif /* QUICKJS_INTERNAL_ARRAY_ALGORITHM_H */

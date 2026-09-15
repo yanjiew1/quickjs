@@ -121,7 +121,7 @@ static JSValue js___date_create(JSContext *ctx, JSValueConst this_val,
     obj = JS_NewObjectProtoClass(ctx, proto, JS_CLASS_DATE);
     JS_FreeValue(ctx, proto);
     if (!JS_IsException(obj))
-        qjs_set_object_data(ctx, obj, JS_DupValue(ctx, argv[2]));
+        JS_SetObjectData(ctx, obj, JS_DupValue(ctx, argv[2]));
     return obj;
 }
 #endif
@@ -404,7 +404,7 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
    part: 1=date, 2=time 3=all
    XXX: should use a variant of strftime().
  */
-static JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv, int magic)
 {
     // _string(obj, fmt, part)
@@ -423,7 +423,7 @@ static JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
         if (fmt == 2)
             return JS_ThrowRangeError(ctx, "Date value is NaN");
         else
-            return qjs_date_new_string8(ctx, "Invalid Date");
+            return js_new_string8(ctx, "Invalid Date");
     }
 
     y = fields[0];
@@ -543,16 +543,16 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
                 goto has_val;
             }
         }
-        v = qjs_date_to_primitive(ctx, argv[0], QJS_DATE_HINT_NONE);
+        v = JS_ToPrimitive(ctx, argv[0], QJS_DATE_HINT_NONE);
         if (JS_IsString(v)) {
             dv = js_Date_parse(ctx, JS_UNDEFINED, 1, (JSValueConst *)&v);
             JS_FreeValue(ctx, v);
             if (JS_IsException(dv))
                 return JS_EXCEPTION;
-            if (qjs_date_to_float64_free(ctx, &val, dv))
+            if (JS_ToFloat64Free(ctx, &val, dv))
                 return JS_EXCEPTION;
         } else {
-            if (qjs_date_to_float64_free(ctx, &val, v))
+            if (JS_ToFloat64Free(ctx, &val, v))
                 return JS_EXCEPTION;
         }
         val = time_clip(val);
@@ -574,9 +574,9 @@ has_val:
     args[2] = JS_NewFloat64(ctx, val);
     rv = js___date_create(ctx, JS_UNDEFINED, 3, args);
 #else
-    rv = qjs_date_create_from_ctor(ctx, new_target, JS_CLASS_DATE);
+    rv = js_create_from_ctor(ctx, new_target, JS_CLASS_DATE);
     if (!JS_IsException(rv))
-        qjs_set_object_data(ctx, rv, JS_NewFloat64(ctx, val));
+        JS_SetObjectData(ctx, rv, JS_NewFloat64(ctx, val));
 #endif
     if (!JS_IsException(rv) && JS_IsUndefined(new_target)) {
         /* invoked as a function, return (new Date()).toString(); */
@@ -1042,7 +1042,7 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
     sp = JS_VALUE_GET_STRING(s);
     /* convert the string as a byte array */
     for (i = 0; i < sp->len && i < (int)countof(buf) - 1; i++) {
-        c = qjs_date_string_get(sp, i);
+        c = string_get(sp, i);
         if (c > 255)
             c = (c == 0x2212) ? '-' : 'x';
         buf[i] = c;
@@ -1087,7 +1087,7 @@ static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,
     int hint_num;
 
     if (!JS_IsObject(obj))
-        return qjs_date_throw_type_error_not_object(ctx);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
 
     if (JS_IsString(argv[0])) {
         hint = JS_ValueToAtom(ctx, argv[0]);
@@ -1107,7 +1107,7 @@ static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,
     default:
         return JS_ThrowTypeError(ctx, "invalid hint");
     }
-    return qjs_date_to_primitive(ctx, obj, hint_num | QJS_DATE_HINT_FORCE_ORDINARY);
+    return JS_ToPrimitive(ctx, obj, hint_num | QJS_DATE_HINT_FORCE_ORDINARY);
 }
 
 static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
@@ -1177,7 +1177,7 @@ static JSValue js_date_toJSON(JSContext *ctx, JSValueConst this_val,
     tv = JS_UNDEFINED;
 
     obj = JS_ToObject(ctx, this_val);
-    tv = qjs_date_to_primitive(ctx, obj, QJS_DATE_HINT_NUMBER);
+    tv = JS_ToPrimitive(ctx, obj, QJS_DATE_HINT_NUMBER);
     if (JS_IsException(tv))
         goto exception;
     if (JS_IsNumber(tv)) {
@@ -1196,7 +1196,7 @@ static JSValue js_date_toJSON(JSContext *ctx, JSValueConst this_val,
         JS_FreeValue(ctx, method);
         goto exception;
     }
-    rv = qjs_call_free(ctx, method, obj, 0, NULL);
+    rv = JS_CallFree(ctx, method, obj, 0, NULL);
 exception:
 done:
     JS_FreeValue(ctx, obj);
@@ -1262,10 +1262,10 @@ static const JSCFunctionListEntry js_date_proto_funcs[] = {
 
 JSValue JS_NewDate(JSContext *ctx, double epoch_ms)
 {
-    JSValue obj = qjs_date_create_from_ctor(ctx, JS_UNDEFINED, JS_CLASS_DATE);
+    JSValue obj = js_create_from_ctor(ctx, JS_UNDEFINED, JS_CLASS_DATE);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
-    qjs_set_object_data(ctx, obj, __JS_NewFloat64(ctx, time_clip(epoch_ms)));
+    JS_SetObjectData(ctx, obj, __JS_NewFloat64(ctx, time_clip(epoch_ms)));
     return obj;
 }
 
@@ -1274,7 +1274,7 @@ int JS_AddIntrinsicDate(JSContext *ctx)
     JSValue obj;
 
     /* Date */
-    obj = qjs_date_new_c_constructor(ctx, JS_CLASS_DATE, "Date",
+    obj = JS_NewCConstructor(ctx, JS_CLASS_DATE, "Date",
                                     js_date_constructor, 7, JS_CFUNC_constructor_or_func, 0,
                                     JS_UNDEFINED,
                                     js_date_funcs, countof(js_date_funcs),
@@ -1284,14 +1284,4 @@ int JS_AddIntrinsicDate(JSContext *ctx)
         return -1;
     JS_FreeValue(ctx, obj);
     return 0;
-}
-
-
-
-QJS_INTERNAL JSValue qjs_date_get_string(JSContext *ctx,
-                                         JSValueConst this_val,
-                                         int argc, JSValueConst *argv,
-                                         int magic)
-{
-    return get_date_string(ctx, this_val, argc, argv, magic);
 }
