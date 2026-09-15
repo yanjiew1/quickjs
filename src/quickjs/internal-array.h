@@ -61,10 +61,6 @@ QJS_INTERNAL JSValue qjs_array_iterator_next(JSContext *ctx,
                                              JSValueConst this_val,
                                              int argc, JSValueConst *argv,
                                              BOOL *done, int magic);
-QJS_INTERNAL JSValue qjs_iterator_proto_iterator(JSContext *ctx,
-                                                 JSValueConst this_val,
-                                                 int argc,
-                                                 JSValueConst *argv);
 QJS_INTERNAL JSValue qjs_primitive_create_array_iterator(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
     int magic);
