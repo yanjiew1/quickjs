@@ -25,9 +25,33 @@
 #ifndef QUICKJS_INTERNAL_MODULE_H
 #define QUICKJS_INTERNAL_MODULE_H
 
-#include "internal-object.h"
+#include "internal-function.h"
 
 QJS_INTERNAL JSModuleDef *qjs_new_module_def(JSContext *ctx, JSAtom name);
 QJS_INTERNAL JSValue qjs_new_module_value(JSContext *ctx, JSModuleDef *module);
+QJS_INTERNAL void qjs_module_free_all(JSContext *ctx);
+QJS_INTERNAL void qjs_free_module_def(JSRuntime *rt, JSModuleDef *module);
+QJS_INTERNAL void qjs_mark_module_def(JSRuntime *rt, JSModuleDef *module,
+                                      JS_MarkFunc *mark_func);
+QJS_INTERNAL void qjs_module_init_class(JSRuntime *rt);
+QJS_INTERNAL JSValue qjs_module_ns_autoinit(JSContext *ctx, JSObject *obj,
+                                            JSAtom atom, void *opaque);
+QJS_INTERNAL int qjs_module_add_request(JSContext *ctx, JSModuleDef *module,
+                                        JSAtom module_name);
+QJS_INTERNAL JSExportEntry *qjs_module_find_export(JSModuleDef *module,
+                                                   JSAtom export_name);
+QJS_INTERNAL JSExportEntry *qjs_module_add_export_unchecked(
+    JSContext *ctx, JSModuleDef *module, JSAtom local_name,
+    JSAtom export_name, JSExportTypeEnum export_type);
+QJS_INTERNAL int qjs_module_add_star_export(JSContext *ctx,
+                                            JSModuleDef *module,
+                                            int req_module_idx);
+QJS_INTERNAL int qjs_resolve_module(JSContext *ctx, JSModuleDef *module);
+QJS_INTERNAL JSValue qjs_module_link_and_evaluate(JSContext *ctx,
+                                                  JSModuleDef *module);
+QJS_INTERNAL JSValue qjs_import_meta(JSContext *ctx);
+QJS_INTERNAL JSValue qjs_dynamic_import(JSContext *ctx,
+                                        JSValueConst specifier,
+                                        JSValueConst options);
 
 #endif /* QUICKJS_INTERNAL_MODULE_H */

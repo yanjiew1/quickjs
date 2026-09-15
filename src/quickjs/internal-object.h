@@ -30,6 +30,7 @@
 #define JS_ATOM_TAG_INT (1U << 31)
 #define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
 #define JS_ATOM_MAX     ((1U << 30) - 1)
+#define ATOM_GET_STR_BUF_SIZE 64
 
 static inline BOOL qjs_atom_is_tagged_int(JSAtom atom)
 {
@@ -68,5 +69,25 @@ QJS_INTERNAL int qjs_set_object_data(JSContext *ctx, JSValueConst obj,
 QJS_INTERNAL JSValue qjs_to_object(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL __exception int qjs_get_length32(JSContext *ctx, uint32_t *pres,
                                              JSValueConst obj);
+QJS_INTERNAL const char *qjs_atom_get_str(JSContext *ctx, char *buf,
+                                          int buf_size, JSAtom atom);
+QJS_INTERNAL int qjs_string_compare(JSContext *ctx, const JSString *left,
+                                    const JSString *right);
+QJS_INTERNAL JSShapeProperty *qjs_find_own_property1(JSObject *obj,
+                                                     JSAtom atom);
+QJS_INTERNAL void qjs_free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+QJS_INTERNAL int qjs_get_own_property_names_internal(
+    JSContext *ctx, JSPropertyEnum **ptab, uint32_t *plen, JSObject *obj,
+    int flags);
+QJS_INTERNAL JSProperty *qjs_add_property(JSContext *ctx, JSObject *obj,
+                                          JSAtom atom, int flags);
+QJS_INTERNAL int qjs_define_auto_init_property(JSContext *ctx,
+                                               JSValueConst obj,
+                                               JSAtom atom,
+                                               JSAutoInitIDEnum id,
+                                               void *opaque, int flags);
+QJS_INTERNAL void qjs_print_atom(JSContext *ctx, JSAtom atom);
+QJS_INTERNAL JSValue qjs_throw_duplicate_export(JSContext *ctx, JSAtom atom);
+
 
 #endif /* QUICKJS_INTERNAL_OBJECT_H */
