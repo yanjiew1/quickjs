@@ -68,6 +68,27 @@ static inline BOOL qjs_is_empty_string(JSValueConst value)
            JS_VALUE_GET_STRING(value)->len == 0;
 }
 
+static inline uint32_t qjs_hash_string(const JSString *str, uint32_t hash)
+{
+    size_t i;
+    if (str->is_wide_char) {
+        for (i = 0; i < str->len; i++)
+            hash = hash * 263 + str->u.str16[i];
+    } else {
+        for (i = 0; i < str->len; i++)
+            hash = hash * 263 + str->u.str8[i];
+    }
+    return hash;
+}
+
+static inline uint32_t qjs_hash_string_rope(JSValueConst value, uint32_t hash)
+{
+    if (JS_VALUE_GET_TAG(value) == JS_TAG_STRING)
+        return qjs_hash_string(JS_VALUE_GET_STRING(value), hash);
+    hash = qjs_hash_string_rope(JS_VALUE_GET_STRING_ROPE(value)->left, hash);
+    return qjs_hash_string_rope(JS_VALUE_GET_STRING_ROPE(value)->right, hash);
+}
+
 /* Compatibility spellings for the existing RegExp consumer. */
 #define qjs_regexp_string_get qjs_string_get
 #define qjs_regexp_is_empty_string qjs_is_empty_string
