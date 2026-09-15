@@ -25,7 +25,7 @@
 #ifndef QUICKJS_INTERNAL_FUNCTION_H
 #define QUICKJS_INTERNAL_FUNCTION_H
 
-#include "internal-object.h"
+#include "internal-property.h"
 
 #define GLOBAL_VAR_OFFSET 0x40000000
 #define ARGUMENT_VAR_OFFSET 0x20000000

@@ -40,23 +40,11 @@ QJS_INTERNAL JSValue qjs_proxy_throw_stack_overflow(JSContext *ctx);
 QJS_INTERNAL JSValue qjs_proxy_throw_type_error_not_object(JSContext *ctx);
 QJS_INTERNAL JSValue qjs_proxy_throw_type_error_not_constructor(
     JSContext *ctx, JSValueConst value);
-QJS_INTERNAL int qjs_proxy_set_prototype_internal(JSContext *ctx,
-                                                  JSValueConst obj,
-                                                  JSValueConst proto,
-                                                  BOOL throw_flag);
-QJS_INTERNAL int qjs_proxy_get_own_property_internal(
-    JSContext *ctx, JSPropertyDescriptor *desc, JSObject *obj, JSAtom atom);
 QJS_INTERNAL JSValue qjs_proxy_create_array(JSContext *ctx, int len,
                                             JSValueConst *values);
-QJS_INTERNAL void qjs_proxy_free_desc(JSContext *ctx,
-                                      JSPropertyDescriptor *desc);
-QJS_INTERNAL BOOL qjs_proxy_check_define_prop_flags(int prop_flags, int flags);
 QJS_INTERNAL int qjs_proxy_to_bool_free(JSContext *ctx, JSValue value);
 QJS_INTERNAL BOOL qjs_proxy_same_value(JSContext *ctx, JSValueConst left,
                                        JSValueConst right);
-QJS_INTERNAL int qjs_proxy_obj_to_desc(JSContext *ctx,
-                                       JSPropertyDescriptor *desc,
-                                       JSValueConst value);
 
 QJS_INTERNAL JSValue qjs_proxy_throw_revoked(JSContext *ctx);
 QJS_INTERNAL int qjs_resolve_proxy(JSContext *ctx, JSValueConst *value,
