@@ -32,6 +32,20 @@
 #define JS_ATOM_MAX     ((1U << 30) - 1)
 #define ATOM_GET_STR_BUF_SIZE 64
 
+#define ATOD_ACCEPT_BIN_OCT       (1 << 2)
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+#define ATOD_ACCEPT_UNDERSCORES   (1 << 5)
+#define ATOD_ACCEPT_SUFFIX        (1 << 6)
+
+typedef struct StringBuffer {
+    JSContext *ctx;
+    JSString *str;
+    int len;
+    int size;
+    int is_wide_char;
+    int error_status;
+} StringBuffer;
+
 static inline BOOL qjs_atom_is_tagged_int(JSAtom atom)
 {
     return (atom & JS_ATOM_TAG_INT) != 0;
@@ -87,7 +101,29 @@ QJS_INTERNAL int qjs_define_auto_init_property(JSContext *ctx,
                                                JSAutoInitIDEnum id,
                                                void *opaque, int flags);
 QJS_INTERNAL void qjs_print_atom(JSContext *ctx, JSAtom atom);
+QJS_INTERNAL void qjs_dump_value_write(void *opaque, const char *buf,
+                                       size_t len);
 QJS_INTERNAL JSValue qjs_throw_duplicate_export(JSContext *ctx, JSAtom atom);
+QJS_INTERNAL JSValue qjs_throw_syntax_error_atom(JSContext *ctx, JSAtom atom,
+                                                 const char *fmt);
+QJS_INTERNAL const char *qjs_atom_get_str_rt(JSRuntime *rt, char *buf,
+                                             int buf_size, JSAtom atom);
+QJS_INTERNAL JSAtom qjs_atom_concat_str(JSContext *ctx, JSAtom atom,
+                                        const char *suffix);
+QJS_INTERNAL JSAtom qjs_atom_concat_num(JSContext *ctx, JSAtom atom,
+                                        uint32_t number);
+QJS_INTERNAL int qjs_string_buffer_init(JSContext *ctx, StringBuffer *buf,
+                                        int size);
+QJS_INTERNAL void qjs_string_buffer_free(StringBuffer *buf);
+QJS_INTERNAL int qjs_string_buffer_putc8(StringBuffer *buf, uint32_t c);
+QJS_INTERNAL int qjs_string_buffer_putc(StringBuffer *buf, uint32_t c);
+QJS_INTERNAL JSValue qjs_string_buffer_end(StringBuffer *buf);
+QJS_INTERNAL int qjs_update_property_flags(JSContext *ctx, JSObject *obj,
+                                           JSShapeProperty **prop, int flags);
+QJS_INTERNAL int qjs_to_digit(int c);
+QJS_INTERNAL JSValue qjs_atof(JSContext *ctx, const char *str,
+                              const char **end, int radix, int flags);
+QJS_INTERNAL int qjs_string_find_invalid_codepoint(JSString *str);
 
 
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

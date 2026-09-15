@@ -27,6 +27,29 @@
 
 #include "internal-object.h"
 
+#define GLOBAL_VAR_OFFSET 0x40000000
+#define ARGUMENT_VAR_OFFSET 0x20000000
+#define JS_DEFINE_CLASS_HAS_HERITAGE       (1 << 0)
+#define JS_THROW_VAR_RO                    0
+#define JS_THROW_VAR_REDECL                1
+#define JS_THROW_VAR_UNINITIALIZED         2
+#define JS_THROW_ERROR_DELETE_SUPER        3
+#define JS_THROW_ERROR_ITERATOR_THROW      4
+#define OP_DEFINE_METHOD_METHOD            0
+#define OP_DEFINE_METHOD_GETTER            1
+#define OP_DEFINE_METHOD_SETTER            2
+#define OP_DEFINE_METHOD_ENUMERABLE        4
+
+typedef enum {
+    OP_SPECIAL_OBJECT_ARGUMENTS,
+    OP_SPECIAL_OBJECT_MAPPED_ARGUMENTS,
+    OP_SPECIAL_OBJECT_THIS_FUNC,
+    OP_SPECIAL_OBJECT_NEW_TARGET,
+    OP_SPECIAL_OBJECT_HOME_OBJECT,
+    OP_SPECIAL_OBJECT_VAR_OBJECT,
+    OP_SPECIAL_OBJECT_IMPORT_META,
+} OPSpecialObjectEnum;
+
 static inline BOOL qjs_class_has_bytecode(JSClassID class_id)
 {
     return class_id == JS_CLASS_BYTECODE_FUNCTION ||
@@ -48,5 +71,14 @@ QJS_INTERNAL JSValue qjs_async_function_call(JSContext *ctx,
                                              int flags);
 QJS_INTERNAL JSValue qjs_promise_then(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv);
+QJS_INTERNAL JSVarRef *qjs_get_var_ref(JSContext *ctx, JSStackFrame *frame,
+                                      int var_idx, BOOL is_arg);
+QJS_INTERNAL JSValue qjs_closure(JSContext *ctx, JSValue bytecode_func,
+                                JSVarRef **cur_var_refs,
+                                JSStackFrame *stack_frame, BOOL is_eval);
+QJS_INTERNAL JSValue qjs_call_free(JSContext *ctx, JSValue func_obj,
+                                   JSValueConst this_obj, int argc,
+                                   JSValueConst *argv);
+
 
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */
