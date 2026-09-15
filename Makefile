@@ -249,6 +249,7 @@ endif
 
 QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/src/quickjs/frontend.o \
     $(OBJDIR)/src/quickjs/module.o $(OBJDIR)/src/quickjs/bytecode.o \
+    $(OBJDIR)/src/quickjs/builtin.o $(OBJDIR)/src/quickjs/builtin-math.o \
     $(OBJDIR)/src/quickjs/builtin-regexp.o
 QJS_ENGINE_CHECK_OBJS=$(patsubst %.o, %.check.o, $(QJS_ENGINE_OBJS))
 
