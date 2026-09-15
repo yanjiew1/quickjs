@@ -128,6 +128,8 @@ QJS_INTERNAL JSValue qjs_concat_string3(JSContext *ctx, const char *prefix,
                                         JSValue value, const char *suffix);
 QJS_INTERNAL JSValue qjs_concat_string(JSContext *ctx, JSValue left,
                                        JSValue right);
+QJS_INTERNAL JSValue qjs_to_locale_string_free(JSContext *ctx,
+                                               JSValue value);
 
 QJS_INTERNAL JSValue qjs_regexp_new_string8_len(JSContext *ctx,
                                                 const char *buf, int len);

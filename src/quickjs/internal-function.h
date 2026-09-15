@@ -79,6 +79,11 @@ QJS_INTERNAL JSValue qjs_closure(JSContext *ctx, JSValue bytecode_func,
 QJS_INTERNAL JSValue qjs_call_free(JSContext *ctx, JSValue func_obj,
                                    JSValueConst this_obj, int argc,
                                    JSValueConst *argv);
+QJS_INTERNAL int qjs_ordinary_is_instance_of(JSContext *ctx,
+                                             JSValueConst value,
+                                             JSValueConst constructor);
+QJS_INTERNAL JSContext *qjs_get_function_realm(JSContext *ctx,
+                                               JSValueConst func_obj);
 
 
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

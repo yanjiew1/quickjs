@@ -54,6 +54,19 @@ QJS_INTERNAL int qjs_update_property_flags(JSContext *ctx, JSObject *obj,
 QJS_INTERNAL JSValue qjs_object_proto_class_alloc(
     JSContext *ctx, JSValueConst proto, JSClassID class_id, int prop_count);
 QJS_INTERNAL void qjs_set_cycle_flag(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL JSValue qjs_get_property_value(JSContext *ctx,
+                                            JSValueConst obj,
+                                            JSValue property);
+QJS_INTERNAL int qjs_set_property_value(JSContext *ctx, JSValueConst obj,
+                                        JSValue property, JSValue value,
+                                        int flags);
+QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst left,
+                                   JSValueConst right, int mode);
+QJS_INTERNAL BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
+                                 JSValueConst right);
+#define QJS_EQ_STRICT 0
+#define QJS_EQ_SAME_VALUE 1
+#define QJS_EQ_SAME_VALUE_ZERO 2
 
 /* Existing consumer bridges, owned here because they expose property logic. */
 QJS_INTERNAL JSShape *qjs_regexp_new_shape2(JSContext *ctx, JSObject *proto,
