@@ -57,6 +57,9 @@ QJS_INTERNAL void qjs_set_cycle_flag(JSContext *ctx, JSValueConst obj);
 QJS_INTERNAL JSValue qjs_get_property_value(JSContext *ctx,
                                             JSValueConst obj,
                                             JSValue property);
+QJS_INTERNAL JSValue qjs_get_property_int64(JSContext *ctx,
+                                            JSValueConst obj,
+                                            int64_t index);
 QJS_INTERNAL int qjs_set_property_value(JSContext *ctx, JSValueConst obj,
                                         JSValue property, JSValue value,
                                         int flags);
