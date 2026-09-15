@@ -34,56 +34,56 @@
 
 #define js_rc qjs_get_ref_header
 #define is_digit qjs_is_digit
-#define string_get qjs_string_get
+#define string_get string_get
 #define JS_ToNumber qjs_to_number
-#define JS_ToStringFree qjs_to_string_free
+#define JS_ToStringFree JS_ToStringFree
 
-#define JS_DupAtomRT qjs_dup_atom_rt
-#define JS_AtomGetKind qjs_atom_get_kind
-#define JS_AtomIsString qjs_atom_is_string
-#define js_get_atom_index qjs_get_atom_index
-#define JS_NewAtomStr qjs_new_atom_str
-#define JS_NewAtomInt64 qjs_new_atom_int64
-#define JS_NewSymbol qjs_new_symbol
-#define JS_NewSymbolFromAtom qjs_new_symbol_from_atom
-#define JS_AtomGetStrRT qjs_atom_get_str_rt
-#define JS_AtomGetStr qjs_atom_get_str
+#define JS_DupAtomRT JS_DupAtomRT
+#define JS_AtomGetKind JS_AtomGetKind
+#define JS_AtomIsString JS_AtomIsString
+#define js_get_atom_index js_get_atom_index
+#define JS_NewAtomStr JS_NewAtomStr
+#define JS_NewAtomInt64 JS_NewAtomInt64
+#define JS_NewSymbol JS_NewSymbol
+#define JS_NewSymbolFromAtom JS_NewSymbolFromAtom
+#define JS_AtomGetStrRT JS_AtomGetStrRT
+#define JS_AtomGetStr JS_AtomGetStr
 #define JS_AtomIsArrayIndex qjs_atom_is_array_index_slow
 #define JS_AtomIsNumericIndex1 qjs_atom_is_numeric_index_slow
-#define JS_AtomSymbolHasDescription qjs_atom_symbol_has_description
-#define js_atom_concat_str qjs_atom_concat_str
-#define js_atom_concat_num qjs_atom_concat_num
-#define js_alloc_string qjs_alloc_string
-#define js_alloc_string_rt qjs_alloc_string_rt
-#define js_free_string qjs_free_string
-#define js_new_string8_len qjs_new_string8_len
-#define js_new_string8 qjs_new_string8
-#define js_new_string16_len qjs_new_string16_len
-#define js_new_string_char qjs_new_string_char
-#define js_sub_string qjs_sub_string
-#define string_buffer_init2 qjs_string_buffer_init2
-#define string_buffer_init qjs_string_buffer_init
-#define string_buffer_free qjs_string_buffer_free
-#define string_buffer_putc8 qjs_string_buffer_putc8
-#define string_buffer_putc16 qjs_string_buffer_putc16
-#define string_buffer_putc qjs_string_buffer_putc
-#define string_getc qjs_string_getc
-#define string_buffer_write8 qjs_string_buffer_write8
-#define string_buffer_puts8 qjs_string_buffer_puts8
-#define string_buffer_concat qjs_string_buffer_concat
-#define string_buffer_concat_value qjs_string_buffer_concat_value
-#define string_buffer_concat_value_free qjs_string_buffer_concat_value_free
-#define string_buffer_fill qjs_string_buffer_fill
-#define string_buffer_end qjs_string_buffer_end
-#define JS_ConcatString3 qjs_concat_string3
-#define js_string_memcmp qjs_string_memcmp
+#define JS_AtomSymbolHasDescription JS_AtomSymbolHasDescription
+#define js_atom_concat_str js_atom_concat_str
+#define js_atom_concat_num js_atom_concat_num
+#define js_alloc_string js_alloc_string
+#define js_alloc_string_rt js_alloc_string_rt
+#define js_free_string js_free_string
+#define js_new_string8_len js_new_string8_len
+#define js_new_string8 js_new_string8
+#define js_new_string16_len js_new_string16_len
+#define js_new_string_char js_new_string_char
+#define js_sub_string js_sub_string
+#define string_buffer_init2 string_buffer_init2
+#define string_buffer_init string_buffer_init
+#define string_buffer_free string_buffer_free
+#define string_buffer_putc8 string_buffer_putc8
+#define string_buffer_putc16 string_buffer_putc16
+#define string_buffer_putc string_buffer_putc
+#define string_getc string_getc
+#define string_buffer_write8 string_buffer_write8
+#define string_buffer_puts8 string_buffer_puts8
+#define string_buffer_concat string_buffer_concat
+#define string_buffer_concat_value string_buffer_concat_value
+#define string_buffer_concat_value_free string_buffer_concat_value_free
+#define string_buffer_fill string_buffer_fill
+#define string_buffer_end string_buffer_end
+#define JS_ConcatString3 JS_ConcatString3
+#define js_string_memcmp js_string_memcmp
 #define js_string_eq qjs_string_equal
-#define js_string_compare qjs_string_compare
-#define string_rope_get qjs_string_rope_get
-#define js_string_rope_compare qjs_string_rope_compare
-#define js_linearize_string_rope qjs_linearize_string_rope
-#define JS_ConcatString qjs_concat_string
-#define JS_ConcatStringInPlace qjs_concat_string_in_place
+#define js_string_compare js_string_compare
+#define string_rope_get string_rope_get
+#define js_string_rope_compare js_string_rope_compare
+#define js_linearize_string_rope js_linearize_string_rope
+#define JS_ConcatString JS_ConcatString
+#define JS_ConcatStringInPlace JS_ConcatStringInPlace
 
 static const char js_atom_init[] =
 #define DEF(name, str) str "\0"
@@ -92,8 +92,8 @@ static const char js_atom_init[] =
 ;
 static JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
                                int atom_type);
-QJS_INTERNAL void qjs_free_atom_struct(JSRuntime *rt, JSAtomStruct *p);
-#define JS_FreeAtomStruct qjs_free_atom_struct
+QJS_INTERNAL void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+#define JS_FreeAtomStruct JS_FreeAtomStruct
 QJS_INTERNAL int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
                             int pos2, int len);
 static inline uint32_t atom_get_free(const JSAtomStruct *p)
@@ -127,7 +127,7 @@ QJS_INTERNAL void qjs_free_string_zero_ref(JSRuntime *rt, JSString *str)
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
 
-#define __JS_AtomIsConst qjs_atom_is_const
+#define __JS_AtomIsConst __JS_AtomIsConst
 
 static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
 {
@@ -1062,7 +1062,7 @@ QJS_INTERNAL int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
     return 0;
 }
 
-QJS_INTERNAL int qjs_string_buffer_init(JSContext *ctx, StringBuffer *s,
+QJS_INTERNAL int string_buffer_init(JSContext *ctx, StringBuffer *s,
                                         int size)
 {
     s->ctx = ctx;
@@ -1187,7 +1187,7 @@ QJS_INTERNAL int string_buffer_putc16(StringBuffer *s, uint32_t c)
     return string_buffer_putc16_slow(s, c);
 }
 
-QJS_INTERNAL int qjs_string_buffer_putc_slow(StringBuffer *s, uint32_t c)
+QJS_INTERNAL int string_buffer_putc_slow(StringBuffer *s, uint32_t c)
 {
     if (unlikely(c >= 0x10000)) {
         /* surrogate pair */
@@ -1647,7 +1647,7 @@ static JSValue JS_ConcatString1(JSContext *ctx,
     return JS_MKPTR(JS_TAG_STRING, p);
 }
 
-QJS_INTERNAL BOOL qjs_concat_string_in_place(JSContext *ctx, JSString *p1,
+QJS_INTERNAL BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1,
                                              JSValueConst op2) {
     if (JS_VALUE_GET_TAG(op2) == JS_TAG_STRING) {
         JSString *p2 = JS_VALUE_GET_STRING(op2);

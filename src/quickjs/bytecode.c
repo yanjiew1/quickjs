@@ -205,21 +205,21 @@ static void bc_put_u8(BCWriterState *s, uint8_t v)
 
 static void bc_put_u16(BCWriterState *s, uint16_t v)
 {
-    if (qjs_is_be())
+    if (is_be())
         v = bswap16(v);
     dbuf_put_u16(&s->dbuf, v);
 }
 
 static __maybe_unused void bc_put_u32(BCWriterState *s, uint32_t v)
 {
-    if (qjs_is_be())
+    if (is_be())
         v = bswap32(v);
     dbuf_put_u32(&s->dbuf, v);
 }
 
 static void bc_put_u64(BCWriterState *s, uint64_t v)
 {
-    if (qjs_is_be())
+    if (is_be())
         v = bswap64(v);
     dbuf_put(&s->dbuf, (uint8_t *)&v, sizeof(v));
 }
@@ -389,7 +389,7 @@ static int JS_WriteFunctionBytecode(BCWriterState *s,
         pos += len;
     }
 
-    if (qjs_is_be())
+    if (is_be())
         bc_byte_swap(bc_buf, bc_len);
 
     dbuf_put(&s->dbuf, bc_buf, bc_len);
@@ -626,7 +626,7 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
         bc_put_u8(s, BC_TAG_ARRAY);
         is_template = FALSE;
     }
-    if (qjs_get_length32(ctx, &len, obj)) /* no side effect */
+    if (js_get_length32(ctx, &len, obj)) /* no side effect */
         goto fail;
     bc_put_leb128(s, len);
     if (p->fast_array) {
@@ -703,7 +703,7 @@ static int JS_WriteObjectTag(BCWriterState *s, JSValueConst obj)
         for(i = 0, pr = qjs_get_shape_prop(sh); i < sh->prop_count; i++, pr++) {
             atom = pr->atom;
             if (atom != JS_ATOM_NULL &&
-                qjs_atom_is_string(s->ctx, atom) &&
+                JS_AtomIsString(s->ctx, atom) &&
                 (pr->flags & JS_PROP_ENUMERABLE)) {
                 if (pr->flags & JS_PROP_TMASK) {
                     JS_ThrowTypeError(s->ctx, "only value properties are supported");
@@ -774,7 +774,7 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
 {
     uint32_t tag;
 
-    if (qjs_check_stack_overflow(s->ctx->rt, 0)) {
+    if (js_check_stack_overflow(s->ctx->rt, 0)) {
         qjs_throw_stack_overflow(s->ctx);
         return -1;
     }
@@ -921,7 +921,7 @@ static int JS_WriteObjectAtoms(BCWriterState *s)
     int i, atoms_size;
 
     dbuf1 = s->dbuf;
-    qjs_dbuf_init(s->ctx, &s->dbuf);
+    js_dbuf_init(s->ctx, &s->dbuf);
     bc_put_u8(s, BC_VERSION);
 
     bc_put_leb128(s, s->idx_to_atom_count);
@@ -963,7 +963,7 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
         s->first_atom = JS_ATOM_END;
     else
         s->first_atom = 1;
-    qjs_dbuf_init(ctx, &s->dbuf);
+    js_dbuf_init(ctx, &s->dbuf);
     js_object_list_init(&s->object_list);
 
     if (JS_WriteObjectRec(s, obj))
@@ -1081,7 +1081,7 @@ static int bc_get_u16(BCReaderState *s, uint16_t *pval)
         return bc_read_error_end(s);
     }
     v = get_u16(s->ptr);
-    if (qjs_is_be())
+    if (is_be())
         v = bswap16(v);
     *pval = v;
     s->ptr += 2;
@@ -1096,7 +1096,7 @@ static __maybe_unused int bc_get_u32(BCReaderState *s, uint32_t *pval)
         return bc_read_error_end(s);
     }
     v = get_u32(s->ptr);
-    if (qjs_is_be())
+    if (is_be())
         v = bswap32(v);
     *pval = v;
     s->ptr += 4;
@@ -1111,7 +1111,7 @@ static int bc_get_u64(BCReaderState *s, uint64_t *pval)
         return bc_read_error_end(s);
     }
     v = get_u64(s->ptr);
-    if (qjs_is_be())
+    if (is_be())
         v = bswap64(v);
     *pval = v;
     s->ptr += 8;
@@ -1216,7 +1216,7 @@ static JSString *JS_ReadString(BCReaderState *s)
         JS_ThrowInternalError(s->ctx, "string too long");
         return NULL;
     }
-    p = qjs_alloc_string(s->ctx, len, is_wide_char);
+    p = js_alloc_string(s->ctx, len, is_wide_char);
     if (!p) {
         s->error_state = -1;
         return NULL;
@@ -1224,13 +1224,13 @@ static JSString *JS_ReadString(BCReaderState *s)
     size = (size_t)len << is_wide_char;
     if ((s->buf_end - s->ptr) < size) {
         bc_read_error_end(s);
-        qjs_free_string(s->ctx->rt, p);
+        js_free_string(s->ctx->rt, p);
         return NULL;
     }
     memcpy(p->u.str8, s->ptr, size);
     s->ptr += size;
     if (is_wide_char) {
-        if (qjs_is_be()) {
+        if (is_be()) {
             uint32_t i;
             for (i = 0; i < len; i++)
                 p->u.str16[i] = bswap16(p->u.str16[i]);
@@ -1274,7 +1274,7 @@ static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
     }
     b->byte_code_buf = bc_buf;
 
-    if (qjs_is_be())
+    if (is_be())
         bc_byte_swap(bc_buf, bc_len);
 
     pos = 0;
@@ -1937,7 +1937,7 @@ static JSValue JS_ReadObjectValue(BCReaderState *s)
     val = JS_ReadObjectRec(s);
     if (JS_IsException(val))
         goto fail;
-    obj = qjs_to_object(ctx, val);
+    obj = JS_ToObject(ctx, val);
     if (JS_IsException(obj))
         goto fail;
     if (BC_add_object_ref(s, obj))
@@ -1956,7 +1956,7 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
     uint8_t tag;
     JSValue obj = JS_UNDEFINED;
 
-    if (qjs_check_stack_overflow(ctx->rt, 0))
+    if (js_check_stack_overflow(ctx->rt, 0))
         return qjs_throw_stack_overflow(ctx);
 
     if (bc_get_u8(s, &tag))
@@ -2092,7 +2092,7 @@ static int JS_ReadObjectAtoms(BCReaderState *s)
         p = JS_ReadString(s);
         if (!p)
             return -1;
-        atom = qjs_new_atom_str(s->ctx, p);
+        atom = JS_NewAtomStr(s->ctx, p);
         if (atom == JS_ATOM_NULL)
             return s->error_state = -1;
         s->idx_to_atom[i] = atom;

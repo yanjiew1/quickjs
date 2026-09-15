@@ -58,18 +58,18 @@ static inline BOOL qjs_class_has_bytecode(JSClassID class_id)
            class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION;
 }
 
-static inline BOOL qjs_is_strict_mode(JSContext *ctx)
+static inline BOOL is_strict_mode(JSContext *ctx)
 {
     JSStackFrame *frame = ctx->rt->current_stack_frame;
     return frame && (frame->js_mode & JS_MODE_STRICT);
 }
 
 QJS_INTERNAL void qjs_function_vm_init_runtime(JSRuntime *rt);
-QJS_INTERNAL void qjs_async_function_gc_free(JSRuntime *rt,
+QJS_INTERNAL void __async_func_free(JSRuntime *rt,
                                              JSAsyncFunctionState *state);
-QJS_INTERNAL JSValue qjs_instantiate_prototype(JSContext *ctx, JSObject *obj,
+QJS_INTERNAL JSValue js_instantiate_prototype(JSContext *ctx, JSObject *obj,
                                                JSAtom atom, void *opaque);
-QJS_INTERNAL JSValueConst qjs_get_active_function(JSContext *ctx);
+QJS_INTERNAL JSValueConst JS_GetActiveFunction(JSContext *ctx);
 QJS_INTERNAL JSVarRef *qjs_global_object_find_uninitialized_var(
     JSContext *ctx, JSObject *obj, JSAtom atom, BOOL is_lexical);
 QJS_INTERNAL JSValue qjs_create_from_ctor(JSContext *ctx, JSValueConst ctor,
@@ -82,7 +82,7 @@ QJS_INTERNAL JSValue qjs_closure2(JSContext *ctx, JSValue func_obj,
                                  JSVarRef **cur_var_refs,
                                  JSStackFrame *stack_frame, BOOL is_eval,
                                  JSModuleDef *module);
-QJS_INTERNAL JSValue qjs_async_function_call(JSContext *ctx,
+QJS_INTERNAL JSValue js_async_function_call(JSContext *ctx,
                                              JSValueConst func_obj,
                                              JSValueConst this_obj,
                                              int argc, JSValueConst *argv,
@@ -91,7 +91,7 @@ QJS_INTERNAL void qjs_function_set_properties(JSContext *ctx,
                                                JSValueConst func,
                                                JSAtom name, int length);
 /* Promise implementation is owned by builtin-async.c. */
-QJS_INTERNAL JSValue qjs_promise_then(JSContext *ctx, JSValueConst this_val,
+QJS_INTERNAL JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv);
 QJS_INTERNAL JSVarRef *qjs_get_var_ref(JSContext *ctx, JSStackFrame *frame,
                                       int var_idx, BOOL is_arg);

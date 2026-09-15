@@ -31,6 +31,70 @@ The final working tree is clean except for the user-supplied authoritative
 
 Authoritative task: `task.md`. Living roadmap: `PLAN.md`.
 
+## Upstream-symbol naming cleanup follow-up (2026-09-16)
+
+This follow-up uses inline-policy completion commit `b3da94f` as its immediate
+baseline and upstream commit `04be246` as the naming authority. It does not
+reopen modular architecture, ownership, inline policy, optimization, or final
+performance acceptance.
+
+### Audit and strict source-equivalence result
+
+The pre-edit audit enumerated 486 unique `qjs_*` identifiers (2,892 source
+occurrences) under `src/` and `quickjs-libc.c`, including all QuickJS engine,
+QuickJS libc, RegExp, Unicode, Unicode-generator, and Test262-runner owners. It
+also found 365 upstream-style-to-`qjs_*` alias definitions. Comparison with
+upstream classified 296 identifiers as exact or extracted upstream symbols, 50
+as genuinely new modular lifecycle/composition/test glue, and 140 as real
+split adapters, collision-avoiding entries, or private fast-boundary helpers.
+
+Only 103 of the 296 exact/extracted names can be restored without changing
+anything except identifier spelling. Applying the other 193 exact mappings
+produces concrete same-TU redefinitions, static/non-static declaration
+conflicts, or duplicate owner entries because the modular tree deliberately
+contains both an upstream-local implementation and a cross-TU adapter. They
+remain `qjs_*`: changing `static`, `QJS_INTERNAL`, wrappers, macros, header
+placement, ownership, or call topology to force those names is prohibited by
+the strict identifier-only scope.
+
+The accepted source change consists of 103 global whole-token substitutions in
+32 files, with 852 added and 852 removed lines. For every changed file, applying
+the same token map to `git show b3da94f:<path>` produces a byte-for-byte match
+with the working file. Therefore function bodies, control flow, `static`,
+`inline`, `force_inline`, `no_inline`, `QJS_INTERNAL`, visibility, attributes,
+types, qualifiers, parameter order, macro structure, TU/header placement, call
+topology, compiler flags, and build configuration are unchanged. The final tree
+has 383 unique `qjs_*` identifiers (2,035 occurrences), 205 remaining
+upstream-style-to-`qjs_*` aliases, and 158 harmless self-aliases created by the
+identifier substitution; deleting or restructuring those macros would violate
+the same invariant.
+
+The exhaustive surviving-name classification appears at the end of this file.
+Raw audit maps and rejected-collision compiler logs are under
+`/tmp/qjs-naming-*`; the strict source-equivalence proof directory is
+`/tmp/qjs-naming-proof.h87Z2Z`.
+
+### Correctness, interface, and performance disposition
+
+- `git diff --check`: PASS.
+- GCC 16.2 normal non-LTO clean WERROR `all` and full `make test`: PASS.
+- Clang 23.1 normal non-LTO clean WERROR `all` and full `make test`: PASS.
+- Exact full Test262: unchanged at 58/83,558 errors, 3,356 excluded, and
+  6,000 skipped.
+- Exported dynamic symbols: byte-identical name sets to the accepted baseline,
+  292 names for GCC and 286 for Clang.
+- No compiler-specific inline/no-inline branch, annotation, alignment, section,
+  link-order, flag, or build change was introduced.
+- No new performance campaign or tuning was performed. The completed branch's
+  accepted performance record remains authoritative; for this strict naming
+  cleanup, the byte-for-byte identifier-substitution proof establishes that any
+  small timing movement cannot reflect changed semantic work or call topology
+  and is not a blocker.
+
+Validation logs are `/tmp/qjs-naming-main-{gcc,clang}-{build,test}.log`, the
+Test262 log is `/tmp/qjs-naming-main-gcc-test262.log`, and exact exported-symbol
+comparisons are `/tmp/qjs-naming-main-{gcc,clang}-exports.diff`.
+
 ## Inline-policy cleanup follow-up (2026-09-15)
 
 This separate follow-up uses completed modularization commit `af558f1` as its
@@ -1964,3 +2028,422 @@ taskset -c 2 ./qjs --std tests/microbench.js \
   prop_read prop_write func_call array_read array_push typed_array_read \
   string_build2 regexp_ascii regexp_utf16 regexp_replace sort_bench
 ```
+
+## Exhaustive surviving qjs identifier audit (2026-09-16)
+
+This appendix lists every surviving unique `qjs_*` identifier after the strict
+cleanup. Entries in each table share the precise disposition stated above that
+table; there are no unclassified survivors.
+
+### Exact upstream counterparts blocked by identifier-only collisions (193)
+
+Each entry has an exact upstream counterpart, but direct token replacement was
+compiler-tested and rejected because it creates a same-TU redefinition, a
+static/non-static declaration conflict, or a duplicate owner entry. Resolving
+one would require a prohibited linkage, wrapper, macro, placement, ownership, or
+call-topology change.
+
+| Surviving modular name | Exact upstream name |
+|---|---|
+| `qjs_add_brand` | `JS_AddBrand` |
+| `qjs_add_intrinsic_bigint` | `JS_AddIntrinsicBigInt` |
+| `qjs_add_property` | `add_property` |
+| `qjs_allocate_fast_array` | `js_allocate_fast_array` |
+| `qjs_array_buffer_finalizer` | `js_array_buffer_finalizer` |
+| `qjs_array_buffer_is_resizable` | `array_buffer_is_resizable` |
+| `qjs_array_every` | `js_array_every` |
+| `qjs_array_finalizer` | `js_array_finalizer` |
+| `qjs_array_iterator_finalizer` | `js_array_iterator_finalizer` |
+| `qjs_array_iterator_mark` | `js_array_iterator_mark` |
+| `qjs_array_mark` | `js_array_mark` |
+| `qjs_array_push` | `js_array_push` |
+| `qjs_array_reduce` | `js_array_reduce` |
+| `qjs_atof` | `js_atof` |
+| `qjs_atom_from_uint32` | `__JS_AtomFromUInt32` |
+| `qjs_atom_is_tagged_int` | `__JS_AtomIsTaggedInt` |
+| `qjs_atom_to_uint32` | `__JS_AtomToUInt32` |
+| `qjs_auto_init_property` | `JS_AutoInitProperty` |
+| `qjs_bigint_from_float64` | `js_bigint_from_float64` |
+| `qjs_bigint_new` | `js_bigint_new` |
+| `qjs_bigint_normalize` | `js_bigint_normalize` |
+| `qjs_bigint_set_short` | `js_bigint_set_short` |
+| `qjs_bigint_sign` | `js_bigint_sign` |
+| `qjs_bigint_to_float64` | `js_bigint_to_float64` |
+| `qjs_bigint_to_string` | `js_bigint_to_string1` |
+| `qjs_build_backtrace` | `build_backtrace` |
+| `qjs_call_free` | `JS_CallFree` |
+| `qjs_check_brand` | `JS_CheckBrand` |
+| `qjs_check_define_global_var` | `JS_CheckDefineGlobalVar` |
+| `qjs_check_exception_free` | `check_exception_free` |
+| `qjs_check_function` | `check_function` |
+| `qjs_class_has_bytecode` | `js_class_has_bytecode` |
+| `qjs_closure` | `js_closure` |
+| `qjs_closure2` | `js_closure2` |
+| `qjs_compact_bigint` | `JS_CompactBigInt` |
+| `qjs_convert_fast_array_to_array` | `convert_fast_array_to_array` |
+| `qjs_copy_data_properties` | `JS_CopyDataProperties` |
+| `qjs_create_array` | `js_create_array` |
+| `qjs_create_array_free` | `js_create_array_free` |
+| `qjs_create_array_iterator` | `js_create_array_iterator` |
+| `qjs_create_from_ctor` | `js_create_from_ctor` |
+| `qjs_create_iterator_result` | `js_create_iterator_result` |
+| `qjs_create_var_ref` | `js_create_var_ref` |
+| `qjs_dbuf_bytecode_init` | `js_dbuf_bytecode_init` |
+| `qjs_dbuf_put_leb128` | `dbuf_put_leb128` |
+| `qjs_dbuf_put_sleb128` | `dbuf_put_sleb128` |
+| `qjs_define_auto_init_property` | `JS_DefineAutoInitProperty` |
+| `qjs_define_object_name` | `JS_DefineObjectName` |
+| `qjs_define_object_name_computed` | `JS_DefineObjectNameComputed` |
+| `qjs_define_private_field` | `JS_DefinePrivateField` |
+| `qjs_define_property_value_int64` | `JS_DefinePropertyValueInt64` |
+| `qjs_define_property_value_value` | `JS_DefinePropertyValueValue` |
+| `qjs_delete_global_var` | `JS_DeleteGlobalVar` |
+| `qjs_delete_property` | `delete_property` |
+| `qjs_delete_property_int64` | `JS_DeletePropertyInt64` |
+| `qjs_dtoa2` | `js_dtoa2` |
+| `qjs_dump_atoms` | `JS_DumpAtoms` |
+| `qjs_dump_value_write` | `js_dump_value_write` |
+| `qjs_dup_shape` | `js_dup_shape` |
+| `qjs_dynamic_import` | `js_dynamic_import` |
+| `qjs_enqueue_job2` | `JS_EnqueueJob2` |
+| `qjs_eval_internal` | `JS_EvalInternal` |
+| `qjs_eval_object` | `JS_EvalObject` |
+| `qjs_find_line_num` | `find_line_num` |
+| `qjs_finrec_delete` | `finrec_delete_weakref` |
+| `qjs_free_function_bytecode` | `free_function_bytecode` |
+| `qjs_free_module_def` | `js_free_module_def` |
+| `qjs_free_property` | `free_property` |
+| `qjs_free_zero_refcount` | `free_zero_refcount` |
+| `qjs_function_set_properties` | `js_function_set_properties` |
+| `qjs_get_array_buffer` | `JS_GetArrayBuffer` |
+| `qjs_get_function_realm` | `JS_GetFunctionRealm` |
+| `qjs_get_global_var_ref` | `JS_GetGlobalVarRef` |
+| `qjs_get_iterator` | `JS_GetIterator` |
+| `qjs_get_iterator2` | `JS_GetIterator2` |
+| `qjs_get_leb128` | `get_leb128` |
+| `qjs_get_own_property_internal` | `JS_GetOwnPropertyInternal` |
+| `qjs_get_own_property_names_internal` | `JS_GetOwnPropertyNamesInternal` |
+| `qjs_get_private_field` | `JS_GetPrivateField` |
+| `qjs_get_property_int64` | `JS_GetPropertyInt64` |
+| `qjs_get_prototype_free` | `JS_GetPrototypeFree` |
+| `qjs_get_shape_prop` | `get_shape_prop` |
+| `qjs_get_sleb128` | `get_sleb128` |
+| `qjs_get_var_ref` | `get_var_ref` |
+| `qjs_global_is_finite` | `js_global_isFinite` |
+| `qjs_global_is_nan` | `js_global_isNaN` |
+| `qjs_global_object_find_uninitialized_var` | `js_global_object_find_uninitialized_var` |
+| `qjs_hash_string` | `hash_string` |
+| `qjs_import_meta` | `js_import_meta` |
+| `qjs_init_class_range` | `init_class_range` |
+| `qjs_instantiate_function_list_item` | `JS_InstantiateFunctionListItem2` |
+| `qjs_invoke_free` | `JS_InvokeFree` |
+| `qjs_is_backtrace_needed` | `is_backtrace_needed` |
+| `qjs_is_c_function` | `JS_IsCFunction` |
+| `qjs_is_digit` | `is_digit` |
+| `qjs_is_regexp` | `js_is_regexp` |
+| `qjs_is_safe_integer` | `is_safe_integer` |
+| `qjs_iterator_close` | `JS_IteratorClose` |
+| `qjs_iterator_concat_finalizer` | `js_iterator_concat_finalizer` |
+| `qjs_iterator_concat_mark` | `js_iterator_concat_mark` |
+| `qjs_iterator_get_complete_value` | `JS_IteratorGetCompleteValue` |
+| `qjs_iterator_helper_finalizer` | `js_iterator_helper_finalizer` |
+| `qjs_iterator_helper_mark` | `js_iterator_helper_mark` |
+| `qjs_iterator_next` | `JS_IteratorNext` |
+| `qjs_iterator_next2` | `JS_IteratorNext2` |
+| `qjs_iterator_proto_iterator` | `js_iterator_proto_iterator` |
+| `qjs_iterator_wrap_finalizer` | `js_iterator_wrap_finalizer` |
+| `qjs_iterator_wrap_mark` | `js_iterator_wrap_mark` |
+| `qjs_json_free_parse_record` | `json_free_parse_record` |
+| `qjs_json_parse_record_add` | `json_parse_record_add` |
+| `qjs_json_parse_record_find` | `json_parse_record_find` |
+| `qjs_json_parse_record_init_obj` | `json_parse_record_init_obj` |
+| `qjs_map_delete_weakrefs` | `map_delete_weakrefs` |
+| `qjs_mark_module_def` | `js_mark_module_def` |
+| `qjs_math_pow` | `js_pow` |
+| `qjs_method_set_home_object` | `js_method_set_home_object` |
+| `qjs_method_set_properties` | `js_method_set_properties` |
+| `qjs_module_ns_autoinit` | `js_module_ns_autoinit` |
+| `qjs_new_c_constructor` | `JS_NewCConstructor` |
+| `qjs_new_c_function3` | `JS_NewCFunction3` |
+| `qjs_new_module_def` | `js_new_module_def` |
+| `qjs_new_module_value` | `JS_NewModuleValue` |
+| `qjs_new_object_proto_list` | `JS_NewObjectProtoList` |
+| `qjs_new_regexp` | `JS_NewRegexp` |
+| `qjs_number_is_integer` | `JS_NumberIsInteger` |
+| `qjs_number_is_negative_or_minus_zero` | `JS_NumberIsNegativeOrMinusZero` |
+| `qjs_object_group_by` | `js_object_groupBy` |
+| `qjs_ordinary_is_instance_of` | `JS_OrdinaryIsInstanceOf` |
+| `qjs_parse_json3` | `JS_ParseJSON3` |
+| `qjs_poll_interrupts` | `js_poll_interrupts` |
+| `qjs_print_atom` | `js_print_atom` |
+| `qjs_proxy_free_desc` | `js_free_desc` |
+| `qjs_regexp_finalizer` | `js_regexp_finalizer` |
+| `qjs_regexp_string_iterator_finalizer` | `js_regexp_string_iterator_finalizer` |
+| `qjs_regexp_string_iterator_mark` | `js_regexp_string_iterator_mark` |
+| `qjs_resize_array` | `js_resize_array` |
+| `qjs_resolve_module` | `JS_ResolveModule` |
+| `qjs_resolve_proxy` | `js_resolve_proxy` |
+| `qjs_same_value` | `js_same_value` |
+| `qjs_same_value_zero` | `js_same_value_zero` |
+| `qjs_set_constructor2` | `JS_SetConstructor2` |
+| `qjs_set_cycle_flag` | `set_cycle_flag` |
+| `qjs_set_object_data` | `JS_SetObjectData` |
+| `qjs_set_private_field` | `JS_SetPrivateField` |
+| `qjs_set_prototype_internal` | `JS_SetPrototypeInternal` |
+| `qjs_set_value` | `set_value` |
+| `qjs_string_equal` | `js_string_eq` |
+| `qjs_string_find_invalid_codepoint` | `js_string_find_invalid_codepoint` |
+| `qjs_string_to_bigint_error` | `JS_StringToBigIntErr` |
+| `qjs_throw_error2` | `JS_ThrowError2` |
+| `qjs_throw_reference_error_not_defined` | `JS_ThrowReferenceErrorNotDefined` |
+| `qjs_throw_reference_error_uninitialized` | `JS_ThrowReferenceErrorUninitialized` |
+| `qjs_throw_reference_error_uninitialized2` | `JS_ThrowReferenceErrorUninitialized2` |
+| `qjs_throw_stack_overflow` | `JS_ThrowStackOverflow` |
+| `qjs_throw_syntax_error_atom` | `JS_ThrowSyntaxErrorAtom` |
+| `qjs_throw_syntax_error_var_redeclaration` | `JS_ThrowSyntaxErrorVarRedeclaration` |
+| `qjs_throw_type_error_not_constructor` | `JS_ThrowTypeErrorNotAConstructor` |
+| `qjs_throw_type_error_not_object` | `JS_ThrowTypeErrorNotAnObject` |
+| `qjs_throw_type_error_read_only` | `JS_ThrowTypeErrorReadOnly` |
+| `qjs_to_array_length_free` | `JS_ToArrayLengthFree` |
+| `qjs_to_bigint` | `JS_ToBigInt` |
+| `qjs_to_bigint64_free` | `JS_ToBigInt64Free` |
+| `qjs_to_bigint_free` | `JS_ToBigIntFree` |
+| `qjs_to_bool_free` | `JS_ToBoolFree` |
+| `qjs_to_digit` | `to_digit` |
+| `qjs_to_float64_free` | `JS_ToFloat64Free` |
+| `qjs_to_int32_clamp` | `JS_ToInt32Clamp` |
+| `qjs_to_int32_free` | `JS_ToInt32Free` |
+| `qjs_to_int32_sat` | `JS_ToInt32Sat` |
+| `qjs_to_int64_clamp` | `JS_ToInt64Clamp` |
+| `qjs_to_int64_free` | `JS_ToInt64Free` |
+| `qjs_to_int64_sat` | `JS_ToInt64Sat` |
+| `qjs_to_integer_free` | `JS_ToIntegerFree` |
+| `qjs_to_length_free` | `JS_ToLengthFree` |
+| `qjs_to_locale_string_free` | `JS_ToLocaleStringFree` |
+| `qjs_to_number` | `JS_ToNumber` |
+| `qjs_to_number_free` | `JS_ToNumberFree` |
+| `qjs_to_numeric` | `JS_ToNumeric` |
+| `qjs_to_primitive` | `JS_ToPrimitive` |
+| `qjs_to_primitive_free` | `JS_ToPrimitiveFree` |
+| `qjs_to_string_check_object` | `JS_ToStringCheckObject` |
+| `qjs_to_string_internal` | `JS_ToStringInternal` |
+| `qjs_to_uint32_free` | `JS_ToUint32Free` |
+| `qjs_to_uint8_clamp_free` | `JS_ToUint8ClampFree` |
+| `qjs_try_get_property_int64` | `JS_TryGetPropertyInt64` |
+| `qjs_typed_array_constructor` | `js_typed_array_constructor` |
+| `qjs_typed_array_finalizer` | `js_typed_array_finalizer` |
+| `qjs_typed_array_get_length_unsafe` | `js_typed_array_get_length_unsafe` |
+| `qjs_typed_array_is_oob` | `typed_array_is_oob` |
+| `qjs_typed_array_mark` | `js_typed_array_mark` |
+| `qjs_typed_array_species_create` | `js_typed_array___speciesCreate` |
+| `qjs_update_property_flags` | `js_update_property_flags` |
+| `qjs_weakref_delete` | `weakref_delete_weakref` |
+
+### Genuinely new modularization glue (50)
+
+No identifier with the same conceptual lifecycle, composition, split-helper, or
+test-interface purpose exists in upstream `04be246`; these names are genuinely
+introduced by the multi-TU architecture.
+
+| Surviving name | Disposition |
+|---|---|
+| `qjs_add_intrinsic_array_basic` | New modularization-only glue; no upstream counterpart. |
+| `qjs_add_intrinsic_generator` | New modularization-only glue; no upstream counterpart. |
+| `qjs_add_intrinsic_global` | New modularization-only glue; no upstream counterpart. |
+| `qjs_add_intrinsic_iterators` | New modularization-only glue; no upstream counterpart. |
+| `qjs_add_intrinsic_math` | New modularization-only glue; no upstream counterpart. |
+| `qjs_add_intrinsic_number_boolean_string` | New modularization-only glue; no upstream counterpart. |
+| `qjs_add_intrinsic_symbol` | New modularization-only glue; no upstream counterpart. |
+| `qjs_add_intrinsics` | New modularization-only glue; no upstream counterpart. |
+| `qjs_allocator_init` | New modularization-only glue; no upstream counterpart. |
+| `qjs_array_get_length32` | New modularization-only glue; no upstream counterpart. |
+| `qjs_array_get_opaque2` | New modularization-only glue; no upstream counterpart. |
+| `qjs_array_get_this` | New modularization-only glue; no upstream counterpart. |
+| `qjs_array_object_to_string` | New modularization-only glue; no upstream counterpart. |
+| `qjs_atom_string_compute_memory_usage` | New modularization-only glue; no upstream counterpart. |
+| `qjs_atom_string_free_runtime` | New modularization-only glue; no upstream counterpart. |
+| `qjs_atom_string_free_value_rt` | New modularization-only glue; no upstream counterpart. |
+| `qjs_atom_string_init_runtime` | New modularization-only glue; no upstream counterpart. |
+| `qjs_default_malloc_functions` | New modularization-only glue; no upstream counterpart. |
+| `qjs_function_class_id` | New modularization-only glue; no upstream counterpart. |
+| `qjs_function_vm_init_runtime` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_add_event_module_exports` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_create_json_module` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_eval_script` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_get_bool_option` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_get_errno` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_init_event_module` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_load_script` | New modularization-only glue; no upstream counterpart. |
+| `qjs_libc_print_value_write` | New modularization-only glue; no upstream counterpart. |
+| `qjs_module_add_export_unchecked` | New modularization-only glue; no upstream counterpart. |
+| `qjs_module_add_request` | New modularization-only glue; no upstream counterpart. |
+| `qjs_module_add_star_export` | New modularization-only glue; no upstream counterpart. |
+| `qjs_module_find_export` | New modularization-only glue; no upstream counterpart. |
+| `qjs_module_free_all` | New modularization-only glue; no upstream counterpart. |
+| `qjs_module_init_class` | New modularization-only glue; no upstream counterpart. |
+| `qjs_module_link_and_evaluate` | New modularization-only glue; no upstream counterpart. |
+| `qjs_new_atom_rt_ascii` | New modularization-only glue; no upstream counterpart. |
+| `qjs_object_dump_context` | New modularization-only glue; no upstream counterpart. |
+| `qjs_object_free_context_shapes` | New modularization-only glue; no upstream counterpart. |
+| `qjs_object_free_shape_hash` | New modularization-only glue; no upstream counterpart. |
+| `qjs_object_gc_shutdown` | New modularization-only glue; no upstream counterpart. |
+| `qjs_object_init_classes` | New modularization-only glue; no upstream counterpart. |
+| `qjs_object_init_shapes` | New modularization-only glue; no upstream counterpart. |
+| `qjs_object_proto_class_alloc` | New modularization-only glue; no upstream counterpart. |
+| `qjs_string_object_length` | New modularization-only glue; no upstream counterpart. |
+| `qjs_throw_array_buffer_oob` | New modularization-only glue; no upstream counterpart. |
+| `qjs_throw_detached_array_buffer` | New modularization-only glue; no upstream counterpart. |
+| `qjs_throw_duplicate_export` | New modularization-only glue; no upstream counterpart. |
+| `qjs_unicode_test_compose_pair` | New modularization-only glue; no upstream counterpart. |
+| `qjs_unicode_test_decomp_char` | New modularization-only glue; no upstream counterpart. |
+| `qjs_unicode_test_get_cc` | New modularization-only glue; no upstream counterpart. |
+
+### Real adapters, collision entries, and private split boundaries (140)
+
+Each entry performs actual ownership adaptation, preserves a public/local-name
+collision, or exposes a distinct private fast boundary; it is not merely an
+exact upstream implementation renamed on extraction. Removing or renaming these
+entries would require a non-identifier structural change.
+
+| Surviving name | Disposition |
+|---|---|
+| `qjs_add_gc_object` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_add_gc_object_fast` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_array_buffer_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_array_buffer_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_aggregate_error_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_bytecode_finalizer` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_bytecode_mark` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_c_function_data` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_create_from_ctor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_create_from_sync_iterator` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_dump_value` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_function_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_invoke_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_perform_promise_then` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_promise_resolve` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_resolve_call` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_resolve_finalizer` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_resolve_mark` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_species_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_async_to_int32_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_atom_is_array_index_slow` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_atom_is_numeric_index_slow` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_aggregate_error` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_build_arg_list` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_create_data_property_uint32` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_create_from_ctor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_define_property_value` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_error_to_string` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_free_arg_list` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_free_desc` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_function_apply` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_function_class_id` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_function_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_get_active_function` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_get_own_property_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_get_prototype_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_obj_to_desc` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_poll_interrupts` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_set_immutable_prototype` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_set_prototype_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_species_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_base_throw_not_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_collection_create_array` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_collection_create_from_ctor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_collection_throw_not_object` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_create_from_ctor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_get_string` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_new_c_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_new_string8` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_string_get` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_throw_type_error_not_object` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_to_float64_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_date_to_primitive` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_dup_atom` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_find_own_property` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_find_own_property1` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_find_own_property_fast` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_atom` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_atom_rt` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_raw` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_rt_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_string_zero_ref` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_value` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_free_var_ref` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_get_ref_header` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_global_atof` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_global_skip_spaces` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_global_string_buffer_putc16` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_global_string_buffer_write8` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_global_string_get` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_global_throw_error` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_json_array_includes` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_json_array_pop` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_json_array_push` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_json_object_keys` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_malloc_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_malloc_raw` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_malloc_rt_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_math_get_iterator` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_math_iterator_close` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_math_iterator_next` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_poll_interrupts_slow` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_check_define_flags` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_create_array_iterator` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_create_data_property_uint32` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_create_from_ctor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_get_property_int64` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_get_property_value` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_init_classes` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_invoke_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_new_c_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_new_object_proto_list` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_throw_not_configurable` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_throw_not_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_to_object_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_to_primitive_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_primitive_to_string_check_object` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_check_define_prop_flags` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_create_array` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_get_own_property_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_is_strict_mode` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_new_c_function3` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_obj_to_desc` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_register_class` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_same_value` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_set_prototype_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_throw_revoked` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_throw_stack_overflow` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_throw_type_error_not_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_throw_type_error_not_object` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_proxy_to_bool_free` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_realloc2_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_realloc_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_realloc_raw` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_realloc_rt_internal` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_add_shape_property` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_create_from_ctor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_get_proto_obj` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_get_this` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_is_c_function` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_is_empty_string` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_new_c_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_new_object_proto_list` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_new_shape2` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_species_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_string_advance_index` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_string_get` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_string_indexof_char` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_throw_interrupted` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_throw_type_error_invalid_class` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_regexp_throw_type_error_not_object` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_remove_gc_object` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_remove_gc_object_fast` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_to_float64_free_slow` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_typed_bigint_sign` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_typed_create_from_ctor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_typed_species_constructor` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_typed_throw_invalid_class` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |
+| `qjs_typed_to_primitive` | Real split adapter, collision entry, or private boundary; no safe exact-name substitution. |

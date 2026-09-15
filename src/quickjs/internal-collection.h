@@ -38,11 +38,11 @@ QJS_INTERNAL JSValue qjs_collection_create_from_ctor(JSContext *ctx,
                                                      JSValueConst ctor,
                                                      JSClassID class_id);
 
-QJS_INTERNAL void qjs_map_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_map_mark(JSRuntime *rt, JSValueConst value,
+QJS_INTERNAL void js_map_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst value,
                                JS_MarkFunc *mark_func);
-QJS_INTERNAL void qjs_map_iterator_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_map_iterator_mark(JSRuntime *rt, JSValueConst value,
+QJS_INTERNAL void js_map_iterator_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_map_iterator_mark(JSRuntime *rt, JSValueConst value,
                                         JS_MarkFunc *mark_func);
 QJS_INTERNAL void qjs_map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *ref);
 QJS_INTERNAL void qjs_weakref_delete(JSRuntime *rt, JSWeakRefHeader *ref);

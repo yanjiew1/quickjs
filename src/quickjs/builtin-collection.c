@@ -282,7 +282,7 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
         h = map_hash32(qjs_hash_string(JS_VALUE_GET_STRING(key), 0) ^ JS_TAG_STRING, hash_bits);
         break;
     case JS_TAG_STRING_ROPE:
-        h = map_hash32(qjs_hash_string_rope(key, 0) ^ JS_TAG_STRING, hash_bits);
+        h = map_hash32(hash_string_rope(key, 0) ^ JS_TAG_STRING, hash_bits);
         break;
     case JS_TAG_OBJECT:
     case JS_TAG_SYMBOL:
@@ -804,7 +804,7 @@ static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
-QJS_INTERNAL void qjs_map_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_map_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p;
     JSMapState *s;
@@ -835,7 +835,7 @@ QJS_INTERNAL void qjs_map_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-QJS_INTERNAL void qjs_map_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst val,
                                JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -862,7 +862,7 @@ typedef struct JSMapIteratorData {
     JSMapRecord *cur_record;
 } JSMapIteratorData;
 
-QJS_INTERNAL void qjs_map_iterator_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void js_map_iterator_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p;
     JSMapIteratorData *it;
@@ -880,7 +880,7 @@ QJS_INTERNAL void qjs_map_iterator_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-QJS_INTERNAL void qjs_map_iterator_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_map_iterator_mark(JSRuntime *rt, JSValueConst val,
                                         JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -1641,7 +1641,7 @@ int JS_AddIntrinsicMapSet(JSContext *ctx)
 
     for(i = 0; i < 4; i++) {
         JSCFunctionType ft;
-        const char *name = qjs_atom_get_str(ctx, buf, sizeof(buf),
+        const char *name = JS_AtomGetStr(ctx, buf, sizeof(buf),
                                          JS_ATOM_Map + i);
         ft.constructor_magic = js_map_constructor;
         obj1 = qjs_new_c_constructor(ctx, JS_CLASS_MAP + i, name,

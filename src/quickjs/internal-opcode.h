@@ -68,14 +68,14 @@ typedef struct JSOpCode {
 } JSOpCode;
 
 extern QJS_INTERNAL const JSOpCode
-qjs_opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)];
+opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)];
 
 #if SHORT_OPCODES
 #define short_opcode_info(op)                                      \
-    qjs_opcode_info[(op) >= OP_TEMP_START ?                        \
+    opcode_info[(op) >= OP_TEMP_START ?                        \
                     (op) + (OP_TEMP_END - OP_TEMP_START) : (op)]
 #else
-#define short_opcode_info(op) qjs_opcode_info[op]
+#define short_opcode_info(op) opcode_info[op]
 #endif
 
 #endif /* QUICKJS_INTERNAL_OPCODE_H */

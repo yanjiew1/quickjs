@@ -31,9 +31,9 @@ static const JSCFunctionListEntry js_generator_function_proto_funcs[] = {
 };
 
 static const JSCFunctionListEntry js_generator_proto_funcs[] = {
-    JS_ITERATOR_NEXT_DEF("next", 1, qjs_generator_next, QJS_GEN_MAGIC_NEXT ),
-    JS_ITERATOR_NEXT_DEF("return", 1, qjs_generator_next, QJS_GEN_MAGIC_RETURN ),
-    JS_ITERATOR_NEXT_DEF("throw", 1, qjs_generator_next, QJS_GEN_MAGIC_THROW ),
+    JS_ITERATOR_NEXT_DEF("next", 1, js_generator_next, QJS_GEN_MAGIC_NEXT ),
+    JS_ITERATOR_NEXT_DEF("return", 1, js_generator_next, QJS_GEN_MAGIC_RETURN ),
+    JS_ITERATOR_NEXT_DEF("throw", 1, js_generator_next, QJS_GEN_MAGIC_THROW ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Generator", JS_PROP_CONFIGURABLE),
 };
 
@@ -668,7 +668,7 @@ static JSValue js_promise_all_resolve_element(JSContext *ctx,
         obj = JS_NewObject(ctx);
         if (JS_IsException(obj))
             return JS_EXCEPTION;
-        str = qjs_new_string8(ctx, is_reject ? "rejected" : "fulfilled");
+        str = js_new_string8(ctx, is_reject ? "rejected" : "fulfilled");
         if (JS_IsException(str))
             goto fail1;
         if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_status,
@@ -980,7 +980,7 @@ QJS_INTERNAL int qjs_async_perform_promise_then(
     return 0;
 }
 
-QJS_INTERNAL JSValue qjs_promise_then(JSContext *ctx,
+QJS_INTERNAL JSValue js_promise_then(JSContext *ctx,
                                       JSValueConst this_val,
                                       int argc, JSValueConst *argv)
 {
@@ -1112,7 +1112,7 @@ static const JSCFunctionListEntry js_promise_funcs[] = {
 };
 
 static const JSCFunctionListEntry js_promise_proto_funcs[] = {
-    JS_CFUNC_DEF("then", 2, qjs_promise_then ),
+    JS_CFUNC_DEF("then", 2, js_promise_then ),
     JS_CFUNC_DEF("catch", 1, js_promise_catch ),
     JS_CFUNC_DEF("finally", 1, js_promise_finally ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Promise", JS_PROP_CONFIGURABLE ),
@@ -1353,9 +1353,9 @@ static const JSCFunctionListEntry js_async_generator_function_proto_funcs[] = {
 /* AsyncGenerator prototype */
 
 static const JSCFunctionListEntry js_async_generator_proto_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("next", 1, qjs_async_generator_next, QJS_GEN_MAGIC_NEXT ),
-    JS_CFUNC_MAGIC_DEF("return", 1, qjs_async_generator_next, QJS_GEN_MAGIC_RETURN ),
-    JS_CFUNC_MAGIC_DEF("throw", 1, qjs_async_generator_next, QJS_GEN_MAGIC_THROW ),
+    JS_CFUNC_MAGIC_DEF("next", 1, js_async_generator_next, QJS_GEN_MAGIC_NEXT ),
+    JS_CFUNC_MAGIC_DEF("return", 1, js_async_generator_next, QJS_GEN_MAGIC_RETURN ),
+    JS_CFUNC_MAGIC_DEF("throw", 1, js_async_generator_next, QJS_GEN_MAGIC_THROW ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "AsyncGenerator", JS_PROP_CONFIGURABLE ),
 };
 
@@ -1368,7 +1368,7 @@ static JSClassShortDef const js_async_class_def[] = {
     { JS_ATOM_AsyncFunctionReject, qjs_async_resolve_finalizer, qjs_async_resolve_mark }, /* JS_CLASS_ASYNC_FUNCTION_REJECT */
     { JS_ATOM_empty_string, js_async_from_sync_iterator_finalizer, js_async_from_sync_iterator_mark }, /* JS_CLASS_ASYNC_FROM_SYNC_ITERATOR */
     { JS_ATOM_AsyncGeneratorFunction, qjs_async_bytecode_finalizer, qjs_async_bytecode_mark },  /* JS_CLASS_ASYNC_GENERATOR_FUNCTION */
-    { JS_ATOM_AsyncGenerator, qjs_async_generator_finalizer, qjs_async_generator_mark },  /* JS_CLASS_ASYNC_GENERATOR */
+    { JS_ATOM_AsyncGenerator, js_async_generator_finalizer, js_async_generator_mark },  /* JS_CLASS_ASYNC_GENERATOR */
 };
 
 int JS_AddIntrinsicPromise(JSContext *ctx)
@@ -1383,10 +1383,10 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
             return -1;
         rt->class_array[JS_CLASS_PROMISE_RESOLVE_FUNCTION].call = js_promise_resolve_function_call;
         rt->class_array[JS_CLASS_PROMISE_REJECT_FUNCTION].call = js_promise_resolve_function_call;
-        rt->class_array[JS_CLASS_ASYNC_FUNCTION].call = qjs_async_function_call;
+        rt->class_array[JS_CLASS_ASYNC_FUNCTION].call = js_async_function_call;
         rt->class_array[JS_CLASS_ASYNC_FUNCTION_RESOLVE].call = qjs_async_resolve_call;
         rt->class_array[JS_CLASS_ASYNC_FUNCTION_REJECT].call = qjs_async_resolve_call;
-        rt->class_array[JS_CLASS_ASYNC_GENERATOR_FUNCTION].call = qjs_async_generator_function_call;
+        rt->class_array[JS_CLASS_ASYNC_GENERATOR_FUNCTION].call = js_async_generator_function_call;
     }
 
     /* Promise */

@@ -38,7 +38,7 @@ typedef struct JSClassShortDef {
     JSClassGCMark *gc_mark;
 } JSClassShortDef;
 
-QJS_INTERNAL int qjs_add_intrinsic_basic_objects(JSContext *ctx);
+QJS_INTERNAL int JS_AddIntrinsicBasicObjects(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_math(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsics(JSContext *ctx);
 QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx);

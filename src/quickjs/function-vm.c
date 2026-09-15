@@ -42,15 +42,15 @@
 #define JS_InstantiateFunctionListItem2 qjs_instantiate_function_list_item
 #define JS_SetConstructor2 qjs_set_constructor2
 #define JS_NewCConstructor qjs_new_c_constructor
-#define js_map_finalizer qjs_map_finalizer
-#define js_map_mark qjs_map_mark
-#define js_map_iterator_finalizer qjs_map_iterator_finalizer
-#define js_map_iterator_mark qjs_map_iterator_mark
+#define js_map_finalizer js_map_finalizer
+#define js_map_mark js_map_mark
+#define js_map_iterator_finalizer js_map_iterator_finalizer
+#define js_map_iterator_mark js_map_iterator_mark
 #define map_delete_weakrefs qjs_map_delete_weakrefs
 #define weakref_delete_weakref qjs_weakref_delete
 #define finrec_delete_weakref qjs_finrec_delete
 #define js_object_groupBy qjs_object_group_by
-#define can_extend_fast_array qjs_can_extend_fast_array
+#define can_extend_fast_array can_extend_fast_array
 #define js_array_finalizer qjs_array_finalizer
 #define js_array_mark qjs_array_mark
 #define js_array_iterator_finalizer qjs_array_iterator_finalizer
@@ -67,12 +67,12 @@
 #define array_buffer_is_resizable qjs_array_buffer_is_resizable
 
 #define JS_AddBrand qjs_add_brand
-#define JS_AtomIsArrayIndex qjs_atom_is_array_index
+#define JS_AtomIsArrayIndex JS_AtomIsArrayIndex
 #define JS_AutoInitProperty qjs_auto_init_property
 #define JS_CheckBrand qjs_check_brand
 #define JS_CheckDefineGlobalVar qjs_check_define_global_var
-#define JS_ConcatString qjs_concat_string
-#define JS_ConcatStringInPlace qjs_concat_string_in_place
+#define JS_ConcatString JS_ConcatString
+#define JS_ConcatStringInPlace JS_ConcatStringInPlace
 #define JS_DefineAutoInitProperty qjs_define_auto_init_property
 #define JS_DefineObjectName qjs_define_object_name
 #define JS_DefineObjectNameComputed qjs_define_object_name_computed
@@ -83,14 +83,14 @@
 #define JS_GetOwnPropertyInternal qjs_get_own_property_internal
 #define JS_GetOwnPropertyNamesInternal qjs_get_own_property_names_internal
 #define JS_GetPrivateField qjs_get_private_field
-#define JS_GetPropertyValue qjs_get_property_value
+#define JS_GetPropertyValue JS_GetPropertyValue
 #define JS_GetPrototypeFree qjs_get_prototype_free
 #define JS_IsCFunction qjs_is_c_function
-#define JS_NewObjectFromShape qjs_new_object_from_shape
-#define JS_NewSymbolFromAtom qjs_new_symbol_from_atom
+#define JS_NewObjectFromShape JS_NewObjectFromShape
+#define JS_NewSymbolFromAtom JS_NewSymbolFromAtom
 #define JS_FreeAtom qjs_free_atom
 #define JS_SetPrivateField qjs_set_private_field
-#define JS_SetPropertyValue qjs_set_property_value
+#define JS_SetPropertyValue JS_SetPropertyValue
 #define JS_SetPrototypeInternal qjs_set_prototype_internal
 #define JS_ThrowReferenceErrorNotDefined qjs_throw_reference_error_not_defined
 #define JS_ThrowReferenceErrorUninitialized qjs_throw_reference_error_uninitialized
@@ -101,8 +101,8 @@
 #define JS_ThrowTypeErrorNotAnObject qjs_throw_type_error_not_object
 #define JS_ThrowTypeErrorReadOnly qjs_throw_type_error_read_only
 #define JS_ToBoolFree qjs_to_bool_free
-#define JS_ToObject qjs_to_object
-#define JS_ToObjectFree qjs_to_object_free
+#define JS_ToObject JS_ToObject
+#define JS_ToObjectFree JS_ToObjectFree
 #define __JS_AtomFromUInt32 qjs_atom_from_uint32
 #define add_gc_object qjs_add_gc_object_fast
 #define add_property qjs_add_property
@@ -114,11 +114,11 @@
 #define free_zero_refcount qjs_free_zero_refcount
 #define get_shape_prop qjs_get_shape_prop
 #define is_backtrace_needed qjs_is_backtrace_needed
-#define is_strict_mode qjs_is_strict_mode
-#define js_add_slow qjs_add_slow
-#define js_binary_arith_slow qjs_binary_arith_slow
-#define js_binary_logic_slow qjs_binary_logic_slow
-#define js_check_stack_overflow qjs_check_stack_overflow
+#define is_strict_mode is_strict_mode
+#define js_add_slow js_add_slow
+#define js_binary_arith_slow js_binary_arith_slow
+#define js_binary_logic_slow js_binary_logic_slow
+#define js_check_stack_overflow js_check_stack_overflow
 #define js_create_array qjs_create_array
 #define js_create_array_free qjs_create_array_free
 #define js_dup_shape qjs_dup_shape
@@ -128,27 +128,27 @@
 #define js_malloc qjs_malloc_internal
 #define js_free qjs_free_internal
 #define js_realloc qjs_realloc_internal
-#define js_eq_slow qjs_eq_slow
+#define js_eq_slow js_eq_slow
 #define js_free_desc qjs_proxy_free_desc
 #define js_function_set_properties qjs_function_set_properties
-#define js_has_unscopable qjs_has_unscopable
+#define js_has_unscopable js_has_unscopable
 #define js_method_set_home_object qjs_method_set_home_object
 #define js_method_set_properties qjs_method_set_properties
-#define js_not_slow qjs_not_slow
-#define js_operator_delete qjs_operator_delete
-#define js_operator_in qjs_operator_in
-#define js_operator_instanceof qjs_operator_instanceof
-#define js_operator_private_in qjs_operator_private_in
-#define js_operator_typeof qjs_operator_typeof
+#define js_not_slow js_not_slow
+#define js_operator_delete js_operator_delete
+#define js_operator_in js_operator_in
+#define js_operator_instanceof js_operator_instanceof
+#define js_operator_private_in js_operator_private_in
+#define js_operator_typeof js_operator_typeof
 #define js_poll_interrupts qjs_poll_interrupts
-#define js_post_inc_slow qjs_post_inc_slow
+#define js_post_inc_slow js_post_inc_slow
 #define js_rc qjs_get_ref_header
-#define js_relational_slow qjs_relational_slow
+#define js_relational_slow js_relational_slow
 #define js_same_value qjs_same_value
-#define js_shr_slow qjs_shr_slow
-#define js_strict_eq2 qjs_strict_equal
+#define js_shr_slow js_shr_slow
+#define js_strict_eq2 js_strict_eq2
 #define js_string_eq(ctx, left, right) qjs_string_equal((left), (right))
-#define js_unary_arith_slow qjs_unary_arith_slow
+#define js_unary_arith_slow js_unary_arith_slow
 #define remove_gc_object qjs_remove_gc_object_fast
 #define set_cycle_flag qjs_set_cycle_flag
 #define set_value qjs_set_value
@@ -903,12 +903,12 @@ static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
         return -1;
     }
 
-    ft.iterator_next = qjs_array_iterator_next;
+    ft.iterator_next = js_array_iterator_next;
     if (is_array_iterator
     &&  JS_IsCFunction(ctx, method, ft.generic, 0)
-    &&  qjs_get_fast_array(ctx, sp[-1], &arrp, &count32)) {
+    &&  js_get_fast_array(ctx, sp[-1], &arrp, &count32)) {
         uint32_t len;
-        if (qjs_get_length32(ctx, &len, sp[-1]))
+        if (js_get_length32(ctx, &len, sp[-1]))
             goto exception;
         /* if len > count32, the elements >= count32 might be read in
            the prototypes and might have side effects */
@@ -1024,7 +1024,7 @@ static __exception int JS_CopyDataProperties(JSContext *ctx,
 }
 
 /* only valid inside C functions */
-QJS_INTERNAL JSValueConst qjs_get_active_function(JSContext *ctx)
+QJS_INTERNAL JSValueConst JS_GetActiveFunction(JSContext *ctx)
 {
     return ctx->rt->current_stack_frame->cur_func;
 }
@@ -1392,7 +1392,7 @@ static JSValue js_closure2(JSContext *ctx, JSValue func_obj,
     return JS_EXCEPTION;
 }
 
-QJS_INTERNAL JSValue qjs_instantiate_prototype(JSContext *ctx, JSObject *p,
+QJS_INTERNAL JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p,
                                                JSAtom atom, void *opaque)
 {
     JSValue obj, this_val;
@@ -5018,7 +5018,7 @@ static JSValue async_func_resume(JSContext *ctx, JSAsyncFunctionState *s)
     return ret;
 }
 
-QJS_INTERNAL void qjs_async_function_gc_free(JSRuntime *rt,
+QJS_INTERNAL void __async_func_free(JSRuntime *rt,
                                              JSAsyncFunctionState *s)
 {
     /* cannot close the closure variables here because it would
@@ -5108,7 +5108,7 @@ static void js_generator_mark(JSRuntime *rt, JSValueConst val,
 #define GEN_MAGIC_RETURN QJS_GEN_MAGIC_RETURN
 #define GEN_MAGIC_THROW  QJS_GEN_MAGIC_THROW
 
-QJS_INTERNAL JSValue qjs_generator_next(JSContext *ctx,
+QJS_INTERNAL JSValue js_generator_next(JSContext *ctx,
                                         JSValueConst this_val,
                                         int argc, JSValueConst *argv,
                                         BOOL *pdone, int magic)
@@ -5349,7 +5349,7 @@ QJS_INTERNAL JSValue qjs_async_resolve_call(
     return JS_UNDEFINED;
 }
 
-QJS_INTERNAL JSValue qjs_async_function_call(
+QJS_INTERNAL JSValue js_async_function_call(
     JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj,
     int argc, JSValueConst *argv, int flags)
 {
@@ -5421,7 +5421,7 @@ static void js_async_generator_free(JSRuntime *rt,
     js_free_rt(rt, s);
 }
 
-QJS_INTERNAL void qjs_async_generator_finalizer(JSRuntime *rt, JSValue obj)
+QJS_INTERNAL void js_async_generator_finalizer(JSRuntime *rt, JSValue obj)
 {
     JSAsyncGeneratorData *s = JS_GetOpaque(obj, JS_CLASS_ASYNC_GENERATOR);
 
@@ -5430,7 +5430,7 @@ QJS_INTERNAL void qjs_async_generator_finalizer(JSRuntime *rt, JSValue obj)
     }
 }
 
-QJS_INTERNAL void qjs_async_generator_mark(JSRuntime *rt, JSValueConst val,
+QJS_INTERNAL void js_async_generator_mark(JSRuntime *rt, JSValueConst val,
                                            JS_MarkFunc *mark_func)
 {
     JSAsyncGeneratorData *s = JS_GetOpaque(val, JS_CLASS_ASYNC_GENERATOR);
@@ -5736,7 +5736,7 @@ static JSValue js_async_generator_resolve_function(JSContext *ctx,
 }
 
 /* magic = GEN_MAGIC_x */
-QJS_INTERNAL JSValue qjs_async_generator_next(
+QJS_INTERNAL JSValue js_async_generator_next(
     JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
     int magic)
 {
@@ -5779,7 +5779,7 @@ QJS_INTERNAL JSValue qjs_async_generator_next(
     return JS_EXCEPTION;
 }
 
-QJS_INTERNAL JSValue qjs_async_generator_function_call(
+QJS_INTERNAL JSValue js_async_generator_function_call(
     JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj,
     int argc, JSValueConst *argv, int flags)
 {

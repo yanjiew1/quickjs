@@ -49,7 +49,7 @@ QJS_INTERNAL void qjs_async_dump_value(JSContext *ctx, const char *name,
 QJS_INTERNAL JSValueConst qjs_async_c_function_data(
     JSValueConst function, int index);
 
-QJS_INTERNAL JSValue qjs_generator_next(JSContext *ctx,
+QJS_INTERNAL JSValue js_generator_next(JSContext *ctx,
                                         JSValueConst this_val,
                                         int argc, JSValueConst *argv,
                                         BOOL *done, int magic);
@@ -64,13 +64,13 @@ QJS_INTERNAL JSValue qjs_async_resolve_call(JSContext *ctx,
                                             JSValueConst this_obj,
                                             int argc, JSValueConst *argv,
                                             int flags);
-QJS_INTERNAL void qjs_async_generator_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void qjs_async_generator_mark(JSRuntime *rt, JSValueConst value,
+QJS_INTERNAL void js_async_generator_finalizer(JSRuntime *rt, JSValue value);
+QJS_INTERNAL void js_async_generator_mark(JSRuntime *rt, JSValueConst value,
                                            JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue qjs_async_generator_function_call(
+QJS_INTERNAL JSValue js_async_generator_function_call(
     JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj,
     int argc, JSValueConst *argv, int flags);
-QJS_INTERNAL JSValue qjs_async_generator_next(JSContext *ctx,
+QJS_INTERNAL JSValue js_async_generator_next(JSContext *ctx,
                                               JSValueConst this_val,
                                               int argc, JSValueConst *argv,
                                               int magic);
@@ -86,7 +86,7 @@ QJS_INTERNAL JSValue qjs_async_promise_resolve(
     int magic);
 QJS_INTERNAL JSValue qjs_async_create_from_sync_iterator(
     JSContext *ctx, JSValueConst sync_iterator);
-QJS_INTERNAL JSValue qjs_promise_then(JSContext *ctx,
+QJS_INTERNAL JSValue js_promise_then(JSContext *ctx,
                                       JSValueConst this_val,
                                       int argc, JSValueConst *argv);
 

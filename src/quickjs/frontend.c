@@ -394,7 +394,7 @@ typedef struct JSParseState {
 } JSParseState;
 
 QJS_INTERNAL const JSOpCode
-qjs_opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
+opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
 #define FMT(f)
 #ifdef DUMP_BYTECODE
 #define DEF(id, size, n_pop, n_push, f) { #id, size, n_pop, n_push, OP_FMT_ ## f },
@@ -451,7 +451,7 @@ static void __attribute((unused)) dump_token(JSParseState *s,
         {
             char buf[ATOM_GET_STR_BUF_SIZE];
             printf("ident: '%s'\n",
-                   qjs_atom_get_str(s->ctx, buf, sizeof(buf), token->u.ident.atom));
+                   JS_AtomGetStr(s->ctx, buf, sizeof(buf), token->u.ident.atom));
         }
         break;
     case TOK_STRING:
@@ -612,7 +612,7 @@ static int js_parse_error_reserved_identifier(JSParseState *s)
 {
     char buf1[ATOM_GET_STR_BUF_SIZE];
     return js_parse_error(s, "'%s' is a reserved identifier",
-                          qjs_atom_get_str(s->ctx, buf1, sizeof(buf1),
+                          JS_AtomGetStr(s->ctx, buf1, sizeof(buf1),
                                         s->token.u.ident.atom));
 }
 
@@ -623,7 +623,7 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
     JSValue str;
 
     /* p points to the first byte of the template part */
-    if (qjs_string_buffer_init(s->ctx, b, 32))
+    if (string_buffer_init(s->ctx, b, 32))
         goto fail;
     for(;;) {
         if (p >= s->buf_end)
@@ -639,7 +639,7 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
             break;
         }
         if (c == '\\') {
-            if (qjs_string_buffer_putc8(b, c))
+            if (string_buffer_putc8(b, c))
                 goto fail;
             if (p >= s->buf_end)
                 goto unexpected_eof;
@@ -660,10 +660,10 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
             }
             p = p_next;
         }
-        if (qjs_string_buffer_putc(b, c))
+        if (string_buffer_putc(b, c))
             goto fail;
     }
-    str = qjs_string_buffer_end(b);
+    str = string_buffer_end(b);
     if (JS_IsException(str))
         return -1;
     s->token.val = TOK_TEMPLATE;
@@ -675,7 +675,7 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
  unexpected_eof:
     js_parse_error(s, "unexpected end of string");
  fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return -1;
 }
 
@@ -690,7 +690,7 @@ static __exception int js_parse_string(JSParseState *s, int sep,
     JSValue str;
 
     /* string */
-    if (qjs_string_buffer_init(s->ctx, b, 32))
+    if (string_buffer_init(s->ctx, b, 32))
         goto fail;
     for(;;) {
         if (p >= s->buf_end)
@@ -792,10 +792,10 @@ static __exception int js_parse_string(JSParseState *s, int sep,
                 goto invalid_utf8;
             p = p_next;
         }
-        if (qjs_string_buffer_putc(b, c))
+        if (string_buffer_putc(b, c))
             goto fail;
     }
-    str = qjs_string_buffer_end(b);
+    str = string_buffer_end(b);
     if (JS_IsException(str))
         return -1;
     token->val = TOK_STRING;
@@ -812,7 +812,7 @@ static __exception int js_parse_string(JSParseState *s, int sep,
     if (do_throw)
         js_parse_error(s, "unexpected end of string");
  fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return -1;
 }
 
@@ -833,9 +833,9 @@ static __exception int js_parse_regexp(JSParseState *s)
     p = s->buf_ptr;
     p++;
     in_class = FALSE;
-    if (qjs_string_buffer_init(s->ctx, b, 32))
+    if (string_buffer_init(s->ctx, b, 32))
         return -1;
-    if (qjs_string_buffer_init(s->ctx, b2, 1))
+    if (string_buffer_init(s->ctx, b2, 1))
         goto fail;
     for(;;) {
         if (p >= s->buf_end) {
@@ -855,7 +855,7 @@ static __exception int js_parse_regexp(JSParseState *s)
             /* XXX: incorrect as the first character in a class */
             in_class = FALSE;
         } else if (c == '\\') {
-            if (qjs_string_buffer_putc8(b, c))
+            if (string_buffer_putc8(b, c))
                 goto fail;
             c = *p++;
             if (c == '\n' || c == '\r')
@@ -888,7 +888,7 @@ static __exception int js_parse_regexp(JSParseState *s)
             }
             p = p_next;
         }
-        if (qjs_string_buffer_putc(b, c))
+        if (string_buffer_putc(b, c))
             goto fail;
     }
 
@@ -905,13 +905,13 @@ static __exception int js_parse_regexp(JSParseState *s)
         }
         if (!lre_js_is_ident_next(c))
             break;
-        if (qjs_string_buffer_putc(b2, c))
+        if (string_buffer_putc(b2, c))
             goto fail;
         p = p_next;
     }
 
-    body_str = qjs_string_buffer_end(b);
-    flags_str = qjs_string_buffer_end(b2);
+    body_str = string_buffer_end(b);
+    flags_str = string_buffer_end(b2);
     if (JS_IsException(body_str) ||
         JS_IsException(flags_str)) {
         JS_FreeValue(s->ctx, body_str);
@@ -924,8 +924,8 @@ static __exception int js_parse_regexp(JSParseState *s)
     s->buf_ptr = p;
     return 0;
  fail:
-    qjs_string_buffer_free(b);
-    qjs_string_buffer_free(b2);
+    string_buffer_free(b);
+    string_buffer_free(b2);
     return -1;
 }
 
@@ -1054,7 +1054,7 @@ static __exception int next_token(JSParseState *s)
     BOOL ident_has_escape;
     JSAtom atom;
 
-    if (qjs_check_stack_overflow(s->ctx->rt, 0)) {
+    if (js_check_stack_overflow(s->ctx->rt, 0)) {
         return js_parse_error(s, "stack overflow");
     }
 
@@ -1530,7 +1530,7 @@ static int json_parse_string(JSParseState *s, const uint8_t **pp, int sep)
     uint32_t c;
     StringBuffer b_s, *b = &b_s;
 
-    if (qjs_string_buffer_init(s->ctx, b, 32))
+    if (string_buffer_init(s->ctx, b, 32))
         goto fail;
 
     p = *pp;
@@ -1594,19 +1594,19 @@ static int json_parse_string(JSParseState *s, const uint8_t **pp, int sep)
             }
             p = p_next;
         }
-        if (qjs_string_buffer_putc(b, c))
+        if (string_buffer_putc(b, c))
             goto fail;
     }
     s->token.val = TOK_STRING;
     s->token.u.str.sep = sep;
-    s->token.u.str.str = qjs_string_buffer_end(b);
+    s->token.u.str.str = string_buffer_end(b);
     *pp = p;
     return 0;
 
  end_of_input:
     js_parse_error(s, "Unexpected end of JSON input");
  fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return -1;
 }
 
@@ -1701,7 +1701,7 @@ static __exception int json_next_token(JSParseState *s)
     int c;
     JSAtom atom;
 
-    if (qjs_check_stack_overflow(s->ctx->rt, 0)) {
+    if (js_check_stack_overflow(s->ctx->rt, 0)) {
         return js_parse_error(s, "stack overflow");
     }
 
@@ -2201,7 +2201,7 @@ static __exception int emit_push_const(JSParseState *s, JSValueConst val,
         JSAtom atom;
         /* warning: JS_NewAtomStr frees the string value */
         JS_DupValue(s->ctx, val);
-        atom = qjs_new_atom_str(s->ctx, JS_VALUE_GET_STRING(val));
+        atom = JS_NewAtomStr(s->ctx, JS_VALUE_GET_STRING(val));
         if (atom != JS_ATOM_NULL && !qjs_atom_is_tagged_int(atom)) {
             emit_op(s, OP_push_atom_value);
             emit_u32(s, atom);
@@ -3430,7 +3430,7 @@ static void emit_class_field_init(JSParseState *s)
 /* build a private setter function name from the private getter name */
 static JSAtom get_private_setter_name(JSContext *ctx, JSAtom name)
 {
-    return qjs_atom_concat_str(ctx, name, "<set>");
+    return js_atom_concat_str(ctx, name, "<set>");
 }
 
 typedef struct {
@@ -3756,7 +3756,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             }
             if (name == JS_ATOM_NULL ) {
                 /* save the computed field name into a variable */
-                field_var_name = qjs_atom_concat_num(ctx, JS_ATOM_computed_field + is_static, cf->computed_fields_count);
+                field_var_name = js_atom_concat_num(ctx, JS_ATOM_computed_field + is_static, cf->computed_fields_count);
                 if (field_var_name == JS_ATOM_NULL)
                     goto fail;
                 if (define_var(s, fd, field_var_name, JS_VAR_DEF_CONST) < 0) {
@@ -4428,7 +4428,7 @@ static int js_unsupported_keyword(JSParseState *s, JSAtom atom)
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return js_parse_error(s, "unsupported keyword: %s",
-                          qjs_atom_get_str(s->ctx, buf, sizeof(buf), atom));
+                          JS_AtomGetStr(s->ctx, buf, sizeof(buf), atom));
 }
 
 static __exception int js_define_var(JSParseState *s, JSAtom name, int tok)
@@ -7888,7 +7888,7 @@ static JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
     if (qjs_module_find_export(m, export_name)) {
         char buf[ATOM_GET_STR_BUF_SIZE];
         js_parse_error(s, "duplicate exported name '%s'",
-                       qjs_atom_get_str(s->ctx, buf, sizeof(buf), export_name));
+                       JS_AtomGetStr(s->ctx, buf, sizeof(buf), export_name));
         return NULL;
     }
     return qjs_module_add_export_unchecked(s->ctx, m, local_name,
@@ -8421,7 +8421,7 @@ static JSFunctionDef *js_new_function_def(JSContext *ctx,
     fd->source_pos = source_ptr - get_line_col_cache->buf_start;
     fd->get_line_col_cache = get_line_col_cache;
 
-    qjs_dbuf_init(ctx, &fd->pc2line);
+    js_dbuf_init(ctx, &fd->pc2line);
     //fd->pc2line_last_line_num = line_num;
     //fd->pc2line_last_pc = 0;
     fd->last_opcode_source_ptr = source_ptr;
@@ -8442,7 +8442,7 @@ static void free_bytecode_atoms(JSRuntime *rt,
         if (use_short_opcodes)
             oi = &short_opcode_info(op);
         else
-            oi = &qjs_opcode_info[op];
+            oi = &opcode_info[op];
 
         len = oi->size;
         switch(oi->fmt) {
@@ -8575,7 +8575,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
         if (use_short_opcodes)
             oi = &short_opcode_info(op);
         else
-            oi = &qjs_opcode_info[op];
+            oi = &opcode_info[op];
         pos_next = pos + oi->size;
         if (op < OP_COUNT) {
             switch (oi->fmt) {
@@ -8649,7 +8649,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
         if (use_short_opcodes)
             oi = &short_opcode_info(op);
         else
-            oi = &qjs_opcode_info[op];
+            oi = &opcode_info[op];
         size = oi->size;
         if (pos + size > len) {
             printf("truncated opcode (0x%02x)\n", op);
@@ -8900,12 +8900,12 @@ static __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionB
 
     if (b->has_debug && b->debug.filename != JS_ATOM_NULL) {
         int line_num, col_num;
-        str = qjs_atom_get_str(ctx, atom_buf, sizeof(atom_buf), b->debug.filename);
+        str = JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), b->debug.filename);
         line_num = qjs_find_line_num(ctx, b, -1, &col_num);
         printf("%s:%d:%d: ", str, line_num, col_num);
     }
 
-    str = qjs_atom_get_str(ctx, atom_buf, sizeof(atom_buf), b->func_name);
+    str = JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), b->func_name);
     printf("function: %s%s\n", &"*"[b->func_kind != JS_FUNC_GENERATOR], str);
     if (b->js_mode) {
         printf("  mode:");
@@ -8916,7 +8916,7 @@ static __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionB
     if (b->arg_count && b->vardefs) {
         printf("  args:");
         for(i = 0; i < b->arg_count; i++) {
-            printf(" %s", qjs_atom_get_str(ctx, atom_buf, sizeof(atom_buf),
+            printf(" %s", JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf),
                                         b->vardefs[i].var_name));
         }
         printf("\n");
@@ -8931,7 +8931,7 @@ static __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionB
                     vd->var_kind == JS_VAR_NEW_FUNCTION_DECL) ? "function" :
                    vd->is_const ? "const" :
                    vd->is_lexical ? "let" : "var",
-                   qjs_atom_get_str(ctx, atom_buf, sizeof(atom_buf), vd->var_name));
+                   JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), vd->var_name));
             if (vd->has_scope)
                 printf(" [next:%d]", vd->scope_next);
             printf("\n");
@@ -8944,7 +8944,7 @@ static __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionB
             printf("%5d: %s %s", i,
                    cv->is_const ? "const" :
                    cv->is_lexical ? "let" : "var",
-                   qjs_atom_get_str(ctx, atom_buf, sizeof(atom_buf), cv->var_name));
+                   JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), cv->var_name));
             switch(cv->closure_type) {
             case JS_CLOSURE_LOCAL:
                 printf(" [loc%d]\n", cv->var_idx);
@@ -10204,7 +10204,7 @@ static BOOL code_match(CodeContext *s, int pos, ...)
             if (pos >= s->bc_len)
                 goto done;
             op = tab[pos];
-            len = qjs_opcode_info[op].size;
+            len = opcode_info[op].size;
             pos_next = pos + len;
             if (pos_next > s->bc_len)
                 goto done;
@@ -10228,7 +10228,7 @@ static BOOL code_match(CodeContext *s, int pos, ...)
         }
 
         pos++;
-        switch(qjs_opcode_info[op].fmt) {
+        switch(opcode_info[op].fmt) {
         case OP_FMT_loc8:
         case OP_FMT_u8:
             {
@@ -10420,7 +10420,7 @@ static int skip_dead_code(JSFunctionDef *s, const uint8_t *bc_buf, int bc_len,
 
     for (; pos < bc_len; pos += len) {
         op = bc_buf[pos];
-        len = qjs_opcode_info[op].size;
+        len = opcode_info[op].size;
         if (op == OP_line_num) {
             *linep = get_u32(bc_buf + pos + 1);
         } else
@@ -10438,7 +10438,7 @@ static int skip_dead_code(JSFunctionDef *s, const uint8_t *bc_buf, int bc_len,
         } else {
             /* XXX: output a warning for unreachable code? */
             JSAtom atom;
-            switch(qjs_opcode_info[op].fmt) {
+            switch(opcode_info[op].fmt) {
             case OP_FMT_label:
             case OP_FMT_label_u16:
                 label = get_u32(bc_buf + pos + 1);
@@ -10540,7 +10540,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
     line_num = 0; /* avoid warning */
     for (pos = 0; pos < bc_len; pos = pos_next) {
         op = bc_buf[pos];
-        len = qjs_opcode_info[op].size;
+        len = opcode_info[op].size;
         pos_next = pos + len;
         switch(op) {
         case OP_line_num:
@@ -10695,7 +10695,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                 label = get_u32(bc_buf + pos + 1);
                 assert(label >= 0 && label < s->label_count);
                 ls = &s->label_slots[label];
-                ls->pos2 = bc_out.size + qjs_opcode_info[op].size;
+                ls->pos2 = bc_out.size + opcode_info[op].size;
             }
             goto no_change;
 
@@ -10838,7 +10838,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
     /* XXX: find a better solution ? */
     for (; pos < bc_len; pos = pos_next) {
         op = bc_buf[pos];
-        len = qjs_opcode_info[op].size;
+        len = opcode_info[op].size;
         pos_next = pos + len;
         dbuf_put(&bc_out, bc_buf + pos, len);
     }
@@ -10875,7 +10875,7 @@ static void compute_pc2line_info(JSFunctionDef *s)
         uint32_t last_pc = 0;
         int i, line_num, col_num;
         const uint8_t *buf_start = s->get_line_col_cache->buf_start;
-        qjs_dbuf_init(s->ctx, &s->pc2line);
+        js_dbuf_init(s->ctx, &s->pc2line);
 
         last_line_num = get_line_col_cached(s->get_line_col_cache,
                                             &last_col_num,
@@ -10978,7 +10978,7 @@ static int find_jump_target(JSFunctionDef *s, int label0, int *pop, int *pline)
                     *pline = get_u32(s->byte_code.buf + pos + 1);
                 /* fall thru */
             case OP_label:
-                pos += qjs_opcode_info[op].size;
+                pos += opcode_info[op].size;
                 continue;
             case OP_goto:
                 label = get_u32(s->byte_code.buf + pos + 1);
@@ -11202,7 +11202,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
     for (pos = 0; pos < bc_len; pos = pos_next) {
         int val;
         op = bc_buf[pos];
-        len = qjs_opcode_info[op].size;
+        len = opcode_info[op].size;
         pos_next = pos + len;
         switch(op) {
         case OP_line_num:
@@ -12593,7 +12593,7 @@ static void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
     {
         char buf[ATOM_GET_STR_BUF_SIZE];
         printf("freeing %s\n",
-               qjs_atom_get_str_rt(rt, buf, sizeof(buf), b->func_name));
+               JS_AtomGetStrRT(rt, buf, sizeof(buf), b->func_name));
     }
 #endif
     if (b->byte_code_buf)

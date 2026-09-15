@@ -58,7 +58,7 @@ static JSProxyData *get_proxy_method(JSContext *ctx, JSValue *pmethod,
     JSValue method;
 
     /* safer to test recursion in all proxy methods */
-    if (qjs_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(ctx->rt, 0)) {
         qjs_proxy_throw_stack_overflow(ctx);
         return NULL;
     }
@@ -693,7 +693,7 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
     len = 0;
     tab2 = NULL;
     len2 = 0;
-    if (qjs_get_length32(ctx, &len, prop_array))
+    if (js_get_length32(ctx, &len, prop_array))
         goto fail;
     if (len > 0) {
         tab = js_mallocz(ctx, sizeof(tab[0]) * len);

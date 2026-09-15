@@ -142,7 +142,7 @@ static JSValue js_global_decodeURI(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(str))
         return str;
 
-    qjs_string_buffer_init(ctx, b, 0);
+    string_buffer_init(ctx, b, 0);
 
     p = JS_VALUE_GET_STRING(str);
     for (k = 0; k < p->len;) {
@@ -195,14 +195,14 @@ static JSValue js_global_decodeURI(JSContext *ctx, JSValueConst this_val,
         } else {
             k++;
         }
-        qjs_string_buffer_putc(b, c);
+        string_buffer_putc(b, c);
     }
     JS_FreeValue(ctx, str);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 fail:
     JS_FreeValue(ctx, str);
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return JS_EXCEPTION;
 }
 
@@ -255,7 +255,7 @@ static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
         return str;
 
     p = JS_VALUE_GET_STRING(str);
-    qjs_string_buffer_init(ctx, b, p->len);
+    string_buffer_init(ctx, b, p->len);
     for (k = 0; k < p->len;) {
         c = qjs_global_string_get(p, k);
         k++;
@@ -298,11 +298,11 @@ static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
         }
     }
     JS_FreeValue(ctx, str);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 fail:
     JS_FreeValue(ctx, str);
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return JS_EXCEPTION;
 }
 
@@ -319,7 +319,7 @@ static JSValue js_global_escape(JSContext *ctx, JSValueConst this_val,
         return str;
 
     p = JS_VALUE_GET_STRING(str);
-    qjs_string_buffer_init(ctx, b, p->len);
+    string_buffer_init(ctx, b, p->len);
     for (i = 0, len = p->len; i < len; i++) {
         c = qjs_global_string_get(p, i);
         if (isUnescaped(c)) {
@@ -329,7 +329,7 @@ static JSValue js_global_escape(JSContext *ctx, JSValueConst this_val,
         }
     }
     JS_FreeValue(ctx, str);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 }
 
 static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
@@ -344,7 +344,7 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(str))
         return str;
 
-    qjs_string_buffer_init(ctx, b, 0);
+    string_buffer_init(ctx, b, 0);
     p = JS_VALUE_GET_STRING(str);
     for (i = 0, len = p->len; i < len; i++) {
         c = qjs_global_string_get(p, i);
@@ -364,7 +364,7 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
         qjs_global_string_buffer_putc16(b, c);
     }
     JS_FreeValue(ctx, str);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 }
 
 /* global object */

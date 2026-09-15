@@ -43,7 +43,7 @@ static JSValue js_typed_array_constructor(JSContext *ctx,
 
 /* Typed Arrays */
 
-QJS_INTERNAL const uint8_t qjs_typed_array_size_log2[JS_TYPED_ARRAY_COUNT] = {
+QJS_INTERNAL const uint8_t typed_array_size_log2[JS_TYPED_ARRAY_COUNT] = {
     0, 0, 0, 1, 1, 2, 2,
     3, 3,                   // BigInt64Array, BigUint64Array
     1, 2, 3                 // Float16Array, Float32Array, Float64Array
@@ -182,7 +182,7 @@ static JSValue js_array_buffer_constructor0(JSContext *ctx, JSValueConst new_tar
         goto next;
     if (!JS_IsObject(argv[1]))
         goto next;
-    obj = qjs_to_object(ctx, argv[1]);
+    obj = JS_ToObject(ctx, argv[1]);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     val = JS_GetProperty(ctx, obj, JS_ATOM_maxByteLength);
@@ -874,7 +874,7 @@ static JSValue js_typed_array_set_internal(JSContext *ctx,
         goto fail;
     }
     dst_len = p->u.array.count;
-    src_obj = qjs_to_object(ctx, src);
+    src_obj = JS_ToObject(ctx, src);
     if (JS_IsException(src_obj))
         goto fail;
     src_p = JS_VALUE_GET_OBJ(src_obj);
@@ -908,7 +908,7 @@ static JSValue js_typed_array_set_internal(JSContext *ctx,
     } else {
         // can change |dst| as a side effect; per spec,
         // perform the range check against its old length
-        if (qjs_get_length64(ctx, &src_len, src_obj))
+        if (js_get_length64(ctx, &src_len, src_obj))
             goto fail;
         if (offset > dst_len - src_len) {
         range_error:
@@ -1124,10 +1124,10 @@ static JSValue js_typed_array_from(JSContext *ctx, JSValueConst this_val,
             goto exception;
         len = len1;
     } else {
-        arr = qjs_to_object(ctx, items);
+        arr = JS_ToObject(ctx, items);
         if (JS_IsException(arr))
             goto exception;
-        if (qjs_get_length64(ctx, &len, arr) < 0)
+        if (js_get_length64(ctx, &len, arr) < 0)
             goto exception;
     }
     v = JS_NewInt64(ctx, len);
@@ -1349,7 +1349,7 @@ static JSValue js_typed_array_find(JSContext *ctx, JSValueConst this_val,
 
     for(; k != end; k += dir) {
         index_val = JS_NewInt32(ctx, k);
-        val = qjs_get_property_value(ctx, this_val, index_val);
+        val = JS_GetPropertyValue(ctx, this_val, index_val);
         if (JS_IsException(val))
             goto exception;
         args[0] = val;
@@ -1700,16 +1700,16 @@ static JSValue js_typed_array_join(JSContext *ctx, JSValueConst this_val,
         newlen = p->u.array.count;
         len = min_int(len, newlen);
     }
-    qjs_string_buffer_init(ctx, b, 0);
+    string_buffer_init(ctx, b, 0);
 
     /* XXX: optimize with direct access */
     for(i = 0; i < len; i++) {
         if (i > 0) {
             if (c >= 0) {
-                if (qjs_string_buffer_putc8(b, c))
+                if (string_buffer_putc8(b, c))
                     goto fail;
             } else {
-                if (qjs_string_buffer_concat(b, s, 0, s->len))
+                if (string_buffer_concat(b, s, 0, s->len))
                     goto fail;
             }
         }
@@ -1721,7 +1721,7 @@ static JSValue js_typed_array_join(JSContext *ctx, JSValueConst this_val,
             if (toLocaleString) {
                 el = qjs_to_locale_string_free(ctx, el);
             }
-            if (qjs_string_buffer_concat_value_free(b, el))
+            if (string_buffer_concat_value_free(b, el))
                 goto fail;
         }
     }
@@ -1730,19 +1730,19 @@ static JSValue js_typed_array_join(JSContext *ctx, JSValueConst this_val,
     i = max_int(1, newlen);
     for(/*empty*/; i < oldlen; i++) {
         if (c >= 0) {
-            if (qjs_string_buffer_putc8(b, c))
+            if (string_buffer_putc8(b, c))
                 goto fail;
         } else {
-            if (qjs_string_buffer_concat(b, s, 0, s->len))
+            if (string_buffer_concat(b, s, 0, s->len))
                 goto fail;
         }
     }
 
     JS_FreeValue(ctx, sep);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     JS_FreeValue(ctx, sep);
 exception:
     return JS_EXCEPTION;
@@ -1888,10 +1888,10 @@ static JSValue js_typed_array_slice(JSContext *ctx, JSValueConst this_val,
                          count << shift);
         } else {
             for (n = 0; n < count; n++) {
-                val = qjs_get_property_value(ctx, this_val, JS_NewInt32(ctx, start + n));
+                val = JS_GetPropertyValue(ctx, this_val, JS_NewInt32(ctx, start + n));
                 if (JS_IsException(val))
                     goto exception;
-                if (qjs_set_property_value(ctx, arr, JS_NewInt32(ctx, n), val,
+                if (JS_SetPropertyValue(ctx, arr, JS_NewInt32(ctx, n), val,
                                         JS_PROP_THROW) < 0)
                     goto exception;
             }
@@ -2817,7 +2817,7 @@ static JSValue js_uint8array_to_base64(JSContext *ctx, JSValueConst this_val,
     if (unlikely(out_len > JS_STRING_LEN_MAX))
         return JS_ThrowRangeError(ctx, "output too large");
 
-    ostr = qjs_alloc_string(ctx, out_len, 0);
+    ostr = js_alloc_string(ctx, out_len, 0);
     if (!ostr)
         return JS_EXCEPTION;
 
@@ -2853,7 +2853,7 @@ static JSValue js_uint8array_to_hex(JSContext *ctx, JSValueConst this_val,
     if (unlikely(out_len > JS_STRING_LEN_MAX))
         return JS_ThrowRangeError(ctx, "output too large");
 
-    ostr = qjs_alloc_string(ctx, out_len, 0);
+    ostr = js_alloc_string(ctx, out_len, 0);
     if (!ostr)
         return JS_EXCEPTION;
 
@@ -3240,7 +3240,7 @@ static JSValue js_typed_array_constructor_obj(JSContext *ctx,
             goto fail;
         len = len1;
     } else {
-        if (qjs_get_length64(ctx, &len, obj))
+        if (js_get_length64(ctx, &len, obj))
             goto fail;
         arr = JS_DupValue(ctx, obj);
     }
@@ -3605,7 +3605,7 @@ static JSValue js_dataview_getValue(JSContext *ctx,
     if (JS_ToIndex(ctx, &pos, argv[0]))
         return JS_EXCEPTION;
     littleEndian = argc > 1 && JS_ToBool(ctx, argv[1]);
-    is_swap = littleEndian ^ !qjs_is_be();
+    is_swap = littleEndian ^ !is_be();
     abuf = ta->buffer->u.array_buffer;
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
@@ -3747,7 +3747,7 @@ static JSValue js_dataview_setValue(JSContext *ctx,
         }
     }
     littleEndian = argc > 2 && JS_ToBool(ctx, argv[2]);
-    is_swap = littleEndian ^ !qjs_is_be();
+    is_swap = littleEndian ^ !is_be();
     abuf = ta->buffer->u.array_buffer;
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
@@ -4397,7 +4397,7 @@ int JS_AddIntrinsicTypedArrays(JSContext *ctx)
         char buf[ATOM_GET_STR_BUF_SIZE];
         const char *name;
 
-        name = qjs_atom_get_str(ctx, buf, sizeof(buf),
+        name = JS_AtomGetStr(ctx, buf, sizeof(buf),
                              JS_ATOM_Uint8ClampedArray + i - JS_CLASS_UINT8C_ARRAY);
         if (i == JS_CLASS_UINT8_ARRAY) {
             obj = qjs_new_c_constructor(ctx, i, name,

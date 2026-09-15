@@ -1176,7 +1176,7 @@ static JSValue js_date_toJSON(JSContext *ctx, JSValueConst this_val,
     rv = JS_EXCEPTION;
     tv = JS_UNDEFINED;
 
-    obj = qjs_to_object(ctx, this_val);
+    obj = JS_ToObject(ctx, this_val);
     tv = qjs_date_to_primitive(ctx, obj, QJS_DATE_HINT_NUMBER);
     if (JS_IsException(tv))
         goto exception;

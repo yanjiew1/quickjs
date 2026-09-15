@@ -29,12 +29,12 @@
 
 QJS_INTERNAL int qjs_set_object_data(JSContext *ctx, JSValueConst obj,
                                   JSValue val);
-QJS_INTERNAL JSValue qjs_to_object(JSContext *ctx, JSValueConst val);
-QJS_INTERNAL JSValue qjs_to_object_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL JSValue qjs_to_string_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL __exception int qjs_get_length32(JSContext *ctx, uint32_t *pres,
+QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue value);
+QJS_INTERNAL JSValue JS_ToStringFree(JSContext *ctx, JSValue value);
+QJS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                              JSValueConst obj);
-QJS_INTERNAL __exception int qjs_get_length64(JSContext *ctx, int64_t *pres,
+QJS_INTERNAL __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                               JSValueConst obj);
 QJS_INTERNAL void qjs_free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 QJS_INTERNAL int qjs_object_init_classes(JSRuntime *rt);

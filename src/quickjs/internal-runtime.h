@@ -45,7 +45,7 @@ static force_inline void qjs_free_value(JSContext *ctx, JSValue value)
 
 #define JS_FreeValue qjs_free_value
 
-static inline void qjs_dbuf_init(JSContext *ctx, DynBuf *s)
+static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
 {
     dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
 }
@@ -55,7 +55,7 @@ static inline int qjs_is_digit(int c)
     return c >= '0' && c <= '9';
 }
 
-static inline BOOL qjs_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 {
 #if !defined(CONFIG_STACK_CHECK)
     return FALSE;
@@ -74,7 +74,7 @@ static inline __exception int qjs_poll_interrupts(JSContext *ctx)
     return 0;
 }
 
-static inline BOOL qjs_is_be(void)
+static inline BOOL is_be(void)
 {
     union {
         uint16_t value;
@@ -117,7 +117,7 @@ static inline void qjs_remove_gc_object_fast(JSGCObjectHeader *header)
 {
     list_del(&header->link);
 }
-QJS_INTERNAL void qjs_mark_context(JSRuntime *rt, JSContext *ctx,
+QJS_INTERNAL void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
                                    JS_MarkFunc *mark_func);
 QJS_INTERNAL int qjs_find_line_num(JSContext *ctx, JSFunctionBytecode *bytecode,
                                    uint32_t pc_value, int *pcol_num);

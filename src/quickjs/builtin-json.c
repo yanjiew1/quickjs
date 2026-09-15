@@ -37,7 +37,7 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
     JSAtom prop;
     JSPropertyEnum *atoms = NULL;
 
-    if (qjs_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(ctx->rt, 0)) {
         return qjs_throw_stack_overflow(ctx);
     }
 
@@ -72,7 +72,7 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
         if (is_array < 0)
             goto fail;
         if (is_array) {
-            if (qjs_get_length32(ctx, &len, val))
+            if (js_get_length32(ctx, &len, val))
                 goto fail;
         } else {
             ret = qjs_get_own_property_names_internal(ctx, &atoms, &len, JS_VALUE_GET_OBJ(val), JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
@@ -214,8 +214,8 @@ static JSValue js_json_rawJSON(JSContext *ctx, JSValueConst this_val,
         return str;
     p = JS_VALUE_GET_STRING(str);
     if (p->len == 0 ||
-        !is_valid_raw_json_char(qjs_string_get(p, 0)) ||
-        !is_valid_raw_json_char(qjs_string_get(p, p->len - 1))) {
+        !is_valid_raw_json_char(string_get(p, 0)) ||
+        !is_valid_raw_json_char(string_get(p, p->len - 1))) {
         goto syntax_error;
     }
     res = js_json_parse(ctx, JS_UNDEFINED, 1, (JSValueConst *)&str);
@@ -263,10 +263,10 @@ static int JS_ToQuotedString(JSContext *ctx, StringBuffer *b, JSValueConst val1)
         return -1;
     p = JS_VALUE_GET_STRING(val);
 
-    if (qjs_string_buffer_putc8(b, '\"'))
+    if (string_buffer_putc8(b, '\"'))
         goto fail;
     for(i = 0; i < p->len; ) {
-        c = qjs_string_getc(p, &i);
+        c = string_getc(p, &i);
         switch(c) {
         case '\t':
             c = 't';
@@ -286,24 +286,24 @@ static int JS_ToQuotedString(JSContext *ctx, StringBuffer *b, JSValueConst val1)
         case '\"':
         case '\\':
         quote:
-            if (qjs_string_buffer_putc8(b, '\\'))
+            if (string_buffer_putc8(b, '\\'))
                 goto fail;
-            if (qjs_string_buffer_putc8(b, c))
+            if (string_buffer_putc8(b, c))
                 goto fail;
             break;
         default:
             if (c < 32 || is_surrogate(c)) {
                 snprintf(buf, sizeof(buf), "\\u%04x", c);
-                if (qjs_string_buffer_puts8(b, buf))
+                if (string_buffer_puts8(b, buf))
                     goto fail;
             } else {
-                if (qjs_string_buffer_putc(b, c))
+                if (string_buffer_putc(b, c))
                     goto fail;
             }
             break;
         }
     }
-    if (qjs_string_buffer_putc8(b, '\"'))
+    if (string_buffer_putc8(b, '\"'))
         goto fail;
     JS_FreeValue(ctx, val);
     return 0;
@@ -392,7 +392,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
     tab = JS_UNDEFINED;
     prop = JS_UNDEFINED;
 
-    if (qjs_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(ctx->rt, 0)) {
         qjs_throw_stack_overflow(ctx);
         goto exception;
     }
@@ -401,7 +401,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
         p = JS_VALUE_GET_OBJ(val);
         cl = p->class_id;
         if (cl == JS_CLASS_STRING) {
-            val = qjs_to_string_free(ctx, val);
+            val = JS_ToStringFree(ctx, val);
             if (JS_IsException(val))
                 goto exception;
             goto concat_primitive;
@@ -430,14 +430,14 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             JS_ThrowTypeError(ctx, "circular reference");
             goto exception;
         }
-        indent1 = qjs_concat_string(ctx, JS_DupValue(ctx, indent), JS_DupValue(ctx, jsc->gap));
+        indent1 = JS_ConcatString(ctx, JS_DupValue(ctx, indent), JS_DupValue(ctx, jsc->gap));
         if (JS_IsException(indent1))
             goto exception;
-        if (!qjs_is_empty_string(jsc->gap)) {
-            sep = qjs_concat_string3(ctx, "\n", JS_DupValue(ctx, indent1), "");
+        if (!JS_IsEmptyString(jsc->gap)) {
+            sep = JS_ConcatString3(ctx, "\n", JS_DupValue(ctx, indent1), "");
             if (JS_IsException(sep))
                 goto exception;
-            sep1 = qjs_new_string8(ctx, " ");
+            sep1 = js_new_string8(ctx, " ");
             if (JS_IsException(sep1))
                 goto exception;
         } else {
@@ -451,18 +451,18 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
         if (ret < 0)
             goto exception;
         if (ret) {
-            if (qjs_get_length64(ctx, &len, val))
+            if (js_get_length64(ctx, &len, val))
                 goto exception;
-            qjs_string_buffer_putc8(jsc->b, '[');
+            string_buffer_putc8(jsc->b, '[');
             for(i = 0; i < len; i++) {
                 if (i > 0)
-                    qjs_string_buffer_putc8(jsc->b, ',');
-                qjs_string_buffer_concat_value(jsc->b, sep);
+                    string_buffer_putc8(jsc->b, ',');
+                string_buffer_concat_value(jsc->b, sep);
                 v = qjs_get_property_int64(ctx, val, i);
                 if (JS_IsException(v))
                     goto exception;
                 /* XXX: could do this string conversion only when needed */
-                prop = qjs_to_string_free(ctx, JS_NewInt64(ctx, i));
+                prop = JS_ToStringFree(ctx, JS_NewInt64(ctx, i));
                 if (JS_IsException(prop))
                     goto exception;
                 v = js_json_check(ctx, jsc, val, v, prop);
@@ -475,11 +475,11 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                 if (js_json_to_str(ctx, jsc, val, v, indent1))
                     goto exception;
             }
-            if (len > 0 && !qjs_is_empty_string(jsc->gap)) {
-                qjs_string_buffer_putc8(jsc->b, '\n');
-                qjs_string_buffer_concat_value(jsc->b, indent);
+            if (len > 0 && !JS_IsEmptyString(jsc->gap)) {
+                string_buffer_putc8(jsc->b, '\n');
+                string_buffer_concat_value(jsc->b, indent);
             }
-            qjs_string_buffer_putc8(jsc->b, ']');
+            string_buffer_putc8(jsc->b, ']');
         } else {
             if (!JS_IsUndefined(jsc->property_list))
                 tab = JS_DupValue(ctx, jsc->property_list);
@@ -487,16 +487,16 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                 tab = qjs_json_object_keys(ctx, JS_UNDEFINED, 1, (JSValueConst *)&val, JS_ITERATOR_KIND_KEY);
             if (JS_IsException(tab))
                 goto exception;
-            if (qjs_get_length64(ctx, &len, tab))
+            if (js_get_length64(ctx, &len, tab))
                 goto exception;
-            qjs_string_buffer_putc8(jsc->b, '{');
+            string_buffer_putc8(jsc->b, '{');
             has_content = FALSE;
             for(i = 0; i < len; i++) {
                 JS_FreeValue(ctx, prop);
                 prop = qjs_get_property_int64(ctx, tab, i);
                 if (JS_IsException(prop))
                     goto exception;
-                v = qjs_get_property_value(ctx, val, JS_DupValue(ctx, prop));
+                v = JS_GetPropertyValue(ctx, val, JS_DupValue(ctx, prop));
                 if (JS_IsException(v))
                     goto exception;
                 v = js_json_check(ctx, jsc, val, v, prop);
@@ -504,24 +504,24 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                     goto exception;
                 if (!JS_IsUndefined(v)) {
                     if (has_content)
-                        qjs_string_buffer_putc8(jsc->b, ',');
-                    qjs_string_buffer_concat_value(jsc->b, sep);
+                        string_buffer_putc8(jsc->b, ',');
+                    string_buffer_concat_value(jsc->b, sep);
                     if (JS_ToQuotedString(ctx, jsc->b, prop)) {
                         JS_FreeValue(ctx, v);
                         goto exception;
                     }
-                    qjs_string_buffer_putc8(jsc->b, ':');
-                    qjs_string_buffer_concat_value(jsc->b, sep1);
+                    string_buffer_putc8(jsc->b, ':');
+                    string_buffer_concat_value(jsc->b, sep1);
                     if (js_json_to_str(ctx, jsc, val, v, indent1))
                         goto exception;
                     has_content = TRUE;
                 }
             }
-            if (has_content && !qjs_is_empty_string(jsc->gap)) {
-                qjs_string_buffer_putc8(jsc->b, '\n');
-                qjs_string_buffer_concat_value(jsc->b, indent);
+            if (has_content && !JS_IsEmptyString(jsc->gap)) {
+                string_buffer_putc8(jsc->b, '\n');
+                string_buffer_concat_value(jsc->b, indent);
             }
-            qjs_string_buffer_putc8(jsc->b, '}');
+            string_buffer_putc8(jsc->b, '}');
         }
         if (qjs_check_exception_free(ctx,
                                     qjs_json_array_pop(ctx, jsc->stack,
@@ -549,7 +549,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
     case JS_TAG_BOOL:
     case JS_TAG_NULL:
     concat_value:
-        return qjs_string_buffer_concat_value_free(jsc->b, val);
+        return string_buffer_concat_value_free(jsc->b, val);
     case JS_TAG_SHORT_BIG_INT:
     case JS_TAG_BIG_INT:
         /* reject big numbers: use toJSON method to override */
@@ -588,7 +588,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
     ret = JS_UNDEFINED;
     wrapper = JS_UNDEFINED;
 
-    qjs_string_buffer_init(ctx, jsc->b, 0);
+    string_buffer_init(ctx, jsc->b, 0);
     jsc->stack = JS_NewArray(ctx);
     if (JS_IsException(jsc->stack))
         goto exception;
@@ -603,7 +603,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
             jsc->property_list = JS_NewArray(ctx);
             if (JS_IsException(jsc->property_list))
                 goto exception;
-            if (qjs_get_length64(ctx, &n, replacer))
+            if (js_get_length64(ctx, &n, replacer))
                 goto exception;
             for (i = j = 0; i < n; i++) {
                 JSValue present;
@@ -614,7 +614,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                     JSObject *p = JS_VALUE_GET_OBJ(v);
                     if (p->class_id == JS_CLASS_STRING ||
                         p->class_id == JS_CLASS_NUMBER) {
-                        v = qjs_to_string_free(ctx, v);
+                        v = JS_ToStringFree(ctx, v);
                         if (JS_IsException(v))
                             goto exception;
                     } else {
@@ -622,7 +622,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                         continue;
                     }
                 } else if (JS_IsNumber(v)) {
-                    v = qjs_to_string_free(ctx, v);
+                    v = JS_ToStringFree(ctx, v);
                     if (JS_IsException(v))
                         goto exception;
                 } else if (!JS_IsString(v)) {
@@ -649,7 +649,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
         if (p->class_id == JS_CLASS_NUMBER) {
             space = qjs_to_number_free(ctx, space);
         } else if (p->class_id == JS_CLASS_STRING) {
-            space = qjs_to_string_free(ctx, space);
+            space = JS_ToStringFree(ctx, space);
         }
         if (JS_IsException(space)) {
             JS_FreeValue(ctx, space);
@@ -660,10 +660,10 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
         int n;
         if (qjs_to_int32_clamp(ctx, &n, space, 0, 10, 0))
             goto exception;
-        jsc->gap = qjs_new_string8_len(ctx, "          ", n);
+        jsc->gap = js_new_string8_len(ctx, "          ", n);
     } else if (JS_IsString(space)) {
         JSString *p = JS_VALUE_GET_STRING(space);
-        jsc->gap = qjs_sub_string(ctx, p, 0, min_int(p->len, 10));
+        jsc->gap = js_sub_string(ctx, p, 0, min_int(p->len, 10));
     } else {
         jsc->gap = JS_DupValue(ctx, jsc->empty);
     }
@@ -688,13 +688,13 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
     if (js_json_to_str(ctx, jsc, wrapper, val, jsc->empty))
         goto exception;
 
-    ret = qjs_string_buffer_end(jsc->b);
+    ret = string_buffer_end(jsc->b);
     goto done;
 
 exception:
     ret = JS_EXCEPTION;
 done1:
-    qjs_string_buffer_free(jsc->b);
+    string_buffer_free(jsc->b);
 done:
     JS_FreeValue(ctx, wrapper);
     JS_FreeValue(ctx, jsc->empty);

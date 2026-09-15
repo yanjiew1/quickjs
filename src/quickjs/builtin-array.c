@@ -215,10 +215,10 @@ static JSValue js_array_from(JSContext *ctx, JSValueConst this_val,
                 goto exception_close;
         }
     } else {
-        arrayLike = qjs_to_object(ctx, items);
+        arrayLike = JS_ToObject(ctx, items);
         if (JS_IsException(arrayLike))
             goto exception;
-        if (qjs_get_length64(ctx, &len, arrayLike) < 0)
+        if (js_get_length64(ctx, &len, arrayLike) < 0)
             goto exception;
         v = JS_NewInt64(ctx, len);
         args[0] = v;
@@ -411,8 +411,8 @@ static JSValue js_array_at(JSContext *ctx, JSValueConst this_val,
     JSValue *arrp;
     uint32_t count;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     if (qjs_to_int64_sat(ctx, &idx, argv[0]))
@@ -422,7 +422,7 @@ static JSValue js_array_at(JSContext *ctx, JSValueConst this_val,
         idx = len + idx;
     if (idx < 0 || idx >= len) {
         ret = JS_UNDEFINED;
-    } else if (qjs_get_fast_array(ctx, obj, &arrp, &count) && idx < count) {
+    } else if (js_get_fast_array(ctx, obj, &arrp, &count) && idx < count) {
         ret = JS_DupValue(ctx, arrp[idx]);
     } else {
         int present = qjs_try_get_property_int64(ctx, obj, idx, &ret);
@@ -448,8 +448,8 @@ static JSValue js_array_with(JSContext *ctx, JSValueConst this_val,
 
     ret = JS_EXCEPTION;
     arr = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     if (qjs_to_int64_sat(ctx, &idx, argv[0]))
@@ -470,7 +470,7 @@ static JSValue js_array_with(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_OBJ(arr);
     i = 0;
     pval = p->u.array.u.values;
-    if (qjs_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+    if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
         for (; i < idx; i++, pval++)
             *pval = JS_DupValue(ctx, arrp[i]);
         *pval = JS_DupValue(ctx, argv[1]);
@@ -505,7 +505,7 @@ static JSValue js_array_concat(JSContext *ctx, JSValueConst this_val,
     int i, res;
 
     arr = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
+    obj = JS_ToObject(ctx, this_val);
     if (JS_IsException(obj))
         goto exception;
 
@@ -523,7 +523,7 @@ static JSValue js_array_concat(JSContext *ctx, JSValueConst this_val,
         if (res < 0)
             goto exception;
         if (res) {
-            if (qjs_get_length64(ctx, &len, e))
+            if (js_get_length64(ctx, &len, e))
                 goto exception;
             if (n + len > QJS_MAX_SAFE_INTEGER) {
                 JS_ThrowTypeError(ctx, "Array loo long");
@@ -579,8 +579,8 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
         if (len < 0)
             goto exception;
     } else {
-        obj = qjs_to_object(ctx, this_val);
-        if (qjs_get_length64(ctx, &len, obj))
+        obj = JS_ToObject(ctx, this_val);
+        if (js_get_length64(ctx, &len, obj))
             goto exception;
     }
     func = argv[0];
@@ -668,7 +668,7 @@ static JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                     goto exception;
                 break;
             case QJS_ARRAY_MAP | QJS_ARRAY_TYPED:
-                if (qjs_set_property_value(ctx, ret, JS_NewInt32(ctx, k), res, JS_PROP_THROW) < 0)
+                if (JS_SetPropertyValue(ctx, ret, JS_NewInt32(ctx, k), res, JS_PROP_THROW) < 0)
                     goto exception;
                 break;
             case QJS_ARRAY_FILTER:
@@ -732,8 +732,8 @@ static JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
         if (len < 0)
             goto exception;
     } else {
-        obj = qjs_to_object(ctx, this_val);
-        if (qjs_get_length64(ctx, &len, obj))
+        obj = JS_ToObject(ctx, this_val);
+        if (js_get_length64(ctx, &len, obj))
             goto exception;
     }
     func = argv[0];
@@ -812,8 +812,8 @@ static JSValue js_array_fill(JSContext *ctx, JSValueConst this_val,
     JSValue obj;
     int64_t len, start, end;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     start = 0;
@@ -851,8 +851,8 @@ static JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
     uint32_t count;
     int res;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     res = FALSE;
@@ -862,9 +862,9 @@ static JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
             if (qjs_to_int64_clamp(ctx, &n, argv[1], 0, len, len))
                 goto exception;
         }
-        if (qjs_get_fast_array(ctx, obj, &arrp, &count)) {
+        if (js_get_fast_array(ctx, obj, &arrp, &count)) {
             for (; n < count; n++) {
-                if (qjs_strict_equal(ctx, argv[0], arrp[n],
+                if (js_strict_eq2(ctx, argv[0], arrp[n],
                                   QJS_EQ_SAME_VALUE_ZERO)) {
                     res = TRUE;
                     goto done;
@@ -875,7 +875,7 @@ static JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
             val = qjs_get_property_int64(ctx, obj, n);
             if (JS_IsException(val))
                 goto exception;
-            if (qjs_strict_equal(ctx, argv[0], val,
+            if (js_strict_eq2(ctx, argv[0], val,
                               QJS_EQ_SAME_VALUE_ZERO)) {
                 JS_FreeValue(ctx, val);
                 res = TRUE;
@@ -901,8 +901,8 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
     JSValue *arrp;
     uint32_t count;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     res = -1;
@@ -912,9 +912,9 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
             if (qjs_to_int64_clamp(ctx, &n, argv[1], 0, len, len))
                 goto exception;
         }
-        if (qjs_get_fast_array(ctx, obj, &arrp, &count)) {
+        if (js_get_fast_array(ctx, obj, &arrp, &count)) {
             for (; n < count; n++) {
-                if (qjs_strict_equal(ctx, argv[0], arrp[n], QJS_EQ_STRICT)) {
+                if (js_strict_eq2(ctx, argv[0], arrp[n], QJS_EQ_STRICT)) {
                     res = n;
                     goto done;
                 }
@@ -925,7 +925,7 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
             if (present < 0)
                 goto exception;
             if (present) {
-                if (qjs_strict_equal(ctx, argv[0], val, QJS_EQ_STRICT)) {
+                if (js_strict_eq2(ctx, argv[0], val, QJS_EQ_STRICT)) {
                     JS_FreeValue(ctx, val);
                     res = n;
                     break;
@@ -950,8 +950,8 @@ static JSValue js_array_lastIndexOf(JSContext *ctx, JSValueConst this_val,
     int64_t len, n, res;
     int present;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     res = -1;
@@ -967,7 +967,7 @@ static JSValue js_array_lastIndexOf(JSContext *ctx, JSValueConst this_val,
             if (present < 0)
                 goto exception;
             if (present) {
-                if (qjs_strict_equal(ctx, argv[0], val, QJS_EQ_STRICT)) {
+                if (js_strict_eq2(ctx, argv[0], val, QJS_EQ_STRICT)) {
                     JS_FreeValue(ctx, val);
                     res = n;
                     break;
@@ -995,8 +995,8 @@ static JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
 
     index_val = JS_UNDEFINED;
     val = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     func = argv[0];
@@ -1021,7 +1021,7 @@ static JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
         index_val = JS_NewInt64(ctx, k);
         if (JS_IsException(index_val))
             goto exception;
-        val = qjs_get_property_value(ctx, obj, index_val);
+        val = JS_GetPropertyValue(ctx, obj, index_val);
         if (JS_IsException(val))
             goto exception;
         args[0] = val;
@@ -1062,7 +1062,7 @@ static JSValue js_array_toString(JSContext *ctx, JSValueConst this_val,
 {
     JSValue obj, method, ret;
 
-    obj = qjs_to_object(ctx, this_val);
+    obj = JS_ToObject(ctx, this_val);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     method = JS_GetProperty(ctx, obj, JS_ATOM_join);
@@ -1089,8 +1089,8 @@ static JSValue js_array_join(JSContext *ctx, JSValueConst this_val,
     int64_t i, n;
     int c;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &n, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &n, obj))
         goto exception;
 
     c = ',';    /* default separator */
@@ -1104,14 +1104,14 @@ static JSValue js_array_join(JSContext *ctx, JSValueConst this_val,
         else
             c = -1;
     }
-    qjs_string_buffer_init(ctx, b, 0);
+    string_buffer_init(ctx, b, 0);
 
     for(i = 0; i < n; i++) {
         if (i > 0) {
             if (c >= 0) {
-                qjs_string_buffer_putc8(b, c);
+                string_buffer_putc8(b, c);
             } else {
-                qjs_string_buffer_concat(b, p, 0, p->len);
+                string_buffer_concat(b, p, 0, p->len);
             }
         }
         el = JS_GetPropertyUint32(ctx, obj, i);
@@ -1121,16 +1121,16 @@ static JSValue js_array_join(JSContext *ctx, JSValueConst this_val,
             if (toLocaleString) {
                 el = qjs_to_locale_string_free(ctx, el);
             }
-            if (qjs_string_buffer_concat_value_free(b, el))
+            if (string_buffer_concat_value_free(b, el))
                 goto fail;
         }
     }
     JS_FreeValue(ctx, sep);
     JS_FreeValue(ctx, obj);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     JS_FreeValue(ctx, sep);
 exception:
     JS_FreeValue(ctx, obj);
@@ -1145,14 +1145,14 @@ static JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
     JSValue *arrp;
     uint32_t count32;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
     newLen = 0;
     if (len > 0) {
         newLen = len - 1;
         /* Special case fast arrays */
-        if (qjs_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+        if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
             JSObject *p = JS_VALUE_GET_OBJ(obj);
             if (shift) {
                 res = arrp[0];
@@ -1200,7 +1200,7 @@ static JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
     if (likely(JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT && !unshift)) {
         JSObject *p = JS_VALUE_GET_OBJ(this_val);
         if (likely(p->class_id == JS_CLASS_ARRAY && p->fast_array &&
-                   qjs_can_extend_fast_array(p) &&
+                   can_extend_fast_array(p) &&
                    JS_VALUE_GET_TAG(p->prop[0].u.value) == JS_TAG_INT &&
                    JS_VALUE_GET_INT(p->prop[0].u.value) == p->u.array.count &&
                    (qjs_get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE) != 0)) {
@@ -1209,7 +1209,7 @@ static JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
             new_len = p->u.array.count + argc;
             if (likely(new_len <= INT32_MAX)) {
                 if (unlikely(new_len > p->u.array.u1.size)) {
-                    if (qjs_expand_fast_array(ctx, p, new_len))
+                    if (expand_fast_array(ctx, p, new_len))
                         return JS_EXCEPTION;
                 }
                 for(i = 0; i < argc; i++)
@@ -1220,8 +1220,8 @@ static JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
             }
         }
     }
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
     newLen = len + argc;
     if (newLen > QJS_MAX_SAFE_INTEGER) {
@@ -1260,12 +1260,12 @@ static JSValue js_array_reverse(JSContext *ctx, JSValueConst this_val,
     uint32_t count32;
 
     lval = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     /* Special case fast arrays */
-    if (qjs_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+    if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
         uint32_t ll, hh;
 
         if (count32 > 1) {
@@ -1333,8 +1333,8 @@ static JSValue js_array_toReversed(JSContext *ctx, JSValueConst this_val,
 
     ret = JS_EXCEPTION;
     arr = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     arr = qjs_allocate_fast_array(ctx, len);
@@ -1346,7 +1346,7 @@ static JSValue js_array_toReversed(JSContext *ctx, JSValueConst this_val,
 
         i = len - 1;
         pval = p->u.array.u.values;
-        if (qjs_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+        if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
             for (; i >= 0; i--, pval++)
                 *pval = JS_DupValue(ctx, arrp[i]);
         } else {
@@ -1377,8 +1377,8 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
     uint32_t count32;
 
     arr = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     if (qjs_to_int64_clamp(ctx, &start, argv[0], 0, len, len))
@@ -1397,7 +1397,7 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
 
     final = start + count;
     if (JS_IsUndefined(ctor) &&
-        qjs_get_fast_array(ctx, obj, &arrp, &count32) &&
+        js_get_fast_array(ctx, obj, &arrp, &count32) &&
         final <= count32) {
         /* fast case */
         arr = qjs_create_array(ctx, count, (JSValueConst *)arrp + start);
@@ -1439,8 +1439,8 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
     JSObject *p;
 
     arr = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     if (qjs_to_int64_clamp(ctx, &start, argv[0], 0, len, len))
@@ -1476,7 +1476,7 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
         p->fast_array &&
         final <= p->u.array.count &&
         (qjs_get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE) && /* writable array length */
-        qjs_can_extend_fast_array(p)) {
+        can_extend_fast_array(p)) {
         uint32_t count32 = p->u.array.count;
         JSValue *arrp = p->u.array.u.values;
 
@@ -1496,7 +1496,7 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
                         (count32 - final) * sizeof(arrp[0]));
             } else {
                 if (unlikely(new_count32 > p->u.array.u1.size)) {
-                    if (qjs_expand_fast_array(ctx, p, new_count32))
+                    if (expand_fast_array(ctx, p, new_count32))
                         goto exception;
                     arrp = p->u.array.u.values;
                 }
@@ -1568,8 +1568,8 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
     ret = JS_EXCEPTION;
     arr = JS_UNDEFINED;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     start = 0;
@@ -1605,7 +1605,7 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
     pval = &p->u.array.u.values[0];
     last = &p->u.array.u.values[newlen];
 
-    if (qjs_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+    if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
         for (i = 0; i < start; i++, pval++)
             *pval = JS_DupValue(ctx, arrp[i]);
         for (j = 0; j < add; j++, pval++)
@@ -1641,8 +1641,8 @@ static JSValue js_array_copyWithin(JSContext *ctx, JSValueConst this_val,
     JSValue obj;
     int64_t len, from, to, final, count;
 
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     if (qjs_to_int64_clamp(ctx, &to, argv[0], 0, len, len))
@@ -1680,7 +1680,7 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
     int64_t sourceIndex, elementLen;
     int present, is_array;
 
-    if (qjs_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(ctx->rt, 0)) {
         qjs_throw_stack_overflow(ctx);
         return -1;
     }
@@ -1704,7 +1704,7 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
             if (is_array < 0)
                 goto fail;
             if (is_array) {
-                if (qjs_get_length64(ctx, &elementLen, element) < 0)
+                if (js_get_length64(ctx, &elementLen, element) < 0)
                     goto fail;
                 targetIndex = JS_FlattenIntoArray(ctx, target, element,
                                                   elementLen, targetIndex,
@@ -1741,8 +1741,8 @@ static JSValue js_array_flatten(JSContext *ctx, JSValueConst this_val,
     int depthNum;
 
     arr = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &sourceLen, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &sourceLen, obj))
         goto exception;
 
     depthNum = 1;
@@ -1839,7 +1839,7 @@ static int js_array_cmp_generic(const void *a, const void *b, void *opaque) {
                 goto exception;
             bp->str = JS_VALUE_GET_STRING(str);
         }
-        cmp = qjs_string_compare(ctx, ap->str, bp->str);
+        cmp = js_string_compare(ctx, ap->str, bp->str);
     }
     if (cmp != 0)
         return cmp;
@@ -1867,8 +1867,8 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
             goto exception;
         asc.has_method = 1;
     }
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     /* XXX: should special case fast arrays */
@@ -1957,8 +1957,8 @@ static JSValue js_array_toSorted(JSContext *ctx, JSValueConst this_val,
 
     ret = JS_EXCEPTION;
     arr = JS_UNDEFINED;
-    obj = qjs_to_object(ctx, this_val);
-    if (qjs_get_length64(ctx, &len, obj))
+    obj = JS_ToObject(ctx, this_val);
+    if (js_get_length64(ctx, &len, obj))
         goto exception;
 
     arr = qjs_allocate_fast_array(ctx, len);
@@ -1969,7 +1969,7 @@ static JSValue js_array_toSorted(JSContext *ctx, JSValueConst this_val,
         p = JS_VALUE_GET_OBJ(arr);
         i = 0;
         pval = p->u.array.u.values;
-        if (qjs_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+        if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
             for (; i < len; i++, pval++)
                 *pval = JS_DupValue(ctx, arrp[i]);
         } else {
@@ -2028,7 +2028,7 @@ static JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
         arr = qjs_to_string_check_object(ctx, this_val);
         class_id = JS_CLASS_STRING_ITERATOR;
     } else {
-        arr = qjs_to_object(ctx, this_val);
+        arr = JS_ToObject(ctx, this_val);
         class_id = JS_CLASS_ARRAY_ITERATOR;
     }
     if (JS_IsException(arr))
@@ -2051,7 +2051,7 @@ static JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
-QJS_INTERNAL JSValue qjs_array_iterator_next(JSContext *ctx,
+QJS_INTERNAL JSValue js_array_iterator_next(JSContext *ctx,
                                               JSValueConst this_val,
                                               int argc, JSValueConst *argv,
                                               BOOL *pdone, int magic)
@@ -2094,7 +2094,7 @@ QJS_INTERNAL JSValue qjs_array_iterator_next(JSContext *ctx,
     if (it->kind == JS_ITERATOR_KIND_KEY) {
         return JS_NewUint32(ctx, idx);
     } else {
-        val = qjs_get_property_value(ctx, it->obj, JS_NewUint32(ctx, idx));
+        val = JS_GetPropertyValue(ctx, it->obj, JS_NewUint32(ctx, idx));
         if (JS_IsException(val))
             return JS_EXCEPTION;
         if (it->kind == JS_ITERATOR_KIND_VALUE) {
@@ -3233,7 +3233,7 @@ static const JSCFunctionListEntry js_array_proto_funcs[] = {
 };
 
 static const JSCFunctionListEntry js_array_iterator_proto_funcs[] = {
-    JS_ITERATOR_NEXT_DEF("next", 0, qjs_array_iterator_next, 0 ),
+    JS_ITERATOR_NEXT_DEF("next", 0, js_array_iterator_next, 0 ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Array Iterator", JS_PROP_CONFIGURABLE ),
 };
 

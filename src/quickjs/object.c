@@ -49,15 +49,15 @@
 #define JS_InstantiateFunctionListItem2 qjs_instantiate_function_list_item
 #define JS_SetConstructor2 qjs_set_constructor2
 #define JS_NewCConstructor qjs_new_c_constructor
-#define js_map_finalizer qjs_map_finalizer
-#define js_map_mark qjs_map_mark
-#define js_map_iterator_finalizer qjs_map_iterator_finalizer
-#define js_map_iterator_mark qjs_map_iterator_mark
+#define js_map_finalizer js_map_finalizer
+#define js_map_mark js_map_mark
+#define js_map_iterator_finalizer js_map_iterator_finalizer
+#define js_map_iterator_mark js_map_iterator_mark
 #define map_delete_weakrefs qjs_map_delete_weakrefs
 #define weakref_delete_weakref qjs_weakref_delete
 #define finrec_delete_weakref qjs_finrec_delete
 #define js_object_groupBy qjs_object_group_by
-#define can_extend_fast_array qjs_can_extend_fast_array
+#define can_extend_fast_array can_extend_fast_array
 #define js_array_finalizer qjs_array_finalizer
 #define js_array_mark qjs_array_mark
 #define js_array_iterator_finalizer qjs_array_iterator_finalizer
@@ -72,79 +72,79 @@
 #define js_typed_array_finalizer qjs_typed_array_finalizer
 #define js_typed_array_mark qjs_typed_array_mark
 #define array_buffer_is_resizable qjs_array_buffer_is_resizable
-#define js_unary_arith_slow qjs_unary_arith_slow
-#define js_post_inc_slow qjs_post_inc_slow
-#define js_not_slow qjs_not_slow
-#define js_binary_arith_slow qjs_binary_arith_slow
-#define js_add_slow qjs_add_slow
-#define js_binary_logic_slow qjs_binary_logic_slow
-#define js_relational_slow qjs_relational_slow
-#define js_eq_slow qjs_eq_slow
-#define js_shr_slow qjs_shr_slow
-#define js_operator_in qjs_operator_in
-#define js_operator_private_in qjs_operator_private_in
-#define js_has_unscopable qjs_has_unscopable
-#define js_operator_instanceof qjs_operator_instanceof
-#define js_operator_typeof qjs_operator_typeof
-#define js_operator_delete qjs_operator_delete
+#define js_unary_arith_slow js_unary_arith_slow
+#define js_post_inc_slow js_post_inc_slow
+#define js_not_slow js_not_slow
+#define js_binary_arith_slow js_binary_arith_slow
+#define js_add_slow js_add_slow
+#define js_binary_logic_slow js_binary_logic_slow
+#define js_relational_slow js_relational_slow
+#define js_eq_slow js_eq_slow
+#define js_shr_slow js_shr_slow
+#define js_operator_in js_operator_in
+#define js_operator_private_in js_operator_private_in
+#define js_has_unscopable js_has_unscopable
+#define js_operator_instanceof js_operator_instanceof
+#define js_operator_typeof js_operator_typeof
+#define js_operator_delete js_operator_delete
 #define JS_CallFree qjs_call_free
 #define JS_InvokeFree qjs_invoke_free
 #define js_create_var_ref qjs_create_var_ref
 #define free_var_ref qjs_free_var_ref
-#define __async_func_free qjs_async_function_gc_free
-#define js_instantiate_prototype qjs_instantiate_prototype
+#define __async_func_free __async_func_free
+#define js_instantiate_prototype js_instantiate_prototype
 #define __JS_AtomIsTaggedInt qjs_atom_is_tagged_int
 #define __JS_AtomFromUInt32 qjs_atom_from_uint32
 #define __JS_AtomToUInt32 qjs_atom_to_uint32
-#define JS_DupAtomRT qjs_dup_atom_rt
-#define JS_AtomGetKind qjs_atom_get_kind
-#define JS_AtomIsString qjs_atom_is_string
-#define js_get_atom_index qjs_get_atom_index
-#define JS_NewAtomStr qjs_new_atom_str
-#define JS_NewAtomInt64 qjs_new_atom_int64
-#define JS_NewSymbol qjs_new_symbol
-#define JS_NewSymbolFromAtom qjs_new_symbol_from_atom
-#define JS_AtomGetStrRT qjs_atom_get_str_rt
-#define JS_AtomGetStr qjs_atom_get_str
+#define JS_DupAtomRT JS_DupAtomRT
+#define JS_AtomGetKind JS_AtomGetKind
+#define JS_AtomIsString JS_AtomIsString
+#define js_get_atom_index js_get_atom_index
+#define JS_NewAtomStr JS_NewAtomStr
+#define JS_NewAtomInt64 JS_NewAtomInt64
+#define JS_NewSymbol JS_NewSymbol
+#define JS_NewSymbolFromAtom JS_NewSymbolFromAtom
+#define JS_AtomGetStrRT JS_AtomGetStrRT
+#define JS_AtomGetStr JS_AtomGetStr
 #define JS_DumpAtoms qjs_dump_atoms
-#define JS_AtomIsArrayIndex qjs_atom_is_array_index
-#define JS_AtomIsNumericIndex1 qjs_atom_is_numeric_index_value
-#define JS_AtomIsNumericIndex qjs_atom_is_numeric_index
-#define JS_AtomSymbolHasDescription qjs_atom_symbol_has_description
-#define js_atom_concat_str qjs_atom_concat_str
-#define js_atom_concat_num qjs_atom_concat_num
-#define js_alloc_string qjs_alloc_string
-#define js_new_string8_len qjs_new_string8_len
-#define js_new_string8 qjs_new_string8
-#define js_new_string16_len qjs_new_string16_len
-#define js_new_string_char qjs_new_string_char
-#define js_sub_string qjs_sub_string
-#define string_get qjs_string_get
-#define string_buffer_init2 qjs_string_buffer_init2
-#define string_buffer_init qjs_string_buffer_init
-#define string_buffer_free qjs_string_buffer_free
-#define string_buffer_putc8 qjs_string_buffer_putc8
-#define string_buffer_putc16 qjs_string_buffer_putc16
-#define string_buffer_putc qjs_string_buffer_putc
-#define string_getc qjs_string_getc
-#define string_buffer_write8 qjs_string_buffer_write8
-#define string_buffer_puts8 qjs_string_buffer_puts8
-#define string_buffer_concat qjs_string_buffer_concat
-#define string_buffer_concat_value qjs_string_buffer_concat_value
-#define string_buffer_concat_value_free qjs_string_buffer_concat_value_free
-#define string_buffer_fill qjs_string_buffer_fill
-#define string_buffer_end qjs_string_buffer_end
-#define JS_ConcatString3 qjs_concat_string3
-#define js_string_memcmp qjs_string_memcmp
-#define js_string_compare qjs_string_compare
-#define string_rope_get qjs_string_rope_get
-#define js_string_rope_compare qjs_string_rope_compare
-#define js_linearize_string_rope qjs_linearize_string_rope
-#define JS_ConcatString qjs_concat_string
-#define JS_ConcatStringInPlace qjs_concat_string_in_place
+#define JS_AtomIsArrayIndex JS_AtomIsArrayIndex
+#define JS_AtomIsNumericIndex1 JS_AtomIsNumericIndex1
+#define JS_AtomIsNumericIndex JS_AtomIsNumericIndex
+#define JS_AtomSymbolHasDescription JS_AtomSymbolHasDescription
+#define js_atom_concat_str js_atom_concat_str
+#define js_atom_concat_num js_atom_concat_num
+#define js_alloc_string js_alloc_string
+#define js_new_string8_len js_new_string8_len
+#define js_new_string8 js_new_string8
+#define js_new_string16_len js_new_string16_len
+#define js_new_string_char js_new_string_char
+#define js_sub_string js_sub_string
+#define string_get string_get
+#define string_buffer_init2 string_buffer_init2
+#define string_buffer_init string_buffer_init
+#define string_buffer_free string_buffer_free
+#define string_buffer_putc8 string_buffer_putc8
+#define string_buffer_putc16 string_buffer_putc16
+#define string_buffer_putc string_buffer_putc
+#define string_getc string_getc
+#define string_buffer_write8 string_buffer_write8
+#define string_buffer_puts8 string_buffer_puts8
+#define string_buffer_concat string_buffer_concat
+#define string_buffer_concat_value string_buffer_concat_value
+#define string_buffer_concat_value_free string_buffer_concat_value_free
+#define string_buffer_fill string_buffer_fill
+#define string_buffer_end string_buffer_end
+#define JS_ConcatString3 JS_ConcatString3
+#define js_string_memcmp js_string_memcmp
+#define js_string_compare js_string_compare
+#define string_rope_get string_rope_get
+#define js_string_rope_compare js_string_rope_compare
+#define js_linearize_string_rope js_linearize_string_rope
+#define JS_ConcatString JS_ConcatString
+#define JS_ConcatStringInPlace JS_ConcatStringInPlace
 #define JS_ToPrimitiveFree qjs_to_primitive_free
 #define JS_ToPrimitive qjs_to_primitive
-#define JS_ToStringFree qjs_to_string_free
+#define JS_ToStringFree JS_ToStringFree
 #define JS_ToBoolFree qjs_to_bool_free
 #define JS_ToInt32Free qjs_to_int32_free
 #define JS_ToFloat64Free qjs_to_float64_free
@@ -178,13 +178,13 @@
 #define js_pow qjs_math_pow
 #define js_same_value qjs_same_value
 #define js_same_value_zero qjs_same_value_zero
-#define is_strict_mode qjs_is_strict_mode
-#define js_dbuf_init qjs_dbuf_init
+#define is_strict_mode is_strict_mode
+#define js_dbuf_init js_dbuf_init
 #define set_value qjs_set_value
 #define JS_FreeAtom qjs_free_atom
 #define JS_FreeAtomRT qjs_free_atom_rt
 #define JS_DupAtom qjs_dup_atom
-#define JS_GetPropertyValue qjs_get_property_value
+#define JS_GetPropertyValue JS_GetPropertyValue
 #define js_global_object_find_uninitialized_var \
     qjs_global_object_find_uninitialized_var
 #define js_rc qjs_get_ref_header
@@ -214,8 +214,8 @@ static void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
 
 static void gc_decref(JSRuntime *rt);
 
-QJS_INTERNAL JSValue qjs_to_object(JSContext *ctx, JSValueConst val);
-QJS_INTERNAL JSValue qjs_to_object_free(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 static JSProperty *add_property(JSContext *ctx,
                                 JSObject *p, JSAtom prop, int prop_flags);
 static void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
@@ -224,7 +224,7 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
                              JSAtom prop, JSValueConst val,
                              JSValueConst getter, JSValueConst setter,
                              int flags);
-QJS_INTERNAL int qjs_set_property_value(JSContext *ctx,
+QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx,
                                         JSValueConst this_obj,
                                         JSValue prop, JSValue val, int flags);
 static int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
@@ -813,7 +813,7 @@ static __maybe_unused void JS_DumpShapes(JSRuntime *rt)
 
 /* 'props[]' is used to initialized the object properties. The number
    of elements depends on the shape. */
-QJS_INTERNAL JSValue qjs_new_object_from_shape(JSContext *ctx, JSShape *sh,
+QJS_INTERNAL JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh,
                                                JSClassID class_id,
                                                JSProperty *props)
 {
@@ -959,7 +959,7 @@ JSValue JS_NewObjectProtoClass(JSContext *ctx, JSValueConst proto_val,
         if (!sh)
             return JS_EXCEPTION;
     }
-    return qjs_new_object_from_shape(ctx, sh, class_id, NULL);
+    return JS_NewObjectFromShape(ctx, sh, class_id, NULL);
 }
 
 /* WARNING: the shape is not hashed. It is used for objects where
@@ -982,7 +982,7 @@ static JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_va
     sh = js_new_shape_nohash(ctx, proto, hash_size, n_alloc_props);
     if (!sh)
         return JS_EXCEPTION;
-    return qjs_new_object_from_shape(ctx, sh, class_id, NULL);
+    return JS_NewObjectFromShape(ctx, sh, class_id, NULL);
 }
 
 #if 0
@@ -1044,7 +1044,7 @@ JSValue JS_NewObjectProto(JSContext *ctx, JSValueConst proto)
 
 JSValue JS_NewArray(JSContext *ctx)
 {
-    return qjs_new_object_from_shape(ctx, js_dup_shape(ctx->array_shape),
+    return JS_NewObjectFromShape(ctx, js_dup_shape(ctx->array_shape),
                                      JS_CLASS_ARRAY, NULL);
 }
 
@@ -1807,7 +1807,7 @@ static void mark_children(JSRuntime *rt, JSGCObjectHeader *gp,
     case JS_GC_OBJ_TYPE_JS_CONTEXT:
         {
             JSContext *ctx = (JSContext *)gp;
-            qjs_mark_context(rt, ctx, mark_func);
+            JS_MarkContext(rt, ctx, mark_func);
         }
         break;
     case JS_GC_OBJ_TYPE_MODULE:
@@ -4617,7 +4617,7 @@ static int set_array_length(JSContext *ctx, JSObject *p, JSValue val,
 }
 
 /* return -1 if exception */
-QJS_INTERNAL int qjs_expand_fast_array(JSContext *ctx, JSObject *p,
+QJS_INTERNAL int expand_fast_array(JSContext *ctx, JSObject *p,
                                        uint32_t new_len)
 {
     uint32_t new_size;
@@ -4657,7 +4657,7 @@ static inline int add_fast_array_element(JSContext *ctx, JSObject *p,
         }
     }
     if (unlikely(new_len > p->u.array.u1.size)) {
-        if (qjs_expand_fast_array(ctx, p, new_len)) {
+        if (expand_fast_array(ctx, p, new_len)) {
             JS_FreeValue(ctx, val);
             return -1;
         }
@@ -4683,7 +4683,7 @@ static JSValue js_allocate_fast_array(JSContext *ctx, int64_t len)
         return arr;
     if (len > 0) {
         p = JS_VALUE_GET_OBJ(arr);
-        if (qjs_expand_fast_array(ctx, p, len) < 0) {
+        if (expand_fast_array(ctx, p, len) < 0) {
             JS_FreeValue(ctx, arr);
             return JS_EXCEPTION;
         }
@@ -4707,7 +4707,7 @@ static JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab)
         return JS_EXCEPTION;
     if (len > 0) {
         p = JS_VALUE_GET_OBJ(obj);
-        if (qjs_expand_fast_array(ctx, p, len) < 0) {
+        if (expand_fast_array(ctx, p, len) < 0) {
             JS_FreeValue(ctx, obj);
             return JS_EXCEPTION;
         }
@@ -4731,7 +4731,7 @@ static JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab)
         goto fail;
     if (len > 0) {
         p = JS_VALUE_GET_OBJ(obj);
-        if (qjs_expand_fast_array(ctx, p, len) < 0) {
+        if (expand_fast_array(ctx, p, len) < 0) {
             JS_FreeValue(ctx, obj);
         fail:
             for(i = 0; i < len; i++)
@@ -4841,7 +4841,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                     uint32_t idx = __JS_AtomToUInt32(prop);
                     if (idx < p1->u.array.count) {
                         if (unlikely(p == p1))
-                            return qjs_set_property_value(ctx, this_obj,
+                            return JS_SetPropertyValue(ctx, this_obj,
                                                           JS_NewInt32(ctx, idx),
                                                           val, flags);
                         else
@@ -5033,7 +5033,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
 
 /* return true if an element can be added to a fast array without further tests */
 /* flags can be JS_PROP_THROW or JS_PROP_THROW_STRICT */
-QJS_INTERNAL int qjs_set_property_value(JSContext *ctx,
+QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx,
                                         JSValueConst this_obj,
                                         JSValue prop, JSValue val, int flags)
 {
@@ -5162,7 +5162,7 @@ QJS_INTERNAL int qjs_set_property_value(JSContext *ctx,
 int JS_SetPropertyUint32(JSContext *ctx, JSValueConst this_obj,
                          uint32_t idx, JSValue val)
 {
-    return qjs_set_property_value(ctx, this_obj, JS_NewUint32(ctx, idx), val,
+    return JS_SetPropertyValue(ctx, this_obj, JS_NewUint32(ctx, idx), val,
                                   JS_PROP_THROW);
 }
 
@@ -5174,7 +5174,7 @@ int JS_SetPropertyInt64(JSContext *ctx, JSValueConst this_obj,
 
     if ((uint64_t)idx <= INT32_MAX) {
         /* fast path for fast arrays */
-        return qjs_set_property_value(ctx, this_obj, JS_NewInt32(ctx, idx), val,
+        return JS_SetPropertyValue(ctx, this_obj, JS_NewInt32(ctx, idx), val,
                                       JS_PROP_THROW);
     }
     prop = JS_NewAtomInt64(ctx, idx);
@@ -5725,7 +5725,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                 return JS_ThrowTypeErrorOrFalse(ctx, flags, "invalid descriptor flags");
             }
             if (flags & JS_PROP_HAS_VALUE) {
-                return qjs_set_property_value(ctx, this_obj,
+                return JS_SetPropertyValue(ctx, this_obj,
                                               JS_NewInt32(ctx, idx),
                                               JS_DupValue(ctx, val), flags);
             }
@@ -6015,7 +6015,7 @@ int JS_DeleteProperty(JSContext *ctx, JSValueConst obj, JSAtom prop, int flags)
     JSObject *p;
     int res;
 
-    obj1 = qjs_to_object(ctx, obj);
+    obj1 = JS_ToObject(ctx, obj);
     if (JS_IsException(obj1))
         return -1;
     p = JS_VALUE_GET_OBJ(obj1);
@@ -7045,7 +7045,7 @@ int JS_IsArray(JSContext *ctx, JSValueConst val)
 
 /* Object class */
 
-QJS_INTERNAL JSValue qjs_to_object(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val)
 {
     int tag = JS_VALUE_GET_NORM_TAG(val);
     JSValue obj;
@@ -7095,9 +7095,9 @@ QJS_INTERNAL JSValue qjs_to_object(JSContext *ctx, JSValueConst val)
     }
 }
 
-QJS_INTERNAL JSValue qjs_to_object_free(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val)
 {
-    JSValue obj = qjs_to_object(ctx, val);
+    JSValue obj = JS_ToObject(ctx, val);
     JS_FreeValue(ctx, val);
     return obj;
 }
@@ -7596,7 +7596,7 @@ QJS_INTERNAL JSValue qjs_primitive_invoke_free(JSContext *ctx, JSValue value,
 { return qjs_invoke_free(ctx, value, atom, argc, argv); }
 QJS_INTERNAL JSValue qjs_primitive_to_object_free(JSContext *ctx,
                                                   JSValue value)
-{ return qjs_to_object_free(ctx, value); }
+{ return JS_ToObjectFree(ctx, value); }
 QJS_INTERNAL JSValue qjs_primitive_new_object_proto_list(
     JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
     int field_count)
@@ -7699,7 +7699,7 @@ QJS_INTERNAL JSValue qjs_async_function_constructor(
 { return qjs_base_function_constructor(ctx, new_target, argc, argv, magic); }
 
 QJS_INTERNAL JSValueConst qjs_base_get_active_function(JSContext *ctx)
-{ return qjs_get_active_function(ctx); }
+{ return JS_GetActiveFunction(ctx); }
 QJS_INTERNAL JSValue qjs_base_create_from_ctor(JSContext *ctx,
                                                JSValueConst ctor,
                                                JSClassID class_id)

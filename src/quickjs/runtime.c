@@ -29,7 +29,7 @@
 #include "internal-object.h"
 #include "internal-primitive.h"
 
-#define JS_DupAtomRT qjs_dup_atom_rt
+#define JS_DupAtomRT JS_DupAtomRT
 #define js_rc qjs_get_ref_header
 #define add_gc_object qjs_add_gc_object
 #define remove_gc_object qjs_remove_gc_object
@@ -375,7 +375,7 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
     ctx->promise_ctor = JS_NULL;
     init_list_head(&ctx->loaded_modules);
 
-    if (qjs_add_intrinsic_basic_objects(ctx)) {
+    if (JS_AddIntrinsicBasicObjects(ctx)) {
         JS_FreeContext(ctx);
         return NULL;
     }
@@ -438,7 +438,7 @@ JSContext *JS_DupContext(JSContext *ctx)
 }
 
 /* used by the GC */
-QJS_INTERNAL void qjs_mark_context(JSRuntime *rt, JSContext *ctx,
+QJS_INTERNAL void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
                                    JS_MarkFunc *mark_func)
 {
     int i;
@@ -717,7 +717,7 @@ QJS_INTERNAL int qjs_proxy_register_class(JSRuntime *rt,
 
 QJS_INTERNAL BOOL qjs_proxy_is_strict_mode(JSContext *ctx)
 {
-    return qjs_is_strict_mode(ctx);
+    return is_strict_mode(ctx);
 }
 
 QJS_INTERNAL int qjs_init_class_range(JSRuntime *rt,

@@ -27,30 +27,30 @@
 
 #include "internal-property.h"
 
-QJS_INTERNAL __exception int qjs_unary_arith_slow(
+QJS_INTERNAL __exception int js_unary_arith_slow(
     JSContext *ctx, JSValue *sp, OPCodeEnum op);
-QJS_INTERNAL __exception int qjs_post_inc_slow(
+QJS_INTERNAL __exception int js_post_inc_slow(
     JSContext *ctx, JSValue *sp, OPCodeEnum op);
-QJS_INTERNAL int qjs_not_slow(JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int qjs_binary_arith_slow(
+QJS_INTERNAL int js_not_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_binary_arith_slow(
     JSContext *ctx, JSValue *sp, OPCodeEnum op);
-QJS_INTERNAL __exception int qjs_add_slow(JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int qjs_binary_logic_slow(
+QJS_INTERNAL __exception int js_add_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_binary_logic_slow(
     JSContext *ctx, JSValue *sp, OPCodeEnum op);
-QJS_INTERNAL int qjs_relational_slow(
+QJS_INTERNAL int js_relational_slow(
     JSContext *ctx, JSValue *sp, OPCodeEnum op);
-QJS_INTERNAL __exception int qjs_eq_slow(
+QJS_INTERNAL __exception int js_eq_slow(
     JSContext *ctx, JSValue *sp, BOOL is_neq);
-QJS_INTERNAL int qjs_shr_slow(JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int qjs_operator_in(JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int qjs_operator_private_in(
+QJS_INTERNAL int js_shr_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_in(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_private_in(
     JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int qjs_operator_instanceof(
+QJS_INTERNAL __exception int js_operator_instanceof(
     JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int qjs_operator_typeof(JSContext *ctx,
+QJS_INTERNAL __exception int js_operator_typeof(JSContext *ctx,
                                                  JSValueConst value);
-QJS_INTERNAL __exception int qjs_operator_delete(JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int qjs_has_unscopable(
+QJS_INTERNAL __exception int js_operator_delete(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_has_unscopable(
     JSContext *ctx, JSValueConst obj, JSAtom atom);
 
 #endif /* QUICKJS_INTERNAL_OPERATOR_H */

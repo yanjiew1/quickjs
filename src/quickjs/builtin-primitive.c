@@ -198,7 +198,7 @@ static JSValue js_number_toString(JSContext *ctx, JSValueConst this_val,
         char buf1[70];
         int len;
         len = i64toa_radix(buf1, JS_VALUE_GET_INT(val), base);
-        return qjs_new_string8_len(ctx, buf1, len);
+        return js_new_string8_len(ctx, buf1, len);
     }
     if (qjs_to_float64_free(ctx, &d, val))
         return JS_EXCEPTION;
@@ -249,7 +249,7 @@ static JSValue js_number_toExponential(JSContext *ctx, JSValueConst this_val,
     if (JS_ToInt32Sat(ctx, &f, argv[0]))
         return JS_EXCEPTION;
     if (!isfinite(d)) {
-        return qjs_to_string_free(ctx,  __JS_NewFloat64(ctx, d));
+        return JS_ToStringFree(ctx,  __JS_NewFloat64(ctx, d));
     }
     if (JS_IsUndefined(argv[0])) {
         flags = JS_DTOA_FORMAT_FREE;
@@ -281,7 +281,7 @@ static JSValue js_number_toPrecision(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (!isfinite(d)) {
     to_string:
-        return qjs_to_string_free(ctx,  __JS_NewFloat64(ctx, d));
+        return JS_ToStringFree(ctx,  __JS_NewFloat64(ctx, d));
     }
     if (p < 1 || p > 100)
         return JS_ThrowRangeError(ctx, "invalid number of digits");
@@ -368,9 +368,9 @@ static int js_string_get_own_property(JSContext *ctx,
             idx = qjs_atom_to_uint32(prop);
             if (idx < p1->len) {
                 if (desc) {
-                    ch = qjs_string_get(p1, idx);
+                    ch = string_get(p1, idx);
                     desc->flags = JS_PROP_ENUMERABLE;
-                    desc->value = qjs_new_string_char(ctx, ch);
+                    desc->value = js_new_string_char(ctx, ch);
                     desc->getter = JS_UNDEFINED;
                     desc->setter = JS_UNDEFINED;
                 }
@@ -408,7 +408,7 @@ static int js_string_define_own_property(JSContext *ctx,
             p2 = JS_VALUE_GET_STRING(val);
             if (p2->len != 1)
                 goto fail;
-            if (qjs_string_get(p1, idx) != qjs_string_get(p2, 0)) {
+            if (string_get(p1, idx) != string_get(p2, 0)) {
             fail:
                 return qjs_primitive_throw_not_configurable(ctx, flags);
             }
@@ -450,7 +450,7 @@ static JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
     } else {
         if (JS_IsUndefined(new_target) && JS_IsSymbol(argv[0])) {
             JSAtomStruct *p = JS_VALUE_GET_PTR(argv[0]);
-            val = qjs_concat_string3(ctx, "Symbol(", JS_AtomToString(ctx, qjs_get_atom_index(ctx->rt, p)), ")");
+            val = JS_ConcatString3(ctx, "Symbol(", JS_AtomToString(ctx, js_get_atom_index(ctx->rt, p)), ")");
         } else {
             val = JS_ToString(ctx, argv[0]);
         }
@@ -495,16 +495,16 @@ static JSValue js_string_fromCharCode(JSContext *ctx, JSValueConst this_val,
     int i;
     StringBuffer b_s, *b = &b_s;
 
-    qjs_string_buffer_init(ctx, b, argc);
+    string_buffer_init(ctx, b, argc);
 
     for(i = 0; i < argc; i++) {
         int32_t c;
-        if (JS_ToInt32(ctx, &c, argv[i]) || qjs_string_buffer_putc16(b, c & 0xffff)) {
-            qjs_string_buffer_free(b);
+        if (JS_ToInt32(ctx, &c, argv[i]) || string_buffer_putc16(b, c & 0xffff)) {
+            string_buffer_free(b);
             return JS_EXCEPTION;
         }
     }
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 }
 
 static JSValue js_string_fromCodePoint(JSContext *ctx, JSValueConst this_val,
@@ -516,7 +516,7 @@ static JSValue js_string_fromCodePoint(JSContext *ctx, JSValueConst this_val,
 
     /* XXX: could pre-compute string length if all arguments are JS_TAG_INT */
 
-    if (qjs_string_buffer_init(ctx, b, argc))
+    if (string_buffer_init(ctx, b, argc))
         goto fail;
     for(i = 0; i < argc; i++) {
         if (JS_VALUE_GET_TAG(argv[i]) == JS_TAG_INT) {
@@ -529,15 +529,15 @@ static JSValue js_string_fromCodePoint(JSContext *ctx, JSValueConst this_val,
             if (isnan(d) || d < 0 || d > 0x10ffff || (c = (int)d) != d)
                 goto range_error;
         }
-        if (qjs_string_buffer_putc(b, c))
+        if (string_buffer_putc(b, c))
             goto fail;
     }
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
  range_error:
     JS_ThrowRangeError(ctx, "invalid code point");
  fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return JS_EXCEPTION;
 }
 
@@ -549,35 +549,35 @@ static JSValue js_string_raw(JSContext *ctx, JSValueConst this_val,
     StringBuffer b_s, *b = &b_s;
     int64_t i, n;
 
-    qjs_string_buffer_init(ctx, b, 0);
+    string_buffer_init(ctx, b, 0);
     raw = JS_UNDEFINED;
-    cooked = qjs_to_object(ctx, argv[0]);
+    cooked = JS_ToObject(ctx, argv[0]);
     if (JS_IsException(cooked))
         goto exception;
     raw = qjs_primitive_to_object_free(ctx, JS_GetProperty(ctx, cooked, JS_ATOM_raw));
     if (JS_IsException(raw))
         goto exception;
-    if (qjs_get_length64(ctx, &n, raw) < 0)
+    if (js_get_length64(ctx, &n, raw) < 0)
         goto exception;
 
     for (i = 0; i < n; i++) {
-        val = qjs_to_string_free(ctx, qjs_primitive_get_property_int64(ctx, raw, i));
+        val = JS_ToStringFree(ctx, qjs_primitive_get_property_int64(ctx, raw, i));
         if (JS_IsException(val))
             goto exception;
-        qjs_string_buffer_concat_value_free(b, val);
+        string_buffer_concat_value_free(b, val);
         if (i < n - 1 && i + 1 < argc) {
-            if (qjs_string_buffer_concat_value(b, argv[i + 1]))
+            if (string_buffer_concat_value(b, argv[i + 1]))
                 goto exception;
         }
     }
     JS_FreeValue(ctx, cooked);
     JS_FreeValue(ctx, raw);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 exception:
     JS_FreeValue(ctx, cooked);
     JS_FreeValue(ctx, raw);
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return JS_EXCEPTION;
 }
 
@@ -600,12 +600,12 @@ JSValue js_string_codePointRange(JSContext *ctx, JSValueConst this_val,
     if (end > 0x10000) {
         n += end - max_uint32(start, 0x10000);
     }
-    if (qjs_string_buffer_init2(ctx, b, n, end >= 0x100))
+    if (string_buffer_init2(ctx, b, n, end >= 0x100))
         return JS_EXCEPTION;
     for(i = start; i < end; i++) {
-        qjs_string_buffer_putc(b, i);
+        string_buffer_putc(b, i);
     }
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 }
 
 #if 0
@@ -637,7 +637,7 @@ static JSValue js_string_charCodeAt(JSContext *ctx, JSValueConst this_val,
     if (idx < 0 || idx >= p->len) {
         ret = JS_NAN;
     } else {
-        c = qjs_string_get(p, idx);
+        c = string_get(p, idx);
         ret = JS_NewInt32(ctx, c);
     }
     JS_FreeValue(ctx, val);
@@ -667,8 +667,8 @@ static JSValue js_string_charAt(JSContext *ctx, JSValueConst this_val,
         else
             ret = JS_AtomToString(ctx, JS_ATOM_empty_string);
     } else {
-        c = qjs_string_get(p, idx);
-        ret = qjs_new_string_char(ctx, c);
+        c = string_get(p, idx);
+        ret = js_new_string_char(ctx, c);
     }
     JS_FreeValue(ctx, val);
     return ret;
@@ -692,7 +692,7 @@ static JSValue js_string_codePointAt(JSContext *ctx, JSValueConst this_val,
     if (idx < 0 || idx >= p->len) {
         ret = JS_UNDEFINED;
     } else {
-        c = qjs_string_getc(p, &idx);
+        c = string_getc(p, &idx);
         ret = JS_NewInt32(ctx, c);
     }
     JS_FreeValue(ctx, val);
@@ -712,7 +712,7 @@ static JSValue js_string_concat(JSContext *ctx, JSValueConst this_val,
     for (i = 0; i < argc; i++) {
         if (JS_IsException(r))
             break;
-        r = qjs_concat_string(ctx, r, JS_DupValue(ctx, argv[i]));
+        r = JS_ConcatString(ctx, r, JS_DupValue(ctx, argv[i]));
     }
     return r;
 }
@@ -721,7 +721,7 @@ static int string_cmp(JSString *p1, JSString *p2, int x1, int x2, int len)
 {
     int i, c1, c2;
     for (i = 0; i < len; i++) {
-        if ((c1 = qjs_string_get(p1, x1 + i)) != (c2 = qjs_string_get(p2, x2 + i)))
+        if ((c1 = string_get(p1, x1 + i)) != (c2 = string_get(p2, x2 + i)))
             return c1 - c2;
     }
     return 0;
@@ -753,7 +753,7 @@ static int string_indexof(JSString *p1, JSString *p2, int from)
     int c, i, j, len1 = p1->len, len2 = p2->len;
     if (len2 == 0)
         return from;
-    for (i = from, c = qjs_string_get(p2, 0); i + len2 <= len1; i = j + 1) {
+    for (i = from, c = string_get(p2, 0); i + len2 <= len1; i = j + 1) {
         j = qjs_regexp_string_indexof_char(p1, c, i);
         if (j < 0 || j + len2 > len1)
             break;
@@ -771,7 +771,7 @@ QJS_INTERNAL int64_t qjs_regexp_string_advance_index(JSString *p,
         index++;
     } else {
         int index32 = (int)index;
-        qjs_string_getc(p, &index32);
+        string_getc(p, &index32);
         index = index32;
     }
     return index;
@@ -831,7 +831,7 @@ static JSValue js_string_toWellFormed(JSContext *ctx, JSValueConst this_val,
     if (i < 0)
         return str;
 
-    ret = qjs_new_string16_len(ctx, p->u.str16, p->len);
+    ret = js_new_string16_len(ctx, p->u.str16, p->len);
     JS_FreeValue(ctx, str);
     if (JS_IsException(ret))
         return JS_EXCEPTION;
@@ -997,7 +997,7 @@ static int check_regexp_g_flag(JSContext *ctx, JSValueConst regexp)
             JS_ThrowTypeError(ctx, "cannot convert to object");
             return -1;
         }
-        flags = qjs_to_string_free(ctx, flags);
+        flags = JS_ToStringFree(ctx, flags);
         if (JS_IsException(flags))
             return -1;
         ret = qjs_regexp_string_indexof_char(JS_VALUE_GET_STRING(flags),
@@ -1044,7 +1044,7 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
     args[0] = regexp;
     str = JS_UNDEFINED;
     if (atom == JS_ATOM_Symbol_matchAll) {
-        str = qjs_new_string8(ctx, "g");
+        str = js_new_string8(ctx, "g");
         if (JS_IsException(str))
             goto fail;
         args[args_len++] = (JSValueConst)str;
@@ -1063,7 +1063,7 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
 
 /* if captures != NULL, captures_val and matched are ignored. Otherwise,
    captures_len is ignored */
-QJS_INTERNAL int qjs_string_get_substitution(
+QJS_INTERNAL int js_string_GetSubstitution(
     JSContext *ctx, StringBuffer *b, JSValueConst matched, JSString *sp,
     uint32_t position, JSValueConst captures_val,
     JSValueConst namedCaptures, JSValueConst rep, uint8_t **captures,
@@ -1087,10 +1087,10 @@ QJS_INTERNAL int qjs_string_get_substitution(
     } else {
         captures_len = 0;
         if (!JS_IsUndefined(captures_val)) {
-            if (qjs_get_length32(ctx, &captures_len, captures_val))
+            if (js_get_length32(ctx, &captures_len, captures_val))
                 goto exception;
         }
-        if (qjs_get_length32(ctx, &matched_len, matched))
+        if (js_get_length32(ctx, &matched_len, matched))
             goto exception;
     }
 
@@ -1100,26 +1100,26 @@ QJS_INTERNAL int qjs_string_get_substitution(
         j = qjs_regexp_string_indexof_char(rp, '$', i);
         if (j < 0 || j + 1 >= len)
             break;
-        qjs_string_buffer_concat(b, rp, i, j);
+        string_buffer_concat(b, rp, i, j);
         j0 = j++;
-        c = qjs_string_get(rp, j++);
+        c = string_get(rp, j++);
         if (c == '$') {
-            qjs_string_buffer_putc8(b, '$');
+            string_buffer_putc8(b, '$');
         } else if (c == '&') {
             if (captures) {
-                qjs_string_buffer_concat(b, sp, position, position + matched_len);
+                string_buffer_concat(b, sp, position, position + matched_len);
             } else {
-                if (qjs_string_buffer_concat_value(b, matched))
+                if (string_buffer_concat_value(b, matched))
                     goto exception;
             }
         } else if (c == '`') {
-            qjs_string_buffer_concat(b, sp, 0, position);
+            string_buffer_concat(b, sp, 0, position);
         } else if (c == '\'') {
-            qjs_string_buffer_concat(b, sp, position + matched_len, sp->len);
+            string_buffer_concat(b, sp, position + matched_len, sp->len);
         } else if (c >= '0' && c <= '9') {
             k = c - '0';
             if (j < len) {
-                c1 = qjs_string_get(rp, j);
+                c1 = string_get(rp, j);
                 if (c1 >= '0' && c1 <= '9') {
                     /* This behavior is specified in ES6 and refined in ECMA 2019 */
                     /* ECMA 2019 does not have the extra test, but
@@ -1137,14 +1137,14 @@ QJS_INTERNAL int qjs_string_get_substitution(
                     if (captures[2 * k] && captures[2 * k + 1]) {
                         start = (captures[2 * k] - sp->u.str8) >> shift;
                         end = (captures[2 * k + 1] - sp->u.str8) >> shift;
-                        qjs_string_buffer_concat(b, sp, start, end);
+                        string_buffer_concat(b, sp, start, end);
                     }
                 } else {
                     s = qjs_primitive_get_property_int64(ctx, captures_val, k);
                     if (JS_IsException(s))
                         goto exception;
                     if (!JS_IsUndefined(s)) {
-                        if (qjs_string_buffer_concat_value_free(b, s))
+                        if (string_buffer_concat_value_free(b, s))
                             goto exception;
                     }
                 }
@@ -1155,24 +1155,24 @@ QJS_INTERNAL int qjs_string_get_substitution(
             k = qjs_regexp_string_indexof_char(rp, '>', j);
             if (k < 0)
                 goto norep;
-            name = qjs_sub_string(ctx, rp, j, k);
+            name = js_sub_string(ctx, rp, j, k);
             if (JS_IsException(name))
                 goto exception;
             capture = qjs_primitive_get_property_value(ctx, namedCaptures, name);
             if (JS_IsException(capture))
                 goto exception;
             if (!JS_IsUndefined(capture)) {
-                if (qjs_string_buffer_concat_value_free(b, capture))
+                if (string_buffer_concat_value_free(b, capture))
                     goto exception;
             }
             j = k + 1;
         } else {
         norep:
-            qjs_string_buffer_concat(b, rp, j0, j);
+            string_buffer_concat(b, rp, j0, j);
         }
         i = j;
     }
-    qjs_string_buffer_concat(b, rp, i, rp->len);
+    string_buffer_concat(b, rp, i, rp->len);
     return 0;
 exception:
     return -1;
@@ -1213,7 +1213,7 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
             return qjs_call_free(ctx, replacer, searchValue, 2, args);
         }
     }
-    qjs_string_buffer_init(ctx, b, 0);
+    string_buffer_init(ctx, b, 0);
 
     str = JS_ToString(ctx, O);
     if (JS_IsException(str))
@@ -1245,7 +1245,7 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
         }
         if (pos < 0) {
             if (is_first) {
-                qjs_string_buffer_free(b);
+                string_buffer_free(b);
                 JS_FreeValue(ctx, search_str);
                 JS_FreeValue(ctx, replaceValue_str);
                 return str;
@@ -1254,18 +1254,18 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
             }
         }
 
-        qjs_string_buffer_concat(b, sp, endOfLastMatch, pos);
+        string_buffer_concat(b, sp, endOfLastMatch, pos);
 
         if (functionalReplace) {
             args[0] = search_str;
             args[1] = JS_NewInt32(ctx, pos);
             args[2] = str;
-            repl_str = qjs_to_string_free(ctx, JS_Call(ctx, replaceValue, JS_UNDEFINED, 3, args));
+            repl_str = JS_ToStringFree(ctx, JS_Call(ctx, replaceValue, JS_UNDEFINED, 3, args));
             if (JS_IsException(repl_str))
                 goto exception;
-            qjs_string_buffer_concat_value_free(b, repl_str);
+            string_buffer_concat_value_free(b, repl_str);
         } else {
-            if (qjs_string_get_substitution(ctx, b, search_str, sp, pos,
+            if (js_string_GetSubstitution(ctx, b, search_str, sp, pos,
                                             JS_UNDEFINED, JS_UNDEFINED,
                                             replaceValue_str, NULL, 0)) {
                 goto exception;
@@ -1277,14 +1277,14 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
         if (!is_replaceAll)
             break;
     }
-    qjs_string_buffer_concat(b, sp, endOfLastMatch, sp->len);
+    string_buffer_concat(b, sp, endOfLastMatch, sp->len);
     JS_FreeValue(ctx, search_str);
     JS_FreeValue(ctx, replaceValue_str);
     JS_FreeValue(ctx, str);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 exception:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     JS_FreeValue(ctx, search_str);
     JS_FreeValue(ctx, replaceValue_str);
     JS_FreeValue(ctx, str);
@@ -1354,7 +1354,7 @@ static JSValue js_string_split(JSContext *ctx, JSValueConst this_val,
         e = string_indexof(sp, rp, q);
         if (e < 0)
             break;
-        T = qjs_sub_string(ctx, sp, p, e);
+        T = js_sub_string(ctx, sp, p, e);
         if (JS_IsException(T))
             goto exception;
         if (qjs_primitive_create_data_property_uint32(ctx, A, lengthA++, T, 0) < 0)
@@ -1363,7 +1363,7 @@ static JSValue js_string_split(JSContext *ctx, JSValueConst this_val,
             goto done;
     }
 add_tail:
-    T = qjs_sub_string(ctx, sp, p, s);
+    T = js_sub_string(ctx, sp, p, s);
     if (JS_IsException(T))
         goto exception;
     if (qjs_primitive_create_data_property_uint32(ctx, A, lengthA++, T,0 ) < 0)
@@ -1409,7 +1409,7 @@ static JSValue js_string_substring(JSContext *ctx, JSValueConst this_val,
         start = b;
         end = a;
     }
-    ret = qjs_sub_string(ctx, p, start, end);
+    ret = js_sub_string(ctx, p, start, end);
     JS_FreeValue(ctx, str);
     return ret;
 }
@@ -1437,7 +1437,7 @@ static JSValue js_string_substr(JSContext *ctx, JSValueConst this_val,
             return JS_EXCEPTION;
         }
     }
-    ret = qjs_sub_string(ctx, p, a, a + n);
+    ret = js_sub_string(ctx, p, a, a + n);
     JS_FreeValue(ctx, str);
     return ret;
 }
@@ -1465,7 +1465,7 @@ static JSValue js_string_slice(JSContext *ctx, JSValueConst this_val,
             return JS_EXCEPTION;
         }
     }
-    ret = qjs_sub_string(ctx, p, start, max_int(end, start));
+    ret = js_sub_string(ctx, p, start, max_int(end, start));
     JS_FreeValue(ctx, str);
     return ret;
 }
@@ -1497,7 +1497,7 @@ static JSValue js_string_pad(JSContext *ctx, JSValueConst this_val,
             return str;
         }
         if (p1->len == 1) {
-            c = qjs_string_get(p1, 0);
+            c = string_get(p1, 0);
             p1 = NULL;
         }
     }
@@ -1505,34 +1505,34 @@ static JSValue js_string_pad(JSContext *ctx, JSValueConst this_val,
         JS_ThrowRangeError(ctx, "invalid string length");
         goto fail3;
     }
-    if (qjs_string_buffer_init(ctx, b, n))
+    if (string_buffer_init(ctx, b, n))
         goto fail3;
     n -= len;
     if (padEnd) {
-        if (qjs_string_buffer_concat(b, p, 0, len))
+        if (string_buffer_concat(b, p, 0, len))
             goto fail;
     }
     if (p1) {
         while (n > 0) {
             int chunk = min_int(n, p1->len);
-            if (qjs_string_buffer_concat(b, p1, 0, chunk))
+            if (string_buffer_concat(b, p1, 0, chunk))
                 goto fail;
             n -= chunk;
         }
     } else {
-        if (qjs_string_buffer_fill(b, c, n))
+        if (string_buffer_fill(b, c, n))
             goto fail;
     }
     if (!padEnd) {
-        if (qjs_string_buffer_concat(b, p, 0, len))
+        if (string_buffer_concat(b, p, 0, len))
             goto fail;
     }
     JS_FreeValue(ctx, v);
     JS_FreeValue(ctx, str);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
 fail3:
     JS_FreeValue(ctx, v);
 fail2:
@@ -1569,17 +1569,17 @@ static JSValue js_string_repeat(JSContext *ctx, JSValueConst this_val,
         JS_ThrowRangeError(ctx, "invalid string length");
         goto fail;
     }
-    if (qjs_string_buffer_init2(ctx, b, n * len, p->is_wide_char))
+    if (string_buffer_init2(ctx, b, n * len, p->is_wide_char))
         goto fail;
     if (len == 1) {
-        qjs_string_buffer_fill(b, qjs_string_get(p, 0), n);
+        string_buffer_fill(b, string_get(p, 0), n);
     } else {
         while (n-- > 0) {
-            qjs_string_buffer_concat(b, p, 0, len);
+            string_buffer_concat(b, p, 0, len);
         }
     }
     JS_FreeValue(ctx, str);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
 
 fail:
     JS_FreeValue(ctx, str);
@@ -1600,14 +1600,14 @@ static JSValue js_string_trim(JSContext *ctx, JSValueConst this_val,
     a = 0;
     b = len = p->len;
     if (magic & 1) {
-        while (a < len && lre_is_space(qjs_string_get(p, a)))
+        while (a < len && lre_is_space(string_get(p, a)))
             a++;
     }
     if (magic & 2) {
-        while (b > a && lre_is_space(qjs_string_get(p, b - 1)))
+        while (b > a && lre_is_space(string_get(p, b - 1)))
             b--;
     }
-    ret = qjs_sub_string(ctx, p, a, b);
+    ret = js_sub_string(ctx, p, a, b);
     JS_FreeValue(ctx, str);
     return ret;
 }
@@ -1658,7 +1658,7 @@ static BOOL test_final_sigma(JSString *p, int sigma_pos)
     for(;;) {
         if (k >= p->len)
             return TRUE;
-        c1 = qjs_string_getc(p, &k);
+        c1 = string_getc(p, &k);
         if (!lre_is_case_ignorable(c1))
             break;
     }
@@ -1680,10 +1680,10 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_STRING(val);
     if (p->len == 0)
         return val;
-    if (qjs_string_buffer_init(ctx, b, p->len))
+    if (string_buffer_init(ctx, b, p->len))
         goto fail;
     for(i = 0; i < p->len;) {
-        c = qjs_string_getc(p, &i);
+        c = string_getc(p, &i);
         if (c == 0x3a3 && to_lower && test_final_sigma(p, i - 1)) {
             res[0] = 0x3c2; /* final sigma */
             l = 1;
@@ -1691,15 +1691,15 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
             l = lre_case_conv(res, c, to_lower);
         }
         for(j = 0; j < l; j++) {
-            if (qjs_string_buffer_putc(b, res[j]))
+            if (string_buffer_putc(b, res[j]))
                 goto fail;
         }
     }
     JS_FreeValue(ctx, val);
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
  fail:
     JS_FreeValue(ctx, val);
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return JS_EXCEPTION;
 }
 
@@ -1725,7 +1725,7 @@ static int JS_ToUTF32String(JSContext *ctx, uint32_t **pbuf, JSValueConst val1)
         goto fail;
     }
     for(i = j = 0; i < len;)
-        buf[j++] = qjs_string_getc(p, &i);
+        buf[j++] = string_getc(p, &i);
     JS_FreeValue(ctx, val);
     *pbuf = buf;
     return j;
@@ -1738,15 +1738,15 @@ static JSValue JS_NewUTF32String(JSContext *ctx, const uint32_t *buf, int len)
 {
     int i;
     StringBuffer b_s, *b = &b_s;
-    if (qjs_string_buffer_init(ctx, b, len))
+    if (string_buffer_init(ctx, b, len))
         return JS_EXCEPTION;
     for(i = 0; i < len; i++) {
-        if (qjs_string_buffer_putc(b, buf[i]))
+        if (string_buffer_putc(b, buf[i]))
             goto fail;
     }
-    return qjs_string_buffer_end(b);
+    return string_buffer_end(b);
  fail:
-    qjs_string_buffer_free(b);
+    string_buffer_free(b);
     return JS_EXCEPTION;
 }
 
@@ -1891,7 +1891,7 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
         JS_FreeValue(ctx, a);
         return JS_EXCEPTION;
     }
-    cmp = qjs_string_compare(ctx, JS_VALUE_GET_STRING(a), JS_VALUE_GET_STRING(b));
+    cmp = js_string_compare(ctx, JS_VALUE_GET_STRING(a), JS_VALUE_GET_STRING(b));
     JS_FreeValue(ctx, a);
     JS_FreeValue(ctx, b);
     return JS_NewInt32(ctx, cmp);
@@ -1933,13 +1933,13 @@ static JSValue js_string_iterator_next(JSContext *ctx, JSValueConst this_val,
     }
 
     start = idx;
-    c = qjs_string_getc(p, (int *)&idx);
+    c = string_getc(p, (int *)&idx);
     it->idx = idx;
     *pdone = FALSE;
     if (c <= 0xffff) {
-        return qjs_new_string_char(ctx, c);
+        return js_new_string_char(ctx, c);
     } else {
-        return qjs_new_string16_len(ctx, p->u.str16 + start, 2);
+        return js_new_string16_len(ctx, p->u.str16 + start, 2);
     }
 }
 
@@ -1976,42 +1976,42 @@ static JSValue js_string_CreateHTML(JSContext *ctx, JSValueConst this_val,
     str = qjs_primitive_to_string_check_object(ctx, this_val);
     if (JS_IsException(str))
         return JS_EXCEPTION;
-    qjs_string_buffer_init(ctx, b, 7);
-    qjs_string_buffer_putc8(b, '<');
-    qjs_string_buffer_puts8(b, defs[magic].tag);
+    string_buffer_init(ctx, b, 7);
+    string_buffer_putc8(b, '<');
+    string_buffer_puts8(b, defs[magic].tag);
     if (defs[magic].attr) {
         // r += " " + attr + "=\"" + value + "\"";
         JSValue value;
         int i;
 
-        qjs_string_buffer_putc8(b, ' ');
-        qjs_string_buffer_puts8(b, defs[magic].attr);
-        qjs_string_buffer_puts8(b, "=\"");
+        string_buffer_putc8(b, ' ');
+        string_buffer_puts8(b, defs[magic].attr);
+        string_buffer_puts8(b, "=\"");
         value = qjs_primitive_to_string_check_object(ctx, argv[0]);
         if (JS_IsException(value)) {
             JS_FreeValue(ctx, str);
-            qjs_string_buffer_free(b);
+            string_buffer_free(b);
             return JS_EXCEPTION;
         }
         p = JS_VALUE_GET_STRING(value);
         for (i = 0; i < p->len; i++) {
-            int c = qjs_string_get(p, i);
+            int c = string_get(p, i);
             if (c == '"') {
-                qjs_string_buffer_puts8(b, "&quot;");
+                string_buffer_puts8(b, "&quot;");
             } else {
-                qjs_string_buffer_putc16(b, c);
+                string_buffer_putc16(b, c);
             }
         }
         JS_FreeValue(ctx, value);
-        qjs_string_buffer_putc8(b, '\"');
+        string_buffer_putc8(b, '\"');
     }
     // return r + ">" + str + "</" + tag + ">";
-    qjs_string_buffer_putc8(b, '>');
-    qjs_string_buffer_concat_value_free(b, str);
-    qjs_string_buffer_puts8(b, "</");
-    qjs_string_buffer_puts8(b, defs[magic].tag);
-    qjs_string_buffer_putc8(b, '>');
-    return qjs_string_buffer_end(b);
+    string_buffer_putc8(b, '>');
+    string_buffer_concat_value_free(b, str);
+    string_buffer_puts8(b, "</");
+    string_buffer_puts8(b, defs[magic].tag);
+    string_buffer_putc8(b, '>');
+    return string_buffer_end(b);
 }
 
 static const JSCFunctionListEntry js_string_funcs[] = {
@@ -2110,7 +2110,7 @@ static JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
             return JS_EXCEPTION;
         p = JS_VALUE_GET_STRING(str);
     }
-    return qjs_new_symbol(ctx, p, JS_ATOM_TYPE_SYMBOL);
+    return JS_NewSymbol(ctx, p, JS_ATOM_TYPE_SYMBOL);
 }
 
 static JSValue js_thisSymbolValue(JSContext *ctx, JSValueConst this_val)
@@ -2159,7 +2159,7 @@ static JSValue js_symbol_get_description(JSContext *ctx, JSValueConst this_val)
     if (p->len == 0 && p->is_wide_char != 0) {
         ret = JS_UNDEFINED;
     } else {
-        ret = JS_AtomToString(ctx, qjs_get_atom_index(ctx->rt, p));
+        ret = JS_AtomToString(ctx, js_get_atom_index(ctx->rt, p));
     }
     JS_FreeValue(ctx, val);
     return ret;
@@ -2182,7 +2182,7 @@ static JSValue js_symbol_for(JSContext *ctx, JSValueConst this_val,
     str = JS_ToString(ctx, argv[0]);
     if (JS_IsException(str))
         return JS_EXCEPTION;
-    return qjs_new_symbol(ctx, JS_VALUE_GET_STRING(str), JS_ATOM_TYPE_GLOBAL_SYMBOL);
+    return JS_NewSymbol(ctx, JS_VALUE_GET_STRING(str), JS_ATOM_TYPE_GLOBAL_SYMBOL);
 }
 
 static JSValue js_symbol_keyFor(JSContext *ctx, JSValueConst this_val,

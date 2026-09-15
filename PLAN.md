@@ -71,6 +71,17 @@ forcing does not harm the corresponding Clang screens. Full evidence and the
 one deliberately accepted natural-inline iterator tradeoff are recorded in
 `CHECKPOINT.md`.
 
+The naming-only follow-up is complete against inline-cleanup commit `b3da94f`.
+It restores 103 extracted implementation identifiers to their exact upstream
+`04be246` spellings. The source delta is mechanically proven to contain only
+whole-identifier substitutions: no linkage, visibility, declaration type,
+attribute, macro structure, function body, control flow, translation-unit
+placement, build rule, or call-topology change is present. Exact upstream names
+that collide with an existing same-TU upstream-local implementation remain
+unchanged because resolving those collisions would exceed this follow-up's
+strict identifier-only scope. The exhaustive classification and validation
+record is in `CHECKPOINT.md`.
+
 ## Inspected starting architecture
 
 The starting tree has one 61,424-line `quickjs.c`, one-object build rules in the

@@ -28,16 +28,16 @@
 
 #define JS_CallFree qjs_call_free
 #define JS_InvokeFree qjs_invoke_free
-#define JS_ConcatString qjs_concat_string
+#define JS_ConcatString JS_ConcatString
 #define JS_CheckBrand qjs_check_brand
 #define find_own_property qjs_find_own_property_fast
 #define js_rc qjs_get_ref_header
-#define js_new_string8_len qjs_new_string8_len
-#define js_new_string8 qjs_new_string8
-#define js_linearize_string_rope qjs_linearize_string_rope
-#define js_string_compare qjs_string_compare
-#define js_string_rope_compare qjs_string_rope_compare
-#define js_unary_arith_slow qjs_unary_arith_slow
+#define js_new_string8_len js_new_string8_len
+#define js_new_string8 js_new_string8
+#define js_linearize_string_rope js_linearize_string_rope
+#define js_string_compare js_string_compare
+#define js_string_rope_compare js_string_rope_compare
+#define js_unary_arith_slow js_unary_arith_slow
 #define js_malloc_rt qjs_malloc_rt_internal
 #define js_free_rt qjs_free_rt_internal
 #define js_realloc_rt qjs_realloc_rt_internal
@@ -56,7 +56,7 @@ typedef enum JSStrictEqModeEnum {
     JS_EQ_SAME_VALUE_ZERO,
 } JSStrictEqModeEnum;
 
-QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst op1,
+QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1,
                                    JSValueConst op2, int eq_mode);
 
 static inline BOOL js_string_eq(JSContext *ctx,
@@ -2654,7 +2654,7 @@ JSValue JS_ToString(JSContext *ctx, JSValueConst val)
     return JS_ToStringInternal(ctx, val, FALSE);
 }
 
-QJS_INTERNAL JSValue qjs_to_string_free(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
 {
     JSValue ret;
     ret = JS_ToString(ctx, val);
@@ -2665,7 +2665,7 @@ QJS_INTERNAL JSValue qjs_to_string_free(JSContext *ctx, JSValue val)
 static JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val)
 {
     if (JS_IsUndefined(val) || JS_IsNull(val))
-        return qjs_to_string_free(ctx, val);
+        return JS_ToStringFree(ctx, val);
     return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 0, NULL);
 }
 
@@ -2834,7 +2834,7 @@ int JS_ToBigInt64(JSContext *ctx, int64_t *pres, JSValueConst val)
     return JS_ToBigInt64Free(ctx, pres, JS_DupValue(ctx, val));
 }
 
-QJS_INTERNAL no_inline __exception int qjs_unary_arith_slow(JSContext *ctx,
+QJS_INTERNAL no_inline __exception int js_unary_arith_slow(JSContext *ctx,
                                                      JSValue *sp,
                                                      OPCodeEnum op)
 {
@@ -2974,7 +2974,7 @@ QJS_INTERNAL no_inline __exception int qjs_unary_arith_slow(JSContext *ctx,
     return -1;
 }
 
-QJS_INTERNAL __exception int qjs_post_inc_slow(JSContext *ctx,
+QJS_INTERNAL __exception int js_post_inc_slow(JSContext *ctx,
                                         JSValue *sp, OPCodeEnum op)
 {
     JSValue op1;
@@ -2991,7 +2991,7 @@ QJS_INTERNAL __exception int qjs_post_inc_slow(JSContext *ctx,
     return js_unary_arith_slow(ctx, sp + 1, op - OP_post_dec + OP_dec);
 }
 
-QJS_INTERNAL no_inline int qjs_not_slow(JSContext *ctx, JSValue *sp)
+QJS_INTERNAL no_inline int js_not_slow(JSContext *ctx, JSValue *sp)
 {
     JSValue op1;
 
@@ -3020,7 +3020,7 @@ QJS_INTERNAL no_inline int qjs_not_slow(JSContext *ctx, JSValue *sp)
     return -1;
 }
 
-QJS_INTERNAL no_inline __exception int qjs_binary_arith_slow(JSContext *ctx, JSValue *sp,
+QJS_INTERNAL no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *sp,
                                                       OPCodeEnum op)
 {
     JSValue op1, op2;
@@ -3212,7 +3212,7 @@ static inline BOOL tag_is_string(uint32_t tag)
     return tag == JS_TAG_STRING || tag == JS_TAG_STRING_ROPE;
 }
 
-QJS_INTERNAL no_inline __exception int qjs_add_slow(JSContext *ctx, JSValue *sp)
+QJS_INTERNAL no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp)
 {
     JSValue op1, op2;
     uint32_t tag1, tag2;
@@ -3328,7 +3328,7 @@ QJS_INTERNAL no_inline __exception int qjs_add_slow(JSContext *ctx, JSValue *sp)
     return -1;
 }
 
-QJS_INTERNAL no_inline __exception int qjs_binary_logic_slow(JSContext *ctx,
+QJS_INTERNAL no_inline __exception int js_binary_logic_slow(JSContext *ctx,
                                                       JSValue *sp,
                                                       OPCodeEnum op)
 {
@@ -3582,7 +3582,7 @@ static int js_compare_bigint(JSContext *ctx, OPCodeEnum op,
     return res;
 }
 
-QJS_INTERNAL no_inline int qjs_relational_slow(JSContext *ctx, JSValue *sp,
+QJS_INTERNAL no_inline int js_relational_slow(JSContext *ctx, JSValue *sp,
                                         OPCodeEnum op)
 {
     JSValue op1, op2;
@@ -3723,7 +3723,7 @@ static BOOL tag_is_number(uint32_t tag)
             tag == JS_TAG_BIG_INT || tag == JS_TAG_SHORT_BIG_INT);
 }
 
-QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
+QJS_INTERNAL no_inline __exception int js_eq_slow(JSContext *ctx, JSValue *sp,
                                             BOOL is_neq)
 {
     JSValue op1, op2;
@@ -3758,7 +3758,7 @@ QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
             res = js_compare_bigint(ctx, OP_eq, op1, op2);
         }
     } else if (tag1 == tag2) {
-        res = qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
+        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if ((tag1 == JS_TAG_NULL && tag2 == JS_TAG_UNDEFINED) ||
@@ -3766,7 +3766,7 @@ QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
         res = TRUE;
     } else if (tag_is_string(tag1) && tag_is_string(tag2)) {
         /* needed when comparing strings and ropes */
-        res = qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
+        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if ((tag_is_string(tag1) && tag_is_number(tag2)) ||
@@ -3803,7 +3803,7 @@ QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
                 goto exception;
             }
         }
-        res = qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
+        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if (tag1 == JS_TAG_BOOL) {
@@ -3849,7 +3849,7 @@ QJS_INTERNAL no_inline __exception int qjs_eq_slow(JSContext *ctx, JSValue *sp,
     return -1;
 }
 
-QJS_INTERNAL no_inline int qjs_shr_slow(JSContext *ctx, JSValue *sp)
+QJS_INTERNAL no_inline int js_shr_slow(JSContext *ctx, JSValue *sp)
 {
     JSValue op1, op2;
     uint32_t v1, v2, r;
@@ -3887,7 +3887,7 @@ QJS_INTERNAL no_inline int qjs_shr_slow(JSContext *ctx, JSValue *sp)
     return -1;
 }
 
-QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst op1,
+QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1,
                                    JSValueConst op2, int eq_mode)
 {
     BOOL res;
@@ -4010,7 +4010,7 @@ QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst op1,
 
 static BOOL js_strict_eq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return qjs_strict_equal(ctx, op1, op2, JS_EQ_STRICT);
+    return js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
 }
 
 BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
@@ -4020,7 +4020,7 @@ BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 
 static BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return qjs_strict_equal(ctx, op1, op2, JS_EQ_SAME_VALUE);
+    return js_strict_eq2(ctx, op1, op2, JS_EQ_SAME_VALUE);
 }
 
 BOOL JS_SameValue(JSContext *ctx, JSValueConst op1, JSValueConst op2)
@@ -4030,7 +4030,7 @@ BOOL JS_SameValue(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 
 static BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return qjs_strict_equal(ctx, op1, op2, JS_EQ_SAME_VALUE_ZERO);
+    return js_strict_eq2(ctx, op1, op2, JS_EQ_SAME_VALUE_ZERO);
 }
 
 BOOL JS_SameValueZero(JSContext *ctx, JSValueConst op1, JSValueConst op2)
@@ -4038,7 +4038,7 @@ BOOL JS_SameValueZero(JSContext *ctx, JSValueConst op1, JSValueConst op2)
     return js_same_value_zero(ctx, op1, op2);
 }
 
-QJS_INTERNAL __exception int qjs_operator_in(JSContext *ctx, JSValue *sp)
+QJS_INTERNAL __exception int js_operator_in(JSContext *ctx, JSValue *sp)
 {
     JSValue op1, op2;
     JSAtom atom;
@@ -4064,7 +4064,7 @@ QJS_INTERNAL __exception int qjs_operator_in(JSContext *ctx, JSValue *sp)
     return 0;
 }
 
-QJS_INTERNAL __exception int qjs_operator_private_in(JSContext *ctx, JSValue *sp)
+QJS_INTERNAL __exception int js_operator_private_in(JSContext *ctx, JSValue *sp)
 {
     JSValue op1, op2;
     int ret;
@@ -4101,7 +4101,7 @@ QJS_INTERNAL __exception int qjs_operator_private_in(JSContext *ctx, JSValue *sp
     return 0;
 }
 
-QJS_INTERNAL __exception int qjs_has_unscopable(JSContext *ctx, JSValueConst obj,
+QJS_INTERNAL __exception int js_has_unscopable(JSContext *ctx, JSValueConst obj,
                                          JSAtom atom)
 {
     JSValue arr, val;
@@ -4119,7 +4119,7 @@ QJS_INTERNAL __exception int qjs_has_unscopable(JSContext *ctx, JSValueConst obj
     return ret;
 }
 
-QJS_INTERNAL __exception int qjs_operator_instanceof(JSContext *ctx, JSValue *sp)
+QJS_INTERNAL __exception int js_operator_instanceof(JSContext *ctx, JSValue *sp)
 {
     JSValue op1, op2;
     BOOL ret;
@@ -4135,7 +4135,7 @@ QJS_INTERNAL __exception int qjs_operator_instanceof(JSContext *ctx, JSValue *sp
     return 0;
 }
 
-QJS_INTERNAL __exception int qjs_operator_typeof(JSContext *ctx, JSValueConst op1)
+QJS_INTERNAL __exception int js_operator_typeof(JSContext *ctx, JSValueConst op1)
 {
     JSAtom atom;
     uint32_t tag;
@@ -4186,7 +4186,7 @@ QJS_INTERNAL __exception int qjs_operator_typeof(JSContext *ctx, JSValueConst op
     return atom;
 }
 
-QJS_INTERNAL __exception int qjs_operator_delete(JSContext *ctx, JSValue *sp)
+QJS_INTERNAL __exception int js_operator_delete(JSContext *ctx, JSValue *sp)
 {
     JSValue op1, op2;
     JSAtom atom;

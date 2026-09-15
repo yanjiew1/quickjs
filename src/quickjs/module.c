@@ -613,18 +613,18 @@ static void js_resolve_export_throw_error(JSContext *ctx,
     default:
     case JS_RESOLVE_RES_NOT_FOUND:
         JS_ThrowSyntaxError(ctx, "Could not find export '%s' in module '%s'",
-                            qjs_atom_get_str(ctx, buf1, sizeof(buf1), export_name),
-                            qjs_atom_get_str(ctx, buf2, sizeof(buf2), m->module_name));
+                            JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name),
+                            JS_AtomGetStr(ctx, buf2, sizeof(buf2), m->module_name));
         break;
     case JS_RESOLVE_RES_CIRCULAR:
         JS_ThrowSyntaxError(ctx, "circular reference when looking for export '%s' in module '%s'",
-                            qjs_atom_get_str(ctx, buf1, sizeof(buf1), export_name),
-                            qjs_atom_get_str(ctx, buf2, sizeof(buf2), m->module_name));
+                            JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name),
+                            JS_AtomGetStr(ctx, buf2, sizeof(buf2), m->module_name));
         break;
     case JS_RESOLVE_RES_AMBIGUOUS:
         JS_ThrowSyntaxError(ctx, "export '%s' in module '%s' is ambiguous",
-                            qjs_atom_get_str(ctx, buf1, sizeof(buf1), export_name),
-                            qjs_atom_get_str(ctx, buf2, sizeof(buf2), m->module_name));
+                            JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name),
+                            JS_AtomGetStr(ctx, buf2, sizeof(buf2), m->module_name));
         break;
     }
 }
@@ -739,7 +739,7 @@ static int exported_names_cmp(const void *p1, const void *p2, void *opaque)
         /* XXX: raise an error ? */
         ret = 0;
     } else {
-        ret = qjs_string_compare(ctx, JS_VALUE_GET_STRING(str1),
+        ret = js_string_compare(ctx, JS_VALUE_GET_STRING(str1),
                                 JS_VALUE_GET_STRING(str2));
     }
     JS_FreeValue(ctx, str1);
@@ -904,7 +904,7 @@ static int js_resolve_module(JSContext *ctx, JSModuleDef *m)
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("resolving module '%s':\n", qjs_atom_get_str(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("resolving module '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
     }
 #endif
     m->resolved = TRUE;
@@ -1002,7 +1002,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
     BOOL is_c_module;
     JSValue ret_val;
 
-    if (qjs_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(ctx->rt, 0)) {
         qjs_throw_stack_overflow(ctx);
         return -1;
     }
@@ -1010,7 +1010,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("js_inner_module_linking '%s':\n", qjs_atom_get_str(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("js_inner_module_linking '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
     }
 #endif
 
@@ -1048,7 +1048,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("instantiating module '%s':\n", qjs_atom_get_str(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("instantiating module '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
     }
 #endif
     /* check the indirect exports */
@@ -1197,7 +1197,7 @@ static int js_link_module(JSContext *ctx, JSModuleDef *m)
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("js_link_module '%s':\n", qjs_atom_get_str(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("js_link_module '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
     }
 #endif
     assert(m->status == JS_MODULE_STATUS_UNLINKED ||
@@ -1381,7 +1381,7 @@ static void JS_LoadModuleInternal(JSContext *ctx, const char *basename,
     evaluate_resolving_funcs[0] = JS_NewCFunctionData(ctx, js_load_module_fulfilled, 0, 0, 3, func_data);
     evaluate_resolving_funcs[1] = JS_NewCFunctionData(ctx, js_load_module_rejected, 0, 0, 3, func_data);
     JS_FreeValue(ctx, func_obj);
-    ret = qjs_promise_then(ctx, evaluate_promise, 2, (JSValueConst *)evaluate_resolving_funcs);
+    ret = js_promise_then(ctx, evaluate_promise, 2, (JSValueConst *)evaluate_resolving_funcs);
     JS_FreeValue(ctx, ret);
     JS_FreeValue(ctx, evaluate_resolving_funcs[0]);
     JS_FreeValue(ctx, evaluate_resolving_funcs[1]);
@@ -1577,7 +1577,7 @@ static int gather_available_ancestors(JSContext *ctx, JSModuleDef *module,
 {
     int i;
 
-    if (qjs_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(ctx->rt, 0)) {
         qjs_throw_stack_overflow(ctx);
         return -1;
     }
@@ -1621,7 +1621,7 @@ static void js_dump_module(JSContext *ctx, const char *str, JSModuleDef *m)
 {
     char buf1[ATOM_GET_STR_BUF_SIZE];
     static const char *module_status_str[] = { "unlinked", "linking", "linked", "evaluating", "evaluating_async", "evaluated" };
-    printf("%s: %s status=%s\n", str, qjs_atom_get_str(ctx, buf1, sizeof(buf1), m->module_name), module_status_str[m->status]);
+    printf("%s: %s status=%s\n", str, JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name), module_status_str[m->status]);
 }
 #endif
 
@@ -1635,7 +1635,7 @@ static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst t
 #ifdef DUMP_MODULE_EXEC
     js_dump_module(ctx, __func__, module);
 #endif
-    if (qjs_check_stack_overflow(ctx->rt, 0))
+    if (js_check_stack_overflow(ctx->rt, 0))
         return qjs_throw_stack_overflow(ctx);
 
     if (module->status == JS_MODULE_STATUS_EVALUATED) {
@@ -1738,13 +1738,13 @@ static int js_execute_async_module(JSContext *ctx, JSModuleDef *m)
 #ifdef DUMP_MODULE_EXEC
     js_dump_module(ctx, __func__, m);
 #endif
-    promise = qjs_async_function_call(ctx, m->func_obj, JS_UNDEFINED, 0, NULL, 0);
+    promise = js_async_function_call(ctx, m->func_obj, JS_UNDEFINED, 0, NULL, 0);
     if (JS_IsException(promise))
         return -1;
     m_obj = JS_NewModuleValue(ctx, m);
     resolve_funcs[0] = JS_NewCFunctionData(ctx, js_async_module_execution_fulfilled, 0, 0, 1, (JSValueConst *)&m_obj);
     resolve_funcs[1] = JS_NewCFunctionData(ctx, js_async_module_execution_rejected, 0, 0, 1, (JSValueConst *)&m_obj);
-    ret_val = qjs_promise_then(ctx, promise, 2, (JSValueConst *)resolve_funcs);
+    ret_val = js_promise_then(ctx, promise, 2, (JSValueConst *)resolve_funcs);
     JS_FreeValue(ctx, ret_val);
     JS_FreeValue(ctx, m_obj);
     JS_FreeValue(ctx, resolve_funcs[0]);
@@ -1768,7 +1768,7 @@ static int js_execute_sync_module(JSContext *ctx, JSModuleDef *m,
         JSValue promise;
         JSPromiseStateEnum state;
 
-        promise = qjs_async_function_call(ctx, m->func_obj, JS_UNDEFINED, 0, NULL, 0);
+        promise = js_async_function_call(ctx, m->func_obj, JS_UNDEFINED, 0, NULL, 0);
         if (JS_IsException(promise))
             goto fail;
         state = JS_PromiseState(ctx, promise);
@@ -1803,7 +1803,7 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
     js_dump_module(ctx, __func__, m);
 #endif
 
-    if (qjs_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(ctx->rt, 0)) {
         qjs_throw_stack_overflow(ctx);
         *pvalue = JS_GetException(ctx);
         return -1;
