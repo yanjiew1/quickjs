@@ -121,7 +121,11 @@ QJS_INTERNAL int qjs_set_prototype_internal(JSContext *ctx,
 QJS_INTERNAL JSValue qjs_new_object_from_shape(JSContext *ctx, JSShape *shape,
                                                JSClassID class_id,
                                                JSProperty *properties);
-QJS_INTERNAL JSShape *qjs_dup_shape(JSShape *shape);
+static inline JSShape *qjs_dup_shape(JSShape *shape)
+{
+    qjs_get_ref_header(shape)->ref_count++;
+    return shape;
+}
 QJS_INTERNAL int qjs_convert_fast_array_to_array(JSContext *ctx,
                                                  JSObject *obj);
 QJS_INTERNAL int qjs_delete_property(JSContext *ctx, JSObject *obj,
@@ -135,34 +139,31 @@ QJS_INTERNAL int qjs_define_property_value_value(
     int flags);
 QJS_INTERNAL BOOL qjs_strict_equal(JSContext *ctx, JSValueConst left,
                                    JSValueConst right, int mode);
-QJS_INTERNAL BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
-                                 JSValueConst right);
-QJS_INTERNAL BOOL qjs_same_value_zero(JSContext *ctx, JSValueConst left,
-                                      JSValueConst right);
 #define QJS_EQ_STRICT 0
 #define QJS_EQ_SAME_VALUE 1
 #define QJS_EQ_SAME_VALUE_ZERO 2
 
+static inline BOOL qjs_same_value(JSContext *ctx, JSValueConst left,
+                                  JSValueConst right)
+{
+    return qjs_strict_equal(ctx, left, right, QJS_EQ_SAME_VALUE);
+}
+
+static inline BOOL qjs_same_value_zero(JSContext *ctx,
+                                       JSValueConst left,
+                                       JSValueConst right)
+{
+    return qjs_strict_equal(ctx, left, right, QJS_EQ_SAME_VALUE_ZERO);
+}
+
 /* Existing consumer bridges, owned here because they expose property logic. */
 QJS_INTERNAL JSShape *qjs_regexp_new_shape2(JSContext *ctx, JSObject *proto,
                                             int hash_size, int prop_size);
-QJS_INTERNAL JSShape *qjs_regexp_dup_shape(JSShape *shape);
 QJS_INTERNAL int qjs_regexp_add_shape_property(JSContext *ctx,
                                                JSShape **shape,
                                                JSObject *obj, JSAtom atom,
                                                int prop_flags);
-QJS_INTERNAL JSValue qjs_regexp_new_object_from_shape(JSContext *ctx,
-                                                      JSShape *shape,
-                                                      JSClassID class_id,
-                                                      JSProperty *props);
 QJS_INTERNAL JSObject *qjs_regexp_get_proto_obj(JSValueConst proto);
-QJS_INTERNAL JSValue qjs_regexp_get_property_int64(JSContext *ctx,
-                                                   JSValueConst obj,
-                                                   int64_t index);
-QJS_INTERNAL int qjs_regexp_expand_fast_array(JSContext *ctx, JSObject *obj,
-                                              uint32_t new_len);
-QJS_INTERNAL int qjs_regexp_define_property_value_int64(
-    JSContext *ctx, JSValueConst obj, int64_t index, JSValue value, int flags);
 QJS_INTERNAL int qjs_proxy_set_prototype_internal(JSContext *ctx,
                                                   JSValueConst obj,
                                                   JSValueConst proto,

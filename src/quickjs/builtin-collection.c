@@ -22,10 +22,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-allocator.h"
 #include "internal-collection.h"
 #include "internal-number.h"
 #include "internal-iterator.h"
 #include "internal-array.h"
+
+#define js_malloc_rt qjs_malloc_rt_internal
+#define js_free_rt qjs_free_rt_internal
+#define js_realloc_rt qjs_realloc_rt_internal
+#define js_malloc qjs_malloc_internal
+#define js_free qjs_free_internal
+#define js_realloc qjs_realloc_internal
 
 /* Set/Map/WeakSet/WeakMap */
 
@@ -796,7 +804,7 @@ static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
-static void js_map_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void qjs_map_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p;
     JSMapState *s;
@@ -827,7 +835,8 @@ static void js_map_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-static void js_map_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func)
+QJS_INTERNAL void qjs_map_mark(JSRuntime *rt, JSValueConst val,
+                               JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSMapState *s;
@@ -853,7 +862,7 @@ typedef struct JSMapIteratorData {
     JSMapRecord *cur_record;
 } JSMapIteratorData;
 
-static void js_map_iterator_finalizer(JSRuntime *rt, JSValue val)
+QJS_INTERNAL void qjs_map_iterator_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p;
     JSMapIteratorData *it;
@@ -871,8 +880,8 @@ static void js_map_iterator_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-static void js_map_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                 JS_MarkFunc *mark_func)
+QJS_INTERNAL void qjs_map_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                        JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSMapIteratorData *it;
@@ -1953,14 +1962,6 @@ int JS_AddIntrinsicWeakRef(JSContext *ctx)
 
 
 
-QJS_INTERNAL void qjs_map_finalizer(JSRuntime *rt, JSValue value)
-{ js_map_finalizer(rt, value); }
-QJS_INTERNAL void qjs_map_mark(JSRuntime *rt, JSValueConst value, JS_MarkFunc *mark_func)
-{ js_map_mark(rt, value, mark_func); }
-QJS_INTERNAL void qjs_map_iterator_finalizer(JSRuntime *rt, JSValue value)
-{ js_map_iterator_finalizer(rt, value); }
-QJS_INTERNAL void qjs_map_iterator_mark(JSRuntime *rt, JSValueConst value, JS_MarkFunc *mark_func)
-{ js_map_iterator_mark(rt, value, mark_func); }
 QJS_INTERNAL void qjs_map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *ref)
 { map_delete_weakrefs(rt, ref); }
 QJS_INTERNAL void qjs_weakref_delete(JSRuntime *rt, JSWeakRefHeader *ref)

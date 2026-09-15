@@ -2051,16 +2051,17 @@ static JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
-static JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv,
-                                      BOOL *pdone, int magic)
+QJS_INTERNAL JSValue qjs_array_iterator_next(JSContext *ctx,
+                                              JSValueConst this_val,
+                                              int argc, JSValueConst *argv,
+                                              BOOL *pdone, int magic)
 {
     JSArrayIteratorData *it;
     uint32_t len, idx;
     JSValue val, obj;
     JSObject *p;
 
-    it = JS_GetOpaque2(ctx, this_val, JS_CLASS_ARRAY_ITERATOR);
+    it = qjs_array_get_opaque2(ctx, this_val, JS_CLASS_ARRAY_ITERATOR);
     if (!it)
         goto fail1;
     if (JS_IsUndefined(it->obj))
@@ -2074,7 +2075,7 @@ static JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
         }
         len = p->u.array.count;
     } else {
-        if (qjs_get_length32(ctx, &len, it->obj)) {
+        if (qjs_array_get_length32(ctx, &len, it->obj)) {
         fail1:
             *pdone = FALSE;
             return JS_EXCEPTION;
@@ -2093,7 +2094,7 @@ static JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
     if (it->kind == JS_ITERATOR_KIND_KEY) {
         return JS_NewUint32(ctx, idx);
     } else {
-        val = JS_GetPropertyUint32(ctx, it->obj, idx);
+        val = qjs_get_property_value(ctx, it->obj, JS_NewUint32(ctx, idx));
         if (JS_IsException(val))
             return JS_EXCEPTION;
         if (it->kind == JS_ITERATOR_KIND_VALUE) {
@@ -3232,7 +3233,7 @@ static const JSCFunctionListEntry js_array_proto_funcs[] = {
 };
 
 static const JSCFunctionListEntry js_array_iterator_proto_funcs[] = {
-    JS_ITERATOR_NEXT_DEF("next", 0, js_array_iterator_next, 0 ),
+    JS_ITERATOR_NEXT_DEF("next", 0, qjs_array_iterator_next, 0 ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Array Iterator", JS_PROP_CONFIGURABLE ),
 };
 
@@ -3298,11 +3299,6 @@ QJS_INTERNAL JSValue qjs_json_array_push(JSContext *ctx,
 QJS_INTERNAL JSValue qjs_array_push(JSContext *ctx, JSValueConst this_val,
                                     int argc, JSValueConst *argv, int magic)
 { return js_array_push(ctx, this_val, argc, argv, magic); }
-QJS_INTERNAL JSValue qjs_array_iterator_next(JSContext *ctx,
-                                             JSValueConst this_val,
-                                             int argc, JSValueConst *argv,
-                                             BOOL *done, int magic)
-{ return js_array_iterator_next(ctx, this_val, argc, argv, done, magic); }
 QJS_INTERNAL JSValue qjs_iterator_proto_iterator(JSContext *ctx,
                                                  JSValueConst this_val,
                                                  int argc,

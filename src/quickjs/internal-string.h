@@ -26,6 +26,7 @@
 #define QUICKJS_INTERNAL_STRING_H
 
 #include "internal-runtime.h"
+#include "internal-allocator.h"
 
 #define JS_ATOM_TAG_INT (1U << 31)
 #define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
@@ -44,6 +45,27 @@ typedef struct StringBuffer {
 static inline BOOL qjs_atom_is_tagged_int(JSAtom atom)
 {
     return (atom & JS_ATOM_TAG_INT) != 0;
+}
+
+static inline BOOL qjs_atom_is_const(JSAtom atom)
+{
+#if defined(DUMP_LEAKS) && DUMP_LEAKS > 1
+    return (int32_t)atom <= 0;
+#else
+    return (int32_t)atom < JS_ATOM_END;
+#endif
+}
+
+QJS_INTERNAL void qjs_free_atom_struct(JSRuntime *rt, JSAtomStruct *atom);
+
+static inline void qjs_free_atom(JSContext *ctx, JSAtom atom)
+{
+    if (!qjs_atom_is_const(atom)) {
+        JSAtomStruct *str = ctx->rt->atom_array[atom];
+
+        if (--qjs_get_ref_header(str)->ref_count <= 0)
+            qjs_free_atom_struct(ctx->rt, str);
+    }
 }
 
 static inline JSAtom qjs_atom_from_uint32(uint32_t value)
@@ -118,11 +140,60 @@ static inline BOOL qjs_atom_is_string(JSContext *ctx, JSAtom atom)
     return qjs_atom_get_kind(ctx, atom) == JS_ATOM_KIND_STRING;
 }
 
-QJS_INTERNAL JSAtom qjs_dup_atom_rt(JSRuntime *rt, JSAtom atom);
+static inline JSAtom qjs_dup_atom_rt(JSRuntime *rt, JSAtom atom)
+{
+    if (!qjs_atom_is_const(atom))
+        qjs_get_ref_header(rt->atom_array[atom])->ref_count++;
+    return atom;
+}
+
+static inline JSAtom qjs_dup_atom(JSContext *ctx, JSAtom atom)
+{
+    return qjs_dup_atom_rt(ctx->rt, atom);
+}
+
+static inline void qjs_free_atom_rt(JSRuntime *rt, JSAtom atom)
+{
+    if (!qjs_atom_is_const(atom)) {
+        JSAtomStruct *str = rt->atom_array[atom];
+
+        if (--qjs_get_ref_header(str)->ref_count <= 0)
+            qjs_free_atom_struct(rt, str);
+    }
+}
 QJS_INTERNAL JSAtom qjs_new_atom_str(JSContext *ctx, JSString *str);
 QJS_INTERNAL JSAtom qjs_new_atom_int64(JSContext *ctx, int64_t value);
-QJS_INTERNAL JSString *qjs_alloc_string(JSContext *ctx, int max_len,
-                                       int is_wide_char);
+static inline JSString *qjs_alloc_string_rt(JSRuntime *rt, int max_len,
+                                            int is_wide_char)
+{
+    JSString *str = qjs_malloc_rt_internal(
+        rt, sizeof(JSString) + (max_len << is_wide_char) + 1 - is_wide_char);
+
+    if (unlikely(!str))
+        return NULL;
+    qjs_get_ref_header(str)->ref_count = 1;
+    str->is_wide_char = is_wide_char;
+    str->len = max_len;
+    str->atom_type = 0;
+    str->hash = 0;
+    str->hash_next = 0;
+#ifdef DUMP_LEAKS
+    list_add_tail(&str->link, &rt->string_list);
+#endif
+    return str;
+}
+
+static inline JSString *qjs_alloc_string(JSContext *ctx, int max_len,
+                                         int is_wide_char)
+{
+    JSString *str = qjs_alloc_string_rt(ctx->rt, max_len, is_wide_char);
+
+    if (unlikely(!str)) {
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
+    return str;
+}
 QJS_INTERNAL void qjs_free_string_zero_ref(JSRuntime *rt, JSString *str);
 
 /* Same as JS_FreeValueRT(), but optimized for a known string value. */
@@ -134,7 +205,29 @@ static inline void qjs_free_string(JSRuntime *rt, JSString *str)
 
 QJS_INTERNAL int qjs_atom_string_init_runtime(JSRuntime *rt);
 QJS_INTERNAL void qjs_atom_string_free_runtime(JSRuntime *rt);
-QJS_INTERNAL void qjs_atom_string_free_value_rt(JSRuntime *rt, JSValue value);
+static inline void qjs_atom_string_free_value_rt(JSRuntime *rt, JSValue value)
+{
+    uint32_t tag = JS_VALUE_GET_TAG(value);
+
+    if (tag == JS_TAG_STRING || tag == JS_TAG_SYMBOL) {
+        JSString *str = JS_VALUE_GET_PTR(value);
+        if (str->atom_type) {
+            qjs_free_atom_struct(rt, str);
+        } else {
+#ifdef DUMP_LEAKS
+            list_del(&str->link);
+#endif
+            qjs_free_rt_internal(rt, str);
+        }
+    } else if (tag == JS_TAG_STRING_ROPE) {
+        JSStringRope *rope = JS_VALUE_GET_STRING_ROPE(value);
+        JS_FreeValueRT(rt, rope->left);
+        JS_FreeValueRT(rt, rope->right);
+        qjs_free_rt_internal(rt, rope);
+    } else {
+        abort();
+    }
+}
 QJS_INTERNAL void qjs_dump_atoms(JSRuntime *rt);
 QJS_INTERNAL void qjs_atom_string_compute_memory_usage(
     JSRuntime *rt, JSMemoryUsage *stats);
@@ -229,30 +322,84 @@ static inline int qjs_atom_is_numeric_index(JSContext *ctx, JSAtom atom)
 }
 QJS_INTERNAL BOOL qjs_atom_symbol_has_description(JSContext *ctx,
                                                   JSAtom atom);
+QJS_INTERNAL int qjs_string_buffer_init2(JSContext *ctx, StringBuffer *buf,
+                                         int size, int is_wide);
 QJS_INTERNAL int qjs_string_buffer_init(JSContext *ctx, StringBuffer *buf,
                                         int size);
-QJS_INTERNAL void qjs_string_buffer_free(StringBuffer *buf);
+static inline void qjs_string_buffer_free(StringBuffer *buf)
+{
+    qjs_free_internal(buf->ctx, buf->str);
+    buf->str = NULL;
+}
 QJS_INTERNAL int qjs_string_buffer_putc8(StringBuffer *buf, uint32_t c);
-QJS_INTERNAL int qjs_string_buffer_putc(StringBuffer *buf, uint32_t c);
+QJS_INTERNAL int qjs_string_buffer_putc_slow(StringBuffer *buf, uint32_t c);
+static inline int qjs_string_buffer_putc(StringBuffer *buf, uint32_t c)
+{
+    if (likely(buf->len < buf->size)) {
+        if (buf->is_wide_char) {
+            if (c < 0x10000) {
+                buf->str->u.str16[buf->len++] = c;
+                return 0;
+            } else if (likely((buf->len + 1) < buf->size)) {
+                buf->str->u.str16[buf->len++] = get_hi_surrogate(c);
+                buf->str->u.str16[buf->len++] = get_lo_surrogate(c);
+                return 0;
+            }
+        } else if (c < 0x100) {
+            buf->str->u.str8[buf->len++] = c;
+            return 0;
+        }
+    }
+    return qjs_string_buffer_putc_slow(buf, c);
+}
 QJS_INTERNAL JSValue qjs_string_buffer_end(StringBuffer *buf);
 QJS_INTERNAL int qjs_string_find_invalid_codepoint(JSString *str);
 QJS_INTERNAL JSAtom qjs_get_atom_index(JSRuntime *rt, JSAtomStruct *str);
 QJS_INTERNAL JSValue qjs_new_symbol(JSContext *ctx, JSString *str,
                                     int atom_type);
-QJS_INTERNAL JSValue qjs_new_string8_len(JSContext *ctx, const char *buf,
-                                         int len);
+static inline JSValue qjs_new_string8_len(JSContext *ctx, const char *buf,
+                                          int len)
+{
+    JSString *str;
+
+    if (len <= 0)
+        return JS_AtomToString(ctx, JS_ATOM_empty_string);
+    str = qjs_alloc_string(ctx, len, 0);
+    if (!str)
+        return JS_EXCEPTION;
+    memcpy(str->u.str8, buf, len);
+    str->u.str8[len] = '\0';
+    return JS_MKPTR(JS_TAG_STRING, str);
+}
 QJS_INTERNAL JSValue qjs_new_string8(JSContext *ctx, const char *buf);
 QJS_INTERNAL JSValue qjs_new_string16_len(JSContext *ctx,
                                           const uint16_t *buf, int len);
 QJS_INTERNAL JSValue qjs_new_string_char(JSContext *ctx, uint16_t c);
 QJS_INTERNAL JSValue qjs_sub_string(JSContext *ctx, JSString *str,
                                     int start, int end);
-QJS_INTERNAL int qjs_string_buffer_init2(JSContext *ctx, StringBuffer *buf,
-                                         int size, int is_wide);
 QJS_INTERNAL int qjs_string_buffer_putc16(StringBuffer *buf, uint32_t c);
 QJS_INTERNAL int qjs_string_buffer_write8(StringBuffer *buf,
                                           const uint8_t *str, int len);
-QJS_INTERNAL int qjs_string_getc(const JSString *str, int *index);
+static inline int qjs_string_getc(const JSString *str, int *index)
+{
+    int pos = *index;
+    int c, c1;
+
+    if (str->is_wide_char) {
+        c = str->u.str16[pos++];
+        if (is_hi_surrogate(c) && pos < str->len) {
+            c1 = str->u.str16[pos];
+            if (is_lo_surrogate(c1)) {
+                c = from_surrogate(c, c1);
+                pos++;
+            }
+        }
+    } else {
+        c = str->u.str8[pos++];
+    }
+    *index = pos;
+    return c;
+}
 QJS_INTERNAL int qjs_string_buffer_puts8(StringBuffer *buf, const char *str);
 QJS_INTERNAL int qjs_string_buffer_concat(StringBuffer *buf,
                                           const JSString *str,
@@ -308,36 +455,12 @@ QJS_INTERNAL JSValue qjs_to_locale_string_free(JSContext *ctx,
 QJS_INTERNAL JSValue qjs_to_string_check_object(JSContext *ctx,
                                                 JSValueConst value);
 
-QJS_INTERNAL JSValue qjs_regexp_new_string8_len(JSContext *ctx,
-                                                const char *buf, int len);
-QJS_INTERNAL JSValue qjs_regexp_new_string8(JSContext *ctx, const char *buf);
-QJS_INTERNAL JSValue qjs_regexp_sub_string(JSContext *ctx, JSString *str,
-                                           int start, int end);
-QJS_INTERNAL int qjs_regexp_string_buffer_init2(JSContext *ctx,
-                                                StringBuffer *buf, int size,
-                                                int is_wide);
-QJS_INTERNAL int qjs_regexp_string_buffer_putc16(StringBuffer *buf,
-                                                 uint32_t c);
-QJS_INTERNAL int qjs_regexp_string_getc(const JSString *str, int *index);
-QJS_INTERNAL int qjs_regexp_string_buffer_puts8(StringBuffer *buf,
-                                                const char *str);
-QJS_INTERNAL int qjs_regexp_string_buffer_concat(StringBuffer *buf,
-                                                 const JSString *str,
-                                                 int from, int to);
-QJS_INTERNAL int qjs_regexp_string_buffer_concat_value(StringBuffer *buf,
-                                                       JSValueConst value);
-QJS_INTERNAL int qjs_regexp_string_buffer_concat_value_free(
-    StringBuffer *buf, JSValue value);
-QJS_INTERNAL JSValue qjs_regexp_concat_string3(JSContext *ctx,
-                                               const char *prefix,
-                                               JSValue str,
-                                               const char *suffix);
 QJS_INTERNAL int qjs_regexp_string_indexof_char(JSString *str, int c,
                                                 int from);
 QJS_INTERNAL int64_t qjs_regexp_string_advance_index(JSString *str,
                                                      int64_t index,
                                                      BOOL unicode);
-QJS_INTERNAL int qjs_regexp_string_get_substitution(
+QJS_INTERNAL int qjs_string_get_substitution(
     JSContext *ctx, StringBuffer *buf, JSValueConst matched, JSString *str,
     uint32_t position, JSValueConst captures_value,
     JSValueConst named_captures, JSValueConst replacement,

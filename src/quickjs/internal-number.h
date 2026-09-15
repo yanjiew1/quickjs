@@ -40,8 +40,15 @@ QJS_INTERNAL JSValue qjs_to_primitive(JSContext *ctx, JSValueConst value,
 QJS_INTERNAL JSValue qjs_atof(JSContext *ctx, const char *str,
                               const char **end, int radix, int flags);
 QJS_INTERNAL JSBigInt *qjs_bigint_new(JSContext *ctx, int len);
-QJS_INTERNAL JSBigInt *qjs_bigint_set_short(JSBigIntBuf *buf,
-                                            JSValueConst value);
+static inline JSBigInt *qjs_bigint_set_short(JSBigIntBuf *buf,
+                                             JSValueConst value)
+{
+    JSBigInt *result = (JSBigInt *)buf->big_int_buf;
+
+    result->len = 1;
+    result->tab[0] = JS_VALUE_GET_SHORT_BIG_INT(value);
+    return result;
+}
 static inline int qjs_bigint_sign(const JSBigInt *value)
 {
     return (value->tab[value->len - 1] >> (JS_LIMB_BITS - 1)) != 0;
@@ -58,8 +65,57 @@ QJS_INTERNAL JSValue qjs_to_numeric(JSContext *ctx, JSValueConst value);
 QJS_INTERNAL JSValue qjs_to_number_free(JSContext *ctx, JSValue value);
 QJS_INTERNAL JSValue qjs_to_number(JSContext *ctx, JSValueConst value);
 QJS_INTERNAL int qjs_to_bool_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL int qjs_to_int32_free(JSContext *ctx, int32_t *result,
-                                   JSValue value);
+static inline int qjs_to_int32_free(JSContext *ctx, int32_t *result,
+                                    JSValue value)
+{
+    uint32_t tag;
+    int32_t ret;
+
+ redo:
+    tag = JS_VALUE_GET_NORM_TAG(value);
+    switch(tag) {
+    case JS_TAG_INT:
+    case JS_TAG_BOOL:
+    case JS_TAG_NULL:
+    case JS_TAG_UNDEFINED:
+        ret = JS_VALUE_GET_INT(value);
+        break;
+    case JS_TAG_FLOAT64:
+        {
+            JSFloat64Union u;
+            double d;
+            int e;
+
+            d = JS_VALUE_GET_FLOAT64(value);
+            u.d = d;
+            e = (u.u64 >> 52) & 0x7ff;
+            if (likely(e <= (1023 + 30))) {
+                ret = (int32_t)d;
+            } else if (e <= (1023 + 30 + 53)) {
+                uint64_t v;
+
+                v = (u.u64 & (((uint64_t)1 << 52) - 1)) |
+                    ((uint64_t)1 << 52);
+                v = v << ((e - 1023) - 52 + 32);
+                ret = v >> 32;
+                if (u.u64 >> 63)
+                    ret = -ret;
+            } else {
+                ret = 0;
+            }
+        }
+        break;
+    default:
+        value = qjs_to_number_free(ctx, value);
+        if (JS_IsException(value)) {
+            *result = 0;
+            return -1;
+        }
+        goto redo;
+    }
+    *result = ret;
+    return 0;
+}
 QJS_INTERNAL int qjs_to_float64_free_slow(JSContext *ctx, double *result,
                                           JSValue value);
 static inline int qjs_to_float64_free(JSContext *ctx, double *result,

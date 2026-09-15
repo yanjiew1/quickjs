@@ -50,8 +50,23 @@ QJS_INTERNAL JSValue qjs_iterator_proto_iterator(JSContext *ctx,
                                                  JSValueConst this_val,
                                                  int argc,
                                                  JSValueConst *argv);
-QJS_INTERNAL BOOL qjs_get_fast_array(JSContext *ctx, JSValueConst obj,
-                                     JSValue **values, uint32_t *count);
+/* This representation check was directly visible to every monolithic caller.
+   Keep it inline across the split so array algorithms do not gain a runtime
+   forwarding boundary. */
+static inline BOOL qjs_get_fast_array(JSContext *ctx, JSValueConst obj,
+                                      JSValue **values, uint32_t *count)
+{
+    (void)ctx;
+    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
+        JSObject *p = JS_VALUE_GET_OBJ(obj);
+        if (p->class_id == JS_CLASS_ARRAY && p->fast_array) {
+            *count = p->u.array.count;
+            *values = p->u.array.u.values;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 QJS_INTERNAL int qjs_copy_data_properties(JSContext *ctx,
                                           JSValueConst target,
                                           JSValueConst source,
