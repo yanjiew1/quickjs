@@ -52,6 +52,15 @@ static inline BOOL qjs_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 #endif
 }
 
+QJS_INTERNAL __exception int qjs_poll_interrupts_slow(JSContext *ctx);
+
+static inline __exception int qjs_poll_interrupts(JSContext *ctx)
+{
+    if (unlikely(--ctx->interrupt_counter <= 0))
+        return qjs_poll_interrupts_slow(ctx);
+    return 0;
+}
+
 static inline BOOL qjs_is_be(void)
 {
     union {
@@ -90,5 +99,20 @@ QJS_INTERNAL void qjs_build_backtrace(JSContext *ctx, JSValueConst error_obj,
 QJS_INTERNAL JSValue qjs_throw_error2(JSContext *ctx, JSErrorEnum error_num,
                                       const char *fmt, va_list ap,
                                       BOOL add_backtrace);
+QJS_INTERNAL BOOL qjs_is_backtrace_needed(JSContext *ctx,
+                                          JSValueConst obj);
+QJS_INTERNAL JSValue qjs_throw_reference_error_not_defined(
+    JSContext *ctx, JSAtom atom);
+QJS_INTERNAL JSValue qjs_throw_reference_error_uninitialized(
+    JSContext *ctx, JSAtom atom);
+QJS_INTERNAL JSValue qjs_throw_reference_error_uninitialized2(
+    JSContext *ctx, JSFunctionBytecode *bytecode, int index, BOOL is_arg);
+QJS_INTERNAL JSValue qjs_throw_syntax_error_var_redeclaration(
+    JSContext *ctx, JSAtom atom);
+QJS_INTERNAL int qjs_throw_type_error_read_only(
+    JSContext *ctx, int flags, JSAtom atom);
+QJS_INTERNAL JSValue qjs_throw_type_error_not_constructor(
+    JSContext *ctx, JSValueConst value);
+QJS_INTERNAL JSValue qjs_throw_type_error_not_object(JSContext *ctx);
 
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

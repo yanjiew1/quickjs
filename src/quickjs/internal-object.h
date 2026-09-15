@@ -30,6 +30,7 @@
 QJS_INTERNAL int qjs_set_object_data(JSContext *ctx, JSValueConst obj,
                                   JSValue val);
 QJS_INTERNAL JSValue qjs_to_object(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue qjs_to_object_free(JSContext *ctx, JSValue value);
 QJS_INTERNAL JSValue qjs_to_string_free(JSContext *ctx, JSValue value);
 QJS_INTERNAL __exception int qjs_get_length32(JSContext *ctx, uint32_t *pres,
                                              JSValueConst obj);
