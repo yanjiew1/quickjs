@@ -1,0 +1,54 @@
+{
+  "base": "b63ab025d402e46c647a8a239bffe72a58f73a35",
+  "upstream": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
+  "source_digest": "91cbbca8ec7c3256a342aeaa2d526374cfb446852fd46812ae1f48c79c3bed29",
+  "environment": "local Linux x86_64 container",
+  "compilers": {
+    "gcc": "gcc (Debian 14.2.0-19) 14.2.0",
+    "clang": "clang version 17.0.0 (https://github.com/swiftlang/llvm-project.git 10999b6d034fe318f3d56c83bddb6572593a8bb0)"
+  },
+  "results": {
+    "gcc_non_lto_werror": {
+      "build": "PASS",
+      "built_in_tests": "PASS",
+      "exports_match_baseline": true,
+      "exported_symbol_count": 289
+    },
+    "clang_non_lto_werror": {
+      "build": "PASS",
+      "built_in_tests": "PASS"
+    },
+    "gcc_lto_werror": {
+      "build": "PASS",
+      "built_in_tests": "PASS"
+    },
+    "clang_lto_werror": {
+      "build": "PASS",
+      "built_in_tests": "PASS",
+      "linker": "LLD",
+      "targets": [
+        "qjs",
+        "qjsc",
+        "run-test262",
+        "libquickjs.a",
+        "libquickjs.lto.a"
+      ],
+      "link_flags": "-g -flto -fuse-ld=lld",
+      "note": "Core targets and built-in suite; standalone qjsc-compiled C executable examples were not part of this LTO check."
+    },
+    "gcc_asan_werror": {
+      "build": "PASS",
+      "built_in_tests": "PASS",
+      "ASAN_OPTIONS": "halt_on_error=1"
+    },
+    "gcc_ubsan_werror": {
+      "build": "PASS",
+      "built_in_tests": "PASS",
+      "UBSAN_OPTIONS": "halt_on_error=1"
+    }
+  },
+  "performance_tested": false,
+  "scope": "Engine src/quickjs; supporting libraries and tools retain their earlier modularization.",
+  "diff_check": "Raw diff check reports restored upstream trailing whitespace. The check with core.whitespace=-blank-at-eol passes. Literal upstream body/data matching is audited separately.",
+  "logs": "Local logs are supplied with the split-05 validation download; full Test262 and compiler-paired exports are recorded separately by the GitHub workflow."
+}

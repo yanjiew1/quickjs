@@ -1,83 +1,299 @@
-name: split-05 publish validated source
-
-on:
-  push:
-    branches: [split-05]
-    paths: ['.github/workflows/ci.yml']
+name: ci
 
 permissions:
-  contents: write
-  actions: read
+  contents: read
 
-concurrency:
-  group: split05-audited-migration
-  cancel-in-progress: false
+on:
+  pull_request:
+    paths:
+      - '**'
+      - '!.gitignore'
+      - '!LICENSE'
+      - '!TODO'
+      - '!doc/**'
+      - '!examples/**'
+      - '.github/workflows/ci.yml'
+  push:
+    branches:
+      - '*'
 
 jobs:
-  publish-validated-source:
-    if: github.ref == 'refs/heads/split-05'
+  linux:
+    name: Linux (Ubuntu)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    strategy:
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - name: Retrieve the completed correctness comparison
-        uses: actions/download-artifact@v4
-        with:
-          name: split05-correctness-evidence
-          run-id: 35116500029
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/split05-validated
-      - name: Reproduce exactly the source that passed the comparison
+          submodules: true
+      - name: Build
         run: |
-          test ! -e src/quickjs/internal-canonical.h
-          python3 tools/split05.py
-          python3 tools/check_split05.py --expect-digest 91cbbca8ec7c3256a342aeaa2d526374cfb446852fd46812ae1f48c79c3bed29 --report "$RUNNER_TEMP/split05-publish-audit.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          evidence = Path(os.environ['RUNNER_TEMP']) / 'split05-validated'
-          report = json.loads((evidence / 'validation.json').read_text())
-          previous_audit = json.loads((evidence / 'source-audit.json').read_text())
-          audit = json.loads((Path(os.environ['RUNNER_TEMP']) / 'split05-publish-audit.json').read_text())
-          assert report['success'] and not report['performance_tested']
-          assert report['base'] == 'b63ab025d402e46c647a8a239bffe72a58f73a35'
-          assert not audit['errors'] and not previous_audit['errors']
-          assert audit['source_manifest'] == previous_audit['source_manifest']
-          for compiler in ('gcc', 'clang'):
-              result = report['compilers'][compiler]
-              assert result['exports_match'] and result['test262_failure_sets_match']
-              assert result['baseline']['test262'] == result['candidate']['test262']
-              assert result['candidate']['test262']['total'] >= 50000
-              assert result['candidate']['build'] == result['candidate']['built_in_tests'] == 'PASS'
-              assert (evidence / (compiler + '-baseline-test262.errors')).read_bytes() == (evidence / (compiler + '-candidate-test262.errors')).read_bytes()
-          report['validation_workflow_run'] = 35116500029
-          report['validation_artifact_id'] = 10454239335
-          report['source_digest'] = audit['source_digest']
-          for key in ('function_definitions', 'unique_functions', 'data_definitions', 'private_header_function_definitions'):
-              report[key] = audit[key]
-          report['source_fidelity_errors'] = audit['errors']
-          Path('SPLIT-05-VALIDATION.json').write_text(json.dumps(report, indent=2) + '\n')
-          PY
-      - name: Publish source only; workflow changes are handled separately
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+      - name: Stats
         run: |
-          git add src/quickjs quickjs.h Makefile split05-inventory.json SPLIT-05-VALIDATION.json
-          git diff --cached --check > "$RUNNER_TEMP/split05-publish-diff.log" 2>&1 || true
-          git -c core.whitespace=-blank-at-eol diff --cached --check
-          test "$(git ls-remote origin refs/heads/split-05 | cut -f1)" = "$GITHUB_SHA"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'refactor(split-05): restore upstream bodies and split engine ownership'
-          git push origin HEAD:refs/heads/split-05
-          git rev-parse HEAD | tee "$RUNNER_TEMP/split05-result-commit.txt"
-      - name: Upload publication evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+          ./qjs -qd
+      - name: Run built-in tests
+        run: |
+          make test
+      - name: Run test262
+        run: |
+          make test2-bootstrap
+          make test2
+
+  linux-lto:
+    name: Linux LTO
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: split05-publication-evidence
-          path: |
-            ${{ runner.temp }}/split05-publish-audit.json
-            ${{ runner.temp }}/split05-publish-diff.log
-            ${{ runner.temp }}/split05-result-commit.txt
-          retention-days: 30
+          submodules: true
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y
+      - name: Run built-in tests
+        run: |
+          make test
+
+  linux-32bit:
+    name: Linux 32bit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install gcc-multilib
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-multilib
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_M32=y
+      - name: Run built-in tests
+        run: |
+          make CONFIG_M32=y test
+      - name: Run test262
+        run: |
+          make test2-bootstrap
+          make CONFIG_M32=y test2
+
+  linux-asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
+      - name: Run built-in tests
+        env:
+          ASAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_ASAN=y test
+
+  linux-msan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build
+        env:
+          CC: clang
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_MSAN=y CONFIG_CLANG=y
+      - name: Run built-in tests
+        env:
+          MSAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_MSAN=y CONFIG_CLANG=y test
+
+  linux-ubsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
+      - name: Run built-in tests
+        env:
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_UBSAN=y test
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+      - name: Stats
+        run: |
+          ./qjs -qd
+      - name: Run built-in tests
+        run: |
+          make test
+      - name: Run test262
+        run: |
+          make test2-bootstrap
+          make test2
+
+  macos-asan:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
+      - name: Run built-in tests
+        env:
+          ASAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_ASAN=y test
+
+  macos-ubsan:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
+      - name: Run built-in tests
+        env:
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_UBSAN=y test
+
+  freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + test
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          copyback: false
+          mem: 16384
+          prepare: |
+            pkg install -y gmake
+          run: |
+            gmake
+            ./qjs -qd
+            gmake test
+
+  cosmopolitan:
+    name: Cosmopolitan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install Cosmopolitan
+        run: |
+          mkdir ~/cosmocc
+          cd ~/cosmocc
+          wget https://cosmo.zip/pub/cosmocc/cosmocc.zip
+          unzip cosmocc.zip
+          echo "$HOME/cosmocc/bin" >> "$GITHUB_PATH"
+      - name: Build
+        run: |
+          make CONFIG_COSMO=y
+      - name: Run built-in tests
+        run: |
+          make CONFIG_COSMO=y test
+      - name: Run test262
+        run: |
+          make test2-bootstrap
+          make CONFIG_COSMO=y test2
+
+  mingw-windows:
+    name: MinGW Windows target
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install MinGW and Wine
+        run: |
+          sudo apt update
+          sudo apt install -y wine mingw-w64
+          cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll .
+      - name: Setup Wine
+        run: |
+          wine --version
+          winecfg /v
+          # binfmt doesn't work in GitHub Actions
+          #sudo apt install -y binfmt-support wine-binfmt
+          #echo ":Wine:M::MZ::/usr/bin/wine:" > /etc/binfmt.d/wine.conf
+          #sudo systemctl restart systemd-binfmt
+      - name: Build
+        run: |
+          make CONFIG_WIN32=y
+      - name: Run built-in tests
+        run: |
+          # If binfmt support worked, could just run `make CONFIG_WIN32=y test`
+          make WINE=/usr/bin/wine CONFIG_WIN32=y test
+
+  windows-msys:
+    name: Windows MSYS2
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: git make mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
+      - name: Build
+        run: |
+           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+      - name: Stats
+        run: |
+          ./qjs -qd
+      - name: Run built-in tests
+        run: |
+          make test
+
+
+  qemu-alpine:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/386
+          - linux/riscv64
+          - linux/arm64
+          - linux/arm/v6
+          - linux/arm/v7
+          - linux/s390x
+          - linux/ppc64le
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: recursive
+      - name: Get qemu
+        # See https://github.com/tonistiigi/binfmt/issues/215#issuecomment-2613004741
+        run: docker run --privileged --rm tonistiigi/binfmt:master --install all
+      - name: Run tests on ${{ matrix.platform }}
+        run: docker run --rm --interactive --mount type=bind,source=$(pwd),target=/host --platform ${{ matrix.platform }} alpine sh -c "apk add git patch make gcc libc-dev && cd /host && make test"
