@@ -22,9 +22,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
 #include "internal-array.h"
+#include "internal-array-algorithm.h"
+#include "internal-base.h"
+#include "internal-builtin.h"
+#include "internal-collection.h"
+#include "internal-function.h"
+#include "internal-iterator.h"
+#include "internal-json.h"
+#include "internal-number.h"
+#include "internal-object.h"
 #include "internal-primitive.h"
+#include "internal-property.h"
+#include "internal-proxy.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 
 QJS_INTERNAL void js_array_finalizer(JSRuntime *rt, JSValue val)
 {

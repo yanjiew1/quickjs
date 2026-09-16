@@ -22,10 +22,11 @@ redesigned in this pass.
   remaps. The upstream public `quickjs.h`, including its original inline bodies,
   is preserved byte-for-byte.
 - The full `JS_CallInternal()` interpreter body remains intact in one `.c` file.
-- The temporary broad private interface in `internal-canonical.h` is intentional.
-  It exposes canonical upstream functions/tables instead of inventing adapters.
-  Necessary shared types are in private headers. Narrowing this interface is a
-  separate later task, as is introducing measured header inlining.
+- Cross-TU declarations are distributed among owner-specific private headers;
+  there is no umbrella `internal-canonical.h`. Existing header ownership is
+  preserved where it already existed, and declarations introduced by the split
+  live with their implementation owner. Shared private types required by more
+  than one owner live in `internal-types.h`.
 
 `JS_GetOpaque2()` is the ordinary upstream implementation in `object.c`; there
 is no `JS_GetOpaque2_inline` or custom opaque fast path. The same restoration
@@ -44,8 +45,10 @@ applies to allocator/atom/free helpers and GC helper twins.
 | `function.c` | Functions, closures/VarRefs, arguments, calls and async/generator execution |
 | `iterator.c` | Iterator protocol, for-in enumeration setup and iterator lifetime |
 
-The normal Makefile builds the new `.c` files independently. The migration
-scripts are not part of compilation and do not implement an amalgamation.
+The new implementation owners have matching private declaration headers where
+needed (for example `internal-shape.h` and `internal-bigint.h`). The normal
+Makefile builds the new `.c` files independently. The migration scripts are not
+part of compilation and do not implement an amalgamation.
 
 ## Verification and reproduction
 
@@ -61,6 +64,11 @@ sets, and the complete accepted Test262 configuration. Test262 failure lists and
 case counts must match the baseline exactly; known failures are not described as
 passing tests. Detailed logs and source-audit records are workflow artifacts.
 No benchmark or performance-regression test is run.
+
+After removing the temporary umbrella header, the owner-header distribution and
+include cleanup were re-audited for source fidelity and rebuilt with both GCC and
+Clang under `CONFIG_WERROR=y`; both built-in test runs passed. No function body or
+call topology was changed by that cleanup.
 
 `git diff --check` can report upstream trailing whitespace restored with verbatim
 bodies. This is intentionally not removed by rewriting those bodies. The

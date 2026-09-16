@@ -54,4 +54,14 @@ QJS_INTERNAL int js_resolve_module(JSContext *ctx, JSModuleDef *m);
 QJS_INTERNAL JSValue js_import_meta(JSContext *ctx);
 QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+extern QJS_INTERNAL const JSClassExoticMethods js_module_ns_exotic_methods;
+
+QJS_INTERNAL int js_create_module_function(JSContext *ctx, JSModuleDef *m);
+
+QJS_INTERNAL JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
+
+QJS_INTERNAL int js_link_module(JSContext *ctx, JSModuleDef *m);
+
 #endif /* QUICKJS_INTERNAL_MODULE_H */

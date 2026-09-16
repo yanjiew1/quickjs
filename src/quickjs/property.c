@@ -22,7 +22,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-property.h"
+#include "internal-array.h"
+#include "internal-base.h"
+#include "internal-builtin.h"
+#include "internal-collection.h"
+#include "internal-function.h"
+#include "internal-iterator.h"
+#include "internal-module.h"
+#include "internal-number.h"
+#include "internal-object.h"
+#include "internal-primitive.h"
+#include "internal-runtime.h"
+#include "internal-shape.h"
+#include "internal-string.h"
 
 QJS_INTERNAL void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj)
 {

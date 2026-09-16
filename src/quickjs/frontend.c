@@ -22,8 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
 #include "internal-frontend.h"
+#include "internal-function.h"
+#include "internal-module.h"
+#include "internal-number.h"
+#include "internal-property.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 
 /* JS parser */
 

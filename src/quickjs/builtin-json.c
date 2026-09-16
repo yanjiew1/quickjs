@@ -22,8 +22,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
 #include "internal-json.h"
+#include "internal-array.h"
+#include "internal-builtin.h"
+#include "internal-frontend.h"
+#include "internal-function.h"
+#include "internal-number.h"
+#include "internal-object.h"
+#include "internal-primitive.h"
+#include "internal-property.h"
+#include "internal-proxy.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 
 /* JSON */
 

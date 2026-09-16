@@ -23,8 +23,23 @@
  * THE SOFTWARE.
  */
 
-#include "internal-canonical.h"
 #include "internal-base.h"
+#include "internal-array.h"
+#include "internal-async.h"
+#include "internal-builtin.h"
+#include "internal-collection.h"
+#include "internal-frontend.h"
+#include "internal-function.h"
+#include "internal-global.h"
+#include "internal-iterator.h"
+#include "internal-json.h"
+#include "internal-math.h"
+#include "internal-number.h"
+#include "internal-object.h"
+#include "internal-primitive.h"
+#include "internal-property.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 
 static __exception int JS_DefinePropertyDesc(JSContext *ctx, JSValueConst obj,
                                              JSAtom prop, JSValueConst desc,

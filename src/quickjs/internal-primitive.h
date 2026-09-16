@@ -57,4 +57,36 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char
                                   const JSCFunctionListEntry *proto_fields, int n_proto_fields,
                                   int flags);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+extern QJS_INTERNAL const JSCFunctionListEntry js_number_funcs[14];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_number_proto_funcs[6];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_boolean_proto_funcs[2];
+
+extern QJS_INTERNAL const JSClassExoticMethods js_string_exotic_methods;
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_string_funcs[3];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_string_proto_funcs[50];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_symbol_proto_funcs[5];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_symbol_funcs[15];
+
+QJS_INTERNAL JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+
+QJS_INTERNAL JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+
+QJS_INTERNAL JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+
+QJS_INTERNAL JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+
 #endif /* QUICKJS_INTERNAL_PRIMITIVE_H */

@@ -147,4 +147,18 @@ QJS_INTERNAL int js_string_GetSubstitution(JSContext *ctx,
                                      uint8_t **captures,
                                      uint32_t captures_len);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+QJS_INTERNAL __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
+
+QJS_INTERNAL int JS_InitAtoms(JSRuntime *rt);
+
+QJS_INTERNAL JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len,
+                            int atom_type);
+
+QJS_INTERNAL JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
+                               int atom_type);
+
+QJS_INTERNAL BOOL atom_is_free(const JSAtomStruct *p);
+
 #endif /* QUICKJS_INTERNAL_STRING_H */

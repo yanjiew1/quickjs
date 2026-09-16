@@ -94,4 +94,83 @@ QJS_INTERNAL int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
                                     JSAtom name, int flags, JSValueConst home_obj);
 BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+extern QJS_INTERNAL const JSClassExoticMethods js_arguments_exotic_methods;
+
+extern QJS_INTERNAL const uint16_t func_kind_to_class_id[4];
+
+QJS_INTERNAL JSValue JS_CallConstructorInternal(JSContext *ctx,
+                                          JSValueConst func_obj,
+                                          JSValueConst new_target,
+                                          int argc, JSValue *argv, int flags);
+
+QJS_INTERNAL JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
+                               JSValueConst this_obj, JSValueConst new_target,
+                               int argc, JSValue *argv, int flags);
+
+QJS_INTERNAL JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
+
+QJS_INTERNAL void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+
+QJS_INTERNAL void close_lexical_var(JSContext *ctx, JSFunctionBytecode *b,
+                              JSStackFrame *sf, int var_idx);
+
+QJS_INTERNAL void close_var_refs(JSRuntime *rt, JSFunctionBytecode *b, JSStackFrame *sf);
+
+QJS_INTERNAL void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
+
+QJS_INTERNAL void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+
+QJS_INTERNAL JSValue js_build_arguments(JSContext *ctx, int argc, JSValueConst *argv);
+
+QJS_INTERNAL JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
+                                         JSValueConst *argv,
+                                         JSStackFrame *sf, int arg_count);
+
+QJS_INTERNAL JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv, int flags);
+
+QJS_INTERNAL void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
+
+QJS_INTERNAL void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+
+QJS_INTERNAL void js_c_function_finalizer(JSRuntime *rt, JSValue val);
+
+QJS_INTERNAL void js_c_function_mark(JSRuntime *rt, JSValueConst val,
+                               JS_MarkFunc *mark_func);
+
+QJS_INTERNAL JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst this_obj,
+                                      int argc, JSValueConst *argv, int flags);
+
+QJS_INTERNAL JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
+                                  JSValueConst this_obj,
+                                  int argc, JSValueConst *argv, int flags);
+
+QJS_INTERNAL void js_generator_finalizer(JSRuntime *rt, JSValue obj);
+
+QJS_INTERNAL JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,
+                                          JSValueConst this_obj,
+                                          int argc, JSValueConst *argv,
+                                          int flags);
+
+QJS_INTERNAL void js_generator_mark(JSRuntime *rt, JSValueConst val,
+                              JS_MarkFunc *mark_func);
+
+QJS_INTERNAL JSValue js_get_function_name(JSContext *ctx, JSAtom name);
+
+QJS_INTERNAL void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
+
+QJS_INTERNAL void js_global_object_mark(JSRuntime *rt, JSValueConst val,
+                                  JS_MarkFunc *mark_func);
+
+QJS_INTERNAL void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
+
+QJS_INTERNAL void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
+                                     JS_MarkFunc *mark_func);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

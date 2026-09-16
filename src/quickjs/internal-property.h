@@ -115,4 +115,13 @@ QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
 QJS_INTERNAL int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
                           JSValueConst desc);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+QJS_INTERNAL int JS_CreateProperty(JSContext *ctx, JSObject *p,
+                             JSAtom prop, JSValueConst val,
+                             JSValueConst getter, JSValueConst setter,
+                             int flags);
+
+QJS_INTERNAL JSAtom js_symbol_to_atom(JSContext *ctx, JSValue val);
+
 #endif /* QUICKJS_INTERNAL_PROPERTY_H */

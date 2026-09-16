@@ -936,4 +936,12 @@ enum {
 
 typedef struct JSParseState JSParseState;
 
+
+/* Shared class registration descriptor. */
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+
 #endif /* QUICKJS_INTERNAL_TYPES_H */

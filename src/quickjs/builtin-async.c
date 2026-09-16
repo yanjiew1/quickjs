@@ -23,8 +23,17 @@
  * THE SOFTWARE.
  */
 
-#include "internal-canonical.h"
 #include "internal-async.h"
+#include "internal-array-algorithm.h"
+#include "internal-base.h"
+#include "internal-builtin.h"
+#include "internal-collection.h"
+#include "internal-function.h"
+#include "internal-iterator.h"
+#include "internal-number.h"
+#include "internal-property.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 
 /* Generator */
 QJS_INTERNAL const JSCFunctionListEntry js_generator_function_proto_funcs[] = {

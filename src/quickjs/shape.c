@@ -22,7 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-shape.h"
+#include "internal-property.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
+#include "internal-types.h"
 
 /* Shape support */
 

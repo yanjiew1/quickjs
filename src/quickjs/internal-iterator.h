@@ -55,4 +55,18 @@ QJS_INTERNAL __exception int JS_CopyDataProperties(JSContext *ctx,
                                              JSValueConst excluded,
                                              BOOL setprop);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+QJS_INTERNAL JSValue build_for_in_iterator(JSContext *ctx, JSValue obj);
+
+QJS_INTERNAL void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
+
+QJS_INTERNAL void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+
+QJS_INTERNAL __exception int js_for_in_prepare_prototype_chain_enum(JSContext *ctx,
+                                                              JSValueConst enum_obj);
+
+QJS_INTERNAL __exception int js_iterator_get_value_done(JSContext *ctx, JSValue *sp);
+
 #endif /* QUICKJS_INTERNAL_ITERATOR_H */

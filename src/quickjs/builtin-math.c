@@ -22,8 +22,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-math.h"
 #include "internal-builtin.h"
+#include "internal-iterator.h"
 
 /* Math */
 

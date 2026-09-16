@@ -22,25 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_INTERNAL_GLOBAL_H
-#define QUICKJS_INTERNAL_GLOBAL_H
+#ifndef QUICKJS_INTERNAL_MATH_H
+#define QUICKJS_INTERNAL_MATH_H
 
-#include "internal-builtin.h"
-
-QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv);
-QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv);
-QJS_INTERNAL int string_buffer_putc16(StringBuffer *s, uint32_t c);
-QJS_INTERNAL int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
-QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap);
-QJS_INTERNAL int skip_spaces(const char *pc);
-QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
-                       int radix, int flags);
-
+#include "internal-types.h"
 
 /* Cross-TU declarations owned by this subsystem. */
-extern QJS_INTERNAL const JSCFunctionListEntry js_global_funcs[15];
+extern QJS_INTERNAL const JSCFunctionListEntry js_math_obj[1];
 
-#endif /* QUICKJS_INTERNAL_GLOBAL_H */
+QJS_INTERNAL void js_random_init(JSContext *ctx);
+
+#endif

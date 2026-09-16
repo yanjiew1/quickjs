@@ -22,8 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
 #include "internal-global.h"
+#include "internal-frontend.h"
+#include "internal-number.h"
+#include "internal-string.h"
 
 static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)

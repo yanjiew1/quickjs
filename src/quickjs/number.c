@@ -22,10 +22,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
-#include "internal-allocator.h"
+#include "internal-number.h"
+#include "internal-bigint.h"
+#include "internal-builtin.h"
 #include "internal-function.h"
+#include "internal-global.h"
+#include "internal-object.h"
 #include "internal-operator.h"
+#include "internal-primitive.h"
+#include "internal-property.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
+#include "internal-allocator.h"
 
 QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
                           JSStrictEqModeEnum eq_mode);

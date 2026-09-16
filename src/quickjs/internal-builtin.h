@@ -32,11 +32,6 @@
 #define JS_NEW_CTOR_PROTO_EXIST (1 << 2)
 #define JS_NEW_CTOR_READONLY    (1 << 3)
 
-typedef struct JSClassShortDef {
-    JSAtom class_name;
-    JSClassFinalizer *finalizer;
-    JSClassGCMark *gc_mark;
-} JSClassShortDef;
 
 QJS_INTERNAL int JS_AddIntrinsicBasicObjects(JSContext *ctx);
 QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx);

@@ -68,4 +68,8 @@ QJS_INTERNAL void json_free_parse_record(JSContext *ctx, JSONParseRecord *pr);
 JSValue JS_ParseJSON3(JSContext *ctx, const char *buf, size_t buf_len,
                       const char *filename, int flags, JSONParseRecord *pr);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+QJS_INTERNAL __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...);
+
 #endif /* QUICKJS_INTERNAL_FRONTEND_H */

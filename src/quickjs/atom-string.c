@@ -22,7 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-string.h"
+#include "internal-number.h"
+#include "internal-object.h"
+#include "internal-runtime.h"
 #include "src/quickjs/internal-allocator.h"
 #include "src/quickjs/internal-object.h"
 

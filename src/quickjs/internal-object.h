@@ -43,4 +43,26 @@ typedef struct JSArrayIteratorData {
     uint32_t idx;
 } JSArrayIteratorData;
 
+
+/* Cross-TU declarations owned by this subsystem. */
+extern QJS_INTERNAL JSClassShortDef const js_std_class_def[50];
+
+QJS_INTERNAL __maybe_unused void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p);
+
+QJS_INTERNAL __maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
+
+QJS_INTERNAL void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
+
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotASymbol(JSContext *ctx);
+
+QJS_INTERNAL JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+
+QJS_INTERNAL void gc_decref(JSRuntime *rt);
+
+QJS_INTERNAL void js_autoinit_free(JSRuntime *rt, JSProperty *pr);
+
+QJS_INTERNAL JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
+
+QJS_INTERNAL JSContext *js_autoinit_get_realm(JSProperty *pr);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

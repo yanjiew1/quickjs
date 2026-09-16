@@ -72,4 +72,10 @@ QJS_INTERNAL JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
 QJS_INTERNAL JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+extern QJS_INTERNAL const JSCFunctionListEntry js_generator_function_proto_funcs[1];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_generator_proto_funcs[4];
+
 #endif

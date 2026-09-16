@@ -22,8 +22,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
 #include "internal-primitive.h"
+#include "internal-array.h"
+#include "internal-base.h"
+#include "internal-builtin.h"
+#include "internal-function.h"
+#include "internal-global.h"
+#include "internal-number.h"
+#include "internal-object.h"
+#include "internal-property.h"
+#include "internal-regexp.h"
+#include "internal-string.h"
 #include "internal-allocator.h"
 
 /* Number */

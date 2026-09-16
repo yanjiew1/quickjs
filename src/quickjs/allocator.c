@@ -22,7 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-allocator.h"
+#include "internal-runtime.h"
 #include "src/quickjs/internal-allocator.h"
 
 /* JS malloc */

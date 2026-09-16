@@ -22,8 +22,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
 #include "internal-module.h"
+#include "internal-async.h"
+#include "internal-frontend.h"
+#include "internal-function.h"
+#include "internal-object.h"
+#include "internal-property.h"
+#include "internal-proxy.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 
 /* XXX: would be more efficient with separate module lists */
 QJS_INTERNAL void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)

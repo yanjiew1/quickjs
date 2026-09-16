@@ -84,4 +84,34 @@ QJS_INTERNAL JSValue js_typed_array_constructor(JSContext *ctx,
                                           int argc, JSValueConst *argv,
                                           int classid);
 
+
+/* Cross-TU declarations owned by this subsystem. */
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_funcs[4];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_wrap_proto_funcs[2];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_concat_proto_funcs[3];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_funcs[2];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_proto_funcs[13];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_proto_funcs[40];
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_iterator_proto_funcs[2];
+
+QJS_INTERNAL JSValue js_array_constructor(JSContext *ctx, JSValueConst new_target,
+                                    int argc, JSValueConst *argv);
+
+QJS_INTERNAL JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
+                                       int argc, JSValueConst *argv);
+
+QJS_INTERNAL JSValue js_iterator_constructor_getset(JSContext *ctx,
+                                              JSValueConst this_val,
+                                              int argc, JSValueConst *argv,
+                                              int magic,
+                                              JSValue *func_data);
+
 #endif /* QUICKJS_INTERNAL_ARRAY_H */

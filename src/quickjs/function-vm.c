@@ -22,7 +22,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-function.h"
+#include "internal-array.h"
+#include "internal-base.h"
+#include "internal-collection.h"
+#include "internal-frontend.h"
+#include "internal-iterator.h"
+#include "internal-module.h"
+#include "internal-number.h"
+#include "internal-object.h"
+#include "internal-operator.h"
+#include "internal-property.h"
+#include "internal-proxy.h"
+#include "internal-regexp.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 #include "src/quickjs/internal-allocator.h"
 #include "src/quickjs/internal-frontend.h"
 #include "src/quickjs/internal-regexp.h"

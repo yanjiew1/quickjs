@@ -22,12 +22,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
-#include "internal-allocator.h"
 #include "internal-regexp.h"
+#include "internal-array-algorithm.h"
 #include "internal-array.h"
 #include "internal-base.h"
+#include "internal-builtin.h"
+#include "internal-collection.h"
+#include "internal-function.h"
 #include "internal-number.h"
+#include "internal-object.h"
+#include "internal-property.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
+#include "internal-allocator.h"
 
 /* RegExp */
 

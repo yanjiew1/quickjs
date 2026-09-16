@@ -22,14 +22,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-runtime.h"
 #include "internal-allocator.h"
-static inline uintptr_t js_get_stack_pointer(void);
 #include "internal-builtin.h"
+#include "internal-collection.h"
 #include "internal-function.h"
 #include "internal-module.h"
 #include "internal-object.h"
 #include "internal-primitive.h"
+#include "internal-shape.h"
+#include "internal-string.h"
+#include "internal-types.h"
+static inline uintptr_t js_get_stack_pointer(void);
 
 static JSClassID js_class_id_alloc = JS_CLASS_INIT_COUNT;
 static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,

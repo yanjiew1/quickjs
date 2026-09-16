@@ -83,4 +83,9 @@ QJS_INTERNAL __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen
 #error unsupported
 #endif
 
+
+/* Cross-TU declarations owned by this subsystem. */
+QJS_INTERNAL BOOL js_string_eq(JSContext *ctx,
+                         const JSString *p1, const JSString *p2);
+
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

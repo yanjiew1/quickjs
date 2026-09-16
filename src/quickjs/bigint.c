@@ -22,7 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal-canonical.h"
+#include "internal-bigint.h"
+#include "internal-global.h"
+#include "internal-number.h"
+#include "internal-runtime.h"
+#include "internal-string.h"
 
 /* bigint support */
 
