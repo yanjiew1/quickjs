@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#define QUICKJS_ATOM_STRING_OWNER
+#include "internal-canonical.h"
 #include "src/quickjs/internal-allocator.h"
 #include "src/quickjs/internal-object.h"
 
@@ -31,7 +31,7 @@ static const char js_atom_init[] =
 #include "quickjs-atom.h"
 #undef DEF
 ;
-static JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
+QJS_INTERNAL JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
                                int atom_type);
 QJS_INTERNAL void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
 QJS_INTERNAL int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
@@ -41,7 +41,7 @@ static inline uint32_t atom_get_free(const JSAtomStruct *p)
     return (uintptr_t)p >> 1;
 }
 
-static inline BOOL atom_is_free(const JSAtomStruct *p)
+QJS_INTERNAL BOOL atom_is_free(const JSAtomStruct *p)
 {
     return (uintptr_t)p & 1;
 }
@@ -51,22 +51,10 @@ static inline JSAtomStruct *atom_set_free(uint32_t v)
     return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
 }
 
-QJS_INTERNAL void qjs_free_string_zero_ref(JSRuntime *rt, JSString *str)
-{
-    if (str->atom_type) {
-        JS_FreeAtomStruct(rt, str);
-    } else {
-#ifdef DUMP_LEAKS
-        list_del(&str->link);
-#endif
-        js_free_rt(rt, str);
-    }
-}
 /* JSAtom support */
 
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
-
 
 static inline int is_num(int c)
 {
@@ -128,7 +116,7 @@ static inline uint32_t hash_string16(const uint16_t *str,
     return h;
 }
 
-static uint32_t hash_string(const JSString *str, uint32_t h)
+QJS_INTERNAL uint32_t hash_string(const JSString *str, uint32_t h)
 {
     if (str->is_wide_char)
         h = hash_string16(str->u.str16, str->len, h);
@@ -152,7 +140,7 @@ static __maybe_unused void JS_DumpChar(FILE *fo, int c, int sep)
     }
 }
 
-static __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p)
+QJS_INTERNAL __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p)
 {
     int i, sep;
 
@@ -234,7 +222,7 @@ static int JS_ResizeAtomHash(JSRuntime *rt, int new_hash_size)
     return 0;
 }
 
-static int JS_InitAtoms(JSRuntime *rt)
+QJS_INTERNAL int JS_InitAtoms(JSRuntime *rt)
 {
     int i, len, atom_type;
     const char *p;
@@ -263,7 +251,7 @@ static int JS_InitAtoms(JSRuntime *rt)
     return 0;
 }
 
-JSAtom (JS_DupAtom)(JSContext *ctx, JSAtom v)
+JSAtom JS_DupAtom(JSContext *ctx, JSAtom v)
 {
     JSRuntime *rt;
     JSAtomStruct *p;
@@ -451,7 +439,7 @@ static JSAtom __JS_NewAtom(JSRuntime *rt, JSString *str, int atom_type)
 }
 
 /* only works with zero terminated 8 bit strings */
-static JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
+QJS_INTERNAL JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
                                int atom_type)
 {
     JSString *p;
@@ -464,7 +452,7 @@ static JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
 }
 
 /* Warning: str must be ASCII only */
-static JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len,
+QJS_INTERNAL JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len,
                             int atom_type)
 {
     uint32_t h, h1, i;
@@ -747,87 +735,18 @@ JSValue JS_AtomToString(JSContext *ctx, JSAtom atom)
 }
 
 /* Return TRUE for an array index in the range 0 through 2^32 - 2. */
-QJS_INTERNAL BOOL qjs_atom_is_array_index_slow(JSContext *ctx,
-                                               uint32_t *pval, JSAtom atom)
-{
-    JSRuntime *rt = ctx->rt;
-    JSAtomStruct *str;
-    uint32_t value;
-
-    assert(!__JS_AtomIsTaggedInt(atom));
-    assert(atom < rt->atom_size);
-    str = rt->atom_array[atom];
-    if (str->atom_type == JS_ATOM_TYPE_STRING &&
-        is_num_string(&value, str) && value != UINT32_MAX) {
-        *pval = value;
-        return TRUE;
-    }
-    *pval = 0;
-    return FALSE;
-}
 
 /* This test must be fast if atom is not a numeric index (e.g. a
    method name). Return JS_UNDEFINED if not a numeric
    index. JS_EXCEPTION can also be returned. */
-QJS_INTERNAL JSValue qjs_atom_is_numeric_index_slow(JSContext *ctx,
-                                                    JSAtom atom)
-{
-    JSRuntime *rt = ctx->rt;
-    JSAtomStruct *p1;
-    JSString *p;
-    int c, ret;
-    JSValue num, str;
 
-    if (__JS_AtomIsTaggedInt(atom))
-        return JS_NewInt32(ctx, __JS_AtomToUInt32(atom));
-    assert(atom < rt->atom_size);
-    p1 = rt->atom_array[atom];
-    if (p1->atom_type != JS_ATOM_TYPE_STRING)
-        return JS_UNDEFINED;
-    switch(atom) {
-    case JS_ATOM_minus_zero:
-        return __JS_NewFloat64(ctx, -0.0);
-    case JS_ATOM_Infinity:
-        return __JS_NewFloat64(ctx, INFINITY);
-    case JS_ATOM_minus_Infinity:
-        return __JS_NewFloat64(ctx, -INFINITY);
-    case JS_ATOM_NaN:
-        return __JS_NewFloat64(ctx, NAN);
-    default:
-        break;
-    }
-    p = p1;
-    if (p->len == 0)
-        return JS_UNDEFINED;
-    c = string_get(p, 0);
-    if (!is_num(c) && c != '-')
-        return JS_UNDEFINED;
-    /* this is ECMA CanonicalNumericIndexString primitive */
-    num = JS_ToNumber(ctx, JS_MKPTR(JS_TAG_STRING, p));
-    if (JS_IsException(num))
-        return num;
-    str = JS_ToString(ctx, num);
-    if (JS_IsException(str)) {
-        JS_FreeValue(ctx, num);
-        return str;
-    }
-    ret = js_string_eq_inline(p, JS_VALUE_GET_STRING(str));
-    JS_FreeValue(ctx, str);
-    if (ret) {
-        return num;
-    } else {
-        JS_FreeValue(ctx, num);
-        return JS_UNDEFINED;
-    }
-}
-
-void (JS_FreeAtom)(JSContext *ctx, JSAtom v)
+void JS_FreeAtom(JSContext *ctx, JSAtom v)
 {
     if (!__JS_AtomIsConst(v))
         __JS_FreeAtom(ctx->rt, v);
 }
 
-void (JS_FreeAtomRT)(JSRuntime *rt, JSAtom v)
+void JS_FreeAtomRT(JSRuntime *rt, JSAtom v)
 {
     if (!__JS_AtomIsConst(v))
         __JS_FreeAtom(rt, v);
@@ -987,23 +906,9 @@ QJS_INTERNAL int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
     return 0;
 }
 
-QJS_INTERNAL int string_buffer_init(JSContext *ctx, StringBuffer *s,
-                                        int size)
+QJS_INTERNAL int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
 {
-    s->ctx = ctx;
-    s->size = size;
-    s->len = 0;
-    s->is_wide_char = 0;
-    s->error_status = 0;
-    s->str = js_alloc_string(ctx, size, 0);
-    if (unlikely(!s->str)) {
-        s->size = 0;
-        return s->error_status = -1;
-    }
-#ifdef DUMP_LEAKS
-    list_del(&s->str->link);
-#endif
-    return 0;
+    return string_buffer_init2(ctx, s, size, 0);
 }
 
 static int string_buffer_set_error(StringBuffer *s)
@@ -1572,8 +1477,7 @@ static JSValue JS_ConcatString1(JSContext *ctx,
     return JS_MKPTR(JS_TAG_STRING, p);
 }
 
-QJS_INTERNAL BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1,
-                                             JSValueConst op2) {
+QJS_INTERNAL BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2) {
     if (JS_VALUE_GET_TAG(op2) == JS_TAG_STRING) {
         JSString *p2 = JS_VALUE_GET_STRING(op2);
         size_t size1;
@@ -1689,13 +1593,13 @@ QJS_INTERNAL int js_string_rope_compare(JSContext *ctx, JSValueConst op1,
     int res;
     JSStringRopeIter it1, it2;
     JSString *p1, *p2;
-
+    
     len1 = string_rope_get_len(op1);
     len2 = string_rope_get_len(op2);
     /* no need to go further for equality test if
        different length */
     if (eq_only && len1 != len2)
-        return 1;
+        return 1; 
     len = min_uint32(len1, len2);
     string_rope_iter_init(&it1, op1);
     string_rope_iter_init(&it2, op2);
@@ -1738,7 +1642,7 @@ QJS_INTERNAL JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope)
     StringBuffer b_s, *b = &b_s;
     JSStringRope *r;
     JSValue ret;
-
+    
     r = JS_VALUE_GET_STRING_ROPE(rope);
 
     /* check whether it is already linearized */
@@ -1776,7 +1680,7 @@ static JSValue js_new_string_rope(JSContext *ctx, JSValue op1, JSValue op2)
     int is_wide_char, depth;
     JSStringRope *r;
     JSValue res;
-
+    
     if (JS_VALUE_GET_TAG(op1) == JS_TAG_STRING) {
         JSString *p1 = JS_VALUE_GET_STRING(op1);
         len = p1->len;
@@ -1820,7 +1724,7 @@ static JSValue js_new_string_rope(JSContext *ctx, JSValue op1, JSValue op2)
 #endif
         res2 = js_rebalancee_string_rope(ctx, res);
 #ifdef DUMP_ROPE_REBALANCE
-        if (JS_VALUE_GET_TAG(res2) == JS_TAG_STRING_ROPE)
+        if (JS_VALUE_GET_TAG(res2) == JS_TAG_STRING_ROPE) 
             printf("rebalance: final depth=%d\n", JS_VALUE_GET_STRING_ROPE(res2)->depth);
 #endif
         JS_FreeValue(ctx, res);
@@ -1858,7 +1762,7 @@ static int js_rebalancee_string_rope_rec(JSContext *ctx, JSValue *buckets,
         JSString *p = JS_VALUE_GET_STRING(val);
         uint32_t len, i;
         JSValue a, b;
-
+        
         len = p->len;
         if (len == 0)
             return 0; /* nothing to do */
@@ -1911,7 +1815,7 @@ static JSValue js_rebalancee_string_rope(JSContext *ctx, JSValueConst rope)
 {
     JSValue buckets[ROPE_N_BUCKETS], a, b;
     int i;
-
+    
     for(i = 0; i < ROPE_N_BUCKETS; i++)
         buckets[i] = JS_NULL;
     if (js_rebalancee_string_rope_rec(ctx, buckets, rope))
@@ -1944,8 +1848,7 @@ static JSValue js_rebalancee_string_rope(JSContext *ctx, JSValueConst rope)
 
 /* op1 and op2 are converted to strings. For convenience, op1 or op2 =
    JS_EXCEPTION are accepted and return JS_EXCEPTION.  */
-QJS_INTERNAL JSValue
-JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
+QJS_INTERNAL JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
 {
     JSString *p1, *p2;
 
@@ -2022,143 +1925,293 @@ JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
     return js_new_string_rope(ctx, op1, op2);
 }
 
-QJS_INTERNAL int qjs_atom_string_init_runtime(JSRuntime *rt)
+QJS_INTERNAL BOOL __JS_AtomIsTaggedInt(JSAtom v)
 {
-#ifdef DUMP_LEAKS
-    init_list_head(&rt->string_list);
-#endif
-    return JS_InitAtoms(rt);
+    return (v & JS_ATOM_TAG_INT) != 0;
 }
 
-QJS_INTERNAL void qjs_atom_string_free_runtime(JSRuntime *rt)
+QJS_INTERNAL BOOL __JS_AtomIsConst(JSAtom v)
 {
-    int i;
-
-#ifdef DUMP_LEAKS
-    /* Only the atoms defined by JS_InitAtoms() should be left. */
-    {
-        BOOL header_done = FALSE;
-
-        for(i = 0; i < rt->atom_size; i++) {
-            JSAtomStruct *p = rt->atom_array[i];
-            if (!atom_is_free(p)) {
-                if (i >= JS_ATOM_END || js_rc(p)->ref_count != 1) {
-                    if (!header_done) {
-                        header_done = TRUE;
-                        if (rt->rt_info) {
-                            printf("%s:1: atom leakage:", rt->rt_info);
-                        } else {
-                            printf("Atom leaks:\n"
-                                   "    %6s %6s %s\n",
-                                   "ID", "REFCNT", "NAME");
-                        }
-                    }
-                    if (rt->rt_info) {
-                        printf(" ");
-                    } else {
-                        printf("    %6u %6u ", i, js_rc(p)->ref_count);
-                    }
-                    switch (p->atom_type) {
-                    case JS_ATOM_TYPE_STRING:
-                        JS_DumpString(rt, p);
-                        break;
-                    case JS_ATOM_TYPE_GLOBAL_SYMBOL:
-                        printf("Symbol.for(");
-                        JS_DumpString(rt, p);
-                        printf(")");
-                        break;
-                    case JS_ATOM_TYPE_SYMBOL:
-                        if (p->hash != JS_ATOM_HASH_PRIVATE) {
-                            printf("Symbol(");
-                            JS_DumpString(rt, p);
-                            printf(")");
-                        } else {
-                            printf("Private(");
-                            JS_DumpString(rt, p);
-                            printf(")");
-                        }
-                        break;
-                    }
-                    if (rt->rt_info)
-                        printf(":%u", js_rc(p)->ref_count);
-                    else
-                        printf("\n");
-                }
-            }
-        }
-        if (rt->rt_info && header_done)
-            printf("\n");
-    }
+#if defined(DUMP_LEAKS) && DUMP_LEAKS > 1
+        return (int32_t)v <= 0;
+#else
+        return (int32_t)v < JS_ATOM_END;
 #endif
+}
 
-    for(i = 0; i < rt->atom_size; i++) {
-        JSAtomStruct *p = rt->atom_array[i];
-        if (!atom_is_free(p)) {
-#ifdef DUMP_LEAKS
-            list_del(&p->link);
-#endif
-            js_free_rt(rt, p);
-        }
+QJS_INTERNAL JSAtom __JS_AtomFromUInt32(uint32_t v)
+{
+    return v | JS_ATOM_TAG_INT;
+}
+
+QJS_INTERNAL uint32_t __JS_AtomToUInt32(JSAtom atom)
+{
+    return atom & ~JS_ATOM_TAG_INT;
+}
+
+QJS_INTERNAL int string_get(const JSString *p, int idx) {
+    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
+}
+
+QJS_INTERNAL BOOL JS_IsEmptyString(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
+}
+
+QJS_INTERNAL uint32_t hash_string_rope(JSValueConst val, uint32_t h)
+{
+    if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING) {
+        return hash_string(JS_VALUE_GET_STRING(val), h);
+    } else {
+        JSStringRope *r = JS_VALUE_GET_STRING_ROPE(val);
+        h = hash_string_rope(r->left, h);
+        return hash_string_rope(r->right, h);
     }
-    js_free_rt(rt, rt->atom_array);
-    js_free_rt(rt, rt->atom_hash);
+}
 
+QJS_INTERNAL JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v)
+{
+    JSRuntime *rt;
+    JSAtomStruct *p;
+
+    rt = ctx->rt;
+    if (__JS_AtomIsTaggedInt(v))
+        return JS_ATOM_KIND_STRING;
+    p = rt->atom_array[v];
+    switch(p->atom_type) {
+    case JS_ATOM_TYPE_STRING:
+        return JS_ATOM_KIND_STRING;
+    case JS_ATOM_TYPE_GLOBAL_SYMBOL:
+        return JS_ATOM_KIND_SYMBOL;
+    case JS_ATOM_TYPE_SYMBOL:
+        if (p->hash == JS_ATOM_HASH_PRIVATE)
+            return JS_ATOM_KIND_PRIVATE;
+        else
+            return JS_ATOM_KIND_SYMBOL;
+    default:
+        abort();
+    }
+}
+
+QJS_INTERNAL BOOL JS_AtomIsString(JSContext *ctx, JSAtom v)
+{
+    return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
+}
+
+QJS_INTERNAL JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v)
+{
+    JSAtomStruct *p;
+
+    if (!__JS_AtomIsConst(v)) {
+        p = rt->atom_array[v];
+        js_rc(p)->ref_count++;
+    }
+    return v;
+}
+
+QJS_INTERNAL JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char)
+{
+    JSString *str;
+    str = js_malloc_rt(rt, sizeof(JSString) + (max_len << is_wide_char) + 1 - is_wide_char);
+    if (unlikely(!str))
+        return NULL;
+    js_rc(str)->ref_count = 1;
+    str->is_wide_char = is_wide_char;
+    str->len = max_len;
+    str->atom_type = 0;
+    str->hash = 0;          /* optional but costless */
+    str->hash_next = 0;     /* optional */
 #ifdef DUMP_LEAKS
-    if (!list_empty(&rt->string_list)) {
-        struct list_head *el, *el1;
+    list_add_tail(&str->link, &rt->string_list);
+#endif
+    return str;
+}
 
-        if (rt->rt_info) {
-            printf("%s:1: string leakage:", rt->rt_info);
+QJS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
+{
+    JSString *p;
+    p = js_alloc_string_rt(ctx->rt, max_len, is_wide_char);
+    if (unlikely(!p)) {
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
+    return p;
+}
+
+QJS_INTERNAL void js_free_string(JSRuntime *rt, JSString *str)
+{
+    if (--js_rc(str)->ref_count <= 0) {
+        if (str->atom_type) {
+            JS_FreeAtomStruct(rt, str);
         } else {
-            printf("String leaks:\n"
-                   "    %6s %s\n",
-                   "REFCNT", "VALUE");
-        }
-        list_for_each_safe(el, el1, &rt->string_list) {
-            JSString *str = list_entry(el, JSString, link);
-            if (rt->rt_info)
-                printf(" ");
-            else
-                printf("    %6u ", js_rc(str)->ref_count);
-            JS_DumpString(rt, str);
-            if (rt->rt_info)
-                printf(":%u", js_rc(str)->ref_count);
-            else
-                printf("\n");
+#ifdef DUMP_LEAKS
             list_del(&str->link);
+#endif
             js_free_rt(rt, str);
         }
-        if (rt->rt_info)
-            printf("\n");
     }
-#endif
 }
 
-
-QJS_INTERNAL JSAtom qjs_new_atom_rt_ascii(JSRuntime *rt, const char *str,
-                                          size_t len, int atom_type)
+QJS_INTERNAL int js_string_compare(JSContext *ctx,
+                             const JSString *p1, const JSString *p2)
 {
-    JSAtom atom = __JS_FindAtom(rt, str, len, atom_type);
-
-    if (atom == JS_ATOM_NULL)
-        atom = __JS_NewAtomInit(rt, str, len, atom_type);
-    return atom;
+    int res, len;
+    len = min_int(p1->len, p2->len);
+    res = js_string_memcmp(p1, 0, p2, 0, len);
+    if (res == 0) {
+        if (p1->len == p2->len)
+            res = 0;
+        else if (p1->len < p2->len)
+            res = -1;
+        else
+            res = 1;
+    }
+    return res;
 }
 
-QJS_INTERNAL void qjs_atom_string_compute_memory_usage(
-    JSRuntime *rt, JSMemoryUsage *stats)
+QJS_INTERNAL JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom)
 {
-    int i;
+    JSRuntime *rt = ctx->rt;
+    JSAtomStruct *p1;
+    JSString *p;
+    int c, ret;
+    JSValue num, str;
 
-    stats->memory_used_count += 2; /* rt->atom_array, rt->atom_hash */
-    stats->atom_count = rt->atom_count;
-    stats->atom_size = sizeof(rt->atom_array[0]) * rt->atom_size +
-        sizeof(rt->atom_hash[0]) * rt->atom_hash_size;
-    for(i = 0; i < rt->atom_size; i++) {
-        JSAtomStruct *atom = rt->atom_array[i];
-        if (!atom_is_free(atom)) {
-            stats->atom_size += sizeof(*atom) +
-                (atom->len << atom->is_wide_char) + 1 - atom->is_wide_char;
+    if (__JS_AtomIsTaggedInt(atom))
+        return JS_NewInt32(ctx, __JS_AtomToUInt32(atom));
+    assert(atom < rt->atom_size);
+    p1 = rt->atom_array[atom];
+    if (p1->atom_type != JS_ATOM_TYPE_STRING)
+        return JS_UNDEFINED;
+    switch(atom) {
+    case JS_ATOM_minus_zero:
+        return __JS_NewFloat64(ctx, -0.0);
+    case JS_ATOM_Infinity:
+        return __JS_NewFloat64(ctx, INFINITY);
+    case JS_ATOM_minus_Infinity:
+        return __JS_NewFloat64(ctx, -INFINITY);
+    case JS_ATOM_NaN:
+        return __JS_NewFloat64(ctx, NAN);
+    default:
+        break;
+    }
+    p = p1;
+    if (p->len == 0)
+        return JS_UNDEFINED;
+    c = string_get(p, 0);
+    if (!is_num(c) && c != '-')
+        return JS_UNDEFINED;
+    /* this is ECMA CanonicalNumericIndexString primitive */
+    num = JS_ToNumber(ctx, JS_MKPTR(JS_TAG_STRING, p));
+    if (JS_IsException(num))
+        return num;
+    str = JS_ToString(ctx, num);
+    if (JS_IsException(str)) {
+        JS_FreeValue(ctx, num);
+        return str;
+    }
+    ret = js_string_eq(ctx, p, JS_VALUE_GET_STRING(str));
+    JS_FreeValue(ctx, str);
+    if (ret) {
+        return num;
+    } else {
+        JS_FreeValue(ctx, num);
+        return JS_UNDEFINED;
+    }
+}
+
+QJS_INTERNAL int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom)
+{
+    JSValue num;
+    num = JS_AtomIsNumericIndex1(ctx, atom);
+    if (likely(JS_IsUndefined(num)))
+        return FALSE;
+    if (JS_IsException(num))
+        return -1;
+    JS_FreeValue(ctx, num);
+    return TRUE;
+}
+
+QJS_INTERNAL void string_buffer_free(StringBuffer *s)
+{
+    js_free(s->ctx, s->str);
+    s->str = NULL;
+}
+
+QJS_INTERNAL int string_buffer_putc(StringBuffer *s, uint32_t c)
+{
+    if (likely(s->len < s->size)) {
+        if (s->is_wide_char) {
+            if (c < 0x10000) {
+                s->str->u.str16[s->len++] = c;
+                return 0;
+            } else if (likely((s->len + 1) < s->size)) {
+                s->str->u.str16[s->len++] = get_hi_surrogate(c);
+                s->str->u.str16[s->len++] = get_lo_surrogate(c);
+                return 0;
+            }
+        } else if (c < 0x100) {
+            s->str->u.str8[s->len++] = c;
+            return 0;
+        }
+    }
+    return string_buffer_putc_slow(s, c);
+}
+
+QJS_INTERNAL JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
+{
+    JSString *str;
+
+    if (len <= 0) {
+        return JS_AtomToString(ctx, JS_ATOM_empty_string);
+    }
+    str = js_alloc_string(ctx, len, 0);
+    if (!str)
+        return JS_EXCEPTION;
+    memcpy(str->u.str8, buf, len);
+    str->u.str8[len] = '\0';
+    return JS_MKPTR(JS_TAG_STRING, str);
+}
+
+QJS_INTERNAL int string_getc(const JSString *p, int *pidx)
+{
+    int idx, c, c1;
+    idx = *pidx;
+    if (p->is_wide_char) {
+        c = p->u.str16[idx++];
+        if (is_hi_surrogate(c) && idx < p->len) {
+            c1 = p->u.str16[idx];
+            if (is_lo_surrogate(c1)) {
+                c = from_surrogate(c, c1);
+                idx++;
+            }
+        }
+    } else {
+        c = p->u.str8[idx++];
+    }
+    *pidx = idx;
+    return c;
+}
+
+QJS_INTERNAL BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval, JSAtom atom)
+{
+    if (__JS_AtomIsTaggedInt(atom)) {
+        *pval = __JS_AtomToUInt32(atom);
+        return TRUE;
+    } else {
+        JSRuntime *rt = ctx->rt;
+        JSAtomStruct *p;
+        uint32_t val;
+
+        assert(atom < rt->atom_size);
+        p = rt->atom_array[atom];
+        if (p->atom_type == JS_ATOM_TYPE_STRING &&
+            is_num_string(&val, p) && val != -1) {
+            *pval = val;
+            return TRUE;
+        } else {
+            *pval = 0;
+            return FALSE;
         }
     }
 }

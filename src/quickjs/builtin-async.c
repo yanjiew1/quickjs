@@ -23,48 +23,20 @@
  * THE SOFTWARE.
  */
 
+#include "internal-canonical.h"
 #include "internal-async.h"
 
 /* Generator */
-static const JSCFunctionListEntry js_generator_function_proto_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_generator_function_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "GeneratorFunction", JS_PROP_CONFIGURABLE),
 };
 
-static const JSCFunctionListEntry js_generator_proto_funcs[] = {
-    JS_ITERATOR_NEXT_DEF("next", 1, js_generator_next, QJS_GEN_MAGIC_NEXT ),
-    JS_ITERATOR_NEXT_DEF("return", 1, js_generator_next, QJS_GEN_MAGIC_RETURN ),
-    JS_ITERATOR_NEXT_DEF("throw", 1, js_generator_next, QJS_GEN_MAGIC_THROW ),
+QJS_INTERNAL const JSCFunctionListEntry js_generator_proto_funcs[] = {
+    JS_ITERATOR_NEXT_DEF("next", 1, js_generator_next, GEN_MAGIC_NEXT ),
+    JS_ITERATOR_NEXT_DEF("return", 1, js_generator_next, GEN_MAGIC_RETURN ),
+    JS_ITERATOR_NEXT_DEF("throw", 1, js_generator_next, GEN_MAGIC_THROW ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Generator", JS_PROP_CONFIGURABLE),
 };
-
-QJS_INTERNAL int qjs_add_intrinsic_generator(JSContext *ctx)
-{
-    JSCFunctionType ft;
-    JSValue obj;
-
-    ctx->class_proto[JS_CLASS_GENERATOR] =
-        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
-                                  js_generator_proto_funcs,
-                                  countof(js_generator_proto_funcs));
-    if (JS_IsException(ctx->class_proto[JS_CLASS_GENERATOR]))
-        return -1;
-
-    ft.generic_magic = js_function_constructor;
-    obj = JS_NewCConstructor(
-        ctx, JS_CLASS_GENERATOR_FUNCTION, "GeneratorFunction", ft.generic, 1,
-        JS_CFUNC_constructor_or_func_magic, JS_FUNC_GENERATOR,
-        ctx->function_ctor, NULL, 0, js_generator_function_proto_funcs,
-        countof(js_generator_function_proto_funcs),
-        JS_NEW_CTOR_NO_GLOBAL | JS_NEW_CTOR_READONLY);
-    if (JS_IsException(obj))
-        return -1;
-    JS_FreeValue(ctx, obj);
-    return JS_SetConstructor2(ctx,
-                                ctx->class_proto[JS_CLASS_GENERATOR_FUNCTION],
-                                ctx->class_proto[JS_CLASS_GENERATOR],
-                                JS_PROP_CONFIGURABLE,
-                                JS_PROP_CONFIGURABLE);
-}
 
 /* Promise */
 
@@ -108,8 +80,10 @@ JSValue JS_PromiseResult(JSContext *ctx, JSValue promise)
     return JS_DupValue(ctx, s->promise_result);
 }
 
-static int js_create_resolving_functions(JSContext *ctx, JSValue *args,
-                                         JSValueConst promise);
+static int js_create_resolving_functions(JSContext *ctx,
+                                         JSValue *resolving_funcs,
+                                         JSValueConst promise)
+;
 
 static void promise_reaction_data_free(JSRuntime *rt,
                                        JSPromiseReactionData *rd)
@@ -484,6 +458,7 @@ static JSValue js_new_promise_capability(JSContext *ctx,
                                          JSValueConst ctor)
 {
     JSValue executor, result_promise;
+    JSCFunctionDataRecord *s;
     int i;
 
     executor = js_promise_executor_new(ctx);
@@ -499,14 +474,13 @@ static JSValue js_new_promise_capability(JSContext *ctx,
     }
     if (JS_IsException(result_promise))
         goto fail;
+    s = JS_GetOpaque(executor, JS_CLASS_C_FUNCTION_DATA);
     for(i = 0; i < 2; i++) {
-        if (check_function(ctx,
-                               qjs_async_c_function_data(executor, i)))
+        if (check_function(ctx, s->data[i]))
             goto fail;
     }
     for(i = 0; i < 2; i++)
-        resolving_funcs[i] =
-            JS_DupValue(ctx, qjs_async_c_function_data(executor, i));
+        resolving_funcs[i] = JS_DupValue(ctx, s->data[i]);
     JS_FreeValue(ctx, executor);
     return result_promise;
  fail:
@@ -520,9 +494,8 @@ JSValue JS_NewPromiseCapability(JSContext *ctx, JSValue *resolving_funcs)
     return js_new_promise_capability(ctx, resolving_funcs, JS_UNDEFINED);
 }
 
-QJS_INTERNAL JSValue js_promise_resolve(
-    JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
-    int magic)
+QJS_INTERNAL JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv, int magic)
 {
     JSValue result_promise, resolving_funcs[2], ret;
     BOOL is_reject = magic;
@@ -926,9 +899,10 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
     goto done;
 }
 
-QJS_INTERNAL int perform_promise_then(
-    JSContext *ctx, JSValueConst promise, JSValueConst *resolve_reject,
-    JSValueConst *cap_resolving_funcs)
+QJS_INTERNAL __exception int perform_promise_then(JSContext *ctx,
+                                            JSValueConst promise,
+                                            JSValueConst *resolve_reject,
+                                            JSValueConst *cap_resolving_funcs)
 {
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
     JSPromiseReactionData *rd_array[2], *rd;
@@ -980,9 +954,8 @@ QJS_INTERNAL int perform_promise_then(
     return 0;
 }
 
-QJS_INTERNAL JSValue js_promise_then(JSContext *ctx,
-                                      JSValueConst this_val,
-                                      int argc, JSValueConst *argv)
+QJS_INTERNAL JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv)
 {
     JSValue ctor, result_promise, resolving_funcs[2];
     JSPromiseData *s;
@@ -1158,8 +1131,8 @@ static void js_async_from_sync_iterator_mark(JSRuntime *rt, JSValueConst val,
     }
 }
 
-QJS_INTERNAL JSValue JS_CreateAsyncFromSyncIterator(
-    JSContext *ctx, JSValueConst sync_iter)
+QJS_INTERNAL JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
+                                              JSValueConst sync_iter)
 {
     JSValue async_iter, next_method;
     JSAsyncFromSyncIteratorData *s;
@@ -1237,16 +1210,16 @@ static JSValue js_async_from_sync_iterator_next(JSContext *ctx, JSValueConst thi
         goto reject;
     }
 
-    if (magic == QJS_GEN_MAGIC_NEXT) {
+    if (magic == GEN_MAGIC_NEXT) {
         method = JS_DupValue(ctx, s->next_method);
     } else {
         method = JS_GetProperty(ctx, s->sync_iter,
-                                magic == QJS_GEN_MAGIC_RETURN ? JS_ATOM_return :
+                                magic == GEN_MAGIC_RETURN ? JS_ATOM_return :
                                 JS_ATOM_throw);
         if (JS_IsException(method))
             goto reject;
         if (JS_IsUndefined(method) || JS_IsNull(method)) {
-            if (magic == QJS_GEN_MAGIC_RETURN) {
+            if (magic == GEN_MAGIC_RETURN) {
                 err = js_create_iterator_result(ctx, JS_DupValue(ctx, argv[0]), TRUE);
                 is_reject = 0;
                 goto done_resolve;
@@ -1270,7 +1243,7 @@ static JSValue js_async_from_sync_iterator_next(JSContext *ctx, JSValueConst thi
         if (JS_IsException(value))
             goto reject;
     }
-
+    
     if (JS_IsException(value))
         goto reject;
     {
@@ -1282,7 +1255,7 @@ static JSValue js_async_from_sync_iterator_next(JSContext *ctx, JSValueConst thi
         if (JS_IsException(value_wrapper_promise)) {
             JSValue res2;
             JS_FreeValue(ctx, value);
-            if (magic != QJS_GEN_MAGIC_RETURN && !done) {
+            if (magic != GEN_MAGIC_RETURN && !done) {
                 JS_IteratorClose(ctx, s->sync_iter, TRUE);
             }
         reject:
@@ -1304,7 +1277,7 @@ static JSValue js_async_from_sync_iterator_next(JSContext *ctx, JSValueConst thi
             JS_FreeValue(ctx, value_wrapper_promise);
             goto fail;
         }
-        if (done || magic == QJS_GEN_MAGIC_RETURN) {
+        if (done || magic == GEN_MAGIC_RETURN) {
             resolve_reject[1] = JS_UNDEFINED;
         } else {
             resolve_reject[1] =
@@ -1339,9 +1312,9 @@ static JSValue js_async_from_sync_iterator_next(JSContext *ctx, JSValueConst thi
 }
 
 static const JSCFunctionListEntry js_async_from_sync_iterator_proto_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("next", 1, js_async_from_sync_iterator_next, QJS_GEN_MAGIC_NEXT ),
-    JS_CFUNC_MAGIC_DEF("return", 1, js_async_from_sync_iterator_next, QJS_GEN_MAGIC_RETURN ),
-    JS_CFUNC_MAGIC_DEF("throw", 1, js_async_from_sync_iterator_next, QJS_GEN_MAGIC_THROW ),
+    JS_CFUNC_MAGIC_DEF("next", 1, js_async_from_sync_iterator_next, GEN_MAGIC_NEXT ),
+    JS_CFUNC_MAGIC_DEF("return", 1, js_async_from_sync_iterator_next, GEN_MAGIC_RETURN ),
+    JS_CFUNC_MAGIC_DEF("throw", 1, js_async_from_sync_iterator_next, GEN_MAGIC_THROW ),
 };
 
 /* AsyncGeneratorFunction */
@@ -1353,9 +1326,9 @@ static const JSCFunctionListEntry js_async_generator_function_proto_funcs[] = {
 /* AsyncGenerator prototype */
 
 static const JSCFunctionListEntry js_async_generator_proto_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("next", 1, js_async_generator_next, QJS_GEN_MAGIC_NEXT ),
-    JS_CFUNC_MAGIC_DEF("return", 1, js_async_generator_next, QJS_GEN_MAGIC_RETURN ),
-    JS_CFUNC_MAGIC_DEF("throw", 1, js_async_generator_next, QJS_GEN_MAGIC_THROW ),
+    JS_CFUNC_MAGIC_DEF("next", 1, js_async_generator_next, GEN_MAGIC_NEXT ),
+    JS_CFUNC_MAGIC_DEF("return", 1, js_async_generator_next, GEN_MAGIC_RETURN ),
+    JS_CFUNC_MAGIC_DEF("throw", 1, js_async_generator_next, GEN_MAGIC_THROW ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "AsyncGenerator", JS_PROP_CONFIGURABLE ),
 };
 
@@ -1399,7 +1372,7 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
     if (JS_IsException(obj1))
         return -1;
     ctx->promise_ctor = obj1;
-
+    
     /* AsyncFunction */
     ft.generic_magic = js_function_constructor;
     obj1 = JS_NewCConstructor(ctx, JS_CLASS_ASYNC_FUNCTION, "AsyncFunction",
@@ -1411,7 +1384,7 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
     if (JS_IsException(obj1))
         return -1;
     JS_FreeValue(ctx, obj1);
-
+    
     /* AsyncIteratorPrototype */
     ctx->async_iterator_proto =
         JS_NewObjectProtoList(ctx,  ctx->class_proto[JS_CLASS_OBJECT],
@@ -1427,10 +1400,10 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
                               countof(js_async_from_sync_iterator_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ASYNC_FROM_SYNC_ITERATOR]))
         return -1;
-
+    
     /* AsyncGeneratorPrototype */
     ctx->class_proto[JS_CLASS_ASYNC_GENERATOR] =
-        JS_NewObjectProtoList(ctx, ctx->async_iterator_proto,
+        JS_NewObjectProtoList(ctx, ctx->async_iterator_proto, 
                               js_async_generator_proto_funcs,
                               countof(js_async_generator_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ASYNC_GENERATOR]))

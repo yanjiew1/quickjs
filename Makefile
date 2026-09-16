@@ -247,10 +247,10 @@ endif
 endif
 endif
 
-QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/object.o \
+QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/object.o $(OBJDIR)/src/quickjs/shape.o $(OBJDIR)/src/quickjs/property.o \
     $(OBJDIR)/src/quickjs/atom-string.o \
-    $(OBJDIR)/src/quickjs/number.o $(OBJDIR)/src/quickjs/allocator.o \
-    $(OBJDIR)/src/quickjs/runtime.o $(OBJDIR)/src/quickjs/function-vm.o \
+    $(OBJDIR)/src/quickjs/number.o $(OBJDIR)/src/quickjs/bigint.o $(OBJDIR)/src/quickjs/allocator.o \
+    $(OBJDIR)/src/quickjs/runtime.o $(OBJDIR)/src/quickjs/function-vm.o $(OBJDIR)/src/quickjs/function.o $(OBJDIR)/src/quickjs/iterator.o \
     $(OBJDIR)/src/quickjs/frontend.o \
     $(OBJDIR)/src/quickjs/module.o $(OBJDIR)/src/quickjs/bytecode.o \
     $(OBJDIR)/src/quickjs/builtin.o $(OBJDIR)/src/quickjs/builtin-math.o \

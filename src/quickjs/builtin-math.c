@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-builtin.h"
 
 /* Math */
@@ -243,7 +244,7 @@ static void sum_precise_renorm(SumPreciseState *s)
 {
     int64_t v, carry;
     int i;
-
+    
     carry = 0;
     for(i = 0; i < s->n_limbs; i++) {
         v = s->acc[i] + carry;
@@ -261,7 +262,7 @@ static void sum_precise_add(SumPreciseState *s, double d)
     uint64_t a, m, a0, a1;
     int sgn, e, p;
     unsigned int shift;
-
+    
     a = float64_as_uint64(d);
     sgn = a >> 63;
     e = (a >> 52) & ((1 << 11) - 1);
@@ -323,7 +324,7 @@ static double sum_precise_get_result(SumPreciseState *s)
 {
     int n, shift, e, p, is_neg;
     uint64_t m, addend;
-
+        
     if (s->state != SUM_PRECISE_STATE_FINITE) {
         switch(s->state) {
         default:
@@ -352,7 +353,7 @@ static double sum_precise_get_result(SumPreciseState *s)
     /* minus zero result */
     if (n == 0)
         return -0.0;
-
+    
     /* normalize */
     while (n > 0 && s->acc[n - 1] == 0)
         n--;
@@ -377,7 +378,7 @@ static double sum_precise_get_result(SumPreciseState *s)
     }
     /* subnormal case */
     if (n == 1 && s->acc[0] < ((uint64_t)1 << 52))
-        return uint64_as_float64(((uint64_t)is_neg << 63) | s->acc[0]);
+        return uint64_as_float64(((uint64_t)is_neg << 63) | s->acc[0]); 
     /* normal case */
     e = n * SP_LIMB_BITS;
     p = n - 1;
@@ -475,7 +476,7 @@ static uint64_t xorshift64star(uint64_t *pstate)
     return x * 0x2545F4914F6CDD1D;
 }
 
-static void js_random_init(JSContext *ctx)
+QJS_INTERNAL void js_random_init(JSContext *ctx)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -548,13 +549,6 @@ static const JSCFunctionListEntry js_math_funcs[] = {
     JS_PROP_DOUBLE_DEF("SQRT2", 1.4142135623730951, 0 ),
 };
 
-static const JSCFunctionListEntry js_math_obj[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_math_obj[] = {
     JS_OBJECT_DEF("Math", js_math_funcs, countof(js_math_funcs), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE ),
 };
-
-QJS_INTERNAL int qjs_add_intrinsic_math(JSContext *ctx)
-{
-    js_random_init(ctx);
-    return JS_SetPropertyFunctionList(ctx, ctx->global_obj, js_math_obj,
-                                      countof(js_math_obj));
-}

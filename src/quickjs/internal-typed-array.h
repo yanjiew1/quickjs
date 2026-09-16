@@ -28,24 +28,17 @@
 #include "internal-array.h"
 #include "internal-builtin.h"
 
-#define QJS_TYPED_HINT_NONE 2
-
-QJS_INTERNAL void js_array_buffer_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void js_typed_array_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void js_typed_array_mark(JSRuntime *rt, JSValueConst value,
-                                       JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx,
-                                                   int class_id);
-QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx,
-                                            JSValueConst value, int hint);
-QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *result,
-                                         JSValue value);
-QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue value);
-QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
-                                                JSValueConst ctor,
-                                                int class_id);
-QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx,
-                                                   JSValueConst obj,
-                                                   JSValueConst default_ctor);
+QJS_INTERNAL void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
+QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
+QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
+                                     JSValueConst defaultConstructor);
 
 #endif /* QUICKJS_INTERNAL_TYPED_ARRAY_H */

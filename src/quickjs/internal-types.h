@@ -913,4 +913,27 @@ enum {
 #define JS_ATOM_LAST_KEYWORD JS_ATOM_super
 #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
 
+typedef enum JSStrictEqModeEnum {
+    JS_EQ_STRICT,
+    JS_EQ_SAME_VALUE,
+    JS_EQ_SAME_VALUE_ZERO,
+} JSStrictEqModeEnum;
+
+typedef struct JSCFunctionDataRecord {
+    JSCFunctionData *func;
+    uint8_t length;
+    uint8_t data_len;
+    uint16_t magic;
+    JSValue data[0];
+} JSCFunctionDataRecord;
+
+enum {
+    ArrayFind,
+    ArrayFindIndex,
+    ArrayFindLast,
+    ArrayFindLastIndex,
+};
+
+typedef struct JSParseState JSParseState;
+
 #endif /* QUICKJS_INTERNAL_TYPES_H */

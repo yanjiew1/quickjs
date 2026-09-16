@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-proxy.h"
 
 /* Proxy */
@@ -465,7 +466,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
             result_desc.flags |= JS_PROP_NORMAL;
         }
         result_desc.flags &= (JS_PROP_C_W_E | JS_PROP_TMASK);
-
+        
         if (target_desc_ret) {
             /* convert result_desc.flags to defineProperty flags */
             flags1 = result_desc.flags | JS_PROP_HAS_CONFIGURABLE | JS_PROP_HAS_ENUMERABLE;
@@ -976,16 +977,21 @@ static const JSCFunctionListEntry js_proxy_funcs[] = {
     JS_CFUNC_DEF("revocable", 2, js_proxy_revocable ),
 };
 
+static const JSClassShortDef js_proxy_class_def[] = {
+    { JS_ATOM_Object, js_proxy_finalizer, js_proxy_mark }, /* JS_CLASS_PROXY */
+};
+
 int JS_AddIntrinsicProxy(JSContext *ctx)
 {
     JSRuntime *rt = ctx->rt;
     JSValue obj1;
 
     if (!JS_IsRegisteredClass(rt, JS_CLASS_PROXY)) {
-        if (qjs_proxy_register_class(rt, js_proxy_finalizer, js_proxy_mark,
-                                     &js_proxy_exotic_methods,
-                                     js_proxy_call) < 0)
+        if (init_class_range(rt, js_proxy_class_def, JS_CLASS_PROXY,
+                             countof(js_proxy_class_def)))
             return -1;
+        rt->class_array[JS_CLASS_PROXY].exotic = &js_proxy_exotic_methods;
+        rt->class_array[JS_CLASS_PROXY].call = js_proxy_call;
     }
 
     /* additional fields: name, length */

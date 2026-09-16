@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-builtin.h"
 
 /* runtime functions & objects */
@@ -330,7 +331,7 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char
     } else {
         ctor_flags = JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE;
     }
-
+    
     if (JS_IsUndefined(parent_ctor)) {
         parent_proto = JS_DupValue(ctx, ctx->class_proto[JS_CLASS_OBJECT]);
         parent_ctor = ctx->function_proto;
@@ -339,7 +340,7 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char
         if (JS_IsException(parent_proto))
             return JS_EXCEPTION;
     }
-
+    
     if (flags & JS_NEW_CTOR_PROTO_EXIST) {
         proto = JS_DupValue(ctx, ctx->class_proto[class_id]);
     } else {
@@ -381,24 +382,4 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char
     JS_FreeValue(ctx, parent_proto);
     JS_FreeValue(ctx, ctor);
     return JS_EXCEPTION;
-}
-
-
-
-QJS_INTERNAL int qjs_add_intrinsics(JSContext *ctx)
-{
-    if (JS_AddIntrinsicBaseObjects(ctx) ||
-        JS_AddIntrinsicDate(ctx) ||
-        JS_AddIntrinsicEval(ctx) ||
-        JS_AddIntrinsicStringNormalize(ctx) ||
-        JS_AddIntrinsicRegExp(ctx) ||
-        JS_AddIntrinsicJSON(ctx) ||
-        JS_AddIntrinsicProxy(ctx) ||
-        JS_AddIntrinsicMapSet(ctx) ||
-        JS_AddIntrinsicTypedArrays(ctx) ||
-        JS_AddIntrinsicPromise(ctx) ||
-        JS_AddIntrinsicWeakRef(ctx)) {
-        return -1;
-    }
-    return 0;
 }

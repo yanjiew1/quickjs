@@ -50,76 +50,48 @@ typedef enum {
     OP_SPECIAL_OBJECT_IMPORT_META,
 } OPSpecialObjectEnum;
 
-#ifndef QUICKJS_OBJECT_OWNER
-static inline BOOL js_class_has_bytecode(JSClassID class_id)
-{
-    return class_id == JS_CLASS_BYTECODE_FUNCTION ||
-           class_id == JS_CLASS_GENERATOR_FUNCTION ||
-           class_id == JS_CLASS_ASYNC_FUNCTION ||
-           class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION;
-}
-#endif
+QJS_INTERNAL BOOL js_class_has_bytecode(JSClassID class_id);
 
-static inline BOOL is_strict_mode(JSContext *ctx)
-{
-    JSStackFrame *frame = ctx->rt->current_stack_frame;
-    return frame && (frame->js_mode & JS_MODE_STRICT);
-}
+QJS_INTERNAL BOOL is_strict_mode(JSContext *ctx);
 
-QJS_INTERNAL void qjs_function_vm_init_runtime(JSRuntime *rt);
-QJS_INTERNAL void __async_func_free(JSRuntime *rt,
-                                             JSAsyncFunctionState *state);
-QJS_INTERNAL JSValue js_instantiate_prototype(JSContext *ctx, JSObject *obj,
-                                               JSAtom atom, void *opaque);
+QJS_INTERNAL void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+QJS_INTERNAL JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
 QJS_INTERNAL JSValueConst JS_GetActiveFunction(JSContext *ctx);
-QJS_INTERNAL JSVarRef *js_global_object_find_uninitialized_var(
-    JSContext *ctx, JSObject *obj, JSAtom atom, BOOL is_lexical);
+QJS_INTERNAL JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
+                                                         JSAtom atom, BOOL is_lexical);
 QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
-                                          int class_id);
-QJS_INTERNAL JSClassID qjs_function_class_id(int function_kind);
+                                   int class_id);
 
 QJS_INTERNAL JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
 QJS_INTERNAL JSValue js_closure2(JSContext *ctx, JSValue func_obj,
-                                 JSFunctionBytecode *bytecode,
-                                 JSVarRef **cur_var_refs,
-                                 JSStackFrame *stack_frame, BOOL is_eval,
-                                 JSModuleDef *module);
-QJS_INTERNAL JSValue js_async_function_call(JSContext *ctx,
-                                             JSValueConst func_obj,
-                                             JSValueConst this_obj,
-                                             int argc, JSValueConst *argv,
-                                             int flags);
-QJS_INTERNAL void js_function_set_properties(JSContext *ctx,
-                                               JSValueConst func,
-                                               JSAtom name, int length);
+                           JSFunctionBytecode *b,
+                           JSVarRef **cur_var_refs,
+                           JSStackFrame *sf,
+                           BOOL is_eval, JSModuleDef *m);
+QJS_INTERNAL JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst this_obj,
+                                      int argc, JSValueConst *argv, int flags);
+QJS_INTERNAL void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                       JSAtom name, int len);
 /* Promise implementation is owned by builtin-async.c. */
 QJS_INTERNAL JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv);
-QJS_INTERNAL JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *frame,
-                                      int var_idx, BOOL is_arg);
-QJS_INTERNAL JSValue js_closure(JSContext *ctx, JSValue bytecode_func,
-                                JSVarRef **cur_var_refs,
-                                JSStackFrame *stack_frame, BOOL is_eval);
-QJS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj,
-                                   JSValueConst this_obj, int argc,
-                                   JSValueConst *argv);
-QJS_INTERNAL int JS_OrdinaryIsInstanceOf(JSContext *ctx,
-                                             JSValueConst value,
-                                             JSValueConst constructor);
-QJS_INTERNAL JSContext *JS_GetFunctionRealm(JSContext *ctx,
-                                               JSValueConst func_obj);
-QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue value,
-                                     JSAtom atom, int argc,
-                                     JSValueConst *argv);
-QJS_INTERNAL void js_method_set_home_object(JSContext *ctx,
-                                             JSValueConst func,
-                                             JSValueConst home_object);
-QJS_INTERNAL int js_method_set_properties(JSContext *ctx,
-                                           JSValueConst func,
-                                           JSAtom name, int flags,
-                                           JSValueConst home_object);
-BOOL JS_IsCFunction(JSContext *ctx, JSValueConst value,
-                                    JSCFunction *func, int magic);
-
+                               int argc, JSValueConst *argv);
+QJS_INTERNAL JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
+                             BOOL is_arg);
+QJS_INTERNAL JSValue js_closure(JSContext *ctx, JSValue bfunc,
+                          JSVarRef **cur_var_refs,
+                          JSStackFrame *sf, BOOL is_eval);
+QJS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                           int argc, JSValueConst *argv);
+QJS_INTERNAL int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
+                                   JSValueConst obj);
+QJS_INTERNAL JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
+QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
+                             int argc, JSValueConst *argv);
+QJS_INTERNAL void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst home_obj);
+QJS_INTERNAL int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                    JSAtom name, int flags, JSValueConst home_obj);
+BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
 
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

@@ -39,36 +39,30 @@ typedef struct JSClassShortDef {
 } JSClassShortDef;
 
 QJS_INTERNAL int JS_AddIntrinsicBasicObjects(JSContext *ctx);
-QJS_INTERNAL int qjs_add_intrinsic_math(JSContext *ctx);
-QJS_INTERNAL int qjs_add_intrinsics(JSContext *ctx);
-QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx);
-QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx);
 QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx);
-QJS_INTERNAL void qjs_primitive_init_classes(JSRuntime *rt);
 
-QJS_INTERNAL double js_pow(double left, double right);
-QJS_INTERNAL int check_function(JSContext *ctx, JSValueConst value);
-QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue value);
-QJS_INTERNAL JSValue JS_NewObjectProtoList(
-    JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
-    int field_count);
-QJS_INTERNAL JSValue JS_InstantiateFunctionListItem2(
-    JSContext *ctx, JSObject *obj, JSAtom atom, void *opaque);
+QJS_INTERNAL double js_pow(double a, double b);
+QJS_INTERNAL int check_function(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue obj);
+QJS_INTERNAL JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
+                                     const JSCFunctionListEntry *fields, int n_fields);
+QJS_INTERNAL JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
+                                               JSAtom atom, void *opaque);
 QJS_INTERNAL int JS_SetConstructor2(JSContext *ctx,
-                                      JSValueConst constructor,
-                                      JSValueConst prototype,
-                                      int prototype_flags,
-                                      int constructor_flags);
-QJS_INTERNAL JSValue JS_NewCConstructor(
-    JSContext *ctx, int class_id, const char *name, JSCFunction *func,
-    int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
-    const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
-    const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags);
-QJS_INTERNAL JSValue JS_NewCFunction3(
-    JSContext *ctx, JSCFunction *func, const char *name, int length,
-    JSCFunctionEnum cproto, int magic, JSValueConst proto, int prop_count);
-QJS_INTERNAL int init_class_range(JSRuntime *rt,
-                                      const JSClassShortDef *classes,
-                                      int first_class, int class_count);
+                              JSValueConst func_obj,
+                              JSValueConst proto,
+                              int proto_flags, int ctor_flags);
+QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                                  JSValueConst parent_ctor,
+                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                                  int flags);
+QJS_INTERNAL JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                                const char *name,
+                                int length, JSCFunctionEnum cproto, int magic,
+                                JSValueConst proto_val, int n_fields);
+QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                            int start, int count);
 
 #endif /* QUICKJS_INTERNAL_BUILTIN_H */

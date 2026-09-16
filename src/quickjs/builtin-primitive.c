@@ -22,12 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-primitive.h"
 #include "internal-allocator.h"
 
 /* Number */
 
-static JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
+QJS_INTERNAL JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
                                      int argc, JSValueConst *argv)
 {
     JSValue val, obj;
@@ -121,7 +122,7 @@ static JSValue js_number_isSafeInteger(JSContext *ctx, JSValueConst this_val,
     return JS_NewBool(ctx, is_safe_integer(d));
 }
 
-static const JSCFunctionListEntry js_number_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_number_funcs[] = {
     /* global ParseInt and parseFloat should be defined already or delayed */
     JS_ALIAS_BASE_DEF("parseInt", "parseInt", 0 ),
     JS_ALIAS_BASE_DEF("parseFloat", "parseFloat", 0 ),
@@ -285,7 +286,7 @@ static JSValue js_number_toPrecision(JSContext *ctx, JSValueConst this_val,
     return js_dtoa2(ctx, d, 10, p, JS_DTOA_FORMAT_FIXED);
 }
 
-static const JSCFunctionListEntry js_number_proto_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_number_proto_funcs[] = {
     JS_CFUNC_DEF("toExponential", 1, js_number_toExponential ),
     JS_CFUNC_DEF("toFixed", 1, js_number_toFixed ),
     JS_CFUNC_DEF("toPrecision", 1, js_number_toPrecision ),
@@ -294,9 +295,8 @@ static const JSCFunctionListEntry js_number_proto_funcs[] = {
     JS_CFUNC_DEF("valueOf", 0, js_number_valueOf ),
 };
 
-
 /* Boolean */
-static JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
+QJS_INTERNAL JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
                                      int argc, JSValueConst *argv)
 {
     JSValue val, obj;
@@ -342,7 +342,7 @@ static JSValue js_boolean_valueOf(JSContext *ctx, JSValueConst this_val,
     return js_thisBooleanValue(ctx, this_val);
 }
 
-static const JSCFunctionListEntry js_boolean_proto_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_boolean_proto_funcs[] = {
     JS_CFUNC_DEF("toString", 0, js_boolean_toString ),
     JS_CFUNC_DEF("valueOf", 0, js_boolean_valueOf ),
 };
@@ -407,8 +407,7 @@ static int js_string_define_own_property(JSContext *ctx,
                 goto fail;
             if (string_get(p1, idx) != string_get(p2, 0)) {
             fail:
-                return JS_ThrowTypeErrorOrFalse(
-                    ctx, flags, "property is not configurable");
+                return JS_ThrowTypeErrorOrFalse(ctx, flags, "property is not configurable");
             }
         }
         return TRUE;
@@ -433,13 +432,13 @@ static int js_string_delete_property(JSContext *ctx,
     return TRUE;
 }
 
-static const JSClassExoticMethods js_string_exotic_methods = {
+QJS_INTERNAL const JSClassExoticMethods js_string_exotic_methods = {
     .get_own_property = js_string_get_own_property,
     .define_own_property = js_string_define_own_property,
     .delete_property = js_string_delete_property,
 };
 
-static JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
+QJS_INTERNAL JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
                                      int argc, JSValueConst *argv)
 {
     JSValue val, obj;
@@ -761,9 +760,7 @@ static int string_indexof(JSString *p1, JSString *p2, int from)
     return -1;
 }
 
-QJS_INTERNAL int64_t string_advance_index(JSString *p,
-                                                      int64_t index,
-                                                      BOOL unicode)
+QJS_INTERNAL int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode)
 {
     if (!unicode || index >= p->len || !p->is_wide_char) {
         index++;
@@ -998,8 +995,7 @@ static int check_regexp_g_flag(JSContext *ctx, JSValueConst regexp)
         flags = JS_ToStringFree(ctx, flags);
         if (JS_IsException(flags))
             return -1;
-        ret = string_indexof_char(JS_VALUE_GET_STRING(flags),
-                                             'g', 0);
+        ret = string_indexof_char(JS_VALUE_GET_STRING(flags), 'g', 0);
         JS_FreeValue(ctx, flags);
         if (ret < 0) {
             JS_ThrowTypeError(ctx, "regexp must have the 'g' flag");
@@ -1061,11 +1057,16 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
 
 /* if captures != NULL, captures_val and matched are ignored. Otherwise,
    captures_len is ignored */
-QJS_INTERNAL int js_string_GetSubstitution(
-    JSContext *ctx, StringBuffer *b, JSValueConst matched, JSString *sp,
-    uint32_t position, JSValueConst captures_val,
-    JSValueConst namedCaptures, JSValueConst rep, uint8_t **captures,
-    uint32_t captures_len)
+QJS_INTERNAL int js_string_GetSubstitution(JSContext *ctx,
+                                     StringBuffer *b,
+                                     JSValueConst matched,
+                                     JSString *sp,
+                                     uint32_t position,
+                                     JSValueConst captures_val,
+                                     JSValueConst namedCaptures,
+                                     JSValueConst rep,
+                                     uint8_t **captures,
+                                     uint32_t captures_len)
 {
     JSValue capture, name, s;
     uint32_t len, matched_len;
@@ -1264,8 +1265,8 @@ static JSValue js_string_replace(JSContext *ctx, JSValueConst this_val,
             string_buffer_concat_value_free(b, repl_str);
         } else {
             if (js_string_GetSubstitution(ctx, b, search_str, sp, pos,
-                                            JS_UNDEFINED, JS_UNDEFINED,
-                                            replaceValue_str, NULL, 0)) {
+                                          JS_UNDEFINED, JS_UNDEFINED, replaceValue_str,
+                                          NULL, 0)) {
                 goto exception;
             }
         }
@@ -2012,13 +2013,13 @@ static JSValue js_string_CreateHTML(JSContext *ctx, JSValueConst this_val,
     return string_buffer_end(b);
 }
 
-static const JSCFunctionListEntry js_string_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_string_funcs[] = {
     JS_CFUNC_DEF("fromCharCode", 1, js_string_fromCharCode ),
     JS_CFUNC_DEF("fromCodePoint", 1, js_string_fromCodePoint ),
     JS_CFUNC_DEF("raw", 1, js_string_raw ),
 };
 
-static const JSCFunctionListEntry js_string_proto_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_string_proto_funcs[] = {
     JS_PROP_INT32_DEF("length", 0, JS_PROP_CONFIGURABLE ),
     JS_CFUNC_MAGIC_DEF("at", 1, js_string_charAt, 1 ),
     JS_CFUNC_DEF("charCodeAt", 1, js_string_charCodeAt ),
@@ -2072,7 +2073,7 @@ static const JSCFunctionListEntry js_string_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("sup", 0, js_string_CreateHTML, magic_string_sup ),
 };
 
-static const JSCFunctionListEntry js_string_iterator_proto_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_string_iterator_proto_funcs[] = {
     JS_ITERATOR_NEXT_DEF("next", 0, js_string_iterator_next, 0 ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "String Iterator", JS_PROP_CONFIGURABLE ),
 };
@@ -2092,7 +2093,7 @@ int JS_AddIntrinsicStringNormalize(JSContext *ctx)
 
 /* Symbol */
 
-static JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
+QJS_INTERNAL JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
                                      int argc, JSValueConst *argv)
 {
     JSValue str;
@@ -2163,7 +2164,7 @@ static JSValue js_symbol_get_description(JSContext *ctx, JSValueConst this_val)
     return ret;
 }
 
-static const JSCFunctionListEntry js_symbol_proto_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_symbol_proto_funcs[] = {
     JS_CFUNC_DEF("toString", 0, js_symbol_toString ),
     JS_CFUNC_DEF("valueOf", 0, js_symbol_valueOf ),
     // XXX: should have writable: false
@@ -2196,7 +2197,7 @@ static JSValue js_symbol_keyFor(JSContext *ctx, JSValueConst this_val,
     return JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING, p));
 }
 
-static const JSCFunctionListEntry js_symbol_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_symbol_funcs[] = {
     JS_CFUNC_DEF("for", 1, js_symbol_for ),
     JS_CFUNC_DEF("keyFor", 1, js_symbol_keyFor ),
     JS_PROP_ATOM_DEF("toPrimitive", JS_ATOM_Symbol_toPrimitive, 0),
@@ -2213,7 +2214,6 @@ static const JSCFunctionListEntry js_symbol_funcs[] = {
     JS_PROP_ATOM_DEF("unscopables", JS_ATOM_Symbol_unscopables, 0),
     JS_PROP_ATOM_DEF("asyncIterator", JS_ATOM_Symbol_asyncIterator, 0),
 };
-
 
 /* BigInt */
 
@@ -2328,7 +2328,7 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
 {
     uint64_t bits;
     JSValue res, a;
-
+    
     if (JS_ToIndex(ctx, &bits, argv[0]))
         return JS_EXCEPTION;
     a = JS_ToBigInt(ctx, argv[1]);
@@ -2409,72 +2409,5 @@ QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx)
     if (JS_IsException(obj1))
         return -1;
     JS_FreeValue(ctx, obj1);
-    return 0;
-}
-
-
-
-QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx)
-{
-    JSValue obj;
-
-    obj = JS_NewCConstructor(
-        ctx, JS_CLASS_NUMBER, "Number", js_number_constructor, 1,
-        JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
-        js_number_funcs, countof(js_number_funcs),
-        js_number_proto_funcs, countof(js_number_proto_funcs), (1 << 1));
-    if (JS_IsException(obj))
-        return -1;
-    JS_FreeValue(ctx, obj);
-    if (JS_SetObjectData(ctx, ctx->class_proto[JS_CLASS_NUMBER],
-                            JS_NewInt32(ctx, 0)))
-        return -1;
-
-    obj = JS_NewCConstructor(
-        ctx, JS_CLASS_BOOLEAN, "Boolean", js_boolean_constructor, 1,
-        JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED, NULL, 0,
-        js_boolean_proto_funcs, countof(js_boolean_proto_funcs), (1 << 1));
-    if (JS_IsException(obj))
-        return -1;
-    JS_FreeValue(ctx, obj);
-    if (JS_SetObjectData(ctx, ctx->class_proto[JS_CLASS_BOOLEAN],
-                            JS_NewBool(ctx, FALSE)))
-        return -1;
-
-    obj = JS_NewCConstructor(
-        ctx, JS_CLASS_STRING, "String", js_string_constructor, 1,
-        JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
-        js_string_funcs, countof(js_string_funcs),
-        js_string_proto_funcs, countof(js_string_proto_funcs), (1 << 1));
-    if (JS_IsException(obj))
-        return -1;
-    JS_FreeValue(ctx, obj);
-    if (JS_SetObjectData(ctx, ctx->class_proto[JS_CLASS_STRING],
-                            JS_AtomToString(ctx, JS_ATOM_empty_string)))
-        return -1;
-
-    ctx->class_proto[JS_CLASS_STRING_ITERATOR] =
-        JS_NewObjectProtoList(
-            ctx, ctx->class_proto[JS_CLASS_ITERATOR],
-            js_string_iterator_proto_funcs,
-            countof(js_string_iterator_proto_funcs));
-    return JS_IsException(ctx->class_proto[JS_CLASS_STRING_ITERATOR]) ? -1 : 0;
-}
-
-QJS_INTERNAL void qjs_primitive_init_classes(JSRuntime *rt)
-{
-    rt->class_array[JS_CLASS_STRING].exotic = &js_string_exotic_methods;
-}
-
-QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx)
-{
-    JSValue obj = JS_NewCConstructor(
-        ctx, JS_CLASS_SYMBOL, "Symbol", js_symbol_constructor, 0,
-        JS_CFUNC_constructor_or_func, 0, JS_UNDEFINED,
-        js_symbol_funcs, countof(js_symbol_funcs),
-        js_symbol_proto_funcs, countof(js_symbol_proto_funcs), 0);
-    if (JS_IsException(obj))
-        return -1;
-    JS_FreeValue(ctx, obj);
     return 0;
 }

@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-module.h"
 
 /* XXX: would be more efficient with separate module lists */
@@ -76,7 +77,7 @@ QJS_INTERNAL void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
         JSReqModuleEntry *rme = &m->req_module_entries[i];
         JS_MarkValue(rt, rme->attributes, mark_func);
     }
-
+    
     for(i = 0; i < m->export_entries_count; i++) {
         JSExportEntry *me = &m->export_entries[i];
         if (me->export_type == JS_EXPORT_TYPE_LOCAL &&
@@ -164,7 +165,8 @@ QJS_INTERNAL int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
     return m->req_module_entries_count - 1;
 }
 
-QJS_INTERNAL JSExportEntry *find_export_entry(JSModuleDef *m, JSAtom export_name)
+QJS_INTERNAL JSExportEntry *find_export_entry(JSContext *ctx, JSModuleDef *m,
+                                        JSAtom export_name)
 {
     JSExportEntry *me;
     int i;
@@ -176,15 +178,21 @@ QJS_INTERNAL JSExportEntry *find_export_entry(JSModuleDef *m, JSAtom export_name
     return NULL;
 }
 
-QJS_INTERNAL JSExportEntry *add_export_entry2(JSContext *ctx, JSModuleDef *m,
-                                        JSAtom local_name, JSAtom export_name,
-                                        JSExportTypeEnum export_type)
+QJS_INTERNAL JSExportEntry *add_export_entry2(JSContext *ctx,
+                                        JSParseState *s, JSModuleDef *m,
+                                       JSAtom local_name, JSAtom export_name,
+                                       JSExportTypeEnum export_type)
 {
     JSExportEntry *me;
 
-    if (find_export_entry(m, export_name)) {
-        JS_ThrowSyntaxErrorAtom(ctx, "duplicate exported name '%s'",
-                                export_name);
+    if (find_export_entry(ctx, m, export_name)) {
+        char buf1[ATOM_GET_STR_BUF_SIZE];
+        if (s) {
+            js_parse_error(s, "duplicate exported name '%s'",
+                           JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name));
+        } else {
+            JS_ThrowSyntaxErrorAtom(ctx, "duplicate exported name '%s'", export_name);
+        }
         return NULL;
     }
 
@@ -239,7 +247,7 @@ int JS_AddModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name)
     name = JS_NewAtom(ctx, export_name);
     if (name == JS_ATOM_NULL)
         return -1;
-    me = add_export_entry2(ctx, m, JS_ATOM_NULL, name,
+    me = add_export_entry2(ctx, NULL, m, JS_ATOM_NULL, name,
                            JS_EXPORT_TYPE_LOCAL);
     JS_FreeAtom(ctx, name);
     if (!me)
@@ -256,7 +264,7 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
     name = JS_NewAtom(ctx, export_name);
     if (name == JS_ATOM_NULL)
         goto fail;
-    me = find_export_entry(m, name);
+    me = find_export_entry(ctx, m, name);
     JS_FreeAtom(ctx, name);
     if (!me)
         goto fail;
@@ -512,7 +520,7 @@ static JSResolveResultEnum js_resolve_export1(JSContext *ctx,
         return JS_RESOLVE_RES_CIRCULAR;
     if (add_resolve_entry(ctx, s, m, export_name) < 0)
         return JS_RESOLVE_RES_EXCEPTION;
-    me = find_export_entry(m, export_name);
+    me = find_export_entry(ctx, m, export_name);
     if (me) {
         if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
             /* local export */
@@ -625,7 +633,6 @@ static void js_resolve_export_throw_error(JSContext *ctx,
     }
 }
 
-
 typedef enum {
     EXPORTED_NAME_AMBIGUOUS,
     EXPORTED_NAME_NORMAL,
@@ -716,7 +723,7 @@ static int js_module_ns_has(JSContext *ctx, JSValueConst obj, JSAtom atom)
     return (find_own_property1(JS_VALUE_GET_OBJ(obj), atom) != NULL);
 }
 
-static const JSClassExoticMethods js_module_ns_exotic_methods = {
+QJS_INTERNAL const JSClassExoticMethods js_module_ns_exotic_methods = {
     .has_property = js_module_ns_has,
 };
 
@@ -945,7 +952,7 @@ static int js_create_module_bytecode_function(JSContext *ctx, JSModuleDef *m)
 }
 
 /* must be done before js_link_module() because of cyclic references */
-static int js_create_module_function(JSContext *ctx, JSModuleDef *m)
+QJS_INTERNAL int js_create_module_function(JSContext *ctx, JSModuleDef *m)
 {
     BOOL is_c_module;
     int i;
@@ -983,7 +990,6 @@ static int js_create_module_function(JSContext *ctx, JSModuleDef *m)
 
     return 0;
 }
-
 
 /* Prepare a module to be executed by resolving all the imported
    variables. */
@@ -1186,7 +1192,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
 
 /* Prepare a module to be executed by resolving all the imported
    variables. */
-static int js_link_module(JSContext *ctx, JSModuleDef *m)
+QJS_INTERNAL int js_link_module(JSContext *ctx, JSModuleDef *m)
 {
     JSModuleDef *stack_top, *m1;
 
@@ -1464,7 +1470,7 @@ QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, J
     specifier_str = JS_ToString(ctx, specifier);
     if (JS_IsException(specifier_str))
         goto exception;
-
+    
     if (!JS_IsUndefined(options)) {
         if (!JS_IsObject(options)) {
             JS_ThrowTypeError(ctx, "options must be an object");
@@ -1477,7 +1483,7 @@ QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, J
             JSPropertyEnum *atoms;
             uint32_t atoms_len, i;
             JSValue val;
-
+            
             if (!JS_IsObject(attributes_obj)) {
                 JS_ThrowTypeError(ctx, "options.with must be an object");
                 goto exception;
@@ -1517,7 +1523,7 @@ QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, J
     args[2] = basename_val;
     args[3] = specifier_str;
     args[4] = attributes;
-
+    
     /* cannot run JS_LoadModuleInternal synchronously because it would
        cause an unexpected recursion in js_evaluate_module() */
     JS_EnqueueJob(ctx, js_dynamic_import_job, 5, args);
@@ -1900,7 +1906,7 @@ static int js_inner_module_evaluation(JSContext *ctx, JSModuleDef *m,
 
 /* Run the <eval> function of the module and of all its requested
    modules. Return a promise or an exception. */
-static JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
+QJS_INTERNAL JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
 {
     JSModuleDef *m1, *stack_top;
     JSValue ret_val, result;
@@ -1959,7 +1965,6 @@ static JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
     return JS_DupValue(ctx, m->promise);
 }
 
-
 int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
 {
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
@@ -1970,22 +1975,4 @@ int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
         }
     }
     return 0;
-}
-
-
-
-QJS_INTERNAL void qjs_module_init_class(JSRuntime *rt)
-{
-    rt->class_array[JS_CLASS_MODULE_NS].exotic =
-        &js_module_ns_exotic_methods;
-}
-
-QJS_INTERNAL JSValue qjs_module_link_and_evaluate(JSContext *ctx,
-                                                  JSModuleDef *module)
-{
-    if (js_create_module_function(ctx, module) < 0)
-        return JS_EXCEPTION;
-    if (js_link_module(ctx, module) < 0)
-        return JS_EXCEPTION;
-    return js_evaluate_module(ctx, module);
 }

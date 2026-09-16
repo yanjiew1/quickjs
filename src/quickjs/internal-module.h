@@ -33,30 +33,25 @@ typedef enum JSFreeModuleEnum {
 } JSFreeModuleEnum;
 
 QJS_INTERNAL JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
-QJS_INTERNAL JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *module);
+QJS_INTERNAL JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
 QJS_INTERNAL void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
-QJS_INTERNAL void js_free_module_def(JSRuntime *rt, JSModuleDef *module);
-QJS_INTERNAL void js_mark_module_def(JSRuntime *rt, JSModuleDef *module,
-                                      JS_MarkFunc *mark_func);
-QJS_INTERNAL void qjs_module_init_class(JSRuntime *rt);
-QJS_INTERNAL JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *obj,
-                                            JSAtom atom, void *opaque);
-QJS_INTERNAL int add_req_module_entry(JSContext *ctx, JSModuleDef *module,
-                                        JSAtom module_name);
-QJS_INTERNAL JSExportEntry *find_export_entry(JSModuleDef *module,
-                                                   JSAtom export_name);
-QJS_INTERNAL JSExportEntry *add_export_entry2(
-    JSContext *ctx, JSModuleDef *module, JSAtom local_name,
-    JSAtom export_name, JSExportTypeEnum export_type);
-QJS_INTERNAL int add_star_export_entry(JSContext *ctx,
-                                            JSModuleDef *module,
-                                            int req_module_idx);
-QJS_INTERNAL int js_resolve_module(JSContext *ctx, JSModuleDef *module);
-QJS_INTERNAL JSValue qjs_module_link_and_evaluate(JSContext *ctx,
-                                                  JSModuleDef *module);
+QJS_INTERNAL void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
+QJS_INTERNAL void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
+                               JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
+                                     void *opaque);
+QJS_INTERNAL int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
+                                JSAtom module_name);
+QJS_INTERNAL JSExportEntry *find_export_entry(JSContext *ctx, JSModuleDef *m,
+                                        JSAtom export_name);
+QJS_INTERNAL JSExportEntry *add_export_entry2(JSContext *ctx,
+                                        JSParseState *s, JSModuleDef *m,
+                                       JSAtom local_name, JSAtom export_name,
+                                       JSExportTypeEnum export_type);
+QJS_INTERNAL int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
+                                 int req_module_idx);
+QJS_INTERNAL int js_resolve_module(JSContext *ctx, JSModuleDef *m);
 QJS_INTERNAL JSValue js_import_meta(JSContext *ctx);
-QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx,
-                                        JSValueConst specifier,
-                                        JSValueConst options);
+QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
 
 #endif /* QUICKJS_INTERNAL_MODULE_H */

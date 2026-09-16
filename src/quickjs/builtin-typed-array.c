@@ -22,12 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#define QUICKJS_TYPED_ARRAY_OWNER
+#include "internal-canonical.h"
 #include "internal-typed-array.h"
 #include "internal-primitive.h"
 
 QJS_INTERNAL void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
-static BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
+QJS_INTERNAL BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
 static int typed_array_init(JSContext *ctx, JSValueConst obj,
                             JSValue buffer, uint64_t offset, uint64_t len,
                             BOOL track_rab);
@@ -44,7 +44,7 @@ QJS_INTERNAL JSValue js_typed_array_constructor(JSContext *ctx,
 
 /* Typed Arrays */
 
-QJS_INTERNAL const uint8_t typed_array_size_log2[JS_TYPED_ARRAY_COUNT] = {
+QJS_INTERNAL uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT] = {
     0, 0, 0, 1, 1, 2, 2,
     3, 3,                   // BigInt64Array, BigUint64Array
     1, 2, 3                 // Float16Array, Float32Array, Float64Array
@@ -195,7 +195,7 @@ static JSValue js_array_buffer_constructor0(JSContext *ctx, JSValueConst new_tar
     if (JS_ToInt64Free(ctx, &i, val))
         return JS_EXCEPTION;
     // don't have to check i < 0 because len >= 0
-    if (len > i || i > QJS_MAX_SAFE_INTEGER)
+    if (len > i || i > MAX_SAFE_INTEGER)
         return JS_ThrowRangeError(ctx, "invalid array buffer max length");
     max_len = i;
     pmax_len = &max_len;
@@ -372,7 +372,7 @@ static void js_array_buffer_update_typed_arrays(JSArrayBuffer *abuf)
             }
         }
     }
-
+    
 }
 
 void JS_DetachArrayBuffer(JSContext *ctx, JSValueConst obj)
@@ -423,7 +423,7 @@ uint8_t *JS_GetArrayBuffer(JSContext *ctx, size_t *psize, JSValueConst obj)
     return NULL;
 }
 
-static BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf)
+QJS_INTERNAL BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf)
 {
     return abuf->max_byte_length >= 0;
 }
@@ -469,7 +469,7 @@ static JSValue js_array_buffer_transfer(JSContext *ctx,
         JS_DetachArrayBuffer(ctx, this_val);
     } else {
         uint64_t old_len;
-
+        
         old_len = abuf->byte_length;
 
         /* if length mismatch, realloc. Otherwise, use the same backing buffer. */
@@ -1342,7 +1342,7 @@ static JSValue js_typed_array_find(JSContext *ctx, JSValueConst this_val,
     k = 0;
     dir = 1;
     end = len;
-    if (mode == QJS_ARRAY_FIND_LAST || mode == QJS_ARRAY_FIND_LAST_INDEX) {
+    if (mode == ArrayFindLast || mode == ArrayFindLastIndex) {
         k = len - 1;
         dir = -1;
         end = -1;
@@ -1360,7 +1360,7 @@ static JSValue js_typed_array_find(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(res))
             goto exception;
         if (JS_ToBoolFree(ctx, res)) {
-            if (mode == QJS_ARRAY_FIND_INDEX || mode == QJS_ARRAY_FIND_LAST_INDEX) {
+            if (mode == ArrayFindIndex || mode == ArrayFindLastIndex) {
                 JS_FreeValue(ctx, val);
                 return index_val;
             } else {
@@ -1369,7 +1369,7 @@ static JSValue js_typed_array_find(JSContext *ctx, JSValueConst this_val,
         }
         JS_FreeValue(ctx, val);
     }
-    if (mode == QJS_ARRAY_FIND_INDEX || mode == QJS_ARRAY_FIND_LAST_INDEX)
+    if (mode == ArrayFindIndex || mode == ArrayFindLastIndex)
         return JS_NewInt32(ctx, -1);
     else
         return JS_UNDEFINED;
@@ -1378,10 +1378,6 @@ exception:
     JS_FreeValue(ctx, val);
     return JS_EXCEPTION;
 }
-
-#define special_indexOf 0
-#define special_lastIndexOf 1
-#define special_includes -1
 
 static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv, int special)
@@ -1465,7 +1461,7 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
             p1 = js_bigint_set_short(&buf1, argv[0]);
         else
             p1 = JS_VALUE_GET_PTR(argv[0]);
-
+        
         if (p->class_id == JS_CLASS_BIG_INT64_ARRAY) {
             if (p1->len > sz)
                 goto done; /* does not fit an int64 : cannot be found */
@@ -1914,7 +1910,7 @@ static JSValue js_typed_array_subarray(JSContext *ctx, JSValueConst this_val,
     JSObject *p;
     int len, start, final, count, shift, offset;
     BOOL is_auto;
-
+        
     p = get_typed_array(ctx, this_val);
     if (!p)
         goto exception;
@@ -1934,7 +1930,7 @@ static JSValue js_typed_array_subarray(JSContext *ctx, JSValueConst this_val,
         is_auto = FALSE;
         if (JS_ToInt32Clamp(ctx, &final, argv[1], 0, len, len))
             goto exception;
-    }
+    } 
     count = max_int(final - start, 0);
     ta_buffer = js_typed_array_get_buffer(ctx, this_val);
     if (JS_IsException(ta_buffer))
@@ -2077,7 +2073,7 @@ static int js_TA_cmp_generic(const void *a, const void *b, void *opaque) {
     JSValueConst argv[2];
     JSValue res;
     int cmp;
-
+    
     cmp = 0;
     if (!psc->exception) {
         /* Note: the typed array can be detached without causing an
@@ -2198,7 +2194,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
             if (!array)
                 return JS_EXCEPTION;
             memcpy(array, p->u.array.u.ptr, len * elt_size);
-
+            
             /* array_idx is needed to have a stable sort */
             array_idx = js_malloc(ctx, len * sizeof(array_idx[0]));
             if (!array_idx) {
@@ -2439,7 +2435,7 @@ static size_t from_base64(const char *src, size_t src_len,
     int seen = 0;
     size_t index = 0;
     uint8_t ch;
-
+    
     *p_err = 0;
 
     if (max_len == 0) {
@@ -2467,13 +2463,13 @@ static size_t from_base64(const char *src, size_t src_len,
                 index += 4;
             }
             read = index;
-
+            
             if (written >= max_len) {
                 *p_read = read;
                 return written;
             }
         }
-
+        
         /* Slow path: handle whitespace, padding, partial groups, capacity. */
         index = b64_skip_ws(src, src_len, index, dec_table);
 
@@ -2873,7 +2869,7 @@ static JSValue js_uint8array_from_base64(JSContext *ctx, JSValueConst this_val,
     uint8_t *buf;
     JSValue result;
     JSValueConst options;
-
+    
     if (!JS_IsString(argv[0]))
         return JS_ThrowTypeError(ctx, "expected string");
 
@@ -3090,18 +3086,18 @@ static const JSCFunctionListEntry js_typed_array_base_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("entries", 0, js_create_typed_array_iterator, JS_ITERATOR_KIND_KEY_AND_VALUE ),
     JS_CGETSET_DEF("[Symbol.toStringTag]", js_typed_array_get_toStringTag, NULL ),
     JS_CFUNC_DEF("copyWithin", 2, js_typed_array_copyWithin ),
-    JS_CFUNC_MAGIC_DEF("every", 1, js_array_every, QJS_ARRAY_EVERY | QJS_ARRAY_TYPED ),
-    JS_CFUNC_MAGIC_DEF("some", 1, js_array_every, QJS_ARRAY_SOME | QJS_ARRAY_TYPED ),
-    JS_CFUNC_MAGIC_DEF("forEach", 1, js_array_every, QJS_ARRAY_FOR_EACH | QJS_ARRAY_TYPED ),
-    JS_CFUNC_MAGIC_DEF("map", 1, js_array_every, QJS_ARRAY_MAP | QJS_ARRAY_TYPED ),
-    JS_CFUNC_MAGIC_DEF("filter", 1, js_array_every, QJS_ARRAY_FILTER | QJS_ARRAY_TYPED ),
-    JS_CFUNC_MAGIC_DEF("reduce", 1, js_array_reduce, QJS_ARRAY_REDUCE | QJS_ARRAY_TYPED ),
-    JS_CFUNC_MAGIC_DEF("reduceRight", 1, js_array_reduce, QJS_ARRAY_REDUCE_RIGHT | QJS_ARRAY_TYPED ),
+    JS_CFUNC_MAGIC_DEF("every", 1, js_array_every, special_every | special_TA ),
+    JS_CFUNC_MAGIC_DEF("some", 1, js_array_every, special_some | special_TA ),
+    JS_CFUNC_MAGIC_DEF("forEach", 1, js_array_every, special_forEach | special_TA ),
+    JS_CFUNC_MAGIC_DEF("map", 1, js_array_every, special_map | special_TA ),
+    JS_CFUNC_MAGIC_DEF("filter", 1, js_array_every, special_filter | special_TA ),
+    JS_CFUNC_MAGIC_DEF("reduce", 1, js_array_reduce, special_reduce | special_TA ),
+    JS_CFUNC_MAGIC_DEF("reduceRight", 1, js_array_reduce, special_reduceRight | special_TA ),
     JS_CFUNC_DEF("fill", 1, js_typed_array_fill ),
-    JS_CFUNC_MAGIC_DEF("find", 1, js_typed_array_find, QJS_ARRAY_FIND ),
-    JS_CFUNC_MAGIC_DEF("findIndex", 1, js_typed_array_find, QJS_ARRAY_FIND_INDEX ),
-    JS_CFUNC_MAGIC_DEF("findLast", 1, js_typed_array_find, QJS_ARRAY_FIND_LAST ),
-    JS_CFUNC_MAGIC_DEF("findLastIndex", 1, js_typed_array_find, QJS_ARRAY_FIND_LAST_INDEX ),
+    JS_CFUNC_MAGIC_DEF("find", 1, js_typed_array_find, ArrayFind ),
+    JS_CFUNC_MAGIC_DEF("findIndex", 1, js_typed_array_find, ArrayFindIndex ),
+    JS_CFUNC_MAGIC_DEF("findLast", 1, js_typed_array_find, ArrayFindLast ),
+    JS_CFUNC_MAGIC_DEF("findLastIndex", 1, js_typed_array_find, ArrayFindLastIndex ),
     JS_CFUNC_DEF("reverse", 0, js_typed_array_reverse ),
     JS_CFUNC_DEF("toReversed", 0, js_typed_array_toReversed ),
     JS_CFUNC_DEF("slice", 2, js_typed_array_slice ),
@@ -3174,7 +3170,6 @@ static int typed_array_init(JSContext *ctx, JSValueConst obj,
     p->u.array.u.ptr = abuf->data + offset;
     return 0;
 }
-
 
 static JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
                                       JSValueConst obj, JSValueConst method)
@@ -3837,7 +3832,7 @@ typedef enum AtomicsOpEnum {
     ATOMICS_OP_LOAD,
 } AtomicsOpEnum;
 
-static JSObject *js_atomics_get_buf(JSContext *ctx,
+static JSObject *js_atomics_get_buf(JSContext *ctx, 
                                     JSValueConst obj, JSValueConst idx_val,
                                     uint64_t *pidx, int is_waitable)
 {
@@ -3875,7 +3870,7 @@ static JSObject *js_atomics_get_buf(JSContext *ctx,
         }
     }
     old_len = p->u.array.count;
-
+    
     if (JS_ToIndex(ctx, &idx, idx_val)) {
         return NULL;
     }
@@ -3909,7 +3904,7 @@ static JSValue js_atomics_op(JSContext *ctx,
     void *ptr;
     JSValue ret;
     JSObject *p;
-
+    
     p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 0);
     if (!p)
         return JS_EXCEPTION;
@@ -3945,7 +3940,7 @@ static JSValue js_atomics_op(JSContext *ctx,
             return JS_ThrowRangeError(ctx, "out-of-bound access");
     }
     ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
-
+    
     switch(op | (size_log2 << 3)) {
 
 #define OP(op_name, func_name)                          \
@@ -4088,7 +4083,7 @@ static JSValue js_atomics_store(JSContext *ctx,
         return JS_ThrowRangeError(ctx, "out-of-bound access");
 
     ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
-
+    
     switch(size_log2) {
     case 0:
         atomic_store((_Atomic(uint8_t) *)ptr, v);
@@ -4193,7 +4188,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
         return JS_EXCEPTION;
     size_log2 = typed_array_size_log2(p->class_id);
     ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
-
+    
     /* 'argv[0]' is a SharedArrayBuffer so it cannot be detached nor reduced */
     if (size_log2 == 3) {
         if (JS_ToBigInt64(ctx, &v, argv[2]))
@@ -4273,12 +4268,12 @@ static JSValue js_atomics_notify(JSContext *ctx,
     JSAtomicsWaiter *waiter;
     JSArrayBuffer *abuf;
     JSObject *p;
-
+    
     p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 1);
     if (!p)
         return JS_EXCEPTION;
     size_log2 = typed_array_size_log2(p->class_id);
-
+    
     if (JS_IsUndefined(argv[2])) {
         count = INT32_MAX;
     } else {
@@ -4391,13 +4386,13 @@ int JS_AddIntrinsicTypedArrays(JSContext *ctx)
     JS_FreeValue(ctx, typed_array_base_proto);
     if (ret < 0)
         goto fail;
-
+    
     /* Used to squelch a -Wcast-function-type warning. */
     JSCFunctionType ft = { .generic_magic = js_typed_array_constructor };
     for(i = JS_CLASS_UINT8C_ARRAY; i < JS_CLASS_UINT8C_ARRAY + JS_TYPED_ARRAY_COUNT; i++) {
         char buf[ATOM_GET_STR_BUF_SIZE];
         const char *name;
-
+            
         name = JS_AtomGetStr(ctx, buf, sizeof(buf),
                              JS_ATOM_Uint8ClampedArray + i - JS_CLASS_UINT8C_ARRAY);
         if (i == JS_CLASS_UINT8_ARRAY) {

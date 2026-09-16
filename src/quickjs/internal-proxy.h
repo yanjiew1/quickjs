@@ -27,23 +27,17 @@
 
 #include "internal-builtin.h"
 
-QJS_INTERNAL int qjs_proxy_register_class(JSRuntime *rt,
-                                           JSClassFinalizer *finalizer,
-                                           JSClassGCMark *gc_mark,
-                                           const JSClassExoticMethods *exotic,
-                                           JSClassCall *call);
-QJS_INTERNAL JSValue JS_NewCFunction3(
-    JSContext *ctx, JSCFunction *func, const char *name, int length,
-    JSCFunctionEnum cproto, int magic, JSValueConst proto, int prop_count);
+QJS_INTERNAL JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                                const char *name,
+                                int length, JSCFunctionEnum cproto, int magic,
+                                JSValueConst proto_val, int n_fields);
 QJS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
-QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(
-    JSContext *ctx, JSValueConst value);
-QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
-                                            JSValueConst *values);
-QJS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue value);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
+                                                JSValueConst func_obj);
+QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+QJS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue val);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
-QJS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *value,
-                                   BOOL throw_exception);
+QJS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);
 
 #endif /* QUICKJS_INTERNAL_PROXY_H */

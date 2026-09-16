@@ -29,20 +29,13 @@
 #include "internal-frontend.h"
 #include "internal-builtin.h"
 
-QJS_INTERNAL JSValue js_object_keys(JSContext *ctx,
-                                          JSValueConst this_val,
-                                          int argc, JSValueConst *argv,
-                                          int magic);
-QJS_INTERNAL JSValue js_array_includes(JSContext *ctx,
-                                             JSValueConst this_val,
-                                             int argc, JSValueConst *argv);
-QJS_INTERNAL JSValue js_array_pop(JSContext *ctx,
-                                        JSValueConst this_val,
-                                        int argc, JSValueConst *argv,
-                                        int magic);
-QJS_INTERNAL JSValue js_array_push(JSContext *ctx,
-                                         JSValueConst this_val,
-                                         int argc, JSValueConst *argv,
-                                         int magic);
+QJS_INTERNAL JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv, int kind);
+QJS_INTERNAL JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv, int shift);
+QJS_INTERNAL JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv, int unshift);
 
 #endif /* QUICKJS_INTERNAL_JSON_H */

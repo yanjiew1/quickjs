@@ -28,53 +28,28 @@
 #include "internal-frontend.h"
 
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
-QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx,
-                                                               int class_id);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
 QJS_INTERNAL void JS_ThrowInterrupted(JSContext *ctx);
-static inline BOOL JS_IsCFunction_inline(JSContext *ctx, JSValueConst value,
-                                         JSCFunction *func, int magic);
 
-#define JS_IsCFunction(ctx, value, func, magic) \
-    JS_IsCFunction_inline((ctx), (value), (func), (magic))
-
-static inline BOOL JS_IsCFunction_inline(JSContext *ctx,
-                                            JSValueConst value,
-                                            JSCFunction *func, int magic)
-{
-    JSObject *obj;
-
-    (void)ctx;
-    if (JS_VALUE_GET_TAG(value) != JS_TAG_OBJECT)
-        return FALSE;
-    obj = JS_VALUE_GET_OBJ(value);
-    return obj->class_id == JS_CLASS_C_FUNCTION &&
-           obj->u.cfunc.c_function.generic == func &&
-           obj->u.cfunc.magic == magic;
-}
-QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
-                                                 JSValueConst ctor,
-                                                 int class_id);
-QJS_INTERNAL JSValue JS_NewObjectProtoList(
-    JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
-    int field_count);
-QJS_INTERNAL JSValue JS_NewCConstructor(
-    JSContext *ctx, int class_id, const char *name, JSCFunction *func,
-    int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
-    const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
-    const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags);
-QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx,
-                                                    JSValueConst obj,
-                                                    JSValueConst default_ctor);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+QJS_INTERNAL JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
+                                     const JSCFunctionListEntry *fields, int n_fields);
+QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                                  JSValueConst parent_ctor,
+                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                                  int flags);
+QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
+                                     JSValueConst defaultConstructor);
 QJS_INTERNAL JSValue js_get_this(JSContext *ctx,
-                                         JSValueConst this_val);
-QJS_INTERNAL void js_regexp_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void js_regexp_string_iterator_finalizer(JSRuntime *rt,
-                                                       JSValue value);
-QJS_INTERNAL void js_regexp_string_iterator_mark(JSRuntime *rt,
-                                                  JSValueConst value,
-                                                  JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern,
-                                    JSValue bytecode);
-QJS_INTERNAL int js_is_regexp(JSContext *ctx, JSValueConst value);
+                           JSValueConst this_val);
+QJS_INTERNAL void js_regexp_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                           JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
+QJS_INTERNAL int js_is_regexp(JSContext *ctx, JSValueConst obj);
 
 #endif /* QUICKJS_INTERNAL_REGEXP_H */

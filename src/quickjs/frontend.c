@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-frontend.h"
 
 /* JS parser */
@@ -393,8 +394,7 @@ typedef struct JSParseState {
     GetLineColCache get_line_col_cache;
 } JSParseState;
 
-QJS_INTERNAL const JSOpCode
-opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
+QJS_INTERNAL const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
 #define FMT(f)
 #ifdef DUMP_BYTECODE
 #define DEF(id, size, n_pop, n_push, f) { #id, size, n_pop, n_push, OP_FMT_ ## f },
@@ -502,7 +502,7 @@ static int get_line_col(int *pcol_num, const uint8_t *buf, size_t len)
 {
     int line_num, col_num, c;
     size_t i;
-
+    
     line_num = 0;
     col_num = 0;
     for(i = 0; i < len; i++) {
@@ -569,18 +569,18 @@ static __attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState
 {
     va_list ap;
     int ret;
-
+    
     va_start(ap, fmt);
     ret = js_parse_error_v(s, ptr, fmt, ap);
     va_end(ap);
     return ret;
 }
 
-static __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...)
+QJS_INTERNAL __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...)
 {
     va_list ap;
     int ret;
-
+    
     va_start(ap, fmt);
     ret = js_parse_error_v(s, s->token.ptr, fmt, ap);
     va_end(ap);
@@ -1045,7 +1045,6 @@ static JSAtom parse_ident(JSParseState *s, const uint8_t **pp,
     *pp = p;
     return atom;
 }
-
 
 static __exception int next_token(JSParseState *s)
 {
@@ -1554,7 +1553,7 @@ static int json_parse_string(JSParseState *s, const uint8_t **pp, int sep)
             case 'r':   c = '\r'; break;
             case 't':   c = '\t'; break;
             case '\\':  break;
-            case '/':   break;
+            case '/':   break; 
             case 'u':
                 c = 0;
                 for(i = 0; i < 4; i++) {
@@ -1617,7 +1616,7 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
     int radix;
     double d;
     JSATODTempMem atod_mem;
-
+    
     if (*p == '+' || *p == '-')
         p++;
 
@@ -2283,7 +2282,6 @@ static int find_var_in_child_scope(JSContext *ctx, JSFunctionDef *fd,
     return -1;
 }
 
-
 static JSGlobalVar *find_global_var(JSFunctionDef *fd, JSAtom name)
 {
     int i;
@@ -2671,7 +2669,8 @@ static __exception int js_parse_expr(JSParseState *s);
 static __exception int js_parse_function_decl(JSParseState *s,
                                               JSParseFunctionEnum func_type,
                                               JSFunctionKindEnum func_kind,
-                                              JSAtom func_name, const uint8_t *ptr);
+                                              JSAtom func_name,
+                                              const uint8_t *ptr);
 static JSFunctionDef *js_parse_function_class_fields_init(JSParseState *s);
 static __exception int js_parse_function_decl2(JSParseState *s,
                                                JSParseFunctionEnum func_type,
@@ -2818,7 +2817,6 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
  done1:
     return next_token(s);
 }
-
 
 #define PROP_TYPE_IDENT 0
 #define PROP_TYPE_VAR   1
@@ -3026,7 +3024,7 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     int last_tok, tok = TOK_EOF;
     int c, tok_len, bits = 0;
     const uint8_t *last_token_ptr;
-
+    
     /* protect from underflow */
     state[level++] = 0;
 
@@ -3490,7 +3488,6 @@ static void emit_class_init_end(JSParseState *s, ClassFieldsDef *cf)
     emit_u32(s, cpool_idx);
     emit_op(s, OP_set_home_object);
 }
-
 
 static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
                                       JSParseExportEnum export_flag)
@@ -4822,7 +4819,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
                     scope = s->cur_func->scope_level;
                     label_lvalue = -1;
                     depth_lvalue = 0;
-
+                    
                     /* source -- source val */
                     emit_op(s, OP_get_field2);
                     emit_u32(s, prop_name);
@@ -5056,7 +5053,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
     int optional_chaining_label;
     BOOL accept_lparen = (parse_flags & PF_POSTFIX_CALL) != 0;
     const uint8_t *op_token_ptr;
-
+    
     call_type = FUNC_CALL_NORMAL;
     switch(s->token.val) {
     case TOK_NUMBER:
@@ -5956,7 +5953,7 @@ static __exception int js_parse_expr_binary(JSParseState *s, int level,
 {
     int op, opcode;
     const uint8_t *op_token_ptr;
-
+    
     if (level == 0) {
         return js_parse_unary(s, PF_POW_ALLOWED);
     } else if (s->token.val == TOK_PRIVATE_NAME &&
@@ -6841,7 +6838,7 @@ static int is_let(JSParseState *s, int decl_mask)
 {
     int res = FALSE;
     const uint8_t *last_token_ptr;
-
+    
     if (token_is_pseudo_keyword(s, JS_ATOM_let)) {
         JSParsePos pos;
         js_parse_get_pos(s, &pos);
@@ -7081,7 +7078,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         if (is_async) {
             /* stack: iter_obj next catch_offset */
             /* call the next method */
-            emit_op(s, OP_for_await_of_next);
+            emit_op(s, OP_for_await_of_next); 
             /* get the result of the promise */
             emit_op(s, OP_await);
             /* unwrap the value and done values */
@@ -7885,14 +7882,8 @@ static JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
                                        JSAtom local_name, JSAtom export_name,
                                        JSExportTypeEnum export_type)
 {
-    if (find_export_entry(m, export_name)) {
-        char buf[ATOM_GET_STR_BUF_SIZE];
-        js_parse_error(s, "duplicate exported name '%s'",
-                       JS_AtomGetStr(s->ctx, buf, sizeof(buf), export_name));
-        return NULL;
-    }
-    return add_export_entry2(s->ctx, m, local_name,
-                                           export_name, export_type);
+    return add_export_entry2(s->ctx, s, m, local_name, export_name,
+                             export_type);
 }
 
 static __exception int js_parse_with_clause(JSParseState *s, JSReqModuleEntry *rme)
@@ -7901,7 +7892,7 @@ static __exception int js_parse_with_clause(JSParseState *s, JSReqModuleEntry *r
     JSAtom key;
     int ret;
     const uint8_t *key_token_ptr;
-
+    
     if (next_token(s))
         return -1;
     if (js_parse_expect(s, '{'))
@@ -8420,7 +8411,7 @@ static JSFunctionDef *js_new_function_def(JSContext *ctx,
     fd->filename = JS_NewAtom(ctx, filename);
     fd->source_pos = source_ptr - get_line_col_cache->buf_start;
     fd->get_line_col_cache = get_line_col_cache;
-
+    
     js_dbuf_init(ctx, &fd->pc2line);
     //fd->pc2line_last_line_num = line_num;
     //fd->pc2line_last_pc = 0;
@@ -8551,7 +8542,7 @@ static void print_lines(const char *source, int line, int line1) {
 
 static void dump_byte_code(JSContext *ctx, int pass,
                            const uint8_t *tab, int len,
-                           const JSBytecodeVarDef *vardefs,
+                           const JSBytecodeVarDef *vardefs, 
                            const JSVarDef *args, int arg_count,
                            const JSVarDef *vars, int var_count,
                            const JSClosureVar *closure_var, int closure_var_count,
@@ -8568,7 +8559,7 @@ static void dump_byte_code(JSContext *ctx, int pass,
         int col_num;
         line_num = find_line_num(ctx, b, -1, &col_num);
     }
-
+    
     /* scan for jump targets */
     for (pos = 0; pos < len; pos = pos_next) {
         op = tab[pos];
@@ -8838,7 +8829,7 @@ static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int 
     int pc, v, line_num, col_num, ret;
     unsigned int op;
     uint32_t val;
-
+    
     if (len <= 0)
         return;
 
@@ -8846,7 +8837,7 @@ static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int 
 
     p = buf;
     p_end = buf + len;
-
+    
     /* get the function line and column numbers */
     ret = get_leb128(&val, p, p_end);
     if (ret < 0)
@@ -8861,7 +8852,7 @@ static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int 
     col_num = val + 1;
 
     printf("%5s %5d %5d\n", "-", line_num, col_num);
-
+    
     pc = 0;
     while (p < p_end) {
         op = *p++;
@@ -8886,7 +8877,7 @@ static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int 
             goto fail;
         p += ret;
         col_num += v;
-
+        
         printf("%5d %5d %5d\n", pc, line_num, col_num);
     }
  fail: ;
@@ -9545,7 +9536,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             idx = get_closure_var(ctx, s, fd,
                                   JS_CLOSURE_GLOBAL_REF,
                                   idx1,
-                                  var_name, FALSE, FALSE,
+                                  var_name, FALSE, FALSE, 
                                   JS_VAR_NORMAL);
         } else {
             idx = idx1;
@@ -9966,7 +9957,7 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
             capture_var(s, vd);
         }
     }
-
+    
     /* eval can use all the variables of the enclosing functions, so
        they must be all put in the closure. The closure variables are
        ordered by scope. It works only because no closure are created
@@ -10913,7 +10904,7 @@ static void compute_pc2line_info(JSFunctionDef *s)
                 dbuf_put_sleb128(&s->pc2line, diff_line);
             }
             dbuf_put_sleb128(&s->pc2line, diff_col);
-
+                
             last_pc = pc;
             last_line_num = line_num;
             last_col_num = col_num;
@@ -12262,7 +12253,7 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
     JSExportEntry *me;
     JSGlobalVar *hf;
     BOOL need_global_closures;
-
+    
     /* Script: add the defined global variables. In the non strict
        direct eval not in global scope, the global variables are
        created in the enclosing scope so they are not created as
@@ -12311,9 +12302,8 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
             if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
                 idx = find_closure_var(ctx, fd, me->local_name);
                 if (idx < 0) {
-                    JS_ThrowSyntaxErrorAtom(
-                        ctx, "exported variable '%s' does not exist",
-                        me->local_name);
+                    JS_ThrowSyntaxErrorAtom(ctx, "exported variable '%s' does not exist",
+                                            me->local_name);
                     return -1;
                 }
                 me->u.local.var_idx = idx;
@@ -12335,7 +12325,7 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     int function_size, byte_code_offset, cpool_offset;
     int closure_var_offset, vardefs_offset;
     BOOL strip_var_debug;
-
+    
     /* recompute scope linkage */
     for (scope = 0; scope < fd->scope_count; scope++) {
         fd->scopes[scope].first = -1;
@@ -12373,7 +12363,7 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     if (fd->is_eval) {
         if (add_global_variables(ctx, fd))
             goto fail;
-    }
+    } 
 
     /* first create all the child functions */
     list_for_each_safe(el, el1, &fd->child_list) {
@@ -12470,7 +12460,7 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
             vd1->var_kind = vd->var_kind;
             vd1->var_ref_idx = vd->var_ref_idx;
         }
-
+        
         for(i = 0; i < fd->var_count; i++) {
             JSVarDef *vd = &fd->vars[i];
             JSBytecodeVarDef *vd1 = &b->vardefs[i + fd->arg_count];
@@ -13468,9 +13458,15 @@ static JSValue JS_EvalFunctionInternal(JSContext *ctx, JSValue fun_obj,
         m = JS_VALUE_GET_PTR(fun_obj);
         /* the module refcount should be >= 2 */
         JS_FreeValue(ctx, fun_obj);
-        ret_val = qjs_module_link_and_evaluate(ctx, m);
-        if (JS_IsException(ret_val))
+        if (js_create_module_function(ctx, m) < 0)
+            goto fail;
+        if (js_link_module(ctx, m) < 0)
+            goto fail;
+        ret_val = js_evaluate_module(ctx, m);
+        if (JS_IsException(ret_val)) {
+        fail:
             return JS_EXCEPTION;
+        }
     } else {
         JS_FreeValue(ctx, fun_obj);
         ret_val = JS_ThrowTypeError(ctx, "bytecode function expected");
@@ -13484,11 +13480,9 @@ JSValue JS_EvalFunction(JSContext *ctx, JSValue fun_obj)
 }
 
 /* 'input' must be zero terminated i.e. input[input_len] = '\0'. */
-QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx,
-                                       JSValueConst this_obj,
-                                       const char *input, size_t input_len,
-                                       const char *filename, int flags,
-                                       int scope_idx)
+QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
+                                 const char *input, size_t input_len,
+                                 const char *filename, int flags, int scope_idx)
 {
     JSParseState s1, *s = &s1;
     int err, js_mode, eval_type;
@@ -13609,7 +13603,7 @@ static JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     BOOL backtrace_barrier = ((flags & JS_EVAL_FLAG_BACKTRACE_BARRIER) != 0);
     int saved_js_mode = 0;
     JSValue ret;
-
+    
     if (unlikely(!ctx->eval_internal)) {
         return JS_ThrowTypeError(ctx, "eval is not supported");
     }
@@ -13665,7 +13659,6 @@ JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
 /*******************************************************************/
 /*******************************************************************/
 
-
 static int json_parse_expect(JSParseState *s, int tok)
 {
     if (s->token.val != tok) {
@@ -13675,8 +13668,7 @@ static int json_parse_expect(JSParseState *s, int tok)
     return json_next_token(s);
 }
 
-QJS_INTERNAL void json_parse_record_init_obj(JSContext *ctx, JSONParseRecord *pr,
-                                       JSValueConst val)
+QJS_INTERNAL void json_parse_record_init_obj(JSContext *ctx, JSONParseRecord *pr, JSValueConst val)
 {
     pr->value = JS_DupValue(ctx, val);
     pr->u.obj.count = 0;
@@ -13730,7 +13722,7 @@ QJS_INTERNAL JSONParseRecord *json_parse_record_add(JSContext *ctx, JSONParseRec
     JSONParseRecordEntry *e;
     JSONParseRecord *pr1;
     uint32_t h;
-
+    
     if (js_resize_array(ctx, (void **)&po->entries, sizeof(po->entries[0]),
                         psize, po->count + 1)) {
         return NULL;
@@ -13759,7 +13751,7 @@ QJS_INTERNAL JSONParseRecord *json_parse_record_find(JSONParseRecord *pr, JSAtom
     JSONParseRecordObject *po = &pr->u.obj;
     JSONParseRecordEntry *e;
     uint32_t h, i;
-
+    
     if (po->hash_size == 0) {
         for(i = 0; i < po->count; i++) {
             if (po->entries[i].atom == key)
@@ -13812,7 +13804,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
     if (pr) {
         pr->value = JS_UNDEFINED;
     }
-
+    
     switch(s->token.val) {
     case '{':
         {
@@ -13820,7 +13812,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
             JSAtom prop_name;
             JSONParseRecord *pr1;
             int pr_size;
-
+            
             if (json_next_token(s))
                 goto fail;
             val = JS_NewObject(ctx);
@@ -13883,7 +13875,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
             uint32_t idx;
             JSONParseRecord *pr1;
             int pr_size;
-
+            
             if (json_next_token(s))
                 goto fail;
             val = JS_NewArray(ctx);
@@ -13927,7 +13919,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
     case TOK_STRING:
         val = JS_DupValue(ctx, s->token.u.str.str);
         if (pr) {
-            json_parse_record_init_primitive(ctx, pr, val,
+            json_parse_record_init_primitive(ctx, pr, val, 
                                              s->token.ptr - s->buf_start,
                                              s->buf_ptr - s->token.ptr);
         }
@@ -13937,7 +13929,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
     case TOK_NUMBER:
         val = s->token.u.num.val;
         if (pr) {
-            json_parse_record_init_primitive(ctx, pr, val,
+            json_parse_record_init_primitive(ctx, pr, val, 
                                              s->token.ptr - s->buf_start,
                                              s->buf_ptr - s->token.ptr);
         }
@@ -13949,20 +13941,20 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
             s->token.u.ident.atom == JS_ATOM_true) {
             val = JS_NewBool(ctx, s->token.u.ident.atom == JS_ATOM_true);
             if (pr) {
-                json_parse_record_init_primitive(ctx, pr, val,
+                json_parse_record_init_primitive(ctx, pr, val, 
                                                  s->token.ptr - s->buf_start,
                                                  s->buf_ptr - s->token.ptr);
             }
         } else if (s->token.u.ident.atom == JS_ATOM_null) {
             val = JS_NULL;
             if (pr) {
-                json_parse_record_init_primitive(ctx, pr, val,
+                json_parse_record_init_primitive(ctx, pr, val, 
                                                  s->token.ptr - s->buf_start,
                                                  s->buf_ptr - s->token.ptr);
             }
         } else if (s->token.u.ident.atom == JS_ATOM_NaN && s->ext_json) {
-            /* Note: json5 identifier handling is ambiguous e.g. is
-               '{ NaN: 1 }' a valid JSON5 production ? */
+            /* Note: json5 identifier handling is ambiguous e.g. is 
+               '{ NaN: 1 }' a valid JSON5 production ? */ 
             val = JS_NewFloat64(s->ctx, NAN);
         } else if (s->token.u.ident.atom == JS_ATOM_Infinity && s->ext_json) {
             val = JS_NewFloat64(s->ctx, INFINITY);

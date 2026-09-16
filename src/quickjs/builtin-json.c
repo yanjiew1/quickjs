@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-json.h"
 
 /* JSON */
@@ -66,7 +67,7 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
     context = JS_NewObject(ctx);
     if (JS_IsException(context))
         goto fail;
-
+    
     if (JS_IsObject(val)) {
         is_array = JS_IsArray(ctx, val);
         if (is_array < 0)
@@ -137,7 +138,7 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
     JSValue obj;
     const char *str;
     size_t len;
-
+    
     str = JS_ToCStringLen(ctx, &len, argv[0]);
     if (!str)
         return JS_EXCEPTION;
@@ -146,7 +147,7 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
         JSValue root;
         JSValueConst reviver;
         int size;
-
+        
         reviver = argv[1];
         root = JS_NewObject(ctx);
         if (JS_IsException(root))
@@ -160,7 +161,7 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
         obj = JS_ParseJSON3(ctx, str, len, "<input>", 0, pr1);
         if (JS_IsException(obj))
             goto fail1;
-
+        
         if (JS_DefinePropertyValue(ctx, root, JS_ATOM_empty_string, obj,
                                    JS_PROP_C_W_E) < 0) {
             JS_FreeValue(ctx, obj);
@@ -169,7 +170,7 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
             JS_FreeValue(ctx, root);
             goto fail;
         }
-
+        
         obj = internalize_json_property(ctx, root, JS_ATOM_empty_string,
                                         reviver, str, pr);
         json_free_parse_record(ctx, pr);
@@ -200,7 +201,7 @@ static BOOL is_valid_raw_json_char(int c)
 {
     return ((c >= 'a' && c <= 'z') ||
             (c >= '0' && c <= '9') ||
-            c == '-' ||
+            c == '-' || 
             c == '"');
 }
 
@@ -225,7 +226,7 @@ static JSValue js_json_rawJSON(JSContext *ctx, JSValueConst this_val,
         goto fail;
     }
     JS_FreeValue(ctx, res);
-
+    
     obj = JS_NewObjectProtoClass(ctx, JS_NULL, JS_CLASS_RAWJSON);
     if (JS_IsException(obj))
         goto fail;
@@ -239,7 +240,6 @@ static JSValue js_json_rawJSON(JSContext *ctx, JSValueConst this_val,
     JS_FreeValue(ctx, str);
     return JS_EXCEPTION;
 }
-
 
 typedef struct JSONStringifyContext {
     JSValueConst replacer_func;
@@ -523,9 +523,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             }
             string_buffer_putc8(jsc->b, '}');
         }
-        if (check_exception_free(ctx,
-                                    js_array_pop(ctx, jsc->stack,
-                                                       0, NULL, 0)))
+        if (check_exception_free(ctx, js_array_pop(ctx, jsc->stack, 0, NULL, 0)))
             goto exception;
         JS_FreeValue(ctx, val);
         JS_FreeValue(ctx, tab);

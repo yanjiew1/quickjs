@@ -1,0 +1,66 @@
+{
+  "base": "b63ab025d402e46c647a8a239bffe72a58f73a35",
+  "test262_commit": "5c8206929d81b2d3d727ca6aac56c18358c8d790",
+  "performance_tested": false,
+  "compilers": {
+    "gcc": {
+      "baseline": {
+        "build": "PASS",
+        "built_in_tests": "PASS",
+        "test262": {
+          "failed": 58,
+          "total": 83558,
+          "excluded": 3356,
+          "skipped": 6000
+        }
+      },
+      "candidate": {
+        "build": "PASS",
+        "built_in_tests": "PASS",
+        "test262": {
+          "failed": 58,
+          "total": 83558,
+          "excluded": 3356,
+          "skipped": 6000
+        }
+      },
+      "exported_symbol_count": 289,
+      "exports_match": true,
+      "test262_failure_sets_match": true
+    },
+    "clang": {
+      "baseline": {
+        "build": "PASS",
+        "built_in_tests": "PASS",
+        "test262": {
+          "failed": 58,
+          "total": 83558,
+          "excluded": 3356,
+          "skipped": 6000
+        }
+      },
+      "candidate": {
+        "build": "PASS",
+        "built_in_tests": "PASS",
+        "test262": {
+          "failed": 58,
+          "total": 83558,
+          "excluded": 3356,
+          "skipped": 6000
+        }
+      },
+      "exported_symbol_count": 284,
+      "exports_match": true,
+      "test262_failure_sets_match": true
+    }
+  },
+  "success": true,
+  "validation_workflow_run": 35116500029,
+  "validation_artifact_id": 10454239335,
+  "source_digest": "91cbbca8ec7c3256a342aeaa2d526374cfb446852fd46812ae1f48c79c3bed29",
+  "function_definitions": 1563,
+  "unique_functions": 1557,
+  "data_definitions": 97,
+  "private_header_function_definitions": 0,
+  "source_fidelity_errors": []
+}

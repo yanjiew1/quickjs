@@ -22,13 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-allocator.h"
+static inline uintptr_t js_get_stack_pointer(void);
 #include "internal-builtin.h"
 #include "internal-function.h"
 #include "internal-module.h"
 #include "internal-object.h"
 #include "internal-primitive.h"
-
 
 static JSClassID js_class_id_alloc = JS_CLASS_INIT_COUNT;
 static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
@@ -53,7 +54,7 @@ static no_inline int js_realloc_array(JSContext *ctx, void **parray,
 
 /* resize the array and update its size if req_size > *psize */
 QJS_INTERNAL int js_resize_array(JSContext *ctx, void **parray, int elem_size,
-                                 int *psize, int req_size)
+                                  int *psize, int req_size)
 {
     if (unlikely(req_size > *psize))
         return js_realloc_array(ctx, parray, elem_size, psize, req_size);
@@ -65,7 +66,7 @@ static void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size)
 {
     JSRuntime *rt = opaque;
     if (size > (INT32_MAX / 2)) {
-        /* the bytecode cannot be larger than 2G. Leave some slack to
+        /* the bytecode cannot be larger than 2G. Leave some slack to 
            avoid some overflows. */
         return NULL;
     } else {
@@ -96,17 +97,9 @@ QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
 
 #if !defined(CONFIG_STACK_CHECK)
 /* no stack limitation */
-static inline uintptr_t js_get_stack_pointer(void)
-{
-    return 0;
-}
 
 #else
 /* Note: OS and CPU dependent */
-static inline uintptr_t js_get_stack_pointer(void)
-{
-    return (uintptr_t)__builtin_frame_address(0);
-}
 
 #endif
 
@@ -119,7 +112,7 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     ms.opaque = opaque;
     ms.malloc_limit = -1;
 
-    rt = (mf->js_malloc)(&ms, sizeof(JSRuntime));
+    rt = mf->js_malloc(&ms, sizeof(JSRuntime));
     if (!rt)
         return NULL;
     memset(rt, 0, sizeof(*rt));
@@ -134,17 +127,28 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     rt->gc_phase = JS_GC_PHASE_NONE;
     init_list_head(&rt->weakref_list);
 
+#ifdef DUMP_LEAKS
+    init_list_head(&rt->string_list);
+#endif
     init_list_head(&rt->job_list);
 
-    if (qjs_atom_string_init_runtime(rt))
+    if (JS_InitAtoms(rt))
         goto fail;
 
-    if (qjs_object_init_classes(rt) < 0)
+    /* create the object, array and function classes */
+    if (init_class_range(rt, js_std_class_def, JS_CLASS_OBJECT,
+                         countof(js_std_class_def)) < 0)
         goto fail;
-    qjs_function_vm_init_runtime(rt);
-    qjs_primitive_init_classes(rt);
-    qjs_module_init_class(rt);
-    if (qjs_object_init_shapes(rt))
+    rt->class_array[JS_CLASS_ARGUMENTS].exotic = &js_arguments_exotic_methods;
+    rt->class_array[JS_CLASS_MAPPED_ARGUMENTS].exotic = &js_arguments_exotic_methods;
+    rt->class_array[JS_CLASS_STRING].exotic = &js_string_exotic_methods;
+    rt->class_array[JS_CLASS_MODULE_NS].exotic = &js_module_ns_exotic_methods;
+
+    rt->class_array[JS_CLASS_C_FUNCTION].call = js_call_c_function;
+    rt->class_array[JS_CLASS_C_FUNCTION_DATA].call = js_c_function_data_call;
+    rt->class_array[JS_CLASS_BOUND_FUNCTION].call = js_call_bound_function;
+    rt->class_array[JS_CLASS_GENERATOR_FUNCTION].call = js_generator_function_call;
+    if (init_shape_hash(rt))
         goto fail;
 
     rt->stack_size = JS_DEFAULT_STACK_SIZE;
@@ -312,7 +316,51 @@ void JS_FreeRuntime(JSRuntime *rt)
     }
     init_list_head(&rt->job_list);
 
-    qjs_object_gc_shutdown(rt);
+    /* don't remove the weak objects to avoid create new jobs with
+       FinalizationRegistry */
+    JS_RunGCInternal(rt, FALSE);
+
+#ifdef DUMP_LEAKS
+    /* leaking objects */
+    {
+        BOOL header_done;
+        JSGCObjectHeader *p;
+        int count;
+
+        /* remove the internal refcounts to display only the object
+           referenced externally */
+        list_for_each(el, &rt->gc_obj_list) {
+            p = list_entry(el, JSGCObjectHeader, link);
+            js_rc(p)->mark = 0;
+        }
+        gc_decref(rt);
+
+        header_done = FALSE;
+        list_for_each(el, &rt->gc_obj_list) {
+            p = list_entry(el, JSGCObjectHeader, link);
+            if (js_rc(p)->ref_count != 0) {
+                if (!header_done) {
+                    printf("Object leaks:\n");
+                    JS_DumpObjectHeader(rt);
+                    header_done = TRUE;
+                }
+                JS_DumpGCObject(rt, p);
+            }
+        }
+
+        count = 0;
+        list_for_each(el, &rt->gc_obj_list) {
+            p = list_entry(el, JSGCObjectHeader, link);
+            if (js_rc(p)->ref_count == 0) {
+                count++;
+            }
+        }
+        if (count != 0)
+            printf("Secondary object leaks: %d\n", count);
+    }
+#endif
+    assert(list_empty(&rt->gc_obj_list));
+    assert(list_empty(&rt->weakref_list));
 
     /* free the classes */
     for(i = 0; i < rt->class_count; i++) {
@@ -323,9 +371,105 @@ void JS_FreeRuntime(JSRuntime *rt)
     }
     js_free_rt(rt, rt->class_array);
 
-    qjs_atom_string_free_runtime(rt);
-    qjs_object_free_shape_hash(rt);
 #ifdef DUMP_LEAKS
+    /* only the atoms defined in JS_InitAtoms() should be left */
+    {
+        BOOL header_done = FALSE;
+
+        for(i = 0; i < rt->atom_size; i++) {
+            JSAtomStruct *p = rt->atom_array[i];
+            if (!atom_is_free(p) /* && p->str*/) {
+                if (i >= JS_ATOM_END || js_rc(p)->ref_count != 1) {
+                    if (!header_done) {
+                        header_done = TRUE;
+                        if (rt->rt_info) {
+                            printf("%s:1: atom leakage:", rt->rt_info);
+                        } else {
+                            printf("Atom leaks:\n"
+                                   "    %6s %6s %s\n",
+                                   "ID", "REFCNT", "NAME");
+                        }
+                    }
+                    if (rt->rt_info) {
+                        printf(" ");
+                    } else {
+                        printf("    %6u %6u ", i, js_rc(p)->ref_count);
+                    }
+                    switch (p->atom_type) {
+                    case JS_ATOM_TYPE_STRING:
+                        JS_DumpString(rt, p);
+                        break;
+                    case JS_ATOM_TYPE_GLOBAL_SYMBOL:
+                        printf("Symbol.for(");
+                        JS_DumpString(rt, p);
+                        printf(")");
+                        break;
+                    case JS_ATOM_TYPE_SYMBOL:
+                        if (p->hash != JS_ATOM_HASH_PRIVATE) {
+                            printf("Symbol(");
+                            JS_DumpString(rt, p);
+                            printf(")");
+                        } else {
+                            printf("Private(");
+                            JS_DumpString(rt, p);
+                            printf(")");
+                        }
+                        break;
+                    }
+                    if (rt->rt_info) {
+                        printf(":%u", js_rc(p)->ref_count);
+                    } else {
+                        printf("\n");
+                    }
+                }
+            }
+        }
+        if (rt->rt_info && header_done)
+            printf("\n");
+    }
+#endif
+
+    /* free the atoms */
+    for(i = 0; i < rt->atom_size; i++) {
+        JSAtomStruct *p = rt->atom_array[i];
+        if (!atom_is_free(p)) {
+#ifdef DUMP_LEAKS
+            list_del(&p->link);
+#endif
+            js_free_rt(rt, p);
+        }
+    }
+    js_free_rt(rt, rt->atom_array);
+    js_free_rt(rt, rt->atom_hash);
+    js_free_rt(rt, rt->shape_hash);
+#ifdef DUMP_LEAKS
+    if (!list_empty(&rt->string_list)) {
+        if (rt->rt_info) {
+            printf("%s:1: string leakage:", rt->rt_info);
+        } else {
+            printf("String leaks:\n"
+                   "    %6s %s\n",
+                   "REFCNT", "VALUE");
+        }
+        list_for_each_safe(el, el1, &rt->string_list) {
+            JSString *str = list_entry(el, JSString, link);
+            if (rt->rt_info) {
+                printf(" ");
+            } else {
+                printf("    %6u ", js_rc(str)->ref_count);
+            }
+            JS_DumpString(rt, str);
+            if (rt->rt_info) {
+                printf(":%u", js_rc(str)->ref_count);
+            } else {
+                printf("\n");
+            }
+            list_del(&str->link);
+            js_free_rt(rt, str);
+        }
+        if (rt->rt_info)
+            printf("\n");
+    }
     {
         JSMallocState *s = &rt->malloc_ctx.malloc_state;
         if (s->malloc_count > 1) {
@@ -340,7 +484,7 @@ void JS_FreeRuntime(JSRuntime *rt)
 
     {
         JSMallocState ms = rt->malloc_ctx.malloc_state;
-        (rt->malloc_ctx.mf.js_free)(&ms, rt);
+        rt->malloc_ctx.mf.js_free(&ms, rt);
     }
 }
 
@@ -386,7 +530,17 @@ JSContext *JS_NewContext(JSRuntime *rt)
     if (!ctx)
         return NULL;
 
-    if (qjs_add_intrinsics(ctx)) {
+    if (JS_AddIntrinsicBaseObjects(ctx) ||
+        JS_AddIntrinsicDate(ctx) ||
+        JS_AddIntrinsicEval(ctx) ||
+        JS_AddIntrinsicStringNormalize(ctx) ||
+        JS_AddIntrinsicRegExp(ctx) ||
+        JS_AddIntrinsicJSON(ctx) ||
+        JS_AddIntrinsicProxy(ctx) ||
+        JS_AddIntrinsicMapSet(ctx) ||
+        JS_AddIntrinsicTypedArrays(ctx) ||
+        JS_AddIntrinsicPromise(ctx) ||
+        JS_AddIntrinsicWeakRef(ctx)) {
         JS_FreeContext(ctx);
         return NULL;
     }
@@ -425,7 +579,7 @@ JSContext *JS_DupContext(JSContext *ctx)
 
 /* used by the GC */
 QJS_INTERNAL void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
-                                   JS_MarkFunc *mark_func)
+                           JS_MarkFunc *mark_func)
 {
     int i;
     struct list_head *el;
@@ -481,7 +635,32 @@ void JS_FreeContext(JSContext *ctx)
         return;
     assert(js_rc(ctx)->ref_count == 0);
 
-    qjs_object_dump_context(ctx);
+#ifdef DUMP_ATOMS
+    JS_DumpAtoms(ctx->rt);
+#endif
+#ifdef DUMP_SHAPES
+    JS_DumpShapes(ctx->rt);
+#endif
+#ifdef DUMP_OBJECTS
+    {
+        struct list_head *el;
+        JSGCObjectHeader *p;
+        printf("JSObjects: {\n");
+        JS_DumpObjectHeader(ctx->rt);
+        list_for_each(el, &rt->gc_obj_list) {
+            p = list_entry(el, JSGCObjectHeader, link);
+            JS_DumpGCObject(rt, p);
+        }
+        printf("}\n");
+    }
+#endif
+#ifdef DUMP_MEM
+    {
+        JSMemoryUsage stats;
+        JS_ComputeMemoryUsage(rt, &stats);
+        JS_DumpMemoryUsage(stdout, &stats, rt);
+    }
+#endif
 
     js_free_modules(ctx, JS_FREE_MODULE_ALL);
 
@@ -507,7 +686,11 @@ void JS_FreeContext(JSContext *ctx)
     JS_FreeValue(ctx, ctx->function_ctor);
     JS_FreeValue(ctx, ctx->function_proto);
 
-    qjs_object_free_context_shapes(ctx);
+    js_free_shape_null(ctx->rt, ctx->array_shape);
+    js_free_shape_null(ctx->rt, ctx->arguments_shape);
+    js_free_shape_null(ctx->rt, ctx->mapped_arguments_shape);
+    js_free_shape_null(ctx->rt, ctx->regexp_shape);
+    js_free_shape_null(ctx->rt, ctx->regexp_result_shape);
 
     list_del(&ctx->link);
     remove_gc_object(&ctx->header);
@@ -636,10 +819,12 @@ int JS_NewClass(JSRuntime *rt, JSClassID class_id, const JSClassDef *class_def)
     JSAtom name;
 
     len = strlen(class_def->class_name);
-    name = qjs_new_atom_rt_ascii(rt, class_def->class_name, len,
-                                 JS_ATOM_TYPE_STRING);
-    if (name == JS_ATOM_NULL)
-        return -1;
+    name = __JS_FindAtom(rt, class_def->class_name, len, JS_ATOM_TYPE_STRING);
+    if (name == JS_ATOM_NULL) {
+        name = __JS_NewAtomInit(rt, class_def->class_name, len, JS_ATOM_TYPE_STRING);
+        if (name == JS_ATOM_NULL)
+            return -1;
+    }
     ret = JS_NewClass1(rt, class_id, class_def, name);
     JS_FreeAtomRT(rt, name);
     return ret;
@@ -675,16 +860,40 @@ JS_BOOL JS_HasException(JSContext *ctx)
     return !JS_IsUninitialized(ctx->rt->current_exception);
 }
 
-QJS_INTERNAL int qjs_proxy_register_class(JSRuntime *rt,
-                                           JSClassFinalizer *finalizer,
-                                           JSClassGCMark *gc_mark,
-                                           const JSClassExoticMethods *exotic,
-                                           JSClassCall *call)
+#if !defined(CONFIG_STACK_CHECK)
+static inline uintptr_t js_get_stack_pointer(void)
 {
-    JSClassShortDef class_def = { JS_ATOM_Object, finalizer, gc_mark };
-    if (init_class_range(rt, &class_def, JS_CLASS_PROXY, 1) < 0)
-        return -1;
-    rt->class_array[JS_CLASS_PROXY].exotic = exotic;
-    rt->class_array[JS_CLASS_PROXY].call = call;
     return 0;
+}
+
+QJS_INTERNAL BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+{
+    return FALSE;
+}
+#else
+static inline uintptr_t js_get_stack_pointer(void)
+{
+    return (uintptr_t)__builtin_frame_address(0);
+}
+
+QJS_INTERNAL BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+{
+    uintptr_t sp;
+    sp = js_get_stack_pointer() - alloca_size;
+    return unlikely(sp < rt->stack_limit);
+}
+#endif
+
+QJS_INTERNAL void js_dbuf_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
+}
+
+QJS_INTERNAL BOOL is_be(void)
+{
+    union {
+        uint16_t a;
+        uint8_t  b;
+    } u = {0x100};
+    return u.b;
 }

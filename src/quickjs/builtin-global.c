@@ -22,13 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-global.h"
 
 static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
 {
-    return JS_EvalObject(ctx, ctx->global_obj, argv[0],
-                           JS_EVAL_TYPE_INDIRECT, -1);
+    return JS_EvalObject(ctx, ctx->global_obj, argv[0], JS_EVAL_TYPE_INDIRECT, -1);
 }
 
 QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
@@ -50,7 +50,6 @@ QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
     return JS_NewBool(ctx, isfinite(d));
 }
 
-
 static JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv)
 {
@@ -70,7 +69,7 @@ static JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
     } else {
         p = str;
         p += skip_spaces(p);
-        flags = QJS_ATOD_INT_ONLY | QJS_ATOD_ACCEPT_PREFIX_AFTER_SIGN;
+        flags = ATOD_INT_ONLY | ATOD_ACCEPT_PREFIX_AFTER_SIGN;
         ret = js_atof(ctx, p, NULL, radix, flags);
     }
     JS_FreeCString(ctx, str);
@@ -369,7 +368,7 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
 
 /* global object */
 
-static const JSCFunctionListEntry js_global_funcs[] = {
+QJS_INTERNAL const JSCFunctionListEntry js_global_funcs[] = {
     JS_CFUNC_DEF("parseInt", 2, js_parseInt ),
     JS_CFUNC_DEF("parseFloat", 1, js_parseFloat ),
     JS_CFUNC_DEF("isNaN", 1, js_global_isNaN ),
@@ -387,10 +386,3 @@ static const JSCFunctionListEntry js_global_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "global", JS_PROP_CONFIGURABLE ),
     JS_CFUNC_DEF("eval", 1, js_global_eval ),
 };
-
-
-QJS_INTERNAL int qjs_add_intrinsic_global(JSContext *ctx)
-{
-    return JS_SetPropertyFunctionList(ctx, ctx->global_obj, js_global_funcs,
-                                      countof(js_global_funcs));
-}

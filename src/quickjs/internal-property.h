@@ -27,178 +27,92 @@
 
 #include "internal-object.h"
 
-static inline JSShapeProperty *get_shape_prop(JSShape *shape)
-{
-    return (JSShapeProperty *)((uint32_t *)(shape + 1) +
-                               shape->prop_hash_mask + 1);
-}
+QJS_INTERNAL JSShapeProperty *get_shape_prop(JSShape *sh);
 
-static force_inline JSShapeProperty *find_own_property1(JSObject *p,
-                                                        JSAtom atom)
-{
-    JSShape *sh;
-    JSShapeProperty *pr, *prop;
-    intptr_t h;
-    sh = p->shape;
-    h = (uintptr_t)atom & sh->prop_hash_mask;
-    h = sh->hash_table[h];
-    prop = get_shape_prop(sh);
-    while (h) {
-        pr = &prop[h - 1];
-        if (likely(pr->atom == atom)) {
-            return pr;
-        }
-        h = pr->hash_next;
-    }
-    return NULL;
-}
+QJS_INTERNAL JSShapeProperty *find_own_property1(JSObject *p,
+                                                        JSAtom atom);
 
-static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
+QJS_INTERNAL JSShapeProperty *find_own_property(JSProperty **ppr,
                                                        JSObject *p,
-                                                       JSAtom atom)
-{
-    JSShape *sh;
-    JSShapeProperty *pr, *prop;
-    intptr_t h;
-    sh = p->shape;
-    h = (uintptr_t)atom & sh->prop_hash_mask;
-    h = sh->hash_table[h];
-    prop = get_shape_prop(sh);
-    while (h) {
-        pr = &prop[h - 1];
-        if (likely(pr->atom == atom)) {
-            *ppr = &p->prop[h - 1];
-            /* the compiler should be able to assume that pr != NULL here */
-            return pr;
-        }
-        h = pr->hash_next;
-    }
-    *ppr = NULL;
-    return NULL;
-}
-QJS_INTERNAL int JS_GetOwnPropertyNamesInternal(
-    JSContext *ctx, JSPropertyEnum **properties, uint32_t *count,
-    JSObject *obj, int flags);
-QJS_INTERNAL JSProperty *add_property(JSContext *ctx, JSObject *obj,
-                                          JSAtom atom, int flags);
-QJS_INTERNAL int __attribute__((format(printf, 3, 4)))
-JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
-QJS_INTERNAL int JS_DefineAutoInitProperty(JSContext *ctx,
-                                               JSValueConst obj,
-                                               JSAtom atom,
-                                               JSAutoInitIDEnum id,
-                                               void *opaque, int flags);
-QJS_INTERNAL int js_update_property_flags(JSContext *ctx, JSObject *obj,
-                                           JSShapeProperty **property,
-                                           int flags);
-QJS_INTERNAL JSValue JS_NewObjectProtoClassAlloc(
-    JSContext *ctx, JSValueConst proto, JSClassID class_id, int prop_count);
+                                                       JSAtom atom);
+QJS_INTERNAL int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+                                                      JSPropertyEnum **ptab,
+                                                      uint32_t *plen,
+                                                      JSObject *p, int flags);
+QJS_INTERNAL JSProperty *add_property(JSContext *ctx,
+                                JSObject *p, JSAtom prop, int prop_flags);
+QJS_INTERNAL int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
+QJS_INTERNAL int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+                                     JSAtom prop, JSAutoInitIDEnum id,
+                                     void *opaque, int flags);
+QJS_INTERNAL int js_update_property_flags(JSContext *ctx, JSObject *p,
+                                    JSShapeProperty **pprs, int flags);
+QJS_INTERNAL JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
+                                           JSClassID class_id, int n_alloc_props);
 QJS_INTERNAL void set_cycle_flag(JSContext *ctx, JSValueConst obj);
-QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx,
-                                            JSValueConst obj,
-                                            JSValue property);
-QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx,
-                                            JSValueConst obj,
-                                            int64_t index);
+QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                                   JSValue prop);
+QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
-int JS_DefinePropertyValueInt64(
-    JSContext *ctx, JSValueConst obj, int64_t index, JSValue value, int flags);
-int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj,
-                                           int64_t index, int flags);
-QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx, JSValueConst obj,
-                                        JSValue property, JSValue value,
-                                        int flags);
-QJS_INTERNAL int JS_AutoInitProperty(JSContext *ctx, JSObject *obj,
-                                        JSAtom atom, JSProperty *property,
-                                        JSShapeProperty *shape_property);
-QJS_INTERNAL int JS_AddBrand(JSContext *ctx, JSValueConst obj,
-                               JSValueConst home_obj);
-QJS_INTERNAL int JS_CheckBrand(JSContext *ctx, JSValueConst obj,
-                                 JSValueConst func);
-QJS_INTERNAL int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom atom,
-                                             int flags);
-QJS_INTERNAL int JS_GetGlobalVarRef(JSContext *ctx, JSAtom atom,
-                                        JSValue *stack);
-QJS_INTERNAL int JS_DeleteGlobalVar(JSContext *ctx, JSAtom atom);
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
+                                int64_t idx, JSValue val, int flags);
+int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
+QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                               JSValue prop, JSValue val, int flags);
+QJS_INTERNAL int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
+                               JSProperty *pr, JSShapeProperty *prs);
+QJS_INTERNAL int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
+QJS_INTERNAL int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
+QJS_INTERNAL int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
+QJS_INTERNAL int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
+QJS_INTERNAL int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
 QJS_INTERNAL int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
-                                        JSAtom name, int flags);
-QJS_INTERNAL int JS_DefineObjectNameComputed(
-    JSContext *ctx, JSValueConst obj, JSValueConst name, int flags);
+                               JSAtom name, int flags);
+QJS_INTERNAL int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
+                                       JSValueConst str, int flags);
 QJS_INTERNAL int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
-                                          JSValueConst name,
-                                          JSValue value);
+                                 JSValueConst name, JSValue val);
 QJS_INTERNAL JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
-                                           JSValueConst name);
+                                  JSValueConst name);
 QJS_INTERNAL int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
-                                       JSValueConst name, JSValue value);
-QJS_INTERNAL int JS_GetOwnPropertyInternal(
-    JSContext *ctx, JSPropertyDescriptor *desc, JSObject *obj, JSAtom atom);
+                              JSValueConst name, JSValue val);
+QJS_INTERNAL int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                                     JSObject *p, JSAtom prop);
 QJS_INTERNAL JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
-QJS_INTERNAL int JS_SetPrototypeInternal(JSContext *ctx,
-                                            JSValueConst obj,
-                                            JSValueConst proto,
-                                            BOOL throw_flag);
-QJS_INTERNAL JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *shape,
-                                               JSClassID class_id,
-                                               JSProperty *properties);
-#ifndef QUICKJS_OBJECT_OWNER
-static inline JSShape *js_dup_shape(JSShape *shape)
-{
-    js_rc(shape)->ref_count++;
-    return shape;
-}
-#endif
-QJS_INTERNAL int convert_fast_array_to_array(JSContext *ctx,
-                                                 JSObject *obj);
-QJS_INTERNAL int delete_property(JSContext *ctx, JSObject *obj,
-                                     JSAtom atom);
-QJS_INTERNAL void free_property(JSRuntime *rt, JSProperty *property,
-                                    int flags);
-QJS_INTERNAL JSValue js_create_array_free(JSContext *ctx, int len,
-                                           JSValue *values);
-int JS_DefinePropertyValueValue(
-    JSContext *ctx, JSValueConst obj, JSValue property, JSValue value,
-    int flags);
-QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst left,
-                                   JSValueConst right, int mode);
-#define QJS_EQ_STRICT 0
-#define QJS_EQ_SAME_VALUE 1
-#define QJS_EQ_SAME_VALUE_ZERO 2
+QJS_INTERNAL int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                   JSValueConst proto_val,
+                                   BOOL throw_flag);
+QJS_INTERNAL JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
+                                     JSProperty *props);
+QJS_INTERNAL JSShape *js_dup_shape(JSShape *sh);
+QJS_INTERNAL no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
+                                                             JSObject *p);
+QJS_INTERNAL int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
+QJS_INTERNAL void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
+QJS_INTERNAL JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
+int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
+                                JSValue prop, JSValue val, int flags);
+QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
+                          JSStrictEqModeEnum eq_mode);
 
-#ifndef QUICKJS_NUMBER_OWNER
-static inline BOOL js_same_value(JSContext *ctx, JSValueConst left,
-                                  JSValueConst right)
-{
-    return js_strict_eq2(ctx, left, right, QJS_EQ_SAME_VALUE);
-}
+QJS_INTERNAL BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 
-static inline BOOL js_same_value_zero(JSContext *ctx,
-                                       JSValueConst left,
-                                       JSValueConst right)
-{
-    return js_strict_eq2(ctx, left, right, QJS_EQ_SAME_VALUE_ZERO);
-}
-#endif
+QJS_INTERNAL BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 
 /* Existing consumer bridges, owned here because they expose property logic. */
-QJS_INTERNAL JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
-                                            int hash_size, int prop_size);
-QJS_INTERNAL int add_shape_property(JSContext *ctx,
-                                               JSShape **shape,
-                                               JSObject *obj, JSAtom atom,
-                                               int prop_flags);
-QJS_INTERNAL JSObject *get_proto_obj(JSValueConst proto);
-QJS_INTERNAL int JS_SetPrototypeInternal(JSContext *ctx,
-                                                  JSValueConst obj,
-                                                  JSValueConst proto,
-                                                  BOOL throw_flag);
-QJS_INTERNAL int JS_GetOwnPropertyInternal(
-    JSContext *ctx, JSPropertyDescriptor *desc, JSObject *obj, JSAtom atom);
-QJS_INTERNAL void js_free_desc(JSContext *ctx,
-                                      JSPropertyDescriptor *desc);
+QJS_INTERNAL no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
+                                        int hash_size, int prop_size);
+QJS_INTERNAL int add_shape_property(JSContext *ctx, JSShape **psh,
+                              JSObject *p, JSAtom atom, int prop_flags);
+QJS_INTERNAL JSObject *get_proto_obj(JSValueConst proto_val);
+QJS_INTERNAL int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                   JSValueConst proto_val,
+                                   BOOL throw_flag);
+QJS_INTERNAL int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                                     JSObject *p, JSAtom prop);
+QJS_INTERNAL void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
 QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
-QJS_INTERNAL int js_obj_to_desc(JSContext *ctx,
-                                       JSPropertyDescriptor *desc,
-                                       JSValueConst value);
+QJS_INTERNAL int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
+                          JSValueConst desc);
 
 #endif /* QUICKJS_INTERNAL_PROPERTY_H */

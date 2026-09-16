@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-date.h"
 
 /* Date */
@@ -125,7 +126,6 @@ static JSValue js___date_create(JSContext *ctx, JSValueConst this_val,
     return obj;
 }
 #endif
-
 
 /* Date */
 
@@ -376,7 +376,7 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
     if (res < 0)
         return JS_EXCEPTION;
     res1 = res;
-
+    
     // Argument coercion is observable and must be done unconditionally.
     n = min_int(argc, end_field - first_field);
     for(i = 0; i < n; i++) {
@@ -543,7 +543,7 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
                 goto has_val;
             }
         }
-        v = JS_ToPrimitive(ctx, argv[0], QJS_DATE_HINT_NONE);
+        v = JS_ToPrimitive(ctx, argv[0], HINT_NONE);
         if (JS_IsString(v)) {
             dv = js_Date_parse(ctx, JS_UNDEFINED, 1, (JSValueConst *)&v);
             JS_FreeValue(ctx, v);
@@ -1098,16 +1098,16 @@ static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,
     switch (hint) {
     case JS_ATOM_number:
     case JS_ATOM_integer:
-        hint_num = QJS_DATE_HINT_NUMBER;
+        hint_num = HINT_NUMBER;
         break;
     case JS_ATOM_string:
     case JS_ATOM_default:
-        hint_num = QJS_DATE_HINT_STRING;
+        hint_num = HINT_STRING;
         break;
     default:
         return JS_ThrowTypeError(ctx, "invalid hint");
     }
-    return JS_ToPrimitive(ctx, obj, hint_num | QJS_DATE_HINT_FORCE_ORDINARY);
+    return JS_ToPrimitive(ctx, obj, hint_num | HINT_FORCE_ORDINARY);
 }
 
 static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
@@ -1177,7 +1177,7 @@ static JSValue js_date_toJSON(JSContext *ctx, JSValueConst this_val,
     tv = JS_UNDEFINED;
 
     obj = JS_ToObject(ctx, this_val);
-    tv = JS_ToPrimitive(ctx, obj, QJS_DATE_HINT_NUMBER);
+    tv = JS_ToPrimitive(ctx, obj, HINT_NUMBER);
     if (JS_IsException(tv))
         goto exception;
     if (JS_IsNumber(tv)) {

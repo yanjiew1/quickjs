@@ -55,27 +55,17 @@ typedef struct JSONParseRecordEntry {
     JSONParseRecord parse_record;
 } JSONParseRecordEntry;
 
-QJS_INTERNAL void free_function_bytecode(JSRuntime *rt,
-                                              JSFunctionBytecode *bytecode);
-QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx,
-                                       JSValueConst this_obj,
-                                       const char *input, size_t input_len,
-                                       const char *filename, int flags,
-                                       int scope_idx);
+QJS_INTERNAL void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
+QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
+                                 const char *input, size_t input_len,
+                                 const char *filename, int flags, int scope_idx);
 QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
-                                     JSValueConst value, int flags,
-                                     int scope_idx);
-QJS_INTERNAL void json_parse_record_init_obj(JSContext *ctx,
-                                                 JSONParseRecord *record,
-                                                 JSValueConst value);
-QJS_INTERNAL JSONParseRecord *json_parse_record_add(
-    JSContext *ctx, JSONParseRecord *record, JSAtom key, int *psize);
-QJS_INTERNAL JSONParseRecord *json_parse_record_find(
-    JSONParseRecord *record, JSAtom key);
-QJS_INTERNAL void json_free_parse_record(JSContext *ctx,
-                                             JSONParseRecord *record);
-JSValue JS_ParseJSON3(JSContext *ctx, const char *buf,
-                                     size_t buf_len, const char *filename,
-                                     int flags, JSONParseRecord *record);
+                             JSValueConst val, int flags, int scope_idx);
+QJS_INTERNAL void json_parse_record_init_obj(JSContext *ctx, JSONParseRecord *pr, JSValueConst val);
+QJS_INTERNAL JSONParseRecord *json_parse_record_add(JSContext *ctx, JSONParseRecord *pr, JSAtom key, int *psize);
+QJS_INTERNAL JSONParseRecord *json_parse_record_find(JSONParseRecord *pr, JSAtom key);
+QJS_INTERNAL void json_free_parse_record(JSContext *ctx, JSONParseRecord *pr);
+JSValue JS_ParseJSON3(JSContext *ctx, const char *buf, size_t buf_len,
+                      const char *filename, int flags, JSONParseRecord *pr);
 
 #endif /* QUICKJS_INTERNAL_FRONTEND_H */

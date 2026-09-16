@@ -86,7 +86,6 @@
 #define CONFIG_STACK_CHECK
 #endif
 
-
 /* dump object free */
 //#define DUMP_FREE
 //#define DUMP_CLOSURE
@@ -215,6 +214,46 @@ typedef enum JSErrorEnum {
 
     JS_NATIVE_ERROR_COUNT, /* number of different NativeError objects */
 } JSErrorEnum;
+
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+#define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
+#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+#define DEFINE_GLOBAL_LEX_VAR (1 << 7)
+#define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
+#define ATOD_INT_ONLY        (1 << 0)
+#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
+#define ATOD_ACCEPT_SUFFIX    (1 << 6)
+#define ATOD_TYPE_MASK        (3 << 7)
+#define ATOD_TYPE_FLOAT64     (0 << 7)
+#define ATOD_TYPE_BIG_INT     (1 << 7)
+#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+#define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
+#define JS_CALL_FLAG_COPY_ARGV   (1 << 1)
+#define JS_CALL_FLAG_GENERATOR   (1 << 2)
+#define FUNC_RET_AWAIT         0
+#define FUNC_RET_YIELD         1
+#define FUNC_RET_YIELD_STAR    2
+#define FUNC_RET_INITIAL_YIELD 3
+#define GEN_MAGIC_NEXT   0
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_THROW  2
+#define special_every    0
+#define special_some     1
+#define special_forEach  2
+#define special_map      3
+#define special_filter   4
+#define special_TA       8
+#define special_reduce       0
+#define special_reduceRight  1
+#define special_indexOf 0
+#define special_lastIndexOf 1
+#define special_includes -1
 
 #endif /* QUICKJS_INTERNAL_CONFIG_H */
 

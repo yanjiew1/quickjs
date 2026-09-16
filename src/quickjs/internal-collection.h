@@ -28,28 +28,22 @@
 #include "internal-builtin.h"
 
 QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
-                                  int argc, JSValueConst *argv,
-                                  BOOL no_exception);
+                          int argc, JSValueConst *argv, BOOL no_exception);
 QJS_INTERNAL void free_zero_refcount(JSRuntime *rt);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
-QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
-                                                 JSValueConst *values);
-QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
-                                                     JSValueConst ctor,
-                                                     int class_id);
+QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
 
-QJS_INTERNAL void js_map_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst value,
-                               JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_map_iterator_finalizer(JSRuntime *rt, JSValue value);
-QJS_INTERNAL void js_map_iterator_mark(JSRuntime *rt, JSValueConst value,
-                                        JS_MarkFunc *mark_func);
-QJS_INTERNAL void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *ref);
-QJS_INTERNAL void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *ref);
-QJS_INTERNAL void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *ref);
-QJS_INTERNAL JSValue js_object_groupBy(JSContext *ctx,
-                                         JSValueConst this_val,
-                                         int argc, JSValueConst *argv,
-                                         int is_map);
+QJS_INTERNAL void js_map_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_map_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_map_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                 JS_MarkFunc *mark_func);
+QJS_INTERNAL void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
+QJS_INTERNAL void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
+QJS_INTERNAL void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
+QJS_INTERNAL JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv, int is_map);
 
 #endif

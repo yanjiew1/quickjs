@@ -27,41 +27,13 @@
 
 #include "internal-iterator.h"
 
-#define QJS_MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
-
-enum {
-    QJS_ARRAY_EVERY,
-    QJS_ARRAY_SOME,
-    QJS_ARRAY_FOR_EACH,
-    QJS_ARRAY_MAP,
-    QJS_ARRAY_FILTER,
-    QJS_ARRAY_TYPED = 8,
-};
-
-enum {
-    QJS_ARRAY_REDUCE,
-    QJS_ARRAY_REDUCE_RIGHT,
-};
-
-typedef enum QJSArrayFindMode {
-    QJS_ARRAY_FIND,
-    QJS_ARRAY_FIND_INDEX,
-    QJS_ARRAY_FIND_LAST,
-    QJS_ARRAY_FIND_LAST_INDEX,
-} QJSArrayFindMode;
-
-#define QJS_ITERATOR_NEXT   0
-#define QJS_ITERATOR_RETURN 1
-
 QJS_INTERNAL JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv, int magic);
+                              int argc, JSValueConst *argv, int special);
 QJS_INTERNAL JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv, int magic);
-QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx,
-                                               JSValueConst this_val,
-                                               int argc, JSValueConst *argv,
-                                               int magic);
+                               int argc, JSValueConst *argv, int special);
+QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
 QJS_INTERNAL JSValue js_get_this(JSContext *ctx,
-                                        JSValueConst this_val);
+                           JSValueConst this_val);
 
 #endif /* QUICKJS_INTERNAL_ARRAY_ALGORITHM_H */

@@ -29,45 +29,32 @@
 #include "internal-regexp.h"
 #include "internal-array.h"
 
-#define HINT_NUMBER 1
-
-QJS_INTERNAL int qjs_add_intrinsic_number_boolean_string(JSContext *ctx);
-QJS_INTERNAL int qjs_add_intrinsic_symbol(JSContext *ctx);
 QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx);
 
-QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(
-    JSContext *ctx, JSValueConst value);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
+                                                JSValueConst func_obj);
 QJS_INTERNAL uint32_t js_string_obj_get_length(JSContext *ctx,
-                                               JSValueConst value);
-QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx,
-                                                      JSValueConst obj,
-                                                      JSValue property);
-QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx,
-                                                      JSValueConst obj,
-                                                      int64_t index);
+                                         JSValueConst obj);
+QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                                   JSValue prop);
+QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
 QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
-QJS_INTERNAL int JS_CreateDataPropertyUint32(
-    JSContext *ctx, JSValueConst obj, uint32_t index, JSValue value,
-    int flags);
-QJS_INTERNAL JSValue JS_ToPrimitiveFree(JSContext *ctx,
-                                                    JSValue value, int hint);
-QJS_INTERNAL JSValue JS_ToStringCheckObject(
-    JSContext *ctx, JSValueConst value);
-QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
-                                                    JSValueConst ctor,
-                                                    int class_id);
-QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue value,
-                                               JSAtom atom, int argc,
-                                               JSValueConst *argv);
-QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx,
-                                                  JSValue value);
-QJS_INTERNAL JSValue JS_NewObjectProtoList(
-    JSContext *ctx, JSValueConst proto, const JSCFunctionListEntry *fields,
-    int field_count);
-QJS_INTERNAL JSValue JS_NewCConstructor(
-    JSContext *ctx, int class_id, const char *name, JSCFunction *func,
-    int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
-    const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
-    const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags);
+QJS_INTERNAL int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
+                                       int64_t idx, JSValue val, int flags);
+QJS_INTERNAL JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
+QJS_INTERNAL JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
+                             int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
+                                     const JSCFunctionListEntry *fields, int n_fields);
+QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                                  JSValueConst parent_ctor,
+                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                                  int flags);
 
 #endif /* QUICKJS_INTERNAL_PRIMITIVE_H */

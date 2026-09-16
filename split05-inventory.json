@@ -1,0 +1,1980 @@
+{
+  "upstream": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
+  "base": "b63ab025d402e46c647a8a239bffe72a58f73a35",
+  "removed": [
+    "JS_DupAtom_inline",
+    "JS_FreeAtomRT_inline",
+    "JS_FreeAtom_inline",
+    "JS_FreeValue_inline",
+    "JS_GetOpaque2_inline",
+    "JS_IsCFunction_inline",
+    "js_base_get_function_bytecode",
+    "js_free_inline",
+    "js_free_rt_inline",
+    "js_get_length32_inline",
+    "js_malloc_inline",
+    "js_malloc_rt_inline",
+    "js_realloc2_inline",
+    "js_realloc_inline",
+    "js_realloc_rt_inline",
+    "js_string_eq_inline",
+    "qjs_add_gc_object_fast",
+    "qjs_add_intrinsic_array_basic",
+    "qjs_add_intrinsic_generator",
+    "qjs_add_intrinsic_global",
+    "qjs_add_intrinsic_iterators",
+    "qjs_add_intrinsic_math",
+    "qjs_add_intrinsic_number_boolean_string",
+    "qjs_add_intrinsic_symbol",
+    "qjs_add_intrinsics",
+    "qjs_async_c_function_data",
+    "qjs_atom_is_array_index_slow",
+    "qjs_atom_is_numeric_index_slow",
+    "qjs_atom_string_compute_memory_usage",
+    "qjs_atom_string_free_runtime",
+    "qjs_atom_string_free_value_rt",
+    "qjs_atom_string_init_runtime",
+    "qjs_free_string_zero_ref",
+    "qjs_function_class_id",
+    "qjs_function_vm_init_runtime",
+    "qjs_module_init_class",
+    "qjs_module_link_and_evaluate",
+    "qjs_new_atom_rt_ascii",
+    "qjs_object_dump_context",
+    "qjs_object_free_context_shapes",
+    "qjs_object_free_shape_hash",
+    "qjs_object_gc_shutdown",
+    "qjs_object_init_classes",
+    "qjs_object_init_shapes",
+    "qjs_primitive_init_classes",
+    "qjs_proxy_register_class",
+    "qjs_remove_gc_object_fast"
+  ],
+  "exposed": [
+    "JS_AddBrand",
+    "JS_AddIntrinsicBaseObjects",
+    "JS_AddIntrinsicBasicObjects",
+    "JS_AddIntrinsicBigInt",
+    "JS_AddIntrinsicDate",
+    "JS_AddIntrinsicEval",
+    "JS_AddIntrinsicJSON",
+    "JS_AddIntrinsicMapSet",
+    "JS_AddIntrinsicPromise",
+    "JS_AddIntrinsicProxy",
+    "JS_AddIntrinsicRegExp",
+    "JS_AddIntrinsicStringNormalize",
+    "JS_AddIntrinsicTypedArrays",
+    "JS_AddIntrinsicWeakRef",
+    "JS_AddModuleExport",
+    "JS_AtomGetKind",
+    "JS_AtomGetStr",
+    "JS_AtomGetStrRT",
+    "JS_AtomIsArrayIndex",
+    "JS_AtomIsNumericIndex",
+    "JS_AtomIsNumericIndex1",
+    "JS_AtomIsString",
+    "JS_AtomSymbolHasDescription",
+    "JS_AtomToString",
+    "JS_AtomToValue",
+    "JS_AutoInitProperty",
+    "JS_Call",
+    "JS_CallConstructor",
+    "JS_CallConstructor2",
+    "JS_CallConstructorInternal",
+    "JS_CallFree",
+    "JS_CallInternal",
+    "JS_CheckBrand",
+    "JS_CheckDefineGlobalVar",
+    "JS_CompactBigInt",
+    "JS_ComputeMemoryUsage",
+    "JS_ConcatString",
+    "JS_ConcatString3",
+    "JS_ConcatStringInPlace",
+    "JS_CopyDataProperties",
+    "JS_CreateAsyncFromSyncIterator",
+    "JS_CreateDataPropertyUint32",
+    "JS_CreateProperty",
+    "JS_DefineAutoInitProperty",
+    "JS_DefineObjectName",
+    "JS_DefineObjectNameComputed",
+    "JS_DefinePrivateField",
+    "JS_DefineProperty",
+    "JS_DefinePropertyGetSet",
+    "JS_DefinePropertyValue",
+    "JS_DefinePropertyValueInt64",
+    "JS_DefinePropertyValueStr",
+    "JS_DefinePropertyValueUint32",
+    "JS_DefinePropertyValueValue",
+    "JS_DeleteGlobalVar",
+    "JS_DeleteProperty",
+    "JS_DeletePropertyInt64",
+    "JS_DumpAtoms",
+    "JS_DumpGCObject",
+    "JS_DumpMemoryUsage",
+    "JS_DumpObjectHeader",
+    "JS_DumpShapes",
+    "JS_DumpString",
+    "JS_DumpValue",
+    "JS_DupAtom",
+    "JS_DupAtomRT",
+    "JS_DupContext",
+    "JS_EnqueueJob",
+    "JS_EnqueueJob2",
+    "JS_EvalFunction",
+    "JS_EvalObject",
+    "JS_FreeAtom",
+    "JS_FreeAtomRT",
+    "JS_FreeAtomStruct",
+    "JS_FreeCString",
+    "JS_FreeContext",
+    "JS_FreePropertyEnum",
+    "JS_GetActiveFunction",
+    "JS_GetException",
+    "JS_GetFunctionBytecode",
+    "JS_GetFunctionRealm",
+    "JS_GetGlobalVarRef",
+    "JS_GetIterator",
+    "JS_GetIterator2",
+    "JS_GetOpaque",
+    "JS_GetOpaque2",
+    "JS_GetOwnProperty",
+    "JS_GetOwnPropertyInternal",
+    "JS_GetOwnPropertyNamesInternal",
+    "JS_GetPrivateField",
+    "JS_GetPropertyInt64",
+    "JS_GetPropertyInternal",
+    "JS_GetPropertyUint32",
+    "JS_GetPropertyValue",
+    "JS_GetPrototype",
+    "JS_GetPrototypeFree",
+    "JS_HasProperty",
+    "JS_InitAtoms",
+    "JS_InstantiateFunctionListItem2",
+    "JS_Invoke",
+    "JS_InvokeFree",
+    "JS_IsArray",
+    "JS_IsCFunction",
+    "JS_IsConstructor",
+    "JS_IsEmptyString",
+    "JS_IsError",
+    "JS_IsExtensible",
+    "JS_IsFunction",
+    "JS_IsInstanceOf",
+    "JS_IsLiveObject",
+    "JS_IsRegisteredClass",
+    "JS_IteratorClose",
+    "JS_IteratorGetCompleteValue",
+    "JS_IteratorNext",
+    "JS_IteratorNext2",
+    "JS_MarkContext",
+    "JS_MarkValue",
+    "JS_NewArray",
+    "JS_NewAtom",
+    "JS_NewAtomInt64",
+    "JS_NewAtomLen",
+    "JS_NewAtomStr",
+    "JS_NewAtomString",
+    "JS_NewAtomUInt32",
+    "JS_NewBigInt64",
+    "JS_NewBigUint64",
+    "JS_NewCConstructor",
+    "JS_NewCFunction2",
+    "JS_NewCFunction3",
+    "JS_NewCFunctionData",
+    "JS_NewModuleValue",
+    "JS_NewObject",
+    "JS_NewObjectClass",
+    "JS_NewObjectFromShape",
+    "JS_NewObjectProto",
+    "JS_NewObjectProtoClass",
+    "JS_NewObjectProtoClassAlloc",
+    "JS_NewObjectProtoList",
+    "JS_NewPromiseCapability",
+    "JS_NewRegexp",
+    "JS_NewStringLen",
+    "JS_NewSymbol",
+    "JS_NewSymbolFromAtom",
+    "JS_NumberIsInteger",
+    "JS_NumberIsNegativeOrMinusZero",
+    "JS_OrdinaryIsInstanceOf",
+    "JS_ParseJSON3",
+    "JS_PreventExtensions",
+    "JS_PrintValue",
+    "JS_PromiseResult",
+    "JS_PromiseState",
+    "JS_RunGCInternal",
+    "JS_SetConstructor2",
+    "JS_SetConstructorBit",
+    "JS_SetImmutablePrototype",
+    "JS_SetModuleExport",
+    "JS_SetObjectData",
+    "JS_SetOpaque",
+    "JS_SetPrivateField",
+    "JS_SetPropertyFunctionList",
+    "JS_SetPropertyInt64",
+    "JS_SetPropertyInternal",
+    "JS_SetPropertyUint32",
+    "JS_SetPropertyValue",
+    "JS_SetPrototypeInternal",
+    "JS_SpeciesConstructor",
+    "JS_StringToBigInt",
+    "JS_StringToBigIntErr",
+    "JS_Throw",
+    "JS_ThrowError",
+    "JS_ThrowError2",
+    "JS_ThrowInternalError",
+    "JS_ThrowInterrupted",
+    "JS_ThrowOutOfMemory",
+    "JS_ThrowRangeError",
+    "JS_ThrowReferenceError",
+    "JS_ThrowReferenceErrorNotDefined",
+    "JS_ThrowReferenceErrorUninitialized",
+    "JS_ThrowReferenceErrorUninitialized2",
+    "JS_ThrowStackOverflow",
+    "JS_ThrowSyntaxError",
+    "JS_ThrowSyntaxErrorVarRedeclaration",
+    "JS_ThrowTypeError",
+    "JS_ThrowTypeErrorArrayBufferOOB",
+    "JS_ThrowTypeErrorDetachedArrayBuffer",
+    "JS_ThrowTypeErrorInvalidClass",
+    "JS_ThrowTypeErrorNotAConstructor",
+    "JS_ThrowTypeErrorNotASymbol",
+    "JS_ThrowTypeErrorNotAnObject",
+    "JS_ThrowTypeErrorOrFalse",
+    "JS_ThrowTypeErrorReadOnly",
+    "JS_ThrowTypeErrorRevokedProxy",
+    "JS_ToArrayLengthFree",
+    "JS_ToBigInt",
+    "JS_ToBigInt64",
+    "JS_ToBigInt64Free",
+    "JS_ToBigIntFree",
+    "JS_ToBool",
+    "JS_ToBoolFree",
+    "JS_ToCStringLen2",
+    "JS_ToFloat64",
+    "JS_ToFloat64Free",
+    "JS_ToIndex",
+    "JS_ToInt32",
+    "JS_ToInt32Clamp",
+    "JS_ToInt32Free",
+    "JS_ToInt32Sat",
+    "JS_ToInt64",
+    "JS_ToInt64Clamp",
+    "JS_ToInt64Free",
+    "JS_ToInt64Sat",
+    "JS_ToIntegerFree",
+    "JS_ToLengthFree",
+    "JS_ToLocaleStringFree",
+    "JS_ToNumber",
+    "JS_ToNumberFree",
+    "JS_ToNumeric",
+    "JS_ToObject",
+    "JS_ToObjectFree",
+    "JS_ToPrimitive",
+    "JS_ToPrimitiveFree",
+    "JS_ToPropertyKey",
+    "JS_ToString",
+    "JS_ToStringCheckObject",
+    "JS_ToStringFree",
+    "JS_ToStringInternal",
+    "JS_ToUint32Free",
+    "JS_ToUint8ClampFree",
+    "JS_TryGetPropertyInt64",
+    "JS_ValueToAtom",
+    "__JS_AtomFromUInt32",
+    "__JS_AtomIsConst",
+    "__JS_AtomIsTaggedInt",
+    "__JS_AtomToUInt32",
+    "__JS_EvalInternal",
+    "__JS_FindAtom",
+    "__JS_NewAtomInit",
+    "__JS_ThrowSyntaxErrorAtom",
+    "__JS_ThrowTypeErrorAtom",
+    "__JS_ToFloat64Free",
+    "__async_func_free",
+    "__attribute__",
+    "__js_free",
+    "__js_malloc",
+    "__js_poll_interrupts",
+    "__js_realloc",
+    "add_export_entry2",
+    "add_gc_object",
+    "add_property",
+    "add_req_module_entry",
+    "add_shape_property",
+    "add_star_export_entry",
+    "array_buffer_is_resizable",
+    "async_func_free",
+    "atom_is_free",
+    "build_arg_list",
+    "build_backtrace",
+    "build_for_in_iterator",
+    "can_extend_fast_array",
+    "check_define_prop_flags",
+    "check_exception_free",
+    "check_function",
+    "close_lexical_var",
+    "close_var_refs",
+    "compact_properties",
+    "convert_fast_array_to_array",
+    "dbuf_put_leb128",
+    "dbuf_put_sleb128",
+    "delete_property",
+    "expand_fast_array",
+    "find_export_entry",
+    "find_hashed_shape_prop",
+    "find_hashed_shape_proto",
+    "find_line_num",
+    "find_own_property",
+    "find_own_property1",
+    "finrec_delete_weakref",
+    "free_arg_list",
+    "free_function_bytecode",
+    "free_property",
+    "free_var_ref",
+    "free_zero_refcount",
+    "gc_decref",
+    "get_date_string",
+    "get_leb128",
+    "get_proto_obj",
+    "get_shape_prop",
+    "get_shape_size",
+    "get_sleb128",
+    "get_var_ref",
+    "hash_string",
+    "hash_string_rope",
+    "init_class_range",
+    "init_shape_hash",
+    "is_backtrace_needed",
+    "is_be",
+    "is_digit",
+    "is_safe_integer",
+    "is_strict_mode",
+    "js_add_slow",
+    "js_aggregate_error_constructor",
+    "js_alloc_string",
+    "js_alloc_string_rt",
+    "js_allocate_fast_array",
+    "js_array_buffer_constructor3",
+    "js_array_buffer_finalizer",
+    "js_array_buffer_free",
+    "js_array_constructor",
+    "js_array_every",
+    "js_array_finalizer",
+    "js_array_includes",
+    "js_array_iterator_finalizer",
+    "js_array_iterator_mark",
+    "js_array_iterator_next",
+    "js_array_mark",
+    "js_array_pop",
+    "js_array_push",
+    "js_array_reduce",
+    "js_async_function_call",
+    "js_async_function_resolve_call",
+    "js_async_function_resolve_finalizer",
+    "js_async_function_resolve_mark",
+    "js_async_generator_finalizer",
+    "js_async_generator_function_call",
+    "js_async_generator_mark",
+    "js_async_generator_next",
+    "js_atof",
+    "js_atom_concat_num",
+    "js_atom_concat_str",
+    "js_autoinit_free",
+    "js_autoinit_get_id",
+    "js_autoinit_get_realm",
+    "js_bigint_add",
+    "js_bigint_cmp",
+    "js_bigint_divrem",
+    "js_bigint_from_float64",
+    "js_bigint_from_string",
+    "js_bigint_get_si_sat",
+    "js_bigint_logic",
+    "js_bigint_mul",
+    "js_bigint_neg",
+    "js_bigint_new",
+    "js_bigint_new_di",
+    "js_bigint_normalize",
+    "js_bigint_not",
+    "js_bigint_pow",
+    "js_bigint_set_short",
+    "js_bigint_set_si",
+    "js_bigint_shl",
+    "js_bigint_shr",
+    "js_bigint_sign",
+    "js_bigint_to_float64",
+    "js_bigint_to_string",
+    "js_bigint_to_string1",
+    "js_binary_arith_slow",
+    "js_binary_logic_slow",
+    "js_boolean_constructor",
+    "js_bound_function_finalizer",
+    "js_bound_function_mark",
+    "js_build_arguments",
+    "js_build_mapped_arguments",
+    "js_bytecode_function_finalizer",
+    "js_bytecode_function_mark",
+    "js_c_function_data_call",
+    "js_c_function_data_finalizer",
+    "js_c_function_data_mark",
+    "js_c_function_finalizer",
+    "js_c_function_mark",
+    "js_call_bound_function",
+    "js_call_c_function",
+    "js_check_stack_overflow",
+    "js_class_has_bytecode",
+    "js_clone_shape",
+    "js_closure",
+    "js_closure2",
+    "js_compare_bigint",
+    "js_create_array",
+    "js_create_array_free",
+    "js_create_array_iterator",
+    "js_create_from_ctor",
+    "js_create_iterator_result",
+    "js_create_module_function",
+    "js_create_var_ref",
+    "js_dbuf_bytecode_init",
+    "js_dbuf_init",
+    "js_dtoa2",
+    "js_dump_value_write",
+    "js_dup_shape",
+    "js_dynamic_import",
+    "js_eq_slow",
+    "js_error_toString",
+    "js_evaluate_module",
+    "js_for_in_iterator_finalizer",
+    "js_for_in_iterator_mark",
+    "js_for_in_prepare_prototype_chain_enum",
+    "js_free",
+    "js_free_desc",
+    "js_free_module_def",
+    "js_free_modules",
+    "js_free_rt",
+    "js_free_shape",
+    "js_free_shape_null",
+    "js_free_string",
+    "js_function_apply",
+    "js_function_constructor",
+    "js_function_set_properties",
+    "js_generator_finalizer",
+    "js_generator_function_call",
+    "js_generator_mark",
+    "js_generator_next",
+    "js_get_array_buffer",
+    "js_get_atom_index",
+    "js_get_fast_array",
+    "js_get_function_name",
+    "js_get_length32",
+    "js_get_length64",
+    "js_get_this",
+    "js_global_isFinite",
+    "js_global_isNaN",
+    "js_global_object_finalizer",
+    "js_global_object_find_uninitialized_var",
+    "js_global_object_mark",
+    "js_has_unscopable",
+    "js_import_meta",
+    "js_instantiate_prototype",
+    "js_is_regexp",
+    "js_iterator_concat_finalizer",
+    "js_iterator_concat_mark",
+    "js_iterator_constructor",
+    "js_iterator_constructor_getset",
+    "js_iterator_get_value_done",
+    "js_iterator_helper_finalizer",
+    "js_iterator_helper_mark",
+    "js_iterator_proto_iterator",
+    "js_iterator_wrap_finalizer",
+    "js_iterator_wrap_mark",
+    "js_linearize_string_rope",
+    "js_link_module",
+    "js_malloc",
+    "js_malloc_init",
+    "js_malloc_rt",
+    "js_malloc_usable_size",
+    "js_malloc_usable_size_rt",
+    "js_mallocz",
+    "js_mallocz_rt",
+    "js_map_finalizer",
+    "js_map_iterator_finalizer",
+    "js_map_iterator_mark",
+    "js_map_mark",
+    "js_mapped_arguments_finalizer",
+    "js_mapped_arguments_mark",
+    "js_mark_module_def",
+    "js_method_set_home_object",
+    "js_method_set_properties",
+    "js_module_ns_autoinit",
+    "js_new_module_def",
+    "js_new_shape",
+    "js_new_shape2",
+    "js_new_shape_nohash",
+    "js_new_string16_len",
+    "js_new_string8",
+    "js_new_string8_len",
+    "js_new_string_char",
+    "js_not_slow",
+    "js_number_constructor",
+    "js_obj_to_desc",
+    "js_object_groupBy",
+    "js_object_keys",
+    "js_object_toString",
+    "js_operator_delete",
+    "js_operator_in",
+    "js_operator_instanceof",
+    "js_operator_private_in",
+    "js_operator_typeof",
+    "js_parse_error",
+    "js_poll_interrupts",
+    "js_post_inc_slow",
+    "js_pow",
+    "js_promise_resolve",
+    "js_promise_then",
+    "js_random_init",
+    "js_rc",
+    "js_realloc",
+    "js_realloc2",
+    "js_realloc_rt",
+    "js_regexp_finalizer",
+    "js_regexp_string_iterator_finalizer",
+    "js_regexp_string_iterator_mark",
+    "js_relational_slow",
+    "js_resize_array",
+    "js_resolve_module",
+    "js_resolve_proxy",
+    "js_same_value",
+    "js_same_value_zero",
+    "js_shape_hash_link",
+    "js_shape_prepare_update",
+    "js_shr_slow",
+    "js_strdup",
+    "js_strict_eq2",
+    "js_string_GetSubstitution",
+    "js_string_compare",
+    "js_string_constructor",
+    "js_string_eq",
+    "js_string_find_invalid_codepoint",
+    "js_string_memcmp",
+    "js_string_obj_get_length",
+    "js_string_rope_compare",
+    "js_strndup",
+    "js_sub_string",
+    "js_symbol_constructor",
+    "js_symbol_to_atom",
+    "js_typed_array___speciesCreate",
+    "js_typed_array_constructor",
+    "js_typed_array_finalizer",
+    "js_typed_array_get_length_unsafe",
+    "js_typed_array_mark",
+    "js_unary_arith_slow",
+    "js_update_property_flags",
+    "json_free_parse_record",
+    "json_parse_record_add",
+    "json_parse_record_find",
+    "json_parse_record_init_obj",
+    "map_delete_weakrefs",
+    "perform_promise_then",
+    "print_atom",
+    "remove_gc_object",
+    "resize_properties",
+    "set_cycle_flag",
+    "set_value",
+    "shape_hash",
+    "skip_spaces",
+    "string_advance_index",
+    "string_buffer_concat",
+    "string_buffer_concat_value",
+    "string_buffer_concat_value_free",
+    "string_buffer_end",
+    "string_buffer_fill",
+    "string_buffer_free",
+    "string_buffer_init",
+    "string_buffer_init2",
+    "string_buffer_putc",
+    "string_buffer_putc16",
+    "string_buffer_putc8",
+    "string_buffer_putc_slow",
+    "string_buffer_puts8",
+    "string_buffer_write8",
+    "string_get",
+    "string_getc",
+    "string_indexof_char",
+    "string_rope_get",
+    "to_digit",
+    "typed_array_is_oob",
+    "weakref_delete_weakref"
+  ],
+  "movements": [
+    {
+      "name": "js_limb_clz",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_limb_clz",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_limb_safe_clz",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_add",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_sub",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_neg",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_mul1",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_div1",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_add_mul1",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_mul_basecase",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_sub_mul1",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "udiv1norm_init",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "udiv1norm",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_div1norm",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_divnorm",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_shl",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "mp_shr",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_new",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_set_si",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_set_si64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_set_short",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_dump1",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_dump",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_new_si",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_new_si64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_new_ui64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_new_di",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_normalize1",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_normalize",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_get_si_sat",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_extend",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_add",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_neg",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_mul",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_divrem",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_logic",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_not",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_shl",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_shr",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_pow",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_get_mant_exp",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "shr_rndn",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_to_float64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_from_float64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_float64_cmp",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_cmp",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_from_string",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_u64toa",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "limb_to_a",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_to_string1",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_CompactBigInt",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_to_string",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_NewBigInt64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_NewBigUint64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_StringToBigInt",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_StringToBigIntErr",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_ToBigIntFree",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_ToBigInt",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_ToBigInt64Free",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_ToBigInt64",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "JS_ToBigIntBuf",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_compare_bigint",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "js_bigint_sign",
+      "from": "src/quickjs/number.c",
+      "to": "src/quickjs/bigint.c"
+    },
+    {
+      "name": "get_shape_size",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "init_shape_hash",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "shape_hash",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "get_shape_hash",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "shape_initial_hash",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "resize_shape_hash",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_shape_hash_link",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_shape_hash_unlink",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_new_shape_nohash",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_new_shape2",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_new_shape",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_clone_shape",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_dup_shape",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_free_shape0",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_free_shape",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_free_shape_null",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "resize_properties",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "compact_properties",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "add_shape_property",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "find_hashed_shape_proto",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "find_hashed_shape_prop",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "JS_DumpShape",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "JS_DumpShapes",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "JS_SetImmutablePrototype",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPrototypeInternal",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPrototype",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPrototypePrimitive",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPrototype",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPrototypeFree",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_OrdinaryIsInstanceOf",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_IsInstanceOf",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_AutoInitProperty",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPropertyInternal",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_ThrowTypeErrorPrivateNotFound",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefinePrivateField",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPrivateField",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPrivateField",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_AddBrand",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_CheckBrand",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_string_obj_get_length",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "num_keys_cmp",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_FreePropertyEnum",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetOwnPropertyNamesInternal",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetOwnPropertyNames",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetOwnPropertyInternal",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetOwnProperty",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_IsExtensible",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_PreventExtensions",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_HasProperty",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_symbol_to_atom",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_ValueToAtom",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPropertyValue",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPropertyUint32",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_TryGetPropertyInt64",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPropertyInt64",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetPropertyStr",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "add_property",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "convert_fast_array_to_array",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "remove_global_object_property",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "delete_property",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "call_setter",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "set_array_length",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "expand_fast_array",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "add_fast_array_element",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_allocate_fast_array",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_create_array",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_create_array_free",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_free_desc",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPropertyInternal",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPropertyValue",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPropertyUint32",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPropertyInt64",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_SetPropertyStr",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "get_prop_flags",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_CreateProperty",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "check_define_prop_flags",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_shape_prepare_update",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_update_property_flags",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefineProperty",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefineAutoInitProperty",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefinePropertyValue",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefinePropertyValueValue",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefinePropertyValueUint32",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefinePropertyValueInt64",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefinePropertyValueStr",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefinePropertyGetSet",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_CreateDataPropertyUint32",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_object_has_name",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefineObjectName",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DefineObjectNameComputed",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_ThrowSyntaxErrorVarRedeclaration",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_CheckDefineGlobalVar",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_GetGlobalVarRef",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DeleteGlobalVar",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DeleteProperty",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_DeletePropertyInt64",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "js_shape_prepare_update",
+      "from": "src/quickjs/property.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_update_property_flags",
+      "from": "src/quickjs/property.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "get_shape_prop",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "find_own_property1",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "find_own_property",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/shape.c"
+    },
+    {
+      "name": "js_obj_to_desc",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "JS_CopyDataProperties",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/property.c"
+    },
+    {
+      "name": "build_for_in_iterator",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "js_for_in_prepare_prototype_chain_enum",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "JS_GetIterator2",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "JS_GetIterator",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "JS_IteratorNext2",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "JS_IteratorClose",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "JS_IteratorGetCompleteValue",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "js_iterator_get_value_done",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "js_create_iterator_result",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "JS_IteratorNext",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "js_get_fast_array",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "js_for_in_iterator_finalizer",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "js_for_in_iterator_mark",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/iterator.c"
+    },
+    {
+      "name": "JS_Call",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_CallFree",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_GetFunctionRealm",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_create_from_ctor",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_CallConstructorInternal",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_CallConstructor2",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_CallConstructor",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_Invoke",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_InvokeFree",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "async_func_init",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "async_func_free_frame",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "async_func_resume",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "__async_func_free",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "async_func_free",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "free_generator_stack_rt",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_generator_finalizer",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "free_generator_stack",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_generator_mark",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_generator_next",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_generator_function_call",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_function_resolve_finalizer",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_function_resolve_mark",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_function_resolve_create",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_function_resume",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_function_resolve_call",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_function_call",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_free",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_finalizer",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_mark",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_resolve_function_create",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_await",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_resolve_or_reject",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_resolve",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_reject",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_complete",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_completed_return",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_resume_next",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_resolve_function",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_next",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_async_generator_function_call",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "free_var_ref",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_arguments_define_own_property",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_build_arguments",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_mapped_arguments_finalizer",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_mapped_arguments_mark",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_build_mapped_arguments",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_for_in_start",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_for_in_next",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_for_of_start",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_for_of_next",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_for_await_of_next",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_append_enumerate",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_GetActiveFunction",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_create_var_ref",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "get_var_ref",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_global_object_finalizer",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_global_object_mark",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_global_object_get_uninitialized_var",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_global_object_find_uninitialized_var",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_closure_define_global_var",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_closure_global_var",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_closure2",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_instantiate_prototype",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_closure",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_op_define_class",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "close_var_ref",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "close_var_refs",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "close_lexical_var",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_call_c_function",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_call_bound_function",
+      "from": "src/quickjs/function-vm.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_for_in_start",
+      "from": "src/quickjs/function.c",
+      "to": "src/quickjs/function-vm.c"
+    },
+    {
+      "name": "js_for_in_next",
+      "from": "src/quickjs/function.c",
+      "to": "src/quickjs/function-vm.c"
+    },
+    {
+      "name": "js_for_of_start",
+      "from": "src/quickjs/function.c",
+      "to": "src/quickjs/function-vm.c"
+    },
+    {
+      "name": "js_for_of_next",
+      "from": "src/quickjs/function.c",
+      "to": "src/quickjs/function-vm.c"
+    },
+    {
+      "name": "js_for_await_of_next",
+      "from": "src/quickjs/function.c",
+      "to": "src/quickjs/function-vm.c"
+    },
+    {
+      "name": "js_append_enumerate",
+      "from": "src/quickjs/function.c",
+      "to": "src/quickjs/function-vm.c"
+    },
+    {
+      "name": "js_op_define_class",
+      "from": "src/quickjs/function.c",
+      "to": "src/quickjs/function-vm.c"
+    },
+    {
+      "name": "js_function_set_properties",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_class_has_bytecode",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_GetFunctionBytecode",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_method_set_home_object",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_get_function_name",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_method_set_properties",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_NewCFunction3",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_NewCFunction2",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_c_function_data_finalizer",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_c_function_data_mark",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_c_function_data_call",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "JS_NewCFunctionData",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_c_function_finalizer",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_c_function_mark",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_bytecode_function_finalizer",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_bytecode_function_mark",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_bound_function_finalizer",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    },
+    {
+      "name": "js_bound_function_mark",
+      "from": "src/quickjs/object.c",
+      "to": "src/quickjs/function.c"
+    }
+  ]
+}

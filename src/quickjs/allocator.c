@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "src/quickjs/internal-allocator.h"
 
 /* JS malloc */
@@ -108,8 +109,7 @@ static no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int bloc
 
     block_size = js_malloc_block_sizes[block_size_idx];
     n_blocks = (JS_MALLOC_ARENA_SIZE - sizeof(JSMallocArena)) / block_size;
-    ar = (s->mf.js_malloc)(&s->malloc_state,
-                           sizeof(JSMallocArena) + n_blocks * block_size);
+    ar = s->mf.js_malloc(&s->malloc_state, sizeof(JSMallocArena) + n_blocks * block_size);
     if (!ar)
         return NULL;
 
@@ -132,7 +132,7 @@ static no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int bloc
     b = get_arena_block(ar, n_blocks - 1, block_size);
     b->u.free_next = FREE_NIL;
     b->block_size_idx = block_size_idx;
-
+    
     /* add to the head */
     list_add(&ar->link, &s->arena_list[block_size_idx]);
     list_add(&ar->free_link, &s->free_arena_list[block_size_idx]);
@@ -142,8 +142,7 @@ static no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int bloc
 static no_inline void *js_malloc_large(JSMallocContext *s, size_t size)
 {
     JSMallocLargeBlockHeader *b;
-    b = (s->mf.js_malloc)(&s->malloc_state,
-                          sizeof(JSMallocLargeBlockHeader) + size);
+    b = s->mf.js_malloc(&s->malloc_state, sizeof(JSMallocLargeBlockHeader) + size);
     if (!b)
         return NULL;
     b->header.u.block_idx = FREE_NIL;
@@ -170,7 +169,7 @@ QJS_INTERNAL void *__js_malloc(JSMallocContext *s, size_t size)
             JSMallocBlockHeader *b;
             JSMallocArena *ar;
             struct list_head *el, *head;
-
+            
             block_size_idx = get_block_size_index(total_size);
             block_size = js_malloc_block_sizes[block_size_idx];
             head = &s->free_arena_list[block_size_idx];
@@ -216,7 +215,7 @@ QJS_INTERNAL void __js_free(JSMallocContext *s, void *ptr)
 #ifdef JS_MALLOC_USE_ITER
             list_del(&lb->link);
 #endif
-            (s->mf.js_free)(&s->malloc_state, lb);
+            s->mf.js_free(&s->malloc_state, lb);
         }
     } else {
         unsigned int block_idx = b->u.block_idx;
@@ -236,7 +235,7 @@ QJS_INTERNAL void __js_free(JSMallocContext *s, void *ptr)
         if (unlikely(ar->n_used_blocks == 0)) {
             list_del(&ar->link);
             list_del(&ar->free_link);
-            (s->mf.js_free)(&s->malloc_state, ar);
+            s->mf.js_free(&s->malloc_state, ar);
         }
     }
 }
@@ -260,8 +259,7 @@ QJS_INTERNAL void *__js_realloc(JSMallocContext *s, void *ptr, size_t size)
 #ifdef JS_MALLOC_USE_ITER
             list_del(&lb->link);
 #endif
-            new_lb = (s->mf.js_realloc)(
-                &s->malloc_state, lb, sizeof(JSMallocLargeBlockHeader) + size);
+            new_lb = s->mf.js_realloc(&s->malloc_state, lb, sizeof(JSMallocLargeBlockHeader) + size);
             if (!new_lb) {
 #ifdef JS_MALLOC_USE_ITER
                 /* add again in the list */
@@ -361,7 +359,7 @@ static __maybe_unused void js_malloc_iter(JSMallocContext *s, JSMallocIterFunc *
     int block_size_idx;
     int i, j, n_words;
     uint32_t bmp;
-
+    
     for(block_size_idx = 0; block_size_idx < JS_MALLOC_BLOCK_SIZE_COUNT; block_size_idx++) {
         unsigned int block_size = js_malloc_block_sizes[block_size_idx];
         list_for_each(el, &s->arena_list[block_size_idx]) {
@@ -386,17 +384,17 @@ static __maybe_unused void js_malloc_iter(JSMallocContext *s, JSMallocIterFunc *
 
 /* end JS malloc */
 
-void *(js_malloc_rt)(JSRuntime *rt, size_t size)
+void *js_malloc_rt(JSRuntime *rt, size_t size)
 {
     return __js_malloc(&rt->malloc_ctx, size);
 }
 
-void (js_free_rt)(JSRuntime *rt, void *ptr)
+void js_free_rt(JSRuntime *rt, void *ptr)
 {
     __js_free(&rt->malloc_ctx, ptr);
 }
 
-void *(js_realloc_rt)(JSRuntime *rt, void *ptr, size_t size)
+void *js_realloc_rt(JSRuntime *rt, void *ptr, size_t size)
 {
     return __js_realloc(&rt->malloc_ctx, ptr, size);
 }
@@ -416,7 +414,7 @@ void *js_mallocz_rt(JSRuntime *rt, size_t size)
 }
 
 /* Throw out of memory in case of error */
-void *(js_malloc)(JSContext *ctx, size_t size)
+void *js_malloc(JSContext *ctx, size_t size)
 {
     void *ptr;
     ptr = js_malloc_rt(ctx->rt, size);
@@ -439,13 +437,13 @@ void *js_mallocz(JSContext *ctx, size_t size)
     return ptr;
 }
 
-void (js_free)(JSContext *ctx, void *ptr)
+void js_free(JSContext *ctx, void *ptr)
 {
     js_free_rt(ctx->rt, ptr);
 }
 
 /* Throw out of memory in case of error */
-void *(js_realloc)(JSContext *ctx, void *ptr, size_t size)
+void *js_realloc(JSContext *ctx, void *ptr, size_t size)
 {
     void *ret;
     ret = js_realloc_rt(ctx->rt, ptr, size);
@@ -457,7 +455,7 @@ void *(js_realloc)(JSContext *ctx, void *ptr, size_t size)
 }
 
 /* store extra allocated size in *pslack if successful */
-void *(js_realloc2)(JSContext *ctx, void *ptr, size_t size, size_t *pslack)
+void *js_realloc2(JSContext *ctx, void *ptr, size_t size, size_t *pslack)
 {
     void *ret;
     ret = js_realloc_rt(ctx->rt, ptr, size);
@@ -573,3 +571,8 @@ QJS_INTERNAL const JSMallocFunctions def_malloc_funcs = {
     js_def_realloc,
     js_def_malloc_usable_size,
 };
+
+QJS_INTERNAL JSMallocBlockHeader *js_rc(void *ptr)
+{
+    return container_of(ptr, JSMallocBlockHeader, user_data);
+}

@@ -27,26 +27,16 @@
 
 #include "internal-builtin.h"
 
-#define QJS_ATOD_INT_ONLY                 (1 << 0)
-#define QJS_ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
-
-QJS_INTERNAL int qjs_add_intrinsic_global(JSContext *ctx);
-QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv);
-QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx,
-                                          JSValueConst this_val,
-                                          int argc, JSValueConst *argv);
-QJS_INTERNAL int string_buffer_putc16(StringBuffer *buf,
-                                                 uint32_t c);
-QJS_INTERNAL int string_buffer_write8(StringBuffer *buf,
-                                                 const uint8_t *str,
-                                                 int len);
-QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx,
-                                            JSErrorEnum error_num,
-                                            const char *fmt, va_list ap);
-QJS_INTERNAL int skip_spaces(const char *str);
-QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str,
-                                     const char **end, int radix, int flags);
+QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv);
+QJS_INTERNAL int string_buffer_putc16(StringBuffer *s, uint32_t c);
+QJS_INTERNAL int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
+QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
+                             const char *fmt, va_list ap);
+QJS_INTERNAL int skip_spaces(const char *pc);
+QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+                       int radix, int flags);
 
 #endif /* QUICKJS_INTERNAL_GLOBAL_H */

@@ -27,26 +27,18 @@
 
 #include "internal-builtin.h"
 
-#define QJS_DATE_HINT_STRING         0
-#define QJS_DATE_HINT_NUMBER         1
-#define QJS_DATE_HINT_NONE           2
-#define QJS_DATE_HINT_FORCE_ORDINARY (1 << 4)
-
-QJS_INTERNAL JSValue get_date_string(JSContext *ctx,
-                                         JSValueConst this_val,
-                                         int argc, JSValueConst *argv,
-                                         int magic);
-QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *str);
+QJS_INTERNAL JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *buf);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
-QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst value,
-                                           int hint);
-QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx,
-                                               JSValueConst ctor,
-                                               int class_id);
-QJS_INTERNAL JSValue JS_NewCConstructor(
-    JSContext *ctx, int class_id, const char *name, JSCFunction *func,
-    int length, JSCFunctionEnum cproto, int magic, JSValueConst parent_ctor,
-    const JSCFunctionListEntry *ctor_fields, int ctor_field_count,
-    const JSCFunctionListEntry *proto_fields, int proto_field_count, int flags);
+QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                                  JSValueConst parent_ctor,
+                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                                  int flags);
 
 #endif /* QUICKJS_INTERNAL_DATE_H */

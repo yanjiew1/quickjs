@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal-canonical.h"
 #include "internal-array.h"
 
 /* object list */
@@ -420,7 +421,7 @@ static int JS_WriteBigInt(BCWriterState *s, JSValueConst obj)
     uint32_t len, i;
     js_limb_t v, b;
     int shift;
-
+    
     bc_put_u8(s, BC_TAG_BIG_INT);
 
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_SHORT_BIG_INT)
@@ -616,7 +617,7 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
     BOOL is_template;
     JSShapeProperty *prs;
     JSProperty *pr;
-
+    
     if (s->allow_bytecode && !p->extensible) {
         /* not extensible array: we consider it is a
            template when we are saving bytecode */
@@ -1318,7 +1319,7 @@ static JSValue JS_ReadBigInt(BCReaderState *s)
     JSBigInt *p;
     js_limb_t v;
     uint8_t v8;
-
+    
     if (bc_get_leb128(s, &len))
         goto fail;
     bc_read_trace(s, "len=%" PRId64 "\n", (int64_t)len);
@@ -1393,7 +1394,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     int cpool_offset, byte_code_offset;
     int closure_var_offset, vardefs_offset;
     uint64_t function_size;
-
+    
     memset(&bc, 0, sizeof(bc));
 
     if (bc_get_u16(s, &v16))
