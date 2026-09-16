@@ -1,83 +1,83 @@
-name: split-05 audited migration
+name: split-05 publish validated source
 
 on:
   push:
     branches: [split-05]
-    paths:
-      - '.github/workflows/ci.yml'
-      - 'tools/split05*.py'
-      - 'tools/check_split05.py'
-      - 'tools/validate_split05.py'
+    paths: ['.github/workflows/ci.yml']
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: split05-audited-migration
   cancel-in-progress: false
 
 jobs:
-  validate-and-publish:
+  publish-validated-source:
     if: github.ref == 'refs/heads/split-05'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Materialize reviewed source and verify its exact digest
+      - name: Retrieve the completed correctness comparison
+        uses: actions/download-artifact@v4
+        with:
+          name: split05-correctness-evidence
+          run-id: 35116500029
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/split05-validated
+      - name: Reproduce exactly the source that passed the comparison
         run: |
-          mkdir -p "$RUNNER_TEMP/split05-logs"
+          test ! -e src/quickjs/internal-canonical.h
           python3 tools/split05.py
-          python3 tools/check_split05.py --expect-digest 91cbbca8ec7c3256a342aeaa2d526374cfb446852fd46812ae1f48c79c3bed29 --report "$RUNNER_TEMP/split05-logs/source-audit.json"
-      - name: GCC and Clang correctness and full Test262 comparison
-        run: |
-          python3 tools/validate_split05.py --out "$RUNNER_TEMP/split05-logs"
-      - name: Publish tested source only to split-05 and retire the auto-writer
-        run: |
-          python3 tools/check_split05.py --expect-digest 91cbbca8ec7c3256a342aeaa2d526374cfb446852fd46812ae1f48c79c3bed29 --report "$RUNNER_TEMP/split05-logs/source-audit.json"
+          python3 tools/check_split05.py --expect-digest 91cbbca8ec7c3256a342aeaa2d526374cfb446852fd46812ae1f48c79c3bed29 --report "$RUNNER_TEMP/split05-publish-audit.json"
           python3 - <<'PY'
-          import json, os, re, subprocess
+          import json, os
           from pathlib import Path
-          base = 'b63ab025d402e46c647a8a239bffe72a58f73a35'
-          # Restore the ordinary portability CI, without its benchmark steps.
-          # No automatic migration/push remains in the completed branch.
-          ci = subprocess.check_output(['git', 'show', base + ':.github/workflows/ci.yml']).decode()
-          ci, count = re.subn(r'(?m)^      - name: Run microbench\n        run: \|\n          make microbench\n', '', ci)
-          assert count > 0 and 'microbench' not in ci
-          ci = ci.replace('name: ci\n', 'name: ci\n\npermissions:\n  contents: read\n', 1)
-          Path('.github/workflows/ci.yml').write_text(ci)
-          report_path = Path('SPLIT-05-VALIDATION.json')
-          report = json.loads(report_path.read_text())
-          assert report['success']
-          audit = json.loads((Path(os.environ['RUNNER_TEMP']) / 'split05-logs/source-audit.json').read_text())
+          evidence = Path(os.environ['RUNNER_TEMP']) / 'split05-validated'
+          report = json.loads((evidence / 'validation.json').read_text())
+          previous_audit = json.loads((evidence / 'source-audit.json').read_text())
+          audit = json.loads((Path(os.environ['RUNNER_TEMP']) / 'split05-publish-audit.json').read_text())
+          assert report['success'] and not report['performance_tested']
+          assert report['base'] == 'b63ab025d402e46c647a8a239bffe72a58f73a35'
+          assert not audit['errors'] and not previous_audit['errors']
+          assert audit['source_manifest'] == previous_audit['source_manifest']
+          for compiler in ('gcc', 'clang'):
+              result = report['compilers'][compiler]
+              assert result['exports_match'] and result['test262_failure_sets_match']
+              assert result['baseline']['test262'] == result['candidate']['test262']
+              assert result['candidate']['test262']['total'] >= 50000
+              assert result['candidate']['build'] == result['candidate']['built_in_tests'] == 'PASS'
+              assert (evidence / (compiler + '-baseline-test262.errors')).read_bytes() == (evidence / (compiler + '-candidate-test262.errors')).read_bytes()
+          report['validation_workflow_run'] = 35116500029
+          report['validation_artifact_id'] = 10454239335
           report['source_digest'] = audit['source_digest']
-          report['function_definitions'] = audit['function_definitions']
-          report['unique_functions'] = audit['unique_functions']
-          report['data_definitions'] = audit['data_definitions']
-          report['private_header_function_definitions'] = audit['private_header_function_definitions']
+          for key in ('function_definitions', 'unique_functions', 'data_definitions', 'private_header_function_definitions'):
+              report[key] = audit[key]
           report['source_fidelity_errors'] = audit['errors']
-          report_path.write_text(json.dumps(report, indent=2) + '\n')
+          Path('SPLIT-05-VALIDATION.json').write_text(json.dumps(report, indent=2) + '\n')
           PY
-          git add src/quickjs quickjs.h Makefile split05-inventory.json SPLIT-05-VALIDATION.json .github/workflows/ci.yml
-          git diff --cached --check > "$RUNNER_TEMP/split05-logs/raw-diff-check.log" 2>&1 || true
+      - name: Publish source only; workflow changes are handled separately
+        run: |
+          git add src/quickjs quickjs.h Makefile split05-inventory.json SPLIT-05-VALIDATION.json
+          git diff --cached --check > "$RUNNER_TEMP/split05-publish-diff.log" 2>&1 || true
           git -c core.whitespace=-blank-at-eol diff --cached --check
           test "$(git ls-remote origin refs/heads/split-05 | cut -f1)" = "$GITHUB_SHA"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'refactor(split-05): restore upstream bodies and split engine ownership'
           git push origin HEAD:refs/heads/split-05
-          git rev-parse HEAD | tee "$RUNNER_TEMP/split05-logs/result-commit.txt"
-      - name: Upload correctness evidence
+          git rev-parse HEAD | tee "$RUNNER_TEMP/split05-result-commit.txt"
+      - name: Upload publication evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: split05-correctness-evidence
+          name: split05-publication-evidence
           path: |
-            ${{ runner.temp }}/split05-logs/*.log
-            ${{ runner.temp }}/split05-logs/*.json
-            ${{ runner.temp }}/split05-logs/*.errors
-            ${{ runner.temp }}/split05-logs/*.report
-            ${{ runner.temp }}/split05-logs/*.symbols
-            ${{ runner.temp }}/split05-logs/*.txt
+            ${{ runner.temp }}/split05-publish-audit.json
+            ${{ runner.temp }}/split05-publish-diff.log
+            ${{ runner.temp }}/split05-result-commit.txt
           retention-days: 30
