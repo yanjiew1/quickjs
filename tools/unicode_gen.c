@@ -32,6 +32,7 @@
 #include <time.h>
 
 #include "cutils.h"
+#include "libunicode.h"
 
 uint32_t total_tables;
 uint32_t total_table_bytes;
@@ -62,10 +63,6 @@ uint32_t total_index_bytes;
    - allow holes in B runs
    - suppress more upper / lower case redundancy
 */
-
-#ifdef USE_TEST
-#include "libunicode.c"
-#endif
 
 #define CHARCODE_MAX 0x10ffff
 #define CC_LEN_MAX 3
