@@ -233,4 +233,6 @@ QJS_INTERNAL JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
 
 QJS_INTERNAL JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
 
+QJS_INTERNAL JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val, JSClassID class_id, int n_fields);
+
 #endif /* QJS_OBJECT_H */

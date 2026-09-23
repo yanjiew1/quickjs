@@ -44,4 +44,6 @@ QJS_INTERNAL int find_line_num(JSContext *ctx, JSFunctionBytecode *b, uint32_t p
 
 QJS_INTERNAL JSValue js_generator_next(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, BOOL *pdone, int magic);
 
+QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj, const char *input, size_t input_len, const char *filename, int flags, int scope_idx);
+
 #endif /* QJS_VM_H */
