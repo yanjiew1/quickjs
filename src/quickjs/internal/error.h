@@ -28,8 +28,6 @@
 #include <stdarg.h>
 
 typedef struct JSFunctionBytecode JSFunctionBytecode;
-
-#include <stdarg.h>
 #include "runtime.h"
 
 QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
@@ -56,5 +54,10 @@ QJS_INTERNAL JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
                                                     JSFunctionBytecode *b,
                                                     int idx, BOOL is_ref);
 QJS_INTERNAL BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
+
+QJS_INTERNAL const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
+QJS_INTERNAL JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+#define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotASymbol(JSContext *ctx);
 
 #endif /* QJS_ERROR_H */
