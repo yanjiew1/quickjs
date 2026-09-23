@@ -51,4 +51,11 @@ QJS_INTERNAL JSValue js_object_preventExtensions(JSContext *ctx,
                                                  int argc, JSValueConst *argv,
                                                  int reflect);
 
+QJS_INTERNAL JSValue js_object_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
+extern QJS_INTERNAL const JSCFunctionListEntry js_object_funcs[23];
+extern QJS_INTERNAL const JSCFunctionListEntry js_object_proto_funcs[11];
+
+QJS_INTERNAL JSValue js_object_toString(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_object_seal(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int freeze);
+
 #endif /* QJS_BUILTIN_OBJECT_H */

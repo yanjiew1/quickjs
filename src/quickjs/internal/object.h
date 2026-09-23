@@ -231,4 +231,6 @@ QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
 
 QJS_INTERNAL JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
 
+QJS_INTERNAL JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
+
 #endif /* QJS_OBJECT_H */

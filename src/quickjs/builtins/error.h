@@ -1,5 +1,5 @@
 /*
- * QuickJS Error Internal Interface
+ * QuickJS Error Builtins Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,21 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_ERROR_H
-#define QJS_ERROR_H
+#ifndef QJS_BUILTIN_ERROR_H
+#define QJS_BUILTIN_ERROR_H
 
-#include <stdarg.h>
-#include "runtime.h"
+#include "../internal/runtime.h"
 
-QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                                    const char *fmt, va_list ap);
-QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
-QJS_INTERNAL void JS_ThrowInterrupted(JSContext *ctx);
-QJS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+QJS_INTERNAL JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv, int magic);
+extern QJS_INTERNAL const JSCFunctionListEntry js_error_proto_funcs[3];
+extern QJS_INTERNAL const JSCFunctionListEntry js_native_error_proto_funcs[2 * JS_NATIVE_ERROR_COUNT];
+extern QJS_INTERNAL const JSCFunctionListEntry js_error_funcs[1];
 
-QJS_INTERNAL JSValue js_aggregate_error_constructor(JSContext *ctx, JSValueConst errors);
-
-#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
-QJS_INTERNAL void build_backtrace(JSContext *ctx, JSValueConst error_obj, const char *filename, int line_num, int col_num, int backtrace_flags);
-
-#endif /* QJS_ERROR_H */
+#endif /* QJS_BUILTIN_ERROR_H */

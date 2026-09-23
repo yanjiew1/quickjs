@@ -26,6 +26,7 @@
 #define QJS_VM_H
 
 #include "runtime.h"
+#include "function.h"
 
 QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                                     JSValueConst val, int flags, int scope_idx);
@@ -38,5 +39,7 @@ QJS_INTERNAL JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_v
 QJS_INTERNAL JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
 QJS_INTERNAL JSValue js_async_function_resolve_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
 QJS_INTERNAL JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+
+QJS_INTERNAL int find_line_num(JSContext *ctx, JSFunctionBytecode *b, uint32_t pc_value, int *pcol_num);
 
 #endif /* QJS_VM_H */

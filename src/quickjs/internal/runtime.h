@@ -246,6 +246,25 @@ typedef struct JSClassShortDef {
     JSClassGCMark *gc_mark;
 } JSClassShortDef;
 
+/* must be large enough to have a negligible runtime cost and small
+   enough to call the interrupt callback often. */
+#define JS_INTERRUPT_COUNTER_INIT 10000
+
+QJS_INTERNAL no_inline __exception int __js_poll_interrupts(JSContext *ctx);
+
+static inline __exception int js_poll_interrupts(JSContext *ctx)
+{
+    if (unlikely(--ctx->interrupt_counter <= 0)) {
+        return __js_poll_interrupts(ctx);
+    } else {
+        return 0;
+    }
+}
+
+
+
+
+
 QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
                                   int start, int count);
 QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
