@@ -26,8 +26,10 @@
 #define QJS_RUNTIME_H
 
 #include "base.h"
+#include "allocator.h"
 
 typedef struct JSShape JSShape;
+typedef struct JSString JSAtomStruct;
 
 typedef enum JSErrorEnum {
     JS_EVAL_ERROR,
@@ -47,6 +49,86 @@ typedef enum JSErrorEnum {
    a particular type of GC object. */
 struct JSGCObjectHeader {
     struct list_head link;
+};
+
+typedef enum {
+    JS_GC_PHASE_NONE,
+    JS_GC_PHASE_DECREF,
+    JS_GC_PHASE_REMOVE_CYCLES,
+} JSGCPhaseEnum;
+
+struct JSRuntime {
+    JSMallocContext malloc_ctx;
+    const char *rt_info;
+
+    int atom_hash_size; /* power of two */
+    int atom_count;
+    int atom_size;
+    int atom_count_resize; /* resize hash table at this count */
+    uint32_t *atom_hash;
+    JSAtomStruct **atom_array;
+    int atom_free_index; /* 0 = none */
+
+    int class_count;    /* size of class_array */
+    JSClass *class_array;
+
+    struct list_head context_list; /* list of JSContext.link */
+    /* list of JSGCObjectHeader.link. List of allocated GC objects (used
+       by the garbage collector) */
+    struct list_head gc_obj_list;
+    /* list of JSGCObjectHeader.link. Used during JS_FreeValueRT() */
+    struct list_head gc_zero_ref_count_list;
+    struct list_head tmp_obj_list; /* used during GC */
+    JSGCPhaseEnum gc_phase : 8;
+    size_t malloc_gc_threshold;
+    struct list_head weakref_list; /* list of JSWeakRefHeader.link */
+#ifdef DUMP_LEAKS
+    struct list_head string_list; /* list of JSString.link */
+#endif
+    /* stack limitation */
+    uintptr_t stack_size; /* in bytes, 0 if no limit */
+    uintptr_t stack_top;
+    uintptr_t stack_limit; /* lower stack limit */
+
+    JSValue current_exception;
+    /* true if the current exception cannot be catched */
+    BOOL current_exception_is_uncatchable : 8;
+    /* true if inside an out of memory error, to avoid recursing */
+    BOOL in_out_of_memory : 8;
+
+    struct JSStackFrame *current_stack_frame;
+
+    JSInterruptHandler *interrupt_handler;
+    void *interrupt_opaque;
+
+    JSHostPromiseRejectionTracker *host_promise_rejection_tracker;
+    void *host_promise_rejection_tracker_opaque;
+
+    struct list_head job_list; /* list of JSJobEntry.link */
+
+    JSModuleNormalizeFunc *module_normalize_func;
+    BOOL module_loader_has_attr;
+    union {
+        JSModuleLoaderFunc *module_loader_func;
+        JSModuleLoaderFunc2 *module_loader_func2;
+    } u;
+    JSModuleCheckSupportedImportAttributes *module_check_attrs;
+    void *module_loader_opaque;
+    /* timestamp for internal use in module evaluation */
+    int64_t module_async_evaluation_next_timestamp;
+
+    BOOL can_block : 8; /* TRUE if Atomics.wait can block */
+    /* used to allocate, free and clone SharedArrayBuffers */
+    JSSharedArrayBufferFunctions sab_funcs;
+    /* see JS_SetStripInfo() */
+    uint8_t strip_flags;
+    
+    /* Shape hash table */
+    int shape_hash_bits;
+    int shape_hash_size;
+    int shape_hash_count; /* number of hashed shapes */
+    JSShape **shape_hash;
+    void *user_opaque;
 };
 
 struct JSContext {
@@ -95,5 +177,16 @@ struct JSContext {
                              const char *filename, int flags, int scope_idx);
     void *user_opaque;
 };
+
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+
+QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                                  int start, int count);
+QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
+                                int argc, JSValueConst *argv, BOOL no_exception);
 
 #endif /* QJS_RUNTIME_H */

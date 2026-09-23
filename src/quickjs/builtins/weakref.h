@@ -1,5 +1,5 @@
 /*
- * QuickJS Primitive Conversion Internal Interface
+ * QuickJS WeakRef Builtin Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,18 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_PRIMITIVE_H
-#define QJS_PRIMITIVE_H
+#ifndef QJS_BUILTINS_WEAKREF_H
+#define QJS_BUILTINS_WEAKREF_H
 
-#include "base.h"
+#include "../internal/weakref.h"
 
-#define HINT_STRING  0
-#define HINT_NUMBER  1
-#define HINT_NONE    2
-#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+QJS_INTERNAL void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
+QJS_INTERNAL void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
-QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
-
-QJS_INTERNAL BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
-
-#endif /* QJS_PRIMITIVE_H */
+#endif /* QJS_BUILTINS_WEAKREF_H */

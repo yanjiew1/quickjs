@@ -47,6 +47,7 @@
 #include "libunicode.h"
 #include "dtoa.h"
 #include "internal/runtime.h"
+#include "internal/weakref.h"
 #include "internal/object.h"
 #include "internal/number.h"
 #include "internal/primitive.h"
@@ -55,6 +56,7 @@
 #include "internal/iterator.h"
 #include "builtins/math.h"
 #include "builtins/date.h"
+#include "builtins/weakref.h"
 
 #define OPTIMIZE         1
 #define SHORT_OPCODES    1
@@ -148,165 +150,10 @@ static uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
 
 
 
-typedef enum {
-    JS_GC_PHASE_NONE,
-    JS_GC_PHASE_DECREF,
-    JS_GC_PHASE_REMOVE_CYCLES,
-} JSGCPhaseEnum;
 
 typedef enum OPCodeEnum OPCodeEnum;
 
-/* JS malloc */
 
-#define JS_MALLOC_ALIGN 8
-#define JS_MALLOC_ARENA_SIZE 4096
-#define JS_MALLOC_BLOCK_SIZE_COUNT 31
-#define JS_MALLOC_MIN_SMALL_SIZE 16
-#define JS_MALLOC_MAX_SMALL_SIZE 512
-#if defined(__SANITIZE_ADDRESS__)
-/* use the host malloc() for all allocations */
-#define JS_MALLOC_LARGE_BLOCKS_ONLY 1
-#else
-#define JS_MALLOC_LARGE_BLOCKS_ONLY 0
-#endif
-
-/* allow iteration among the allocated blocks. Currently not used. May
-   be used to suppress the memory overhead of JSGCObjectHeader */
-//#define JS_MALLOC_USE_ITER
-
-#define FREE_NIL 0xffff
-
-/* 8 byte header */
-/* Notes: 
-   - the header is necessary at least to recover a pointer to
-     JSMallocArena because we don't want to enforce a page
-     alignment on the system malloc().
-   - could store the block offset instead of (block_idx,
-   block_size_idx), but it would require a division to recover the block
-   index.
-*/
-typedef struct JSMallocBlockHeader {
-    union {
-        uint16_t block_idx; /* FREE_NIL if large block */
-        uint16_t free_next; /* FREE_NIL if none */
-    } u;
-    uint8_t block_size_idx;
-    uint8_t gc_obj_type : 7;
-    uint8_t mark : 1;
-    int ref_count;
-    __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t user_data[];
-} JSMallocBlockHeader;
-
-typedef struct JSMallocLargeBlockHeader {
-#ifdef JS_MALLOC_USE_ITER    
-    struct list_head link;
-#endif
-    JSMallocBlockHeader header;
-} JSMallocLargeBlockHeader;
-
-typedef struct {
-    struct list_head free_link;
-    struct list_head link;
-    uint8_t block_size_idx;
-    uint16_t n_used_blocks; /* number of allocated blocks */
-    uint16_t n_blocks; /* total number of blocks */
-    uint16_t first_free_block; /* FREE_NIL if none */
-#ifdef JS_MALLOC_USE_ITER    
-    /* bit set to 1 for allocated block */
-    uint32_t bitmap[((JS_MALLOC_ARENA_SIZE / JS_MALLOC_MIN_SMALL_SIZE) + 31) / 32]; 
-#endif
-    /* n_blocks memory blocks of identical size */
-    __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t blocks[];
-} JSMallocArena;
-
-typedef struct {
-    struct list_head arena_list[JS_MALLOC_BLOCK_SIZE_COUNT]; /* list of JSMallocArena.link (all arenas) */
-    struct list_head free_arena_list[JS_MALLOC_BLOCK_SIZE_COUNT]; /* list of JSMallocArena.free_link (arenas where n_used_blocks < n_blocks) */
-#ifdef JS_MALLOC_USE_ITER
-    struct list_head large_block_list; /* list of JSMallocLargeBlockHeader.link */
-#endif
-    __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t zero_size_block[sizeof(JSMallocBlockHeader)];
-
-    /* callbacks to the host malloc */
-    JSMallocFunctions mf;
-    JSMallocState malloc_state;
-} JSMallocContext;
-
-/* end JS Malloc */
-
-struct JSRuntime {
-    JSMallocContext malloc_ctx;
-    const char *rt_info;
-
-    int atom_hash_size; /* power of two */
-    int atom_count;
-    int atom_size;
-    int atom_count_resize; /* resize hash table at this count */
-    uint32_t *atom_hash;
-    JSAtomStruct **atom_array;
-    int atom_free_index; /* 0 = none */
-
-    int class_count;    /* size of class_array */
-    JSClass *class_array;
-
-    struct list_head context_list; /* list of JSContext.link */
-    /* list of JSGCObjectHeader.link. List of allocated GC objects (used
-       by the garbage collector) */
-    struct list_head gc_obj_list;
-    /* list of JSGCObjectHeader.link. Used during JS_FreeValueRT() */
-    struct list_head gc_zero_ref_count_list;
-    struct list_head tmp_obj_list; /* used during GC */
-    JSGCPhaseEnum gc_phase : 8;
-    size_t malloc_gc_threshold;
-    struct list_head weakref_list; /* list of JSWeakRefHeader.link */
-#ifdef DUMP_LEAKS
-    struct list_head string_list; /* list of JSString.link */
-#endif
-    /* stack limitation */
-    uintptr_t stack_size; /* in bytes, 0 if no limit */
-    uintptr_t stack_top;
-    uintptr_t stack_limit; /* lower stack limit */
-
-    JSValue current_exception;
-    /* true if the current exception cannot be catched */
-    BOOL current_exception_is_uncatchable : 8;
-    /* true if inside an out of memory error, to avoid recursing */
-    BOOL in_out_of_memory : 8;
-
-    struct JSStackFrame *current_stack_frame;
-
-    JSInterruptHandler *interrupt_handler;
-    void *interrupt_opaque;
-
-    JSHostPromiseRejectionTracker *host_promise_rejection_tracker;
-    void *host_promise_rejection_tracker_opaque;
-
-    struct list_head job_list; /* list of JSJobEntry.link */
-
-    JSModuleNormalizeFunc *module_normalize_func;
-    BOOL module_loader_has_attr;
-    union {
-        JSModuleLoaderFunc *module_loader_func;
-        JSModuleLoaderFunc2 *module_loader_func2;
-    } u;
-    JSModuleCheckSupportedImportAttributes *module_check_attrs;
-    void *module_loader_opaque;
-    /* timestamp for internal use in module evaluation */
-    int64_t module_async_evaluation_next_timestamp;
-
-    BOOL can_block : 8; /* TRUE if Atomics.wait can block */
-    /* used to allocate, free and clone SharedArrayBuffers */
-    JSSharedArrayBufferFunctions sab_funcs;
-    /* see JS_SetStripInfo() */
-    uint8_t strip_flags;
-    
-    /* Shape hash table */
-    int shape_hash_bits;
-    int shape_hash_size;
-    int shape_hash_count; /* number of hashed shapes */
-    JSShape **shape_hash;
-    void *user_opaque;
-};
 
 struct JSClass {
     uint32_t class_id; /* 0 means free entry */
@@ -348,16 +195,6 @@ typedef enum {
 } JSGCObjectTypeEnum;
 
 
-typedef enum {
-    JS_WEAKREF_TYPE_MAP,
-    JS_WEAKREF_TYPE_WEAKREF,
-    JS_WEAKREF_TYPE_FINREC,
-} JSWeakRefHeaderTypeEnum;
-
-typedef struct {
-    struct list_head link;
-    JSWeakRefHeaderTypeEnum weakref_type;
-} JSWeakRefHeader;
 
 typedef struct JSVarRef {
     JSGCObjectHeader header; /* must come first */
@@ -977,7 +814,6 @@ typedef enum JSStrictEqModeEnum {
 static BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
                           JSStrictEqModeEnum eq_mode);
 static BOOL js_strict_eq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
-static BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 static BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 static JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 static JSProperty *add_property(JSContext *ctx,
@@ -1096,8 +932,6 @@ static JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
 static JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv, int is_map);
 static void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
-static void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
-static void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 static void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
 static JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
                                       JSValueConst obj, JSValueConst method);
@@ -1195,10 +1029,6 @@ static void *get_arena_block(JSMallocArena *ar, unsigned int idx, unsigned int b
     return ar->blocks + idx * block_size;
 }
 
-static inline JSMallocBlockHeader *js_rc(void *ptr)
-{
-    return container_of(ptr, JSMallocBlockHeader, user_data);
-}
 
 static no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int block_size_idx)
 {
@@ -1665,11 +1495,6 @@ static inline int is_digit(int c) {
 }
 
 
-typedef struct JSClassShortDef {
-    JSAtom class_name;
-    JSClassFinalizer *finalizer;
-    JSClassGCMark *gc_mark;
-} JSClassShortDef;
 
 static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_Object, NULL, NULL },                             /* JS_CLASS_OBJECT */
@@ -1724,7 +1549,7 @@ static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_Object, NULL, NULL }, /* JS_CLASS_RAWJSON */
 };
 
-static int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
                             int start, int count)
 {
     JSClassDef cm_s, *cm = &cm_s;
@@ -1963,7 +1788,7 @@ int JS_GetStripInfo(JSRuntime *rt)
     return rt->strip_flags;
 }
 
-static int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
+QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                           int argc, JSValueConst *argv, BOOL no_exception)
 {
     JSRuntime *rt = ctx->rt;
@@ -15588,7 +15413,7 @@ BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
     return js_strict_eq(ctx, op1, op2);
 }
 
-static BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2)
+QJS_INTERNAL BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
     return js_strict_eq2(ctx, op1, op2, JS_EQ_SAME_VALUE);
 }
@@ -50746,79 +50571,6 @@ static const JSCFunctionListEntry js_symbol_funcs[] = {
 
 /* Set/Map/WeakSet/WeakMap */
 
-static BOOL js_weakref_is_target(JSValueConst val)
-{
-    switch (JS_VALUE_GET_TAG(val)) {
-    case JS_TAG_OBJECT:
-        return TRUE;
-    case JS_TAG_SYMBOL:
-        {
-            JSAtomStruct *p = JS_VALUE_GET_PTR(val);
-            if (p->atom_type == JS_ATOM_TYPE_SYMBOL &&
-                p->hash != JS_ATOM_HASH_PRIVATE)
-                return TRUE;
-        }
-        break;
-    default:
-        break;
-    }
-    return FALSE;
-}
-
-/* JS_UNDEFINED is considered as a live weakref */
-/* XXX: add a specific JSWeakRef value type ? */
-static BOOL js_weakref_is_live(JSValueConst val)
-{
-    void *p;
-    if (JS_IsUndefined(val))
-        return TRUE;
-    p = JS_VALUE_GET_PTR(val);
-    return (js_rc(p)->ref_count != 0);
-}
-
-/* 'val' can be JS_UNDEFINED */
-static void js_weakref_free(JSRuntime *rt, JSValue val)
-{
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(val);
-        assert(p->weakref_count >= 1);
-        p->weakref_count--;
-        /* 'mark' is tested to avoid freeing the object structure when
-           it is about to be freed in a cycle or in
-           free_zero_refcount() */
-        if (p->weakref_count == 0 && js_rc(p)->ref_count == 0 &&
-            js_rc(p)->mark == 0) {
-            js_free_rt(rt, p);
-        }
-    } else if (JS_VALUE_GET_TAG(val) == JS_TAG_SYMBOL) {
-        JSString *p = JS_VALUE_GET_STRING(val);
-        assert(p->hash >= 1);
-        p->hash--;
-        if (p->hash == 0 && js_rc(p)->ref_count == 0) {
-            /* can remove the dummy structure */
-            js_free_rt(rt, p);
-        }
-    }
-}
-
-/* val must be an object, a symbol or undefined (see
-   js_weakref_is_target). */
-static JSValue js_weakref_new(JSContext *ctx, JSValueConst val)
-{
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(val);
-        p->weakref_count++;
-    } else if (JS_VALUE_GET_TAG(val) == JS_TAG_SYMBOL) {
-        JSString *p = JS_VALUE_GET_STRING(val);
-        /* XXX: could return an exception if too many references */
-        assert(p->hash < JS_ATOM_HASH_MASK - 2);
-        p->hash++;
-    } else {
-        assert(JS_IsUndefined(val));
-    }
-    return (JSValue)val;
-}
-
 #define MAGIC_SET (1 << 0)
 #define MAGIC_WEAK (1 << 1)
 
@@ -59025,298 +58777,5 @@ int JS_AddIntrinsicTypedArrays(JSContext *ctx)
     if (JS_AddIntrinsicAtomics(ctx))
         return -1;
 #endif
-    return 0;
-}
-
-/* WeakRef */
-
-typedef struct JSWeakRefData {
-    JSWeakRefHeader weakref_header;
-    JSValue target;
-} JSWeakRefData;
-
-static void js_weakref_finalizer(JSRuntime *rt, JSValue val)
-{
-    JSWeakRefData *wrd = JS_GetOpaque(val, JS_CLASS_WEAK_REF);
-    if (!wrd)
-        return;
-    js_weakref_free(rt, wrd->target);
-    list_del(&wrd->weakref_header.link);
-    js_free_rt(rt, wrd);
-}
-
-static void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
-{
-    JSWeakRefData *wrd = container_of(wh, JSWeakRefData, weakref_header);
-
-    if (!js_weakref_is_live(wrd->target)) {
-        js_weakref_free(rt, wrd->target);
-        wrd->target = JS_UNDEFINED;
-    }
-}
-
-static JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
-                                      int argc, JSValueConst *argv)
-{
-    JSValueConst arg;
-    JSValue obj;
-
-    if (JS_IsUndefined(new_target))
-        return JS_ThrowTypeError(ctx, "constructor requires 'new'");
-    arg = argv[0];
-    if (!js_weakref_is_target(arg))
-        return JS_ThrowTypeError(ctx, "invalid target");
-    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_WEAK_REF);
-    if (JS_IsException(obj))
-        return JS_EXCEPTION;
-    JSWeakRefData *wrd = js_mallocz(ctx, sizeof(*wrd));
-    if (!wrd) {
-        JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
-    }
-    wrd->target = js_weakref_new(ctx, arg);
-    wrd->weakref_header.weakref_type = JS_WEAKREF_TYPE_WEAKREF;
-    list_add_tail(&wrd->weakref_header.link, &ctx->rt->weakref_list);
-    JS_SetOpaque(obj, wrd);
-    return obj;
-}
-
-static JSValue js_weakref_deref(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
-{
-    JSWeakRefData *wrd = JS_GetOpaque2(ctx, this_val, JS_CLASS_WEAK_REF);
-    if (!wrd)
-        return JS_EXCEPTION;
-    if (js_weakref_is_live(wrd->target)) 
-        return JS_DupValue(ctx, wrd->target);
-    else
-        return JS_UNDEFINED;
-}
-
-static const JSCFunctionListEntry js_weakref_proto_funcs[] = {
-    JS_CFUNC_DEF("deref", 0, js_weakref_deref ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "WeakRef", JS_PROP_CONFIGURABLE ),
-};
-
-static const JSClassShortDef js_weakref_class_def[] = {
-    { JS_ATOM_WeakRef, js_weakref_finalizer, NULL }, /* JS_CLASS_WEAK_REF */
-};
-
-typedef struct JSFinRecEntry {
-    struct list_head link;
-    JSValue target;
-    JSValue held_val;
-    JSValue token;
-} JSFinRecEntry;
-
-typedef struct JSFinalizationRegistryData {
-    JSWeakRefHeader weakref_header;
-    struct list_head entries; /* list of JSFinRecEntry.link */
-    JSContext *realm;
-    JSValue cb;
-} JSFinalizationRegistryData;
-
-static void js_finrec_finalizer(JSRuntime *rt, JSValue val)
-{
-    JSFinalizationRegistryData *frd = JS_GetOpaque(val, JS_CLASS_FINALIZATION_REGISTRY);
-    if (frd) {
-        struct list_head *el, *el1;
-        list_for_each_safe(el, el1, &frd->entries) {
-            JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
-            js_weakref_free(rt, fre->target);
-            js_weakref_free(rt, fre->token);
-            JS_FreeValueRT(rt, fre->held_val);
-            js_free_rt(rt, fre);
-        }
-        JS_FreeValueRT(rt, frd->cb);
-        JS_FreeContext(frd->realm);
-        list_del(&frd->weakref_header.link);
-        js_free_rt(rt, frd);
-    }
-}
-
-static void js_finrec_mark(JSRuntime *rt, JSValueConst val,
-                           JS_MarkFunc *mark_func)
-{
-    JSFinalizationRegistryData *frd = JS_GetOpaque(val, JS_CLASS_FINALIZATION_REGISTRY);
-    struct list_head *el;
-    if (frd) {
-        list_for_each(el, &frd->entries) {
-            JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
-            JS_MarkValue(rt, fre->held_val, mark_func);
-        }
-        JS_MarkValue(rt, frd->cb, mark_func);
-        mark_func(rt, &frd->realm->header);
-    }
-}
-
-static JSValue js_finrec_job(JSContext *ctx, int argc, JSValueConst *argv)
-{
-    return JS_Call(ctx, argv[0], JS_UNDEFINED, 1, &argv[1]);
-}
-
-static void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh)
-{
-    JSFinalizationRegistryData *frd = container_of(wh, JSFinalizationRegistryData, weakref_header);
-    struct list_head *el, *el1;
-
-    list_for_each_safe(el, el1, &frd->entries) {
-        JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
-
-        if (!js_weakref_is_live(fre->token)) {
-            js_weakref_free(rt, fre->token);
-            fre->token = JS_UNDEFINED;
-        }
-
-        if (!js_weakref_is_live(fre->target)) {
-            JSValueConst args[2];
-            args[0] = frd->cb;
-            args[1] = fre->held_val;
-            /* no exception is raised to avoid recursing into the GC */
-            JS_EnqueueJob2(frd->realm, js_finrec_job, 2, args, TRUE);
-                
-            js_weakref_free(rt, fre->target);
-            js_weakref_free(rt, fre->token);
-            JS_FreeValueRT(rt, fre->held_val);
-            list_del(&fre->link);
-            js_free_rt(rt, fre);
-        }
-    }
-}
-
-static JSValue js_finrec_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
-{
-    JSValueConst cb;
-    JSValue obj;
-    JSFinalizationRegistryData *frd;
-    
-    if (JS_IsUndefined(new_target))
-        return JS_ThrowTypeError(ctx, "constructor requires 'new'");
-    cb = argv[0];
-    if (!JS_IsFunction(ctx, cb))
-        return JS_ThrowTypeError(ctx, "argument must be a function");
-
-    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_FINALIZATION_REGISTRY);
-    if (JS_IsException(obj))
-        return JS_EXCEPTION;
-    frd = js_mallocz(ctx, sizeof(*frd));
-    if (!frd) {
-        JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
-    }
-    frd->weakref_header.weakref_type = JS_WEAKREF_TYPE_FINREC;
-    list_add_tail(&frd->weakref_header.link, &ctx->rt->weakref_list);
-    init_list_head(&frd->entries);
-    frd->realm = JS_DupContext(ctx);
-    frd->cb = JS_DupValue(ctx, cb);
-    JS_SetOpaque(obj, frd);
-    return obj;
-}
-
-static JSValue js_finrec_register(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    JSValueConst target, held_val, token;
-    JSFinalizationRegistryData *frd;
-    JSFinRecEntry *fre;
-
-    frd = JS_GetOpaque2(ctx, this_val, JS_CLASS_FINALIZATION_REGISTRY);
-    if (!frd)
-        return JS_EXCEPTION;
-    target = argv[0];
-    held_val = argv[1];
-    token = argc > 2 ? argv[2] : JS_UNDEFINED;
-
-    if (!js_weakref_is_target(target))
-        return JS_ThrowTypeError(ctx, "invalid target");
-    if (js_same_value(ctx, target, held_val))
-        return JS_ThrowTypeError(ctx, "held value cannot be the target");
-    if (!JS_IsUndefined(token) && !js_weakref_is_target(token))
-        return JS_ThrowTypeError(ctx, "invalid unregister token");
-    fre = js_malloc(ctx, sizeof(*fre));
-    if (!fre)
-        return JS_EXCEPTION;
-    fre->target = js_weakref_new(ctx, target);
-    fre->held_val = JS_DupValue(ctx, held_val);
-    fre->token = js_weakref_new(ctx, token);
-    list_add_tail(&fre->link, &frd->entries);
-    return JS_UNDEFINED;
-}
-
-static JSValue js_finrec_unregister(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
-{
-    JSFinalizationRegistryData *frd = JS_GetOpaque2(ctx, this_val, JS_CLASS_FINALIZATION_REGISTRY);
-    JSValueConst token;
-    BOOL removed;
-    struct list_head *el, *el1;
-
-    if (!frd)
-        return JS_EXCEPTION;
-    token = argv[0];
-    if (!js_weakref_is_target(token))
-        return JS_ThrowTypeError(ctx, "invalid unregister token");
-
-    removed = FALSE;
-    list_for_each_safe(el, el1, &frd->entries) {
-        JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
-        if (js_weakref_is_live(fre->token) && js_same_value(ctx, fre->token, token)) {
-            js_weakref_free(ctx->rt, fre->target);
-            js_weakref_free(ctx->rt, fre->token);
-            JS_FreeValue(ctx, fre->held_val);
-            list_del(&fre->link);
-            js_free(ctx, fre);
-            removed = TRUE;
-        }
-    }
-    return JS_NewBool(ctx, removed);
-}
-
-static const JSCFunctionListEntry js_finrec_proto_funcs[] = {
-    JS_CFUNC_DEF("register", 2, js_finrec_register ),
-    JS_CFUNC_DEF("unregister", 1, js_finrec_unregister ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "FinalizationRegistry", JS_PROP_CONFIGURABLE ),
-};
-
-static const JSClassShortDef js_finrec_class_def[] = {
-    { JS_ATOM_FinalizationRegistry, js_finrec_finalizer, js_finrec_mark }, /* JS_CLASS_FINALIZATION_REGISTRY */
-};
-
-int JS_AddIntrinsicWeakRef(JSContext *ctx)
-{
-    JSRuntime *rt = ctx->rt;
-    JSValue obj;
-    
-    /* WeakRef */
-    if (!JS_IsRegisteredClass(rt, JS_CLASS_WEAK_REF)) {
-        if (init_class_range(rt, js_weakref_class_def, JS_CLASS_WEAK_REF,
-                             countof(js_weakref_class_def)))
-            return -1;
-    }
-    obj = JS_NewCConstructor(ctx, JS_CLASS_WEAK_REF, "WeakRef",
-                             js_weakref_constructor, 1, JS_CFUNC_constructor_or_func, 0,
-                             JS_UNDEFINED,
-                             NULL, 0,
-                             js_weakref_proto_funcs, countof(js_weakref_proto_funcs),
-                             0);
-    if (JS_IsException(obj))
-        return -1;
-    JS_FreeValue(ctx, obj);
-
-    /* FinalizationRegistry */
-    if (!JS_IsRegisteredClass(rt, JS_CLASS_FINALIZATION_REGISTRY)) {
-        if (init_class_range(rt, js_finrec_class_def, JS_CLASS_FINALIZATION_REGISTRY,
-                             countof(js_finrec_class_def)))
-            return -1;
-    }
-
-    obj = JS_NewCConstructor(ctx, JS_CLASS_FINALIZATION_REGISTRY, "FinalizationRegistry",
-                             js_finrec_constructor, 1, JS_CFUNC_constructor_or_func, 0,
-                             JS_UNDEFINED,
-                             NULL, 0,
-                             js_finrec_proto_funcs, countof(js_finrec_proto_funcs),
-                             0);
-    if (JS_IsException(obj))
-        return -1;
-    JS_FreeValue(ctx, obj);
     return 0;
 }
