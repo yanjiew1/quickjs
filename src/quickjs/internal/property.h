@@ -132,4 +132,7 @@ QJS_INTERNAL void js_autoinit_free(JSRuntime *rt, JSProperty *pr);
 QJS_INTERNAL void js_autoinit_mark(JSRuntime *rt, JSProperty *pr,
                              JS_MarkFunc *mark_func);
 
+QJS_INTERNAL no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
+                                                                     JSObject *p);
+
 #endif /* QJS_PROPERTY_H */

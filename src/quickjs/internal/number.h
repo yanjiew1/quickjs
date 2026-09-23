@@ -142,4 +142,7 @@ QJS_INTERNAL __exception int js_operator_instanceof(JSContext *ctx, JSValue *sp)
 QJS_INTERNAL __exception int js_operator_typeof(JSContext *ctx, JSValueConst op1);
 QJS_INTERNAL __exception int js_operator_delete(JSContext *ctx, JSValue *sp);
 
+QJS_INTERNAL BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx,
+                                                  JSValueConst val);
+
 #endif /* QJS_NUMBER_H */
