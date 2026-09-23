@@ -2134,3 +2134,33 @@ QJS_INTERNAL JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
     return js_new_string_rope(ctx, op1, op2);
 }
 
+/* Note: the string contents are uninitialized */
+QJS_INTERNAL JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char)
+{
+    JSString *str;
+    str = js_malloc_rt(rt, sizeof(JSString) + (max_len << is_wide_char) + 1 - is_wide_char);
+    if (unlikely(!str))
+        return NULL;
+    js_rc(str)->ref_count = 1;
+    str->is_wide_char = is_wide_char;
+    str->len = max_len;
+    str->atom_type = 0;
+    str->hash = 0;          /* optional but costless */
+    str->hash_next = 0;     /* optional */
+#ifdef DUMP_LEAKS
+    list_add_tail(&str->link, &rt->string_list);
+#endif
+    return str;
+}
+
+QJS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
+{
+    JSString *p;
+    p = js_alloc_string_rt(ctx->rt, max_len, is_wide_char);
+    if (unlikely(!p)) {
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
+    return p;
+}
+

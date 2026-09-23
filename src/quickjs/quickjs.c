@@ -356,36 +356,6 @@ int JS_ExecutePendingJob(JSRuntime *rt, JSContext **pctx)
     return ret;
 }
 
-/* Note: the string contents are uninitialized */
-QJS_INTERNAL JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char)
-{
-    JSString *str;
-    str = js_malloc_rt(rt, sizeof(JSString) + (max_len << is_wide_char) + 1 - is_wide_char);
-    if (unlikely(!str))
-        return NULL;
-    js_rc(str)->ref_count = 1;
-    str->is_wide_char = is_wide_char;
-    str->len = max_len;
-    str->atom_type = 0;
-    str->hash = 0;          /* optional but costless */
-    str->hash_next = 0;     /* optional */
-#ifdef DUMP_LEAKS
-    list_add_tail(&str->link, &rt->string_list);
-#endif
-    return str;
-}
-
-QJS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char)
-{
-    JSString *p;
-    p = js_alloc_string_rt(ctx->rt, max_len, is_wide_char);
-    if (unlikely(!p)) {
-        JS_ThrowOutOfMemory(ctx);
-        return NULL;
-    }
-    return p;
-}
-
 /* same as JS_FreeValueRT() but faster */
 void JS_SetRuntimeInfo(JSRuntime *rt, const char *s)
 {
@@ -662,25 +632,6 @@ JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id)
     JSRuntime *rt = ctx->rt;
     assert(class_id < rt->class_count);
     return JS_DupValue(ctx, ctx->class_proto[class_id]);
-}
-
-/* XXX: would be more efficient with separate module lists */
-QJS_INTERNAL void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
-{
-    struct list_head *el, *el1;
-    list_for_each_safe(el, el1, &ctx->loaded_modules) {
-        JSModuleDef *m = list_entry(el, JSModuleDef, link);
-        if (flag == JS_FREE_MODULE_ALL ||
-            (flag == JS_FREE_MODULE_NOT_RESOLVED && !m->resolved)) {
-            /* warning: the module may be referenced elsewhere. It
-               could be simpler to use an array instead of a list for
-               'ctx->loaded_modules' */
-            list_del(&m->link);
-            m->link.prev = NULL;
-            m->link.next = NULL;
-            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
-        }
-    }
 }
 
 JSContext *JS_DupContext(JSContext *ctx)
