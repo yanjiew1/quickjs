@@ -38,6 +38,7 @@
 #include "builtins/typed-array.h"
 #include "builtins/weakref.h"
 #include "internal/compiler.h"
+#include "internal/module-api.h"
 #include "internal/function-vm.h"
 #include "internal/number.h"
 #include "internal/object-api.h"

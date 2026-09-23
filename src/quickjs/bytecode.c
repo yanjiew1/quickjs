@@ -31,6 +31,7 @@
 #include "builtins/typed-array.h"
 #include "internal/bytecode.h"
 #include "internal/compiler.h"
+#include "internal/module-api.h"
 #include "internal/number.h"
 #include "internal/bigint.h"
 #include "internal/object-api.h"

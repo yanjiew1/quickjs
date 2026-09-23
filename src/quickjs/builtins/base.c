@@ -30,6 +30,7 @@
 #include "builtins/bigint.h"
 #include "internal/atom-string-api.h"
 #include "internal/compiler.h"
+#include "internal/module-api.h"
 #include "internal/number.h"
 #include "internal/object-api.h"
 #include "internal/shape.h"
