@@ -1,5 +1,5 @@
 /*
- * QuickJS Number Internal Interface
+ * QuickJS BigInt Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,42 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_NUMBER_H
-#define QJS_NUMBER_H
+#ifndef QJS_BIGINT_H
+#define QJS_BIGINT_H
 
 #include "base.h"
 
-typedef union JSFloat64Union {
-    double d;
-    uint64_t u64;
-    uint32_t u32[2];
-} JSFloat64Union;
+typedef struct JSBigInt JSBigInt;
+QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
 
-QJS_INTERNAL double js_pow(double a, double b);
-QJS_INTERNAL BOOL is_safe_integer(double d);
-QJS_INTERNAL int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
-QJS_INTERNAL JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val);
-QJS_INTERNAL int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
-QJS_INTERNAL JSValue js_dtoa2(JSContext *ctx, double d, int radix,
-                              int n_digits, int flags);
-
-QJS_INTERNAL __exception int __JS_ToFloat64Free(JSContext *ctx, double *pres,
-                                                  JSValue val);
-
-static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
-{
-    uint32_t tag;
-
-    tag = JS_VALUE_GET_TAG(val);
-    if (tag <= JS_TAG_NULL) {
-        *pres = JS_VALUE_GET_INT(val);
-        return 0;
-    } else if (JS_TAG_IS_FLOAT64(tag)) {
-        *pres = JS_VALUE_GET_FLOAT64(val);
-        return 0;
-    } else {
-        return __JS_ToFloat64Free(ctx, pres, val);
-    }
-}
-
-#endif /* QJS_NUMBER_H */
+#endif /* QJS_BIGINT_H */

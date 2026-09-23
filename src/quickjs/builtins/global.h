@@ -1,5 +1,5 @@
 /*
- * QuickJS Private Linkage
+ * QuickJS Global Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,22 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_BASE_H
-#define QJS_BASE_H
+#ifndef QJS_GLOBAL_H
+#define QJS_GLOBAL_H
 
-#include "quickjs.h"
-#include "list.h"
-#include "cutils.h"
+#include "../internal/base.h"
 
-/* dump objects leaking when freeing the runtime */
-//#define DUMP_LEAKS  1
+QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
+                                         int argc, JSValueConst *argv);
 
-#if defined(__GNUC__) || defined(__clang__)
-#define QJS_INTERNAL __attribute__((visibility("hidden")))
-#else
-#define QJS_INTERNAL
-#endif
-
-#define __exception __attribute__((warn_unused_result))
-
-#endif /* QJS_BASE_H */
+#endif /* QJS_GLOBAL_H */

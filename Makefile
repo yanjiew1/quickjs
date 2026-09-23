@@ -248,9 +248,9 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/src/quickjs/weakref.check.o $(OBJDIR)/src/quickjs/builtins/math.check.o $(OBJDIR)/src/quickjs/builtins/date.check.o $(OBJDIR)/src/quickjs/builtins/weakref.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
+all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/src/quickjs/weakref.check.o $(OBJDIR)/src/quickjs/builtins/math.check.o $(OBJDIR)/src/quickjs/builtins/date.check.o $(OBJDIR)/src/quickjs/builtins/weakref.check.o $(OBJDIR)/src/quickjs/builtins/number.check.o $(OBJDIR)/src/quickjs/builtins/boolean.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/weakref.o $(OBJDIR)/src/quickjs/builtins/math.o $(OBJDIR)/src/quickjs/builtins/date.o $(OBJDIR)/src/quickjs/builtins/weakref.o $(OBJDIR)/src/quickjs/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/src/quickjs/libc.o
+QJS_LIB_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/weakref.o $(OBJDIR)/src/quickjs/builtins/math.o $(OBJDIR)/src/quickjs/builtins/date.o $(OBJDIR)/src/quickjs/builtins/weakref.o $(OBJDIR)/src/quickjs/builtins/number.o $(OBJDIR)/src/quickjs/builtins/boolean.o $(OBJDIR)/src/quickjs/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/src/quickjs/libc.o
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/tools/repl.o $(QJS_LIB_OBJS)
 

@@ -92,5 +92,7 @@ static inline int string_get(const JSString *p, int idx) {
 }
 
 QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *buf);
+QJS_INTERNAL JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+QJS_INTERNAL JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
 
 #endif /* QJS_ATOM_STRING_H */
