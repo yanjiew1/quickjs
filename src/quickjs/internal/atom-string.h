@@ -196,4 +196,9 @@ QJS_INTERNAL int string_buffer_fill(StringBuffer *s, int c, int count);
 QJS_INTERNAL int string_buffer_puts8(StringBuffer *s, const char *str);
 QJS_INTERNAL int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
 
+#define ATOM_GET_STR_BUF_SIZE 64
+QJS_INTERNAL uint32_t hash_string(const JSString *str, uint32_t h);
+QJS_INTERNAL uint32_t hash_string_rope(JSValueConst val, uint32_t h);
+QJS_INTERNAL const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
+
 #endif /* QJS_ATOM_STRING_H */

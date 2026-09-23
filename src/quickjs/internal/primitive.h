@@ -38,4 +38,6 @@ QJS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue val);
 
 QJS_INTERNAL BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 
+QJS_INTERNAL BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+
 #endif /* QJS_PRIMITIVE_H */

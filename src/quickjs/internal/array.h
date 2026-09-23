@@ -31,4 +31,7 @@ QJS_INTERNAL int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len
 QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
                                       JSValueConst *tab);
 
+QJS_INTERNAL JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
+                                   int argc, JSValueConst *argv, int unshift);
+
 #endif /* QJS_ARRAY_H */

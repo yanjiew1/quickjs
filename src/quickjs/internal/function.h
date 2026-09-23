@@ -60,4 +60,6 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id,
                                         const JSCFunctionListEntry *proto_fields,
                                         int n_proto_fields, int flags);
 
+QJS_INTERNAL int check_function(JSContext *ctx, JSValueConst obj);
+
 #endif /* QJS_FUNCTION_H */

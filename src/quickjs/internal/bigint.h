@@ -75,4 +75,6 @@ QJS_INTERNAL JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
 QJS_INTERNAL JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
 
+QJS_INTERNAL JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
+
 #endif /* QJS_BIGINT_H */
