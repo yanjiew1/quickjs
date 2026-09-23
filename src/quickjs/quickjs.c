@@ -1045,30 +1045,6 @@ void *JS_GetAnyOpaque(JSValueConst obj, JSClassID *class_id)
     return p->u.opaque;
 }
 
-/* return -1 if exception (proxy case) or TRUE/FALSE */
-// TODO: should take flags to make proxy resolution and exceptions optional
-int JS_IsArray(JSContext *ctx, JSValueConst val)
-{
-    if (js_resolve_proxy(ctx, &val, TRUE))
-        return -1;
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(val);
-        return p->class_id == JS_CLASS_ARRAY;
-    } else {
-        return FALSE;
-    }
-}
-
-QJS_INTERNAL double js_pow(double a, double b)
-{
-    if (unlikely(!isfinite(b)) && fabs(a) == 1) {
-        /* not compatible with IEEE 754 */
-        return JS_FLOAT64_NAN;
-    } else {
-        return pow(a, b);
-    }
-}
-
 QJS_INTERNAL __exception int JS_CopyDataProperties(JSContext *ctx,
                                              JSValueConst target,
                                              JSValueConst source,

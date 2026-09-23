@@ -1115,3 +1115,14 @@ QJS_INTERNAL JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val)
         return JS_ThrowTypeError(ctx, "null or undefined are forbidden");
     return JS_ToString(ctx, val);
 }
+
+QJS_INTERNAL double js_pow(double a, double b)
+{
+    if (unlikely(!isfinite(b)) && fabs(a) == 1) {
+        /* not compatible with IEEE 754 */
+        return JS_FLOAT64_NAN;
+    } else {
+        return pow(a, b);
+    }
+}
+

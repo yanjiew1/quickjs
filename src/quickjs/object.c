@@ -50,6 +50,7 @@
 #include "internal/vm.h"
 #include "internal/error.h"
 #include "builtins/typed-array.h"
+#include "builtins/proxy.h"
 
 
 static JSClassID js_class_id_alloc = JS_CLASS_INIT_COUNT;
@@ -866,6 +867,20 @@ QJS_INTERNAL void free_object(JSRuntime *rt, JSObject *p)
         } else {
             js_rc(p)->mark = 0; /* reset the mark so that the weakref can be freed */
         }
+    }
+}
+
+/* return -1 if exception (proxy case) or TRUE/FALSE */
+// TODO: should take flags to make proxy resolution and exceptions optional
+int JS_IsArray(JSContext *ctx, JSValueConst val)
+{
+    if (js_resolve_proxy(ctx, &val, TRUE))
+        return -1;
+    if (JS_VALUE_GET_TAG(val) == JS_TAG_OBJECT) {
+        JSObject *p = JS_VALUE_GET_OBJ(val);
+        return p->class_id == JS_CLASS_ARRAY;
+    } else {
+        return FALSE;
     }
 }
 
