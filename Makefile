@@ -167,7 +167,7 @@ CFLAGS+=$(DEFINES) -Iinclude -Isrc -Isrc/quickjs -Isrc/regexp -Isrc/unicode
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
 CFLAGS_OPT=$(CFLAGS) -O2
-CFLAGS_NOLTO:=$(CFLAGS_OPT)
+CFLAGS_NOLTO=$(filter-out -flto,$(CFLAGS_OPT))
 ifdef CONFIG_COSMO
 LDFLAGS+=-s # better to strip by default
 else
@@ -249,7 +249,7 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
-QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/binary.o $(OBJDIR)/src/quickjs/quickjs-libc.o
+QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/binary.o $(OBJDIR)/src/quickjs/builtins/base.o $(OBJDIR)/src/quickjs/quickjs-libc.o
 QJS_SUPPORT_OBJS=$(OBJDIR)/src/dtoa.o $(OBJDIR)/src/cutils.o
 UNICODE_OBJS=$(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o
 REGEXP_OBJS=$(OBJDIR)/src/regexp/libregexp.o

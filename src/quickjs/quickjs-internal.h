@@ -1145,13 +1145,429 @@ enum OPCodeEnum {
 };
 
 
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+typedef enum JSStrictEqModeEnum {
+    JS_EQ_STRICT,
+    JS_EQ_SAME_VALUE,
+    JS_EQ_SAME_VALUE_ZERO,
+} JSStrictEqModeEnum;
+typedef struct StringBuffer {
+    JSContext *ctx;
+    JSString *str;
+    int len;
+    int size;
+    int is_wide_char;
+    int error_status;
+} StringBuffer;
+typedef struct JSCFunctionDataRecord {
+    JSCFunctionData *func;
+    uint8_t length;
+    uint8_t data_len;
+    uint16_t magic;
+    JSValue data[0];
+} JSCFunctionDataRecord;
+enum {
+    TOK_NUMBER = -128,
+    TOK_STRING,
+    TOK_TEMPLATE,
+    TOK_IDENT,
+    TOK_REGEXP,
+    /* warning: order matters (see js_parse_assign_expr) */
+    TOK_MUL_ASSIGN,
+    TOK_DIV_ASSIGN,
+    TOK_MOD_ASSIGN,
+    TOK_PLUS_ASSIGN,
+    TOK_MINUS_ASSIGN,
+    TOK_SHL_ASSIGN,
+    TOK_SAR_ASSIGN,
+    TOK_SHR_ASSIGN,
+    TOK_AND_ASSIGN,
+    TOK_XOR_ASSIGN,
+    TOK_OR_ASSIGN,
+    TOK_POW_ASSIGN,
+    TOK_LAND_ASSIGN,
+    TOK_LOR_ASSIGN,
+    TOK_DOUBLE_QUESTION_MARK_ASSIGN,
+    TOK_DEC,
+    TOK_INC,
+    TOK_SHL,
+    TOK_SAR,
+    TOK_SHR,
+    TOK_LT,
+    TOK_LTE,
+    TOK_GT,
+    TOK_GTE,
+    TOK_EQ,
+    TOK_STRICT_EQ,
+    TOK_NEQ,
+    TOK_STRICT_NEQ,
+    TOK_LAND,
+    TOK_LOR,
+    TOK_POW,
+    TOK_ARROW,
+    TOK_ELLIPSIS,
+    TOK_DOUBLE_QUESTION_MARK,
+    TOK_QUESTION_MARK_DOT,
+    TOK_ERROR,
+    TOK_PRIVATE_NAME,
+    TOK_EOF,
+    /* keywords: WARNING: same order as atoms */
+    TOK_NULL, /* must be first */
+    TOK_FALSE,
+    TOK_TRUE,
+    TOK_IF,
+    TOK_ELSE,
+    TOK_RETURN,
+    TOK_VAR,
+    TOK_THIS,
+    TOK_DELETE,
+    TOK_VOID,
+    TOK_TYPEOF,
+    TOK_NEW,
+    TOK_IN,
+    TOK_INSTANCEOF,
+    TOK_DO,
+    TOK_WHILE,
+    TOK_FOR,
+    TOK_BREAK,
+    TOK_CONTINUE,
+    TOK_SWITCH,
+    TOK_CASE,
+    TOK_DEFAULT,
+    TOK_THROW,
+    TOK_TRY,
+    TOK_CATCH,
+    TOK_FINALLY,
+    TOK_FUNCTION,
+    TOK_DEBUGGER,
+    TOK_WITH,
+    /* FutureReservedWord */
+    TOK_CLASS,
+    TOK_CONST,
+    TOK_ENUM,
+    TOK_EXPORT,
+    TOK_EXTENDS,
+    TOK_IMPORT,
+    TOK_SUPER,
+    /* FutureReservedWords when parsing strict mode code */
+    TOK_IMPLEMENTS,
+    TOK_INTERFACE,
+    TOK_LET,
+    TOK_PACKAGE,
+    TOK_PRIVATE,
+    TOK_PROTECTED,
+    TOK_PUBLIC,
+    TOK_STATIC,
+    TOK_YIELD,
+    TOK_AWAIT, /* must be last */
+    TOK_OF,     /* only used for js_parse_skip_parens_token() */
+};
+
+#define TOK_FIRST_KEYWORD   TOK_NULL
+#define TOK_LAST_KEYWORD    TOK_AWAIT
+
+/* unicode code points */
+#define CP_NBSP 0x00a0
+#define CP_BOM  0xfeff
+
+#define CP_LS   0x2028
+#define CP_PS   0x2029
+
+typedef struct BlockEnv {
+    struct BlockEnv *prev;
+    JSAtom label_name; /* JS_ATOM_NULL if none */
+    int label_break; /* -1 if none */
+    int label_cont; /* -1 if none */
+    int drop_count; /* number of stack elements to drop */
+    int label_finally; /* -1 if none */
+    int scope_level;
+    uint8_t has_iterator : 1;
+    uint8_t is_regular_stmt : 1; /* i.e. not a loop statement */
+} BlockEnv;
+
+typedef struct JSGlobalVar {
+    int cpool_idx; /* if >= 0, index in the constant pool for hoisted
+                      function defintion*/
+    uint8_t force_init : 1; /* force initialization to undefined */
+    uint8_t is_lexical : 1; /* global let/const definition */
+    uint8_t is_const   : 1; /* const definition */
+    int scope_level;    /* scope of definition */
+    JSAtom var_name;  /* variable name */
+} JSGlobalVar;
+
+typedef struct RelocEntry {
+    struct RelocEntry *next;
+    uint32_t addr; /* address to patch */
+    int size;   /* address size: 1, 2 or 4 bytes */
+} RelocEntry;
+
+typedef struct JumpSlot {
+    int op;
+    int size;
+    int pos;
+    int label;
+} JumpSlot;
+
+typedef struct LabelSlot {
+    int ref_count;
+    int pos;    /* phase 1 address, -1 means not resolved yet */
+    int pos2;   /* phase 2 address, -1 means not resolved yet */
+    int addr;   /* phase 3 address, -1 means not resolved yet */
+    RelocEntry *first_reloc;
+} LabelSlot;
+
+typedef struct LineNumberSlot {
+    uint32_t pc;
+    uint32_t source_pos;
+} LineNumberSlot;
+
+typedef struct {
+    /* last source position */
+    const uint8_t *ptr;
+    int line_num;
+    int col_num;
+    const uint8_t *buf_start;
+} GetLineColCache;
+
+typedef enum JSParseFunctionEnum {
+    JS_PARSE_FUNC_STATEMENT,
+    JS_PARSE_FUNC_VAR,
+    JS_PARSE_FUNC_EXPR,
+    JS_PARSE_FUNC_ARROW,
+    JS_PARSE_FUNC_GETTER,
+    JS_PARSE_FUNC_SETTER,
+    JS_PARSE_FUNC_METHOD,
+    JS_PARSE_FUNC_CLASS_STATIC_INIT,
+    JS_PARSE_FUNC_CLASS_CONSTRUCTOR,
+    JS_PARSE_FUNC_DERIVED_CLASS_CONSTRUCTOR,
+} JSParseFunctionEnum;
+
+typedef enum JSParseExportEnum {
+    JS_PARSE_EXPORT_NONE,
+    JS_PARSE_EXPORT_NAMED,
+    JS_PARSE_EXPORT_DEFAULT,
+} JSParseExportEnum;
+
+typedef struct JSVarScope {
+    int parent;  /* index into fd->scopes of the enclosing scope */
+    int first;   /* index into fd->vars of the last variable in this scope */
+} JSVarScope;
+
+typedef struct JSVarDef {
+    JSAtom var_name;
+    /* index into fd->scopes of this variable lexical scope */
+    int scope_level;
+    /* - if scope_level = 0: scope in which the variable is defined
+       - if scope_level != 0: index into fd->vars of the next
+       variable in the same or enclosing lexical scope
+    */
+    int scope_next;
+    uint8_t is_const : 1;
+    uint8_t is_lexical : 1;
+    uint8_t is_captured : 1; /* XXX: could remove and use a var_ref_idx value */
+    uint8_t is_static_private : 1; /* only used during private class field parsing */
+    uint8_t var_kind : 4; /* see JSVarKindEnum */
+    /* if is_captured = TRUE, provides, the index of the corresponding
+       JSVarRef on stack */
+    uint16_t var_ref_idx;
+    /* function pool index for lexical variables with var_kind =
+       JS_VAR_FUNCTION_DECL/JS_VAR_NEW_FUNCTION_DECL or scope level of
+       the definition of the 'var' variables (they have scope_level =
+       0) */
+    int func_pool_idx;
+} JSVarDef;
+
+typedef struct JSFunctionDef {
+    JSContext *ctx;
+    struct JSFunctionDef *parent;
+    int parent_cpool_idx; /* index in the constant pool of the parent
+                             or -1 if none */
+    int parent_scope_level; /* scope level in parent at point of definition */
+    struct list_head child_list; /* list of JSFunctionDef.link */
+    struct list_head link;
+
+    BOOL is_eval; /* TRUE if eval code */
+    int eval_type; /* only valid if is_eval = TRUE */
+    BOOL is_global_var; /* TRUE if variables are not defined locally:
+                           eval global, eval module or non strict eval */
+    BOOL is_func_expr; /* TRUE if function expression */
+    BOOL has_home_object; /* TRUE if the home object is available */
+    BOOL has_prototype; /* true if a prototype field is necessary */
+    BOOL has_simple_parameter_list;
+    BOOL has_parameter_expressions; /* if true, an argument scope is created */
+    BOOL has_use_strict; /* to reject directive in special cases */
+    BOOL has_eval_call; /* true if the function contains a call to eval() */
+    BOOL has_arguments_binding; /* true if the 'arguments' binding is
+                                   available in the function */
+    BOOL has_this_binding; /* true if the 'this' and new.target binding are
+                              available in the function */
+    BOOL new_target_allowed; /* true if the 'new.target' does not
+                                throw a syntax error */
+    BOOL super_call_allowed; /* true if super() is allowed */
+    BOOL super_allowed; /* true if super. or super[] is allowed */
+    BOOL arguments_allowed; /* true if the 'arguments' identifier is allowed */
+    BOOL is_derived_class_constructor;
+    BOOL in_function_body;
+    JSFunctionKindEnum func_kind : 8;
+    JSParseFunctionEnum func_type : 8;
+    uint8_t js_mode; /* bitmap of JS_MODE_x */
+    JSAtom func_name; /* JS_ATOM_NULL if no name */
+
+    JSVarDef *vars;
+    int var_size; /* allocated size for vars[] */
+    int var_count;
+    JSVarDef *args;
+    int arg_size; /* allocated size for args[] */
+    int arg_count; /* number of arguments */
+    int defined_arg_count;
+    int var_ref_count; /* number of local/arg variable references */
+    int var_object_idx; /* -1 if none */
+    int arg_var_object_idx; /* -1 if none (var object for the argument scope) */
+    int arguments_var_idx; /* -1 if none */
+    int arguments_arg_idx; /* argument variable definition in argument scope,
+                              -1 if none */
+    int func_var_idx; /* variable containing the current function (-1
+                         if none, only used if is_func_expr is true) */
+    int eval_ret_idx; /* variable containing the return value of the eval, -1 if none */
+    int this_var_idx; /* variable containg the 'this' value, -1 if none */
+    int new_target_var_idx; /* variable containg the 'new.target' value, -1 if none */
+    int this_active_func_var_idx; /* variable containg the 'this.active_func' value, -1 if none */
+    int home_object_var_idx;
+    BOOL need_home_object;
+
+    int scope_level;    /* index into fd->scopes if the current lexical scope */
+    int scope_first;    /* index into vd->vars of first lexically scoped variable */
+    int scope_size;     /* allocated size of fd->scopes array */
+    int scope_count;    /* number of entries used in the fd->scopes array */
+    JSVarScope *scopes;
+    JSVarScope def_scope_array[4];
+    int body_scope; /* scope of the body of the function or eval */
+
+    int global_var_count;
+    int global_var_size;
+    JSGlobalVar *global_vars;
+
+    DynBuf byte_code;
+    int last_opcode_pos; /* -1 if no last opcode */
+    const uint8_t *last_opcode_source_ptr;
+    BOOL use_short_opcodes; /* true if short opcodes are used in byte_code */
+
+    LabelSlot *label_slots;
+    int label_size; /* allocated size for label_slots[] */
+    int label_count;
+    BlockEnv *top_break; /* break/continue label stack */
+
+    /* constant pool (strings, functions, numbers) */
+    JSValue *cpool;
+    int cpool_count;
+    int cpool_size;
+
+    /* list of variables in the closure */
+    int closure_var_count;
+    int closure_var_size;
+    JSClosureVar *closure_var;
+
+    JumpSlot *jump_slots;
+    int jump_size;
+    int jump_count;
+
+    LineNumberSlot *line_number_slots;
+    int line_number_size;
+    int line_number_count;
+    int line_number_last;
+    int line_number_last_pc;
+
+    /* pc2line table */
+    BOOL strip_debug : 1; /* strip all debug info (implies strip_source = TRUE) */
+    BOOL strip_source : 1; /* strip only source code */
+    JSAtom filename;
+    uint32_t source_pos; /* pointer in the eval() source */
+    GetLineColCache *get_line_col_cache; /* XXX: could remove to save memory */
+    DynBuf pc2line;
+
+    char *source;  /* raw source, utf-8 encoded */
+    int source_len;
+
+    JSModuleDef *module; /* != NULL when parsing a module */
+    BOOL has_await; /* TRUE if await is used (used in module eval) */
+} JSFunctionDef;
+
+typedef struct JSToken {
+    int val;
+    const uint8_t *ptr; /* position in the source */
+    union {
+        struct {
+            JSValue str;
+            int sep;
+        } str;
+        struct {
+            JSValue val;
+        } num;
+        struct {
+            JSAtom atom;
+            BOOL has_escape;
+            BOOL is_reserved;
+        } ident;
+        struct {
+            JSValue body;
+            JSValue flags;
+        } regexp;
+    } u;
+} JSToken;
+
+typedef struct JSParseState {
+    JSContext *ctx;
+    const char *filename;
+    JSToken token;
+    BOOL got_lf; /* true if got line feed before the current token */
+    const uint8_t *last_ptr;
+    const uint8_t *buf_start;
+    const uint8_t *buf_ptr;
+    const uint8_t *buf_end;
+
+    /* current function code */
+    JSFunctionDef *cur_func;
+    BOOL is_module; /* parsing a module */
+    BOOL allow_html_comments;
+    BOOL ext_json; /* JSON parsing: true if accepting JSON superset */
+    GetLineColCache get_line_col_cache;
+} JSParseState;
 #define JS_ATOM_TAG_INT (1U << 31)
 #define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
 #define JS_ATOM_MAX     ((1U << 30) - 1)
 
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
-
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+#define ATOM_GET_STR_BUF_SIZE 64
+#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+#define ATOD_INT_ONLY        (1 << 0)
+/* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
+#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
+/* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+/* accept _ between digits as a digit separator */
+#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
+/* allow a suffix to override the type */
+#define ATOD_ACCEPT_SUFFIX    (1 << 6)
+/* default type */
+#define ATOD_TYPE_MASK        (3 << 7)
+#define ATOD_TYPE_FLOAT64     (0 << 7)
+#define ATOD_TYPE_BIG_INT     (1 << 7)
+/* accept -0x1 */
+#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+#define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
+/* XXX: use enum */
+#define GEN_MAGIC_NEXT   0
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_THROW  2
 typedef struct JSOpCode {
 #ifdef DUMP_BYTECODE
     const char *name;
@@ -1177,14 +1593,76 @@ extern QJS_INTERNAL const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP
 #define short_opcode_info(op) opcode_info[op]
 #endif
 
+extern QJS_INTERNAL const char digits[36];
+extern QJS_INTERNAL const uint16_t func_kind_to_class_id[4];
+extern QJS_INTERNAL const JSClassExoticMethods js_string_exotic_methods;
+extern QJS_INTERNAL const uint8_t typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
+#define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
+
 QJS_INTERNAL no_inline int js_realloc_array(JSContext *ctx, void **parray,
                                       int elem_size, int *psize, int req_size);
+QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                            int start, int count);
+QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
+                          int argc, JSValueConst *argv, BOOL no_exception);
 QJS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
+QJS_INTERNAL uint32_t hash_string(const JSString *str, uint32_t h);
+QJS_INTERNAL uint32_t hash_string_rope(JSValueConst val, uint32_t h);
 QJS_INTERNAL __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
 QJS_INTERNAL BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+QJS_INTERNAL JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
 QJS_INTERNAL void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
 QJS_INTERNAL JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+QJS_INTERNAL JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type);
+QJS_INTERNAL const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
+QJS_INTERNAL JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *buf);
+QJS_INTERNAL JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
+QJS_INTERNAL JSValue js_new_string_char(JSContext *ctx, uint16_t c);
+QJS_INTERNAL JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
+QJS_INTERNAL int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
+                               int is_wide);
+QJS_INTERNAL void string_buffer_free(StringBuffer *s);
+QJS_INTERNAL int string_buffer_putc8(StringBuffer *s, uint32_t c);
+QJS_INTERNAL int string_buffer_putc16(StringBuffer *s, uint32_t c);
+QJS_INTERNAL int string_buffer_putc_slow(StringBuffer *s, uint32_t c);
+QJS_INTERNAL int string_getc(const JSString *p, int *pidx);
+QJS_INTERNAL int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
+QJS_INTERNAL int string_buffer_puts8(StringBuffer *s, const char *str);
+QJS_INTERNAL int string_buffer_concat(StringBuffer *s, const JSString *p,
+                                uint32_t from, uint32_t to);
+QJS_INTERNAL int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
+QJS_INTERNAL int string_buffer_concat_value_free(StringBuffer *s, JSValue v);
+QJS_INTERNAL int string_buffer_fill(StringBuffer *s, int c, int count);
+QJS_INTERNAL JSValue string_buffer_end(StringBuffer *s);
+QJS_INTERNAL JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
+                                JSValue str2, const char *str3);
+QJS_INTERNAL int js_string_compare(JSContext *ctx,
+                             const JSString *p1, const JSString *p2);
+QJS_INTERNAL JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
+QJS_INTERNAL no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
+                                        int hash_size, int prop_size);
+QJS_INTERNAL JSShape *js_dup_shape(JSShape *sh);
+QJS_INTERNAL int add_shape_property(JSContext *ctx, JSShape **psh,
+                              JSObject *p, JSAtom atom, int prop_flags);
+QJS_INTERNAL JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
+                                     JSProperty *props);
+QJS_INTERNAL JSObject *get_proto_obj(JSValueConst proto_val);
+QJS_INTERNAL JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
+                                           JSClassID class_id, int n_alloc_props);
 QJS_INTERNAL int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
+QJS_INTERNAL void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                       JSAtom name, int len);
+QJS_INTERNAL BOOL js_class_has_bytecode(JSClassID class_id);
+QJS_INTERNAL JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                                const char *name,
+                                int length, JSCFunctionEnum cproto, int magic,
+                                JSValueConst proto_val, int n_fields);
+QJS_INTERNAL void set_cycle_flag(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
+                                      JS_MarkFunc *mark_func);
+QJS_INTERNAL void free_zero_refcount(JSRuntime *rt);
 QJS_INTERNAL void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                           JSGCObjectTypeEnum type);
 QJS_INTERNAL void dbuf_put_leb128(DynBuf *s, uint32_t v);
@@ -1193,16 +1671,229 @@ QJS_INTERNAL int get_leb128(uint32_t *pval, const uint8_t *buf,
                       const uint8_t *buf_end);
 QJS_INTERNAL int get_sleb128(int32_t *pval, const uint8_t *buf,
                        const uint8_t *buf_end);
+QJS_INTERNAL const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
+QJS_INTERNAL void build_backtrace(JSContext *ctx, JSValueConst error_obj,
+                            const char *filename, int line_num, int col_num,
+                            int backtrace_flags);
+QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
+                             const char *fmt, va_list ap);
+QJS_INTERNAL int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
 QJS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
+                                                JSValueConst func_obj);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+QJS_INTERNAL void JS_ThrowInterrupted(JSContext *ctx);
+QJS_INTERNAL no_inline __exception int __js_poll_interrupts(JSContext *ctx);
+QJS_INTERNAL void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                   JSValueConst proto_val,
+                                   BOOL throw_flag);
+QJS_INTERNAL JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
+QJS_INTERNAL int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
+                                   JSValueConst obj);
+QJS_INTERNAL uint32_t js_string_obj_get_length(JSContext *ctx,
+                                         JSValueConst obj);
+QJS_INTERNAL int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+                                                      JSPropertyEnum **ptab,
+                                                      uint32_t *plen,
+                                                      JSObject *p, int flags);
+QJS_INTERNAL int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                                     JSObject *p, JSAtom prop);
+QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                                   JSValue prop);
+QJS_INTERNAL int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
+QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
+QJS_INTERNAL int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
+QJS_INTERNAL int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
+QJS_INTERNAL JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
+QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+QJS_INTERNAL void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
+QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                               JSValue prop, JSValue val, int flags);
+QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
+QJS_INTERNAL int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+                                     JSAtom prop, JSAutoInitIDEnum id,
+                                     void *opaque, int flags);
+QJS_INTERNAL int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
+                                       int64_t idx, JSValue val, int flags);
+QJS_INTERNAL JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
+QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
+QJS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL int skip_spaces(const char *pc);
 QJS_INTERNAL JSBigInt *js_bigint_new(JSContext *ctx, int len);
 QJS_INTERNAL JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
+QJS_INTERNAL JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
+QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
+QJS_INTERNAL JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
+QJS_INTERNAL JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
 QJS_INTERNAL JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
+QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+                       int radix, int flags);
+QJS_INTERNAL JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL __exception int __JS_ToFloat64Free(JSContext *ctx, double *pres,
+                                          JSValue val);
+QJS_INTERNAL JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
+QJS_INTERNAL int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
+QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
+QJS_INTERNAL __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
+                                            JSValue val, BOOL is_array_ctor);
+QJS_INTERNAL BOOL is_safe_integer(double d);
+QJS_INTERNAL __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
+                                       JSValue val);
+QJS_INTERNAL int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue js_dtoa2(JSContext *ctx,
+                        double d, int radix, int n_digits, int flags);
+QJS_INTERNAL JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToPropertyKey);
+QJS_INTERNAL JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL __maybe_unused void print_atom(JSContext *ctx, JSAtom atom);
+QJS_INTERNAL __maybe_unused void JS_DumpValue(JSContext *ctx, const char *str, JSValueConst val);
+QJS_INTERNAL double js_pow(double a, double b);
+QJS_INTERNAL JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
+                          JSStrictEqModeEnum eq_mode);
+QJS_INTERNAL BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+QJS_INTERNAL BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+QJS_INTERNAL JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
+                                   int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_function_proto_fileName(JSContext *ctx,
+                                          JSValueConst this_val);
+QJS_INTERNAL JSValue js_function_proto_lineNumber(JSContext *ctx,
+                                            JSValueConst this_val, int is_col);
+QJS_INTERNAL JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
+                               JSValueConst method);
+QJS_INTERNAL JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
+QJS_INTERNAL JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
+                                JSValueConst method,
+                                int argc, JSValueConst *argv, int *pdone);
+QJS_INTERNAL JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
+                               JSValueConst method,
+                               int argc, JSValueConst *argv, BOOL *pdone);
+QJS_INTERNAL int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
+                            BOOL is_exception_pending);
+QJS_INTERNAL JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
+                                           BOOL *pdone);
+QJS_INTERNAL JSValue js_create_iterator_result(JSContext *ctx,
+                                         JSValue val,
+                                         BOOL done);
+QJS_INTERNAL BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
+                              JSValue **arrpp, uint32_t *countp);
+QJS_INTERNAL __exception int JS_CopyDataProperties(JSContext *ctx,
+                                             JSValueConst target,
+                                             JSValueConst source,
+                                             JSValueConst excluded,
+                                             BOOL setprop);
+QJS_INTERNAL JSValueConst JS_GetActiveFunction(JSContext *ctx);
+QJS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                           int argc, JSValueConst *argv);
+QJS_INTERNAL JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
+                             int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv,
+                                 BOOL *pdone, int magic);
+QJS_INTERNAL void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
+                                           JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_async_function_resolve_call(JSContext *ctx,
+                                              JSValueConst func_obj,
+                                              JSValueConst this_obj,
+                                              int argc, JSValueConst *argv,
+                                              int flags);
+QJS_INTERNAL JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst this_obj,
+                                      int argc, JSValueConst *argv, int flags);
+QJS_INTERNAL void js_async_generator_finalizer(JSRuntime *rt, JSValue obj);
+QJS_INTERNAL void js_async_generator_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
+                                       int argc, JSValueConst *argv,
+                                       int magic);
+QJS_INTERNAL JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
+                                                JSValueConst this_obj,
+                                                int argc, JSValueConst *argv,
+                                                int flags);
+QJS_INTERNAL void free_token(JSParseState *s, JSToken *token);
+QJS_INTERNAL __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...);
+QJS_INTERNAL __exception int json_next_token(JSParseState *s);
 QJS_INTERNAL JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
 QJS_INTERNAL JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+QJS_INTERNAL void js_parse_init(JSContext *ctx, JSParseState *s,
+                          const char *input, size_t input_len,
+                          const char *filename);
+QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
+                                 const char *input, size_t input_len,
+                                 const char *filename, int flags, int scope_idx);
+QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
+                             JSValueConst val, int flags, int scope_idx);
+QJS_INTERNAL JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
+                                               JSAtom atom, void *opaque);
 QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 QJS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                        JSValueConst obj);
+QJS_INTERNAL void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
+QJS_INTERNAL JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
+                               JSValueConst array_arg);
+QJS_INTERNAL JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_error_toString(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv);
+QJS_INTERNAL void js_array_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                   JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv,
+                                      BOOL *pdone, int magic);
+QJS_INTERNAL void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
+                                  JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
+                                   JS_MarkFunc *mark_func);
+QJS_INTERNAL int js_string_find_invalid_codepoint(JSString *p);
+QJS_INTERNAL void js_regexp_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
+QJS_INTERNAL JSValue js_regexp_toString(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv);
+QJS_INTERNAL void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                           JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
+QJS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);
+QJS_INTERNAL void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
+QJS_INTERNAL void js_map_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_map_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_map_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                 JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL __exception int perform_promise_then(JSContext *ctx,
+                                            JSValueConst promise,
+                                            JSValueConst *resolve_reject,
+                                            JSValueConst *cap_resolving_funcs);
+QJS_INTERNAL JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
+                                              JSValueConst sync_iter);
+QJS_INTERNAL JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL int JS_AddIntrinsicBasicObjects(JSContext *ctx);
 QJS_INTERNAL JSValue js_array_buffer_constructor3(JSContext *ctx,
                                             JSValueConst new_target,
                                             uint64_t len, uint64_t *max_len,
@@ -1211,12 +1902,31 @@ QJS_INTERNAL JSValue js_array_buffer_constructor3(JSContext *ctx,
                                             JSFreeArrayBufferDataFunc *free_func,
                                             void *opaque, BOOL alloc_flag);
 QJS_INTERNAL void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
+QJS_INTERNAL void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
 QJS_INTERNAL JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
 QJS_INTERNAL JSValue js_typed_array_constructor(JSContext *ctx,
                                           JSValueConst new_target,
                                           int argc, JSValueConst *argv,
                                           int classid);
+QJS_INTERNAL void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+QJS_INTERNAL void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
+QJS_INTERNAL void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
+int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
+                                JSValue prop, JSValue val, int flags);
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
+                                int64_t idx, JSValue val, int flags);
+int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
+int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val);
+int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
+                    int64_t min, int64_t max, int64_t neg_offset);
+int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
+int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
+                    int min, int max, int min_offset);
+BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
 
 #if !defined(CONFIG_STACK_CHECK)
 /* no stack limitation */
@@ -1263,6 +1973,10 @@ static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
     dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
 }
 
+static inline int string_get(const JSString *p, int idx) {
+    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
+}
+
 static inline void js_free_string(JSRuntime *rt, JSString *str)
 {
     if (--js_rc(str)->ref_count <= 0) {
@@ -1275,6 +1989,20 @@ static inline void js_free_string(JSRuntime *rt, JSString *str)
             js_free_rt(rt, str);
         }
     }
+}
+
+static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
+{
+    JSValue old_val;
+    old_val = *pval;
+    *pval = new_val;
+    JS_FreeValue(ctx, old_val);
+}
+
+static inline BOOL is_strict_mode(JSContext *ctx)
+{
+    JSStackFrame *sf = ctx->rt->current_stack_frame;
+    return (sf && (sf->js_mode & JS_MODE_STRICT));
 }
 
 static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
@@ -1290,6 +2018,36 @@ static inline JSAtom __JS_AtomFromUInt32(uint32_t v)
 static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
 {
     return atom & ~JS_ATOM_TAG_INT;
+}
+
+static inline BOOL JS_IsEmptyString(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
+}
+
+static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
+{
+    return string_buffer_init2(ctx, s, size, 0);
+}
+
+static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
+{
+    if (likely(s->len < s->size)) {
+        if (s->is_wide_char) {
+            if (c < 0x10000) {
+                s->str->u.str16[s->len++] = c;
+                return 0;
+            } else if (likely((s->len + 1) < s->size)) {
+                s->str->u.str16[s->len++] = get_hi_surrogate(c);
+                s->str->u.str16[s->len++] = get_lo_surrogate(c);
+                return 0;
+            }
+        } else if (c < 0x100) {
+            s->str->u.str8[s->len++] = c;
+            return 0;
+        }
+    }
+    return string_buffer_putc_slow(s, c);
 }
 
 static inline JSShapeProperty *get_shape_prop(JSShape *sh)
@@ -1319,6 +2077,52 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
     }
     *ppr = NULL;
     return NULL;
+}
+
+static inline __exception int js_poll_interrupts(JSContext *ctx)
+{
+    if (unlikely(--ctx->interrupt_counter <= 0)) {
+        return __js_poll_interrupts(ctx);
+    } else {
+        return 0;
+    }
+}
+
+static force_inline BOOL can_extend_fast_array(JSObject *p)
+{
+    JSObject *proto;
+    if (!p->extensible)
+        return FALSE;
+    proto = p->shape->proto;
+    if (!proto)
+        return TRUE;
+    return proto->is_std_array_prototype;
+}
+
+static inline int js_bigint_sign(const JSBigInt *a)
+{
+    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
+}
+
+static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
+{
+    uint32_t tag;
+
+    tag = JS_VALUE_GET_TAG(val);
+    if (tag <= JS_TAG_NULL) {
+        *pres = JS_VALUE_GET_INT(val);
+        return 0;
+    } else if (JS_TAG_IS_FLOAT64(tag)) {
+        *pres = JS_VALUE_GET_FLOAT64(val);
+        return 0;
+    } else {
+        return __JS_ToFloat64Free(ctx, pres, val);
+    }
+}
+
+static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
+{
+    return JS_ToInt32Free(ctx, (int32_t *)pres, val);
 }
 
 static inline BOOL is_be(void)
