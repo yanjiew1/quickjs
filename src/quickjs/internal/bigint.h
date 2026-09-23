@@ -27,6 +27,8 @@
 
 #include "base.h"
 
+typedef enum OPCodeEnum OPCodeEnum;
+
 /* bigint */
 
 #if JS_LIMB_BITS == 32
@@ -83,5 +85,43 @@ static inline int js_bigint_sign(const JSBigInt *a)
 }
 
 QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+
+/* it is currently assumed that JS_SHORT_BIG_INT_BITS = JS_LIMB_BITS */
+#if JS_SHORT_BIG_INT_BITS == 32
+#define JS_SHORT_BIG_INT_MIN INT32_MIN
+#define JS_SHORT_BIG_INT_MAX INT32_MAX
+#elif JS_SHORT_BIG_INT_BITS == 64
+#define JS_SHORT_BIG_INT_MIN INT64_MIN
+#define JS_SHORT_BIG_INT_MAX INT64_MAX
+#else
+#error unsupported
+#endif
+
+QJS_INTERNAL JSBigInt *js_bigint_from_string(JSContext *ctx, const char *str, int radix);
+
+QJS_INTERNAL JSBigInt *js_bigint_set_si(JSBigIntBuf *buf, js_slimb_t a);
+QJS_INTERNAL JSBigInt *js_bigint_new_si64(JSContext *ctx, int64_t a);
+QJS_INTERNAL JSBigInt *js_bigint_new_ui64(JSContext *ctx, uint64_t a);
+QJS_INTERNAL JSBigInt *js_bigint_new_di(JSContext *ctx, js_sdlimb_t a);
+QJS_INTERNAL JSBigInt *js_bigint_add(JSContext *ctx, const JSBigInt *a,
+                               const JSBigInt *b, int b_neg);
+QJS_INTERNAL JSBigInt *js_bigint_neg(JSContext *ctx, const JSBigInt *a);
+QJS_INTERNAL JSBigInt *js_bigint_not(JSContext *ctx, const JSBigInt *a);
+QJS_INTERNAL JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
+                               const JSBigInt *b);
+QJS_INTERNAL JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
+                                  const JSBigInt *b, BOOL is_rem);
+QJS_INTERNAL JSBigInt *js_bigint_logic(JSContext *ctx, const JSBigInt *a,
+                                 const JSBigInt *b, OPCodeEnum op);
+QJS_INTERNAL js_slimb_t js_bigint_get_si_sat(const JSBigInt *a);
+QJS_INTERNAL JSBigInt *js_bigint_shl(JSContext *ctx, const JSBigInt *a,
+                               unsigned int shift1);
+QJS_INTERNAL JSBigInt *js_bigint_shr(JSContext *ctx, const JSBigInt *a,
+                               unsigned int shift1);
+QJS_INTERNAL JSBigInt *js_bigint_pow(JSContext *ctx, const JSBigInt *a, JSBigInt *b);
+QJS_INTERNAL int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
+                                 double b);
+QJS_INTERNAL int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
+                         const JSBigInt *b);
 
 #endif /* QJS_BIGINT_H */

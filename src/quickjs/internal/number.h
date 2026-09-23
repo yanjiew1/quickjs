@@ -105,4 +105,16 @@ QJS_INTERNAL int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val
 QJS_INTERNAL __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen, JSValue val, BOOL is_array_ctor);
 QJS_INTERNAL JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
 
+static inline int to_digit(int c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'A' && c <= 'Z')
+        return c - 'A' + 10;
+    else if (c >= 'a' && c <= 'z')
+        return c - 'a' + 10;
+    else
+        return 36;
+}
+
 #endif /* QJS_NUMBER_H */
