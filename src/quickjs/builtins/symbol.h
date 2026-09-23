@@ -1,5 +1,5 @@
 /*
- * QuickJS Iterator Internal Interface
+ * QuickJS Symbol Builtin Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,32 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_ITERATOR_H
-#define QJS_ITERATOR_H
+#ifndef QJS_BUILTIN_SYMBOL_H
+#define QJS_BUILTIN_SYMBOL_H
 
-#include "base.h"
+#include "../internal/base.h"
 
-typedef enum JSIteratorKindEnum {
-    JS_ITERATOR_KIND_KEY,
-    JS_ITERATOR_KIND_VALUE,
-    JS_ITERATOR_KIND_KEY_AND_VALUE,
-} JSIteratorKindEnum;
+QJS_INTERNAL JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
+                                            int argc, JSValueConst *argv);
+QJS_INTERNAL extern const JSCFunctionListEntry js_symbol_funcs[15];
+QJS_INTERNAL extern const JSCFunctionListEntry js_symbol_proto_funcs[5];
 
-typedef struct JSArrayIteratorData {
-    JSValue obj;
-    JSIteratorKindEnum kind;
-    uint32_t idx;
-} JSArrayIteratorData;
-
-QJS_INTERNAL JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
-QJS_INTERNAL JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                                     JSValueConst method, int argc,
-                                     JSValueConst *argv, BOOL *pdone);
-QJS_INTERNAL int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
-                                  BOOL is_exception_pending);
-QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx,
-                                               JSValueConst this_val,
-                                               int argc, JSValueConst *argv,
-                                               int magic);
-
-#endif /* QJS_ITERATOR_H */
+#endif /* QJS_BUILTIN_SYMBOL_H */

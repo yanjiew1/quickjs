@@ -1,5 +1,5 @@
 /*
- * QuickJS Iterator Internal Interface
+ * QuickJS Property Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,32 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_ITERATOR_H
-#define QJS_ITERATOR_H
+#ifndef QJS_PROPERTY_H
+#define QJS_PROPERTY_H
 
 #include "base.h"
 
-typedef enum JSIteratorKindEnum {
-    JS_ITERATOR_KIND_KEY,
-    JS_ITERATOR_KIND_VALUE,
-    JS_ITERATOR_KIND_KEY_AND_VALUE,
-} JSIteratorKindEnum;
+QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
+QJS_INTERNAL int __attribute__((format(printf, 3, 4)))
+JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL __exception int js_get_length64(JSContext *ctx, int64_t *pres,
+                                               JSValueConst obj);
+QJS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+                                               JSValueConst obj);
+QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj,
+                                         int64_t idx);
+QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                                         JSValue prop);
+QJS_INTERNAL int JS_CreateDataPropertyUint32(JSContext *ctx,
+                                              JSValueConst this_obj,
+                                              int64_t idx, JSValue val,
+                                              int flags);
 
-typedef struct JSArrayIteratorData {
-    JSValue obj;
-    JSIteratorKindEnum kind;
-    uint32_t idx;
-} JSArrayIteratorData;
-
-QJS_INTERNAL JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
-QJS_INTERNAL JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                                     JSValueConst method, int argc,
-                                     JSValueConst *argv, BOOL *pdone);
-QJS_INTERNAL int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
-                                  BOOL is_exception_pending);
-QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx,
-                                               JSValueConst this_val,
-                                               int argc, JSValueConst *argv,
-                                               int magic);
-
-#endif /* QJS_ITERATOR_H */
+#endif /* QJS_PROPERTY_H */

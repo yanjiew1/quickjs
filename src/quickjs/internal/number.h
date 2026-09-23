@@ -38,6 +38,9 @@ QJS_INTERNAL BOOL is_safe_integer(double d);
 QJS_INTERNAL int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
+QJS_INTERNAL int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
+                                 int min, int max, int min_offset);
+QJS_INTERNAL int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val);
 QJS_INTERNAL JSValue js_dtoa2(JSContext *ctx, double d, int radix,
                               int n_digits, int flags);
 

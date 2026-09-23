@@ -26,6 +26,7 @@
 #define QJS_ATOM_STRING_H
 
 #include "base.h"
+#include "libunicode.h"
 
 enum {
     __JS_ATOM_NULL = JS_ATOM_NULL,
@@ -35,7 +36,40 @@ enum {
     JS_ATOM_END,
 };
 #define JS_ATOM_LAST_KEYWORD JS_ATOM_super
+#define JS_STRING_LEN_MAX ((1 << 30) - 1)
 #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
+
+#define JS_ATOM_TAG_INT (1U << 31)
+#define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
+#define JS_ATOM_MAX     ((1U << 30) - 1)
+
+/* return the max count from the hash size */
+#define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
+
+static inline BOOL __JS_AtomIsConst(JSAtom v)
+{
+#if defined(DUMP_LEAKS) && DUMP_LEAKS > 1
+        return (int32_t)v <= 0;
+#else
+        return (int32_t)v < JS_ATOM_END;
+#endif
+}
+
+static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
+{
+    return (v & JS_ATOM_TAG_INT) != 0;
+}
+
+static inline JSAtom __JS_AtomFromUInt32(uint32_t v)
+{
+    return v | JS_ATOM_TAG_INT;
+}
+
+static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
+{
+    return atom & ~JS_ATOM_TAG_INT;
+}
+
 
 typedef struct JSString JSString;
 typedef struct JSString JSAtomStruct;
@@ -91,8 +125,68 @@ static inline int string_get(const JSString *p, int idx) {
     return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
 }
 
+typedef struct StringBuffer {
+    JSContext *ctx;
+    JSString *str;
+    int len;
+    int size;
+    int is_wide_char;
+    int error_status;
+} StringBuffer;
+
+QJS_INTERNAL int string_buffer_init2(JSContext *ctx, StringBuffer *s,
+                                     int size, int is_wide);
+QJS_INTERNAL int string_buffer_putc_slow(StringBuffer *s, uint32_t c);
+
+static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
+{
+    return string_buffer_init2(ctx, s, size, 0);
+}
+
+
+static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
+{
+    if (likely(s->len < s->size)) {
+        if (s->is_wide_char) {
+            if (c < 0x10000) {
+                s->str->u.str16[s->len++] = c;
+                return 0;
+            } else if (likely((s->len + 1) < s->size)) {
+                s->str->u.str16[s->len++] = get_hi_surrogate(c);
+                s->str->u.str16[s->len++] = get_lo_surrogate(c);
+                return 0;
+            }
+        } else if (c < 0x100) {
+            s->str->u.str8[s->len++] = c;
+            return 0;
+        }
+    }
+    return string_buffer_putc_slow(s, c);
+}
+
+
 QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *buf);
 QJS_INTERNAL JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
 QJS_INTERNAL JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
+QJS_INTERNAL JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type);
+QJS_INTERNAL JSValue js_new_string_char(JSContext *ctx, uint16_t c);
+QJS_INTERNAL JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
+QJS_INTERNAL JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
+QJS_INTERNAL JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
+QJS_INTERNAL JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
+                                      JSValue str2, const char *str3);
+QJS_INTERNAL JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL int string_getc(const JSString *p, int *pidx);
+QJS_INTERNAL void string_buffer_free(StringBuffer *s);
+QJS_INTERNAL JSValue string_buffer_end(StringBuffer *s);
+QJS_INTERNAL int string_buffer_putc16(StringBuffer *s, uint32_t c);
+QJS_INTERNAL int string_buffer_putc8(StringBuffer *s, uint32_t c);
+QJS_INTERNAL int string_buffer_concat(StringBuffer *s, const JSString *p,
+                                      uint32_t from, uint32_t to);
+QJS_INTERNAL int string_buffer_concat_value_free(StringBuffer *s, JSValue v);
+QJS_INTERNAL int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
+QJS_INTERNAL int string_buffer_fill(StringBuffer *s, int c, int count);
+QJS_INTERNAL int string_buffer_puts8(StringBuffer *s, const char *str);
 
 #endif /* QJS_ATOM_STRING_H */

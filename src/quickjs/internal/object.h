@@ -105,6 +105,9 @@ typedef struct JSProperty JSProperty;
 
 #define JS_VALUE_GET_OBJ(v) ((JSObject *)JS_VALUE_GET_PTR(v))
 
+QJS_INTERNAL uint32_t js_string_obj_get_length(JSContext *ctx,
+                                                JSValueConst obj);
+
 typedef struct JSRegExp {
     JSString *pattern;
     JSString *bytecode; /* also contains the flags */
