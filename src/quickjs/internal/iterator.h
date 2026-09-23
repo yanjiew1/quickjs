@@ -69,4 +69,10 @@ QJS_INTERNAL __exception int js_for_of_next(JSContext *ctx, JSValue *sp, int off
 QJS_INTERNAL __exception int js_for_await_of_next(JSContext *ctx, JSValue *sp);
 QJS_INTERNAL __exception int js_iterator_get_value_done(JSContext *ctx, JSValue *sp);
 
+QJS_INTERNAL BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj, JSValue **parrp, uint32_t *pcount);
+
+QJS_INTERNAL __exception int js_for_in_start(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_for_in_next(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_append_enumerate(JSContext *ctx, JSValue *sp);
+
 #endif /* QJS_ITERATOR_H */

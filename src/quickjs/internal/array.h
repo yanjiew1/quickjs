@@ -63,11 +63,6 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
     return proto->is_std_array_prototype;
 }
 
-QJS_INTERNAL BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj, JSValue **parrp, uint32_t *pcount);
-
 QJS_INTERNAL JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
-QJS_INTERNAL __exception int js_for_in_start(JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int js_for_in_next(JSContext *ctx, JSValue *sp);
-QJS_INTERNAL __exception int js_append_enumerate(JSContext *ctx, JSValue *sp);
 
 #endif /* QJS_ARRAY_H */
