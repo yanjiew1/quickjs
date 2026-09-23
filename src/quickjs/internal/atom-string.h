@@ -188,5 +188,6 @@ QJS_INTERNAL int string_buffer_concat_value_free(StringBuffer *s, JSValue v);
 QJS_INTERNAL int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
 QJS_INTERNAL int string_buffer_fill(StringBuffer *s, int c, int count);
 QJS_INTERNAL int string_buffer_puts8(StringBuffer *s, const char *str);
+QJS_INTERNAL int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
 
 #endif /* QJS_ATOM_STRING_H */

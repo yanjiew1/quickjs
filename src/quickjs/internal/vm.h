@@ -1,5 +1,5 @@
 /*
- * QuickJS Global Internal Interface
+ * QuickJS Vm Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,15 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_GLOBAL_H
-#define QJS_GLOBAL_H
+#ifndef QJS_VM_H
+#define QJS_VM_H
 
-#include "../internal/base.h"
+#include "runtime.h"
 
-QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv);
-QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
-                                         int argc, JSValueConst *argv);
-QJS_INTERNAL extern const JSCFunctionListEntry js_global_funcs[15];
+QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
+                                    JSValueConst val, int flags, int scope_idx);
 
-#endif /* QJS_GLOBAL_H */
+#endif /* QJS_VM_H */

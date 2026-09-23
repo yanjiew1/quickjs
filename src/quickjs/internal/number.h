@@ -27,6 +27,22 @@
 
 #include "base.h"
 
+#define ATOD_INT_ONLY        (1 << 0)
+/* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
+#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
+/* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+/* accept _ between digits as a digit separator */
+#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
+/* allow a suffix to override the type */
+#define ATOD_ACCEPT_SUFFIX    (1 << 6)
+/* default type */
+#define ATOD_TYPE_MASK        (3 << 7)
+#define ATOD_TYPE_FLOAT64     (0 << 7)
+#define ATOD_TYPE_BIG_INT     (1 << 7)
+/* accept -0x1 */
+#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+
 typedef union JSFloat64Union {
     double d;
     uint64_t u64;
@@ -41,6 +57,9 @@ QJS_INTERNAL int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 QJS_INTERNAL int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
                                  int min, int max, int min_offset);
 QJS_INTERNAL int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val);
+QJS_INTERNAL int skip_spaces(const char *pc);
+QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str,
+                              const char **pp, int radix, int flags);
 QJS_INTERNAL JSValue js_dtoa2(JSContext *ctx, double d, int radix,
                               int n_digits, int flags);
 

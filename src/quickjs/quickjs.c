@@ -56,6 +56,8 @@
 #include "internal/atom-string.h"
 #include "internal/iterator.h"
 #include "internal/property.h"
+#include "internal/vm.h"
+#include "internal/error.h"
 #include "builtins/number.h"
 #include "builtins/boolean.h"
 #include "builtins/bigint.h"
@@ -682,7 +684,7 @@ QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom
                              int argc, JSValueConst *argv);
 static __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
                                             JSValue val, BOOL is_array_ctor);
-static JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
+QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                              JSValueConst val, int flags, int scope_idx);
 JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
 static __maybe_unused void JS_DumpAtoms(JSRuntime *rt);
@@ -3615,7 +3617,7 @@ QJS_INTERNAL int string_getc(const JSString *p, int *pidx)
     return c;
 }
 
-static int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len)
+QJS_INTERNAL int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len)
 {
     int i;
 
@@ -7082,7 +7084,7 @@ static JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
     return ret;
 }
 
-static JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
+QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
                              const char *fmt, va_list ap)
 {
     JSRuntime *rt = ctx->rt;
@@ -10650,7 +10652,7 @@ int JS_ToBool(JSContext *ctx, JSValueConst val)
     return JS_ToBoolFree(ctx, JS_DupValue(ctx, val));
 }
 
-static int skip_spaces(const char *pc)
+QJS_INTERNAL int skip_spaces(const char *pc)
 {
     const uint8_t *p, *p_next, *p_start;
     uint32_t c;
@@ -12164,26 +12166,10 @@ QJS_INTERNAL JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
     }
 }
 
-#define ATOD_INT_ONLY        (1 << 0)
-/* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
-#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
-/* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
-#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
-/* accept _ between digits as a digit separator */
-#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
-/* allow a suffix to override the type */
-#define ATOD_ACCEPT_SUFFIX    (1 << 6)
-/* default type */
-#define ATOD_TYPE_MASK        (3 << 7)
-#define ATOD_TYPE_FLOAT64     (0 << 7)
-#define ATOD_TYPE_BIG_INT     (1 << 7)
-/* accept -0x1 */
-#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
-
 /* return an exception in case of memory error. Return JS_NAN if
    invalid syntax */
 /* XXX: directly use js_atod() */
-static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
                        int radix, int flags)
 {
     const char *p, *p_start;
@@ -36730,7 +36716,7 @@ static JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     return ret;
 }
 
-static JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
+QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                              JSValueConst val, int flags, int scope_idx)
 {
     JSValue ret;
@@ -39276,31 +39262,6 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char
     JS_FreeValue(ctx, parent_proto);
     JS_FreeValue(ctx, ctor);
     return JS_EXCEPTION;
-}
-
-static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv)
-{
-    return JS_EvalObject(ctx, ctx->global_obj, argv[0], JS_EVAL_TYPE_INDIRECT, -1);
-}
-
-QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv)
-{
-    double d;
-
-    if (unlikely(JS_ToFloat64(ctx, &d, argv[0])))
-        return JS_EXCEPTION;
-    return JS_NewBool(ctx, isnan(d));
-}
-
-QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    double d;
-    if (unlikely(JS_ToFloat64(ctx, &d, argv[0])))
-        return JS_EXCEPTION;
-    return JS_NewBool(ctx, isfinite(d));
 }
 
 /* Object class */
@@ -44204,48 +44165,6 @@ static const JSCFunctionListEntry js_array_iterator_proto_funcs[] = {
     JS_ITERATOR_NEXT_DEF("next", 0, js_array_iterator_next, 0 ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Array Iterator", JS_PROP_CONFIGURABLE ),
 };
-
-static JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
-                           int argc, JSValueConst *argv)
-{
-    const char *str, *p;
-    int radix, flags;
-    JSValue ret;
-
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str)
-        return JS_EXCEPTION;
-    if (JS_ToInt32(ctx, &radix, argv[1])) {
-        JS_FreeCString(ctx, str);
-        return JS_EXCEPTION;
-    }
-    if (radix != 0 && (radix < 2 || radix > 36)) {
-        ret = JS_NAN;
-    } else {
-        p = str;
-        p += skip_spaces(p);
-        flags = ATOD_INT_ONLY | ATOD_ACCEPT_PREFIX_AFTER_SIGN;
-        ret = js_atof(ctx, p, NULL, radix, flags);
-    }
-    JS_FreeCString(ctx, str);
-    return ret;
-}
-
-static JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
-{
-    const char *str, *p;
-    JSValue ret;
-
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str)
-        return JS_EXCEPTION;
-    p = str;
-    p += skip_spaces(p);
-    ret = js_atof(ctx, p, NULL, 10, 0);
-    JS_FreeCString(ctx, str);
-    return ret;
-}
 
 /* RegExp */
 
@@ -51215,301 +51134,6 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
                               ctx->class_proto[JS_CLASS_ASYNC_GENERATOR],
                               JS_PROP_CONFIGURABLE, JS_PROP_CONFIGURABLE);
 }
-
-/* URI handling */
-
-static int string_get_hex(JSString *p, int k, int n) {
-    int c = 0, h;
-    while (n-- > 0) {
-        if ((h = from_hex(string_get(p, k++))) < 0)
-            return -1;
-        c = (c << 4) | h;
-    }
-    return c;
-}
-
-static int isURIReserved(int c) {
-    return c < 0x100 && memchr(";/?:@&=+$,#", c, sizeof(";/?:@&=+$,#") - 1) != NULL;
-}
-
-static int __attribute__((format(printf, 2, 3))) js_throw_URIError(JSContext *ctx, const char *fmt, ...)
-{
-    va_list ap;
-
-    va_start(ap, fmt);
-    JS_ThrowError(ctx, JS_URI_ERROR, fmt, ap);
-    va_end(ap);
-    return -1;
-}
-
-static int hex_decode(JSContext *ctx, JSString *p, int k) {
-    int c;
-
-    if (k >= p->len || string_get(p, k) != '%')
-        return js_throw_URIError(ctx, "expecting %%");
-    if (k + 2 >= p->len || (c = string_get_hex(p, k + 1, 2)) < 0)
-        return js_throw_URIError(ctx, "expecting hex digit");
-
-    return c;
-}
-
-static JSValue js_global_decodeURI(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv, int isComponent)
-{
-    JSValue str;
-    StringBuffer b_s, *b = &b_s;
-    JSString *p;
-    int k, c, c1, n, c_min;
-
-    str = JS_ToString(ctx, argv[0]);
-    if (JS_IsException(str))
-        return str;
-
-    string_buffer_init(ctx, b, 0);
-
-    p = JS_VALUE_GET_STRING(str);
-    for (k = 0; k < p->len;) {
-        c = string_get(p, k);
-        if (c == '%') {
-            c = hex_decode(ctx, p, k);
-            if (c < 0)
-                goto fail;
-            k += 3;
-            if (c < 0x80) {
-                if (!isComponent && isURIReserved(c)) {
-                    c = '%';
-                    k -= 2;
-                }
-            } else {
-                /* Decode URI-encoded UTF-8 sequence */
-                if (c >= 0xc0 && c <= 0xdf) {
-                    n = 1;
-                    c_min = 0x80;
-                    c &= 0x1f;
-                } else if (c >= 0xe0 && c <= 0xef) {
-                    n = 2;
-                    c_min = 0x800;
-                    c &= 0xf;
-                } else if (c >= 0xf0 && c <= 0xf7) {
-                    n = 3;
-                    c_min = 0x10000;
-                    c &= 0x7;
-                } else {
-                    n = 0;
-                    c_min = 1;
-                    c = 0;
-                }
-                while (n-- > 0) {
-                    c1 = hex_decode(ctx, p, k);
-                    if (c1 < 0)
-                        goto fail;
-                    k += 3;
-                    if ((c1 & 0xc0) != 0x80) {
-                        c = 0;
-                        break;
-                    }
-                    c = (c << 6) | (c1 & 0x3f);
-                }
-                if (c < c_min || c > 0x10FFFF || is_surrogate(c)) {
-                    js_throw_URIError(ctx, "malformed UTF-8");
-                    goto fail;
-                }
-            }
-        } else {
-            k++;
-        }
-        string_buffer_putc(b, c);
-    }
-    JS_FreeValue(ctx, str);
-    return string_buffer_end(b);
-
-fail:
-    JS_FreeValue(ctx, str);
-    string_buffer_free(b);
-    return JS_EXCEPTION;
-}
-
-static int isUnescaped(int c) {
-    static char const unescaped_chars[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789"
-        "@*_+-./";
-    return c < 0x100 &&
-        memchr(unescaped_chars, c, sizeof(unescaped_chars) - 1);
-}
-
-static int isURIUnescaped(int c, int isComponent) {
-    return c < 0x100 &&
-        ((c >= 0x61 && c <= 0x7a) ||
-         (c >= 0x41 && c <= 0x5a) ||
-         (c >= 0x30 && c <= 0x39) ||
-         memchr("-_.!~*'()", c, sizeof("-_.!~*'()") - 1) != NULL ||
-         (!isComponent && isURIReserved(c)));
-}
-
-static int encodeURI_hex(StringBuffer *b, int c) {
-    uint8_t buf[6];
-    int n = 0;
-    const char *hex = "0123456789ABCDEF";
-
-    buf[n++] = '%';
-    if (c >= 256) {
-        buf[n++] = 'u';
-        buf[n++] = hex[(c >> 12) & 15];
-        buf[n++] = hex[(c >>  8) & 15];
-    }
-    buf[n++] = hex[(c >> 4) & 15];
-    buf[n++] = hex[(c >> 0) & 15];
-    return string_buffer_write8(b, buf, n);
-}
-
-static JSValue js_global_encodeURI(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv,
-                                   int isComponent)
-{
-    JSValue str;
-    StringBuffer b_s, *b = &b_s;
-    JSString *p;
-    int k, c, c1;
-
-    str = JS_ToString(ctx, argv[0]);
-    if (JS_IsException(str))
-        return str;
-
-    p = JS_VALUE_GET_STRING(str);
-    string_buffer_init(ctx, b, p->len);
-    for (k = 0; k < p->len;) {
-        c = string_get(p, k);
-        k++;
-        if (isURIUnescaped(c, isComponent)) {
-            string_buffer_putc16(b, c);
-        } else {
-            if (is_lo_surrogate(c)) {
-                js_throw_URIError(ctx, "invalid character");
-                goto fail;
-            } else if (is_hi_surrogate(c)) {
-                if (k >= p->len) {
-                    js_throw_URIError(ctx, "expecting surrogate pair");
-                    goto fail;
-                }
-                c1 = string_get(p, k);
-                k++;
-                if (!is_lo_surrogate(c1)) {
-                    js_throw_URIError(ctx, "expecting surrogate pair");
-                    goto fail;
-                }
-                c = from_surrogate(c, c1);
-            }
-            if (c < 0x80) {
-                encodeURI_hex(b, c);
-            } else {
-                /* XXX: use C UTF-8 conversion ? */
-                if (c < 0x800) {
-                    encodeURI_hex(b, (c >> 6) | 0xc0);
-                } else {
-                    if (c < 0x10000) {
-                        encodeURI_hex(b, (c >> 12) | 0xe0);
-                    } else {
-                        encodeURI_hex(b, (c >> 18) | 0xf0);
-                        encodeURI_hex(b, ((c >> 12) & 0x3f) | 0x80);
-                    }
-                    encodeURI_hex(b, ((c >> 6) & 0x3f) | 0x80);
-                }
-                encodeURI_hex(b, (c & 0x3f) | 0x80);
-            }
-        }
-    }
-    JS_FreeValue(ctx, str);
-    return string_buffer_end(b);
-
-fail:
-    JS_FreeValue(ctx, str);
-    string_buffer_free(b);
-    return JS_EXCEPTION;
-}
-
-static JSValue js_global_escape(JSContext *ctx, JSValueConst this_val,
-                                int argc, JSValueConst *argv)
-{
-    JSValue str;
-    StringBuffer b_s, *b = &b_s;
-    JSString *p;
-    int i, len, c;
-
-    str = JS_ToString(ctx, argv[0]);
-    if (JS_IsException(str))
-        return str;
-
-    p = JS_VALUE_GET_STRING(str);
-    string_buffer_init(ctx, b, p->len);
-    for (i = 0, len = p->len; i < len; i++) {
-        c = string_get(p, i);
-        if (isUnescaped(c)) {
-            string_buffer_putc16(b, c);
-        } else {
-            encodeURI_hex(b, c);
-        }
-    }
-    JS_FreeValue(ctx, str);
-    return string_buffer_end(b);
-}
-
-static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    JSValue str;
-    StringBuffer b_s, *b = &b_s;
-    JSString *p;
-    int i, len, c, n;
-
-    str = JS_ToString(ctx, argv[0]);
-    if (JS_IsException(str))
-        return str;
-
-    string_buffer_init(ctx, b, 0);
-    p = JS_VALUE_GET_STRING(str);
-    for (i = 0, len = p->len; i < len; i++) {
-        c = string_get(p, i);
-        if (c == '%') {
-            if (i + 6 <= len
-            &&  string_get(p, i + 1) == 'u'
-            &&  (n = string_get_hex(p, i + 2, 4)) >= 0) {
-                c = n;
-                i += 6 - 1;
-            } else
-            if (i + 3 <= len
-            &&  (n = string_get_hex(p, i + 1, 2)) >= 0) {
-                c = n;
-                i += 3 - 1;
-            }
-        }
-        string_buffer_putc16(b, c);
-    }
-    JS_FreeValue(ctx, str);
-    return string_buffer_end(b);
-}
-
-/* global object */
-
-static const JSCFunctionListEntry js_global_funcs[] = {
-    JS_CFUNC_DEF("parseInt", 2, js_parseInt ),
-    JS_CFUNC_DEF("parseFloat", 1, js_parseFloat ),
-    JS_CFUNC_DEF("isNaN", 1, js_global_isNaN ),
-    JS_CFUNC_DEF("isFinite", 1, js_global_isFinite ),
-
-    JS_CFUNC_MAGIC_DEF("decodeURI", 1, js_global_decodeURI, 0 ),
-    JS_CFUNC_MAGIC_DEF("decodeURIComponent", 1, js_global_decodeURI, 1 ),
-    JS_CFUNC_MAGIC_DEF("encodeURI", 1, js_global_encodeURI, 0 ),
-    JS_CFUNC_MAGIC_DEF("encodeURIComponent", 1, js_global_encodeURI, 1 ),
-    JS_CFUNC_DEF("escape", 1, js_global_escape ),
-    JS_CFUNC_DEF("unescape", 1, js_global_unescape ),
-    JS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0 ),
-    JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
-    JS_PROP_UNDEFINED_DEF("undefined", 0 ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "global", JS_PROP_CONFIGURABLE ),
-    JS_CFUNC_DEF("eval", 1, js_global_eval ),
-};
 
 /* eval */
 
