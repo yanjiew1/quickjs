@@ -24,70 +24,27 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <inttypes.h>
 #include <string.h>
 #include <assert.h>
-#include <sys/time.h>
-#include <time.h>
-#include <fenv.h>
-#include <math.h>
-#if defined(__APPLE__)
-#include <malloc/malloc.h>
-#elif defined(__linux__) || defined(__GLIBC__)
-#include <malloc.h>
-#elif defined(__FreeBSD__)
-#include <malloc_np.h>
-#endif
-
 #include "cutils.h"
 #include "list.h"
 #include "quickjs.h"
-#include "libregexp.h"
-#include "libunicode.h"
-#include "dtoa.h"
 #include "internal/runtime.h"
-#include "internal/weakref.h"
 #include "internal/object.h"
-#include "internal/number.h"
-#include "internal/operator.h"
-#include "internal/bigint.h"
-#include "internal/primitive.h"
 #include "internal/function.h"
-#include "internal/function-list.h"
 #include "internal/atom-string.h"
 #include "internal/value-print.h"
-#include "internal/iterator.h"
-#include "internal/property.h"
 #include "internal/shape.h"
-#include "internal/array.h"
-#include "internal/parser.h"
 #include "internal/vm.h"
-#include "internal/serialization.h"
 #include "internal/module.h"
-#include "internal/opcode.h"
-#include "internal/error.h"
-#include "builtins/number.h"
-#include "builtins/boolean.h"
-#include "builtins/bigint.h"
 #include "builtins/string.h"
 #include "builtins/regexp.h"
-#include "builtins/object.h"
-#include "builtins/reflect.h"
-#include "builtins/proxy.h"
 #include "builtins/collection.h"
-#include "builtins/async.h"
 #include "builtins/typed-array.h"
-#include "builtins/error.h"
-#include "builtins/function.h"
 #include "builtins/array.h"
 #include "builtins/iterator.h"
 #include "builtins/base.h"
-#include "builtins/symbol.h"
-#include "builtins/global.h"
-#include "builtins/math.h"
-#include "builtins/date.h"
-#include "builtins/weakref.h"
 
 
 #if !defined(_WIN32)
@@ -141,112 +98,6 @@ typedef struct JSJobEntry {
     int argc;
     JSValue argv[0];
 } JSJobEntry;
-
-QJS_INTERNAL JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
-                                  JSValueConst this_obj,
-                                  int argc, JSValueConst *argv, int flags);
-QJS_INTERNAL JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst this_obj,
-                                      int argc, JSValueConst *argv, int flags);
-QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
-                             int argc, JSValueConst *argv);
-QJS_INTERNAL __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
-                                            JSValue val, BOOL is_array_ctor);
-QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
-                             JSValueConst val, int flags, int scope_idx);
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
-QJS_INTERNAL JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv, int magic);
-QJS_INTERNAL void js_object_data_finalizer(JSRuntime *rt, JSValue val);
-QJS_INTERNAL void js_object_data_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_c_function_finalizer(JSRuntime *rt, JSValue val);
-QJS_INTERNAL void js_c_function_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
-QJS_INTERNAL void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
-QJS_INTERNAL void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
-QJS_INTERNAL void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_generator_finalizer(JSRuntime *rt, JSValue obj);
-QJS_INTERNAL void js_generator_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
-QJS_INTERNAL void js_global_object_mark(JSRuntime *rt, JSValueConst val,
-                                  JS_MarkFunc *mark_func);
-
-QJS_INTERNAL int JS_ToBoolFree(JSContext *ctx, JSValue val);
-QJS_INTERNAL int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
-QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
-QJS_INTERNAL void gc_decref(JSRuntime *rt);
-QJS_INTERNAL int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
-                        const JSClassDef *class_def, JSAtom name);
-
-QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
-                          JSStrictEqModeEnum eq_mode);
-QJS_INTERNAL BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
-QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
-QJS_INTERNAL JSProperty *add_property(JSContext *ctx,
-                                JSObject *p, JSAtom prop, int prop_flags);
-QJS_INTERNAL void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
-JSValue JS_ThrowOutOfMemory(JSContext *ctx);
-
-QJS_INTERNAL JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
-QJS_INTERNAL JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
-                             BOOL is_arg);
-QJS_INTERNAL void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
-QJS_INTERNAL void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
-QJS_INTERNAL JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,
-                                          JSValueConst this_obj,
-                                          int argc, JSValueConst *argv,
-                                          int flags);
-QJS_INTERNAL void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
-QJS_INTERNAL void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
-                                           JS_MarkFunc *mark_func);
-QJS_INTERNAL void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
-QJS_INTERNAL void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
-                               JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue js_import_meta(JSContext *ctx);
-QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
-QJS_INTERNAL void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
-QJS_INTERNAL int js_string_compare(JSContext *ctx,
-                             const JSString *p1, const JSString *p2);
-QJS_INTERNAL JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
-QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
-                               JSValue prop, JSValue val, int flags);
-QJS_INTERNAL JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
-QJS_INTERNAL int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
-                                     JSObject *p, JSAtom prop);
-QJS_INTERNAL void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
-QJS_INTERNAL void js_free_shape(JSRuntime *rt, JSShape *sh);
-QJS_INTERNAL void js_free_shape_null(JSRuntime *rt, JSShape *sh);
-QJS_INTERNAL int init_shape_hash(JSRuntime *rt);
-QJS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
-                                       JSValueConst obj);
-QJS_INTERNAL __exception int js_get_length64(JSContext *ctx, int64_t *pres,
-                                       JSValueConst obj);
-QJS_INTERNAL void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
-QJS_INTERNAL JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
-                               JSValueConst array_arg);
-QJS_INTERNAL void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
-QJS_INTERNAL void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func);
-QJS_INTERNAL JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv, int flags);
-QJS_INTERNAL void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                          JSGCObjectTypeEnum type);
-QJS_INTERNAL void remove_gc_object(JSGCObjectHeader *h);
-QJS_INTERNAL JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
-QJS_INTERNAL JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
-                                 void *opaque);
-QJS_INTERNAL void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
-QJS_INTERNAL JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
-                                                         JSAtom atom, BOOL is_lexical);
-
-
 
 static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_Object, NULL, NULL },                             /* JS_CLASS_OBJECT */
