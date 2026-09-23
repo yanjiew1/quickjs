@@ -63,10 +63,6 @@ uint32_t total_index_bytes;
    - suppress more upper / lower case redundancy
 */
 
-#ifdef USE_TEST
-#include "libunicode.c"
-#endif
-
 #define CHARCODE_MAX 0x10ffff
 #define CC_LEN_MAX 3
 
