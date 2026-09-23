@@ -568,3 +568,19 @@ QJS_INTERNAL no_inline __exception int __js_poll_interrupts(JSContext *ctx)
 
 /* Return -1 (exception) or TRUE/FALSE. 'throw_flag' = FALSE indicates
    that it is called from Reflect.setPrototypeOf(). */
+
+BOOL JS_IsError(JSContext *ctx, JSValueConst val)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(val);
+    return (p->class_id == JS_CLASS_ERROR);
+}
+
+/* must be called after JS_Throw() */
+void JS_SetUncatchableException(JSContext *ctx, BOOL flag)
+{
+    ctx->rt->current_exception_is_uncatchable = flag;
+}
+

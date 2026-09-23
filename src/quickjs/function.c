@@ -40,6 +40,7 @@
 #include "internal/error.h"
 #include "internal/array.h"
 #include "internal/vm.h"
+#include "builtins/proxy.h"
 
 /*******************************************************************/
 /* runtime functions & objects */
@@ -535,3 +536,51 @@ QJS_INTERNAL JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
     JS_FreeValue(ctx, val);
     return JS_EXCEPTION;
 }
+
+BOOL JS_IsFunction(JSContext *ctx, JSValueConst val)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(val);
+    switch(p->class_id) {
+    case JS_CLASS_BYTECODE_FUNCTION:
+        return TRUE;
+    case JS_CLASS_PROXY:
+        return p->u.proxy_data->is_func;
+    default:
+        return (ctx->rt->class_array[p->class_id].call != NULL);
+    }
+}
+
+QJS_INTERNAL BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(val);
+    if (p->class_id == JS_CLASS_C_FUNCTION)
+        return (p->u.cfunc.c_function.generic == func && p->u.cfunc.magic == magic);
+    else
+        return FALSE;
+}
+
+BOOL JS_IsConstructor(JSContext *ctx, JSValueConst val)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(val);
+    return p->is_constructor;
+}
+
+BOOL JS_SetConstructorBit(JSContext *ctx, JSValueConst func_obj, BOOL val)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(func_obj);
+    p->is_constructor = val;
+    return TRUE;
+}
+
