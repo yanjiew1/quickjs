@@ -34,6 +34,7 @@
 #include "../internal/function.h"
 #include "../internal/iterator.h"
 #include "../internal/primitive.h"
+#include "../internal/operator.h"
 #include "../internal/shape.h"
 #include "../internal/array.h"
 #include "../internal/error.h"

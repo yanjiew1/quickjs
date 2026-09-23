@@ -35,6 +35,7 @@
 #include "../internal/weakref.h"
 #include "../internal/function.h"
 #include "../internal/primitive.h"
+#include "../internal/operator.h"
 #include "weakref.h"
 
 /* WeakRef */

@@ -126,5 +126,6 @@ QJS_INTERNAL int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
 
 QJS_INTERNAL int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
 QJS_INTERNAL JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_StringToBigInt(JSContext *ctx, JSValue val);
 
 #endif /* QJS_BIGINT_H */

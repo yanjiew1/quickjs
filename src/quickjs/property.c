@@ -47,6 +47,7 @@
 #include "internal/property.h"
 #include "internal/array.h"
 #include "internal/number.h"
+#include "internal/operator.h"
 #include "internal/bigint.h"
 #include "internal/primitive.h"
 #include "internal/function.h"

@@ -120,8 +120,6 @@ QJS_INTERNAL int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
                               JSValueConst name, JSValue val);
 QJS_INTERNAL int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
                                  JSValueConst name, JSValue val);
-QJS_INTERNAL __exception int js_has_unscopable(JSContext *ctx, JSValueConst obj,
-                                         JSAtom atom);
 
 #define DEFINE_GLOBAL_LEX_VAR (1 << 7)
 #define DEFINE_GLOBAL_FUNC_VAR (1 << 6)

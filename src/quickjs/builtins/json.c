@@ -41,6 +41,7 @@
 #include "../internal/shape.h"
 #include "../internal/allocator.h"
 #include "../internal/primitive.h"
+#include "../internal/operator.h"
 #include "../internal/iterator.h"
 #include "../internal/error.h"
 #include "array.h"
