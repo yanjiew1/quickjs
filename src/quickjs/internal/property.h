@@ -126,4 +126,10 @@ QJS_INTERNAL __exception int js_has_unscopable(JSContext *ctx, JSValueConst obj,
 #define DEFINE_GLOBAL_LEX_VAR (1 << 7)
 #define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
 
+QJS_INTERNAL JSContext *js_autoinit_get_realm(JSProperty *pr);
+QJS_INTERNAL JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
+QJS_INTERNAL void js_autoinit_free(JSRuntime *rt, JSProperty *pr);
+QJS_INTERNAL void js_autoinit_mark(JSRuntime *rt, JSProperty *pr,
+                             JS_MarkFunc *mark_func);
+
 #endif /* QJS_PROPERTY_H */

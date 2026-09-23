@@ -237,4 +237,36 @@ QJS_INTERNAL JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst pr
 
 QJS_INTERNAL void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 
+typedef struct JSForInIterator {
+    JSValue obj;
+    uint32_t idx;
+    uint32_t atom_count;
+    uint8_t in_prototype_chain;
+    uint8_t is_array;
+    JSPropertyEnum *tab_atom; /* is_array = FALSE */
+} JSForInIterator;
+
+
+QJS_INTERNAL int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
+                        const JSClassDef *class_def, JSAtom name);
+QJS_INTERNAL void free_object(JSRuntime *rt, JSObject *p);
+QJS_INTERNAL void js_object_data_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_object_data_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_c_function_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_c_function_mark(JSRuntime *rt, JSValueConst val,
+                               JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv, int flags);
+
 #endif /* QJS_OBJECT_H */

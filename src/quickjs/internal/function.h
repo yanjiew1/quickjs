@@ -263,4 +263,6 @@ QJS_INTERNAL JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAto
 QJS_INTERNAL JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
                                                          JSAtom atom, BOOL is_lexical);
 
+QJS_INTERNAL JSValue js_get_function_name(JSContext *ctx, JSAtom name);
+
 #endif /* QJS_FUNCTION_H */
