@@ -249,7 +249,7 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
-QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/quickjs-libc.o
+QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/binary.o $(OBJDIR)/src/quickjs/quickjs-libc.o
 QJS_SUPPORT_OBJS=$(OBJDIR)/src/dtoa.o $(OBJDIR)/src/cutils.o
 UNICODE_OBJS=$(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o
 REGEXP_OBJS=$(OBJDIR)/src/regexp/libregexp.o
