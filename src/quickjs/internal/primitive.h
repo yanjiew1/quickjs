@@ -25,7 +25,16 @@
 #ifndef QJS_PRIMITIVE_H
 #define QJS_PRIMITIVE_H
 
-#include "base.h"
+#include "object.h"
+
+static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(obj);
+    return p->is_HTMLDDA;
+}
 
 #define HINT_STRING  0
 #define HINT_NUMBER  1

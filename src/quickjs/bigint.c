@@ -39,6 +39,11 @@
 #include "internal/error.h"
 #include "internal/opcode.h"
 
+QJS_INTERNAL JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
+{
+    return js_bigint_to_string1(ctx, val, 10);
+}
+
 /* bigint support */
 
 #define JS_BIGINT_MAX_SIZE ((1024 * 1024) / JS_LIMB_BITS) /* in limbs */
@@ -1502,4 +1507,3 @@ QJS_INTERNAL JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
         return JS_MKPTR(JS_TAG_BIG_INT, p);
     }
 }
-
