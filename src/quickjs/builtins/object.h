@@ -1,5 +1,5 @@
 /*
- * QuickJS Error Internal Interface
+ * QuickJS Object Builtin Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,16 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_ERROR_H
-#define QJS_ERROR_H
+#ifndef QJS_BUILTIN_OBJECT_H
+#define QJS_BUILTIN_OBJECT_H
 
-#include <stdarg.h>
-#include "runtime.h"
+#include "../internal/base.h"
 
-QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                                    const char *fmt, va_list ap);
-QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
-QJS_INTERNAL void JS_ThrowInterrupted(JSContext *ctx);
-QJS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+QJS_INTERNAL JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
+                                     int argc, JSValueConst *argv, int kind);
 
-#endif /* QJS_ERROR_H */
+#endif /* QJS_BUILTIN_OBJECT_H */

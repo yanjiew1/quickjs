@@ -62,6 +62,7 @@ QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str,
                               const char **pp, int radix, int flags);
 QJS_INTERNAL __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
                                               JSValue val);
+QJS_INTERNAL JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
 QJS_INTERNAL JSValue js_dtoa2(JSContext *ctx, double d, int radix,
                               int n_digits, int flags);
 

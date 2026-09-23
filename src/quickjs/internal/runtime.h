@@ -214,5 +214,6 @@ QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
                                   int start, int count);
 QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                                 int argc, JSValueConst *argv, BOOL no_exception);
+QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue obj);
 
 #endif /* QJS_RUNTIME_H */

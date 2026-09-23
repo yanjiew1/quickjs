@@ -65,5 +65,10 @@ QJS_INTERNAL int JS_DefinePropertyValueInt64(JSContext *ctx,
                                               JSValueConst this_obj,
                                               int64_t idx, JSValue val,
                                               int flags);
+QJS_INTERNAL int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+                                                              JSPropertyEnum **ptab,
+                                                              uint32_t *plen,
+                                                              JSObject *p,
+                                                              int flags);
 
 #endif /* QJS_PROPERTY_H */
