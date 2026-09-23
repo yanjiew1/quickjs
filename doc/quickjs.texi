@@ -65,7 +65,7 @@ You can type @code{make install} as root if you wish to install the binaries and
 Note: On some OSes atomic operations are not available or need a
 specific library. If you get related errors, you should either add
 @code{-latomics} in the Makefile @code{LIBS} variable or disable
-@code{CONFIG_ATOMICS} in @file{quickjs.c}.
+@code{CONFIG_ATOMICS} in the @file{src/quickjs/} source files.
 
 @section Quick start
 
@@ -884,13 +884,13 @@ is used to define a prototype for a given class in a given
 JSContext. @code{JS_NewObjectClass()} sets this prototype in the
 created object.
 
-Examples are available in @file{quickjs-libc.c}.
+Examples are available in @file{src/quickjs/libc.c}.
 
 @subsection C Modules
 
 Native ES6 modules are supported and can be dynamically or statically
 linked. Look at the @file{test_bjson} and @file{bjson.so}
-examples. The standard library @file{quickjs-libc.c} is also a good example
+examples. The standard library @file{src/quickjs/libc.c} is also a good example
 of a native module.
 
 @subsection Memory handling
