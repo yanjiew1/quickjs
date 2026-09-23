@@ -64,7 +64,7 @@ uint32_t total_index_bytes;
 */
 
 #ifdef USE_TEST
-#include "libunicode.c"
+#include "libunicode.h"
 #endif
 
 #define CHARCODE_MAX 0x10ffff

@@ -24,6 +24,8 @@
 #ifndef LIBUNICODE_H
 #define LIBUNICODE_H
 
+#include <stddef.h>
+
 #include <stdint.h>
 
 /* unicode standard version */
@@ -184,7 +186,7 @@ static inline int lre_js_is_ident_next(uint32_t c) {
     } else {
         /* ZWNJ and ZWJ are accepted in identifiers */
         if (c >= 0x200C && c <= 0x200D)
-            return TRUE;
+            return 1;
 #ifdef CONFIG_ALL_UNICODE
         return lre_is_id_continue(c);
 #else
