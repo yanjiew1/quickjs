@@ -258,7 +258,7 @@ UNICODE_OBJS=$(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o
 REGEXP_OBJS=$(OBJDIR)/src/regexp/libregexp.o
 QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(QJS_SUPPORT_OBJS) $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o
 
-QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
+QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/tools/repl.o $(QJS_LIB_OBJS)
 
 HOST_LIBS=-lm -ldl -lpthread
 LIBS=-lm -lpthread
@@ -330,8 +330,8 @@ endif # CONFIG_LTO
 libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
 	$(AR) rcs $@ $^
 
-repl.c: $(QJSC) repl.js
-	$(QJSC) -s -c -o $@ -m repl.js
+tools/repl.c: $(QJSC) tools/repl.js
+	$(QJSC) -s -c -o $@ -m tools/repl.js
 
 ifneq ($(wildcard unicode/UnicodeData.txt),)
 $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/unicode/libunicode.nolto.o: src/unicode/libunicode-table.h
@@ -379,16 +379,16 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: src/regexp/libregexp.c src/unicode/libunicode.c src/cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ $^ $(LIBS)
+regexp_test: $(OBJDIR)/tools/regexp_test.o libregexp.a libunicode.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/unicode/libunicode.host.o $(OBJDIR)/src/cutils.host.o tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/unicode/libunicode.host.o $(OBJDIR)/src/cutils.host.o
 
 clean:
-	rm -f repl.c out.c
+	rm -f repl.c tools/repl.c out.c
 	rm -f *.a *.o *.d *~ unicode_gen regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
-	rm -f hello.c test_fib.c
+	rm -f hello.c test_fib.c examples/hello.c examples/test_fib.c
 	rm -f examples/*.so tests/*.so
 	rm -rf $(OBJDIR)/ *.dSYM/ qjs-debug$(EXE)
 	rm -rf run-test262-debug$(EXE)
@@ -415,10 +415,10 @@ HELLO_OPTS=-fno-string-normalize -fno-map -fno-promise -fno-typedarray \
            -fno-typedarray -fno-regexp -fno-json -fno-eval -fno-proxy \
            -fno-date -fno-module-loader
 
-hello.c: $(QJSC) $(HELLO_SRCS)
+examples/hello.c: $(QJSC) $(HELLO_SRCS)
 	$(QJSC) -e $(HELLO_OPTS) -o $@ $(HELLO_SRCS)
 
-examples/hello: $(OBJDIR)/hello.o $(QJS_LIB_OBJS)
+examples/hello: $(OBJDIR)/examples/hello.o $(QJS_LIB_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # example of static JS compilation with modules
@@ -431,10 +431,10 @@ examples/hello_module: $(QJSC) libquickjs$(LTOEXT).a $(HELLO_MODULE_SRCS)
 
 # use of an external C module (static compilation)
 
-test_fib.c: $(QJSC) examples/test_fib.js
+examples/test_fib.c: $(QJSC) examples/test_fib.js
 	$(QJSC) -e -M examples/fib.so,fib -m -o $@ examples/test_fib.js
 
-examples/test_fib: $(OBJDIR)/test_fib.o $(OBJDIR)/examples/fib.o libquickjs$(LTOEXT).a
+examples/test_fib: $(OBJDIR)/examples/test_fib.o $(OBJDIR)/examples/fib.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 examples/fib.so: $(OBJDIR)/examples/fib.pic.o
