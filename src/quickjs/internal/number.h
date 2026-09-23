@@ -28,4 +28,141 @@
 #include "base.h"
 QJS_INTERNAL double js_pow(double a, double b);
 
+QJS_INTERNAL JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
+QJS_INTERNAL int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
+QJS_INTERNAL __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
+                                            JSValue val, BOOL is_array_ctor);
+QJS_INTERNAL JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
+QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
+                    int min, int max, int min_offset);
+QJS_INTERNAL int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
+QJS_INTERNAL int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
+QJS_INTERNAL int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
+                    int64_t min, int64_t max, int64_t neg_offset);
+QJS_INTERNAL int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
+QJS_INTERNAL int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val);
+QJS_INTERNAL __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
+                                       JSValue val);
+QJS_INTERNAL JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
+QJS_INTERNAL BOOL is_safe_integer(double d);
+QJS_INTERNAL no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL extern const JSClassExoticMethods js_arguments_exotic_methods;
+QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+                       int radix, int flags);
+QJS_INTERNAL JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
+QJS_INTERNAL JSBigInt *js_bigint_new(JSContext *ctx, int len);
+QJS_INTERNAL JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
+QJS_INTERNAL JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
+QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
+QJS_INTERNAL JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
+QJS_INTERNAL no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *sp,
+                                                      OPCodeEnum op);
+QJS_INTERNAL no_inline __exception int js_binary_logic_slow(JSContext *ctx,
+                                                      JSValue *sp,
+                                                      OPCodeEnum op);
+QJS_INTERNAL JSValue js_build_arguments(JSContext *ctx, int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_dtoa2(JSContext *ctx,
+                        double d, int radix, int n_digits, int flags);
+QJS_INTERNAL no_inline __exception int js_eq_slow(JSContext *ctx, JSValue *sp,
+                                            BOOL is_neq);
+QJS_INTERNAL JSValue js_function_proto_fileName(JSContext *ctx,
+                                          JSValueConst this_val);
+QJS_INTERNAL JSValue js_function_proto_lineNumber(JSContext *ctx,
+                                            JSValueConst this_val, int is_col);
+QJS_INTERNAL __exception int js_has_unscopable(JSContext *ctx, JSValueConst obj,
+                                         JSAtom atom);
+QJS_INTERNAL no_inline int js_not_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_delete(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_in(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_instanceof(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_private_in(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_typeof(JSContext *ctx, JSValueConst op1);
+QJS_INTERNAL __exception int js_post_inc_slow(JSContext *ctx,
+                                        JSValue *sp, OPCodeEnum op);
+QJS_INTERNAL no_inline int js_relational_slow(JSContext *ctx, JSValue *sp,
+                                        OPCodeEnum op);
+QJS_INTERNAL BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+QJS_INTERNAL BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+QJS_INTERNAL no_inline int js_shr_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
+                          JSStrictEqModeEnum eq_mode);
+QJS_INTERNAL JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
+                                   int argc, JSValueConst *argv);
+QJS_INTERNAL no_inline __exception int js_unary_arith_slow(JSContext *ctx,
+                                                     JSValue *sp,
+                                                     OPCodeEnum op);
+static inline int js_bigint_sign(const JSBigInt *a)
+{
+    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
+}
+
+QJS_INTERNAL int __JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val);
+
+static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
+{
+    uint32_t tag;
+
+    tag = JS_VALUE_GET_TAG(val);
+    if (tag <= JS_TAG_NULL) {
+        *pres = JS_VALUE_GET_INT(val);
+        return 0;
+    } else if (JS_TAG_IS_FLOAT64(tag)) {
+        *pres = JS_VALUE_GET_FLOAT64(val);
+        return 0;
+    } else {
+        return __JS_ToFloat64Free(ctx, pres, val);
+    }
+}
+
+static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
+{
+    return JS_ToInt32Free(ctx, (int32_t *)pres, val);
+}
+
+typedef enum JSToNumberHintEnum {
+    TON_FLAG_NUMBER,
+    TON_FLAG_NUMERIC,
+} JSToNumberHintEnum;
+
+#define JS_PRINT_MAX_DEPTH 8
+
+typedef struct {
+    JSRuntime *rt;
+    JSContext *ctx; /* may be NULL */
+    JSPrintValueOptions options;
+    JSPrintValueWrite *write_func;
+    void *write_opaque;
+    int level;
+    JSObject *print_stack[JS_PRINT_MAX_DEPTH]; /* level values */
+} JSPrintValueState;
+
+#define ATOD_INT_ONLY        (1 << 0)
+/* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
+#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
+/* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+/* accept _ between digits as a digit separator */
+#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
+/* allow a suffix to override the type */
+#define ATOD_ACCEPT_SUFFIX    (1 << 6)
+/* default type */
+#define ATOD_TYPE_MASK        (3 << 7)
+#define ATOD_TYPE_FLOAT64     (0 << 7)
+#define ATOD_TYPE_BIG_INT     (1 << 7)
+/* accept -0x1 */
+#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+
+#define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
+
 #endif /* QJS_INTERNAL_NUMBER_H */

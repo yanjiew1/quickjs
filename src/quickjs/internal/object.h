@@ -181,4 +181,26 @@ typedef struct JSMapState {
 } JSMapState;
 
 
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+
+typedef enum JSStrictEqModeEnum {
+    JS_EQ_STRICT,
+    JS_EQ_SAME_VALUE,
+    JS_EQ_SAME_VALUE_ZERO,
+} JSStrictEqModeEnum;
+
+typedef struct JSMemoryUsage_helper {
+    double memory_used_count;
+    double str_count;
+    double str_size;
+    int64_t js_func_count;
+    double js_func_size;
+    int64_t js_func_code_size;
+    int64_t js_func_pc2line_count;
+    int64_t js_func_pc2line_size;
+} JSMemoryUsage_helper;
+
 #endif /* QJS_INTERNAL_OBJECT_H */

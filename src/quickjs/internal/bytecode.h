@@ -1,5 +1,5 @@
 /*
- * QuickJS Bytecode Definitions
+ * QuickJS Bytecode Private Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -23,48 +23,21 @@
  * THE SOFTWARE.
  */
 
-#ifndef QJS_INTERNAL_VM_H
-#define QJS_INTERNAL_VM_H
+#ifndef QJS_INTERNAL_BYTECODE_API_H
+#define QJS_INTERNAL_BYTECODE_API_H
 
-#include "base.h"
-typedef enum OPCodeFormat {
-#define FMT(f) OP_FMT_ ## f,
-#define DEF(id, size, n_pop, n_push, f)
-#include "quickjs-opcode.h"
-#undef DEF
-#undef FMT
-} OPCodeFormat;
+#include "internal/object.h"
+#include "internal/vm.h"
 
-enum OPCodeEnum {
-#define FMT(f)
-#define DEF(id, size, n_pop, n_push, f) OP_ ## id,
-#define def(id, size, n_pop, n_push, f)
-#include "quickjs-opcode.h"
-#undef def
-#undef DEF
-#undef FMT
-    OP_COUNT, /* excluding temporary opcodes */
-    /* temporary opcodes : overlap with the short opcodes */
-    OP_TEMP_START = OP_nop + 1,
-    OP___dummy = OP_TEMP_START - 1,
-#define FMT(f)
-#define DEF(id, size, n_pop, n_push, f)
-#define def(id, size, n_pop, n_push, f) OP_ ## id,
-#include "quickjs-opcode.h"
-#undef def
-#undef DEF
-#undef FMT
-    OP_TEMP_END,
-};
 
-typedef enum {
-    OP_SPECIAL_OBJECT_ARGUMENTS,
-    OP_SPECIAL_OBJECT_MAPPED_ARGUMENTS,
-    OP_SPECIAL_OBJECT_THIS_FUNC,
-    OP_SPECIAL_OBJECT_NEW_TARGET,
-    OP_SPECIAL_OBJECT_HOME_OBJECT,
-    OP_SPECIAL_OBJECT_VAR_OBJECT,
-    OP_SPECIAL_OBJECT_IMPORT_META,
-} OPSpecialObjectEnum;
 
-#endif /* QJS_INTERNAL_VM_H */
+static inline BOOL is_be(void)
+{
+    union {
+        uint16_t a;
+        uint8_t  b;
+    } u = {0x100};
+    return u.b;
+}
+
+#endif /* QJS_INTERNAL_BYTECODE_API_H */

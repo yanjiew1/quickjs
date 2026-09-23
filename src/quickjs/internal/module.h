@@ -132,4 +132,9 @@ typedef struct JSJobEntry {
 } JSJobEntry;
 
 
+typedef enum JSFreeModuleEnum {
+    JS_FREE_MODULE_ALL,
+    JS_FREE_MODULE_NOT_RESOLVED,
+} JSFreeModuleEnum;
+
 #endif /* QJS_INTERNAL_MODULE_H */

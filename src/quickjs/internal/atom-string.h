@@ -82,4 +82,24 @@ enum {
 #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
 
 
+typedef struct StringBuffer {
+    JSContext *ctx;
+    JSString *str;
+    int len;
+    int size;
+    int is_wide_char;
+    int error_status;
+} StringBuffer;
+
+typedef struct {
+    JSValueConst stack[JS_STRING_ROPE_MAX_DEPTH];
+    int stack_len;
+} JSStringRopeIter;
+
+#define JS_ATOM_TAG_INT (1U << 31)
+#define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
+#define JS_ATOM_MAX     ((1U << 30) - 1)
+
+#define ATOM_GET_STR_BUF_SIZE 64
+
 #endif /* QJS_INTERNAL_ATOM_STRING_H */

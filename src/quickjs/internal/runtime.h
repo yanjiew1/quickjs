@@ -289,4 +289,10 @@ typedef enum {
 } JSAtomKindEnum;
 
 
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+
 #endif /* QJS_INTERNAL_RUNTIME_H */

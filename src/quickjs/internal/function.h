@@ -247,4 +247,12 @@ typedef struct {
 } JSOperatorSetData;
 
 
+typedef struct JSCFunctionDataRecord {
+    JSCFunctionData *func;
+    uint8_t length;
+    uint8_t data_len;
+    uint16_t magic;
+    JSValue data[0];
+} JSCFunctionDataRecord;
+
 #endif /* QJS_INTERNAL_FUNCTION_H */
