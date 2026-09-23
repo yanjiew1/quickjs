@@ -1170,6 +1170,25 @@ typedef struct JSCFunctionDataRecord {
     uint16_t magic;
     JSValue data[0];
 } JSCFunctionDataRecord;
+typedef struct JSArrayIteratorData {
+    JSValue obj;
+    JSIteratorKindEnum kind;
+    uint32_t idx;
+} JSArrayIteratorData;
+#define special_every    0
+#define special_some     1
+#define special_forEach  2
+#define special_map      3
+#define special_filter   4
+#define special_TA       8
+#define special_reduce       0
+#define special_reduceRight  1
+enum {
+    ArrayFind,
+    ArrayFindIndex,
+    ArrayFindLast,
+    ArrayFindLastIndex,
+};
 enum {
     TOK_NUMBER = -128,
     TOK_STRING,
@@ -1568,6 +1587,10 @@ typedef struct JSParseState {
 #define GEN_MAGIC_NEXT   0
 #define GEN_MAGIC_RETURN 1
 #define GEN_MAGIC_THROW  2
+#define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
+#define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* the prototype class is 'class_id' instead of JS_CLASS_OBJECT */
+#define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
+#define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
 typedef struct JSOpCode {
 #ifdef DUMP_BYTECODE
     const char *name;
@@ -1598,6 +1621,27 @@ extern QJS_INTERNAL const uint16_t func_kind_to_class_id[4];
 extern QJS_INTERNAL const JSClassExoticMethods js_string_exotic_methods;
 extern QJS_INTERNAL const uint8_t typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
 #define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
+
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_funcs[4];
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_wrap_proto_funcs[2];
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_concat_proto_funcs[3];
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_funcs[2];
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_proto_funcs[13];
+extern QJS_INTERNAL const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_proto_funcs[40];
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_iterator_proto_funcs[2];
+extern QJS_INTERNAL const JSCFunctionListEntry js_number_funcs[14];
+extern QJS_INTERNAL const JSCFunctionListEntry js_number_proto_funcs[6];
+extern QJS_INTERNAL const JSCFunctionListEntry js_boolean_proto_funcs[2];
+extern QJS_INTERNAL const JSCFunctionListEntry js_string_funcs[3];
+extern QJS_INTERNAL const JSCFunctionListEntry js_string_proto_funcs[50];
+extern QJS_INTERNAL const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
+extern QJS_INTERNAL const JSCFunctionListEntry js_math_obj[1];
+extern QJS_INTERNAL const JSCFunctionListEntry js_reflect_obj[1];
+extern QJS_INTERNAL const JSCFunctionListEntry js_symbol_proto_funcs[5];
+extern QJS_INTERNAL const JSCFunctionListEntry js_symbol_funcs[15];
+extern QJS_INTERNAL const JSCFunctionListEntry js_generator_function_proto_funcs[1];
+extern QJS_INTERNAL const JSCFunctionListEntry js_generator_proto_funcs[4];
 
 QJS_INTERNAL no_inline int js_realloc_array(JSContext *ctx, void **parray,
                                       int elem_size, int *psize, int req_size);
@@ -1835,11 +1879,53 @@ QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
                                  const char *filename, int flags, int scope_idx);
 QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                              JSValueConst val, int flags, int scope_idx);
+QJS_INTERNAL int check_function(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue obj);
+QJS_INTERNAL JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
+                                     const JSCFunctionListEntry *fields, int n_fields);
 QJS_INTERNAL JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
                                                JSAtom atom, void *opaque);
+QJS_INTERNAL int JS_SetConstructor2(JSContext *ctx,
+                              JSValueConst func_obj,
+                              JSValueConst proto,
+                              int proto_flags, int ctor_flags);
+QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                                  JSValueConst parent_ctor,
+                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                                  int flags);
+QJS_INTERNAL JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv);
 QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
+QJS_INTERNAL int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
+                          JSValueConst desc);
+QJS_INTERNAL JSValue js_object_getPrototypeOf(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_object_defineProperty(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx, JSValueConst this_val,
+                                                  int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
+                                       int flags, int kind);
+QJS_INTERNAL JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv, int kind);
+QJS_INTERNAL JSValue js_object_isExtensible(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv, int reflect);
+QJS_INTERNAL JSValue js_object_preventExtensions(JSContext *ctx, JSValueConst this_val,
+                                           int argc, JSValueConst *argv, int reflect);
+QJS_INTERNAL JSValue js_object_toString(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
+                                     JSValueConst defaultConstructor);
+QJS_INTERNAL JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
+                                       int argc, JSValueConst *argv, int magic);
 QJS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+                                       JSValueConst obj);
+QJS_INTERNAL __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                        JSValueConst obj);
 QJS_INTERNAL void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
 QJS_INTERNAL JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
@@ -1848,6 +1934,22 @@ QJS_INTERNAL JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv, int magic);
 QJS_INTERNAL JSValue js_error_toString(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_aggregate_error_constructor(JSContext *ctx,
+                                              JSValueConst errors);
+QJS_INTERNAL JSValue js_array_constructor(JSContext *ctx, JSValueConst new_target,
+                                    int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_get_this(JSContext *ctx,
+                           JSValueConst this_val);
+QJS_INTERNAL JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv, int special);
+QJS_INTERNAL JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv, int special);
+QJS_INTERNAL JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv, int shift);
+QJS_INTERNAL JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv, int unshift);
 QJS_INTERNAL void js_array_iterator_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
                                    JS_MarkFunc *mark_func);
@@ -1859,15 +1961,48 @@ QJS_INTERNAL JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_va
 QJS_INTERNAL void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
                                   JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_iterator_constructor_getset(JSContext *ctx,
+                                              JSValueConst this_val,
+                                              int argc, JSValueConst *argv,
+                                              int magic,
+                                              JSValue *func_data);
+QJS_INTERNAL JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
+                                       int argc, JSValueConst *argv);
 QJS_INTERNAL void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
                                     JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
+                                          int argc, JSValueConst *argv);
 QJS_INTERNAL void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
                                    JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+QJS_INTERNAL int string_indexof_char(JSString *p, int c, int from);
+QJS_INTERNAL int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
 QJS_INTERNAL int js_string_find_invalid_codepoint(JSString *p);
+QJS_INTERNAL int js_string_GetSubstitution(JSContext *ctx,
+                                     StringBuffer *b,
+                                     JSValueConst matched,
+                                     JSString *sp,
+                                     uint32_t position,
+                                     JSValueConst captures_val,
+                                     JSValueConst namedCaptures,
+                                     JSValueConst rep,
+                                     uint8_t **captures,
+                                     uint32_t captures_len);
+QJS_INTERNAL void js_random_init(JSContext *ctx);
 QJS_INTERNAL void js_regexp_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
+QJS_INTERNAL int js_is_regexp(JSContext *ctx, JSValueConst obj);
 QJS_INTERNAL JSValue js_regexp_toString(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv);
 QJS_INTERNAL void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
@@ -1875,7 +2010,11 @@ QJS_INTERNAL void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val
                                            JS_MarkFunc *mark_func);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
 QJS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);
+QJS_INTERNAL JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
 QJS_INTERNAL void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
+QJS_INTERNAL JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv, int is_map);
 QJS_INTERNAL void js_map_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL void js_map_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
 QJS_INTERNAL void js_map_iterator_finalizer(JSRuntime *rt, JSValue val);
@@ -1893,6 +2032,7 @@ QJS_INTERNAL JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
                                               JSValueConst sync_iter);
 QJS_INTERNAL JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL int JS_AddIntrinsicBigInt(JSContext *ctx);
 QJS_INTERNAL int JS_AddIntrinsicBasicObjects(JSContext *ctx);
 QJS_INTERNAL JSValue js_array_buffer_constructor3(JSContext *ctx,
                                             JSValueConst new_target,
@@ -1904,8 +2044,14 @@ QJS_INTERNAL JSValue js_array_buffer_constructor3(JSContext *ctx,
 QJS_INTERNAL void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
 QJS_INTERNAL void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorArrayBufferOOB(JSContext *ctx);
 QJS_INTERNAL JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
 QJS_INTERNAL BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
+QJS_INTERNAL BOOL typed_array_is_oob(JSObject *p);
+QJS_INTERNAL int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL JSValue js_typed_array___speciesCreate(JSContext *ctx,
+                                              JSValueConst this_val,
+                                              int argc, JSValueConst *argv);
 QJS_INTERNAL JSValue js_typed_array_constructor(JSContext *ctx,
                                           JSValueConst new_target,
                                           int argc, JSValueConst *argv,

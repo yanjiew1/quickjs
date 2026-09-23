@@ -65,7 +65,7 @@ You can type @code{make install} as root if you wish to install the binaries and
 Note: On some OSes atomic operations are not available or need a
 specific library. If you get related errors, you should either add
 @code{-latomics} in the Makefile @code{LIBS} variable or disable
-@code{CONFIG_ATOMICS} in @file{src/quickjs/quickjs.c}.
+@code{CONFIG_ATOMICS} in @file{src/quickjs/quickjs-internal.h}.
 
 @section Quick start
 
