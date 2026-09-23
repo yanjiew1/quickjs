@@ -27,6 +27,8 @@
 
 #include "object.h"
 
+typedef struct JSShapeProperty JSShapeProperty;
+
 typedef struct JSProperty {
     union {
         JSValue value;      /* JS_PROP_NORMAL */
@@ -102,5 +104,7 @@ QJS_INTERNAL int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_
 QJS_INTERNAL int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj, JSAtom prop, JSAutoInitIDEnum id, void *opaque, int flags);
 
 QJS_INTERNAL JSProperty *add_property(JSContext *ctx, JSObject *p, JSAtom prop, int prop_flags);
+
+QJS_INTERNAL int js_update_property_flags(JSContext *ctx, JSObject *p, JSShapeProperty **pprs, int flags);
 
 #endif /* QJS_PROPERTY_H */

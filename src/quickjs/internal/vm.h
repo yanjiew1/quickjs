@@ -46,4 +46,14 @@ QJS_INTERNAL JSValue js_generator_next(JSContext *ctx, JSValueConst this_val, in
 
 QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj, const char *input, size_t input_len, const char *filename, int flags, int scope_idx);
 
+#define GLOBAL_VAR_OFFSET 0x40000000
+#define ARGUMENT_VAR_OFFSET 0x20000000
+
+#define JS_DEFINE_CLASS_HAS_HERITAGE     (1 << 0)
+
+#define JS_THROW_VAR_RO             0
+#define JS_THROW_VAR_REDECL         1
+#define JS_THROW_VAR_UNINITIALIZED  2
+#define JS_THROW_ERROR_DELETE_SUPER   3
+#define JS_THROW_ERROR_ITERATOR_THROW 4
 #endif /* QJS_VM_H */

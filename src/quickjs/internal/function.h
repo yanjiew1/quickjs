@@ -240,4 +240,7 @@ QJS_INTERNAL void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 QJS_INTERNAL JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
 QJS_INTERNAL JSValue js_closure2(JSContext *ctx, JSValue func_obj, JSFunctionBytecode *b, JSVarRef **cur_var_refs, JSStackFrame *sf, BOOL is_eval, JSModuleDef *m);
 
+QJS_INTERNAL JSValue js_closure(JSContext *ctx, JSValue bfunc, JSVarRef **cur_var_refs, JSStackFrame *sf, BOOL is_eval);
+QJS_INTERNAL void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
+
 #endif /* QJS_FUNCTION_H */

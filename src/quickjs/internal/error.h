@@ -26,6 +26,8 @@
 #define QJS_ERROR_H
 
 #include <stdarg.h>
+
+#include <stdarg.h>
 #include "runtime.h"
 
 QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
@@ -41,5 +43,7 @@ QJS_INTERNAL void build_backtrace(JSContext *ctx, JSValueConst error_obj, const 
 
 QJS_INTERNAL JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+
+QJS_INTERNAL JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num, const char *fmt, va_list ap, BOOL add_backtrace);
 
 #endif /* QJS_ERROR_H */

@@ -97,4 +97,19 @@ static const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
 #define short_opcode_info(op) opcode_info[op]
 #endif
 
+/* argument of OP_special_object */
+typedef enum {
+    OP_SPECIAL_OBJECT_ARGUMENTS,
+    OP_SPECIAL_OBJECT_MAPPED_ARGUMENTS,
+    OP_SPECIAL_OBJECT_THIS_FUNC,
+    OP_SPECIAL_OBJECT_NEW_TARGET,
+    OP_SPECIAL_OBJECT_HOME_OBJECT,
+    OP_SPECIAL_OBJECT_VAR_OBJECT,
+    OP_SPECIAL_OBJECT_IMPORT_META,
+} OPSpecialObjectEnum;
+
+#define OP_DEFINE_METHOD_METHOD 0
+#define OP_DEFINE_METHOD_GETTER 1
+#define OP_DEFINE_METHOD_SETTER 2
+#define OP_DEFINE_METHOD_ENUMERABLE 4
 #endif /* QJS_OPCODE_H */
