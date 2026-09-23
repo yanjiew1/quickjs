@@ -57,6 +57,7 @@
 #include "internal/iterator.h"
 #include "builtins/number.h"
 #include "builtins/boolean.h"
+#include "builtins/bigint.h"
 #include "builtins/global.h"
 #include "builtins/math.h"
 #include "builtins/date.h"
@@ -216,44 +217,6 @@ typedef struct JSVarRef {
     };
 } JSVarRef;
 
-/* bigint */
-
-#if JS_LIMB_BITS == 32
-
-typedef int32_t js_slimb_t;
-typedef uint32_t js_limb_t;
-typedef int64_t js_sdlimb_t;
-typedef uint64_t js_dlimb_t;
-
-#define JS_LIMB_DIGITS 9
-
-#else
-
-typedef __int128 int128_t;
-typedef unsigned __int128 uint128_t;
-typedef int64_t js_slimb_t;
-typedef uint64_t js_limb_t;
-typedef int128_t js_sdlimb_t;
-typedef uint128_t js_dlimb_t;
-
-#define JS_LIMB_DIGITS 19
-
-#endif
-
-typedef struct JSBigInt {
-    uint32_t len; /* number of limbs, >= 1 */
-    js_limb_t tab[]; /* two's complement representation, always
-                        normalized so that 'len' is the minimum
-                        possible length >= 1 */
-} JSBigInt;
-
-/* this bigint structure can hold a 64 bit integer */
-typedef struct {
-    js_limb_t big_int_buf[sizeof(JSBigInt) / sizeof(js_limb_t)]; /* for JSBigInt */
-    /* must come just after */
-    js_limb_t tab[(64 + JS_LIMB_BITS - 1) / JS_LIMB_BITS];
-} JSBigIntBuf;
-    
 typedef enum {
     JS_AUTOINIT_ID_PROTOTYPE,
     JS_AUTOINIT_ID_MODULE_NS,
@@ -796,7 +759,6 @@ static void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val);
 static void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);
 
-static JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
 static int JS_ToBoolFree(JSContext *ctx, JSValue val);
 static int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
 static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
@@ -7325,7 +7287,7 @@ QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx)
     return JS_ThrowTypeError(ctx, "not an object");
 }
 
-static JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
+QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
                                                 JSValueConst func_obj)
 {
     const char *name;
@@ -10589,7 +10551,7 @@ void *JS_GetAnyOpaque(JSValueConst obj, JSClassID *class_id)
     return p->u.opaque;
 }
 
-static JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
+QJS_INTERNAL JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
 {
     int i;
     BOOL force_ordinary;
@@ -11117,7 +11079,7 @@ static js_limb_t mp_shr(js_limb_t *tab_r, const js_limb_t *tab, int n,
     return l & (((js_limb_t)1 << shift) - 1);
 }
 
-static JSBigInt *js_bigint_new(JSContext *ctx, int len)
+QJS_INTERNAL JSBigInt *js_bigint_new(JSContext *ctx, int len)
 {
     JSBigInt *r;
     if (len > JS_BIGINT_MAX_SIZE) {
@@ -11280,7 +11242,7 @@ static JSBigInt *js_bigint_normalize1(JSContext *ctx, JSBigInt *a, int l)
     return a;
 }
 
-static JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a)
+QJS_INTERNAL JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a)
 {
     return js_bigint_normalize1(ctx, a, a->len);
 }
@@ -11817,7 +11779,7 @@ QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
 
 /* return (1, NULL) if not an integer, (2, NULL) if NaN or Infinity,
    (0, n) if an integer, (0, NULL) in case of memory error */
-static JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1)
+QJS_INTERNAL JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1)
 {
     uint64_t a = float64_as_uint64(a1);
     int sgn, e, shift;
@@ -12160,7 +12122,7 @@ static const js_limb_t radix_base_table[JS_RADIX_MAX - 1] = {
 #endif
 };
 
-static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+QJS_INTERNAL JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 {
     if (JS_VALUE_GET_TAG(val) == JS_TAG_SHORT_BIG_INT) {
         char buf[66];
@@ -12258,7 +12220,7 @@ static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 
 /* if possible transform a BigInt to short big and free it, otherwise
    return a normal bigint */
-static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+QJS_INTERNAL JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
 {
     JSValue res;
     if (p->len == 1) {
@@ -14148,7 +14110,7 @@ static JSValue JS_StringToBigInt(JSContext *ctx, JSValue val)
     return val;
 }
 
-static JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val)
+QJS_INTERNAL JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val)
 {
     val = JS_StringToBigInt(ctx, val);
     if (JS_VALUE_IS_NAN(val))
@@ -14194,7 +14156,7 @@ static JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
     return val;
 }
 
-static JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val)
+QJS_INTERNAL JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val)
 {
     return JS_ToBigIntFree(ctx, JS_DupValue(ctx, val));
 }
@@ -53500,203 +53462,6 @@ static const JSCFunctionListEntry js_global_funcs[] = {
 int JS_AddIntrinsicEval(JSContext *ctx)
 {
     ctx->eval_internal = __JS_EvalInternal;
-    return 0;
-}
-
-/* BigInt */
-
-static JSValue JS_ToBigIntCtorFree(JSContext *ctx, JSValue val)
-{
-    uint32_t tag;
-
- redo:
-    tag = JS_VALUE_GET_NORM_TAG(val);
-    switch(tag) {
-    case JS_TAG_INT:
-    case JS_TAG_BOOL:
-        val = JS_NewBigInt64(ctx, JS_VALUE_GET_INT(val));
-        break;
-    case JS_TAG_SHORT_BIG_INT:
-    case JS_TAG_BIG_INT:
-        break;
-    case JS_TAG_FLOAT64:
-        {
-            double d = JS_VALUE_GET_FLOAT64(val);
-            JSBigInt *r;
-            int res;
-            r = js_bigint_from_float64(ctx, &res, d);
-            if (!r) {
-                if (res == 0) {
-                    val = JS_EXCEPTION;
-                } else if (res == 1) {
-                    val = JS_ThrowRangeError(ctx, "cannot convert to BigInt: not an integer");
-                } else {
-                    val = JS_ThrowRangeError(ctx, "cannot convert NaN or Infinity to BigInt");                }
-            } else {
-                val = JS_CompactBigInt(ctx, r);
-            }
-        }
-        break;
-    case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
-        val = JS_StringToBigIntErr(ctx, val);
-        break;
-    case JS_TAG_OBJECT:
-        val = JS_ToPrimitiveFree(ctx, val, HINT_NUMBER);
-        if (JS_IsException(val))
-            break;
-        goto redo;
-    case JS_TAG_NULL:
-    case JS_TAG_UNDEFINED:
-    default:
-        JS_FreeValue(ctx, val);
-        return JS_ThrowTypeError(ctx, "cannot convert to BigInt");
-    }
-    return val;
-}
-
-static JSValue js_bigint_constructor(JSContext *ctx,
-                                     JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
-{
-    if (!JS_IsUndefined(new_target))
-        return JS_ThrowTypeErrorNotAConstructor(ctx, new_target);
-    return JS_ToBigIntCtorFree(ctx, JS_DupValue(ctx, argv[0]));
-}
-
-static JSValue js_thisBigIntValue(JSContext *ctx, JSValueConst this_val)
-{
-    if (JS_IsBigInt(ctx, this_val))
-        return JS_DupValue(ctx, this_val);
-
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(this_val);
-        if (p->class_id == JS_CLASS_BIG_INT) {
-            if (JS_IsBigInt(ctx, p->u.object_data))
-                return JS_DupValue(ctx, p->u.object_data);
-        }
-    }
-    return JS_ThrowTypeError(ctx, "not a BigInt");
-}
-
-static JSValue js_bigint_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    JSValue val;
-    int base;
-    JSValue ret;
-
-    val = js_thisBigIntValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    if (argc == 0 || JS_IsUndefined(argv[0])) {
-        base = 10;
-    } else {
-        base = js_get_radix(ctx, argv[0]);
-        if (base < 0)
-            goto fail;
-    }
-    ret = js_bigint_to_string1(ctx, val, base);
-    JS_FreeValue(ctx, val);
-    return ret;
- fail:
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
-
-static JSValue js_bigint_valueOf(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    return js_thisBigIntValue(ctx, this_val);
-}
-
-static JSValue js_bigint_asUintN(JSContext *ctx,
-                                  JSValueConst this_val,
-                                  int argc, JSValueConst *argv, int asIntN)
-{
-    uint64_t bits;
-    JSValue res, a;
-    
-    if (JS_ToIndex(ctx, &bits, argv[0]))
-        return JS_EXCEPTION;
-    a = JS_ToBigInt(ctx, argv[1]);
-    if (JS_IsException(a))
-        return JS_EXCEPTION;
-    if (bits == 0) {
-        JS_FreeValue(ctx, a);
-        res = __JS_NewShortBigInt(ctx, 0);
-    } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
-        /* fast case */
-        if (bits >= JS_SHORT_BIG_INT_BITS) {
-            res = a;
-        } else {
-            uint64_t v;
-            int shift;
-            shift = 64 - bits;
-            v = JS_VALUE_GET_SHORT_BIG_INT(a);
-            v = v << shift;
-            if (asIntN)
-                v = (int64_t)v >> shift;
-            else
-                v = v >> shift;
-            res = __JS_NewShortBigInt(ctx, v);
-        }
-    } else {
-        JSBigInt *r, *p = JS_VALUE_GET_PTR(a);
-        if (bits >= p->len * JS_LIMB_BITS) {
-            res = a;
-        } else {
-            int len, shift, i;
-            js_limb_t v;
-            len = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
-            r = js_bigint_new(ctx, len);
-            if (!r) {
-                JS_FreeValue(ctx, a);
-                return JS_EXCEPTION;
-            }
-            r->len = len;
-            for(i = 0; i < len - 1; i++)
-                r->tab[i] = p->tab[i];
-            shift = (-bits) & (JS_LIMB_BITS - 1);
-            /* 0 <= shift <= JS_LIMB_BITS - 1 */
-            v = p->tab[len - 1] << shift;
-            if (asIntN)
-                v = (js_slimb_t)v >> shift;
-            else
-                v = v >> shift;
-            r->tab[len - 1] = v;
-            r = js_bigint_normalize(ctx, r);
-            JS_FreeValue(ctx, a);
-            res = JS_CompactBigInt(ctx, r);
-        }
-    }
-    return res;
-}
-
-static const JSCFunctionListEntry js_bigint_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("asUintN", 2, js_bigint_asUintN, 0 ),
-    JS_CFUNC_MAGIC_DEF("asIntN", 2, js_bigint_asUintN, 1 ),
-};
-
-static const JSCFunctionListEntry js_bigint_proto_funcs[] = {
-    JS_CFUNC_DEF("toString", 0, js_bigint_toString ),
-    JS_CFUNC_DEF("valueOf", 0, js_bigint_valueOf ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "BigInt", JS_PROP_CONFIGURABLE ),
-};
-
-static int JS_AddIntrinsicBigInt(JSContext *ctx)
-{
-    JSValue obj1;
-
-    obj1 = JS_NewCConstructor(ctx, JS_CLASS_BIG_INT, "BigInt",
-                                     js_bigint_constructor, 1, JS_CFUNC_constructor_or_func, 0,
-                                     JS_UNDEFINED,
-                                     js_bigint_funcs, countof(js_bigint_funcs),
-                                     js_bigint_proto_funcs, countof(js_bigint_proto_funcs),
-                                     0);
-    if (JS_IsException(obj1))
-        return -1;
-    JS_FreeValue(ctx, obj1);
     return 0;
 }
 
