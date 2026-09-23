@@ -209,8 +209,64 @@ QJS_INTERNAL JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
 
 QJS_INTERNAL BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
 QJS_INTERNAL JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
-QJS_INTERNAL void js_free_string(JSRuntime *rt, JSString *str);
 QJS_INTERNAL void JS_DumpString(JSRuntime *rt, const JSString *p);
 QJS_INTERNAL void print_atom(JSContext *ctx, JSAtom atom);
+
+QJS_INTERNAL int JS_InitAtoms(JSRuntime *rt);
+QJS_INTERNAL JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len, int atom_type);
+QJS_INTERNAL JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len, int atom_type);
+QJS_INTERNAL void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+QJS_INTERNAL JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
+QJS_INTERNAL JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
+QJS_INTERNAL JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
+
+static inline uint32_t atom_get_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p >> 1;
+}
+
+static inline BOOL atom_is_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p & 1;
+}
+
+static inline JSAtomStruct *atom_set_free(uint32_t v)
+{
+    return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
+}
+
+static inline int is_digit(int c) {
+    return c >= '0' && c <= '9';
+}
+
+
+
+QJS_INTERNAL JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
+QJS_INTERNAL JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v);
+QJS_INTERNAL JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr, int atom_type);
+QJS_INTERNAL const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size, JSAtom atom);
+QJS_INTERNAL BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval, JSAtom atom);
+QJS_INTERNAL JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom);
+QJS_INTERNAL int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom);
+QJS_INTERNAL BOOL JS_AtomSymbolHasDescription(JSContext *ctx, JSAtom v);
+QJS_INTERNAL BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
+QJS_INTERNAL BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2);
+QJS_INTERNAL int string_rope_get(JSValueConst val, uint32_t idx);
+QJS_INTERNAL int js_string_rope_compare(JSContext *ctx, JSValueConst op1, JSValueConst op2, BOOL eq_only);
+QJS_INTERNAL JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
+
+static inline void js_free_string(JSRuntime *rt, JSString *str)
+{
+    if (--js_rc(str)->ref_count <= 0) {
+        if (str->atom_type) {
+            JS_FreeAtomStruct(rt, str);
+        } else {
+#ifdef DUMP_LEAKS
+            list_del(&str->link);
+#endif
+            js_free_rt(rt, str);
+        }
+    }
+}
 
 #endif /* QJS_ATOM_STRING_H */
