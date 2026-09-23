@@ -289,4 +289,7 @@ QJS_INTERNAL void remove_gc_object(JSGCObjectHeader *h);
 
 QJS_INTERNAL void free_zero_refcount(JSRuntime *rt);
 
+QJS_INTERNAL void gc_decref(JSRuntime *rt);
+QJS_INTERNAL void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
+
 #endif /* QJS_RUNTIME_H */

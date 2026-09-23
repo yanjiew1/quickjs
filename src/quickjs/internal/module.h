@@ -28,6 +28,8 @@
 #include "runtime.h"
 #include "function.h"
 
+typedef struct JSParseState JSParseState;
+
 typedef struct JSReqModuleEntry {
     JSAtom module_name;
     JSModuleDef *module; /* used using resolution */
