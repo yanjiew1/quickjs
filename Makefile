@@ -247,11 +247,12 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
-
-QJS_LIB_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/src/quickjs-libc.o
+QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/builtins/math.o
+QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/src/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/tools/repl.o $(QJS_LIB_OBJS)
+
+all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QJS_ENGINE_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
 HOST_LIBS=-lm -ldl -lpthread
 LIBS=-lm -lpthread
