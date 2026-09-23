@@ -38,15 +38,8 @@ QJS_INTERNAL __exception int JS_CopyDataProperties(JSContext *ctx,
                                              BOOL setprop);
 QJS_INTERNAL JSValueConst JS_GetActiveFunction(JSContext *ctx);
 QJS_INTERNAL JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
-QJS_INTERNAL JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
-                               JSValueConst method);
 QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
                              int argc, JSValueConst *argv);
-QJS_INTERNAL JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
-                                           BOOL *pdone);
-QJS_INTERNAL JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
-                                JSValueConst method,
-                                int argc, JSValueConst *argv, int *pdone);
 QJS_INTERNAL void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 QJS_INTERNAL void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 QJS_INTERNAL extern const uint16_t func_kind_to_class_id[4];
@@ -87,9 +80,6 @@ QJS_INTERNAL JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                            BOOL is_eval, JSModuleDef *m);
 QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                                    int class_id);
-QJS_INTERNAL JSValue js_create_iterator_result(JSContext *ctx,
-                                         JSValue val,
-                                         BOOL done);
 QJS_INTERNAL JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
 QJS_INTERNAL void js_generator_finalizer(JSRuntime *rt, JSValue obj);
 QJS_INTERNAL JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,

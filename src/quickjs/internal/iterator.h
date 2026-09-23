@@ -33,4 +33,15 @@ QJS_INTERNAL JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
 QJS_INTERNAL int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
                                   BOOL is_exception_pending);
 
+QJS_INTERNAL JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
+                               JSValueConst method);
+QJS_INTERNAL JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
+                                           BOOL *pdone);
+QJS_INTERNAL JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
+                                JSValueConst method,
+                                int argc, JSValueConst *argv, int *pdone);
+QJS_INTERNAL JSValue js_create_iterator_result(JSContext *ctx,
+                                         JSValue val,
+                                         BOOL done);
+
 #endif /* QJS_INTERNAL_ITERATOR_H */
