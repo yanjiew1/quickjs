@@ -52,6 +52,18 @@ struct JSGCObjectHeader {
 };
 
 typedef enum {
+    JS_GC_OBJ_TYPE_JS_OBJECT,
+    JS_GC_OBJ_TYPE_FUNCTION_BYTECODE,
+    JS_GC_OBJ_TYPE_SHAPE,
+    JS_GC_OBJ_TYPE_VAR_REF,
+    JS_GC_OBJ_TYPE_ASYNC_FUNCTION,
+    JS_GC_OBJ_TYPE_JS_CONTEXT,
+    JS_GC_OBJ_TYPE_MODULE,
+} JSGCObjectTypeEnum;
+
+
+
+typedef enum {
     JS_GC_PHASE_NONE,
     JS_GC_PHASE_DECREF,
     JS_GC_PHASE_REMOVE_CYCLES,
@@ -270,5 +282,7 @@ QJS_INTERNAL int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
 QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                                 int argc, JSValueConst *argv, BOOL no_exception);
 QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue obj);
+
+QJS_INTERNAL void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h, JSGCObjectTypeEnum type);
 
 #endif /* QJS_RUNTIME_H */

@@ -207,4 +207,10 @@ QJS_INTERNAL int js_string_compare(JSContext *ctx, const JSString *p1, const JSS
 
 QJS_INTERNAL JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
 
+QJS_INTERNAL BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+QJS_INTERNAL JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+QJS_INTERNAL void js_free_string(JSRuntime *rt, JSString *str);
+QJS_INTERNAL void JS_DumpString(JSRuntime *rt, const JSString *p);
+QJS_INTERNAL void print_atom(JSContext *ctx, JSAtom atom);
+
 #endif /* QJS_ATOM_STRING_H */

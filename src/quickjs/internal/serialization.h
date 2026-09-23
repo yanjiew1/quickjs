@@ -25,7 +25,7 @@
 #ifndef QJS_SERIALIZATION_H
 #define QJS_SERIALIZATION_H
 
-#include "base.h"
+#include "runtime.h"
 
 static inline BOOL is_be(void)
 {
@@ -35,5 +35,15 @@ static inline BOOL is_be(void)
     } u = {0x100};
     return u.b;
 }
+
+static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
+}
+
+QJS_INTERNAL void dbuf_put_leb128(DynBuf *s, uint32_t v);
+QJS_INTERNAL void dbuf_put_sleb128(DynBuf *s, int32_t v);
+QJS_INTERNAL int get_leb128(uint32_t *pval, const uint8_t *buf, const uint8_t *buf_end);
+QJS_INTERNAL int get_sleb128(int32_t *pval, const uint8_t *buf, const uint8_t *buf_end);
 
 #endif /* QJS_SERIALIZATION_H */
