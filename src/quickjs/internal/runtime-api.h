@@ -28,6 +28,7 @@
 
 #include "internal/object.h"
 #include "internal/vm.h"
+#include "internal/atom-string-api.h"
 
 QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                           int argc, JSValueConst *argv, BOOL no_exception);

@@ -32,6 +32,7 @@
 #include "internal/function-vm.h"
 #include "internal/number.h"
 #include "internal/object-api.h"
+#include "internal/shape.h"
 #include "internal/runtime-api.h"
 
 static void js_print_value(JSPrintValueState *s, JSValueConst val);

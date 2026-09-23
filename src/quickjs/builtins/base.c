@@ -32,6 +32,7 @@
 #include "internal/compiler.h"
 #include "internal/number.h"
 #include "internal/object-api.h"
+#include "internal/shape.h"
 #include "builtins/function.h"
 #include "builtins/global.h"
 #include "builtins/math.h"

@@ -41,6 +41,7 @@
 #include "internal/function-vm.h"
 #include "internal/number.h"
 #include "internal/object-api.h"
+#include "internal/shape.h"
 #include "internal/runtime-api.h"
 
 QJS_INTERNAL JSClassID js_class_id_alloc = JS_CLASS_INIT_COUNT;

@@ -248,7 +248,7 @@ endif
 endif
 
 QJS_BUILTIN_OBJS=$(addprefix $(OBJDIR)/src/quickjs/builtins/,base.o object.o function.o array.o primitive.o math.o date.o regexp.o json.o proxy.o collection.o async.o global.o bigint.o typed-array.o weakref.o)
-QJS_ENGINE_OBJS=$(addprefix $(OBJDIR)/src/quickjs/,runtime.o atom-string.o object.o number.o function-vm.o compiler.o bytecode.o) $(QJS_BUILTIN_OBJS)
+QJS_ENGINE_OBJS=$(addprefix $(OBJDIR)/src/quickjs/,runtime.o atom-string.o shape.o object.o number.o function-vm.o compiler.o bytecode.o) $(QJS_BUILTIN_OBJS)
 QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(OBJDIR)/src/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o $(OBJDIR)/src/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/tools/repl.o $(QJS_LIB_OBJS)

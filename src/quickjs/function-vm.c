@@ -36,6 +36,7 @@
 #include "internal/function-vm.h"
 #include "internal/number.h"
 #include "internal/object-api.h"
+#include "internal/shape.h"
 #include "internal/runtime-api.h"
 
 QJS_INTERNAL JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);

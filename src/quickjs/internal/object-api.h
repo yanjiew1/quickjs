@@ -113,8 +113,6 @@ QJS_INTERNAL void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                           JSGCObjectTypeEnum type);
 QJS_INTERNAL JSProperty *add_property(JSContext *ctx,
                                 JSObject *p, JSAtom prop, int prop_flags);
-QJS_INTERNAL int add_shape_property(JSContext *ctx, JSShape **psh,
-                              JSObject *p, JSAtom atom, int prop_flags);
 QJS_INTERNAL void build_backtrace(JSContext *ctx, JSValueConst error_obj,
                             const char *filename, int line_num, int col_num,
                             int backtrace_flags);
@@ -136,7 +134,6 @@ QJS_INTERNAL const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAto
 QJS_INTERNAL JSObject *get_proto_obj(JSValueConst proto_val);
 QJS_INTERNAL int get_sleb128(int32_t *pval, const uint8_t *buf,
                        const uint8_t *buf_end);
-QJS_INTERNAL int init_shape_hash(JSRuntime *rt);
 QJS_INTERNAL BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
 QJS_INTERNAL JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
 QJS_INTERNAL void js_array_finalizer(JSRuntime *rt, JSValue val);
@@ -162,20 +159,16 @@ QJS_INTERNAL void js_c_function_mark(JSRuntime *rt, JSValueConst val,
 QJS_INTERNAL BOOL js_class_has_bytecode(JSClassID class_id);
 QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
 QJS_INTERNAL JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
-QJS_INTERNAL JSShape *js_dup_shape(JSShape *sh);
 QJS_INTERNAL void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);
 QJS_INTERNAL void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
-QJS_INTERNAL void js_free_shape_null(JSRuntime *rt, JSShape *sh);
 QJS_INTERNAL void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
                                        JSAtom name, int len);
 QJS_INTERNAL void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
                                       JSValueConst home_obj);
 QJS_INTERNAL int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
                                     JSAtom name, int flags, JSValueConst home_obj);
-QJS_INTERNAL no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
-                                        int hash_size, int prop_size);
 QJS_INTERNAL void js_object_data_finalizer(JSRuntime *rt, JSValue val);
 QJS_INTERNAL void js_object_data_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);

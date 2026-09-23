@@ -31,6 +31,7 @@
 #include "internal/function-vm.h"
 #include "internal/number.h"
 #include "internal/object-api.h"
+#include "internal/shape.h"
 #include "internal/runtime-api.h"
 #include "builtins/function.h"
 #include "builtins/object.h"
