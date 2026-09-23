@@ -37,6 +37,7 @@
 #include "internal/shape.h"
 #include "internal/function.h"
 #include "internal/parser.h"
+#include "internal/lexer.h"
 #include "internal/module.h"
 #include "internal/vm.h"
 #include "internal/error.h"
@@ -1973,4 +1974,3 @@ QJS_INTERNAL JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
     }
     return JS_DupValue(ctx, m->promise);
 }
-

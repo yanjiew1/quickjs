@@ -33,6 +33,7 @@
 #include "libunicode.h"
 #include "../internal/runtime.h"
 #include "../internal/parser.h"
+#include "../internal/lexer.h"
 #include "../internal/object.h"
 #include "../internal/atom-string.h"
 #include "../internal/property.h"

@@ -187,13 +187,9 @@ typedef struct JSParseState {
     GetLineColCache get_line_col_cache;
 } JSParseState;
 
-QJS_INTERNAL __attribute__((format(printf, 2, 3)))
-int js_parse_error(JSParseState *s, const char *fmt, ...);
-QJS_INTERNAL __exception int json_next_token(JSParseState *s);
 QJS_INTERNAL void js_parse_init(JSContext *ctx, JSParseState *s,
                                 const char *input, size_t input_len,
                                 const char *filename);
-QJS_INTERNAL void free_token(JSParseState *s, JSToken *token);
 
 
 #endif /* QJS_PARSER_H */

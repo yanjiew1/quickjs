@@ -31,31 +31,20 @@
 #include <math.h>
 
 #include "cutils.h"
-#include "libregexp.h"
-#include "libunicode.h"
-#include "dtoa.h"
 #include "internal/runtime.h"
+#include "internal/allocator.h"
 #include "internal/atom-string.h"
 #include "internal/value-print.h"
 #include "internal/object.h"
-#include "internal/shape.h"
-#include "internal/property.h"
-#include "internal/number.h"
-#include "internal/bigint.h"
-#include "internal/primitive.h"
 #include "internal/function.h"
 #include "internal/parser.h"
 #include "internal/compiler.h"
+#include "internal/lexer.h"
 #include "internal/opcode.h"
 #include "internal/module.h"
 #include "internal/serialization.h"
 #include "internal/vm.h"
 #include "internal/error.h"
-#include "builtins/array.h"
-#include "builtins/function.h"
-#include "builtins/typed-array.h"
-#include "builtins/async.h"
-#include "builtins/string.h"
 
 static void free_bytecode_atoms(JSRuntime *rt,
                                 const uint8_t *bc_buf, int bc_len,
@@ -4256,4 +4245,3 @@ QJS_INTERNAL void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
         js_free_rt(rt, b);
     }
 }
-

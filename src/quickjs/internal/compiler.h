@@ -29,8 +29,6 @@
 #include "parser.h"
 #include "function.h"
 
-#define OPTIMIZE         1
-
 QJS_INTERNAL void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
 static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
@@ -252,7 +250,6 @@ typedef struct JSFunctionDef {
 } JSFunctionDef;
 
 
-QJS_INTERNAL int get_line_col_cached(GetLineColCache *s, int *pcol_num, const uint8_t *ptr);
 QJS_INTERNAL int update_label(JSFunctionDef *s, int label, int delta);
 QJS_INTERNAL int new_label_fd(JSFunctionDef *fd);
 QJS_INTERNAL int find_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
