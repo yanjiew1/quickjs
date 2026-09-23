@@ -27,6 +27,8 @@
 
 #include <stdarg.h>
 
+typedef struct JSFunctionBytecode JSFunctionBytecode;
+
 #include <stdarg.h>
 #include "runtime.h"
 
@@ -45,5 +47,14 @@ QJS_INTERNAL JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxError
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 
 QJS_INTERNAL JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num, const char *fmt, va_list ap, BOOL add_backtrace);
+
+QJS_INTERNAL int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
+QJS_INTERNAL JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop);
+QJS_INTERNAL JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name);
+QJS_INTERNAL JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name);
+QJS_INTERNAL JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
+                                                    JSFunctionBytecode *b,
+                                                    int idx, BOOL is_ref);
+QJS_INTERNAL BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
 
 #endif /* QJS_ERROR_H */

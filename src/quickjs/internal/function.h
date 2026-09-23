@@ -25,6 +25,8 @@
 #ifndef QJS_FUNCTION_H
 #define QJS_FUNCTION_H
 
+typedef struct JSObject JSObject;
+
 #include "runtime.h"
 
 typedef enum JSFunctionKindEnum {
@@ -242,5 +244,23 @@ QJS_INTERNAL JSValue js_closure2(JSContext *ctx, JSValue func_obj, JSFunctionByt
 
 QJS_INTERNAL JSValue js_closure(JSContext *ctx, JSValue bfunc, JSVarRef **cur_var_refs, JSStackFrame *sf, BOOL is_eval);
 QJS_INTERNAL void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
+
+QJS_INTERNAL void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst home_obj);
+QJS_INTERNAL int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
+                                       JSValueConst str, int flags);
+QJS_INTERNAL int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
+                               JSAtom name, int flags);
+QJS_INTERNAL JSValue js_build_arguments(JSContext *ctx, int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
+                                         JSValueConst *argv,
+                                         JSStackFrame *sf, int arg_count);
+QJS_INTERNAL int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
+QJS_INTERNAL int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
+QJS_INTERNAL int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                    JSAtom name, int flags, JSValueConst home_obj);
+QJS_INTERNAL JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+QJS_INTERNAL JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
+                                                         JSAtom atom, BOOL is_lexical);
 
 #endif /* QJS_FUNCTION_H */

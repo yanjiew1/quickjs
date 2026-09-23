@@ -107,4 +107,23 @@ QJS_INTERNAL JSProperty *add_property(JSContext *ctx, JSObject *p, JSAtom prop, 
 
 QJS_INTERNAL int js_update_property_flags(JSContext *ctx, JSObject *p, JSShapeProperty **pprs, int flags);
 
+QJS_INTERNAL int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
+QJS_INTERNAL int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
+                               JSProperty *pr, JSShapeProperty *prs);
+QJS_INTERNAL void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
+QJS_INTERNAL int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
+QJS_INTERNAL int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
+QJS_INTERNAL int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
+QJS_INTERNAL JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
+                                  JSValueConst name);
+QJS_INTERNAL int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
+                              JSValueConst name, JSValue val);
+QJS_INTERNAL int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
+                                 JSValueConst name, JSValue val);
+QJS_INTERNAL __exception int js_has_unscopable(JSContext *ctx, JSValueConst obj,
+                                         JSAtom atom);
+
+#define DEFINE_GLOBAL_LEX_VAR (1 << 7)
+#define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
+
 #endif /* QJS_PROPERTY_H */

@@ -56,4 +56,31 @@ QJS_INTERNAL JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj, co
 #define JS_THROW_VAR_UNINITIALIZED  2
 #define JS_THROW_ERROR_DELETE_SUPER   3
 #define JS_THROW_ERROR_ITERATOR_THROW 4
+typedef struct JSAsyncFunctionState {
+    JSGCObjectHeader header;
+    JSValue this_val; /* 'this' argument */
+    int argc; /* number of function arguments */
+    BOOL throw_flag; /* used to throw an exception in JS_CallInternal() */
+    BOOL is_completed; /* TRUE if the function has returned. The stack
+                          frame is no longer valid */
+    JSValue resolving_funcs[2]; /* only used in JS async functions */
+    JSStackFrame frame;
+    /* arg_buf, var_buf, stack_buf and var_refs follow */
+} JSAsyncFunctionState;
+
+QJS_INTERNAL JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+QJS_INTERNAL JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+QJS_INTERNAL JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+QJS_INTERNAL void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+QJS_INTERNAL void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+
+QJS_INTERNAL void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
+QJS_INTERNAL void js_global_object_mark(JSRuntime *rt, JSValueConst val,
+                                  JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_generator_finalizer(JSRuntime *rt, JSValue obj);
+QJS_INTERNAL void js_generator_mark(JSRuntime *rt, JSValueConst val,
+                              JS_MarkFunc *mark_func);
+QJS_INTERNAL JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
+                             BOOL is_arg);
+
 #endif /* QJS_VM_H */

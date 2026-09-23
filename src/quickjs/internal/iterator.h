@@ -63,4 +63,10 @@ QJS_INTERNAL JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst ob
 
 QJS_INTERNAL JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj, JSValueConst method);
 
+QJS_INTERNAL __exception int js_for_of_start(JSContext *ctx, JSValue *sp,
+                                       BOOL is_async);
+QJS_INTERNAL __exception int js_for_of_next(JSContext *ctx, JSValue *sp, int offset);
+QJS_INTERNAL __exception int js_for_await_of_next(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_iterator_get_value_done(JSContext *ctx, JSValue *sp);
+
 #endif /* QJS_ITERATOR_H */

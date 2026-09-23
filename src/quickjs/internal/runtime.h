@@ -287,4 +287,6 @@ QJS_INTERNAL void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h, JSGCObjectTy
 
 QJS_INTERNAL void remove_gc_object(JSGCObjectHeader *h);
 
+QJS_INTERNAL void free_zero_refcount(JSRuntime *rt);
+
 #endif /* QJS_RUNTIME_H */

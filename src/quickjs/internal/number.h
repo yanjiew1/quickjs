@@ -27,6 +27,8 @@
 
 #include "base.h"
 
+typedef enum OPCodeEnum OPCodeEnum;
+
 #define ATOD_INT_ONLY        (1 << 0)
 /* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
 #define ATOD_ACCEPT_BIN_OCT  (1 << 2)
@@ -116,5 +118,28 @@ static inline int to_digit(int c)
     else
         return 36;
 }
+
+QJS_INTERNAL no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *sp,
+                                                      OPCodeEnum op);
+QJS_INTERNAL no_inline __exception int js_unary_arith_slow(JSContext *ctx,
+                                                     JSValue *sp,
+                                                     OPCodeEnum op);
+QJS_INTERNAL __exception int js_post_inc_slow(JSContext *ctx,
+                                        JSValue *sp, OPCodeEnum op);
+QJS_INTERNAL no_inline int js_not_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL no_inline __exception int js_binary_logic_slow(JSContext *ctx,
+                                                      JSValue *sp,
+                                                      OPCodeEnum op);
+QJS_INTERNAL no_inline int js_shr_slow(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL no_inline int js_relational_slow(JSContext *ctx, JSValue *sp,
+                                        OPCodeEnum op);
+QJS_INTERNAL no_inline __exception int js_eq_slow(JSContext *ctx, JSValue *sp,
+                                            BOOL is_neq);
+QJS_INTERNAL __exception int js_operator_in(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_private_in(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_instanceof(JSContext *ctx, JSValue *sp);
+QJS_INTERNAL __exception int js_operator_typeof(JSContext *ctx, JSValueConst op1);
+QJS_INTERNAL __exception int js_operator_delete(JSContext *ctx, JSValue *sp);
 
 #endif /* QJS_NUMBER_H */
