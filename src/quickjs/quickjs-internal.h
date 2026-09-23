@@ -1569,6 +1569,19 @@ typedef struct JSParseState {
     BOOL ext_json; /* JSON parsing: true if accepting JSON superset */
     GetLineColCache get_line_col_cache;
 } JSParseState;
+typedef enum {
+    JS_VAR_DEF_WITH,
+    JS_VAR_DEF_LET,
+    JS_VAR_DEF_CONST,
+    JS_VAR_DEF_FUNCTION_DECL, /* function declaration */
+    JS_VAR_DEF_NEW_FUNCTION_DECL, /* async/generator function declaration */
+    JS_VAR_DEF_CATCH,
+    JS_VAR_DEF_VAR,
+} JSVarDefEnum;
+typedef struct JSParsePos {
+    BOOL got_lf;
+    const uint8_t *ptr;
+} JSParsePos;
 #define JS_ATOM_TAG_INT (1U << 31)
 #define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
 #define JS_ATOM_MAX     ((1U << 30) - 1)
@@ -1635,6 +1648,14 @@ typedef struct JSParseState {
 #define GEN_MAGIC_NEXT   0
 #define GEN_MAGIC_RETURN 1
 #define GEN_MAGIC_THROW  2
+#define SKIP_HAS_SEMI       (1 << 0)
+#define SKIP_HAS_ELLIPSIS   (1 << 1)
+#define SKIP_HAS_ASSIGNMENT (1 << 2)
+#define DECL_MASK_FUNC  (1 << 0) /* allow normal function declaration */
+/* ored with DECL_MASK_FUNC if function declarations are allowed with a label */
+#define DECL_MASK_FUNC_WITH_LABEL (1 << 1)
+#define DECL_MASK_OTHER (1 << 2) /* all other declarations */
+#define DECL_MASK_ALL   (DECL_MASK_FUNC | DECL_MASK_FUNC_WITH_LABEL | DECL_MASK_OTHER)
 #define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
 #define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* the prototype class is 'class_id' instead of JS_CLASS_OBJECT */
 #define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
@@ -2161,18 +2182,110 @@ QJS_INTERNAL JSValue js_async_generator_function_call(JSContext *ctx, JSValueCon
                                                 int argc, JSValueConst *argv,
                                                 int flags);
 QJS_INTERNAL void free_token(JSParseState *s, JSToken *token);
+QJS_INTERNAL int get_line_col_cached(GetLineColCache *s, int *pcol_num, const uint8_t *ptr);
+QJS_INTERNAL __attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState *s, const uint8_t *ptr, const char *fmt, ...);
 QJS_INTERNAL __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...);
+QJS_INTERNAL int js_parse_expect(JSParseState *s, int tok);
+QJS_INTERNAL int js_parse_expect_semi(JSParseState *s);
+QJS_INTERNAL int js_parse_error_reserved_identifier(JSParseState *s);
+QJS_INTERNAL void reparse_ident_token(JSParseState *s);
+QJS_INTERNAL __exception int next_token(JSParseState *s);
 QJS_INTERNAL __exception int json_next_token(JSParseState *s);
+QJS_INTERNAL int peek_token(JSParseState *s, BOOL no_line_terminator);
+QJS_INTERNAL void skip_shebang(const uint8_t **pp, const uint8_t *buf_end);
+QJS_INTERNAL BOOL js_is_live_code(JSParseState *s);
+QJS_INTERNAL void emit_u16(JSParseState *s, uint16_t val);
+QJS_INTERNAL void emit_u32(JSParseState *s, uint32_t val);
+QJS_INTERNAL void emit_source_pos(JSParseState *s, const uint8_t *source_ptr);
+QJS_INTERNAL void emit_op(JSParseState *s, uint8_t val);
+QJS_INTERNAL void emit_atom(JSParseState *s, JSAtom name);
+QJS_INTERNAL int update_label(JSFunctionDef *s, int label, int delta);
+QJS_INTERNAL int new_label_fd(JSFunctionDef *fd);
+QJS_INTERNAL int new_label(JSParseState *s);
+QJS_INTERNAL int emit_label(JSParseState *s, int label);
+QJS_INTERNAL int emit_goto(JSParseState *s, int opcode, int label);
+QJS_INTERNAL int cpool_add(JSParseState *s, JSValue val);
+QJS_INTERNAL int find_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
+QJS_INTERNAL JSGlobalVar *find_global_var(JSFunctionDef *fd, JSAtom name);
+QJS_INTERNAL int find_lexical_decl(JSContext *ctx, JSFunctionDef *fd, JSAtom name,
+                             int scope_idx, BOOL check_catch_var);
+QJS_INTERNAL int push_scope(JSParseState *s);
+QJS_INTERNAL void pop_scope(JSParseState *s);
+QJS_INTERNAL int add_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
+QJS_INTERNAL int add_func_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
+QJS_INTERNAL int add_arguments_var(JSContext *ctx, JSFunctionDef *fd);
+QJS_INTERNAL int add_arguments_arg(JSContext *ctx, JSFunctionDef *fd);
+QJS_INTERNAL int add_arg(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
+QJS_INTERNAL JSGlobalVar *add_global_var(JSContext *ctx, JSFunctionDef *s,
+                                     JSAtom name);
+QJS_INTERNAL int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
+                      JSVarDefEnum var_def_type);
+QJS_INTERNAL BOOL token_is_ident(int tok);
+QJS_INTERNAL int js_parse_get_pos(JSParseState *s, JSParsePos *sp);
+QJS_INTERNAL __exception int js_parse_seek_token(JSParseState *s, const JSParsePos *sp);
+QJS_INTERNAL int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_terminator);
+QJS_INTERNAL void set_object_name(JSParseState *s, JSAtom name);
+QJS_INTERNAL void emit_class_field_init(JSParseState *s);
+QJS_INTERNAL JSAtom get_private_setter_name(JSContext *ctx, JSAtom name);
+QJS_INTERNAL __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
+                                      JSParseExportEnum export_flag);
+QJS_INTERNAL int js_parse_check_duplicate_parameter(JSParseState *s, JSAtom name);
+QJS_INTERNAL int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
+                                        int hasval, int has_ellipsis,
+                                        BOOL allow_initializer, BOOL export_flag);
+QJS_INTERNAL __exception int js_parse_assign_expr(JSParseState *s);
+QJS_INTERNAL void emit_return(JSParseState *s, BOOL hasval);
+QJS_INTERNAL __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
+                                    BOOL export_flag);
+QJS_INTERNAL __exception int js_parse_statement_or_decl(JSParseState *s,
+                                                  int decl_mask);
 QJS_INTERNAL JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
 QJS_INTERNAL void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
                                JS_MarkFunc *mark_func);
 QJS_INTERNAL void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
+QJS_INTERNAL int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
+                                JSAtom module_name);
+QJS_INTERNAL JSExportEntry *find_export_entry(JSContext *ctx, JSModuleDef *m,
+                                        JSAtom export_name);
+QJS_INTERNAL JSExportEntry *add_export_entry2(JSContext *ctx,
+                                        JSParseState *s, JSModuleDef *m,
+                                       JSAtom local_name, JSAtom export_name,
+                                       JSExportTypeEnum export_type);
+QJS_INTERNAL JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
+                                       JSAtom local_name, JSAtom export_name,
+                                       JSExportTypeEnum export_type);
+QJS_INTERNAL int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
+                                 int req_module_idx);
 QJS_INTERNAL JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
                                      void *opaque);
+QJS_INTERNAL int js_resolve_module(JSContext *ctx, JSModuleDef *m);
+QJS_INTERNAL int js_create_module_function(JSContext *ctx, JSModuleDef *m);
+QJS_INTERNAL int js_link_module(JSContext *ctx, JSModuleDef *m);
 QJS_INTERNAL JSValue js_import_meta(JSContext *ctx);
 QJS_INTERNAL JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
 QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
+QJS_INTERNAL JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
+QJS_INTERNAL JSFunctionDef *js_new_function_def(JSContext *ctx,
+                                          JSFunctionDef *parent,
+                                          BOOL is_eval,
+                                          BOOL is_func_expr,
+                                          const char *filename,
+                                          const uint8_t *source_ptr,
+                                          GetLineColCache *get_line_col_cache);
 QJS_INTERNAL void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
+QJS_INTERNAL JSFunctionDef *js_parse_function_class_fields_init(JSParseState *s);
+QJS_INTERNAL __exception int js_parse_function_decl2(JSParseState *s,
+                                               JSParseFunctionEnum func_type,
+                                               JSFunctionKindEnum func_kind,
+                                               JSAtom func_name,
+                                               const uint8_t *ptr,
+                                               JSParseExportEnum export_flag,
+                                               JSFunctionDef **pfd);
+QJS_INTERNAL __exception int js_parse_function_decl(JSParseState *s,
+                                              JSParseFunctionEnum func_type,
+                                              JSFunctionKindEnum func_kind,
+                                              JSAtom func_name,
+                                              const uint8_t *ptr);
 QJS_INTERNAL void js_parse_init(JSContext *ctx, JSParseState *s,
                           const char *input, size_t input_len,
                           const char *filename);
@@ -2665,6 +2778,11 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
 static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
 {
     return JS_ToInt32Free(ctx, (int32_t *)pres, val);
+}
+
+static inline BOOL token_is_pseudo_keyword(JSParseState *s, JSAtom atom) {
+    return s->token.val == TOK_IDENT && s->token.u.ident.atom == atom &&
+        !s->token.u.ident.has_escape;
 }
 
 static inline BOOL is_be(void)
