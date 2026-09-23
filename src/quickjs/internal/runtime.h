@@ -1,0 +1,99 @@
+/*
+ * QuickJS Runtime Internal Interface
+ *
+ * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2025 Charlie Gordon
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+#ifndef QJS_RUNTIME_H
+#define QJS_RUNTIME_H
+
+#include "base.h"
+
+typedef struct JSShape JSShape;
+
+typedef enum JSErrorEnum {
+    JS_EVAL_ERROR,
+    JS_RANGE_ERROR,
+    JS_REFERENCE_ERROR,
+    JS_SYNTAX_ERROR,
+    JS_TYPE_ERROR,
+    JS_URI_ERROR,
+    JS_INTERNAL_ERROR,
+    JS_AGGREGATE_ERROR,
+
+    JS_NATIVE_ERROR_COUNT, /* number of different NativeError objects */
+} JSErrorEnum;
+
+/* header for GC objects. GC objects are C data structures with a
+   reference count that can reference other GC objects. JS Objects are
+   a particular type of GC object. */
+struct JSGCObjectHeader {
+    struct list_head link;
+};
+
+struct JSContext {
+    JSGCObjectHeader header; /* must come first */
+    JSRuntime *rt;
+    struct list_head link;
+
+    uint16_t binary_object_count;
+    int binary_object_size;
+    
+    JSShape *array_shape;   /* initial shape for Array objects */
+    JSShape *arguments_shape;  /* shape for arguments objects */
+    JSShape *mapped_arguments_shape;  /* shape for mapped arguments objects */
+    JSShape *regexp_shape;  /* shape for regexp objects */
+    JSShape *regexp_result_shape;  /* shape for regexp result objects */
+
+    JSValue *class_proto;
+    JSValue function_proto;
+    JSValue function_ctor;
+    JSValue array_ctor;
+    JSValue regexp_ctor;
+    JSValue promise_ctor;
+    JSValue native_error_proto[JS_NATIVE_ERROR_COUNT];
+    JSValue iterator_ctor;
+    JSValue async_iterator_proto;
+    JSValue array_proto_values;
+    JSValue throw_type_error;
+    JSValue eval_obj;
+
+    JSValue global_obj; /* global object */
+    JSValue global_var_obj; /* contains the global let/const definitions */
+
+    uint64_t random_state;
+
+    /* when the counter reaches zero, JSRutime.interrupt_handler is called */
+    int interrupt_counter;
+
+    struct list_head loaded_modules; /* list of JSModuleDef.link */
+
+    /* if NULL, RegExp compilation is not supported */
+    JSValue (*compile_regexp)(JSContext *ctx, JSValueConst pattern,
+                              JSValueConst flags);
+    /* if NULL, eval is not supported */
+    JSValue (*eval_internal)(JSContext *ctx, JSValueConst this_obj,
+                             const char *input, size_t input_len,
+                             const char *filename, int flags, int scope_idx);
+    void *user_opaque;
+};
+
+#endif /* QJS_RUNTIME_H */
