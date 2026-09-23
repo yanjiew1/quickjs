@@ -123,4 +123,14 @@ static inline JSMallocBlockHeader *js_rc(void *ptr)
     return container_of(ptr, JSMallocBlockHeader, user_data);
 }
 
+QJS_INTERNAL void js_malloc_init(JSMallocContext *s);
+
+#if defined(__APPLE__)
+#define MALLOC_OVERHEAD  0
+#else
+#define MALLOC_OVERHEAD  8
+#endif
+
+QJS_INTERNAL void js_trigger_gc(JSRuntime *rt, size_t size);
+
 #endif /* QJS_ALLOCATOR_H */
