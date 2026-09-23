@@ -28,7 +28,6 @@
 #include "base.h"
 QJS_INTERNAL double js_pow(double a, double b);
 
-QJS_INTERNAL JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
 QJS_INTERNAL int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val);
 QJS_INTERNAL JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
@@ -60,12 +59,6 @@ QJS_INTERNAL no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp);
 QJS_INTERNAL extern const JSClassExoticMethods js_arguments_exotic_methods;
 QJS_INTERNAL JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
                        int radix, int flags);
-QJS_INTERNAL JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
-QJS_INTERNAL JSBigInt *js_bigint_new(JSContext *ctx, int len);
-QJS_INTERNAL JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
-QJS_INTERNAL JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
-QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
-QJS_INTERNAL JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
 QJS_INTERNAL no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *sp,
                                                       OPCodeEnum op);
 QJS_INTERNAL no_inline __exception int js_binary_logic_slow(JSContext *ctx,
@@ -102,10 +95,6 @@ QJS_INTERNAL JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
 QJS_INTERNAL no_inline __exception int js_unary_arith_slow(JSContext *ctx,
                                                      JSValue *sp,
                                                      OPCodeEnum op);
-static inline int js_bigint_sign(const JSBigInt *a)
-{
-    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
-}
 
 QJS_INTERNAL int __JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val);
 

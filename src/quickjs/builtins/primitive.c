@@ -30,6 +30,7 @@
 #include "internal/atom-string-api.h"
 #include "internal/function-vm.h"
 #include "internal/number.h"
+#include "internal/bigint.h"
 #include "internal/object-api.h"
 #include "internal/runtime-api.h"
 #include "builtins/function.h"

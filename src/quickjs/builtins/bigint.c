@@ -27,6 +27,7 @@
 #include "internal/vm.h"
 #include "builtins/base.h"
 #include "internal/number.h"
+#include "internal/bigint.h"
 #include "internal/object-api.h"
 #include "builtins/primitive.h"
 #include "builtins/bigint.h"
