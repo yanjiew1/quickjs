@@ -1,5 +1,5 @@
 /*
- * QuickJS Private Linkage
+ * QuickJS Primitive Conversion Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,21 +22,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_BASE_H
-#define QJS_BASE_H
+#ifndef QJS_PRIMITIVE_H
+#define QJS_PRIMITIVE_H
 
-#include "quickjs.h"
-#include "list.h"
+#include "base.h"
 
-/* dump objects leaking when freeing the runtime */
-//#define DUMP_LEAKS  1
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 
-#if defined(__GNUC__) || defined(__clang__)
-#define QJS_INTERNAL __attribute__((visibility("hidden")))
-#else
-#define QJS_INTERNAL
-#endif
+QJS_INTERNAL JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
 
-#define __exception __attribute__((warn_unused_result))
-
-#endif /* QJS_BASE_H */
+#endif /* QJS_PRIMITIVE_H */

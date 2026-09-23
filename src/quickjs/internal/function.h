@@ -1,5 +1,5 @@
 /*
- * QuickJS Private Linkage
+ * QuickJS Function Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,21 +22,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_BASE_H
-#define QJS_BASE_H
+#ifndef QJS_FUNCTION_H
+#define QJS_FUNCTION_H
 
-#include "quickjs.h"
-#include "list.h"
+#include "base.h"
 
-/* dump objects leaking when freeing the runtime */
-//#define DUMP_LEAKS  1
+QJS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj,
+                                 JSValueConst this_obj, int argc,
+                                 JSValueConst *argv);
+QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                         int class_id);
+QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id,
+                                        const char *name, JSCFunction *func,
+                                        int length, JSCFunctionEnum cproto, int magic,
+                                        JSValueConst parent_ctor,
+                                        const JSCFunctionListEntry *ctor_fields,
+                                        int n_ctor_fields,
+                                        const JSCFunctionListEntry *proto_fields,
+                                        int n_proto_fields, int flags);
 
-#if defined(__GNUC__) || defined(__clang__)
-#define QJS_INTERNAL __attribute__((visibility("hidden")))
-#else
-#define QJS_INTERNAL
-#endif
-
-#define __exception __attribute__((warn_unused_result))
-
-#endif /* QJS_BASE_H */
+#endif /* QJS_FUNCTION_H */

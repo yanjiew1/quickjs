@@ -37,4 +37,60 @@ enum {
 #define JS_ATOM_LAST_KEYWORD JS_ATOM_super
 #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
 
+typedef struct JSString JSString;
+typedef struct JSString JSAtomStruct;
+
+#define JS_VALUE_GET_STRING(v) ((JSString *)JS_VALUE_GET_PTR(v))
+#define JS_VALUE_GET_STRING_ROPE(v) ((JSStringRope *)JS_VALUE_GET_PTR(v))
+
+enum {
+    JS_ATOM_TYPE_STRING = 1,
+    JS_ATOM_TYPE_GLOBAL_SYMBOL,
+    JS_ATOM_TYPE_SYMBOL,
+    JS_ATOM_TYPE_PRIVATE,
+};
+
+typedef enum {
+    JS_ATOM_KIND_STRING,
+    JS_ATOM_KIND_SYMBOL,
+    JS_ATOM_KIND_PRIVATE,
+} JSAtomKindEnum;
+
+#define JS_ATOM_HASH_MASK  ((1 << 30) - 1)
+#define JS_ATOM_HASH_PRIVATE JS_ATOM_HASH_MASK
+
+struct JSString {
+    uint32_t len : 31;
+    uint8_t is_wide_char : 1; /* 0 = 8 bits, 1 = 16 bits characters */
+    /* for JS_ATOM_TYPE_SYMBOL: hash = weakref_count, atom_type = 3,
+       for JS_ATOM_TYPE_PRIVATE: hash = JS_ATOM_HASH_PRIVATE, atom_type = 3
+       XXX: could change encoding to have one more bit in hash */
+    uint32_t hash : 30;
+    uint8_t atom_type : 2; /* != 0 if atom, JS_ATOM_TYPE_x */
+    uint32_t hash_next; /* atom_index for JS_ATOM_TYPE_SYMBOL */
+#ifdef DUMP_LEAKS
+    struct list_head link; /* string list */
+#endif
+    union {
+        uint8_t str8[0]; /* 8 bit strings will get an extra null terminator */
+        uint16_t str16[0];
+    } u;
+};
+
+typedef struct JSStringRope {
+    uint32_t len;
+    uint8_t is_wide_char; /* 0 = 8 bits, 1 = 16 bits characters */
+    uint8_t depth; /* max depth of the rope tree */
+    /* XXX: could reduce memory usage by using a direct pointer with
+       bit 0 to select rope or string */
+    JSValue left;
+    JSValue right; /* might be the empty string */
+} JSStringRope;
+
+static inline int string_get(const JSString *p, int idx) {
+    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
+}
+
+QJS_INTERNAL JSValue js_new_string8(JSContext *ctx, const char *buf);
+
 #endif /* QJS_ATOM_STRING_H */
