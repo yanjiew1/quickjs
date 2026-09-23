@@ -50,7 +50,6 @@ typedef struct JSProperty {
 QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
 QJS_INTERNAL int __attribute__((format(printf, 3, 4)))
 JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
-QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 QJS_INTERNAL __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                                JSValueConst obj);
 QJS_INTERNAL __exception int js_get_length32(JSContext *ctx, uint32_t *pres,

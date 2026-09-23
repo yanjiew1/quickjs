@@ -227,6 +227,7 @@ struct JSObject {
 
 QJS_INTERNAL int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
 
 QJS_INTERNAL JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);

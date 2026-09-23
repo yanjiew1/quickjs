@@ -884,3 +884,62 @@ int JS_IsArray(JSContext *ctx, JSValueConst val)
     }
 }
 
+/* Object class */
+
+QJS_INTERNAL JSValue JS_ToObject(JSContext *ctx, JSValueConst val)
+{
+    int tag = JS_VALUE_GET_NORM_TAG(val);
+    JSValue obj;
+
+    switch(tag) {
+    default:
+    case JS_TAG_NULL:
+    case JS_TAG_UNDEFINED:
+        return JS_ThrowTypeError(ctx, "cannot convert to object");
+    case JS_TAG_OBJECT:
+    case JS_TAG_EXCEPTION:
+        return JS_DupValue(ctx, val);
+    case JS_TAG_SHORT_BIG_INT:
+    case JS_TAG_BIG_INT:
+        obj = JS_NewObjectClass(ctx, JS_CLASS_BIG_INT);
+        goto set_value;
+    case JS_TAG_INT:
+    case JS_TAG_FLOAT64:
+        obj = JS_NewObjectClass(ctx, JS_CLASS_NUMBER);
+        goto set_value;
+    case JS_TAG_STRING:
+    case JS_TAG_STRING_ROPE:
+        /* XXX: should call the string constructor */
+        {
+            JSValue str;
+            str = JS_ToString(ctx, val); /* ensure that we never store a rope */
+            if (JS_IsException(str))
+                return JS_EXCEPTION;
+            obj = JS_NewObjectClass(ctx, JS_CLASS_STRING);
+            if (!JS_IsException(obj)) {
+                JS_DefinePropertyValue(ctx, obj, JS_ATOM_length,
+                                       JS_NewInt32(ctx, JS_VALUE_GET_STRING(str)->len), 0);
+                JS_SetObjectData(ctx, obj, JS_DupValue(ctx, str));
+            }
+            JS_FreeValue(ctx, str);
+            return obj;
+        }
+    case JS_TAG_BOOL:
+        obj = JS_NewObjectClass(ctx, JS_CLASS_BOOLEAN);
+        goto set_value;
+    case JS_TAG_SYMBOL:
+        obj = JS_NewObjectClass(ctx, JS_CLASS_SYMBOL);
+    set_value:
+        if (!JS_IsException(obj))
+            JS_SetObjectData(ctx, obj, JS_DupValue(ctx, val));
+        return obj;
+    }
+}
+
+QJS_INTERNAL JSValue JS_ToObjectFree(JSContext *ctx, JSValue val)
+{
+    JSValue obj = JS_ToObject(ctx, val);
+    JS_FreeValue(ctx, val);
+    return obj;
+}
+
