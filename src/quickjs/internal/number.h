@@ -98,6 +98,10 @@ QJS_INTERNAL no_inline __exception int js_unary_arith_slow(JSContext *ctx,
 
 QJS_INTERNAL int skip_spaces(const char *pc);
 
+static inline int is_digit(int c) {
+    return c >= '0' && c <= '9';
+}
+
 static inline int to_digit(int c)
 {
     if (c >= '0' && c <= '9')

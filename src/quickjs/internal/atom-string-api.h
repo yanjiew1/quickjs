@@ -28,6 +28,7 @@
 
 #include "internal/object.h"
 #include "internal/vm.h"
+#include "internal/runtime-api.h"
 
 QJS_INTERNAL JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v);
 QJS_INTERNAL const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
@@ -129,6 +130,39 @@ static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
         }
     }
     return string_buffer_putc_slow(s, c);
+}
+
+static inline int string_get(const JSString *p, int idx) {
+    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
+}
+
+static inline uint32_t atom_get_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p >> 1;
+}
+
+static inline BOOL atom_is_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p & 1;
+}
+
+static inline JSAtomStruct *atom_set_free(uint32_t v)
+{
+    return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
+}
+
+static inline void js_free_string(JSRuntime *rt, JSString *str)
+{
+    if (--js_rc(str)->ref_count <= 0) {
+        if (str->atom_type) {
+            JS_FreeAtomStruct(rt, str);
+        } else {
+#ifdef DUMP_LEAKS
+            list_del(&str->link);
+#endif
+            js_free_rt(rt, str);
+        }
+    }
 }
 
 #endif /* QJS_INTERNAL_ATOM_STRING_API_H */

@@ -28,7 +28,6 @@
 
 #include "internal/object.h"
 #include "internal/vm.h"
-#include "internal/atom-string-api.h"
 
 QJS_INTERNAL int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                           int argc, JSValueConst *argv, BOOL no_exception);
@@ -70,13 +69,9 @@ static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
     dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
 }
 
-static inline int is_digit(int c) {
-    return c >= '0' && c <= '9';
-}
 
-static inline int string_get(const JSString *p, int idx) {
-    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
-}
+
+
 
 #if !defined(CONFIG_STACK_CHECK)
 /* no stack limitation */
@@ -104,34 +99,13 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 }
 #endif
 
-static inline uint32_t atom_get_free(const JSAtomStruct *p)
-{
-    return (uintptr_t)p >> 1;
-}
 
-static inline BOOL atom_is_free(const JSAtomStruct *p)
-{
-    return (uintptr_t)p & 1;
-}
 
-static inline JSAtomStruct *atom_set_free(uint32_t v)
-{
-    return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
-}
 
-static inline void js_free_string(JSRuntime *rt, JSString *str)
-{
-    if (--js_rc(str)->ref_count <= 0) {
-        if (str->atom_type) {
-            JS_FreeAtomStruct(rt, str);
-        } else {
-#ifdef DUMP_LEAKS
-            list_del(&str->link);
-#endif
-            js_free_rt(rt, str);
-        }
-    }
-}
+
+
+
+
 
 static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
 {
