@@ -27,6 +27,7 @@
 #include "internal/object-api.h"
 #include "internal/runtime-api.h"
 #include "internal/bigint.h"
+#include "internal/number.h"
 
 /* bigint support */
 

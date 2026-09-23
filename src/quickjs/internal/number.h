@@ -96,6 +96,20 @@ QJS_INTERNAL no_inline __exception int js_unary_arith_slow(JSContext *ctx,
                                                      JSValue *sp,
                                                      OPCodeEnum op);
 
+QJS_INTERNAL int skip_spaces(const char *pc);
+
+static inline int to_digit(int c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'A' && c <= 'Z')
+        return c - 'A' + 10;
+    else if (c >= 'a' && c <= 'z')
+        return c - 'a' + 10;
+    else
+        return 36;
+}
+
 QJS_INTERNAL int __JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val);
 
 static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)

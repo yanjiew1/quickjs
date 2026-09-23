@@ -178,7 +178,6 @@ QJS_INTERNAL int js_update_property_flags(JSContext *ctx, JSObject *p,
                                     JSShapeProperty **pprs, int flags);
 QJS_INTERNAL void remove_gc_object(JSGCObjectHeader *h);
 QJS_INTERNAL void set_cycle_flag(JSContext *ctx, JSValueConst obj);
-QJS_INTERNAL int skip_spaces(const char *pc);
 
 static inline JSShapeProperty *get_shape_prop(JSShape *sh)
 {
@@ -260,17 +259,7 @@ static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
     return p->is_HTMLDDA;
 }
 
-static inline int to_digit(int c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    else if (c >= 'A' && c <= 'Z')
-        return c - 'A' + 10;
-    else if (c >= 'a' && c <= 'z')
-        return c - 'a' + 10;
-    else
-        return 36;
-}
+
 
 #define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
 
