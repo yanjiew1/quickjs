@@ -77,4 +77,11 @@ QJS_INTERNAL double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
 
 QJS_INTERNAL JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
 
+static inline int js_bigint_sign(const JSBigInt *a)
+{
+    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
+}
+
+QJS_INTERNAL JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+
 #endif /* QJS_BIGINT_H */

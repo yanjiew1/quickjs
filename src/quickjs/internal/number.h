@@ -89,4 +89,10 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
 
 QJS_INTERNAL int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
 
+QJS_INTERNAL int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
+QJS_INTERNAL int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
+QJS_INTERNAL JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
+
+QJS_INTERNAL int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val, int64_t min, int64_t max, int64_t max_offset);
+
 #endif /* QJS_NUMBER_H */

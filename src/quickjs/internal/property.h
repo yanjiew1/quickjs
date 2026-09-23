@@ -80,4 +80,6 @@ QJS_INTERNAL JSValue JS_GetOwnPropertyNames2(JSContext *ctx,
                                               JSValueConst obj1,
                                               int flags, int kind);
 
+QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags);
+
 #endif /* QJS_PROPERTY_H */

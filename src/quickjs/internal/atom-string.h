@@ -201,4 +201,6 @@ QJS_INTERNAL uint32_t hash_string(const JSString *str, uint32_t h);
 QJS_INTERNAL uint32_t hash_string_rope(JSValueConst val, uint32_t h);
 QJS_INTERNAL const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
 
+QJS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
+
 #endif /* QJS_ATOM_STRING_H */
