@@ -101,4 +101,6 @@ QJS_INTERNAL int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_
 
 QJS_INTERNAL int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj, JSAtom prop, JSAutoInitIDEnum id, void *opaque, int flags);
 
+QJS_INTERNAL JSProperty *add_property(JSContext *ctx, JSObject *p, JSAtom prop, int prop_flags);
+
 #endif /* QJS_PROPERTY_H */

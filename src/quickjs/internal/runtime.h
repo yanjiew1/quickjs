@@ -285,4 +285,6 @@ QJS_INTERNAL int check_exception_free(JSContext *ctx, JSValue obj);
 
 QJS_INTERNAL void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h, JSGCObjectTypeEnum type);
 
+QJS_INTERNAL void remove_gc_object(JSGCObjectHeader *h);
+
 #endif /* QJS_RUNTIME_H */

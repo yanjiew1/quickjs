@@ -91,4 +91,25 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 }
 
 
+static force_inline JSShapeProperty *find_own_property1(JSObject *p,
+                                                        JSAtom atom)
+{
+    JSShape *sh;
+    JSShapeProperty *pr, *prop;
+    intptr_t h;
+    sh = p->shape;
+    h = (uintptr_t)atom & sh->prop_hash_mask;
+    h = sh->hash_table[h];
+    prop = get_shape_prop(sh);
+    while (h) {
+        pr = &prop[h - 1];
+        if (likely(pr->atom == atom)) {
+            return pr;
+        }
+        h = pr->hash_next;
+    }
+    return NULL;
+}
+
+
 #endif /* QJS_SHAPE_H */

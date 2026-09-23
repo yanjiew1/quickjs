@@ -236,4 +236,8 @@ QJS_INTERNAL BOOL js_class_has_bytecode(JSClassID class_id);
 QJS_INTERNAL JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
 QJS_INTERNAL int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val, JSValueConst obj);
 
+QJS_INTERNAL void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+QJS_INTERNAL JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
+QJS_INTERNAL JSValue js_closure2(JSContext *ctx, JSValue func_obj, JSFunctionBytecode *b, JSVarRef **cur_var_refs, JSStackFrame *sf, BOOL is_eval, JSModuleDef *m);
+
 #endif /* QJS_FUNCTION_H */

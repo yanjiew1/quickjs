@@ -39,4 +39,7 @@ QJS_INTERNAL JSValue js_aggregate_error_constructor(JSContext *ctx, JSValueConst
 #define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
 QJS_INTERNAL void build_backtrace(JSContext *ctx, JSValueConst error_obj, const char *filename, int line_num, int col_num, int backtrace_flags);
 
+QJS_INTERNAL JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+
 #endif /* QJS_ERROR_H */

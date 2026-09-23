@@ -127,4 +127,30 @@ struct JSModuleDef {
 QJS_INTERNAL JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
 QJS_INTERNAL JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
 
+QJS_INTERNAL void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
+QJS_INTERNAL void js_mark_module_def(JSRuntime *rt, JSModuleDef *m, JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+extern QJS_INTERNAL const JSClassExoticMethods js_module_ns_exotic_methods;
+QJS_INTERNAL int js_resolve_module(JSContext *ctx, JSModuleDef *m);
+QJS_INTERNAL JSValue js_import_meta(JSContext *ctx);
+QJS_INTERNAL JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
+
+typedef enum JSFreeModuleEnum {
+    JS_FREE_MODULE_ALL,
+    JS_FREE_MODULE_NOT_RESOLVED,
+} JSFreeModuleEnum;
+
+QJS_INTERNAL void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
+
+QJS_INTERNAL int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
+                                JSAtom module_name);
+QJS_INTERNAL JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
+                                       JSAtom local_name, JSAtom export_name,
+                                       JSExportTypeEnum export_type);
+QJS_INTERNAL int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
+                                 int req_module_idx);
+QJS_INTERNAL int js_create_module_function(JSContext *ctx, JSModuleDef *m);
+QJS_INTERNAL int js_link_module(JSContext *ctx, JSModuleDef *m);
+QJS_INTERNAL JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
+
 #endif /* QJS_MODULE_H */
