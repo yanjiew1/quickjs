@@ -87,4 +87,6 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
 
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 
+QJS_INTERNAL int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
+
 #endif /* QJS_NUMBER_H */

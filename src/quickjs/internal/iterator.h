@@ -39,6 +39,12 @@ typedef struct JSArrayIteratorData {
     uint32_t idx;
 } JSArrayIteratorData;
 
+/* XXX: use enum */
+#define GEN_MAGIC_NEXT   0
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_THROW  2
+
+
 QJS_INTERNAL JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
 QJS_INTERNAL JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
                                      JSValueConst method, int argc,
@@ -49,5 +55,10 @@ QJS_INTERNAL JSValue js_create_array_iterator(JSContext *ctx,
                                                JSValueConst this_val,
                                                int argc, JSValueConst *argv,
                                                int magic);
+
+QJS_INTERNAL JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_create_iterator_result(JSContext *ctx, JSValue val, BOOL done);
+QJS_INTERNAL JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj, JSValueConst method, int argc, JSValueConst *argv, int *pdone);
+QJS_INTERNAL JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj, BOOL *pdone);
 
 #endif /* QJS_ITERATOR_H */

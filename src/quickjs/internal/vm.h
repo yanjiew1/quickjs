@@ -30,4 +30,13 @@
 QJS_INTERNAL JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                                     JSValueConst val, int flags, int scope_idx);
 
+QJS_INTERNAL void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_async_generator_finalizer(JSRuntime *rt, JSValue obj);
+QJS_INTERNAL void js_async_generator_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+QJS_INTERNAL JSValue js_async_function_resolve_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+QJS_INTERNAL JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv, int flags);
+
 #endif /* QJS_VM_H */

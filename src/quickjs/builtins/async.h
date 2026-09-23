@@ -1,5 +1,5 @@
 /*
- * QuickJS Error Internal Interface
+ * QuickJS Promise and Async Builtins Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,18 +22,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_ERROR_H
-#define QJS_ERROR_H
+#ifndef QJS_BUILTIN_ASYNC_H
+#define QJS_BUILTIN_ASYNC_H
 
-#include <stdarg.h>
-#include "runtime.h"
+#include "../internal/base.h"
 
-QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                                    const char *fmt, va_list ap);
-QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
-QJS_INTERNAL void JS_ThrowInterrupted(JSContext *ctx);
-QJS_INTERNAL JSValue JS_ThrowStackOverflow(JSContext *ctx);
+QJS_INTERNAL JSValue js_new_promise_capability(JSContext *ctx, JSValue *resolving_funcs, JSValueConst ctor);
+QJS_INTERNAL __exception int perform_promise_then(JSContext *ctx, JSValueConst promise,
+                                                   JSValueConst *resolve_reject,
+                                                   JSValueConst *cap_resolving_funcs);
+QJS_INTERNAL JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
+                                     int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx, JSValueConst sync_iter);
 
-QJS_INTERNAL JSValue js_aggregate_error_constructor(JSContext *ctx, JSValueConst errors);
-
-#endif /* QJS_ERROR_H */
+#endif /* QJS_BUILTIN_ASYNC_H */

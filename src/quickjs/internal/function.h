@@ -27,6 +27,28 @@
 
 #include "base.h"
 
+typedef enum JSFunctionKindEnum {
+    JS_FUNC_NORMAL = 0,
+    JS_FUNC_GENERATOR = (1 << 0),
+    JS_FUNC_ASYNC = (1 << 1),
+    JS_FUNC_ASYNC_GENERATOR = (JS_FUNC_GENERATOR | JS_FUNC_ASYNC),
+} JSFunctionKindEnum;
+
+
+typedef struct JSCFunctionDataRecord {
+    JSCFunctionData *func;
+    uint8_t length;
+    uint8_t data_len;
+    uint16_t magic;
+    JSValue data[0];
+} JSCFunctionDataRecord;
+
+
+#define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
+#define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* the prototype class is 'class_id' instead of JS_CLASS_OBJECT */
+#define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
+#define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
+
 QJS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj,
                                  JSValueConst this_obj, int argc,
                                  JSValueConst *argv);
@@ -61,5 +83,11 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id,
                                         int n_proto_fields, int flags);
 
 QJS_INTERNAL int check_function(JSContext *ctx, JSValueConst obj);
+
+QJS_INTERNAL void js_function_set_properties(JSContext *ctx, JSValueConst func_obj, JSAtom name_atom, int length);
+QJS_INTERNAL void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+QJS_INTERNAL JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv, int func_kind);
+QJS_INTERNAL int JS_SetConstructor2(JSContext *ctx, JSValueConst func_obj, JSValueConst proto, int proto_flags, int ctor_flags);
 
 #endif /* QJS_FUNCTION_H */
