@@ -247,10 +247,12 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
+all: $(OBJDIR) $(QJS_CHECK_OBJS) $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
 QJS_BUILTIN_OBJS=$(addprefix $(OBJDIR)/src/quickjs/builtins/,base.o array.o primitive.o math.o date.o regexp.o json.o proxy.o collection.o async.o typed-array.o)
-QJS_ENGINE_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/binary.o $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/quickjs/quickjs-libc.o
+QJS_CORE_OBJS=$(addprefix $(OBJDIR)/src/quickjs/,runtime.o atom.o string.o shape.o object.o property.o bigint.o number.o function.o function-vm.o compiler.o binary.o)
+QJS_CHECK_OBJS=$(patsubst %.o,%.check.o,$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS))
+QJS_ENGINE_OBJS=$(QJS_CORE_OBJS) $(QJS_BUILTIN_OBJS) $(OBJDIR)/src/quickjs/quickjs-libc.o
 QJS_SUPPORT_OBJS=$(OBJDIR)/src/dtoa.o $(OBJDIR)/src/cutils.o
 UNICODE_OBJS=$(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils.o
 REGEXP_OBJS=$(OBJDIR)/src/regexp/libregexp.o
