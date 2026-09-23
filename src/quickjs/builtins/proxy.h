@@ -1,5 +1,5 @@
 /*
- * QuickJS Array Internal Interface
+ * QuickJS Proxy Builtin Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,13 +22,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_ARRAY_H
-#define QJS_ARRAY_H
+#ifndef QJS_BUILTIN_PROXY_H
+#define QJS_BUILTIN_PROXY_H
 
-#include "object.h"
+#include "../internal/base.h"
 
-QJS_INTERNAL int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
-QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
-                                      JSValueConst *tab);
+typedef struct JSProxyData {
+    JSValue target;
+    JSValue handler;
+    uint8_t is_func;
+    uint8_t is_revoked;
+} JSProxyData;
 
-#endif /* QJS_ARRAY_H */
+QJS_INTERNAL int js_resolve_proxy(JSContext *ctx, JSValueConst *pval,
+                                  BOOL throw_exception);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
+
+#endif /* QJS_BUILTIN_PROXY_H */

@@ -70,5 +70,14 @@ QJS_INTERNAL int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
                                                               uint32_t *plen,
                                                               JSObject *p,
                                                               int flags);
+QJS_INTERNAL int JS_GetOwnPropertyInternal(JSContext *ctx,
+                                           JSPropertyDescriptor *desc,
+                                           JSObject *p, JSAtom prop);
+QJS_INTERNAL void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
+QJS_INTERNAL int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
+                                 JSValueConst desc);
+QJS_INTERNAL JSValue JS_GetOwnPropertyNames2(JSContext *ctx,
+                                              JSValueConst obj1,
+                                              int flags, int kind);
 
 #endif /* QJS_PROPERTY_H */

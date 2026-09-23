@@ -40,6 +40,13 @@ QJS_INTERNAL BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val,
 QJS_INTERNAL JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
                                         int argc, JSValueConst *argv, int magic);
 QJS_INTERNAL JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
+QJS_INTERNAL JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
+                                     JSValueConst array_arg);
+QJS_INTERNAL void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
+QJS_INTERNAL JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                                       const char *name, int length,
+                                       JSCFunctionEnum cproto, int magic,
+                                       JSValueConst proto_val, int n_fields);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
                                                         JSValueConst func_obj);
 QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,

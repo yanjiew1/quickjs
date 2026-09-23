@@ -113,6 +113,9 @@ QJS_INTERNAL JSValue JS_NewObjectProtoList(JSContext *ctx,
                                             JSValueConst proto,
                                             const JSCFunctionListEntry *fields,
                                             int n_fields);
+QJS_INTERNAL int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                         JSValueConst proto_val,
+                                         BOOL throw_flag);
 
 typedef struct JSRegExp {
     JSString *pattern;

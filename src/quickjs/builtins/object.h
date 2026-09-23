@@ -29,5 +29,26 @@
 
 QJS_INTERNAL JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv, int kind);
+QJS_INTERNAL JSValue js_object_defineProperty(JSContext *ctx,
+                                               JSValueConst this_val,
+                                               int argc, JSValueConst *argv,
+                                               int magic);
+QJS_INTERNAL JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx,
+                                                         JSValueConst this_val,
+                                                         int argc,
+                                                         JSValueConst *argv,
+                                                         int magic);
+QJS_INTERNAL JSValue js_object_getPrototypeOf(JSContext *ctx,
+                                               JSValueConst this_val,
+                                               int argc, JSValueConst *argv,
+                                               int magic);
+QJS_INTERNAL JSValue js_object_isExtensible(JSContext *ctx,
+                                            JSValueConst this_val,
+                                            int argc, JSValueConst *argv,
+                                            int reflect);
+QJS_INTERNAL JSValue js_object_preventExtensions(JSContext *ctx,
+                                                 JSValueConst this_val,
+                                                 int argc, JSValueConst *argv,
+                                                 int reflect);
 
 #endif /* QJS_BUILTIN_OBJECT_H */

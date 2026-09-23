@@ -57,6 +57,35 @@ typedef enum {
     JS_GC_PHASE_REMOVE_CYCLES,
 } JSGCPhaseEnum;
 
+struct JSClass {
+    uint32_t class_id; /* 0 means free entry */
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+    JSClassCall *call;
+    /* pointers for exotic behavior, can be NULL if none are present */
+    const JSClassExoticMethods *exotic;
+};
+
+#define JS_MODE_STRICT (1 << 0)
+#define JS_MODE_ASYNC  (1 << 2) /* async function */
+#define JS_MODE_BACKTRACE_BARRIER (1 << 3) /* stop backtrace before this frame */
+
+typedef struct JSStackFrame {
+    struct JSStackFrame *prev_frame; /* NULL if first stack frame */
+    JSValue cur_func; /* current function, JS_UNDEFINED if the frame is detached */
+    JSValue *arg_buf; /* arguments */
+    JSValue *var_buf; /* variables */
+    struct JSVarRef **var_refs; /* references to arguments or local variables */ 
+    const uint8_t *cur_pc; /* only used in bytecode functions : PC of the
+                        instruction after the call */
+    int arg_count;
+    int js_mode; /* not supported for C functions */
+    /* only used in generators. Current stack pointer value. NULL if
+       the function is running. */
+    JSValue *cur_sp;
+} JSStackFrame;
+
 struct JSRuntime {
     JSMallocContext malloc_ctx;
     const char *rt_info;
@@ -203,6 +232,13 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
     return unlikely(sp < rt->stack_limit);
 }
 #endif
+
+static inline BOOL is_strict_mode(JSContext *ctx)
+{
+    JSStackFrame *sf = ctx->rt->current_stack_frame;
+    return (sf && (sf->js_mode & JS_MODE_STRICT));
+}
+
 
 typedef struct JSClassShortDef {
     JSAtom class_name;

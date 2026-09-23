@@ -1,5 +1,5 @@
 /*
- * QuickJS Array Internal Interface
+ * QuickJS Reflect Builtin Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,13 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_ARRAY_H
-#define QJS_ARRAY_H
+#ifndef QJS_BUILTIN_REFLECT_H
+#define QJS_BUILTIN_REFLECT_H
 
-#include "object.h"
+#include "../internal/base.h"
 
-QJS_INTERNAL int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
-QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
-                                      JSValueConst *tab);
+QJS_INTERNAL extern const JSCFunctionListEntry js_reflect_obj[1];
 
-#endif /* QJS_ARRAY_H */
+#endif /* QJS_BUILTIN_REFLECT_H */
