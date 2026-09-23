@@ -203,4 +203,8 @@ QJS_INTERNAL const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, 
 
 QJS_INTERNAL JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 
+QJS_INTERNAL int js_string_compare(JSContext *ctx, const JSString *p1, const JSString *p2);
+
+QJS_INTERNAL JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
+
 #endif /* QJS_ATOM_STRING_H */

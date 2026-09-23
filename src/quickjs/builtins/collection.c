@@ -44,6 +44,7 @@
 #include "../internal/array.h"
 #include "../internal/error.h"
 #include "collection.h"
+#include "array.h"
 
 /* Set/Map/WeakSet/WeakMap */
 

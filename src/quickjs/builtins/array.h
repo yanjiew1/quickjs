@@ -1,5 +1,5 @@
 /*
- * QuickJS Array Builtin Internal Interface
+ * QuickJS Array Builtins Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -27,11 +27,19 @@
 
 #include "../internal/base.h"
 
-QJS_INTERNAL JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
-                                          int argc, JSValueConst *argv);
-QJS_INTERNAL JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
-                                    int argc, JSValueConst *argv, int unshift);
-QJS_INTERNAL JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv, int shift);
+QJS_INTERNAL void js_array_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_array_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+QJS_INTERNAL void js_array_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_array_iterator_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_funcs[4];
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_proto_funcs[40];
+extern QJS_INTERNAL const JSCFunctionListEntry js_array_iterator_proto_funcs[2];
+
+QJS_INTERNAL JSValue js_array_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
+QJS_INTERNAL JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, BOOL *pdone, int magic);
+
+QJS_INTERNAL JSValue js_array_push(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int unshift);
+QJS_INTERNAL JSValue js_array_pop(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int shift);
+QJS_INTERNAL JSValue js_array_includes(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
 #endif /* QJS_BUILTIN_ARRAY_H */

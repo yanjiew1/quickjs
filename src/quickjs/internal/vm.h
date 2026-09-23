@@ -42,4 +42,6 @@ QJS_INTERNAL JSValue js_async_generator_function_call(JSContext *ctx, JSValueCon
 
 QJS_INTERNAL int find_line_num(JSContext *ctx, JSFunctionBytecode *b, uint32_t pc_value, int *pcol_num);
 
+QJS_INTERNAL JSValue js_generator_next(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, BOOL *pdone, int magic);
+
 #endif /* QJS_VM_H */

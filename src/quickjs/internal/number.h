@@ -102,4 +102,7 @@ QJS_INTERNAL JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
 
 QJS_INTERNAL int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val, int64_t min, int64_t max, int64_t max_offset);
 
+QJS_INTERNAL __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen, JSValue val, BOOL is_array_ctor);
+QJS_INTERNAL JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
+
 #endif /* QJS_NUMBER_H */

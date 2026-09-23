@@ -85,4 +85,6 @@ QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj, JSVa
 QJS_INTERNAL __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
 QJS_INTERNAL int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags);
 
+QJS_INTERNAL int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
+
 #endif /* QJS_PROPERTY_H */

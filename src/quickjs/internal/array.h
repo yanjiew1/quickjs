@@ -48,10 +48,21 @@ QJS_INTERNAL int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len
 QJS_INTERNAL JSValue js_create_array(JSContext *ctx, int len,
                                       JSValueConst *tab);
 
-QJS_INTERNAL JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv, int unshift);
-
 QJS_INTERNAL JSValue js_array_every(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int special);
 QJS_INTERNAL JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int special);
+
+/* return true if an element can be added to a fast array without further tests */
+static force_inline BOOL can_extend_fast_array(JSObject *p)
+{
+    JSObject *proto;
+    if (!p->extensible)
+        return FALSE;
+    proto = p->shape->proto;
+    if (!proto)
+        return TRUE;
+    return proto->is_std_array_prototype;
+}
+
+QJS_INTERNAL BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj, JSValue **parrp, uint32_t *pcount);
 
 #endif /* QJS_ARRAY_H */
