@@ -25,7 +25,7 @@
 #ifndef QJS_ARRAY_H
 #define QJS_ARRAY_H
 
-#include "object.h"
+#include "shape.h"
 
 #define special_every    0
 #define special_some     1

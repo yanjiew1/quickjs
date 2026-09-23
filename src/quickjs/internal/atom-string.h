@@ -26,6 +26,7 @@
 #define QJS_ATOM_STRING_H
 
 #include "base.h"
+#include "allocator.h"
 #include "libunicode.h"
 
 enum {
