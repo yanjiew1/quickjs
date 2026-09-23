@@ -82,9 +82,23 @@ QJS_INTERNAL JSValue JS_GetOwnPropertyNames2(JSContext *ctx,
 
 QJS_INTERNAL int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags);
 
+typedef enum {
+    JS_AUTOINIT_ID_PROTOTYPE,
+    JS_AUTOINIT_ID_MODULE_NS,
+    JS_AUTOINIT_ID_PROP,
+} JSAutoInitIDEnum;
+
+
+
+
+
+
+
 QJS_INTERNAL __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
 QJS_INTERNAL int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags);
 
 QJS_INTERNAL int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
+
+QJS_INTERNAL int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj, JSAtom prop, JSAutoInitIDEnum id, void *opaque, int flags);
 
 #endif /* QJS_PROPERTY_H */
