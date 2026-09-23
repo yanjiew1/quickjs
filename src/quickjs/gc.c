@@ -39,6 +39,7 @@
 #include "internal/runtime.h"
 #include "internal/allocator.h"
 #include "internal/atom-string.h"
+#include "internal/value-print.h"
 #include "internal/bigint.h"
 #include "internal/object.h"
 #include "internal/shape.h"

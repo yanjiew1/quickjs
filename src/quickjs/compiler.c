@@ -36,6 +36,7 @@
 #include "dtoa.h"
 #include "internal/runtime.h"
 #include "internal/atom-string.h"
+#include "internal/value-print.h"
 #include "internal/object.h"
 #include "internal/shape.h"
 #include "internal/property.h"

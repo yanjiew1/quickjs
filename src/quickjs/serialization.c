@@ -32,6 +32,7 @@
 #include "internal/runtime.h"
 #include "internal/object.h"
 #include "internal/atom-string.h"
+#include "internal/value-print.h"
 #include "internal/number.h"
 #include "internal/bigint.h"
 #include "internal/function.h"
