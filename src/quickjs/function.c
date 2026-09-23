@@ -1,5 +1,5 @@
 /*
- * QuickJS Function Lists and Constructors
+ * QuickJS Functions and Arguments
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -38,6 +38,8 @@
 #include "internal/function-list.h"
 #include "internal/shape.h"
 #include "internal/error.h"
+#include "internal/array.h"
+#include "internal/vm.h"
 
 /*******************************************************************/
 /* runtime functions & objects */
@@ -400,3 +402,136 @@ QJS_INTERNAL JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char
     return JS_EXCEPTION;
 }
 
+static int js_arguments_define_own_property(JSContext *ctx,
+                                            JSValueConst this_obj,
+                                            JSAtom prop, JSValueConst val,
+                                            JSValueConst getter, JSValueConst setter, int flags)
+{
+    JSObject *p;
+    uint32_t idx;
+    p = JS_VALUE_GET_OBJ(this_obj);
+    /* convert to normal array when redefining an existing numeric field */
+    if (p->fast_array && JS_AtomIsArrayIndex(ctx, &idx, prop) &&
+        idx < p->u.array.count) {
+        if (convert_fast_array_to_array(ctx, p))
+            return -1;
+    }
+    /* run the default define own property */
+    return JS_DefineProperty(ctx, this_obj, prop, val, getter, setter,
+                             flags | JS_PROP_NO_EXOTIC);
+}
+
+QJS_INTERNAL const JSClassExoticMethods js_arguments_exotic_methods = {
+    .define_own_property = js_arguments_define_own_property,
+};
+
+QJS_INTERNAL JSValue js_build_arguments(JSContext *ctx, int argc, JSValueConst *argv)
+{
+    JSValue val, *tab;
+    JSProperty props[3];
+    JSObject *p;
+    int i;
+
+    props[0].u.value = JS_NewInt32(ctx, argc); /* length */
+    props[1].u.value = JS_DupValue(ctx, ctx->array_proto_values); /* Symbol.iterator */
+    props[2].u.getset.getter = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ctx->throw_type_error)); /* callee */
+    props[2].u.getset.setter = JS_VALUE_GET_OBJ(JS_DupValue(ctx, ctx->throw_type_error)); /* callee */
+    
+    val = JS_NewObjectFromShape(ctx, js_dup_shape(ctx->arguments_shape),
+                                JS_CLASS_ARGUMENTS, props);
+    if (JS_IsException(val))
+        return val;
+    p = JS_VALUE_GET_OBJ(val);
+
+    /* initialize the fast array part */
+    tab = NULL;
+    if (argc > 0) {
+        tab = js_malloc(ctx, sizeof(tab[0]) * argc);
+        if (!tab)
+            goto fail;
+        for(i = 0; i < argc; i++) {
+            tab[i] = JS_DupValue(ctx, argv[i]);
+        }
+    }
+    p->u.array.u.values = tab;
+    p->u.array.count = argc;
+    return val;
+ fail:
+    JS_FreeValue(ctx, val);
+    return JS_EXCEPTION;
+}
+
+QJS_INTERNAL void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(val);
+    JSVarRef **var_refs = p->u.array.u.var_refs;
+    int i;
+    for(i = 0; i < p->u.array.count; i++)
+        free_var_ref(rt, var_refs[i]);
+    js_free_rt(rt, var_refs);
+}
+
+QJS_INTERNAL void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
+                                     JS_MarkFunc *mark_func)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(val);
+    JSVarRef **var_refs = p->u.array.u.var_refs;
+    int i;
+    
+    for(i = 0; i < p->u.array.count; i++)
+        mark_func(rt, &var_refs[i]->header);
+}
+
+/* legacy arguments object: add references to the function arguments */
+QJS_INTERNAL JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
+                                         JSValueConst *argv,
+                                         JSStackFrame *sf, int arg_count)
+{
+    JSValue val;
+    JSProperty props[3];
+    JSVarRef **tab, *var_ref;
+    JSObject *p;
+    int i, j;
+
+    props[0].u.value = JS_NewInt32(ctx, argc); /* length */
+    props[1].u.value = JS_DupValue(ctx, ctx->array_proto_values); /* Symbol.iterator */
+    props[2].u.value = JS_DupValue(ctx, ctx->rt->current_stack_frame->cur_func); /* callee */
+    
+    val = JS_NewObjectFromShape(ctx, js_dup_shape(ctx->mapped_arguments_shape),
+                                JS_CLASS_MAPPED_ARGUMENTS, props);
+    if (JS_IsException(val))
+        return val;
+    p = JS_VALUE_GET_OBJ(val);
+
+    /* initialize the fast array part */
+    tab = NULL;
+    if (argc > 0) {
+        tab = js_malloc(ctx, sizeof(tab[0]) * argc);
+        if (!tab)
+            goto fail;
+        for(i = 0; i < arg_count; i++) {
+            var_ref = get_var_ref(ctx, sf, i, TRUE);
+            if (!var_ref)
+                goto fail1;
+            tab[i] = var_ref;
+        }
+        for(i = arg_count; i < argc; i++) {
+            var_ref = js_create_var_ref(ctx, FALSE);
+            if (!var_ref) {
+            fail1:
+                for(j = 0; j < i; j++)
+                    free_var_ref(ctx->rt, tab[j]);
+                js_free(ctx, tab);
+                goto fail;
+            }
+            var_ref->value = JS_DupValue(ctx, argv[i]);
+            tab[i] = var_ref;
+        }
+    }
+    p->u.array.u.var_refs = tab;
+    p->u.array.count = argc;
+    return val;
+ fail:
+    JS_FreeValue(ctx, val);
+    return JS_EXCEPTION;
+}

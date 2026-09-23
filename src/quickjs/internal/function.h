@@ -252,6 +252,10 @@ QJS_INTERNAL int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
 QJS_INTERNAL int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
                                JSAtom name, int flags);
 QJS_INTERNAL JSValue js_build_arguments(JSContext *ctx, int argc, JSValueConst *argv);
+extern QJS_INTERNAL const JSClassExoticMethods js_arguments_exotic_methods;
+QJS_INTERNAL void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
+                                           JS_MarkFunc *mark_func);
 QJS_INTERNAL JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
                                          JSValueConst *argv,
                                          JSStackFrame *sf, int arg_count);
