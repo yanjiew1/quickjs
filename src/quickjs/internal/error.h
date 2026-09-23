@@ -30,5 +30,7 @@
 
 QJS_INTERNAL JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
                                     const char *fmt, va_list ap);
+QJS_INTERNAL JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+QJS_INTERNAL void JS_ThrowInterrupted(JSContext *ctx);
 
 #endif /* QJS_ERROR_H */

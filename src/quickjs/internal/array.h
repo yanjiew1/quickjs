@@ -1,5 +1,5 @@
 /*
- * QuickJS Private Linkage
+ * QuickJS Array Internal Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,27 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QJS_BASE_H
-#define QJS_BASE_H
+#ifndef QJS_ARRAY_H
+#define QJS_ARRAY_H
 
-#include "quickjs.h"
-#include "list.h"
-#include "cutils.h"
+#include "object.h"
 
-#if !defined(__EMSCRIPTEN__)
-/* enable stack limitation */
-#define CONFIG_STACK_CHECK
-#endif
+QJS_INTERNAL int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
 
-/* dump objects leaking when freeing the runtime */
-//#define DUMP_LEAKS  1
-
-#if defined(__GNUC__) || defined(__clang__)
-#define QJS_INTERNAL __attribute__((visibility("hidden")))
-#else
-#define QJS_INTERNAL
-#endif
-
-#define __exception __attribute__((warn_unused_result))
-
-#endif /* QJS_BASE_H */
+#endif /* QJS_ARRAY_H */

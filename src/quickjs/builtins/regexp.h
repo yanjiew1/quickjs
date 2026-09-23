@@ -28,5 +28,11 @@
 #include "../internal/base.h"
 
 QJS_INTERNAL int js_is_regexp(JSContext *ctx, JSValueConst obj);
+QJS_INTERNAL JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
+QJS_INTERNAL void js_regexp_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
+QJS_INTERNAL void js_regexp_string_iterator_mark(JSRuntime *rt,
+                                                  JSValueConst val,
+                                                  JS_MarkFunc *mark_func);
 
 #endif /* QJS_BUILTIN_REGEXP_H */

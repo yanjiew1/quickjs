@@ -107,6 +107,12 @@ typedef struct JSProperty JSProperty;
 
 QJS_INTERNAL uint32_t js_string_obj_get_length(JSContext *ctx,
                                                 JSValueConst obj);
+QJS_INTERNAL JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh,
+                                            JSClassID class_id, JSProperty *props);
+QJS_INTERNAL JSValue JS_NewObjectProtoList(JSContext *ctx,
+                                            JSValueConst proto,
+                                            const JSCFunctionListEntry *fields,
+                                            int n_fields);
 
 typedef struct JSRegExp {
     JSString *pattern;
@@ -116,6 +122,16 @@ typedef struct JSRegExp {
 typedef struct JSGlobalObject {
     JSValue uninitialized_vars; /* hidden object containing the list of uninitialized variables */
 } JSGlobalObject;
+
+/* set the new value and free the old value after (freeing the value
+   can reallocate the object data) */
+static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
+{
+    JSValue old_val;
+    old_val = *pval;
+    *pval = new_val;
+    JS_FreeValue(ctx, old_val);
+}
 
 struct JSObject {
     JSGCObjectHeader header;

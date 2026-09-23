@@ -32,6 +32,14 @@ QJS_INTERNAL JSValue JS_CallFree(JSContext *ctx, JSValue func_obj,
                                  JSValueConst *argv);
 QJS_INTERNAL JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val,
                                    JSAtom atom, int argc, JSValueConst *argv);
+QJS_INTERNAL JSValueConst JS_GetActiveFunction(JSContext *ctx);
+QJS_INTERNAL JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
+                                            JSValueConst defaultConstructor);
+QJS_INTERNAL BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val,
+                                  JSCFunction *func, int magic);
+QJS_INTERNAL JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
+QJS_INTERNAL JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
 QJS_INTERNAL JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
                                                         JSValueConst func_obj);
 QJS_INTERNAL JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,

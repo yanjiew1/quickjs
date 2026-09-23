@@ -25,7 +25,25 @@
 #ifndef QJS_PROPERTY_H
 #define QJS_PROPERTY_H
 
-#include "base.h"
+#include "object.h"
+
+typedef struct JSProperty {
+    union {
+        JSValue value;      /* JS_PROP_NORMAL */
+        struct {            /* JS_PROP_GETSET */
+            JSObject *getter; /* NULL if undefined */
+            JSObject *setter; /* NULL if undefined */
+        } getset;
+        JSVarRef *var_ref;  /* JS_PROP_VARREF */
+        struct {            /* JS_PROP_AUTOINIT */
+            /* in order to use only 2 pointers, we compress the realm
+               and the init function pointer */
+            uintptr_t realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
+                                       in the 2 low bits */
+            void *opaque;
+        } init;
+    } u;
+} JSProperty;
 
 QJS_INTERNAL BOOL check_define_prop_flags(int prop_flags, int flags);
 QJS_INTERNAL int __attribute__((format(printf, 3, 4)))
@@ -40,6 +58,10 @@ QJS_INTERNAL JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj,
 QJS_INTERNAL JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                                          JSValue prop);
 QJS_INTERNAL int JS_CreateDataPropertyUint32(JSContext *ctx,
+                                              JSValueConst this_obj,
+                                              int64_t idx, JSValue val,
+                                              int flags);
+QJS_INTERNAL int JS_DefinePropertyValueInt64(JSContext *ctx,
                                               JSValueConst this_obj,
                                               int64_t idx, JSValue val,
                                               int flags);
