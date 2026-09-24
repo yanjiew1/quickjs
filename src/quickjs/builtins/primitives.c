@@ -29,6 +29,7 @@
 #include "../internal/object.h"
 #include "dtoa.h"
 #include "primitives.h"
+#include "global.h"
 
 /* Number */
 

@@ -216,11 +216,6 @@ BOOL is_safe_integer(double d);
 int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
 JSValue js_dtoa2(JSContext *ctx,
                         double d, int radix, int n_digits, int flags);
-JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv);
-JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv);
-
 int skip_spaces(const char *pc);
 
 #define ATOD_INT_ONLY        (1 << 0)

@@ -8253,27 +8253,3 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
     return JS_EXCEPTION;
 }
 
-JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv)
-{
-    return JS_EvalObject(ctx, ctx->global_obj, argv[0], JS_EVAL_TYPE_INDIRECT, -1);
-}
-
-JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv)
-{
-    double d;
-
-    if (unlikely(JS_ToFloat64(ctx, &d, argv[0])))
-        return JS_EXCEPTION;
-    return JS_NewBool(ctx, isnan(d));
-}
-
-JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    double d;
-    if (unlikely(JS_ToFloat64(ctx, &d, argv[0])))
-        return JS_EXCEPTION;
-    return JS_NewBool(ctx, isfinite(d));
-}
