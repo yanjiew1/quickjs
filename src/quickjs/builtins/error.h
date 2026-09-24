@@ -30,4 +30,11 @@
 JSValue js_aggregate_error_constructor(JSContext *ctx,
                                               JSValueConst errors);
 
+JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
+                                    int argc, JSValueConst *argv, int magic);
+
+extern const JSCFunctionListEntry js_error_proto_funcs[3];
+extern const JSCFunctionListEntry js_native_error_proto_funcs[16];
+extern const JSCFunctionListEntry js_error_funcs[1];
+
 #endif /* QUICKJS_BUILTINS_ERROR_H */

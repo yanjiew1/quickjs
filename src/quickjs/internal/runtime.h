@@ -301,4 +301,10 @@ static inline __exception int js_poll_interrupts(JSContext *ctx)
     }
 }
 
+void build_backtrace(JSContext *ctx, JSValueConst error_obj,
+                            const char *filename, int line_num, int col_num,
+                            int backtrace_flags);
+
+#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */
