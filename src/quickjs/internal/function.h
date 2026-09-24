@@ -274,4 +274,6 @@ JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
 int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
                             BOOL is_exception_pending);
 
+int check_function(JSContext *ctx, JSValueConst obj);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

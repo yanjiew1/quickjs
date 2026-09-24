@@ -1,5 +1,5 @@
 /*
- * QuickJS Atom Definitions
+ * QuickJS Map and Set Builtin Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,23 +22,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_INTERNAL_ATOM_H
-#define QUICKJS_INTERNAL_ATOM_H
+#ifndef QUICKJS_BUILTINS_MAP_SET_H
+#define QUICKJS_BUILTINS_MAP_SET_H
 
-#include "base.h"
+#include "internal/object.h"
 
-enum {
-    __JS_ATOM_NULL = JS_ATOM_NULL,
-#define DEF(name, str) JS_ATOM_ ## name,
-#include "quickjs-atom.h"
-#undef DEF
-    JS_ATOM_END,
-};
-#define JS_ATOM_LAST_KEYWORD JS_ATOM_super
-#define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
+JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv, int is_map);
 
-#define ATOM_GET_STR_BUF_SIZE 64
+BOOL js_weakref_is_target(JSValueConst val);
+BOOL js_weakref_is_live(JSValueConst val);
+void js_weakref_free(JSRuntime *rt, JSValue val);
+JSValue js_weakref_new(JSContext *ctx, JSValueConst val);
+void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
+void js_map_finalizer(JSRuntime *rt, JSValue val);
+void js_map_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_map_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_map_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                 JS_MarkFunc *mark_func);
 
-const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
-
-#endif /* QUICKJS_INTERNAL_ATOM_H */
+#endif /* QUICKJS_BUILTINS_MAP_SET_H */

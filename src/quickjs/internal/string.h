@@ -77,4 +77,8 @@ static inline int string_get(const JSString *p, int idx) {
     return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
 }
 
+uint32_t hash_string(const JSString *str, uint32_t h);
+
+uint32_t hash_string_rope(JSValueConst val, uint32_t h);
+
 #endif /* QUICKJS_INTERNAL_STRING_H */

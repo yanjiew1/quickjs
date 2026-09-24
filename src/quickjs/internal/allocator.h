@@ -105,4 +105,9 @@ typedef struct {
 
 /* end JS Malloc */
 
+static inline JSMallocBlockHeader *js_rc(void *ptr)
+{
+    return container_of(ptr, JSMallocBlockHeader, user_data);
+}
+
 #endif /* QUICKJS_INTERNAL_ALLOCATOR_H */

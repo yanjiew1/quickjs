@@ -31,6 +31,7 @@
 #define HINT_NUMBER  1
 #define HINT_NONE    2
 #define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+#define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 
 double js_pow(double a, double b);
 
@@ -98,5 +99,11 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
         return __JS_ToFloat64Free(ctx, pres, val);
     }
 }
+
+int JS_ToBoolFree(JSContext *ctx, JSValue val);
+
+JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
+
+BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

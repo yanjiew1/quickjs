@@ -27,6 +27,8 @@
 
 #include "module.h"
 
+JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
+
 typedef enum {
     JS_AUTOINIT_ID_PROTOTYPE,
     JS_AUTOINIT_ID_MODULE_NS,
@@ -188,5 +190,10 @@ typedef struct JSMapState {
 int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 
 JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
+
+JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+
+JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
+                                     const JSCFunctionListEntry *fields, int n_fields);
 
 #endif /* QUICKJS_INTERNAL_OBJECT_H */
