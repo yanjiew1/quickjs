@@ -374,4 +374,6 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
 
 JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 
+JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
+
 #endif
