@@ -1,5 +1,5 @@
 /*
- * QuickJS Number and Boolean builtin interface
+ * QuickJS String builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,24 +22,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_PRIMITIVES_H
-#define QUICKJS_BUILTINS_PRIMITIVES_H
+#ifndef QUICKJS_BUILTINS_STRING_H
+#define QUICKJS_BUILTINS_STRING_H
 
 #include "../internal/base.h"
 
-extern const JSCFunctionListEntry js_number_funcs[14];
-extern const JSCFunctionListEntry js_number_proto_funcs[6];
-extern const JSCFunctionListEntry js_boolean_proto_funcs[2];
-JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
+extern const JSCFunctionListEntry js_string_funcs[3];
+extern const JSCFunctionListEntry js_string_proto_funcs[50];
+extern const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
+JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
                                      int argc, JSValueConst *argv);
-JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv);
-JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
-                           int argc, JSValueConst *argv);
-JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv);
-int js_get_radix(JSContext *ctx, JSValueConst val);
-
-
+extern const JSClassExoticMethods js_string_exotic_methods;
 
 #endif
