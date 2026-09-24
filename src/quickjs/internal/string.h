@@ -182,4 +182,6 @@ static inline void js_free_string(JSRuntime *rt, JSString *str)
     }
 }
 
+JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
+
 #endif /* QUICKJS_INTERNAL_STRING_H */
