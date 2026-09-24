@@ -77,4 +77,7 @@ static inline int string_get(const JSString *p, int idx) {
 
 JSValue js_new_string8(JSContext *ctx, const char *buf);
 
+uint32_t hash_string(const JSString *str, uint32_t h);
+uint32_t hash_string_rope(JSValueConst val, uint32_t h);
+
 #endif

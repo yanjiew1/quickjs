@@ -68,6 +68,11 @@ typedef struct JSMallocBlockHeader {
     __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t user_data[];
 } JSMallocBlockHeader;
 
+static inline JSMallocBlockHeader *js_rc(void *ptr)
+{
+    return container_of(ptr, JSMallocBlockHeader, user_data);
+}
+
 typedef struct JSMallocLargeBlockHeader {
 #ifdef JS_MALLOC_USE_ITER    
     struct list_head link;
@@ -317,6 +322,18 @@ typedef struct JSJobEntry {
     JSValue argv[0];
 } JSJobEntry;
 
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+
+int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                     int start, int count);
+
 JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+
+int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
+                   int argc, JSValueConst *argv, BOOL no_exception);
 
 #endif

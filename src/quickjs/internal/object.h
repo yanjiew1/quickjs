@@ -195,27 +195,6 @@ struct JSObject {
     } u;
 };
 
-typedef struct JSMapRecord {
-    int ref_count; /* used during enumeration to avoid freeing the record */
-    BOOL empty : 8; /* TRUE if the record is deleted */
-    struct list_head link;
-    struct JSMapRecord *hash_next;
-    JSValue key;
-    JSValue value;
-} JSMapRecord;
-
-typedef struct JSMapState {
-    BOOL is_weak; /* TRUE if WeakSet/WeakMap */
-    struct list_head records; /* list of JSMapRecord.link */
-    uint32_t record_count;
-    JSMapRecord **hash_table;
-    int hash_bits;
-    uint32_t hash_size; /* = 2 ^ hash_bits */
-    uint32_t record_count_threshold; /* count at which a hash table
-                                        resize is needed */
-    JSWeakRefHeader weakref_header; /* only used if is_weak = TRUE */
-} JSMapState;
-
 JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 
 #define HINT_STRING  0
@@ -226,4 +205,7 @@ JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
 
+JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
+                              const JSCFunctionListEntry *fields, int n_fields);
 #endif

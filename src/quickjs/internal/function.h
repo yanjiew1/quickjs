@@ -187,4 +187,10 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                                    int class_id);
 
+int check_function(JSContext *ctx, JSValueConst obj);
+JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
+JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
+JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
+                        JSValueConst method, int argc, JSValueConst *argv, BOOL *pdone);
+int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj, BOOL is_exception_pending);
 #endif

@@ -1,5 +1,5 @@
 /*
- * QuickJS atom definitions
+ * QuickJS Array builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,21 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_ATOM_H
-#define QUICKJS_ATOM_H
+#ifndef QUICKJS_BUILTINS_ARRAY_H
+#define QUICKJS_BUILTINS_ARRAY_H
 
-#include "base.h"
+#include "../internal/base.h"
 
-enum {
-    __JS_ATOM_NULL = JS_ATOM_NULL,
-#define DEF(name, str) JS_ATOM_ ## name,
-#include "quickjs-atom.h"
-#undef DEF
-    JS_ATOM_END,
-};
-#define JS_ATOM_LAST_KEYWORD JS_ATOM_super
-#define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
+JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv, int unshift);
 
-#define ATOM_GET_STR_BUF_SIZE 64
-const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
 #endif

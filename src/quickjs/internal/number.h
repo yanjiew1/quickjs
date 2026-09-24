@@ -137,4 +137,10 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
     }
 }
 
+#define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
+JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
+int JS_ToBoolFree(JSContext *ctx, JSValue val);
+BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+
 #endif
