@@ -152,4 +152,8 @@ JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
 
 extern const JSClassExoticMethods js_module_ns_exotic_methods;
 
+JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
+
+JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+
 #endif /* QUICKJS_INTERNAL_MODULE_H */

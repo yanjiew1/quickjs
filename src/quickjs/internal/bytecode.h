@@ -57,6 +57,32 @@ enum OPCodeEnum {
     OP_TEMP_END,
 };
 
+typedef struct JSOpCode {
+#ifdef DUMP_BYTECODE
+    const char *name;
+#endif
+    uint8_t size; /* in bytes */
+    /* the opcodes remove n_pop items from the top of the stack, then
+       pushes n_push items */
+    uint8_t n_pop;
+    uint8_t n_push;
+    uint8_t fmt;
+} JSOpCode;
+
+extern const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)];
+
+#if SHORT_OPCODES
+/* After the final compilation pass, short opcodes are used. Their
+   opcodes overlap with the temporary opcodes which cannot appear in
+   the final bytecode. Their description is after the temporary
+   opcodes in opcode_info[]. */
+#define short_opcode_info(op)           \
+    opcode_info[(op) >= OP_TEMP_START ? \
+                (op) + (OP_TEMP_END - OP_TEMP_START) : (op)]
+#else
+#define short_opcode_info(op) opcode_info[op]
+#endif
+
 static inline BOOL is_be(void)
 {
     union {
