@@ -226,6 +226,13 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
 __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                        JSValueConst obj);
 
+static inline size_t get_shape_size(size_t hash_size, size_t prop_size)
+{
+    return sizeof(JSShape) + hash_size * sizeof(uint32_t) +
+        prop_size * sizeof(JSShapeProperty);
+}
+
+
 static inline JSShapeProperty *get_shape_prop(JSShape *sh)
 {
     return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
