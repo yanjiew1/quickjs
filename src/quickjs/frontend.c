@@ -31,6 +31,7 @@
 #include <math.h>
 
 #include "internal/object.h"
+#include "internal/module.h"
 #include "internal/atom.h"
 #include "internal/frontend.h"
 #include "internal/bytecode.h"

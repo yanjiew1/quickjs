@@ -25,7 +25,7 @@
 #ifndef QUICKJS_BUILTINS_ARRAY_H
 #define QUICKJS_BUILTINS_ARRAY_H
 
-#include "internal/function.h"
+#include "quickjs.h"
 
 #define special_every    0
 #define special_some     1

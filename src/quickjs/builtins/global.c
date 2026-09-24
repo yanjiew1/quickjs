@@ -31,6 +31,7 @@
 #include <math.h>
 
 #include "internal/object.h"
+#include "internal/string.h"
 #include "internal/frontend.h"
 #include "internal/atom.h"
 #include "builtins/global.h"

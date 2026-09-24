@@ -34,6 +34,7 @@
 #include "list.h"
 #include "quickjs.h"
 #include "internal/object.h"
+#include "internal/module.h"
 #include "internal/allocator.h"
 #include "internal/atom.h"
 #include "internal/string.h"
@@ -41,6 +42,7 @@
 #include "internal/bytecode.h"
 #include "internal/frontend.h"
 #include "builtins/typed-array.h"
+#include "builtins/proxy.h"
 
 static JSAtom js_symbol_to_atom(JSContext *ctx, JSValue val);
 static int JS_CreateProperty(JSContext *ctx, JSObject *p,

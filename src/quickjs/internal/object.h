@@ -25,7 +25,18 @@
 #ifndef QUICKJS_INTERNAL_OBJECT_H
 #define QUICKJS_INTERNAL_OBJECT_H
 
-#include "module.h"
+#include "runtime.h"
+
+typedef struct JSFunctionBytecode JSFunctionBytecode;
+
+typedef struct JSRegExp {
+    JSString *pattern;
+    JSString *bytecode; /* also contains the flags */
+} JSRegExp;
+
+typedef struct JSGlobalObject {
+    JSValue uninitialized_vars; /* hidden object containing the list of uninitialized variables */
+} JSGlobalObject;
 
 int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj,
                            int64_t idx, int flags);

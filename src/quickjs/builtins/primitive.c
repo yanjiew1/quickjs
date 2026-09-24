@@ -31,6 +31,9 @@
 #include <math.h>
 
 #include "internal/object.h"
+#include "internal/function.h"
+#include "internal/number.h"
+#include "internal/string.h"
 #include "dtoa.h"
 #include "builtins/global.h"
 #include "internal/atom.h"

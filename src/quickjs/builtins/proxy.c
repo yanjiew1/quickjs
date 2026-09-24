@@ -31,6 +31,8 @@
 #include <math.h>
 
 #include "internal/object.h"
+#include "internal/function.h"
+#include "internal/number.h"
 #include "internal/atom.h"
 #include "builtins/proxy.h"
 #include "builtins/function.h"

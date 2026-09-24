@@ -28,6 +28,7 @@
 #include <time.h>
 
 #include "internal/object.h"
+#include "internal/atom.h"
 #include "internal/number.h"
 #include "builtins/typed-array.h"
 #include "builtins/atomics.h"

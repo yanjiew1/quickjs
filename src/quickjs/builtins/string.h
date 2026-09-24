@@ -26,6 +26,7 @@
 #define QUICKJS_BUILTINS_STRING_H
 
 #include "internal/object.h"
+#include "internal/string.h"
 
 int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
 

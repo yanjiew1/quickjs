@@ -31,10 +31,14 @@
 #include <math.h>
 
 #include "internal/object.h"
+#include "internal/function.h"
+#include "internal/number.h"
+#include "internal/string.h"
 #include "dtoa.h"
 #include "libunicode.h"
 #include "internal/frontend.h"
 #include "builtins/array.h"
+#include "builtins/iterator.h"
 #include "builtins/object.h"
 #include "internal/atom.h"
 #include "builtins/json.h"

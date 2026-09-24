@@ -27,6 +27,13 @@
 
 #include "internal/object.h"
 
+typedef struct JSProxyData {
+    JSValue target;
+    JSValue handler;
+    uint8_t is_func;
+    uint8_t is_revoked;
+} JSProxyData;
+
 JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
 
 int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);

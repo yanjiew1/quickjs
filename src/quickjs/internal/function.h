@@ -171,42 +171,6 @@ typedef struct JSForInIterator {
     JSPropertyEnum *tab_atom; /* is_array = FALSE */
 } JSForInIterator;
 
-typedef struct JSRegExp {
-    JSString *pattern;
-    JSString *bytecode; /* also contains the flags */
-} JSRegExp;
-
-typedef struct JSProxyData {
-    JSValue target;
-    JSValue handler;
-    uint8_t is_func;
-    uint8_t is_revoked;
-} JSProxyData;
-
-typedef struct JSArrayBuffer {
-    int byte_length; /* 0 if detached */
-    int max_byte_length; /* -1 if not resizable; >= byte_length otherwise */
-    uint8_t detached;
-    uint8_t shared; /* if shared, the array buffer cannot be detached */
-    uint8_t *data; /* NULL if detached */
-    struct list_head array_list;
-    void *opaque;
-    JSFreeArrayBufferDataFunc *free_func;
-} JSArrayBuffer;
-
-typedef struct JSTypedArray {
-    struct list_head link; /* link to arraybuffer */
-    JSObject *obj; /* back pointer to the TypedArray/DataView object */
-    JSObject *buffer; /* based array buffer */
-    uint32_t offset; /* byte offset in the array buffer */
-    uint32_t length; /* byte length in the array buffer */
-    BOOL track_rab; /* auto-track length of backing array buffer */
-} JSTypedArray;
-
-typedef struct JSGlobalObject {
-    JSValue uninitialized_vars; /* hidden object containing the list of uninitialized variables */
-} JSGlobalObject;
-
 typedef struct JSAsyncFunctionState {
     JSGCObjectHeader header;
     JSValue this_val; /* 'this' argument */

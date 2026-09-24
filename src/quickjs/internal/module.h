@@ -25,7 +25,7 @@
 #ifndef QUICKJS_INTERNAL_MODULE_H
 #define QUICKJS_INTERNAL_MODULE_H
 
-#include "function.h"
+#include "runtime.h"
 
 typedef struct JSParseState JSParseState;
 
