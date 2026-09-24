@@ -25,8 +25,6 @@
 #include "../internal/base.h"
 #include "../internal/runtime.h"
 #include "../internal/number.h"
-#include "../internal/string.h"
-#include "../internal/function.h"
 #include "../internal/object.h"
 #include "../internal/atom.h"
 #include "proxy.h"

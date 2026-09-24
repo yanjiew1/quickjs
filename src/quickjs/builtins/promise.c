@@ -26,11 +26,7 @@
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/string.h"
-#include "../internal/function.h"
 #include "../internal/object.h"
-#include "../internal/module.h"
-#include "../internal/atom.h"
-#include "../internal/bytecode.h"
 #include "promise.h"
 #include "array.h"
 

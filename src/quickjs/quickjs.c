@@ -24,15 +24,12 @@
  */
 #include "internal/base.h"
 #include "libregexp.h"
-#include "libunicode.h"
 #include "dtoa.h"
 #include "internal/runtime.h"
 #include "internal/number.h"
 #include "internal/string.h"
-#include "internal/function.h"
 #include "internal/object.h"
 #include "internal/module.h"
-#include "internal/atom.h"
 #include "internal/bytecode.h"
 #include "internal/frontend.h"
 #include "builtins/date.h"
@@ -42,9 +39,6 @@
 #include "builtins/regexp.h"
 #include "builtins/promise.h"
 #include "builtins/typed-array.h"
-#include "builtins/json.h"
-#include "builtins/primitives.h"
-#include "builtins/intrinsics.h"
 
 
 static JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
@@ -8282,4 +8276,3 @@ JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     return JS_NewBool(ctx, isfinite(d));
 }
-
