@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include "quickjs-libc.h"
+#include "cutils.h"
 #include "list.h"
 
 typedef struct JSWorkerMessagePipe JSWorkerMessagePipe;
