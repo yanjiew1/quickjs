@@ -279,4 +279,6 @@ JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
 JSBigInt *js_bigint_shl(JSContext *ctx, const JSBigInt *a,
                                unsigned int shift1);
 
+int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
+
 #endif

@@ -26,6 +26,7 @@
 #define QUICKJS_OBJECT_H
 
 #include "runtime.h"
+#include "function.h"
 
 typedef struct JSRegExp {
     JSString *pattern;
@@ -375,5 +376,102 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
 JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 
 JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
+
+#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+
+#define DEFINE_GLOBAL_LEX_VAR (1 << 7)
+
+#define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
+
+static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(obj);
+    return p->is_HTMLDDA;
+}
+
+int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
+int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
+                               JSProperty *pr, JSShapeProperty *prs);
+int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
+int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
+int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
+                               JSAtom name, int flags);
+int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
+                                       JSValueConst str, int flags);
+int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
+                                 JSValueConst name, JSValue val);
+int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
+                                JSValue prop, JSValue val, int flags);
+int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
+__maybe_unused void JS_DumpShapes(JSRuntime *rt);
+JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
+int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
+JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
+                                  JSValueConst name);
+JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
+int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
+                        const JSClassDef *class_def, JSAtom name);
+JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
+                                           JSClassID class_id, int n_alloc_props);
+void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
+void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
+int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
+                              JSValueConst name, JSValue val);
+JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
+                             const char *fmt, va_list ap);
+JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name);
+JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name);
+JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
+                                                    JSFunctionBytecode *b,
+                                                    int idx, BOOL is_ref);
+JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop);
+int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
+no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
+                                                             JSObject *p);
+int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+                         uint32_t pc_value, int *pcol_num);
+void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
+void free_zero_refcount(JSRuntime *rt);
+void gc_decref(JSRuntime *rt);
+const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
+int init_shape_hash(JSRuntime *rt);
+BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
+void js_array_finalizer(JSRuntime *rt, JSValue val);
+void js_array_mark(JSRuntime *rt, JSValueConst val,
+                          JS_MarkFunc *mark_func);
+JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
+JSContext *js_autoinit_get_realm(JSProperty *pr);
+void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
+void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv, int flags);
+void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
+void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+void js_c_function_finalizer(JSRuntime *rt, JSValue val);
+void js_c_function_mark(JSRuntime *rt, JSValueConst val,
+                               JS_MarkFunc *mark_func);
+JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
+void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+void js_free_shape_null(JSRuntime *rt, JSShape *sh);
+void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst home_obj);
+int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                    JSAtom name, int flags, JSValueConst home_obj);
+void js_object_data_finalizer(JSRuntime *rt, JSValue val);
+void js_object_data_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+void set_cycle_flag(JSContext *ctx, JSValueConst obj);
+
+JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
+                                                         JSAtom atom, BOOL is_lexical);
 
 #endif

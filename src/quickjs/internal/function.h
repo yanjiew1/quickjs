@@ -287,4 +287,13 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
 int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
                                    JSValueConst obj);
 
+void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+
+void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+
+JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+
+JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
+                                               JSAtom atom, void *opaque);
+
 #endif

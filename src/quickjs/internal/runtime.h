@@ -410,4 +410,20 @@ void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
 int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
 
+no_inline __exception int __js_poll_interrupts(JSContext *ctx);
+
+static inline __exception int js_poll_interrupts(JSContext *ctx)
+{
+    if (unlikely(--ctx->interrupt_counter <= 0)) {
+        return __js_poll_interrupts(ctx);
+    } else {
+        return 0;
+    }
+}
+
+void js_trigger_gc(JSRuntime *rt, size_t size);
+
+void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
+                           JS_MarkFunc *mark_func);
+
 #endif
