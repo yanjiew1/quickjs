@@ -178,12 +178,6 @@ typedef struct JSAsyncFunctionState {
 
 JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
                            int argc, JSValueConst *argv);
-JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
-                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
-                                  JSValueConst parent_ctor,
-                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
-                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
-                                  int flags);
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                                    int class_id);
 
@@ -285,9 +279,6 @@ void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 
 JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
-
-JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
-                                               JSAtom atom, void *opaque);
 
 extern const uint16_t func_kind_to_class_id[JS_FUNC_ASYNC_GENERATOR + 1];
 

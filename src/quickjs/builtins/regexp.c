@@ -27,6 +27,7 @@
 #include "../internal/number.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/function-list.h"
 #include "libregexp.h"
 #include "libunicode.h"
 #include "regexp.h"

@@ -28,6 +28,7 @@
 #include "internal/bigint.h"
 #include "internal/string.h"
 #include "internal/object.h"
+#include "internal/function-list.h"
 #include "internal/module.h"
 #include "internal/frontend.h"
 #include "libunicode.h"

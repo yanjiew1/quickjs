@@ -28,6 +28,7 @@
 #include "../internal/bigint.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/function-list.h"
 #include "collections.h"
 #include "array.h"
 

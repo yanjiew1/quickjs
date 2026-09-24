@@ -207,8 +207,6 @@ int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
 
 JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
-JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
-                              const JSCFunctionListEntry *fields, int n_fields);
 int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
                                    JSValueConst proto_val,
                                    BOOL throw_flag);
@@ -302,14 +300,6 @@ JSProperty *add_property(JSContext *ctx,
 int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
                                      JSAtom prop, JSAutoInitIDEnum id,
                                      void *opaque, int flags);
-
-int JS_SetConstructor2(JSContext *ctx,
-                              JSValueConst func_obj,
-                              JSValueConst proto,
-                              int proto_flags, int ctor_flags);
-
-#define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
-#define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
 
 JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                                    JSValue prop);
@@ -441,10 +431,6 @@ JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
                                                          JSAtom atom, BOOL is_lexical);
 
 __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
-
-#define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* the prototype class is 'class_id' instead of JS_CLASS_OBJECT */
-
-#define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
 
 void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
 
