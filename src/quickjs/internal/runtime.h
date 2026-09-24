@@ -276,4 +276,7 @@ typedef struct JSClassShortDef {
 
 int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
                             int start, int count);
+int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
+                   int argc, JSValueConst *argv, BOOL no_exception);
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */
