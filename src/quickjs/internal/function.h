@@ -267,4 +267,11 @@ JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                                    int class_id);
 
+JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
+JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
+                               JSValueConst method,
+                               int argc, JSValueConst *argv, BOOL *pdone);
+int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
+                            BOOL is_exception_pending);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */
