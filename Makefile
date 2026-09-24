@@ -255,7 +255,7 @@ CUTILS_OBJS=$(OBJDIR)/cutils.o
 DTOA_OBJS=$(OBJDIR)/dtoa.o
 UNICODE_OBJS=$(OBJDIR)/libunicode.o
 REGEXP_OBJS=$(OBJDIR)/libregexp.o $(OBJDIR)/exec.o
-QUICKJS_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/runtime.o $(OBJDIR)/atom-string.o $(OBJDIR)/number.o $(OBJDIR)/object.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode-io.o $(OBJDIR)/date.o $(OBJDIR)/collections.o $(OBJDIR)/proxy.o $(OBJDIR)/regexp.o $(OBJDIR)/promise.o $(OBJDIR)/array-buffer.o $(OBJDIR)/typed-array.o $(OBJDIR)/data-view.o $(OBJDIR)/atomics.o $(OBJDIR)/json.o $(OBJDIR)/array.o $(OBJDIR)/iterator.o $(OBJDIR)/primitives.o $(OBJDIR)/string.o $(OBJDIR)/math.o $(OBJDIR)/object-methods.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/symbol.o $(OBJDIR)/global.o $(OBJDIR)/bigint.o $(OBJDIR)/intrinsics.o
+QUICKJS_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/runtime.o $(OBJDIR)/atom-string.o $(OBJDIR)/number.o $(OBJDIR)/bigint-core.o $(OBJDIR)/object.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode-io.o $(OBJDIR)/date.o $(OBJDIR)/collections.o $(OBJDIR)/proxy.o $(OBJDIR)/regexp.o $(OBJDIR)/promise.o $(OBJDIR)/array-buffer.o $(OBJDIR)/typed-array.o $(OBJDIR)/data-view.o $(OBJDIR)/atomics.o $(OBJDIR)/json.o $(OBJDIR)/array.o $(OBJDIR)/iterator.o $(OBJDIR)/primitives.o $(OBJDIR)/string.o $(OBJDIR)/math.o $(OBJDIR)/object-methods.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/symbol.o $(OBJDIR)/global.o $(OBJDIR)/bigint.o $(OBJDIR)/intrinsics.o
 QUICKJS_LIBC_OBJS=$(OBJDIR)/quickjs-libc.o $(OBJDIR)/module-loader.o $(OBJDIR)/os.o
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(DTOA_OBJS) $(REGEXP_OBJS) $(UNICODE_OBJS) $(CUTILS_OBJS) $(QUICKJS_LIBC_OBJS)
 

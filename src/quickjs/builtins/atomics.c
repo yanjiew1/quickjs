@@ -26,6 +26,7 @@
 #include "../internal/atom.h"
 #include "../internal/runtime.h"
 #include "../internal/number.h"
+#include "../internal/bigint.h"
 #include "../internal/object.h"
 #include "typed-array.h"
 #include "array-buffer.h"
