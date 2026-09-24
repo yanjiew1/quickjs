@@ -31,11 +31,7 @@ void js_regexp_finalizer(JSRuntime *rt, JSValue val);
 void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
 void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
                                            JS_MarkFunc *mark_func);
-JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
-                                 JSValueConst flags);
 JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
-JSValue js_regexp_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv);
 int js_is_regexp(JSContext *ctx, JSValueConst obj);
 
 #endif

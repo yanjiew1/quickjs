@@ -446,7 +446,7 @@ static JSBigInt *js_bigint_new_si64(JSContext *ctx, int64_t a)
 #endif
 }
 
-JSBigInt *js_bigint_new_ui64(JSContext *ctx, uint64_t a)
+static JSBigInt *js_bigint_new_ui64(JSContext *ctx, uint64_t a)
 {
     if (a <= INT64_MAX) {
         return js_bigint_new_si64(ctx, a);

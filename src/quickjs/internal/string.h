@@ -178,8 +178,6 @@ uint32_t js_string_obj_get_length(JSContext *ctx,
 JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
 int string_buffer_fill(StringBuffer *s, int c, int count);
 
-JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
-int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2, int pos2, int len);
 BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
 int string_rope_get(JSValueConst val, uint32_t idx);
 int js_string_rope_compare(JSContext *ctx, JSValueConst op1, JSValueConst op2, BOOL eq_only);

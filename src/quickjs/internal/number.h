@@ -255,7 +255,6 @@ int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
 int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
                          const JSBigInt *b);
 BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val);
-JSBigInt *js_bigint_new_ui64(JSContext *ctx, uint64_t a);
 JSBigInt *js_bigint_new_di(JSContext *ctx, js_sdlimb_t a);
 js_slimb_t js_bigint_get_si_sat(const JSBigInt *a);
 JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,

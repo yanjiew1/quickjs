@@ -32,7 +32,7 @@
 
 JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
                                int atom_type);
-int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
+static int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
                             int pos2, int len);
 BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
 
@@ -44,7 +44,7 @@ static const char js_atom_init[] =
 
 
 /* Note: the string contents are uninitialized */
-JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char)
+static JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char)
 {
     JSString *str;
     str = js_malloc_rt(rt, sizeof(JSString) + (max_len << is_wide_char) + 1 - is_wide_char);
@@ -1633,7 +1633,7 @@ static int memcmp16(const uint16_t *src1, const uint16_t *src2, int len)
     return 0;
 }
 
-int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
+static int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
                             int pos2, int len)
 {
     int res;

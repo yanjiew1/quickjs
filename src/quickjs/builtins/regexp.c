@@ -47,7 +47,7 @@ void js_regexp_finalizer(JSRuntime *rt, JSValue val)
 }
 
 /* create a string containing the RegExp bytecode */
-JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
+static JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
                                  JSValueConst flags)
 {
     const char *str;
@@ -457,7 +457,7 @@ exception:
     return JS_EXCEPTION;
 }
 
-JSValue js_regexp_toString(JSContext *ctx, JSValueConst this_val,
+static JSValue js_regexp_toString(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv)
 {
     JSValue pattern, flags;

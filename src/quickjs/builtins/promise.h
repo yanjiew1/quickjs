@@ -27,15 +27,6 @@
 
 #include "../internal/base.h"
 
-void js_promise_finalizer(JSRuntime *rt, JSValue val);
-void js_promise_mark(JSRuntime *rt, JSValueConst val,
-                            JS_MarkFunc *mark_func);
-void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val);
-void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
-                                             JS_MarkFunc *mark_func);
-JSValue js_new_promise_capability(JSContext *ctx,
-                                         JSValue *resolving_funcs,
-                                         JSValueConst ctor);
 JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv, int magic);
 __exception int perform_promise_then(JSContext *ctx,
@@ -44,9 +35,6 @@ __exception int perform_promise_then(JSContext *ctx,
                                             JSValueConst *cap_resolving_funcs);
 JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
                                               JSValueConst sync_iter);
-void js_async_from_sync_iterator_finalizer(JSRuntime *rt, JSValue val);
-void js_async_from_sync_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                             JS_MarkFunc *mark_func);
 JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
                         int argc, JSValueConst *argv);
 

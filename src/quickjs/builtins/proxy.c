@@ -201,7 +201,7 @@ const JSCFunctionListEntry js_reflect_obj[] = {
 
 /* Proxy */
 
-void js_proxy_finalizer(JSRuntime *rt, JSValue val)
+static void js_proxy_finalizer(JSRuntime *rt, JSValue val)
 {
     JSProxyData *s = JS_GetOpaque(val, JS_CLASS_PROXY);
     if (s) {
@@ -211,7 +211,7 @@ void js_proxy_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-void js_proxy_mark(JSRuntime *rt, JSValueConst val,
+static void js_proxy_mark(JSRuntime *rt, JSValueConst val,
                           JS_MarkFunc *mark_func)
 {
     JSProxyData *s = JS_GetOpaque(val, JS_CLASS_PROXY);

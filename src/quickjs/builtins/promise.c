@@ -262,7 +262,7 @@ static int js_create_resolving_functions(JSContext *ctx,
     return ret;
 }
 
-void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
+static void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
 {
     JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(val)->u.promise_function_data;
     if (s) {
@@ -272,7 +272,7 @@ void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
+static void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
                                              JS_MarkFunc *mark_func)
 {
     JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(val)->u.promise_function_data;
@@ -334,7 +334,7 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
     return JS_UNDEFINED;
 }
 
-void js_promise_finalizer(JSRuntime *rt, JSValue val)
+static void js_promise_finalizer(JSRuntime *rt, JSValue val)
 {
     JSPromiseData *s = JS_GetOpaque(val, JS_CLASS_PROMISE);
     struct list_head *el, *el1;
@@ -353,7 +353,7 @@ void js_promise_finalizer(JSRuntime *rt, JSValue val)
     js_free_rt(rt, s);
 }
 
-void js_promise_mark(JSRuntime *rt, JSValueConst val,
+static void js_promise_mark(JSRuntime *rt, JSValueConst val,
                             JS_MarkFunc *mark_func)
 {
     JSPromiseData *s = JS_GetOpaque(val, JS_CLASS_PROMISE);
@@ -447,7 +447,7 @@ static JSValue js_promise_executor_new(JSContext *ctx)
                                0, 2, func_data);
 }
 
-JSValue js_new_promise_capability(JSContext *ctx,
+static JSValue js_new_promise_capability(JSContext *ctx,
                                          JSValue *resolving_funcs,
                                          JSValueConst ctor)
 {
@@ -1103,7 +1103,7 @@ typedef struct JSAsyncFromSyncIteratorData {
     JSValue next_method;
 } JSAsyncFromSyncIteratorData;
 
-void js_async_from_sync_iterator_finalizer(JSRuntime *rt, JSValue val)
+static void js_async_from_sync_iterator_finalizer(JSRuntime *rt, JSValue val)
 {
     JSAsyncFromSyncIteratorData *s =
         JS_GetOpaque(val, JS_CLASS_ASYNC_FROM_SYNC_ITERATOR);
@@ -1114,7 +1114,7 @@ void js_async_from_sync_iterator_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-void js_async_from_sync_iterator_mark(JSRuntime *rt, JSValueConst val,
+static void js_async_from_sync_iterator_mark(JSRuntime *rt, JSValueConst val,
                                              JS_MarkFunc *mark_func)
 {
     JSAsyncFromSyncIteratorData *s =
