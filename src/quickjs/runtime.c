@@ -30,7 +30,6 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <time.h>
-#include <fenv.h>
 #include <math.h>
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
@@ -61,10 +60,6 @@
 #include "builtins/string.h"
 #include "builtins/primitive.h"
 #include "builtins/global.h"
-
-#include "internal/config.h"
-#include "internal/base.h"
-#include "internal/allocator.h"
 #include "internal/runtime.h"
 #include "internal/number.h"
 #include "internal/string.h"
@@ -72,18 +67,7 @@
 #include "internal/module.h"
 #include "internal/object.h"
 #include "internal/bytecode.h"
-#include "internal/frontend.h"
-
-
 #include "internal/atom.h"
-
-
-
-
-
-
-
-
 
 static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
                         const JSClassDef *class_def, JSAtom name);

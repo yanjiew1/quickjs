@@ -249,9 +249,14 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
+QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode.o $(OBJDIR)/number.o $(OBJDIR)/atom-string.o $(OBJDIR)/property.o $(OBJDIR)/vm.o $(OBJDIR)/runtime.o $(OBJDIR)/array.o $(OBJDIR)/typed-array.o $(OBJDIR)/promise.o $(OBJDIR)/weak-ref.o $(OBJDIR)/proxy.o $(OBJDIR)/json.o $(OBJDIR)/regexp.o $(OBJDIR)/string.o $(OBJDIR)/primitive.o $(OBJDIR)/global.o $(OBJDIR)/object.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/date.o $(OBJDIR)/math.o $(OBJDIR)/map-set.o
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode.o $(OBJDIR)/number.o $(OBJDIR)/atom-string.o $(OBJDIR)/property.o $(OBJDIR)/vm.o $(OBJDIR)/runtime.o $(OBJDIR)/array.o $(OBJDIR)/typed-array.o $(OBJDIR)/promise.o $(OBJDIR)/weak-ref.o $(OBJDIR)/proxy.o $(OBJDIR)/json.o $(OBJDIR)/regexp.o $(OBJDIR)/string.o $(OBJDIR)/primitive.o $(OBJDIR)/global.o $(OBJDIR)/object.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/date.o $(OBJDIR)/math.o $(OBJDIR)/map-set.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/exec.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_SUPPORT_OBJS=$(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/exec.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+
+QJS_LIB_OBJS=$(QJS_ENGINE_OBJS) $(QJS_SUPPORT_OBJS)
+QJS_CHECK_OBJS=$(patsubst %.o,%.check.o,$(QJS_ENGINE_OBJS))
+
+all: $(OBJDIR) $(QJS_CHECK_OBJS) $(OBJDIR)/qjs.check.o $(PROGS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 

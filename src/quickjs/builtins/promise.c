@@ -265,7 +265,7 @@ static int js_create_resolving_functions(JSContext *ctx,
     return ret;
 }
 
-void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
+static void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
 {
     JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(val)->u.promise_function_data;
     if (s) {
@@ -275,7 +275,7 @@ void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val)
     }
 }
 
-void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
+static void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
                                              JS_MarkFunc *mark_func)
 {
     JSPromiseFunctionData *s = JS_VALUE_GET_OBJ(val)->u.promise_function_data;
@@ -337,7 +337,7 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
     return JS_UNDEFINED;
 }
 
-void js_promise_finalizer(JSRuntime *rt, JSValue val)
+static void js_promise_finalizer(JSRuntime *rt, JSValue val)
 {
     JSPromiseData *s = JS_GetOpaque(val, JS_CLASS_PROMISE);
     struct list_head *el, *el1;
@@ -356,7 +356,7 @@ void js_promise_finalizer(JSRuntime *rt, JSValue val)
     js_free_rt(rt, s);
 }
 
-void js_promise_mark(JSRuntime *rt, JSValueConst val,
+static void js_promise_mark(JSRuntime *rt, JSValueConst val,
                             JS_MarkFunc *mark_func)
 {
     JSPromiseData *s = JS_GetOpaque(val, JS_CLASS_PROMISE);

@@ -27,11 +27,6 @@
 
 #include "internal/object.h"
 
-void js_proxy_finalizer(JSRuntime *rt, JSValue val);
-
-void js_proxy_mark(JSRuntime *rt, JSValueConst val,
-                          JS_MarkFunc *mark_func);
-
 JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
 
 int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);

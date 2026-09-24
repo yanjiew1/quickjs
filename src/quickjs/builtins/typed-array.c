@@ -953,6 +953,16 @@ static JSValue js_typed_array_at(JSContext *ctx, JSValueConst this_val,
     return JS_GetPropertyInt64(ctx, this_val, idx);
 }
 
+static JSValue js_typed_array_constructor_ta(JSContext *ctx,
+                                             JSValueConst new_target,
+                                             JSValueConst src_obj,
+                                             int classid, uint32_t len);
+static JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
+                                      JSValueConst obj, JSValueConst method);
+static int typed_array_init(JSContext *ctx, JSValueConst obj,
+                            JSValue buffer, uint64_t offset, uint64_t len,
+                            BOOL track_rab);
+
 static JSValue js_typed_array_with(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv)
 {
@@ -3139,7 +3149,7 @@ static JSValue js_typed_array_base_constructor(JSContext *ctx,
 }
 
 /* 'obj' must be an allocated typed array object */
-int typed_array_init(JSContext *ctx, JSValueConst obj,
+static int typed_array_init(JSContext *ctx, JSValueConst obj,
                             JSValue buffer, uint64_t offset, uint64_t len,
                             BOOL track_rab)
 {
@@ -3170,7 +3180,7 @@ int typed_array_init(JSContext *ctx, JSValueConst obj,
 }
 
 
-JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
+static JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
                                       JSValueConst obj, JSValueConst method)
 {
     JSValue arr, iter, next_method = JS_UNDEFINED, val;
@@ -3263,7 +3273,7 @@ static JSValue js_typed_array_constructor_obj(JSContext *ctx,
     return JS_EXCEPTION;
 }
 
-JSValue js_typed_array_constructor_ta(JSContext *ctx,
+static JSValue js_typed_array_constructor_ta(JSContext *ctx,
                                              JSValueConst new_target,
                                              JSValueConst src_obj,
                                              int classid, uint32_t len)

@@ -27,16 +27,6 @@
 
 #include "internal/object.h"
 
-void js_promise_finalizer(JSRuntime *rt, JSValue val);
-
-void js_promise_mark(JSRuntime *rt, JSValueConst val,
-                            JS_MarkFunc *mark_func);
-
-void js_promise_resolve_function_finalizer(JSRuntime *rt, JSValue val);
-
-void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
-                                             JS_MarkFunc *mark_func);
-
 __exception int perform_promise_then(JSContext *ctx,
                                             JSValueConst promise,
                                             JSValueConst *resolve_reject,

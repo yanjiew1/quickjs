@@ -976,7 +976,7 @@ static JSValue js_array_lastIndexOf(JSContext *ctx, JSValueConst this_val,
 }
 
 
-JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
+static JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv, int mode)
 {
     JSValueConst func, this_arg;

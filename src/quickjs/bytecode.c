@@ -30,18 +30,15 @@
 #include <assert.h>
 #include <math.h>
 
+#include "quickjs.h"
 #include "internal/object.h"
 #include "internal/atom.h"
-#include "internal/frontend.h"
 #include "internal/bytecode.h"
-#include "builtins/function.h"
-#include "builtins/string.h"
-#include "builtins/error.h"
-#include "builtins/promise.h"
+#include "internal/module.h"
+#include "internal/function.h"
+#include "internal/string.h"
 #include "builtins/typed-array.h"
-#include "dtoa.h"
-#include "libregexp.h"
-#include "libunicode.h"
+#include "builtins/date.h"
 
 /*******************************************************************/
 /* object list */

@@ -56,19 +56,7 @@ JSValue js_typed_array_constructor(JSContext *ctx,
                                           int argc, JSValueConst *argv,
                                           int classid);
 
-JSValue js_typed_array_constructor_ta(JSContext *ctx,
-                                             JSValueConst new_target,
-                                             JSValueConst src_obj,
-                                             int classid, uint32_t len);
-
 JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
-
-JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
-                                      JSValueConst obj, JSValueConst method);
-
-int typed_array_init(JSContext *ctx, JSValueConst obj,
-                            JSValue buffer, uint64_t offset, uint64_t len,
-                            BOOL track_rab);
 
 void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
 

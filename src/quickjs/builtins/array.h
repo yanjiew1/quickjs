@@ -53,8 +53,6 @@ JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                        int argc, JSValueConst *argv, int special);
 JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
                         int argc, JSValueConst *argv, int special);
-JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv, int mode);
 JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv);
 
