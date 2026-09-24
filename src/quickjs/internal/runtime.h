@@ -268,4 +268,12 @@ static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
     JS_FreeValue(ctx, old_val);
 }
 
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
+
+int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                            int start, int count);
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

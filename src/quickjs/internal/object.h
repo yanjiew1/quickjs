@@ -254,4 +254,7 @@ JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
 JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
                                      JSValueConst defaultConstructor);
 
+JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
+                             int argc, JSValueConst *argv);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

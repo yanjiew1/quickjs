@@ -150,4 +150,6 @@ static inline int js_bigint_sign(const JSBigInt *a)
     return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
 }
 
+int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
+
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

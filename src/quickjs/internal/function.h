@@ -297,4 +297,63 @@ int check_exception_free(JSContext *ctx, JSValue obj);
 #define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
 #define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
 
+void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                       JSAtom name, int len);
+
+int JS_SetConstructor2(JSContext *ctx,
+                              JSValueConst func_obj,
+                              JSValueConst proto,
+                              int proto_flags, int ctor_flags);
+
+void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
+
+void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
+                                      JS_MarkFunc *mark_func);
+
+void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
+
+void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
+                                           JS_MarkFunc *mark_func);
+
+JSValue js_async_function_resolve_call(JSContext *ctx,
+                                              JSValueConst func_obj,
+                                              JSValueConst this_obj,
+                                              int argc, JSValueConst *argv,
+                                              int flags);
+
+JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst this_obj,
+                                      int argc, JSValueConst *argv, int flags);
+
+void js_async_generator_finalizer(JSRuntime *rt, JSValue obj);
+
+void js_async_generator_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+
+JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
+                                       int argc, JSValueConst *argv,
+                                       int magic);
+
+JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
+                                                JSValueConst this_obj,
+                                                int argc, JSValueConst *argv,
+                                                int flags);
+
+JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
+                                       int argc, JSValueConst *argv, int magic);
+
+JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
+                                           BOOL *pdone);
+
+JSValue js_create_iterator_result(JSContext *ctx,
+                                         JSValue val,
+                                         BOOL done);
+
+typedef struct JSCFunctionDataRecord {
+    JSCFunctionData *func;
+    uint8_t length;
+    uint8_t data_len;
+    uint16_t magic;
+    JSValue data[0];
+} JSCFunctionDataRecord;
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */
