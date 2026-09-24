@@ -31,6 +31,9 @@
 #include "libunicode.h"
 #include "libunicode-table.h"
 #include "unicode-encoding.h"
+#ifdef USE_TEST
+#include "unicode-test.h"
+#endif
 
 static int lre_case_conv1(uint32_t c, int conv_type)
 {
@@ -909,6 +912,9 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
 
 /* return the length of the decomposition (length <=
    UNICODE_DECOMP_LEN_MAX) or 0 if no decomposition */
+#ifndef USE_TEST
+static
+#endif
 int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
 {
     uint32_t v, type, is_compat, code, len;
@@ -938,6 +944,9 @@ int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
 }
 
 /* return 0 if no pair found */
+#ifndef USE_TEST
+static
+#endif
 int unicode_compose_pair(uint32_t c0, uint32_t c1)
 {
     uint32_t code, len, type, v, idx1, d_idx, d_offset, ch;
@@ -974,6 +983,9 @@ int unicode_compose_pair(uint32_t c0, uint32_t c1)
 }
 
 /* return the combining class of character c (between 0 and 255) */
+#ifndef USE_TEST
+static
+#endif
 int unicode_get_cc(uint32_t c)
 {
     uint32_t code, n, type, cc, c1, b;

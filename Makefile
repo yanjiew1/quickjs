@@ -370,12 +370,21 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 regexp_test: tests/regexp_test.c src/regexp/libregexp.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/libregexp.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/libunicode.host.o $(OBJDIR)/cutils.host.o tools/unicode_gen_def.h
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/libunicode.host.o $(OBJDIR)/cutils.host.o
+unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o tools/unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
+
+$(OBJDIR)/unicode_gen.test.host.o: tools/unicode_gen.c | $(OBJDIR)
+	$(HOST_CC) $(CFLAGS_OPT) -DUSE_TEST -c -o $@ $<
+
+$(OBJDIR)/libunicode.test.host.o: src/unicode/libunicode.c | $(OBJDIR)
+	$(HOST_CC) $(CFLAGS_OPT) -DUSE_TEST -c -o $@ $<
+
+unicode_gen_test: $(OBJDIR)/unicode_gen.test.host.o $(OBJDIR)/libunicode.test.host.o $(OBJDIR)/cutils.host.o tools/unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.test.host.o $(OBJDIR)/libunicode.test.host.o $(OBJDIR)/cutils.host.o
 
 clean:
 	rm -f repl.c out.c
-	rm -f *.a *.o *.d *~ unicode_gen regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
+	rm -f *.a *.o *.d *~ unicode_gen unicode_gen_test regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
 	rm -f hello.c test_fib.c
 	rm -f examples/*.so tests/*.so
 	rm -rf $(OBJDIR)/ *.dSYM/ qjs-debug$(EXE)
