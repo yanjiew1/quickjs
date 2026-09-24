@@ -339,8 +339,6 @@ JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
                                                 int argc, JSValueConst *argv,
                                                 int flags);
 
-JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
-                                       int argc, JSValueConst *argv, int magic);
 
 JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
                                            BOOL *pdone);
@@ -361,16 +359,25 @@ JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
                                 int length, JSCFunctionEnum cproto, int magic,
                                 JSValueConst proto_val, int n_fields);
 
-JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
-                               JSValueConst array_arg);
 
-void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
 
-JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv, int magic);
 
 JSValueConst JS_GetActiveFunction(JSContext *ctx);
 
 BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
+
+BOOL js_class_has_bytecode(JSClassID class_id);
+
+JSValue js_function_proto_fileName(JSContext *ctx,
+                                          JSValueConst this_val);
+
+JSValue js_function_proto_lineNumber(JSContext *ctx,
+                                            JSValueConst this_val, int is_col);
+
+JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv,
+                                 BOOL *pdone, int magic);
+
+extern const uint16_t func_kind_to_class_id[4];
 
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

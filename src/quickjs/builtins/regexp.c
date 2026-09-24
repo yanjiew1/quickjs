@@ -36,6 +36,7 @@
 #include "libunicode.h"
 #include "builtins/string.h"
 #include "builtins/regexp.h"
+#include "builtins/function.h"
 
 /* RegExp */
 

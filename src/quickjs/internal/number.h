@@ -215,4 +215,9 @@ int skip_spaces(const char *pc);
 #define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
 
 
+static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
+{
+    return JS_ToInt32Free(ctx, (int32_t *)pres, val);
+}
+
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

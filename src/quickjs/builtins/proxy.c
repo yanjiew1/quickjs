@@ -33,6 +33,7 @@
 #include "internal/object.h"
 #include "internal/atom.h"
 #include "builtins/proxy.h"
+#include "builtins/function.h"
 #include "builtins/object.h"
 
 /* Reflect */

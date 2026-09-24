@@ -34,6 +34,7 @@
 #include "internal/atom.h"
 #include "builtins/array.h"
 #include "builtins/promise.h"
+#include "builtins/function.h"
 #include "builtins/error.h"
 
 /* Promise */
