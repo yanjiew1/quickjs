@@ -31,6 +31,7 @@
 #include "array.h"
 #include "iterator.h"
 #include "function.h"
+#include "error.h"
 
 /* Promise */
 

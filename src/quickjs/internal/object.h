@@ -303,9 +303,6 @@ int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
                                      JSAtom prop, JSAutoInitIDEnum id,
                                      void *opaque, int flags);
 
-JSValue js_aggregate_error_constructor(JSContext *ctx,
-                                              JSValueConst errors);
-
 int JS_SetConstructor2(JSContext *ctx,
                               JSValueConst func_obj,
                               JSValueConst proto,
