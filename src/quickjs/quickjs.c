@@ -361,7 +361,7 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
     } else {
         ctor_flags = JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE;
     }
-    
+
     if (JS_IsUndefined(parent_ctor)) {
         parent_proto = JS_DupValue(ctx, ctx->class_proto[JS_CLASS_OBJECT]);
         parent_ctor = ctx->function_proto;
@@ -370,7 +370,7 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
         if (JS_IsException(parent_proto))
             return JS_EXCEPTION;
     }
-    
+
     if (flags & JS_NEW_CTOR_PROTO_EXIST) {
         proto = JS_DupValue(ctx, ctx->class_proto[class_id]);
     } else {
@@ -516,7 +516,7 @@ int JS_AddIntrinsicBasicObjects(JSContext *ctx)
         JSObject *p = JS_VALUE_GET_OBJ(ctx->class_proto[JS_CLASS_ARRAY]);
         p->is_std_array_prototype = TRUE;
     }
-    
+
     ctx->array_shape = js_new_shape2(ctx, get_proto_obj(ctx->class_proto[JS_CLASS_ARRAY]),
                                      JS_PROP_INITIAL_HASH_SIZE, 1);
     if (!ctx->array_shape)
@@ -552,7 +552,7 @@ int JS_AddIntrinsicBasicObjects(JSContext *ctx)
     if (add_shape_property(ctx, &ctx->mapped_arguments_shape, NULL,
                            JS_ATOM_callee, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE))
         return -1;
-    
+
     return 0;
 }
 
@@ -587,7 +587,7 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
     if (JS_IsException(obj1))
         return -1;
     JS_FreeValue(ctx, obj1);
-    
+
     /* Function */
     ft.generic_magic = js_function_constructor;
     obj1 = JS_NewCConstructor(ctx, JS_CLASS_BYTECODE_FUNCTION, "Function",
@@ -629,22 +629,22 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
     }
     JS_FreeValue(ctx, obj1);
     ctx->iterator_ctor = obj2;
-    
+
     ctx->class_proto[JS_CLASS_ITERATOR_CONCAT] =
-        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
+        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
                               js_iterator_concat_proto_funcs,
                               countof(js_iterator_concat_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ITERATOR_CONCAT]))
         return -1;
     ctx->class_proto[JS_CLASS_ITERATOR_HELPER] =
-        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
+        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
                               js_iterator_helper_proto_funcs,
                               countof(js_iterator_helper_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ITERATOR_HELPER]))
         return -1;
-                       
+
     ctx->class_proto[JS_CLASS_ITERATOR_WRAP] =
-        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
+        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
                               js_iterator_wrap_proto_funcs,
                               countof(js_iterator_wrap_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ITERATOR_WRAP]))
@@ -657,7 +657,7 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
         return -1;
 
     ctx->class_proto[JS_CLASS_ARRAY_ITERATOR] =
-        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
+        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
                               js_array_iterator_proto_funcs,
                               countof(js_array_iterator_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ARRAY_ITERATOR]))
@@ -682,7 +682,7 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
     JS_FreeValue(ctx, obj1);
     if (JS_SetObjectData(ctx, ctx->class_proto[JS_CLASS_NUMBER], JS_NewInt32(ctx, 0)))
         return -1;
-    
+
     /* Boolean */
     obj1 = JS_NewCConstructor(ctx, JS_CLASS_BOOLEAN, "Boolean",
                                      js_boolean_constructor, 1, JS_CFUNC_constructor_or_func, 0,
@@ -710,7 +710,7 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
         return -1;
 
     ctx->class_proto[JS_CLASS_STRING_ITERATOR] =
-        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
+        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
                               js_string_iterator_proto_funcs,
                               countof(js_string_iterator_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_STRING_ITERATOR]))
@@ -735,7 +735,7 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
     if (JS_IsException(obj1))
         return -1;
     JS_FreeValue(ctx, obj1);
-    
+
     /* ES6 Generator */
     ctx->class_proto[JS_CLASS_GENERATOR] =
         JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
@@ -759,12 +759,12 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
                            ctx->class_proto[JS_CLASS_GENERATOR],
                            JS_PROP_CONFIGURABLE, JS_PROP_CONFIGURABLE))
         return -1;
-    
+
     /* global properties */
     ctx->eval_obj = JS_GetProperty(ctx, ctx->global_obj, JS_ATOM_eval);
     if (JS_IsException(ctx->eval_obj))
         return -1;
-    
+
     if (JS_DefinePropertyValue(ctx, ctx->global_obj, JS_ATOM_globalThis,
                                JS_DupValue(ctx, ctx->global_obj),
                                JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE) < 0)
