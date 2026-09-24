@@ -352,4 +352,6 @@ JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext 
     the format string. */
 #define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
 
+BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

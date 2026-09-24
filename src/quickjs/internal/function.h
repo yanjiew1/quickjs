@@ -401,4 +401,44 @@ void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 
 void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 
+JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
+                                   int argc, JSValueConst *argv);
+
+void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
+
+void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
+                                     JS_MarkFunc *mark_func);
+
+void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
+
+void js_global_object_mark(JSRuntime *rt, JSValueConst val,
+                                  JS_MarkFunc *mark_func);
+
+JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
+                                  JSValueConst this_obj,
+                                  int argc, JSValueConst *argv, int flags);
+
+JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst this_obj,
+                                      int argc, JSValueConst *argv, int flags);
+
+void js_generator_finalizer(JSRuntime *rt, JSValue obj);
+
+void js_generator_mark(JSRuntime *rt, JSValueConst val,
+                              JS_MarkFunc *mark_func);
+
+JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,
+                                          JSValueConst this_obj,
+                                          int argc, JSValueConst *argv,
+                                          int flags);
+
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+                         uint32_t pc_value, int *pcol_num);
+
+JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
+                                                    JSFunctionBytecode *b,
+                                                    int idx, BOOL is_ref);
+
+extern const JSClassExoticMethods js_arguments_exotic_methods;
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

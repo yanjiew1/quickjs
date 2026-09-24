@@ -251,7 +251,7 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/frontend.o $(OBJDIR)/bytecode.o $(OBJDIR)/number.o $(OBJDIR)/atom-string.o $(OBJDIR)/property.o $(OBJDIR)/array.o $(OBJDIR)/typed-array.o $(OBJDIR)/promise.o $(OBJDIR)/weak-ref.o $(OBJDIR)/proxy.o $(OBJDIR)/json.o $(OBJDIR)/regexp.o $(OBJDIR)/string.o $(OBJDIR)/primitive.o $(OBJDIR)/global.o $(OBJDIR)/object.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/date.o $(OBJDIR)/math.o $(OBJDIR)/map-set.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/exec.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/frontend.o $(OBJDIR)/bytecode.o $(OBJDIR)/number.o $(OBJDIR)/atom-string.o $(OBJDIR)/property.o $(OBJDIR)/vm.o $(OBJDIR)/array.o $(OBJDIR)/typed-array.o $(OBJDIR)/promise.o $(OBJDIR)/weak-ref.o $(OBJDIR)/proxy.o $(OBJDIR)/json.o $(OBJDIR)/regexp.o $(OBJDIR)/string.o $(OBJDIR)/primitive.o $(OBJDIR)/global.o $(OBJDIR)/object.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/date.o $(OBJDIR)/math.o $(OBJDIR)/map-set.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/exec.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
