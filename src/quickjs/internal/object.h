@@ -363,4 +363,120 @@ int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
                                      JSAtom prop, JSAutoInitIDEnum id,
                                      void *opaque, int flags);
 
+int init_shape_hash(JSRuntime *rt);
+
+uint32_t shape_hash(uint32_t h, uint32_t val);
+
+void js_free_shape_null(JSRuntime *rt, JSShape *sh);
+
+__maybe_unused void JS_DumpShapes(JSRuntime *rt);
+
+JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
+                                           JSClassID class_id, int n_alloc_props);
+
+JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
+
+void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst home_obj);
+
+int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                    JSAtom name, int flags, JSValueConst home_obj);
+
+void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
+
+void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+
+JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv, int flags);
+
+JSContext *js_autoinit_get_realm(JSProperty *pr);
+
+JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
+
+void js_autoinit_mark(JSRuntime *rt, JSProperty *pr,
+                             JS_MarkFunc *mark_func);
+
+void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
+
+void set_cycle_flag(JSContext *ctx, JSValueConst obj);
+
+void js_array_finalizer(JSRuntime *rt, JSValue val);
+
+void js_array_mark(JSRuntime *rt, JSValueConst val,
+                          JS_MarkFunc *mark_func);
+
+void js_object_data_finalizer(JSRuntime *rt, JSValue val);
+
+void js_object_data_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+
+void js_c_function_finalizer(JSRuntime *rt, JSValue val);
+
+void js_c_function_mark(JSRuntime *rt, JSValueConst val,
+                               JS_MarkFunc *mark_func);
+
+void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
+
+void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+
+void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
+
+void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+
+void free_gc_object(JSRuntime *rt, JSGCObjectHeader *gp);
+
+void free_zero_refcount(JSRuntime *rt);
+
+void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
+
+int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
+                               JSProperty *pr, JSShapeProperty *prs);
+
+int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
+                                 JSValueConst name, JSValue val);
+
+JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
+                                  JSValueConst name);
+
+int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
+                              JSValueConst name, JSValue val);
+
+int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
+
+int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
+
+no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
+                                                             JSObject *p);
+
+int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
+
+JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
+
+int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
+                               JSAtom name, int flags);
+
+int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
+                                       JSValueConst str, int flags);
+
+JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop);
+
+int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
+
+int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
+
+int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
+
+static inline size_t get_shape_size(size_t hash_size, size_t prop_size)
+{
+    return sizeof(JSShape) + hash_size * sizeof(uint32_t) +
+        prop_size * sizeof(JSShapeProperty);
+}
+
+#define DEFINE_GLOBAL_LEX_VAR (1 << 7)
+#define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

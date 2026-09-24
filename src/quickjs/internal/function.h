@@ -397,4 +397,8 @@ JSValue js_closure(JSContext *ctx, JSValue bfunc,
                           JSVarRef **cur_var_refs,
                           JSStackFrame *sf, BOOL is_eval);
 
+void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+
+void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

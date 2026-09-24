@@ -324,4 +324,32 @@ static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
 
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 
+void js_trigger_gc(JSRuntime *rt, size_t size);
+
+int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
+
+JSValue JS_ThrowTypeErrorNotASymbol(JSContext *ctx);
+
+JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name);
+
+JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name);
+
+__maybe_unused void print_atom(JSContext *ctx, JSAtom atom);
+
+__maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p);
+
+JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
+                                                         JSAtom atom, BOOL is_lexical);
+
+JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
+
+JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
+                                               JSAtom atom, void *opaque);
+
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+
+/* %s is replaced by 'atom'. The macro is used so that gcc can check
+    the format string. */
+#define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */
