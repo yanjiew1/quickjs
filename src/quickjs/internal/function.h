@@ -210,4 +210,8 @@ static inline BOOL is_strict_mode(JSContext *ctx)
     return (sf && (sf->js_mode & JS_MODE_STRICT));
 }
 
+JSValueConst JS_GetActiveFunction(JSContext *ctx);
+
+BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
+
 #endif

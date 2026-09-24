@@ -71,6 +71,15 @@ typedef struct JSStringRope {
     JSValue right; /* might be the empty string */
 } JSStringRope;
 
+typedef struct StringBuffer {
+    JSContext *ctx;
+    JSString *str;
+    int len;
+    int size;
+    int is_wide_char;
+    int error_status;
+} StringBuffer;
+
 static inline int string_get(const JSString *p, int idx) {
     return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
 }
@@ -79,5 +88,68 @@ JSValue js_new_string8(JSContext *ctx, const char *buf);
 
 uint32_t hash_string(const JSString *str, uint32_t h);
 uint32_t hash_string_rope(JSValueConst val, uint32_t h);
+
+static inline BOOL JS_IsEmptyString(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
+}
+
+int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
+                               int is_wide);
+int string_buffer_putc_slow(StringBuffer *s, uint32_t c);
+
+static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
+{
+    return string_buffer_init2(ctx, s, size, 0);
+}
+
+static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
+{
+    if (likely(s->len < s->size)) {
+        if (s->is_wide_char) {
+            if (c < 0x10000) {
+                s->str->u.str16[s->len++] = c;
+                return 0;
+            } else if (likely((s->len + 1) < s->size)) {
+                s->str->u.str16[s->len++] = get_hi_surrogate(c);
+                s->str->u.str16[s->len++] = get_lo_surrogate(c);
+                return 0;
+            }
+        } else if (c < 0x100) {
+            s->str->u.str8[s->len++] = c;
+            return 0;
+        }
+    }
+    return string_buffer_putc_slow(s, c);
+}
+
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+void string_buffer_free(StringBuffer *s);
+int string_buffer_putc8(StringBuffer *s, uint32_t c);
+int string_buffer_putc16(StringBuffer *s, uint32_t c);
+int string_buffer_puts8(StringBuffer *s, const char *str);
+int string_buffer_concat(StringBuffer *s, const JSString *p,
+                                uint32_t from, uint32_t to);
+int string_buffer_concat_value_free(StringBuffer *s, JSValue v);
+int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
+JSValue string_buffer_end(StringBuffer *s);
+int string_getc(const JSString *p, int *pidx);
+JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
+int string_indexof_char(JSString *p, int c, int from);
+JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
+JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
+                                JSValue str2, const char *str3);
+int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
+
+int js_string_GetSubstitution(JSContext *ctx,
+                                     StringBuffer *b,
+                                     JSValueConst matched,
+                                     JSString *sp,
+                                     uint32_t position,
+                                     JSValueConst captures_val,
+                                     JSValueConst namedCaptures,
+                                     JSValueConst rep,
+                                     uint8_t **captures,
+                                     uint32_t captures_len);
 
 #endif

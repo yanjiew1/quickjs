@@ -237,4 +237,71 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
 __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
                                        JSValueConst obj);
 
+static inline JSShapeProperty *get_shape_prop(JSShape *sh)
+{
+    return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
+}
+
+static force_inline JSShapeProperty *find_own_property1(JSObject *p,
+                                                        JSAtom atom)
+{
+    JSShape *sh;
+    JSShapeProperty *pr, *prop;
+    intptr_t h;
+    sh = p->shape;
+    h = (uintptr_t)atom & sh->prop_hash_mask;
+    h = sh->hash_table[h];
+    prop = get_shape_prop(sh);
+    while (h) {
+        pr = &prop[h - 1];
+        if (likely(pr->atom == atom)) {
+            return pr;
+        }
+        h = pr->hash_next;
+    }
+    return NULL;
+}
+
+static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
+                                                       JSObject *p,
+                                                       JSAtom atom)
+{
+    JSShape *sh;
+    JSShapeProperty *pr, *prop;
+    intptr_t h;
+    sh = p->shape;
+    h = (uintptr_t)atom & sh->prop_hash_mask;
+    h = sh->hash_table[h];
+    prop = get_shape_prop(sh);
+    while (h) {
+        pr = &prop[h - 1];
+        if (likely(pr->atom == atom)) {
+            *ppr = &p->prop[h - 1];
+            /* the compiler should be able to assume that pr != NULL here */
+            return pr;
+        }
+        h = pr->hash_next;
+    }
+    *ppr = NULL;
+    return NULL;
+}
+
+JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
+                                     JSProperty *props);
+JSShape *js_dup_shape(JSShape *sh);
+int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
+no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
+                                        int hash_size, int prop_size);
+JSObject *get_proto_obj(JSValueConst proto_val);
+int add_shape_property(JSContext *ctx, JSShape **psh,
+                              JSObject *p, JSAtom atom, int prop_flags);
+JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
+JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
+                                     JSValueConst defaultConstructor);
+__exception int js_get_length64(JSContext *ctx, int64_t *pres,
+                                       JSValueConst obj);
+
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
+                                 int64_t idx, JSValue val, int flags);
+
 #endif

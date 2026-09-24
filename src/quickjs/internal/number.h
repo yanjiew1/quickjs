@@ -143,4 +143,7 @@ int JS_ToBoolFree(JSContext *ctx, JSValue val);
 BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 
+__exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
+                                       JSValue val);
+
 #endif
