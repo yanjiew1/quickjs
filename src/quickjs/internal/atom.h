@@ -65,4 +65,6 @@ JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
 
+JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
+
 #endif

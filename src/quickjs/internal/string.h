@@ -177,4 +177,10 @@ JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
 JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
 JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
 
+JSValue js_new_string_char(JSContext *ctx, uint16_t c);
+uint32_t js_string_obj_get_length(JSContext *ctx,
+                                         JSValueConst obj);
+JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
+int string_buffer_fill(StringBuffer *s, int c, int count);
+
 #endif

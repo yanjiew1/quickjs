@@ -372,4 +372,6 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
     return proto->is_std_array_prototype;
 }
 
+JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
+
 #endif
