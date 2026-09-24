@@ -325,4 +325,15 @@ JSValue js_array_buffer_constructor3(JSContext *ctx,
                                             void *opaque, BOOL alloc_flag);
 void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
 
+JSValue js_aggregate_error_constructor(JSContext *ctx,
+                                              JSValueConst errors);
+
+int JS_SetConstructor2(JSContext *ctx,
+                              JSValueConst func_obj,
+                              JSValueConst proto,
+                              int proto_flags, int ctor_flags);
+
+#define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
+#define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
+
 #endif

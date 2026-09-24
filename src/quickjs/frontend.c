@@ -33,6 +33,7 @@
 #include "internal/bytecode.h"
 #include "internal/frontend.h"
 #include "builtins/regexp.h"
+#include "builtins/promise.h"
 #include "builtins/proxy.h"
 #include "libregexp.h"
 #include "libunicode.h"

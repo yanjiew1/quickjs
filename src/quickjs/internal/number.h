@@ -173,4 +173,6 @@ JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
 JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
 JSBigInt *js_bigint_new(JSContext *ctx, int len);
 
+int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
+
 #endif

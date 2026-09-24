@@ -229,7 +229,57 @@ JSValue js_closure(JSContext *ctx, JSValue bfunc,
                           JSVarRef **cur_var_refs,
                           JSStackFrame *sf, BOOL is_eval);
 
-JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv);
+
+typedef struct JSCFunctionDataRecord {
+    JSCFunctionData *func;
+    uint8_t length;
+    uint8_t data_len;
+    uint16_t magic;
+    JSValue data[0];
+} JSCFunctionDataRecord;
+
+void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                       JSAtom name, int len);
+JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
+                             int argc, JSValueConst *argv);
+int check_exception_free(JSContext *ctx, JSValue obj);
+JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
+                                          int argc, JSValueConst *argv);
+
+#define GEN_MAGIC_THROW  2
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_NEXT   0
+JSValue js_create_iterator_result(JSContext *ctx,
+                                         JSValue val,
+                                         BOOL done);
+JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
+                                JSValueConst method,
+                                int argc, JSValueConst *argv, int *pdone);
+JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
+                                           BOOL *pdone);
+void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
+void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
+                                           JS_MarkFunc *mark_func);
+JSValue js_async_function_resolve_call(JSContext *ctx,
+                                              JSValueConst func_obj,
+                                              JSValueConst this_obj,
+                                              int argc, JSValueConst *argv,
+                                              int flags);
+void js_async_generator_finalizer(JSRuntime *rt, JSValue obj);
+void js_async_generator_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
+                                       int argc, JSValueConst *argv,
+                                       int magic);
+JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
+                                                JSValueConst this_obj,
+                                                int argc, JSValueConst *argv,
+                                                int flags);
+
+void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
+void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
+                                      JS_MarkFunc *mark_func);
+JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
+                                       int argc, JSValueConst *argv, int magic);
 
 #endif
