@@ -185,13 +185,6 @@ JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
                                  const char *input, size_t input_len,
                                  const char *filename, int flags, int scope_idx);
-JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
-JSValue js_import_meta(JSContext *ctx);
-JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
-                                     void *opaque);
-void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
-void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
-                               JS_MarkFunc *mark_func);
 __exception int json_next_token(JSParseState *s);
 __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...);
 void js_parse_init(JSContext *ctx, JSParseState *s,
