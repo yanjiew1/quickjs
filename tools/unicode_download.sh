@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+cd "$(dirname "$0")/.."
+
 version="17.0.0"
 url="ftp://ftp.unicode.org/Public"
 

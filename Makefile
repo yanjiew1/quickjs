@@ -103,7 +103,7 @@ endif
 ifdef CONFIG_CLANG
   HOST_CC=clang
   CC=$(CROSS_PREFIX)clang
-  CFLAGS+=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
+  CFLAGS+=-g -Wall
   CFLAGS += -Wextra
   CFLAGS += -Wno-sign-compare
   CFLAGS += -Wno-missing-field-initializers
@@ -111,7 +111,6 @@ ifdef CONFIG_CLANG
   CFLAGS += -Wunused -Wno-unused-parameter
   CFLAGS += -Wwrite-strings
   CFLAGS += -Wchar-subscripts -funsigned-char
-  CFLAGS += -MMD -MF $(OBJDIR)/$(@F).d
   ifdef CONFIG_DEFAULT_AR
     AR=$(CROSS_PREFIX)ar
   else
@@ -127,13 +126,13 @@ else ifdef CONFIG_COSMO
   HOST_CC=gcc
   CC=cosmocc
   # cosmocc does not correct support -MF
-  CFLAGS=-g -Wall #-MMD -MF $(OBJDIR)/$(@F).d
+  CFLAGS=-g -Wall
   CFLAGS += -Wno-array-bounds -Wno-format-truncation
   AR=cosmoar
 else
   HOST_CC=gcc
   CC=$(CROSS_PREFIX)gcc
-  CFLAGS+=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
+  CFLAGS+=-g -Wall
   CFLAGS += -Wno-array-bounds -Wno-format-truncation -Wno-infinite-recursion
   ifdef CONFIG_LTO
     AR=$(CROSS_PREFIX)gcc-ar
@@ -164,6 +163,10 @@ endif
 endif
 
 CFLAGS+=$(DEFINES)
+CFLAGS+=-Iinclude -Isrc/cutils -Isrc/dtoa -Isrc/unicode -Isrc/regexp -Isrc/quickjs -I.
+ifndef CONFIG_COSMO
+DEPFLAGS=-MMD -MF $(@:.o=.d)
+endif
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
 CFLAGS_OPT=$(CFLAGS) -O2
@@ -247,11 +250,11 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
+all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+QJS_LIB_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/binary.o $(OBJDIR)/src/dtoa/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
 
-QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
+QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
 HOST_LIBS=-lm -ldl -lpthread
 LIBS=-lm -lpthread
@@ -269,7 +272,7 @@ qjs$(EXE): $(QJS_OBJS)
 qjs-debug$(EXE): $(patsubst %.o, %.debug.o, $(QJS_OBJS))
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-qjsc$(EXE): $(OBJDIR)/qjsc.o $(QJS_LIB_OBJS)
+qjsc$(EXE): $(OBJDIR)/tools/qjsc.o $(QJS_LIB_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
@@ -278,14 +281,14 @@ fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 fuzz_compile: $(OBJDIR)/fuzz_compile.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/libregexp.fuzz.o $(OBJDIR)/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
+fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/src/regexp/libregexp.fuzz.o $(OBJDIR)/src/cutils/cutils.fuzz.o $(OBJDIR)/src/unicode/libunicode.fuzz.o
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
 
 ifneq ($(CROSS_PREFIX),)
 
-$(QJSC): $(OBJDIR)/qjsc.host.o \
+$(QJSC): $(OBJDIR)/tools/qjsc.host.o \
     $(patsubst %.o, %.host.o, $(QJS_LIB_OBJS))
 	$(HOST_CC) $(LDFLAGS) -o $@ $^ $(HOST_LIBS)
 
@@ -297,8 +300,8 @@ QJSC_DEFINES+=-DCONFIG_LTO
 endif
 QJSC_HOST_DEFINES:=-DCONFIG_CC=\"$(HOST_CC)\" -DCONFIG_PREFIX=\"$(PREFIX)\"
 
-$(OBJDIR)/qjsc.o: CFLAGS+=$(QJSC_DEFINES)
-$(OBJDIR)/qjsc.host.o: CFLAGS+=$(QJSC_HOST_DEFINES)
+$(OBJDIR)/tools/qjsc.o: CFLAGS+=$(QJSC_DEFINES)
+$(OBJDIR)/tools/qjsc.host.o: CFLAGS+=$(QJSC_HOST_DEFINES)
 
 ifdef CONFIG_LTO
 LTOEXT=.lto
@@ -317,57 +320,76 @@ endif # CONFIG_LTO
 libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
 	$(AR) rcs $@ $^
 
-repl.c: $(QJSC) repl.js
-	$(QJSC) -s -c -o $@ -m repl.js
+repl.c: $(QJSC) tools/repl.js
+	$(QJSC) -s -c -o $@ -m tools/repl.js
 
 ifneq ($(wildcard unicode/UnicodeData.txt),)
-$(OBJDIR)/libunicode.o $(OBJDIR)/libunicode.nolto.o: libunicode-table.h
+$(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/unicode/libunicode.nolto.o: src/unicode/libunicode-table.h
 
-libunicode-table.h: unicode_gen
+src/unicode/libunicode-table.h: unicode_gen
 	./unicode_gen unicode $@
 endif
 
-run-test262$(EXE): $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS)
+run-test262$(EXE): $(OBJDIR)/tools/run-test262.o $(QJS_LIB_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-run-test262-debug: $(patsubst %.o, %.debug.o, $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS))
+run-test262-debug: $(patsubst %.o, %.debug.o, $(OBJDIR)/tools/run-test262.o $(QJS_LIB_OBJS))
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # object suffix order: nolto
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_OPT) -c -o $@ $<
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/fuzz_%.o: fuzz/fuzz_%.c | $(OBJDIR)
-	$(CC) $(CFLAGS_OPT) -c -I. -o $@ $<
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -I. -o $@ $<
 
 $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
-	$(HOST_CC) $(CFLAGS_OPT) -c -o $@ $<
+	mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_OPT) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
 $(OBJDIR)/%.nolto.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_NOLTO) -c -o $@ $<
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_NOLTO) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.debug.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_DEBUG) -c -o $@ $<
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_DEBUG) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS_OPT) -fsanitize=fuzzer-no-link -c -o $@ $<
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
 
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
-	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: libregexp.c libunicode.c cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
+regexp_test: src/regexp/libregexp.c src/unicode/libunicode.c src/cutils/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ $^ $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
+unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $^
+
+unicode_gen-test: $(OBJDIR)/tools/unicode_gen.test.o $(OBJDIR)/src/unicode/libunicode.test.o $(OBJDIR)/src/cutils/cutils.host.o
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $^
+
+$(OBJDIR)/tools/unicode_gen.test.o: tools/unicode_gen.c | $(OBJDIR)
+	mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
+
+$(OBJDIR)/src/unicode/libunicode.test.o: src/unicode/libunicode.c | $(OBJDIR)
+	mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
 
 clean:
 	rm -f repl.c out.c
-	rm -f *.a *.o *.d *~ unicode_gen regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
+	rm -f *.a *.o *.d *~ unicode_gen unicode_gen-test regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
 	rm -f hello.c test_fib.c
 	rm -f examples/*.so tests/*.so
 	rm -rf $(OBJDIR)/ *.dSYM/ qjs-debug$(EXE)
@@ -384,7 +406,7 @@ ifdef CONFIG_LTO
 	install -m644 libquickjs.lto.a "$(DESTDIR)$(PREFIX)/lib/quickjs"
 endif
 	mkdir -p "$(DESTDIR)$(PREFIX)/include/quickjs"
-	install -m644 quickjs.h quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
+	install -m644 include/quickjs.h include/quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
 
 ###############################################################################
 # examples
@@ -543,10 +565,10 @@ tests/bjson.so: $(OBJDIR)/tests/bjson.pic.o
 BENCHMARKDIR=../quickjs-benchmarks
 
 run_sunspider_like: $(BENCHMARKDIR)/run_sunspider_like.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -I. -o $@ $< libquickjs$(LTOEXT).a $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -o $@ $< libquickjs$(LTOEXT).a $(LIBS)
 
 run_octane: $(BENCHMARKDIR)/run_octane.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -I. -o $@ $< libquickjs$(LTOEXT).a $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -o $@ $< libquickjs$(LTOEXT).a $(LIBS)
 
 benchmarks: run_sunspider_like run_octane
 	./run_sunspider_like $(BENCHMARKDIR)/kraken-1.0/
@@ -554,4 +576,4 @@ benchmarks: run_sunspider_like run_octane
 	./run_sunspider_like $(BENCHMARKDIR)/sunspider-1.0/
 	./run_octane $(BENCHMARKDIR)/
 
--include $(wildcard $(OBJDIR)/*.d)
+-include $(shell find $(OBJDIR) -name '*.d' -print 2>/dev/null)

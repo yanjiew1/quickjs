@@ -31,6 +31,12 @@
 #include "libunicode.h"
 #include "libunicode-table.h"
 
+#ifdef USE_TEST
+#define UNICODE_TEST_LINKAGE
+#else
+#define UNICODE_TEST_LINKAGE static
+#endif
+
 enum {
     RUN_TYPE_U,
     RUN_TYPE_L,
@@ -965,7 +971,7 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
 
 /* return the length of the decomposition (length <=
    UNICODE_DECOMP_LEN_MAX) or 0 if no decomposition */
-static int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
+UNICODE_TEST_LINKAGE int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
 {
     uint32_t v, type, is_compat, code, len;
     int idx_min, idx_max, idx;
@@ -994,7 +1000,7 @@ static int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
 }
 
 /* return 0 if no pair found */
-static int unicode_compose_pair(uint32_t c0, uint32_t c1)
+UNICODE_TEST_LINKAGE int unicode_compose_pair(uint32_t c0, uint32_t c1)
 {
     uint32_t code, len, type, v, idx1, d_idx, d_offset, ch;
     int idx_min, idx_max, idx, d;
@@ -1030,7 +1036,7 @@ static int unicode_compose_pair(uint32_t c0, uint32_t c1)
 }
 
 /* return the combining class of character c (between 0 and 255) */
-static int unicode_get_cc(uint32_t c)
+UNICODE_TEST_LINKAGE int unicode_get_cc(uint32_t c)
 {
     uint32_t code, n, type, cc, c1, b;
     int pos;

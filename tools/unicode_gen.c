@@ -64,7 +64,8 @@ uint32_t total_index_bytes;
 */
 
 #ifdef USE_TEST
-#include "libunicode.c"
+#include "libunicode.h"
+#include "libunicode-test.h"
 #endif
 
 #define CHARCODE_MAX 0x10ffff
@@ -1226,7 +1227,6 @@ BOOL is_complicated_case(const CCInfo *ci)
             (memcmp(ci->f_data, ci->l_data, ci->f_len * sizeof(ci->f_data[0])) != 0));
 }
 
-#ifndef USE_TEST
 enum {
     RUN_TYPE_U,
     RUN_TYPE_L,
@@ -1243,7 +1243,6 @@ enum {
     RUN_TYPE_LF_EXT2,
     RUN_TYPE_UF_EXT3,
 };
-#endif
 
 const char *run_type_str[] = {
     "U",
@@ -2689,7 +2688,6 @@ void build_cc_table(FILE *f)
 }
 
 /* maximum length of decomposition: 18 chars (1), then 8 */
-#ifndef USE_TEST
 typedef enum {
     DECOMP_TYPE_C1, /* 16 bit char */
     DECOMP_TYPE_L1, /* 16 bit char table */
@@ -2727,7 +2725,6 @@ typedef enum {
     DECOMP_TYPE_S2_UL,
     DECOMP_TYPE_LS2_UL,
 } DecompTypeEnum;
-#endif
 
 const char *decomp_type_str[] = {
     "C1",
