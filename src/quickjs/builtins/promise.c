@@ -29,6 +29,7 @@
 #include "../internal/object.h"
 #include "promise.h"
 #include "array.h"
+#include "iterator.h"
 
 /* Promise */
 

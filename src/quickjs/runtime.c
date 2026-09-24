@@ -32,6 +32,7 @@
 #include "builtins/intrinsics.h"
 #include "builtins/collections.h"
 #include "builtins/array.h"
+#include "builtins/iterator.h"
 #include "builtins/regexp.h"
 #include "builtins/typed-array.h"
 #include "builtins/primitives.h"

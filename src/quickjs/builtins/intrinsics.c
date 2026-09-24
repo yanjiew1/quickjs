@@ -30,6 +30,7 @@
 #include "../internal/frontend.h"
 #include "collections.h"
 #include "array.h"
+#include "iterator.h"
 #include "proxy.h"
 #include "primitives.h"
 #include "math.h"
