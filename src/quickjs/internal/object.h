@@ -416,8 +416,4 @@ void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
 void js_global_object_mark(JSRuntime *rt, JSValueConst val,
                                   JS_MarkFunc *mark_func);
 
-__maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
-
-__maybe_unused void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p);
-
 #endif
