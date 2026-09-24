@@ -152,4 +152,20 @@ static inline int js_bigint_sign(const JSBigInt *a)
 
 int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
 
+JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
+
+JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
+
+static inline int to_digit(int c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'A' && c <= 'Z')
+        return c - 'A' + 10;
+    else if (c >= 'a' && c <= 'z')
+        return c - 'a' + 10;
+    else
+        return 36;
+}
+
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

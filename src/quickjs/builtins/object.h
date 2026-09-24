@@ -48,4 +48,7 @@ JSValue js_object_isExtensible(JSContext *ctx, JSValueConst this_val,
 JSValue js_object_preventExtensions(JSContext *ctx, JSValueConst this_val,
                                            int argc, JSValueConst *argv, int reflect);
 
+JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv, int kind);
+
 #endif /* QUICKJS_BUILTINS_OBJECT_H */

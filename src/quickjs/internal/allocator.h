@@ -110,4 +110,16 @@ static inline JSMallocBlockHeader *js_rc(void *ptr)
     return container_of(ptr, JSMallocBlockHeader, user_data);
 }
 
+no_inline int js_realloc_array(JSContext *ctx, void **parray,
+                                      int elem_size, int *psize, int req_size);
+
+static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
+                                  int *psize, int req_size)
+{
+    if (unlikely(req_size > *psize))
+        return js_realloc_array(ctx, parray, elem_size, psize, req_size);
+    else
+        return 0;
+}
+
 #endif /* QUICKJS_INTERNAL_ALLOCATOR_H */

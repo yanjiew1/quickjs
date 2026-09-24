@@ -66,6 +66,7 @@
 #include "internal/module.h"
 #include "internal/object.h"
 #include "internal/bytecode.h"
+#include "internal/frontend.h"
 
 
 #include "internal/atom.h"
@@ -179,11 +180,11 @@ static void js_global_object_mark(JSRuntime *rt, JSValueConst val,
 
 
 static JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
-static JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
 
 
 
-static JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+
+
 static JSValue js_compile_regexp(JSContext *ctx, JSValueConst pattern,
                                  JSValueConst flags);
 static JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
@@ -252,7 +253,7 @@ static BOOL js_string_eq(JSContext *ctx,
 
 static int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
 static BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val);
-static JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
+
 
 
 static int JS_AddIntrinsicBasicObjects(JSContext *ctx);
@@ -789,7 +790,7 @@ char *js_strdup(JSContext *ctx, const char *str)
     return js_strndup(ctx, str, strlen(str));
 }
 
-static no_inline int js_realloc_array(JSContext *ctx, void **parray,
+no_inline int js_realloc_array(JSContext *ctx, void **parray,
                                       int elem_size, int *psize, int req_size)
 {
     int new_size;
@@ -807,14 +808,7 @@ static no_inline int js_realloc_array(JSContext *ctx, void **parray,
 }
 
 /* resize the array and update its size if req_size > *psize */
-static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
-                                  int *psize, int req_size)
-{
-    if (unlikely(req_size > *psize))
-        return js_realloc_array(ctx, parray, elem_size, psize, req_size);
-    else
-        return 0;
-}
+
 
 static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
 {
@@ -838,9 +832,7 @@ static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
     dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
 }
 
-static inline int is_digit(int c) {
-    return c >= '0' && c <= '9';
-}
+
 
 
 
@@ -1710,9 +1702,6 @@ void JS_UpdateStackTop(JSRuntime *rt)
 
 /* JSAtom support */
 
-#define JS_ATOM_TAG_INT (1U << 31)
-#define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
-#define JS_ATOM_MAX     ((1U << 30) - 1)
 
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
@@ -1726,20 +1715,14 @@ static inline BOOL __JS_AtomIsConst(JSAtom v)
 #endif
 }
 
-static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
-{
-    return (v & JS_ATOM_TAG_INT) != 0;
-}
+
 
 static inline JSAtom __JS_AtomFromUInt32(uint32_t v)
 {
     return v | JS_ATOM_TAG_INT;
 }
 
-static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
-{
-    return atom & ~JS_ATOM_TAG_INT;
-}
+
 
 static inline int is_num(int c)
 {
@@ -2650,10 +2633,7 @@ static JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n)
     return js_atom_concat_str(ctx, name, buf);
 }
 
-static inline BOOL JS_IsEmptyString(JSValueConst v)
-{
-    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
-}
+
 
 /* JSClass support */
 
@@ -2762,7 +2742,7 @@ int JS_NewClass(JSRuntime *rt, JSClassID class_id, const JSClassDef *class_def)
     return ret;
 }
 
-static JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len)
 {
     JSString *str;
 
@@ -2803,7 +2783,7 @@ static JSValue js_new_string_char(JSContext *ctx, uint16_t c)
     }
 }
 
-static JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end)
+JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end)
 {
     int len = end - start;
     if (start == 0 && end == p->len) {
@@ -2972,7 +2952,7 @@ static int string_buffer_putc16(StringBuffer *s, uint32_t c)
     return string_buffer_putc16_slow(s, c);
 }
 
-static int string_buffer_putc_slow(StringBuffer *s, uint32_t c)
+int string_buffer_putc_slow(StringBuffer *s, uint32_t c)
 {
     if (unlikely(c >= 0x10000)) {
         /* surrogate pair */
@@ -2984,27 +2964,9 @@ static int string_buffer_putc_slow(StringBuffer *s, uint32_t c)
 }
 
 /* 0 <= c <= 0x10ffff */
-static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
-{
-    if (likely(s->len < s->size)) {
-        if (s->is_wide_char) {
-            if (c < 0x10000) {
-                s->str->u.str16[s->len++] = c;
-                return 0;
-            } else if (likely((s->len + 1) < s->size)) {
-                s->str->u.str16[s->len++] = get_hi_surrogate(c);
-                s->str->u.str16[s->len++] = get_lo_surrogate(c);
-                return 0;
-            }
-        } else if (c < 0x100) {
-            s->str->u.str8[s->len++] = c;
-            return 0;
-        }
-    }
-    return string_buffer_putc_slow(s, c);
-}
 
-static int string_getc(const JSString *p, int *pidx)
+
+int string_getc(const JSString *p, int *pidx)
 {
     int idx, c, c1;
     idx = *pidx;
@@ -3071,7 +3033,7 @@ static int string_buffer_write16(StringBuffer *s, const uint16_t *p, int len)
 }
 
 /* appending an ASCII string */
-static int string_buffer_puts8(StringBuffer *s, const char *str)
+int string_buffer_puts8(StringBuffer *s, const char *str)
 {
     return string_buffer_write8(s, (const uint8_t *)str, strlen(str));
 }
@@ -3087,7 +3049,7 @@ int string_buffer_concat(StringBuffer *s, const JSString *p,
         return string_buffer_write8(s, p->u.str8 + from, to - from);
 }
 
-static int string_buffer_concat_value(StringBuffer *s, JSValueConst v)
+int string_buffer_concat_value(StringBuffer *s, JSValueConst v)
 {
     JSString *p;
     JSValue v1;
@@ -3243,7 +3205,7 @@ JSValue JS_NewStringLen(JSContext *ctx, const char *buf, size_t buf_len)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
+JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
                                 JSValue str2, const char *str3)
 {
     StringBuffer b_s, *b = &b_s;
@@ -3871,7 +3833,7 @@ static JSValue js_rebalancee_string_rope(JSContext *ctx, JSValueConst rope)
 
 /* op1 and op2 are converted to strings. For convenience, op1 or op2 =
    JS_EXCEPTION are accepted and return JS_EXCEPTION.  */
-static JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
+JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
 {
     JSString *p1, *p2;
 
@@ -10063,17 +10025,7 @@ static int skip_spaces(const char *pc)
     return p - p_start;
 }
 
-static inline int to_digit(int c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    else if (c >= 'A' && c <= 'Z')
-        return c - 'A' + 10;
-    else if (c >= 'a' && c <= 'z')
-        return c - 'a' + 10;
-    else
-        return 36;
-}
+
 
 /* bigint support */
 
@@ -11827,7 +11779,7 @@ static JSValue JS_ToNumberHintFree(JSContext *ctx, JSValue val,
     return ret;
 }
 
-static JSValue JS_ToNumberFree(JSContext *ctx, JSValue val)
+JSValue JS_ToNumberFree(JSContext *ctx, JSValue val)
 {
     return JS_ToNumberHintFree(ctx, val, TON_FLAG_NUMBER);
 }
@@ -12442,7 +12394,7 @@ JSValue JS_ToString(JSContext *ctx, JSValueConst val)
     return JS_ToStringInternal(ctx, val, FALSE);
 }
 
-static JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
+JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
 {
     JSValue ret;
     ret = JS_ToString(ctx, val);
@@ -20566,115 +20518,6 @@ JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
     return JS_EXCEPTION;
 }
 
-/* JS parser */
-
-enum {
-    TOK_NUMBER = -128,
-    TOK_STRING,
-    TOK_TEMPLATE,
-    TOK_IDENT,
-    TOK_REGEXP,
-    /* warning: order matters (see js_parse_assign_expr) */
-    TOK_MUL_ASSIGN,
-    TOK_DIV_ASSIGN,
-    TOK_MOD_ASSIGN,
-    TOK_PLUS_ASSIGN,
-    TOK_MINUS_ASSIGN,
-    TOK_SHL_ASSIGN,
-    TOK_SAR_ASSIGN,
-    TOK_SHR_ASSIGN,
-    TOK_AND_ASSIGN,
-    TOK_XOR_ASSIGN,
-    TOK_OR_ASSIGN,
-    TOK_POW_ASSIGN,
-    TOK_LAND_ASSIGN,
-    TOK_LOR_ASSIGN,
-    TOK_DOUBLE_QUESTION_MARK_ASSIGN,
-    TOK_DEC,
-    TOK_INC,
-    TOK_SHL,
-    TOK_SAR,
-    TOK_SHR,
-    TOK_LT,
-    TOK_LTE,
-    TOK_GT,
-    TOK_GTE,
-    TOK_EQ,
-    TOK_STRICT_EQ,
-    TOK_NEQ,
-    TOK_STRICT_NEQ,
-    TOK_LAND,
-    TOK_LOR,
-    TOK_POW,
-    TOK_ARROW,
-    TOK_ELLIPSIS,
-    TOK_DOUBLE_QUESTION_MARK,
-    TOK_QUESTION_MARK_DOT,
-    TOK_ERROR,
-    TOK_PRIVATE_NAME,
-    TOK_EOF,
-    /* keywords: WARNING: same order as atoms */
-    TOK_NULL, /* must be first */
-    TOK_FALSE,
-    TOK_TRUE,
-    TOK_IF,
-    TOK_ELSE,
-    TOK_RETURN,
-    TOK_VAR,
-    TOK_THIS,
-    TOK_DELETE,
-    TOK_VOID,
-    TOK_TYPEOF,
-    TOK_NEW,
-    TOK_IN,
-    TOK_INSTANCEOF,
-    TOK_DO,
-    TOK_WHILE,
-    TOK_FOR,
-    TOK_BREAK,
-    TOK_CONTINUE,
-    TOK_SWITCH,
-    TOK_CASE,
-    TOK_DEFAULT,
-    TOK_THROW,
-    TOK_TRY,
-    TOK_CATCH,
-    TOK_FINALLY,
-    TOK_FUNCTION,
-    TOK_DEBUGGER,
-    TOK_WITH,
-    /* FutureReservedWord */
-    TOK_CLASS,
-    TOK_CONST,
-    TOK_ENUM,
-    TOK_EXPORT,
-    TOK_EXTENDS,
-    TOK_IMPORT,
-    TOK_SUPER,
-    /* FutureReservedWords when parsing strict mode code */
-    TOK_IMPLEMENTS,
-    TOK_INTERFACE,
-    TOK_LET,
-    TOK_PACKAGE,
-    TOK_PRIVATE,
-    TOK_PROTECTED,
-    TOK_PUBLIC,
-    TOK_STATIC,
-    TOK_YIELD,
-    TOK_AWAIT, /* must be last */
-    TOK_OF,     /* only used for js_parse_skip_parens_token() */
-};
-
-#define TOK_FIRST_KEYWORD   TOK_NULL
-#define TOK_LAST_KEYWORD    TOK_AWAIT
-
-/* unicode code points */
-#define CP_NBSP 0x00a0
-#define CP_BOM  0xfeff
-
-#define CP_LS   0x2028
-#define CP_PS   0x2029
-
 typedef struct BlockEnv {
     struct BlockEnv *prev;
     JSAtom label_name; /* JS_ATOM_NULL if none */
@@ -20723,13 +20566,7 @@ typedef struct LineNumberSlot {
     uint32_t source_pos;
 } LineNumberSlot;
 
-typedef struct {
-    /* last source position */
-    const uint8_t *ptr;
-    int line_num;
-    int col_num;
-    const uint8_t *buf_start;
-} GetLineColCache;
+
 
 typedef enum JSParseFunctionEnum {
     JS_PARSE_FUNC_STATEMENT,
@@ -20894,46 +20731,7 @@ typedef struct JSFunctionDef {
     BOOL has_await; /* TRUE if await is used (used in module eval) */
 } JSFunctionDef;
 
-typedef struct JSToken {
-    int val;
-    const uint8_t *ptr; /* position in the source */
-    union {
-        struct {
-            JSValue str;
-            int sep;
-        } str;
-        struct {
-            JSValue val;
-        } num;
-        struct {
-            JSAtom atom;
-            BOOL has_escape;
-            BOOL is_reserved;
-        } ident;
-        struct {
-            JSValue body;
-            JSValue flags;
-        } regexp;
-    } u;
-} JSToken;
 
-typedef struct JSParseState {
-    JSContext *ctx;
-    const char *filename;
-    JSToken token;
-    BOOL got_lf; /* true if got line feed before the current token */
-    const uint8_t *last_ptr;
-    const uint8_t *buf_start;
-    const uint8_t *buf_ptr;
-    const uint8_t *buf_end;
-
-    /* current function code */
-    JSFunctionDef *cur_func;
-    BOOL is_module; /* parsing a module */
-    BOOL allow_html_comments;
-    BOOL ext_json; /* JSON parsing: true if accepting JSON superset */
-    GetLineColCache get_line_col_cache;
-} JSParseState;
 
 typedef struct JSOpCode {
 #ifdef DUMP_BYTECODE
@@ -20973,7 +20771,7 @@ static const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
 
 static __exception int next_token(JSParseState *s);
 
-static void free_token(JSParseState *s, JSToken *token)
+void free_token(JSParseState *s, JSToken *token)
 {
     switch(token->val) {
     case TOK_NUMBER:
@@ -21130,7 +20928,7 @@ static int js_parse_error_v(JSParseState *s, const uint8_t *ptr, const char *fmt
     return -1;
 }
 
-static __attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState *s, const uint8_t *ptr, const char *fmt, ...)
+__attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState *s, const uint8_t *ptr, const char *fmt, ...)
 {
     va_list ap;
     int ret;
@@ -21141,7 +20939,7 @@ static __attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState
     return ret;
 }
 
-static __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...)
+__attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...)
 {
     va_list ap;
     int ret;
@@ -21494,7 +21292,7 @@ static __exception int js_parse_regexp(JSParseState *s)
     return -1;
 }
 
-static __exception int ident_realloc(JSContext *ctx, char **pbuf, size_t *psize,
+__exception int ident_realloc(JSContext *ctx, char **pbuf, size_t *psize,
                                      char *static_buf)
 {
     char *buf, *new_buf;
@@ -22038,382 +21836,6 @@ static __exception int next_token(JSParseState *s)
                     goto fail;
                 }
             }
-        }
-    def_token:
-        s->token.val = c;
-        p++;
-        break;
-    }
-    s->buf_ptr = p;
-
-    //    dump_token(s, &s->token);
-    return 0;
-
- fail:
-    s->token.val = TOK_ERROR;
-    return -1;
-}
-
-/* 'c' is the first character. Return JS_ATOM_NULL in case of error */
-/* XXX: accept unicode identifiers as JSON5 ? */
-static JSAtom json_parse_ident(JSParseState *s, const uint8_t **pp, int c)
-{
-    const uint8_t *p;
-    char ident_buf[128], *buf;
-    size_t ident_size, ident_pos;
-    JSAtom atom;
-
-    p = *pp;
-    buf = ident_buf;
-    ident_size = sizeof(ident_buf);
-    ident_pos = 0;
-    for(;;) {
-        buf[ident_pos++] = c;
-        c = *p;
-        if (c >= 128 || !lre_is_id_continue_byte(c))
-            break;
-        p++;
-        if (unlikely(ident_pos >= ident_size - UTF8_CHAR_LEN_MAX)) {
-            if (ident_realloc(s->ctx, &buf, &ident_size, ident_buf)) {
-                atom = JS_ATOM_NULL;
-                goto done;
-            }
-        }
-    }
-    atom = JS_NewAtomLen(s->ctx, buf, ident_pos);
- done:
-    if (unlikely(buf != ident_buf))
-        js_free(s->ctx, buf);
-    *pp = p;
-    return atom;
-}
-
-static int json_parse_string(JSParseState *s, const uint8_t **pp, int sep)
-{
-    const uint8_t *p, *p_next;
-    int i;
-    uint32_t c;
-    StringBuffer b_s, *b = &b_s;
-
-    if (string_buffer_init(s->ctx, b, 32))
-        goto fail;
-
-    p = *pp;
-    for(;;) {
-        if (p >= s->buf_end) {
-            goto end_of_input;
-        }
-        c = *p++;
-        if (c == sep)
-            break;
-        if (c < 0x20) {
-            js_parse_error_pos(s, p - 1, "Bad control character in string literal");
-            goto fail;
-        }
-        if (c == '\\') {
-            c = *p++;
-            switch(c) {
-            case 'b':   c = '\b'; break;
-            case 'f':   c = '\f'; break;
-            case 'n':   c = '\n'; break;
-            case 'r':   c = '\r'; break;
-            case 't':   c = '\t'; break;
-            case '\\':  break;
-            case '/':   break; 
-            case 'u':
-                c = 0;
-                for(i = 0; i < 4; i++) {
-                    int h = from_hex(*p++);
-                    if (h < 0) {
-                        js_parse_error_pos(s, p - 1, "Bad Unicode escape");
-                        goto fail;
-                    }
-                    c = (c << 4) | h;
-                }
-                break;
-            case '\n':
-                if (s->ext_json)
-                    continue;
-                goto bad_escape;
-            case 'v':
-                if (s->ext_json) {
-                    c = '\v';
-                    break;
-                }
-                goto bad_escape;
-            default:
-                if (c == sep)
-                    break;
-                if (p > s->buf_end)
-                    goto end_of_input;
-            bad_escape:
-                js_parse_error_pos(s, p - 1, "Bad escaped character");
-                goto fail;
-            }
-        } else
-        if (c >= 0x80) {
-            c = unicode_from_utf8(p - 1, UTF8_CHAR_LEN_MAX, &p_next);
-            if (c > 0x10FFFF) {
-                js_parse_error_pos(s, p - 1, "Bad UTF-8 sequence");
-                goto fail;
-            }
-            p = p_next;
-        }
-        if (string_buffer_putc(b, c))
-            goto fail;
-    }
-    s->token.val = TOK_STRING;
-    s->token.u.str.sep = sep;
-    s->token.u.str.str = string_buffer_end(b);
-    *pp = p;
-    return 0;
-
- end_of_input:
-    js_parse_error(s, "Unexpected end of JSON input");
- fail:
-    string_buffer_free(b);
-    return -1;
-}
-
-static int json_parse_number(JSParseState *s, const uint8_t **pp)
-{
-    const uint8_t *p = *pp;
-    const uint8_t *p_start = p;
-    int radix;
-    double d;
-    JSATODTempMem atod_mem;
-    
-    if (*p == '+' || *p == '-')
-        p++;
-
-    if (!is_digit(*p)) {
-        if (s->ext_json) {
-            if (strstart((const char *)p, "Infinity", (const char **)&p)) {
-                d = 1.0 / 0.0;
-                if (*p_start == '-')
-                    d = -d;
-                goto done;
-            } else if (strstart((const char *)p, "NaN", (const char **)&p)) {
-                d = NAN;
-                goto done;
-            } else if (*p != '.') {
-                goto unexpected_token;
-            }
-        } else {
-            goto unexpected_token;
-        }
-    }
-
-    if (p[0] == '0') {
-        if (s->ext_json) {
-            /* also accepts base 16, 8 and 2 prefix for integers */
-            radix = 10;
-            if (p[1] == 'x' || p[1] == 'X') {
-                p += 2;
-                radix = 16;
-            } else if ((p[1] == 'o' || p[1] == 'O')) {
-                p += 2;
-                radix = 8;
-            } else if ((p[1] == 'b' || p[1] == 'B')) {
-                p += 2;
-                radix = 2;
-            }
-            if (radix != 10) {
-                /* prefix is present */
-                if (to_digit(*p) >= radix) {
-                unexpected_token:
-                    return js_parse_error_pos(s, p, "Unexpected token '%c'", *p);
-                }
-                d = js_atod((const char *)p_start, (const char **)&p, 0,
-                            JS_ATOD_INT_ONLY | JS_ATOD_ACCEPT_BIN_OCT, &atod_mem);
-                goto done;
-            }
-        }
-        if (is_digit(p[1]))
-            return js_parse_error_pos(s, p, "Unexpected number");
-    }
-
-    while (is_digit(*p))
-        p++;
-
-    if (*p == '.') {
-        p++;
-        if (!is_digit(*p))
-            return js_parse_error_pos(s, p, "Unterminated fractional number");
-        while (is_digit(*p))
-            p++;
-    }
-    if (*p == 'e' || *p == 'E') {
-        p++;
-        if (*p == '+' || *p == '-')
-            p++;
-        if (!is_digit(*p))
-            return js_parse_error_pos(s, p, "Exponent part is missing a number");
-        while (is_digit(*p))
-            p++;
-    }
-    d = js_atod((const char *)p_start, NULL, 10, 0, &atod_mem);
- done:
-    s->token.val = TOK_NUMBER;
-    s->token.u.num.val = JS_NewFloat64(s->ctx, d);
-    *pp = p;
-    return 0;
-}
-
-static __exception int json_next_token(JSParseState *s)
-{
-    const uint8_t *p;
-    int c;
-    JSAtom atom;
-
-    if (js_check_stack_overflow(s->ctx->rt, 0)) {
-        return js_parse_error(s, "stack overflow");
-    }
-
-    free_token(s, &s->token);
-
-    p = s->last_ptr = s->buf_ptr;
- redo:
-    s->token.ptr = p;
-    c = *p;
-    switch(c) {
-    case 0:
-        if (p >= s->buf_end) {
-            s->token.val = TOK_EOF;
-        } else {
-            goto def_token;
-        }
-        break;
-    case '\'':
-        if (!s->ext_json) {
-            /* JSON does not accept single quoted strings */
-            goto def_token;
-        }
-        /* fall through */
-    case '\"':
-        p++;
-        if (json_parse_string(s, &p, c))
-            goto fail;
-        break;
-    case '\r':  /* accept DOS and MAC newline sequences */
-        if (p[1] == '\n') {
-            p++;
-        }
-        /* fall thru */
-    case '\n':
-        p++;
-        goto redo;
-    case '\f':
-    case '\v':
-        if (!s->ext_json) {
-            /* JSONWhitespace does not match <VT>, nor <FF> */
-            goto def_token;
-        }
-        /* fall through */
-    case ' ':
-    case '\t':
-        p++;
-        goto redo;
-    case '/':
-        if (!s->ext_json) {
-            /* JSON does not accept comments */
-            goto def_token;
-        }
-        if (p[1] == '*') {
-            /* comment */
-            p += 2;
-            for(;;) {
-                if (*p == '\0' && p >= s->buf_end) {
-                    js_parse_error(s, "unexpected end of comment");
-                    goto fail;
-                }
-                if (p[0] == '*' && p[1] == '/') {
-                    p += 2;
-                    break;
-                }
-                if (*p >= 0x80) {
-                    c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p);
-                    if (c == -1) {
-                        p++; /* skip invalid UTF-8 */
-                    }
-                } else {
-                    p++;
-                }
-            }
-            goto redo;
-        } else if (p[1] == '/') {
-            /* line comment */
-            p += 2;
-            for(;;) {
-                if (*p == '\0' && p >= s->buf_end)
-                    break;
-                if (*p == '\r' || *p == '\n')
-                    break;
-                if (*p >= 0x80) {
-                    c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p);
-                    /* LS or PS are considered as line terminator */
-                    if (c == CP_LS || c == CP_PS) {
-                        break;
-                    } else if (c == -1) {
-                        p++; /* skip invalid UTF-8 */
-                    }
-                } else {
-                    p++;
-                }
-            }
-            goto redo;
-        } else {
-            goto def_token;
-        }
-        break;
-    case 'a': case 'b': case 'c': case 'd':
-    case 'e': case 'f': case 'g': case 'h':
-    case 'i': case 'j': case 'k': case 'l':
-    case 'm': case 'n': case 'o': case 'p':
-    case 'q': case 'r': case 's': case 't':
-    case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z':
-    case 'A': case 'B': case 'C': case 'D':
-    case 'E': case 'F': case 'G': case 'H':
-    case 'I': case 'J': case 'K': case 'L':
-    case 'M': case 'N': case 'O': case 'P':
-    case 'Q': case 'R': case 'S': case 'T':
-    case 'U': case 'V': case 'W': case 'X':
-    case 'Y': case 'Z':
-    case '_':
-    case '$':
-        p++;
-        atom = json_parse_ident(s, &p, c);
-        if (atom == JS_ATOM_NULL)
-            goto fail;
-        s->token.u.ident.atom = atom;
-        s->token.u.ident.has_escape = FALSE;
-        s->token.u.ident.is_reserved = FALSE;
-        s->token.val = TOK_IDENT;
-        break;
-    case '+':
-        if (!s->ext_json)
-            goto def_token;
-        goto parse_number;
-    case '.':
-        if (s->ext_json && is_digit(p[1]))
-            goto parse_number;
-        else
-            goto def_token;
-    case '-':
-    case '0':
-    case '1': case '2': case '3': case '4':
-    case '5': case '6': case '7': case '8':
-    case '9':
-        /* number */
-    parse_number:
-        if (json_parse_number(s, &p))
-            goto fail;
-        break;
-    default:
-        if (c >= 128) {
-            js_parse_error(s, "unexpected character");
-            goto fail;
         }
     def_token:
         s->token.val = c;
@@ -35913,7 +35335,7 @@ static __exception int js_parse_program(JSParseState *s)
     return 0;
 }
 
-static void js_parse_init(JSContext *ctx, JSParseState *s,
+void js_parse_init(JSContext *ctx, JSParseState *s,
                           const char *input, size_t input_len,
                           const char *filename)
 {
@@ -39239,7 +38661,7 @@ static JSValue js_object_getOwnPropertySymbols(JSContext *ctx, JSValueConst this
                                    JS_GPN_SYMBOL_MASK, JS_ITERATOR_KIND_KEY);
 }
 
-static JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
+JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv, int kind)
 {
     return JS_GetOwnPropertyNames2(ctx, argv[0],
@@ -44241,1099 +43663,6 @@ int JS_AddIntrinsicRegExp(JSContext *ctx)
         return -1;
 
     return 0;
-}
-
-/* JSON */
-
-static int json_parse_expect(JSParseState *s, int tok)
-{
-    if (s->token.val != tok) {
-        /* XXX: dump token correctly in all cases */
-        return js_parse_error(s, "expecting '%c'", tok);
-    }
-    return json_next_token(s);
-}
-
-
-typedef struct {
-    int count;
-    uint32_t hash_size;
-    struct JSONParseRecordEntry *entries;
-    uint32_t *hash_table;
-} JSONParseRecordObject;
-    
-typedef struct JSONParseRecord {
-    JSValue value;
-    union {
-        JSONParseRecordObject obj;
-        struct {
-            int count;
-            struct JSONParseRecord *elements;
-        } array;
-        struct {
-            uint32_t source_pos;
-            uint32_t source_len;
-        } primitive;
-    } u;
-} JSONParseRecord;
-
-typedef struct JSONParseRecordEntry {
-    JSAtom atom;
-    uint32_t hash_next;
-    JSONParseRecord parse_record;
-} JSONParseRecordEntry;
-
-static void json_parse_record_init_obj(JSContext *ctx, JSONParseRecord *pr, JSValueConst val)
-{
-    pr->value = JS_DupValue(ctx, val);
-    pr->u.obj.count = 0;
-    pr->u.obj.entries = NULL;
-    pr->u.obj.hash_table = NULL;
-    pr->u.obj.hash_size = 0;
-}
-
-static void json_parse_record_init_array(JSContext *ctx, JSONParseRecord *pr, JSValueConst val)
-{
-    pr->value = JS_DupValue(ctx, val);
-    pr->u.array.count = 0;
-    pr->u.array.elements = NULL;
-}
-
-static void json_parse_record_init_primitive(JSContext *ctx, JSONParseRecord *pr, JSValueConst val,
-                                             uint32_t source_pos, uint32_t source_len)
-{
-    pr->value = JS_DupValue(ctx, val);
-    pr->u.primitive.source_pos = source_pos;
-    pr->u.primitive.source_len = source_len;
-}
-
-static int json_parse_record_resize_hash(JSContext *ctx, JSONParseRecordObject *po, uint32_t new_hash_size)
-{
-    uint32_t i, h, *new_hash_table;
-    JSONParseRecordEntry *e;
-
-    new_hash_table = js_malloc(ctx, sizeof(new_hash_table[0]) * new_hash_size);
-    if (!new_hash_table)
-        return -1;
-    js_free(ctx, po->hash_table);
-    po->hash_table = new_hash_table;
-    po->hash_size = new_hash_size;
-
-    for(i = 0; i < po->hash_size; i++) {
-        po->hash_table[i] = -1;
-    }
-    for(i = 0; i < po->count; i++) {
-        e = &po->entries[i];
-        h = e->atom & (po->hash_size - 1);
-        e->hash_next = po->hash_table[h];
-        po->hash_table[h] = i;
-    }
-    return 0;
-}
-
-static JSONParseRecord *json_parse_record_add(JSContext *ctx, JSONParseRecord *pr, JSAtom key, int *psize)
-{
-    JSONParseRecordObject *po = &pr->u.obj;
-    JSONParseRecordEntry *e;
-    JSONParseRecord *pr1;
-    uint32_t h;
-    
-    if (js_resize_array(ctx, (void **)&po->entries, sizeof(po->entries[0]),
-                        psize, po->count + 1)) {
-        return NULL;
-    }
-    /* don't use a hash table when the number of entries is small */
-    if (po->count >= 8 && (po->count + 1) > po->hash_size) {
-        int hash_bits = 32 - clz32(po->count);
-        if (json_parse_record_resize_hash(ctx, po, 1 << hash_bits))
-            return NULL;
-    }
-
-    e = &po->entries[po->count++];
-    e->atom = JS_DupAtom(ctx, key);
-    pr1 = &e->parse_record;
-    pr1->value = JS_UNDEFINED;
-    if (po->hash_size != 0) {
-        h = key & (po->hash_size - 1);
-        e->hash_next = po->hash_table[h];
-        po->hash_table[h] = po->count - 1;
-    }
-    return pr1;
-}
-
-static JSONParseRecord *json_parse_record_find(JSONParseRecord *pr, JSAtom key)
-{
-    JSONParseRecordObject *po = &pr->u.obj;
-    JSONParseRecordEntry *e;
-    uint32_t h, i;
-    
-    if (po->hash_size == 0) {
-        for(i = 0; i < po->count; i++) {
-            if (po->entries[i].atom == key)
-                return &po->entries[i].parse_record;
-        }
-    } else {
-        h = key & (po->hash_size - 1);
-        i = po->hash_table[h];
-        while (i != -1) {
-            e = &po->entries[i];
-            if (e->atom == key)
-                return &e->parse_record;
-            i = e->hash_next;
-        }
-    }
-    return NULL;
-}
-
-static void json_free_parse_record(JSContext *ctx, JSONParseRecord *pr)
-{
-    int i;
-    if (!pr)
-        return;
-    if (JS_IsObject(pr->value)) {
-        if (JS_IsArray(ctx, pr->value)) {
-            for(i = 0; i < pr->u.array.count; i++) {
-                json_free_parse_record(ctx, &pr->u.array.elements[i]);
-            }
-            js_free(ctx, pr->u.array.elements);
-        } else {
-            for(i = 0; i < pr->u.obj.count; i++) {
-                JS_FreeAtom(ctx, pr->u.obj.entries[i].atom);
-                json_free_parse_record(ctx, &pr->u.obj.entries[i].parse_record);
-            }
-            js_free(ctx, pr->u.obj.entries);
-            js_free(ctx, pr->u.obj.hash_table);
-        }
-    }
-    JS_FreeValue(ctx, pr->value);
-    pr->value = JS_UNDEFINED; /* fail safe */
-}
-
-/* 'pr' can be NULL */
-static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
-{
-    JSContext *ctx = s->ctx;
-    JSValue val = JS_NULL;
-    int ret;
-
-    if (pr) {
-        pr->value = JS_UNDEFINED;
-    }
-    
-    switch(s->token.val) {
-    case '{':
-        {
-            JSValue prop_val;
-            JSAtom prop_name;
-            JSONParseRecord *pr1;
-            int pr_size;
-            
-            if (json_next_token(s))
-                goto fail;
-            val = JS_NewObject(ctx);
-            if (JS_IsException(val))
-                goto fail;
-            if (pr) {
-                json_parse_record_init_obj(ctx, pr, val);
-                pr_size = 0;
-            }
-            if (s->token.val != '}') {
-                for(;;) {
-                    if (s->token.val == TOK_STRING) {
-                        prop_name = JS_ValueToAtom(ctx, s->token.u.str.str);
-                        if (prop_name == JS_ATOM_NULL)
-                            goto fail;
-                    } else if (s->ext_json && s->token.val == TOK_IDENT) {
-                        prop_name = JS_DupAtom(ctx, s->token.u.ident.atom);
-                    } else {
-                        js_parse_error(s, "expecting property name");
-                        goto fail;
-                    }
-                    if (json_next_token(s))
-                        goto fail1;
-                    if (json_parse_expect(s, ':'))
-                        goto fail1;
-                    if (pr) {
-                        pr1 = json_parse_record_add(ctx, pr, prop_name, &pr_size);
-                        if (!pr1)
-                            goto fail1;
-                    } else {
-                        pr1 = NULL;
-                    }
-                    prop_val = json_parse_value(s, pr1);
-                    if (JS_IsException(prop_val)) {
-                    fail1:
-                        JS_FreeAtom(ctx, prop_name);
-                        goto fail;
-                    }
-                    ret = JS_DefinePropertyValue(ctx, val, prop_name,
-                                                 prop_val, JS_PROP_C_W_E);
-                    JS_FreeAtom(ctx, prop_name);
-                    if (ret < 0)
-                        goto fail;
-
-                    if (s->token.val != ',')
-                        break;
-                    if (json_next_token(s))
-                        goto fail;
-                    if (s->ext_json && s->token.val == '}')
-                        break;
-                }
-            }
-            if (json_parse_expect(s, '}'))
-                goto fail;
-        }
-        break;
-    case '[':
-        {
-            JSValue el;
-            uint32_t idx;
-            JSONParseRecord *pr1;
-            int pr_size;
-            
-            if (json_next_token(s))
-                goto fail;
-            val = JS_NewArray(ctx);
-            if (JS_IsException(val))
-                goto fail;
-            if (pr) {
-                json_parse_record_init_array(ctx, pr, val);
-                pr_size = 0;
-            }
-            if (s->token.val != ']') {
-                idx = 0;
-                for(;;) {
-                    if (pr) {
-                        if (js_resize_array(ctx, (void **)&pr->u.array.elements, sizeof(pr->u.array.elements[0]),
-                                            &pr_size, pr->u.array.count + 1))
-                            goto fail;
-                        pr1 = &pr->u.array.elements[pr->u.array.count++];
-                        pr1->value = JS_UNDEFINED;
-                    } else {
-                        pr1 = NULL;
-                    }
-                    el = json_parse_value(s, pr1);
-                    if (JS_IsException(el))
-                        goto fail;
-                    ret = JS_DefinePropertyValueUint32(ctx, val, idx, el, JS_PROP_C_W_E);
-                    if (ret < 0)
-                        goto fail;
-                    if (s->token.val != ',')
-                        break;
-                    if (json_next_token(s))
-                        goto fail;
-                    idx++;
-                    if (s->ext_json && s->token.val == ']')
-                        break;
-                }
-            }
-            if (json_parse_expect(s, ']'))
-                goto fail;
-        }
-        break;
-    case TOK_STRING:
-        val = JS_DupValue(ctx, s->token.u.str.str);
-        if (pr) {
-            json_parse_record_init_primitive(ctx, pr, val, 
-                                             s->token.ptr - s->buf_start,
-                                             s->buf_ptr - s->token.ptr);
-        }
-        if (json_next_token(s))
-            goto fail;
-        break;
-    case TOK_NUMBER:
-        val = s->token.u.num.val;
-        if (pr) {
-            json_parse_record_init_primitive(ctx, pr, val, 
-                                             s->token.ptr - s->buf_start,
-                                             s->buf_ptr - s->token.ptr);
-        }
-        if (json_next_token(s))
-            goto fail;
-        break;
-    case TOK_IDENT:
-        if (s->token.u.ident.atom == JS_ATOM_false ||
-            s->token.u.ident.atom == JS_ATOM_true) {
-            val = JS_NewBool(ctx, s->token.u.ident.atom == JS_ATOM_true);
-            if (pr) {
-                json_parse_record_init_primitive(ctx, pr, val, 
-                                                 s->token.ptr - s->buf_start,
-                                                 s->buf_ptr - s->token.ptr);
-            }
-        } else if (s->token.u.ident.atom == JS_ATOM_null) {
-            val = JS_NULL;
-            if (pr) {
-                json_parse_record_init_primitive(ctx, pr, val, 
-                                                 s->token.ptr - s->buf_start,
-                                                 s->buf_ptr - s->token.ptr);
-            }
-        } else if (s->token.u.ident.atom == JS_ATOM_NaN && s->ext_json) {
-            /* Note: json5 identifier handling is ambiguous e.g. is 
-               '{ NaN: 1 }' a valid JSON5 production ? */ 
-            val = JS_NewFloat64(s->ctx, NAN);
-        } else if (s->token.u.ident.atom == JS_ATOM_Infinity && s->ext_json) {
-            val = JS_NewFloat64(s->ctx, INFINITY);
-        } else {
-            goto def_token;
-        }
-        if (json_next_token(s))
-            goto fail;
-        break;
-    default:
-    def_token:
-        if (s->token.val == TOK_EOF) {
-            js_parse_error(s, "Unexpected end of JSON input");
-        } else {
-            js_parse_error(s, "unexpected token: '%.*s'",
-                           (int)(s->buf_ptr - s->token.ptr), s->token.ptr);
-        }
-        goto fail;
-    }
-    return val;
- fail:
-    json_free_parse_record(ctx, pr);
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
-
-JSValue JS_ParseJSON3(JSContext *ctx, const char *buf, size_t buf_len,
-                      const char *filename, int flags, JSONParseRecord *pr)
-{
-    JSParseState s1, *s = &s1;
-    JSValue val = JS_UNDEFINED;
-
-    js_parse_init(ctx, s, buf, buf_len, filename);
-    s->ext_json = ((flags & JS_PARSE_JSON_EXT) != 0);
-    if (json_next_token(s))
-        goto fail;
-    val = json_parse_value(s, pr);
-    if (JS_IsException(val))
-        goto fail;
-    if (s->token.val != TOK_EOF) {
-        if (js_parse_error(s, "unexpected data at the end")) {
-            json_free_parse_record(ctx, pr);
-            goto fail;
-        }
-    }
-    return val;
- fail:
-    JS_FreeValue(ctx, val);
-    free_token(s, &s->token);
-    return JS_EXCEPTION;
-}
-
-JSValue JS_ParseJSON2(JSContext *ctx, const char *buf, size_t buf_len,
-                      const char *filename, int flags)
-{
-    return JS_ParseJSON3(ctx, buf, buf_len, filename, flags, NULL);
-}
-
-JSValue JS_ParseJSON(JSContext *ctx, const char *buf, size_t buf_len,
-                     const char *filename)
-{
-    return JS_ParseJSON3(ctx, buf, buf_len, filename, 0, NULL);
-}
-
-/* if pr != NULL, then pr->value = holder by construction */
-static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
-                                         JSAtom name, JSValueConst reviver,
-                                         const char *text_str, JSONParseRecord *pr)
-{
-    JSValue val, new_el, name_val, res, context;
-    JSValueConst args[3];
-    int ret, is_array;
-    uint32_t i, len = 0;
-    JSAtom prop;
-    JSPropertyEnum *atoms = NULL;
-
-    if (js_check_stack_overflow(ctx->rt, 0)) {
-        return JS_ThrowStackOverflow(ctx);
-    }
-
-    val = JS_GetProperty(ctx, holder, name);
-    if (JS_IsException(val))
-        return val;
-
-    if (pr) {
-        if (JS_IsArray(ctx, pr->value)) {
-            if (__JS_AtomIsTaggedInt(name)) {
-                uint32_t idx = __JS_AtomToUInt32(name);
-                if (idx < pr->u.array.count) {
-                    pr = &pr->u.array.elements[idx];
-                } else {
-                    pr = NULL;
-                }
-            }
-        } else {
-            pr = json_parse_record_find(pr, name);
-        }
-        if (pr && !js_same_value(ctx, pr->value, val)) {
-            pr = NULL;
-        }
-    }
-
-    context = JS_NewObject(ctx);
-    if (JS_IsException(context))
-        goto fail;
-    
-    if (JS_IsObject(val)) {
-        is_array = JS_IsArray(ctx, val);
-        if (is_array < 0)
-            goto fail;
-        if (is_array) {
-            if (js_get_length32(ctx, &len, val))
-                goto fail;
-        } else {
-            ret = JS_GetOwnPropertyNamesInternal(ctx, &atoms, &len, JS_VALUE_GET_OBJ(val), JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK);
-            if (ret < 0)
-                goto fail;
-        }
-        for(i = 0; i < len; i++) {
-            if (is_array) {
-                prop = JS_NewAtomUInt32(ctx, i);
-                if (prop == JS_ATOM_NULL)
-                    goto fail;
-            } else {
-                prop = JS_DupAtom(ctx, atoms[i].atom);
-            }
-            new_el = internalize_json_property(ctx, val, prop, reviver, text_str, pr);
-            if (JS_IsException(new_el)) {
-                JS_FreeAtom(ctx, prop);
-                goto fail;
-            }
-            if (JS_IsUndefined(new_el)) {
-                ret = JS_DeleteProperty(ctx, val, prop, 0);
-            } else {
-                ret = JS_DefinePropertyValue(ctx, val, prop, new_el, JS_PROP_C_W_E);
-            }
-            JS_FreeAtom(ctx, prop);
-            if (ret < 0)
-                goto fail;
-        }
-    } else {
-        if (pr) {
-            new_el = JS_NewStringLen(ctx, text_str + pr->u.primitive.source_pos,
-                                     pr->u.primitive.source_len);
-            if (JS_IsException(new_el))
-                goto fail;
-            if (JS_DefinePropertyValue(ctx, context, JS_ATOM_source, new_el, JS_PROP_C_W_E) < 0)
-                goto fail;
-        }
-    }
-    JS_FreePropertyEnum(ctx, atoms, len);
-    atoms = NULL;
-    name_val = JS_AtomToValue(ctx, name);
-    if (JS_IsException(name_val))
-        goto fail;
-    args[0] = name_val;
-    args[1] = val;
-    args[2] = context;
-    res = JS_Call(ctx, reviver, holder, 3, args);
-    JS_FreeValue(ctx, name_val);
-    JS_FreeValue(ctx, val);
-    JS_FreeValue(ctx, context);
-    return res;
- fail:
-    JS_FreePropertyEnum(ctx, atoms, len);
-    JS_FreeValue(ctx, context);
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
-
-static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
-{
-    JSValue obj;
-    const char *str;
-    size_t len;
-    
-    str = JS_ToCStringLen(ctx, &len, argv[0]);
-    if (!str)
-        return JS_EXCEPTION;
-    if (argc > 1 && JS_IsFunction(ctx, argv[1])) {
-        JSONParseRecord pr_s, *pr = &pr_s, *pr1;
-        JSValue root;
-        JSValueConst reviver;
-        int size;
-        
-        reviver = argv[1];
-        root = JS_NewObject(ctx);
-        if (JS_IsException(root))
-            goto fail;
-        json_parse_record_init_obj(ctx, pr, root);
-        size = 0;
-        pr1 = json_parse_record_add(ctx, pr, JS_ATOM_empty_string, &size);
-        if (!pr1)
-            goto fail1;
-
-        obj = JS_ParseJSON3(ctx, str, len, "<input>", 0, pr1);
-        if (JS_IsException(obj))
-            goto fail1;
-        
-        if (JS_DefinePropertyValue(ctx, root, JS_ATOM_empty_string, obj,
-                                   JS_PROP_C_W_E) < 0) {
-            JS_FreeValue(ctx, obj);
-        fail1:
-            json_free_parse_record(ctx, pr);
-            JS_FreeValue(ctx, root);
-            goto fail;
-        }
-        
-        obj = internalize_json_property(ctx, root, JS_ATOM_empty_string,
-                                        reviver, str, pr);
-        json_free_parse_record(ctx, pr);
-        JS_FreeValue(ctx, root);
-    } else {
-        obj = JS_ParseJSON3(ctx, str, len, "<input>", 0, NULL);
-    }
-    JS_FreeCString(ctx, str);
-    return obj;
- fail:
-    JS_FreeCString(ctx, str);
-    return JS_EXCEPTION;
-}
-
-static JSValue js_json_isRawJSON(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    JSValueConst obj = argv[0];
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(obj);
-        return JS_NewBool(ctx, p->class_id == JS_CLASS_RAWJSON);
-    } else {
-        return JS_FALSE;
-    }
-}
-
-static BOOL is_valid_raw_json_char(int c)
-{
-    return ((c >= 'a' && c <= 'z') ||
-            (c >= '0' && c <= '9') ||
-            c == '-' || 
-            c == '"');
-}
-
-static JSValue js_json_rawJSON(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    JSValue str, res, obj;
-    JSString *p;
-    str = JS_ToString(ctx, argv[0]);
-    if (JS_IsException(str))
-        return str;
-    p = JS_VALUE_GET_STRING(str);
-    if (p->len == 0 ||
-        !is_valid_raw_json_char(string_get(p, 0)) ||
-        !is_valid_raw_json_char(string_get(p, p->len - 1))) {
-        goto syntax_error;
-    }
-    res = js_json_parse(ctx, JS_UNDEFINED, 1, (JSValueConst *)&str);
-    if (JS_IsException(res)) {
-    syntax_error:
-        JS_ThrowSyntaxError(ctx, "invalid rawJSON string");
-        goto fail;
-    }
-    JS_FreeValue(ctx, res);
-    
-    obj = JS_NewObjectProtoClass(ctx, JS_NULL, JS_CLASS_RAWJSON);
-    if (JS_IsException(obj))
-        goto fail;
-    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_rawJSON, str, JS_PROP_ENUMERABLE) < 0) {
-        JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
-    }
-    JS_PreventExtensions(ctx, obj);
-    return obj;
- fail:
-    JS_FreeValue(ctx, str);
-    return JS_EXCEPTION;
-}
-
-
-typedef struct JSONStringifyContext {
-    JSValueConst replacer_func;
-    JSValue stack;
-    JSValue property_list;
-    JSValue gap;
-    JSValue empty;
-    StringBuffer *b;
-} JSONStringifyContext;
-
-static int JS_ToQuotedString(JSContext *ctx, StringBuffer *b, JSValueConst val1)
-{
-    JSValue val;
-    JSString *p;
-    int i;
-    uint32_t c;
-    char buf[16];
-
-    val = JS_ToStringCheckObject(ctx, val1);
-    if (JS_IsException(val))
-        return -1;
-    p = JS_VALUE_GET_STRING(val);
-
-    if (string_buffer_putc8(b, '\"'))
-        goto fail;
-    for(i = 0; i < p->len; ) {
-        c = string_getc(p, &i);
-        switch(c) {
-        case '\t':
-            c = 't';
-            goto quote;
-        case '\r':
-            c = 'r';
-            goto quote;
-        case '\n':
-            c = 'n';
-            goto quote;
-        case '\b':
-            c = 'b';
-            goto quote;
-        case '\f':
-            c = 'f';
-            goto quote;
-        case '\"':
-        case '\\':
-        quote:
-            if (string_buffer_putc8(b, '\\'))
-                goto fail;
-            if (string_buffer_putc8(b, c))
-                goto fail;
-            break;
-        default:
-            if (c < 32 || is_surrogate(c)) {
-                snprintf(buf, sizeof(buf), "\\u%04x", c);
-                if (string_buffer_puts8(b, buf))
-                    goto fail;
-            } else {
-                if (string_buffer_putc(b, c))
-                    goto fail;
-            }
-            break;
-        }
-    }
-    if (string_buffer_putc8(b, '\"'))
-        goto fail;
-    JS_FreeValue(ctx, val);
-    return 0;
- fail:
-    JS_FreeValue(ctx, val);
-    return -1;
-}
-
-static int JS_ToQuotedStringFree(JSContext *ctx, StringBuffer *b, JSValue val) {
-    int ret = JS_ToQuotedString(ctx, b, val);
-    JS_FreeValue(ctx, val);
-    return ret;
-}
-
-static JSValue js_json_check(JSContext *ctx, JSONStringifyContext *jsc,
-                             JSValueConst holder, JSValue val, JSValueConst key)
-{
-    JSValue v;
-    JSValueConst args[2];
-
-    /* check for object.toJSON method */
-    /* ECMA specifies this is done only for Object and BigInt */
-    if (JS_IsObject(val) || JS_IsBigInt(ctx, val)) {
-        JSValue f = JS_GetProperty(ctx, val, JS_ATOM_toJSON);
-        if (JS_IsException(f))
-            goto exception;
-        if (JS_IsFunction(ctx, f)) {
-            v = JS_CallFree(ctx, f, val, 1, &key);
-            JS_FreeValue(ctx, val);
-            val = v;
-            if (JS_IsException(val))
-                goto exception;
-        } else {
-            JS_FreeValue(ctx, f);
-        }
-    }
-
-    if (!JS_IsUndefined(jsc->replacer_func)) {
-        args[0] = key;
-        args[1] = val;
-        v = JS_Call(ctx, jsc->replacer_func, holder, 2, args);
-        JS_FreeValue(ctx, val);
-        val = v;
-        if (JS_IsException(val))
-            goto exception;
-    }
-
-    switch (JS_VALUE_GET_NORM_TAG(val)) {
-    case JS_TAG_OBJECT:
-        if (JS_IsFunction(ctx, val))
-            break;
-    case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
-    case JS_TAG_INT:
-    case JS_TAG_FLOAT64:
-    case JS_TAG_BOOL:
-    case JS_TAG_NULL:
-    case JS_TAG_SHORT_BIG_INT:
-    case JS_TAG_BIG_INT:
-    case JS_TAG_EXCEPTION:
-        return val;
-    default:
-        break;
-    }
-    JS_FreeValue(ctx, val);
-    return JS_UNDEFINED;
-
-exception:
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
-
-static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
-                          JSValueConst holder, JSValue val,
-                          JSValueConst indent)
-{
-    JSValue indent1, sep, sep1, tab, v, prop;
-    JSObject *p;
-    int64_t i, len;
-    int cl, ret;
-    BOOL has_content;
-
-    indent1 = JS_UNDEFINED;
-    sep = JS_UNDEFINED;
-    sep1 = JS_UNDEFINED;
-    tab = JS_UNDEFINED;
-    prop = JS_UNDEFINED;
-
-    if (js_check_stack_overflow(ctx->rt, 0)) {
-        JS_ThrowStackOverflow(ctx);
-        goto exception;
-    }
-
-    if (JS_IsObject(val)) {
-        p = JS_VALUE_GET_OBJ(val);
-        cl = p->class_id;
-        if (cl == JS_CLASS_STRING) {
-            val = JS_ToStringFree(ctx, val);
-            if (JS_IsException(val))
-                goto exception;
-            goto concat_primitive;
-        } else if (cl == JS_CLASS_NUMBER) {
-            val = JS_ToNumberFree(ctx, val);
-            if (JS_IsException(val))
-                goto exception;
-            goto concat_primitive;
-        } else if (cl == JS_CLASS_BOOLEAN || cl == JS_CLASS_BIG_INT) {
-            /* This will thow the same error as for the primitive object */
-            set_value(ctx, &val, JS_DupValue(ctx, p->u.object_data));
-            goto concat_primitive;
-        } else if (cl == JS_CLASS_RAWJSON) {
-            JSValue val1;
-            val1 = JS_GetProperty(ctx, val, JS_ATOM_rawJSON);
-            if (JS_IsException(val1))
-                goto exception;
-            JS_FreeValue(ctx, val);
-            val = val1;
-            goto concat_value;
-        }
-        v = js_array_includes(ctx, jsc->stack, 1, (JSValueConst *)&val);
-        if (JS_IsException(v))
-            goto exception;
-        if (JS_ToBoolFree(ctx, v)) {
-            JS_ThrowTypeError(ctx, "circular reference");
-            goto exception;
-        }
-        indent1 = JS_ConcatString(ctx, JS_DupValue(ctx, indent), JS_DupValue(ctx, jsc->gap));
-        if (JS_IsException(indent1))
-            goto exception;
-        if (!JS_IsEmptyString(jsc->gap)) {
-            sep = JS_ConcatString3(ctx, "\n", JS_DupValue(ctx, indent1), "");
-            if (JS_IsException(sep))
-                goto exception;
-            sep1 = js_new_string8(ctx, " ");
-            if (JS_IsException(sep1))
-                goto exception;
-        } else {
-            sep = JS_DupValue(ctx, jsc->empty);
-            sep1 = JS_DupValue(ctx, jsc->empty);
-        }
-        v = js_array_push(ctx, jsc->stack, 1, (JSValueConst *)&val, 0);
-        if (check_exception_free(ctx, v))
-            goto exception;
-        ret = JS_IsArray(ctx, val);
-        if (ret < 0)
-            goto exception;
-        if (ret) {
-            if (js_get_length64(ctx, &len, val))
-                goto exception;
-            string_buffer_putc8(jsc->b, '[');
-            for(i = 0; i < len; i++) {
-                if (i > 0)
-                    string_buffer_putc8(jsc->b, ',');
-                string_buffer_concat_value(jsc->b, sep);
-                v = JS_GetPropertyInt64(ctx, val, i);
-                if (JS_IsException(v))
-                    goto exception;
-                /* XXX: could do this string conversion only when needed */
-                prop = JS_ToStringFree(ctx, JS_NewInt64(ctx, i));
-                if (JS_IsException(prop))
-                    goto exception;
-                v = js_json_check(ctx, jsc, val, v, prop);
-                JS_FreeValue(ctx, prop);
-                prop = JS_UNDEFINED;
-                if (JS_IsException(v))
-                    goto exception;
-                if (JS_IsUndefined(v))
-                    v = JS_NULL;
-                if (js_json_to_str(ctx, jsc, val, v, indent1))
-                    goto exception;
-            }
-            if (len > 0 && !JS_IsEmptyString(jsc->gap)) {
-                string_buffer_putc8(jsc->b, '\n');
-                string_buffer_concat_value(jsc->b, indent);
-            }
-            string_buffer_putc8(jsc->b, ']');
-        } else {
-            if (!JS_IsUndefined(jsc->property_list))
-                tab = JS_DupValue(ctx, jsc->property_list);
-            else
-                tab = js_object_keys(ctx, JS_UNDEFINED, 1, (JSValueConst *)&val, JS_ITERATOR_KIND_KEY);
-            if (JS_IsException(tab))
-                goto exception;
-            if (js_get_length64(ctx, &len, tab))
-                goto exception;
-            string_buffer_putc8(jsc->b, '{');
-            has_content = FALSE;
-            for(i = 0; i < len; i++) {
-                JS_FreeValue(ctx, prop);
-                prop = JS_GetPropertyInt64(ctx, tab, i);
-                if (JS_IsException(prop))
-                    goto exception;
-                v = JS_GetPropertyValue(ctx, val, JS_DupValue(ctx, prop));
-                if (JS_IsException(v))
-                    goto exception;
-                v = js_json_check(ctx, jsc, val, v, prop);
-                if (JS_IsException(v))
-                    goto exception;
-                if (!JS_IsUndefined(v)) {
-                    if (has_content)
-                        string_buffer_putc8(jsc->b, ',');
-                    string_buffer_concat_value(jsc->b, sep);
-                    if (JS_ToQuotedString(ctx, jsc->b, prop)) {
-                        JS_FreeValue(ctx, v);
-                        goto exception;
-                    }
-                    string_buffer_putc8(jsc->b, ':');
-                    string_buffer_concat_value(jsc->b, sep1);
-                    if (js_json_to_str(ctx, jsc, val, v, indent1))
-                        goto exception;
-                    has_content = TRUE;
-                }
-            }
-            if (has_content && !JS_IsEmptyString(jsc->gap)) {
-                string_buffer_putc8(jsc->b, '\n');
-                string_buffer_concat_value(jsc->b, indent);
-            }
-            string_buffer_putc8(jsc->b, '}');
-        }
-        if (check_exception_free(ctx, js_array_pop(ctx, jsc->stack, 0, NULL, 0)))
-            goto exception;
-        JS_FreeValue(ctx, val);
-        JS_FreeValue(ctx, tab);
-        JS_FreeValue(ctx, sep);
-        JS_FreeValue(ctx, sep1);
-        JS_FreeValue(ctx, indent1);
-        JS_FreeValue(ctx, prop);
-        return 0;
-    }
- concat_primitive:
-    switch (JS_VALUE_GET_NORM_TAG(val)) {
-    case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
-        return JS_ToQuotedStringFree(ctx, jsc->b, val);
-    case JS_TAG_FLOAT64:
-        if (!isfinite(JS_VALUE_GET_FLOAT64(val))) {
-            val = JS_NULL;
-        }
-        goto concat_value;
-    case JS_TAG_INT:
-    case JS_TAG_BOOL:
-    case JS_TAG_NULL:
-    concat_value:
-        return string_buffer_concat_value_free(jsc->b, val);
-    case JS_TAG_SHORT_BIG_INT:
-    case JS_TAG_BIG_INT:
-        /* reject big numbers: use toJSON method to override */
-        JS_ThrowTypeError(ctx, "Do not know how to serialize a BigInt");
-        goto exception;
-    default:
-        JS_FreeValue(ctx, val);
-        return 0;
-    }
-
-exception:
-    JS_FreeValue(ctx, val);
-    JS_FreeValue(ctx, tab);
-    JS_FreeValue(ctx, sep);
-    JS_FreeValue(ctx, sep1);
-    JS_FreeValue(ctx, indent1);
-    JS_FreeValue(ctx, prop);
-    return -1;
-}
-
-JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
-                         JSValueConst replacer, JSValueConst space0)
-{
-    StringBuffer b_s;
-    JSONStringifyContext jsc_s, *jsc = &jsc_s;
-    JSValue val, v, space, ret, wrapper;
-    int res;
-    int64_t i, j, n;
-
-    jsc->replacer_func = JS_UNDEFINED;
-    jsc->stack = JS_UNDEFINED;
-    jsc->property_list = JS_UNDEFINED;
-    jsc->gap = JS_UNDEFINED;
-    jsc->b = &b_s;
-    jsc->empty = JS_AtomToString(ctx, JS_ATOM_empty_string);
-    ret = JS_UNDEFINED;
-    wrapper = JS_UNDEFINED;
-
-    string_buffer_init(ctx, jsc->b, 0);
-    jsc->stack = JS_NewArray(ctx);
-    if (JS_IsException(jsc->stack))
-        goto exception;
-    if (JS_IsFunction(ctx, replacer)) {
-        jsc->replacer_func = replacer;
-    } else {
-        res = JS_IsArray(ctx, replacer);
-        if (res < 0)
-            goto exception;
-        if (res) {
-            /* XXX: enumeration is not fully correct */
-            jsc->property_list = JS_NewArray(ctx);
-            if (JS_IsException(jsc->property_list))
-                goto exception;
-            if (js_get_length64(ctx, &n, replacer))
-                goto exception;
-            for (i = j = 0; i < n; i++) {
-                JSValue present;
-                v = JS_GetPropertyInt64(ctx, replacer, i);
-                if (JS_IsException(v))
-                    goto exception;
-                if (JS_IsObject(v)) {
-                    JSObject *p = JS_VALUE_GET_OBJ(v);
-                    if (p->class_id == JS_CLASS_STRING ||
-                        p->class_id == JS_CLASS_NUMBER) {
-                        v = JS_ToStringFree(ctx, v);
-                        if (JS_IsException(v))
-                            goto exception;
-                    } else {
-                        JS_FreeValue(ctx, v);
-                        continue;
-                    }
-                } else if (JS_IsNumber(v)) {
-                    v = JS_ToStringFree(ctx, v);
-                    if (JS_IsException(v))
-                        goto exception;
-                } else if (!JS_IsString(v)) {
-                    JS_FreeValue(ctx, v);
-                    continue;
-                }
-                present = js_array_includes(ctx, jsc->property_list,
-                                            1, (JSValueConst *)&v);
-                if (JS_IsException(present)) {
-                    JS_FreeValue(ctx, v);
-                    goto exception;
-                }
-                if (!JS_ToBoolFree(ctx, present)) {
-                    JS_SetPropertyInt64(ctx, jsc->property_list, j++, v);
-                } else {
-                    JS_FreeValue(ctx, v);
-                }
-            }
-        }
-    }
-    space = JS_DupValue(ctx, space0);
-    if (JS_IsObject(space)) {
-        JSObject *p = JS_VALUE_GET_OBJ(space);
-        if (p->class_id == JS_CLASS_NUMBER) {
-            space = JS_ToNumberFree(ctx, space);
-        } else if (p->class_id == JS_CLASS_STRING) {
-            space = JS_ToStringFree(ctx, space);
-        }
-        if (JS_IsException(space)) {
-            JS_FreeValue(ctx, space);
-            goto exception;
-        }
-    }
-    if (JS_IsNumber(space)) {
-        int n;
-        if (JS_ToInt32Clamp(ctx, &n, space, 0, 10, 0))
-            goto exception;
-        jsc->gap = js_new_string8_len(ctx, "          ", n);
-    } else if (JS_IsString(space)) {
-        JSString *p = JS_VALUE_GET_STRING(space);
-        jsc->gap = js_sub_string(ctx, p, 0, min_int(p->len, 10));
-    } else {
-        jsc->gap = JS_DupValue(ctx, jsc->empty);
-    }
-    JS_FreeValue(ctx, space);
-    if (JS_IsException(jsc->gap))
-        goto exception;
-    wrapper = JS_NewObject(ctx);
-    if (JS_IsException(wrapper))
-        goto exception;
-    if (JS_DefinePropertyValue(ctx, wrapper, JS_ATOM_empty_string,
-                               JS_DupValue(ctx, obj), JS_PROP_C_W_E) < 0)
-        goto exception;
-    val = JS_DupValue(ctx, obj);
-
-    val = js_json_check(ctx, jsc, wrapper, val, jsc->empty);
-    if (JS_IsException(val))
-        goto exception;
-    if (JS_IsUndefined(val)) {
-        ret = JS_UNDEFINED;
-        goto done1;
-    }
-    if (js_json_to_str(ctx, jsc, wrapper, val, jsc->empty))
-        goto exception;
-
-    ret = string_buffer_end(jsc->b);
-    goto done;
-
-exception:
-    ret = JS_EXCEPTION;
-done1:
-    string_buffer_free(jsc->b);
-done:
-    JS_FreeValue(ctx, wrapper);
-    JS_FreeValue(ctx, jsc->empty);
-    JS_FreeValue(ctx, jsc->gap);
-    JS_FreeValue(ctx, jsc->property_list);
-    JS_FreeValue(ctx, jsc->stack);
-    return ret;
-}
-
-static JSValue js_json_stringify(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    // stringify(val, replacer, space)
-    return JS_JSONStringify(ctx, argv[0], argv[1], argv[2]);
-}
-
-static const JSCFunctionListEntry js_json_funcs[] = {
-    JS_CFUNC_DEF("isRawJSON", 1, js_json_isRawJSON ),
-    JS_CFUNC_DEF("parse", 2, js_json_parse ),
-    JS_CFUNC_DEF("rawJSON", 1, js_json_rawJSON ),
-    JS_CFUNC_DEF("stringify", 3, js_json_stringify ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "JSON", JS_PROP_CONFIGURABLE ),
-};
-
-static const JSCFunctionListEntry js_json_obj[] = {
-    JS_OBJECT_DEF("JSON", js_json_funcs, countof(js_json_funcs), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE ),
-};
-
-int JS_AddIntrinsicJSON(JSContext *ctx)
-{
-    /* add JSON as autoinit object */
-    return JS_SetPropertyFunctionList(ctx, ctx->global_obj, js_json_obj, countof(js_json_obj));
 }
 
 /* Symbol */

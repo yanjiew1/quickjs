@@ -114,4 +114,46 @@ static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
 
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 
+JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
+                                JSValue str2, const char *str3);
+
+JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
+
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+
+JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
+
+int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
+
+int string_buffer_puts8(StringBuffer *s, const char *str);
+
+int string_getc(const JSString *p, int *pidx);
+
+int string_buffer_putc_slow(StringBuffer *s, uint32_t c);
+
+static inline BOOL JS_IsEmptyString(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
+}
+
+static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
+{
+    if (likely(s->len < s->size)) {
+        if (s->is_wide_char) {
+            if (c < 0x10000) {
+                s->str->u.str16[s->len++] = c;
+                return 0;
+            } else if (likely((s->len + 1) < s->size)) {
+                s->str->u.str16[s->len++] = get_hi_surrogate(c);
+                s->str->u.str16[s->len++] = get_lo_surrogate(c);
+                return 0;
+            }
+        } else if (c < 0x100) {
+            s->str->u.str8[s->len++] = c;
+            return 0;
+        }
+    }
+    return string_buffer_putc_slow(s, c);
+}
+
 #endif /* QUICKJS_INTERNAL_STRING_H */
