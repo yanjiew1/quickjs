@@ -27,11 +27,22 @@
 
 #include "base.h"
 
+typedef enum JSStrictEqModeEnum {
+    JS_EQ_STRICT,
+    JS_EQ_SAME_VALUE,
+    JS_EQ_SAME_VALUE_ZERO,
+} JSStrictEqModeEnum;
+
 #define HINT_STRING  0
 #define HINT_NUMBER  1
 #define HINT_NONE    2
 #define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
+
+int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
+int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val);
+int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
+                    int64_t min, int64_t max, int64_t neg_offset);
 
 double js_pow(double a, double b);
 
@@ -105,5 +116,23 @@ int JS_ToBoolFree(JSContext *ctx, JSValue val);
 JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
 
 BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+
+JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
+
+__maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
+
+int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
+
+__exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
+                                            JSValue val, BOOL is_array_ctor);
+
+JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
+
+JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
+
+BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
+                          JSStrictEqModeEnum eq_mode);
+
+BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

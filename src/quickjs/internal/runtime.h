@@ -234,4 +234,38 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
                                   const JSCFunctionListEntry *proto_fields, int n_proto_fields,
                                   int flags);
 
+JSValue JS_ThrowStackOverflow(JSContext *ctx);
+
+#if !defined(CONFIG_STACK_CHECK)
+/* no stack limitation */
+static inline uintptr_t js_get_stack_pointer(void)
+{
+    return 0;
+}
+
+
+#else
+/* Note: OS and CPU dependent */
+static inline uintptr_t js_get_stack_pointer(void)
+{
+    return (uintptr_t)__builtin_frame_address(0);
+}
+
+static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+{
+    uintptr_t sp;
+    sp = js_get_stack_pointer() - alloca_size;
+    return unlikely(sp < rt->stack_limit);
+}
+#endif
+
+
+static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
+{
+    JSValue old_val;
+    old_val = *pval;
+    *pval = new_val;
+    JS_FreeValue(ctx, old_val);
+}
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

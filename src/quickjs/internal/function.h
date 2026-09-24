@@ -151,6 +151,11 @@ typedef struct JSBoundFunction {
     JSValue argv[0];
 } JSBoundFunction;
 
+/* XXX: use enum */
+#define GEN_MAGIC_NEXT   0
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_THROW  2
+
 typedef enum JSIteratorKindEnum {
     JS_ITERATOR_KIND_KEY,
     JS_ITERATOR_KIND_VALUE,
@@ -275,5 +280,16 @@ int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
                             BOOL is_exception_pending);
 
 int check_function(JSContext *ctx, JSValueConst obj);
+
+JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
+                               JSValueConst method);
+
+JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
+                                JSValueConst method,
+                                int argc, JSValueConst *argv, int *pdone);
+
+JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
+
+int check_exception_free(JSContext *ctx, JSValue obj);
 
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

@@ -81,4 +81,35 @@ uint32_t hash_string(const JSString *str, uint32_t h);
 
 uint32_t hash_string_rope(JSValueConst val, uint32_t h);
 
+typedef struct StringBuffer {
+    JSContext *ctx;
+    JSString *str;
+    int len;
+    int size;
+    int is_wide_char;
+    int error_status;
+} StringBuffer;
+
+int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
+                               int is_wide);
+
+void string_buffer_free(StringBuffer *s);
+
+int string_buffer_putc8(StringBuffer *s, uint32_t c);
+
+int string_buffer_concat(StringBuffer *s, const JSString *p,
+                                uint32_t from, uint32_t to);
+
+int string_buffer_concat_value_free(StringBuffer *s, JSValue v);
+
+JSValue string_buffer_end(StringBuffer *s);
+
+int js_string_compare(JSContext *ctx,
+                             const JSString *p1, const JSString *p2);
+
+static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
+{
+    return string_buffer_init2(ctx, s, size, 0);
+}
+
 #endif /* QUICKJS_INTERNAL_STRING_H */

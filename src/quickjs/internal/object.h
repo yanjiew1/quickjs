@@ -27,6 +27,11 @@
 
 #include "module.h"
 
+int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj,
+                           int64_t idx, int flags);
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
+                                int64_t idx, JSValue val, int flags);
+
 JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
 
 typedef enum {
@@ -195,5 +200,53 @@ JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
 
 JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
                                      const JSCFunctionListEntry *fields, int n_fields);
+
+int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
+                                   JSValueConst obj);
+
+JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                                   JSValue prop);
+
+int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
+
+JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
+
+int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
+
+JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
+
+int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                               JSValue prop, JSValue val, int flags);
+
+int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
+                                       int64_t idx, JSValue val, int flags);
+
+BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
+                              JSValue **arrpp, uint32_t *countp);
+
+JSValue js_object_toString(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv);
+
+__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+                                       JSValueConst obj);
+
+__exception int js_get_length64(JSContext *ctx, int64_t *pres,
+                                       JSValueConst obj);
+
+static inline JSShapeProperty *get_shape_prop(JSShape *sh)
+{
+    return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
+}
+
+static force_inline BOOL can_extend_fast_array(JSObject *p)
+{
+    JSObject *proto;
+    if (!p->extensible)
+        return FALSE;
+    proto = p->shape->proto;
+    if (!proto)
+        return TRUE;
+    return proto->is_std_array_prototype;
+}
 
 #endif /* QUICKJS_INTERNAL_OBJECT_H */
