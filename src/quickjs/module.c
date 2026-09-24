@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
+#include "internal/value-print.h"
 #include "internal/runtime.h"
 #include "internal/string.h"
 #include "internal/object.h"
@@ -1961,4 +1962,3 @@ JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
     }
     return JS_DupValue(ctx, m->promise);
 }
-
