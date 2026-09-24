@@ -188,7 +188,6 @@ JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                                    int class_id);
 
 int check_function(JSContext *ctx, JSValueConst obj);
-JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
 JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
 JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
                         JSValueConst method, int argc, JSValueConst *argv, BOOL *pdone);
@@ -243,8 +242,6 @@ void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
 JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
                              int argc, JSValueConst *argv);
 int check_exception_free(JSContext *ctx, JSValue obj);
-JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
-                                          int argc, JSValueConst *argv);
 
 #define GEN_MAGIC_THROW  2
 #define GEN_MAGIC_RETURN 1
@@ -284,5 +281,10 @@ JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
 
 JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
                                JSValueConst method);
+
+JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
+
+int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
+                                   JSValueConst obj);
 
 #endif

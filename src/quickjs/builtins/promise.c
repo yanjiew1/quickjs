@@ -32,6 +32,7 @@
 #include "../internal/atom.h"
 #include "../internal/bytecode.h"
 #include "promise.h"
+#include "array.h"
 
 /* Promise */
 

@@ -351,4 +351,25 @@ int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
 JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv, int kind);
 
+int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
+BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
+                              JSValue **arrpp, uint32_t *countp);
+JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
+
+int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
+
+JSValue js_object_toString(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv);
+
+static force_inline BOOL can_extend_fast_array(JSObject *p)
+{
+    JSObject *proto;
+    if (!p->extensible)
+        return FALSE;
+    proto = p->shape->proto;
+    if (!proto)
+        return TRUE;
+    return proto->is_std_array_prototype;
+}
+
 #endif

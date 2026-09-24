@@ -197,4 +197,17 @@ int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 
 JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
 
+typedef enum JSStrictEqModeEnum {
+    JS_EQ_STRICT,
+    JS_EQ_SAME_VALUE,
+    JS_EQ_SAME_VALUE_ZERO,
+} JSStrictEqModeEnum;
+
+__exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
+                                            JSValue val, BOOL is_array_ctor);
+BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
+                          JSStrictEqModeEnum eq_mode);
+
+JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
+
 #endif

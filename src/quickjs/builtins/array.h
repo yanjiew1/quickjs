@@ -25,7 +25,7 @@
 #ifndef QUICKJS_BUILTINS_ARRAY_H
 #define QUICKJS_BUILTINS_ARRAY_H
 
-#include "../internal/base.h"
+#include "../internal/function.h"
 
 JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
                       int argc, JSValueConst *argv, int unshift);
@@ -59,5 +59,50 @@ JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv);
 JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv, int shift);
+
+typedef struct JSArrayIteratorData {
+    JSValue obj;
+    JSIteratorKindEnum kind;
+    uint32_t idx;
+} JSArrayIteratorData;
+
+extern const JSCFunctionListEntry js_array_funcs[4];
+extern const JSCFunctionListEntry js_array_proto_funcs[40];
+extern const JSCFunctionListEntry js_iterator_funcs[2];
+extern const JSCFunctionListEntry js_iterator_proto_funcs[13];
+extern const JSCFunctionListEntry js_iterator_concat_proto_funcs[3];
+extern const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
+extern const JSCFunctionListEntry js_iterator_wrap_proto_funcs[2];
+extern const JSCFunctionListEntry js_array_iterator_proto_funcs[2];
+JSValue js_array_constructor(JSContext *ctx, JSValueConst new_target,
+                                    int argc, JSValueConst *argv);
+JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
+                                       int argc, JSValueConst *argv);
+void js_array_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                   JS_MarkFunc *mark_func);
+void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val);
+void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val);
+void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
+                                   JS_MarkFunc *mark_func);
+void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val);
+void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
+                                  JS_MarkFunc *mark_func);
+
+JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
+JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
+                                   int argc, JSValueConst *argv);
+
+JSValue js_iterator_constructor_getset(JSContext *ctx,
+                                              JSValueConst this_val,
+                                              int argc, JSValueConst *argv,
+                                              int magic,
+                                              JSValue *func_data);
+
+JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv,
+                                      BOOL *pdone, int magic);
 
 #endif

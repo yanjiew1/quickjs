@@ -32,6 +32,7 @@
 #include "libregexp.h"
 #include "libunicode.h"
 #include "regexp.h"
+#include "array.h"
 
 /* RegExp */
 
