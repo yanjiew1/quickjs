@@ -29,6 +29,7 @@
 #include "../internal/object.h"
 #include "../internal/frontend.h"
 #include "json.h"
+#include "object-methods.h"
 #include "array.h"
 
 /* JSON */

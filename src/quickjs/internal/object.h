@@ -214,16 +214,6 @@ int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
                                    BOOL throw_flag);
 JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
                                        int flags, int kind);
-JSValue js_object_defineProperty(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic);
-JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx, JSValueConst this_val,
-                                                  int argc, JSValueConst *argv, int magic);
-JSValue js_object_getPrototypeOf(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic);
-JSValue js_object_isExtensible(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv, int reflect);
-JSValue js_object_preventExtensions(JSContext *ctx, JSValueConst this_val,
-                                           int argc, JSValueConst *argv, int reflect);
 int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
                                      JSObject *p, JSAtom prop);
 void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
@@ -349,8 +339,6 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
 int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
                                        int64_t idx, JSValue val, int flags);
 
-JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv, int kind);
 
 int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
 BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
@@ -359,8 +347,6 @@ JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
 
 int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
 
-JSValue js_object_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv);
 
 static force_inline BOOL can_extend_fast_array(JSObject *p)
 {

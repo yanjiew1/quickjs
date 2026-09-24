@@ -28,6 +28,7 @@
 #include "../internal/string.h"
 #include "../internal/object.h"
 #include "array.h"
+#include "object-methods.h"
 #include "typed-array.h"
 
 /* Array */

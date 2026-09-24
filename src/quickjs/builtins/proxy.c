@@ -28,6 +28,7 @@
 #include "../internal/object.h"
 #include "../internal/atom.h"
 #include "proxy.h"
+#include "object-methods.h"
 
 /* Reflect */
 
