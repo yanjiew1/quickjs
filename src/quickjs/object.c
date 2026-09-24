@@ -6183,3 +6183,79 @@ int skip_spaces(const char *pc)
 }
 
 
+
+__exception int JS_CopyDataProperties(JSContext *ctx,
+                                             JSValueConst target,
+                                             JSValueConst source,
+                                             JSValueConst excluded,
+                                             BOOL setprop)
+{
+    JSPropertyEnum *tab_atom;
+    JSValue val;
+    uint32_t i, tab_atom_count;
+    JSObject *p;
+    JSObject *pexcl = NULL;
+    int ret, gpn_flags;
+    JSPropertyDescriptor desc;
+    BOOL is_enumerable;
+
+    if (JS_VALUE_GET_TAG(source) != JS_TAG_OBJECT)
+        return 0;
+
+    if (JS_VALUE_GET_TAG(excluded) == JS_TAG_OBJECT)
+        pexcl = JS_VALUE_GET_OBJ(excluded);
+
+    p = JS_VALUE_GET_OBJ(source);
+
+    gpn_flags = JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK | JS_GPN_ENUM_ONLY;
+    if (p->is_exotic) {
+        const JSClassExoticMethods *em = ctx->rt->class_array[p->class_id].exotic;
+        /* cannot use JS_GPN_ENUM_ONLY with e.g. proxies because it
+           introduces a visible change */
+        if (em && em->get_own_property_names) {
+            gpn_flags &= ~JS_GPN_ENUM_ONLY;
+        }
+    }
+    if (JS_GetOwnPropertyNamesInternal(ctx, &tab_atom, &tab_atom_count, p,
+                                       gpn_flags))
+        return -1;
+
+    for (i = 0; i < tab_atom_count; i++) {
+        if (pexcl) {
+            ret = JS_GetOwnPropertyInternal(ctx, NULL, pexcl, tab_atom[i].atom);
+            if (ret) {
+                if (ret < 0)
+                    goto exception;
+                continue;
+            }
+        }
+        if (!(gpn_flags & JS_GPN_ENUM_ONLY)) {
+            /* test if the property is enumerable */
+            ret = JS_GetOwnPropertyInternal(ctx, &desc, p, tab_atom[i].atom);
+            if (ret < 0)
+                goto exception;
+            if (!ret)
+                continue;
+            is_enumerable = (desc.flags & JS_PROP_ENUMERABLE) != 0;
+            js_free_desc(ctx, &desc);
+            if (!is_enumerable)
+                continue;
+        }
+        val = JS_GetProperty(ctx, source, tab_atom[i].atom);
+        if (JS_IsException(val))
+            goto exception;
+        if (setprop)
+            ret = JS_SetProperty(ctx, target, tab_atom[i].atom, val);
+        else
+            ret = JS_DefinePropertyValue(ctx, target, tab_atom[i].atom, val,
+                                         JS_PROP_C_W_E);
+        if (ret < 0)
+            goto exception;
+    }
+    JS_FreePropertyEnum(ctx, tab_atom, tab_atom_count);
+    return 0;
+ exception:
+    JS_FreePropertyEnum(ctx, tab_atom, tab_atom_count);
+    return -1;
+}
+

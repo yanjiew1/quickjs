@@ -199,4 +199,7 @@ void js_parse_init(JSContext *ctx, JSParseState *s,
                           const char *filename);
 void free_token(JSParseState *s, JSToken *token);
 
+JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv);
+
 #endif

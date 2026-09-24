@@ -296,4 +296,10 @@ JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void 
 JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
                                                JSAtom atom, void *opaque);
 
+extern const uint16_t func_kind_to_class_id[JS_FUNC_ASYNC_GENERATOR + 1];
+
+JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv,
+                                 BOOL *pdone, int magic);
+
 #endif

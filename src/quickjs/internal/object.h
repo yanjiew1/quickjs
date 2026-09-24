@@ -474,4 +474,10 @@ void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
                                                          JSAtom atom, BOOL is_lexical);
 
+__exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
+
+#define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* the prototype class is 'class_id' instead of JS_CLASS_OBJECT */
+
+#define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
+
 #endif

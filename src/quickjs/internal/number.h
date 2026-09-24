@@ -281,4 +281,10 @@ JSBigInt *js_bigint_shl(JSContext *ctx, const JSBigInt *a,
 
 int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
 
+JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
+
+JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val);
+
+JSValue JS_StringToBigInt(JSContext *ctx, JSValue val);
+
 #endif
