@@ -311,11 +311,6 @@ int JS_SetConstructor2(JSContext *ctx,
 #define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
 #define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
 
-JSValue js_typed_array_constructor(JSContext *ctx,
-                                          JSValueConst new_target,
-                                          int argc, JSValueConst *argv,
-                                          int classid);
-
 JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                                    JSValue prop);
 int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,

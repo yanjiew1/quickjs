@@ -30,6 +30,7 @@
 #include "internal/module.h"
 #include "internal/bytecode.h"
 #include "builtins/array-buffer.h"
+#include "builtins/typed-array.h"
 
 /*******************************************************************/
 /* object list */
