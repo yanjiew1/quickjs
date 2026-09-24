@@ -33,4 +33,6 @@ JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
 JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv);
 
+extern const JSCFunctionListEntry js_global_funcs[15];
+
 #endif /* QUICKJS_BUILTINS_GLOBAL_H */

@@ -206,4 +206,7 @@ static inline int is_digit(int c) {
     return c >= '0' && c <= '9';
 }
 
+JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
+                             JSValueConst val, int flags, int scope_idx);
+
 #endif /* QUICKJS_INTERNAL_FRONTEND_H */

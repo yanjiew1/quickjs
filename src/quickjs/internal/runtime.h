@@ -287,4 +287,7 @@ static inline BOOL is_strict_mode(JSContext *ctx)
 
 void JS_ThrowInterrupted(JSContext *ctx);
 
+JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
+                             const char *fmt, va_list ap);
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

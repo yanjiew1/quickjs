@@ -164,4 +164,6 @@ JSValue js_new_string_char(JSContext *ctx, uint16_t c);
 
 int string_buffer_fill(StringBuffer *s, int c, int count);
 
+int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
+
 #endif /* QUICKJS_INTERNAL_STRING_H */
