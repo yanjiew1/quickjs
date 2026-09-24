@@ -105,6 +105,10 @@ typedef struct {
 
 /* end JS Malloc */
 
+void js_malloc_init(JSMallocContext *s);
+void js_trigger_gc(JSRuntime *rt, size_t size);
+void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
+
 static inline JSMallocBlockHeader *js_rc(void *ptr)
 {
     return container_of(ptr, JSMallocBlockHeader, user_data);

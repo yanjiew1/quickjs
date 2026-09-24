@@ -34,6 +34,7 @@
 #include "list.h"
 #include "quickjs.h"
 #include "internal/object.h"
+#include "internal/allocator.h"
 #include "internal/atom.h"
 #include "internal/string.h"
 #include "internal/number.h"

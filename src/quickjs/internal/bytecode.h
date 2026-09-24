@@ -26,6 +26,7 @@
 #define QUICKJS_INTERNAL_BYTECODE_H
 
 #include "function.h"
+#include "allocator.h"
 
 typedef enum OPCodeFormat {
 #define FMT(f) OP_FMT_ ## f,
@@ -125,7 +126,6 @@ int get_leb128(uint32_t *pval, const uint8_t *buf,
 int get_sleb128(int32_t *pval, const uint8_t *buf,
                        const uint8_t *buf_end);
 
-void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
 void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 

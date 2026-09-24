@@ -324,7 +324,6 @@ static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
 
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 
-void js_trigger_gc(JSRuntime *rt, size_t size);
 
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
 
