@@ -29,4 +29,7 @@
 void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                           JSGCObjectTypeEnum type);
 
+/* Internal implementation detail; not part of the public QuickJS API. */
+void remove_gc_object(JSGCObjectHeader *h);
+
 #endif /* QUICKJS_PRIVATE_GC_H */

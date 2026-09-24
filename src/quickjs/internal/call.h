@@ -1,5 +1,5 @@
 /*
- * QuickJS internal module interfaces
+ * QuickJS internal call interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,40 +22,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_MODULE_H
-#define QUICKJS_PRIVATE_MODULE_H
-
-/* Internal implementation details; not part of the public QuickJS API. */
-JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
-JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
-
-typedef enum JSFreeModuleEnum {
-    JS_FREE_MODULE_ALL,
-    JS_FREE_MODULE_NOT_RESOLVED,
-} JSFreeModuleEnum;
+#ifndef QUICKJS_PRIVATE_CALL_H
+#define QUICKJS_PRIVATE_CALL_H
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
+JSValue js_closure2(JSContext *ctx, JSValue func_obj,
+                           JSFunctionBytecode *b,
+                           JSVarRef **cur_var_refs,
+                           JSStackFrame *sf,
+                           BOOL is_eval, JSModuleDef *m);
 
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
+JSValue js_closure(JSContext *ctx, JSValue bfunc,
+                          JSVarRef **cur_var_refs,
+                          JSStackFrame *sf, BOOL is_eval);
+
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
-                               JS_MarkFunc *mark_func);
+JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                           int argc, JSValueConst *argv);
+
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue js_import_meta(JSContext *ctx);
+JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst this_obj,
+                                      int argc, JSValueConst *argv, int flags);
 
-/* Internal implementation detail; not part of the public QuickJS API. */
-JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
 
-/* Internal implementation detail; not part of the public QuickJS API. */
-JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
-                                     void *opaque);
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-extern const JSClassExoticMethods js_module_ns_exotic_methods;
-
-#endif /* QUICKJS_PRIVATE_MODULE_H */
+#endif /* QUICKJS_PRIVATE_CALL_H */

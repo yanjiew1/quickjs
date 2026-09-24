@@ -74,4 +74,13 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 }
 #endif
 
+/* Internal implementation detail; not part of the public QuickJS API. */
+void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
+
+static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
+}
+
+
 #endif /* QUICKJS_PRIVATE_MEMORY_H */

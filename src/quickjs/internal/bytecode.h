@@ -33,4 +33,20 @@ int get_leb128(uint32_t *pval, const uint8_t *buf,
 int get_sleb128(int32_t *pval, const uint8_t *buf,
                        const uint8_t *buf_end);
 
+#define GLOBAL_VAR_OFFSET 0x40000000
+#define ARGUMENT_VAR_OFFSET 0x20000000
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
+
+
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+BOOL js_class_has_bytecode(JSClassID class_id);
+
+
+
 #endif /* QUICKJS_PRIVATE_BYTECODE_H */

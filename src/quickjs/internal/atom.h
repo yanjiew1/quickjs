@@ -59,4 +59,15 @@ static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
     return atom & ~JS_ATOM_TAG_INT;
 }
 
+#define ATOM_GET_STR_BUF_SIZE 64
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
+
 #endif /* QUICKJS_PRIVATE_ATOM_H */

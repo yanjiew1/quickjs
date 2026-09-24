@@ -1,5 +1,5 @@
 /*
- * QuickJS internal errors interfaces
+ * QuickJS internal Promise interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,24 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_ERRORS_H
-#define QUICKJS_PRIVATE_ERRORS_H
-
-/* Internal implementation details; not part of the public QuickJS API. */
-JSValue JS_ThrowStackOverflow(JSContext *ctx);
+#ifndef QUICKJS_PRIVATE_BUILTIN_PROMISE_H
+#define QUICKJS_PRIVATE_BUILTIN_PROMISE_H
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                            const char *filename, int line_num, int col_num,
-                            int backtrace_flags);
+JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv);
 
-/* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace);
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
-
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
-
-#endif /* QUICKJS_PRIVATE_ERRORS_H */
+#endif
