@@ -185,7 +185,12 @@ JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
                                  const char *input, size_t input_len,
                                  const char *filename, int flags, int scope_idx);
-__exception int json_next_token(JSParseState *s);
+#define CP_LS   0x2028
+#define CP_PS   0x2029
+
+__attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState *s, const uint8_t *ptr, const char *fmt, ...);
+__exception int ident_realloc(JSContext *ctx, char **pbuf, size_t *psize,
+                                     char *static_buf);
 __attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...);
 void js_parse_init(JSContext *ctx, JSParseState *s,
                           const char *input, size_t input_len,

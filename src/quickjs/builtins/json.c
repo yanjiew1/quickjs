@@ -29,9 +29,387 @@
 #include "../internal/object.h"
 #include "../internal/error.h"
 #include "../internal/frontend.h"
+#include "dtoa.h"
+#include "libunicode.h"
 #include "json.h"
 #include "object-methods.h"
 #include "array.h"
+
+/* 'c' is the first character. Return JS_ATOM_NULL in case of error */
+/* XXX: accept unicode identifiers as JSON5 ? */
+static JSAtom json_parse_ident(JSParseState *s, const uint8_t **pp, int c)
+{
+    const uint8_t *p;
+    char ident_buf[128], *buf;
+    size_t ident_size, ident_pos;
+    JSAtom atom;
+
+    p = *pp;
+    buf = ident_buf;
+    ident_size = sizeof(ident_buf);
+    ident_pos = 0;
+    for(;;) {
+        buf[ident_pos++] = c;
+        c = *p;
+        if (c >= 128 || !lre_is_id_continue_byte(c))
+            break;
+        p++;
+        if (unlikely(ident_pos >= ident_size - UTF8_CHAR_LEN_MAX)) {
+            if (ident_realloc(s->ctx, &buf, &ident_size, ident_buf)) {
+                atom = JS_ATOM_NULL;
+                goto done;
+            }
+        }
+    }
+    atom = JS_NewAtomLen(s->ctx, buf, ident_pos);
+ done:
+    if (unlikely(buf != ident_buf))
+        js_free(s->ctx, buf);
+    *pp = p;
+    return atom;
+}
+
+static int json_parse_string(JSParseState *s, const uint8_t **pp, int sep)
+{
+    const uint8_t *p, *p_next;
+    int i;
+    uint32_t c;
+    StringBuffer b_s, *b = &b_s;
+
+    if (string_buffer_init(s->ctx, b, 32))
+        goto fail;
+
+    p = *pp;
+    for(;;) {
+        if (p >= s->buf_end) {
+            goto end_of_input;
+        }
+        c = *p++;
+        if (c == sep)
+            break;
+        if (c < 0x20) {
+            js_parse_error_pos(s, p - 1, "Bad control character in string literal");
+            goto fail;
+        }
+        if (c == '\\') {
+            c = *p++;
+            switch(c) {
+            case 'b':   c = '\b'; break;
+            case 'f':   c = '\f'; break;
+            case 'n':   c = '\n'; break;
+            case 'r':   c = '\r'; break;
+            case 't':   c = '\t'; break;
+            case '\\':  break;
+            case '/':   break;
+            case 'u':
+                c = 0;
+                for(i = 0; i < 4; i++) {
+                    int h = from_hex(*p++);
+                    if (h < 0) {
+                        js_parse_error_pos(s, p - 1, "Bad Unicode escape");
+                        goto fail;
+                    }
+                    c = (c << 4) | h;
+                }
+                break;
+            case '\n':
+                if (s->ext_json)
+                    continue;
+                goto bad_escape;
+            case 'v':
+                if (s->ext_json) {
+                    c = '\v';
+                    break;
+                }
+                goto bad_escape;
+            default:
+                if (c == sep)
+                    break;
+                if (p > s->buf_end)
+                    goto end_of_input;
+            bad_escape:
+                js_parse_error_pos(s, p - 1, "Bad escaped character");
+                goto fail;
+            }
+        } else
+        if (c >= 0x80) {
+            c = unicode_from_utf8(p - 1, UTF8_CHAR_LEN_MAX, &p_next);
+            if (c > 0x10FFFF) {
+                js_parse_error_pos(s, p - 1, "Bad UTF-8 sequence");
+                goto fail;
+            }
+            p = p_next;
+        }
+        if (string_buffer_putc(b, c))
+            goto fail;
+    }
+    s->token.val = TOK_STRING;
+    s->token.u.str.sep = sep;
+    s->token.u.str.str = string_buffer_end(b);
+    *pp = p;
+    return 0;
+
+ end_of_input:
+    js_parse_error(s, "Unexpected end of JSON input");
+ fail:
+    string_buffer_free(b);
+    return -1;
+}
+
+static int json_parse_number(JSParseState *s, const uint8_t **pp)
+{
+    const uint8_t *p = *pp;
+    const uint8_t *p_start = p;
+    int radix;
+    double d;
+    JSATODTempMem atod_mem;
+
+    if (*p == '+' || *p == '-')
+        p++;
+
+    if (!is_digit(*p)) {
+        if (s->ext_json) {
+            if (strstart((const char *)p, "Infinity", (const char **)&p)) {
+                d = 1.0 / 0.0;
+                if (*p_start == '-')
+                    d = -d;
+                goto done;
+            } else if (strstart((const char *)p, "NaN", (const char **)&p)) {
+                d = NAN;
+                goto done;
+            } else if (*p != '.') {
+                goto unexpected_token;
+            }
+        } else {
+            goto unexpected_token;
+        }
+    }
+
+    if (p[0] == '0') {
+        if (s->ext_json) {
+            /* also accepts base 16, 8 and 2 prefix for integers */
+            radix = 10;
+            if (p[1] == 'x' || p[1] == 'X') {
+                p += 2;
+                radix = 16;
+            } else if ((p[1] == 'o' || p[1] == 'O')) {
+                p += 2;
+                radix = 8;
+            } else if ((p[1] == 'b' || p[1] == 'B')) {
+                p += 2;
+                radix = 2;
+            }
+            if (radix != 10) {
+                /* prefix is present */
+                if (to_digit(*p) >= radix) {
+                unexpected_token:
+                    return js_parse_error_pos(s, p, "Unexpected token '%c'", *p);
+                }
+                d = js_atod((const char *)p_start, (const char **)&p, 0,
+                            JS_ATOD_INT_ONLY | JS_ATOD_ACCEPT_BIN_OCT, &atod_mem);
+                goto done;
+            }
+        }
+        if (is_digit(p[1]))
+            return js_parse_error_pos(s, p, "Unexpected number");
+    }
+
+    while (is_digit(*p))
+        p++;
+
+    if (*p == '.') {
+        p++;
+        if (!is_digit(*p))
+            return js_parse_error_pos(s, p, "Unterminated fractional number");
+        while (is_digit(*p))
+            p++;
+    }
+    if (*p == 'e' || *p == 'E') {
+        p++;
+        if (*p == '+' || *p == '-')
+            p++;
+        if (!is_digit(*p))
+            return js_parse_error_pos(s, p, "Exponent part is missing a number");
+        while (is_digit(*p))
+            p++;
+    }
+    d = js_atod((const char *)p_start, NULL, 10, 0, &atod_mem);
+ done:
+    s->token.val = TOK_NUMBER;
+    s->token.u.num.val = JS_NewFloat64(s->ctx, d);
+    *pp = p;
+    return 0;
+}
+
+static __exception int json_next_token(JSParseState *s)
+{
+    const uint8_t *p;
+    int c;
+    JSAtom atom;
+
+    if (js_check_stack_overflow(s->ctx->rt, 0)) {
+        return js_parse_error(s, "stack overflow");
+    }
+
+    free_token(s, &s->token);
+
+    p = s->last_ptr = s->buf_ptr;
+ redo:
+    s->token.ptr = p;
+    c = *p;
+    switch(c) {
+    case 0:
+        if (p >= s->buf_end) {
+            s->token.val = TOK_EOF;
+        } else {
+            goto def_token;
+        }
+        break;
+    case '\'':
+        if (!s->ext_json) {
+            /* JSON does not accept single quoted strings */
+            goto def_token;
+        }
+        /* fall through */
+    case '\"':
+        p++;
+        if (json_parse_string(s, &p, c))
+            goto fail;
+        break;
+    case '\r':  /* accept DOS and MAC newline sequences */
+        if (p[1] == '\n') {
+            p++;
+        }
+        /* fall thru */
+    case '\n':
+        p++;
+        goto redo;
+    case '\f':
+    case '\v':
+        if (!s->ext_json) {
+            /* JSONWhitespace does not match <VT>, nor <FF> */
+            goto def_token;
+        }
+        /* fall through */
+    case ' ':
+    case '\t':
+        p++;
+        goto redo;
+    case '/':
+        if (!s->ext_json) {
+            /* JSON does not accept comments */
+            goto def_token;
+        }
+        if (p[1] == '*') {
+            /* comment */
+            p += 2;
+            for(;;) {
+                if (*p == '\0' && p >= s->buf_end) {
+                    js_parse_error(s, "unexpected end of comment");
+                    goto fail;
+                }
+                if (p[0] == '*' && p[1] == '/') {
+                    p += 2;
+                    break;
+                }
+                if (*p >= 0x80) {
+                    c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p);
+                    if (c == -1) {
+                        p++; /* skip invalid UTF-8 */
+                    }
+                } else {
+                    p++;
+                }
+            }
+            goto redo;
+        } else if (p[1] == '/') {
+            /* line comment */
+            p += 2;
+            for(;;) {
+                if (*p == '\0' && p >= s->buf_end)
+                    break;
+                if (*p == '\r' || *p == '\n')
+                    break;
+                if (*p >= 0x80) {
+                    c = unicode_from_utf8(p, UTF8_CHAR_LEN_MAX, &p);
+                    /* LS or PS are considered as line terminator */
+                    if (c == CP_LS || c == CP_PS) {
+                        break;
+                    } else if (c == -1) {
+                        p++; /* skip invalid UTF-8 */
+                    }
+                } else {
+                    p++;
+                }
+            }
+            goto redo;
+        } else {
+            goto def_token;
+        }
+        break;
+    case 'a': case 'b': case 'c': case 'd':
+    case 'e': case 'f': case 'g': case 'h':
+    case 'i': case 'j': case 'k': case 'l':
+    case 'm': case 'n': case 'o': case 'p':
+    case 'q': case 'r': case 's': case 't':
+    case 'u': case 'v': case 'w': case 'x':
+    case 'y': case 'z':
+    case 'A': case 'B': case 'C': case 'D':
+    case 'E': case 'F': case 'G': case 'H':
+    case 'I': case 'J': case 'K': case 'L':
+    case 'M': case 'N': case 'O': case 'P':
+    case 'Q': case 'R': case 'S': case 'T':
+    case 'U': case 'V': case 'W': case 'X':
+    case 'Y': case 'Z':
+    case '_':
+    case '$':
+        p++;
+        atom = json_parse_ident(s, &p, c);
+        if (atom == JS_ATOM_NULL)
+            goto fail;
+        s->token.u.ident.atom = atom;
+        s->token.u.ident.has_escape = FALSE;
+        s->token.u.ident.is_reserved = FALSE;
+        s->token.val = TOK_IDENT;
+        break;
+    case '+':
+        if (!s->ext_json)
+            goto def_token;
+        goto parse_number;
+    case '.':
+        if (s->ext_json && is_digit(p[1]))
+            goto parse_number;
+        else
+            goto def_token;
+    case '-':
+    case '0':
+    case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8':
+    case '9':
+        /* number */
+    parse_number:
+        if (json_parse_number(s, &p))
+            goto fail;
+        break;
+    default:
+        if (c >= 128) {
+            js_parse_error(s, "unexpected character");
+            goto fail;
+        }
+    def_token:
+        s->token.val = c;
+        p++;
+        break;
+    }
+    s->buf_ptr = p;
+
+    //    dump_token(s, &s->token);
+    return 0;
+
+ fail:
+    s->token.val = TOK_ERROR;
+    return -1;
+}
 
 /* JSON */
 
