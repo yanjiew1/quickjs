@@ -28,6 +28,11 @@
 #include "base.h"
 #include "atom.h"
 
+static inline BOOL tag_is_string(uint32_t tag)
+{
+    return tag == JS_TAG_STRING || tag == JS_TAG_STRING_ROPE;
+}
+
 enum {
     JS_ATOM_TYPE_STRING = 1,
     JS_ATOM_TYPE_GLOBAL_SYMBOL,

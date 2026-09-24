@@ -101,8 +101,6 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
 
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 int JS_ToBoolFree(JSContext *ctx, JSValue val);
-BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
-BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 
 __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
                                        JSValue val);
@@ -150,16 +148,8 @@ int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 
 JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
 
-typedef enum JSStrictEqModeEnum {
-    JS_EQ_STRICT,
-    JS_EQ_SAME_VALUE,
-    JS_EQ_SAME_VALUE_ZERO,
-} JSStrictEqModeEnum;
-
 __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
                                             JSValue val, BOOL is_array_ctor);
-BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
-                          JSStrictEqModeEnum eq_mode);
 
 JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
 
