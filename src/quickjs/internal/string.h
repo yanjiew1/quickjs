@@ -156,4 +156,6 @@ static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
     return string_buffer_putc_slow(s, c);
 }
 
+int string_buffer_putc16(StringBuffer *s, uint32_t c);
+
 #endif /* QUICKJS_INTERNAL_STRING_H */

@@ -285,4 +285,6 @@ static inline BOOL is_strict_mode(JSContext *ctx)
     return (sf && (sf->js_mode & JS_MODE_STRICT));
 }
 
+void JS_ThrowInterrupted(JSContext *ctx);
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

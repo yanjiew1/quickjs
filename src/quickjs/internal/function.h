@@ -369,4 +369,8 @@ void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
 JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv, int magic);
 
+JSValueConst JS_GetActiveFunction(JSContext *ctx);
+
+BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */
