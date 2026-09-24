@@ -31,6 +31,7 @@
 #include "libunicode.h"
 #include "regexp.h"
 #include "array.h"
+#include "function.h"
 
 /* RegExp */
 
@@ -1796,4 +1797,3 @@ int JS_AddIntrinsicRegExp(JSContext *ctx)
 
     return 0;
 }
-

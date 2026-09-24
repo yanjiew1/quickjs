@@ -192,11 +192,6 @@ JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
 JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
                         JSValueConst method, int argc, JSValueConst *argv, BOOL *pdone);
 int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj, BOOL is_exception_pending);
-JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv, int magic);
-JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
-                               JSValueConst array_arg);
-void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
 
 JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
                                 const char *name,
@@ -276,8 +271,6 @@ JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
 void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
                                       JS_MarkFunc *mark_func);
-JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
-                                       int argc, JSValueConst *argv, int magic);
 
 JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
                                JSValueConst method);

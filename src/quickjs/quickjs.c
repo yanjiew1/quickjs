@@ -39,6 +39,7 @@
 #include "builtins/regexp.h"
 #include "builtins/promise.h"
 #include "builtins/typed-array.h"
+#include "builtins/function.h"
 
 
 static JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,

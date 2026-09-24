@@ -30,6 +30,7 @@
 #include "promise.h"
 #include "array.h"
 #include "iterator.h"
+#include "function.h"
 
 /* Promise */
 
@@ -1416,4 +1417,3 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
                               ctx->class_proto[JS_CLASS_ASYNC_GENERATOR],
                               JS_PROP_CONFIGURABLE, JS_PROP_CONFIGURABLE);
 }
-

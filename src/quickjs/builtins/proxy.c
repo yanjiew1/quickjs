@@ -29,6 +29,7 @@
 #include "../internal/atom.h"
 #include "proxy.h"
 #include "object-methods.h"
+#include "function.h"
 
 /* Reflect */
 
@@ -1185,4 +1186,3 @@ int JS_AddIntrinsicProxy(JSContext *ctx)
     JS_FreeValue(ctx, obj1);
     return -1;
 }
-

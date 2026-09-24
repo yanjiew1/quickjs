@@ -34,6 +34,30 @@
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
 
+__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+                                       JSValueConst obj)
+{
+    JSValue len_val;
+    len_val = JS_GetProperty(ctx, obj, JS_ATOM_length);
+    if (JS_IsException(len_val)) {
+        *pres = 0;
+        return -1;
+    }
+    return JS_ToUint32Free(ctx, pres, len_val);
+}
+
+__exception int js_get_length64(JSContext *ctx, int64_t *pres,
+                                       JSValueConst obj)
+{
+    JSValue len_val;
+    len_val = JS_GetProperty(ctx, obj, JS_ATOM_length);
+    if (JS_IsException(len_val)) {
+        *pres = 0;
+        return -1;
+    }
+    return JS_ToLengthFree(ctx, pres, len_val);
+}
+
 /* Object class */
 
 JSValue JS_ToObject(JSContext *ctx, JSValueConst val)
