@@ -1,5 +1,5 @@
 /*
- * QuickJS Array builtin interface
+ * QuickJS typed array and ArrayBuffer builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,37 +22,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_ARRAY_H
-#define QUICKJS_BUILTINS_ARRAY_H
+#ifndef QUICKJS_BUILTINS_TYPED_ARRAY_H
+#define QUICKJS_BUILTINS_TYPED_ARRAY_H
 
 #include "../internal/base.h"
 
-JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
-                      int argc, JSValueConst *argv, int unshift);
+extern uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
+#define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
 
-enum {
-    ArrayFind,
-    ArrayFindIndex,
-    ArrayFindLast,
-    ArrayFindLastIndex,
-};
-
-JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic);
-
-#define special_every    0
-#define special_some     1
-#define special_forEach  2
-#define special_map      3
-#define special_filter   4
-#define special_TA       8
-
-JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv, int special);
-JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv, int special);
-
-#define special_reduce       0
-#define special_reduceRight  1
+void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
+void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
+void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
+int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
+JSValue js_typed_array___speciesCreate(JSContext *ctx,
+                                              JSValueConst this_val,
+                                              int argc, JSValueConst *argv);
+BOOL typed_array_is_oob(JSObject *p);
+JSValue JS_ThrowTypeErrorArrayBufferOOB(JSContext *ctx);
 
 #endif

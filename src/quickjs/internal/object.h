@@ -311,19 +311,6 @@ JSProperty *add_property(JSContext *ctx,
 int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
                                      JSAtom prop, JSAutoInitIDEnum id,
                                      void *opaque, int flags);
-JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
-JSValue js_typed_array_constructor(JSContext *ctx,
-                                          JSValueConst new_target,
-                                          int argc, JSValueConst *argv,
-                                          int classid);
-JSValue js_array_buffer_constructor3(JSContext *ctx,
-                                            JSValueConst new_target,
-                                            uint64_t len, uint64_t *max_len,
-                                            JSClassID class_id,
-                                            uint8_t *buf,
-                                            JSFreeArrayBufferDataFunc *free_func,
-                                            void *opaque, BOOL alloc_flag);
-void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
 
 JSValue js_aggregate_error_constructor(JSContext *ctx,
                                               JSValueConst errors);
@@ -335,5 +322,30 @@ int JS_SetConstructor2(JSContext *ctx,
 
 #define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
 #define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
+
+JSValue js_array_buffer_constructor3(JSContext *ctx,
+                                            JSValueConst new_target,
+                                            uint64_t len, uint64_t *max_len,
+                                            JSClassID class_id,
+                                            uint8_t *buf,
+                                            JSFreeArrayBufferDataFunc *free_func,
+                                            void *opaque, BOOL alloc_flag);
+
+void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
+
+JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
+
+JSValue js_typed_array_constructor(JSContext *ctx,
+                                          JSValueConst new_target,
+                                          int argc, JSValueConst *argv,
+                                          int classid);
+
+JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                                   JSValue prop);
+int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                               JSValue prop, JSValue val, int flags);
+
+int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
+                                       int64_t idx, JSValue val, int flags);
 
 #endif

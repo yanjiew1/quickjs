@@ -175,4 +175,24 @@ JSBigInt *js_bigint_new(JSContext *ctx, int len);
 
 int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
 
+int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
+
+int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
+                    int min, int max, int max_default);
+int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val);
+int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
+                    int64_t min, int64_t max, int64_t max_default);
+
+int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
+
+static inline int js_bigint_sign(const JSBigInt *a)
+{
+    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
+}
+
+JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+__maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
+
+int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
+
 #endif

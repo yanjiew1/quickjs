@@ -282,4 +282,7 @@ void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
 JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
                                        int argc, JSValueConst *argv, int magic);
 
+JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
+                               JSValueConst method);
+
 #endif

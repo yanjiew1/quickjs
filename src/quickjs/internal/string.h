@@ -172,4 +172,6 @@ int js_string_compare(JSContext *ctx,
 int js_string_find_invalid_codepoint(JSString *p);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 
+JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
+
 #endif
