@@ -146,4 +146,31 @@ BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
                                        JSValue val);
 
+#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
+#define ATOD_ACCEPT_SUFFIX    (1 << 6)
+#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+
+static inline int is_digit(int c) {
+    return c >= '0' && c <= '9';
+}
+
+static inline int to_digit(int c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'A' && c <= 'Z')
+        return c - 'A' + 10;
+    else if (c >= 'a' && c <= 'z')
+        return c - 'a' + 10;
+    else
+        return 36;
+}
+
+JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+                       int radix, int flags);
+JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
+JSBigInt *js_bigint_new(JSContext *ctx, int len);
+
 #endif

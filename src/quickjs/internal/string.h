@@ -26,6 +26,7 @@
 #define QUICKJS_STRING_H
 
 #include "base.h"
+#include "atom.h"
 
 enum {
     JS_ATOM_TYPE_STRING = 1,
@@ -151,5 +152,24 @@ int js_string_GetSubstitution(JSContext *ctx,
                                      JSValueConst rep,
                                      uint8_t **captures,
                                      uint32_t captures_len);
+
+static inline void js_free_string(JSRuntime *rt, JSString *str)
+{
+    if (--js_rc(str)->ref_count <= 0) {
+        if (str->atom_type) {
+            JS_FreeAtomStruct(rt, str);
+        } else {
+#ifdef DUMP_LEAKS
+            list_del(&str->link);
+#endif
+            js_free_rt(rt, str);
+        }
+    }
+}
+
+int js_string_compare(JSContext *ctx,
+                             const JSString *p1, const JSString *p2);
+int js_string_find_invalid_codepoint(JSString *p);
+JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 
 #endif

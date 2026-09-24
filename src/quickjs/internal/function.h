@@ -214,4 +214,22 @@ JSValueConst JS_GetActiveFunction(JSContext *ctx);
 
 BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
 
+void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+JSValue js_closure2(JSContext *ctx, JSValue func_obj,
+                           JSFunctionBytecode *b,
+                           JSVarRef **cur_var_refs,
+                           JSStackFrame *sf,
+                           BOOL is_eval, JSModuleDef *m);
+JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
+BOOL js_class_has_bytecode(JSClassID class_id);
+JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst this_obj,
+                                      int argc, JSValueConst *argv, int flags);
+JSValue js_closure(JSContext *ctx, JSValue bfunc,
+                          JSVarRef **cur_var_refs,
+                          JSStackFrame *sf, BOOL is_eval);
+
+JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv);
+
 #endif

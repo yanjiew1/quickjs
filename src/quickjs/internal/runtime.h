@@ -378,4 +378,34 @@ static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
 JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
 void JS_ThrowInterrupted(JSContext *ctx);
 
+no_inline int js_realloc_array(JSContext *ctx, void **parray,
+                                      int elem_size, int *psize, int req_size);
+
+static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
+                                  int *psize, int req_size)
+{
+    if (unlikely(req_size > *psize))
+        return js_realloc_array(ctx, parray, elem_size, psize, req_size);
+    else
+        return 0;
+}
+
+static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
+}
+
+JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
+                              const char *fmt, va_list ap, BOOL add_backtrace);
+void build_backtrace(JSContext *ctx, JSValueConst error_obj,
+                            const char *filename, int line_num, int col_num,
+                            int backtrace_flags);
+no_inline int js_realloc_array(JSContext *ctx, void **parray,
+                                      int elem_size, int *psize, int req_size);
+void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
+                          JSGCObjectTypeEnum type);
+void remove_gc_object(JSGCObjectHeader *h);
+JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
+void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
+
 #endif

@@ -37,6 +37,32 @@ enum {
 #define JS_ATOM_LAST_KEYWORD JS_ATOM_super
 #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
 
+#define JS_ATOM_TAG_INT (1U << 31)
+#define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
 #define ATOM_GET_STR_BUF_SIZE 64
 const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
+static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
+{
+    return (v & JS_ATOM_TAG_INT) != 0;
+}
+
+static inline JSAtom __JS_AtomFromUInt32(uint32_t v)
+{
+    return v | JS_ATOM_TAG_INT;
+}
+
+static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
+{
+    return atom & ~JS_ATOM_TAG_INT;
+}
+
+#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+
+void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
+JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+
 #endif

@@ -57,4 +57,50 @@ enum OPCodeEnum {
     OP_TEMP_END,
 };
 
+typedef enum {
+    OP_SPECIAL_OBJECT_ARGUMENTS,
+    OP_SPECIAL_OBJECT_MAPPED_ARGUMENTS,
+    OP_SPECIAL_OBJECT_THIS_FUNC,
+    OP_SPECIAL_OBJECT_NEW_TARGET,
+    OP_SPECIAL_OBJECT_HOME_OBJECT,
+    OP_SPECIAL_OBJECT_VAR_OBJECT,
+    OP_SPECIAL_OBJECT_IMPORT_META,
+} OPSpecialObjectEnum;
+
+#define GLOBAL_VAR_OFFSET 0x40000000
+#define ARGUMENT_VAR_OFFSET 0x20000000
+#define JS_DEFINE_CLASS_HAS_HERITAGE     (1 << 0)
+#define JS_THROW_VAR_RO             0
+#define JS_THROW_VAR_REDECL         1
+#define JS_THROW_VAR_UNINITIALIZED  2
+#define JS_THROW_ERROR_DELETE_SUPER   3
+#define JS_THROW_ERROR_ITERATOR_THROW 4
+#define OP_DEFINE_METHOD_METHOD 0
+#define OP_DEFINE_METHOD_GETTER 1
+#define OP_DEFINE_METHOD_SETTER 2
+#define OP_DEFINE_METHOD_ENUMERABLE 4
+
+void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
+
+static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
+}
+
+static inline BOOL is_be(void)
+{
+    union {
+        uint16_t a;
+        uint8_t  b;
+    } u = {0x100};
+    return u.b;
+}
+
+void dbuf_put_leb128(DynBuf *s, uint32_t v);
+void dbuf_put_sleb128(DynBuf *s, int32_t v1);
+int get_leb128(uint32_t *pval, const uint8_t *buf,
+                      const uint8_t *buf_end);
+int get_sleb128(int32_t *pval, const uint8_t *buf,
+                       const uint8_t *buf_end);
+
 #endif
