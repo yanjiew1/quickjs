@@ -182,10 +182,6 @@ JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                                    int class_id);
 
 int check_function(JSContext *ctx, JSValueConst obj);
-JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
-JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                        JSValueConst method, int argc, JSValueConst *argv, BOOL *pdone);
-int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj, BOOL is_exception_pending);
 
 JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
                                 const char *name,
@@ -253,14 +249,6 @@ int check_exception_free(JSContext *ctx, JSValue obj);
 #define GEN_MAGIC_THROW  2
 #define GEN_MAGIC_RETURN 1
 #define GEN_MAGIC_NEXT   0
-JSValue js_create_iterator_result(JSContext *ctx,
-                                         JSValue val,
-                                         BOOL done);
-JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
-                                JSValueConst method,
-                                int argc, JSValueConst *argv, int *pdone);
-JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
-                                           BOOL *pdone);
 void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
 void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
                                            JS_MarkFunc *mark_func);
@@ -284,8 +272,6 @@ void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
                                       JS_MarkFunc *mark_func);
 
-JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
-                               JSValueConst method);
 
 JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
 
