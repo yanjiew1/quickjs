@@ -132,4 +132,8 @@ void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
 
 extern const JSClassExoticMethods js_module_ns_exotic_methods;
 
+JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
+
+JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+
 #endif
