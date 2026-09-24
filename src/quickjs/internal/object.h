@@ -480,4 +480,13 @@ __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSVal
 
 #define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
 
+void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
+
+void js_global_object_mark(JSRuntime *rt, JSValueConst val,
+                                  JS_MarkFunc *mark_func);
+
+__maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
+
+__maybe_unused void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p);
+
 #endif

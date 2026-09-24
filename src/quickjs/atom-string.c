@@ -187,7 +187,7 @@ static __maybe_unused void JS_DumpChar(FILE *fo, int c, int sep)
     }
 }
 
-static __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p)
+__maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p)
 {
     int i, sep;
 
@@ -204,7 +204,7 @@ static __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p)
     putchar(sep);
 }
 
-static __maybe_unused void JS_DumpAtoms(JSRuntime *rt)
+__maybe_unused void JS_DumpAtoms(JSRuntime *rt)
 {
     JSAtomStruct *p;
     int h, i;
