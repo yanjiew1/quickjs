@@ -1,5 +1,5 @@
 /*
- * QuickJS C library
+ * QuickJS C Library Thread State
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
@@ -24,122 +24,13 @@
  */
 #ifndef QUICKJS_LIBC_INTERNAL_H
 #define QUICKJS_LIBC_INTERNAL_H
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <inttypes.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/time.h>
-#include <time.h>
-#include <signal.h>
-#include <limits.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#if defined(_WIN32)
-#include <windows.h>
-#include <conio.h>
-#include <utime.h>
-#else
-#include <dlfcn.h>
-#include <termios.h>
-#include <sys/ioctl.h>
-#include <sys/wait.h>
-#include <poll.h>
 
-#if defined(__FreeBSD__)
-extern char **environ;
-#endif
-
-#if defined(__APPLE__) || defined(__FreeBSD__)
-typedef sig_t sighandler_t;
-#endif
-
-#if defined(__APPLE__)
-#if !defined(environ)
-#include <crt_externs.h>
-#define environ (*_NSGetEnviron())
-#endif
-#endif /* __APPLE__ */
-
-#endif
-
-/* enable the os.Worker API. It relies on POSIX threads */
-#define USE_WORKER
-
-#ifdef USE_WORKER
-#include <pthread.h>
-#include <stdatomic.h>
-#endif
-
-#include "cutils.h"
-#include "list.h"
+#include <stdint.h>
 #include "quickjs-libc.h"
+#include "list.h"
 
-#if !defined(PATH_MAX)
-#define PATH_MAX 4096
-#endif
-
-/* TODO:
-   - add socket calls
-*/
-
-typedef struct {
-    struct list_head link;
-    int fd;
-    int poll_fd_index; /* temporary use in js_os_poll() */
-    JSValue rw_func[2];
-} JSOSRWHandler;
-
-typedef struct {
-    struct list_head link;
-    int sig_num;
-    JSValue func;
-} JSOSSignalHandler;
-
-typedef struct {
-    struct list_head link;
-    int timer_id;
-    int64_t timeout;
-    JSValue func;
-} JSOSTimer;
-
-typedef struct {
-    struct list_head link;
-    uint8_t *data;
-    size_t data_len;
-    /* list of SharedArrayBuffers, necessary to free the message */
-    uint8_t **sab_tab;
-    size_t sab_tab_len;
-} JSWorkerMessage;
-
-typedef struct JSWaker {
-#ifdef _WIN32
-    HANDLE handle;
-#else
-    int read_fd;
-    int write_fd;
-#endif
-} JSWaker;
-
-typedef struct {
-    int ref_count;
-#ifdef USE_WORKER
-    pthread_mutex_t mutex;
-#endif
-    struct list_head msg_queue; /* list of JSWorkerMessage.link */
-    JSWaker waker;
-} JSWorkerMessagePipe;
-
-typedef struct {
-    struct list_head link;
-    JSWorkerMessagePipe *recv_pipe;
-    JSValue on_message_func;
-    int poll_fd_index; /* temporary use in js_os_poll() */
-} JSWorkerMessageHandler;
+typedef struct JSWorkerMessagePipe JSWorkerMessagePipe;
+struct pollfd;
 
 typedef struct {
     struct list_head link;
@@ -169,7 +60,7 @@ extern int (*os_poll_func)(JSContext *ctx);
 int get_bool_option(JSContext *ctx, BOOL *pbool, JSValueConst obj,
                     const char *option);
 ssize_t js_get_errno(ssize_t ret);
-JSValue js_os_now(JSContext *ctx, JSValue this_val,
+JSValue js_os_now(JSContext *ctx, JSValueConst this_val,
                   int argc, JSValueConst *argv);
 
 #endif /* QUICKJS_LIBC_INTERNAL_H */

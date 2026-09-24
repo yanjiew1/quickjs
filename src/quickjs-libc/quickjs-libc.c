@@ -22,6 +22,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <assert.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+#include <limits.h>
+
+#if defined(__FreeBSD__)
+extern char **environ;
+#endif
+
+#if defined(__APPLE__)
+#if !defined(environ)
+#include <crt_externs.h>
+#define environ (*_NSGetEnviron())
+#endif
+#endif
+
+#include "cutils.h"
 #include "internal.h"
 
 uint64_t os_pending_signals;
@@ -612,7 +634,7 @@ static JSValue js_new_std_file(JSContext *ctx, FILE *f,
     return obj;
 }
 
-static void js_set_error_object(JSContext *ctx, JSValue obj, int err)
+static void js_set_error_object(JSContext *ctx, JSValueConst obj, int err)
 {
     if (!JS_IsUndefined(obj)) {
         JS_SetPropertyStr(ctx, obj, "errno", JS_NewInt32(ctx, err));

@@ -1,5 +1,5 @@
 /*
- * QuickJS C library
+ * QuickJS OS Module
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
@@ -22,7 +22,124 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <inttypes.h>
+#include <string.h>
+#include <assert.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <time.h>
+#include <signal.h>
+#include <limits.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#if defined(_WIN32)
+#include <windows.h>
+#include <conio.h>
+#include <utime.h>
+#else
+#include <dlfcn.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <sys/wait.h>
+#include <poll.h>
+
+#if defined(__FreeBSD__)
+extern char **environ;
+#endif
+
+#if defined(__APPLE__) || defined(__FreeBSD__)
+typedef sig_t sighandler_t;
+#endif
+
+#if defined(__APPLE__)
+#if !defined(environ)
+#include <crt_externs.h>
+#define environ (*_NSGetEnviron())
+#endif
+#endif /* __APPLE__ */
+
+#endif
+
+/* enable the os.Worker API. It relies on POSIX threads */
+#define USE_WORKER
+
+#ifdef USE_WORKER
+#include <pthread.h>
+#include <stdatomic.h>
+#endif
+
+#include "cutils.h"
+#include "list.h"
+#include "quickjs-libc.h"
+
+#if !defined(PATH_MAX)
+#define PATH_MAX 4096
+#endif
+
+/* TODO:
+   - add socket calls
+*/
+
 #include "internal.h"
+
+typedef struct {
+    struct list_head link;
+    int fd;
+    int poll_fd_index; /* temporary use in js_os_poll() */
+    JSValue rw_func[2];
+} JSOSRWHandler;
+
+typedef struct {
+    struct list_head link;
+    int sig_num;
+    JSValue func;
+} JSOSSignalHandler;
+
+typedef struct {
+    struct list_head link;
+    int timer_id;
+    int64_t timeout;
+    JSValue func;
+} JSOSTimer;
+
+typedef struct {
+    struct list_head link;
+    uint8_t *data;
+    size_t data_len;
+    /* list of SharedArrayBuffers, necessary to free the message */
+    uint8_t **sab_tab;
+    size_t sab_tab_len;
+} JSWorkerMessage;
+
+typedef struct JSWaker {
+#ifdef _WIN32
+    HANDLE handle;
+#else
+    int read_fd;
+    int write_fd;
+#endif
+} JSWaker;
+
+struct JSWorkerMessagePipe {
+    int ref_count;
+#ifdef USE_WORKER
+    pthread_mutex_t mutex;
+#endif
+    struct list_head msg_queue; /* list of JSWorkerMessage.link */
+    JSWaker waker;
+};
+
+typedef struct {
+    struct list_head link;
+    JSWorkerMessagePipe *recv_pipe;
+    JSValue on_message_func;
+    int poll_fd_index; /* temporary use in js_os_poll() */
+} JSWorkerMessageHandler;
 
 /**********************************************************/
 /* 'os' object */
@@ -454,8 +571,8 @@ static int64_t get_time_ns(void)
 }
 #endif
 
-JSValue js_os_now(JSContext *ctx, JSValue this_val,
-                         int argc, JSValue *argv)
+JSValue js_os_now(JSContext *ctx, JSValueConst this_val,
+                         int argc, JSValueConst *argv)
 {
     return JS_NewFloat64(ctx, (double)get_time_ns() / 1e6);
 }

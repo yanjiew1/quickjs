@@ -1,5 +1,5 @@
 /*
- * QuickJS C library
+ * QuickJS C Module Loader
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
@@ -22,7 +22,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal.h"
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <limits.h>
+#if !defined(_WIN32)
+#include <dlfcn.h>
+#endif
+
+#include "cutils.h"
+#include "quickjs-libc.h"
+
+#if !defined(PATH_MAX)
+#define PATH_MAX 4096
+#endif
 
 typedef JSModuleDef *(JSInitModuleFunc)(JSContext *ctx,
                                         const char *module_name);
