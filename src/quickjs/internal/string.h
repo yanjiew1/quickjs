@@ -35,11 +35,6 @@ enum {
     JS_ATOM_TYPE_PRIVATE,
 };
 
-typedef enum {
-    JS_ATOM_KIND_STRING,
-    JS_ATOM_KIND_SYMBOL,
-    JS_ATOM_KIND_PRIVATE,
-} JSAtomKindEnum;
 
 #define JS_ATOM_HASH_MASK  ((1 << 30) - 1)
 #define JS_ATOM_HASH_PRIVATE JS_ATOM_HASH_MASK
@@ -182,5 +177,14 @@ uint32_t js_string_obj_get_length(JSContext *ctx,
                                          JSValueConst obj);
 JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
 int string_buffer_fill(StringBuffer *s, int c, int count);
+
+JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
+int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2, int pos2, int len);
+BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
+int string_rope_get(JSValueConst val, uint32_t idx);
+int js_string_rope_compare(JSContext *ctx, JSValueConst op1, JSValueConst op2, BOOL eq_only);
+JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
+BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2);
+int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
 
 #endif

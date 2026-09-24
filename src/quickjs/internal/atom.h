@@ -67,4 +67,39 @@ JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContex
 
 JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
 
+static inline uint32_t atom_get_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p >> 1;
+}
+
+static inline BOOL atom_is_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p & 1;
+}
+
+static inline JSAtomStruct *atom_set_free(uint32_t v)
+{
+    return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
+}
+
+typedef enum {
+    JS_ATOM_KIND_STRING,
+    JS_ATOM_KIND_SYMBOL,
+    JS_ATOM_KIND_PRIVATE,
+} JSAtomKindEnum;
+
+int JS_InitAtoms(JSRuntime *rt);
+JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len, int atom_type);
+JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
+JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v);
+JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len, int atom_type);
+JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
+JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type);
+JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr, int atom_type);
+const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size, JSAtom atom);
+BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval, JSAtom atom);
+JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom);
+int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom);
+BOOL JS_AtomSymbolHasDescription(JSContext *ctx, JSAtom v);
+
 #endif
