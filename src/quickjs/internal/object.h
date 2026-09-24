@@ -333,4 +333,11 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
     return NULL;
 }
 
+int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
+
+JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
+
+uint32_t js_string_obj_get_length(JSContext *ctx,
+                                         JSValueConst obj);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

@@ -158,4 +158,10 @@ static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
 
 int string_buffer_putc16(StringBuffer *s, uint32_t c);
 
+JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
+
+JSValue js_new_string_char(JSContext *ctx, uint16_t c);
+
+int string_buffer_fill(StringBuffer *s, int c, int count);
+
 #endif /* QUICKJS_INTERNAL_STRING_H */

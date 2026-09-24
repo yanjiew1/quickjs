@@ -42,4 +42,14 @@ int js_string_GetSubstitution(JSContext *ctx,
                                      uint8_t **captures,
                                      uint32_t captures_len);
 
+JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+
+int js_string_find_invalid_codepoint(JSString *p);
+
+extern const JSClassExoticMethods js_string_exotic_methods;
+extern const JSCFunctionListEntry js_string_funcs[3];
+extern const JSCFunctionListEntry js_string_proto_funcs[50];
+extern const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
+
 #endif /* QUICKJS_BUILTINS_STRING_H */

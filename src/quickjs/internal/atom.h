@@ -55,4 +55,6 @@ static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
     return atom & ~JS_ATOM_TAG_INT;
 }
 
+JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
+
 #endif /* QUICKJS_INTERNAL_ATOM_H */
