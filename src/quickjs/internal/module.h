@@ -27,6 +27,8 @@
 
 #include "function.h"
 
+typedef struct JSParseState JSParseState;
+
 typedef struct JSReqModuleEntry {
     JSAtom module_name;
     JSModuleDef *module; /* used using resolution */
@@ -155,5 +157,23 @@ extern const JSClassExoticMethods js_module_ns_exotic_methods;
 JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
 
 JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+
+int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
+                                JSAtom module_name);
+
+JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
+                                       JSAtom local_name, JSAtom export_name,
+                                       JSExportTypeEnum export_type);
+
+int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
+                                 int req_module_idx);
+
+int js_create_module_function(JSContext *ctx, JSModuleDef *m);
+
+int js_link_module(JSContext *ctx, JSModuleDef *m);
+
+JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
+
+int js_resolve_module(JSContext *ctx, JSModuleDef *m);
 
 #endif /* QUICKJS_INTERNAL_MODULE_H */
