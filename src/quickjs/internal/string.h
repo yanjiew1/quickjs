@@ -26,6 +26,7 @@
 #define QUICKJS_INTERNAL_STRING_H
 
 #include "base.h"
+#include "atom.h"
 
 enum {
     JS_ATOM_TYPE_STRING = 1,
@@ -165,5 +166,20 @@ JSValue js_new_string_char(JSContext *ctx, uint16_t c);
 int string_buffer_fill(StringBuffer *s, int c, int count);
 
 int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
+
+/* same as JS_FreeValueRT() but faster */
+static inline void js_free_string(JSRuntime *rt, JSString *str)
+{
+    if (--js_rc(str)->ref_count <= 0) {
+        if (str->atom_type) {
+            JS_FreeAtomStruct(rt, str);
+        } else {
+#ifdef DUMP_LEAKS
+            list_del(&str->link);
+#endif
+            js_free_rt(rt, str);
+        }
+    }
+}
 
 #endif /* QUICKJS_INTERNAL_STRING_H */

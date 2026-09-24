@@ -131,4 +131,25 @@ typedef struct JSJobEntry {
     JSValue argv[0];
 } JSJobEntry;
 
+typedef enum JSFreeModuleEnum {
+    JS_FREE_MODULE_ALL,
+    JS_FREE_MODULE_NOT_RESOLVED,
+} JSFreeModuleEnum;
+
+void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
+
+void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
+
+void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
+                               JS_MarkFunc *mark_func);
+
+JSValue js_import_meta(JSContext *ctx);
+
+JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
+
+JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
+                                     void *opaque);
+
+extern const JSClassExoticMethods js_module_ns_exotic_methods;
+
 #endif /* QUICKJS_INTERNAL_MODULE_H */

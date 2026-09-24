@@ -209,4 +209,8 @@ static inline int is_digit(int c) {
 JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                              JSValueConst val, int flags, int scope_idx);
 
+JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
+                                 const char *input, size_t input_len,
+                                 const char *filename, int flags, int scope_idx);
+
 #endif /* QUICKJS_INTERNAL_FRONTEND_H */

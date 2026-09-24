@@ -59,4 +59,19 @@ JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
 
 JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type);
 
+BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+
+JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+
+JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
+
+JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
+
+void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+
+static inline JSAtom __JS_AtomFromUInt32(uint32_t v)
+{
+    return v | JS_ATOM_TAG_INT;
+}
+
 #endif /* QUICKJS_INTERNAL_ATOM_H */

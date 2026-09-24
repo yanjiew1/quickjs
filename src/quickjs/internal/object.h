@@ -353,4 +353,14 @@ JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
 int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
                                 JSValue prop, JSValue val, int flags);
 
+int js_update_property_flags(JSContext *ctx, JSObject *p,
+                                    JSShapeProperty **pprs, int flags);
+
+JSProperty *add_property(JSContext *ctx,
+                                JSObject *p, JSAtom prop, int prop_flags);
+
+int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+                                     JSAtom prop, JSAutoInitIDEnum id,
+                                     void *opaque, int flags);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

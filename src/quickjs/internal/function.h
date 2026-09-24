@@ -380,4 +380,21 @@ JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
 
 extern const uint16_t func_kind_to_class_id[4];
 
+#define GLOBAL_VAR_OFFSET 0x40000000
+#define ARGUMENT_VAR_OFFSET 0x20000000
+
+void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+
+JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
+
+JSValue js_closure2(JSContext *ctx, JSValue func_obj,
+                           JSFunctionBytecode *b,
+                           JSVarRef **cur_var_refs,
+                           JSStackFrame *sf,
+                           BOOL is_eval, JSModuleDef *m);
+
+JSValue js_closure(JSContext *ctx, JSValue bfunc,
+                          JSVarRef **cur_var_refs,
+                          JSStackFrame *sf, BOOL is_eval);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

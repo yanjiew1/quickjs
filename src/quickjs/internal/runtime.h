@@ -307,4 +307,21 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
 
 #define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
 
+JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
+                              const char *fmt, va_list ap, BOOL add_backtrace);
+
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+
+void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
+                          JSGCObjectTypeEnum type);
+
+void remove_gc_object(JSGCObjectHeader *h);
+
+static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
+}
+
+#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */
