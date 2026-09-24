@@ -39,6 +39,8 @@ typedef enum JSStrictEqModeEnum {
 #define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 
+int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
+                    int min, int max, int min_offset);
 int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val);
 int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
@@ -134,5 +136,18 @@ BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
                           JSStrictEqModeEnum eq_mode);
 
 BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+
+JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+
+__exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
+                                       JSValue val);
+
+int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
+
+/* return 0 or 1 depending on the sign */
+static inline int js_bigint_sign(const JSBigInt *a)
+{
+    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
+}
 
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

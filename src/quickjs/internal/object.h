@@ -249,4 +249,9 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
     return proto->is_std_array_prototype;
 }
 
+JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+
+JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
+                                     JSValueConst defaultConstructor);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

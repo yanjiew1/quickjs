@@ -37,4 +37,47 @@ JSValue js_typed_array___speciesCreate(JSContext *ctx,
                                               JSValueConst this_val,
                                               int argc, JSValueConst *argv);
 
+JSValue js_array_buffer_constructor3(JSContext *ctx,
+                                            JSValueConst new_target,
+                                            uint64_t len, uint64_t *max_len,
+                                            JSClassID class_id,
+                                            uint8_t *buf,
+                                            JSFreeArrayBufferDataFunc *free_func,
+                                            void *opaque, BOOL alloc_flag);
+
+void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
+
+JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
+
+BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
+
+JSValue js_typed_array_constructor(JSContext *ctx,
+                                          JSValueConst new_target,
+                                          int argc, JSValueConst *argv,
+                                          int classid);
+
+JSValue js_typed_array_constructor_ta(JSContext *ctx,
+                                             JSValueConst new_target,
+                                             JSValueConst src_obj,
+                                             int classid, uint32_t len);
+
+JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
+
+JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
+                                      JSValueConst obj, JSValueConst method);
+
+int typed_array_init(JSContext *ctx, JSValueConst obj,
+                            JSValue buffer, uint64_t offset, uint64_t len,
+                            BOOL track_rab);
+
+void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
+
+void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
+
+void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+
+extern const uint8_t typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
+#define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
+
 #endif /* QUICKJS_BUILTINS_TYPED_ARRAY_H */

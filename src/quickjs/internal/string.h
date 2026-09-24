@@ -112,4 +112,6 @@ static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
     return string_buffer_init2(ctx, s, size, 0);
 }
 
+JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
+
 #endif /* QUICKJS_INTERNAL_STRING_H */

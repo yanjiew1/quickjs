@@ -292,4 +292,9 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
 
 int check_exception_free(JSContext *ctx, JSValue obj);
 
+#define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
+#define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* the prototype class is 'class_id' instead of JS_CLASS_OBJECT */
+#define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* the prototype is already defined */
+#define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */
