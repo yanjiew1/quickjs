@@ -59,20 +59,6 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
 
 
 
-/* return -1 if exception (proxy case) or TRUE/FALSE */
-// TODO: should take flags to make proxy resolution and exceptions optional
-int JS_IsArray(JSContext *ctx, JSValueConst val)
-{
-    if (js_resolve_proxy(ctx, &val, TRUE))
-        return -1;
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(val);
-        return p->class_id == JS_CLASS_ARRAY;
-    } else {
-        return FALSE;
-    }
-}
-
 double js_pow(double a, double b)
 {
     if (unlikely(!isfinite(b)) && fabs(a) == 1) {
@@ -1904,22 +1890,6 @@ static __exception int js_iterator_get_value_done(JSContext *ctx, JSValue *sp)
     sp[-1] = value;
     sp[0] = JS_NewBool(ctx, done);
     return 0;
-}
-
-/* Access an Array's internal JSValue array if available */
-BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
-                              JSValue **arrpp, uint32_t *countp)
-{
-    /* Try and handle fast arrays explicitly */
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(obj);
-        if (p->class_id == JS_CLASS_ARRAY && p->fast_array) {
-            *countp = p->u.array.count;
-            *arrpp = p->u.array.u.values;
-            return TRUE;
-        }
-    }
-    return FALSE;
 }
 
 static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
