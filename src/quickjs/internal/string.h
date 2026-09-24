@@ -35,11 +35,6 @@ enum {
     JS_ATOM_TYPE_PRIVATE,
 };
 
-typedef enum {
-    JS_ATOM_KIND_STRING,
-    JS_ATOM_KIND_SYMBOL,
-    JS_ATOM_KIND_PRIVATE,
-} JSAtomKindEnum;
 
 #define JS_ATOM_HASH_MASK  ((1 << 30) - 1)
 #define JS_ATOM_HASH_PRIVATE JS_ATOM_HASH_MASK
@@ -183,5 +178,15 @@ static inline void js_free_string(JSRuntime *rt, JSString *str)
 }
 
 JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
+
+BOOL js_string_eq(JSContext *ctx,
+                         const JSString *p1, const JSString *p2);
+
+BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2);
+
+int string_rope_get(JSValueConst val, uint32_t idx);
+
+int js_string_rope_compare(JSContext *ctx, JSValueConst op1,
+                                  JSValueConst op2, BOOL eq_only);
 
 #endif /* QUICKJS_INTERNAL_STRING_H */

@@ -28,54 +28,17 @@
 #include <inttypes.h>
 #include <string.h>
 #include <assert.h>
-#include <sys/time.h>
-#include <time.h>
-#include <fenv.h>
 #include <math.h>
-#if defined(__APPLE__)
-#include <malloc/malloc.h>
-#elif defined(__linux__) || defined(__GLIBC__)
-#include <malloc.h>
-#elif defined(__FreeBSD__)
-#include <malloc_np.h>
-#endif
 
 #include "cutils.h"
-#include "list.h"
-#include "quickjs.h"
-#include "libregexp.h"
-#include "libunicode.h"
 #include "dtoa.h"
-#include "builtins/date.h"
-#include "builtins/math.h"
-#include "builtins/map-set.h"
-#include "builtins/array.h"
-#include "builtins/typed-array.h"
-#include "builtins/promise.h"
-#include "builtins/weak-ref.h"
-#include "builtins/proxy.h"
-#include "builtins/object.h"
-#include "builtins/function.h"
-#include "builtins/error.h"
-#include "builtins/regexp.h"
-#include "builtins/string.h"
-#include "builtins/primitive.h"
-#include "builtins/global.h"
-
-#include "internal/config.h"
-#include "internal/base.h"
-#include "internal/allocator.h"
-#include "internal/runtime.h"
+#include "quickjs.h"
+#include "libunicode.h"
+#include "internal/object.h"
 #include "internal/number.h"
 #include "internal/string.h"
-#include "internal/function.h"
-#include "internal/module.h"
-#include "internal/object.h"
-#include "internal/bytecode.h"
-#include "internal/frontend.h"
-
-
 #include "internal/atom.h"
+#include "internal/bytecode.h"
 
 /* bigint support */
 

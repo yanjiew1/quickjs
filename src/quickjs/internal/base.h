@@ -147,4 +147,8 @@ typedef enum {
 
 typedef enum OPCodeEnum OPCodeEnum;
 
+static inline int is_digit(int c) {
+    return c >= '0' && c <= '9';
+}
+
 #endif /* QUICKJS_INTERNAL_BASE_H */
