@@ -160,17 +160,11 @@ mkdir -p $outdir $outdir/doc $outdir/tests $outdir/examples
 
 cp Makefile VERSION TODO Changelog readme.txt LICENSE \
    release.sh unicode_download.sh \
-   qjs.c qjsc.c repl.js \
-   quickjs.c quickjs.h quickjs-atom.h \
-   quickjs-libc.c quickjs-libc.h quickjs-opcode.h \
-   cutils.c cutils.h list.h \
-   libregexp.c libregexp.h libregexp-opcode.h \
-   libunicode.c libunicode.h libunicode-table.h \
-   dtoa.c dtoa.h \
-   unicode_gen.c unicode_gen_def.h \
-   run-test262.c test262o.conf test262.conf \
+   repl.js test262o.conf test262.conf \
    test262o_errors.txt test262_errors.txt \
    $outdir
+
+cp -R include src tools $outdir
 
 cp tests/*.js tests/*.patch tests/bjson.c $outdir/tests
 

@@ -61,6 +61,8 @@ TEST262_COMMIT?=5c8206929d81b2d3d727ca6aac56c18358c8d790
 TEST262_SINCE?=2025-09-01
 
 OBJDIR=.obj
+VPATH=tools:src/quickjs:src/quickjs-libc:src/dtoa:src/regexp:src/unicode:src/cutils
+COMPONENT_INCLUDES=-Iinclude -Isrc/cutils -Isrc/dtoa -Isrc/regexp -Isrc/unicode -Isrc/quickjs
 
 ifdef CONFIG_ASAN
 OBJDIR:=$(OBJDIR)/asan
@@ -163,7 +165,7 @@ DEFINES+=-DHAVE_CLOSEFROM
 endif
 endif
 
-CFLAGS+=$(DEFINES)
+CFLAGS+=$(DEFINES) $(COMPONENT_INCLUDES)
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
 CFLAGS_OPT=$(CFLAGS) -O2
@@ -321,9 +323,9 @@ repl.c: $(QJSC) repl.js
 	$(QJSC) -s -c -o $@ -m repl.js
 
 ifneq ($(wildcard unicode/UnicodeData.txt),)
-$(OBJDIR)/libunicode.o $(OBJDIR)/libunicode.nolto.o: libunicode-table.h
+$(OBJDIR)/libunicode.o $(OBJDIR)/libunicode.nolto.o: src/unicode/libunicode-table.h
 
-libunicode-table.h: unicode_gen
+src/unicode/libunicode-table.h: unicode_gen
 	./unicode_gen unicode $@
 endif
 
@@ -359,10 +361,10 @@ $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: libregexp.c libunicode.c cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
+regexp_test: src/regexp/libregexp.c src/unicode/libunicode.c src/cutils/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ src/regexp/libregexp.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
+unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o src/unicode/libunicode.c src/unicode/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
 
 clean:
@@ -384,7 +386,7 @@ ifdef CONFIG_LTO
 	install -m644 libquickjs.lto.a "$(DESTDIR)$(PREFIX)/lib/quickjs"
 endif
 	mkdir -p "$(DESTDIR)$(PREFIX)/include/quickjs"
-	install -m644 quickjs.h quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
+	install -m644 include/quickjs.h include/quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
 
 ###############################################################################
 # examples
