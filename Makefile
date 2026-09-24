@@ -256,7 +256,7 @@ DTOA_OBJS=$(OBJDIR)/dtoa.o
 UNICODE_OBJS=$(OBJDIR)/libunicode.o
 REGEXP_OBJS=$(OBJDIR)/libregexp.o $(OBJDIR)/exec.o
 QUICKJS_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/date.o $(OBJDIR)/collections.o $(OBJDIR)/proxy.o $(OBJDIR)/regexp.o
-QUICKJS_LIBC_OBJS=$(OBJDIR)/quickjs-libc.o
+QUICKJS_LIBC_OBJS=$(OBJDIR)/quickjs-libc.o $(OBJDIR)/os.o
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(DTOA_OBJS) $(REGEXP_OBJS) $(UNICODE_OBJS) $(CUTILS_OBJS) $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
