@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
+#include "internal/value-conversion.h"
 #include "internal/value-compare.h"
 #include "internal/iterator.h"
 #include "libregexp.h"

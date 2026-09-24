@@ -137,7 +137,6 @@ JSValue string_buffer_end(StringBuffer *s);
 int string_getc(const JSString *p, int *pidx);
 JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
 int string_indexof_char(JSString *p, int c, int from);
-JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
 JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
                                 JSValue str2, const char *str3);
 int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
@@ -172,9 +171,7 @@ int js_string_compare(JSContext *ctx,
 int js_string_find_invalid_codepoint(JSString *p);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 
-JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
 
-JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
 JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
 
 JSValue js_new_string_char(JSContext *ctx, uint16_t c);

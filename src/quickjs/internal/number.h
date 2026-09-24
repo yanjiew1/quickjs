@@ -100,7 +100,6 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
 }
 
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
-int JS_ToBoolFree(JSContext *ctx, JSValue val);
 
 __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
                                        JSValue val);

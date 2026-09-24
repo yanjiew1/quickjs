@@ -198,13 +198,7 @@ struct JSObject {
 
 JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 
-#define HINT_STRING  0
-#define HINT_NUMBER  1
-#define HINT_NONE    2
-#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
-
 int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
-JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
 
 JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
 int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
@@ -338,7 +332,6 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
 
 JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 
-JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
 
 #define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
 

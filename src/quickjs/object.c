@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
+#include "internal/value-conversion.h"
 #include "internal/value-compare.h"
 #include "internal/value-print.h"
 #include "internal/runtime.h"
@@ -4849,85 +4850,6 @@ void *JS_GetAnyOpaque(JSValueConst obj, JSClassID *class_id)
     p = JS_VALUE_GET_OBJ(obj);
     *class_id = p->class_id;
     return p->u.opaque;
-}
-
-JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
-{
-    int i;
-    BOOL force_ordinary;
-
-    JSAtom method_name;
-    JSValue method, ret;
-    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
-        return val;
-    force_ordinary = hint & HINT_FORCE_ORDINARY;
-    hint &= ~HINT_FORCE_ORDINARY;
-    if (!force_ordinary) {
-        method = JS_GetProperty(ctx, val, JS_ATOM_Symbol_toPrimitive);
-        if (JS_IsException(method))
-            goto exception;
-        /* ECMA says *If exoticToPrim is not undefined* but tests in
-           test262 use null as a non callable converter */
-        if (!JS_IsUndefined(method) && !JS_IsNull(method)) {
-            JSAtom atom;
-            JSValue arg;
-            switch(hint) {
-            case HINT_STRING:
-                atom = JS_ATOM_string;
-                break;
-            case HINT_NUMBER:
-                atom = JS_ATOM_number;
-                break;
-            default:
-            case HINT_NONE:
-                atom = JS_ATOM_default;
-                break;
-            }
-            arg = JS_AtomToString(ctx, atom);
-            ret = JS_CallFree(ctx, method, val, 1, (JSValueConst *)&arg);
-            JS_FreeValue(ctx, arg);
-            if (JS_IsException(ret))
-                goto exception;
-            JS_FreeValue(ctx, val);
-            if (JS_VALUE_GET_TAG(ret) != JS_TAG_OBJECT)
-                return ret;
-            JS_FreeValue(ctx, ret);
-            return JS_ThrowTypeError(ctx, "toPrimitive");
-        }
-    }
-    if (hint != HINT_STRING)
-        hint = HINT_NUMBER;
-    for(i = 0; i < 2; i++) {
-        if ((i ^ hint) == 0) {
-            method_name = JS_ATOM_toString;
-        } else {
-            method_name = JS_ATOM_valueOf;
-        }
-        method = JS_GetProperty(ctx, val, method_name);
-        if (JS_IsException(method))
-            goto exception;
-        if (JS_IsFunction(ctx, method)) {
-            ret = JS_CallFree(ctx, method, val, 0, NULL);
-            if (JS_IsException(ret))
-                goto exception;
-            if (JS_VALUE_GET_TAG(ret) != JS_TAG_OBJECT) {
-                JS_FreeValue(ctx, val);
-                return ret;
-            }
-            JS_FreeValue(ctx, ret);
-        } else {
-            JS_FreeValue(ctx, method);
-        }
-    }
-    JS_ThrowTypeError(ctx, "toPrimitive");
-exception:
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
-
-JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint)
-{
-    return JS_ToPrimitiveFree(ctx, JS_DupValue(ctx, val), hint);
 }
 
 void JS_SetIsHTMLDDA(JSContext *ctx, JSValueConst obj)
