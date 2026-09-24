@@ -61,7 +61,7 @@ TEST262_COMMIT?=5c8206929d81b2d3d727ca6aac56c18358c8d790
 TEST262_SINCE?=2025-09-01
 
 OBJDIR=.obj
-VPATH=tools:src/quickjs:src/quickjs-libc:src/cutils:src/dtoa:src/unicode:src/regexp
+VPATH=tools:src/quickjs:src/quickjs/builtins:src/quickjs-libc:src/cutils:src/dtoa:src/unicode:src/regexp
 
 ifdef CONFIG_ASAN
 OBJDIR:=$(OBJDIR)/asan
@@ -255,7 +255,7 @@ CUTILS_OBJS=$(OBJDIR)/cutils.o
 DTOA_OBJS=$(OBJDIR)/dtoa.o
 UNICODE_OBJS=$(OBJDIR)/libunicode.o
 REGEXP_OBJS=$(OBJDIR)/libregexp.o $(OBJDIR)/exec.o
-QUICKJS_OBJS=$(OBJDIR)/quickjs.o
+QUICKJS_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/date.o
 QUICKJS_LIBC_OBJS=$(OBJDIR)/quickjs-libc.o
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(DTOA_OBJS) $(REGEXP_OBJS) $(UNICODE_OBJS) $(CUTILS_OBJS) $(QUICKJS_LIBC_OBJS)
 
