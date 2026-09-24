@@ -80,10 +80,6 @@ typedef sig_t sighandler_t;
 #include "std.h"
 #include "module-loader.h"
 
-#if !defined(PATH_MAX)
-#define PATH_MAX 4096
-#endif
-
 /* TODO:
    - add socket calls
 */

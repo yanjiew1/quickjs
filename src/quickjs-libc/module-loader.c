@@ -33,6 +33,10 @@
 #include "quickjs-libc.h"
 #include "module-loader.h"
 
+#if !defined(PATH_MAX)
+#define PATH_MAX 4096
+#endif
+
 typedef JSModuleDef *(JSInitModuleFunc)(JSContext *ctx,
                                         const char *module_name);
 
