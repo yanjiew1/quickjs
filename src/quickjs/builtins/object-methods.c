@@ -364,85 +364,6 @@ exception:
     return JS_EXCEPTION;
 }
 
-JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
-                                       int flags, int kind)
-{
-    JSValue obj, r, val, key, value;
-    JSObject *p;
-    JSPropertyEnum *atoms;
-    uint32_t len, i, j;
-
-    r = JS_UNDEFINED;
-    val = JS_UNDEFINED;
-    obj = JS_ToObject(ctx, obj1);
-    if (JS_IsException(obj))
-        return JS_EXCEPTION;
-    p = JS_VALUE_GET_OBJ(obj);
-    if (JS_GetOwnPropertyNamesInternal(ctx, &atoms, &len, p, flags & ~JS_GPN_ENUM_ONLY))
-        goto exception;
-    r = JS_NewArray(ctx);
-    if (JS_IsException(r))
-        goto exception;
-    for(j = i = 0; i < len; i++) {
-        JSAtom atom = atoms[i].atom;
-        if (flags & JS_GPN_ENUM_ONLY) {
-            JSPropertyDescriptor desc;
-            int res;
-
-            /* Check if property is still enumerable */
-            res = JS_GetOwnPropertyInternal(ctx, &desc, p, atom);
-            if (res < 0)
-                goto exception;
-            if (!res)
-                continue;
-            js_free_desc(ctx, &desc);
-            if (!(desc.flags & JS_PROP_ENUMERABLE))
-                continue;
-        }
-        switch(kind) {
-        default:
-        case JS_ITERATOR_KIND_KEY:
-            val = JS_AtomToValue(ctx, atom);
-            if (JS_IsException(val))
-                goto exception;
-            break;
-        case JS_ITERATOR_KIND_VALUE:
-            val = JS_GetProperty(ctx, obj, atom);
-            if (JS_IsException(val))
-                goto exception;
-            break;
-        case JS_ITERATOR_KIND_KEY_AND_VALUE:
-            val = JS_NewArray(ctx);
-            if (JS_IsException(val))
-                goto exception;
-            key = JS_AtomToValue(ctx, atom);
-            if (JS_IsException(key))
-                goto exception1;
-            if (JS_CreateDataPropertyUint32(ctx, val, 0, key, JS_PROP_THROW) < 0)
-                goto exception1;
-            value = JS_GetProperty(ctx, obj, atom);
-            if (JS_IsException(value))
-                goto exception1;
-            if (JS_CreateDataPropertyUint32(ctx, val, 1, value, JS_PROP_THROW) < 0)
-                goto exception1;
-            break;
-        }
-        if (JS_CreateDataPropertyUint32(ctx, r, j++, val, 0) < 0)
-            goto exception;
-    }
-    goto done;
-
-exception1:
-    JS_FreeValue(ctx, val);
-exception:
-    JS_FreeValue(ctx, r);
-    r = JS_EXCEPTION;
-done:
-    JS_FreePropertyEnum(ctx, atoms, len);
-    JS_FreeValue(ctx, obj);
-    return r;
-}
-
 static JSValue js_object_getOwnPropertyNames(JSContext *ctx, JSValueConst this_val,
                                              int argc, JSValueConst *argv)
 {
@@ -823,36 +744,6 @@ static JSValue js_object_is(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv)
 {
     return JS_NewBool(ctx, js_same_value(ctx, argv[0], argv[1]));
-}
-
-JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
-                                     JSValueConst defaultConstructor)
-{
-    JSValue ctor, species;
-
-    if (!JS_IsObject(obj))
-        return JS_ThrowTypeErrorNotAnObject(ctx);
-    ctor = JS_GetProperty(ctx, obj, JS_ATOM_constructor);
-    if (JS_IsException(ctor))
-        return ctor;
-    if (JS_IsUndefined(ctor))
-        return JS_DupValue(ctx, defaultConstructor);
-    if (!JS_IsObject(ctor)) {
-        JS_FreeValue(ctx, ctor);
-        return JS_ThrowTypeErrorNotAnObject(ctx);
-    }
-    species = JS_GetProperty(ctx, ctor, JS_ATOM_Symbol_species);
-    JS_FreeValue(ctx, ctor);
-    if (JS_IsException(species))
-        return species;
-    if (JS_IsUndefined(species) || JS_IsNull(species))
-        return JS_DupValue(ctx, defaultConstructor);
-    if (!JS_IsConstructor(ctx, species)) {
-        JS_ThrowTypeErrorNotAConstructor(ctx, species);
-        JS_FreeValue(ctx, species);
-        return JS_EXCEPTION;
-    }
-    return species;
 }
 
 static JSValue js_object_get___proto__(JSContext *ctx, JSValueConst this_val)
