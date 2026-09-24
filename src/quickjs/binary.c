@@ -35,9 +35,6 @@
 #include "cutils.h"
 #include "list.h"
 #include "quickjs.h"
-#include "libregexp.h"
-#include "libunicode.h"
-#include "dtoa.h"
 #include "internal/config.h"
 #include "internal/runtime-types.h"
 #include "internal/bigint-types.h"
@@ -55,7 +52,7 @@
 #include "internal/errors.h"
 #include "internal/bigint.h"
 #include "internal/module.h"
-#include "internal/typed-array.h"
+#include "builtins/typed-array.h"
 #include "internal/gc.h"
 #include "internal/byteorder.h"
 /*******************************************************************/
@@ -2181,4 +2178,3 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
     bc_reader_free(s);
     return obj;
 }
-

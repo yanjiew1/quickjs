@@ -1,5 +1,5 @@
 /*
- * QuickJS internal typed array interfaces
+ * QuickJS internal string builtin interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,23 +22,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_TYPED_ARRAY_H
-#define QUICKJS_PRIVATE_TYPED_ARRAY_H
+#ifndef QUICKJS_PRIVATE_BUILTIN_STRING_H
+#define QUICKJS_PRIVATE_BUILTIN_STRING_H
 
-/* Internal implementation details; not part of the public QuickJS API. */
-JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
-JSValue js_typed_array_constructor(JSContext *ctx,
-                                          JSValueConst new_target,
-                                          int argc, JSValueConst *argv,
-                                          int classid);
-JSValue js_array_buffer_constructor3(JSContext *ctx,
-                                            JSValueConst new_target,
-                                            uint64_t len, uint64_t *max_len,
-                                            JSClassID class_id,
-                                            uint8_t *buf,
-                                            JSFreeArrayBufferDataFunc *free_func,
-                                            void *opaque, BOOL alloc_flag);
-void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
-JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
+/* Internal implementation detail; not part of the public QuickJS API. */
+extern const JSClassExoticMethods js_string_exotic_methods;
 
-#endif /* QUICKJS_PRIVATE_TYPED_ARRAY_H */
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+extern const JSCFunctionListEntry js_string_funcs[3];
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+extern const JSCFunctionListEntry js_string_proto_funcs[50];
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+extern const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
+
+#endif /* QUICKJS_PRIVATE_BUILTIN_STRING_H */

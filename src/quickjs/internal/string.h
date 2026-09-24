@@ -102,4 +102,94 @@ int js_string_compare(JSContext *ctx,
 /* Internal implementation detail; not part of the public QuickJS API. */
 int js_string_find_invalid_codepoint(JSString *p);
 
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
+                                JSValue str2, const char *str3);
+
+static inline BOOL JS_IsEmptyString(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
+}
+
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_new_string8(JSContext *ctx, const char *buf);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int js_string_GetSubstitution(JSContext *ctx,
+                                     StringBuffer *b,
+                                     JSValueConst matched,
+                                     JSString *sp,
+                                     uint32_t position,
+                                     JSValueConst captures_val,
+                                     JSValueConst namedCaptures,
+                                     JSValueConst rep,
+                                     uint8_t **captures,
+                                     uint32_t captures_len);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_buffer_concat_value_free(StringBuffer *s, JSValue v);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_buffer_concat(StringBuffer *s, const JSString *p,
+                                uint32_t from, uint32_t to);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_buffer_putc16(StringBuffer *s, uint32_t c);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_buffer_puts8(StringBuffer *s, const char *str);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_getc(const JSString *p, int *pidx);
+
+static inline int string_get(const JSString *p, int idx) {
+    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
+}
+
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_indexof_char(JSString *p, int c, int from);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+uint32_t hash_string(const JSString *str, uint32_t h);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+uint32_t hash_string_rope(JSValueConst val, uint32_t h);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_new_string_char(JSContext *ctx, uint16_t c);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+uint32_t js_string_obj_get_length(JSContext *ctx,
+                                         JSValueConst obj);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int skip_spaces(const char *pc);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_buffer_fill(StringBuffer *s, int c, int count);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_dtoa2(JSContext *ctx,
+                        double d, int radix, int n_digits, int flags);
+
 #endif /* QUICKJS_PRIVATE_STRING_H */

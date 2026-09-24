@@ -1,5 +1,5 @@
 /*
- * QuickJS internal bytecode interfaces
+ * QuickJS internal map-set interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,45 +22,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_BYTECODE_H
-#define QUICKJS_PRIVATE_BYTECODE_H
+#ifndef QUICKJS_PRIVATE_BUILTIN_MAP_SET_H
+#define QUICKJS_PRIVATE_BUILTIN_MAP_SET_H
 
-/* Internal implementation details; not part of the public QuickJS API. */
-void dbuf_put_leb128(DynBuf *s, uint32_t v);
-void dbuf_put_sleb128(DynBuf *s, int32_t v1);
-int get_leb128(uint32_t *pval, const uint8_t *buf,
-                      const uint8_t *buf_end);
-int get_sleb128(int32_t *pval, const uint8_t *buf,
-                       const uint8_t *buf_end);
+typedef struct JSMapRecord {
+    int ref_count; /* used during enumeration to avoid freeing the record */
+    BOOL empty : 8; /* TRUE if the record is deleted */
+    struct list_head link;
+    struct JSMapRecord *hash_next;
+    JSValue key;
+    JSValue value;
+} JSMapRecord;
 
-#define GLOBAL_VAR_OFFSET 0x40000000
-#define ARGUMENT_VAR_OFFSET 0x20000000
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
-
-
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-BOOL js_class_has_bytecode(JSClassID class_id);
-
-
-
-#define GEN_MAGIC_NEXT   0
-#define GEN_MAGIC_RETURN 1
-#define GEN_MAGIC_THROW  2
+typedef struct JSMapState {
+    BOOL is_weak; /* TRUE if WeakSet/WeakMap */
+    struct list_head records; /* list of JSMapRecord.link */
+    uint32_t record_count;
+    JSMapRecord **hash_table;
+    int hash_bits;
+    uint32_t hash_size; /* = 2 ^ hash_bits */
+    uint32_t record_count_threshold; /* count at which a hash table
+                                        resize is needed */
+    JSWeakRefHeader weakref_header; /* only used if is_weak = TRUE */
+} JSMapState;
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
+void js_map_finalizer(JSRuntime *rt, JSValue val);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
-                                      JS_MarkFunc *mark_func);
+void js_map_iterator_finalizer(JSRuntime *rt, JSValue val);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-extern const uint16_t func_kind_to_class_id[];
+void js_map_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                 JS_MarkFunc *mark_func);
 
-#endif /* QUICKJS_PRIVATE_BYTECODE_H */
+/* Internal implementation detail; not part of the public QuickJS API. */
+void js_map_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv, int is_map);
+
+#endif /* QUICKJS_PRIVATE_BUILTIN_MAP_SET_H */

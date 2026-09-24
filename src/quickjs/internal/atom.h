@@ -70,4 +70,10 @@ JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 /* Internal implementation detail; not part of the public QuickJS API. */
 JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
+
 #endif /* QUICKJS_PRIVATE_ATOM_H */

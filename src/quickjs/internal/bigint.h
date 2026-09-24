@@ -30,4 +30,30 @@ JSBigInt *js_bigint_new(JSContext *ctx, int len);
 JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
 JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
 
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
+
+static inline int js_bigint_sign(const JSBigInt *a)
+{
+    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
+}
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
+
 #endif /* QUICKJS_PRIVATE_BIGINT_H */

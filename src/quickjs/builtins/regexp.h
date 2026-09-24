@@ -1,5 +1,5 @@
 /*
- * QuickJS internal gc interfaces
+ * QuickJS internal RegExp builtin interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,17 +22,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_GC_H
-#define QUICKJS_PRIVATE_GC_H
-
-/* Internal implementation details; not part of the public QuickJS API. */
-void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                          JSGCObjectTypeEnum type);
+#ifndef QUICKJS_PRIVATE_BUILTIN_REGEXP_H
+#define QUICKJS_PRIVATE_BUILTIN_REGEXP_H
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void remove_gc_object(JSGCObjectHeader *h);
+void js_regexp_finalizer(JSRuntime *rt, JSValue val);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void set_cycle_flag(JSContext *ctx, JSValueConst obj);
+void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
 
-#endif /* QUICKJS_PRIVATE_GC_H */
+/* Internal implementation detail; not part of the public QuickJS API. */
+void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                           JS_MarkFunc *mark_func);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int js_is_regexp(JSContext *ctx, JSValueConst obj);
+
+#endif /* QUICKJS_PRIVATE_BUILTIN_REGEXP_H */

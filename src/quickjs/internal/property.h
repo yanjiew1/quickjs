@@ -97,4 +97,115 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
                                                       uint32_t *plen,
                                                       JSObject *p, int flags);
 
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
+                                     JSProperty *props);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int add_shape_property(JSContext *ctx, JSShape **psh,
+                              JSObject *p, JSAtom atom, int prop_flags);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSObject *get_proto_obj(JSValueConst proto_val);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSShape *js_dup_shape(JSShape *sh);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
+                                        int hash_size, int prop_size);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
+                                int64_t idx, JSValue val, int flags);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+__exception int JS_CopyDataProperties(JSContext *ctx,
+                                             JSValueConst target,
+                                             JSValueConst source,
+                                             JSValueConst excluded,
+                                             BOOL setprop);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
+                                       int64_t idx, JSValue val, int flags);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
+                                JSValue prop, JSValue val, int flags);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                                     JSObject *p, JSAtom prop);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                                   JSValue prop);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
+                                           JSClassID class_id, int n_alloc_props);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
+                                   JSValueConst obj);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                               JSValue prop, JSValue val, int flags);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                   JSValueConst proto_val,
+                                   BOOL throw_flag);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
+
+static force_inline BOOL can_extend_fast_array(JSObject *p)
+{
+    JSObject *proto;
+    if (!p->extensible)
+        return FALSE;
+    proto = p->shape->proto;
+    if (!proto)
+        return TRUE;
+    return proto->is_std_array_prototype;
+}
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+BOOL check_define_prop_flags(int prop_flags, int flags);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
+                              JSValue **arrpp, uint32_t *countp);
+
 #endif /* QUICKJS_PRIVATE_PROPERTY_H */

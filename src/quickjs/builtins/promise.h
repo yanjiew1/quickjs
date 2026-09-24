@@ -29,4 +29,22 @@
 JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv);
 
-#endif
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv, int magic);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+__exception int perform_promise_then(JSContext *ctx,
+                                     JSValueConst promise,
+                                     JSValueConst *resolve_reject,
+                                     JSValueConst *cap_resolving_funcs);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
+                                       JSValueConst sync_iter);
+
+/* Internal implementation details; not part of the public QuickJS API. */
+extern const JSCFunctionListEntry js_generator_function_proto_funcs[1];
+extern const JSCFunctionListEntry js_generator_proto_funcs[4];
+
+#endif /* QUICKJS_PRIVATE_BUILTIN_PROMISE_H */

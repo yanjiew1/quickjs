@@ -252,7 +252,26 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/src/quickjs/quickjs.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/src/quickjs/quickjs.o $(OBJDIR)/src/quickjs/compile.o $(OBJDIR)/src/quickjs/binary.o $(OBJDIR)/src/dtoa/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
+QJS_LIB_OBJS=$(OBJDIR)/src/quickjs/quickjs.o \
+    $(OBJDIR)/src/quickjs/compile.o \
+    $(OBJDIR)/src/quickjs/binary.o \
+    $(OBJDIR)/src/quickjs/builtins/regexp.o \
+    $(OBJDIR)/src/quickjs/builtins/base.o \
+    $(OBJDIR)/src/quickjs/builtins/weakref.o \
+    $(OBJDIR)/src/quickjs/builtins/typed-array.o \
+    $(OBJDIR)/src/quickjs/builtins/promise.o \
+    $(OBJDIR)/src/quickjs/builtins/map-set.o \
+    $(OBJDIR)/src/quickjs/builtins/proxy.o \
+    $(OBJDIR)/src/quickjs/builtins/json.o \
+    $(OBJDIR)/src/quickjs/builtins/date.o \
+    $(OBJDIR)/src/quickjs/builtins/number.o \
+    $(OBJDIR)/src/quickjs/builtins/string.o \
+    $(OBJDIR)/src/quickjs/builtins/array.o \
+    $(OBJDIR)/src/dtoa/dtoa.o \
+    $(OBJDIR)/src/regexp/libregexp.o \
+    $(OBJDIR)/src/unicode/libunicode.o \
+    $(OBJDIR)/src/cutils/cutils.o \
+    $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 

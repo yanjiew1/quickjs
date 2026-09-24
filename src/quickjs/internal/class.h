@@ -1,5 +1,5 @@
 /*
- * QuickJS internal gc interfaces
+ * QuickJS internal class interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,17 +22,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_GC_H
-#define QUICKJS_PRIVATE_GC_H
+#ifndef QUICKJS_PRIVATE_CLASS_H
+#define QUICKJS_PRIVATE_CLASS_H
 
-/* Internal implementation details; not part of the public QuickJS API. */
-void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                          JSGCObjectTypeEnum type);
+typedef struct JSClassShortDef {
+    JSAtom class_name;
+    JSClassFinalizer *finalizer;
+    JSClassGCMark *gc_mark;
+} JSClassShortDef;
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void remove_gc_object(JSGCObjectHeader *h);
+int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                            int start, int count);
 
-/* Internal implementation detail; not part of the public QuickJS API. */
-void set_cycle_flag(JSContext *ctx, JSValueConst obj);
-
-#endif /* QUICKJS_PRIVATE_GC_H */
+#endif /* QUICKJS_PRIVATE_CLASS_H */

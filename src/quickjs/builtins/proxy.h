@@ -1,5 +1,5 @@
 /*
- * QuickJS internal gc interfaces
+ * QuickJS internal proxy interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,17 +22,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_GC_H
-#define QUICKJS_PRIVATE_GC_H
+#ifndef QUICKJS_PRIVATE_BUILTIN_PROXY_H
+#define QUICKJS_PRIVATE_BUILTIN_PROXY_H
+
+typedef struct JSProxyData {
+    JSValue target;
+    JSValue handler;
+    uint8_t is_func;
+    uint8_t is_revoked;
+} JSProxyData;
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
 
 /* Internal implementation details; not part of the public QuickJS API. */
-void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                          JSGCObjectTypeEnum type);
+extern const JSCFunctionListEntry js_reflect_obj[1];
+extern const JSCFunctionListEntry js_symbol_funcs[15];
+extern const JSCFunctionListEntry js_symbol_proto_funcs[5];
+JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
+                              int argc, JSValueConst *argv);
 
-/* Internal implementation detail; not part of the public QuickJS API. */
-void remove_gc_object(JSGCObjectHeader *h);
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-void set_cycle_flag(JSContext *ctx, JSValueConst obj);
-
-#endif /* QUICKJS_PRIVATE_GC_H */
+#endif /* QUICKJS_PRIVATE_BUILTIN_PROXY_H */

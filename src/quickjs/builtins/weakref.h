@@ -1,5 +1,5 @@
 /*
- * QuickJS internal gc interfaces
+ * QuickJS internal weakref builtin interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,17 +22,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_GC_H
-#define QUICKJS_PRIVATE_GC_H
-
-/* Internal implementation details; not part of the public QuickJS API. */
-void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                          JSGCObjectTypeEnum type);
+#ifndef QUICKJS_PRIVATE_BUILTIN_WEAKREF_H
+#define QUICKJS_PRIVATE_BUILTIN_WEAKREF_H
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void remove_gc_object(JSGCObjectHeader *h);
+void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void set_cycle_flag(JSContext *ctx, JSValueConst obj);
+void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
-#endif /* QUICKJS_PRIVATE_GC_H */
+/* Internal implementation detail; not part of the public QuickJS API. */
+BOOL js_weakref_is_target(JSValueConst val);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+BOOL js_weakref_is_live(JSValueConst val);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+void js_weakref_free(JSRuntime *rt, JSValue val);
+
+/* Internal implementation detail; not part of the public QuickJS API. */
+JSValue js_weakref_new(JSContext *ctx, JSValueConst val);
+
+#endif /* QUICKJS_PRIVATE_BUILTIN_WEAKREF_H */

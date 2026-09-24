@@ -1,5 +1,5 @@
 /*
- * QuickJS internal errors interfaces
+ * QuickJS internal Number builtin interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,62 +22,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_ERRORS_H
-#define QUICKJS_PRIVATE_ERRORS_H
-
-/* Internal implementation details; not part of the public QuickJS API. */
-JSValue JS_ThrowStackOverflow(JSContext *ctx);
+#ifndef QUICKJS_PRIVATE_BUILTIN_NUMBER_H
+#define QUICKJS_PRIVATE_BUILTIN_NUMBER_H
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                            const char *filename, int line_num, int col_num,
-                            int backtrace_flags);
+JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace);
+JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
-
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-void JS_ThrowInterrupted(JSContext *ctx);
+JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
-
-#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+void js_random_init(JSContext *ctx);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap);
+extern const JSCFunctionListEntry js_number_funcs[14];
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
-                                                JSValueConst func_obj);
+extern const JSCFunctionListEntry js_number_proto_funcs[6];
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
+extern const JSCFunctionListEntry js_boolean_proto_funcs[2];
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-no_inline __exception int __js_poll_interrupts(JSContext *ctx);
-
-static inline __exception int js_poll_interrupts(JSContext *ctx)
-{
-    if (unlikely(--ctx->interrupt_counter <= 0)) {
-        return __js_poll_interrupts(ctx);
-    } else {
-        return 0;
-    }
-}
+extern const JSCFunctionListEntry js_math_obj[1];
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv);
+int js_get_radix(JSContext *ctx, JSValueConst val);
 
-#endif /* QUICKJS_PRIVATE_ERRORS_H */
+#endif /* QUICKJS_PRIVATE_BUILTIN_NUMBER_H */

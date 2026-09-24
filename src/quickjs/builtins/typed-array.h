@@ -1,5 +1,5 @@
 /*
- * QuickJS internal errors interfaces
+ * QuickJS internal typed-array builtin interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,62 +22,54 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_PRIVATE_ERRORS_H
-#define QUICKJS_PRIVATE_ERRORS_H
+#ifndef QUICKJS_PRIVATE_BUILTIN_TYPED_ARRAY_H
+#define QUICKJS_PRIVATE_BUILTIN_TYPED_ARRAY_H
 
 /* Internal implementation details; not part of the public QuickJS API. */
-JSValue JS_ThrowStackOverflow(JSContext *ctx);
+JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
+JSValue js_typed_array_constructor(JSContext *ctx,
+                                   JSValueConst new_target,
+                                   int argc, JSValueConst *argv,
+                                   int classid);
+JSValue js_array_buffer_constructor3(JSContext *ctx,
+                                     JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len,
+                                     JSClassID class_id,
+                                     uint8_t *buf,
+                                     JSFreeArrayBufferDataFunc *free_func,
+                                     void *opaque, BOOL alloc_flag);
+void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
+JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                            const char *filename, int line_num, int col_num,
-                            int backtrace_flags);
+extern const uint8_t typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
+#define typed_array_size_log2(classid) (typed_array_size_log2[(classid) - JS_CLASS_UINT8C_ARRAY])
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace);
+BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
-
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
+void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-void JS_ThrowInterrupted(JSContext *ctx);
+void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
-
-#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap);
+BOOL typed_array_is_oob(JSObject *p);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
-                                                JSValueConst func_obj);
+JSValue js_typed_array___speciesCreate(JSContext *ctx,
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv);
 
 /* Internal implementation detail; not part of the public QuickJS API. */
-int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
+JSValue JS_ThrowTypeErrorArrayBufferOOB(JSContext *ctx);
 
-/* Internal implementation detail; not part of the public QuickJS API. */
-no_inline __exception int __js_poll_interrupts(JSContext *ctx);
-
-static inline __exception int js_poll_interrupts(JSContext *ctx)
-{
-    if (unlikely(--ctx->interrupt_counter <= 0)) {
-        return __js_poll_interrupts(ctx);
-    } else {
-        return 0;
-    }
-}
-
-/* Internal implementation detail; not part of the public QuickJS API. */
-JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv);
-
-#endif /* QUICKJS_PRIVATE_ERRORS_H */
+#endif /* QUICKJS_PRIVATE_BUILTIN_TYPED_ARRAY_H */
