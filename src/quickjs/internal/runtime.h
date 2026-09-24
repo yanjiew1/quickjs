@@ -290,4 +290,15 @@ void JS_ThrowInterrupted(JSContext *ctx);
 JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
                              const char *fmt, va_list ap);
 
+no_inline __exception int __js_poll_interrupts(JSContext *ctx);
+
+static inline __exception int js_poll_interrupts(JSContext *ctx)
+{
+    if (unlikely(--ctx->interrupt_counter <= 0)) {
+        return __js_poll_interrupts(ctx);
+    } else {
+        return 0;
+    }
+}
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

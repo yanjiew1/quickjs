@@ -51,4 +51,13 @@ JSValue js_object_preventExtensions(JSContext *ctx, JSValueConst this_val,
 JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv, int kind);
 
+JSValue js_object_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
+
+JSValue js_object_seal(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv, int freeze_flag);
+
+extern const JSCFunctionListEntry js_object_funcs[23];
+extern const JSCFunctionListEntry js_object_proto_funcs[11];
+
 #endif /* QUICKJS_BUILTINS_OBJECT_H */

@@ -342,4 +342,15 @@ uint32_t js_string_obj_get_length(JSContext *ctx,
 
 JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
 
+__exception int JS_CopyDataProperties(JSContext *ctx,
+                                             JSValueConst target,
+                                             JSValueConst source,
+                                             JSValueConst excluded,
+                                             BOOL setprop);
+
+JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
+
+int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
+                                JSValue prop, JSValue val, int flags);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */
