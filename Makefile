@@ -249,7 +249,7 @@ endif
 endif
 endif
 
-QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode.o $(OBJDIR)/number.o $(OBJDIR)/atom-string.o $(OBJDIR)/property.o $(OBJDIR)/vm.o $(OBJDIR)/runtime.o $(OBJDIR)/array.o $(OBJDIR)/typed-array.o $(OBJDIR)/promise.o $(OBJDIR)/weak-ref.o $(OBJDIR)/proxy.o $(OBJDIR)/json.o $(OBJDIR)/regexp.o $(OBJDIR)/string.o $(OBJDIR)/primitive.o $(OBJDIR)/global.o $(OBJDIR)/object.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/date.o $(OBJDIR)/math.o $(OBJDIR)/map-set.o
+QJS_ENGINE_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode.o $(OBJDIR)/number.o $(OBJDIR)/atom-string.o $(OBJDIR)/property.o $(OBJDIR)/vm.o $(OBJDIR)/runtime.o $(OBJDIR)/array.o $(OBJDIR)/typed-array.o $(OBJDIR)/atomics.o $(OBJDIR)/promise.o $(OBJDIR)/weak-ref.o $(OBJDIR)/proxy.o $(OBJDIR)/json.o $(OBJDIR)/regexp.o $(OBJDIR)/string.o $(OBJDIR)/primitive.o $(OBJDIR)/global.o $(OBJDIR)/object.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/date.o $(OBJDIR)/math.o $(OBJDIR)/map-set.o
 
 QJS_SUPPORT_OBJS=$(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/exec.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o $(OBJDIR)/module-loader.o $(OBJDIR)/os.o
 

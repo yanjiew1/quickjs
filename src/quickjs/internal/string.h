@@ -25,7 +25,7 @@
 #ifndef QUICKJS_INTERNAL_STRING_H
 #define QUICKJS_INTERNAL_STRING_H
 
-#include "base.h"
+#include "allocator.h"
 #include "atom.h"
 
 enum {

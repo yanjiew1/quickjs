@@ -25,7 +25,7 @@
 #ifndef QUICKJS_INTERNAL_BYTECODE_H
 #define QUICKJS_INTERNAL_BYTECODE_H
 
-#include "runtime.h"
+#include "function.h"
 
 typedef enum OPCodeFormat {
 #define FMT(f) OP_FMT_ ## f,
