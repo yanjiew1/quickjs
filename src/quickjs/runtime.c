@@ -35,6 +35,7 @@
 #include "builtins/iterator.h"
 #include "builtins/regexp.h"
 #include "builtins/typed-array.h"
+#include "builtins/array-buffer.h"
 #include "builtins/primitives.h"
 #include "builtins/string.h"
 
@@ -1377,4 +1378,3 @@ void JS_UpdateStackTop(JSRuntime *rt)
     rt->stack_top = js_get_stack_pointer();
     update_stack_limit(rt);
 }
-

@@ -405,7 +405,6 @@ no_inline int js_realloc_array(JSContext *ctx, void **parray,
 void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                           JSGCObjectTypeEnum type);
 void remove_gc_object(JSGCObjectHeader *h);
-JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
 void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
 int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);

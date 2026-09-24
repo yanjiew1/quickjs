@@ -29,6 +29,7 @@
 #include "internal/object.h"
 #include "internal/module.h"
 #include "internal/bytecode.h"
+#include "builtins/array-buffer.h"
 
 /*******************************************************************/
 /* object list */
@@ -2153,4 +2154,3 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
     bc_reader_free(s);
     return obj;
 }
-

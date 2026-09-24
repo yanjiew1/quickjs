@@ -1,5 +1,5 @@
 /*
- * QuickJS typed array and ArrayBuffer builtin interface
+ * QuickJS ArrayBuffer and SharedArrayBuffer builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,21 +22,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_TYPED_ARRAY_H
-#define QUICKJS_BUILTINS_TYPED_ARRAY_H
+#ifndef QUICKJS_BUILTINS_ARRAY_BUFFER_H
+#define QUICKJS_BUILTINS_ARRAY_BUFFER_H
 
-#include "../internal/base.h"
+#include "../internal/object.h"
 
-extern uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
-#define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
-
-void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
-void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
-int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
-JSValue js_typed_array___speciesCreate(JSContext *ctx,
-                                              JSValueConst this_val,
-                                              int argc, JSValueConst *argv);
-BOOL typed_array_is_oob(JSObject *p);
+int JS_AddIntrinsicArrayBuffers(JSContext *ctx);
+JSValue js_array_buffer_constructor3(JSContext *ctx, JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len,
+                                     JSClassID class_id, uint8_t *buf,
+                                     JSFreeArrayBufferDataFunc *free_func,
+                                     void *opaque, BOOL alloc_flag);
+JSValue js_array_buffer_constructor1(JSContext *ctx, JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len);
+void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
+void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
+JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
+BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
+JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
+JSValue JS_ThrowTypeErrorArrayBufferOOB(JSContext *ctx);
 
 #endif

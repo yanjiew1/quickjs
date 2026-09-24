@@ -32,6 +32,7 @@
 #include "libunicode.h"
 #include "builtins/collections.h"
 #include "builtins/typed-array.h"
+#include "builtins/array-buffer.h"
 
 /* Object class */
 
@@ -6397,4 +6398,3 @@ __exception int JS_CopyDataProperties(JSContext *ctx,
     JS_FreePropertyEnum(ctx, tab_atom, tab_atom_count);
     return -1;
 }
-

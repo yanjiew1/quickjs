@@ -28,6 +28,7 @@
 #include "../internal/number.h"
 #include "../internal/object.h"
 #include "typed-array.h"
+#include "array-buffer.h"
 #include "atomics.h"
 
 /* Atomics */
@@ -548,4 +549,3 @@ int JS_AddIntrinsicAtomics(JSContext *ctx)
 }
 
 #endif /* CONFIG_ATOMICS */
-

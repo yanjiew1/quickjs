@@ -28,6 +28,7 @@
 #include "../internal/object.h"
 #include "../internal/bytecode.h"
 #include "typed-array.h"
+#include "array-buffer.h"
 #include "data-view.h"
 
 JSValue js_dataview_constructor(JSContext *ctx,
@@ -416,4 +417,3 @@ const JSCFunctionListEntry js_dataview_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("setFloat64", 2, js_dataview_setValue, JS_CLASS_FLOAT64_ARRAY ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "DataView", JS_PROP_CONFIGURABLE ),
 };
-

@@ -30,6 +30,7 @@
 #include "array.h"
 #include "object-methods.h"
 #include "typed-array.h"
+#include "array-buffer.h"
 
 /* Array */
 
@@ -2169,4 +2170,3 @@ const JSCFunctionListEntry js_array_iterator_proto_funcs[] = {
     JS_ITERATOR_NEXT_DEF("next", 0, js_array_iterator_next, 0 ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Array Iterator", JS_PROP_CONFIGURABLE ),
 };
-
