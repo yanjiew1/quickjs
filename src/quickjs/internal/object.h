@@ -370,7 +370,6 @@ int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
                                 JSValue prop, JSValue val, int flags);
 int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
 __maybe_unused void JS_DumpShapes(JSRuntime *rt);
-JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
 int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
 JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
                                   JSValueConst name);
@@ -397,27 +396,11 @@ void js_array_mark(JSRuntime *rt, JSValueConst val,
                           JS_MarkFunc *mark_func);
 JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
 JSContext *js_autoinit_get_realm(JSProperty *pr);
-void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
-void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
-JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv, int flags);
-void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
-void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func);
-void js_c_function_finalizer(JSRuntime *rt, JSValue val);
-void js_c_function_mark(JSRuntime *rt, JSValueConst val,
-                               JS_MarkFunc *mark_func);
 JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
 void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
 void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);
 void js_free_shape_null(JSRuntime *rt, JSShape *sh);
-void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst home_obj);
-int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
-                                    JSAtom name, int flags, JSValueConst home_obj);
 void js_object_data_finalizer(JSRuntime *rt, JSValue val);
 void js_object_data_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);

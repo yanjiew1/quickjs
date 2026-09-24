@@ -226,6 +226,24 @@ typedef struct JSCFunctionDataRecord {
     JSValue data[0];
 } JSCFunctionDataRecord;
 
+JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
+void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
+void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func);
+JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv, int flags);
+void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
+void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+void js_c_function_finalizer(JSRuntime *rt, JSValue val);
+void js_c_function_mark(JSRuntime *rt, JSValueConst val,
+                               JS_MarkFunc *mark_func);
+void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+                                      JSValueConst home_obj);
+int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
+                                    JSAtom name, int flags, JSValueConst home_obj);
+JSValue js_get_function_name(JSContext *ctx, JSAtom name);
 void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
                                        JSAtom name, int len);
 JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
