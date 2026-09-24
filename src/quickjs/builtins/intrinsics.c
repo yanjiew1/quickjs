@@ -32,6 +32,7 @@
 #include "array.h"
 #include "proxy.h"
 #include "primitives.h"
+#include "math.h"
 
 /* XXX: not 100% compatible, but mozilla seems to use a similar
    implementation to ensure that caller in non strict mode does not

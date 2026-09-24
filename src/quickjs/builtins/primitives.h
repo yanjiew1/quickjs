@@ -1,5 +1,5 @@
 /*
- * QuickJS primitive and Math builtin interface
+ * QuickJS primitive and String builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -33,7 +33,6 @@ extern const JSCFunctionListEntry js_boolean_proto_funcs[2];
 extern const JSCFunctionListEntry js_string_funcs[3];
 extern const JSCFunctionListEntry js_string_proto_funcs[50];
 extern const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
-extern const JSCFunctionListEntry js_math_obj[1];
 JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
                                      int argc, JSValueConst *argv);
 JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
@@ -46,7 +45,6 @@ JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv);
 int js_get_radix(JSContext *ctx, JSValueConst val);
 
-void js_random_init(JSContext *ctx);
 
 extern const JSClassExoticMethods js_string_exotic_methods;
 
