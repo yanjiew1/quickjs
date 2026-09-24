@@ -279,4 +279,10 @@ int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
 int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                    int argc, JSValueConst *argv, BOOL no_exception);
 
+static inline BOOL is_strict_mode(JSContext *ctx)
+{
+    JSStackFrame *sf = ctx->rt->current_stack_frame;
+    return (sf && (sf->js_mode & JS_MODE_STRICT));
+}
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

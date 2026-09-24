@@ -257,4 +257,23 @@ JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
 JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
                              int argc, JSValueConst *argv);
 
+int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                                     JSObject *p, JSAtom prop);
+
+int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+                                                      JSPropertyEnum **ptab,
+                                                      uint32_t *plen,
+                                                      JSObject *p, int flags);
+
+int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                   JSValueConst proto_val,
+                                   BOOL throw_flag);
+
+JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
+                                                JSValueConst func_obj);
+
+BOOL check_define_prop_flags(int prop_flags, int flags);
+
+void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

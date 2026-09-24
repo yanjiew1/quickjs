@@ -356,4 +356,17 @@ typedef struct JSCFunctionDataRecord {
     uint16_t magic;
     JSValue data[0];
 } JSCFunctionDataRecord;
+JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                                const char *name,
+                                int length, JSCFunctionEnum cproto, int magic,
+                                JSValueConst proto_val, int n_fields);
+
+JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
+                               JSValueConst array_arg);
+
+void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
+
+JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv, int magic);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */
