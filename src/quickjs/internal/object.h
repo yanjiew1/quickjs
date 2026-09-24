@@ -395,8 +395,6 @@ int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
 no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
                                                              JSObject *p);
 int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
-int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
-                         uint32_t pc_value, int *pcol_num);
 void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
 void free_zero_refcount(JSRuntime *rt);
 void gc_decref(JSRuntime *rt);

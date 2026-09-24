@@ -103,6 +103,9 @@ int get_leb128(uint32_t *pval, const uint8_t *buf,
 int get_sleb128(int32_t *pval, const uint8_t *buf,
                        const uint8_t *buf_end);
 
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+                         uint32_t pc_value, int *pcol_num);
+
 typedef struct JSOpCode {
 #ifdef DUMP_BYTECODE
     const char *name;
