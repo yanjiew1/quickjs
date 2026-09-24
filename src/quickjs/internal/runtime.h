@@ -354,4 +354,6 @@ JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext 
 
 BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
 
+int JS_AddIntrinsicBasicObjects(JSContext *ctx);
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */
