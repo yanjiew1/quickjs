@@ -464,11 +464,10 @@ static int output_executable(const char *out_filename, const char *cfilename,
         pstrcpy(exe_dir, sizeof(exe_dir), ".");
     }
 
-    /* if 'quickjs.h' is present at the same path as the executable, we
-       use it as include and lib directory */
-    snprintf(buf, sizeof(buf), "%s/quickjs.h", exe_dir);
+    /* use the source tree headers and archive next to the executable */
+    snprintf(buf, sizeof(buf), "%s/include/quickjs.h", exe_dir);
     if (access(buf, R_OK) == 0) {
-        pstrcpy(inc_dir, sizeof(inc_dir), exe_dir);
+        snprintf(inc_dir, sizeof(inc_dir), "%s/include", exe_dir);
         pstrcpy(lib_dir, sizeof(lib_dir), exe_dir);
     } else {
         snprintf(inc_dir, sizeof(inc_dir), "%s/include/quickjs", CONFIG_PREFIX);

@@ -61,6 +61,7 @@ TEST262_COMMIT?=5c8206929d81b2d3d727ca6aac56c18358c8d790
 TEST262_SINCE?=2025-09-01
 
 OBJDIR=.obj
+VPATH=tools:src/quickjs:src/quickjs-libc:src/cutils:src/dtoa:src/unicode:src/regexp
 
 ifdef CONFIG_ASAN
 OBJDIR:=$(OBJDIR)/asan
@@ -164,6 +165,7 @@ endif
 endif
 
 CFLAGS+=$(DEFINES)
+CFLAGS+=-Iinclude -Isrc/cutils -Isrc/dtoa -Isrc/unicode -Isrc/regexp -Isrc/quickjs
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
 CFLAGS_OPT=$(CFLAGS) -O2
@@ -249,7 +251,13 @@ endif
 
 all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
-QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+CUTILS_OBJS=$(OBJDIR)/cutils.o
+DTOA_OBJS=$(OBJDIR)/dtoa.o
+UNICODE_OBJS=$(OBJDIR)/libunicode.o
+REGEXP_OBJS=$(OBJDIR)/libregexp.o
+QUICKJS_OBJS=$(OBJDIR)/quickjs.o
+QUICKJS_LIBC_OBJS=$(OBJDIR)/quickjs-libc.o
+QJS_LIB_OBJS=$(QUICKJS_OBJS) $(DTOA_OBJS) $(REGEXP_OBJS) $(UNICODE_OBJS) $(CUTILS_OBJS) $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -317,13 +325,13 @@ endif # CONFIG_LTO
 libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
 	$(AR) rcs $@ $^
 
-repl.c: $(QJSC) repl.js
-	$(QJSC) -s -c -o $@ -m repl.js
+repl.c: $(QJSC) tools/repl.js
+	$(QJSC) -s -c -o $@ -m tools/repl.js
 
 ifneq ($(wildcard unicode/UnicodeData.txt),)
-$(OBJDIR)/libunicode.o $(OBJDIR)/libunicode.nolto.o: libunicode-table.h
+$(OBJDIR)/libunicode.o $(OBJDIR)/libunicode.nolto.o: src/unicode/libunicode-table.h
 
-libunicode-table.h: unicode_gen
+src/unicode/libunicode-table.h: unicode_gen
 	./unicode_gen unicode $@
 endif
 
@@ -359,11 +367,11 @@ $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: libregexp.c libunicode.c cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
+regexp_test: tests/regexp_test.c src/regexp/libregexp.c src/unicode/libunicode.c src/cutils/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/libregexp.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
-unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
+unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/libunicode.host.o $(OBJDIR)/cutils.host.o tools/unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/libunicode.host.o $(OBJDIR)/cutils.host.o
 
 clean:
 	rm -f repl.c out.c
@@ -384,7 +392,7 @@ ifdef CONFIG_LTO
 	install -m644 libquickjs.lto.a "$(DESTDIR)$(PREFIX)/lib/quickjs"
 endif
 	mkdir -p "$(DESTDIR)$(PREFIX)/include/quickjs"
-	install -m644 quickjs.h quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
+	install -m644 include/quickjs.h include/quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
 
 ###############################################################################
 # examples
