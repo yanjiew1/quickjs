@@ -1,5 +1,5 @@
 /*
- * QuickJS Atom Definitions
+ * QuickJS Global Builtin Interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,41 +22,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_INTERNAL_ATOM_H
-#define QUICKJS_INTERNAL_ATOM_H
+#ifndef QUICKJS_BUILTINS_GLOBAL_H
+#define QUICKJS_BUILTINS_GLOBAL_H
 
-#include "base.h"
+#include "internal/object.h"
 
-#define JS_ATOM_TAG_INT (1U << 31)
-#define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
-#define JS_ATOM_MAX     ((1U << 30) - 1)
+JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv);
 
-enum {
-    __JS_ATOM_NULL = JS_ATOM_NULL,
-#define DEF(name, str) JS_ATOM_ ## name,
-#include "quickjs-atom.h"
-#undef DEF
-    JS_ATOM_END,
-};
-#define JS_ATOM_LAST_KEYWORD JS_ATOM_super
-#define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
+JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv);
 
-#define ATOM_GET_STR_BUF_SIZE 64
-
-const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
-
-static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
-{
-    return (v & JS_ATOM_TAG_INT) != 0;
-}
-
-static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
-{
-    return atom & ~JS_ATOM_TAG_INT;
-}
-
-JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
-
-JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type);
-
-#endif /* QUICKJS_INTERNAL_ATOM_H */
+#endif /* QUICKJS_BUILTINS_GLOBAL_H */

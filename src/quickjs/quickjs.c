@@ -57,6 +57,8 @@
 #include "builtins/object.h"
 #include "builtins/regexp.h"
 #include "builtins/string.h"
+#include "builtins/primitive.h"
+#include "builtins/global.h"
 
 #include "internal/config.h"
 #include "internal/base.h"
@@ -180,7 +182,7 @@ static void js_global_object_mark(JSRuntime *rt, JSValueConst val,
 
 
 
-static JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
+
 
 
 
@@ -251,7 +253,7 @@ static BOOL js_string_eq(JSContext *ctx,
 
 
 
-static int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
+
 static BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val);
 
 
@@ -2339,7 +2341,7 @@ static JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n)
 }
 
 /* 'p' is freed */
-static JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type)
+JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type)
 {
     JSRuntime *rt = ctx->rt;
     JSAtom atom;
@@ -9791,7 +9793,7 @@ void *JS_GetAnyOpaque(JSValueConst obj, JSClassID *class_id)
     return p->u.opaque;
 }
 
-static JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
+JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
 {
     int i;
     BOOL force_ordinary;
@@ -9958,7 +9960,7 @@ int JS_ToBool(JSContext *ctx, JSValueConst val)
     return JS_ToBoolFree(ctx, JS_DupValue(ctx, val));
 }
 
-static int skip_spaces(const char *pc)
+int skip_spaces(const char *pc)
 {
     const uint8_t *p, *p_next, *p_start;
     uint32_t c;
@@ -10309,7 +10311,7 @@ static js_limb_t mp_shr(js_limb_t *tab_r, const js_limb_t *tab, int n,
     return l & (((js_limb_t)1 << shift) - 1);
 }
 
-static JSBigInt *js_bigint_new(JSContext *ctx, int len)
+JSBigInt *js_bigint_new(JSContext *ctx, int len)
 {
     JSBigInt *r;
     if (len > JS_BIGINT_MAX_SIZE) {
@@ -10472,7 +10474,7 @@ static JSBigInt *js_bigint_normalize1(JSContext *ctx, JSBigInt *a, int l)
     return a;
 }
 
-static JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a)
+JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a)
 {
     return js_bigint_normalize1(ctx, a, a->len);
 }
@@ -10972,7 +10974,7 @@ static uint64_t shr_rndn(uint64_t a, int n)
 
 /* convert to float64 with round to nearest, ties to even. Return
    +/-infinity if too large. */
-static double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
+double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
 {
     int sgn, e;
     uint64_t mant;
@@ -11005,7 +11007,7 @@ static double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
 
 /* return (1, NULL) if not an integer, (2, NULL) if NaN or Infinity,
    (0, n) if an integer, (0, NULL) in case of memory error */
-static JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1)
+JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1)
 {
     uint64_t a = float64_as_uint64(a1);
     int sgn, e, shift;
@@ -11348,7 +11350,7 @@ static const js_limb_t radix_base_table[JS_RADIX_MAX - 1] = {
 #endif
 };
 
-static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
+JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 {
     if (JS_VALUE_GET_TAG(val) == JS_TAG_SHORT_BIG_INT) {
         char buf[66];
@@ -11446,7 +11448,7 @@ static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 
 /* if possible transform a BigInt to short big and free it, otherwise
    return a normal bigint */
-static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
 {
     JSValue res;
     if (p->len == 1) {
@@ -11458,26 +11460,10 @@ static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
     }
 }
 
-#define ATOD_INT_ONLY        (1 << 0)
-/* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
-#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
-/* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
-#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
-/* accept _ between digits as a digit separator */
-#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
-/* allow a suffix to override the type */
-#define ATOD_ACCEPT_SUFFIX    (1 << 6)
-/* default type */
-#define ATOD_TYPE_MASK        (3 << 7)
-#define ATOD_TYPE_FLOAT64     (0 << 7)
-#define ATOD_TYPE_BIG_INT     (1 << 7)
-/* accept -0x1 */
-#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
-
 /* return an exception in case of memory error. Return JS_NAN if
    invalid syntax */
 /* XXX: directly use js_atod() */
-static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
                        int radix, int flags)
 {
     const char *p, *p_start;
@@ -11744,7 +11730,7 @@ static JSValue JS_ToNumericFree(JSContext *ctx, JSValue val)
     return JS_ToNumberHintFree(ctx, val, TON_FLAG_NUMERIC);
 }
 
-static JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val)
+JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val)
 {
     return JS_ToNumericFree(ctx, JS_DupValue(ctx, val));
 }
@@ -12186,7 +12172,7 @@ __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
 }
 
 
-static BOOL is_safe_integer(double d)
+BOOL is_safe_integer(double d)
 {
     return isfinite(d) && floor(d) == d &&
         fabs(d) <= (double)MAX_SAFE_INTEGER;
@@ -12217,7 +12203,7 @@ __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
 }
 
 /* Note: can return an exception */
-static int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
+int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
 {
     double d;
     if (!JS_IsNumber(val))
@@ -12262,7 +12248,7 @@ static JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
     return js_bigint_to_string1(ctx, val, 10);
 }
 
-static JSValue js_dtoa2(JSContext *ctx,
+JSValue js_dtoa2(JSContext *ctx,
                         double d, int radix, int n_digits, int flags)
 {
     char static_buf[128], *buf, *tmp_buf;
@@ -13337,7 +13323,7 @@ static JSValue JS_StringToBigInt(JSContext *ctx, JSValue val)
     return val;
 }
 
-static JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val)
+JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val)
 {
     val = JS_StringToBigInt(ctx, val);
     if (JS_VALUE_IS_NAN(val))
@@ -13383,7 +13369,7 @@ JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
     return val;
 }
 
-static JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val)
+JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val)
 {
     return JS_ToBigIntFree(ctx, JS_DupValue(ctx, val));
 }
@@ -37665,10 +37651,8 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
 /* runtime functions & objects */
 
 
-static JSValue js_boolean_constructor(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv);
-static JSValue js_number_constructor(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv);
+
+
 
 int check_function(JSContext *ctx, JSValueConst obj)
 {
@@ -38034,7 +38018,7 @@ static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
     return JS_EvalObject(ctx, ctx->global_obj, argv[0], JS_EVAL_TYPE_INDIRECT, -1);
 }
 
-static JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
+JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv)
 {
     double d;
@@ -38044,7 +38028,7 @@ static JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
     return JS_NewBool(ctx, isnan(d));
 }
 
-static JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
+JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv)
 {
     double d;
@@ -39745,493 +39729,6 @@ JSValue js_aggregate_error_constructor(JSContext *ctx,
     return obj;
 }
 
-/* Number */
-
-static JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
-{
-    JSValue val, obj;
-    if (argc == 0) {
-        val = JS_NewInt32(ctx, 0);
-    } else {
-        val = JS_ToNumeric(ctx, argv[0]);
-        if (JS_IsException(val))
-            return val;
-        switch(JS_VALUE_GET_TAG(val)) {
-        case JS_TAG_SHORT_BIG_INT:
-            val = JS_NewInt64(ctx, JS_VALUE_GET_SHORT_BIG_INT(val));
-            if (JS_IsException(val))
-                return val;
-            break;
-        case JS_TAG_BIG_INT:
-            {
-                JSBigInt *p = JS_VALUE_GET_PTR(val);
-                double d;
-                d = js_bigint_to_float64(ctx, p);
-                JS_FreeValue(ctx, val);
-                val = JS_NewFloat64(ctx, d);
-            }
-            break;
-        default:
-            break;
-        }
-    }
-    if (!JS_IsUndefined(new_target)) {
-        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_NUMBER);
-        if (!JS_IsException(obj))
-            JS_SetObjectData(ctx, obj, val);
-        return obj;
-    } else {
-        return val;
-    }
-}
-
-#if 0
-static JSValue js_number___toInteger(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv)
-{
-    return JS_ToIntegerFree(ctx, JS_DupValue(ctx, argv[0]));
-}
-
-static JSValue js_number___toLength(JSContext *ctx, JSValueConst this_val,
-                                    int argc, JSValueConst *argv)
-{
-    int64_t v;
-    if (JS_ToLengthFree(ctx, &v, JS_DupValue(ctx, argv[0])))
-        return JS_EXCEPTION;
-    return JS_NewInt64(ctx, v);
-}
-#endif
-
-static JSValue js_number_isNaN(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv)
-{
-    if (!JS_IsNumber(argv[0]))
-        return JS_FALSE;
-    return js_global_isNaN(ctx, this_val, argc, argv);
-}
-
-static JSValue js_number_isFinite(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    if (!JS_IsNumber(argv[0]))
-        return JS_FALSE;
-    return js_global_isFinite(ctx, this_val, argc, argv);
-}
-
-static JSValue js_number_isInteger(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv)
-{
-    int ret;
-    ret = JS_NumberIsInteger(ctx, argv[0]);
-    if (ret < 0)
-        return JS_EXCEPTION;
-    else
-        return JS_NewBool(ctx, ret);
-}
-
-static JSValue js_number_isSafeInteger(JSContext *ctx, JSValueConst this_val,
-                                       int argc, JSValueConst *argv)
-{
-    double d;
-    if (!JS_IsNumber(argv[0]))
-        return JS_FALSE;
-    if (unlikely(JS_ToFloat64(ctx, &d, argv[0])))
-        return JS_EXCEPTION;
-    return JS_NewBool(ctx, is_safe_integer(d));
-}
-
-static const JSCFunctionListEntry js_number_funcs[] = {
-    /* global ParseInt and parseFloat should be defined already or delayed */
-    JS_ALIAS_BASE_DEF("parseInt", "parseInt", 0 ),
-    JS_ALIAS_BASE_DEF("parseFloat", "parseFloat", 0 ),
-    JS_CFUNC_DEF("isNaN", 1, js_number_isNaN ),
-    JS_CFUNC_DEF("isFinite", 1, js_number_isFinite ),
-    JS_CFUNC_DEF("isInteger", 1, js_number_isInteger ),
-    JS_CFUNC_DEF("isSafeInteger", 1, js_number_isSafeInteger ),
-    JS_PROP_DOUBLE_DEF("MAX_VALUE", 1.7976931348623157e+308, 0 ),
-    JS_PROP_DOUBLE_DEF("MIN_VALUE", 5e-324, 0 ),
-    JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
-    JS_PROP_DOUBLE_DEF("NEGATIVE_INFINITY", -INFINITY, 0 ),
-    JS_PROP_DOUBLE_DEF("POSITIVE_INFINITY", INFINITY, 0 ),
-    JS_PROP_DOUBLE_DEF("EPSILON", 2.220446049250313e-16, 0 ), /* ES6 */
-    JS_PROP_DOUBLE_DEF("MAX_SAFE_INTEGER", 9007199254740991.0, 0 ), /* ES6 */
-    JS_PROP_DOUBLE_DEF("MIN_SAFE_INTEGER", -9007199254740991.0, 0 ), /* ES6 */
-    //JS_CFUNC_DEF("__toInteger", 1, js_number___toInteger ),
-    //JS_CFUNC_DEF("__toLength", 1, js_number___toLength ),
-};
-
-static JSValue js_thisNumberValue(JSContext *ctx, JSValueConst this_val)
-{
-    if (JS_IsNumber(this_val))
-        return JS_DupValue(ctx, this_val);
-
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(this_val);
-        if (p->class_id == JS_CLASS_NUMBER) {
-            if (JS_IsNumber(p->u.object_data))
-                return JS_DupValue(ctx, p->u.object_data);
-        }
-    }
-    return JS_ThrowTypeError(ctx, "not a number");
-}
-
-static JSValue js_number_valueOf(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    return js_thisNumberValue(ctx, this_val);
-}
-
-static int js_get_radix(JSContext *ctx, JSValueConst val)
-{
-    int radix;
-    if (JS_ToInt32Sat(ctx, &radix, val))
-        return -1;
-    if (radix < 2 || radix > 36) {
-        JS_ThrowRangeError(ctx, "radix must be between 2 and 36");
-        return -1;
-    }
-    return radix;
-}
-
-static JSValue js_number_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv, int magic)
-{
-    JSValue val;
-    int base, flags;
-    double d;
-
-    val = js_thisNumberValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    if (magic || JS_IsUndefined(argv[0])) {
-        base = 10;
-    } else {
-        base = js_get_radix(ctx, argv[0]);
-        if (base < 0)
-            goto fail;
-    }
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_INT) {
-        char buf1[70];
-        int len;
-        len = i64toa_radix(buf1, JS_VALUE_GET_INT(val), base);
-        return js_new_string8_len(ctx, buf1, len);
-    }
-    if (JS_ToFloat64Free(ctx, &d, val))
-        return JS_EXCEPTION;
-    flags = JS_DTOA_FORMAT_FREE;
-    if (base != 10)
-        flags |= JS_DTOA_EXP_DISABLED;
-    return js_dtoa2(ctx, d, base, 0, flags);
- fail:
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
-
-static JSValue js_number_toFixed(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    JSValue val;
-    int f, flags;
-    double d;
-
-    val = js_thisNumberValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    if (JS_ToFloat64Free(ctx, &d, val))
-        return JS_EXCEPTION;
-    if (JS_ToInt32Sat(ctx, &f, argv[0]))
-        return JS_EXCEPTION;
-    if (f < 0 || f > 100)
-        return JS_ThrowRangeError(ctx, "invalid number of digits");
-    if (fabs(d) >= 1e21)
-        flags = JS_DTOA_FORMAT_FREE;
-    else
-        flags = JS_DTOA_FORMAT_FRAC;
-    return js_dtoa2(ctx, d, 10, f, flags);
-}
-
-static JSValue js_number_toExponential(JSContext *ctx, JSValueConst this_val,
-                                       int argc, JSValueConst *argv)
-{
-    JSValue val;
-    int f, flags;
-    double d;
-
-    val = js_thisNumberValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    if (JS_ToFloat64Free(ctx, &d, val))
-        return JS_EXCEPTION;
-    if (JS_ToInt32Sat(ctx, &f, argv[0]))
-        return JS_EXCEPTION;
-    if (!isfinite(d)) {
-        return JS_ToStringFree(ctx,  __JS_NewFloat64(ctx, d));
-    }
-    if (JS_IsUndefined(argv[0])) {
-        flags = JS_DTOA_FORMAT_FREE;
-        f = 0;
-    } else {
-        if (f < 0 || f > 100)
-            return JS_ThrowRangeError(ctx, "invalid number of digits");
-        f++;
-        flags = JS_DTOA_FORMAT_FIXED;
-    }
-    return js_dtoa2(ctx, d, 10, f, flags | JS_DTOA_EXP_ENABLED);
-}
-
-static JSValue js_number_toPrecision(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv)
-{
-    JSValue val;
-    int p;
-    double d;
-
-    val = js_thisNumberValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    if (JS_ToFloat64Free(ctx, &d, val))
-        return JS_EXCEPTION;
-    if (JS_IsUndefined(argv[0]))
-        goto to_string;
-    if (JS_ToInt32Sat(ctx, &p, argv[0]))
-        return JS_EXCEPTION;
-    if (!isfinite(d)) {
-    to_string:
-        return JS_ToStringFree(ctx,  __JS_NewFloat64(ctx, d));
-    }
-    if (p < 1 || p > 100)
-        return JS_ThrowRangeError(ctx, "invalid number of digits");
-    return js_dtoa2(ctx, d, 10, p, JS_DTOA_FORMAT_FIXED);
-}
-
-static const JSCFunctionListEntry js_number_proto_funcs[] = {
-    JS_CFUNC_DEF("toExponential", 1, js_number_toExponential ),
-    JS_CFUNC_DEF("toFixed", 1, js_number_toFixed ),
-    JS_CFUNC_DEF("toPrecision", 1, js_number_toPrecision ),
-    JS_CFUNC_MAGIC_DEF("toString", 1, js_number_toString, 0 ),
-    JS_CFUNC_MAGIC_DEF("toLocaleString", 0, js_number_toString, 1 ),
-    JS_CFUNC_DEF("valueOf", 0, js_number_valueOf ),
-};
-
-static JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
-                           int argc, JSValueConst *argv)
-{
-    const char *str, *p;
-    int radix, flags;
-    JSValue ret;
-
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str)
-        return JS_EXCEPTION;
-    if (JS_ToInt32(ctx, &radix, argv[1])) {
-        JS_FreeCString(ctx, str);
-        return JS_EXCEPTION;
-    }
-    if (radix != 0 && (radix < 2 || radix > 36)) {
-        ret = JS_NAN;
-    } else {
-        p = str;
-        p += skip_spaces(p);
-        flags = ATOD_INT_ONLY | ATOD_ACCEPT_PREFIX_AFTER_SIGN;
-        ret = js_atof(ctx, p, NULL, radix, flags);
-    }
-    JS_FreeCString(ctx, str);
-    return ret;
-}
-
-static JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
-{
-    const char *str, *p;
-    JSValue ret;
-
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str)
-        return JS_EXCEPTION;
-    p = str;
-    p += skip_spaces(p);
-    ret = js_atof(ctx, p, NULL, 10, 0);
-    JS_FreeCString(ctx, str);
-    return ret;
-}
-
-/* Boolean */
-static JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
-{
-    JSValue val, obj;
-    val = JS_NewBool(ctx, JS_ToBool(ctx, argv[0]));
-    if (!JS_IsUndefined(new_target)) {
-        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_BOOLEAN);
-        if (!JS_IsException(obj))
-            JS_SetObjectData(ctx, obj, val);
-        return obj;
-    } else {
-        return val;
-    }
-}
-
-static JSValue js_thisBooleanValue(JSContext *ctx, JSValueConst this_val)
-{
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_BOOL)
-        return JS_DupValue(ctx, this_val);
-
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(this_val);
-        if (p->class_id == JS_CLASS_BOOLEAN) {
-            if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_BOOL)
-                return p->u.object_data;
-        }
-    }
-    return JS_ThrowTypeError(ctx, "not a boolean");
-}
-
-static JSValue js_boolean_toString(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv)
-{
-    JSValue val = js_thisBooleanValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    return JS_AtomToString(ctx, JS_VALUE_GET_BOOL(val) ?
-                       JS_ATOM_true : JS_ATOM_false);
-}
-
-static JSValue js_boolean_valueOf(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    return js_thisBooleanValue(ctx, this_val);
-}
-
-static const JSCFunctionListEntry js_boolean_proto_funcs[] = {
-    JS_CFUNC_DEF("toString", 0, js_boolean_toString ),
-    JS_CFUNC_DEF("valueOf", 0, js_boolean_valueOf ),
-};
-
-/* Symbol */
-
-static JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
-{
-    JSValue str;
-    JSString *p;
-
-    if (!JS_IsUndefined(new_target))
-        return JS_ThrowTypeErrorNotAConstructor(ctx, new_target);
-    if (argc == 0 || JS_IsUndefined(argv[0])) {
-        p = NULL;
-    } else {
-        str = JS_ToString(ctx, argv[0]);
-        if (JS_IsException(str))
-            return JS_EXCEPTION;
-        p = JS_VALUE_GET_STRING(str);
-    }
-    return JS_NewSymbol(ctx, p, JS_ATOM_TYPE_SYMBOL);
-}
-
-static JSValue js_thisSymbolValue(JSContext *ctx, JSValueConst this_val)
-{
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_SYMBOL)
-        return JS_DupValue(ctx, this_val);
-
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(this_val);
-        if (p->class_id == JS_CLASS_SYMBOL) {
-            if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_SYMBOL)
-                return JS_DupValue(ctx, p->u.object_data);
-        }
-    }
-    return JS_ThrowTypeError(ctx, "not a symbol");
-}
-
-static JSValue js_symbol_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    JSValue val, ret;
-    val = js_thisSymbolValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    /* XXX: use JS_ToStringInternal() with a flags */
-    ret = js_string_constructor(ctx, JS_UNDEFINED, 1, (JSValueConst *)&val);
-    JS_FreeValue(ctx, val);
-    return ret;
-}
-
-static JSValue js_symbol_valueOf(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    return js_thisSymbolValue(ctx, this_val);
-}
-
-static JSValue js_symbol_get_description(JSContext *ctx, JSValueConst this_val)
-{
-    JSValue val, ret;
-    JSAtomStruct *p;
-
-    val = js_thisSymbolValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    p = JS_VALUE_GET_PTR(val);
-    if (p->len == 0 && p->is_wide_char != 0) {
-        ret = JS_UNDEFINED;
-    } else {
-        ret = JS_AtomToString(ctx, js_get_atom_index(ctx->rt, p));
-    }
-    JS_FreeValue(ctx, val);
-    return ret;
-}
-
-static const JSCFunctionListEntry js_symbol_proto_funcs[] = {
-    JS_CFUNC_DEF("toString", 0, js_symbol_toString ),
-    JS_CFUNC_DEF("valueOf", 0, js_symbol_valueOf ),
-    // XXX: should have writable: false
-    JS_CFUNC_DEF("[Symbol.toPrimitive]", 1, js_symbol_valueOf ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Symbol", JS_PROP_CONFIGURABLE ),
-    JS_CGETSET_DEF("description", js_symbol_get_description, NULL ),
-};
-
-static JSValue js_symbol_for(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
-{
-    JSValue str;
-
-    str = JS_ToString(ctx, argv[0]);
-    if (JS_IsException(str))
-        return JS_EXCEPTION;
-    return JS_NewSymbol(ctx, JS_VALUE_GET_STRING(str), JS_ATOM_TYPE_GLOBAL_SYMBOL);
-}
-
-static JSValue js_symbol_keyFor(JSContext *ctx, JSValueConst this_val,
-                                int argc, JSValueConst *argv)
-{
-    JSAtomStruct *p;
-
-    if (!JS_IsSymbol(argv[0]))
-        return JS_ThrowTypeError(ctx, "not a symbol");
-    p = JS_VALUE_GET_PTR(argv[0]);
-    if (p->atom_type != JS_ATOM_TYPE_GLOBAL_SYMBOL)
-        return JS_UNDEFINED;
-    return JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING, p));
-}
-
-static const JSCFunctionListEntry js_symbol_funcs[] = {
-    JS_CFUNC_DEF("for", 1, js_symbol_for ),
-    JS_CFUNC_DEF("keyFor", 1, js_symbol_keyFor ),
-    JS_PROP_ATOM_DEF("toPrimitive", JS_ATOM_Symbol_toPrimitive, 0),
-    JS_PROP_ATOM_DEF("iterator", JS_ATOM_Symbol_iterator, 0),
-    JS_PROP_ATOM_DEF("match", JS_ATOM_Symbol_match, 0),
-    JS_PROP_ATOM_DEF("matchAll", JS_ATOM_Symbol_matchAll, 0),
-    JS_PROP_ATOM_DEF("replace", JS_ATOM_Symbol_replace, 0),
-    JS_PROP_ATOM_DEF("search", JS_ATOM_Symbol_search, 0),
-    JS_PROP_ATOM_DEF("split", JS_ATOM_Symbol_split, 0),
-    JS_PROP_ATOM_DEF("toStringTag", JS_ATOM_Symbol_toStringTag, 0),
-    JS_PROP_ATOM_DEF("isConcatSpreadable", JS_ATOM_Symbol_isConcatSpreadable, 0),
-    JS_PROP_ATOM_DEF("hasInstance", JS_ATOM_Symbol_hasInstance, 0),
-    JS_PROP_ATOM_DEF("species", JS_ATOM_Symbol_species, 0),
-    JS_PROP_ATOM_DEF("unscopables", JS_ATOM_Symbol_unscopables, 0),
-    JS_PROP_ATOM_DEF("asyncIterator", JS_ATOM_Symbol_asyncIterator, 0),
-};
-
 /* Generator */
 static const JSCFunctionListEntry js_generator_function_proto_funcs[] = {
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "GeneratorFunction", JS_PROP_CONFIGURABLE),
@@ -40243,6 +39740,7 @@ static const JSCFunctionListEntry js_generator_proto_funcs[] = {
     JS_ITERATOR_NEXT_DEF("throw", 1, js_generator_next, GEN_MAGIC_THROW ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Generator", JS_PROP_CONFIGURABLE),
 };
+
 
 /* URI handling */
 
@@ -40544,203 +40042,6 @@ static const JSCFunctionListEntry js_global_funcs[] = {
 int JS_AddIntrinsicEval(JSContext *ctx)
 {
     ctx->eval_internal = __JS_EvalInternal;
-    return 0;
-}
-
-/* BigInt */
-
-static JSValue JS_ToBigIntCtorFree(JSContext *ctx, JSValue val)
-{
-    uint32_t tag;
-
- redo:
-    tag = JS_VALUE_GET_NORM_TAG(val);
-    switch(tag) {
-    case JS_TAG_INT:
-    case JS_TAG_BOOL:
-        val = JS_NewBigInt64(ctx, JS_VALUE_GET_INT(val));
-        break;
-    case JS_TAG_SHORT_BIG_INT:
-    case JS_TAG_BIG_INT:
-        break;
-    case JS_TAG_FLOAT64:
-        {
-            double d = JS_VALUE_GET_FLOAT64(val);
-            JSBigInt *r;
-            int res;
-            r = js_bigint_from_float64(ctx, &res, d);
-            if (!r) {
-                if (res == 0) {
-                    val = JS_EXCEPTION;
-                } else if (res == 1) {
-                    val = JS_ThrowRangeError(ctx, "cannot convert to BigInt: not an integer");
-                } else {
-                    val = JS_ThrowRangeError(ctx, "cannot convert NaN or Infinity to BigInt");                }
-            } else {
-                val = JS_CompactBigInt(ctx, r);
-            }
-        }
-        break;
-    case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
-        val = JS_StringToBigIntErr(ctx, val);
-        break;
-    case JS_TAG_OBJECT:
-        val = JS_ToPrimitiveFree(ctx, val, HINT_NUMBER);
-        if (JS_IsException(val))
-            break;
-        goto redo;
-    case JS_TAG_NULL:
-    case JS_TAG_UNDEFINED:
-    default:
-        JS_FreeValue(ctx, val);
-        return JS_ThrowTypeError(ctx, "cannot convert to BigInt");
-    }
-    return val;
-}
-
-static JSValue js_bigint_constructor(JSContext *ctx,
-                                     JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
-{
-    if (!JS_IsUndefined(new_target))
-        return JS_ThrowTypeErrorNotAConstructor(ctx, new_target);
-    return JS_ToBigIntCtorFree(ctx, JS_DupValue(ctx, argv[0]));
-}
-
-static JSValue js_thisBigIntValue(JSContext *ctx, JSValueConst this_val)
-{
-    if (JS_IsBigInt(ctx, this_val))
-        return JS_DupValue(ctx, this_val);
-
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(this_val);
-        if (p->class_id == JS_CLASS_BIG_INT) {
-            if (JS_IsBigInt(ctx, p->u.object_data))
-                return JS_DupValue(ctx, p->u.object_data);
-        }
-    }
-    return JS_ThrowTypeError(ctx, "not a BigInt");
-}
-
-static JSValue js_bigint_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    JSValue val;
-    int base;
-    JSValue ret;
-
-    val = js_thisBigIntValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    if (argc == 0 || JS_IsUndefined(argv[0])) {
-        base = 10;
-    } else {
-        base = js_get_radix(ctx, argv[0]);
-        if (base < 0)
-            goto fail;
-    }
-    ret = js_bigint_to_string1(ctx, val, base);
-    JS_FreeValue(ctx, val);
-    return ret;
- fail:
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
-
-static JSValue js_bigint_valueOf(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
-{
-    return js_thisBigIntValue(ctx, this_val);
-}
-
-static JSValue js_bigint_asUintN(JSContext *ctx,
-                                  JSValueConst this_val,
-                                  int argc, JSValueConst *argv, int asIntN)
-{
-    uint64_t bits;
-    JSValue res, a;
-    
-    if (JS_ToIndex(ctx, &bits, argv[0]))
-        return JS_EXCEPTION;
-    a = JS_ToBigInt(ctx, argv[1]);
-    if (JS_IsException(a))
-        return JS_EXCEPTION;
-    if (bits == 0) {
-        JS_FreeValue(ctx, a);
-        res = __JS_NewShortBigInt(ctx, 0);
-    } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
-        /* fast case */
-        if (bits >= JS_SHORT_BIG_INT_BITS) {
-            res = a;
-        } else {
-            uint64_t v;
-            int shift;
-            shift = 64 - bits;
-            v = JS_VALUE_GET_SHORT_BIG_INT(a);
-            v = v << shift;
-            if (asIntN)
-                v = (int64_t)v >> shift;
-            else
-                v = v >> shift;
-            res = __JS_NewShortBigInt(ctx, v);
-        }
-    } else {
-        JSBigInt *r, *p = JS_VALUE_GET_PTR(a);
-        if (bits >= p->len * JS_LIMB_BITS) {
-            res = a;
-        } else {
-            int len, shift, i;
-            js_limb_t v;
-            len = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
-            r = js_bigint_new(ctx, len);
-            if (!r) {
-                JS_FreeValue(ctx, a);
-                return JS_EXCEPTION;
-            }
-            r->len = len;
-            for(i = 0; i < len - 1; i++)
-                r->tab[i] = p->tab[i];
-            shift = (-bits) & (JS_LIMB_BITS - 1);
-            /* 0 <= shift <= JS_LIMB_BITS - 1 */
-            v = p->tab[len - 1] << shift;
-            if (asIntN)
-                v = (js_slimb_t)v >> shift;
-            else
-                v = v >> shift;
-            r->tab[len - 1] = v;
-            r = js_bigint_normalize(ctx, r);
-            JS_FreeValue(ctx, a);
-            res = JS_CompactBigInt(ctx, r);
-        }
-    }
-    return res;
-}
-
-static const JSCFunctionListEntry js_bigint_funcs[] = {
-    JS_CFUNC_MAGIC_DEF("asUintN", 2, js_bigint_asUintN, 0 ),
-    JS_CFUNC_MAGIC_DEF("asIntN", 2, js_bigint_asUintN, 1 ),
-};
-
-static const JSCFunctionListEntry js_bigint_proto_funcs[] = {
-    JS_CFUNC_DEF("toString", 0, js_bigint_toString ),
-    JS_CFUNC_DEF("valueOf", 0, js_bigint_valueOf ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "BigInt", JS_PROP_CONFIGURABLE ),
-};
-
-static int JS_AddIntrinsicBigInt(JSContext *ctx)
-{
-    JSValue obj1;
-
-    obj1 = JS_NewCConstructor(ctx, JS_CLASS_BIG_INT, "BigInt",
-                                     js_bigint_constructor, 1, JS_CFUNC_constructor_or_func, 0,
-                                     JS_UNDEFINED,
-                                     js_bigint_funcs, countof(js_bigint_funcs),
-                                     js_bigint_proto_funcs, countof(js_bigint_proto_funcs),
-                                     0);
-    if (JS_IsException(obj1))
-        return -1;
-    JS_FreeValue(ctx, obj1);
     return 0;
 }
 

@@ -340,4 +340,6 @@ JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 uint32_t js_string_obj_get_length(JSContext *ctx,
                                          JSValueConst obj);
 
+JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

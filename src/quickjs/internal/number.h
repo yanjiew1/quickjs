@@ -168,4 +168,51 @@ static inline int to_digit(int c)
         return 36;
 }
 
+JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
+
+int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
+
+JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
+
+JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val);
+
+JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val);
+
+BOOL is_safe_integer(double d);
+
+JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+                       int radix, int flags);
+
+JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
+
+JSBigInt *js_bigint_new(JSContext *ctx, int len);
+
+JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
+
+double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
+
+JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
+
+JSValue js_dtoa2(JSContext *ctx,
+                        double d, int radix, int n_digits, int flags);
+
+int skip_spaces(const char *pc);
+
+#define ATOD_INT_ONLY        (1 << 0)
+/* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
+#define ATOD_ACCEPT_BIN_OCT  (1 << 2)
+/* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
+#define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
+/* accept _ between digits as a digit separator */
+#define ATOD_ACCEPT_UNDERSCORES  (1 << 5)
+/* allow a suffix to override the type */
+#define ATOD_ACCEPT_SUFFIX    (1 << 6)
+/* default type */
+#define ATOD_TYPE_MASK        (3 << 7)
+#define ATOD_TYPE_FLOAT64     (0 << 7)
+#define ATOD_TYPE_BIG_INT     (1 << 7)
+/* accept -0x1 */
+#define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+
+
 #endif /* QUICKJS_INTERNAL_NUMBER_H */
