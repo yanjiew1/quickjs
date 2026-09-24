@@ -348,4 +348,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
 int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
                                        int64_t idx, JSValue val, int flags);
 
+JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv, int kind);
+
 #endif

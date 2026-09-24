@@ -55,4 +55,9 @@ JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
 #define special_reduce       0
 #define special_reduceRight  1
 
+JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv);
+JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv, int shift);
+
 #endif

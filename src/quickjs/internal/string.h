@@ -174,4 +174,7 @@ JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 
 JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
 
+JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
+JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
+
 #endif

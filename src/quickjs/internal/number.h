@@ -195,4 +195,6 @@ __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
 
 int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 
+JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
+
 #endif
