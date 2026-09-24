@@ -42,6 +42,7 @@
 #include "internal/frontend.h"
 #include "builtins/promise.h"
 #include "builtins/array.h"
+#include "builtins/iterator.h"
 #include "builtins/typed-array.h"
 #include "builtins/string.h"
 #include "builtins/function.h"

@@ -35,6 +35,7 @@
 #include "libunicode.h"
 #include "builtins/string.h"
 #include "builtins/array.h"
+#include "builtins/iterator.h"
 #include "builtins/regexp.h"
 
 /* String */

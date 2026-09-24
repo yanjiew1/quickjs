@@ -37,6 +37,7 @@
 #include "builtins/math.h"
 #include "builtins/map-set.h"
 #include "builtins/array.h"
+#include "builtins/iterator.h"
 #include "builtins/typed-array.h"
 #include "builtins/promise.h"
 #include "builtins/weak-ref.h"

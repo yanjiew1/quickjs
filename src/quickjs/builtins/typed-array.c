@@ -34,6 +34,7 @@
 #include "internal/bytecode.h"
 #include "internal/atom.h"
 #include "builtins/array.h"
+#include "builtins/iterator.h"
 #include "builtins/typed-array.h"
 #include "builtins/atomics.h"
 
