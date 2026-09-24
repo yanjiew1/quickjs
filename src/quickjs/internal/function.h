@@ -261,4 +261,10 @@ typedef struct {
     JSBinaryOperatorDef right;
 } JSOperatorSetData;
 
+JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                           int argc, JSValueConst *argv);
+
+JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id);
+
 #endif /* QUICKJS_INTERNAL_FUNCTION_H */

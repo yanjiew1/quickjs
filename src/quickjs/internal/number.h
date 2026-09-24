@@ -27,6 +27,11 @@
 
 #include "base.h"
 
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+
 /* bigint */
 
 #if JS_LIMB_BITS == 32
@@ -70,5 +75,26 @@ typedef union JSFloat64Union {
     uint64_t u64;
     uint32_t u32[2];
 } JSFloat64Union;
+
+JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
+
+__exception int __JS_ToFloat64Free(JSContext *ctx, double *pres,
+                                          JSValue val);
+
+static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
+{
+    uint32_t tag;
+
+    tag = JS_VALUE_GET_TAG(val);
+    if (tag <= JS_TAG_NULL) {
+        *pres = JS_VALUE_GET_INT(val);
+        return 0;
+    } else if (JS_TAG_IS_FLOAT64(tag)) {
+        *pres = JS_VALUE_GET_FLOAT64(val);
+        return 0;
+    } else {
+        return __JS_ToFloat64Free(ctx, pres, val);
+    }
+}
 
 #endif /* QUICKJS_INTERNAL_NUMBER_H */

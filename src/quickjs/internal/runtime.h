@@ -225,4 +225,13 @@ struct JSContext {
     void *user_opaque;
 };
 
+JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
+
+JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                                  JSValueConst parent_ctor,
+                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                                  int flags);
+
 #endif /* QUICKJS_INTERNAL_RUNTIME_H */

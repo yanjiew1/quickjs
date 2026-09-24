@@ -185,4 +185,8 @@ typedef struct JSMapState {
     JSWeakRefHeader weakref_header; /* only used if is_weak = TRUE */
 } JSMapState;
 
+int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
+
+JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
+
 #endif /* QUICKJS_INTERNAL_OBJECT_H */

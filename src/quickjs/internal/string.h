@@ -71,4 +71,10 @@ typedef struct JSStringRope {
     JSValue right; /* might be the empty string */
 } JSStringRope;
 
+JSValue js_new_string8(JSContext *ctx, const char *buf);
+
+static inline int string_get(const JSString *p, int idx) {
+    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
+}
+
 #endif /* QUICKJS_INTERNAL_STRING_H */
