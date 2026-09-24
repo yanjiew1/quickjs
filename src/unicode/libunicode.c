@@ -29,24 +29,10 @@
 
 #include "cutils.h"
 #include "libunicode.h"
+#include "unicode-internal.h"
 #include "libunicode-table.h"
 
-enum {
-    RUN_TYPE_U,
-    RUN_TYPE_L,
-    RUN_TYPE_UF,
-    RUN_TYPE_LF,
-    RUN_TYPE_UL,
-    RUN_TYPE_LSU,
-    RUN_TYPE_U2L_399_EXT2,
-    RUN_TYPE_UF_D20,
-    RUN_TYPE_UF_D1_EXT,
-    RUN_TYPE_U_EXT,
-    RUN_TYPE_LF_EXT,
-    RUN_TYPE_UF_EXT2,
-    RUN_TYPE_LF_EXT2,
-    RUN_TYPE_UF_EXT3,
-};
+
 
 static int lre_case_conv1(uint32_t c, int conv_type)
 {
@@ -758,45 +744,7 @@ BOOL lre_is_id_continue(uint32_t c)
                         sizeof(unicode_prop_ID_Continue1_index) / 3);
 }
 
-#define UNICODE_DECOMP_LEN_MAX 18
 
-typedef enum {
-    DECOMP_TYPE_C1, /* 16 bit char */
-    DECOMP_TYPE_L1, /* 16 bit char table */
-    DECOMP_TYPE_L2,
-    DECOMP_TYPE_L3,
-    DECOMP_TYPE_L4,
-    DECOMP_TYPE_L5, /* XXX: not used */
-    DECOMP_TYPE_L6, /* XXX: could remove */
-    DECOMP_TYPE_L7, /* XXX: could remove */
-    DECOMP_TYPE_LL1, /* 18 bit char table */
-    DECOMP_TYPE_LL2,
-    DECOMP_TYPE_S1, /* 8 bit char table */
-    DECOMP_TYPE_S2,
-    DECOMP_TYPE_S3,
-    DECOMP_TYPE_S4,
-    DECOMP_TYPE_S5,
-    DECOMP_TYPE_I1, /* increment 16 bit char value */
-    DECOMP_TYPE_I2_0,
-    DECOMP_TYPE_I2_1,
-    DECOMP_TYPE_I3_1,
-    DECOMP_TYPE_I3_2,
-    DECOMP_TYPE_I4_1,
-    DECOMP_TYPE_I4_2,
-    DECOMP_TYPE_B1, /* 16 bit base + 8 bit offset */
-    DECOMP_TYPE_B2,
-    DECOMP_TYPE_B3,
-    DECOMP_TYPE_B4,
-    DECOMP_TYPE_B5,
-    DECOMP_TYPE_B6,
-    DECOMP_TYPE_B7,
-    DECOMP_TYPE_B8,
-    DECOMP_TYPE_B18,
-    DECOMP_TYPE_LS2,
-    DECOMP_TYPE_PAT3,
-    DECOMP_TYPE_S2_UL,
-    DECOMP_TYPE_LS2_UL,
-} DecompTypeEnum;
 
 static uint32_t unicode_get_short_code(uint32_t c)
 {
@@ -965,7 +913,7 @@ static int unicode_decomp_entry(uint32_t *res, uint32_t c,
 
 /* return the length of the decomposition (length <=
    UNICODE_DECOMP_LEN_MAX) or 0 if no decomposition */
-static int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
+int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
 {
     uint32_t v, type, is_compat, code, len;
     int idx_min, idx_max, idx;
@@ -994,7 +942,7 @@ static int unicode_decomp_char(uint32_t *res, uint32_t c, BOOL is_compat1)
 }
 
 /* return 0 if no pair found */
-static int unicode_compose_pair(uint32_t c0, uint32_t c1)
+int unicode_compose_pair(uint32_t c0, uint32_t c1)
 {
     uint32_t code, len, type, v, idx1, d_idx, d_offset, ch;
     int idx_min, idx_max, idx, d;
@@ -1030,7 +978,7 @@ static int unicode_compose_pair(uint32_t c0, uint32_t c1)
 }
 
 /* return the combining class of character c (between 0 and 255) */
-static int unicode_get_cc(uint32_t c)
+int unicode_get_cc(uint32_t c)
 {
     uint32_t code, n, type, cc, c1, b;
     int pos;

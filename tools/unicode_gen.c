@@ -38,7 +38,7 @@ uint32_t total_table_bytes;
 uint32_t total_index;
 uint32_t total_index_bytes;
 
-/* define it to be able to test unicode.c */
+/* enabled by the unicode_gen_test build target */
 //#define USE_TEST
 /* profile tests */
 //#define PROFILE
@@ -63,8 +63,9 @@ uint32_t total_index_bytes;
    - suppress more upper / lower case redundancy
 */
 
+#include "unicode-internal.h"
 #ifdef USE_TEST
-#include "libunicode.c"
+#include "libunicode.h"
 #endif
 
 #define CHARCODE_MAX 0x10ffff
@@ -1226,24 +1227,7 @@ BOOL is_complicated_case(const CCInfo *ci)
             (memcmp(ci->f_data, ci->l_data, ci->f_len * sizeof(ci->f_data[0])) != 0));
 }
 
-#ifndef USE_TEST
-enum {
-    RUN_TYPE_U,
-    RUN_TYPE_L,
-    RUN_TYPE_UF,
-    RUN_TYPE_LF,
-    RUN_TYPE_UL,
-    RUN_TYPE_LSU,
-    RUN_TYPE_U2L_399_EXT2,
-    RUN_TYPE_UF_D20,
-    RUN_TYPE_UF_D1_EXT,
-    RUN_TYPE_U_EXT,
-    RUN_TYPE_LF_EXT,
-    RUN_TYPE_UF_EXT2,
-    RUN_TYPE_LF_EXT2,
-    RUN_TYPE_UF_EXT3,
-};
-#endif
+
 
 const char *run_type_str[] = {
     "U",
@@ -2689,45 +2673,7 @@ void build_cc_table(FILE *f)
 }
 
 /* maximum length of decomposition: 18 chars (1), then 8 */
-#ifndef USE_TEST
-typedef enum {
-    DECOMP_TYPE_C1, /* 16 bit char */
-    DECOMP_TYPE_L1, /* 16 bit char table */
-    DECOMP_TYPE_L2,
-    DECOMP_TYPE_L3,
-    DECOMP_TYPE_L4,
-    DECOMP_TYPE_L5, /* XXX: not used */
-    DECOMP_TYPE_L6, /* XXX: could remove */
-    DECOMP_TYPE_L7, /* XXX: could remove */
-    DECOMP_TYPE_LL1, /* 18 bit char table */
-    DECOMP_TYPE_LL2,
-    DECOMP_TYPE_S1, /* 8 bit char table */
-    DECOMP_TYPE_S2,
-    DECOMP_TYPE_S3,
-    DECOMP_TYPE_S4,
-    DECOMP_TYPE_S5,
-    DECOMP_TYPE_I1, /* increment 16 bit char value */
-    DECOMP_TYPE_I2_0,
-    DECOMP_TYPE_I2_1,
-    DECOMP_TYPE_I3_1,
-    DECOMP_TYPE_I3_2,
-    DECOMP_TYPE_I4_1,
-    DECOMP_TYPE_I4_2,
-    DECOMP_TYPE_B1, /* 16 bit base + 8 bit offset */
-    DECOMP_TYPE_B2,
-    DECOMP_TYPE_B3,
-    DECOMP_TYPE_B4,
-    DECOMP_TYPE_B5,
-    DECOMP_TYPE_B6,
-    DECOMP_TYPE_B7,
-    DECOMP_TYPE_B8,
-    DECOMP_TYPE_B18,
-    DECOMP_TYPE_LS2,
-    DECOMP_TYPE_PAT3,
-    DECOMP_TYPE_S2_UL,
-    DECOMP_TYPE_LS2_UL,
-} DecompTypeEnum;
-#endif
+
 
 const char *decomp_type_str[] = {
     "C1",
