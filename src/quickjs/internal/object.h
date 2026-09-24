@@ -383,13 +383,6 @@ void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
 void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
 int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
                               JSValueConst name, JSValue val);
-JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap);
-JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name);
-JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name);
-JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
-                                                    JSFunctionBytecode *b,
-                                                    int idx, BOOL is_ref);
 JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop);
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
 no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
@@ -398,9 +391,7 @@ int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
 void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
 void free_zero_refcount(JSRuntime *rt);
 void gc_decref(JSRuntime *rt);
-const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
 int init_shape_hash(JSRuntime *rt);
-BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
 void js_array_finalizer(JSRuntime *rt, JSValue val);
 void js_array_mark(JSRuntime *rt, JSValueConst val,
                           JS_MarkFunc *mark_func);

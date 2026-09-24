@@ -56,14 +56,12 @@ static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
     return atom & ~JS_ATOM_TAG_INT;
 }
 
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 
 void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
 JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
 BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
 JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
-JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
 
 JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
 

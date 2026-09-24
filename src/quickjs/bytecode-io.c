@@ -28,6 +28,7 @@
 #include "internal/bigint.h"
 #include "internal/string.h"
 #include "internal/object.h"
+#include "internal/error.h"
 #include "internal/module.h"
 #include "internal/bytecode.h"
 #include "builtins/array-buffer.h"

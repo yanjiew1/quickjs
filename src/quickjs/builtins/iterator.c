@@ -28,6 +28,7 @@
 #include "../internal/string.h"
 #include "../internal/function.h"
 #include "../internal/object.h"
+#include "../internal/error.h"
 #include "iterator.h"
 
 /* Iterator Wrap */

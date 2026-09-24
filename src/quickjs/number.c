@@ -28,6 +28,7 @@
 #include "internal/bigint.h"
 #include "internal/string.h"
 #include "internal/object.h"
+#include "internal/error.h"
 #include "internal/function.h"
 #include "internal/atom.h"
 #include "internal/bytecode.h"

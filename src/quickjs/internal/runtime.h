@@ -331,7 +331,6 @@ typedef struct JSClassShortDef {
 int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
                      int start, int count);
 
-JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
 
 int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                    int argc, JSValueConst *argv, BOOL no_exception);
@@ -363,9 +362,6 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
 #endif
 
 
-JSValue JS_ThrowStackOverflow(JSContext *ctx);
-JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
-                                                JSValueConst func_obj);
 
 static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
 {
@@ -395,11 +391,6 @@ static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
     dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
 }
 
-JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace);
-void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                            const char *filename, int line_num, int col_num,
-                            int backtrace_flags);
 no_inline int js_realloc_array(JSContext *ctx, void **parray,
                                       int elem_size, int *psize, int req_size);
 void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
@@ -407,7 +398,6 @@ void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
 void remove_gc_object(JSGCObjectHeader *h);
 void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
-int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
 
 no_inline __exception int __js_poll_interrupts(JSContext *ctx);
 

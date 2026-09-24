@@ -27,6 +27,7 @@
 #include "internal/string.h"
 #include "internal/function.h"
 #include "internal/object.h"
+#include "internal/error.h"
 #include "internal/module.h"
 #include "internal/atom.h"
 #include "builtins/intrinsics.h"

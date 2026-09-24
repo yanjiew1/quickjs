@@ -26,6 +26,7 @@
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/object.h"
+#include "../internal/error.h"
 #include "../internal/atom.h"
 #include "proxy.h"
 #include "object-methods.h"

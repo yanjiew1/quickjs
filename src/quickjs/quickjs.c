@@ -30,6 +30,7 @@
 #include "internal/bigint.h"
 #include "internal/string.h"
 #include "internal/object.h"
+#include "internal/error.h"
 #include "internal/module.h"
 #include "internal/bytecode.h"
 #include "internal/frontend.h"
@@ -50,7 +51,6 @@ static JSValue JS_CallConstructorInternal(JSContext *ctx,
                                           JSValueConst func_obj,
                                           JSValueConst new_target,
                                           int argc, JSValue *argv, int flags);
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
 __maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
 static __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p);
 __maybe_unused void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p);
@@ -63,7 +63,6 @@ static void js_dump_value_write(void *opaque, const char *buf, size_t len);
 
 
 static BOOL js_strict_eq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
-JSValue JS_ThrowOutOfMemory(JSContext *ctx);
 
 static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
                              BOOL is_arg);

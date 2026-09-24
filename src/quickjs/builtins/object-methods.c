@@ -27,6 +27,7 @@
 #include "../internal/number.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/error.h"
 #include "object-methods.h"
 #include "collections.h"
 
