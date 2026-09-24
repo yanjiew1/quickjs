@@ -313,16 +313,35 @@ else
 LTOEXT=
 endif
 
-libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS)
-	$(AR) rcs $@ $^
-
 ifdef CONFIG_LTO
-libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
-	$(AR) rcs $@ $^
+libquickjs.lto.a: $(QJS_LIB_OBJS) Makefile
+	$(RM) $@.tmp
+	$(AR) rcs $@.tmp $(QJS_LIB_OBJS)
+	mv $@.tmp $@
+LIBQUICKJS_A_OBJS=$(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
+else
+LIBQUICKJS_A_OBJS=$(QJS_LIB_OBJS)
 endif # CONFIG_LTO
 
-libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
-	$(AR) rcs $@ $^
+# An archive retains members removed from its input list.  Record the selected
+# object directory and LTO mode so switching configurations rebuilds it too.
+LIBQUICKJS_A_CONFIG=$(OBJDIR):$(LTOEXT):$(CC):$(AR):$(notdir $(LIBQUICKJS_A_OBJS))
+ifneq ($(shell cat .obj/libquickjs-a-config 2>/dev/null),$(LIBQUICKJS_A_CONFIG))
+.PHONY: libquickjs-a-config-changed
+libquickjs.a: libquickjs-a-config-changed
+endif
+
+libquickjs.a: $(LIBQUICKJS_A_OBJS) Makefile
+	$(RM) $@.tmp
+	$(AR) rcs $@.tmp $(LIBQUICKJS_A_OBJS)
+	mv $@.tmp $@
+	@mkdir -p .obj
+	@printf '%s\n' '$(LIBQUICKJS_A_CONFIG)' > .obj/libquickjs-a-config
+
+libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS)) Makefile
+	$(RM) $@.tmp
+	$(AR) rcs $@.tmp $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
+	mv $@.tmp $@
 
 repl.c: $(QJSC) repl.js
 	$(QJSC) -s -c -o $@ -m repl.js
