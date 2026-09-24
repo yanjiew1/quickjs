@@ -621,16 +621,25 @@ static JSValue js_new_std_file(JSContext *ctx, FILE *f,
     JSValue obj;
     obj = JS_NewObjectClass(ctx, js_std_file_class_id);
     if (JS_IsException(obj))
-        return obj;
+        goto fail;
     s = js_mallocz(ctx, sizeof(*s));
     if (!s) {
         JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
+        obj = JS_EXCEPTION;
+        goto fail;
     }
     s->close_in_finalizer = close_in_finalizer;
     s->is_popen = is_popen;
     s->f = f;
     JS_SetOpaque(obj, s);
+    return obj;
+ fail:
+    if (close_in_finalizer) {
+        if (is_popen)
+            pclose(f);
+        else
+            fclose(f);
+    }
     return obj;
 }
 
