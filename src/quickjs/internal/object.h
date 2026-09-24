@@ -208,4 +208,33 @@ JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
 JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
 JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
                               const JSCFunctionListEntry *fields, int n_fields);
+int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                                   JSValueConst proto_val,
+                                   BOOL throw_flag);
+JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
+                                       int flags, int kind);
+JSValue js_object_defineProperty(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
+JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx, JSValueConst this_val,
+                                                  int argc, JSValueConst *argv, int magic);
+JSValue js_object_getPrototypeOf(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv, int magic);
+JSValue js_object_isExtensible(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv, int reflect);
+JSValue js_object_preventExtensions(JSContext *ctx, JSValueConst this_val,
+                                           int argc, JSValueConst *argv, int reflect);
+int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                                     JSObject *p, JSAtom prop);
+void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
+
+int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
+                          JSValueConst desc);
+BOOL check_define_prop_flags(int prop_flags, int flags);
+int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+                                                      JSPropertyEnum **ptab,
+                                                      uint32_t *plen,
+                                                      JSObject *p, int flags);
+__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+                                       JSValueConst obj);
+
 #endif

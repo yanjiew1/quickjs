@@ -193,4 +193,21 @@ JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
 JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
                         JSValueConst method, int argc, JSValueConst *argv, BOOL *pdone);
 int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj, BOOL is_exception_pending);
+JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv, int magic);
+JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
+                               JSValueConst array_arg);
+void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
+
+JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                                const char *name,
+                                int length, JSCFunctionEnum cproto, int magic,
+                                JSValueConst proto_val, int n_fields);
+
+static inline BOOL is_strict_mode(JSContext *ctx)
+{
+    JSStackFrame *sf = ctx->rt->current_stack_frame;
+    return (sf && (sf->js_mode & JS_MODE_STRICT));
+}
+
 #endif

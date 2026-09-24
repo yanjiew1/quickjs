@@ -336,4 +336,35 @@ JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
 int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                    int argc, JSValueConst *argv, BOOL no_exception);
 
+#if !defined(CONFIG_STACK_CHECK)
+/* no stack limitation */
+static inline uintptr_t js_get_stack_pointer(void)
+{
+    return 0;
+}
+
+static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+{
+    return FALSE;
+}
+#else
+/* Note: OS and CPU dependent */
+static inline uintptr_t js_get_stack_pointer(void)
+{
+    return (uintptr_t)__builtin_frame_address(0);
+}
+
+static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+{
+    uintptr_t sp;
+    sp = js_get_stack_pointer() - alloca_size;
+    return unlikely(sp < rt->stack_limit);
+}
+#endif
+
+
+JSValue JS_ThrowStackOverflow(JSContext *ctx);
+JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
+                                                JSValueConst func_obj);
+
 #endif
