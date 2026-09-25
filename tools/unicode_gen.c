@@ -2479,7 +2479,17 @@ void check_case_conv(void)
             error++;
         }
         l = check_conv(res, code, 2);
-        if (l != ci->f_len || tabcmp((int *)res, ci->f_data, l)) {
+        /* These three characters have both full and simple folds.  The
+           table keeps the full fold for case conversion, while regexp
+           canonicalization groups them with their simple fold. */
+        if (code == 0x1FD3 || code == 0x1FE3 || code == 0xFB05) {
+            if (l != (code == 0xFB05 ? 2 : 3) ||
+                lre_canonicalize(code, TRUE) !=
+                lre_canonicalize(ci->f_data[0], TRUE)) {
+                printf("ERROR: F\n");
+                error++;
+            }
+        } else if (l != ci->f_len || tabcmp((int *)res, ci->f_data, l)) {
             printf("ERROR: F\n");
             error++;
         }
