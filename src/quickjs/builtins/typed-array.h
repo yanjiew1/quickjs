@@ -50,5 +50,9 @@ JSValue js_typed_array___speciesCreate(JSContext *ctx,
                                        JSValueConst this_val,
                                        int argc, JSValueConst *argv);
 BOOL typed_array_is_oob(JSObject *p);
+JSValue JS_NewUint8ArrayCopy(JSContext *ctx, const uint8_t *buf, size_t len);
+
+extern const JSCFunctionListEntry js_uint8array_proto_funcs[5];
+extern const JSCFunctionListEntry js_uint8array_funcs[3];
 
 #endif

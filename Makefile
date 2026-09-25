@@ -261,7 +261,7 @@ QUICKJS_CORE_SRCS=\
 	src/quickjs/compiler/parser.c src/quickjs/compiler/eval.c src/quickjs/compiler/backend.c src/quickjs/compiler/lexer.c src/quickjs/parse-state.c src/quickjs/module.c src/quickjs/bytecode-format.c src/quickjs/compiler/stack-analysis.c src/quickjs/object-serialization.c
 QUICKJS_BUILTIN_SRCS=\
 	src/quickjs/builtins/date.c src/quickjs/builtins/collections.c src/quickjs/builtins/weakref.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/proxy.c src/quickjs/builtins/reflect.c \
-	src/quickjs/builtins/regexp.c src/quickjs/builtins/promise.c src/quickjs/builtins/array-buffer.c src/quickjs/builtins/typed-array.c src/quickjs/builtins/data-view.c \
+	src/quickjs/builtins/regexp.c src/quickjs/builtins/promise.c src/quickjs/builtins/array-buffer.c src/quickjs/builtins/typed-array.c src/quickjs/builtins/uint8array-encoding.c src/quickjs/builtins/data-view.c \
 	src/quickjs/builtins/atomics.c src/quickjs/builtins/json.c src/quickjs/builtins/array.c src/quickjs/builtins/iterator.c src/quickjs/builtins/number.c \
 	src/quickjs/builtins/boolean.c src/quickjs/builtins/string.c src/quickjs/builtins/math.c src/quickjs/builtins/object.c src/quickjs/builtins/function.c \
 	src/quickjs/builtins/error.c src/quickjs/builtins/symbol.c src/quickjs/builtins/global.c src/quickjs/builtins/bigint.c src/quickjs/builtins/intrinsics.c
