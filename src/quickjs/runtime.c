@@ -38,7 +38,6 @@
 #include "builtins/regexp.h"
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
-#include "builtins/primitives.h"
 #include "builtins/string.h"
 
 /* JS malloc */

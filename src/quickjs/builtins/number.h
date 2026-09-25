@@ -1,5 +1,5 @@
 /*
- * QuickJS Number and Boolean builtin interface
+ * QuickJS Number builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,17 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_PRIMITIVES_H
-#define QUICKJS_BUILTINS_PRIMITIVES_H
+#ifndef QUICKJS_BUILTINS_NUMBER_H
+#define QUICKJS_BUILTINS_NUMBER_H
 
 #include "../internal/base.h"
 
 extern const JSCFunctionListEntry js_number_funcs[14];
 extern const JSCFunctionListEntry js_number_proto_funcs[6];
-extern const JSCFunctionListEntry js_boolean_proto_funcs[2];
 JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv);
-JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
                                      int argc, JSValueConst *argv);
 
 
