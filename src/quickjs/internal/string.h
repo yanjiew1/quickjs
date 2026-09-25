@@ -96,7 +96,7 @@ static inline BOOL JS_IsEmptyString(JSValueConst v)
 }
 
 int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
-                               int is_wide);
+                        int is_wide);
 int string_buffer_putc_slow(StringBuffer *s, uint32_t c);
 
 static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
@@ -130,7 +130,7 @@ int string_buffer_putc8(StringBuffer *s, uint32_t c);
 int string_buffer_putc16(StringBuffer *s, uint32_t c);
 int string_buffer_puts8(StringBuffer *s, const char *str);
 int string_buffer_concat(StringBuffer *s, const JSString *p,
-                                uint32_t from, uint32_t to);
+                         uint32_t from, uint32_t to);
 int string_buffer_concat_value_free(StringBuffer *s, JSValue v);
 int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
 JSValue string_buffer_end(StringBuffer *s);
@@ -138,19 +138,19 @@ int string_getc(const JSString *p, int *pidx);
 JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
 int string_indexof_char(JSString *p, int c, int from);
 JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
-                                JSValue str2, const char *str3);
+                         JSValue str2, const char *str3);
 int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
 
 int js_string_GetSubstitution(JSContext *ctx,
-                                     StringBuffer *b,
-                                     JSValueConst matched,
-                                     JSString *sp,
-                                     uint32_t position,
-                                     JSValueConst captures_val,
-                                     JSValueConst namedCaptures,
-                                     JSValueConst rep,
-                                     uint8_t **captures,
-                                     uint32_t captures_len);
+                              StringBuffer *b,
+                              JSValueConst matched,
+                              JSString *sp,
+                              uint32_t position,
+                              JSValueConst captures_val,
+                              JSValueConst namedCaptures,
+                              JSValueConst rep,
+                              uint8_t **captures,
+                              uint32_t captures_len);
 
 static inline void js_free_string(JSRuntime *rt, JSString *str)
 {
@@ -167,7 +167,7 @@ static inline void js_free_string(JSRuntime *rt, JSString *str)
 }
 
 int js_string_compare(JSContext *ctx,
-                             const JSString *p1, const JSString *p2);
+                      const JSString *p1, const JSString *p2);
 int js_string_find_invalid_codepoint(JSString *p);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 
@@ -176,7 +176,7 @@ JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
 
 JSValue js_new_string_char(JSContext *ctx, uint16_t c);
 uint32_t js_string_obj_get_length(JSContext *ctx,
-                                         JSValueConst obj);
+                                  JSValueConst obj);
 JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
 int string_buffer_fill(StringBuffer *s, int c, int count);
 

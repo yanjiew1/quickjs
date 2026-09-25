@@ -61,7 +61,7 @@ int JS_IsArray(JSContext *ctx, JSValueConst val)
 
 /* Access an Array's internal JSValue array if available */
 BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
-                              JSValue **arrpp, uint32_t *countp)
+                       JSValue **arrpp, uint32_t *countp)
 {
     /* Try and handle fast arrays explicitly */
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
@@ -76,7 +76,7 @@ BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
 }
 
 __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
-                                       JSValueConst obj)
+                                JSValueConst obj)
 {
     JSValue len_val;
     len_val = JS_GetProperty(ctx, obj, JS_ATOM_length);
@@ -88,7 +88,7 @@ __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
 }
 
 __exception int js_get_length64(JSContext *ctx, int64_t *pres,
-                                       JSValueConst obj)
+                                JSValueConst obj)
 {
     JSValue len_val;
     len_val = JS_GetProperty(ctx, obj, JS_ATOM_length);
@@ -159,7 +159,7 @@ JSValue JS_ToObjectFree(JSContext *ctx, JSValue val)
 }
 
 int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
-                          JSValueConst desc)
+                   JSValueConst desc)
 {
     JSValue val, getter, setter;
     int flags;
@@ -290,7 +290,7 @@ BOOL JS_IsRegisteredClass(JSRuntime *rt, JSClassID class_id)
 /* create a new object internal class. Return -1 if error, 0 if
    OK. The finalizer can be NULL if none is needed. */
 int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
-                        const JSClassDef *class_def, JSAtom name)
+                 const JSClassDef *class_def, JSAtom name)
 {
     int new_size, i;
     JSClass *cl, *new_class_array;
@@ -464,7 +464,7 @@ static inline JSShape *js_new_shape_nohash(JSContext *ctx, JSObject *proto,
 
 /* create a new empty shape with prototype 'proto' */
 no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
-                                        int hash_size, int prop_size)
+                                 int hash_size, int prop_size)
 {
     JSRuntime *rt = ctx->rt;
     JSShape *sh;
@@ -695,7 +695,7 @@ static int compact_properties(JSContext *ctx, JSObject *p)
 }
 
 int add_shape_property(JSContext *ctx, JSShape **psh,
-                              JSObject *p, JSAtom atom, int prop_flags)
+                       JSObject *p, JSAtom atom, int prop_flags)
 {
     JSRuntime *rt = ctx->rt;
     JSShape *sh = *psh;
@@ -839,7 +839,7 @@ __maybe_unused void JS_DumpShapes(JSRuntime *rt)
 /* 'props[]' is used to initialized the object properties. The number
    of elements depends on the shape. */
 JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
-                                     JSProperty *props)
+                              JSProperty *props)
 {
     JSObject *p;
     int i;
@@ -989,7 +989,7 @@ JSValue JS_NewObjectProtoClass(JSContext *ctx, JSValueConst proto_val,
 /* WARNING: the shape is not hashed. It is used for objects where
    factorizing the shape is not relevant (prototypes, constructors) */
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
-                                           JSClassID class_id, int n_alloc_props)
+                                    JSClassID class_id, int n_alloc_props)
 {
     JSShape *sh;
     JSObject *proto;
@@ -1062,7 +1062,7 @@ JSValue JS_NewObjectClass(JSContext *ctx, int class_id)
 }
 
 JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
-                                     JSValueConst defaultConstructor)
+                              JSValueConst defaultConstructor)
 {
     JSValue ctor, species;
 
@@ -1166,7 +1166,7 @@ void js_array_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_array_mark(JSRuntime *rt, JSValueConst val,
-                          JS_MarkFunc *mark_func)
+                   JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     int i;
@@ -1184,7 +1184,7 @@ void js_object_data_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_object_data_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func)
+                         JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JS_MarkValue(rt, p->u.object_data, mark_func);
@@ -1415,7 +1415,7 @@ static void gc_remove_weak_objects(JSRuntime *rt)
 }
 
 void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                          JSGCObjectTypeEnum type)
+                   JSGCObjectTypeEnum type)
 {
     js_rc(h)->mark = 0;
     js_rc(h)->gc_obj_type = type;
@@ -1779,8 +1779,8 @@ void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj)
 /* Return -1 (exception) or TRUE/FALSE. 'throw_flag' = FALSE indicates
    that it is called from Reflect.setPrototypeOf(). */
 int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
-                                   JSValueConst proto_val,
-                                   BOOL throw_flag)
+                            JSValueConst proto_val,
+                            BOOL throw_flag)
 {
     JSObject *proto, *p, *p1;
     JSShape *sh;
@@ -1941,7 +1941,7 @@ JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj)
 
 /* return TRUE, FALSE or (-1) in case of exception */
 int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
-                                   JSValueConst obj)
+                            JSValueConst obj)
 {
     JSValue obj_proto;
     JSObject *proto;
@@ -2049,7 +2049,7 @@ static JSAutoInitFunc *js_autoinit_func_table[] = {
 
 /* warning: 'prs' is reallocated after it */
 int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
-                               JSProperty *pr, JSShapeProperty *prs)
+                        JSProperty *pr, JSShapeProperty *prs)
 {
     JSValue val;
     JSContext *realm;
@@ -2256,7 +2256,7 @@ static JSValue JS_ThrowTypeErrorPrivateNotFound(JSContext *ctx, JSAtom atom)
 /* Private fields can be added even on non extensible objects or
    Proxies */
 int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
-                                 JSValueConst name, JSValue val)
+                          JSValueConst name, JSValue val)
 {
     JSObject *p;
     JSShapeProperty *prs;
@@ -2291,7 +2291,7 @@ int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
 }
 
 JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
-                                  JSValueConst name)
+                           JSValueConst name)
 {
     JSObject *p;
     JSShapeProperty *prs;
@@ -2314,7 +2314,7 @@ JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
 }
 
 int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
-                              JSValueConst name, JSValue val)
+                       JSValueConst name, JSValue val)
 {
     JSObject *p;
     JSShapeProperty *prs;
@@ -2434,7 +2434,7 @@ int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func)
 }
 
 uint32_t js_string_obj_get_length(JSContext *ctx,
-                                         JSValueConst obj)
+                                  JSValueConst obj)
 {
     JSObject *p;
     uint32_t len = 0;
@@ -2480,9 +2480,9 @@ void JS_FreePropertyEnum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len)
 /* return < 0 in case if exception, 0 if OK. ptab and its atoms must
    be freed by the user. */
 int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
-                                                      JSPropertyEnum **ptab,
-                                                      uint32_t *plen,
-                                                      JSObject *p, int flags)
+                                               JSPropertyEnum **ptab,
+                                               uint32_t *plen,
+                                               JSObject *p, int flags)
 {
     int i, j;
     JSShape *sh;
@@ -2696,7 +2696,7 @@ int JS_GetOwnPropertyNames(JSContext *ctx, JSPropertyEnum **ptab,
 }
 
 JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
-                                       int flags, int kind)
+                                int flags, int kind)
 {
     JSValue obj, r, val, key, value;
     JSObject *p;
@@ -2779,7 +2779,7 @@ done:
    FALSE if the property does not exist, TRUE if it exists. If TRUE is
    returned, the property descriptor 'desc' is filled present. */
 int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
-                                     JSObject *p, JSAtom prop)
+                              JSObject *p, JSAtom prop)
 {
     JSShapeProperty *prs;
     JSProperty *pr;
@@ -2991,7 +2991,7 @@ JSAtom JS_ValueToAtom(JSContext *ctx, JSValueConst val)
 }
 
 JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
-                                   JSValue prop)
+                            JSValue prop)
 {
     JSAtom atom;
     JSValue ret;
@@ -3141,7 +3141,7 @@ JSValue JS_GetPropertyStr(JSContext *ctx, JSValueConst this_obj,
 /* Note: the property value is not initialized. Return NULL if memory
    error. */
 JSProperty *add_property(JSContext *ctx,
-                                JSObject *p, JSAtom prop, int prop_flags)
+                         JSObject *p, JSAtom prop, int prop_flags)
 {
     JSShape *sh, *new_sh;
 
@@ -3206,7 +3206,7 @@ JSProperty *add_property(JSContext *ctx,
    JS_CLASS_MAPPED_ARGUMENTS objects. return < 0 if memory alloc
    error. */
 no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
-                                                             JSObject *p)
+                                                      JSObject *p)
 {
     JSProperty *pr;
     JSShape *sh;
@@ -3899,7 +3899,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
 
 /* flags can be JS_PROP_THROW or JS_PROP_THROW_STRICT */
 int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
-                               JSValue prop, JSValue val, int flags)
+                        JSValue prop, JSValue val, int flags)
 {
     if (likely(JS_VALUE_GET_TAG(this_obj) == JS_TAG_OBJECT &&
                JS_VALUE_GET_TAG(prop) == JS_TAG_INT)) {
@@ -4281,7 +4281,7 @@ static int js_shape_prepare_update(JSContext *ctx, JSObject *p,
 }
 
 int js_update_property_flags(JSContext *ctx, JSObject *p,
-                                    JSShapeProperty **pprs, int flags)
+                             JSShapeProperty **pprs, int flags)
 {
     if (flags != (*pprs)->flags) {
         if (js_shape_prepare_update(ctx, p, pprs))
@@ -4600,8 +4600,8 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
 }
 
 int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
-                                     JSAtom prop, JSAutoInitIDEnum id,
-                                     void *opaque, int flags)
+                              JSAtom prop, JSAutoInitIDEnum id,
+                              void *opaque, int flags)
 {
     JSObject *p;
     JSProperty *pr;
@@ -4700,7 +4700,7 @@ int JS_DefinePropertyGetSet(JSContext *ctx, JSValueConst this_obj,
 }
 
 int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
-                                       int64_t idx, JSValue val, int flags)
+                                int64_t idx, JSValue val, int flags)
 {
     return JS_DefinePropertyValueValue(ctx, this_obj, JS_NewInt64(ctx, idx),
                                        val, flags | JS_PROP_CONFIGURABLE |
@@ -4729,7 +4729,7 @@ static BOOL js_object_has_name(JSContext *ctx, JSValueConst obj)
 }
 
 int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
-                               JSAtom name, int flags)
+                        JSAtom name, int flags)
 {
     if (name != JS_ATOM_NULL
     &&  JS_IsObject(obj)
@@ -4741,7 +4741,7 @@ int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
 }
 
 int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
-                                       JSValueConst str, int flags)
+                                JSValueConst str, int flags)
 {
     if (JS_IsObject(obj) &&
         !js_object_has_name(ctx, obj)) {
@@ -4977,10 +4977,10 @@ void JS_SetIsHTMLDDA(JSContext *ctx, JSValueConst obj)
 
 
 __exception int JS_CopyDataProperties(JSContext *ctx,
-                                             JSValueConst target,
-                                             JSValueConst source,
-                                             JSValueConst excluded,
-                                             BOOL setprop)
+                                      JSValueConst target,
+                                      JSValueConst source,
+                                      JSValueConst excluded,
+                                      BOOL setprop)
 {
     JSPropertyEnum *tab_atom;
     JSValue val;
@@ -5058,7 +5058,7 @@ void js_global_object_finalizer(JSRuntime *rt, JSValue obj)
 }
 
 void js_global_object_mark(JSRuntime *rt, JSValueConst val,
-                                  JS_MarkFunc *mark_func)
+                           JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JS_MarkValue(rt, p->u.global_object.uninitialized_vars, mark_func);

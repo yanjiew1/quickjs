@@ -35,11 +35,11 @@ JSValue js_typed_array_constructor(JSContext *ctx, JSValueConst new_target,
 
 void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
 void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
+                         JS_MarkFunc *mark_func);
 int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
 JSValue js_typed_array___speciesCreate(JSContext *ctx,
-                                              JSValueConst this_val,
-                                              int argc, JSValueConst *argv);
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv);
 BOOL typed_array_is_oob(JSObject *p);
 
 #endif

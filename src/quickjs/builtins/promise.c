@@ -494,7 +494,7 @@ JSValue JS_NewPromiseCapability(JSContext *ctx, JSValue *resolving_funcs)
 }
 
 JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv, int magic)
+                           int argc, JSValueConst *argv, int magic)
 {
     JSValue result_promise, resolving_funcs[2], ret;
     BOOL is_reject = magic;
@@ -899,9 +899,9 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
 }
 
 __exception int perform_promise_then(JSContext *ctx,
-                                            JSValueConst promise,
-                                            JSValueConst *resolve_reject,
-                                            JSValueConst *cap_resolving_funcs)
+                                     JSValueConst promise,
+                                     JSValueConst *resolve_reject,
+                                     JSValueConst *cap_resolving_funcs)
 {
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
     JSPromiseReactionData *rd_array[2], *rd;
@@ -954,7 +954,7 @@ __exception int perform_promise_then(JSContext *ctx,
 }
 
 JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv)
+                        int argc, JSValueConst *argv)
 {
     JSValue ctor, result_promise, resolving_funcs[2];
     JSPromiseData *s;
@@ -1131,7 +1131,7 @@ static void js_async_from_sync_iterator_mark(JSRuntime *rt, JSValueConst val,
 }
 
 JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
-                                              JSValueConst sync_iter)
+                                       JSValueConst sync_iter)
 {
     JSValue async_iter, next_method;
     JSAsyncFromSyncIteratorData *s;

@@ -202,7 +202,7 @@ static void free_generator_stack(JSContext *ctx, JSGeneratorData *s)
 }
 
 void js_generator_mark(JSRuntime *rt, JSValueConst val,
-                              JS_MarkFunc *mark_func)
+                       JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSGeneratorData *s = p->u.generator_data;
@@ -215,8 +215,8 @@ void js_generator_mark(JSRuntime *rt, JSValueConst val,
 /* XXX: use enum */
 
 JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv,
-                                 BOOL *pdone, int magic)
+                          int argc, JSValueConst *argv,
+                          BOOL *pdone, int magic)
 {
     JSGeneratorData *s = JS_GetOpaque(this_val, JS_CLASS_GENERATOR);
     JSStackFrame *sf;
@@ -297,9 +297,9 @@ JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,
-                                          JSValueConst this_obj,
-                                          int argc, JSValueConst *argv,
-                                          int flags)
+                                   JSValueConst this_obj,
+                                   int argc, JSValueConst *argv,
+                                   int flags)
 {
     JSValue obj, func_ret;
     JSGeneratorData *s;
@@ -343,7 +343,7 @@ void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
-                                           JS_MarkFunc *mark_func)
+                                    JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSAsyncFunctionState *s = p->u.async_function_data;
@@ -431,10 +431,10 @@ static void js_async_function_resume(JSContext *ctx, JSAsyncFunctionState *s)
 }
 
 JSValue js_async_function_resolve_call(JSContext *ctx,
-                                              JSValueConst func_obj,
-                                              JSValueConst this_obj,
-                                              int argc, JSValueConst *argv,
-                                              int flags)
+                                       JSValueConst func_obj,
+                                       JSValueConst this_obj,
+                                       int argc, JSValueConst *argv,
+                                       int flags)
 {
     JSObject *p = JS_VALUE_GET_OBJ(func_obj);
     JSAsyncFunctionState *s = p->u.async_function_data;
@@ -457,8 +457,8 @@ JSValue js_async_function_resolve_call(JSContext *ctx,
 }
 
 JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst this_obj,
-                                      int argc, JSValueConst *argv, int flags)
+                               JSValueConst this_obj,
+                               int argc, JSValueConst *argv, int flags)
 {
     JSValue promise;
     JSAsyncFunctionState *s;
@@ -538,7 +538,7 @@ void js_async_generator_finalizer(JSRuntime *rt, JSValue obj)
 }
 
 void js_async_generator_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func)
+                             JS_MarkFunc *mark_func)
 {
     JSAsyncGeneratorData *s = JS_GetOpaque(val, JS_CLASS_ASYNC_GENERATOR);
     struct list_head *el;
@@ -844,8 +844,8 @@ static JSValue js_async_generator_resolve_function(JSContext *ctx,
 
 /* magic = GEN_MAGIC_x */
 JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
-                                       int argc, JSValueConst *argv,
-                                       int magic)
+                                int argc, JSValueConst *argv,
+                                int magic)
 {
     JSAsyncGeneratorData *s = JS_GetOpaque(this_val, JS_CLASS_ASYNC_GENERATOR);
     JSValue promise, resolving_funcs[2];
@@ -887,9 +887,9 @@ JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
-                                                JSValueConst this_obj,
-                                                int argc, JSValueConst *argv,
-                                                int flags)
+                                         JSValueConst this_obj,
+                                         int argc, JSValueConst *argv,
+                                         int flags)
 {
     JSValue obj, func_ret;
     JSAsyncGeneratorData *s;

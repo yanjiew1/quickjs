@@ -37,7 +37,7 @@
    implementation to ensure that caller in non strict mode does not
    throw (ES5 compatibility) */
 JSValue js_throw_type_error(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv)
+                            int argc, JSValueConst *argv)
 {
     JSFunctionBytecode *b = JS_GetFunctionBytecode(this_val);
     if (!b || (b->js_mode & JS_MODE_STRICT) || !b->has_prototype || argc >= 1) {
@@ -74,14 +74,14 @@ static JSValue js_function_proto_lineNumber(JSContext *ctx,
 /* Function class */
 
 JSValue js_function_proto(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
+                          int argc, JSValueConst *argv)
 {
     return JS_UNDEFINED;
 }
 
 /* XXX: add a specific eval mode so that Function("}), ({") is rejected */
 JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
-                                       int argc, JSValueConst *argv, int magic)
+                                int argc, JSValueConst *argv, int magic)
 {
     JSFunctionKindEnum func_kind = magic;
     int i, n, ret;
@@ -161,7 +161,7 @@ void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len)
 
 /* XXX: should use ValueArray */
 JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
-                               JSValueConst array_arg)
+                        JSValueConst array_arg)
 {
     uint32_t len, i;
     int64_t len64;
@@ -215,7 +215,7 @@ JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
 /* magic value: 0 = normal apply, 1 = apply for constructor, 2 =
    Reflect.apply */
 JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv, int magic)
+                          int argc, JSValueConst *argv, int magic)
 {
     JSValueConst this_arg, array_arg;
     uint32_t len;

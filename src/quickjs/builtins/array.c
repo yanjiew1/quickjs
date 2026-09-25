@@ -109,7 +109,7 @@ static int JS_CopySubArray(JSContext *ctx,
 }
 
 JSValue js_array_constructor(JSContext *ctx, JSValueConst new_target,
-                                    int argc, JSValueConst *argv)
+                             int argc, JSValueConst *argv)
 {
     JSValue obj;
     int i;
@@ -294,7 +294,7 @@ static JSValue js_array_isArray(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_get_this(JSContext *ctx,
-                           JSValueConst this_val)
+                    JSValueConst this_val)
 {
     return JS_DupValue(ctx, this_val);
 }
@@ -554,7 +554,7 @@ exception:
 
 
 JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv, int special)
+                       int argc, JSValueConst *argv, int special)
 {
     JSValue obj, val, index_val, res, ret;
     JSValueConst args[3];
@@ -708,7 +708,7 @@ exception:
 
 
 JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv, int special)
+                        int argc, JSValueConst *argv, int special)
 {
     JSValue obj, val, index_val, acc, acc1;
     JSValueConst args[4];
@@ -835,7 +835,7 @@ static JSValue js_array_fill(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv)
+                          int argc, JSValueConst *argv)
 {
     JSValue obj, val;
     int64_t len, n;
@@ -1132,7 +1132,7 @@ exception:
 }
 
 JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
-                            int argc, JSValueConst *argv, int shift)
+                     int argc, JSValueConst *argv, int shift)
 {
     JSValue obj, res = JS_UNDEFINED;
     int64_t len, newLen;
@@ -1185,7 +1185,7 @@ JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv, int unshift)
+                      int argc, JSValueConst *argv, int unshift)
 {
     JSValue obj;
     int i;
@@ -2001,7 +2001,7 @@ void js_array_iterator_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                   JS_MarkFunc *mark_func)
+                            JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSArrayIteratorData *it = p->u.array_iterator_data;
@@ -2011,7 +2011,7 @@ void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
 }
 
 JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic)
+                                 int argc, JSValueConst *argv, int magic)
 {
     JSValue enum_obj, arr;
     JSArrayIteratorData *it;
@@ -2048,8 +2048,8 @@ JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv,
-                                      BOOL *pdone, int magic)
+                               int argc, JSValueConst *argv,
+                               BOOL *pdone, int magic)
 {
     JSArrayIteratorData *it;
     uint32_t len, idx;

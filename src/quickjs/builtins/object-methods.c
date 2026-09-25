@@ -89,7 +89,7 @@ exception:
 }
 
 JSValue js_object_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
+                              int argc, JSValueConst *argv)
 {
     JSValue ret;
     if (!JS_IsUndefined(new_target) &&
@@ -134,7 +134,7 @@ static JSValue js_object_create(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_object_getPrototypeOf(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic)
+                                 int argc, JSValueConst *argv, int magic)
 {
     JSValueConst val;
 
@@ -161,7 +161,7 @@ static JSValue js_object_setPrototypeOf(JSContext *ctx, JSValueConst this_val,
 
 /* magic = 1 if called as Reflect.defineProperty */
 JSValue js_object_defineProperty(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic)
+                                 int argc, JSValueConst *argv, int magic)
 {
     JSValueConst obj, prop, desc;
     int ret, flags;
@@ -250,7 +250,7 @@ static JSValue js_object___defineGetter__(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx, JSValueConst this_val,
-                                                  int argc, JSValueConst *argv, int magic)
+                                           int argc, JSValueConst *argv, int magic)
 {
     JSValueConst prop;
     JSAtom atom;
@@ -379,14 +379,14 @@ static JSValue js_object_getOwnPropertySymbols(JSContext *ctx, JSValueConst this
 }
 
 JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv, int kind)
+                       int argc, JSValueConst *argv, int kind)
 {
     return JS_GetOwnPropertyNames2(ctx, argv[0],
                                    JS_GPN_ENUM_ONLY | JS_GPN_STRING_MASK, kind);
 }
 
 JSValue js_object_isExtensible(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv, int reflect)
+                               int argc, JSValueConst *argv, int reflect)
 {
     JSValueConst obj;
     int ret;
@@ -406,7 +406,7 @@ JSValue js_object_isExtensible(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_object_preventExtensions(JSContext *ctx, JSValueConst this_val,
-                                           int argc, JSValueConst *argv, int reflect)
+                                    int argc, JSValueConst *argv, int reflect)
 {
     JSValueConst obj;
     int ret;
@@ -489,7 +489,7 @@ static JSValue js_object_valueOf(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_object_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
+                           int argc, JSValueConst *argv)
 {
     JSValue obj, tag;
     int is_array;
@@ -578,7 +578,7 @@ exception:
 }
 
 JSValue js_object_seal(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv, int freeze_flag)
+                       int argc, JSValueConst *argv, int freeze_flag)
 {
     JSValueConst obj = argv[0];
     JSObject *p;

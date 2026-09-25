@@ -32,8 +32,6 @@
 #include "internal/atom.h"
 #include "libunicode.h"
 
-JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
-                               int atom_type);
 static int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
                             int pos2, int len);
 BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
@@ -529,7 +527,7 @@ static JSAtom __JS_NewAtom(JSRuntime *rt, JSString *str, int atom_type)
 
 /* only works with zero terminated 8 bit strings */
 JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
-                               int atom_type)
+                        int atom_type)
 {
     JSString *p;
     p = js_alloc_string_rt(rt, len, 0);
@@ -542,7 +540,7 @@ JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
 
 /* Warning: str must be ASCII only */
 JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len,
-                            int atom_type)
+                     int atom_type)
 {
     uint32_t h, h1, i;
     JSAtomStruct *p;
@@ -722,7 +720,7 @@ JSValue JS_NewSymbol(JSContext *ctx, JSString *p, int atom_type)
 
 /* descr must be a non-numeric string atom */
 JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr,
-                                    int atom_type)
+                             int atom_type)
 {
     JSRuntime *rt = ctx->rt;
     JSString *p;
@@ -737,7 +735,7 @@ JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr,
 
 /* Should only be used for debug. */
 const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size,
-                                   JSAtom atom)
+                            JSAtom atom)
 {
     if (__JS_AtomIsTaggedInt(atom)) {
         snprintf(buf, buf_size, "%u", __JS_AtomToUInt32(atom));
@@ -1079,7 +1077,7 @@ JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end)
    If the error_status is set, string_buffer_end() returns JS_EXCEPTION.
  */
 int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
-                               int is_wide)
+                        int is_wide)
 {
     s->ctx = ctx;
     s->size = size;
@@ -1297,7 +1295,7 @@ int string_buffer_puts8(StringBuffer *s, const char *str)
 }
 
 int string_buffer_concat(StringBuffer *s, const JSString *p,
-                                uint32_t from, uint32_t to)
+                         uint32_t from, uint32_t to)
 {
     if (to <= from)
         return 0;
@@ -1464,7 +1462,7 @@ JSValue JS_NewStringLen(JSContext *ctx, const char *buf, size_t buf_len)
 }
 
 JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
-                                JSValue str2, const char *str3)
+                         JSValue str2, const char *str3)
 {
     StringBuffer b_s, *b = &b_s;
     int len1, len3;
@@ -1655,7 +1653,7 @@ static int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
 }
 
 BOOL js_string_eq(JSContext *ctx,
-                         const JSString *p1, const JSString *p2)
+                  const JSString *p1, const JSString *p2)
 {
     if (p1->len != p2->len)
         return FALSE;
@@ -1666,7 +1664,7 @@ BOOL js_string_eq(JSContext *ctx,
 
 /* return < 0, 0 or > 0 */
 int js_string_compare(JSContext *ctx,
-                             const JSString *p1, const JSString *p2)
+                      const JSString *p1, const JSString *p2)
 {
     int res, len;
     len = min_int(p1->len, p2->len);
@@ -1830,7 +1828,7 @@ static uint32_t string_rope_get_len(JSValueConst val)
 }
 
 int js_string_rope_compare(JSContext *ctx, JSValueConst op1,
-                                  JSValueConst op2, BOOL eq_only)
+                           JSValueConst op2, BOOL eq_only)
 {
     uint32_t len1, len2, len, pos1, pos2, l;
     int res;
@@ -2167,4 +2165,3 @@ JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2)
     }
     return js_new_string_rope(ctx, op1, op2);
 }
-

@@ -386,7 +386,7 @@ static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv)
+                        int argc, JSValueConst *argv)
 {
     double d;
 
@@ -396,7 +396,7 @@ JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
+                           int argc, JSValueConst *argv)
 {
     double d;
     if (unlikely(JS_ToFloat64(ctx, &d, argv[0])))

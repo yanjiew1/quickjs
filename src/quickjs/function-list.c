@@ -54,7 +54,7 @@ static JSAtom find_atom(JSContext *ctx, const char *name)
 }
 
 JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
-                                     const JSCFunctionListEntry *fields, int n_fields)
+                              const JSCFunctionListEntry *fields, int n_fields)
 {
     JSValue obj;
     obj = JS_NewObjectProtoClassAlloc(ctx, proto, JS_CLASS_OBJECT, n_fields);
@@ -68,7 +68,7 @@ JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
 }
 
 JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
-                                               JSAtom atom, void *opaque)
+                                        JSAtom atom, void *opaque)
 {
     const JSCFunctionListEntry *e = opaque;
     JSValue val, proto;
@@ -276,9 +276,9 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
 
 /* Note: 'func_obj' is not necessarily a constructor */
 int JS_SetConstructor2(JSContext *ctx,
-                              JSValueConst func_obj,
-                              JSValueConst proto,
-                              int proto_flags, int ctor_flags)
+                       JSValueConst func_obj,
+                       JSValueConst proto,
+                       int proto_flags, int ctor_flags)
 {
     if (JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_prototype,
                                JS_DupValue(ctx, proto), proto_flags) < 0)
@@ -306,11 +306,11 @@ int JS_SetConstructor(JSContext *ctx, JSValueConst func_obj,
    parent_ctor if it is not JS_UNDEFINED. if class_id is != -1,
    class_proto[class_id] is set. */
 JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
-                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
-                                  JSValueConst parent_ctor,
-                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
-                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
-                                  int flags)
+                           JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                           JSValueConst parent_ctor,
+                           const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                           const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                           int flags)
 {
     JSValue ctor = JS_UNDEFINED, proto, parent_proto;
     int proto_class_id, proto_flags, ctor_flags;

@@ -73,7 +73,7 @@ static JSValue iterator_to_array(JSContext *ctx, JSValueConst items)
 }
 
 JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
-                                    int argc, JSValueConst *argv, int magic)
+                             int argc, JSValueConst *argv, int magic)
 {
     JSValue obj, msg, proto;
     JSValueConst message, options;
@@ -214,7 +214,7 @@ const JSCFunctionListEntry js_error_funcs[] = {
 
 /* used by C code. */
 JSValue js_aggregate_error_constructor(JSContext *ctx,
-                                              JSValueConst errors)
+                                       JSValueConst errors)
 {
     JSValue obj;
 

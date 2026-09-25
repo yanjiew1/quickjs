@@ -529,7 +529,7 @@ char *js_strdup(JSContext *ctx, const char *str)
 }
 
 no_inline int js_realloc_array(JSContext *ctx, void **parray,
-                                      int elem_size, int *psize, int req_size)
+                               int elem_size, int *psize, int req_size)
 {
     int new_size;
     size_t slack;
@@ -616,7 +616,7 @@ static JSClassShortDef const js_std_class_def[] = {
 };
 
 int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
-                            int start, int count)
+                     int start, int count)
 {
     JSClassDef cm_s, *cm = &cm_s;
     int i, class_id;
@@ -830,7 +830,7 @@ int JS_GetStripInfo(JSRuntime *rt)
 }
 
 int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
-                          int argc, JSValueConst *argv, BOOL no_exception)
+                   int argc, JSValueConst *argv, BOOL no_exception)
 {
     JSRuntime *rt = ctx->rt;
     JSJobEntry *e;
@@ -1237,7 +1237,7 @@ JSContext *JS_DupContext(JSContext *ctx)
 
 /* used by the GC */
 void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
-                           JS_MarkFunc *mark_func)
+                    JS_MarkFunc *mark_func)
 {
     int i;
     struct list_head *el;

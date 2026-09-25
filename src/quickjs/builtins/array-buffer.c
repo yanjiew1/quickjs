@@ -35,12 +35,12 @@
 #include "array.h"
 
 JSValue js_array_buffer_constructor3(JSContext *ctx,
-                                            JSValueConst new_target,
-                                            uint64_t len, uint64_t *max_len,
-                                            JSClassID class_id,
-                                            uint8_t *buf,
-                                            JSFreeArrayBufferDataFunc *free_func,
-                                            void *opaque, BOOL alloc_flag)
+                                     JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len,
+                                     JSClassID class_id,
+                                     uint8_t *buf,
+                                     JSFreeArrayBufferDataFunc *free_func,
+                                     void *opaque, BOOL alloc_flag)
 {
     JSRuntime *rt = ctx->rt;
     JSValue obj;
@@ -126,8 +126,8 @@ static JSValue js_array_buffer_constructor2(JSContext *ctx,
 }
 
 JSValue js_array_buffer_constructor1(JSContext *ctx,
-                                            JSValueConst new_target,
-                                            uint64_t len, uint64_t *max_len)
+                                     JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len)
 {
     return js_array_buffer_constructor2(ctx, new_target, len, max_len,
                                         JS_CLASS_ARRAY_BUFFER);

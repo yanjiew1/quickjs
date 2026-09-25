@@ -36,7 +36,7 @@
 /* Number */
 
 JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
+                              int argc, JSValueConst *argv)
 {
     JSValue val, obj;
     if (argc == 0) {

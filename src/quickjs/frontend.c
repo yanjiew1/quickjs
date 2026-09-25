@@ -798,7 +798,7 @@ static __exception int js_parse_regexp(JSParseState *s)
 }
 
 __exception int ident_realloc(JSContext *ctx, char **pbuf, size_t *psize,
-                                     char *static_buf)
+                              char *static_buf)
 {
     char *buf, *new_buf;
     size_t size, new_size;
@@ -12906,8 +12906,8 @@ static __exception int js_parse_program(JSParseState *s)
 }
 
 void js_parse_init(JSContext *ctx, JSParseState *s,
-                          const char *input, size_t input_len,
-                          const char *filename)
+                   const char *input, size_t input_len,
+                   const char *filename)
 {
     memset(s, 0, sizeof(*s));
     s->ctx = ctx;
@@ -12964,8 +12964,8 @@ JSValue JS_EvalFunction(JSContext *ctx, JSValue fun_obj)
 
 /* 'input' must be zero terminated i.e. input[input_len] = '\0'. */
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
-                                 const char *input, size_t input_len,
-                                 const char *filename, int flags, int scope_idx)
+                          const char *input, size_t input_len,
+                          const char *filename, int flags, int scope_idx)
 {
     JSParseState s1, *s = &s1;
     int err, js_mode, eval_type;
@@ -13102,7 +13102,7 @@ static JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
 }
 
 JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
-                             JSValueConst val, int flags, int scope_idx)
+                      JSValueConst val, int flags, int scope_idx)
 {
     JSValue ret;
     const char *str;

@@ -92,8 +92,8 @@ const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop)
 /* if filename != NULL, an additional level is added with the filename
    and line number information (used for parse error). */
 void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                            const char *filename, int line_num, int col_num,
-                            int backtrace_flags)
+                     const char *filename, int line_num, int col_num,
+                     int backtrace_flags)
 {
     JSStackFrame *sf;
     JSValue str;
@@ -192,7 +192,7 @@ JSValue JS_NewError(JSContext *ctx)
 }
 
 JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace)
+                       const char *fmt, va_list ap, BOOL add_backtrace)
 {
     char buf[256];
     JSValue obj, ret;
@@ -216,7 +216,7 @@ JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
 }
 
 JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap)
+                      const char *fmt, va_list ap)
 {
     JSRuntime *rt = ctx->rt;
     JSStackFrame *sf;
@@ -329,7 +329,7 @@ JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx)
 }
 
 JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
-                                                JSValueConst func_obj)
+                                         JSValueConst func_obj)
 {
     const char *name;
     if (!JS_IsFunction(ctx, func_obj))
@@ -360,8 +360,8 @@ JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name)
 }
 
 JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
-                                                    JSFunctionBytecode *b,
-                                                    int idx, BOOL is_ref)
+                                             JSFunctionBytecode *b,
+                                             int idx, BOOL is_ref)
 {
     JSAtom atom = JS_ATOM_NULL;
     if (is_ref) {

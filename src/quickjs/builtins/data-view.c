@@ -32,8 +32,8 @@
 #include "data-view.h"
 
 JSValue js_dataview_constructor(JSContext *ctx,
-                                       JSValueConst new_target,
-                                       int argc, JSValueConst *argv)
+                                JSValueConst new_target,
+                                int argc, JSValueConst *argv)
 {
     BOOL recompute_len = FALSE;
     BOOL track_rab = FALSE;

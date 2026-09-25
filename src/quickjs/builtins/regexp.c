@@ -1067,7 +1067,7 @@ void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                           JS_MarkFunc *mark_func)
+                                    JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSRegExpStringIteratorData *it = p->u.regexp_string_iterator_data;

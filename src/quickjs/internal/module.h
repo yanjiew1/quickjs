@@ -141,22 +141,22 @@ JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
 JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
 JSValue js_import_meta(JSContext *ctx);
 JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
-                                     void *opaque);
+                              void *opaque);
 void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
 void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
-                               JS_MarkFunc *mark_func);
+                        JS_MarkFunc *mark_func);
 
 int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
-                                JSAtom module_name);
+                         JSAtom module_name);
 int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
-                                 int req_module_idx);
+                          int req_module_idx);
 int js_resolve_module(JSContext *ctx, JSModuleDef *m);
 int js_create_module_function(JSContext *ctx, JSModuleDef *m);
 int js_link_module(JSContext *ctx, JSModuleDef *m);
 JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m);
 
 JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
-                                       JSAtom local_name, JSAtom export_name,
-                                       JSExportTypeEnum export_type);
+                                JSAtom local_name, JSAtom export_name,
+                                JSExportTypeEnum export_type);
 
 #endif

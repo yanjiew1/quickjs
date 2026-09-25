@@ -99,12 +99,12 @@ static inline BOOL is_be(void)
 void dbuf_put_leb128(DynBuf *s, uint32_t v);
 void dbuf_put_sleb128(DynBuf *s, int32_t v1);
 int get_leb128(uint32_t *pval, const uint8_t *buf,
-                      const uint8_t *buf_end);
+               const uint8_t *buf_end);
 int get_sleb128(int32_t *pval, const uint8_t *buf,
-                       const uint8_t *buf_end);
+                const uint8_t *buf_end);
 
 int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
-                         uint32_t pc_value, int *pcol_num);
+                  uint32_t pc_value, int *pcol_num);
 
 typedef struct JSOpCode {
 #ifdef DUMP_BYTECODE

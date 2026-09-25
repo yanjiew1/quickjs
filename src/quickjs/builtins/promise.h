@@ -28,13 +28,13 @@
 #include "../internal/base.h"
 
 JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv, int magic);
+                           int argc, JSValueConst *argv, int magic);
 __exception int perform_promise_then(JSContext *ctx,
-                                            JSValueConst promise,
-                                            JSValueConst *resolve_reject,
-                                            JSValueConst *cap_resolving_funcs);
+                                     JSValueConst promise,
+                                     JSValueConst *resolve_reject,
+                                     JSValueConst *cap_resolving_funcs);
 JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
-                                              JSValueConst sync_iter);
+                                       JSValueConst sync_iter);
 JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
                         int argc, JSValueConst *argv);
 

@@ -32,7 +32,7 @@
 #include "internal/generator.h"
 
 void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
-                                       JSAtom name, int len)
+                                JSAtom name, int len)
 {
     /* ES6 feature non compatible with ES5.1: length is configurable */
     JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_length, JS_NewInt32(ctx, len),
@@ -62,7 +62,7 @@ JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val)
 }
 
 void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst home_obj)
+                               JSValueConst home_obj)
 {
     JSObject *p, *p1;
     JSFunctionBytecode *b;
@@ -102,7 +102,7 @@ JSValue js_get_function_name(JSContext *ctx, JSAtom name)
    JS_PROP_HAS_SET. Also set the home object of the method.
    Return < 0 if exception. */
 int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
-                                    JSAtom name, int flags, JSValueConst home_obj)
+                             JSAtom name, int flags, JSValueConst home_obj)
 {
     JSValue name_str;
 
@@ -123,9 +123,9 @@ int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
 
 /* Note: at least 'length' arguments will be readable in 'argv' */
 JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
-                                const char *name,
-                                int length, JSCFunctionEnum cproto, int magic,
-                                JSValueConst proto_val, int n_fields)
+                         const char *name,
+                         int length, JSCFunctionEnum cproto, int magic,
+                         JSValueConst proto_val, int n_fields)
 {
     JSValue func_obj;
     JSObject *p;
@@ -185,7 +185,7 @@ void js_c_function_data_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func)
+                             JS_MarkFunc *mark_func)
 {
     JSCFunctionDataRecord *s = JS_GetOpaque(val, JS_CLASS_C_FUNCTION_DATA);
     int i;
@@ -198,8 +198,8 @@ void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
 }
 
 JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv, int flags)
+                                JSValueConst this_val,
+                                int argc, JSValueConst *argv, int flags)
 {
     JSCFunctionDataRecord *s = JS_GetOpaque(func_obj, JS_CLASS_C_FUNCTION_DATA);
     JSValueConst *arg_buf;
@@ -279,7 +279,7 @@ void js_c_function_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_c_function_mark(JSRuntime *rt, JSValueConst val,
-                               JS_MarkFunc *mark_func)
+                        JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
 
@@ -311,7 +311,7 @@ void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
-                                      JS_MarkFunc *mark_func)
+                               JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSVarRef **var_refs = p->u.func.var_refs;
@@ -484,7 +484,7 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
 }
 
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
-                                   int class_id)
+                            int class_id)
 {
     JSValue proto, obj;
     JSContext *realm;

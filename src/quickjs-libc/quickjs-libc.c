@@ -535,8 +535,8 @@ static int interrupt_handler(JSRuntime *rt, void *opaque)
 }
 
 int get_bool_option(JSContext *ctx, BOOL *pbool,
-                           JSValueConst obj,
-                           const char *option)
+                    JSValueConst obj,
+                    const char *option)
 {
     JSValue val;
     val = JS_GetPropertyStr(ctx, obj, option);

@@ -31,7 +31,7 @@
 #include "internal/value-compare.h"
 
 BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
-                          JSStrictEqModeEnum eq_mode)
+                   JSStrictEqModeEnum eq_mode)
 {
     BOOL res;
     int tag1, tag2;

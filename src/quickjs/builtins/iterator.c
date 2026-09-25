@@ -54,7 +54,7 @@ void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
-                                  JS_MarkFunc *mark_func)
+                           JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSIteratorWrapData *it = p->u.iterator_wrap_data;
@@ -97,10 +97,10 @@ const JSCFunctionListEntry js_iterator_wrap_proto_funcs[] = {
 /* Iterator */
 
 JSValue js_iterator_constructor_getset(JSContext *ctx,
-                                              JSValueConst this_val,
-                                              int argc, JSValueConst *argv,
-                                              int magic,
-                                              JSValue *func_data)
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv,
+                                       int magic,
+                                       JSValue *func_data)
 {
     int ret;
 
@@ -119,7 +119,7 @@ JSValue js_iterator_constructor_getset(JSContext *ctx,
 }
 
 JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
-                                       int argc, JSValueConst *argv)
+                                int argc, JSValueConst *argv)
 {
     JSObject *p;
 
@@ -155,7 +155,7 @@ void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func)
+                             JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSIteratorConcatData *it = p->u.iterator_concat_data;
@@ -750,7 +750,7 @@ exception:
 }
 
 JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
-                                          int argc, JSValueConst *argv)
+                                   int argc, JSValueConst *argv)
 {
     return JS_DupValue(ctx, this_val);
 }
@@ -797,7 +797,7 @@ void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
-                                   JS_MarkFunc *mark_func)
+                             JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSIteratorHelperData *it = p->u.iterator_helper_data;
@@ -1091,4 +1091,3 @@ const JSCFunctionListEntry js_iterator_helper_proto_funcs[] = {
     JS_ITERATOR_NEXT_DEF("return", 0, js_iterator_helper_next, GEN_MAGIC_RETURN ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Iterator Helper", JS_PROP_CONFIGURABLE ),
 };
-

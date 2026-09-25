@@ -30,7 +30,7 @@
 extern const JSCFunctionListEntry js_number_funcs[14];
 extern const JSCFunctionListEntry js_number_proto_funcs[6];
 JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv);
+                              int argc, JSValueConst *argv);
 
 
 

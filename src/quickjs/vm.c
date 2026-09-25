@@ -1346,7 +1346,7 @@ void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
-                                     JS_MarkFunc *mark_func)
+                              JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSVarRef **var_refs = p->u.array.u.var_refs;
@@ -1924,7 +1924,7 @@ static JSVarRef *js_global_object_get_uninitialized_var(JSContext *ctx, JSObject
 /* return a new variable reference. Get it from the uninitialized
    variables if it is present. Return NULL in case of memory error. */
 JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
-                                                         JSAtom atom, BOOL is_lexical)
+                                                  JSAtom atom, BOOL is_lexical)
 {
     JSObject *p1;
     JSShapeProperty *prs;
@@ -2086,10 +2086,10 @@ static JSVarRef *js_closure_global_var(JSContext *ctx, JSClosureVar *cv)
 }
 
 JSValue js_closure2(JSContext *ctx, JSValue func_obj,
-                           JSFunctionBytecode *b,
-                           JSVarRef **cur_var_refs,
-                           JSStackFrame *sf,
-                           BOOL is_eval, JSModuleDef *m)
+                    JSFunctionBytecode *b,
+                    JSVarRef **cur_var_refs,
+                    JSStackFrame *sf,
+                    BOOL is_eval, JSModuleDef *m)
 {
     JSObject *p;
     JSVarRef **var_refs;
@@ -2172,8 +2172,8 @@ const uint16_t func_kind_to_class_id[] = {
 };
 
 JSValue js_closure(JSContext *ctx, JSValue bfunc,
-                          JSVarRef **cur_var_refs,
-                          JSStackFrame *sf, BOOL is_eval)
+                   JSVarRef **cur_var_refs,
+                   JSStackFrame *sf, BOOL is_eval)
 {
     JSFunctionBytecode *b;
     JSValue func_obj;
@@ -2363,8 +2363,8 @@ static void close_lexical_var(JSContext *ctx, JSFunctionBytecode *b,
 #define JS_CALL_FLAG_COPY_ARGV   (1 << 1)
 
 JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
-                                  JSValueConst this_obj,
-                                  int argc, JSValueConst *argv, int flags)
+                           JSValueConst this_obj,
+                           int argc, JSValueConst *argv, int flags)
 {
     JSRuntime *rt = ctx->rt;
     JSCFunctionType func;
@@ -2492,8 +2492,8 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
 }
 
 JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst this_obj,
-                                      int argc, JSValueConst *argv, int flags)
+                               JSValueConst this_obj,
+                               int argc, JSValueConst *argv, int flags)
 {
     JSObject *p;
     JSBoundFunction *bf;
@@ -2535,8 +2535,8 @@ JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
 
 /* argv[] is modified if (flags & JS_CALL_FLAG_COPY_ARGV) = 0. */
 JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
-                               JSValueConst this_obj, JSValueConst new_target,
-                               int argc, JSValue *argv, int flags)
+                        JSValueConst this_obj, JSValueConst new_target,
+                        int argc, JSValue *argv, int flags)
 {
     JSRuntime *rt = caller_ctx->rt;
     JSContext *ctx;
@@ -5504,7 +5504,7 @@ JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj,
 }
 
 JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
-                           int argc, JSValueConst *argv)
+                    int argc, JSValueConst *argv)
 {
     JSValue res = JS_CallInternal(ctx, func_obj, this_obj, JS_UNDEFINED,
                                   argc, (JSValue *)argv, JS_CALL_FLAG_COPY_ARGV);
@@ -5589,7 +5589,7 @@ JSValue JS_Invoke(JSContext *ctx, JSValueConst this_val, JSAtom atom,
 }
 
 JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
-                             int argc, JSValueConst *argv)
+                      int argc, JSValueConst *argv)
 {
     JSValue res = JS_Invoke(ctx, this_val, atom, argc, argv);
     JS_FreeValue(ctx, this_val);

@@ -32,20 +32,20 @@ extern const JSCFunctionListEntry js_object_proto_funcs[11];
 JSValue js_object_constructor(JSContext *ctx, JSValueConst new_target,
                               int argc, JSValueConst *argv);
 JSValue js_object_seal(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv, int freeze_flag);
+                       int argc, JSValueConst *argv, int freeze_flag);
 JSValue js_object_defineProperty(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic);
+                                 int argc, JSValueConst *argv, int magic);
 JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx, JSValueConst this_val,
-                                                  int argc, JSValueConst *argv, int magic);
+                                           int argc, JSValueConst *argv, int magic);
 JSValue js_object_getPrototypeOf(JSContext *ctx, JSValueConst this_val,
-                                        int argc, JSValueConst *argv, int magic);
+                                 int argc, JSValueConst *argv, int magic);
 JSValue js_object_isExtensible(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv, int reflect);
+                               int argc, JSValueConst *argv, int reflect);
 JSValue js_object_preventExtensions(JSContext *ctx, JSValueConst this_val,
-                                           int argc, JSValueConst *argv, int reflect);
+                                    int argc, JSValueConst *argv, int reflect);
 JSValue js_object_keys(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv, int kind);
+                       int argc, JSValueConst *argv, int kind);
 JSValue js_object_toString(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv);
+                           int argc, JSValueConst *argv);
 
 #endif

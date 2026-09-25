@@ -29,7 +29,7 @@
 
 ssize_t js_get_errno(ssize_t ret);
 int get_bool_option(JSContext *ctx, BOOL *pbool,
-                           JSValueConst obj,
-                           const char *option);
+                    JSValueConst obj,
+                    const char *option);
 
 #endif

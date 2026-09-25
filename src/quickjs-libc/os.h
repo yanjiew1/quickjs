@@ -28,7 +28,7 @@
 #include "thread.h"
 
 JSValue js_os_now(JSContext *ctx, JSValue this_val,
-                         int argc, JSValue *argv);
+                  int argc, JSValue *argv);
 void *js_sab_alloc(void *opaque, size_t size);
 void js_sab_free(void *opaque, void *ptr);
 void js_sab_dup(void *opaque, void *ptr);

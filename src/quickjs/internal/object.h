@@ -202,23 +202,23 @@ int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 
 JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab);
 int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
-                                   JSValueConst proto_val,
-                                   BOOL throw_flag);
+                            JSValueConst proto_val,
+                            BOOL throw_flag);
 JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
-                                       int flags, int kind);
+                                int flags, int kind);
 int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
-                                     JSObject *p, JSAtom prop);
+                              JSObject *p, JSAtom prop);
 void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
 
 int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
-                          JSValueConst desc);
+                   JSValueConst desc);
 BOOL check_define_prop_flags(int prop_flags, int flags);
 int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
-                                                      JSPropertyEnum **ptab,
-                                                      uint32_t *plen,
-                                                      JSObject *p, int flags);
+                                               JSPropertyEnum **ptab,
+                                               uint32_t *plen,
+                                               JSObject *p, int flags);
 __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
-                                       JSValueConst obj);
+                                JSValueConst obj);
 
 static inline size_t get_shape_size(size_t hash_size, size_t prop_size)
 {
@@ -277,43 +277,43 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 }
 
 JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
-                                     JSProperty *props);
+                              JSProperty *props);
 JSShape *js_dup_shape(JSShape *sh);
 int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
 no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
-                                        int hash_size, int prop_size);
+                                 int hash_size, int prop_size);
 JSObject *get_proto_obj(JSValueConst proto_val);
 int add_shape_property(JSContext *ctx, JSShape **psh,
-                              JSObject *p, JSAtom atom, int prop_flags);
+                       JSObject *p, JSAtom atom, int prop_flags);
 JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
 JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
-                                     JSValueConst defaultConstructor);
+                              JSValueConst defaultConstructor);
 __exception int js_get_length64(JSContext *ctx, int64_t *pres,
-                                       JSValueConst obj);
+                                JSValueConst obj);
 
 int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
                                  int64_t idx, JSValue val, int flags);
 
 int js_update_property_flags(JSContext *ctx, JSObject *p,
-                                    JSShapeProperty **pprs, int flags);
+                             JSShapeProperty **pprs, int flags);
 JSProperty *add_property(JSContext *ctx,
-                                JSObject *p, JSAtom prop, int prop_flags);
+                         JSObject *p, JSAtom prop, int prop_flags);
 int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
-                                     JSAtom prop, JSAutoInitIDEnum id,
-                                     void *opaque, int flags);
+                              JSAtom prop, JSAutoInitIDEnum id,
+                              void *opaque, int flags);
 
 JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
-                                   JSValue prop);
+                            JSValue prop);
 int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
-                               JSValue prop, JSValue val, int flags);
+                        JSValue prop, JSValue val, int flags);
 
 int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
-                                       int64_t idx, JSValue val, int flags);
+                                int64_t idx, JSValue val, int flags);
 
 
 int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
 BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
-                              JSValue **arrpp, uint32_t *countp);
+                       JSValue **arrpp, uint32_t *countp);
 JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
 
 int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
@@ -350,35 +350,35 @@ static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
 
 int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
 int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
-                               JSProperty *pr, JSShapeProperty *prs);
+                        JSProperty *pr, JSShapeProperty *prs);
 int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
 int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
 int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
-                               JSAtom name, int flags);
+                        JSAtom name, int flags);
 int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
-                                       JSValueConst str, int flags);
+                                JSValueConst str, int flags);
 int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
-                                 JSValueConst name, JSValue val);
+                          JSValueConst name, JSValue val);
 int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
                                 JSValue prop, JSValue val, int flags);
 int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
 __maybe_unused void JS_DumpShapes(JSRuntime *rt);
 int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
 JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
-                                  JSValueConst name);
+                           JSValueConst name);
 JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
 int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
-                        const JSClassDef *class_def, JSAtom name);
+                 const JSClassDef *class_def, JSAtom name);
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
-                                           JSClassID class_id, int n_alloc_props);
+                                    JSClassID class_id, int n_alloc_props);
 void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
 void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
 int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
-                              JSValueConst name, JSValue val);
+                       JSValueConst name, JSValue val);
 JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop);
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
 no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
-                                                             JSObject *p);
+                                                      JSObject *p);
 int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
 void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
 void free_zero_refcount(JSRuntime *rt);
@@ -386,7 +386,7 @@ void gc_decref(JSRuntime *rt);
 int init_shape_hash(JSRuntime *rt);
 void js_array_finalizer(JSRuntime *rt, JSValue val);
 void js_array_mark(JSRuntime *rt, JSValueConst val,
-                          JS_MarkFunc *mark_func);
+                   JS_MarkFunc *mark_func);
 JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
 JSContext *js_autoinit_get_realm(JSProperty *pr);
 JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
@@ -396,17 +396,17 @@ void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
 void js_free_shape_null(JSRuntime *rt, JSShape *sh);
 void js_object_data_finalizer(JSRuntime *rt, JSValue val);
 void js_object_data_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
+                         JS_MarkFunc *mark_func);
 void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 
 JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
-                                                         JSAtom atom, BOOL is_lexical);
+                                                  JSAtom atom, BOOL is_lexical);
 
 __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
 
 void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
 
 void js_global_object_mark(JSRuntime *rt, JSValueConst val,
-                                  JS_MarkFunc *mark_func);
+                           JS_MarkFunc *mark_func);
 
 #endif

@@ -28,20 +28,20 @@
 #include "base.h"
 
 JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
-                                  JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
-                                  JSValueConst parent_ctor,
-                                  const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
-                                  const JSCFunctionListEntry *proto_fields, int n_proto_fields,
-                                  int flags);
+                           JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
+                           JSValueConst parent_ctor,
+                           const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                           const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                           int flags);
 JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
-                                               JSAtom atom, void *opaque);
+                                        JSAtom atom, void *opaque);
 
 JSValue JS_NewObjectProtoList(JSContext *ctx, JSValueConst proto,
                               const JSCFunctionListEntry *fields, int n_fields);
 int JS_SetConstructor2(JSContext *ctx,
-                              JSValueConst func_obj,
-                              JSValueConst proto,
-                              int proto_flags, int ctor_flags);
+                       JSValueConst func_obj,
+                       JSValueConst proto,
+                       int proto_flags, int ctor_flags);
 
 #define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* don't create a global binding */
 #define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor field */

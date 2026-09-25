@@ -568,7 +568,7 @@ static JSBigInt *js_bigint_extend(JSContext *ctx, JSBigInt *r,
    (b_neg = 1) */
 /* XXX: optimize */
 JSBigInt *js_bigint_add(JSContext *ctx, const JSBigInt *a,
-                               const JSBigInt *b, int b_neg)
+                        const JSBigInt *b, int b_neg)
 {
     JSBigInt *r;
     int n1, n2, i;
@@ -617,7 +617,7 @@ JSBigInt *js_bigint_neg(JSContext *ctx, const JSBigInt *a)
 }
 
 JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
-                               const JSBigInt *b)
+                        const JSBigInt *b)
 {
     JSBigInt *r;
     
@@ -637,7 +637,7 @@ JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
 /* return the division or the remainder. 'b' must be != 0. return NULL
    in case of exception (division by zero or memory error) */
 JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
-                                  const JSBigInt *b, BOOL is_rem)
+                           const JSBigInt *b, BOOL is_rem)
 {
     JSBigInt *r, *q;
     js_limb_t *tabb, h;
@@ -739,7 +739,7 @@ JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
 
 /* and, or, xor */
 JSBigInt *js_bigint_logic(JSContext *ctx, const JSBigInt *a,
-                                 const JSBigInt *b, OPCodeEnum op)
+                          const JSBigInt *b, OPCodeEnum op)
 {
     JSBigInt *r;
     js_limb_t b_sign;
@@ -806,7 +806,7 @@ JSBigInt *js_bigint_not(JSContext *ctx, const JSBigInt *a)
 }
 
 JSBigInt *js_bigint_shl(JSContext *ctx, const JSBigInt *a,
-                               unsigned int shift1)
+                        unsigned int shift1)
 {
     int d, i, shift;
     JSBigInt *r;
@@ -835,7 +835,7 @@ JSBigInt *js_bigint_shl(JSContext *ctx, const JSBigInt *a,
 }
 
 JSBigInt *js_bigint_shr(JSContext *ctx, const JSBigInt *a,
-                               unsigned int shift1)
+                        unsigned int shift1)
 {
     int d, i, shift, a_sign, n1;
     JSBigInt *r;
@@ -1096,7 +1096,7 @@ JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1)
 
 /* return -1, 0, 1 or (2) (unordered) */
 int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
-                                 double b)
+                          double b)
 {
     int b_sign, a_sign, e, f;
     uint64_t mant, b1, a_mant;
@@ -1150,7 +1150,7 @@ int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
 
 /* return -1, 0 or 1 */
 int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
-                         const JSBigInt *b)
+                  const JSBigInt *b)
 {
     int a_sign, b_sign, res, i;
     a_sign = js_bigint_sign(a);
@@ -1209,7 +1209,7 @@ static const js_limb_t js_pow_dec[JS_LIMB_DIGITS + 1] = {
 /* syntax: [-]digits in base radix. Return NULL if memory error. radix
    = 10, 2, 8 or 16. */
 JSBigInt *js_bigint_from_string(JSContext *ctx,
-                                       const char *str, int radix)
+                                const char *str, int radix)
 {
     const char *p = str;
     size_t n_digits1;

@@ -102,7 +102,7 @@ static inline int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val)
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 
 __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
-                                       JSValue val);
+                                JSValue val);
 
 #define ATOD_ACCEPT_BIN_OCT  (1 << 2)
 #define ATOD_ACCEPT_LEGACY_OCTAL  (1 << 4)
@@ -127,7 +127,7 @@ static inline int to_digit(int c)
 }
 
 JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
-                       int radix, int flags);
+                int radix, int flags);
 
 int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
 
@@ -148,7 +148,7 @@ int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
 
 __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
-                                            JSValue val, BOOL is_array_ctor);
+                                     JSValue val, BOOL is_array_ctor);
 
 JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
 
@@ -156,7 +156,7 @@ JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val);
 BOOL is_safe_integer(double d);
 int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
 JSValue js_dtoa2(JSContext *ctx,
-                        double d, int radix, int n_digits, int flags);
+                 double d, int radix, int n_digits, int flags);
 int skip_spaces(const char *pc);
 int js_get_radix(JSContext *ctx, JSValueConst val);
 

@@ -33,7 +33,7 @@
 #include "builtins/promise.h"
 
 JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj,
-                               JSValueConst method)
+                        JSValueConst method)
 {
     JSValue enum_obj;
 
@@ -83,8 +83,8 @@ JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async)
 
 /* return *pdone = 2 if the iterator object is not parsed */
 JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
-                                JSValueConst method,
-                                int argc, JSValueConst *argv, int *pdone)
+                         JSValueConst method,
+                         int argc, JSValueConst *argv, int *pdone)
 {
     JSValue obj;
 
@@ -124,8 +124,8 @@ JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
 
 /* Note: always return JS_UNDEFINED when *pdone = TRUE. */
 JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                               JSValueConst method,
-                               int argc, JSValueConst *argv, BOOL *pdone)
+                        JSValueConst method,
+                        int argc, JSValueConst *argv, BOOL *pdone)
 {
     JSValue obj, value, done_val;
     int done;
@@ -160,7 +160,7 @@ JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
 
 /* return < 0 in case of exception */
 int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
-                            BOOL is_exception_pending)
+                     BOOL is_exception_pending)
 {
     JSValue method, ret, ex_obj;
     int res;
@@ -199,7 +199,7 @@ int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
 }
 
 JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
-                                           BOOL *pdone)
+                                    BOOL *pdone)
 {
     JSValue done_val, value;
     BOOL done;
@@ -218,8 +218,8 @@ JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
 }
 
 JSValue js_create_iterator_result(JSContext *ctx,
-                                         JSValue val,
-                                         BOOL done)
+                                  JSValue val,
+                                  BOOL done)
 {
     JSValue obj;
     obj = JS_NewObject(ctx);

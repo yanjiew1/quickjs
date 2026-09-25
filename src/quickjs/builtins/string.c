@@ -126,7 +126,7 @@ const JSClassExoticMethods js_string_exotic_methods = {
 };
 
 JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
+                              int argc, JSValueConst *argv)
 {
     JSValue val, obj;
     if (argc == 0) {
@@ -746,15 +746,15 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
 /* if captures != NULL, captures_val and matched are ignored. Otherwise,
    captures_len is ignored */
 int js_string_GetSubstitution(JSContext *ctx,
-                                     StringBuffer *b,
-                                     JSValueConst matched,
-                                     JSString *sp,
-                                     uint32_t position,
-                                     JSValueConst captures_val,
-                                     JSValueConst namedCaptures,
-                                     JSValueConst rep,
-                                     uint8_t **captures,
-                                     uint32_t captures_len)
+                              StringBuffer *b,
+                              JSValueConst matched,
+                              JSString *sp,
+                              uint32_t position,
+                              JSValueConst captures_val,
+                              JSValueConst namedCaptures,
+                              JSValueConst rep,
+                              uint8_t **captures,
+                              uint32_t captures_len)
 {
     JSValue capture, name, s;
     uint32_t len, matched_len;

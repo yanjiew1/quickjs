@@ -92,19 +92,19 @@ double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
 
 JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
 int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
-                                 double b);
+                          double b);
 int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
-                         const JSBigInt *b);
+                  const JSBigInt *b);
 
 JSBigInt *js_bigint_new_di(JSContext *ctx, js_sdlimb_t a);
 js_slimb_t js_bigint_get_si_sat(const JSBigInt *a);
 JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
-                                  const JSBigInt *b, BOOL is_rem);
+                           const JSBigInt *b, BOOL is_rem);
 JSBigInt *js_bigint_logic(JSContext *ctx, const JSBigInt *a,
-                                 const JSBigInt *b, OPCodeEnum op);
+                          const JSBigInt *b, OPCodeEnum op);
 JSBigInt *js_bigint_not(JSContext *ctx, const JSBigInt *a);
 JSBigInt *js_bigint_shr(JSContext *ctx, const JSBigInt *a,
-                               unsigned int shift1);
+                        unsigned int shift1);
 JSBigInt *js_bigint_pow(JSContext *ctx, const JSBigInt *a, JSBigInt *b);
 JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
 JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
@@ -112,12 +112,12 @@ JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val);
 
 JSBigInt *js_bigint_set_si(JSBigIntBuf *buf, js_slimb_t a);
 JSBigInt *js_bigint_add(JSContext *ctx, const JSBigInt *a,
-                               const JSBigInt *b, int b_neg);
+                        const JSBigInt *b, int b_neg);
 JSBigInt *js_bigint_neg(JSContext *ctx, const JSBigInt *a);
 JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
-                               const JSBigInt *b);
+                        const JSBigInt *b);
 JSBigInt *js_bigint_shl(JSContext *ctx, const JSBigInt *a,
-                               unsigned int shift1);
+                        unsigned int shift1);
 
 int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
 

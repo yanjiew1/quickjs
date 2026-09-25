@@ -57,7 +57,7 @@ void dbuf_put_sleb128(DynBuf *s, int32_t v1)
 }
 
 int get_leb128(uint32_t *pval, const uint8_t *buf,
-                      const uint8_t *buf_end)
+               const uint8_t *buf_end)
 {
     const uint8_t *ptr = buf;
     uint32_t v, a, i;
@@ -77,7 +77,7 @@ int get_leb128(uint32_t *pval, const uint8_t *buf,
 }
 
 int get_sleb128(int32_t *pval, const uint8_t *buf,
-                       const uint8_t *buf_end)
+                const uint8_t *buf_end)
 {
     int ret;
     uint32_t val;
@@ -92,7 +92,7 @@ int get_sleb128(int32_t *pval, const uint8_t *buf,
 
 /* use pc_value = -1 to get the position of the function definition */
 int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
-                         uint32_t pc_value, int *pcol_num)
+                  uint32_t pc_value, int *pcol_num)
 {
     const uint8_t *p_end, *p;
     int new_line_num, line_num, pc, v, ret, new_col_num, col_num;

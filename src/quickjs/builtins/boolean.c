@@ -30,7 +30,7 @@
 
 /* Boolean */
 JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
+                               int argc, JSValueConst *argv)
 {
     JSValue val, obj;
     val = JS_NewBool(ctx, JS_ToBool(ctx, argv[0]));

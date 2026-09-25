@@ -617,7 +617,7 @@ static JSValue js_map_forEach(JSContext *ctx, JSValueConst this_val,
 }
 
 JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv, int is_map)
+                          int argc, JSValueConst *argv, int is_map)
 {
     JSValueConst cb, args[2];
     JSValue res, iter, next, groups, key, v, prop;
@@ -809,7 +809,7 @@ void js_map_iterator_finalizer(JSRuntime *rt, JSValue val)
 }
 
 void js_map_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                 JS_MarkFunc *mark_func)
+                          JS_MarkFunc *mark_func)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JSMapIteratorData *it;

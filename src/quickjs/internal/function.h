@@ -165,16 +165,16 @@ typedef struct JSForInIterator {
 } JSForInIterator;
 
 JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
-                           int argc, JSValueConst *argv);
+                    int argc, JSValueConst *argv);
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
-                                   int class_id);
+                            int class_id);
 
 int check_function(JSContext *ctx, JSValueConst obj);
 
 JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
-                                const char *name,
-                                int length, JSCFunctionEnum cproto, int magic,
-                                JSValueConst proto_val, int n_fields);
+                         const char *name,
+                         int length, JSCFunctionEnum cproto, int magic,
+                         JSValueConst proto_val, int n_fields);
 
 static inline BOOL is_strict_mode(JSContext *ctx)
 {
@@ -188,15 +188,15 @@ BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int mag
 
 void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 JSValue js_closure2(JSContext *ctx, JSValue func_obj,
-                           JSFunctionBytecode *b,
-                           JSVarRef **cur_var_refs,
-                           JSStackFrame *sf,
-                           BOOL is_eval, JSModuleDef *m);
+                    JSFunctionBytecode *b,
+                    JSVarRef **cur_var_refs,
+                    JSStackFrame *sf,
+                    BOOL is_eval, JSModuleDef *m);
 JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
 BOOL js_class_has_bytecode(JSClassID class_id);
 JSValue js_closure(JSContext *ctx, JSValue bfunc,
-                          JSVarRef **cur_var_refs,
-                          JSStackFrame *sf, BOOL is_eval);
+                   JSVarRef **cur_var_refs,
+                   JSStackFrame *sf, BOOL is_eval);
 
 
 typedef struct JSCFunctionDataRecord {
@@ -212,50 +212,50 @@ void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);
 JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv, int flags);
+                                JSValueConst this_val,
+                                int argc, JSValueConst *argv, int flags);
 void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
 void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func);
+                             JS_MarkFunc *mark_func);
 void js_c_function_finalizer(JSRuntime *rt, JSValue val);
 void js_c_function_mark(JSRuntime *rt, JSValueConst val,
-                               JS_MarkFunc *mark_func);
+                        JS_MarkFunc *mark_func);
 void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst home_obj);
+                               JSValueConst home_obj);
 int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
-                                    JSAtom name, int flags, JSValueConst home_obj);
+                             JSAtom name, int flags, JSValueConst home_obj);
 JSValue js_get_function_name(JSContext *ctx, JSAtom name);
 void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
-                                       JSAtom name, int len);
+                                JSAtom name, int len);
 JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
-                             int argc, JSValueConst *argv);
+                      int argc, JSValueConst *argv);
 
 void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
-                                      JS_MarkFunc *mark_func);
+                               JS_MarkFunc *mark_func);
 
 
 JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
 
 int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
-                                   JSValueConst obj);
+                            JSValueConst obj);
 
 JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
 
 extern const uint16_t func_kind_to_class_id[JS_FUNC_ASYNC_GENERATOR + 1];
 
 JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst this_obj,
-                                      int argc, JSValueConst *argv, int flags);
+                               JSValueConst this_obj,
+                               int argc, JSValueConst *argv, int flags);
 
 JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
-                                  JSValueConst this_obj,
-                                  int argc, JSValueConst *argv, int flags);
+                           JSValueConst this_obj,
+                           int argc, JSValueConst *argv, int flags);
 
 void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
 
 void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
-                                     JS_MarkFunc *mark_func);
+                              JS_MarkFunc *mark_func);
 
 extern const JSClassExoticMethods js_arguments_exotic_methods;
 

@@ -80,7 +80,7 @@ int js_get_radix(JSContext *ctx, JSValueConst val)
    invalid syntax */
 /* XXX: directly use js_atod() */
 JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
-                       int radix, int flags)
+                int radix, int flags)
 {
     const char *p, *p_start;
     int sep, is_neg;
@@ -352,7 +352,7 @@ JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val)
 }
 
 __exception int __JS_ToFloat64Free(JSContext *ctx, double *pres,
-                                          JSValue val)
+                                   JSValue val)
 {
     double d;
     uint32_t tag;
@@ -721,7 +721,7 @@ int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val)
 }
 
 __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
-                                            JSValue val, BOOL is_array_ctor)
+                                     JSValue val, BOOL is_array_ctor)
 {
     uint32_t tag, len;
 
@@ -806,7 +806,7 @@ int JS_ToIndex(JSContext *ctx, uint64_t *plen, JSValueConst val)
 /* convert a value to a length between 0 and MAX_SAFE_INTEGER.
    return -1 for exception */
 __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
-                                       JSValue val)
+                                JSValue val)
 {
     int res = JS_ToInt64Clamp(ctx, plen, val, 0, MAX_SAFE_INTEGER, 0);
     JS_FreeValue(ctx, val);
@@ -855,7 +855,7 @@ BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val)
 }
 
 JSValue js_dtoa2(JSContext *ctx,
-                        double d, int radix, int n_digits, int flags)
+                 double d, int radix, int n_digits, int flags)
 {
     char static_buf[128], *buf, *tmp_buf;
     int len, len_max;

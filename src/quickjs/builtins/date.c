@@ -412,7 +412,7 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
    XXX: should use a variant of strftime().
  */
 JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv, int magic)
+                        int argc, JSValueConst *argv, int magic)
 {
     // _string(obj, fmt, part)
     char buf[64];

@@ -30,23 +30,23 @@
 int check_exception_free(JSContext *ctx, JSValue obj);
 
 JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap);
+                      const char *fmt, va_list ap);
 JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name);
 JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name);
 JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
-                                                    JSFunctionBytecode *b,
-                                                    int idx, BOOL is_ref);
+                                             JSFunctionBytecode *b,
+                                             int idx, BOOL is_ref);
 const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
 BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
 JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
 JSValue JS_ThrowStackOverflow(JSContext *ctx);
 JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
-                                                JSValueConst func_obj);
+                                         JSValueConst func_obj);
 JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace);
+                       const char *fmt, va_list ap, BOOL add_backtrace);
 void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                            const char *filename, int line_num, int col_num,
-                            int backtrace_flags);
+                     const char *filename, int line_num, int col_num,
+                     int backtrace_flags);
 int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...);
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);

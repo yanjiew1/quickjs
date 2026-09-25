@@ -33,7 +33,7 @@
 /* Symbol */
 
 JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
+                              int argc, JSValueConst *argv)
 {
     JSValue str;
     JSString *p;

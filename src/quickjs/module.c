@@ -58,7 +58,7 @@ JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
 }
 
 void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
-                               JS_MarkFunc *mark_func)
+                        JS_MarkFunc *mark_func)
 {
     int i;
 
@@ -138,7 +138,7 @@ void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
 }
 
 int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
-                                JSAtom module_name)
+                         JSAtom module_name)
 {
     JSReqModuleEntry *rme;
 
@@ -199,15 +199,15 @@ static JSExportEntry *add_export_entry2(JSContext *ctx,
 }
 
 JSExportEntry *add_export_entry(JSParseState *s, JSModuleDef *m,
-                                       JSAtom local_name, JSAtom export_name,
-                                       JSExportTypeEnum export_type)
+                                JSAtom local_name, JSAtom export_name,
+                                JSExportTypeEnum export_type)
 {
     return add_export_entry2(s->ctx, s, m, local_name, export_name,
                              export_type);
 }
 
 int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
-                                 int req_module_idx)
+                          int req_module_idx)
 {
     JSStarExportEntry *se;
 
@@ -749,7 +749,7 @@ static int exported_names_cmp(const void *p1, const void *p2, void *opaque)
 }
 
 JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
-                                     void *opaque)
+                              void *opaque)
 {
     JSModuleDef *m = opaque;
     JSResolveResultEnum res;

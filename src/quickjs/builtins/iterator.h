@@ -33,22 +33,22 @@ extern const JSCFunctionListEntry js_iterator_concat_proto_funcs[3];
 extern const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
 extern const JSCFunctionListEntry js_iterator_wrap_proto_funcs[2];
 JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
-                                       int argc, JSValueConst *argv);
+                                int argc, JSValueConst *argv);
 void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val);
 void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func);
+                             JS_MarkFunc *mark_func);
 void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val);
 void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
-                                   JS_MarkFunc *mark_func);
+                             JS_MarkFunc *mark_func);
 void js_iterator_wrap_finalizer(JSRuntime *rt, JSValue val);
 void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
-                                  JS_MarkFunc *mark_func);
+                           JS_MarkFunc *mark_func);
 JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv);
 JSValue js_iterator_constructor_getset(JSContext *ctx,
-                                              JSValueConst this_val,
-                                              int argc, JSValueConst *argv,
-                                              int magic,
-                                              JSValue *func_data);
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv,
+                                       int magic,
+                                       JSValue *func_data);
 
 #endif
