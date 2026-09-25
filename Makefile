@@ -254,7 +254,7 @@ all: $(OBJDIR) $(OBJDIR)/src/quickjs/vm.check.o $(OBJDIR)/tools/qjs.check.o $(PR
 
 CUTILS_SRCS=src/cutils/cutils.c
 DTOA_SRCS=src/dtoa/dtoa.c
-UNICODE_SRCS=src/unicode/case.c src/unicode/char-range.c src/unicode/codepoint.c src/unicode/normalize.c src/unicode/properties.c
+UNICODE_SRCS=src/unicode/libunicode.c
 REGEXP_SRCS=src/regexp/compile.c src/regexp/exec.c
 QUICKJS_CORE_SRCS=\
 	src/quickjs/vm.c src/quickjs/generator.c src/quickjs/value-print.c src/quickjs/value-compare.c src/quickjs/value-conversion.c \
@@ -303,7 +303,7 @@ fuzz_eval: $(OBJDIR)/fuzz/fuzz_eval.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fu
 fuzz_compile: $(OBJDIR)/fuzz/fuzz_compile.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz/fuzz_regexp.o $(OBJDIR)/src/regexp/compile.fuzz.o $(OBJDIR)/src/regexp/exec.fuzz.o $(OBJDIR)/src/cutils/cutils.fuzz.o $(patsubst %.o, %.fuzz.o, $(UNICODE_OBJS))
+fuzz_regexp: $(OBJDIR)/fuzz/fuzz_regexp.o $(OBJDIR)/src/regexp/compile.fuzz.o $(OBJDIR)/src/regexp/exec.fuzz.o $(OBJDIR)/src/cutils/cutils.fuzz.o $(OBJDIR)/src/unicode/libunicode.fuzz.o
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
@@ -349,7 +349,7 @@ repl.c: $(QJSC) tools/repl.js
 	$(QJSC) -s -c -o $@ -m tools/repl.js
 
 ifneq ($(wildcard unicode/UnicodeData.txt),)
-$(filter-out $(OBJDIR)/src/unicode/char-range.o,$(UNICODE_OBJS)) $(patsubst %.o, %.nolto.o, $(filter-out $(OBJDIR)/src/unicode/char-range.o,$(UNICODE_OBJS))): src/unicode/libunicode-table.h
+$(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/unicode/libunicode.nolto.o: src/unicode/libunicode-table.h
 
 src/unicode/libunicode-table.h: unicode_gen
 	./unicode_gen unicode $@
@@ -395,8 +395,8 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c $(UNICODE_SRCS) src/cutils/cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ $^ $(LIBS)
+regexp_test: tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
 unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o
@@ -405,12 +405,12 @@ $(OBJDIR)/tools/unicode_gen.test.host.o: tools/unicode_gen.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
 
-$(OBJDIR)/src/unicode/%.test.host.o: src/unicode/%.c | $(OBJDIR)
+$(OBJDIR)/src/unicode/libunicode.test.host.o: src/unicode/libunicode.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
 
-unicode_gen_test: $(OBJDIR)/tools/unicode_gen.test.host.o $(patsubst %.c,$(OBJDIR)/%.test.host.o,$(UNICODE_SRCS)) $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(filter %.o,$^)
+unicode_gen_test: $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o
 
 clean:
 	rm -f repl.c out.c
