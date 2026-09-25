@@ -40,7 +40,7 @@
 #include "boolean.h"
 #include "weakref.h"
 #include "finalization-registry.h"
-#include "object-methods.h"
+#include "object.h"
 #include "math.h"
 #include "string.h"
 

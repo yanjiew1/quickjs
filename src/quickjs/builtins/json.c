@@ -34,7 +34,7 @@
 #include "dtoa.h"
 #include "libunicode.h"
 #include "json.h"
-#include "object-methods.h"
+#include "object.h"
 #include "array.h"
 
 /* 'c' is the first character. Return JS_ATOM_NULL in case of error */

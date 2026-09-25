@@ -258,14 +258,14 @@ UNICODE_SRCS=src/unicode/libunicode.c
 REGEXP_SRCS=src/regexp/compile.c src/regexp/exec.c
 QUICKJS_CORE_SRCS=\
 	src/quickjs/vm.c src/quickjs/generator.c src/quickjs/value-print.c src/quickjs/value-compare.c src/quickjs/value-conversion.c \
-	src/quickjs/iterator-protocol.c src/quickjs/runtime.c src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/string-core.c src/quickjs/number-core.c src/quickjs/bigint-core.c \
+	src/quickjs/iterator-protocol.c src/quickjs/runtime.c src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/string.c src/quickjs/number.c src/quickjs/bigint.c \
 	src/quickjs/function-list.c src/quickjs/function-object.c src/quickjs/object.c src/quickjs/gc.c src/quickjs/memory-usage.c src/quickjs/error-support.c \
 	src/quickjs/frontend.c src/quickjs/module.c src/quickjs/bytecode-io.c
 QUICKJS_BUILTIN_SRCS=\
 	src/quickjs/builtins/date.c src/quickjs/builtins/collections.c src/quickjs/builtins/weakref.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/proxy.c src/quickjs/builtins/reflect.c \
 	src/quickjs/builtins/regexp.c src/quickjs/builtins/promise.c src/quickjs/builtins/array-buffer.c src/quickjs/builtins/typed-array.c src/quickjs/builtins/data-view.c \
 	src/quickjs/builtins/atomics.c src/quickjs/builtins/json.c src/quickjs/builtins/array.c src/quickjs/builtins/iterator.c src/quickjs/builtins/number.c \
-	src/quickjs/builtins/boolean.c src/quickjs/builtins/string.c src/quickjs/builtins/math.c src/quickjs/builtins/object-methods.c src/quickjs/builtins/function.c \
+	src/quickjs/builtins/boolean.c src/quickjs/builtins/string.c src/quickjs/builtins/math.c src/quickjs/builtins/object.c src/quickjs/builtins/function.c \
 	src/quickjs/builtins/error.c src/quickjs/builtins/symbol.c src/quickjs/builtins/global.c src/quickjs/builtins/bigint.c src/quickjs/builtins/intrinsics.c
 QUICKJS_LIBC_SRCS=src/quickjs-libc/std.c src/quickjs-libc/host.c src/quickjs-libc/module-loader.c src/quickjs-libc/os.c
 CUTILS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(CUTILS_SRCS))

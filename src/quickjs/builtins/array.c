@@ -32,7 +32,7 @@
 #include "../internal/object.h"
 #include "../internal/error.h"
 #include "array.h"
-#include "object-methods.h"
+#include "object.h"
 #include "typed-array.h"
 #include "array-buffer.h"
 

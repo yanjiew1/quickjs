@@ -31,7 +31,7 @@
 #include "../internal/error.h"
 #include "../internal/atom.h"
 #include "reflect.h"
-#include "object-methods.h"
+#include "object.h"
 #include "function.h"
 
 /* Reflect */

@@ -30,7 +30,7 @@
 #include "../internal/string.h"
 #include "../internal/object.h"
 #include "../internal/error.h"
-#include "object-methods.h"
+#include "object.h"
 #include "collections.h"
 
 static __exception int JS_DefinePropertyDesc(JSContext *ctx, JSValueConst obj,
