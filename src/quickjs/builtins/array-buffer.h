@@ -25,9 +25,9 @@
 #ifndef QUICKJS_BUILTINS_ARRAY_BUFFER_H
 #define QUICKJS_BUILTINS_ARRAY_BUFFER_H
 
-#include "../internal/object.h"
+#include "../internal/base.h"
 
-struct JSArrayBuffer {
+typedef struct JSArrayBuffer {
     int byte_length; /* 0 if detached */
     int max_byte_length; /* -1 if not resizable; >= byte_length otherwise */
     uint8_t detached;
@@ -36,7 +36,7 @@ struct JSArrayBuffer {
     struct list_head array_list;
     void *opaque;
     JSFreeArrayBufferDataFunc *free_func;
-};
+} JSArrayBuffer;
 
 int JS_AddIntrinsicArrayBuffers(JSContext *ctx);
 JSValue js_array_buffer_constructor3(JSContext *ctx, JSValueConst new_target,

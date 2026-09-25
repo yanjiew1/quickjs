@@ -25,14 +25,14 @@
 #ifndef QUICKJS_BUILTINS_PROXY_H
 #define QUICKJS_BUILTINS_PROXY_H
 
-#include "../internal/object.h"
+#include "../internal/base.h"
 
-struct JSProxyData {
+typedef struct JSProxyData {
     JSValue target;
     JSValue handler;
     uint8_t is_func;
     uint8_t is_revoked;
-};
+} JSProxyData;
 
 JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
 int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);

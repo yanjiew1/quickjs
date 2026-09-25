@@ -33,10 +33,6 @@ typedef struct JSRegExp {
     JSString *bytecode; /* also contains the flags */
 } JSRegExp;
 
-typedef struct JSProxyData JSProxyData;
-typedef struct JSArrayBuffer JSArrayBuffer;
-typedef struct JSTypedArray JSTypedArray;
-
 typedef struct JSGlobalObject {
     JSValue uninitialized_vars; /* hidden object containing the list of uninitialized variables */
 } JSGlobalObject;

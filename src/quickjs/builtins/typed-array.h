@@ -25,16 +25,16 @@
 #ifndef QUICKJS_BUILTINS_TYPED_ARRAY_H
 #define QUICKJS_BUILTINS_TYPED_ARRAY_H
 
-#include "../internal/object.h"
+#include "../internal/base.h"
 
-struct JSTypedArray {
+typedef struct JSTypedArray {
     struct list_head link; /* link to arraybuffer */
     JSObject *obj; /* back pointer to the TypedArray/DataView object */
     JSObject *buffer; /* based array buffer */
     uint32_t offset; /* byte offset in the array buffer */
     uint32_t length; /* byte length in the array buffer */
     BOOL track_rab; /* auto-track length of backing array buffer */
-};
+} JSTypedArray;
 
 extern uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
 #define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
