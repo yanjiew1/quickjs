@@ -27,6 +27,7 @@
 #include "../internal/number.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/generator.h"
 #include "../internal/bytecode.h"
 #include "../internal/frontend.h"
 #include "array.h"

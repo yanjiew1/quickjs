@@ -32,6 +32,7 @@
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
+#include "internal/generator.h"
 #include "internal/error.h"
 #include "internal/function-list.h"
 #include "internal/module.h"

@@ -28,6 +28,7 @@
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
+#include "internal/generator.h"
 
 void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
                                        JSAtom name, int len)

@@ -164,18 +164,6 @@ typedef struct JSForInIterator {
     JSPropertyEnum *tab_atom; /* is_array = FALSE */
 } JSForInIterator;
 
-typedef struct JSAsyncFunctionState {
-    JSGCObjectHeader header;
-    JSValue this_val; /* 'this' argument */
-    int argc; /* number of function arguments */
-    BOOL throw_flag; /* used to throw an exception in JS_CallInternal() */
-    BOOL is_completed; /* TRUE if the function has returned. The stack
-                          frame is no longer valid */
-    JSValue resolving_funcs[2]; /* only used in JS async functions */
-    JSStackFrame frame;
-    /* arg_buf, var_buf, stack_buf and var_refs follow */
-} JSAsyncFunctionState;
-
 JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
                            int argc, JSValueConst *argv);
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
@@ -206,9 +194,6 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                            BOOL is_eval, JSModuleDef *m);
 JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
 BOOL js_class_has_bytecode(JSClassID class_id);
-JSValue js_async_function_call(JSContext *ctx, JSValueConst func_obj,
-                                      JSValueConst this_obj,
-                                      int argc, JSValueConst *argv, int flags);
 JSValue js_closure(JSContext *ctx, JSValue bfunc,
                           JSVarRef **cur_var_refs,
                           JSStackFrame *sf, BOOL is_eval);
@@ -246,28 +231,6 @@ JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
                              int argc, JSValueConst *argv);
 int check_exception_free(JSContext *ctx, JSValue obj);
 
-#define GEN_MAGIC_THROW  2
-#define GEN_MAGIC_RETURN 1
-#define GEN_MAGIC_NEXT   0
-void js_async_function_resolve_finalizer(JSRuntime *rt, JSValue val);
-void js_async_function_resolve_mark(JSRuntime *rt, JSValueConst val,
-                                           JS_MarkFunc *mark_func);
-JSValue js_async_function_resolve_call(JSContext *ctx,
-                                              JSValueConst func_obj,
-                                              JSValueConst this_obj,
-                                              int argc, JSValueConst *argv,
-                                              int flags);
-void js_async_generator_finalizer(JSRuntime *rt, JSValue obj);
-void js_async_generator_mark(JSRuntime *rt, JSValueConst val,
-                                    JS_MarkFunc *mark_func);
-JSValue js_async_generator_next(JSContext *ctx, JSValueConst this_val,
-                                       int argc, JSValueConst *argv,
-                                       int magic);
-JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst func_obj,
-                                                JSValueConst this_obj,
-                                                int argc, JSValueConst *argv,
-                                                int flags);
-
 void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
                                       JS_MarkFunc *mark_func);
@@ -278,17 +241,9 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
 int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
                                    JSValueConst obj);
 
-void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
-
-void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
-
 JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
 
 extern const uint16_t func_kind_to_class_id[JS_FUNC_ASYNC_GENERATOR + 1];
-
-JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv,
-                                 BOOL *pdone, int magic);
 
 JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
                                       JSValueConst this_obj,
@@ -297,16 +252,6 @@ JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
 JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
                                   JSValueConst this_obj,
                                   int argc, JSValueConst *argv, int flags);
-
-void js_generator_finalizer(JSRuntime *rt, JSValue obj);
-
-JSValue js_generator_function_call(JSContext *ctx, JSValueConst func_obj,
-                                          JSValueConst this_obj,
-                                          int argc, JSValueConst *argv,
-                                          int flags);
-
-void js_generator_mark(JSRuntime *rt, JSValueConst val,
-                              JS_MarkFunc *mark_func);
 
 void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
 

@@ -30,6 +30,7 @@
 #include "../internal/number.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/generator.h"
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "promise.h"

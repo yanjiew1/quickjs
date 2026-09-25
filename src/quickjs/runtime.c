@@ -27,6 +27,7 @@
 #include "internal/runtime.h"
 #include "internal/string.h"
 #include "internal/function.h"
+#include "internal/generator.h"
 #include "internal/object.h"
 #include "internal/error.h"
 #include "internal/module.h"
