@@ -31,7 +31,7 @@
 #include "../internal/string.h"
 #include "../internal/object.h"
 #include "../internal/error.h"
-#include "../internal/frontend.h"
+#include "../internal/parse-state.h"
 #include "dtoa.h"
 #include "libunicode.h"
 #include "json.h"
@@ -1506,4 +1506,3 @@ int JS_AddIntrinsicJSON(JSContext *ctx)
     /* add JSON as autoinit object */
     return JS_SetPropertyFunctionList(ctx, ctx->global_obj, js_json_obj, countof(js_json_obj));
 }
-

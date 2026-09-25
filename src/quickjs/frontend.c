@@ -34,6 +34,7 @@
 #include "internal/module.h"
 #include "internal/bytecode.h"
 #include "internal/frontend.h"
+#include "internal/parse-state.h"
 #include "builtins/promise.h"
 #include "libregexp.h"
 #include "libunicode.h"

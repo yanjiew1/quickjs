@@ -32,7 +32,7 @@
 #include "internal/generator.h"
 #include "internal/error.h"
 #include "internal/module.h"
-#include "internal/frontend.h"
+#include "internal/parse-state.h"
 #include "builtins/promise.h"
 
 /* XXX: would be more efficient with separate module lists */
