@@ -250,8 +250,6 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/src/quickjs/vm.check.o $(OBJDIR)/tools/qjs.check.o $(PROGS)
-
 CUTILS_SRCS=src/cutils/cutils.c
 DTOA_SRCS=src/dtoa/dtoa.c
 UNICODE_SRCS=src/unicode/libunicode.c
@@ -275,6 +273,8 @@ REGEXP_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(REGEXP_SRCS))
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_CORE_SRCS) $(QUICKJS_BUILTIN_SRCS))
 QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(DTOA_OBJS) $(REGEXP_OBJS) $(UNICODE_OBJS) $(CUTILS_OBJS) $(QUICKJS_LIBC_OBJS)
+
+all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
