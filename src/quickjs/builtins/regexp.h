@@ -27,6 +27,11 @@
 
 #include "../internal/base.h"
 
+typedef struct JSRegExp {
+    JSString *pattern;
+    JSString *bytecode; /* also contains the flags */
+} JSRegExp;
+
 void js_regexp_finalizer(JSRuntime *rt, JSValue val);
 void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
 void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,

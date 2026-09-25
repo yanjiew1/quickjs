@@ -27,11 +27,7 @@
 
 #include "runtime.h"
 #include "function.h"
-
-typedef struct JSRegExp {
-    JSString *pattern;
-    JSString *bytecode; /* also contains the flags */
-} JSRegExp;
+#include "../builtins/regexp.h"
 
 typedef struct JSGlobalObject {
     JSValue uninitialized_vars; /* hidden object containing the list of uninitialized variables */
