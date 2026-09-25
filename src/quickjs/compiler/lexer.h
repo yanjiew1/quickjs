@@ -25,7 +25,7 @@
 #ifndef QUICKJS_LEXER_H
 #define QUICKJS_LEXER_H
 
-#include "parse-state.h"
+#include "../internal/parse-state.h"
 
 __exception int next_token(JSParseState *s);
 __exception int js_parse_template_part(JSParseState *s, const uint8_t *p);

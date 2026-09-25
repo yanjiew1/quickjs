@@ -24,6 +24,55 @@
  */
 #include "internal/base.h"
 #include "internal/bytecode-format.h"
+#include "internal/bytecode.h"
+#include "internal/atom.h"
+
+const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
+#define FMT(f)
+#ifdef DUMP_BYTECODE
+#define DEF(id, size, n_pop, n_push, f) { #id, size, n_pop, n_push, OP_FMT_ ## f },
+#else
+#define DEF(id, size, n_pop, n_push, f) { size, n_pop, n_push, OP_FMT_ ## f },
+#endif
+#include "quickjs-opcode.h"
+#undef DEF
+#undef FMT
+};
+
+void free_bytecode_atoms(JSRuntime *rt,
+                         const uint8_t *bc_buf, int bc_len,
+                         BOOL use_short_opcodes)
+{
+    int pos, len, op;
+    JSAtom atom;
+    const JSOpCode *oi;
+
+    pos = 0;
+    while (pos < bc_len) {
+        op = bc_buf[pos];
+        if (use_short_opcodes)
+            oi = &short_opcode_info(op);
+        else
+            oi = &opcode_info[op];
+
+        len = oi->size;
+        switch(oi->fmt) {
+        case OP_FMT_atom:
+        case OP_FMT_atom_u8:
+        case OP_FMT_atom_u16:
+        case OP_FMT_atom_label_u8:
+        case OP_FMT_atom_label_u16:
+            if ((pos + 1 + 4) > bc_len)
+                break; /* may happen if there is not enough memory when emiting bytecode */
+            atom = get_u32(bc_buf + pos + 1);
+            JS_FreeAtomRT(rt, atom);
+            break;
+        default:
+            break;
+        }
+        pos += len;
+    }
+}
 
 void dbuf_put_leb128(DynBuf *s, uint32_t v)
 {

@@ -22,44 +22,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal/base.h"
-#include "internal/frontend-state.h"
-#include "internal/lexer.h"
-#include "internal/number.h"
-#include "internal/string.h"
+#include "../internal/base.h"
+#include "frontend-state.h"
+#include "lexer.h"
+#include "../internal/number.h"
+#include "../internal/string.h"
 #include "libregexp.h"
 #include "libunicode.h"
 
 /* unicode code points */
 #define CP_NBSP 0x00a0
 #define CP_BOM  0xfeff
-
-void free_token(JSParseState *s, JSToken *token)
-{
-    switch(token->val) {
-    case TOK_NUMBER:
-        JS_FreeValue(s->ctx, token->u.num.val);
-        break;
-    case TOK_STRING:
-    case TOK_TEMPLATE:
-        JS_FreeValue(s->ctx, token->u.str.str);
-        break;
-    case TOK_REGEXP:
-        JS_FreeValue(s->ctx, token->u.regexp.body);
-        JS_FreeValue(s->ctx, token->u.regexp.flags);
-        break;
-    case TOK_IDENT:
-    case TOK_PRIVATE_NAME:
-        JS_FreeAtom(s->ctx, token->u.ident.atom);
-        break;
-    default:
-        if (token->val >= TOK_FIRST_KEYWORD &&
-            token->val <= TOK_LAST_KEYWORD) {
-            JS_FreeAtom(s->ctx, token->u.ident.atom);
-        }
-        break;
-    }
-}
 
 static void __attribute((unused)) dump_token(JSParseState *s,
                                              const JSToken *token)
@@ -428,33 +401,6 @@ __exception int js_parse_regexp(JSParseState *s)
     string_buffer_free(b);
     string_buffer_free(b2);
     return -1;
-}
-
-__exception int ident_realloc(JSContext *ctx, char **pbuf, size_t *psize,
-                              char *static_buf)
-{
-    char *buf, *new_buf;
-    size_t size, new_size;
-
-    buf = *pbuf;
-    size = *psize;
-    if (size >= (SIZE_MAX / 3) * 2)
-        new_size = SIZE_MAX;
-    else
-        new_size = size + (size >> 1);
-    if (buf == static_buf) {
-        new_buf = js_malloc(ctx, new_size);
-        if (!new_buf)
-            return -1;
-        memcpy(new_buf, buf, size);
-    } else {
-        new_buf = js_realloc(ctx, buf, new_size);
-        if (!new_buf)
-            return -1;
-    }
-    *pbuf = new_buf;
-    *psize = new_size;
-    return 0;
 }
 
 /* convert a TOK_IDENT to a keyword when needed */
@@ -1150,22 +1096,4 @@ BOOL JS_DetectModule(const char *input, size_t input_len)
     default:
         return FALSE;
     }
-}
-
-void js_parse_init(JSContext *ctx, JSParseState *s,
-                   const char *input, size_t input_len,
-                   const char *filename)
-{
-    memset(s, 0, sizeof(*s));
-    s->ctx = ctx;
-    s->filename = filename;
-    s->buf_start = s->buf_ptr = (const uint8_t *)input;
-    s->buf_end = s->buf_ptr + input_len;
-    s->token.val = ' ';
-    s->token.ptr = s->buf_ptr;
-
-    s->get_line_col_cache.ptr = s->buf_start;
-    s->get_line_col_cache.buf_start = s->buf_start;
-    s->get_line_col_cache.line_num = 0;
-    s->get_line_col_cache.col_num = 0;
 }

@@ -25,8 +25,8 @@
 #ifndef QUICKJS_FRONTEND_STATE_H
 #define QUICKJS_FRONTEND_STATE_H
 
-#include "parse-state.h"
-#include "function.h"
+#include "../internal/parse-state.h"
+#include "../internal/function.h"
 
 typedef struct BlockEnv BlockEnv;
 typedef struct JSGlobalVar JSGlobalVar;

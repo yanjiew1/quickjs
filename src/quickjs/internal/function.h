@@ -178,6 +178,7 @@ JSValueConst JS_GetActiveFunction(JSContext *ctx);
 
 BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
 
+void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                     JSFunctionBytecode *b,

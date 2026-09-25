@@ -179,6 +179,7 @@ typedef struct JSParseState {
 #define CP_LS   0x2028
 #define CP_PS   0x2029
 
+int get_line_col(int *pcol_num, const uint8_t *buf, size_t len);
 __attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState *s, const uint8_t *ptr, const char *fmt, ...);
 __exception int ident_realloc(JSContext *ctx, char **pbuf, size_t *psize,
                               char *static_buf);

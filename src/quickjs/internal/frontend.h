@@ -26,9 +26,7 @@
 #define QUICKJS_FRONTEND_H
 
 #include "runtime.h"
-#include "function.h"
 
-void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                       JSValueConst val, int flags, int scope_idx);
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,

@@ -22,11 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal/base.h"
-#include "internal/allocator.h"
-#include "internal/error.h"
-#include "internal/bytecode.h"
-#include "internal/bytecode-stack.h"
+#include "../internal/base.h"
+#include "../internal/allocator.h"
+#include "../internal/error.h"
+#include "../internal/bytecode.h"
+#include "bytecode-stack.h"
 
 #define JS_STACK_SIZE_MAX 65534
 

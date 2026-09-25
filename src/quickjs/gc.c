@@ -32,7 +32,6 @@
 #include "internal/function.h"
 #include "internal/generator.h"
 #include "internal/module.h"
-#include "internal/frontend.h"
 #include "builtins/collections.h"
 #include "builtins/weakref.h"
 #include "builtins/finalization-registry.h"

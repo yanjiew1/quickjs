@@ -22,23 +22,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal/base.h"
-#include "internal/value-print.h"
-#include "internal/runtime.h"
-#include "internal/allocator.h"
-#include "internal/gc.h"
-#include "internal/number.h"
-#include "internal/string.h"
-#include "internal/object.h"
-#include "internal/error.h"
-#include "internal/module.h"
-#include "internal/bytecode.h"
-#include "internal/bytecode-format.h"
-#include "internal/frontend.h"
-#include "internal/parse-state.h"
-#include "internal/frontend-state.h"
-#include "internal/bytecode-stack.h"
-#include "internal/lexer.h"
+#include "../internal/base.h"
+#include "../internal/value-print.h"
+#include "../internal/runtime.h"
+#include "../internal/allocator.h"
+#include "../internal/gc.h"
+#include "../internal/number.h"
+#include "../internal/string.h"
+#include "../internal/object.h"
+#include "../internal/error.h"
+#include "../internal/module.h"
+#include "../internal/bytecode.h"
+#include "../internal/bytecode-format.h"
+#include "../internal/frontend.h"
+#include "../internal/parse-state.h"
+#include "frontend-state.h"
+#include "bytecode-stack.h"
+#include "lexer.h"
 
 static inline void dbuf_set_error(DynBuf *s)
 {
@@ -149,40 +149,6 @@ struct JSVarDef {
     int func_pool_idx;
 };
 
-const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
-#define FMT(f)
-#ifdef DUMP_BYTECODE
-#define DEF(id, size, n_pop, n_push, f) { #id, size, n_pop, n_push, OP_FMT_ ## f },
-#else
-#define DEF(id, size, n_pop, n_push, f) { size, n_pop, n_push, OP_FMT_ ## f },
-#endif
-#include "quickjs-opcode.h"
-#undef DEF
-#undef FMT
-};
-
-/* return the zero based line and column number in the source. */
-/* Note: we no longer support '\r' as line terminator */
-static int get_line_col(int *pcol_num, const uint8_t *buf, size_t len)
-{
-    int line_num, col_num, c;
-    size_t i;
-    
-    line_num = 0;
-    col_num = 0;
-    for(i = 0; i < len; i++) {
-        c = buf[i];
-        if (c == '\n') {
-            line_num++;
-            col_num = 0;
-        } else if (c < 0x80 || c >= 0xc0) {
-            col_num++;
-        }
-    }
-    *pcol_num = col_num;
-    return line_num;
-}
-
 static int get_line_col_cached(GetLineColCache *s, int *pcol_num, const uint8_t *ptr)
 {
     int line_num, col_num;
@@ -216,40 +182,6 @@ static int get_line_col_cached(GetLineColCache *s, int *pcol_num, const uint8_t 
     s->ptr = ptr;
     *pcol_num = s->col_num;
     return s->line_num;
-}
-
-/* 'ptr' is the position of the error in the source */
-static int js_parse_error_v(JSParseState *s, const uint8_t *ptr, const char *fmt, va_list ap)
-{
-    JSContext *ctx = s->ctx;
-    int line_num, col_num;
-    line_num = get_line_col(&col_num, s->buf_start, ptr - s->buf_start);
-    JS_ThrowError2(ctx, JS_SYNTAX_ERROR, fmt, ap, FALSE);
-    build_backtrace(ctx, ctx->rt->current_exception, s->filename,
-                    line_num + 1, col_num + 1, 0);
-    return -1;
-}
-
-__attribute__((format(printf, 3, 4))) int js_parse_error_pos(JSParseState *s, const uint8_t *ptr, const char *fmt, ...)
-{
-    va_list ap;
-    int ret;
-    
-    va_start(ap, fmt);
-    ret = js_parse_error_v(s, ptr, fmt, ap);
-    va_end(ap);
-    return ret;
-}
-
-__attribute__((format(printf, 2, 3))) int js_parse_error(JSParseState *s, const char *fmt, ...)
-{
-    va_list ap;
-    int ret;
-    
-    va_start(ap, fmt);
-    ret = js_parse_error_v(s, s->token.ptr, fmt, ap);
-    va_end(ap);
-    return ret;
 }
 
 static int js_parse_expect(JSParseState *s, int tok)
@@ -6669,41 +6601,6 @@ static JSFunctionDef *js_new_function_def(JSContext *ctx,
     return fd;
 }
 
-static void free_bytecode_atoms(JSRuntime *rt,
-                                const uint8_t *bc_buf, int bc_len,
-                                BOOL use_short_opcodes)
-{
-    int pos, len, op;
-    JSAtom atom;
-    const JSOpCode *oi;
-
-    pos = 0;
-    while (pos < bc_len) {
-        op = bc_buf[pos];
-        if (use_short_opcodes)
-            oi = &short_opcode_info(op);
-        else
-            oi = &opcode_info[op];
-
-        len = oi->size;
-        switch(oi->fmt) {
-        case OP_FMT_atom:
-        case OP_FMT_atom_u8:
-        case OP_FMT_atom_u16:
-        case OP_FMT_atom_label_u8:
-        case OP_FMT_atom_label_u16:
-            if ((pos + 1 + 4) > bc_len)
-                break; /* may happen if there is not enough memory when emiting bytecode */
-            atom = get_u32(bc_buf + pos + 1);
-            JS_FreeAtomRT(rt, atom);
-            break;
-        default:
-            break;
-        }
-        pos += len;
-    }
-}
-
 static void js_free_function_def(JSContext *ctx, JSFunctionDef *fd)
 {
     int i;
@@ -10568,50 +10465,6 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
  fail:
     js_free_function_def(ctx, fd);
     return JS_EXCEPTION;
-}
-
-void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
-{
-    int i;
-
-#if 0
-    {
-        char buf[ATOM_GET_STR_BUF_SIZE];
-        printf("freeing %s\n",
-               JS_AtomGetStrRT(rt, buf, sizeof(buf), b->func_name));
-    }
-#endif
-    if (b->byte_code_buf)
-        free_bytecode_atoms(rt, b->byte_code_buf, b->byte_code_len, TRUE);
-
-    if (b->vardefs) {
-        for(i = 0; i < b->arg_count + b->var_count; i++) {
-            JS_FreeAtomRT(rt, b->vardefs[i].var_name);
-        }
-    }
-    for(i = 0; i < b->cpool_count; i++)
-        JS_FreeValueRT(rt, b->cpool[i]);
-
-    for(i = 0; i < b->closure_var_count; i++) {
-        JSClosureVar *cv = &b->closure_var[i];
-        JS_FreeAtomRT(rt, cv->var_name);
-    }
-    if (b->realm)
-        JS_FreeContext(b->realm);
-
-    JS_FreeAtomRT(rt, b->func_name);
-    if (b->has_debug) {
-        JS_FreeAtomRT(rt, b->debug.filename);
-        js_free_rt(rt, b->debug.pc2line_buf);
-        js_free_rt(rt, b->debug.source);
-    }
-
-    remove_gc_object(&b->header);
-    if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && js_rc(b)->ref_count != 0) {
-        list_add_tail(&b->header.link, &rt->gc_zero_ref_count_list);
-    } else {
-        js_free_rt(rt, b);
-    }
 }
 
 static __exception int js_parse_directives(JSParseState *s)

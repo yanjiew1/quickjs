@@ -29,8 +29,53 @@
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
+#include "internal/bytecode-format.h"
 #include "builtins/proxy.h"
 #include "internal/generator.h"
+
+void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
+{
+    int i;
+
+#if 0
+    {
+        char buf[ATOM_GET_STR_BUF_SIZE];
+        printf("freeing %s\n",
+               JS_AtomGetStrRT(rt, buf, sizeof(buf), b->func_name));
+    }
+#endif
+    if (b->byte_code_buf)
+        free_bytecode_atoms(rt, b->byte_code_buf, b->byte_code_len, TRUE);
+
+    if (b->vardefs) {
+        for(i = 0; i < b->arg_count + b->var_count; i++) {
+            JS_FreeAtomRT(rt, b->vardefs[i].var_name);
+        }
+    }
+    for(i = 0; i < b->cpool_count; i++)
+        JS_FreeValueRT(rt, b->cpool[i]);
+
+    for(i = 0; i < b->closure_var_count; i++) {
+        JSClosureVar *cv = &b->closure_var[i];
+        JS_FreeAtomRT(rt, cv->var_name);
+    }
+    if (b->realm)
+        JS_FreeContext(b->realm);
+
+    JS_FreeAtomRT(rt, b->func_name);
+    if (b->has_debug) {
+        JS_FreeAtomRT(rt, b->debug.filename);
+        js_free_rt(rt, b->debug.pc2line_buf);
+        js_free_rt(rt, b->debug.source);
+    }
+
+    remove_gc_object(&b->header);
+    if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && js_rc(b)->ref_count != 0) {
+        list_add_tail(&b->header.link, &rt->gc_zero_ref_count_list);
+    } else {
+        js_free_rt(rt, b);
+    }
+}
 
 void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
                                 JSAtom name, int len)
