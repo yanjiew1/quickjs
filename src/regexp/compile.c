@@ -1,5 +1,5 @@
 /*
- * Regular Expression Engine
+ * Regular Expression Compiler
  *
  * Copyright (c) 2017-2018 Fabrice Bellard
  *
