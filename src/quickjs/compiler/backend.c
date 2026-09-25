@@ -1,5 +1,5 @@
 /*
- * QuickJS bytecode compiler
+ * QuickJS compiler backend
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -36,7 +36,7 @@
 #include "../internal/bytecode-format.h"
 #include "../internal/parse-state.h"
 #include "compiler-internal.h"
-#include "bytecode-stack.h"
+#include "stack-analysis.h"
 
 #define PC2LINE_DIFF_PC_MAX ((255 - PC2LINE_OP_FIRST) / PC2LINE_RANGE)
 

@@ -26,7 +26,7 @@
 #include "../internal/allocator.h"
 #include "../internal/error.h"
 #include "../internal/bytecode.h"
-#include "bytecode-stack.h"
+#include "stack-analysis.h"
 
 #define JS_STACK_SIZE_MAX 65534
 

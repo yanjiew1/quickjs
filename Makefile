@@ -258,7 +258,7 @@ QUICKJS_CORE_SRCS=\
 	src/quickjs/vm.c src/quickjs/generator.c src/quickjs/value-print.c src/quickjs/value-compare.c src/quickjs/value-conversion.c \
 	src/quickjs/iterator-protocol.c src/quickjs/runtime.c src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/string.c src/quickjs/number.c src/quickjs/bigint.c \
 	src/quickjs/function-list.c src/quickjs/function.c src/quickjs/object.c src/quickjs/gc.c src/quickjs/memory-usage.c src/quickjs/error-support.c \
-	src/quickjs/compiler/parser.c src/quickjs/compiler/eval.c src/quickjs/compiler/bytecode-compiler.c src/quickjs/compiler/lexer.c src/quickjs/parse-state.c src/quickjs/module.c src/quickjs/bytecode-format.c src/quickjs/compiler/bytecode-stack.c src/quickjs/object-serialization.c
+	src/quickjs/compiler/parser.c src/quickjs/compiler/eval.c src/quickjs/compiler/backend.c src/quickjs/compiler/lexer.c src/quickjs/parse-state.c src/quickjs/module.c src/quickjs/bytecode-format.c src/quickjs/compiler/stack-analysis.c src/quickjs/object-serialization.c
 QUICKJS_BUILTIN_SRCS=\
 	src/quickjs/builtins/date.c src/quickjs/builtins/collections.c src/quickjs/builtins/weakref.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/proxy.c src/quickjs/builtins/reflect.c \
 	src/quickjs/builtins/regexp.c src/quickjs/builtins/promise.c src/quickjs/builtins/array-buffer.c src/quickjs/builtins/typed-array.c src/quickjs/builtins/data-view.c \
