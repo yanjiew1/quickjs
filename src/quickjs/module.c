@@ -35,6 +35,25 @@
 #include "internal/frontend.h"
 #include "builtins/promise.h"
 
+/* XXX: would be more efficient with separate module lists */
+void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
+{
+    struct list_head *el, *el1;
+    list_for_each_safe(el, el1, &ctx->loaded_modules) {
+        JSModuleDef *m = list_entry(el, JSModuleDef, link);
+        if (flag == JS_FREE_MODULE_ALL ||
+            (flag == JS_FREE_MODULE_NOT_RESOLVED && !m->resolved)) {
+            /* warning: the module may be referenced elsewhere. It
+               could be simpler to use an array instead of a list for
+               'ctx->loaded_modules' */
+            list_del(&m->link);
+            m->link.prev = NULL;
+            m->link.next = NULL;
+            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+        }
+    }
+}
+
 /* 'name' is freed. The module is referenced by 'ctx->loaded_modules' */
 JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
 {
