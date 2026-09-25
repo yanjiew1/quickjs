@@ -237,9 +237,6 @@ void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
 
 JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
 
-int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
-                            JSValueConst obj);
-
 JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
 
 extern const uint16_t func_kind_to_class_id[JS_FUNC_ASYNC_GENERATOR + 1];

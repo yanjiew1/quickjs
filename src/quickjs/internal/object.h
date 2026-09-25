@@ -367,6 +367,8 @@ int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
 JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
                            JSValueConst name);
 JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
+int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
+                            JSValueConst obj);
 int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
                  const JSClassDef *class_def, JSAtom name);
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
@@ -375,6 +377,7 @@ void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
 int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
                        JSValueConst name, JSValue val);
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
+JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
 no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
                                                       JSObject *p);
 int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
