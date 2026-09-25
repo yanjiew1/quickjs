@@ -104,7 +104,4 @@ typedef struct JSThreadState {
 #endif    
 } JSThreadState;
 
-extern uint64_t os_pending_signals;
-extern int (*os_poll_func)(JSContext *ctx);
-
 #endif

@@ -36,6 +36,7 @@
 #include "regexp.h"
 #include "array.h"
 #include "function.h"
+#include "string.h"
 
 /* RegExp */
 

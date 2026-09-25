@@ -27,6 +27,7 @@
 
 #include "base.h"
 #include "allocator.h"
+#include "function.h"
 
 typedef enum OPCodeFormat {
 #define FMT(f) OP_FMT_ ## f,

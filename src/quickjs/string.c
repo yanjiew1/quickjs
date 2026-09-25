@@ -32,6 +32,27 @@
 #include "internal/atom.h"
 #include "libunicode.h"
 
+/* return the position of the first invalid character in the string or
+   -1 if none */
+int js_string_find_invalid_codepoint(JSString *p)
+{
+    int i;
+    if (!p->is_wide_char)
+        return -1;
+    for(i = 0; i < p->len; i++) {
+        uint32_t c = p->u.str16[i];
+        if (is_surrogate(c)) {
+            if (is_hi_surrogate(c) && (i + 1) < p->len
+            &&  is_lo_surrogate(p->u.str16[i + 1])) {
+                i++;
+            } else {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
 static inline uint32_t hash_string16(const uint16_t *str,
                                      size_t len, uint32_t h)
 {

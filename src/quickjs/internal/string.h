@@ -25,7 +25,7 @@
 #ifndef QUICKJS_STRING_H
 #define QUICKJS_STRING_H
 
-#include "base.h"
+#include "runtime.h"
 #include "atom.h"
 
 static inline BOOL tag_is_string(uint32_t tag)
@@ -149,21 +149,8 @@ int string_buffer_concat_value(StringBuffer *s, JSValueConst v);
 JSValue string_buffer_end(StringBuffer *s);
 int string_getc(const JSString *p, int *pidx);
 JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end);
-int string_indexof_char(JSString *p, int c, int from);
 JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
                          JSValue str2, const char *str3);
-int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
-
-int js_string_GetSubstitution(JSContext *ctx,
-                              StringBuffer *b,
-                              JSValueConst matched,
-                              JSString *sp,
-                              uint32_t position,
-                              JSValueConst captures_val,
-                              JSValueConst namedCaptures,
-                              JSValueConst rep,
-                              uint8_t **captures,
-                              uint32_t captures_len);
 
 static inline void js_free_string(JSRuntime *rt, JSString *str)
 {

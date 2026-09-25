@@ -26,6 +26,7 @@
 #define QUICKJS_LIBC_STD_H
 
 #include "thread.h"
+#include "cutils.h"
 
 JSValue js_loadScript(JSContext *ctx, JSValueConst this_val,
                       int argc, JSValueConst *argv);
