@@ -30,7 +30,7 @@
 enum {
     __JS_ATOM_NULL = JS_ATOM_NULL,
 #define DEF(name, str) JS_ATOM_ ## name,
-#include "quickjs-atom.h"
+#include "../atom-defs.h"
 #undef DEF
     JS_ATOM_END,
 };

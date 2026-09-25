@@ -34,7 +34,7 @@ const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
 #else
 #define DEF(id, size, n_pop, n_push, f) { size, n_pop, n_push, OP_FMT_ ## f },
 #endif
-#include "quickjs-opcode.h"
+#include "opcode-defs.h"
 #undef DEF
 #undef FMT
 };

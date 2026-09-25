@@ -67,11 +67,6 @@ typedef sig_t sighandler_t;
 /* enable the os.Worker API. It relies on POSIX threads */
 #define USE_WORKER
 
-#ifdef USE_WORKER
-#include <pthread.h>
-#include <stdatomic.h>
-#endif
-
 #include "cutils.h"
 #include "list.h"
 #include "quickjs-libc.h"

@@ -1,5 +1,5 @@
 /*
- * QuickJS typed array and ArrayBuffer builtin interface
+ * QuickJS typed array builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon

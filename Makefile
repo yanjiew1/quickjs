@@ -166,7 +166,7 @@ endif
 endif
 
 CFLAGS+=$(DEFINES)
-CFLAGS+=-Iinclude -Isrc/cutils -Isrc/dtoa -Isrc/unicode -Isrc/regexp -Isrc/quickjs
+CFLAGS+=-Iinclude -Isrc/cutils -Isrc/dtoa -Isrc/unicode -Isrc/regexp
 CFLAGS_DEBUG=$(CFLAGS) -O0
 CFLAGS_SMALL=$(CFLAGS) -Os
 CFLAGS_OPT=$(CFLAGS) -O2

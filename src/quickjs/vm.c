@@ -2588,7 +2588,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 #else
 #define def(id, size, n_pop, n_push, f) && case_default,
 #endif
-#include "quickjs-opcode.h"
+#include "opcode-defs.h"
         [ OP_COUNT ... 255 ] = &&case_default
     };
 #define SWITCH(pc)      goto *dispatch_table[opcode = *pc++];

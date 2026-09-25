@@ -64,21 +64,12 @@ typedef sig_t sighandler_t;
 
 #endif
 
-/* enable the os.Worker API. It relies on POSIX threads */
-#define USE_WORKER
-
-#ifdef USE_WORKER
-#include <pthread.h>
-#include <stdatomic.h>
-#endif
-
 #include "cutils.h"
 #include "list.h"
 #include "quickjs-libc.h"
 #include "thread.h"
 #include "os.h"
 #include "std.h"
-#include "module-loader.h"
 
 static void js_std_dbuf_init(JSContext *ctx, DynBuf *s)
 {

@@ -30,7 +30,7 @@
 typedef enum OPCodeFormat {
 #define FMT(f) OP_FMT_ ## f,
 #define DEF(id, size, n_pop, n_push, f)
-#include "quickjs-opcode.h"
+#include "../opcode-defs.h"
 #undef DEF
 #undef FMT
 } OPCodeFormat;
@@ -39,7 +39,7 @@ enum OPCodeEnum {
 #define FMT(f)
 #define DEF(id, size, n_pop, n_push, f) OP_ ## id,
 #define def(id, size, n_pop, n_push, f)
-#include "quickjs-opcode.h"
+#include "../opcode-defs.h"
 #undef def
 #undef DEF
 #undef FMT
@@ -50,7 +50,7 @@ enum OPCodeEnum {
 #define FMT(f)
 #define DEF(id, size, n_pop, n_push, f)
 #define def(id, size, n_pop, n_push, f) OP_ ## id,
-#include "quickjs-opcode.h"
+#include "../opcode-defs.h"
 #undef def
 #undef DEF
 #undef FMT

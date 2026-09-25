@@ -25,6 +25,7 @@
 #ifndef QUICKJS_LIBC_OS_H
 #define QUICKJS_LIBC_OS_H
 
+#include <sys/types.h>
 #include "thread.h"
 
 extern uint64_t os_pending_signals;
