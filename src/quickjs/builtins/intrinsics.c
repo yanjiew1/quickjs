@@ -37,6 +37,8 @@
 #include "proxy.h"
 #include "number.h"
 #include "boolean.h"
+#include "weakref.h"
+#include "finalization-registry.h"
 #include "object-methods.h"
 #include "math.h"
 #include "string.h"
@@ -393,4 +395,11 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
     if (JS_AddIntrinsicBigInt(ctx))
         return -1;
     return 0;
+}
+
+int JS_AddIntrinsicWeakRef(JSContext *ctx)
+{
+    if (js_add_intrinsic_weakref(ctx))
+        return -1;
+    return js_add_intrinsic_finalization_registry(ctx);
 }

@@ -1,5 +1,5 @@
 /*
- * QuickJS weak reference builtin interface
+ * QuickJS FinalizationRegistry builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,16 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_WEAKREF_H
-#define QUICKJS_BUILTINS_WEAKREF_H
+#ifndef QUICKJS_BUILTINS_FINALIZATION_REGISTRY_H
+#define QUICKJS_BUILTINS_FINALIZATION_REGISTRY_H
 
 #include "../internal/runtime.h"
 
-BOOL js_weakref_is_target(JSValueConst val);
-BOOL js_weakref_is_live(JSValueConst val);
-void js_weakref_free(JSRuntime *rt, JSValue val);
-JSValue js_weakref_new(JSContext *ctx, JSValueConst val);
-void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
-int js_add_intrinsic_weakref(JSContext *ctx);
+void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
+int js_add_intrinsic_finalization_registry(JSContext *ctx);
 
 #endif

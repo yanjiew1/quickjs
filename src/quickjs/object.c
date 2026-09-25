@@ -39,6 +39,7 @@
 #include "libunicode.h"
 #include "builtins/collections.h"
 #include "builtins/weakref.h"
+#include "builtins/finalization-registry.h"
 #include "builtins/proxy.h"
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
