@@ -24,7 +24,6 @@
  */
 #include "../internal/base.h"
 #include "../internal/runtime.h"
-#include "../internal/string.h"
 #include "../internal/object.h"
 #include "../internal/function.h"
 #include "../internal/function-list.h"
@@ -35,7 +34,6 @@
 #include "global.h"
 #include "bigint.h"
 #include "iterator.h"
-#include "proxy.h"
 #include "reflect.h"
 #include "number.h"
 #include "boolean.h"

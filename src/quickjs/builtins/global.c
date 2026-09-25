@@ -26,7 +26,6 @@
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/string.h"
-#include "../internal/object.h"
 #include "../internal/error.h"
 #include "../internal/frontend.h"
 #include "global.h"

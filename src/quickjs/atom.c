@@ -23,14 +23,11 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
-#include "internal/value-conversion.h"
-#include "internal/error.h"
 #include "internal/runtime.h"
 #include "internal/string.h"
 #include "internal/number.h"
 #include "dtoa.h"
 #include "internal/atom.h"
-#include "libunicode.h"
 
 static inline uint32_t atom_get_free(const JSAtomStruct *p)
 {

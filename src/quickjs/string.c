@@ -27,10 +27,7 @@
 #include "internal/error.h"
 #include "internal/runtime.h"
 #include "internal/string.h"
-#include "internal/number.h"
-#include "dtoa.h"
 #include "internal/atom.h"
-#include "libunicode.h"
 
 /* strings <= this length are not concatenated using ropes. if too
    small, the rope memory overhead becomes high. */

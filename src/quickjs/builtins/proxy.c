@@ -26,7 +26,6 @@
 #include "../internal/value-conversion.h"
 #include "../internal/value-compare.h"
 #include "../internal/runtime.h"
-#include "../internal/number.h"
 #include "../internal/object.h"
 #include "../internal/error.h"
 #include "../internal/atom.h"

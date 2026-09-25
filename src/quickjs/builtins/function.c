@@ -24,13 +24,11 @@
  */
 #include "../internal/base.h"
 #include "../internal/runtime.h"
-#include "../internal/number.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
 #include "../internal/generator.h"
 #include "../internal/bytecode.h"
 #include "../internal/frontend.h"
-#include "array.h"
 #include "function.h"
 
 /* XXX: not 100% compatible, but mozilla seems to use a similar

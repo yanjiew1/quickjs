@@ -26,7 +26,6 @@
 #include "libregexp.h"
 #include "dtoa.h"
 #include "internal/runtime.h"
-#include "internal/number.h"
 #include "internal/bigint.h"
 #include "internal/atom.h"
 #include "internal/string.h"

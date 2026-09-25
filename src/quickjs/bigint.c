@@ -28,12 +28,8 @@
 #include "internal/bigint.h"
 #include "internal/number.h"
 #include "internal/string.h"
-#include "internal/object.h"
-#include "internal/function.h"
-#include "internal/atom.h"
 #include "internal/bytecode.h"
 #include "dtoa.h"
-#include "libunicode.h"
 
 /* bigint support */
 

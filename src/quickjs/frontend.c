@@ -35,10 +35,8 @@
 #include "internal/bytecode.h"
 #include "internal/frontend.h"
 #include "internal/parse-state.h"
-#include "builtins/promise.h"
 #include "libregexp.h"
 #include "libunicode.h"
-#include "dtoa.h"
 
 static inline void dbuf_set_error(DynBuf *s)
 {

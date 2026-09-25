@@ -28,8 +28,6 @@
 #include "internal/value-conversion.h"
 #include "internal/value-compare.h"
 #include "internal/iterator.h"
-#include "libregexp.h"
-#include "dtoa.h"
 #include "internal/runtime.h"
 #include "internal/gc.h"
 #include "internal/number.h"
@@ -40,13 +38,8 @@
 #include "internal/module.h"
 #include "internal/bytecode.h"
 #include "internal/frontend.h"
-#include "builtins/date.h"
-#include "builtins/collections.h"
 #include "builtins/array.h"
-#include "builtins/proxy.h"
 #include "builtins/regexp.h"
-#include "builtins/promise.h"
-#include "builtins/typed-array.h"
 #include "builtins/function.h"
 
 #if defined(__EMSCRIPTEN__)

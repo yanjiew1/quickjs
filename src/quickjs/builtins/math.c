@@ -26,7 +26,6 @@
 #include "../internal/iterator.h"
 #include "../internal/runtime.h"
 #include "../internal/number.h"
-#include "../internal/function.h"
 #include "../internal/atom.h"
 #include "math.h"
 
