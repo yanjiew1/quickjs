@@ -164,7 +164,7 @@ mkdir -p $outdir $outdir/doc $outdir/tests $outdir/examples
 cp Makefile VERSION TODO Changelog readme.txt LICENSE \
    test262o.conf test262.conf test262o_errors.txt test262_errors.txt \
    $outdir
-cp -a include src tools $outdir
+cp -a include src tools compat $outdir
 
 cp tests/*.js tests/*.patch tests/bjson.c tests/regexp_test.c $outdir/tests
 
