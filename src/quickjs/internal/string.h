@@ -191,6 +191,4 @@ int string_buffer_write8(StringBuffer *s, const uint8_t *p, int len);
 
 __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
 
-__maybe_unused void JS_DumpAtoms(JSRuntime *rt);
-
 #endif

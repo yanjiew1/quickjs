@@ -60,6 +60,7 @@ static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
 void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
 JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
 BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+__maybe_unused void JS_DumpAtoms(JSRuntime *rt);
 JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 
