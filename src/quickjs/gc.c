@@ -23,29 +23,19 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
-#include "internal/value-conversion.h"
-#include "internal/value-compare.h"
 #include "internal/value-print.h"
 #include "internal/runtime.h"
-#include "internal/number.h"
 #include "internal/bigint.h"
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/gc.h"
 #include "internal/function.h"
 #include "internal/generator.h"
-#include "internal/error.h"
-#include "internal/function-list.h"
 #include "internal/module.h"
 #include "internal/frontend.h"
-#include "libunicode.h"
 #include "builtins/collections.h"
 #include "builtins/weakref.h"
 #include "builtins/finalization-registry.h"
-#include "builtins/proxy.h"
-#include "builtins/typed-array.h"
-#include "builtins/array-buffer.h"
-#include "builtins/string.h"
 
 static void js_autoinit_mark(JSRuntime *rt, JSProperty *pr,
                              JS_MarkFunc *mark_func)

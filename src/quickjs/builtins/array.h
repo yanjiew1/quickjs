@@ -25,7 +25,7 @@
 #ifndef QUICKJS_BUILTINS_ARRAY_H
 #define QUICKJS_BUILTINS_ARRAY_H
 
-#include "../internal/function.h"
+#include "../internal/iterator.h"
 
 JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
                       int argc, JSValueConst *argv, int unshift);

@@ -24,6 +24,7 @@
  */
 #include "../internal/base.h"
 #include "../internal/value-conversion.h"
+#include "../internal/iterator.h"
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/string.h"

@@ -26,7 +26,6 @@
 #define QUICKJS_BYTECODE_H
 
 #include "base.h"
-#include "allocator.h"
 #include "function.h"
 
 typedef enum OPCodeFormat {

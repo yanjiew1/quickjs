@@ -27,6 +27,12 @@
 
 #include "base.h"
 
+typedef enum JSIteratorKindEnum {
+    JS_ITERATOR_KIND_KEY,
+    JS_ITERATOR_KIND_VALUE,
+    JS_ITERATOR_KIND_KEY_AND_VALUE,
+} JSIteratorKindEnum;
+
 JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj, JSValueConst method);
 JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
 JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,

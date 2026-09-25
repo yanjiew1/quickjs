@@ -30,6 +30,7 @@
 #include "../internal/bigint.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/function.h"
 #include "../internal/function-list.h"
 #include "typed-array.h"
 #include "array-buffer.h"

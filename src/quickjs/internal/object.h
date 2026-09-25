@@ -26,7 +26,6 @@
 #define QUICKJS_OBJECT_H
 
 #include "runtime.h"
-#include "function.h"
 #include "../builtins/regexp.h"
 
 typedef struct JSGlobalObject {

@@ -29,6 +29,7 @@
 #include "../internal/bigint.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/function.h"
 #include "dtoa.h"
 #include "number.h"
 #include "global.h"

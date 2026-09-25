@@ -26,6 +26,7 @@
 #include "../internal/runtime.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/function.h"
 #include "boolean.h"
 
 /* Boolean */

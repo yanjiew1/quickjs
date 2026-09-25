@@ -25,7 +25,7 @@
 #ifndef QUICKJS_VALUE_PRINT_H
 #define QUICKJS_VALUE_PRINT_H
 
-#include "object.h"
+#include "base.h"
 
 void js_dump_value_write(void *opaque, const char *buf, size_t len);
 __maybe_unused void print_atom(JSContext *ctx, JSAtom atom);

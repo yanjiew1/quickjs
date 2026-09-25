@@ -25,7 +25,7 @@
 #ifndef QUICKJS_BUILTINS_ITERATOR_H
 #define QUICKJS_BUILTINS_ITERATOR_H
 
-#include "../internal/function.h"
+#include "../internal/base.h"
 
 extern const JSCFunctionListEntry js_iterator_funcs[2];
 extern const JSCFunctionListEntry js_iterator_proto_funcs[13];

@@ -25,6 +25,7 @@
 #include "../internal/base.h"
 #include "../internal/value-conversion.h"
 #include "../internal/value-compare.h"
+#include "../internal/iterator.h"
 #include "../internal/runtime.h"
 #include "../internal/allocator.h"
 #include "../internal/number.h"

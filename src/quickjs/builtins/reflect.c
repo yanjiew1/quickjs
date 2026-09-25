@@ -28,6 +28,7 @@
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/object.h"
+#include "../internal/iterator.h"
 #include "../internal/error.h"
 #include "../internal/atom.h"
 #include "reflect.h"

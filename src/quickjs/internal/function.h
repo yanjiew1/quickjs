@@ -147,12 +147,6 @@ typedef struct JSBoundFunction {
     JSValue argv[0];
 } JSBoundFunction;
 
-typedef enum JSIteratorKindEnum {
-    JS_ITERATOR_KIND_KEY,
-    JS_ITERATOR_KIND_VALUE,
-    JS_ITERATOR_KIND_KEY_AND_VALUE,
-} JSIteratorKindEnum;
-
 typedef struct JSForInIterator {
     JSValue obj;
     uint32_t idx;
