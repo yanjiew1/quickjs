@@ -259,7 +259,7 @@ REGEXP_SRCS=src/regexp/compile.c src/regexp/exec.c
 QUICKJS_CORE_SRCS=\
 	src/quickjs/vm.c src/quickjs/generator.c src/quickjs/value-print.c src/quickjs/value-compare.c src/quickjs/value-conversion.c \
 	src/quickjs/iterator-protocol.c src/quickjs/runtime.c src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/string.c src/quickjs/number.c src/quickjs/bigint.c \
-	src/quickjs/function-list.c src/quickjs/function-object.c src/quickjs/object.c src/quickjs/gc.c src/quickjs/memory-usage.c src/quickjs/error-support.c \
+	src/quickjs/function-list.c src/quickjs/function.c src/quickjs/object.c src/quickjs/gc.c src/quickjs/memory-usage.c src/quickjs/error-support.c \
 	src/quickjs/frontend.c src/quickjs/module.c src/quickjs/bytecode-io.c
 QUICKJS_BUILTIN_SRCS=\
 	src/quickjs/builtins/date.c src/quickjs/builtins/collections.c src/quickjs/builtins/weakref.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/proxy.c src/quickjs/builtins/reflect.c \
