@@ -26,7 +26,7 @@
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/object.h"
-#include "../internal/bytecode.h"
+#include "../internal/function.h"
 #include "typed-array.h"
 #include "array-buffer.h"
 #include "data-view.h"

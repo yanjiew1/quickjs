@@ -33,6 +33,7 @@
 #include "internal/error.h"
 #include "internal/module.h"
 #include "internal/bytecode.h"
+#include "internal/bytecode-format.h"
 #include "internal/frontend.h"
 #include "internal/parse-state.h"
 #include "libregexp.h"

@@ -29,7 +29,7 @@
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
-#include "internal/bytecode.h"
+#include "internal/bytecode-format.h"
 #include "internal/error.h"
 
 JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop)
