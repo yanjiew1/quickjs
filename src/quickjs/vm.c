@@ -1410,6 +1410,30 @@ static JSValue js_build_mapped_arguments(JSContext *ctx, int argc,
     return JS_EXCEPTION;
 }
 
+void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(val);
+    JSForInIterator *it = p->u.for_in_iterator;
+    int i;
+
+    JS_FreeValueRT(rt, it->obj);
+    if (!it->is_array) {
+        for(i = 0; i < it->atom_count; i++) {
+            JS_FreeAtomRT(rt, it->tab_atom[i].atom);
+        }
+        js_free_rt(rt, it->tab_atom);
+    }
+    js_free_rt(rt, it);
+}
+
+void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                JS_MarkFunc *mark_func)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(val);
+    JSForInIterator *it = p->u.for_in_iterator;
+    JS_MarkValue(rt, it->obj, mark_func);
+}
+
 static JSValue build_for_in_iterator(JSContext *ctx, JSValue obj)
 {
     JSObject *p, *p1;
@@ -2163,13 +2187,6 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
     JS_FreeValue(ctx, func_obj);
     return JS_EXCEPTION;
 }
-
-const uint16_t func_kind_to_class_id[] = {
-    [JS_FUNC_NORMAL] = JS_CLASS_BYTECODE_FUNCTION,
-    [JS_FUNC_GENERATOR] = JS_CLASS_GENERATOR_FUNCTION,
-    [JS_FUNC_ASYNC] = JS_CLASS_ASYNC_FUNCTION,
-    [JS_FUNC_ASYNC_GENERATOR] = JS_CLASS_ASYNC_GENERATOR_FUNCTION,
-};
 
 JSValue js_closure(JSContext *ctx, JSValue bfunc,
                    JSVarRef **cur_var_refs,

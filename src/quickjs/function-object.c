@@ -49,6 +49,13 @@ BOOL js_class_has_bytecode(JSClassID class_id)
             class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION);
 }
 
+const uint16_t func_kind_to_class_id[] = {
+    [JS_FUNC_NORMAL] = JS_CLASS_BYTECODE_FUNCTION,
+    [JS_FUNC_GENERATOR] = JS_CLASS_GENERATOR_FUNCTION,
+    [JS_FUNC_ASYNC] = JS_CLASS_ASYNC_FUNCTION,
+    [JS_FUNC_ASYNC_GENERATOR] = JS_CLASS_ASYNC_GENERATOR_FUNCTION,
+};
+
 /* return NULL without exception if not a function or no bytecode */
 JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val)
 {

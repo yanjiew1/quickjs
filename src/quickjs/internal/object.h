@@ -375,7 +375,6 @@ void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
 void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
 int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
                        JSValueConst name, JSValue val);
-JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop);
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
 no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
                                                       JSObject *p);
@@ -390,9 +389,6 @@ void js_array_mark(JSRuntime *rt, JSValueConst val,
 JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
 JSContext *js_autoinit_get_realm(JSProperty *pr);
 JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab);
-void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
-void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func);
 void js_free_shape_null(JSRuntime *rt, JSShape *sh);
 void js_object_data_finalizer(JSRuntime *rt, JSValue val);
 void js_object_data_mark(JSRuntime *rt, JSValueConst val,

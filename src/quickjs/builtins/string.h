@@ -33,5 +33,6 @@ extern const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
 JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
                               int argc, JSValueConst *argv);
 extern const JSClassExoticMethods js_string_exotic_methods;
+uint32_t js_string_obj_get_length(JSContext *ctx, JSValueConst obj);
 
 #endif

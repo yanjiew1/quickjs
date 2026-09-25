@@ -179,8 +179,6 @@ JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
 JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
 
 JSValue js_new_string_char(JSContext *ctx, uint16_t c);
-uint32_t js_string_obj_get_length(JSContext *ctx,
-                                  JSValueConst obj);
 JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
 int string_buffer_fill(StringBuffer *s, int c, int count);
 

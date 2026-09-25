@@ -36,6 +36,21 @@
 
 /* String */
 
+uint32_t js_string_obj_get_length(JSContext *ctx,
+                                  JSValueConst obj)
+{
+    JSObject *p;
+    uint32_t len = 0;
+
+    /* This is a class exotic method: obj class_id is JS_CLASS_STRING */
+    p = JS_VALUE_GET_OBJ(obj);
+    if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_STRING) {
+        JSString *p1 = JS_VALUE_GET_STRING(p->u.object_data);
+        len = p1->len;
+    }
+    return len;
+}
+
 static int js_string_get_own_property(JSContext *ctx,
                                       JSPropertyDescriptor *desc,
                                       JSValueConst obj, JSAtom prop)

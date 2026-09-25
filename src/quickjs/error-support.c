@@ -31,6 +31,26 @@
 #include "internal/bytecode.h"
 #include "internal/error.h"
 
+JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop)
+{
+    return JS_ThrowSyntaxErrorAtom(ctx, "redeclaration of '%s'", prop);
+}
+
+BOOL JS_IsError(JSContext *ctx, JSValueConst val)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(val);
+    return (p->class_id == JS_CLASS_ERROR);
+}
+
+/* must be called after JS_Throw() */
+void JS_SetUncatchableException(JSContext *ctx, BOOL flag)
+{
+    ctx->rt->current_exception_is_uncatchable = flag;
+}
+
 /* WARNING: obj is freed */
 JSValue JS_Throw(JSContext *ctx, JSValue obj)
 {

@@ -44,6 +44,7 @@
 #include "builtins/proxy.h"
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
+#include "builtins/string.h"
 
 /* return -1 if exception (proxy case) or TRUE/FALSE */
 // TODO: should take flags to make proxy resolution and exceptions optional
@@ -1188,30 +1189,6 @@ void js_object_data_mark(JSRuntime *rt, JSValueConst val,
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
     JS_MarkValue(rt, p->u.object_data, mark_func);
-}
-
-void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val)
-{
-    JSObject *p = JS_VALUE_GET_OBJ(val);
-    JSForInIterator *it = p->u.for_in_iterator;
-    int i;
-
-    JS_FreeValueRT(rt, it->obj);
-    if (!it->is_array) {
-        for(i = 0; i < it->atom_count; i++) {
-            JS_FreeAtomRT(rt, it->tab_atom[i].atom);
-        }
-        js_free_rt(rt, it->tab_atom);
-    }
-    js_free_rt(rt, it);
-}
-
-void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
-                                JS_MarkFunc *mark_func)
-{
-    JSObject *p = JS_VALUE_GET_OBJ(val);
-    JSForInIterator *it = p->u.for_in_iterator;
-    JS_MarkValue(rt, it->obj, mark_func);
 }
 
 static void free_object(JSRuntime *rt, JSObject *p)
@@ -2431,21 +2408,6 @@ int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func)
     p = JS_VALUE_GET_OBJ(obj);
     prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, (JSValue)brand));
     return (prs != NULL);
-}
-
-uint32_t js_string_obj_get_length(JSContext *ctx,
-                                  JSValueConst obj)
-{
-    JSObject *p;
-    uint32_t len = 0;
-
-    /* This is a class exotic method: obj class_id is JS_CLASS_STRING */
-    p = JS_VALUE_GET_OBJ(obj);
-    if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_STRING) {
-        JSString *p1 = JS_VALUE_GET_STRING(p->u.object_data);
-        len = p1->len;
-    }
-    return len;
 }
 
 static int num_keys_cmp(const void *p1, const void *p2, void *opaque)
@@ -4761,11 +4723,6 @@ int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
 }
 
 
-JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop)
-{
-    return JS_ThrowSyntaxErrorAtom(ctx, "redeclaration of '%s'", prop);
-}
-
 /* flags is 0, DEFINE_GLOBAL_LEX_VAR or DEFINE_GLOBAL_FUNC_VAR */
 /* XXX: could support exotic global object. */
 int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags)
@@ -4906,21 +4863,6 @@ int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int fl
     res = JS_DeleteProperty(ctx, obj, prop, flags);
     JS_FreeAtom(ctx, prop);
     return res;
-}
-
-BOOL JS_IsError(JSContext *ctx, JSValueConst val)
-{
-    JSObject *p;
-    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
-        return FALSE;
-    p = JS_VALUE_GET_OBJ(val);
-    return (p->class_id == JS_CLASS_ERROR);
-}
-
-/* must be called after JS_Throw() */
-void JS_SetUncatchableException(JSContext *ctx, BOOL flag)
-{
-    ctx->rt->current_exception_is_uncatchable = flag;
 }
 
 void JS_SetOpaque(JSValue obj, void *opaque)
