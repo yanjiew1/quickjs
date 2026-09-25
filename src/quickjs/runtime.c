@@ -1,5 +1,5 @@
 /*
- * QuickJS Javascript Engine
+ * QuickJS runtime lifecycle and allocation
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon

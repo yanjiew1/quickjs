@@ -1,5 +1,5 @@
 /*
- * QuickJS parser, modules, and bytecode
+ * QuickJS parser and bytecode compiler
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -13138,16 +13138,3 @@ JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
     return JS_EvalThis(ctx, ctx->global_obj, input, input_len, filename,
                        eval_flags);
 }
-
-int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
-{
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
-        JSModuleDef *m = JS_VALUE_GET_PTR(obj);
-        if (js_resolve_module(ctx, m) < 0) {
-            js_free_modules(ctx, JS_FREE_MODULE_NOT_RESOLVED);
-            return -1;
-        }
-    }
-    return 0;
-}
-

@@ -1,5 +1,5 @@
 /*
- * QuickJS weak reference builtins
+ * QuickJS weak reference support and WeakRef builtin
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon

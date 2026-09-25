@@ -1,5 +1,5 @@
 /*
- * QuickJS Javascript Engine
+ * QuickJS atoms and strings
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon

@@ -1,5 +1,5 @@
 /*
- * QuickJS Promise builtin
+ * QuickJS Promise and async intrinsic builtins
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon

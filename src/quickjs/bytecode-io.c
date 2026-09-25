@@ -1,5 +1,5 @@
 /*
- * QuickJS parser, modules, and bytecode
+ * QuickJS bytecode metadata and binary object I/O
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon

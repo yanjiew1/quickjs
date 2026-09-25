@@ -1963,3 +1963,15 @@ JSValue js_evaluate_module(JSContext *ctx, JSModuleDef *m)
     }
     return JS_DupValue(ctx, m->promise);
 }
+
+int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
+{
+    if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
+        JSModuleDef *m = JS_VALUE_GET_PTR(obj);
+        if (js_resolve_module(ctx, m) < 0) {
+            js_free_modules(ctx, JS_FREE_MODULE_NOT_RESOLVED);
+            return -1;
+        }
+    }
+    return 0;
+}
