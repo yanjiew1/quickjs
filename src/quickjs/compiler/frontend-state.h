@@ -30,10 +30,53 @@
 
 typedef struct BlockEnv BlockEnv;
 typedef struct JSGlobalVar JSGlobalVar;
+typedef struct RelocEntry RelocEntry;
 typedef struct JumpSlot JumpSlot;
 typedef struct LabelSlot LabelSlot;
 typedef struct LineNumberSlot LineNumberSlot;
 typedef struct JSVarDef JSVarDef;
+
+struct JSGlobalVar {
+    int cpool_idx; /* if >= 0, index in the constant pool for hoisted
+                      function defintion*/
+    uint8_t force_init : 1; /* force initialization to undefined */
+    uint8_t is_lexical : 1; /* global let/const definition */
+    uint8_t is_const   : 1; /* const definition */
+    int scope_level;    /* scope of definition */
+    JSAtom var_name;  /* variable name */
+};
+
+struct LabelSlot {
+    int ref_count;
+    int pos;    /* phase 1 address, -1 means not resolved yet */
+    int pos2;   /* phase 2 address, -1 means not resolved yet */
+    int addr;   /* phase 3 address, -1 means not resolved yet */
+    RelocEntry *first_reloc;
+};
+
+struct JSVarDef {
+    JSAtom var_name;
+    /* index into fd->scopes of this variable lexical scope */
+    int scope_level;
+    /* - if scope_level = 0: scope in which the variable is defined
+       - if scope_level != 0: index into fd->vars of the next
+       variable in the same or enclosing lexical scope
+    */
+    int scope_next;
+    uint8_t is_const : 1;
+    uint8_t is_lexical : 1;
+    uint8_t is_captured : 1; /* XXX: could remove and use a var_ref_idx value */
+    uint8_t is_static_private : 1; /* only used during private class field parsing */
+    uint8_t var_kind : 4; /* see JSVarKindEnum */
+    /* if is_captured = TRUE, provides, the index of the corresponding
+       JSVarRef on stack */
+    uint16_t var_ref_idx;
+    /* function pool index for lexical variables with var_kind =
+       JS_VAR_FUNCTION_DECL/JS_VAR_NEW_FUNCTION_DECL or scope level of
+       the definition of the 'var' variables (they have scope_level =
+       0) */
+    int func_pool_idx;
+};
 
 typedef enum JSParseFunctionEnum {
     JS_PARSE_FUNC_STATEMENT,
