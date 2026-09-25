@@ -28,8 +28,6 @@
 #include "runtime.h"
 #include "function.h"
 
-typedef struct JSFunctionDef JSFunctionDef;
-
 enum {
     TOK_NUMBER = -128,
     TOK_STRING,
@@ -127,9 +125,6 @@ enum {
     TOK_OF,     /* only used for js_parse_skip_parens_token() */
 };
 
-#define TOK_FIRST_KEYWORD   TOK_NULL
-#define TOK_LAST_KEYWORD    TOK_AWAIT
-
 typedef struct {
     /* last source position */
     const uint8_t *ptr;
@@ -172,7 +167,7 @@ typedef struct JSParseState {
     const uint8_t *buf_end;
 
     /* current function code */
-    JSFunctionDef *cur_func;
+    struct JSFunctionDef *cur_func;
     BOOL is_module; /* parsing a module */
     BOOL allow_html_comments;
     BOOL ext_json; /* JSON parsing: true if accepting JSON superset */

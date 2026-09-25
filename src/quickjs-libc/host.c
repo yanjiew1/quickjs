@@ -80,6 +80,12 @@ typedef sig_t sighandler_t;
 #include "std.h"
 #include "module-loader.h"
 
+typedef struct {
+    struct list_head link;
+    JSValue promise;
+    JSValue reason;
+} JSRejectedPromiseEntry;
+
 /**********************************************************/
 
 static JSValue js_print(JSContext *ctx, JSValueConst this_val,

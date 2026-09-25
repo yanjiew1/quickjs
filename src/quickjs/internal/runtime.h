@@ -231,14 +231,6 @@ struct JSContext {
     void *user_opaque;
 };
 
-typedef struct JSJobEntry {
-    struct list_head link;
-    JSContext *realm;
-    JSJobFunc *job_func;
-    int argc;
-    JSValue argv[0];
-} JSJobEntry;
-
 typedef struct JSClassShortDef {
     JSAtom class_name;
     JSClassFinalizer *finalizer;

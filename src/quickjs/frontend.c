@@ -66,6 +66,9 @@ static inline void put_u8(uint8_t *tab, uint8_t val)
 
 /* JS parser */
 
+#define TOK_FIRST_KEYWORD   TOK_NULL
+#define TOK_LAST_KEYWORD    TOK_AWAIT
+
 
 
 /* unicode code points */

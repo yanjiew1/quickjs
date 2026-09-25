@@ -28,6 +28,40 @@
 
 /* JS malloc */
 
+#define JS_MALLOC_ARENA_SIZE 4096
+#define JS_MALLOC_MIN_SMALL_SIZE 16
+#define JS_MALLOC_MAX_SMALL_SIZE 512
+#if defined(__SANITIZE_ADDRESS__)
+/* use the host malloc() for all allocations */
+#define JS_MALLOC_LARGE_BLOCKS_ONLY 1
+#else
+#define JS_MALLOC_LARGE_BLOCKS_ONLY 0
+#endif
+
+#define FREE_NIL 0xffff
+
+typedef struct JSMallocLargeBlockHeader {
+#ifdef JS_MALLOC_USE_ITER
+    struct list_head link;
+#endif
+    JSMallocBlockHeader header;
+} JSMallocLargeBlockHeader;
+
+typedef struct {
+    struct list_head free_link;
+    struct list_head link;
+    uint8_t block_size_idx;
+    uint16_t n_used_blocks; /* number of allocated blocks */
+    uint16_t n_blocks; /* total number of blocks */
+    uint16_t first_free_block; /* FREE_NIL if none */
+#ifdef JS_MALLOC_USE_ITER
+    /* bit set to 1 for allocated block */
+    uint32_t bitmap[((JS_MALLOC_ARENA_SIZE / JS_MALLOC_MIN_SMALL_SIZE) + 31) / 32];
+#endif
+    /* n_blocks memory blocks of identical size */
+    __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t blocks[];
+} JSMallocArena;
+
 /* max overhead for size >= 64: 12.5% */
 static const uint16_t js_malloc_block_sizes[JS_MALLOC_BLOCK_SIZE_COUNT] = {
     16,

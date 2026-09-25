@@ -44,6 +44,14 @@
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
 
+typedef struct JSJobEntry {
+    struct list_head link;
+    JSContext *realm;
+    JSJobFunc *job_func;
+    int argc;
+    JSValue argv[0];
+} JSJobEntry;
+
 static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_Object, NULL, NULL },                             /* JS_CLASS_OBJECT */
     { JS_ATOM_Array, js_array_finalizer, js_array_mark },       /* JS_CLASS_ARRAY */

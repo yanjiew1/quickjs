@@ -30,22 +30,11 @@
 /* JS malloc */
 
 #define JS_MALLOC_ALIGN 8
-#define JS_MALLOC_ARENA_SIZE 4096
 #define JS_MALLOC_BLOCK_SIZE_COUNT 31
-#define JS_MALLOC_MIN_SMALL_SIZE 16
-#define JS_MALLOC_MAX_SMALL_SIZE 512
-#if defined(__SANITIZE_ADDRESS__)
-/* use the host malloc() for all allocations */
-#define JS_MALLOC_LARGE_BLOCKS_ONLY 1
-#else
-#define JS_MALLOC_LARGE_BLOCKS_ONLY 0
-#endif
 
 /* allow iteration among the allocated blocks. Currently not used. May
    be used to suppress the memory overhead of JSGCObjectHeader */
 //#define JS_MALLOC_USE_ITER
-
-#define FREE_NIL 0xffff
 
 /* 8 byte header */
 /* Notes:
@@ -72,28 +61,6 @@ static inline JSMallocBlockHeader *js_rc(void *ptr)
 {
     return container_of(ptr, JSMallocBlockHeader, user_data);
 }
-
-typedef struct JSMallocLargeBlockHeader {
-#ifdef JS_MALLOC_USE_ITER
-    struct list_head link;
-#endif
-    JSMallocBlockHeader header;
-} JSMallocLargeBlockHeader;
-
-typedef struct {
-    struct list_head free_link;
-    struct list_head link;
-    uint8_t block_size_idx;
-    uint16_t n_used_blocks; /* number of allocated blocks */
-    uint16_t n_blocks; /* total number of blocks */
-    uint16_t first_free_block; /* FREE_NIL if none */
-#ifdef JS_MALLOC_USE_ITER
-    /* bit set to 1 for allocated block */
-    uint32_t bitmap[((JS_MALLOC_ARENA_SIZE / JS_MALLOC_MIN_SMALL_SIZE) + 31) / 32];
-#endif
-    /* n_blocks memory blocks of identical size */
-    __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t blocks[];
-} JSMallocArena;
 
 typedef struct {
     struct list_head arena_list[JS_MALLOC_BLOCK_SIZE_COUNT]; /* list of JSMallocArena.link (all arenas) */

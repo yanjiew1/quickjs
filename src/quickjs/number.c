@@ -36,6 +36,53 @@
 #include "dtoa.h"
 #include "libunicode.h"
 
+typedef enum {
+   /* binary operators */
+   JS_OVOP_ADD,
+   JS_OVOP_SUB,
+   JS_OVOP_MUL,
+   JS_OVOP_DIV,
+   JS_OVOP_MOD,
+   JS_OVOP_POW,
+   JS_OVOP_OR,
+   JS_OVOP_AND,
+   JS_OVOP_XOR,
+   JS_OVOP_SHL,
+   JS_OVOP_SAR,
+   JS_OVOP_SHR,
+   JS_OVOP_EQ,
+   JS_OVOP_LESS,
+
+   JS_OVOP_BINARY_COUNT,
+   /* unary operators */
+   JS_OVOP_POS = JS_OVOP_BINARY_COUNT,
+   JS_OVOP_NEG,
+   JS_OVOP_INC,
+   JS_OVOP_DEC,
+   JS_OVOP_NOT,
+
+   JS_OVOP_COUNT,
+} JSOverloadableOperatorEnum;
+
+typedef struct {
+    uint32_t operator_index;
+    JSObject *ops[JS_OVOP_BINARY_COUNT]; /* self operators */
+} JSBinaryOperatorDefEntry;
+
+typedef struct {
+    int count;
+    JSBinaryOperatorDefEntry *tab;
+} JSBinaryOperatorDef;
+
+typedef struct {
+    uint32_t operator_counter;
+    BOOL is_primitive; /* OperatorSet for a primitive type */
+    /* NULL if no operator is defined */
+    JSObject *self_ops[JS_OVOP_COUNT]; /* self operators */
+    JSBinaryOperatorDef left;
+    JSBinaryOperatorDef right;
+} JSOperatorSetData;
+
 int skip_spaces(const char *pc)
 {
     const uint8_t *p, *p_next, *p_start;

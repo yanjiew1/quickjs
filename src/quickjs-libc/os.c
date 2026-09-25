@@ -80,6 +80,33 @@ typedef sig_t sighandler_t;
 #include "os.h"
 #include "std.h"
 
+typedef struct {
+    struct list_head link;
+    uint8_t *data;
+    size_t data_len;
+    /* list of SharedArrayBuffers, necessary to free the message */
+    uint8_t **sab_tab;
+    size_t sab_tab_len;
+} JSWorkerMessage;
+
+typedef struct JSWaker {
+#ifdef _WIN32
+    HANDLE handle;
+#else
+    int read_fd;
+    int write_fd;
+#endif
+} JSWaker;
+
+struct JSWorkerMessagePipe {
+    int ref_count;
+#ifdef USE_WORKER
+    pthread_mutex_t mutex;
+#endif
+    struct list_head msg_queue; /* list of JSWorkerMessage.link */
+    JSWaker waker;
+};
+
 #if !defined(PATH_MAX)
 #define PATH_MAX 4096
 #endif

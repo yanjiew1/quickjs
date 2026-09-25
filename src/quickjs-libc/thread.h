@@ -48,32 +48,7 @@ typedef struct {
     JSValue func;
 } JSOSTimer;
 
-typedef struct {
-    struct list_head link;
-    uint8_t *data;
-    size_t data_len;
-    /* list of SharedArrayBuffers, necessary to free the message */
-    uint8_t **sab_tab;
-    size_t sab_tab_len;
-} JSWorkerMessage;
-
-typedef struct JSWaker {
-#ifdef _WIN32
-    HANDLE handle;
-#else
-    int read_fd;
-    int write_fd;
-#endif
-} JSWaker;
-
-typedef struct {
-    int ref_count;
-#ifdef USE_WORKER
-    pthread_mutex_t mutex;
-#endif
-    struct list_head msg_queue; /* list of JSWorkerMessage.link */
-    JSWaker waker;
-} JSWorkerMessagePipe;
+typedef struct JSWorkerMessagePipe JSWorkerMessagePipe;
 
 typedef struct {
     struct list_head link;
@@ -81,12 +56,6 @@ typedef struct {
     JSValue on_message_func;
     int poll_fd_index; /* temporary use in js_os_poll() */
 } JSWorkerMessageHandler;
-
-typedef struct {
-    struct list_head link;
-    JSValue promise;
-    JSValue reason;
-} JSRejectedPromiseEntry;
 
 typedef struct JSThreadState {
     struct list_head os_rw_handlers; /* list of JSOSRWHandler.link */
