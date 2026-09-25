@@ -48,6 +48,8 @@
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
 
+#define JS_PROP_INITIAL_SIZE 2
+
 /* return -1 if exception (proxy case) or TRUE/FALSE */
 // TODO: should take flags to make proxy resolution and exceptions optional
 int JS_IsArray(JSContext *ctx, JSValueConst val)

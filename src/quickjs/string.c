@@ -32,6 +32,14 @@
 #include "internal/atom.h"
 #include "libunicode.h"
 
+/* strings <= this length are not concatenated using ropes. if too
+   small, the rope memory overhead becomes high. */
+#define JS_STRING_ROPE_SHORT_LEN  512
+/* specific threshold for initial rope use */
+#define JS_STRING_ROPE_SHORT2_LEN 8192
+/* rope depth at which we rebalance */
+#define JS_STRING_ROPE_MAX_DEPTH 60
+
 /* return the position of the first invalid character in the string or
    -1 if none */
 int js_string_find_invalid_codepoint(JSString *p)

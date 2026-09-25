@@ -49,6 +49,12 @@
 #include "builtins/typed-array.h"
 #include "builtins/function.h"
 
+#if defined(__EMSCRIPTEN__)
+#define DIRECT_DISPATCH  0
+#else
+#define DIRECT_DISPATCH  1
+#endif
+
 
 static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
 {

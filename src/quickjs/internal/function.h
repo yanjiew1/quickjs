@@ -51,7 +51,6 @@ typedef struct JSClosureVar {
     JSAtom var_name;
 } JSClosureVar;
 
-#define ARG_SCOPE_INDEX 1
 #define ARG_SCOPE_END (-2)
 
 typedef enum {
@@ -92,7 +91,6 @@ typedef struct JSBytecodeVarDef {
 #define PC2LINE_BASE     (-1)
 #define PC2LINE_RANGE    5
 #define PC2LINE_OP_FIRST 1
-#define PC2LINE_DIFF_PC_MAX ((255 - PC2LINE_OP_FIRST) / PC2LINE_RANGE)
 
 typedef enum JSFunctionKindEnum {
     JS_FUNC_NORMAL = 0,

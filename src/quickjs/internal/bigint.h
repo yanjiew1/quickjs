@@ -36,8 +36,6 @@ typedef uint32_t js_limb_t;
 typedef int64_t js_sdlimb_t;
 typedef uint64_t js_dlimb_t;
 
-#define JS_LIMB_DIGITS 9
-
 #else
 
 typedef __int128 int128_t;
@@ -46,8 +44,6 @@ typedef int64_t js_slimb_t;
 typedef uint64_t js_limb_t;
 typedef int128_t js_sdlimb_t;
 typedef uint128_t js_dlimb_t;
-
-#define JS_LIMB_DIGITS 19
 
 #endif
 

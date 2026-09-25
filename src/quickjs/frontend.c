@@ -66,6 +66,10 @@ static inline void put_u8(uint8_t *tab, uint8_t val)
 
 /* JS parser */
 
+#define OPTIMIZE         1
+#define JS_STACK_SIZE_MAX 65534
+#define ARG_SCOPE_INDEX 1
+#define PC2LINE_DIFF_PC_MAX ((255 - PC2LINE_OP_FIRST) / PC2LINE_RANGE)
 #define TOK_FIRST_KEYWORD   TOK_NULL
 #define TOK_LAST_KEYWORD    TOK_AWAIT
 

@@ -44,6 +44,10 @@
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
 
+/* must be large enough to have a negligible runtime cost and small
+   enough to call the interrupt callback often. */
+#define JS_INTERRUPT_COUNTER_INIT 10000
+
 typedef struct JSJobEntry {
     struct list_head link;
     JSContext *realm;

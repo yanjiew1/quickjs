@@ -47,13 +47,7 @@
 #include "list.h"
 #include "quickjs.h"
 
-#define OPTIMIZE         1
 #define SHORT_OPCODES    1
-#if defined(__EMSCRIPTEN__)
-#define DIRECT_DISPATCH  0
-#else
-#define DIRECT_DISPATCH  1
-#endif
 
 #if defined(__APPLE__)
 #define MALLOC_OVERHEAD  0
@@ -206,16 +200,7 @@ typedef enum JSErrorEnum {
 /* the variable and scope indexes must fit on 16 bits. The (-1) and
    ARG_SCOPE_END values are reserved. */
 #define JS_MAX_LOCAL_VARS 65534
-#define JS_STACK_SIZE_MAX 65534
 #define JS_STRING_LEN_MAX ((1 << 30) - 1)
-
-/* strings <= this length are not concatenated using ropes. if too
-   small, the rope memory overhead becomes high. */
-#define JS_STRING_ROPE_SHORT_LEN  512
-/* specific threshold for initial rope use */
-#define JS_STRING_ROPE_SHORT2_LEN 8192
-/* rope depth at which we rebalance */
-#define JS_STRING_ROPE_MAX_DEPTH 60
 
 #define __exception __attribute__((warn_unused_result))
 

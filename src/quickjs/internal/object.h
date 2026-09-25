@@ -51,7 +51,6 @@ typedef struct JSProperty {
     } u;
 } JSProperty;
 
-#define JS_PROP_INITIAL_SIZE 2
 #define JS_PROP_INITIAL_HASH_SIZE 4 /* must be a power of two */
 
 typedef struct JSShapeProperty {

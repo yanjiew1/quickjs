@@ -37,6 +37,12 @@
 
 /* bigint support */
 
+#if JS_LIMB_BITS == 32
+#define JS_LIMB_DIGITS 9
+#else
+#define JS_LIMB_DIGITS 19
+#endif
+
 #define JS_BIGINT_MAX_SIZE ((1024 * 1024) / JS_LIMB_BITS) /* in limbs */
 
 #define ADDC(res, carry_out, op1, op2, carry_in)        \
