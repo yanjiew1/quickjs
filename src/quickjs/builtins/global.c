@@ -29,7 +29,6 @@
 #include "../internal/object.h"
 #include "../internal/error.h"
 #include "../internal/frontend.h"
-#include "primitives.h"
 #include "global.h"
 
 /* URI handling */
@@ -307,6 +306,48 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
 }
 
 /* global object */
+
+static JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv)
+{
+    const char *str, *p;
+    int radix, flags;
+    JSValue ret;
+
+    str = JS_ToCString(ctx, argv[0]);
+    if (!str)
+        return JS_EXCEPTION;
+    if (JS_ToInt32(ctx, &radix, argv[1])) {
+        JS_FreeCString(ctx, str);
+        return JS_EXCEPTION;
+    }
+    if (radix != 0 && (radix < 2 || radix > 36)) {
+        ret = JS_NAN;
+    } else {
+        p = str;
+        p += skip_spaces(p);
+        flags = ATOD_INT_ONLY | ATOD_ACCEPT_PREFIX_AFTER_SIGN;
+        ret = js_atof(ctx, p, NULL, radix, flags);
+    }
+    JS_FreeCString(ctx, str);
+    return ret;
+}
+
+static JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv)
+{
+    const char *str, *p;
+    JSValue ret;
+
+    str = JS_ToCString(ctx, argv[0]);
+    if (!str)
+        return JS_EXCEPTION;
+    p = str;
+    p += skip_spaces(p);
+    ret = js_atof(ctx, p, NULL, 10, 0);
+    JS_FreeCString(ctx, str);
+    return ret;
+}
 
 const JSCFunctionListEntry js_global_funcs[] = {
     JS_CFUNC_DEF("parseInt", 2, js_parseInt ),

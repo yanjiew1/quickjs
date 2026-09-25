@@ -158,6 +158,7 @@ int JS_NumberIsInteger(JSContext *ctx, JSValueConst val);
 JSValue js_dtoa2(JSContext *ctx,
                         double d, int radix, int n_digits, int flags);
 int skip_spaces(const char *pc);
+int js_get_radix(JSContext *ctx, JSValueConst val);
 
 #define ATOD_INT_ONLY        (1 << 0)
 

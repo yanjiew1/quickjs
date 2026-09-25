@@ -58,6 +58,18 @@ int skip_spaces(const char *pc)
     return p - p_start;
 }
 
+int js_get_radix(JSContext *ctx, JSValueConst val)
+{
+    int radix;
+    if (JS_ToInt32Sat(ctx, &radix, val))
+        return -1;
+    if (radix < 2 || radix > 36) {
+        JS_ThrowRangeError(ctx, "radix must be between 2 and 36");
+        return -1;
+    }
+    return radix;
+}
+
 /* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
 /* accept O prefix as octal if radix == 0 and properly formed (Annex B) */
 /* accept _ between digits as a digit separator */
