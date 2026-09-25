@@ -1,5 +1,5 @@
 /*
- * QuickJS collection and weak reference builtin interface
+ * QuickJS collection builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -55,7 +55,5 @@ void js_map_iterator_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_fun
 JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int is_map);
 void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
-void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
-void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
 #endif
