@@ -25,7 +25,7 @@
 #ifndef QUICKJS_BYTECODE_STACK_H
 #define QUICKJS_BYTECODE_STACK_H
 
-#include "frontend-state.h"
+#include "compiler-state.h"
 
 __exception int compute_stack_size(JSContext *ctx, JSFunctionDef *fd,
                                    int *pstack_size);

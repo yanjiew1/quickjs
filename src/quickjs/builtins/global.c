@@ -27,7 +27,7 @@
 #include "../internal/number.h"
 #include "../internal/string.h"
 #include "../internal/error.h"
-#include "../internal/frontend.h"
+#include "../internal/eval.h"
 #include "global.h"
 
 static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,

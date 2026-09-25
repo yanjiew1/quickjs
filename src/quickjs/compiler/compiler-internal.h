@@ -1,5 +1,5 @@
 /*
- * QuickJS compiler internals shared by the parser and bytecode compiler
+ * QuickJS compiler internals shared across translation units
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -25,7 +25,7 @@
 #ifndef QUICKJS_COMPILER_INTERNAL_H
 #define QUICKJS_COMPILER_INTERNAL_H
 
-#include "frontend-state.h"
+#include "compiler-state.h"
 
 #define OPTIMIZE         1
 #define ARG_SCOPE_INDEX 1
@@ -45,6 +45,9 @@ static inline int update_label(JSFunctionDef *s, int label, int delta)
     assert(ls->ref_count >= 0);
     return ls->ref_count;
 }
+
+int push_scope(JSParseState *s);
+__exception int js_parse_program(JSParseState *s);
 
 int new_label_fd(JSFunctionDef *fd);
 int find_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);

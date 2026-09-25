@@ -1,5 +1,5 @@
 /*
- * QuickJS parser and compiler state
+ * QuickJS compiler state
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,8 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_FRONTEND_STATE_H
-#define QUICKJS_FRONTEND_STATE_H
+#ifndef QUICKJS_COMPILER_STATE_H
+#define QUICKJS_COMPILER_STATE_H
 
 #include "../internal/parse-state.h"
 #include "../internal/function.h"

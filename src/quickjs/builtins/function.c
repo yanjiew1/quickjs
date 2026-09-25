@@ -28,7 +28,7 @@
 #include "../internal/object.h"
 #include "../internal/generator.h"
 #include "../internal/bytecode-format.h"
-#include "../internal/frontend.h"
+#include "../internal/eval.h"
 #include "function.h"
 
 /* XXX: not 100% compatible, but mozilla seems to use a similar

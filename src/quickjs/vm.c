@@ -37,7 +37,7 @@
 #include "internal/error.h"
 #include "internal/module.h"
 #include "internal/bytecode.h"
-#include "internal/frontend.h"
+#include "internal/eval.h"
 #include "builtins/array.h"
 #include "builtins/regexp.h"
 #include "builtins/function.h"

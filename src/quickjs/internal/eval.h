@@ -1,5 +1,5 @@
 /*
- * QuickJS frontend interface
+ * QuickJS evaluation interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,8 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_FRONTEND_H
-#define QUICKJS_FRONTEND_H
+#ifndef QUICKJS_EVAL_H
+#define QUICKJS_EVAL_H
 
 #include "runtime.h"
 
