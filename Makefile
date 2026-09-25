@@ -258,7 +258,7 @@ UNICODE_SRCS=src/unicode/libunicode.c
 REGEXP_SRCS=src/regexp/compile.c src/regexp/exec.c
 QUICKJS_CORE_SRCS=\
 	src/quickjs/vm.c src/quickjs/generator.c src/quickjs/value-print.c src/quickjs/value-compare.c src/quickjs/value-conversion.c \
-	src/quickjs/iterator-protocol.c src/quickjs/runtime.c src/quickjs/atom-string.c src/quickjs/number-core.c src/quickjs/bigint-core.c \
+	src/quickjs/iterator-protocol.c src/quickjs/runtime.c src/quickjs/atom.c src/quickjs/string-core.c src/quickjs/number-core.c src/quickjs/bigint-core.c \
 	src/quickjs/function-list.c src/quickjs/function-object.c src/quickjs/object.c src/quickjs/memory-usage.c src/quickjs/error-support.c \
 	src/quickjs/frontend.c src/quickjs/module.c src/quickjs/bytecode-io.c
 QUICKJS_BUILTIN_SRCS=\

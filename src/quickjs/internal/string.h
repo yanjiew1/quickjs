@@ -89,6 +89,9 @@ JSValue js_new_string8(JSContext *ctx, const char *buf);
 
 uint32_t hash_string(const JSString *str, uint32_t h);
 uint32_t hash_string_rope(JSValueConst val, uint32_t h);
+size_t count_ascii(const uint8_t *buf, size_t len);
+int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
+                     int pos2, int len);
 
 static inline BOOL JS_IsEmptyString(JSValueConst v)
 {
@@ -170,6 +173,7 @@ int js_string_compare(JSContext *ctx,
                       const JSString *p1, const JSString *p2);
 int js_string_find_invalid_codepoint(JSString *p);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
+JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
 
 
 JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
