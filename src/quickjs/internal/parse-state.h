@@ -124,6 +124,9 @@ enum {
     TOK_OF,     /* only used for js_parse_skip_parens_token() */
 };
 
+#define TOK_FIRST_KEYWORD TOK_NULL
+#define TOK_LAST_KEYWORD TOK_AWAIT
+
 typedef struct {
     /* last source position */
     const uint8_t *ptr;
