@@ -1,5 +1,5 @@
 /*
- * QuickJS Javascript Engine
+ * QuickJS bytecode VM
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -57,16 +57,6 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
                              BOOL is_arg);
 
 
-
-double js_pow(double a, double b)
-{
-    if (unlikely(!isfinite(b)) && fabs(a) == 1) {
-        /* not compatible with IEEE 754 */
-        return JS_FLOAT64_NAN;
-    } else {
-        return pow(a, b);
-    }
-}
 
 static no_inline __exception int js_unary_arith_slow(JSContext *ctx,
                                                      JSValue *sp,
@@ -1902,19 +1892,6 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
     return var_ref;
 }
 
-void js_global_object_finalizer(JSRuntime *rt, JSValue obj)
-{
-    JSObject *p = JS_VALUE_GET_OBJ(obj);
-    JS_FreeValueRT(rt, p->u.global_object.uninitialized_vars);
-}
-
-void js_global_object_mark(JSRuntime *rt, JSValueConst val,
-                                  JS_MarkFunc *mark_func)
-{
-    JSObject *p = JS_VALUE_GET_OBJ(val);
-    JS_MarkValue(rt, p->u.global_object.uninitialized_vars, mark_func);
-}
-
 static JSVarRef *js_global_object_get_uninitialized_var(JSContext *ctx, JSObject *p1, 
                                                         JSAtom atom)
 {
@@ -2185,27 +2162,6 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
     /* bfunc is freed when func_obj is freed */
     JS_FreeValue(ctx, func_obj);
     return JS_EXCEPTION;
-}
-
-JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque)
-{
-    JSValue obj, this_val;
-    int ret;
-
-    this_val = JS_MKPTR(JS_TAG_OBJECT, p);
-    obj = JS_NewObject(ctx);
-    if (JS_IsException(obj))
-        return JS_EXCEPTION;
-    set_cycle_flag(ctx, obj);
-    set_cycle_flag(ctx, this_val);
-    ret = JS_DefinePropertyValue(ctx, obj, JS_ATOM_constructor,
-                                 JS_DupValue(ctx, this_val),
-                                 JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-    if (ret < 0) {
-        JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
-    }
-    return obj;
 }
 
 const uint16_t func_kind_to_class_id[] = {
@@ -5556,81 +5512,6 @@ JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
     return res;
 }
 
-/* warning: the refcount of the context is not incremented. Return
-   NULL in case of exception (case of revoked proxy only) */
-JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
-{
-    JSObject *p;
-    JSContext *realm;
-
-    if (JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)
-        return ctx;
-    p = JS_VALUE_GET_OBJ(func_obj);
-    switch(p->class_id) {
-    case JS_CLASS_C_FUNCTION:
-        realm = p->u.cfunc.realm;
-        break;
-    case JS_CLASS_BYTECODE_FUNCTION:
-    case JS_CLASS_GENERATOR_FUNCTION:
-    case JS_CLASS_ASYNC_FUNCTION:
-    case JS_CLASS_ASYNC_GENERATOR_FUNCTION:
-        {
-            JSFunctionBytecode *b;
-            b = p->u.func.function_bytecode;
-            realm = b->realm;
-        }
-        break;
-    case JS_CLASS_PROXY:
-        {
-            JSProxyData *s = p->u.opaque;
-            if (!s)
-                return ctx;
-            if (s->is_revoked) {
-                JS_ThrowTypeErrorRevokedProxy(ctx);
-                return NULL;
-            } else {
-                realm = JS_GetFunctionRealm(ctx, s->target);
-            }
-        }
-        break;
-    case JS_CLASS_BOUND_FUNCTION:
-        {
-            JSBoundFunction *bf = p->u.bound_function;
-            realm = JS_GetFunctionRealm(ctx, bf->func_obj);
-        }
-        break;
-    default:
-        realm = ctx;
-        break;
-    }
-    return realm;
-}
-
-JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
-                                   int class_id)
-{
-    JSValue proto, obj;
-    JSContext *realm;
-
-    if (JS_IsUndefined(ctor)) {
-        proto = JS_DupValue(ctx, ctx->class_proto[class_id]);
-    } else {
-        proto = JS_GetProperty(ctx, ctor, JS_ATOM_prototype);
-        if (JS_IsException(proto))
-            return proto;
-        if (!JS_IsObject(proto)) {
-            JS_FreeValue(ctx, proto);
-            realm = JS_GetFunctionRealm(ctx, ctor);
-            if (!realm)
-                return JS_EXCEPTION;
-            proto = JS_DupValue(ctx, realm->class_proto[class_id]);
-        }
-    }
-    obj = JS_NewObjectProtoClass(ctx, proto, class_id);
-    JS_FreeValue(ctx, proto);
-    return obj;
-}
-
 /* argv[] is modified if (flags & JS_CALL_FLAG_COPY_ARGV) = 0. */
 static JSValue JS_CallConstructorInternal(JSContext *ctx,
                                           JSValueConst func_obj,
@@ -5713,22 +5594,4 @@ JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
     JSValue res = JS_Invoke(ctx, this_val, atom, argc, argv);
     JS_FreeValue(ctx, this_val);
     return res;
-}
-
-/*******************************************************************/
-/* runtime functions & objects */
-
-
-int check_function(JSContext *ctx, JSValueConst obj)
-{
-    if (likely(JS_IsFunction(ctx, obj)))
-        return 0;
-    JS_ThrowTypeError(ctx, "not a function");
-    return -1;
-}
-
-int check_exception_free(JSContext *ctx, JSValue obj)
-{
-    JS_FreeValue(ctx, obj);
-    return JS_IsException(obj);
 }

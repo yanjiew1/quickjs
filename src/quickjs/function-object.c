@@ -28,6 +28,7 @@
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
+#include "builtins/proxy.h"
 #include "internal/generator.h"
 
 void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
@@ -408,5 +409,110 @@ BOOL JS_SetConstructorBit(JSContext *ctx, JSValueConst func_obj, BOOL val)
     p = JS_VALUE_GET_OBJ(func_obj);
     p->is_constructor = val;
     return TRUE;
+}
+
+
+JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque)
+{
+    JSValue obj, this_val;
+    int ret;
+
+    this_val = JS_MKPTR(JS_TAG_OBJECT, p);
+    obj = JS_NewObject(ctx);
+    if (JS_IsException(obj))
+        return JS_EXCEPTION;
+    set_cycle_flag(ctx, obj);
+    set_cycle_flag(ctx, this_val);
+    ret = JS_DefinePropertyValue(ctx, obj, JS_ATOM_constructor,
+                                 JS_DupValue(ctx, this_val),
+                                 JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    if (ret < 0) {
+        JS_FreeValue(ctx, obj);
+        return JS_EXCEPTION;
+    }
+    return obj;
+}
+
+/* warning: the refcount of the context is not incremented. Return
+   NULL in case of exception (case of revoked proxy only) */
+JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
+{
+    JSObject *p;
+    JSContext *realm;
+
+    if (JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)
+        return ctx;
+    p = JS_VALUE_GET_OBJ(func_obj);
+    switch(p->class_id) {
+    case JS_CLASS_C_FUNCTION:
+        realm = p->u.cfunc.realm;
+        break;
+    case JS_CLASS_BYTECODE_FUNCTION:
+    case JS_CLASS_GENERATOR_FUNCTION:
+    case JS_CLASS_ASYNC_FUNCTION:
+    case JS_CLASS_ASYNC_GENERATOR_FUNCTION:
+        {
+            JSFunctionBytecode *b;
+            b = p->u.func.function_bytecode;
+            realm = b->realm;
+        }
+        break;
+    case JS_CLASS_PROXY:
+        {
+            JSProxyData *s = p->u.opaque;
+            if (!s)
+                return ctx;
+            if (s->is_revoked) {
+                JS_ThrowTypeErrorRevokedProxy(ctx);
+                return NULL;
+            } else {
+                realm = JS_GetFunctionRealm(ctx, s->target);
+            }
+        }
+        break;
+    case JS_CLASS_BOUND_FUNCTION:
+        {
+            JSBoundFunction *bf = p->u.bound_function;
+            realm = JS_GetFunctionRealm(ctx, bf->func_obj);
+        }
+        break;
+    default:
+        realm = ctx;
+        break;
+    }
+    return realm;
+}
+
+JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
+                                   int class_id)
+{
+    JSValue proto, obj;
+    JSContext *realm;
+
+    if (JS_IsUndefined(ctor)) {
+        proto = JS_DupValue(ctx, ctx->class_proto[class_id]);
+    } else {
+        proto = JS_GetProperty(ctx, ctor, JS_ATOM_prototype);
+        if (JS_IsException(proto))
+            return proto;
+        if (!JS_IsObject(proto)) {
+            JS_FreeValue(ctx, proto);
+            realm = JS_GetFunctionRealm(ctx, ctor);
+            if (!realm)
+                return JS_EXCEPTION;
+            proto = JS_DupValue(ctx, realm->class_proto[class_id]);
+        }
+    }
+    obj = JS_NewObjectProtoClass(ctx, proto, class_id);
+    JS_FreeValue(ctx, proto);
+    return obj;
+}
+
+int check_function(JSContext *ctx, JSValueConst obj)
+{
+    if (likely(JS_IsFunction(ctx, obj)))
+        return 0;
+    JS_ThrowTypeError(ctx, "not a function");
+    return -1;
 }
 

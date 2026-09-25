@@ -27,6 +27,8 @@
 
 #include "function.h"
 
+int check_exception_free(JSContext *ctx, JSValue obj);
+
 JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
                              const char *fmt, va_list ap);
 JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name);

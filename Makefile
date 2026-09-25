@@ -249,13 +249,13 @@ endif
 endif
 endif
 
-all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
+all: $(OBJDIR) $(OBJDIR)/vm.check.o $(OBJDIR)/qjs.check.o $(PROGS)
 
 CUTILS_OBJS=$(OBJDIR)/cutils.o
 DTOA_OBJS=$(OBJDIR)/dtoa.o
 UNICODE_OBJS=$(OBJDIR)/libunicode.o
 REGEXP_OBJS=$(OBJDIR)/libregexp.o $(OBJDIR)/exec.o
-QUICKJS_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/generator.o $(OBJDIR)/value-print.o $(OBJDIR)/value-compare.o $(OBJDIR)/value-conversion.o $(OBJDIR)/iterator-protocol.o $(OBJDIR)/runtime.o $(OBJDIR)/atom-string.o $(OBJDIR)/number-core.o $(OBJDIR)/bigint-core.o $(OBJDIR)/function-list.o $(OBJDIR)/function-object.o $(OBJDIR)/object.o $(OBJDIR)/memory-usage.o $(OBJDIR)/error-support.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode-io.o $(OBJDIR)/date.o $(OBJDIR)/collections.o $(OBJDIR)/weakref.o $(OBJDIR)/finalization-registry.o $(OBJDIR)/proxy.o $(OBJDIR)/regexp.o $(OBJDIR)/promise.o $(OBJDIR)/array-buffer.o $(OBJDIR)/typed-array.o $(OBJDIR)/data-view.o $(OBJDIR)/atomics.o $(OBJDIR)/json.o $(OBJDIR)/array.o $(OBJDIR)/iterator.o $(OBJDIR)/number.o $(OBJDIR)/boolean.o $(OBJDIR)/string.o $(OBJDIR)/math.o $(OBJDIR)/object-methods.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/symbol.o $(OBJDIR)/global.o $(OBJDIR)/bigint.o $(OBJDIR)/intrinsics.o
+QUICKJS_OBJS=$(OBJDIR)/vm.o $(OBJDIR)/generator.o $(OBJDIR)/value-print.o $(OBJDIR)/value-compare.o $(OBJDIR)/value-conversion.o $(OBJDIR)/iterator-protocol.o $(OBJDIR)/runtime.o $(OBJDIR)/atom-string.o $(OBJDIR)/number-core.o $(OBJDIR)/bigint-core.o $(OBJDIR)/function-list.o $(OBJDIR)/function-object.o $(OBJDIR)/object.o $(OBJDIR)/memory-usage.o $(OBJDIR)/error-support.o $(OBJDIR)/frontend.o $(OBJDIR)/module.o $(OBJDIR)/bytecode-io.o $(OBJDIR)/date.o $(OBJDIR)/collections.o $(OBJDIR)/weakref.o $(OBJDIR)/finalization-registry.o $(OBJDIR)/proxy.o $(OBJDIR)/regexp.o $(OBJDIR)/promise.o $(OBJDIR)/array-buffer.o $(OBJDIR)/typed-array.o $(OBJDIR)/data-view.o $(OBJDIR)/atomics.o $(OBJDIR)/json.o $(OBJDIR)/array.o $(OBJDIR)/iterator.o $(OBJDIR)/number.o $(OBJDIR)/boolean.o $(OBJDIR)/string.o $(OBJDIR)/math.o $(OBJDIR)/object-methods.o $(OBJDIR)/function.o $(OBJDIR)/error.o $(OBJDIR)/symbol.o $(OBJDIR)/global.o $(OBJDIR)/bigint.o $(OBJDIR)/intrinsics.o
 QUICKJS_LIBC_OBJS=$(OBJDIR)/quickjs-libc.o $(OBJDIR)/module-loader.o $(OBJDIR)/os.o
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(DTOA_OBJS) $(REGEXP_OBJS) $(UNICODE_OBJS) $(CUTILS_OBJS) $(QUICKJS_LIBC_OBJS)
 

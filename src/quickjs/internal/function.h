@@ -229,7 +229,6 @@ void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
                                        JSAtom name, int len);
 JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
                              int argc, JSValueConst *argv);
-int check_exception_free(JSContext *ctx, JSValue obj);
 
 void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,

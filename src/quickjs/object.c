@@ -5050,3 +5050,16 @@ __exception int JS_CopyDataProperties(JSContext *ctx,
     JS_FreePropertyEnum(ctx, tab_atom, tab_atom_count);
     return -1;
 }
+
+void js_global_object_finalizer(JSRuntime *rt, JSValue obj)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(obj);
+    JS_FreeValueRT(rt, p->u.global_object.uninitialized_vars);
+}
+
+void js_global_object_mark(JSRuntime *rt, JSValueConst val,
+                                  JS_MarkFunc *mark_func)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(val);
+    JS_MarkValue(rt, p->u.global_object.uninitialized_vars, mark_func);
+}

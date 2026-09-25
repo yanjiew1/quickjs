@@ -374,3 +374,9 @@ JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
     return JS_ThrowReferenceErrorUninitialized(ctx, atom);
 }
 
+
+int check_exception_free(JSContext *ctx, JSValue obj)
+{
+    JS_FreeValue(ctx, obj);
+    return JS_IsException(obj);
+}
