@@ -1,5 +1,5 @@
 /*
- * QuickJS Proxy builtin interface
+ * QuickJS Reflect builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,12 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_PROXY_H
-#define QUICKJS_BUILTINS_PROXY_H
+#ifndef QUICKJS_BUILTINS_REFLECT_H
+#define QUICKJS_BUILTINS_REFLECT_H
 
 #include "../internal/base.h"
 
-JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
-int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);
+extern const JSCFunctionListEntry js_reflect_obj[1];
 
 #endif

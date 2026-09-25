@@ -262,7 +262,7 @@ QUICKJS_CORE_SRCS=\
 	src/quickjs/function-list.c src/quickjs/function-object.c src/quickjs/object.c src/quickjs/memory-usage.c src/quickjs/error-support.c \
 	src/quickjs/frontend.c src/quickjs/module.c src/quickjs/bytecode-io.c
 QUICKJS_BUILTIN_SRCS=\
-	src/quickjs/builtins/date.c src/quickjs/builtins/collections.c src/quickjs/builtins/weakref.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/proxy.c \
+	src/quickjs/builtins/date.c src/quickjs/builtins/collections.c src/quickjs/builtins/weakref.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/proxy.c src/quickjs/builtins/reflect.c \
 	src/quickjs/builtins/regexp.c src/quickjs/builtins/promise.c src/quickjs/builtins/array-buffer.c src/quickjs/builtins/typed-array.c src/quickjs/builtins/data-view.c \
 	src/quickjs/builtins/atomics.c src/quickjs/builtins/json.c src/quickjs/builtins/array.c src/quickjs/builtins/iterator.c src/quickjs/builtins/number.c \
 	src/quickjs/builtins/boolean.c src/quickjs/builtins/string.c src/quickjs/builtins/math.c src/quickjs/builtins/object-methods.c src/quickjs/builtins/function.c \

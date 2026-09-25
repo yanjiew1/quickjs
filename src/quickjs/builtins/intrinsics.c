@@ -35,6 +35,7 @@
 #include "bigint.h"
 #include "iterator.h"
 #include "proxy.h"
+#include "reflect.h"
 #include "number.h"
 #include "boolean.h"
 #include "weakref.h"
