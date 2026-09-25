@@ -37,6 +37,16 @@
 #include "data-view.h"
 #include "array.h"
 
+static inline int isfp16nan(uint16_t v)
+{
+    return (v & 0x7FFF) > 0x7C00;
+}
+
+static inline int isfp16zero(uint16_t v)
+{
+    return (v & 0x7FFF) == 0;
+}
+
 static JSValue js_typed_array_constructor_ta(JSContext *ctx,
                                              JSValueConst new_target,
                                              JSValueConst src_obj,

@@ -71,12 +71,6 @@ char *pstrcat(char *buf, int buf_size, const char *s);
 int strstart(const char *str, const char *val, const char **ptr);
 int has_suffix(const char *str, const char *suffix);
 
-/* Prevent UB when n == 0 and (src == NULL or dest == NULL) */
-static inline void memcpy_no_ub(void *dest, const void *src, size_t n) {
-    if (n)
-        memcpy(dest, src, n);
-}
-
 static inline int max_int(int a, int b)
 {
     if (a > b)
@@ -117,14 +111,6 @@ static inline int64_t max_int64(int64_t a, int64_t b)
         return b;
 }
 
-static inline int64_t min_int64(int64_t a, int64_t b)
-{
-    if (a < b)
-        return a;
-    else
-        return b;
-}
-
 /* WARNING: undefined if a = 0 */
 static inline int clz32(unsigned int a)
 {
@@ -141,12 +127,6 @@ static inline int clz64(uint64_t a)
 static inline int ctz32(unsigned int a)
 {
     return __builtin_ctz(a);
-}
-
-/* WARNING: undefined if a = 0 */
-static inline int ctz64(uint64_t a)
-{
-    return __builtin_ctzll(a);
 }
 
 struct __attribute__((packed)) packed_u64 {
@@ -166,11 +146,6 @@ static inline uint64_t get_u64(const uint8_t *tab)
     return ((const struct packed_u64 *)tab)->v;
 }
 
-static inline int64_t get_i64(const uint8_t *tab)
-{
-    return (int64_t)((const struct packed_u64 *)tab)->v;
-}
-
 static inline void put_u64(uint8_t *tab, uint64_t val)
 {
     ((struct packed_u64 *)tab)->v = val;
@@ -179,11 +154,6 @@ static inline void put_u64(uint8_t *tab, uint64_t val)
 static inline uint32_t get_u32(const uint8_t *tab)
 {
     return ((const struct packed_u32 *)tab)->v;
-}
-
-static inline int32_t get_i32(const uint8_t *tab)
-{
-    return (int32_t)((const struct packed_u32 *)tab)->v;
 }
 
 static inline void put_u32(uint8_t *tab, uint32_t val)
@@ -206,19 +176,9 @@ static inline void put_u16(uint8_t *tab, uint16_t val)
     ((struct packed_u16 *)tab)->v = val;
 }
 
-static inline uint32_t get_u8(const uint8_t *tab)
-{
-    return *tab;
-}
-
 static inline int32_t get_i8(const uint8_t *tab)
 {
     return (int8_t)*tab;
-}
-
-static inline void put_u8(uint8_t *tab, uint8_t val)
-{
-    *tab = val;
 }
 
 #ifndef bswap16
@@ -305,26 +265,11 @@ static inline int dbuf_put_u32(DynBuf *s, uint32_t val)
     }
 }
 
-static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
-{
-    if (unlikely((s->allocated_size - s->size) < 8)) {
-        return __dbuf_put_u64(s, val);
-    } else {
-        put_u64(s->buf + s->size, val);
-        s->size += 8;
-        return 0;
-    }
-}
-
 int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
                                                       const char *fmt, ...);
 void dbuf_free(DynBuf *s);
 static inline BOOL dbuf_error(DynBuf *s) {
     return s->error;
-}
-static inline void dbuf_set_error(DynBuf *s)
-{
-    s->error = TRUE;
 }
 
 #define UTF8_CHAR_LEN_MAX 6
@@ -442,16 +387,6 @@ static inline uint16_t tofp16(double d)
             v = 0x7c00;
     }
     return v | (sgn << 15);
-}
-
-static inline int isfp16nan(uint16_t v)
-{
-    return (v & 0x7FFF) > 0x7C00;
-}
-
-static inline int isfp16zero(uint16_t v)
-{
-    return (v & 0x7FFF) == 0;
 }
 
 #endif  /* CUTILS_H */

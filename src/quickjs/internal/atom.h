@@ -66,19 +66,9 @@ JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 
 JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
 
-static inline uint32_t atom_get_free(const JSAtomStruct *p)
-{
-    return (uintptr_t)p >> 1;
-}
-
 static inline BOOL atom_is_free(const JSAtomStruct *p)
 {
     return (uintptr_t)p & 1;
-}
-
-static inline JSAtomStruct *atom_set_free(uint32_t v)
-{
-    return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
 }
 
 typedef enum {

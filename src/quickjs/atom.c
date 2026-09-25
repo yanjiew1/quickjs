@@ -32,6 +32,16 @@
 #include "internal/atom.h"
 #include "libunicode.h"
 
+static inline uint32_t atom_get_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p >> 1;
+}
+
+static inline JSAtomStruct *atom_set_free(uint32_t v)
+{
+    return (JSAtomStruct *)(((uintptr_t)v << 1) | 1);
+}
+
 static const char js_atom_init[] =
 #define DEF(name, str) str "\0"
 #include "quickjs-atom.h"

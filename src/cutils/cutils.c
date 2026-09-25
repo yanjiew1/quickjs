@@ -29,6 +29,34 @@
 
 #include "cutils.h"
 
+/* WARNING: undefined if a = 0 */
+static inline __maybe_unused int ctz64(uint64_t a)
+{
+    return __builtin_ctzll(a);
+}
+
+static inline __maybe_unused int dbuf_put_u64(DynBuf *s, uint64_t val)
+{
+    if (unlikely((s->allocated_size - s->size) < 8)) {
+        return __dbuf_put_u64(s, val);
+    } else {
+        put_u64(s->buf + s->size, val);
+        s->size += 8;
+        return 0;
+    }
+}
+
+static inline __maybe_unused int64_t get_i64(const uint8_t *tab)
+{
+    return (int64_t)((const struct packed_u64 *)tab)->v;
+}
+
+/* Prevent UB when n == 0 and (src == NULL or dest == NULL) */
+static inline void memcpy_no_ub(void *dest, const void *src, size_t n) {
+    if (n)
+        memcpy(dest, src, n);
+}
+
 void pstrcpy(char *buf, int buf_size, const char *str)
 {
     int c;

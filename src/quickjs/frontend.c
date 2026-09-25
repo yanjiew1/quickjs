@@ -39,6 +39,31 @@
 #include "libunicode.h"
 #include "dtoa.h"
 
+static inline void dbuf_set_error(DynBuf *s)
+{
+    s->error = TRUE;
+}
+
+static inline int32_t get_i32(const uint8_t *tab)
+{
+    return (int32_t)((const struct packed_u32 *)tab)->v;
+}
+
+static inline uint32_t get_u8(const uint8_t *tab)
+{
+    return *tab;
+}
+
+static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
+}
+
+static inline void put_u8(uint8_t *tab, uint8_t val)
+{
+    *tab = val;
+}
+
 /* JS parser */
 
 

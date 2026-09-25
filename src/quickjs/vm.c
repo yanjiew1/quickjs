@@ -50,6 +50,15 @@
 #include "builtins/function.h"
 
 
+static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
+{
+    JSObject *p;
+    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
+        return FALSE;
+    p = JS_VALUE_GET_OBJ(obj);
+    return p->is_HTMLDDA;
+}
+
 static JSValue JS_CallConstructorInternal(JSContext *ctx,
                                           JSValueConst func_obj,
                                           JSValueConst new_target,

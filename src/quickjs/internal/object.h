@@ -339,15 +339,6 @@ JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 
 #define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
 
-static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
-{
-    JSObject *p;
-    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
-        return FALSE;
-    p = JS_VALUE_GET_OBJ(obj);
-    return p->is_HTMLDDA;
-}
-
 int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
 int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
                         JSProperty *pr, JSShapeProperty *prs);

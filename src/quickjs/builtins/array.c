@@ -36,6 +36,14 @@
 #include "typed-array.h"
 #include "array-buffer.h"
 
+static inline int64_t min_int64(int64_t a, int64_t b)
+{
+    if (a < b)
+        return a;
+    else
+        return b;
+}
+
 /* Array */
 
 static int JS_CopySubArray(JSContext *ctx,

@@ -32,6 +32,14 @@
 #include "libregexp.h"
 #include "libunicode.h"
 
+static inline int cr_union_interval(CharRange *cr, uint32_t c1, uint32_t c2)
+{
+    uint32_t b_pt[2];
+    b_pt[0] = c1;
+    b_pt[1] = c2 + 1;
+    return cr_op1(cr, b_pt, 2, CR_OP_UNION);
+}
+
 /*
   TODO:
   - remove REOP_char_i and REOP_range_i by precomputing the case folding.

@@ -81,11 +81,6 @@ typedef enum {
 #define OP_DEFINE_METHOD_SETTER 2
 #define OP_DEFINE_METHOD_ENUMERABLE 4
 
-static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
-{
-    dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
-}
-
 static inline BOOL is_be(void)
 {
     union {
