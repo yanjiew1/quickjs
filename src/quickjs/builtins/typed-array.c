@@ -33,6 +33,7 @@
 #include "../internal/function.h"
 #include "../internal/function-list.h"
 #include "typed-array.h"
+#include "uint8array-encoding.h"
 #include "array-buffer.h"
 #include "atomics.h"
 #include "data-view.h"

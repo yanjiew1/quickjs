@@ -26,6 +26,7 @@
 #include "../internal/string.h"
 #include "../internal/object.h"
 #include "typed-array.h"
+#include "uint8array-encoding.h"
 #include "array-buffer.h"
 
 /* Uint8Array base64/hex (tc39 proposal-arraybuffer-base64) */
