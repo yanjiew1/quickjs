@@ -84,6 +84,20 @@ typedef sig_t sighandler_t;
 #define PATH_MAX 4096
 #endif
 
+/* TODO:
+   - add socket calls
+*/
+
+uint64_t os_pending_signals;
+int (*os_poll_func)(JSContext *ctx);
+
+ssize_t js_get_errno(ssize_t ret)
+{
+    if (ret == -1)
+        ret = -errno;
+    return ret;
+}
+
 /**********************************************************/
 /* 'os' object */
 

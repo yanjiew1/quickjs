@@ -27,6 +27,7 @@
 
 #include "thread.h"
 
+ssize_t js_get_errno(ssize_t ret);
 JSValue js_os_now(JSContext *ctx, JSValue this_val,
                   int argc, JSValue *argv);
 void *js_sab_alloc(void *opaque, size_t size);

@@ -27,7 +27,9 @@
 
 #include "thread.h"
 
-ssize_t js_get_errno(ssize_t ret);
+JSValue js_loadScript(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv);
+void js_print_value_write(void *opaque, const char *buf, size_t len);
 int get_bool_option(JSContext *ctx, BOOL *pbool,
                     JSValueConst obj,
                     const char *option);

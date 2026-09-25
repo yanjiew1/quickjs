@@ -267,7 +267,7 @@ QUICKJS_BUILTIN_SRCS=\
 	src/quickjs/builtins/atomics.c src/quickjs/builtins/json.c src/quickjs/builtins/array.c src/quickjs/builtins/iterator.c src/quickjs/builtins/number.c \
 	src/quickjs/builtins/boolean.c src/quickjs/builtins/string.c src/quickjs/builtins/math.c src/quickjs/builtins/object-methods.c src/quickjs/builtins/function.c \
 	src/quickjs/builtins/error.c src/quickjs/builtins/symbol.c src/quickjs/builtins/global.c src/quickjs/builtins/bigint.c src/quickjs/builtins/intrinsics.c
-QUICKJS_LIBC_SRCS=src/quickjs-libc/quickjs-libc.c src/quickjs-libc/module-loader.c src/quickjs-libc/os.c
+QUICKJS_LIBC_SRCS=src/quickjs-libc/std.c src/quickjs-libc/host.c src/quickjs-libc/module-loader.c src/quickjs-libc/os.c
 CUTILS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(CUTILS_SRCS))
 DTOA_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(DTOA_SRCS))
 UNICODE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(UNICODE_SRCS))
@@ -332,14 +332,17 @@ LTOEXT=
 endif
 
 libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS)
+	rm -f $@
 	$(AR) rcs $@ $^
 
 ifdef CONFIG_LTO
 libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
+	rm -f $@
 	$(AR) rcs $@ $^
 endif # CONFIG_LTO
 
 libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
+	rm -f $@
 	$(AR) rcs $@ $^
 
 repl.c: $(QJSC) tools/repl.js
