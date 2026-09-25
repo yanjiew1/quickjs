@@ -22,13 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal/base.h"
-#include "internal/runtime.h"
-#include "internal/number.h"
-#include "internal/bigint.h"
-#include "internal/string.h"
-#include "internal/object.h"
-#include "internal/value-compare.h"
+#include "../internal/base.h"
+#include "../internal/runtime.h"
+#include "../internal/number.h"
+#include "../internal/bigint.h"
+#include "../internal/string.h"
+#include "../internal/object.h"
+#include "compare.h"
 
 BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
                    JSStrictEqModeEnum eq_mode)

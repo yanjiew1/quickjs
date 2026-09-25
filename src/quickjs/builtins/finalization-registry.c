@@ -27,7 +27,7 @@
 #include "../internal/atom.h"
 #include "../internal/object.h"
 #include "../internal/function.h"
-#include "../internal/value-compare.h"
+#include "../value/compare.h"
 #include "../internal/function-list.h"
 #include "weakref.h"
 #include "finalization-registry.h"

@@ -22,15 +22,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal/base.h"
-#include "internal/runtime.h"
-#include "internal/number.h"
-#include "internal/bigint.h"
-#include "internal/string.h"
-#include "internal/object.h"
-#include "internal/function.h"
-#include "internal/atom.h"
-#include "internal/value-conversion.h"
+#include "../internal/base.h"
+#include "../internal/runtime.h"
+#include "../internal/number.h"
+#include "../internal/bigint.h"
+#include "../internal/string.h"
+#include "../internal/object.h"
+#include "../internal/function.h"
+#include "../internal/atom.h"
+#include "conversion.h"
 #include "dtoa.h"
 
 JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)

@@ -23,7 +23,7 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
-#include "internal/value-print.h"
+#include "value/print.h"
 #include "internal/runtime.h"
 #include "internal/bigint.h"
 #include "internal/string.h"

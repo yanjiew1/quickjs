@@ -23,9 +23,9 @@
  * THE SOFTWARE.
  */
 #include "../internal/base.h"
-#include "../internal/value-compare.h"
+#include "../value/compare.h"
 #include "../internal/iterator.h"
-#include "../internal/value-print.h"
+#include "../value/print.h"
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/string.h"

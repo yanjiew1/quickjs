@@ -25,7 +25,7 @@
 #ifndef QUICKJS_VALUE_COMPARE_H
 #define QUICKJS_VALUE_COMPARE_H
 
-#include "base.h"
+#include "../internal/base.h"
 
 typedef enum JSStrictEqModeEnum {
     JS_EQ_STRICT,

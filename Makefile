@@ -255,7 +255,7 @@ DTOA_SRCS=src/dtoa/dtoa.c
 UNICODE_SRCS=src/unicode/libunicode.c
 REGEXP_SRCS=src/regexp/compile.c src/regexp/exec.c
 QUICKJS_CORE_SRCS=\
-	src/quickjs/vm.c src/quickjs/generator.c src/quickjs/value-print.c src/quickjs/value-compare.c src/quickjs/value-conversion.c \
+	src/quickjs/vm.c src/quickjs/generator.c src/quickjs/value/print.c src/quickjs/value/compare.c src/quickjs/value/conversion.c \
 	src/quickjs/iterator-protocol.c src/quickjs/runtime.c src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/string.c src/quickjs/number.c src/quickjs/bigint.c \
 	src/quickjs/function-list.c src/quickjs/function.c src/quickjs/object.c src/quickjs/gc.c src/quickjs/memory-usage.c src/quickjs/error-support.c \
 	src/quickjs/compiler/parser.c src/quickjs/compiler/eval.c src/quickjs/compiler/backend.c src/quickjs/compiler/lexer.c src/quickjs/parse-state.c src/quickjs/module.c src/quickjs/bytecode-format.c src/quickjs/compiler/stack-analysis.c src/quickjs/serialization/format.c src/quickjs/serialization/writer.c src/quickjs/serialization/reader.c

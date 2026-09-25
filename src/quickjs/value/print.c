@@ -22,19 +22,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "internal/base.h"
+#include "../internal/base.h"
 #include "libregexp.h"
 #include "dtoa.h"
-#include "internal/runtime.h"
-#include "internal/bigint.h"
-#include "internal/atom.h"
-#include "internal/string.h"
-#include "internal/object.h"
-#include "internal/error.h"
-#include "internal/value-print.h"
-#include "builtins/date.h"
-#include "builtins/collections.h"
-#include "builtins/typed-array.h"
+#include "../internal/runtime.h"
+#include "../internal/bigint.h"
+#include "../internal/atom.h"
+#include "../internal/string.h"
+#include "../internal/object.h"
+#include "../internal/error.h"
+#include "print.h"
+#include "../builtins/date.h"
+#include "../builtins/collections.h"
+#include "../builtins/typed-array.h"
 
 #define JS_PRINT_MAX_DEPTH 8
 

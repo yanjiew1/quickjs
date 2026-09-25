@@ -23,7 +23,7 @@
  * THE SOFTWARE.
  */
 #include "../internal/base.h"
-#include "../internal/value-conversion.h"
+#include "../value/conversion.h"
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/bigint.h"

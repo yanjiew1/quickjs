@@ -25,7 +25,7 @@
 #ifndef QUICKJS_VALUE_CONVERSION_H
 #define QUICKJS_VALUE_CONVERSION_H
 
-#include "base.h"
+#include "../internal/base.h"
 
 #define HINT_STRING  0
 #define HINT_NUMBER  1
