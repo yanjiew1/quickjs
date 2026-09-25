@@ -29,6 +29,7 @@
 #include "internal/object.h"
 #include "internal/function.h"
 #include "internal/module.h"
+#include "builtins/array-buffer.h"
 
 /* Compute memory used by various object types */
 /* XXX: poor man's approach to handling multiply referenced objects */

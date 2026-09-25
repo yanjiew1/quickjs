@@ -27,6 +27,17 @@
 
 #include "../internal/object.h"
 
+struct JSArrayBuffer {
+    int byte_length; /* 0 if detached */
+    int max_byte_length; /* -1 if not resizable; >= byte_length otherwise */
+    uint8_t detached;
+    uint8_t shared; /* if shared, the array buffer cannot be detached */
+    uint8_t *data; /* NULL if detached */
+    struct list_head array_list;
+    void *opaque;
+    JSFreeArrayBufferDataFunc *free_func;
+};
+
 int JS_AddIntrinsicArrayBuffers(JSContext *ctx);
 JSValue js_array_buffer_constructor3(JSContext *ctx, JSValueConst new_target,
                                      uint64_t len, uint64_t *max_len,
