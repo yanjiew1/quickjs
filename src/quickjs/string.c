@@ -32,6 +32,36 @@
 #include "internal/atom.h"
 #include "libunicode.h"
 
+static inline uint32_t hash_string16(const uint16_t *str,
+                                     size_t len, uint32_t h)
+{
+    size_t i;
+
+    for(i = 0; i < len; i++)
+        h = h * 263 + str[i];
+    return h;
+}
+
+uint32_t hash_string(const JSString *str, uint32_t h)
+{
+    if (str->is_wide_char)
+        h = hash_string16(str->u.str16, str->len, h);
+    else
+        h = hash_string8(str->u.str8, str->len, h);
+    return h;
+}
+
+uint32_t hash_string_rope(JSValueConst val, uint32_t h)
+{
+    if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING) {
+        return hash_string(JS_VALUE_GET_STRING(val), h);
+    } else {
+        JSStringRope *r = JS_VALUE_GET_STRING_ROPE(val);
+        h = hash_string_rope(r->left, h);
+        return hash_string_rope(r->right, h);
+    }
+}
+
 /* Note: the string contents are uninitialized */
 JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char)
 {

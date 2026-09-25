@@ -87,6 +87,16 @@ static inline int string_get(const JSString *p, int idx) {
 
 JSValue js_new_string8(JSContext *ctx, const char *buf);
 
+/* XXX: could use faster version ? */
+static inline uint32_t hash_string8(const uint8_t *str, size_t len, uint32_t h)
+{
+    size_t i;
+
+    for(i = 0; i < len; i++)
+        h = h * 263 + str[i];
+    return h;
+}
+
 uint32_t hash_string(const JSString *str, uint32_t h);
 uint32_t hash_string_rope(JSValueConst val, uint32_t h);
 size_t count_ascii(const uint8_t *buf, size_t len);
