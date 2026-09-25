@@ -27,6 +27,7 @@
 #include "internal/value-compare.h"
 #include "internal/value-print.h"
 #include "internal/runtime.h"
+#include "internal/allocator.h"
 #include "internal/number.h"
 #include "internal/bigint.h"
 #include "internal/string.h"

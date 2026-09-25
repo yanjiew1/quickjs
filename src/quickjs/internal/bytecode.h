@@ -26,6 +26,7 @@
 #define QUICKJS_BYTECODE_H
 
 #include "base.h"
+#include "allocator.h"
 
 typedef enum OPCodeFormat {
 #define FMT(f) OP_FMT_ ## f,
@@ -79,8 +80,6 @@ typedef enum {
 #define OP_DEFINE_METHOD_GETTER 1
 #define OP_DEFINE_METHOD_SETTER 2
 #define OP_DEFINE_METHOD_ENUMERABLE 4
-
-void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
 static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
 {

@@ -374,26 +374,6 @@ static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
 JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
 void JS_ThrowInterrupted(JSContext *ctx);
 
-no_inline int js_realloc_array(JSContext *ctx, void **parray,
-                               int elem_size, int *psize, int req_size);
-
-static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
-                                  int *psize, int req_size)
-{
-    if (unlikely(req_size > *psize))
-        return js_realloc_array(ctx, parray, elem_size, psize, req_size);
-    else
-        return 0;
-}
-
-static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
-{
-    dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
-}
-
-void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
-
-
 no_inline __exception int __js_poll_interrupts(JSContext *ctx);
 
 static inline __exception int js_poll_interrupts(JSContext *ctx)
@@ -404,8 +384,6 @@ static inline __exception int js_poll_interrupts(JSContext *ctx)
         return 0;
     }
 }
-
-void js_trigger_gc(JSRuntime *rt, size_t size);
 
 void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
                     JS_MarkFunc *mark_func);
