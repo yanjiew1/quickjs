@@ -39,6 +39,66 @@ const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
 #undef FMT
 };
 
+void bc_byte_swap(uint8_t *bc_buf, int bc_len)
+{
+    int pos, len, op, fmt;
+
+    pos = 0;
+    while (pos < bc_len) {
+        op = bc_buf[pos];
+        len = short_opcode_info(op).size;
+        fmt = short_opcode_info(op).fmt;
+        switch(fmt) {
+        case OP_FMT_u16:
+        case OP_FMT_i16:
+        case OP_FMT_label16:
+        case OP_FMT_npop:
+        case OP_FMT_loc:
+        case OP_FMT_arg:
+        case OP_FMT_var_ref:
+            put_u16(bc_buf + pos + 1,
+                    bswap16(get_u16(bc_buf + pos + 1)));
+            break;
+        case OP_FMT_i32:
+        case OP_FMT_u32:
+        case OP_FMT_const:
+        case OP_FMT_label:
+        case OP_FMT_atom:
+        case OP_FMT_atom_u8:
+            put_u32(bc_buf + pos + 1,
+                    bswap32(get_u32(bc_buf + pos + 1)));
+            break;
+        case OP_FMT_atom_u16:
+        case OP_FMT_label_u16:
+            put_u32(bc_buf + pos + 1,
+                    bswap32(get_u32(bc_buf + pos + 1)));
+            put_u16(bc_buf + pos + 1 + 4,
+                    bswap16(get_u16(bc_buf + pos + 1 + 4)));
+            break;
+        case OP_FMT_atom_label_u8:
+        case OP_FMT_atom_label_u16:
+            put_u32(bc_buf + pos + 1,
+                    bswap32(get_u32(bc_buf + pos + 1)));
+            put_u32(bc_buf + pos + 1 + 4,
+                    bswap32(get_u32(bc_buf + pos + 1 + 4)));
+            if (fmt == OP_FMT_atom_label_u16) {
+                put_u16(bc_buf + pos + 1 + 4 + 4,
+                        bswap16(get_u16(bc_buf + pos + 1 + 4 + 4)));
+            }
+            break;
+        case OP_FMT_npop_u16:
+            put_u16(bc_buf + pos + 1,
+                    bswap16(get_u16(bc_buf + pos + 1)));
+            put_u16(bc_buf + pos + 1 + 2,
+                    bswap16(get_u16(bc_buf + pos + 1 + 2)));
+            break;
+        default:
+            break;
+        }
+        pos += len;
+    }
+}
+
 void free_bytecode_atoms(JSRuntime *rt,
                          const uint8_t *bc_buf, int bc_len,
                          BOOL use_short_opcodes)

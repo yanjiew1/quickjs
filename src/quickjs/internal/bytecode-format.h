@@ -28,6 +28,8 @@
 #include "base.h"
 #include "function.h"
 
+void bc_byte_swap(uint8_t *bc_buf, int bc_len);
+
 void free_bytecode_atoms(JSRuntime *rt, const uint8_t *bc_buf, int bc_len,
                          BOOL use_short_opcodes);
 

@@ -25,8 +25,6 @@
 #ifndef QUICKJS_SERIALIZATION_FORMAT_H
 #define QUICKJS_SERIALIZATION_FORMAT_H
 
-#include <stdint.h>
-
 typedef enum BCTagEnum {
     BC_TAG_NULL = 1,
     BC_TAG_UNDEFINED,
@@ -51,6 +49,5 @@ typedef enum BCTagEnum {
 
 #define BC_VERSION 5
 
-void bc_byte_swap(uint8_t *bc_buf, int bc_len);
 
 #endif
