@@ -31,6 +31,9 @@
 #include "../internal/frontend.h"
 #include "global.h"
 
+static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv);
+
 /* URI handling */
 
 static int string_get_hex(JSString *p, int k, int n) {
@@ -376,7 +379,7 @@ int JS_AddIntrinsicEval(JSContext *ctx)
     return 0;
 }
 
-JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
+static JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
 {
     return JS_EvalObject(ctx, ctx->global_obj, argv[0], JS_EVAL_TYPE_INDIRECT, -1);

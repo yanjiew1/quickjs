@@ -28,8 +28,6 @@
 #include "../internal/base.h"
 
 extern const JSCFunctionListEntry js_global_funcs[15];
-JSValue js_global_eval(JSContext *ctx, JSValueConst this_val,
-                       int argc, JSValueConst *argv);
 JSValue js_global_isNaN(JSContext *ctx, JSValueConst this_val,
                         int argc, JSValueConst *argv);
 JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val,
