@@ -371,7 +371,6 @@ int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
                  const JSClassDef *class_def, JSAtom name);
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
                                     JSClassID class_id, int n_alloc_props);
-void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
 void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
 int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
                        JSValueConst name, JSValue val);
@@ -380,8 +379,7 @@ no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
                                                       JSObject *p);
 int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
 void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
-void free_zero_refcount(JSRuntime *rt);
-void gc_decref(JSRuntime *rt);
+void js_free_shape(JSRuntime *rt, JSShape *sh);
 int init_shape_hash(JSRuntime *rt);
 void js_array_finalizer(JSRuntime *rt, JSValue val);
 void js_array_mark(JSRuntime *rt, JSValueConst val,

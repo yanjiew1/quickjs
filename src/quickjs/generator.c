@@ -24,6 +24,7 @@
  */
 #include "internal/base.h"
 #include "internal/runtime.h"
+#include "internal/gc.h"
 #include "internal/object.h"
 #include "internal/error.h"
 #include "internal/function.h"

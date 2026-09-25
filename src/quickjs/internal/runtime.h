@@ -391,9 +391,6 @@ static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
     dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
 }
 
-void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                   JSGCObjectTypeEnum type);
-void remove_gc_object(JSGCObjectHeader *h);
 void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
 
