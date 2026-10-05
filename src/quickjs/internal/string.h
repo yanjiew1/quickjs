@@ -118,7 +118,25 @@ static inline int string_buffer_init(JSContext *ctx, StringBuffer *s, int size)
 }
 
 /* 0 <= c <= 0x10ffff */
-
+static inline int string_buffer_putc(StringBuffer *s, uint32_t c)
+{
+    if (likely(s->len < s->size)) {
+        if (s->is_wide_char) {
+            if (c < 0x10000) {
+                s->str->u.str16[s->len++] = c;
+                return 0;
+            } else if (likely((s->len + 1) < s->size)) {
+                s->str->u.str16[s->len++] = get_hi_surrogate(c);
+                s->str->u.str16[s->len++] = get_lo_surrogate(c);
+                return 0;
+            }
+        } else if (c < 0x100) {
+            s->str->u.str8[s->len++] = c;
+            return 0;
+        }
+    }
+    return string_buffer_putc_slow(s, c);
+}
 
 JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
 void string_buffer_free(StringBuffer *s);
