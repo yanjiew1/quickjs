@@ -47,7 +47,14 @@
 #include "list.h"
 #include "quickjs.h"
 
-
+static inline BOOL is_be(void)
+{
+    union {
+        uint16_t a;
+        uint8_t  b;
+    } u = {0x100};
+    return u.b;
+}
 
 #define SHORT_OPCODES    1
 
