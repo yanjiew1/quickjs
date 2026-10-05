@@ -276,6 +276,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/math.c \
     src/quickjs/builtins/number.c \
     src/quickjs/builtins/object.c \
+    src/quickjs/builtins/promise.c \
     src/quickjs/builtins/reflect.c \
     src/quickjs/builtins/regexp.c \
     src/quickjs/builtins/string.c \

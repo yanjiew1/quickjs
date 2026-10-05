@@ -33,6 +33,7 @@ __exception int perform_promise_then(JSContext *ctx,
                                      JSValueConst promise,
                                      JSValueConst *resolve_reject,
                                      JSValueConst *cap_resolving_funcs);
-
+JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
+                        int argc, JSValueConst *argv);
 
 #endif
