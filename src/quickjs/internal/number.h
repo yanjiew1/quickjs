@@ -92,7 +92,60 @@ static inline int to_digit(int c)
 JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
                 int radix, int flags);
 
-int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val);
+JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
+
+/* return (<0, 0) in case of exception */
+static inline int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val)
+{
+    uint32_t tag;
+    int32_t ret;
+
+ redo:
+    tag = JS_VALUE_GET_NORM_TAG(val);
+    switch(tag) {
+    case JS_TAG_INT:
+    case JS_TAG_BOOL:
+    case JS_TAG_NULL:
+    case JS_TAG_UNDEFINED:
+        ret = JS_VALUE_GET_INT(val);
+        break;
+    case JS_TAG_FLOAT64:
+        {
+            JSFloat64Union u;
+            double d;
+            int e;
+            d = JS_VALUE_GET_FLOAT64(val);
+            u.d = d;
+            /* we avoid doing fmod(x, 2^32) */
+            e = (u.u64 >> 52) & 0x7ff;
+            if (likely(e <= (1023 + 30))) {
+                /* fast case */
+                ret = (int32_t)d;
+            } else if (e <= (1023 + 30 + 53)) {
+                uint64_t v;
+                /* remainder modulo 2^32 */
+                v = (u.u64 & (((uint64_t)1 << 52) - 1)) | ((uint64_t)1 << 52);
+                v = v << ((e - 1023) - 52 + 32);
+                ret = v >> 32;
+                /* take the sign into account */
+                if (u.u64 >> 63)
+                    ret = -ret;
+            } else {
+                ret = 0; /* also handles NaN and +inf */
+            }
+        }
+        break;
+    default:
+        val = JS_ToNumberFree(ctx, val);
+        if (JS_IsException(val)) {
+            *pres = 0;
+            return -1;
+        }
+        goto redo;
+    }
+    *pres = ret;
+    return 0;
+}
 
 int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
 
@@ -107,8 +160,6 @@ int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
 __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
 
 int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
-
-JSValue JS_ToNumberFree(JSContext *ctx, JSValue val);
 
 __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
                                      JSValue val, BOOL is_array_ctor);
