@@ -57,7 +57,10 @@ typedef struct JSMallocBlockHeader {
     __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t user_data[];
 } JSMallocBlockHeader;
 
-
+static inline JSMallocBlockHeader *js_rc(void *ptr)
+{
+    return container_of(ptr, JSMallocBlockHeader, user_data);
+}
 
 typedef struct {
     struct list_head arena_list[JS_MALLOC_BLOCK_SIZE_COUNT]; /* list of JSMallocArena.link (all arenas) */
