@@ -68,8 +68,6 @@ typedef enum {
     OP_SPECIAL_OBJECT_IMPORT_META,
 } OPSpecialObjectEnum;
 
-#define GLOBAL_VAR_OFFSET 0x40000000
-#define ARGUMENT_VAR_OFFSET 0x20000000
 #define JS_DEFINE_CLASS_HAS_HERITAGE     (1 << 0)
 #define JS_THROW_VAR_RO             0
 #define JS_THROW_VAR_REDECL         1
