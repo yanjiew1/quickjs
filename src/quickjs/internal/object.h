@@ -262,7 +262,8 @@ int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
                                  int64_t idx, JSValue val, int flags);
 
 
-
+JSProperty *add_property(JSContext *ctx,
+                         JSObject *p, JSAtom prop, int prop_flags);
 int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
                               JSAtom prop, JSAutoInitIDEnum id,
                               void *opaque, int flags);
