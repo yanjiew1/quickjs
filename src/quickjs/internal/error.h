@@ -52,4 +52,6 @@ int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ct
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
 
+#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+
 #endif

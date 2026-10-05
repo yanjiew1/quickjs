@@ -297,6 +297,7 @@ QUICKJS_SRCS= \
     src/quickjs/module-evaluation.c \
     src/quickjs/module.c \
     src/quickjs/number.c \
+    src/quickjs/object.c \
     src/quickjs/parse-state.c \
     src/quickjs/quickjs.c \
     src/quickjs/runtime.c \

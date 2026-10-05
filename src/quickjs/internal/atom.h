@@ -91,4 +91,6 @@ JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom);
 int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom);
 BOOL JS_AtomSymbolHasDescription(JSContext *ctx, JSAtom v);
 
+JSAtom js_symbol_to_atom(JSContext *ctx, JSValue val);
+
 #endif
