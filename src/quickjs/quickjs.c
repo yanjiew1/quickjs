@@ -43,6 +43,7 @@
 #include "cutils.h"
 #include "list.h"
 #include "builtins/async-from-sync-iterator.h"
+#include "builtins/boolean.h"
 #include "builtins/collections.h"
 #include "builtins/date.h"
 #include "builtins/finalization-registry.h"
@@ -2443,7 +2444,7 @@ static JSValue JS_GetObjectData(JSContext *ctx, JSValueConst obj)
 }
 #endif
 
-static int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val)
+int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val)
 {
     JSObject *p;
 
@@ -30023,8 +30024,7 @@ JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
 
 static JSValue js_string_constructor(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv);
-static JSValue js_boolean_constructor(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv);
+
 static JSValue js_number_constructor(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv);
 
@@ -35276,56 +35276,15 @@ static JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
 }
 
 /* Boolean */
-static JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
-                                     int argc, JSValueConst *argv)
-{
-    JSValue val, obj;
-    val = JS_NewBool(ctx, JS_ToBool(ctx, argv[0]));
-    if (!JS_IsUndefined(new_target)) {
-        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_BOOLEAN);
-        if (!JS_IsException(obj))
-            JS_SetObjectData(ctx, obj, val);
-        return obj;
-    } else {
-        return val;
-    }
-}
 
-static JSValue js_thisBooleanValue(JSContext *ctx, JSValueConst this_val)
-{
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_BOOL)
-        return JS_DupValue(ctx, this_val);
 
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
-        JSObject *p = JS_VALUE_GET_OBJ(this_val);
-        if (p->class_id == JS_CLASS_BOOLEAN) {
-            if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_BOOL)
-                return p->u.object_data;
-        }
-    }
-    return JS_ThrowTypeError(ctx, "not a boolean");
-}
 
-static JSValue js_boolean_toString(JSContext *ctx, JSValueConst this_val,
-                                   int argc, JSValueConst *argv)
-{
-    JSValue val = js_thisBooleanValue(ctx, this_val);
-    if (JS_IsException(val))
-        return val;
-    return JS_AtomToString(ctx, JS_VALUE_GET_BOOL(val) ?
-                       JS_ATOM_true : JS_ATOM_false);
-}
 
-static JSValue js_boolean_valueOf(JSContext *ctx, JSValueConst this_val,
-                                  int argc, JSValueConst *argv)
-{
-    return js_thisBooleanValue(ctx, this_val);
-}
 
-static const JSCFunctionListEntry js_boolean_proto_funcs[] = {
-    JS_CFUNC_DEF("toString", 0, js_boolean_toString ),
-    JS_CFUNC_DEF("valueOf", 0, js_boolean_valueOf ),
-};
+
+
+
+
 
 /* String */
 
