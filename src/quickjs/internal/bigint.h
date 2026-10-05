@@ -63,12 +63,15 @@ typedef struct {
 
 
 
-
+JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
 
 
 
 /* return 0 or 1 depending on the sign */
-
+static inline int js_bigint_sign(const JSBigInt *a)
+{
+    return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
+}
 
 
 
@@ -114,6 +117,7 @@ typedef struct {
 
 
 
-
+JSBigInt *js_bigint_from_string(JSContext *ctx,
+                                    const char *str, int radix);
 
 #endif
