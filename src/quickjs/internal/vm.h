@@ -40,7 +40,11 @@
 
 
 
-
+static inline BOOL is_strict_mode(JSContext *ctx)
+{
+    JSStackFrame *sf = ctx->rt->current_stack_frame;
+    return (sf && (sf->js_mode & JS_MODE_STRICT));
+}
 
 JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
                     int argc, JSValueConst *argv);

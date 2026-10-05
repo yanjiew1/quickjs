@@ -37,9 +37,15 @@ no_inline int js_realloc_array(JSContext *ctx, void **parray,
 /* resize the array and update its size if req_size > *psize */
 
 
+static inline void *js_dbuf_realloc(void *opaque, void *ptr, size_t size)
+{
+    return js_realloc_rt(opaque, ptr, size);
+}
 
-
-
+static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
+{
+    dbuf_init2(s, ctx->rt, js_dbuf_realloc);
+}
 
 void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
 
