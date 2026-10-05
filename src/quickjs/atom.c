@@ -456,7 +456,7 @@ JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len,
             p->atom_type == JS_ATOM_TYPE_STRING &&
             p->len == len &&
             p->is_wide_char == 0 &&
-            memcmp(p->u.str8, str, len) == 0) {
+            (len == 0 || memcmp(p->u.str8, str, len) == 0)) {
             if (!__JS_AtomIsConst(i))
                 js_rc(p)->ref_count++;
             return i;
