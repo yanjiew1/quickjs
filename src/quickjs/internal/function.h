@@ -160,7 +160,10 @@ typedef struct JSForInIterator {
 
 
 
-
+JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
+                         const char *name,
+                         int length, JSCFunctionEnum cproto, int magic,
+                         JSValueConst proto_val, int n_fields);
 
 
 
