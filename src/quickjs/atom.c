@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
+#include "value/conversion.h"
 #include "internal/runtime.h"
 #include "internal/string.h"
 #include "internal/number.h"
@@ -911,4 +912,38 @@ JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n)
     len = u32toa(buf, n);
     buf[len] = '\0';
     return js_atom_concat_str(ctx, name, buf);
+}
+
+/* val must be a symbol */
+JSAtom js_symbol_to_atom(JSContext *ctx, JSValue val)
+{
+    JSAtomStruct *p = JS_VALUE_GET_PTR(val);
+    return js_get_atom_index(ctx->rt, p);
+}
+
+/* return JS_ATOM_NULL in case of exception */
+JSAtom JS_ValueToAtom(JSContext *ctx, JSValueConst val)
+{
+    JSAtom atom;
+    uint32_t tag;
+    tag = JS_VALUE_GET_TAG(val);
+    if (tag == JS_TAG_INT &&
+        (uint32_t)JS_VALUE_GET_INT(val) <= JS_ATOM_MAX_INT) {
+        /* fast path for integer values */
+        atom = __JS_AtomFromUInt32(JS_VALUE_GET_INT(val));
+    } else if (tag == JS_TAG_SYMBOL) {
+        JSAtomStruct *p = JS_VALUE_GET_PTR(val);
+        atom = JS_DupAtom(ctx, js_get_atom_index(ctx->rt, p));
+    } else {
+        JSValue str;
+        str = JS_ToPropertyKey(ctx, val);
+        if (JS_IsException(str))
+            return JS_ATOM_NULL;
+        if (JS_VALUE_GET_TAG(str) == JS_TAG_SYMBOL) {
+            atom = js_symbol_to_atom(ctx, str);
+        } else {
+            atom = JS_NewAtomStr(ctx, JS_VALUE_GET_STRING(str));
+        }
+    }
+    return atom;
 }

@@ -132,7 +132,10 @@ double js_pow(double a, double b);
 #define ATOD_TYPE_FLOAT64     (0 << 7)
 #define ATOD_TYPE_BIG_INT     (1 << 7)
 
-
+static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
+{
+    return JS_ToInt32Free(ctx, (int32_t *)pres, val);
+}
 
 BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val);
 JSValue JS_ToNumericFree(JSContext *ctx, JSValue val);
