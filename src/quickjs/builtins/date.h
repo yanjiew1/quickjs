@@ -1,5 +1,5 @@
 /*
- * QuickJS exception and backtrace interface
+ * QuickJS Date builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,29 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_ERROR_H
-#define QUICKJS_ERROR_H
+#ifndef QUICKJS_BUILTINS_DATE_H
+#define QUICKJS_BUILTINS_DATE_H
 
-#include "function.h"
+#include "../internal/base.h"
 
-
-
-
-
-
-
-
-const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
-
-
-
-
-
-
-
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
-
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
-JSValue JS_ThrowOutOfMemory(JSContext *ctx);
+JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
+                        int argc, JSValueConst *argv, int magic);
 
 #endif

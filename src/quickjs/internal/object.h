@@ -181,11 +181,36 @@ struct JSObject {
 
 
 
+static inline JSShapeProperty *get_shape_prop(JSShape *sh)
+{
+    return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
+}
 
 
 
-
-
+static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
+                                                       JSObject *p,
+                                                       JSAtom atom)
+{
+    JSShape *sh;
+    JSShapeProperty *pr, *prop;
+    intptr_t h;
+    sh = p->shape;
+    h = (uintptr_t)atom & sh->prop_hash_mask;
+    h = sh->hash_table[h];
+    prop = get_shape_prop(sh);
+    while (h) {
+        pr = &prop[h - 1];
+        if (likely(pr->atom == atom)) {
+            *ppr = &p->prop[h - 1];
+            /* the compiler should be able to assume that pr != NULL here */
+            return pr;
+        }
+        h = pr->hash_next;
+    }
+    *ppr = NULL;
+    return NULL;
+}
 
 
 
@@ -254,8 +279,8 @@ struct JSObject {
 
 
 
-
-
+JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
+JSContext *js_autoinit_get_realm(JSProperty *pr);
 
 
 
