@@ -1,5 +1,5 @@
 /*
- * QuickJS generator and async function lifecycle
+ * QuickJS FinalizationRegistry builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,38 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_GENERATOR_H
-#define QUICKJS_GENERATOR_H
+#ifndef QUICKJS_BUILTINS_FINALIZATION_REGISTRY_H
+#define QUICKJS_BUILTINS_FINALIZATION_REGISTRY_H
 
-#include "runtime.h"
+#include "../internal/runtime.h"
+#include "../internal/class.h"
 
-typedef struct JSAsyncFunctionState {
-    JSGCObjectHeader header;
-    JSValue this_val; /* 'this' argument */
-    int argc; /* number of function arguments */
-    BOOL throw_flag; /* used to throw an exception in JS_CallInternal() */
-    BOOL is_completed; /* TRUE if the function has returned. The stack
-                          frame is no longer valid */
-    JSValue resolving_funcs[2]; /* only used in JS async functions */
-    JSStackFrame frame;
-    /* arg_buf, var_buf, stack_buf and var_refs follow */
-} JSAsyncFunctionState;
-
-/* XXX: use enum */
-#define GEN_MAGIC_THROW  2
-#define GEN_MAGIC_RETURN 1
-#define GEN_MAGIC_NEXT   0
-
-void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
-void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
-
-
-
-
-
-
-
-
+void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
 
 
