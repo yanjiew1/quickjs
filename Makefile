@@ -484,7 +484,8 @@ doc/%.html: doc/%.html.pre
 
 
 C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
-        tests/test_unicode$(EXE) tests/test_bytecode_trace$(EXE)
+        tests/test_unicode$(EXE) tests/test_bytecode_trace$(EXE) \
+        tests/test_typed_array$(EXE)
 
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
@@ -495,6 +496,9 @@ tests/test_bytecode_trace$(EXE): $(OBJDIR)/tests/test_bytecode.o $(OBJDIR)/src/q
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_typed_array$(EXE): $(OBJDIR)/tests/test_typed_array.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_bytecode$(EXE): $(OBJDIR)/tests/test_bytecode.o libquickjs$(LTOEXT).a
@@ -509,6 +513,7 @@ tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/l
 .PHONY: test-c
 test-c: $(C_TESTS)
 	$(WINE) ./tests/test_api$(EXE)
+	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
 	$(WINE) ./tests/test_cutils$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
