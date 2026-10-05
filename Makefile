@@ -265,6 +265,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/function.c \
     src/quickjs/builtins/math.c \
     src/quickjs/builtins/number.c \
+    src/quickjs/builtins/object.c \
     src/quickjs/builtins/symbol.c \
     src/quickjs/class.c \
     src/quickjs/error-support.c \
