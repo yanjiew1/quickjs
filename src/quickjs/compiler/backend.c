@@ -72,14 +72,15 @@ struct LineNumberSlot {
 
 
 
-
-
 static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
 {
     dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
 }
 
-
+static inline void put_u8(uint8_t *tab, uint8_t val)
+{
+    *tab = val;
+}
 
 static int get_line_col_cached(GetLineColCache *s, int *pcol_num, const uint8_t *ptr)
 {

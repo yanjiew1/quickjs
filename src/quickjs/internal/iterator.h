@@ -47,4 +47,10 @@ JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
                                     BOOL *pdone);
 JSValue js_create_iterator_result(JSContext *ctx, JSValue val, BOOL done);
 
+/* XXX: use enum */
+#define GEN_MAGIC_THROW  2
+#define GEN_MAGIC_RETURN 1
+#define GEN_MAGIC_NEXT   0
+
+
 #endif
