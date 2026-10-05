@@ -365,11 +365,14 @@ regexp_test$(EXE): libregexp.c libunicode.c cutils.c
 unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
 
+unicode_gen_test: unicode_gen.c libunicode.c libunicode-table.h unicode_gen_def.h cutils.c
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -DUSE_TEST -o $@ unicode_gen.c cutils.c
+
 clean:
 	rm -f repl.c out.c
-	rm -f *.a *.o *.d *~ unicode_gen regexp_test$(EXE) fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
+	rm -f *.a *.o *.d *~ unicode_gen unicode_gen_test regexp_test$(EXE) fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
 	rm -f hello.c test_fib.c
-	rm -f examples/*.so tests/*.so
+	rm -f examples/*.so tests/*.so $(C_TESTS)
 	rm -rf $(OBJDIR)/ *.dSYM/ qjs-debug$(EXE)
 	rm -rf run-test262-debug$(EXE)
 	rm -f run_octane run_sunspider_like
@@ -562,6 +565,21 @@ test-regexp: regexp_test$(EXE)
 
 test: test-regexp
 
+
+C_TESTS=tests/test_unicode$(EXE)
+
+$(OBJDIR)/tests/%.o: tests/%.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) -I. -c -o $@ $<
+
+tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: test-c
+test-c: $(C_TESTS)
+	$(WINE) ./tests/test_unicode$(EXE)
+
+test: test-c
 
 ifneq ($(wildcard fuzz/fuzz_common.c),)
 $(OBJDIR)/fuzz/fuzz_common.o: fuzz/fuzz_common.c fuzz/fuzz_common.h | $(OBJDIR)

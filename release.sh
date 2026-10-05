@@ -172,7 +172,7 @@ cp Makefile VERSION TODO Changelog readme.txt LICENSE \
    test262o_errors.txt test262_errors.txt \
    $outdir
 
-cp tests/*.js tests/*.patch tests/*.c tests/*.sh $outdir/tests
+cp tests/*.js tests/*.patch tests/*.c tests/*.sh
 
 cp examples/*.js examples/*.c examples/*.json $outdir/examples
 
