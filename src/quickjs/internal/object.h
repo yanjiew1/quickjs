@@ -311,7 +311,7 @@ JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
                                 JSValue prop, JSValue val, int flags);
 
-
+__maybe_unused void JS_DumpShapes(JSRuntime *rt);
 
 
 JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
@@ -327,15 +327,17 @@ JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
 int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
 void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
 void js_free_shape(JSRuntime *rt, JSShape *sh);
-
-
-
+int init_shape_hash(JSRuntime *rt);
+void js_array_finalizer(JSRuntime *rt, JSValue val);
+void js_array_mark(JSRuntime *rt, JSValueConst val,
+                   JS_MarkFunc *mark_func);
 JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr);
 JSContext *js_autoinit_get_realm(JSProperty *pr);
 
-
-
-
+void js_free_shape_null(JSRuntime *rt, JSShape *sh);
+void js_object_data_finalizer(JSRuntime *rt, JSValue val);
+void js_object_data_mark(JSRuntime *rt, JSValueConst val,
+                         JS_MarkFunc *mark_func);
 void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 
 
@@ -343,8 +345,9 @@ void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 
 __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
 
+void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
 
-
-
+void js_global_object_mark(JSRuntime *rt, JSValueConst val,
+                           JS_MarkFunc *mark_func);
 
 #endif

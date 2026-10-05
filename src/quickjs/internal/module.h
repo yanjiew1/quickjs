@@ -130,9 +130,9 @@ typedef enum JSFreeModuleEnum {
     JS_FREE_MODULE_NOT_RESOLVED,
 } JSFreeModuleEnum;
 
+void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag);
 
-
-
+extern const JSClassExoticMethods js_module_ns_exotic_methods;
 
 
 
