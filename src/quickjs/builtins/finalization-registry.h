@@ -30,8 +30,9 @@
 
 void finrec_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
-
-
-
+extern const JSCFunctionListEntry js_finrec_proto_funcs[3];
+extern const JSClassShortDef js_finrec_class_def[1];
+JSValue js_finrec_constructor(JSContext *ctx, JSValueConst new_target,
+                                     int argc, JSValueConst *argv);
 
 #endif
