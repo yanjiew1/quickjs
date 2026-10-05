@@ -1,5 +1,5 @@
 /*
- * QuickJS bytecode VM interfaces
+ * QuickJS Promise builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,52 +22,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_VM_H
-#define QUICKJS_VM_H
+#ifndef QUICKJS_BUILTINS_PROMISE_H
+#define QUICKJS_BUILTINS_PROMISE_H
 
-#include "function.h"
+#include "../internal/base.h"
 
-#define JS_CALL_FLAG_GENERATOR   (1 << 2)
-
-#define FUNC_RET_AWAIT         0
-#define FUNC_RET_YIELD         1
-#define FUNC_RET_YIELD_STAR    2
-#define FUNC_RET_INITIAL_YIELD 3
-
-/* A generator resumes its detached stack frame through this VM entry point. */
-JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
-                        JSValueConst this_obj, JSValueConst new_target,
-                        int argc, JSValue *argv, int flags);
-void close_var_refs(JSRuntime *rt, JSFunctionBytecode *b, JSStackFrame *sf);
-
-
-
-static inline BOOL is_strict_mode(JSContext *ctx)
-{
-    JSStackFrame *sf = ctx->rt->current_stack_frame;
-    return (sf && (sf->js_mode & JS_MODE_STRICT));
-}
-
-JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
-                    int argc, JSValueConst *argv);
-
-
-
-
-
-
-
-JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
-                      int argc, JSValueConst *argv);
-
-
-
-
-
-
-
-
-
+JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv, int magic);
+__exception int perform_promise_then(JSContext *ctx,
+                                     JSValueConst promise,
+                                     JSValueConst *resolve_reject,
+                                     JSValueConst *cap_resolving_funcs);
 
 
 #endif
