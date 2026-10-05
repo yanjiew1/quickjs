@@ -61,11 +61,11 @@ typedef struct {
     js_limb_t tab[(64 + JS_LIMB_BITS - 1) / JS_LIMB_BITS];
 } JSBigIntBuf;
 
-
+JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
 
 JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
-
-
+JSBigInt *js_bigint_new(JSContext *ctx, int len);
+JSBigInt *js_bigint_extend(JSContext *ctx, JSBigInt *r, js_limb_t op1);
 
 /* return 0 or 1 depending on the sign */
 static inline int js_bigint_sign(const JSBigInt *a)
@@ -73,9 +73,9 @@ static inline int js_bigint_sign(const JSBigInt *a)
     return a->tab[a->len - 1] >> (JS_LIMB_BITS - 1);
 }
 
+JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
 
-
-
+double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
 
 /* it is currently assumed that JS_SHORT_BIG_INT_BITS = JS_LIMB_BITS */
 #if JS_SHORT_BIG_INT_BITS == 32
@@ -88,34 +88,42 @@ static inline int js_bigint_sign(const JSBigInt *a)
 #error unsupported
 #endif
 
+JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
+int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
+                          double b);
+int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
+                  const JSBigInt *b);
 
+JSBigInt *js_bigint_new_di(JSContext *ctx, js_sdlimb_t a);
+js_slimb_t js_bigint_get_si_sat(const JSBigInt *a);
+JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
+                           const JSBigInt *b, BOOL is_rem);
+JSBigInt *js_bigint_logic(JSContext *ctx, const JSBigInt *a,
+                          const JSBigInt *b, OPCodeEnum op);
+JSBigInt *js_bigint_not(JSContext *ctx, const JSBigInt *a);
+JSBigInt *js_bigint_shr(JSContext *ctx, const JSBigInt *a,
+                        unsigned int shift1);
+JSBigInt *js_bigint_pow(JSContext *ctx, const JSBigInt *a, JSBigInt *b);
+JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
+JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
+JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val);
 
+JSBigInt *js_bigint_set_si(JSBigIntBuf *buf, js_slimb_t a);
+JSBigInt *js_bigint_add(JSContext *ctx, const JSBigInt *a,
+                        const JSBigInt *b, int b_neg);
+JSBigInt *js_bigint_neg(JSContext *ctx, const JSBigInt *a);
+JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
+                        const JSBigInt *b);
+JSBigInt *js_bigint_shl(JSContext *ctx, const JSBigInt *a,
+                        unsigned int shift1);
 
+int JS_ToBigInt64Free(JSContext *ctx, int64_t *pres, JSValue val);
 
+JSValue JS_StringToBigIntErr(JSContext *ctx, JSValue val);
 
+JSValue JS_ToBigInt(JSContext *ctx, JSValueConst val);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+JSValue JS_StringToBigInt(JSContext *ctx, JSValue val);
 
 JSBigInt *js_bigint_from_string(JSContext *ctx,
                                     const char *str, int radix);
