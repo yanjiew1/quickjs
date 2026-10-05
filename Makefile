@@ -359,7 +359,7 @@ $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test: libregexp.c libunicode.c cutils.c
+regexp_test$(EXE): libregexp.c libunicode.c cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
 
 unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
@@ -367,7 +367,7 @@ unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c u
 
 clean:
 	rm -f repl.c out.c
-	rm -f *.a *.o *.d *~ unicode_gen regexp_test fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
+	rm -f *.a *.o *.d *~ unicode_gen regexp_test$(EXE) fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
 	rm -f hello.c test_fib.c
 	rm -f examples/*.so tests/*.so
 	rm -rf $(OBJDIR)/ *.dSYM/ qjs-debug$(EXE)
@@ -555,3 +555,10 @@ benchmarks: run_sunspider_like run_octane
 	./run_octane $(BENCHMARKDIR)/
 
 -include $(wildcard $(OBJDIR)/*.d)
+
+.PHONY: test-regexp
+test-regexp: regexp_test$(EXE)
+	sh tests/test_regexp.sh "$(WINE)" "./regexp_test$(EXE)"
+
+test: test-regexp
+
