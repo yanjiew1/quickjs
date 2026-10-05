@@ -903,6 +903,11 @@ function test_regexp()
     assert(a.indices[0][0], 0);
     assert(a.indices[0][1], 2);
 
+    /* Empty string alternatives must not copy or compare a NULL buffer. */
+    assert(/[\q{}]/v.exec("")[0], "");
+    assert(/[\q{|}]/v.exec("")[0], "");
+    assert(/[\q{|a}]/v.test("a"));
+
     /* syntax check */
     assert(/-&&/v.test("-&&"), true);
 }
