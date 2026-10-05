@@ -254,7 +254,7 @@ endif
 
 .DEFAULT_GOAL := all
 
-QUICKJS_SRCS=src/quickjs/quickjs.c src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/bigint.c src/quickjs/class.c src/quickjs/error-support.c src/quickjs/function-list.c src/quickjs/function.c src/quickjs/gc.c src/quickjs/generator.c src/quickjs/iterator-protocol.c src/quickjs/number.c src/quickjs/string.c src/quickjs/value/compare.c src/quickjs/value/conversion.c src/quickjs/value/print.c
+QUICKJS_SRCS=src/quickjs/quickjs.c src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/bigint.c src/quickjs/class.c src/quickjs/error-support.c src/quickjs/function-list.c src/quickjs/function.c src/quickjs/gc.c src/quickjs/generator.c src/quickjs/iterator-protocol.c src/quickjs/number.c src/quickjs/parse-state.c src/quickjs/string.c src/quickjs/value/compare.c src/quickjs/value/conversion.c src/quickjs/value/print.c
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
 
