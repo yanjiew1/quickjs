@@ -37,6 +37,6 @@ typedef struct JSRegExp {
 
 
 /* return < 0 if exception or TRUE/FALSE */
-
+int js_is_regexp(JSContext *ctx, JSValueConst obj);
 
 #endif
