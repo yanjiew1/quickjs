@@ -1,5 +1,5 @@
 /*
- * QuickJS typed array builtin interface
+ * QuickJS ArrayBuffer and SharedArrayBuffer builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,32 +22,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_TYPED_ARRAY_H
-#define QUICKJS_BUILTINS_TYPED_ARRAY_H
+#ifndef QUICKJS_BUILTINS_ARRAY_BUFFER_H
+#define QUICKJS_BUILTINS_ARRAY_BUFFER_H
 
 #include "../internal/base.h"
 
-typedef struct JSTypedArray {
-    struct list_head link; /* link to arraybuffer */
-    JSObject *obj; /* back pointer to the TypedArray/DataView object */
-    JSObject *buffer; /* based array buffer */
-    uint32_t offset; /* byte offset in the array buffer */
-    uint32_t length; /* byte length in the array buffer */
-    BOOL track_rab; /* auto-track length of backing array buffer */
-} JSTypedArray;
-
-extern uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
-#define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
-
+typedef struct JSArrayBuffer {
+    int byte_length; /* 0 if detached */
+    int max_byte_length; /* -1 if not resizable; >= byte_length otherwise */
+    uint8_t detached;
+    uint8_t shared; /* if shared, the array buffer cannot be detached */
+    uint8_t *data; /* NULL if detached */
+    struct list_head array_list;
+    void *opaque;
+    JSFreeArrayBufferDataFunc *free_func;
+} JSArrayBuffer;
 
 
 
 
-int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
-JSValue js_typed_array___speciesCreate(JSContext *ctx,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv);
-BOOL typed_array_is_oob(JSObject *p);
+
+
+
+
+JSValue JS_ThrowTypeErrorArrayBufferOOB(JSContext *ctx);
+
+
+
+
+
+
 
 
 #endif
