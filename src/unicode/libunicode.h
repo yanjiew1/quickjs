@@ -83,14 +83,6 @@ int cr_op(CharRange *cr, const uint32_t *a_pt, int a_len,
           const uint32_t *b_pt, int b_len, int op);
 int cr_op1(CharRange *cr, const uint32_t *b_pt, int b_len, int op);
 
-static inline int cr_union_interval(CharRange *cr, uint32_t c1, uint32_t c2)
-{
-    uint32_t b_pt[2];
-    b_pt[0] = c1;
-    b_pt[1] = c2 + 1;
-    return cr_op1(cr, b_pt, 2, CR_OP_UNION);
-}
-
 int cr_invert(CharRange *cr);
 
 int cr_regexp_canonicalize(CharRange *cr, int is_unicode);
@@ -150,11 +142,6 @@ static inline int lre_is_id_continue_byte(uint8_t c) {
     return lre_ctype_bits[c] & (UNICODE_C_UPPER | UNICODE_C_LOWER |
                                 UNICODE_C_UNDER | UNICODE_C_DOLLAR |
                                 UNICODE_C_DIGIT);
-}
-
-static inline int lre_is_word_byte(uint8_t c) {
-    return lre_ctype_bits[c] & (UNICODE_C_UPPER | UNICODE_C_LOWER |
-                                UNICODE_C_UNDER | UNICODE_C_DIGIT);
 }
 
 int lre_is_space_non_ascii(uint32_t c);
