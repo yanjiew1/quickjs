@@ -54,4 +54,6 @@ JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContex
 JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
 JSValue JS_ThrowOutOfMemory(JSContext *ctx);
 
+#define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
+
 #endif
