@@ -239,14 +239,18 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
     return NULL;
 }
 
-
-
+JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
+                              JSProperty *props);
+JSShape *js_dup_shape(JSShape *sh);
 int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
-
-
-
+no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
+                                 int hash_size, int prop_size);
+JSObject *get_proto_obj(JSValueConst proto_val);
+int add_shape_property(JSContext *ctx, JSShape **psh,
+                       JSObject *p, JSAtom atom, int prop_flags);
 JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
-
+JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
+                              JSValueConst defaultConstructor);
 __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                 JSValueConst obj);
 
@@ -318,7 +322,7 @@ JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
 
 
 
-
+JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
 
 int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
 void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);

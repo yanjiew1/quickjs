@@ -32,10 +32,11 @@ typedef struct JSRegExp {
     JSString *bytecode; /* also contains the flags */
 } JSRegExp;
 
-
-
-
-
+void js_regexp_finalizer(JSRuntime *rt, JSValue val);
+void js_regexp_string_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_regexp_string_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                    JS_MarkFunc *mark_func);
+JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc);
 /* return < 0 if exception or TRUE/FALSE */
 int js_is_regexp(JSContext *ctx, JSValueConst obj);
 
