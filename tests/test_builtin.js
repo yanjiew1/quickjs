@@ -341,6 +341,18 @@ function test_string()
     assert("abc".padStart(Infinity, ""), "abc");
 }
 
+function test_string_normalize()
+{
+    for (const form of ["NFC", "NFD", "NFKC", "NFKD"]) {
+        assert("".normalize(form), "");
+        assert("abc".normalize(form), "abc");
+    }
+    assert("A\u030a".repeat(128).normalize("NFC"), "\u00c5".repeat(128));
+    assert("\u00c5".repeat(128).normalize("NFD"), "A\u030a".repeat(128));
+    assert("\ufb03".repeat(128).normalize("NFKC"), "ffi".repeat(128));
+    assert("\ufb03".repeat(128).normalize("NFKD"), "ffi".repeat(128));
+}
+
 function test_math()
 {
     var a;
@@ -579,6 +591,18 @@ function assert_json_error(str, line_num, col_num)
     if (!err) {
         throw_error("expected exception");
     }
+}
+
+function test_error_stack()
+{
+    function collect_stack_trace(depth) {
+        if (depth === 0)
+            return new Error("stack allocation");
+        return collect_stack_trace(depth - 1);
+    }
+    const error = collect_stack_trace(32);
+    assert(error.message, "stack allocation");
+    assert(error.stack.split("collect_stack_trace").length - 1, 33);
 }
 
 function test_json()
@@ -1178,9 +1202,11 @@ test_function();
 test_enum();
 test_array();
 test_string();
+test_string_normalize();
 test_math();
 test_number();
 test_eval();
+test_error_stack();
 test_typed_array();
 test_json();
 test_date();
