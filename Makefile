@@ -271,6 +271,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/finalization-registry.c \
     src/quickjs/builtins/function.c \
     src/quickjs/builtins/global.c \
+    src/quickjs/builtins/iterator.c \
     src/quickjs/builtins/math.c \
     src/quickjs/builtins/number.c \
     src/quickjs/builtins/object.c \
