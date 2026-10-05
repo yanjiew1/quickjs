@@ -319,8 +319,8 @@ QUICKJS_SRCS= \
     src/quickjs/vm.c
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 REGEXP_SRCS= \
-    src/regexp/libregexp.c \
-    src/regexp/compile.c
+    src/regexp/compile.c \
+    src/regexp/exec.c
 REGEXP_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(REGEXP_SRCS))
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
 
@@ -443,8 +443,8 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test$(EXE): src/regexp/libregexp.c src/regexp/compile.c src/unicode/libunicode.c src/cutils/cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ src/regexp/libregexp.c src/regexp/compile.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
+regexp_test$(EXE): tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
 unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o src/unicode/libunicode.c tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o
