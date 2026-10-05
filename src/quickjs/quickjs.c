@@ -53,6 +53,8 @@
 #include "internal/function.h"
 #include "builtins/regexp.h"
 #include "internal/object.h"
+#include "internal/module.h"
+#include "internal/generator.h"
 #include "quickjs.h"
 #include "libregexp.h"
 #include "libunicode.h"
@@ -360,17 +362,7 @@ typedef struct JSTypedArray {
 
 
 
-typedef struct JSAsyncFunctionState {
-    JSGCObjectHeader header;
-    JSValue this_val; /* 'this' argument */
-    int argc; /* number of function arguments */
-    BOOL throw_flag; /* used to throw an exception in JS_CallInternal() */
-    BOOL is_completed; /* TRUE if the function has returned. The stack
-                          frame is no longer valid */
-    JSValue resolving_funcs[2]; /* only used in JS async functions */
-    JSStackFrame frame;
-    /* arg_buf, var_buf, stack_buf and var_refs follow */
-} JSAsyncFunctionState;
+
 
 typedef enum {
    /* binary operators */
@@ -419,101 +411,19 @@ typedef struct {
     JSBinaryOperatorDef right;
 } JSOperatorSetData;
 
-typedef struct JSReqModuleEntry {
-    JSAtom module_name;
-    JSModuleDef *module; /* used using resolution */
-    JSValue attributes; /* JS_UNDEFINED or an object contains the attributes as key/value */
-} JSReqModuleEntry;
 
-typedef enum JSExportTypeEnum {
-    JS_EXPORT_TYPE_LOCAL,
-    JS_EXPORT_TYPE_INDIRECT,
-} JSExportTypeEnum;
 
-typedef struct JSExportEntry {
-    union {
-        struct {
-            int var_idx; /* closure variable index */
-            JSVarRef *var_ref; /* if != NULL, reference to the variable */
-        } local; /* for local export */
-        int req_module_idx; /* module for indirect export */
-    } u;
-    JSExportTypeEnum export_type;
-    JSAtom local_name; /* '*' if export ns from. not used for local
-                          export after compilation */
-    JSAtom export_name; /* exported variable name */
-} JSExportEntry;
 
-typedef struct JSStarExportEntry {
-    int req_module_idx; /* in req_module_entries */
-} JSStarExportEntry;
 
-typedef struct JSImportEntry {
-    int var_idx; /* closure variable index */
-    BOOL is_star; /* import_name = '*' is a valid import name, so need a flag */
-    JSAtom import_name;
-    int req_module_idx; /* in req_module_entries */
-} JSImportEntry;
 
-typedef enum {
-    JS_MODULE_STATUS_UNLINKED,
-    JS_MODULE_STATUS_LINKING,
-    JS_MODULE_STATUS_LINKED,
-    JS_MODULE_STATUS_EVALUATING,
-    JS_MODULE_STATUS_EVALUATING_ASYNC,
-    JS_MODULE_STATUS_EVALUATED,
-} JSModuleStatus;
 
-struct JSModuleDef {
-    JSGCObjectHeader header; /* must come first */
-    JSAtom module_name;
-    struct list_head link;
 
-    JSReqModuleEntry *req_module_entries;
-    int req_module_entries_count;
-    int req_module_entries_size;
 
-    JSExportEntry *export_entries;
-    int export_entries_count;
-    int export_entries_size;
 
-    JSStarExportEntry *star_export_entries;
-    int star_export_entries_count;
-    int star_export_entries_size;
 
-    JSImportEntry *import_entries;
-    int import_entries_count;
-    int import_entries_size;
 
-    JSValue module_ns;
-    JSValue func_obj; /* only used for JS modules */
-    JSModuleInitFunc *init_func; /* only used for C modules */
-    BOOL has_tla : 8; /* true if func_obj contains await */
-    BOOL resolved : 8;
-    BOOL func_created : 8;
-    JSModuleStatus status : 8;
-    /* temp use during js_module_link() & js_module_evaluate() */
-    int dfs_index, dfs_ancestor_index;
-    JSModuleDef *stack_prev;
-    /* temp use during js_module_evaluate() */
-    JSModuleDef **async_parent_modules;
-    int async_parent_modules_count;
-    int async_parent_modules_size;
-    int pending_async_dependencies;
-    BOOL async_evaluation; /* true: async_evaluation_timestamp corresponds to [[AsyncEvaluationOrder]] 
-                              false: [[AsyncEvaluationOrder]] is UNSET or DONE */
-    int64_t async_evaluation_timestamp;
-    JSModuleDef *cycle_root;
-    JSValue promise; /* corresponds to spec field: capability */
-    JSValue resolving_funcs[2]; /* corresponds to spec field: capability */
 
-    /* true if evaluation yielded an exception. It is saved in
-       eval_exception */
-    BOOL eval_has_exception : 8;
-    JSValue eval_exception;
-    JSValue meta_obj; /* for import.meta */
-    JSValue private_value; /* private value for C modules */
-};
+
 
 typedef struct JSJobEntry {
     struct list_head link;
@@ -2136,10 +2046,7 @@ JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id)
     return JS_DupValue(ctx, ctx->class_proto[class_id]);
 }
 
-typedef enum JSFreeModuleEnum {
-    JS_FREE_MODULE_ALL,
-    JS_FREE_MODULE_NOT_RESOLVED,
-} JSFreeModuleEnum;
+
 
 /* XXX: would be more efficient with separate module lists */
 static void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
