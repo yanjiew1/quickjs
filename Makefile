@@ -483,10 +483,21 @@ doc/%.html: doc/%.html.pre
 # tests
 
 
-C_TESTS=tests/test_api$(EXE) tests/test_cutils$(EXE) tests/test_unicode$(EXE)
+C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
+        tests/test_unicode$(EXE) tests/test_bytecode_trace$(EXE)
 
 # Link the tracing reader before the archive so it replaces the normal reader.
+$(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
+
+tests/test_bytecode_trace$(EXE): $(OBJDIR)/tests/test_bytecode.o $(OBJDIR)/src/quickjs/serialization/reader.trace.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_bytecode$(EXE): $(OBJDIR)/tests/test_bytecode.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_cutils$(EXE): $(OBJDIR)/tests/test_cutils.o $(OBJDIR)/src/cutils/cutils.o
@@ -495,15 +506,13 @@ tests/test_cutils$(EXE): $(OBJDIR)/tests/test_cutils.o $(OBJDIR)/src/cutils/cuti
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-$(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
-	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
-
 .PHONY: test-c
 test-c: $(C_TESTS)
 	$(WINE) ./tests/test_api$(EXE)
+	$(WINE) ./tests/test_bytecode$(EXE)
 	$(WINE) ./tests/test_cutils$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
+	$(WINE) ./tests/test_bytecode_trace$(EXE)
 
 .PHONY: test-regexp
 test-regexp: regexp_test$(EXE)
