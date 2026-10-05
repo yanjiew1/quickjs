@@ -128,8 +128,8 @@ else ifdef CONFIG_COSMO
   CONFIG_LTO=
   HOST_CC=gcc
   CC=cosmocc
-  # cosmocc does not correct support -MF
-  DEPFLAGS=
+  # Both architecture dependency files must trigger the shared build recipe.
+  DEPFLAGS=-MMD -MF $@.d -MT $@
   CFLAGS=-g -Wall #
   CFLAGS += -Wno-array-bounds -Wno-format-truncation -Wno-infinite-recursion
   AR=cosmoar
