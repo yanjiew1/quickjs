@@ -168,7 +168,9 @@ struct JSObject {
 int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 
 
-
+int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+                            JSValueConst proto_val,
+                            BOOL throw_flag);
 
 
 
@@ -238,7 +240,8 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 
 
 
-
+__exception int js_get_length64(JSContext *ctx, int64_t *pres,
+                                JSValueConst obj);
 
 int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
                                  int64_t idx, JSValue val, int flags);
@@ -287,7 +290,8 @@ int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
 
 
 
-
+int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
+                            JSValueConst obj);
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
                                     JSClassID class_id, int n_alloc_props);
 
