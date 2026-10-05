@@ -39,8 +39,9 @@ JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
                         JSValueConst this_obj, JSValueConst new_target,
                         int argc, JSValue *argv, int flags);
 void close_var_refs(JSRuntime *rt, JSFunctionBytecode *b, JSStackFrame *sf);
-
-
+void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
+                             JS_MarkFunc *mark_func);
 
 static inline BOOL is_strict_mode(JSContext *ctx)
 {
@@ -62,12 +63,11 @@ JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
 
 
 
+void js_mapped_arguments_finalizer(JSRuntime *rt, JSValue val);
 
+void js_mapped_arguments_mark(JSRuntime *rt, JSValueConst val,
+                              JS_MarkFunc *mark_func);
 
-
-
-
-
-
+extern const JSClassExoticMethods js_arguments_exotic_methods;
 
 #endif
