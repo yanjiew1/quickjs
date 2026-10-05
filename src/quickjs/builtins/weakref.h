@@ -28,10 +28,10 @@
 #include "../internal/runtime.h"
 #include "../internal/class.h"
 
-
-
-
-
+BOOL js_weakref_is_target(JSValueConst val);
+BOOL js_weakref_is_live(JSValueConst val);
+void js_weakref_free(JSRuntime *rt, JSValue val);
+JSValue js_weakref_new(JSContext *ctx, JSValueConst val);
 void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
 
