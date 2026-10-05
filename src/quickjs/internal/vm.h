@@ -60,7 +60,9 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                     JSStackFrame *sf,
                     BOOL is_eval, JSModuleDef *m);
 
-
+JSValue js_closure(JSContext *ctx, JSValue bfunc,
+                   JSVarRef **cur_var_refs,
+                   JSStackFrame *sf, BOOL is_eval);
 
 JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
                       int argc, JSValueConst *argv);
