@@ -256,7 +256,9 @@ endif
 
 QUICKJS_SRCS=src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/bigint.c src/quickjs/builtins/array-buffer.c src/quickjs/builtins/array.c src/quickjs/builtins/async-from-sync-iterator.c src/quickjs/builtins/async.c src/quickjs/builtins/atomics.c src/quickjs/builtins/bigint.c src/quickjs/builtins/boolean.c src/quickjs/builtins/collections.c src/quickjs/builtins/data-view.c src/quickjs/builtins/date.c src/quickjs/builtins/error.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/function.c src/quickjs/builtins/global.c src/quickjs/builtins/intrinsics.c src/quickjs/builtins/iterator.c src/quickjs/builtins/json.c src/quickjs/builtins/math.c src/quickjs/builtins/number.c src/quickjs/builtins/object.c src/quickjs/builtins/promise.c src/quickjs/builtins/proxy.c src/quickjs/builtins/reflect.c src/quickjs/builtins/regexp.c src/quickjs/builtins/string.c src/quickjs/builtins/symbol.c src/quickjs/builtins/typed-array.c src/quickjs/builtins/uint8array-encoding.c src/quickjs/builtins/weakref.c src/quickjs/bytecode-format.c src/quickjs/class.c src/quickjs/compiler/backend.c src/quickjs/compiler/bytecode-dump.c src/quickjs/compiler/eval.c src/quickjs/compiler/lexer.c src/quickjs/compiler/parser.c src/quickjs/compiler/stack-analysis.c src/quickjs/error-support.c src/quickjs/function-list.c src/quickjs/function.c src/quickjs/gc.c src/quickjs/generator.c src/quickjs/global-environment.c src/quickjs/iterator-protocol.c src/quickjs/memory-usage.c src/quickjs/module-evaluation.c src/quickjs/module.c src/quickjs/number.c src/quickjs/object.c src/quickjs/parse-state.c src/quickjs/runtime.c src/quickjs/serialization/reader.c src/quickjs/serialization/writer.c src/quickjs/string-buffer.c src/quickjs/string.c src/quickjs/value/compare.c src/quickjs/value/conversion.c src/quickjs/value/print.c src/quickjs/vm.c
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
-QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
+REGEXP_SRCS=src/regexp/libregexp.c src/regexp/compile.c
+REGEXP_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(REGEXP_SRCS))
+QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -285,7 +287,7 @@ fuzz_eval: $(OBJDIR)/fuzz/fuzz_eval.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fu
 fuzz_compile: $(OBJDIR)/fuzz/fuzz_compile.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz/fuzz_regexp.o $(OBJDIR)/src/regexp/libregexp.fuzz.o $(OBJDIR)/src/cutils/cutils.fuzz.o $(OBJDIR)/src/unicode/libunicode.fuzz.o
+fuzz_regexp: $(OBJDIR)/fuzz/fuzz_regexp.o $(patsubst %.o,%.fuzz.o,$(REGEXP_OBJS)) $(OBJDIR)/src/cutils/cutils.fuzz.o $(OBJDIR)/src/unicode/libunicode.fuzz.o
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
@@ -377,8 +379,8 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
-regexp_test$(EXE): src/regexp/libregexp.c src/unicode/libunicode.c src/cutils/cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ src/regexp/libregexp.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
+regexp_test$(EXE): src/regexp/libregexp.c src/regexp/compile.c src/unicode/libunicode.c src/cutils/cutils.c
+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ src/regexp/libregexp.c src/regexp/compile.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
 unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o src/unicode/libunicode.c tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o
