@@ -103,7 +103,10 @@ size_t count_ascii(const uint8_t *buf, size_t len);
 int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
                      int pos2, int len);
 
-
+static inline BOOL JS_IsEmptyString(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
+}
 
 int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
                         int is_wide);
