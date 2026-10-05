@@ -260,6 +260,7 @@ QUICKJS_SRCS= \
     src/quickjs/atom.c \
     src/quickjs/bigint.c \
     src/quickjs/class.c \
+    src/quickjs/function-list.c \
     src/quickjs/number.c \
     src/quickjs/string.c \
     src/quickjs/value/compare.c \
