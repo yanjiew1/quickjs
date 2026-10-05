@@ -34,8 +34,9 @@ void js_weakref_free(JSRuntime *rt, JSValue val);
 JSValue js_weakref_new(JSContext *ctx, JSValueConst val);
 void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
-
-
-
+extern const JSCFunctionListEntry js_weakref_proto_funcs[2];
+extern const JSClassShortDef js_weakref_class_def[1];
+JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
+                                      int argc, JSValueConst *argv);
 
 #endif
