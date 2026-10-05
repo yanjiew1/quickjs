@@ -289,6 +289,7 @@ QUICKJS_SRCS= \
     src/quickjs/bytecode-format.c \
     src/quickjs/class.c \
     src/quickjs/compiler/lexer.c \
+    src/quickjs/compiler/stack-analysis.c \
     src/quickjs/error-support.c \
     src/quickjs/function-list.c \
     src/quickjs/function.c \
