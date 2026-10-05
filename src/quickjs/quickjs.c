@@ -60,6 +60,7 @@
 #include "internal/parse-state.h"
 #include "internal/runtime.h"
 #include "internal/string.h"
+#include "internal/vm.h"
 #include "value/conversion.h"
 #include "quickjs.h"
 #include "libregexp.h"
@@ -441,10 +442,8 @@ static JSValue JS_CallConstructorInternal(JSContext *ctx,
                                           JSValueConst func_obj,
                                           JSValueConst new_target,
                                           int argc, JSValue *argv, int flags);
-static JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
-                           int argc, JSValueConst *argv);
-static JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
-                             int argc, JSValueConst *argv);
+
+
 
 static JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                              JSValueConst val, int flags, int scope_idx);
@@ -526,7 +525,7 @@ static void js_promise_resolve_function_mark(JSRuntime *rt, JSValueConst val,
 #define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 
 
-static int JS_ToBoolFree(JSContext *ctx, JSValue val);
+
 
 static int JS_ToFloat64Free(JSContext *ctx, double *pres, JSValue val);
 
@@ -7788,84 +7787,9 @@ void *JS_GetAnyOpaque(JSValueConst obj, JSClassID *class_id)
     return p->u.opaque;
 }
 
-JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
-{
-    int i;
-    BOOL force_ordinary;
 
-    JSAtom method_name;
-    JSValue method, ret;
-    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
-        return val;
-    force_ordinary = hint & HINT_FORCE_ORDINARY;
-    hint &= ~HINT_FORCE_ORDINARY;
-    if (!force_ordinary) {
-        method = JS_GetProperty(ctx, val, JS_ATOM_Symbol_toPrimitive);
-        if (JS_IsException(method))
-            goto exception;
-        /* ECMA says *If exoticToPrim is not undefined* but tests in
-           test262 use null as a non callable converter */
-        if (!JS_IsUndefined(method) && !JS_IsNull(method)) {
-            JSAtom atom;
-            JSValue arg;
-            switch(hint) {
-            case HINT_STRING:
-                atom = JS_ATOM_string;
-                break;
-            case HINT_NUMBER:
-                atom = JS_ATOM_number;
-                break;
-            default:
-            case HINT_NONE:
-                atom = JS_ATOM_default;
-                break;
-            }
-            arg = JS_AtomToString(ctx, atom);
-            ret = JS_CallFree(ctx, method, val, 1, (JSValueConst *)&arg);
-            JS_FreeValue(ctx, arg);
-            if (JS_IsException(ret))
-                goto exception;
-            JS_FreeValue(ctx, val);
-            if (JS_VALUE_GET_TAG(ret) != JS_TAG_OBJECT)
-                return ret;
-            JS_FreeValue(ctx, ret);
-            return JS_ThrowTypeError(ctx, "toPrimitive");
-        }
-    }
-    if (hint != HINT_STRING)
-        hint = HINT_NUMBER;
-    for(i = 0; i < 2; i++) {
-        if ((i ^ hint) == 0) {
-            method_name = JS_ATOM_toString;
-        } else {
-            method_name = JS_ATOM_valueOf;
-        }
-        method = JS_GetProperty(ctx, val, method_name);
-        if (JS_IsException(method))
-            goto exception;
-        if (JS_IsFunction(ctx, method)) {
-            ret = JS_CallFree(ctx, method, val, 0, NULL);
-            if (JS_IsException(ret))
-                goto exception;
-            if (JS_VALUE_GET_TAG(ret) != JS_TAG_OBJECT) {
-                JS_FreeValue(ctx, val);
-                return ret;
-            }
-            JS_FreeValue(ctx, ret);
-        } else {
-            JS_FreeValue(ctx, method);
-        }
-    }
-    JS_ThrowTypeError(ctx, "toPrimitive");
-exception:
-    JS_FreeValue(ctx, val);
-    return JS_EXCEPTION;
-}
 
-static JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint)
-{
-    return JS_ToPrimitiveFree(ctx, JS_DupValue(ctx, val), hint);
-}
+
 
 void JS_SetIsHTMLDDA(JSContext *ctx, JSValueConst obj)
 {
@@ -7885,75 +7809,9 @@ static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
     return p->is_HTMLDDA;
 }
 
-static int JS_ToBoolFree(JSContext *ctx, JSValue val)
-{
-    uint32_t tag = JS_VALUE_GET_TAG(val);
-    switch(tag) {
-    case JS_TAG_INT:
-        return JS_VALUE_GET_INT(val) != 0;
-    case JS_TAG_BOOL:
-    case JS_TAG_NULL:
-    case JS_TAG_UNDEFINED:
-        return JS_VALUE_GET_INT(val);
-    case JS_TAG_EXCEPTION:
-        return -1;
-    case JS_TAG_STRING:
-        {
-            BOOL ret = JS_VALUE_GET_STRING(val)->len != 0;
-            JS_FreeValue(ctx, val);
-            return ret;
-        }
-    case JS_TAG_STRING_ROPE:
-        {
-            BOOL ret = JS_VALUE_GET_STRING_ROPE(val)->len != 0;
-            JS_FreeValue(ctx, val);
-            return ret;
-        }
-    case JS_TAG_SHORT_BIG_INT:
-        return JS_VALUE_GET_SHORT_BIG_INT(val) != 0;
-    case JS_TAG_BIG_INT:
-        {
-            JSBigInt *p = JS_VALUE_GET_PTR(val);
-            BOOL ret;
-            int i;
-            
-            /* fail safe: we assume it is not necessarily
-               normalized. Beginning from the MSB ensures that the
-               test is fast. */
-            ret = FALSE;
-            for(i = p->len - 1; i >= 0; i--) {
-                if (p->tab[i] != 0) {
-                    ret = TRUE;
-                    break;
-                }
-            }
-            JS_FreeValue(ctx, val);
-            return ret;
-        }
-    case JS_TAG_OBJECT:
-        {
-            JSObject *p = JS_VALUE_GET_OBJ(val);
-            BOOL ret;
-            ret = !p->is_HTMLDDA;
-            JS_FreeValue(ctx, val);
-            return ret;
-        }
-        break;
-    default:
-        if (JS_TAG_IS_FLOAT64(tag)) {
-            double d = JS_VALUE_GET_FLOAT64(val);
-            return !isnan(d) && d != 0;
-        } else {
-            JS_FreeValue(ctx, val);
-            return TRUE;
-        }
-    }
-}
 
-int JS_ToBool(JSContext *ctx, JSValueConst val)
-{
-    return JS_ToBoolFree(ctx, JS_DupValue(ctx, val));
-}
+
+
 
 
 
@@ -8257,95 +8115,17 @@ static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
 
 
 
-static JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToPropertyKey)
-{
-    uint32_t tag;
-    char buf[32];
 
-    tag = JS_VALUE_GET_NORM_TAG(val);
-    switch(tag) {
-    case JS_TAG_STRING:
-        return JS_DupValue(ctx, val);
-    case JS_TAG_STRING_ROPE:
-        return js_linearize_string_rope(ctx, JS_DupValue(ctx, val));
-    case JS_TAG_INT:
-        {
-            size_t len;
-            len = i32toa(buf, JS_VALUE_GET_INT(val));
-            return js_new_string8_len(ctx, buf, len);
-        }
-        break;
-    case JS_TAG_BOOL:
-        return JS_AtomToString(ctx, JS_VALUE_GET_BOOL(val) ?
-                          JS_ATOM_true : JS_ATOM_false);
-    case JS_TAG_NULL:
-        return JS_AtomToString(ctx, JS_ATOM_null);
-    case JS_TAG_UNDEFINED:
-        return JS_AtomToString(ctx, JS_ATOM_undefined);
-    case JS_TAG_EXCEPTION:
-        return JS_EXCEPTION;
-    case JS_TAG_OBJECT:
-        {
-            JSValue val1, ret;
-            val1 = JS_ToPrimitive(ctx, val, HINT_STRING);
-            if (JS_IsException(val1))
-                return val1;
-            ret = JS_ToStringInternal(ctx, val1, is_ToPropertyKey);
-            JS_FreeValue(ctx, val1);
-            return ret;
-        }
-        break;
-    case JS_TAG_FUNCTION_BYTECODE:
-        return js_new_string8(ctx, "[function bytecode]");
-    case JS_TAG_SYMBOL:
-        if (is_ToPropertyKey) {
-            return JS_DupValue(ctx, val);
-        } else {
-            return JS_ThrowTypeError(ctx, "cannot convert symbol to string");
-        }
-    case JS_TAG_FLOAT64:
-        return js_dtoa2(ctx, JS_VALUE_GET_FLOAT64(val), 10, 0,
-                        JS_DTOA_FORMAT_FREE);
-    case JS_TAG_SHORT_BIG_INT:
-    case JS_TAG_BIG_INT:
-        return js_bigint_to_string(ctx, val);
-    default:
-        return js_new_string8(ctx, "[unsupported type]");
-    }
-}
 
-JSValue JS_ToString(JSContext *ctx, JSValueConst val)
-{
-    return JS_ToStringInternal(ctx, val, FALSE);
-}
 
-JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
-{
-    JSValue ret;
-    ret = JS_ToString(ctx, val);
-    JS_FreeValue(ctx, val);
-    return ret;
-}
 
-static JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val)
-{
-    if (JS_IsUndefined(val) || JS_IsNull(val))
-        return JS_ToStringFree(ctx, val);
-    return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 0, NULL);
-}
 
-JSValue JS_ToPropertyKey(JSContext *ctx, JSValueConst val)
-{
-    return JS_ToStringInternal(ctx, val, TRUE);
-}
 
-static JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val)
-{
-    uint32_t tag = JS_VALUE_GET_TAG(val);
-    if (tag == JS_TAG_NULL || tag == JS_TAG_UNDEFINED)
-        return JS_ThrowTypeError(ctx, "null or undefined are forbidden");
-    return JS_ToString(ctx, val);
-}
+
+
+
+
+
 
 #define JS_PRINT_MAX_DEPTH 8
 
@@ -15272,8 +15052,8 @@ JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj,
                            argc, (JSValue *)argv, JS_CALL_FLAG_COPY_ARGV);
 }
 
-static JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
-                           int argc, JSValueConst *argv)
+JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                    int argc, JSValueConst *argv)
 {
     JSValue res = JS_CallInternal(ctx, func_obj, this_obj, JS_UNDEFINED,
                                   argc, (JSValue *)argv, JS_CALL_FLAG_COPY_ARGV);
@@ -15432,8 +15212,8 @@ JSValue JS_Invoke(JSContext *ctx, JSValueConst this_val, JSAtom atom,
     return JS_CallFree(ctx, func_obj, this_val, argc, argv);
 }
 
-static JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
-                             int argc, JSValueConst *argv)
+JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
+                      int argc, JSValueConst *argv)
 {
     JSValue res = JS_Invoke(ctx, this_val, atom, argc, argv);
     JS_FreeValue(ctx, this_val);
