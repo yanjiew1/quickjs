@@ -29,8 +29,9 @@
 
 JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
                                        JSValueConst sync_iter);
-
-
-
+void js_async_from_sync_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_async_from_sync_iterator_mark(JSRuntime *rt, JSValueConst val,
+                                      JS_MarkFunc *mark_func);
+extern const JSCFunctionListEntry js_async_from_sync_iterator_proto_funcs[3];
 
 #endif
