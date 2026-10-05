@@ -54,7 +54,11 @@ JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
 
 JSValueConst JS_GetActiveFunction(JSContext *ctx);
 
-
+JSValue js_closure2(JSContext *ctx, JSValue func_obj,
+                    JSFunctionBytecode *b,
+                    JSVarRef **cur_var_refs,
+                    JSStackFrame *sf,
+                    BOOL is_eval, JSModuleDef *m);
 
 
 
