@@ -562,3 +562,28 @@ test-regexp: regexp_test$(EXE)
 
 test: test-regexp
 
+
+ifneq ($(wildcard fuzz/fuzz_common.c),)
+$(OBJDIR)/fuzz/fuzz_common.o: fuzz/fuzz_common.c fuzz/fuzz_common.h | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
+
+$(OBJDIR)/tests/test_fuzz_support.o: tests/test_fuzz_support.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
+
+tests/test_fuzz_support$(EXE): $(OBJDIR)/tests/test_fuzz_support.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: test-fuzz-support
+test-fuzz-support: tests/test_fuzz_support$(EXE)
+	$(WINE) ./tests/test_fuzz_support$(EXE)
+
+test: test-fuzz-support
+endif
+
+clean-fuzz-test:
+	rm -f tests/test_fuzz_support tests/test_fuzz_support.exe
+
+.PHONY: clean-fuzz-test
+clean: clean-fuzz-test
