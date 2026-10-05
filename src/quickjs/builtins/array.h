@@ -27,7 +27,8 @@
 
 #include "../internal/iterator.h"
 
-
+JSValue js_array_push(JSContext *ctx, JSValueConst this_val,
+                      int argc, JSValueConst *argv, int unshift);
 
 enum {
     ArrayFind,
@@ -46,14 +47,18 @@ JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
 #define special_filter   4
 #define special_TA       8
 
-
-
+JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
+                       int argc, JSValueConst *argv, int special);
+JSValue js_array_reduce(JSContext *ctx, JSValueConst this_val,
+                        int argc, JSValueConst *argv, int special);
 
 #define special_reduce       0
 #define special_reduceRight  1
 
-
-
+JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv);
+JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
+                     int argc, JSValueConst *argv, int shift);
 
 typedef struct JSArrayIteratorData {
     JSValue obj;
@@ -61,13 +66,17 @@ typedef struct JSArrayIteratorData {
     uint32_t idx;
 } JSArrayIteratorData;
 
+extern const JSCFunctionListEntry js_array_funcs[4];
+extern const JSCFunctionListEntry js_array_proto_funcs[40];
+extern const JSCFunctionListEntry js_array_iterator_proto_funcs[2];
+JSValue js_array_constructor(JSContext *ctx, JSValueConst new_target,
+                             int argc, JSValueConst *argv);
+void js_array_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_array_iterator_mark(JSRuntime *rt, JSValueConst val,
+                            JS_MarkFunc *mark_func);
 
-
-
-
-
-
-
-
+JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv,
+                               BOOL *pdone, int magic);
 
 #endif
