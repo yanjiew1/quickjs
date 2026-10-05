@@ -28,6 +28,12 @@
 #include "runtime.h"
 #include "../builtins/regexp.h"
 
+typedef enum {
+    JS_AUTOINIT_ID_PROTOTYPE,
+    JS_AUTOINIT_ID_MODULE_NS,
+    JS_AUTOINIT_ID_PROP,
+} JSAutoInitIDEnum;
+
 typedef struct JSGlobalObject {
     JSValue uninitialized_vars; /* hidden object containing the list of uninitialized variables */
 } JSGlobalObject;
