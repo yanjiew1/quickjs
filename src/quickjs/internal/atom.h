@@ -66,10 +66,10 @@ typedef enum {
 } JSAtomKindEnum;
 
 
+JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len, int atom_type);
+JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
 
-
-
-
+JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len, int atom_type);
 
 
 
