@@ -45,7 +45,7 @@ typedef struct JSAsyncFunctionState {
 #define GEN_MAGIC_NEXT   0
 
 
-
+void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 
 
 
