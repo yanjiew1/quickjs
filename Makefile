@@ -296,6 +296,7 @@ QUICKJS_SRCS= \
     src/quickjs/number.c \
     src/quickjs/parse-state.c \
     src/quickjs/quickjs.c \
+    src/quickjs/runtime.c \
     src/quickjs/string.c \
     src/quickjs/value/compare.c \
     src/quickjs/value/conversion.c \
