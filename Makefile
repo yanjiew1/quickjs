@@ -293,6 +293,7 @@ QUICKJS_SRCS= \
     src/quickjs/gc.c \
     src/quickjs/generator.c \
     src/quickjs/iterator-protocol.c \
+    src/quickjs/memory-usage.c \
     src/quickjs/number.c \
     src/quickjs/parse-state.c \
     src/quickjs/quickjs.c \
