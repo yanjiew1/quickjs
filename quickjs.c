@@ -58836,7 +58836,7 @@ static JSValue js_typed_array_slice(JSContext *ctx, JSValueConst this_val,
         p1 = get_typed_array(ctx, arr);
         space = max_int(0, p->u.array.count - start);
         count = min_int(count, space);
-        if (p1 != NULL && p->class_id == p1->class_id) {
+        if (count > 0 && p1 != NULL && p->class_id == p1->class_id) {
             slice_memcpy(p1->u.array.u.uint8_ptr,
                          p->u.array.u.uint8_ptr + (start << shift),
                          count << shift);

@@ -533,6 +533,40 @@ function test_typed_array()
     assert(a[0], undefined);
 }
 
+function test_typed_array_slice_resize()
+{
+    const constructors = [
+        Uint8ClampedArray, Int8Array, Uint8Array, Int16Array, Uint16Array,
+        Int32Array, Uint32Array, BigInt64Array, BigUint64Array,
+        Float16Array, Float32Array, Float64Array,
+    ];
+    for (const C of constructors) {
+        const zero = C === BigInt64Array || C === BigUint64Array ? 0n : 0;
+        for (const argument of ["start", "end"]) {
+            for (let start = 0; start < 4; start++) {
+                const buffer = new ArrayBuffer(4 * C.BYTES_PER_ELEMENT,
+                                              { maxByteLength: 4 * C.BYTES_PER_ELEMENT });
+                const source = new C(buffer);
+                source.fill(zero === 0n ? 1n : 1);
+                const resize = {
+                    valueOf() {
+                        buffer.resize(0);
+                        return argument === "start" ? start : 4;
+                    }
+                };
+                const result = source.slice(argument === "start" ? resize : start,
+                                            argument === "end" ? resize : 4);
+                assert(buffer.detached, false);
+                assert(buffer.byteLength, 0);
+                assert(source.length, 0);
+                assert(result.length, 4 - start);
+                for (const value of result)
+                    assert(value, zero);
+            }
+        }
+    }
+}
+
 /* return [s, line_num, col_num] where line_num and col_num are the
    position of the '@' character in 'str'. 's' is str without the '@'
    character */
@@ -1208,6 +1242,7 @@ test_number();
 test_eval();
 test_error_stack();
 test_typed_array();
+test_typed_array_slice_resize();
 test_json();
 test_date();
 test_regexp();
