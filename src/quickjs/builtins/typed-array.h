@@ -43,9 +43,11 @@ extern uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
 
 
 
-
-
-
+int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
+JSValue js_typed_array___speciesCreate(JSContext *ctx,
+                                       JSValueConst this_val,
+                                       int argc, JSValueConst *argv);
+BOOL typed_array_is_oob(JSObject *p);
 
 
 #endif
