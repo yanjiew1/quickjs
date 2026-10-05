@@ -1,5 +1,5 @@
 /*
- * QuickJS C library
+ * QuickJS host helpers and event loop
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
@@ -22,10 +22,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "module-loader.h"
-#include "os.h"
-#include "std.h"
-#include "thread.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -46,18 +42,17 @@
 #include <conio.h>
 #include <utime.h>
 #else
-#include <dlfcn.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <poll.h>
 
 #if defined(__FreeBSD__)
-
+extern char **environ;
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
-
+typedef sig_t sighandler_t;
 #endif
 
 #if defined(__APPLE__)
@@ -72,476 +67,19 @@
 /* enable the os.Worker API. It relies on POSIX threads */
 #define USE_WORKER
 
-#ifdef USE_WORKER
-#include <pthread.h>
-#include <stdatomic.h>
-#endif
-
 #include "cutils.h"
 #include "list.h"
 #include "quickjs-libc.h"
-
-#if !defined(PATH_MAX)
-#define PATH_MAX 4096
-#endif
-
-/* TODO:
-   - add socket calls
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#include "thread.h"
+#include "os.h"
+#include "std.h"
+#include "module-loader.h"
 
 typedef struct {
     struct list_head link;
     JSValue promise;
     JSValue reason;
 } JSRejectedPromiseEntry;
-
-
-
-
-
-
-
-
-
-
-
-
-/* XXX: use 'o' and 'O' for object using JS_PrintValue() ? */
-
-
-
-
-/* load and evaluate a file */
-
-
-/* load a file as a UTF-8 encoded string */
-
-
-
-
-
-#if defined(_WIN32)
-
-#else
-
-#endif /* !_WIN32 */
-
-
-
-
-
-
-
-/* in order to conform with the specification, only the keys should be
-   tested and not the associated values. */
-
-
-/* return > 0 if the attributes indicate a JSON module */
-
-
-
-
-
-
-
-
-#if defined(_WIN32)
-
-
-
-#endif /* _WIN32 */
-
-
-
-
-
-/* return an object containing the list of the available environment
-   variables. */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* XXX: could use less memory and go faster */
-
-
-/* XXX: could use less memory and go faster */
-
-
-
-
-
-
-/* urlGet */
-
-#define URL_GET_PROGRAM "curl -s -i --"
-#define URL_GET_BUF_SIZE 4096
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**********************************************************/
-/* 'os' object */
-
-
-
-
-
-
-
-
-
-
-
-#if defined(_WIN32)
-
-
-/* Windows 10 built-in VT100 emulation */
-#define __ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
-#define __ENABLE_VIRTUAL_TERMINAL_INPUT 0x0200
-
-
-#else
-
-
-
-
-
-
-/* XXX: should add a way to go back to normal mode */
-
-
-#endif /* !_WIN32 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if defined(_WIN32)
-
-#endif
-
-
-
-#if defined(__linux__) || defined(__APPLE__)
-
-
-
-#else
-/* more portable, but does not work if the date is updated */
-
-
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-/* return a promise */
-
-
-
-
-#ifdef USE_WORKER
-
-#ifdef _WIN32
-
-
-
-
-
-
-
-
-
-#else // !_WIN32
-
-
-
-
-
-
-
-
-
-#endif // _WIN32
-
-
-
-/* return 1 if a message was handled, 0 if no message */
-
-#else
-
-#endif /* !USE_WORKER */
-
-#if defined(_WIN32)
-
-
-
-#else
-
-
-
-
-
-
-#endif /* !_WIN32 */
-
-
-
-
-
-/* return [cwd, errorcode] */
-
-
-
-
-
-
-/* return [array, errorcode] */
-
-
-#if !defined(_WIN32)
-
-#endif
-
-/* return [obj, errcode] */
-
-
-#if !defined(_WIN32)
-
-#endif
-
-
-
-/* sleep(delay_ms) */
-
-
-#if defined(_WIN32)
-
-#endif
-
-/* return [path, errorcode] */
-
-
-#if !defined(_WIN32)
-
-
-/* return [path, errorcode] */
-
-
-
-
-/* execvpe is not available on non GNU systems */
-
-
-/* exec(args[, options]) -> exitcode */
-
-
-/* getpid() -> pid */
-
-
-/* waitpid(pid, block) -> [pid, status] */
-
-
-/* pipe() -> [read_fd, write_fd] or null if error */
-
-
-/* kill(pid, sig) */
-
-
-/* dup(fd) */
-
-
-/* dup2(fd) */
-
-
-#endif /* !_WIN32 */
-
-#ifdef USE_WORKER
-
-/* Worker */
-
-
-
-
-
-
-
-
-
-
-
-
-/* shared array buffer allocator */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#endif /* USE_WORKER */
-
-
-
-#if defined(_WIN32)
-#define OS_PLATFORM "win32"
-#elif defined(__APPLE__)
-#define OS_PLATFORM "darwin"
-#elif defined(__EMSCRIPTEN__)
-#define OS_PLATFORM "js"
-#else
-#define OS_PLATFORM "linux"
-#endif
-
-#define OS_FLAG(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
-
-
-
-
-
-
 
 /**********************************************************/
 
@@ -550,7 +88,7 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val,
 {
     int i;
     JSValueConst v;
-    
+
     for(i = 0; i < argc; i++) {
         if (i != 0)
             putchar(' ');
@@ -790,7 +328,7 @@ void js_std_loop(JSContext *ctx)
         }
 
         js_std_promise_rejection_check(ctx);
-        
+
         if (!os_poll_func || os_poll_func(ctx))
             break;
     }
@@ -874,7 +412,7 @@ void js_std_eval_binary_json_module(JSContext *ctx,
 {
     JSValue obj;
     JSModuleDef *m;
-    
+
     obj = JS_ReadObject(ctx, buf, buf_len, 0);
     if (JS_IsException(obj))
         goto exception;
