@@ -1,5 +1,5 @@
 /*
- * QuickJS exception and backtrace interface
+ * QuickJS value conversion interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,29 +22,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_ERROR_H
-#define QUICKJS_ERROR_H
+#ifndef QUICKJS_VALUE_CONVERSION_H
+#define QUICKJS_VALUE_CONVERSION_H
 
-#include "function.h"
+#include "../internal/base.h"
 
-
-
-
-
-
-
+#define HINT_STRING  0
+#define HINT_NUMBER  1
+#define HINT_NONE    2
+#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 
 
 
 
+JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
 
 
-
-
-
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
-
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
-JSValue JS_ThrowOutOfMemory(JSContext *ctx);
 
 #endif
