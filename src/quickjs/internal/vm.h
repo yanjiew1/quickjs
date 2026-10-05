@@ -27,6 +27,15 @@
 
 #include "function.h"
 
+typedef struct JSForInIterator {
+    JSValue obj;
+    uint32_t idx;
+    uint32_t atom_count;
+    uint8_t in_prototype_chain;
+    uint8_t is_array;
+    JSPropertyEnum *tab_atom; /* is_array = FALSE */
+} JSForInIterator;
+
 #define JS_CALL_FLAG_GENERATOR   (1 << 2)
 
 #define FUNC_RET_AWAIT         0

@@ -29,6 +29,7 @@
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
+#include "internal/vm.h"
 #include "internal/module.h"
 #include "builtins/array-buffer.h"
 
