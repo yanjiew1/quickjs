@@ -147,15 +147,6 @@ typedef struct JSBoundFunction {
     JSValue argv[0];
 } JSBoundFunction;
 
-typedef struct JSForInIterator {
-    JSValue obj;
-    uint32_t idx;
-    uint32_t atom_count;
-    uint8_t in_prototype_chain;
-    uint8_t is_array;
-    JSPropertyEnum *tab_atom; /* is_array = FALSE */
-} JSForInIterator;
-
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
                             int class_id);
 
