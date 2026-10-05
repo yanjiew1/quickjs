@@ -290,6 +290,7 @@ QUICKJS_SRCS= \
     src/quickjs/class.c \
     src/quickjs/compiler/backend.c \
     src/quickjs/compiler/bytecode-dump.c \
+    src/quickjs/compiler/eval.c \
     src/quickjs/compiler/lexer.c \
     src/quickjs/compiler/parser.c \
     src/quickjs/compiler/stack-analysis.c \
