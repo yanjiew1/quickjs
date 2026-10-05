@@ -45,6 +45,10 @@
 #include "internal/base.h"
 #include "internal/allocator-types.h"
 #include "internal/runtime.h"
+#include "internal/atom.h"
+#include "internal/number.h"
+#include "internal/bigint.h"
+#include "internal/string.h"
 #include "quickjs.h"
 #include "libregexp.h"
 #include "libunicode.h"
@@ -252,39 +256,30 @@ struct JSClass {
 
 #if JS_LIMB_BITS == 32
 
-typedef int32_t js_slimb_t;
-typedef uint32_t js_limb_t;
-typedef int64_t js_sdlimb_t;
-typedef uint64_t js_dlimb_t;
+
+
+
+
 
 #define JS_LIMB_DIGITS 9
 
 #else
 
-typedef __int128 int128_t;
-typedef unsigned __int128 uint128_t;
-typedef int64_t js_slimb_t;
-typedef uint64_t js_limb_t;
-typedef int128_t js_sdlimb_t;
-typedef uint128_t js_dlimb_t;
+
+
+
+
+
+
 
 #define JS_LIMB_DIGITS 19
 
 #endif
 
-typedef struct JSBigInt {
-    uint32_t len; /* number of limbs, >= 1 */
-    js_limb_t tab[]; /* two's complement representation, always
-                        normalized so that 'len' is the minimum
-                        possible length >= 1 */
-} JSBigInt;
+
 
 /* this bigint structure can hold a 64 bit integer */
-typedef struct {
-    js_limb_t big_int_buf[sizeof(JSBigInt) / sizeof(js_limb_t)]; /* for JSBigInt */
-    /* must come just after */
-    js_limb_t tab[(64 + JS_LIMB_BITS - 1) / JS_LIMB_BITS];
-} JSBigIntBuf;
+
     
 
 
@@ -294,55 +289,18 @@ typedef struct {
 
 
 
-typedef union JSFloat64Union {
-    double d;
-    uint64_t u64;
-    uint32_t u32[2];
-} JSFloat64Union;
 
-enum {
-    JS_ATOM_TYPE_STRING = 1,
-    JS_ATOM_TYPE_GLOBAL_SYMBOL,
-    JS_ATOM_TYPE_SYMBOL,
-    JS_ATOM_TYPE_PRIVATE,
-};
 
-typedef enum {
-    JS_ATOM_KIND_STRING,
-    JS_ATOM_KIND_SYMBOL,
-    JS_ATOM_KIND_PRIVATE,
-} JSAtomKindEnum;
+
+
+
 
 #define JS_ATOM_HASH_MASK  ((1 << 30) - 1)
 #define JS_ATOM_HASH_PRIVATE JS_ATOM_HASH_MASK
 
-struct JSString {
-    uint32_t len : 31;
-    uint8_t is_wide_char : 1; /* 0 = 8 bits, 1 = 16 bits characters */
-    /* for JS_ATOM_TYPE_SYMBOL: hash = weakref_count, atom_type = 3,
-       for JS_ATOM_TYPE_PRIVATE: hash = JS_ATOM_HASH_PRIVATE, atom_type = 3
-       XXX: could change encoding to have one more bit in hash */
-    uint32_t hash : 30;
-    uint8_t atom_type : 2; /* != 0 if atom, JS_ATOM_TYPE_x */
-    uint32_t hash_next; /* atom_index for JS_ATOM_TYPE_SYMBOL */
-#ifdef DUMP_LEAKS
-    struct list_head link; /* string list */
-#endif
-    union {
-        uint8_t str8[0]; /* 8 bit strings will get an extra null terminator */
-        uint16_t str16[0];
-    } u;
-};
 
-typedef struct JSStringRope {
-    uint32_t len;
-    uint8_t is_wide_char; /* 0 = 8 bits, 1 = 16 bits characters */
-    uint8_t depth; /* max depth of the rope tree */
-    /* XXX: could reduce memory usage by using a direct pointer with
-       bit 0 to select rope or string */
-    JSValue left;
-    JSValue right; /* might be the empty string */
-} JSStringRope;
+
+
 
 typedef enum {
     JS_CLOSURE_LOCAL, /* 'var_idx' is the index of a local variable in the parent function */
@@ -833,13 +791,7 @@ typedef struct JSMapState {
     JSWeakRefHeader weakref_header; /* only used if is_weak = TRUE */
 } JSMapState;
 
-enum {
-    __JS_ATOM_NULL = JS_ATOM_NULL,
-#define DEF(name, str) JS_ATOM_ ## name,
-#include "quickjs-atom.h"
-#undef DEF
-    JS_ATOM_END,
-};
+
 #define JS_ATOM_LAST_KEYWORD JS_ATOM_super
 #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
 
@@ -3753,14 +3705,7 @@ static JSValue js_sub_string(JSContext *ctx, JSString *p, int start, int end)
     }
 }
 
-typedef struct StringBuffer {
-    JSContext *ctx;
-    JSString *str;
-    int len;
-    int size;
-    int is_wide_char;
-    int error_status;
-} StringBuffer;
+
 
 /* It is valid to call string_buffer_end() and all string_buffer functions even
    if string_buffer_init() or another string_buffer function returns an error.
