@@ -255,7 +255,8 @@ endif
 .DEFAULT_GOAL := all
 
 QUICKJS_SRCS= \
-    src/quickjs/quickjs.c
+    src/quickjs/quickjs.c \
+    src/quickjs/allocator.c
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(OBJDIR)/src/regexp/libregexp.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
 
@@ -315,14 +316,17 @@ LTOEXT=
 endif
 
 libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS)
+	rm -f $@
 	$(AR) rcs $@ $^
 
 ifdef CONFIG_LTO
 libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
+	rm -f $@
 	$(AR) rcs $@ $^
 endif # CONFIG_LTO
 
 libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
+	rm -f $@
 	$(AR) rcs $@ $^
 
 repl.c: $(QJSC) tools/repl.js
