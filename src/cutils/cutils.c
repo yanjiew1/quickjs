@@ -29,6 +29,12 @@
 
 #include "cutils.h"
 
+/* Prevent UB when n == 0 and (src == NULL or dest == NULL) */
+static inline void memcpy_no_ub(void *dest, const void *src, size_t n) {
+    if (n)
+        memcpy(dest, src, n);
+}
+
 void pstrcpy(char *buf, int buf_size, const char *str)
 {
     int c;
