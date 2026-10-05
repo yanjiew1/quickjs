@@ -39,10 +39,6 @@ typedef struct JSAsyncFunctionState {
     /* arg_buf, var_buf, stack_buf and var_refs follow */
 } JSAsyncFunctionState;
 
-/* XXX: use enum */
-#define GEN_MAGIC_THROW  2
-#define GEN_MAGIC_RETURN 1
-#define GEN_MAGIC_NEXT   0
 
 void __async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
 void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);

@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "bytecode-dump.h"
+#include "compiler-internal.h"
 #include "../internal/bytecode.h"
 #include "../internal/bytecode-format.h"
 #include "../internal/atom.h"
