@@ -168,7 +168,7 @@ typedef struct JSForInIterator {
 
 
 
-
+BOOL js_class_has_bytecode(JSClassID class_id);
 
 
 typedef struct JSCFunctionDataRecord {
