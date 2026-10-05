@@ -55,6 +55,9 @@
 #include "internal/object.h"
 #include "internal/module.h"
 #include "internal/generator.h"
+#include "internal/parse-state.h"
+#include "compiler/compiler-state.h"
+#include "internal/bytecode.h"
 #include "quickjs.h"
 #include "libregexp.h"
 #include "libunicode.h"
@@ -475,35 +478,9 @@ static const char js_atom_init[] =
 #undef DEF
 ;
 
-typedef enum OPCodeFormat {
-#define FMT(f) OP_FMT_ ## f,
-#define DEF(id, size, n_pop, n_push, f)
-#include "quickjs-opcode.h"
-#undef DEF
-#undef FMT
-} OPCodeFormat;
 
-enum OPCodeEnum {
-#define FMT(f)
-#define DEF(id, size, n_pop, n_push, f) OP_ ## id,
-#define def(id, size, n_pop, n_push, f)
-#include "quickjs-opcode.h"
-#undef def
-#undef DEF
-#undef FMT
-    OP_COUNT, /* excluding temporary opcodes */
-    /* temporary opcodes : overlap with the short opcodes */
-    OP_TEMP_START = OP_nop + 1,
-    OP___dummy = OP_TEMP_START - 1,
-#define FMT(f)
-#define DEF(id, size, n_pop, n_push, f)
-#define def(id, size, n_pop, n_push, f) OP_ ## id,
-#include "quickjs-opcode.h"
-#undef def
-#undef DEF
-#undef FMT
-    OP_TEMP_END,
-};
+
+
 
 static int JS_InitAtoms(JSRuntime *rt);
 static JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len,
@@ -17227,16 +17204,7 @@ static JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
     }
 }
 
-/* argument of OP_special_object */
-typedef enum {
-    OP_SPECIAL_OBJECT_ARGUMENTS,
-    OP_SPECIAL_OBJECT_MAPPED_ARGUMENTS,
-    OP_SPECIAL_OBJECT_THIS_FUNC,
-    OP_SPECIAL_OBJECT_NEW_TARGET,
-    OP_SPECIAL_OBJECT_HOME_OBJECT,
-    OP_SPECIAL_OBJECT_VAR_OBJECT,
-    OP_SPECIAL_OBJECT_IMPORT_META,
-} OPSpecialObjectEnum;
+
 
 #define FUNC_RET_AWAIT         0
 #define FUNC_RET_YIELD         1
@@ -21292,102 +21260,7 @@ static JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst fun
 
 /* JS parser */
 
-enum {
-    TOK_NUMBER = -128,
-    TOK_STRING,
-    TOK_TEMPLATE,
-    TOK_IDENT,
-    TOK_REGEXP,
-    /* warning: order matters (see js_parse_assign_expr) */
-    TOK_MUL_ASSIGN,
-    TOK_DIV_ASSIGN,
-    TOK_MOD_ASSIGN,
-    TOK_PLUS_ASSIGN,
-    TOK_MINUS_ASSIGN,
-    TOK_SHL_ASSIGN,
-    TOK_SAR_ASSIGN,
-    TOK_SHR_ASSIGN,
-    TOK_AND_ASSIGN,
-    TOK_XOR_ASSIGN,
-    TOK_OR_ASSIGN,
-    TOK_POW_ASSIGN,
-    TOK_LAND_ASSIGN,
-    TOK_LOR_ASSIGN,
-    TOK_DOUBLE_QUESTION_MARK_ASSIGN,
-    TOK_DEC,
-    TOK_INC,
-    TOK_SHL,
-    TOK_SAR,
-    TOK_SHR,
-    TOK_LT,
-    TOK_LTE,
-    TOK_GT,
-    TOK_GTE,
-    TOK_EQ,
-    TOK_STRICT_EQ,
-    TOK_NEQ,
-    TOK_STRICT_NEQ,
-    TOK_LAND,
-    TOK_LOR,
-    TOK_POW,
-    TOK_ARROW,
-    TOK_ELLIPSIS,
-    TOK_DOUBLE_QUESTION_MARK,
-    TOK_QUESTION_MARK_DOT,
-    TOK_ERROR,
-    TOK_PRIVATE_NAME,
-    TOK_EOF,
-    /* keywords: WARNING: same order as atoms */
-    TOK_NULL, /* must be first */
-    TOK_FALSE,
-    TOK_TRUE,
-    TOK_IF,
-    TOK_ELSE,
-    TOK_RETURN,
-    TOK_VAR,
-    TOK_THIS,
-    TOK_DELETE,
-    TOK_VOID,
-    TOK_TYPEOF,
-    TOK_NEW,
-    TOK_IN,
-    TOK_INSTANCEOF,
-    TOK_DO,
-    TOK_WHILE,
-    TOK_FOR,
-    TOK_BREAK,
-    TOK_CONTINUE,
-    TOK_SWITCH,
-    TOK_CASE,
-    TOK_DEFAULT,
-    TOK_THROW,
-    TOK_TRY,
-    TOK_CATCH,
-    TOK_FINALLY,
-    TOK_FUNCTION,
-    TOK_DEBUGGER,
-    TOK_WITH,
-    /* FutureReservedWord */
-    TOK_CLASS,
-    TOK_CONST,
-    TOK_ENUM,
-    TOK_EXPORT,
-    TOK_EXTENDS,
-    TOK_IMPORT,
-    TOK_SUPER,
-    /* FutureReservedWords when parsing strict mode code */
-    TOK_IMPLEMENTS,
-    TOK_INTERFACE,
-    TOK_LET,
-    TOK_PACKAGE,
-    TOK_PRIVATE,
-    TOK_PROTECTED,
-    TOK_PUBLIC,
-    TOK_STATIC,
-    TOK_YIELD,
-    TOK_AWAIT, /* must be last */
-    TOK_OF,     /* only used for js_parse_skip_parens_token() */
-};
+
 
 #define TOK_FIRST_KEYWORD   TOK_NULL
 #define TOK_LAST_KEYWORD    TOK_AWAIT
@@ -21411,15 +21284,7 @@ typedef struct BlockEnv {
     uint8_t is_regular_stmt : 1; /* i.e. not a loop statement */
 } BlockEnv;
 
-typedef struct JSGlobalVar {
-    int cpool_idx; /* if >= 0, index in the constant pool for hoisted
-                      function defintion*/
-    uint8_t force_init : 1; /* force initialization to undefined */
-    uint8_t is_lexical : 1; /* global let/const definition */
-    uint8_t is_const   : 1; /* const definition */
-    int scope_level;    /* scope of definition */
-    JSAtom var_name;  /* variable name */
-} JSGlobalVar;
+
 
 typedef struct RelocEntry {
     struct RelocEntry *next;
@@ -21434,39 +21299,16 @@ typedef struct JumpSlot {
     int label;
 } JumpSlot;
 
-typedef struct LabelSlot {
-    int ref_count;
-    int pos;    /* phase 1 address, -1 means not resolved yet */
-    int pos2;   /* phase 2 address, -1 means not resolved yet */
-    int addr;   /* phase 3 address, -1 means not resolved yet */
-    RelocEntry *first_reloc;
-} LabelSlot;
+
 
 typedef struct LineNumberSlot {
     uint32_t pc;
     uint32_t source_pos;
 } LineNumberSlot;
 
-typedef struct {
-    /* last source position */
-    const uint8_t *ptr;
-    int line_num;
-    int col_num;
-    const uint8_t *buf_start;
-} GetLineColCache;
 
-typedef enum JSParseFunctionEnum {
-    JS_PARSE_FUNC_STATEMENT,
-    JS_PARSE_FUNC_VAR,
-    JS_PARSE_FUNC_EXPR,
-    JS_PARSE_FUNC_ARROW,
-    JS_PARSE_FUNC_GETTER,
-    JS_PARSE_FUNC_SETTER,
-    JS_PARSE_FUNC_METHOD,
-    JS_PARSE_FUNC_CLASS_STATIC_INIT,
-    JS_PARSE_FUNC_CLASS_CONSTRUCTOR,
-    JS_PARSE_FUNC_DERIVED_CLASS_CONSTRUCTOR,
-} JSParseFunctionEnum;
+
+
 
 typedef enum JSParseExportEnum {
     JS_PARSE_EXPORT_NONE,
@@ -21474,202 +21316,17 @@ typedef enum JSParseExportEnum {
     JS_PARSE_EXPORT_DEFAULT,
 } JSParseExportEnum;
 
-typedef struct JSVarScope {
-    int parent;  /* index into fd->scopes of the enclosing scope */
-    int first;   /* index into fd->vars of the last variable in this scope */
-} JSVarScope;
 
-typedef struct JSVarDef {
-    JSAtom var_name;
-    /* index into fd->scopes of this variable lexical scope */
-    int scope_level;
-    /* - if scope_level = 0: scope in which the variable is defined
-       - if scope_level != 0: index into fd->vars of the next
-       variable in the same or enclosing lexical scope
-    */
-    int scope_next;
-    uint8_t is_const : 1;
-    uint8_t is_lexical : 1;
-    uint8_t is_captured : 1; /* XXX: could remove and use a var_ref_idx value */
-    uint8_t is_static_private : 1; /* only used during private class field parsing */
-    uint8_t var_kind : 4; /* see JSVarKindEnum */
-    /* if is_captured = TRUE, provides, the index of the corresponding
-       JSVarRef on stack */
-    uint16_t var_ref_idx;
-    /* function pool index for lexical variables with var_kind =
-       JS_VAR_FUNCTION_DECL/JS_VAR_NEW_FUNCTION_DECL or scope level of
-       the definition of the 'var' variables (they have scope_level =
-       0) */
-    int func_pool_idx;
-} JSVarDef;
 
-typedef struct JSFunctionDef {
-    JSContext *ctx;
-    struct JSFunctionDef *parent;
-    int parent_cpool_idx; /* index in the constant pool of the parent
-                             or -1 if none */
-    int parent_scope_level; /* scope level in parent at point of definition */
-    struct list_head child_list; /* list of JSFunctionDef.link */
-    struct list_head link;
 
-    BOOL is_eval; /* TRUE if eval code */
-    int eval_type; /* only valid if is_eval = TRUE */
-    BOOL is_global_var; /* TRUE if variables are not defined locally:
-                           eval global, eval module or non strict eval */
-    BOOL is_func_expr; /* TRUE if function expression */
-    BOOL has_home_object; /* TRUE if the home object is available */
-    BOOL has_prototype; /* true if a prototype field is necessary */
-    BOOL has_simple_parameter_list;
-    BOOL has_parameter_expressions; /* if true, an argument scope is created */
-    BOOL has_use_strict; /* to reject directive in special cases */
-    BOOL has_eval_call; /* true if the function contains a call to eval() */
-    BOOL has_arguments_binding; /* true if the 'arguments' binding is
-                                   available in the function */
-    BOOL has_this_binding; /* true if the 'this' and new.target binding are
-                              available in the function */
-    BOOL new_target_allowed; /* true if the 'new.target' does not
-                                throw a syntax error */
-    BOOL super_call_allowed; /* true if super() is allowed */
-    BOOL super_allowed; /* true if super. or super[] is allowed */
-    BOOL arguments_allowed; /* true if the 'arguments' identifier is allowed */
-    BOOL is_derived_class_constructor;
-    BOOL in_function_body;
-    JSFunctionKindEnum func_kind : 8;
-    JSParseFunctionEnum func_type : 8;
-    uint8_t js_mode; /* bitmap of JS_MODE_x */
-    JSAtom func_name; /* JS_ATOM_NULL if no name */
 
-    JSVarDef *vars;
-    int var_size; /* allocated size for vars[] */
-    int var_count;
-    JSVarDef *args;
-    int arg_size; /* allocated size for args[] */
-    int arg_count; /* number of arguments */
-    int defined_arg_count;
-    int var_ref_count; /* number of local/arg variable references */
-    int var_object_idx; /* -1 if none */
-    int arg_var_object_idx; /* -1 if none (var object for the argument scope) */
-    int arguments_var_idx; /* -1 if none */
-    int arguments_arg_idx; /* argument variable definition in argument scope,
-                              -1 if none */
-    int func_var_idx; /* variable containing the current function (-1
-                         if none, only used if is_func_expr is true) */
-    int eval_ret_idx; /* variable containing the return value of the eval, -1 if none */
-    int this_var_idx; /* variable containg the 'this' value, -1 if none */
-    int new_target_var_idx; /* variable containg the 'new.target' value, -1 if none */
-    int this_active_func_var_idx; /* variable containg the 'this.active_func' value, -1 if none */
-    int home_object_var_idx;
-    BOOL need_home_object;
 
-    int scope_level;    /* index into fd->scopes if the current lexical scope */
-    int scope_first;    /* index into vd->vars of first lexically scoped variable */
-    int scope_size;     /* allocated size of fd->scopes array */
-    int scope_count;    /* number of entries used in the fd->scopes array */
-    JSVarScope *scopes;
-    JSVarScope def_scope_array[4];
-    int body_scope; /* scope of the body of the function or eval */
 
-    int global_var_count;
-    int global_var_size;
-    JSGlobalVar *global_vars;
 
-    DynBuf byte_code;
-    int last_opcode_pos; /* -1 if no last opcode */
-    const uint8_t *last_opcode_source_ptr;
-    BOOL use_short_opcodes; /* true if short opcodes are used in byte_code */
 
-    LabelSlot *label_slots;
-    int label_size; /* allocated size for label_slots[] */
-    int label_count;
-    BlockEnv *top_break; /* break/continue label stack */
 
-    /* constant pool (strings, functions, numbers) */
-    JSValue *cpool;
-    int cpool_count;
-    int cpool_size;
 
-    /* list of variables in the closure */
-    int closure_var_count;
-    int closure_var_size;
-    JSClosureVar *closure_var;
 
-    JumpSlot *jump_slots;
-    int jump_size;
-    int jump_count;
-
-    LineNumberSlot *line_number_slots;
-    int line_number_size;
-    int line_number_count;
-    int line_number_last;
-    int line_number_last_pc;
-
-    /* pc2line table */
-    BOOL strip_debug : 1; /* strip all debug info (implies strip_source = TRUE) */
-    BOOL strip_source : 1; /* strip only source code */
-    JSAtom filename;
-    uint32_t source_pos; /* pointer in the eval() source */
-    GetLineColCache *get_line_col_cache; /* XXX: could remove to save memory */
-    DynBuf pc2line;
-
-    char *source;  /* raw source, utf-8 encoded */
-    int source_len;
-
-    JSModuleDef *module; /* != NULL when parsing a module */
-    BOOL has_await; /* TRUE if await is used (used in module eval) */
-} JSFunctionDef;
-
-typedef struct JSToken {
-    int val;
-    const uint8_t *ptr; /* position in the source */
-    union {
-        struct {
-            JSValue str;
-            int sep;
-        } str;
-        struct {
-            JSValue val;
-        } num;
-        struct {
-            JSAtom atom;
-            BOOL has_escape;
-            BOOL is_reserved;
-        } ident;
-        struct {
-            JSValue body;
-            JSValue flags;
-        } regexp;
-    } u;
-} JSToken;
-
-typedef struct JSParseState {
-    JSContext *ctx;
-    const char *filename;
-    JSToken token;
-    BOOL got_lf; /* true if got line feed before the current token */
-    const uint8_t *last_ptr;
-    const uint8_t *buf_start;
-    const uint8_t *buf_ptr;
-    const uint8_t *buf_end;
-
-    /* current function code */
-    JSFunctionDef *cur_func;
-    BOOL is_module; /* parsing a module */
-    BOOL allow_html_comments;
-    BOOL ext_json; /* JSON parsing: true if accepting JSON superset */
-    GetLineColCache get_line_col_cache;
-} JSParseState;
-
-typedef struct JSOpCode {
-#ifdef DUMP_BYTECODE
-    const char *name;
-#endif
-    uint8_t size; /* in bytes */
-    /* the opcodes remove n_pop items from the top of the stack, then
-       pushes n_push items */
-    uint8_t n_pop;
-    uint8_t n_push;
-    uint8_t fmt;
-} JSOpCode;
 
 static const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)] = {
 #define FMT(f)
