@@ -268,6 +268,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/data-view.c \
     src/quickjs/builtins/date.c \
     src/quickjs/builtins/error.c \
+    src/quickjs/builtins/finalization-registry.c \
     src/quickjs/builtins/function.c \
     src/quickjs/builtins/global.c \
     src/quickjs/builtins/math.c \
