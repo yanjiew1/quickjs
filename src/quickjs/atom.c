@@ -41,7 +41,7 @@ static inline JSAtomStruct *atom_set_free(uint32_t v)
 
 static const char js_atom_init[] =
 #define DEF(name, str) str "\0"
-#include "quickjs-atom.h"
+#include "atom-defs.h"
 #undef DEF
 ;
 
