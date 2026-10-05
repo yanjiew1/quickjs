@@ -38,20 +38,29 @@ typedef struct JSArrayBuffer {
     JSFreeArrayBufferDataFunc *free_func;
 } JSArrayBuffer;
 
-
-
-
-
-
-
-
+JSValue js_array_buffer_constructor3(JSContext *ctx, JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len,
+                                     JSClassID class_id, uint8_t *buf,
+                                     JSFreeArrayBufferDataFunc *free_func,
+                                     void *opaque, BOOL alloc_flag);
+JSValue js_array_buffer_constructor1(JSContext *ctx, JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len);
+void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr);
+void js_array_buffer_finalizer(JSRuntime *rt, JSValue val);
+JSArrayBuffer *js_get_array_buffer(JSContext *ctx, JSValueConst obj);
+BOOL array_buffer_is_resizable(const JSArrayBuffer *abuf);
+JSValue JS_ThrowTypeErrorDetachedArrayBuffer(JSContext *ctx);
 JSValue JS_ThrowTypeErrorArrayBufferOOB(JSContext *ctx);
 
-
-
-
-
-
-
+extern const JSCFunctionListEntry js_array_buffer_funcs[2];
+extern const JSCFunctionListEntry js_array_buffer_proto_funcs[9];
+extern const JSCFunctionListEntry js_shared_array_buffer_funcs[1];
+extern const JSCFunctionListEntry js_shared_array_buffer_proto_funcs[6];
+JSValue js_array_buffer_constructor(JSContext *ctx,
+                                           JSValueConst new_target,
+                                           int argc, JSValueConst *argv);
+JSValue js_shared_array_buffer_constructor(JSContext *ctx,
+                                                  JSValueConst new_target,
+                                                  int argc, JSValueConst *argv);
 
 #endif
