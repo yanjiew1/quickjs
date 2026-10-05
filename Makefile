@@ -258,7 +258,9 @@ QUICKJS_SRCS=src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/bigint.c src
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 REGEXP_SRCS=src/regexp/compile.c src/regexp/exec.c
 REGEXP_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(REGEXP_SRCS))
-QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(OBJDIR)/src/quickjs-libc/quickjs-libc.o
+QUICKJS_LIBC_SRCS=src/quickjs-libc/quickjs-libc.c src/quickjs-libc/std.c
+QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
+QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
