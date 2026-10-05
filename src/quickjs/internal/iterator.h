@@ -25,7 +25,7 @@
 #ifndef QUICKJS_ITERATOR_H
 #define QUICKJS_ITERATOR_H
 
-#include "base.h"
+#include "object.h"
 
 typedef enum JSIteratorKindEnum {
     JS_ITERATOR_KIND_KEY,
@@ -35,9 +35,48 @@ typedef enum JSIteratorKindEnum {
 
 JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj, JSValueConst method);
 JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
-JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
-                         JSValueConst method, int argc, JSValueConst *argv,
-                         int *pdone);
+
+/* return *pdone = 2 if the iterator object is not parsed */
+static inline JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
+                                       JSValueConst method,
+                                       int argc, JSValueConst *argv, int *pdone)
+{
+    JSValue obj;
+
+    /* fast path for the built-in iterators (avoid creating the
+       intermediate result object) */
+    if (JS_IsObject(method)) {
+        JSObject *p = JS_VALUE_GET_OBJ(method);
+        if (p->class_id == JS_CLASS_C_FUNCTION &&
+            p->u.cfunc.cproto == JS_CFUNC_iterator_next) {
+            JSCFunctionType func;
+            JSValueConst args[1];
+
+            /* in case the function expects one argument */
+            if (argc == 0) {
+                args[0] = JS_UNDEFINED;
+                argv = args;
+            }
+            func = p->u.cfunc.c_function;
+            return func.iterator_next(ctx, enum_obj, argc, argv,
+                                      pdone, p->u.cfunc.magic);
+        }
+    }
+    obj = JS_Call(ctx, method, enum_obj, argc, argv);
+    if (JS_IsException(obj))
+        goto fail;
+    if (!JS_IsObject(obj)) {
+        JS_FreeValue(ctx, obj);
+        JS_ThrowTypeError(ctx, "iterator must return an object");
+        goto fail;
+    }
+    *pdone = 2;
+    return obj;
+ fail:
+    *pdone = FALSE;
+    return JS_EXCEPTION;
+}
+
 JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
                         JSValueConst method, int argc, JSValueConst *argv,
                         BOOL *pdone);
