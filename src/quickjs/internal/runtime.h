@@ -252,6 +252,7 @@ static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
 
 
 
-
+void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
+                    JS_MarkFunc *mark_func);
 
 #endif
