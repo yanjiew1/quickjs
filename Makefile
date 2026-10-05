@@ -259,6 +259,7 @@ QUICKJS_SRCS= \
     src/quickjs/allocator.c \
     src/quickjs/atom.c \
     src/quickjs/bigint.c \
+    src/quickjs/builtins/boolean.c \
     src/quickjs/class.c \
     src/quickjs/error-support.c \
     src/quickjs/function-list.c \
