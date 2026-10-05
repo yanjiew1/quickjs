@@ -78,17 +78,27 @@ typedef struct StringBuffer {
     int error_status;
 } StringBuffer;
 
-
+static inline int string_get(const JSString *p, int idx) {
+    return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
+}
 
 
 
 /* XXX: could use faster version ? */
+static inline uint32_t hash_string8(const uint8_t *str, size_t len, uint32_t h)
+{
+    size_t i;
 
+    for(i = 0; i < len; i++)
+        h = h * 263 + str[i];
+    return h;
+}
 
+uint32_t hash_string(const JSString *str, uint32_t h);
 
-
-
-
+size_t count_ascii(const uint8_t *buf, size_t len);
+int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
+                     int pos2, int len);
 
 
 
@@ -100,7 +110,7 @@ typedef struct StringBuffer {
 /* 0 <= c <= 0x10ffff */
 
 
-
+JSValue js_new_string8_len(JSContext *ctx, const char *buf, int len);
 
 
 
@@ -114,6 +124,24 @@ typedef struct StringBuffer {
 
 
 /* same as JS_FreeValueRT() but faster */
+static inline void js_free_string(JSRuntime *rt, JSString *str)
+{
+    if (--js_rc(str)->ref_count <= 0) {
+        if (str->atom_type) {
+            JS_FreeAtomStruct(rt, str);
+        } else {
+#ifdef DUMP_LEAKS
+            list_del(&str->link);
+#endif
+            js_free_rt(rt, str);
+        }
+    }
+}
+
+
+
+
+JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
 
 
 
@@ -122,19 +150,13 @@ typedef struct StringBuffer {
 
 
 
+BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
 
 
 
 
 
 
-
-
-
-
-
-
-
-
+__maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
 
 #endif
