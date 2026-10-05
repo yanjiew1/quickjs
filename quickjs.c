@@ -1932,9 +1932,14 @@ static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
         return 0;
 }
 
+static inline void *js_dbuf_realloc(void *opaque, void *ptr, size_t size)
+{
+    return js_realloc_rt(opaque, ptr, size);
+}
+
 static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
 {
-    dbuf_init2(s, ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
+    dbuf_init2(s, ctx->rt, js_dbuf_realloc);
 }
 
 static void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size)
@@ -46812,7 +46817,7 @@ static int js_string_normalize1(JSContext *ctx, uint32_t **pout_buf,
     if (buf_len < 0)
         return -1;
     out_len = unicode_normalize(&out_buf, buf, buf_len, n_type,
-                                ctx->rt, (DynBufReallocFunc *)js_realloc_rt);
+                                ctx->rt, js_dbuf_realloc);
     js_free(ctx, buf);
     if (out_len < 0)
         return -1;
