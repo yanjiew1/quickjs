@@ -243,19 +243,6 @@ static void gc_remove_weak_objects(JSRuntime *rt)
     free_zero_refcount(rt);
 }
 
-void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                   JSGCObjectTypeEnum type)
-{
-    js_rc(h)->mark = 0;
-    js_rc(h)->gc_obj_type = type;
-    list_add_tail(&h->link, &rt->gc_obj_list);
-}
-
-void remove_gc_object(JSGCObjectHeader *h)
-{
-    list_del(&h->link);
-}
-
 void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func)
 {
     if (JS_VALUE_HAS_REF_COUNT(val)) {

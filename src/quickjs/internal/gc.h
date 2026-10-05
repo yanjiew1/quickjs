@@ -27,9 +27,19 @@
 
 #include "runtime.h"
 
-void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
-                   JSGCObjectTypeEnum type);
-void remove_gc_object(JSGCObjectHeader *h);
+static inline void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
+                                JSGCObjectTypeEnum type)
+{
+    js_rc(h)->mark = 0;
+    js_rc(h)->gc_obj_type = type;
+    list_add_tail(&h->link, &rt->gc_obj_list);
+}
+
+static inline void remove_gc_object(JSGCObjectHeader *h)
+{
+    list_del(&h->link);
+}
+
 void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
 void free_zero_refcount(JSRuntime *rt);
 void gc_decref(JSRuntime *rt);
