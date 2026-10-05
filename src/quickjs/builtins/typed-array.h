@@ -39,10 +39,12 @@ typedef struct JSTypedArray {
 extern uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
 #define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
 
+JSValue js_typed_array_constructor(JSContext *ctx, JSValueConst new_target,
+                                   int argc, JSValueConst *argv, int classid);
 
-
-
-
+void js_typed_array_finalizer(JSRuntime *rt, JSValue val);
+void js_typed_array_mark(JSRuntime *rt, JSValueConst val,
+                         JS_MarkFunc *mark_func);
 int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
 JSValue js_typed_array___speciesCreate(JSContext *ctx,
                                        JSValueConst this_val,
