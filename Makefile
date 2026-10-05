@@ -274,6 +274,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/regexp.c \
     src/quickjs/builtins/string.c \
     src/quickjs/builtins/symbol.c \
+    src/quickjs/builtins/typed-array.c \
     src/quickjs/builtins/uint8array-encoding.c \
     src/quickjs/class.c \
     src/quickjs/error-support.c \
