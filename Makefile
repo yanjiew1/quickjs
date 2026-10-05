@@ -128,8 +128,8 @@ else ifdef CONFIG_COSMO
   CONFIG_LTO=
   HOST_CC=gcc
   CC=cosmocc
-  DEPFLAGS=
   # cosmocc does not correct support -MF
+  DEPFLAGS=
   CFLAGS=-g -Wall #
   CFLAGS += -Wno-array-bounds -Wno-format-truncation
   AR=cosmoar
@@ -252,8 +252,6 @@ endif
 endif
 endif
 
-.DEFAULT_GOAL := all
-
 QUICKJS_SRCS= \
     src/quickjs/allocator.c \
     src/quickjs/atom.c \
@@ -320,6 +318,9 @@ QUICKJS_SRCS= \
     src/quickjs/value/print.c \
     src/quickjs/vm.c
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
+
+all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
+
 REGEXP_SRCS= \
     src/regexp/compile.c \
     src/regexp/exec.c
@@ -553,6 +554,26 @@ doc/%.html: doc/%.html.pre
 ###############################################################################
 # tests
 
+
+C_TESTS=tests/test_unicode$(EXE)
+
+tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: test-c
+test-c: $(C_TESTS)
+	$(WINE) ./tests/test_unicode$(EXE)
+
+.PHONY: test-regexp
+test-regexp: regexp_test$(EXE)
+	sh tests/test_regexp.sh "$(WINE)" "./regexp_test$(EXE)"
+
+test: test-c test-regexp test-build-dependencies
+
+.PHONY: test-build-dependencies
+test-build-dependencies:
+	sh tests/test_build_dependencies.sh "$(MAKE)"
+
 ifdef CONFIG_SHARED_LIBS
 test: tests/bjson.so examples/point.so
 endif
@@ -669,26 +690,6 @@ quickjs-libc.h: include/quickjs-libc.h
 	ln -sf include/quickjs-libc.h $@
 
 qjsc$(EXE) $(QJSC): | quickjs.h quickjs-libc.h
-
-all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
-
-.PHONY: test-regexp
-test-regexp: regexp_test$(EXE)
-	sh tests/test_regexp.sh "$(WINE)" "./regexp_test$(EXE)"
-
-test: test-regexp
-
-
-C_TESTS=tests/test_unicode$(EXE)
-
-tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-.PHONY: test-c
-test-c: $(C_TESTS)
-	$(WINE) ./tests/test_unicode$(EXE)
-
-test: test-c
 
 ifneq ($(wildcard fuzz/fuzz_common.c),)
 $(OBJDIR)/fuzz/fuzz_common.o: fuzz/fuzz_common.c fuzz/fuzz_common.h | $(OBJDIR)
