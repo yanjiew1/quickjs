@@ -68,6 +68,45 @@ function test_file1()
     f.close();
 }
 
+function test_empty_buffer_io()
+{
+    const f = std.tmpfile();
+    const fd = f.fileno();
+    const empty = new ArrayBuffer(0);
+    assert(f.read(empty, 0, 0), 0);
+    assert(f.write(empty, 0, 0), 0);
+    assert(os.read(fd, empty, 0, 0), 0);
+    assert(os.write(fd, empty, 0, 0), 0);
+    assert(os.read(-1, empty, 0, 0) < 0);
+    assert(os.write(-1, empty, 0, 0) < 0);
+
+    function check_error(expected, call)
+    {
+        let error;
+        try { call(); } catch(e) { error = e; }
+        assert(error instanceof expected);
+    }
+    for (const call of [
+        () => f.read(empty, 1, 0),
+        () => f.write(empty, 0, 1),
+        () => os.read(fd, empty, 1, 0),
+        () => os.write(fd, empty, 0, 1),
+    ])
+        check_error(RangeError, call);
+    const detached = new ArrayBuffer(0);
+    detached.transfer(0);
+    for (const invalid of [{}, detached]) {
+        for (const call of [
+            () => f.read(invalid, 0, 0),
+            () => f.write(invalid, 0, 0),
+            () => os.read(fd, invalid, 0, 0),
+            () => os.write(fd, invalid, 0, 0),
+        ])
+            check_error(TypeError, call);
+    }
+    f.close();
+}
+
 function test_file2()
 {
     var f, str, i, size;
@@ -330,6 +369,7 @@ function test_async_promise_rejection()
 
 test_printf();
 test_file1();
+test_empty_buffer_io();
 test_file2();
 test_getline();
 test_popen();

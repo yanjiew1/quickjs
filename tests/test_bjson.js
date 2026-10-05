@@ -115,6 +115,19 @@ function bjson_test(a)
     }
 }
 
+function bjson_test_empty_input()
+{
+    const empty = new ArrayBuffer(0);
+    const detached = new ArrayBuffer(0);
+    detached.transfer(0);
+    for (const [input, expected] of [[empty, SyntaxError], [{}, TypeError],
+                                     [detached, TypeError]]) {
+        let error;
+        try { bjson.read(input, 0, 0); } catch(e) { error = e; }
+        assert(error instanceof expected);
+    }
+}
+
 function bjson_test_arraybuffer()
 {
     var buf, array_buffer;
@@ -148,6 +161,16 @@ function bjson_test_arraybuffer()
     assert(array_buffer.byteLength, 4);
     assert(array_buffer.maxByteLength, 8);
     assert(array_buffer.resizable, true);
+    for (const resizable of [false, true]) {
+        array_buffer = resizable ? new ArrayBuffer(0, { maxByteLength: 8 }) :
+                                   new ArrayBuffer(0);
+        buf = bjson.write(array_buffer);
+        array_buffer = bjson.read(buf, 0, buf.byteLength);
+        assert(array_buffer.byteLength, 0);
+        assert(array_buffer.resizable, resizable);
+        assert(array_buffer.maxByteLength, resizable ? 8 : 0);
+        assert(array_buffer.detached, false);
+    }
 }
 
 /* test multiple references to an object including circular
@@ -217,6 +240,7 @@ function bjson_test_all()
         assert(e instanceof TypeError);
     }
 
+    bjson_test_empty_input();
     bjson_test_arraybuffer();
     bjson_test_reference();
 }
