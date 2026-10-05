@@ -44,5 +44,6 @@ const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
 
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 
+JSValue JS_ThrowStackOverflow(JSContext *ctx);
 
 #endif
