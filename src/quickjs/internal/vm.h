@@ -1,5 +1,5 @@
 /*
- * QuickJS value conversion interfaces
+ * QuickJS bytecode VM interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,21 +22,46 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_VALUE_CONVERSION_H
-#define QUICKJS_VALUE_CONVERSION_H
+#ifndef QUICKJS_VM_H
+#define QUICKJS_VM_H
 
-#include "../internal/base.h"
+#include "function.h"
 
-#define HINT_STRING  0
-#define HINT_NUMBER  1
-#define HINT_NONE    2
-#define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
+#define JS_CALL_FLAG_GENERATOR   (1 << 2)
 
-JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
-JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
-int JS_ToBoolFree(JSContext *ctx, JSValue val);
-JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
-JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
-JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
+#define FUNC_RET_AWAIT         0
+#define FUNC_RET_YIELD         1
+#define FUNC_RET_YIELD_STAR    2
+#define FUNC_RET_INITIAL_YIELD 3
+
+/* A generator resumes its detached stack frame through this VM entry point. */
+
+
+
+
+
+
+
+JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
+                    int argc, JSValueConst *argv);
+
+
+
+
+
+
+
+JSValue JS_InvokeFree(JSContext *ctx, JSValue this_val, JSAtom atom,
+                      int argc, JSValueConst *argv);
+
+
+
+
+
+
+
+
+
+
 
 #endif
