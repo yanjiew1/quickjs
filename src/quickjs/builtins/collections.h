@@ -52,7 +52,8 @@ typedef struct JSMapState {
 
 
 
-
+JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv, int is_map);
 void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
 
 #endif
