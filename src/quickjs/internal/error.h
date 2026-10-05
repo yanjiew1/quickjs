@@ -34,7 +34,7 @@
 
 
 
-
+const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
 
 
 
