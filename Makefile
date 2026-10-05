@@ -286,6 +286,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/typed-array.c \
     src/quickjs/builtins/uint8array-encoding.c \
     src/quickjs/builtins/weakref.c \
+    src/quickjs/bytecode-format.c \
     src/quickjs/class.c \
     src/quickjs/error-support.c \
     src/quickjs/function-list.c \
