@@ -262,9 +262,16 @@ static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
 
 
 
+no_inline __exception int __js_poll_interrupts(JSContext *ctx);
 
-
-
+static inline __exception int js_poll_interrupts(JSContext *ctx)
+{
+    if (unlikely(--ctx->interrupt_counter <= 0)) {
+        return __js_poll_interrupts(ctx);
+    } else {
+        return 0;
+    }
+}
 
 void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
                     JS_MarkFunc *mark_func);

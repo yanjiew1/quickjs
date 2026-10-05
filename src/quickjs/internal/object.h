@@ -163,7 +163,7 @@ struct JSObject {
     } u;
 };
 
-
+JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 
 int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 
@@ -171,13 +171,19 @@ int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
                             JSValueConst proto_val,
                             BOOL throw_flag);
+JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
+                                int flags, int kind);
+int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
+                              JSObject *p, JSAtom prop);
+void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
 
+int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
+                   JSValueConst desc);
 
-
-
-
-
-
+int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+                                               JSPropertyEnum **ptab,
+                                               uint32_t *plen,
+                                               JSObject *p, int flags);
 
 
 
@@ -284,12 +290,13 @@ int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
 
 
 
+int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
+                                JSValue prop, JSValue val, int flags);
 
 
 
 
-
-
+JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
 int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
                             JSValueConst obj);
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
@@ -316,7 +323,7 @@ void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 
 
 
-
+__exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
 
 
 
