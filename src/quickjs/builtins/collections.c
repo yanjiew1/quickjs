@@ -194,6 +194,15 @@ static uint32_t map_hash_pointer(uintptr_t a, int hash_bits)
 #endif
 }
 
+/* Keep short BigInt hashing inline without expanding the VM's arithmetic paths. */
+static inline JSBigInt *map_bigint_set_si(JSBigIntBuf *buf, js_slimb_t a)
+{
+    JSBigInt *r = (JSBigInt *)buf->big_int_buf;
+    r->len = 1;
+    r->tab[0] = a;
+    return r;
+}
+
 /* XXX: better hash ? */
 /* precondition: 1 <= hash_bits <= 32 */
 static uint32_t map_hash_key(JSValueConst key, int hash_bits)
@@ -230,7 +239,7 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
         h = map_hash64(float64_as_uint64(d) ^ JS_TAG_FLOAT64, hash_bits);
         break;
     case JS_TAG_SHORT_BIG_INT:
-        p = js_bigint_set_short(&buf, key);
+        p = map_bigint_set_si(&buf, JS_VALUE_GET_SHORT_BIG_INT(key));
         goto hash_bigint;
     case JS_TAG_BIG_INT:
         p = JS_VALUE_GET_PTR(key);
