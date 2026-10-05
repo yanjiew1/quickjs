@@ -1,5 +1,5 @@
 /*
- * QuickJS exception and backtrace interface
+ * QuickJS collection builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,10 +22,31 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_ERROR_H
-#define QUICKJS_ERROR_H
+#ifndef QUICKJS_BUILTINS_COLLECTIONS_H
+#define QUICKJS_BUILTINS_COLLECTIONS_H
 
-#include "function.h"
+#include "../internal/runtime.h"
+
+typedef struct JSMapRecord {
+    int ref_count; /* used during enumeration to avoid freeing the record */
+    BOOL empty : 8; /* TRUE if the record is deleted */
+    struct list_head link;
+    struct JSMapRecord *hash_next;
+    JSValue key;
+    JSValue value;
+} JSMapRecord;
+
+typedef struct JSMapState {
+    BOOL is_weak; /* TRUE if WeakSet/WeakMap */
+    struct list_head records; /* list of JSMapRecord.link */
+    uint32_t record_count;
+    JSMapRecord **hash_table;
+    int hash_bits;
+    uint32_t hash_size; /* = 2 ^ hash_bits */
+    uint32_t record_count_threshold; /* count at which a hash table
+                                        resize is needed */
+    JSWeakRefHeader weakref_header; /* only used if is_weak = TRUE */
+} JSMapState;
 
 
 
@@ -33,18 +54,5 @@
 
 
 
-
-const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
-
-
-
-
-
-
-
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
-
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
-JSValue JS_ThrowOutOfMemory(JSContext *ctx);
 
 #endif

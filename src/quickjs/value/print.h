@@ -1,5 +1,5 @@
 /*
- * QuickJS exception and backtrace interface
+ * QuickJS value printing interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,29 +22,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_ERROR_H
-#define QUICKJS_ERROR_H
+#ifndef QUICKJS_VALUE_PRINT_H
+#define QUICKJS_VALUE_PRINT_H
 
-#include "function.h"
+#include "../internal/base.h"
 
-
-
-
-
-
-
-
-const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
-
-
-
-
-
-
-
-#define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
-
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
-JSValue JS_ThrowOutOfMemory(JSContext *ctx);
+void js_dump_value_write(void *opaque, const char *buf, size_t len);
+__maybe_unused void print_atom(JSContext *ctx, JSAtom atom);
+__maybe_unused void JS_DumpValue(JSContext *ctx, const char *str, JSValueConst val);
+__maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
+__maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p);
+__maybe_unused void JS_DumpGCObject(JSRuntime *rt, JSGCObjectHeader *p);
 
 #endif
