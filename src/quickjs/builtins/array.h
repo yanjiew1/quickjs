@@ -1,5 +1,5 @@
 /*
- * QuickJS RegExp builtin interface
+ * QuickJS Array builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,21 +22,52 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_REGEXP_H
-#define QUICKJS_BUILTINS_REGEXP_H
+#ifndef QUICKJS_BUILTINS_ARRAY_H
+#define QUICKJS_BUILTINS_ARRAY_H
 
-#include "../internal/base.h"
-
-typedef struct JSRegExp {
-    JSString *pattern;
-    JSString *bytecode; /* also contains the flags */
-} JSRegExp;
+#include "../internal/iterator.h"
 
 
 
+enum {
+    ArrayFind,
+    ArrayFindIndex,
+    ArrayFindLast,
+    ArrayFindLastIndex,
+};
+
+JSValue js_create_array_iterator(JSContext *ctx, JSValueConst this_val,
+                                 int argc, JSValueConst *argv, int magic);
+
+#define special_every    0
+#define special_some     1
+#define special_forEach  2
+#define special_map      3
+#define special_filter   4
+#define special_TA       8
 
 
-/* return < 0 if exception or TRUE/FALSE */
-int js_is_regexp(JSContext *ctx, JSValueConst obj);
+
+
+#define special_reduce       0
+#define special_reduceRight  1
+
+
+
+
+typedef struct JSArrayIteratorData {
+    JSValue obj;
+    JSIteratorKindEnum kind;
+    uint32_t idx;
+} JSArrayIteratorData;
+
+
+
+
+
+
+
+
+
 
 #endif

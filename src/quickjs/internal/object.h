@@ -179,12 +179,13 @@ void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
 
 int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
                    JSValueConst desc);
-
+BOOL check_define_prop_flags(int prop_flags, int flags);
 int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
                                                JSPropertyEnum **ptab,
                                                uint32_t *plen,
                                                JSObject *p, int flags);
-
+__exception int js_get_length32(JSContext *ctx, uint32_t *pres,
+                                JSValueConst obj);
 
 
 
@@ -244,7 +245,7 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 
 
 
-
+JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
 
 __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                 JSValueConst obj);
@@ -258,10 +259,12 @@ int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
                               JSAtom prop, JSAutoInitIDEnum id,
                               void *opaque, int flags);
 
+JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
+                            JSValue prop);
 
 
-
-
+int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
+                                int64_t idx, JSValue val, int flags);
 
 
 
@@ -274,7 +277,7 @@ int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
 /* return true if an element can be added to a fast array without further tests */
 
 
-
+JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 
 
 #define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
@@ -306,7 +309,7 @@ JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
 
 
 
-
+int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);
 void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
 void js_free_shape(JSRuntime *rt, JSShape *sh);
 
