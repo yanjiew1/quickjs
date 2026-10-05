@@ -36,6 +36,7 @@
 #include "../internal/bytecode-format.h"
 #include "../internal/parse-state.h"
 #include "compiler-internal.h"
+#include "stack-analysis.h"
 
 int update_label(JSFunctionDef *s, int label, int delta)
 {
@@ -47,7 +48,6 @@ int update_label(JSFunctionDef *s, int label, int delta)
     assert(ls->ref_count >= 0);
     return ls->ref_count;
 }
-#include "stack-analysis.h"
 
 #define PC2LINE_DIFF_PC_MAX ((255 - PC2LINE_OP_FIRST) / PC2LINE_RANGE)
 
