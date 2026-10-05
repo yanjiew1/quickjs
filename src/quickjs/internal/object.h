@@ -277,8 +277,8 @@ JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
 
 
 
-
-
+void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags);
+void js_free_shape(JSRuntime *rt, JSShape *sh);
 
 
 

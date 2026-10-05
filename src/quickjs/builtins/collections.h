@@ -53,6 +53,6 @@ typedef struct JSMapState {
 
 
 
-
+void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
 
 #endif
