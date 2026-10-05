@@ -17,6 +17,8 @@
 
 #include "fuzz/fuzz_common.h"
 
+static int nbinterrupts = 0;
+
 // handle timeouts from infinite loops
 static int interrupt_handler(JSRuntime *rt, void *opaque)
 {
