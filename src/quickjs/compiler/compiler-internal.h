@@ -30,7 +30,10 @@
 #define OPTIMIZE         1
 #define ARG_SCOPE_INDEX 1
 
-
+static inline void dbuf_set_error(DynBuf *s)
+{
+    s->error = TRUE;
+}
 
 int update_label(JSFunctionDef *s, int label, int delta);
 
