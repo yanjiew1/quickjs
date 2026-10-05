@@ -53,18 +53,6 @@ static const char js_atom_init[] =
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n) * 2)
 
-static inline BOOL __JS_AtomIsConst(JSAtom v)
-{
-#if defined(DUMP_LEAKS) && DUMP_LEAKS > 1
-        return (int32_t)v <= 0;
-#else
-        return (int32_t)v < JS_ATOM_END;
-#endif
-}
-
-
-
-
 static inline int is_num(int c)
 {
     return c >= '0' && c <= '9';
@@ -212,15 +200,7 @@ JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v)
 
 JSAtom JS_DupAtom(JSContext *ctx, JSAtom v)
 {
-    JSRuntime *rt;
-    JSAtomStruct *p;
-
-    if (!__JS_AtomIsConst(v)) {
-        rt = ctx->rt;
-        p = rt->atom_array[v];
-        js_rc(p)->ref_count++;
-    }
-    return v;
+    return js_dup_atom(ctx, v);
 }
 
 JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v)
@@ -513,16 +493,6 @@ void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p)
     }
     rt->atom_count--;
     assert(rt->atom_count >= 0);
-}
-
-static void __JS_FreeAtom(JSRuntime *rt, uint32_t i)
-{
-    JSAtomStruct *p;
-
-    p = rt->atom_array[i];
-    if (--js_rc(p)->ref_count > 0)
-        return;
-    JS_FreeAtomStruct(rt, p);
 }
 
 /* Warning: 'p' is freed */
@@ -828,14 +798,12 @@ int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom)
 
 void JS_FreeAtom(JSContext *ctx, JSAtom v)
 {
-    if (!__JS_AtomIsConst(v))
-        __JS_FreeAtom(ctx->rt, v);
+    js_free_atom(ctx, v);
 }
 
 void JS_FreeAtomRT(JSRuntime *rt, JSAtom v)
 {
-    if (!__JS_AtomIsConst(v))
-        __JS_FreeAtom(rt, v);
+    js_free_atom_rt(rt, v);
 }
 
 /* return TRUE if 'v' is a symbol with a string description */

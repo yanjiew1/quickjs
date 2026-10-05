@@ -171,6 +171,48 @@ function test()
     assert(err, true, "extensible");
 }
 
+function test_array_sort()
+{
+    var input = ["\ue000", "\ud83d\udc31", "\u0100", "\u00ff",
+                 "ab", "a\0b", "a\0", "a", ""];
+    var expected = ["", "a", "a\0", "a\0b", "ab", "\u00ff",
+                    "\u0100", "\ud83d\udc31", "\ue000"];
+    assert(input.toSorted(), expected);
+    assert(input[0], "\ue000");
+    assert(input.sort(), expected);
+
+    var calls = 0;
+    var value = { toString() { calls++; return "same"; } };
+    assert([value, value, value].sort().length, 3);
+    /* Equal objects must still be converted before comparing their strings. */
+    assert(calls >= 2);
+
+    var first = { toString() { return "same"; } };
+    var second = { toString() { return "same"; } };
+    var sorted = [second, first].sort();
+    assert(sorted[0] === second);
+    assert(sorted[1] === first);
+
+    var error = new Error("sort conversion");
+    var bad = { toString() { throw error; } };
+    var caught;
+    try {
+        [bad, "a"].sort();
+    } catch (e) {
+        caught = e;
+    }
+    assert(caught === error);
+
+    var sparse = [undefined, , "b", "a", ];
+    sparse.sort();
+    assert(sparse.length, 4);
+    assert(sparse[0], "a");
+    assert(sparse[1], "b");
+    assert(sparse[2], undefined);
+    assert(2 in sparse);
+    assert(!(3 in sparse));
+}
+
 function test_enum()
 {
     var a, tab;
@@ -1128,6 +1170,56 @@ function test_map()
     test_map1("object", n);
     test_map1("small_bigint", n);
     test_map1("bigint", n);
+
+    /* Short and heap BigInt keys must keep the same hash and equality rules. */
+    var keys = [0n, -1n, 1n, 0x7fffffffn, 0x80000000n,
+                -0x80000000n, -0x80000001n,
+                0xffffffffn, 0x100000000n, 0x100000001n,
+                -0x100000000n, -(1n << 63n), (1n << 63n) - 1n,
+                1n << 63n, -(1n << 63n) - 1n, 1n << 100n];
+    a = new Map();
+    var set = new Set();
+    for (i = 0; i < keys.length; i++) {
+        a.set(keys[i], i);
+        set.add(keys[i]);
+    }
+    assert(a.size, keys.length);
+    assert(set.size, keys.length);
+    for (i = 0; i < keys.length; i++) {
+        var key = BigInt(keys[i].toString());
+        assert(a.get(key), i);
+        assert(set.has(key));
+        assert(a.delete(key));
+        assert(set.delete(key));
+        assert(!a.has(key));
+        a.set(key, i + 1);
+        set.add(key);
+    }
+    for (i = 0; i < keys.length; i++)
+        assert(a.get(keys[i]), i + 1);
+}
+
+function test_collection_receivers()
+{
+    var methods = [Map.prototype.get, Map.prototype.set, Map.prototype.has,
+                   Map.prototype.delete, Map.prototype.clear,
+                   Set.prototype.add, Set.prototype.has, Set.prototype.delete,
+                   WeakMap.prototype.get, WeakMap.prototype.set,
+                   WeakSet.prototype.add, WeakSet.prototype.has];
+    for (var method of methods) {
+        for (var receiver of [null, undefined, 1, {}, new Proxy(new Map(), {})])
+            assert_throws(TypeError, () => method.call(receiver, {}, 1));
+    }
+    assert_throws(TypeError, () => Map.prototype.get.call(new Set(), 1));
+    assert_throws(TypeError, () => Set.prototype.has.call(new Map(), 1));
+    assert_throws(TypeError, () => WeakMap.prototype.get.call(new Map(), {}));
+
+    class DerivedMap extends Map {}
+    var map = new DerivedMap([[1, 2]]);
+    assert(Map.prototype.get.call(map, 1), 2);
+    var next = map.keys().next;
+    assert_throws(TypeError, () => next.call({}));
+    assert(next.call(map.keys()).value, 1);
 }
 
 function test_weak_map()
@@ -1402,6 +1494,7 @@ test();
 test_function();
 test_enum();
 test_array();
+test_array_sort();
 test_string();
 test_string_normalize();
 test_math();
@@ -1419,6 +1512,7 @@ test_date();
 test_regexp();
 test_symbol();
 test_map();
+test_collection_receivers();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();

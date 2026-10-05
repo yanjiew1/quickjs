@@ -819,24 +819,6 @@ BOOL js_string_eq(JSContext *ctx,
     return js_string_memcmp(p1, 0, p2, 0, p1->len) == 0;
 }
 
-/* return < 0, 0 or > 0 */
-int js_string_compare(JSContext *ctx,
-                      const JSString *p1, const JSString *p2)
-{
-    int res, len;
-    len = min_int(p1->len, p2->len);
-    res = js_string_memcmp(p1, 0, p2, 0, len);
-    if (res == 0) {
-        if (p1->len == p2->len)
-            res = 0;
-        else if (p1->len < p2->len)
-            res = -1;
-        else
-            res = 1;
-    }
-    return res;
-}
-
 static void copy_str16(uint16_t *dst, const JSString *p, int offset, int len)
 {
     if (p->is_wide_char) {

@@ -202,7 +202,6 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
     uint32_t h;
     double d;
     JSBigInt *p;
-    JSBigIntBuf buf;
     
     switch(tag) {
     case JS_TAG_BOOL:
@@ -230,11 +229,12 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
         h = map_hash64(float64_as_uint64(d) ^ JS_TAG_FLOAT64, hash_bits);
         break;
     case JS_TAG_SHORT_BIG_INT:
-        p = js_bigint_set_short(&buf, key);
-        goto hash_bigint;
+        /* A short BigInt has one limb: the loop below reduces to this. */
+        h = map_hash32((263 + (uint32_t)JS_VALUE_GET_SHORT_BIG_INT(key)) ^
+                       JS_TAG_BIG_INT, hash_bits);
+        break;
     case JS_TAG_BIG_INT:
         p = JS_VALUE_GET_PTR(key);
-    hash_bigint:
         {
             int i;
             h = 1;
@@ -409,7 +409,7 @@ void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh)
 static JSValue js_map_set(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int magic)
 {
-    JSMapState *s = JS_GetOpaque2(ctx, this_val, JS_CLASS_MAP + magic);
+    JSMapState *s = js_get_opaque2(ctx, this_val, JS_CLASS_MAP + magic);
     JSMapRecord *mr;
     JSValueConst key, value;
 
@@ -437,7 +437,7 @@ static JSValue js_map_set(JSContext *ctx, JSValueConst this_val,
 static JSValue js_map_get(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int magic)
 {
-    JSMapState *s = JS_GetOpaque2(ctx, this_val, JS_CLASS_MAP + magic);
+    JSMapState *s = js_get_opaque2(ctx, this_val, JS_CLASS_MAP + magic);
     JSMapRecord *mr;
     JSValueConst key;
 
@@ -521,7 +521,7 @@ static JSValue js_map_getOrInsert(JSContext *ctx, JSValueConst this_val,
 static JSValue js_map_has(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int magic)
 {
-    JSMapState *s = JS_GetOpaque2(ctx, this_val, JS_CLASS_MAP + magic);
+    JSMapState *s = js_get_opaque2(ctx, this_val, JS_CLASS_MAP + magic);
     JSMapRecord *mr;
     JSValueConst key;
 
@@ -535,7 +535,7 @@ static JSValue js_map_has(JSContext *ctx, JSValueConst this_val,
 static JSValue js_map_delete(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv, int magic)
 {
-    JSMapState *s = JS_GetOpaque2(ctx, this_val, JS_CLASS_MAP + magic);
+    JSMapState *s = js_get_opaque2(ctx, this_val, JS_CLASS_MAP + magic);
     if (!s)
         return JS_EXCEPTION;
     return map_delete_record(ctx, s, argv[0]);

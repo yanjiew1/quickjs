@@ -168,8 +168,25 @@ static inline void js_free_string(JSRuntime *rt, JSString *str)
     }
 }
 
-int js_string_compare(JSContext *ctx,
-                      const JSString *p1, const JSString *p2);
+/* return < 0, 0 or > 0 */
+static inline int js_string_compare(JSContext *ctx,
+                                    const JSString *p1, const JSString *p2)
+{
+    int res, len;
+    if (p1 == p2)
+        return 0;
+    len = min_int(p1->len, p2->len);
+    res = js_string_memcmp(p1, 0, p2, 0, len);
+    if (res == 0) {
+        if (p1->len == p2->len)
+            res = 0;
+        else if (p1->len < p2->len)
+            res = -1;
+        else
+            res = 1;
+    }
+    return res;
+}
 int js_string_find_invalid_codepoint(JSString *p);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);

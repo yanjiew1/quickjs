@@ -406,7 +406,7 @@ static JSShape *js_clone_shape(JSContext *ctx, JSShape *sh1)
         JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, sh->proto));
     }
     for(i = 0, pr = get_shape_prop(sh); i < sh->prop_count; i++, pr++) {
-        JS_DupAtom(ctx, pr->atom);
+        js_dup_atom(ctx, pr->atom);
     }
     return sh;
 }
@@ -430,7 +430,7 @@ static void js_free_shape0(JSRuntime *rt, JSShape *sh)
     }
     pr = get_shape_prop(sh);
     for(i = 0; i < sh->prop_count; i++) {
-        JS_FreeAtomRT(rt, pr->atom);
+        js_free_atom_rt(rt, pr->atom);
         pr++;
     }
     remove_gc_object(&sh->header);
@@ -619,7 +619,7 @@ int add_shape_property(JSContext *ctx, JSShape **psh,
        The object property at p->prop[sh->prop_count] is uninitialized */
     prop = get_shape_prop(sh);
     pr = &prop[sh->prop_count++];
-    pr->atom = JS_DupAtom(ctx, atom);
+    pr->atom = js_dup_atom(ctx, atom);
     pr->flags = prop_flags;
     /* add in hash table */
     hash_mask = sh->prop_hash_mask;
@@ -1729,17 +1729,17 @@ int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj)
         p1 = JS_VALUE_GET_OBJ(obj);
         prs = find_own_property(&pr, p1, brand_atom);
         if (unlikely(prs)) {
-            JS_FreeAtom(ctx, brand_atom);
+            js_free_atom(ctx, brand_atom);
             JS_ThrowTypeError(ctx, "private method is already present");
             return -1;
         }
         pr = add_property(ctx, p1, brand_atom, JS_PROP_C_W_E);
-        JS_FreeAtom(ctx, brand_atom);
+        js_free_atom(ctx, brand_atom);
         if (!pr)
             return -1;
         pr->u.value = JS_UNDEFINED;
     } else {
-        JS_FreeAtom(ctx, brand_atom);
+        js_free_atom(ctx, brand_atom);
     }
     return 0;
 }
@@ -1807,7 +1807,7 @@ void JS_FreePropertyEnum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len)
     uint32_t i;
     if (tab) {
         for(i = 0; i < len; i++)
-            JS_FreeAtom(ctx, tab[i].atom);
+            js_free_atom(ctx, tab[i].atom);
         js_free(ctx, tab);
     }
 }
@@ -1960,7 +1960,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
                 } else {
                     j = sym_index++;
                 }
-                tab_atom[j].atom = JS_DupAtom(ctx, atom);
+                tab_atom[j].atom = js_dup_atom(ctx, atom);
                 tab_atom[j].is_enumerable = is_enumerable;
             }
         }
@@ -1999,7 +1999,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
                     tab_atom[sym_index].is_enumerable = is_enumerable;
                     sym_index++;
                 } else {
-                    JS_FreeAtom(ctx, atom);
+                    js_free_atom(ctx, atom);
                 }
             }
             js_free(ctx, tab_exotic);
@@ -2310,7 +2310,7 @@ JSAtom JS_ValueToAtom(JSContext *ctx, JSValueConst val)
         atom = __JS_AtomFromUInt32(JS_VALUE_GET_INT(val));
     } else if (tag == JS_TAG_SYMBOL) {
         JSAtomStruct *p = JS_VALUE_GET_PTR(val);
-        atom = JS_DupAtom(ctx, js_get_atom_index(ctx->rt, p));
+        atom = js_dup_atom(ctx, js_get_atom_index(ctx->rt, p));
     } else {
         JSValue str;
         str = JS_ToPropertyKey(ctx, val);
@@ -2395,7 +2395,7 @@ JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
         if (unlikely(atom == JS_ATOM_NULL))
             return JS_EXCEPTION;
         ret = JS_GetProperty(ctx, this_obj, atom);
-        JS_FreeAtom(ctx, atom);
+        js_free_atom(ctx, atom);
         return ret;
     }
 }
@@ -2435,7 +2435,7 @@ int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValu
                 if (unlikely(JS_IsException(val)))
                     present = -1;
             }
-            JS_FreeAtom(ctx, prop);
+            js_free_atom(ctx, prop);
         }
     }
     *pval = val;
@@ -2456,7 +2456,7 @@ JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx)
         return JS_EXCEPTION;
 
     val = JS_GetProperty(ctx, obj, prop);
-    JS_FreeAtom(ctx, prop);
+    js_free_atom(ctx, prop);
     return val;
 }
 
@@ -2469,7 +2469,7 @@ JSValue JS_GetPropertyStr(JSContext *ctx, JSValueConst this_obj,
     if (atom == JS_ATOM_NULL)
         return JS_EXCEPTION;
     ret = JS_GetProperty(ctx, this_obj, atom);
-    JS_FreeAtom(ctx, atom);
+    js_free_atom(ctx, atom);
     return ret;
 }
 
@@ -2650,7 +2650,7 @@ int delete_property(JSContext *ctx, JSObject *p, JSAtom atom)
                         return -1;
             }
             free_property(ctx->rt, pr1, pr->flags);
-            JS_FreeAtom(ctx, pr->atom);
+            js_free_atom(ctx, pr->atom);
             /* put default values */
             pr->flags = 0;
             pr->atom = JS_ATOM_NULL;
@@ -2770,7 +2770,7 @@ static int set_array_length(JSContext *ctx, JSObject *p, JSValue val,
                 while (cur_len > len) {
                     atom = JS_NewAtomUInt32(ctx, cur_len - 1);
                     ret = delete_property(ctx, p, atom);
-                    JS_FreeAtom(ctx, atom);
+                    js_free_atom(ctx, atom);
                     if (unlikely(!ret)) {
                         /* unlikely case: property is not
                            configurable */
@@ -3355,7 +3355,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
             return -1;
         }
         ret = JS_SetPropertyInternal(ctx, this_obj, atom, val, this_obj, flags);
-        JS_FreeAtom(ctx, atom);
+        js_free_atom(ctx, atom);
         return ret;
     }
 }
@@ -3384,7 +3384,7 @@ int JS_SetPropertyInt64(JSContext *ctx, JSValueConst this_obj,
         return -1;
     }
     res = JS_SetProperty(ctx, this_obj, prop, val);
-    JS_FreeAtom(ctx, prop);
+    js_free_atom(ctx, prop);
     return res;
 }
 
@@ -3399,7 +3399,7 @@ int JS_SetPropertyStr(JSContext *ctx, JSValueConst this_obj,
         return -1;
     }
     ret = JS_SetPropertyInternal(ctx, this_obj, atom, val, this_obj, JS_PROP_THROW);
-    JS_FreeAtom(ctx, atom);
+    js_free_atom(ctx, atom);
     return ret;
 }
 
@@ -3989,7 +3989,7 @@ int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
         return -1;
     }
     ret = JS_DefinePropertyValue(ctx, this_obj, atom, val, flags);
-    JS_FreeAtom(ctx, atom);
+    js_free_atom(ctx, atom);
     return ret;
 }
 
@@ -4018,7 +4018,7 @@ int JS_DefinePropertyValueStr(JSContext *ctx, JSValueConst this_obj,
         return -1;
     }
     ret = JS_DefinePropertyValue(ctx, this_obj, atom, val, flags);
-    JS_FreeAtom(ctx, atom);
+    js_free_atom(ctx, atom);
     return ret;
 }
 
@@ -4088,7 +4088,7 @@ int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
         if (prop == JS_ATOM_NULL)
             return -1;
         name_str = js_get_function_name(ctx, prop);
-        JS_FreeAtom(ctx, prop);
+        js_free_atom(ctx, prop);
         if (JS_IsException(name_str))
             return -1;
         if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_name, name_str, flags) < 0)
@@ -4236,7 +4236,7 @@ int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int fl
     if (prop == JS_ATOM_NULL)
         return -1;
     res = JS_DeleteProperty(ctx, obj, prop, flags);
-    JS_FreeAtom(ctx, prop);
+    js_free_atom(ctx, prop);
     return res;
 }
 

@@ -341,6 +341,21 @@ int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
                        JSValueConst name, JSValue val);
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
 JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);
+
+static inline void *js_get_opaque2(JSContext *ctx, JSValueConst obj,
+                                  JSClassID class_id)
+{
+    void *opaque = NULL;
+    if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
+        JSObject *p = JS_VALUE_GET_OBJ(obj);
+        if (p->class_id == class_id)
+            opaque = p->u.opaque;
+    }
+    if (unlikely(!opaque))
+        JS_ThrowTypeErrorInvalidClass(ctx, class_id);
+    return opaque;
+}
+
 no_inline __exception int convert_fast_array_to_array(JSContext *ctx,
                                                       JSObject *p);
 int delete_property(JSContext *ctx, JSObject *p, JSAtom atom);

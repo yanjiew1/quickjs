@@ -25,7 +25,7 @@
 #ifndef QUICKJS_ATOM_H
 #define QUICKJS_ATOM_H
 
-#include "base.h"
+#include "runtime.h"
 
 enum {
     __JS_ATOM_NULL = JS_ATOM_NULL,
@@ -58,6 +58,40 @@ static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
 
 
 void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+
+static inline BOOL __JS_AtomIsConst(JSAtom v)
+{
+#if defined(DUMP_LEAKS) && DUMP_LEAKS > 1
+    return (int32_t)v <= 0;
+#else
+    return (int32_t)v < JS_ATOM_END;
+#endif
+}
+
+static inline JSAtom js_dup_atom(JSContext *ctx, JSAtom v)
+{
+    if (!__JS_AtomIsConst(v)) {
+        JSAtomStruct *p = ctx->rt->atom_array[v];
+        js_rc(p)->ref_count++;
+    }
+    return v;
+}
+
+static inline void js_free_atom_rt(JSRuntime *rt, JSAtom v)
+{
+    if (!__JS_AtomIsConst(v)) {
+        JSAtomStruct *p = rt->atom_array[v];
+        if (unlikely(--js_rc(p)->ref_count <= 0))
+            JS_FreeAtomStruct(rt, p);
+    }
+}
+
+static inline void js_free_atom(JSContext *ctx, JSAtom v)
+{
+    if (!__JS_AtomIsConst(v))
+        js_free_atom_rt(ctx->rt, v);
+}
+
 JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
 BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
 __maybe_unused void JS_DumpAtoms(JSRuntime *rt);
