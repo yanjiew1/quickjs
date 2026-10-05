@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 #include "../quickjs-libc.h"
-#include "../cutils.h"
+#include "cutils.h"
 
 static JSValue js_bjson_read(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
