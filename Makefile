@@ -382,11 +382,19 @@ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 regexp_test$(EXE): tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
-unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o src/unicode/libunicode.c tools/unicode_gen_def.h
+unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o
 
-unicode_gen_test: tools/unicode_gen.c src/unicode/libunicode.c src/unicode/libunicode-table.h tools/unicode_gen_def.h src/cutils/cutils.c
-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -DUSE_TEST -o $@ tools/unicode_gen.c src/cutils/cutils.c
+$(OBJDIR)/tools/unicode_gen.test.host.o: tools/unicode_gen.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
+
+$(OBJDIR)/src/unicode/libunicode.test.host.o: src/unicode/libunicode.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
+
+unicode_gen_test: $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o
 
 clean:
 	rm -f repl.c out.c quickjs.h quickjs-libc.h
