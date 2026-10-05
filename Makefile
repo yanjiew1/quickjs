@@ -261,6 +261,7 @@ QUICKJS_SRCS= \
     src/quickjs/bigint.c \
     src/quickjs/builtins/bigint.c \
     src/quickjs/builtins/boolean.c \
+    src/quickjs/builtins/error.c \
     src/quickjs/builtins/math.c \
     src/quickjs/builtins/number.c \
     src/quickjs/builtins/symbol.c \
