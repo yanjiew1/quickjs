@@ -32,5 +32,10 @@ libwinpthread*.dll
 
 regexp_test.exe
 
+unicode_gen_test
+
+/tests/test_unicode
+/tests/test_unicode.exe
+
 /tests/test_fuzz_support
 /tests/test_fuzz_support.exe
