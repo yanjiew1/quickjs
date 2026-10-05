@@ -267,6 +267,7 @@ QUICKJS_SRCS= \
     src/quickjs/generator.c \
     src/quickjs/iterator-protocol.c \
     src/quickjs/number.c \
+    src/quickjs/parse-state.c \
     src/quickjs/string.c \
     src/quickjs/value/compare.c \
     src/quickjs/value/conversion.c \
