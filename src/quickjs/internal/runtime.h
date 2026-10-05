@@ -165,12 +165,6 @@ typedef struct JSVarRef {
     };
 } JSVarRef;
 
-typedef enum {
-    JS_AUTOINIT_ID_PROTOTYPE,
-    JS_AUTOINIT_ID_MODULE_NS,
-    JS_AUTOINIT_ID_PROP,
-} JSAutoInitIDEnum;
-
 struct JSContext {
     JSGCObjectHeader header; /* must come first */
     JSRuntime *rt;

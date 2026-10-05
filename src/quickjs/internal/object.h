@@ -29,6 +29,12 @@
 #include "global-environment.h"
 #include "../builtins/regexp.h"
 
+typedef enum {
+    JS_AUTOINIT_ID_PROTOTYPE,
+    JS_AUTOINIT_ID_MODULE_NS,
+    JS_AUTOINIT_ID_PROP,
+} JSAutoInitIDEnum;
+
 typedef struct JSProperty {
     union {
         JSValue value;      /* JS_PROP_NORMAL */
