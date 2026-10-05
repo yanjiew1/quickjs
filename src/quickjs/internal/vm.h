@@ -51,7 +51,7 @@ static inline BOOL is_strict_mode(JSContext *ctx)
 JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
                     int argc, JSValueConst *argv);
 
-
+JSValueConst JS_GetActiveFunction(JSContext *ctx);
 
 
 
