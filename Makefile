@@ -260,6 +260,7 @@ QUICKJS_SRCS= \
     src/quickjs/atom.c \
     src/quickjs/bigint.c \
     src/quickjs/builtins/boolean.c \
+    src/quickjs/builtins/math.c \
     src/quickjs/builtins/number.c \
     src/quickjs/class.c \
     src/quickjs/error-support.c \
