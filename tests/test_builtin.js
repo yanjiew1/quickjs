@@ -567,6 +567,45 @@ function test_typed_array_slice_resize()
     }
 }
 
+function test_empty_typed_array_transfer()
+{
+    const constructors = [
+        Uint8ClampedArray, Int8Array, Uint8Array, Int16Array, Uint16Array,
+        Int32Array, Uint32Array, BigInt64Array, BigUint64Array,
+        Float16Array, Float32Array, Float64Array,
+    ];
+    for (const C of constructors) {
+        for (const method of ["transfer", "transferToFixedLength"]) {
+            for (const resizable of [false, true]) {
+                for (const length of [0, C.BYTES_PER_ELEMENT]) {
+                    const buffer = resizable ?
+                        new ArrayBuffer(length, { maxByteLength: C.BYTES_PER_ELEMENT }) :
+                        new ArrayBuffer(length);
+                    const empty = new C(buffer, 0, 0);
+                    const tracking = new C(buffer);
+                    const transferred = buffer[method]();
+                    assert(buffer.detached);
+                    assert(empty.length, 0);
+                    assert(empty.byteLength, 0);
+                    assert(empty.byteOffset, 0);
+                    assert(empty.buffer, buffer);
+                    assert(tracking.length, 0);
+                    assert(transferred.byteLength, length);
+                    assert(new C(transferred).length, length / C.BYTES_PER_ELEMENT);
+                    assert(transferred.resizable, resizable && method === "transfer");
+                    let threw = false;
+                    try {
+                        empty.set([]);
+                    } catch (e) {
+                        threw = e instanceof TypeError;
+                    }
+                    assert(threw);
+                }
+            }
+        }
+    }
+}
+
 /* return [s, line_num, col_num] where line_num and col_num are the
    position of the '@' character in 'str'. 's' is str without the '@'
    character */
@@ -1243,6 +1282,7 @@ test_eval();
 test_error_stack();
 test_typed_array();
 test_typed_array_slice_resize();
+test_empty_typed_array_transfer();
 test_json();
 test_date();
 test_regexp();
