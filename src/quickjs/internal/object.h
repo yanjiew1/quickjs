@@ -240,7 +240,8 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 
 
 
-
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
+                                 int64_t idx, JSValue val, int flags);
 
 
 
