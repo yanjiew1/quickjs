@@ -32,7 +32,7 @@
 #define HINT_NONE    2
 #define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 
-
+JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
 
 
 JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
