@@ -28,14 +28,13 @@ test262o_*.txt
 unicode_gen
 unicode_gen_test
 regexp_test
+regexp_test.exe
 run_octane
 run_sunspider_like
 libwinpthread*.dll
 
 /quickjs.h
 /quickjs-libc.h
-
-regexp_test.exe
 
 /tests/test_unicode
 /tests/test_unicode.exe
