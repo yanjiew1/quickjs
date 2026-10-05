@@ -47,25 +47,7 @@
 #include <sys/wait.h>
 #include <poll.h>
 
-#if defined(__FreeBSD__)
-extern char **environ;
 #endif
-
-#if defined(__APPLE__) || defined(__FreeBSD__)
-typedef sig_t sighandler_t;
-#endif
-
-#if defined(__APPLE__)
-#if !defined(environ)
-#include <crt_externs.h>
-#define environ (*_NSGetEnviron())
-#endif
-#endif /* __APPLE__ */
-
-#endif
-
-/* enable the os.Worker API. It relies on POSIX threads */
-#define USE_WORKER
 
 #include "cutils.h"
 #include "list.h"
