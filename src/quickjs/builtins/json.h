@@ -1,5 +1,5 @@
 /*
- * QuickJS memory allocator interface
+ * QuickJS JSON builtin interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,38 +22,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_ALLOCATOR_H
-#define QUICKJS_ALLOCATOR_H
+#ifndef QUICKJS_BUILTINS_JSON_H
+#define QUICKJS_BUILTINS_JSON_H
 
-#include "runtime.h"
-
-void js_malloc_init(JSMallocContext *s);
-extern const JSMallocFunctions def_malloc_funcs;
-void js_trigger_gc(JSRuntime *rt, size_t size);
-
-no_inline int js_realloc_array(JSContext *ctx, void **parray,
-                               int elem_size, int *psize, int req_size);
-
-/* resize the array and update its size if req_size > *psize */
-static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
-                                  int *psize, int req_size)
-{
-    if (unlikely(req_size > *psize))
-        return js_realloc_array(ctx, parray, elem_size, psize, req_size);
-    else
-        return 0;
-}
-
-static inline void *js_dbuf_realloc(void *opaque, void *ptr, size_t size)
-{
-    return js_realloc_rt(opaque, ptr, size);
-}
-
-static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
-{
-    dbuf_init2(s, ctx->rt, js_dbuf_realloc);
-}
-
-void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);
+#include "../internal/base.h"
 
 #endif
