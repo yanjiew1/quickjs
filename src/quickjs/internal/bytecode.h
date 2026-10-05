@@ -94,7 +94,7 @@ typedef struct JSOpCode {
     uint8_t fmt;
 } JSOpCode;
 
-
+extern const JSOpCode opcode_info[OP_COUNT + (OP_TEMP_END - OP_TEMP_START)];
 
 #if SHORT_OPCODES
 /* After the final compilation pass, short opcodes are used. Their
