@@ -274,6 +274,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/global.c \
     src/quickjs/builtins/intrinsics.c \
     src/quickjs/builtins/iterator.c \
+    src/quickjs/builtins/json-stringify.c \
     src/quickjs/builtins/json.c \
     src/quickjs/builtins/math.c \
     src/quickjs/builtins/number.c \
