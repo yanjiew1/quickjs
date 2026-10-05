@@ -136,7 +136,31 @@ JSValue JS_ConcatString(JSContext *ctx, JSValue op1, JSValue op2);
 JSValue js_new_string_char(JSContext *ctx, uint16_t c);
 JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
 
+#if defined(JS_STRING_IMPLEMENTATION) || defined(JS_STRING_EQ_INLINE)
+#if defined(JS_STRING_IMPLEMENTATION) && defined(__GNUC_STDC_INLINE__)
+#define JS_STRING_INLINE extern inline
+#elif defined(JS_STRING_IMPLEMENTATION)
+#define JS_STRING_INLINE
+#elif defined(__GNUC_STDC_INLINE__)
+#define JS_STRING_INLINE inline
+#else
+#define JS_STRING_INLINE static inline
+#endif
+
+JS_STRING_INLINE BOOL js_string_eq(JSContext *ctx, const JSString *p1,
+                                   const JSString *p2)
+{
+    if (p1->len != p2->len)
+        return FALSE;
+    if (p1 == p2)
+        return TRUE;
+    return js_string_memcmp(p1, 0, p2, 0, p1->len) == 0;
+}
+
+#undef JS_STRING_INLINE
+#else
 BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
+#endif
 int string_rope_get(JSValueConst val, uint32_t idx);
 int js_string_rope_compare(JSContext *ctx, JSValueConst op1, JSValueConst op2, BOOL eq_only);
 JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);

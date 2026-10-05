@@ -22,12 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#define JS_STRING_IMPLEMENTATION
 #include "internal/base.h"
 #include "internal/string-buffer.h"
 #include "value/conversion.h"
 #include "internal/error.h"
 #include "internal/runtime.h"
 #include "internal/string.h"
+#undef JS_STRING_IMPLEMENTATION
 #include "internal/atom.h"
 
 /* strings <= this length are not concatenated using ropes. if too
@@ -499,16 +501,6 @@ int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
             res = memcmp16(p1->u.str16 + pos1, p2->u.str16 + pos2, len);
     }
     return res;
-}
-
-BOOL js_string_eq(JSContext *ctx,
-                  const JSString *p1, const JSString *p2)
-{
-    if (p1->len != p2->len)
-        return FALSE;
-    if (p1 == p2)
-        return TRUE;
-    return js_string_memcmp(p1, 0, p2, 0, p1->len) == 0;
 }
 
 /* return < 0, 0 or > 0 */
