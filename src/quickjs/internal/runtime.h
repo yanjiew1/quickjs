@@ -260,7 +260,7 @@ static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
     JS_FreeValue(ctx, old_val);
 }
 
-
+void JS_ThrowInterrupted(JSContext *ctx);
 
 no_inline __exception int __js_poll_interrupts(JSContext *ctx);
 
