@@ -411,12 +411,6 @@ static JSShape *js_clone_shape(JSContext *ctx, JSShape *sh1)
     return sh;
 }
 
-JSShape *js_dup_shape(JSShape *sh)
-{
-    js_rc(sh)->ref_count++;
-    return sh;
-}
-
 static void js_free_shape0(JSRuntime *rt, JSShape *sh)
 {
     uint32_t i;

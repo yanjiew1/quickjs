@@ -251,7 +251,11 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 
 JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
                               JSProperty *props);
-JSShape *js_dup_shape(JSShape *sh);
+static inline JSShape *js_dup_shape(JSShape *sh)
+{
+    js_rc(sh)->ref_count++;
+    return sh;
+}
 int expand_fast_array(JSContext *ctx, JSObject *p, uint32_t new_len);
 no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
                                  int hash_size, int prop_size);
