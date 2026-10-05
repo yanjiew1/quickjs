@@ -355,7 +355,7 @@ static void js_array_buffer_update_typed_arrays(JSArrayBuffer *abuf)
             } else {
                 if (len >= (int64_t)ta->offset + ta->length) {
                     p->u.array.count = ta->length >> size_log2;
-                    p->u.array.u.ptr = &data[ta->offset];
+                    p->u.array.u.ptr = data ? &data[ta->offset] : NULL;
                 }
             }
         }
