@@ -308,7 +308,6 @@ QUICKJS_SRCS= \
     src/quickjs/number.c \
     src/quickjs/object.c \
     src/quickjs/parse-state.c \
-    src/quickjs/quickjs.c \
     src/quickjs/runtime.c \
     src/quickjs/serialization/reader.c \
     src/quickjs/serialization/writer.c \
