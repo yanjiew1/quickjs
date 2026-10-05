@@ -226,7 +226,9 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 
 
 
-
+int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+                              JSAtom prop, JSAutoInitIDEnum id,
+                              void *opaque, int flags);
 
 
 
@@ -267,7 +269,8 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
 
 
 
-
+JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
+                                    JSClassID class_id, int n_alloc_props);
 
 
 
@@ -285,7 +288,7 @@ JSContext *js_autoinit_get_realm(JSProperty *pr);
 
 
 
-
+void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 
 
 
