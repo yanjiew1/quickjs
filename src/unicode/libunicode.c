@@ -411,7 +411,8 @@ int cr_copy(CharRange *cr, const CharRange *cr1)
 {
     if (cr_realloc(cr, cr1->len))
         return -1;
-    memcpy(cr->points, cr1->points, sizeof(cr->points[0]) * cr1->len);
+    if (cr1->len != 0)
+        memcpy(cr->points, cr1->points, sizeof(cr->points[0]) * cr1->len);
     cr->len = cr1->len;
     return 0;
 }

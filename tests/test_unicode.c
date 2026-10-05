@@ -27,6 +27,31 @@
 #include "cutils.h"
 #include "libunicode.h"
 
+static void *test_realloc(void *opaque, void *ptr, size_t size)
+{
+    (void)opaque;
+    if (size == 0) {
+        free(ptr);
+        return NULL;
+    }
+    return realloc(ptr, size);
+}
+
+static void test_empty_range(void)
+{
+    CharRange src, dst;
+    cr_init(&src, NULL, test_realloc);
+    cr_init(&dst, NULL, test_realloc);
+    assert(cr_copy(&dst, &src) == 0);
+    assert(dst.len == 0);
+    assert(cr_add_interval(&dst, 'a', 'z' + 1) == 0);
+    assert(dst.len == 2);
+    assert(cr_copy(&dst, &src) == 0);
+    assert(dst.len == 0);
+    cr_free(&dst);
+    cr_free(&src);
+}
+
 static void test_case_folding(void)
 {
     static const struct {
@@ -53,6 +78,7 @@ static void test_case_folding(void)
 
 int main(void)
 {
+    test_empty_range();
     test_case_folding();
     return 0;
 }
