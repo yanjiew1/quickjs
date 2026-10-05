@@ -165,7 +165,7 @@ struct JSObject {
 
 
 
-
+int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 
 
 
