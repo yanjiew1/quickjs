@@ -157,6 +157,8 @@ int dbuf_claim(DynBuf *s, size_t len)
 
 int dbuf_put(DynBuf *s, const uint8_t *data, size_t len)
 {
+    if (len == 0)
+        return 0;
     if (unlikely((s->allocated_size - s->size) < len)) {
         if (dbuf_claim(s, len))
             return -1;

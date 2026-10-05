@@ -33,6 +33,9 @@ function test_printf()
     assert(std.sprintf("%10.1f", 2.1), "       2.1");
     assert(std.sprintf("%*.*f", 10, 2, -2.13), "     -2.13");
     assert(std.sprintf("%#lx", 0x7fffffffffffffffn), "0x7fffffffffffffff");
+    /* A leading format specifier appends zero bytes to a pristine DynBuf. */
+    assert(std.sprintf("%s", "x"), "x");
+    assert(std.sprintf("%s", ""), "");
     const str = "x".repeat(4096);
     assert(std.sprintf("%s:%s", str, str), str + ":" + str);
 }
