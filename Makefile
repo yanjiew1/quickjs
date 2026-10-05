@@ -279,13 +279,13 @@ qjs-debug$(EXE): $(patsubst %.o, %.debug.o, $(QJS_OBJS))
 qjsc$(EXE): $(OBJDIR)/tools/qjsc.o $(QJS_LIB_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
+fuzz_eval: $(OBJDIR)/fuzz/fuzz_eval.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_eval $(LIB_FUZZING_ENGINE)
 
-fuzz_compile: $(OBJDIR)/fuzz_compile.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
+fuzz_compile: $(OBJDIR)/fuzz/fuzz_compile.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fuzz.a
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
 
-fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/src/regexp/libregexp.fuzz.o $(OBJDIR)/src/cutils/cutils.fuzz.o $(OBJDIR)/src/unicode/libunicode.fuzz.o
+fuzz_regexp: $(OBJDIR)/fuzz/fuzz_regexp.o $(OBJDIR)/src/regexp/libregexp.fuzz.o $(OBJDIR)/src/cutils/cutils.fuzz.o $(OBJDIR)/src/unicode/libunicode.fuzz.o
 	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
@@ -314,14 +314,17 @@ LTOEXT=
 endif
 
 libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS)
+	rm -f $@
 	$(AR) rcs $@ $^
 
 ifdef CONFIG_LTO
 libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
+	rm -f $@
 	$(AR) rcs $@ $^
 endif # CONFIG_LTO
 
 libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
+	rm -f $@
 	$(AR) rcs $@ $^
 
 repl.c: $(QJSC) tools/repl.js
@@ -346,8 +349,9 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
 
-$(OBJDIR)/fuzz_%.o: fuzz/fuzz_%.c | $(OBJDIR)
-	$(CC) $(CFLAGS_OPT) -c -I. -o $@ $<
+$(OBJDIR)/fuzz/%.o: fuzz/%.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -I. -o $@ $<
 
 $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
