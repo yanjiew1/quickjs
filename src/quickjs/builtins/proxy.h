@@ -35,6 +35,6 @@ typedef struct JSProxyData {
 } JSProxyData;
 
 JSValue JS_ThrowTypeErrorRevokedProxy(JSContext *ctx);
-
+int js_resolve_proxy(JSContext *ctx, JSValueConst *pval, BOOL throw_exception);
 
 #endif
