@@ -27,6 +27,7 @@
 
 #include "quickjs-libc.h"
 
-
+JSModuleDef *create_json_module(JSContext *ctx, const char *module_name,
+                                JSValue val);
 
 #endif
