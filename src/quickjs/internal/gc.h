@@ -30,8 +30,8 @@
 void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
                    JSGCObjectTypeEnum type);
 void remove_gc_object(JSGCObjectHeader *h);
-
-
-
+void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects);
+void free_zero_refcount(JSRuntime *rt);
+void gc_decref(JSRuntime *rt);
 
 #endif

@@ -141,8 +141,9 @@ typedef enum JSFreeModuleEnum {
 
 
 
-
-
+void js_free_module_def(JSRuntime *rt, JSModuleDef *m);
+void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
+                        JS_MarkFunc *mark_func);
 
 
 
