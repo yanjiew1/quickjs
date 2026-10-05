@@ -2163,8 +2163,9 @@ void build_script_ext_table(FILE *f)
         j = i + 1;
         while (j <= CHARCODE_MAX &&
                unicode_db[j].script_ext_len == script_ext_len &&
-               !memcmp(unicode_db[j].script_ext, unicode_db[i].script_ext,
-                       script_ext_len)) {
+               (script_ext_len == 0 ||
+                !memcmp(unicode_db[j].script_ext, unicode_db[i].script_ext,
+                        script_ext_len))) {
             j++;
         }
         n = j - i;
