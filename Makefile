@@ -422,6 +422,14 @@ run-test262-debug: $(patsubst %.o, %.debug.o, $(OBJDIR)/tools/run-test262.o $(QJ
 
 # object suffix order: nolto
 
+ifdef CONFIG_CLANG
+# Allow tail duplication of the VM's 256-way opcode dispatch. Probe the LLVM
+# option because older Clang releases may not support it.
+CLANG_VM_CFLAGS:=$(shell $(CC) -x c -c /dev/null -o /dev/null -mllvm -tail-dup-succ-size=256 >/dev/null 2>&1 && echo -mllvm -tail-dup-succ-size=256)
+$(OBJDIR)/src/quickjs/vm.o $(OBJDIR)/src/quickjs/vm.pic.o $(OBJDIR)/src/quickjs/vm.fuzz.o: CFLAGS_OPT+=$(CLANG_VM_CFLAGS)
+$(OBJDIR)/src/quickjs/vm.nolto.o: CFLAGS_NOLTO+=$(CLANG_VM_CFLAGS)
+endif
+
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
