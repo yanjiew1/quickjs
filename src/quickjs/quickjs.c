@@ -734,15 +734,9 @@ static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
         return 0;
 }
 
-static inline void *js_dbuf_realloc(void *opaque, void *ptr, size_t size)
-{
-    return js_realloc_rt(opaque, ptr, size);
-}
 
-static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
-{
-    dbuf_init2(s, ctx->rt, js_dbuf_realloc);
-}
+
+
 
 
 
@@ -1474,11 +1468,7 @@ void JS_UpdateStackTop(JSRuntime *rt)
     update_stack_limit(rt);
 }
 
-static inline BOOL is_strict_mode(JSContext *ctx)
-{
-    JSStackFrame *sf = ctx->rt->current_stack_frame;
-    return (sf && (sf->js_mode & JS_MODE_STRICT));
-}
+
 
 /* JSAtom support */
 
@@ -2582,25 +2572,7 @@ void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags)
     }
 }
 
-static force_inline JSShapeProperty *find_own_property1(JSObject *p,
-                                                        JSAtom atom)
-{
-    JSShape *sh;
-    JSShapeProperty *pr, *prop;
-    intptr_t h;
-    sh = p->shape;
-    h = (uintptr_t)atom & sh->prop_hash_mask;
-    h = sh->hash_table[h];
-    prop = get_shape_prop(sh);
-    while (h) {
-        pr = &prop[h - 1];
-        if (likely(pr->atom == atom)) {
-            return pr;
-        }
-        h = pr->hash_next;
-    }
-    return NULL;
-}
+
 
 
 
@@ -3230,29 +3202,12 @@ JSValue JS_GetGlobalObject(JSContext *ctx)
 }
 
 /* WARNING: obj is freed */
-JSValue JS_Throw(JSContext *ctx, JSValue obj)
-{
-    JSRuntime *rt = ctx->rt;
-    JS_FreeValue(ctx, rt->current_exception);
-    rt->current_exception = obj;
-    rt->current_exception_is_uncatchable = FALSE;
-    return JS_EXCEPTION;
-}
+
 
 /* return the pending exception (cannot be called twice). */
-JSValue JS_GetException(JSContext *ctx)
-{
-    JSValue val;
-    JSRuntime *rt = ctx->rt;
-    val = rt->current_exception;
-    rt->current_exception = JS_UNINITIALIZED;
-    return val;
-}
 
-JS_BOOL JS_HasException(JSContext *ctx)
-{
-    return !JS_IsUninitialized(ctx->rt->current_exception);
-}
+
+
 
 static void dbuf_put_leb128(DynBuf *s, uint32_t v)
 {
@@ -3310,8 +3265,8 @@ static int get_sleb128(int32_t *pval, const uint8_t *buf,
 }
 
 /* use pc_value = -1 to get the position of the function definition */
-static int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
-                         uint32_t pc_value, int *pcol_num)
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+                  uint32_t pc_value, int *pcol_num)
 {
     const uint8_t *p_end, *p;
     int new_line_num, line_num, pc, v, ret, new_col_num, col_num;
@@ -3379,214 +3334,28 @@ static int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
 
 /* return a string property without executing arbitrary JS code (used
    when dumping the stack trace or in debug print). */
-const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop)
-{
-    JSObject *p;
-    JSProperty *pr;
-    JSShapeProperty *prs;
-    JSValueConst val;
 
-    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
-        return NULL;
-    p = JS_VALUE_GET_OBJ(obj);
-    prs = find_own_property(&pr, p, prop);
-    if (!prs) {
-        /* we look at one level in the prototype to handle the 'name'
-           field of the Error objects */
-        p = p->shape->proto;
-        if (!p)
-            return NULL;
-        prs = find_own_property(&pr, p, prop);
-        if (!prs)
-            return NULL;
-    }
-    
-    if ((prs->flags & JS_PROP_TMASK) != JS_PROP_NORMAL)
-        return NULL;
-    val = pr->u.value;
-    if (JS_VALUE_GET_TAG(val) != JS_TAG_STRING)
-        return NULL;
-    return JS_ToCString(ctx, val);
-}
 
 #define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
 
 /* if filename != NULL, an additional level is added with the filename
    and line number information (used for parse error). */
-static void build_backtrace(JSContext *ctx, JSValueConst error_obj,
-                            const char *filename, int line_num, int col_num,
-                            int backtrace_flags)
-{
-    JSStackFrame *sf;
-    JSValue str;
-    DynBuf dbuf;
-    const char *func_name_str;
-    const char *str1;
-    JSObject *p;
 
-    if (!JS_IsObject(error_obj))
-        return; /* protection in the out of memory case */
-    
-    js_dbuf_init(ctx, &dbuf);
-    if (filename) {
-        dbuf_printf(&dbuf, "    at %s", filename);
-        if (line_num != -1)
-            dbuf_printf(&dbuf, ":%d:%d", line_num, col_num);
-        dbuf_putc(&dbuf, '\n');
-        str = JS_NewString(ctx, filename);
-        if (JS_IsException(str))
-            return;
-        /* Note: SpiderMonkey does that, could update once there is a standard */
-        if (JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_fileName, str,
-                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
-            JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num),
-                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
-            JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, col_num),
-                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0) {
-            return;
-        }
-    }
-    for(sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
-        if (sf->js_mode & JS_MODE_BACKTRACE_BARRIER)
-            break;
-        if (backtrace_flags & JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL) {
-            backtrace_flags &= ~JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL;
-            continue;
-        }
-        func_name_str = get_prop_string(ctx, sf->cur_func, JS_ATOM_name);
-        if (!func_name_str || func_name_str[0] == '\0')
-            str1 = "<anonymous>";
-        else
-            str1 = func_name_str;
-        dbuf_printf(&dbuf, "    at %s", str1);
-        JS_FreeCString(ctx, func_name_str);
-
-        p = JS_VALUE_GET_OBJ(sf->cur_func);
-        if (js_class_has_bytecode(p->class_id)) {
-            JSFunctionBytecode *b;
-            const char *atom_str;
-            int line_num1, col_num1;
-
-            b = p->u.func.function_bytecode;
-            if (b->has_debug) {
-                line_num1 = find_line_num(ctx, b,
-                                          sf->cur_pc - b->byte_code_buf - 1, &col_num1);
-                atom_str = JS_AtomToCString(ctx, b->debug.filename);
-                dbuf_printf(&dbuf, " (%s",
-                            atom_str ? atom_str : "<null>");
-                JS_FreeCString(ctx, atom_str);
-                if (line_num1 != 0)
-                    dbuf_printf(&dbuf, ":%d:%d", line_num1, col_num1);
-                dbuf_putc(&dbuf, ')');
-            }
-        } else {
-            dbuf_printf(&dbuf, " (native)");
-        }
-        dbuf_putc(&dbuf, '\n');
-    }
-    dbuf_putc(&dbuf, '\0');
-    if (dbuf_error(&dbuf))
-        str = JS_NULL;
-    else
-        str = JS_NewString(ctx, (char *)dbuf.buf);
-    dbuf_free(&dbuf);
-    JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str,
-                           JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-}
 
 /* Note: it is important that no exception is returned by this function */
-static BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj)
-{
-    JSObject *p;
-    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
-        return FALSE;
-    p = JS_VALUE_GET_OBJ(obj);
-    if (p->class_id != JS_CLASS_ERROR)
-        return FALSE;
-    if (find_own_property1(p, JS_ATOM_stack))
-        return FALSE;
-    return TRUE;
-}
 
-JSValue JS_NewError(JSContext *ctx)
-{
-    return JS_NewObjectClass(ctx, JS_CLASS_ERROR);
-}
 
-static JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace)
-{
-    char buf[256];
-    JSValue obj, ret;
 
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    obj = JS_NewObjectProtoClass(ctx, ctx->native_error_proto[error_num],
-                                 JS_CLASS_ERROR);
-    if (unlikely(JS_IsException(obj))) {
-        /* out of memory: throw JS_NULL to avoid recursing */
-        obj = JS_NULL;
-    } else {
-        JS_DefinePropertyValue(ctx, obj, JS_ATOM_message,
-                               JS_NewString(ctx, buf),
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-        if (add_backtrace) {
-            build_backtrace(ctx, obj, NULL, 0, 0, 0);
-        }
-    }
-    ret = JS_Throw(ctx, obj);
-    return ret;
-}
 
-static JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap)
-{
-    JSRuntime *rt = ctx->rt;
-    JSStackFrame *sf;
-    BOOL add_backtrace;
 
-    /* the backtrace is added later if called from a bytecode function */
-    sf = rt->current_stack_frame;
-    add_backtrace = !rt->in_out_of_memory &&
-        (!sf || (JS_GetFunctionBytecode(sf->cur_func) == NULL));
-    return JS_ThrowError2(ctx, error_num, fmt, ap, add_backtrace);
-}
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...)
-{
-    JSValue val;
-    va_list ap;
 
-    va_start(ap, fmt);
-    val = JS_ThrowError(ctx, JS_SYNTAX_ERROR, fmt, ap);
-    va_end(ap);
-    return val;
-}
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...)
-{
-    JSValue val;
-    va_list ap;
 
-    va_start(ap, fmt);
-    val = JS_ThrowError(ctx, JS_TYPE_ERROR, fmt, ap);
-    va_end(ap);
-    return val;
-}
 
-static int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...)
-{
-    va_list ap;
 
-    if ((flags & JS_PROP_THROW) ||
-        ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
-        va_start(ap, fmt);
-        JS_ThrowError(ctx, JS_TYPE_ERROR, fmt, ap);
-        va_end(ap);
-        return -1;
-    } else {
-        return FALSE;
-    }
-}
+
+
 
 /* never use it directly */
 static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
@@ -3597,12 +3366,7 @@ static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSC
 }
 
 /* never use it directly */
-static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
-{
-    char buf[ATOM_GET_STR_BUF_SIZE];
-    return JS_ThrowSyntaxError(ctx, fmt,
-                             JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
-}
+
 
 /* %s is replaced by 'atom'. The macro is used so that gcc can check
     the format string. */
@@ -3620,110 +3384,30 @@ static int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom)
     }
 }
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...)
-{
-    JSValue val;
-    va_list ap;
 
-    va_start(ap, fmt);
-    val = JS_ThrowError(ctx, JS_REFERENCE_ERROR, fmt, ap);
-    va_end(ap);
-    return val;
-}
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx, const char *fmt, ...)
-{
-    JSValue val;
-    va_list ap;
 
-    va_start(ap, fmt);
-    val = JS_ThrowError(ctx, JS_RANGE_ERROR, fmt, ap);
-    va_end(ap);
-    return val;
-}
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...)
-{
-    JSValue val;
-    va_list ap;
 
-    va_start(ap, fmt);
-    val = JS_ThrowError(ctx, JS_INTERNAL_ERROR, fmt, ap);
-    va_end(ap);
-    return val;
-}
 
-JSValue JS_ThrowOutOfMemory(JSContext *ctx)
-{
-    JSRuntime *rt = ctx->rt;
-    if (!rt->in_out_of_memory) {
-        rt->in_out_of_memory = TRUE;
-        JS_ThrowInternalError(ctx, "out of memory");
-        rt->in_out_of_memory = FALSE;
-    }
-    return JS_EXCEPTION;
-}
 
-JSValue JS_ThrowStackOverflow(JSContext *ctx)
-{
-    return JS_ThrowInternalError(ctx, "stack overflow");
-}
 
-static JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx)
-{
-    return JS_ThrowTypeError(ctx, "not an object");
-}
 
-static JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
-                                                JSValueConst func_obj)
-{
-    const char *name;
-    if (!JS_IsFunction(ctx, func_obj))
-        goto fail;
-    name = get_prop_string(ctx, func_obj, JS_ATOM_name);
-    if (!name) {
-    fail:
-        return JS_ThrowTypeError(ctx, "not a constructor");
-    }
-    JS_ThrowTypeError(ctx, "%s is not a constructor", name);
-    JS_FreeCString(ctx, name);
-    return JS_EXCEPTION;
-}
+
+
+
+
 
 static JSValue JS_ThrowTypeErrorNotASymbol(JSContext *ctx)
 {
     return JS_ThrowTypeError(ctx, "not a symbol");
 }
 
-static JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name)
-{
-    char buf[ATOM_GET_STR_BUF_SIZE];
-    return JS_ThrowReferenceError(ctx, "'%s' is not defined",
-                                  JS_AtomGetStr(ctx, buf, sizeof(buf), name));
-}
 
-static JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name)
-{
-    char buf[ATOM_GET_STR_BUF_SIZE];
-    return JS_ThrowReferenceError(ctx, "%s is not initialized",
-                                  name == JS_ATOM_NULL ? "lexical variable" :
-                                  JS_AtomGetStr(ctx, buf, sizeof(buf), name));
-}
 
-static JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
-                                                    JSFunctionBytecode *b,
-                                                    int idx, BOOL is_ref)
-{
-    JSAtom atom = JS_ATOM_NULL;
-    if (is_ref) {
-        atom = b->closure_var[idx].var_name;
-    } else {
-        /* not present if the function is stripped and contains no eval() */
-        if (b->vardefs)
-            atom = b->vardefs[b->arg_count + idx].var_name;
-    }
-    return JS_ThrowReferenceErrorUninitialized(ctx, atom);
-}
+
+
+
 
 static JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id)
 {
@@ -6691,10 +6375,7 @@ static int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
 #define DEFINE_GLOBAL_LEX_VAR (1 << 7)
 #define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
 
-static JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop)
-{
-    return JS_ThrowSyntaxErrorAtom(ctx, "redeclaration of '%s'", prop);
-}
+
 
 /* flags is 0, DEFINE_GLOBAL_LEX_VAR or DEFINE_GLOBAL_FUNC_VAR */
 /* XXX: could support exotic global object. */
@@ -6846,20 +6527,10 @@ int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int fl
 
 
 
-BOOL JS_IsError(JSContext *ctx, JSValueConst val)
-{
-    JSObject *p;
-    if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
-        return FALSE;
-    p = JS_VALUE_GET_OBJ(val);
-    return (p->class_id == JS_CLASS_ERROR);
-}
+
 
 /* must be called after JS_Throw() */
-void JS_SetUncatchableException(JSContext *ctx, BOOL flag)
-{
-    ctx->rt->current_exception_is_uncatchable = flag;
-}
+
 
 void JS_SetOpaque(JSValue obj, void *opaque)
 {
@@ -31478,11 +31149,7 @@ static JSValue js_number_constructor(JSContext *ctx, JSValueConst this_val,
 
 
 
-static int check_exception_free(JSContext *ctx, JSValue obj)
-{
-    JS_FreeValue(ctx, obj);
-    return JS_IsException(obj);
-}
+
 
 
 
