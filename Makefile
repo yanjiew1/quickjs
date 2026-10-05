@@ -263,6 +263,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/array.c \
     src/quickjs/builtins/bigint.c \
     src/quickjs/builtins/boolean.c \
+    src/quickjs/builtins/data-view.c \
     src/quickjs/builtins/error.c \
     src/quickjs/builtins/function.c \
     src/quickjs/builtins/global.c \
