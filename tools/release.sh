@@ -166,7 +166,8 @@ cp Makefile VERSION TODO Changelog readme.txt LICENSE \
    $outdir
 cp -a include src tools compat $outdir
 
-cp tests/*.js tests/*.patch tests/*.c tests/*.sh tests/regexp_test.c $outdir/tests
+cp tests/*.js tests/*.patch tests/*.c tests/*.sh \
+   $outdir/tests
 
 cp examples/*.js examples/*.c examples/*.json $outdir/examples
 
