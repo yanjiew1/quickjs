@@ -33,7 +33,20 @@
 #define OPTIMIZE         1
 #define ARG_SCOPE_INDEX 1
 
+static inline void dbuf_set_error(DynBuf *s)
+{
+    s->error = TRUE;
+}
 
+static inline int32_t get_i32(const uint8_t *tab)
+{
+    return (int32_t)((const struct packed_u32 *)tab)->v;
+}
+
+static inline uint32_t get_u8(const uint8_t *tab)
+{
+    return *tab;
+}
 
 int update_label(JSFunctionDef *s, int label, int delta);
 
