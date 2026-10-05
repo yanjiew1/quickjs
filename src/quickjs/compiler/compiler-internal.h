@@ -38,8 +38,8 @@
 int update_label(JSFunctionDef *s, int label, int delta);
 
 
-
-
+int push_scope(JSParseState *s);
+__exception int js_parse_program(JSParseState *s);
 
 int new_label_fd(JSFunctionDef *fd);
 int find_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
