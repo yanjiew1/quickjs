@@ -220,7 +220,8 @@ struct JSContext {
 
 
 
-
+int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
+                   int argc, JSValueConst *argv, BOOL no_exception);
 
 #if !defined(CONFIG_STACK_CHECK)
 /* no stack limitation */
