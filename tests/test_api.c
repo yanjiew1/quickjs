@@ -351,6 +351,54 @@ static void test_empty_buffer_transfer(void)
                         "new Uint8Array(grown)[0] === 0", 1);
 }
 
+static void run_buffer_without_free_callback(uint8_t *data, size_t len,
+                                            const char *source)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue global, buffer;
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    buffer = JS_NewArrayBuffer(ctx, data, len, NULL, NULL, FALSE);
+    assert(!JS_IsException(buffer));
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "external", buffer) >= 0);
+    JS_FreeValue(ctx, global);
+    check_eval(ctx, source);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_buffer_transfer_without_free_callback(void)
+{
+    static const char *methods[] = { "transfer", "transferToFixedLength" };
+    uint8_t data[] = { 17, 34 };
+    char source[512];
+    size_t i, len, new_len, copy_len;
+    int n;
+
+    for (i = 0; i < countof(methods); i++) {
+        for (len = 0; len <= sizeof(data); len += sizeof(data)) {
+            for (new_len = 0; new_len <= sizeof(data) + 1; new_len++) {
+                copy_len = len < new_len ? len : new_len;
+                n = snprintf(source, sizeof(source),
+                             "const original = new Uint8Array(external);"
+                             "const moved = external.%s(%zu);"
+                             "const bytes = new Uint8Array(moved);"
+                             "external.detached && original.length === 0 &&"
+                             "moved.byteLength === %zu &&"
+                             "[...bytes].every((value, index) => "
+                             "value === (index < %zu ? (index + 1) * 17 : 0))",
+                             methods[i], new_len, new_len, copy_len);
+                assert(n >= 0 && (size_t)n < sizeof(source));
+                run_buffer_without_free_callback(data, len, source);
+                assert(data[0] == 17 && data[1] == 34);
+            }
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -362,6 +410,7 @@ int main(int argc, char **argv)
         { "typed-array-arguments", test_typed_array_arguments },
         { "atom", test_empty_atom },
         { "buffer-transfer", test_empty_buffer_transfer },
+        { "buffer-transfer-no-free", test_buffer_transfer_without_free_callback },
     };
     size_t i;
     int ran = 0;
