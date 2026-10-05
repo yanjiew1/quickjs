@@ -264,7 +264,7 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          install: git make mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
+          install: git make diffutils mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
       - name: Build
         run: |
            make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
