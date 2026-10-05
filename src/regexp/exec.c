@@ -38,7 +38,10 @@
 //#define DUMP_EXEC
 #include "regexp-internal.h"
 
-
+static inline int lre_is_word_byte(uint8_t c) {
+    return lre_ctype_bits[c] & (UNICODE_C_UPPER | UNICODE_C_LOWER |
+                                UNICODE_C_UNDER | UNICODE_C_DIGIT);
+}
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */

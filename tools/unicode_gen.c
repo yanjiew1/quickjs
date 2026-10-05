@@ -63,8 +63,10 @@ uint32_t total_index_bytes;
    - suppress more upper / lower case redundancy
 */
 
+#include "libunicode.h"
+#include "unicode-encoding.h"
 #ifdef USE_TEST
-#include "libunicode.c"
+#include "unicode-test.h"
 #endif
 
 #define CHARCODE_MAX 0x10ffff
@@ -220,7 +222,7 @@ static __maybe_unused void re_string_list_dump(const char *str, const REStringLi
     int i, j, k;
 
     printf("%s:\n", str);
-    
+
     j = 0;
     for(i = 0; i < s->hash_size; i++) {
         for(p = s->hash_table[i]; p != NULL; p = p->next) {
@@ -933,7 +935,7 @@ static BOOL is_emoji_modifier(uint32_t c)
 static void add_sequence_prop(int idx, int seq_len, int *seq)
 {
     int i;
-    
+
     assert(idx < SEQUENCE_PROP_COUNT);
     switch(idx) {
     case SEQUENCE_PROP_Basic_Emoji:
@@ -996,7 +998,7 @@ void parse_sequence_prop_list(const char *filename)
     uint32_t c0, c1, c;
     int idx, seq_len;
     int seq[SEQ_MAX_LEN];
-    
+
     f = fopen(filename, "rb");
     if (!f) {
         perror(filename);
@@ -1032,11 +1034,11 @@ void parse_sequence_prop_list(const char *filename)
             fprintf(stderr, "Property not found: %s\n", buf);
             exit(1);
         }
-        
+
         p = p_start;
         c0 = strtoul(p, (char **)&p, 16);
         assert(c0 <= CHARCODE_MAX);
-        
+
         if (*p == '.' && p[1] == '.') {
             p += 2;
             c1 = strtoul(p, (char **)&p, 16);
@@ -1225,25 +1227,6 @@ BOOL is_complicated_case(const CCInfo *ci)
             (ci->f_len != ci->l_len) ||
             (memcmp(ci->f_data, ci->l_data, ci->f_len * sizeof(ci->f_data[0])) != 0));
 }
-
-#ifndef USE_TEST
-enum {
-    RUN_TYPE_U,
-    RUN_TYPE_L,
-    RUN_TYPE_UF,
-    RUN_TYPE_LF,
-    RUN_TYPE_UL,
-    RUN_TYPE_LSU,
-    RUN_TYPE_U2L_399_EXT2,
-    RUN_TYPE_UF_D20,
-    RUN_TYPE_UF_D1_EXT,
-    RUN_TYPE_U_EXT,
-    RUN_TYPE_LF_EXT,
-    RUN_TYPE_UF_EXT2,
-    RUN_TYPE_LF_EXT2,
-    RUN_TYPE_UF_EXT3,
-};
-#endif
 
 const char *run_type_str[] = {
     "U",
@@ -2263,7 +2246,7 @@ static BOOL mark_zwj_string(REStringList *sl, uint32_t *buf, int len, int mod_ty
     if (mark_flag)
         printf("mod_type=%d\n", mod_type);
 #endif
-    
+
     switch(mod_type) {
     case EMOJI_MOD_NONE:
         n_mod = 1;
@@ -2309,7 +2292,7 @@ static BOOL mark_zwj_string(REStringList *sl, uint32_t *buf, int len, int mod_ty
 
             if (hc_pos >= 0)
                 buf[hc_pos] = 0x1F9B0 + j;
-            
+
             p = re_string_find(sl, len, buf, FALSE);
             if (!p)
                 return FALSE;
@@ -2326,7 +2309,7 @@ static void zwj_encode_string(DynBuf *dbuf, const uint32_t *buf, int len, int mo
     int i, j;
     int c, code;
     uint32_t buf1[SEQ_MAX_LEN];
-    
+
     j = 0;
     for(i = 0; i < len;) {
         c = buf[i++];
@@ -2383,7 +2366,7 @@ static void build_rgi_emoji_zwj_sequence(FILE *f, REStringList *sl)
     //    printf("rgi_emoji_zwj_sequence: n=%d\n", sl->n_strings);
 
     dbuf_init(&dbuf);
-    
+
     /* avoid duplicating strings with emoji modifiers or hair colors */
     for(h = 0; h < sl->hash_size; h++) {
         for(p = sl->hash_table[h]; p != NULL; p = p->next) {
@@ -2400,7 +2383,7 @@ static void build_rgi_emoji_zwj_sequence(FILE *f, REStringList *sl)
                 }
                 buf[j] = p->buf[j];
             }
-            
+
             if (mod_count != 0 || hair_color_pos >= 0) {
                 int mod_type;
                 if (mod_count == 0)
@@ -2409,7 +2392,7 @@ static void build_rgi_emoji_zwj_sequence(FILE *f, REStringList *sl)
                     mod_type = EMOJI_MOD_TYPE1;
                 else
                     mod_type = EMOJI_MOD_TYPE2;
-                
+
                 if (mark_zwj_string(sl, buf, p->len, mod_type, mod_pos, hair_color_pos, FALSE)) {
                     mark_zwj_string(sl, buf, p->len, mod_type, mod_pos, hair_color_pos, TRUE);
                 } else if (mod_type == EMOJI_MOD_TYPE2) {
@@ -2431,7 +2414,7 @@ static void build_rgi_emoji_zwj_sequence(FILE *f, REStringList *sl)
             }
         }
     }
-    
+
     /* Encode */
     dump_byte_table(f, "unicode_rgi_emoji_zwj_sequence", dbuf.buf, dbuf.size);
 
@@ -2700,46 +2683,6 @@ void build_cc_table(FILE *f)
 }
 
 /* maximum length of decomposition: 18 chars (1), then 8 */
-#ifndef USE_TEST
-typedef enum {
-    DECOMP_TYPE_C1, /* 16 bit char */
-    DECOMP_TYPE_L1, /* 16 bit char table */
-    DECOMP_TYPE_L2,
-    DECOMP_TYPE_L3,
-    DECOMP_TYPE_L4,
-    DECOMP_TYPE_L5, /* XXX: not used */
-    DECOMP_TYPE_L6, /* XXX: could remove */
-    DECOMP_TYPE_L7, /* XXX: could remove */
-    DECOMP_TYPE_LL1, /* 18 bit char table */
-    DECOMP_TYPE_LL2,
-    DECOMP_TYPE_S1, /* 8 bit char table */
-    DECOMP_TYPE_S2,
-    DECOMP_TYPE_S3,
-    DECOMP_TYPE_S4,
-    DECOMP_TYPE_S5,
-    DECOMP_TYPE_I1, /* increment 16 bit char value */
-    DECOMP_TYPE_I2_0,
-    DECOMP_TYPE_I2_1,
-    DECOMP_TYPE_I3_1,
-    DECOMP_TYPE_I3_2,
-    DECOMP_TYPE_I4_1,
-    DECOMP_TYPE_I4_2,
-    DECOMP_TYPE_B1, /* 16 bit base + 8 bit offset */
-    DECOMP_TYPE_B2,
-    DECOMP_TYPE_B3,
-    DECOMP_TYPE_B4,
-    DECOMP_TYPE_B5,
-    DECOMP_TYPE_B6,
-    DECOMP_TYPE_B7,
-    DECOMP_TYPE_B8,
-    DECOMP_TYPE_B18,
-    DECOMP_TYPE_LS2,
-    DECOMP_TYPE_PAT3,
-    DECOMP_TYPE_S2_UL,
-    DECOMP_TYPE_LS2_UL,
-} DecompTypeEnum;
-#endif
-
 const char *decomp_type_str[] = {
     "C1",
     "L1",
