@@ -61,7 +61,13 @@ typedef struct {
     js_limb_t tab[(64 + JS_LIMB_BITS - 1) / JS_LIMB_BITS];
 } JSBigIntBuf;
 
-JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
+JSBigInt *js_bigint_set_si(JSBigIntBuf *buf, js_slimb_t a);
+
+/* val must be a short big int */
+static inline JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val)
+{
+    return js_bigint_set_si(buf, JS_VALUE_GET_SHORT_BIG_INT(val));
+}
 
 JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
 JSBigInt *js_bigint_new(JSContext *ctx, int len);
@@ -108,7 +114,6 @@ JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
 JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
 JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val);
 
-JSBigInt *js_bigint_set_si(JSBigIntBuf *buf, js_slimb_t a);
 JSBigInt *js_bigint_add(JSContext *ctx, const JSBigInt *a,
                         const JSBigInt *b, int b_neg);
 JSBigInt *js_bigint_neg(JSContext *ctx, const JSBigInt *a);

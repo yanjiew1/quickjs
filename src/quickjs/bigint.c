@@ -394,12 +394,6 @@ static JSBigInt *js_bigint_set_si64(JSBigIntBuf *buf, int64_t a)
 #endif
 }
 
-/* val must be a short big int */
-JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val)
-{
-    return js_bigint_set_si(buf, JS_VALUE_GET_SHORT_BIG_INT(val));
-}
-
 static __maybe_unused void js_bigint_dump1(JSContext *ctx, const char *str,
                                            const js_limb_t *tab, int len)
 {
