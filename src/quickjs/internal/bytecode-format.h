@@ -38,6 +38,7 @@ void free_bytecode_atoms(JSRuntime *rt, const uint8_t *bc_buf, int bc_len,
 
 
 
-
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+                  uint32_t pc_value, int *pcol_num);
 
 #endif
