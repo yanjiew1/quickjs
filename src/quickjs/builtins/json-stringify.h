@@ -1,5 +1,5 @@
 /*
- * QuickJS JSON builtin interface
+ * QuickJS JSON serialization interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,9 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_BUILTINS_JSON_H
-#define QUICKJS_BUILTINS_JSON_H
+#ifndef QUICKJS_BUILTINS_JSON_STRINGIFY_H
+#define QUICKJS_BUILTINS_JSON_STRINGIFY_H
 
 #include "../internal/base.h"
+
+JSValue js_json_stringify(JSContext *ctx, JSValueConst this_val,
+                          int argc, JSValueConst *argv);
 
 #endif
