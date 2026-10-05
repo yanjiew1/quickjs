@@ -319,7 +319,7 @@ int JS_OrdinaryIsInstanceOf(JSContext *ctx, JSValueConst val,
                             JSValueConst obj);
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
                                     JSClassID class_id, int n_alloc_props);
-
+void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
 
 
 JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id);

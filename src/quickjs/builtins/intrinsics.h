@@ -29,6 +29,6 @@
 
 JSValue js_get_this(JSContext *ctx, JSValueConst this_val);
 
-
+int JS_AddIntrinsicBasicObjects(JSContext *ctx);
 
 #endif
