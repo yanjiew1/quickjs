@@ -57,6 +57,9 @@ typedef union JSFloat64Union {
 /* accept -0x1 */
 #define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
 
+static inline int is_digit(int c) {
+    return c >= '0' && c <= '9';
+}
 
 
 
@@ -80,8 +83,7 @@ typedef union JSFloat64Union {
 
 
 
-
-
+JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
 
 
 

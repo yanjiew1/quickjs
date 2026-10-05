@@ -40,24 +40,36 @@ enum {
 #define JS_ATOM_TAG_INT (1U << 31)
 #define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
 #define ATOM_GET_STR_BUF_SIZE 64
+const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
+static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
+{
+    return (v & JS_ATOM_TAG_INT) != 0;
+}
+
+static inline JSAtom __JS_AtomFromUInt32(uint32_t v)
+{
+    return v | JS_ATOM_TAG_INT;
+}
+
+static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
+{
+    return atom & ~JS_ATOM_TAG_INT;
+}
 
 
+void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
+JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
+BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+__maybe_unused void JS_DumpAtoms(JSRuntime *rt);
+JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
+JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
 
+JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+static inline BOOL atom_is_free(const JSAtomStruct *p)
+{
+    return (uintptr_t)p & 1;
+}
 
 typedef enum {
     JS_ATOM_KIND_STRING,
@@ -65,18 +77,18 @@ typedef enum {
     JS_ATOM_KIND_PRIVATE,
 } JSAtomKindEnum;
 
-
+int JS_InitAtoms(JSRuntime *rt);
 JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len, int atom_type);
 JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
-
+JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v);
 JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len, int atom_type);
-
-
-
-
-
-
-
-
+JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
+JSValue JS_NewSymbolInternal(JSContext *ctx, JSString *p, int atom_type);
+JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr, int atom_type);
+const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size, JSAtom atom);
+BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval, JSAtom atom);
+JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom);
+int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom);
+BOOL JS_AtomSymbolHasDescription(JSContext *ctx, JSAtom v);
 
 #endif
