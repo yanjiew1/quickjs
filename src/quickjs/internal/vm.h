@@ -35,8 +35,10 @@
 #define FUNC_RET_INITIAL_YIELD 3
 
 /* A generator resumes its detached stack frame through this VM entry point. */
-
-
+JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
+                        JSValueConst this_obj, JSValueConst new_target,
+                        int argc, JSValue *argv, int flags);
+void close_var_refs(JSRuntime *rt, JSFunctionBytecode *b, JSStackFrame *sf);
 
 
 

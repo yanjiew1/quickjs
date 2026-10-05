@@ -264,6 +264,7 @@ QUICKJS_SRCS= \
     src/quickjs/function-list.c \
     src/quickjs/function.c \
     src/quickjs/gc.c \
+    src/quickjs/generator.c \
     src/quickjs/iterator-protocol.c \
     src/quickjs/number.c \
     src/quickjs/string.c \
