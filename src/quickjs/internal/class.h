@@ -43,6 +43,7 @@ typedef struct JSClassShortDef {
     JSClassGCMark *gc_mark;
 } JSClassShortDef;
 
-
+int init_class_range(JSRuntime *rt, JSClassShortDef const *tab,
+                     int start, int count);
 
 #endif

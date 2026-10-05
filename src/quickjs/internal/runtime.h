@@ -238,7 +238,13 @@ struct JSContext {
 
 /* set the new value and free the old value after (freeing the value
    can reallocate the object data) */
-
+static inline void set_value(JSContext *ctx, JSValue *pval, JSValue new_val)
+{
+    JSValue old_val;
+    old_val = *pval;
+    *pval = new_val;
+    JS_FreeValue(ctx, old_val);
+}
 
 
 
