@@ -128,8 +128,8 @@ else ifdef CONFIG_COSMO
   CONFIG_LTO=
   HOST_CC=gcc
   CC=cosmocc
-  DEPFLAGS=
   # cosmocc does not correct support -MF
+  DEPFLAGS=
   CFLAGS=-g -Wall #
   CFLAGS += -Wno-array-bounds -Wno-format-truncation
   AR=cosmoar
@@ -252,10 +252,11 @@ endif
 endif
 endif
 
-.DEFAULT_GOAL := all
-
 QUICKJS_SRCS=src/quickjs/allocator.c src/quickjs/atom.c src/quickjs/bigint.c src/quickjs/builtins/array-buffer.c src/quickjs/builtins/array.c src/quickjs/builtins/async-from-sync-iterator.c src/quickjs/builtins/atomics.c src/quickjs/builtins/bigint.c src/quickjs/builtins/boolean.c src/quickjs/builtins/collections.c src/quickjs/builtins/data-view.c src/quickjs/builtins/date.c src/quickjs/builtins/error.c src/quickjs/builtins/finalization-registry.c src/quickjs/builtins/function.c src/quickjs/builtins/global.c src/quickjs/builtins/intrinsics.c src/quickjs/builtins/iterator.c src/quickjs/builtins/json-stringify.c src/quickjs/builtins/json.c src/quickjs/builtins/math.c src/quickjs/builtins/number.c src/quickjs/builtins/object.c src/quickjs/builtins/promise.c src/quickjs/builtins/proxy.c src/quickjs/builtins/reflect.c src/quickjs/builtins/regexp.c src/quickjs/builtins/string.c src/quickjs/builtins/symbol.c src/quickjs/builtins/typed-array.c src/quickjs/builtins/uint8array-encoding.c src/quickjs/builtins/weakref.c src/quickjs/bytecode-format.c src/quickjs/class.c src/quickjs/compiler/backend.c src/quickjs/compiler/eval.c src/quickjs/compiler/lexer.c src/quickjs/compiler/parser.c src/quickjs/compiler/stack-analysis.c src/quickjs/error-support.c src/quickjs/function-list.c src/quickjs/function.c src/quickjs/gc.c src/quickjs/generator.c src/quickjs/iterator-protocol.c src/quickjs/memory-usage.c src/quickjs/module.c src/quickjs/number.c src/quickjs/object.c src/quickjs/parse-state.c src/quickjs/runtime.c src/quickjs/serialization/reader.c src/quickjs/serialization/writer.c src/quickjs/string.c src/quickjs/value/compare.c src/quickjs/value/conversion.c src/quickjs/value/print.c src/quickjs/vm.c
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
+
+all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
+
 REGEXP_SRCS=src/regexp/compile.c src/regexp/exec.c
 REGEXP_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(REGEXP_SRCS))
 QUICKJS_LIBC_SRCS=src/quickjs-libc/host.c src/quickjs-libc/std.c src/quickjs-libc/module-loader.c src/quickjs-libc/os.c
@@ -481,6 +482,31 @@ doc/%.html: doc/%.html.pre
 ###############################################################################
 # tests
 
+
+C_TESTS=tests/test_unicode$(EXE)
+
+# Link the tracing reader before the archive so it replaces the normal reader.
+tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
+
+.PHONY: test-c
+test-c: $(C_TESTS)
+	$(WINE) ./tests/test_unicode$(EXE)
+
+.PHONY: test-regexp
+test-regexp: regexp_test$(EXE)
+	sh tests/test_regexp.sh "$(WINE)" "./regexp_test$(EXE)"
+
+test: test-c test-regexp test-build-dependencies
+
+.PHONY: test-build-dependencies
+test-build-dependencies:
+	sh tests/test_build_dependencies.sh "$(MAKE)"
+
 ifdef CONFIG_SHARED_LIBS
 test: tests/bjson.so examples/point.so
 endif
@@ -597,26 +623,6 @@ quickjs-libc.h: include/quickjs-libc.h
 	ln -sf include/quickjs-libc.h $@
 
 qjsc$(EXE) $(QJSC): | quickjs.h quickjs-libc.h
-
-all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
-
-.PHONY: test-regexp
-test-regexp: regexp_test$(EXE)
-	sh tests/test_regexp.sh "$(WINE)" "./regexp_test$(EXE)"
-
-test: test-regexp
-
-
-C_TESTS=tests/test_unicode$(EXE)
-
-tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-.PHONY: test-c
-test-c: $(C_TESTS)
-	$(WINE) ./tests/test_unicode$(EXE)
-
-test: test-c
 
 ifneq ($(wildcard fuzz/fuzz_common.c),)
 $(OBJDIR)/fuzz/fuzz_common.o: fuzz/fuzz_common.c fuzz/fuzz_common.h | $(OBJDIR)

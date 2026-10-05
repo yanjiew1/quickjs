@@ -28,6 +28,7 @@ test262o_*.txt
 unicode_gen
 unicode_gen_test
 regexp_test
+regexp_test.exe
 run_octane
 run_sunspider_like
 libwinpthread*.dll
@@ -35,10 +36,16 @@ libwinpthread*.dll
 /quickjs.h
 /quickjs-libc.h
 
-regexp_test.exe
-
+/tests/test_api
+/tests/test_api.exe
+/tests/test_bytecode
+/tests/test_bytecode.exe
+/tests/test_cutils
+/tests/test_cutils.exe
 /tests/test_unicode
 /tests/test_unicode.exe
+/tests/test_bytecode_trace
+/tests/test_bytecode_trace.exe
 
 /tests/test_fuzz_support
 /tests/test_fuzz_support.exe
