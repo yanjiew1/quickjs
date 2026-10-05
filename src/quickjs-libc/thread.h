@@ -25,6 +25,9 @@
 #ifndef QUICKJS_LIBC_THREAD_H
 #define QUICKJS_LIBC_THREAD_H
 
+/* enable the os.Worker API. It relies on POSIX threads */
+#define USE_WORKER
+
 #include "quickjs-libc.h"
 #include "list.h"
 
