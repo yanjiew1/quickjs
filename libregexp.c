@@ -3392,6 +3392,11 @@ const char *lre_get_groupnames(const uint8_t *bc_buf)
 
 #ifdef TEST
 
+int lre_check_timeout(void *opaque)
+{
+    return 0;
+}
+
 BOOL lre_check_stack_overflow(void *opaque, size_t alloca_size)
 {
     return FALSE;
@@ -3407,7 +3412,7 @@ int main(int argc, char **argv)
     int len, flags, ret, i;
     uint8_t *bc;
     char error_msg[64];
-    uint8_t *capture;
+    uint8_t **capture;
     const char *input;
     int input_len, capture_count;
 
@@ -3443,6 +3448,7 @@ int main(int argc, char **argv)
         }
     }
     free(capture);
+    free(bc);
     return 0;
 }
 #endif
