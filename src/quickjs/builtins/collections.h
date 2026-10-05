@@ -48,10 +48,10 @@ typedef struct JSMapState {
     JSWeakRefHeader weakref_header; /* only used if is_weak = TRUE */
 } JSMapState;
 
-
-
-
-
+void js_map_finalizer(JSRuntime *rt, JSValue val);
+void js_map_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+void js_map_iterator_finalizer(JSRuntime *rt, JSValue val);
+void js_map_iterator_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
 JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int is_map);
 void map_delete_weakrefs(JSRuntime *rt, JSWeakRefHeader *wh);
