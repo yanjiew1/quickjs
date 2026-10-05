@@ -164,9 +164,14 @@ typedef struct JSThreadState {
 static uint64_t os_pending_signals;
 static int (*os_poll_func)(JSContext *ctx);
 
+static void *js_std_dbuf_realloc(void *opaque, void *ptr, size_t size)
+{
+    return js_realloc_rt(opaque, ptr, size);
+}
+
 static void js_std_dbuf_init(JSContext *ctx, DynBuf *s)
 {
-    dbuf_init2(s, JS_GetRuntime(ctx), (DynBufReallocFunc *)js_realloc_rt);
+    dbuf_init2(s, JS_GetRuntime(ctx), js_std_dbuf_realloc);
 }
 
 static BOOL my_isdigit(int c)
