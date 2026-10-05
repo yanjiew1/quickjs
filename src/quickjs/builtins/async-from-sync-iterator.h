@@ -1,5 +1,5 @@
 /*
- * QuickJS iterator protocol interfaces
+ * QuickJS async-from-sync iterator adapter interface
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,29 +22,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_ITERATOR_H
-#define QUICKJS_ITERATOR_H
+#ifndef QUICKJS_BUILTINS_ASYNC_FROM_SYNC_ITERATOR_H
+#define QUICKJS_BUILTINS_ASYNC_FROM_SYNC_ITERATOR_H
 
-#include "base.h"
+#include "../internal/base.h"
 
-typedef enum JSIteratorKindEnum {
-    JS_ITERATOR_KIND_KEY,
-    JS_ITERATOR_KIND_VALUE,
-    JS_ITERATOR_KIND_KEY_AND_VALUE,
-} JSIteratorKindEnum;
+JSValue JS_CreateAsyncFromSyncIterator(JSContext *ctx,
+                                       JSValueConst sync_iter);
 
-JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj, JSValueConst method);
-JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
-JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
-                         JSValueConst method, int argc, JSValueConst *argv,
-                         int *pdone);
-JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                        JSValueConst method, int argc, JSValueConst *argv,
-                        BOOL *pdone);
-int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
-                     BOOL is_exception_pending);
-JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
-                                    BOOL *pdone);
-JSValue js_create_iterator_result(JSContext *ctx, JSValue val, BOOL done);
+
+
 
 #endif
