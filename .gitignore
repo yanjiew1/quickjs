@@ -31,3 +31,6 @@ run_sunspider_like
 libwinpthread*.dll
 
 regexp_test.exe
+
+/tests/test_fuzz_support
+/tests/test_fuzz_support.exe
