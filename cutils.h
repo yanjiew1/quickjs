@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stddef.h>
 
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
@@ -40,9 +41,6 @@
 #define stringify(s)    tostring(s)
 #define tostring(s)     #s
 
-#ifndef offsetof
-#define offsetof(type, field) ((size_t) &((type *)0)->field)
-#endif
 #ifndef countof
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 #endif
