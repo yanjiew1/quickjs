@@ -46,5 +46,6 @@ const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
 
 JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
 JSValue JS_ThrowOutOfMemory(JSContext *ctx);
+JSValue JS_ThrowStackOverflow(JSContext *ctx);
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * QuickJS generator and async function lifecycle
+ * QuickJS iterator protocol interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -22,41 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_GENERATOR_H
-#define QUICKJS_GENERATOR_H
+#ifndef QUICKJS_ITERATOR_H
+#define QUICKJS_ITERATOR_H
 
-#include "runtime.h"
+#include "base.h"
 
-typedef struct JSAsyncFunctionState {
-    JSGCObjectHeader header;
-    JSValue this_val; /* 'this' argument */
-    int argc; /* number of function arguments */
-    BOOL throw_flag; /* used to throw an exception in JS_CallInternal() */
-    BOOL is_completed; /* TRUE if the function has returned. The stack
-                          frame is no longer valid */
-    JSValue resolving_funcs[2]; /* only used in JS async functions */
-    JSStackFrame frame;
-    /* arg_buf, var_buf, stack_buf and var_refs follow */
-} JSAsyncFunctionState;
-
-/* XXX: use enum */
-#define GEN_MAGIC_THROW  2
-#define GEN_MAGIC_RETURN 1
-#define GEN_MAGIC_NEXT   0
-
-
-void async_func_free(JSRuntime *rt, JSAsyncFunctionState *s);
-
-
-
-
-
-
-
-
-
-
-
-
+JSValue js_create_iterator_result(JSContext *ctx, JSValue val, BOOL done);
 
 #endif
