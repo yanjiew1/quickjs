@@ -1,5 +1,5 @@
 /*
- * QuickJS OS module interface
+ * QuickJS host Worker state and interfaces
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
@@ -22,20 +22,52 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef QUICKJS_LIBC_OS_H
-#define QUICKJS_LIBC_OS_H
+#ifndef QUICKJS_LIBC_WORKER_H
+#define QUICKJS_LIBC_WORKER_H
 
-#include <sys/types.h>
 #include "thread.h"
+#include "cutils.h"
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+#ifdef USE_WORKER
+#include <pthread.h>
+#endif
 
-extern uint64_t os_pending_signals;
-extern int (*os_poll_func)(JSContext *ctx);
+typedef struct {
+    struct list_head link;
+    JSWorkerMessagePipe *recv_pipe;
+    JSValue on_message_func;
+    int poll_fd_index; /* temporary use in js_os_poll() */
+} JSWorkerMessageHandler;
 
-ssize_t js_get_errno(ssize_t ret);
-JSValue js_os_now(JSContext *ctx, JSValue this_val,
-                  int argc, JSValue *argv);
-void free_rw_handler(JSRuntime *rt, JSOSRWHandler *rh);
-void free_sh(JSRuntime *rt, JSOSSignalHandler *sh);
-void free_timer(JSRuntime *rt, JSOSTimer *th);
+typedef struct JSWaker {
+#ifdef _WIN32
+    HANDLE handle;
+#else
+    int read_fd;
+    int write_fd;
+#endif
+} JSWaker;
+
+struct JSWorkerMessagePipe {
+    int ref_count;
+#ifdef USE_WORKER
+    pthread_mutex_t mutex;
+#endif
+    struct list_head msg_queue; /* list of JSWorkerMessage.link */
+    JSWaker waker;
+};
+
+BOOL is_main_thread(JSRuntime *rt);
+int handle_posted_message(JSRuntime *rt, JSContext *ctx,
+                          JSWorkerMessageHandler *port);
+#ifdef USE_WORKER
+void *js_sab_alloc(void *opaque, size_t size);
+void js_sab_free(void *opaque, void *ptr);
+void js_sab_dup(void *opaque, void *ptr);
+void js_free_message_pipe(JSWorkerMessagePipe *ps);
+void js_init_worker(JSContext *ctx, JSModuleDef *m);
+#endif
 
 #endif
