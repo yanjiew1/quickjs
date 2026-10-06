@@ -27,6 +27,8 @@
 
 #include "../internal/string.h"
 
+struct StringBuffer;
+
 extern const JSCFunctionListEntry js_string_funcs[3];
 extern const JSCFunctionListEntry js_string_proto_funcs[50];
 extern const JSCFunctionListEntry js_string_iterator_proto_funcs[2];
@@ -37,7 +39,7 @@ uint32_t js_string_obj_get_length(JSContext *ctx, JSValueConst obj);
 int string_indexof_char(JSString *p, int c, int from);
 int64_t string_advance_index(JSString *p, int64_t index, BOOL unicode);
 int js_string_GetSubstitution(JSContext *ctx,
-                              StringBuffer *b,
+                              struct StringBuffer *b,
                               JSValueConst matched,
                               JSString *sp,
                               uint32_t position,
