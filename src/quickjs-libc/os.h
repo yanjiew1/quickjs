@@ -28,14 +28,7 @@
 #include <sys/types.h>
 #include "thread.h"
 
-extern uint64_t os_pending_signals;
-extern int (*os_poll_func)(JSContext *ctx);
 
 ssize_t js_get_errno(ssize_t ret);
-JSValue js_os_now(JSContext *ctx, JSValue this_val,
-                  int argc, JSValue *argv);
-void free_rw_handler(JSRuntime *rt, JSOSRWHandler *rh);
-void free_sh(JSRuntime *rt, JSOSSignalHandler *sh);
-void free_timer(JSRuntime *rt, JSOSTimer *th);
 
 #endif
