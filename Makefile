@@ -324,6 +324,7 @@ REGEXP_SRCS= \
     src/regexp/exec.c
 REGEXP_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(REGEXP_SRCS))
 QUICKJS_LIBC_SRCS= \
+    src/quickjs-libc/event-loop.c \
     src/quickjs-libc/host.c \
     src/quickjs-libc/module-loader.c \
     src/quickjs-libc/os.c \
