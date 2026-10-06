@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#include "worker.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <inttypes.h>
