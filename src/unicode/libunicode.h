@@ -109,7 +109,27 @@ int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void
                           CharRange *cr);
 
 int lre_case_conv(uint32_t *res, uint32_t c, int conv_type);
-int lre_canonicalize(uint32_t c, int is_unicode);
+int lre_canonicalize_slow(uint32_t c, int is_unicode);
+
+/* JS regexp specific rules for case folding */
+static inline int lre_canonicalize(uint32_t c, int is_unicode)
+{
+    if (c < 128) {
+        /* fast case */
+        if (is_unicode) {
+            if (c >= 'A' && c <= 'Z') {
+                c = c - 'A' + 'a';
+            }
+        } else {
+            if (c >= 'a' && c <= 'z') {
+                c = c - 'a' + 'A';
+            }
+        }
+        return c;
+    } else {
+        return lre_canonicalize_slow(c, is_unicode);
+    }
+}
 
 /* Code point type categories */
 enum {
