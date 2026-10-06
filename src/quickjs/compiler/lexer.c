@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "../internal/base.h"
+#include "../internal/string-buffer.h"
 #include "compiler-state.h"
 #include "lexer.h"
 #include "../internal/number.h"

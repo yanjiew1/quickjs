@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "intrinsics.h"
+#include "../internal/string-buffer.h"
 #include "../internal/vm.h"
 #include "../internal/base.h"
 #include "../value/conversion.h"

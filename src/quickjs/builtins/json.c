@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "../internal/vm.h"
+#include "../internal/string-buffer.h"
 #include "../internal/base.h"
 #include "../value/conversion.h"
 #include "../value/compare.h"
