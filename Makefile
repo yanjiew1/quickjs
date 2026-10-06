@@ -311,6 +311,7 @@ QUICKJS_SRCS= \
     src/quickjs/runtime.c \
     src/quickjs/serialization/reader.c \
     src/quickjs/serialization/writer.c \
+    src/quickjs/string-buffer.c \
     src/quickjs/string.c \
     src/quickjs/value/compare.c \
     src/quickjs/value/conversion.c \
