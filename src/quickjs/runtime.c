@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "internal/class.h"
+#include "internal/global-environment.h"
 #include "internal/base.h"
 #include "value/print.h"
 #include "internal/runtime.h"
