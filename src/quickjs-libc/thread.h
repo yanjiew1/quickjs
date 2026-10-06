@@ -53,12 +53,6 @@ typedef struct {
 
 typedef struct JSWorkerMessagePipe JSWorkerMessagePipe;
 
-typedef struct {
-    struct list_head link;
-    JSWorkerMessagePipe *recv_pipe;
-    JSValue on_message_func;
-    int poll_fd_index; /* temporary use in js_os_poll() */
-} JSWorkerMessageHandler;
 
 typedef struct JSThreadState {
     struct list_head os_rw_handlers; /* list of JSOSRWHandler.link */
