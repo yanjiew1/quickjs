@@ -1302,6 +1302,74 @@ function test_set_record()
     }
 }
 
+function test_set_iterator_close()
+{
+    for (const method of ["isDisjointFrom", "isSupersetOf"]) {
+        const receiver = method === "isDisjointFrom" ? new Set([1, 2]) : new Set([1]);
+        const yielded = method === "isDisjointFrom" ? 1 : 2;
+        const marker = {};
+        for (const kind of ["get", "call", "primitive", "noncallable",
+                            "object", "null", "undefined"]) {
+            let reads = 0, calls = 0;
+            const iterator = {
+                next() { return { done: false, value: yielded }; },
+                get return() {
+                    reads++;
+                    if (kind === "get")
+                        throw marker;
+                    if (kind === "noncallable")
+                        return 1;
+                    if (kind === "null")
+                        return null;
+                    if (kind === "undefined")
+                        return undefined;
+                    return function() {
+                        calls++;
+                        assert(this === iterator, true);
+                        assert(arguments.length, 0);
+                        if (kind === "call")
+                            throw marker;
+                        if (kind === "primitive")
+                            return 1;
+                        return {};
+                    };
+                }
+            };
+            const other = { size: 1, has() { return false; },
+                            keys() { return iterator; } };
+            if (kind === "get" || kind === "call") {
+                let caught;
+                try {
+                    receiver[method](other);
+                } catch (error) {
+                    caught = error;
+                }
+                assert(caught === marker, true);
+            } else if (kind === "primitive" || kind === "noncallable") {
+                assert_throws(TypeError, () => receiver[method](other));
+            } else {
+                assert(receiver[method](other), false);
+            }
+            assert(reads, 1);
+            assert(calls, kind === "call" || kind === "primitive" || kind === "object" ? 1 : 0);
+        }
+
+        let closes = 0;
+        const other = {
+            size: 1,
+            has() { return false; },
+            keys() {
+                return {
+                    next() { return { done: true }; },
+                    return() { closes++; return {}; }
+                };
+            }
+        };
+        assert(receiver[method](other), true);
+        assert(closes, 0);
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -1593,6 +1661,7 @@ test_symbol();
 test_map();
 test_map_computed_reentrancy();
 test_set_record();
+test_set_iterator_close();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
