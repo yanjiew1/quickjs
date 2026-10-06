@@ -152,27 +152,10 @@ JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
 
 int check_function(JSContext *ctx, JSValueConst obj);
 
-JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
-                         const char *name,
-                         int length, JSCFunctionEnum cproto, int magic,
-                         JSValueConst proto_val, int n_fields);
-
-
-BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
-
 void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
 BOOL js_class_has_bytecode(JSClassID class_id);
-
-
-typedef struct JSCFunctionDataRecord {
-    JSCFunctionData *func;
-    uint8_t length;
-    uint8_t data_len;
-    uint16_t magic;
-    JSValue data[0];
-} JSCFunctionDataRecord;
 
 JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val);
 JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
@@ -181,18 +164,6 @@ JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
 void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);
-JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
-                                JSValueConst this_val,
-                                int argc, JSValueConst *argv, int flags);
-JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
-                           JSValueConst this_obj,
-                           int argc, JSValueConst *argv, int flags);
-void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
-void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
-                             JS_MarkFunc *mark_func);
-void js_c_function_finalizer(JSRuntime *rt, JSValue val);
-void js_c_function_mark(JSRuntime *rt, JSValueConst val,
-                        JS_MarkFunc *mark_func);
 void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
                                JSValueConst home_obj);
 int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
@@ -205,12 +176,10 @@ void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
                                JS_MarkFunc *mark_func);
 
-
 JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj);
 
 JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque);
 
 extern const uint16_t func_kind_to_class_id[JS_FUNC_ASYNC_GENERATOR + 1];
-
 
 #endif

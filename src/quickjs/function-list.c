@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include "internal/base.h"
+#include "internal/c-function.h"
 #include "internal/runtime.h"
 #include "internal/string.h"
 #include "internal/object.h"
