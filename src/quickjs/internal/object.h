@@ -26,11 +26,8 @@
 #define QUICKJS_OBJECT_H
 
 #include "runtime.h"
+#include "global-environment.h"
 #include "../builtins/regexp.h"
-
-typedef struct JSGlobalObject {
-    JSValue uninitialized_vars; /* hidden object containing the list of uninitialized variables */
-} JSGlobalObject;
 
 typedef struct JSProperty {
     union {
@@ -301,15 +298,12 @@ static force_inline BOOL can_extend_fast_array(JSObject *p)
 JSValue JS_ToObjectFree(JSContext *ctx, JSValue val);
 
 
-#define DEFINE_GLOBAL_LEX_VAR (1 << 7)
 
-#define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
 
 int JS_AddBrand(JSContext *ctx, JSValueConst obj, JSValueConst home_obj);
 int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
                         JSProperty *pr, JSShapeProperty *prs);
 int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func);
-int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
 int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
                         JSAtom name, int flags);
 int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
@@ -318,9 +312,7 @@ int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
                           JSValueConst name, JSValue val);
 int JS_DefinePropertyValueValue(JSContext *ctx, JSValueConst this_obj,
                                 JSValue prop, JSValue val, int flags);
-int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
 __maybe_unused void JS_DumpShapes(JSRuntime *rt);
-int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
 JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
                            JSValueConst name);
 JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
@@ -351,16 +343,9 @@ void js_object_data_mark(JSRuntime *rt, JSValueConst val,
                          JS_MarkFunc *mark_func);
 void set_cycle_flag(JSContext *ctx, JSValueConst obj);
 
-JSVarRef *js_global_object_get_uninitialized_var(JSContext *ctx, JSObject *p,
-                                                 JSAtom atom);
-JSVarRef *js_global_object_find_uninitialized_var(JSContext *ctx, JSObject *p,
-                                                  JSAtom atom, BOOL is_lexical);
 
 __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
 
-void js_global_object_finalizer(JSRuntime *rt, JSValue obj);
 
-void js_global_object_mark(JSRuntime *rt, JSValueConst val,
-                           JS_MarkFunc *mark_func);
 
 #endif
