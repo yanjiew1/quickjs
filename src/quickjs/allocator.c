@@ -25,20 +25,11 @@
 #include "internal/base.h"
 #include "internal/runtime.h"
 #include "internal/allocator.h"
-
-/* JS malloc */
-
-#define JS_MALLOC_ARENA_SIZE 4096
-#define JS_MALLOC_MIN_SMALL_SIZE 16
-#define JS_MALLOC_MAX_SMALL_SIZE 512
-#if defined(__SANITIZE_ADDRESS__)
-/* use the host malloc() for all allocations */
-#define JS_MALLOC_LARGE_BLOCKS_ONLY 1
-#else
-#define JS_MALLOC_LARGE_BLOCKS_ONLY 0
-#endif
+#include "internal/allocator-inlines.h"
 
 #define FREE_NIL 0xffff
+
+/* JS malloc */
 
 typedef struct JSMallocLargeBlockHeader {
 #ifdef JS_MALLOC_USE_ITER
@@ -46,21 +37,6 @@ typedef struct JSMallocLargeBlockHeader {
 #endif
     JSMallocBlockHeader header;
 } JSMallocLargeBlockHeader;
-
-typedef struct {
-    struct list_head free_link;
-    struct list_head link;
-    uint8_t block_size_idx;
-    uint16_t n_used_blocks; /* number of allocated blocks */
-    uint16_t n_blocks; /* total number of blocks */
-    uint16_t first_free_block; /* FREE_NIL if none */
-#ifdef JS_MALLOC_USE_ITER
-    /* bit set to 1 for allocated block */
-    uint32_t bitmap[((JS_MALLOC_ARENA_SIZE / JS_MALLOC_MIN_SMALL_SIZE) + 31) / 32];
-#endif
-    /* n_blocks memory blocks of identical size */
-    __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t blocks[];
-} JSMallocArena;
 
 /* max overhead for size >= 64: 12.5% */
 static const uint16_t js_malloc_block_sizes[JS_MALLOC_BLOCK_SIZE_COUNT] = {
@@ -97,26 +73,6 @@ static const uint16_t js_malloc_block_sizes[JS_MALLOC_BLOCK_SIZE_COUNT] = {
     512,
 };
 
-static int get_block_size_index(size_t size)
-{
-    if (size <= 16) {
-        return 0;
-    } else if (size <= 128) {
-        return (size + 7) / 8 - 2;
-    } else if (size <= 256) {
-        return (size + 15) / 16 + 6;
-    } else if (size <= 512) {
-        return (size + 31) / 32 + 14;
-    } else {
-        return JS_MALLOC_BLOCK_SIZE_COUNT;
-    }
-}
-
-static JSMallocBlockHeader *get_zero_size_block(JSMallocContext *s)
-{
-    return (JSMallocBlockHeader *)s->zero_size_block;
-}
-
 void js_malloc_init(JSMallocContext *s)
 {
     int i;
@@ -131,12 +87,7 @@ void js_malloc_init(JSMallocContext *s)
 #endif
 }
 
-static void *get_arena_block(JSMallocArena *ar, unsigned int idx, unsigned int block_size)
-{
-    return ar->blocks + idx * block_size;
-}
-
-static no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int block_size_idx)
+no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int block_size_idx)
 {
     JSMallocBlockHeader *b;
     JSMallocArena *ar;
@@ -174,7 +125,7 @@ static no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int bloc
     return ar;
 }
 
-static no_inline void *js_malloc_large(JSMallocContext *s, size_t size)
+no_inline void *js_malloc_large(JSMallocContext *s, size_t size)
 {
     JSMallocLargeBlockHeader *b;
     b = s->mf.js_malloc(&s->malloc_state, sizeof(JSMallocLargeBlockHeader) + size);
@@ -186,52 +137,6 @@ static no_inline void *js_malloc_large(JSMallocContext *s, size_t size)
     list_add_tail(&b->link, &s->large_block_list);
 #endif
     return b->header.user_data;
-}
-
-static void *__js_malloc(JSMallocContext *s, size_t size)
-{
-    size_t total_size;
-    if (unlikely(size == 0)) {
-        JSMallocBlockHeader *b = get_zero_size_block(s);
-        return b->user_data;
-    } else {
-        total_size = ((size + JS_MALLOC_ALIGN - 1) & ~(JS_MALLOC_ALIGN - 1)) +
-            sizeof(JSMallocBlockHeader);
-        if (!JS_MALLOC_LARGE_BLOCKS_ONLY &&
-            total_size <= JS_MALLOC_MAX_SMALL_SIZE) {
-            int block_size_idx;
-            unsigned int block_idx, block_size;
-            JSMallocBlockHeader *b;
-            JSMallocArena *ar;
-            struct list_head *el, *head;
-            
-            block_size_idx = get_block_size_index(total_size);
-            block_size = js_malloc_block_sizes[block_size_idx];
-            head = &s->free_arena_list[block_size_idx];
-            el = head->next;
-            if (unlikely(el == head)) {
-                ar = js_malloc_new_arena(s, block_size_idx);
-                if (!ar)
-                    return NULL;
-            } else {
-                ar = list_entry(el, JSMallocArena, free_link);
-            }
-            block_idx = ar->first_free_block;
-            b = get_arena_block(ar, ar->first_free_block, block_size);
-            ar->first_free_block = b->u.free_next;
-            b->u.block_idx = block_idx;
-            ar->n_used_blocks++;
-            if (unlikely(ar->n_used_blocks == ar->n_blocks)) {
-                list_del(&ar->free_link);
-            }
-#ifdef JS_MALLOC_USE_ITER
-            ar->bitmap[block_idx / 32] |= 1 << (block_idx % 32);
-#endif
-            return b->user_data;
-        } else {
-            return js_malloc_large(s, size);
-        }
-    }
 }
 
 static void __js_free(JSMallocContext *s, void *ptr)
@@ -469,65 +374,37 @@ void *js_mallocz_rt(JSRuntime *rt, size_t size)
 }
 
 /* Throw out of memory in case of error */
-void *js_malloc(JSContext *ctx, size_t size)
+void *(js_malloc)(JSContext *ctx, size_t size)
 {
-    void *ptr;
-    ptr = js_malloc_rt(ctx->rt, size);
-    if (unlikely(!ptr)) {
-        JS_ThrowOutOfMemory(ctx);
-        return NULL;
-    }
-    return ptr;
+    return js_malloc_inline(ctx, size);
 }
 
 /* Throw out of memory in case of error */
-void *js_mallocz(JSContext *ctx, size_t size)
+void *(js_mallocz)(JSContext *ctx, size_t size)
 {
-    void *ptr;
-    ptr = js_mallocz_rt(ctx->rt, size);
-    if (unlikely(!ptr)) {
-        JS_ThrowOutOfMemory(ctx);
-        return NULL;
-    }
-    return ptr;
+    return js_mallocz_inline(ctx, size);
 }
 
-void js_free(JSContext *ctx, void *ptr)
+void (js_free)(JSContext *ctx, void *ptr)
 {
-    js_free_rt(ctx->rt, ptr);
+    js_free_inline(ctx, ptr);
 }
 
 /* Throw out of memory in case of error */
-void *js_realloc(JSContext *ctx, void *ptr, size_t size)
+void *(js_realloc)(JSContext *ctx, void *ptr, size_t size)
 {
-    void *ret;
-    ret = js_realloc_rt(ctx->rt, ptr, size);
-    if (unlikely(!ret && size != 0)) {
-        JS_ThrowOutOfMemory(ctx);
-        return NULL;
-    }
-    return ret;
+    return js_realloc_inline(ctx, ptr, size);
 }
 
 /* store extra allocated size in *pslack if successful */
-void *js_realloc2(JSContext *ctx, void *ptr, size_t size, size_t *pslack)
+void *(js_realloc2)(JSContext *ctx, void *ptr, size_t size, size_t *pslack)
 {
-    void *ret;
-    ret = js_realloc_rt(ctx->rt, ptr, size);
-    if (unlikely(!ret && size != 0)) {
-        JS_ThrowOutOfMemory(ctx);
-        return NULL;
-    }
-    if (pslack) {
-        size_t new_size = js_malloc_usable_size_rt(ctx->rt, ret);
-        *pslack = (new_size > size) ? new_size - size : 0;
-    }
-    return ret;
+    return js_realloc2_inline(ctx, ptr, size, pslack);
 }
 
-size_t js_malloc_usable_size(JSContext *ctx, const void *ptr)
+size_t (js_malloc_usable_size)(JSContext *ctx, const void *ptr)
 {
-    return js_malloc_usable_size_rt(ctx->rt, ptr);
+    return js_malloc_usable_size_inline(ctx, ptr);
 }
 
 /* Throw out of memory exception in case of error */
@@ -580,8 +457,6 @@ void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size)
         return js_realloc_rt(rt, ptr, size);
     }
 }
-
-
 
 /* default memory allocation functions with memory limitation */
 static size_t js_def_malloc_usable_size(const void *ptr)

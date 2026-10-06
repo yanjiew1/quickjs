@@ -31,6 +31,7 @@
 #include "internal/string.h"
 #undef JS_STRING_IMPLEMENTATION
 #include "internal/atom.h"
+#include "internal/allocator-inlines.h"
 
 /* strings <= this length are not concatenated using ropes. if too
    small, the rope memory overhead becomes high. */
@@ -559,6 +560,7 @@ static JSValue JS_ConcatString1(JSContext *ctx,
     return JS_MKPTR(JS_TAG_STRING, p);
 }
 
+#define js_malloc_usable_size(ctx, ptr) js_malloc_usable_size_inline((ctx), (ptr))
 BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2) {
     if (JS_VALUE_GET_TAG(op2) == JS_TAG_STRING) {
         JSString *p2 = JS_VALUE_GET_STRING(op2);
@@ -594,6 +596,8 @@ BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2) {
     }
     return FALSE;
 }
+#undef js_malloc_usable_size
+
 
 static JSValue JS_ConcatString2(JSContext *ctx, JSValue op1, JSValue op2)
 {

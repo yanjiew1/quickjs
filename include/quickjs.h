@@ -419,12 +419,12 @@ void *js_realloc_rt(JSRuntime *rt, void *ptr, size_t size);
 size_t js_malloc_usable_size_rt(JSRuntime *rt, const void *ptr);
 void *js_mallocz_rt(JSRuntime *rt, size_t size);
 
-void *js_malloc(JSContext *ctx, size_t size);
-void js_free(JSContext *ctx, void *ptr);
-void *js_realloc(JSContext *ctx, void *ptr, size_t size);
-size_t js_malloc_usable_size(JSContext *ctx, const void *ptr);
-void *js_realloc2(JSContext *ctx, void *ptr, size_t size, size_t *pslack);
-void *js_mallocz(JSContext *ctx, size_t size);
+void *(js_malloc)(JSContext *ctx, size_t size);
+void (js_free)(JSContext *ctx, void *ptr);
+void *(js_realloc)(JSContext *ctx, void *ptr, size_t size);
+size_t (js_malloc_usable_size)(JSContext *ctx, const void *ptr);
+void *(js_realloc2)(JSContext *ctx, void *ptr, size_t size, size_t *pslack);
+void *(js_mallocz)(JSContext *ctx, size_t size);
 char *js_strdup(JSContext *ctx, const char *str);
 char *js_strndup(JSContext *ctx, const char *s, size_t n);
 

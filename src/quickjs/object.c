@@ -30,6 +30,9 @@
 #include "value/compare.h"
 #include "internal/runtime.h"
 #include "internal/allocator.h"
+#define JS_ALLOCATOR_FORCE_INLINE
+#include "internal/allocator-inlines.h"
+#undef JS_ALLOCATOR_FORCE_INLINE
 #include "internal/number.h"
 #include "internal/bigint.h"
 #include "internal/string.h"
@@ -44,6 +47,12 @@
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
+
+#define js_mallocz(ctx, size) js_mallocz_inline((ctx), (size))
+#define js_free(ctx, ptr) js_free_inline((ctx), (ptr))
+#define js_realloc(ctx, ptr, size) js_realloc_inline((ctx), (ptr), (size))
+#define js_realloc2(ctx, ptr, size, pslack) js_realloc2_inline((ctx), (ptr), (size), (pslack))
+#define js_malloc_usable_size(ctx, ptr) js_malloc_usable_size_inline((ctx), (ptr))
 
 #define JS_PROP_INITIAL_SIZE 2
 
@@ -728,6 +737,8 @@ __maybe_unused void JS_DumpShapes(JSRuntime *rt)
     printf("}\n");
 }
 
+#define js_malloc(ctx, size) js_malloc_inline((ctx), (size))
+
 /* 'props[]' is used to initialized the object properties. The number
    of elements depends on the shape. */
 JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
@@ -850,6 +861,8 @@ JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
     }
     return JS_MKPTR(JS_TAG_OBJECT, p);
 }
+
+#undef js_malloc
 
 JSObject *get_proto_obj(JSValueConst proto_val)
 {
