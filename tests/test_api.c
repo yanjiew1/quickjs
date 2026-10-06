@@ -26,8 +26,122 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Public declarations must coexist with function-like inline aliases. */
+#define js_malloc(ctx, size) js_malloc_inline((ctx), (size))
+#define js_mallocz(ctx, size) js_mallocz_inline(ctx, size)
+#define js_free(ctx, ptr) js_free_inline(ctx, ptr)
+#define js_realloc(ctx, ptr, size) js_realloc_inline(ctx, ptr, size)
+#define js_realloc2(ctx, ptr, size, pslack) js_realloc2_inline(ctx, ptr, size, pslack)
+#define js_malloc_usable_size(ctx, ptr) js_malloc_usable_size_inline(ctx, ptr)
 #include "quickjs.h"
+#undef js_malloc
+#undef js_mallocz
+#undef js_free
+#undef js_realloc
+#undef js_realloc2
+#undef js_malloc_usable_size
 #include "cutils.h"
+
+static uint8_t allocator_test_byte(size_t block, size_t offset)
+{
+    return block * 17 + (block >> 8) + offset * 31;
+}
+
+static void test_allocator_api_entry_point(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    void *(*allocate)(JSContext *, size_t);
+    uint8_t *blocks[3];
+    size_t i, j;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    blocks[0] = js_malloc(ctx, 17);
+#define js_malloc(ctx, size) js_malloc_inline((ctx), (size))
+    blocks[1] = (js_malloc)(ctx, 17);
+    allocate = js_malloc;
+    blocks[2] = allocate(ctx, 17);
+#undef js_malloc
+    for (i = 0; i < countof(blocks); i++) {
+        assert(blocks[i]);
+        for (j = 0; j < 17; j++)
+            blocks[i][j] = allocator_test_byte(i, j);
+    }
+    for (i = 0; i < countof(blocks); i++) {
+        for (j = 0; j < 17; j++)
+            assert(blocks[i][j] == allocator_test_byte(i, j));
+        js_free(ctx, blocks[i]);
+    }
+    blocks[0] = js_mallocz(ctx, 23);
+    assert(blocks[0]);
+    for (j = 0; j < 23; j++)
+        assert(blocks[0][j] == 0);
+    memset(blocks[0], 0xa5, 23);
+    blocks[0] = js_realloc(ctx, blocks[0], 97);
+    assert(blocks[0]);
+    for (j = 0; j < 23; j++)
+        assert(blocks[0][j] == 0xa5);
+    {
+        size_t slack, usable;
+        blocks[0] = js_realloc2(ctx, blocks[0], 157, &slack);
+        assert(blocks[0]);
+        usable = js_malloc_usable_size(ctx, blocks[0]);
+        assert(usable == 0 || usable >= 157);
+        assert(usable == 0 || slack == usable - 157);
+        for (j = 0; j < 23; j++)
+            assert(blocks[0][j] == 0xa5);
+    }
+    assert(js_realloc(ctx, blocks[0], 0) == NULL);
+    assert(!JS_HasException(ctx));
+    blocks[0] = js_mallocz(ctx, 0);
+    assert(blocks[0]);
+    js_free(ctx, blocks[0]);
+    js_free(ctx, NULL);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_allocator_capacity_and_reuse(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    uint8_t *blocks[4096];
+    size_t sizes[countof(blocks)];
+    size_t i, j, usable;
+
+    assert(rt);
+    for (i = 0; i < countof(blocks); i++) {
+        sizes[i] = i % 1024 + 1;
+        blocks[i] = js_malloc_rt(rt, sizes[i]);
+        assert(blocks[i]);
+        usable = js_malloc_usable_size_rt(rt, blocks[i]);
+        assert(usable == 0 || usable >= sizes[i]);
+        for (j = 0; j < sizes[i]; j++)
+            blocks[i][j] = allocator_test_byte(i, j);
+    }
+    for (i = 0; i < countof(blocks); i++) {
+        for (j = 0; j < sizes[i]; j++)
+            assert(blocks[i][j] == allocator_test_byte(i, j));
+    }
+    for (i = 1; i < countof(blocks); i += 2)
+        js_free_rt(rt, blocks[i]);
+    for (i = 1; i < countof(blocks); i += 2) {
+        sizes[i] = 1025 - sizes[i];
+        blocks[i] = js_malloc_rt(rt, sizes[i]);
+        assert(blocks[i]);
+        usable = js_malloc_usable_size_rt(rt, blocks[i]);
+        assert(usable == 0 || usable >= sizes[i]);
+        for (j = 0; j < sizes[i]; j++)
+            blocks[i][j] = allocator_test_byte(i, j);
+    }
+    for (i = 0; i < countof(blocks); i++) {
+        for (j = 0; j < sizes[i]; j++)
+            assert(blocks[i][j] == allocator_test_byte(i, j));
+        js_free_rt(rt, blocks[i]);
+    }
+    JS_FreeRuntime(rt);
+}
 
 static void check_eval(JSContext *ctx, const char *source)
 {
@@ -405,6 +519,8 @@ int main(int argc, char **argv)
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "allocator-api", test_allocator_api_entry_point },
+        { "allocator-capacity", test_allocator_capacity_and_reuse },
         { "buffer-allocation", test_empty_buffer_allocation },
         { "shared-buffer-allocation", test_shared_buffer_allocation },
         { "typed-array-arguments", test_typed_array_arguments },

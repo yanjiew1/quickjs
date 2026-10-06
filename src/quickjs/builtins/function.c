@@ -32,6 +32,7 @@
 #include "../internal/bytecode-format.h"
 #include "../internal/eval.h"
 #include "function.h"
+#include "../internal/allocator-inlines.h"
 
 /* XXX: not 100% compatible, but mozilla seems to use a similar
    implementation to ensure that caller in non strict mode does not
@@ -160,6 +161,7 @@ void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len)
 }
 
 /* XXX: should use ValueArray */
+#define js_mallocz(ctx, size) js_mallocz_inline((ctx), (size))
 JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
                         JSValueConst array_arg)
 {
@@ -211,6 +213,8 @@ JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
     *plen = len;
     return tab;
 }
+#undef js_mallocz
+
 
 /* magic value: 0 = normal apply, 1 = apply for constructor, 2 =
    Reflect.apply */

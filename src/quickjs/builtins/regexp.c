@@ -41,6 +41,15 @@
 #include "function.h"
 #include "string.h"
 
+#include "../internal/allocator-inlines.h"
+
+#define js_malloc(ctx, size) js_malloc_inline((ctx), (size))
+#define js_mallocz(ctx, size) js_mallocz_inline((ctx), (size))
+#define js_free(ctx, ptr) js_free_inline((ctx), (ptr))
+#define js_realloc(ctx, ptr, size) js_realloc_inline((ctx), (ptr), (size))
+#define js_realloc2(ctx, ptr, size, pslack) js_realloc2_inline((ctx), (ptr), (size), (pslack))
+#define js_malloc_usable_size(ctx, ptr) js_malloc_usable_size_inline((ctx), (ptr))
+
 /* RegExp */
 
 void js_regexp_finalizer(JSRuntime *rt, JSValue val)
