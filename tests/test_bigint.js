@@ -99,6 +99,55 @@ function test_bigint1()
     assert(r, 4294967296n, "1 << 32n === 4294967296n");
 }
 
+function test_bigint_update()
+{
+    for (const bits of [31n, 32n, 63n, 64n, 127n, 128n]) {
+        const boundary = 1n << bits;
+        for (const sign of [-1n, 1n]) {
+            for (const offset of [-1n, 0n, 1n]) {
+                const initial = sign * boundary + offset;
+                let value = initial;
+                assert(--value, initial - 1n);
+                assert(value, initial - 1n);
+                value = initial;
+                assert(value--, initial);
+                assert(value, initial - 1n);
+                value = initial;
+                assert(++value, initial + 1n);
+                assert(value, initial + 1n);
+                value = initial;
+                assert(value++, initial);
+                assert(value, initial + 1n);
+            }
+        }
+    }
+
+    let reads = 0, conversions = 0, writes = 0;
+    const initial = 1n << 127n;
+    let stored;
+    const object = {
+        get value() {
+            reads++;
+            return {
+                [Symbol.toPrimitive](hint) {
+                    assert(hint, "number");
+                    conversions++;
+                    return initial;
+                }
+            };
+        },
+        set value(value) {
+            writes++;
+            stored = value;
+        }
+    };
+    assert(object.value--, initial);
+    assert(stored, initial - 1n);
+    assert(reads, 1);
+    assert(conversions, 1);
+    assert(writes, 1);
+}
+
 function test_bigint2()
 {
     assert(BigInt(""), 0n);
@@ -273,6 +322,7 @@ function test_bigint_asintn()
 }
 
 test_bigint1();
+test_bigint_update();
 test_bigint2();
 test_bigint3();
 test_pi();
