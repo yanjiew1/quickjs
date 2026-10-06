@@ -25,6 +25,7 @@
 #include "../internal/vm.h"
 #include "../internal/class.h"
 #include "../internal/base.h"
+#include "../internal/c-function.h"
 #include "../value/conversion.h"
 #include "../value/compare.h"
 #include "../internal/runtime.h"
