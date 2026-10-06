@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#include "event-loop.h"
 #include "worker.h"
 #include <stdio.h>
 #include <stdarg.h>

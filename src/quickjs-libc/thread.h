@@ -31,26 +31,6 @@
 #include "quickjs-libc.h"
 #include "list.h"
 
-typedef struct {
-    struct list_head link;
-    int fd;
-    int poll_fd_index; /* temporary use in js_os_poll() */
-    JSValue rw_func[2];
-} JSOSRWHandler;
-
-typedef struct {
-    struct list_head link;
-    int sig_num;
-    JSValue func;
-} JSOSSignalHandler;
-
-typedef struct {
-    struct list_head link;
-    int timer_id;
-    int64_t timeout;
-    JSValue func;
-} JSOSTimer;
-
 typedef struct JSWorkerMessagePipe JSWorkerMessagePipe;
 
 
