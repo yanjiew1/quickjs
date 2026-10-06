@@ -1058,7 +1058,7 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
             found = (ok > 0);
         } while (!found);
     } else {
-        iter = JS_Call(ctx, keys, argv[0], 0, NULL);
+        iter = JS_GetIterator2(ctx, argv[0], keys);
         if (JS_IsException(iter))
             goto exception;
         next = JS_GetProperty(ctx, iter, JS_ATOM_next);
@@ -1157,7 +1157,7 @@ static JSValue js_set_isSupersetOf(JSContext *ctx, JSValueConst this_val,
     found = FALSE;
     if (s->record_count < size)
         goto fini;
-    iter = JS_Call(ctx, keys, argv[0], 0, NULL);
+    iter = JS_GetIterator2(ctx, argv[0], keys);
     if (JS_IsException(iter))
         goto exception;
     next = JS_GetProperty(ctx, iter, JS_ATOM_next);
@@ -1207,7 +1207,7 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
     if (get_set_record(ctx, argv[0], &size, &has, &keys) < 0)
         goto exception;
     if (s->record_count > size) {
-        iter = JS_Call(ctx, keys, argv[0], 0, NULL);
+        iter = JS_GetIterator2(ctx, argv[0], keys);
         if (JS_IsException(iter))
             goto exception;
         next = JS_GetProperty(ctx, iter, JS_ATOM_next);
@@ -1325,7 +1325,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
             JS_FreeValue(ctx, item);
         }
     } else {
-        iter = JS_Call(ctx, keys, argv[0], 0, NULL);
+        iter = JS_GetIterator2(ctx, argv[0], keys);
         if (JS_IsException(iter))
             goto exception;
         next = JS_GetProperty(ctx, iter, JS_ATOM_next);
@@ -1372,7 +1372,7 @@ static JSValue js_set_symmetricDifference(JSContext *ctx, JSValueConst this_val,
 
     next = JS_UNDEFINED;
     newset = JS_UNDEFINED;
-    iter = JS_Call(ctx, keys, argv[0], 0, NULL);
+    iter = JS_GetIterator2(ctx, argv[0], keys);
     if (JS_IsException(iter))
         goto exception;
     next = JS_GetProperty(ctx, iter, JS_ATOM_next);
@@ -1439,7 +1439,7 @@ static JSValue js_set_union(JSContext *ctx, JSValueConst this_val,
 
     next = JS_UNDEFINED;
     newset = JS_UNDEFINED;
-    iter = JS_Call(ctx, keys, argv[0], 0, NULL);
+    iter = JS_GetIterator2(ctx, argv[0], keys);
     if (JS_IsException(iter))
         goto exception;
     next = JS_GetProperty(ctx, iter, JS_ATOM_next);

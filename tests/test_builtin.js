@@ -1370,6 +1370,66 @@ function test_set_iterator_close()
     }
 }
 
+function test_set_iterator_factory()
+{
+    const methods = ["difference", "intersection", "isDisjointFrom",
+                     "isSupersetOf", "symmetricDifference", "union"];
+    const saved = Object.getOwnPropertyDescriptor(Number.prototype, "next");
+    let reads = 0;
+    try {
+        Object.defineProperty(Number.prototype, "next", {
+            configurable: true,
+            get() { reads++; return () => ({ done: true }); }
+        });
+        for (const method of methods) {
+            for (const result of [undefined, null, false, 1, "x", Symbol("x"), 1n]) {
+                let calls = 0;
+                const other = {
+                    size: 0,
+                    has() { return false; },
+                    keys() {
+                        assert(this === other, true);
+                        assert(arguments.length, 0);
+                        calls++;
+                        return result;
+                    }
+                };
+                assert_throws(TypeError, () => new Set([1, 2])[method](other));
+                assert(calls, 1);
+            }
+        }
+        assert(reads, 0);
+    } finally {
+        if (saved)
+            Object.defineProperty(Number.prototype, "next", saved);
+        else
+            delete Number.prototype.next;
+    }
+
+    const marker = {};
+    for (const method of methods) {
+        let closes = 0;
+        const other = {
+            size: 0,
+            has() { return false; },
+            keys() {
+                return {
+                    get next() { throw marker; },
+                    return() { closes++; return {}; }
+                };
+            }
+        };
+        let caught;
+        try {
+            new Set([1, 2])[method](other);
+        } catch (error) {
+            caught = error;
+        }
+        assert(caught === marker, true);
+        assert(closes, 0);
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -1662,6 +1722,7 @@ test_map();
 test_map_computed_reentrancy();
 test_set_record();
 test_set_iterator_close();
+test_set_iterator_factory();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
