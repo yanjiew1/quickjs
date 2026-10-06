@@ -985,6 +985,27 @@ function test_regexp()
     assert(/[\q{a\b}]/.test("a\b"), true);
     assert(/[\b]/.test("\b"), true);
     
+    assert(/A$/i.test("\u0100a"), true);
+    assert(/^[a-z]$/iu.test("\u212a"), true);
+    assert(/^[a-z]$/iv.test("\u212a"), true);
+    assert(/^\u212a$/iu.test("k"), true);
+    assert(/^\u007f$/i.test("\u007f"), true);
+    assert(/^\u0080$/iu.test("\u0080"), true);
+
+    /* ASCII and Unicode folding differ for Kelvin sign and long s. */
+    assert(/^a$/i.test("A"), true);
+    assert(/^a$/iu.test("A"), true);
+    assert(/^k$/i.test("\u212a"), false);
+    assert(/^k$/iu.test("\u212a"), true);
+    assert(/^s$/i.test("\u017f"), false);
+    assert(/^s$/iu.test("\u017f"), true);
+    assert(/^(k)\1$/iu.test("k\u212a"), true);
+    assert(/^(k)\1$/i.test("k\u212a"), false);
+    assert(/^\u00e9$/i.test("\u00c9"), true);
+    assert(/^\u00e9$/iu.test("\u00c9"), true);
+    assert(/^\u{10400}$/iu.test("\u{10428}"), true);
+    assert(/^ss$/iu.test("\u00df"), false);
+
     /* test case insensitive matching (test262 hardly tests it) */
     assert("aAbBcC#4".replace(/\p{Lower}/gu,"X"), "XAXBXC#4");
 

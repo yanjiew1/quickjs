@@ -210,38 +210,25 @@ static int lre_case_folding_entry(uint32_t c, uint32_t idx, uint32_t v, BOOL is_
     return c;
 }
 
-/* JS regexp specific rules for case folding */
-int lre_canonicalize(uint32_t c, BOOL is_unicode)
+/* JS regexp case folding for non-ASCII code points. */
+int lre_canonicalize_slow(uint32_t c, BOOL is_unicode)
 {
-    if (c < 128) {
-        /* fast case */
-        if (is_unicode) {
-            if (c >= 'A' && c <= 'Z') {
-                c = c - 'A' + 'a';
-            }
-        } else {
-            if (c >= 'a' && c <= 'z') {
-                c = c - 'a' + 'A';
-            }
-        }
-    } else {
-        uint32_t v, code, len;
-        int idx, idx_min, idx_max;
+    uint32_t v, code, len;
+    int idx, idx_min, idx_max;
 
-        idx_min = 0;
-        idx_max = countof(case_conv_table1) - 1;
-        while (idx_min <= idx_max) {
-            idx = (unsigned)(idx_max + idx_min) / 2;
-            v = case_conv_table1[idx];
-            code = v >> (32 - 17);
-            len = (v >> (32 - 17 - 7)) & 0x7f;
-            if (c < code) {
-                idx_max = idx - 1;
-            } else if (c >= code + len) {
-                idx_min = idx + 1;
-            } else {
-                return lre_case_folding_entry(c, idx, v, is_unicode);
-            }
+    idx_min = 0;
+    idx_max = countof(case_conv_table1) - 1;
+    while (idx_min <= idx_max) {
+        idx = (unsigned)(idx_max + idx_min) / 2;
+        v = case_conv_table1[idx];
+        code = v >> (32 - 17);
+        len = (v >> (32 - 17 - 7)) & 0x7f;
+        if (c < code) {
+            idx_max = idx - 1;
+        } else if (c >= code + len) {
+            idx_min = idx + 1;
+        } else {
+            return lre_case_folding_entry(c, idx, v, is_unicode);
         }
     }
     return c;
