@@ -1151,6 +1151,85 @@ function test_map()
     test_map1("bigint", n);
 }
 
+function test_map_computed_reentrancy()
+{
+    const map = new Map([["first", 0]]);
+    const iterator = map.keys();
+    assert(iterator.next().value, "first");
+    assert(map.getOrInsertComputed("key", function(key) {
+        assert(arguments.length, 1);
+        assert(key, "key");
+        assert(this, undefined);
+        map.set(key, 1);
+        map.set("last", 2);
+        return 3;
+    }), 3);
+    assert(map.get("key"), 3);
+    assert([...map.keys()].join(","), "first,key,last");
+    assert(iterator.next().value, "key");
+    assert(iterator.next().value, "last");
+    assert(iterator.next().done, true);
+    assert(map.getOrInsertComputed("key", () => {
+        throw Error("existing key callback");
+    }), 3);
+
+    for (const action of ["clear", "delete", "reinsert"]) {
+        const current = new Map([["first", 0]]);
+        assert(current.getOrInsertComputed("key", key => {
+            current.set(key, 1);
+            if (action === "clear")
+                current.clear();
+            else
+                current.delete(key);
+            current.set("last", 2);
+            if (action === "reinsert")
+                current.set(key, 4);
+            return 3;
+        }), 3);
+        assert(current.get("key"), 3);
+        assert([...current.keys()].join(","),
+               action === "clear" ? "last,key" : "first,last,key");
+    }
+
+    for (const key of [NaN, -0]) {
+        const current = new Map();
+        assert(current.getOrInsertComputed(key, normalized => {
+            if (Object.is(key, -0))
+                assert(Object.is(normalized, 0), true);
+            else
+                assert(Number.isNaN(normalized), true);
+            current.set(normalized, 1);
+            current.set("last", 2);
+            return 3;
+        }), 3);
+        assert(current.size, 2);
+        assert(current.get(key), 3);
+        assert([...current.values()].join(","), "3,2");
+    }
+
+    const marker = {};
+    let caught;
+    try {
+        map.getOrInsertComputed("throw", key => {
+            map.set(key, 4);
+            throw marker;
+        });
+    } catch (error) {
+        caught = error;
+    }
+    assert(caught === marker, true);
+    assert(map.get("throw"), 4);
+
+    for (const key of [{}, Symbol("key")]) {
+        const weak = new WeakMap();
+        assert(weak.getOrInsertComputed(key, key => {
+            weak.set(key, 1);
+            return 3;
+        }), 3);
+        assert(weak.get(key), 3);
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -1440,6 +1519,7 @@ test_date();
 test_regexp();
 test_symbol();
 test_map();
+test_map_computed_reentrancy();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
