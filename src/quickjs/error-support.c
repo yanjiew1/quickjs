@@ -402,3 +402,11 @@ int check_exception_free(JSContext *ctx, JSValue obj)
     JS_FreeValue(ctx, obj);
     return JS_IsException(obj);
 }
+
+/* never use it directly */
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
+{
+    char buf[ATOM_GET_STR_BUF_SIZE];
+    return JS_ThrowTypeError(ctx, fmt,
+                             JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
+}
