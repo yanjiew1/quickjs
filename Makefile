@@ -255,13 +255,13 @@ endif
 .DEFAULT_GOAL := all
 
 QUICKJS_SRCS= \
-    src/quickjs/quickjs.c \
     src/quickjs/allocator.c \
     src/quickjs/atom.c \
     src/quickjs/bigint.c \
     src/quickjs/builtins/array-buffer.c \
     src/quickjs/builtins/array.c \
     src/quickjs/builtins/async-from-sync-iterator.c \
+    src/quickjs/builtins/async.c \
     src/quickjs/builtins/atomics.c \
     src/quickjs/builtins/bigint.c \
     src/quickjs/builtins/boolean.c \
@@ -293,6 +293,7 @@ QUICKJS_SRCS= \
     src/quickjs/iterator-protocol.c \
     src/quickjs/number.c \
     src/quickjs/parse-state.c \
+    src/quickjs/quickjs.c \
     src/quickjs/string.c \
     src/quickjs/value/compare.c \
     src/quickjs/value/conversion.c \
