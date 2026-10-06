@@ -504,14 +504,18 @@ static JSValue js_map_getOrInsert(JSContext *ctx, JSValueConst this_val,
             value = JS_Call(ctx, argv[1], JS_UNDEFINED, 1, &key);
             if (JS_IsException(value))
                 return JS_EXCEPTION;
-            map_delete_record(ctx, s, key);
+            mr = map_find_record(ctx, s, key);
         } else {
             value = JS_DupValue(ctx, argv[1]);
         }
-        mr = map_add_record(ctx, s, key);
-        if (!mr) {
-            JS_FreeValue(ctx, value);
-            return JS_EXCEPTION;
+        if (mr) {
+            JS_FreeValue(ctx, mr->value);
+        } else {
+            mr = map_add_record(ctx, s, key);
+            if (!mr) {
+                JS_FreeValue(ctx, value);
+                return JS_EXCEPTION;
+            }
         }
         mr->value = value;
     }
