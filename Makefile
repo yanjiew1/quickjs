@@ -327,7 +327,8 @@ QUICKJS_LIBC_SRCS= \
     src/quickjs-libc/host.c \
     src/quickjs-libc/module-loader.c \
     src/quickjs-libc/os.c \
-    src/quickjs-libc/std.c
+    src/quickjs-libc/std.c \
+    src/quickjs-libc/worker.c
 QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
 
