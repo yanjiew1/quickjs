@@ -27,6 +27,7 @@
 #include "../internal/vm.h"
 #include "../internal/class.h"
 #include "../internal/base.h"
+#include "../internal/c-function.h"
 #include "../value/compare.h"
 #include "../internal/iterator.h"
 #include "../value/print.h"

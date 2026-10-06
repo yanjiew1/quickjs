@@ -289,6 +289,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/uint8array-encoding.c \
     src/quickjs/builtins/weakref.c \
     src/quickjs/bytecode-format.c \
+    src/quickjs/c-function.c \
     src/quickjs/class.c \
     src/quickjs/compiler/backend.c \
     src/quickjs/compiler/bytecode-dump.c \
