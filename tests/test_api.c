@@ -513,12 +513,57 @@ static void test_buffer_transfer_without_free_callback(void)
     }
 }
 
+static int regexp_test_interrupt(JSRuntime *rt, void *opaque)
+{
+    unsigned int *count = opaque;
+    (void)rt;
+    return ++*count >= 4;
+}
+
+static void test_regexp_interrupt(void)
+{
+    static const char *const sources[] = {
+        "/(?:a+)+b/.test('a'.repeat(64))",
+        "/a{65536}/.test('a'.repeat(65536))",
+        "/(?:a|b)*c/.test('a'.repeat(65536))",
+        "/a*?b/.test('a'.repeat(65536))",
+    };
+    size_t i;
+
+    for (i = 0; i < countof(sources); i++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx;
+        JSValue result, exception;
+        const char *message;
+        unsigned int count = 0;
+
+        assert(rt);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        JS_SetInterruptHandler(rt, regexp_test_interrupt, &count);
+        result = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                         "<regexp-interrupt>", JS_EVAL_TYPE_GLOBAL);
+        assert(JS_IsException(result));
+        assert(count == 4);
+        JS_SetInterruptHandler(rt, NULL, NULL);
+        exception = JS_GetException(ctx);
+        message = JS_ToCString(ctx, exception);
+        assert(message && strstr(message, "interrupted"));
+        JS_FreeCString(ctx, message);
+        JS_FreeValue(ctx, exception);
+        JS_FreeValue(ctx, result);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "regexp-interrupt", test_regexp_interrupt },
         { "allocator-api", test_allocator_api_entry_point },
         { "allocator-capacity", test_allocator_capacity_and_reuse },
         { "buffer-allocation", test_empty_buffer_allocation },
