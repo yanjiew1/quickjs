@@ -26,6 +26,7 @@
 #include "../internal/string-buffer.h"
 #include "../internal/vm.h"
 #include "../internal/base.h"
+#include "../internal/c-function.h"
 #include "../value/conversion.h"
 #include "../value/compare.h"
 #include "../internal/runtime.h"

@@ -25,6 +25,7 @@
 #include "internal/class.h"
 #include "internal/global-environment.h"
 #include "internal/base.h"
+#include "internal/c-function.h"
 #include "internal/vm.h"
 #include "internal/generator.h"
 #include "value/conversion.h"

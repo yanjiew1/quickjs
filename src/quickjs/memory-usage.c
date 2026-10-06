@@ -24,6 +24,7 @@
  */
 #include "internal/class.h"
 #include "internal/base.h"
+#include "internal/c-function.h"
 #include "internal/runtime.h"
 #include "internal/atom.h"
 #include "internal/string.h"
