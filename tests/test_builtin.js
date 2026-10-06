@@ -1230,6 +1230,78 @@ function test_map_computed_reentrancy()
     }
 }
 
+function test_set_record()
+{
+    const methods = ["difference", "intersection", "isDisjointFrom",
+                     "isSubsetOf", "isSupersetOf", "symmetricDifference", "union"];
+    const marker = {};
+    for (const method of methods) {
+        const other = new Set([1]);
+        let reads = 0;
+        Object.defineProperty(other, "size", {
+            get() {
+                reads++;
+                throw marker;
+            }
+        });
+        let caught;
+        try {
+            new Set([1])[method](other);
+        } catch (error) {
+            caught = error;
+        }
+        assert(caught === marker, true);
+        assert(reads, 1);
+    }
+
+    for (const method of methods) {
+        const events = [];
+        const other = {
+            get size() {
+                events.push("size");
+                return { valueOf() { events.push("number"); return 0; } };
+            },
+            get has() {
+                events.push("has");
+                return () => false;
+            },
+            get keys() {
+                events.push("keys");
+                return () => [][Symbol.iterator]();
+            }
+        };
+        new Set()[method](other);
+        assert(events.join(","), "size,number,has,keys");
+    }
+
+    const record = { size: -0.5, has() { return false; },
+                     keys() { return [][Symbol.iterator](); } };
+    assert(new Set().union(record).size, 0);
+    record.size = Infinity;
+    assert(new Set().union(record).size, 0);
+    record.size = NaN;
+    assert_throws(TypeError, () => new Set().union(record));
+    record.size = -1;
+    assert_throws(RangeError, () => new Set().union(record));
+
+    const saved = Object.getOwnPropertyDescriptor(Number.prototype, "size");
+    let reads = 0;
+    try {
+        Object.defineProperty(Number.prototype, "size", {
+            configurable: true,
+            get() { reads++; return 0; }
+        });
+        for (const method of methods)
+            assert_throws(TypeError, () => new Set()[method](1));
+        assert(reads, 0);
+    } finally {
+        if (saved)
+            Object.defineProperty(Number.prototype, "size", saved);
+        else
+            delete Number.prototype.size;
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -1520,6 +1592,7 @@ test_regexp();
 test_symbol();
 test_map();
 test_map_computed_reentrancy();
+test_set_record();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
