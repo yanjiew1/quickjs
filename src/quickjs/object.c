@@ -426,7 +426,7 @@ JSShape *js_dup_shape(JSShape *sh)
     return sh;
 }
 
-static void js_free_shape0(JSRuntime *rt, JSShape *sh)
+static no_inline void js_free_shape0(JSRuntime *rt, JSShape *sh)
 {
     uint32_t i;
     JSShapeProperty *pr;
