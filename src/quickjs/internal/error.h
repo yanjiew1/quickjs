@@ -56,4 +56,9 @@ JSValue JS_ThrowOutOfMemory(JSContext *ctx);
 
 #define JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL (1 << 0)
 
+/* %s is replaced by 'atom'. The macro is used so that gcc can check
+    the format string. */
+#define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...);
+
 #endif
