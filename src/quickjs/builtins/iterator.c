@@ -458,6 +458,7 @@ typedef enum JSIteratorZipModeEnum {
 
 typedef struct JSIteratorZipEntry {
     JSValue iter, next, padding, value;
+    JSAtom key;
     BOOL open;
 } JSIteratorZipEntry;
 
@@ -466,6 +467,7 @@ typedef struct JSIteratorZipData {
     JSIteratorZipEntry *entries;
     uint32_t count, capacity, open_count;
     JSIteratorZipModeEnum mode;
+    BOOL keyed;
 } JSIteratorZipData;
 
 static void js_iterator_zip_free(JSRuntime *rt, JSIteratorZipData *zip)
@@ -478,6 +480,7 @@ static void js_iterator_zip_free(JSRuntime *rt, JSIteratorZipData *zip)
         JS_FreeValueRT(rt, entry->next);
         JS_FreeValueRT(rt, entry->padding);
         JS_FreeValueRT(rt, entry->value);
+        JS_FreeAtomRT(rt, entry->key);
     }
     js_free_rt(rt, zip->entries);
     JS_FreeContext(zip->realm);
@@ -670,15 +673,21 @@ static int js_iterator_zip_options(JSContext *ctx, JSValueConst options,
 static JSValue js_iterator_zip_finish(JSContext *ctx, JSIteratorZipData *zip)
 {
     JSValue obj, value;
+    int res;
 
-    obj = JS_NewArray(ctx);
+    obj = zip->keyed ? JS_NewObjectProto(ctx, JS_NULL) : JS_NewArray(ctx);
     if (JS_IsException(obj))
         return obj;
     for (uint32_t i = 0; i < zip->count; i++) {
         value = zip->entries[i].value;
         zip->entries[i].value = JS_UNDEFINED;
-        if (JS_DefinePropertyValueInt64(ctx, obj, i, value,
-                                        JS_PROP_C_W_E | JS_PROP_THROW) < 0) {
+        if (zip->keyed)
+            res = JS_DefinePropertyValue(ctx, obj, zip->entries[i].key,
+                                         value, JS_PROP_C_W_E | JS_PROP_THROW);
+        else
+            res = JS_DefinePropertyValueInt64(ctx, obj, i, value,
+                                              JS_PROP_C_W_E | JS_PROP_THROW);
+        if (res < 0) {
             JS_FreeValue(ctx, obj);
             return JS_EXCEPTION;
         }
@@ -1101,6 +1110,7 @@ static JSValue js_iterator_zip(JSContext *ctx, JSValueConst this_val,
             goto fail;
         JS_FreeValue(ctx, value);
         value = JS_UNDEFINED;
+        entry->key = JS_ATOM_NULL;
         entry->padding = JS_UNDEFINED;
         entry->value = JS_UNDEFINED;
         entry->open = TRUE;
@@ -1148,6 +1158,91 @@ fail:
     JS_FreeValue(ctx, padding);
     JS_FreeValue(ctx, padding_iter);
     JS_FreeValue(ctx, padding_next);
+    js_iterator_zip_free(ctx->rt, zip);
+    return JS_EXCEPTION;
+}
+
+static JSValue js_iterator_zip_keyed(JSContext *ctx, JSValueConst this_val,
+                                     int argc, JSValueConst *argv)
+{
+    JSIteratorZipData *zip;
+    JSIteratorZipEntry *entry;
+    JSIteratorZipModeEnum mode;
+    JSPropertyEnum *all_keys = NULL;
+    JSPropertyDescriptor desc;
+    uint32_t key_count = 0;
+    JSValue padding, value = JS_UNDEFINED, obj;
+    int res;
+
+    if (!JS_IsObject(argv[0]))
+        return JS_ThrowTypeErrorNotAnObject(ctx);
+    if (js_iterator_zip_options(ctx, argc > 1 ? argv[1] : JS_UNDEFINED,
+                                &mode, &padding) < 0)
+        return JS_EXCEPTION;
+    zip = js_mallocz(ctx, sizeof(*zip));
+    if (!zip) {
+        JS_FreeValue(ctx, padding);
+        return JS_EXCEPTION;
+    }
+    zip->realm = JS_DupContext(ctx);
+    zip->mode = mode;
+    zip->keyed = TRUE;
+    /* Do not request enumerable filtering here: [[GetOwnProperty]] and
+       Get must run together for each key, after the single own-key snapshot. */
+    if (JS_GetOwnPropertyNames(ctx, &all_keys, &key_count, argv[0],
+                               JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK) < 0)
+        goto fail;
+    for (uint32_t i = 0; i < key_count; i++) {
+        res = JS_GetOwnProperty(ctx, &desc, argv[0], all_keys[i].atom);
+        if (res < 0)
+            goto fail;
+        if (!res)
+            continue;
+        res = (desc.flags & JS_PROP_ENUMERABLE) != 0;
+        js_free_desc(ctx, &desc);
+        if (!res)
+            continue;
+        value = JS_GetProperty(ctx, argv[0], all_keys[i].atom);
+        if (JS_IsException(value))
+            goto fail;
+        if (JS_IsUndefined(value))
+            continue;
+        if (js_iterator_zip_reserve(ctx, zip) < 0)
+            goto fail;
+        entry = &zip->entries[zip->count];
+        if (js_iterator_zip_get_record(ctx, value, TRUE,
+                                       &entry->iter, &entry->next) < 0)
+            goto fail;
+        JS_FreeValue(ctx, value);
+        value = JS_UNDEFINED;
+        entry->key = JS_DupAtom(ctx, all_keys[i].atom);
+        entry->padding = JS_UNDEFINED;
+        entry->value = JS_UNDEFINED;
+        entry->open = TRUE;
+        zip->count++;
+        zip->open_count++;
+    }
+    JS_FreePropertyEnum(ctx, all_keys, key_count);
+    all_keys = NULL;
+    if (mode == JS_ITERATOR_ZIP_LONGEST && !JS_IsUndefined(padding)) {
+        for (uint32_t i = 0; i < zip->count; i++) {
+            value = JS_GetProperty(ctx, padding, zip->entries[i].key);
+            if (JS_IsException(value))
+                goto fail;
+            zip->entries[i].padding = value;
+            value = JS_UNDEFINED;
+        }
+    }
+    obj = js_iterator_zip_create_helper(ctx, zip);
+    if (JS_IsException(obj))
+        goto fail;
+    JS_FreeValue(ctx, padding);
+    return obj;
+fail:
+    js_iterator_zip_close_all(ctx, zip, TRUE);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, padding);
+    JS_FreePropertyEnum(ctx, all_keys, key_count);
     js_iterator_zip_free(ctx->rt, zip);
     return JS_EXCEPTION;
 }
@@ -1991,6 +2086,7 @@ const JSCFunctionListEntry js_iterator_funcs[] = {
     JS_CFUNC_DEF("concat", 0, js_iterator_concat ),
     JS_CFUNC_DEF("from", 1, js_iterator_from ),
     JS_CFUNC_DEF("zip", 1, js_iterator_zip ),
+    JS_CFUNC_DEF("zipKeyed", 1, js_iterator_zip_keyed ),
 };
 
 const JSCFunctionListEntry js_iterator_proto_funcs[] = {

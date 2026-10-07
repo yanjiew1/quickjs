@@ -5314,7 +5314,243 @@ function test_iterator_zip_results()
     assert(setterCalls, 0); assert(row[0], 5);
 }
 
+function iterator_zip_keyed_make(iterables, options)
+{
+    const keyed = {};
+    for (let i = 0; i < iterables.length; i++) keyed["k" + i] = iterables[i];
+    return Iterator.zipKeyed(keyed, options);
+}
+
+function test_iterator_zip_keyed_results()
+{
+    assert(Iterator.zipKeyed.name, "zipKeyed");
+    assert(Iterator.zipKeyed.length, 1);
+    const desc = Object.getOwnPropertyDescriptor(Iterator, "zipKeyed");
+    assert(desc.writable, true); assert(desc.enumerable, false); assert(desc.configurable, true);
+    assert_throws(TypeError, () => new Iterator.zipKeyed({}));
+    const symbol = Symbol("key");
+    const input = Object.create({ inherited: [42] });
+    input.b = [2, 3];
+    input[2] = [4, 5];
+    input[1] = [6, 7];
+    input[symbol] = [8, 9];
+    input.absent = undefined;
+    Object.defineProperty(input, "hidden", { value: [42] });
+    Object.defineProperty(input, "__proto__", {
+        value: [10, 11], enumerable: true,
+    });
+    const helper = Iterator.zipKeyed(input);
+    const first = helper.next().value;
+    assert(Object.getPrototypeOf(first), null);
+    const keys = Reflect.ownKeys(first);
+    assert(keys.length, 5);
+    assert(keys[0], "1"); assert(keys[1], "2"); assert(keys[2], "b");
+    assert(keys[3], "__proto__"); assert(keys[4], symbol);
+    assert(first[1], 6); assert(first[2], 4); assert(first.b, 2);
+    assert(first.__proto__, 10); assert(first[symbol], 8);
+    assert(Object.hasOwn(first, "hidden"), false);
+    assert(Object.hasOwn(first, "inherited"), false);
+    assert(Object.hasOwn(first, "absent"), false);
+    for (const key of keys) {
+        const property = Object.getOwnPropertyDescriptor(first, key);
+        assert(property.writable, true); assert(property.enumerable, true);
+        assert(property.configurable, true);
+    }
+    first.b = 42; delete first[symbol];
+    const second = helper.next().value;
+    assert(second !== first, true);
+    assert(second.b, 3); assert(second[symbol], 9);
+    assert(helper.next().done, true);
+    const arrayResult = Iterator.zipKeyed([[12], [13]]).next().value;
+    assert(Object.getPrototypeOf(arrayResult), null);
+    assert(arrayResult[0], 12); assert(arrayResult[1], 13);
+    assert(Object.hasOwn(arrayResult, "length"), false);
+    const stringRows = Iterator.zipKeyed({ a: new String("xy") }).toArray();
+    assert(stringRows.length, 2); assert(stringRows[0].a, "x"); assert(stringRows[1].a, "y");
+    let setters = 0;
+    const old = Object.getOwnPropertyDescriptor(Object.prototype, "zipOutput");
+    Object.defineProperty(Object.prototype, "zipOutput", {
+        configurable: true, set() { setters++; throw 42; },
+    });
+    let result;
+    try { result = Iterator.zipKeyed({ zipOutput: [14] }).next().value; }
+    finally {
+        if (old) Object.defineProperty(Object.prototype, "zipOutput", old);
+        else delete Object.prototype.zipOutput;
+    }
+    assert(setters, 0); assert(result.zipOutput, 14);
+    const zip = Iterator.zip([[1]]), keyed = Iterator.zipKeyed({ a: [2] });
+    const proto = Object.getPrototypeOf(zip);
+    assert(Object.getPrototypeOf(keyed) === proto, true);
+    assert(proto.next.call(keyed).value.a, 2);
+    assert(proto.return.call(keyed).done, true);
+}
+
+function test_iterator_zip_keyed_acquisition()
+{
+    const marker = {}, symbol = Symbol("s");
+    let log = [];
+    const a = iterator_zip_source([1], "a", log);
+    const b = iterator_zip_source([2], "b", log);
+    const proxy = new Proxy({}, {
+        ownKeys() { log.push("keys"); return [symbol, "b", "a", "skip", "hidden", "gone"]; },
+        getOwnPropertyDescriptor(target, key) {
+            log.push("desc " + String(key));
+            if (key === "gone") return undefined;
+            return { configurable: true, enumerable: key !== "hidden" };
+        },
+        get(target, key) {
+            log.push("get " + String(key));
+            if (key === "skip") return undefined;
+            if (key === symbol) return b;
+            if (key === "b") return a;
+            if (key === "a") return [3];
+            throw marker;
+        },
+    });
+    let helper = Iterator.zipKeyed(proxy, {
+        get mode() { log.push("mode"); return "strict"; },
+    });
+    assert(log.join(), "mode,keys,desc Symbol(s),get Symbol(s),get b,desc b,get b,get a,"
+           + "desc a,get a,desc skip,get skip,desc hidden,desc gone");
+    const row = helper.next().value;
+    assert(row[symbol], 2); assert(row.b, 1); assert(row.a, 3);
+    assert(Reflect.ownKeys(row)[0], "b");
+    assert(Reflect.ownKeys(row)[1], "a");
+    assert(Reflect.ownKeys(row)[2], symbol);
+    helper.return();
+
+    // A single key snapshot still observes later deletion and descriptor edits.
+    log = [];
+    const input = {
+        get a() {
+            delete input.b;
+            Object.defineProperty(input, "c", { enumerable: false });
+            input.added = [99];
+            return [4];
+        },
+        b: [5], c: [6], absent: undefined,
+    };
+    helper = Iterator.zipKeyed(input);
+    const value = helper.next().value;
+    assert(Reflect.ownKeys(value).join(), "a"); assert(value.a, 4);
+    assert(helper.next().done, true);
+    // Options are read before taking the key snapshot.
+    const changed = {};
+    helper = Iterator.zipKeyed(changed, { get mode() {
+        changed.a = [7]; return undefined;
+    } });
+    assert(helper.next().value.a, 7);
+
+    // Descriptor/get/acquisition errors close only acquired records, in reverse.
+    for (const phase of ["desc", "get", "iterator", "next"]) {
+        log = [];
+        const first = iterator_zip_source([1], "a", log);
+        const second = iterator_zip_source([2], "b", log);
+        const bad = {
+            get [Symbol.iterator]() { if (phase === "iterator") throw marker; },
+            get next() { throw marker; },
+            return() { log.push("unexpected bad close"); return {}; },
+        };
+        const iterables = new Proxy({}, {
+            ownKeys() { return ["a", "b", "bad"]; },
+            getOwnPropertyDescriptor(target, key) {
+                if (key === "bad" && phase === "desc") throw marker;
+                return { enumerable: true, configurable: true };
+            },
+            get(target, key) {
+                if (key === "a") return first;
+                if (key === "b") return second;
+                if (phase === "get") throw marker;
+                return bad;
+            },
+        });
+        iterator_zip_throws_value(() => Iterator.zipKeyed(iterables), marker);
+        assert(log.join(), "get a,get b,close b,close a");
+    }
+    const badKeys = new Proxy({}, { ownKeys() { throw marker; } });
+    iterator_zip_throws_value(() => Iterator.zipKeyed(badKeys), marker);
+    for (const bad of [null, false, 1, 1n, "abc", Symbol()])
+        assert_throws(TypeError, () => Iterator.zipKeyed({ a: bad }));
+    assert(Iterator.zipKeyed({ a: undefined }).next().done, true);
+}
+
+function test_iterator_zip_keyed_padding()
+{
+    const marker = {}, symbol = Symbol("pad");
+    let log = [], gets = 0;
+    const padding = Object.create({ a: "inherited" });
+    Object.defineProperty(padding, symbol, { get() { gets++; return "symbol"; } });
+    Object.defineProperty(padding, "skip", { get() { throw marker; } });
+    Object.defineProperty(padding, "hidden", { get() { throw marker; } });
+    Object.defineProperty(padding, Symbol.iterator, { get() { throw marker; } });
+    let helper = Iterator.zipKeyed({ a: [], b: [1, 2], [symbol]: [], skip: undefined }, {
+        mode: "longest", padding,
+    });
+    assert(gets, 1);
+    let row = helper.next().value;
+    assert(row.a, "inherited"); assert(row.b, 1); assert(row[symbol], "symbol");
+    row = helper.next().value;
+    assert(row.a, "inherited"); assert(row.b, 2); assert(row[symbol], "symbol");
+    assert(helper.next().done, true);
+    assert(gets, 1);
+    // Pads are read for every included key during construction, after acquisition.
+    const a = iterator_zip_source([1], "a", log);
+    const b = iterator_zip_source([2], "b", log);
+    const options = {
+        get mode() { log.push("mode"); return "longest"; },
+        get padding() {
+            log.push("padding");
+            return new Proxy({}, { get(target, key) {
+                log.push("pad " + key); return 0;
+            } });
+        },
+    };
+    helper = Iterator.zipKeyed({ a, b }, options);
+    assert(log.join(), "mode,padding,get a,get b,pad a,pad b");
+    helper.return();
+    for (const key of ["a", "b"]) {
+        log = [];
+        const iterables = {
+            a: iterator_zip_source([1], "a", log),
+            b: iterator_zip_source([2], "b", log),
+        };
+        const throwing = new Proxy({}, { get(target, property) {
+            log.push("pad " + property);
+            if (property === key) throw marker;
+            return 0;
+        } });
+        iterator_zip_throws_value(() => Iterator.zipKeyed(iterables, {
+            mode: "longest", padding: throwing,
+        }), marker);
+        assert(log.join(), "get a,get b,pad a," + (key === "b" ? "pad b," : "")
+               + "close b,close a");
+    }
+    gets = 0;
+    const unused = new Proxy({}, { get() { gets++; throw marker; } });
+    assert(Iterator.zipKeyed({}, { mode: "longest", padding: unused }).next().done, true);
+    assert(gets, 0);
+    const held = {};
+    helper = Iterator.zipKeyed({ a: [], b: [1, 2] }, {
+        mode: "longest", padding: { a: held },
+    });
+    held.helper = helper;
+    if (typeof std !== "undefined") std.gc();
+    assert(helper.next().value.a === held, true);
+    assert(helper.next().value.a === held, true);
+    helper.return();
+    held.helper = null;
+    // Array-shaped padding is read by keys, with no iterable protocol access.
+    helper = Iterator.zipKeyed({ 0: [], 1: [3] }, { mode: "longest", padding: [4] });
+    assert(helper.next().value[0], 4);
+}
+
 test();
+test_iterator_zip_common(iterator_zip_keyed_make);
+test_iterator_zip_options(Iterator.zipKeyed);
+test_iterator_zip_keyed_results();
+test_iterator_zip_keyed_acquisition();
+test_iterator_zip_keyed_padding();
 test_iterator_zip_common((iterables, options) => Iterator.zip(iterables, options));
 test_iterator_zip_options(Iterator.zip);
 test_iterator_zip_acquisition();
