@@ -2085,6 +2085,148 @@ static void test_iterator_zip_realm(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_array_from_async_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx[2], *job_ctx;
+    JSValue global, result, value;
+    int ret;
+    static const char script[] =
+        "/* Source-only probe. A native bootstrap exposes the second realm as foreign. */\n"
+        "(async function () {\n"
+        "    function check(actual, expected, message) {\n"
+        "        if (actual !== expected) throw Error(message);\n"
+        "    }\n"
+        "\n"
+        "    const settle = foreign.Function(\"resolve\", \"value\", \"resolve(value)\");\n"
+        "    function gate() {\n"
+        "        let resolve;\n"
+        "        const promise = new Promise(function (r) { resolve = r; });\n"
+        "        return { promise, resolve };\n"
+        "    }\n"
+        "\n"
+        "    const invalidNext = gate();\n"
+        "    const invalidResult = Array.fromAsync({\n"
+        "        [Symbol.asyncIterator]() {\n"
+        "            return { next() { return invalidNext.promise; } };\n"
+        "        },\n"
+        "    });\n"
+        "    check(Object.getPrototypeOf(invalidResult), Promise.prototype,\n"
+        "          \"result promise belongs to the factory realm\");\n"
+        "    const invalidCheck = invalidResult.then(\n"
+        "        function () { throw Error(\"primitive next result was accepted\"); },\n"
+        "        function (error) {\n"
+        "            check(Object.getPrototypeOf(error), TypeError.prototype,\n"
+        "                  \"next-result TypeError belongs to the suspended factory realm\");\n"
+        "        });\n"
+        "    settle(invalidNext.resolve, 1);\n"
+        "    await invalidCheck;\n"
+        "\n"
+        "    const first = gate();\n"
+        "    const second = Promise.resolve(18);\n"
+        "    let constructorReads = 0, thenReads = 0;\n"
+        "    Object.defineProperty(second, \"constructor\", {\n"
+        "        get() { constructorReads++; return Promise; },\n"
+        "    });\n"
+        "    Object.defineProperty(second, \"then\", {\n"
+        "        get() { thenReads++; throw Error(\"foreign intrinsic Promise was used\"); },\n"
+        "    });\n"
+        "    const arrayLikeResult = Array.fromAsync({\n"
+        "        0: first.promise, 1: second, length: 2,\n"
+        "    });\n"
+        "    settle(first.resolve, 17);\n"
+        "    const values = await arrayLikeResult;\n"
+        "    check(values[0], 17, \"first array-like value\");\n"
+        "    check(values[1], 18, \"second array-like value\");\n"
+        "    check(constructorReads, 1, \"later Await checks the original intrinsic once\");\n"
+        "    check(thenReads, 0, \"branded same-realm promise skips mutable then\");\n"
+        "\n"
+        "    const next = gate();\n"
+        "    let closes = 0;\n"
+        "    const closedResult = Array.fromAsync.call(function Output() {\n"
+        "        return Object.preventExtensions({});\n"
+        "    }, {\n"
+        "        [Symbol.asyncIterator]() {\n"
+        "            return {\n"
+        "                next() { return next.promise; },\n"
+        "                return() { closes++; return {}; },\n"
+        "            };\n"
+        "        },\n"
+        "    });\n"
+        "    const closedCheck = closedResult.then(\n"
+        "        function () { throw Error(\"non-extensible output accepted an element\"); },\n"
+        "        function (error) {\n"
+        "            check(Object.getPrototypeOf(error), TypeError.prototype,\n"
+        "                  \"indexed-definition error belongs to the factory realm\");\n"
+        "        });\n"
+        "    settle(next.resolve, { value: 23, done: false });\n"
+        "    await closedCheck;\n"
+        "    check(closes, 1, \"property failure still closes exactly once\");\n"
+        "    return true;\n"
+        "})()\n";
+
+    assert(rt);
+    ctx[0] = JS_NewContext(rt);
+    ctx[1] = JS_NewContext(rt);
+    assert(ctx[0] && ctx[1]);
+    global = JS_GetGlobalObject(ctx[0]);
+    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
+                             JS_GetGlobalObject(ctx[1])) >= 0);
+    JS_FreeValue(ctx[0], global);
+    result = JS_Eval(ctx[0], script, sizeof(script) - 1,
+                     "<array-from-async-realm>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(result));
+    JS_RunGC(rt);
+    while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        JS_RunGC(rt);
+    assert(ret == 0);
+    assert(JS_PromiseState(ctx[0], result) == JS_PROMISE_FULFILLED);
+    value = JS_PromiseResult(ctx[0], result);
+    assert(JS_ToBool(ctx[0], value) == 1);
+    JS_FreeValue(ctx[0], value);
+    JS_FreeValue(ctx[0], result);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx[1]);
+    JS_FreeContext(ctx[0]);
+    JS_FreeRuntime(rt);
+}
+
+static void test_array_from_async_raw_context(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx[2];
+    JSValue global, array, method;
+    int i, phase;
+
+    assert(rt);
+    for (i = 0; i < 2; i++) {
+        ctx[i] = JS_NewContextRaw(rt);
+        assert(ctx[i]);
+        assert(JS_AddIntrinsicBaseObjects(ctx[i]) == 0);
+        for (phase = 0; phase < 2; phase++) {
+            global = JS_GetGlobalObject(ctx[i]);
+            assert(!JS_IsException(global));
+            array = JS_GetPropertyStr(ctx[i], global, "Array");
+            assert(!JS_IsException(array));
+            method = JS_GetPropertyStr(ctx[i], array, "fromAsync");
+            assert(!JS_IsException(method));
+            if (phase)
+                assert(JS_IsFunction(ctx[i], method));
+            else
+                assert(JS_IsUndefined(method));
+            JS_FreeValue(ctx[i], method);
+            JS_FreeValue(ctx[i], array);
+            JS_FreeValue(ctx[i], global);
+            if (!phase)
+                assert(JS_AddIntrinsicPromise(ctx[i]) == 0);
+        }
+    }
+    JS_RunGC(rt);
+    JS_FreeContext(ctx[1]);
+    JS_FreeContext(ctx[0]);
+    JS_FreeRuntime(rt);
+}
+
 static void test_iterator_constructor_realm(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -2307,6 +2449,8 @@ int main(int argc, char **argv)
         { "bigint-locale-realm", test_bigint_locale_realm },
         { "native-name", test_native_function_initial_name },
         { "stripped-function", test_stripped_function_to_string },
+        { "array-from-async-realm", test_array_from_async_realm },
+        { "array-from-async-raw-context", test_array_from_async_raw_context },
         { "iterator-realm", test_iterator_constructor_realm },
         { "iterator-concat-creation-realm", test_iterator_concat_creation_realm },
         { "iterator-helper-creation-realm", test_iterator_helper_creation_realm },
