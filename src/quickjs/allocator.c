@@ -484,7 +484,8 @@ static void *js_def_malloc(JSMallocState *s, size_t size)
     /* Do not allocate zero bytes: behavior is platform dependent */
     assert(size != 0);
 
-    if (unlikely(s->malloc_size + size > s->malloc_limit))
+    if (unlikely(s->malloc_size > s->malloc_limit ||
+                 size > s->malloc_limit - s->malloc_size))
         return NULL;
 
     ptr = malloc(size);
@@ -522,7 +523,8 @@ static void *js_def_realloc(JSMallocState *s, void *ptr, size_t size)
         free(ptr);
         return NULL;
     }
-    if (s->malloc_size + size - old_size > s->malloc_limit)
+    if (s->malloc_size - old_size > s->malloc_limit ||
+        size > s->malloc_limit - (s->malloc_size - old_size))
         return NULL;
 
     ptr = realloc(ptr, size);
