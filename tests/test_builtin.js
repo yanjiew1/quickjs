@@ -2282,6 +2282,115 @@ function test_iterator_reduce_close()
     assert(closes, 2);
 }
 
+function test_iterator_limits()
+{
+    for (const limit of [Number.MAX_SAFE_INTEGER, Infinity]) {
+        assert([1, 2, 3].values().take(limit).toArray().join(","), "1,2,3");
+        assert([1, 2, 3].values().drop(limit).next().done, true);
+    }
+    assert([1, 2, 3].values().take(2.9).toArray().join(","), "1,2");
+    assert([1, 2, 3].values().drop(2.9).toArray().join(","), "3");
+    for (const limit of [0, -0, -0.5, -Number.MIN_VALUE, null, false]) {
+        assert([1, 2, 3].values().take(limit).next().done, true);
+        assert([1, 2, 3].values().drop(limit).next().value, 1);
+    }
+    assert([1, 2, 3].values().take("2.9").toArray().join(","), "1,2");
+    assert([1, 2, 3].values().drop("2.9").toArray().join(","), "3");
+
+    const marker = {};
+    for (const method of ["take", "drop"]) {
+        for (const limit of [NaN, -1, -Infinity, Number.MAX_SAFE_INTEGER + 1,
+                             2 ** 63, 2 ** 64, Number.MAX_VALUE]) {
+            for (const close of ["object", "primitive", "throw"]) {
+                const events = [];
+                const source = Object.create(Iterator.prototype);
+                Object.defineProperties(source, {
+                    next: { get() { events.push("next"); throw marker; } },
+                    return: { get() {
+                        events.push("return-get");
+                        return function () {
+                            assert(this === source, true);
+                            assert(arguments.length, 0);
+                            events.push("return-call");
+                            if (close === "throw") throw marker;
+                            return close === "object" ? {} : 1;
+                        };
+                    } }
+                });
+                assert_throws(RangeError, () => source[method]({
+                    valueOf() { events.push("number"); return limit; }
+                }));
+                assert(events.join(","), "number,return-get,return-call");
+            }
+        }
+        for (const limit of [1n, Symbol(), "9007199254740992"]) {
+            let reads = 0, closes = 0;
+            const source = Object.create(Iterator.prototype);
+            Object.defineProperties(source, {
+                next: { get() { reads++; throw marker; } },
+                return: { value() { closes++; return {}; } }
+            });
+            assert_throws(typeof limit === "string" ? RangeError : TypeError,
+                          () => source[method](limit));
+            assert(reads, 0);
+            assert(closes, 1);
+        }
+        const events = [];
+        const source = Object.create(Iterator.prototype);
+        Object.defineProperties(source, {
+            next: { get() { events.push("next"); throw marker; } },
+            return: { get() { events.push("return-get"); throw {}; } }
+        });
+        let caught;
+        try { source[method]({ valueOf() {
+            events.push("number"); throw marker;
+        } }); } catch (error) { caught = error; }
+        assert(caught === marker, true);
+        assert(events.join(","), "number,return-get");
+
+        events.length = 0;
+        assert_throws(TypeError, () => Iterator.prototype[method].call(0, {
+            valueOf() { events.push("number"); return 1; }
+        }));
+        assert(events.length, 0);
+
+        for (const limit of [Number.MAX_SAFE_INTEGER, Infinity]) {
+            events.length = 0;
+            let nexts = 0;
+            const valid = Object.create(Iterator.prototype);
+            Object.defineProperties(valid, {
+                next: { get() {
+                    events.push("next-get");
+                    return function () {
+                        nexts++;
+                        return nexts <= 3 ? { value: nexts, done: false } :
+                                          { done: true };
+                    };
+                } },
+                return: { value() { events.push("return"); return {}; } }
+            });
+            const helper = valid[method]({ valueOf() {
+                events.push("number"); return limit;
+            } });
+            assert(events.join(","), "number,next-get");
+            assert(nexts, 0);
+            const result = helper.next();
+            if (method === "take") {
+                assert(result.value, 1);
+                assert(result.done, false);
+                assert(helper.return().done, true);
+                assert(events.join(","), "number,next-get,return");
+                assert(nexts, 1);
+            } else {
+                assert(result.done, true);
+                assert(helper.return().done, true);
+                assert(events.join(","), "number,next-get");
+                assert(nexts, 4);
+            }
+        }
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2593,6 +2702,7 @@ test_iterator_helper_start_return();
 test_iterator_flatmap_close();
 test_iterator_helper_acquisition();
 test_iterator_reduce_close();
+test_iterator_limits();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
