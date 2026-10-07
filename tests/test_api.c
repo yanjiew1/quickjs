@@ -665,12 +665,59 @@ static void test_stripped_function_to_string(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue native_name_callback(JSContext *ctx, JSValueConst this_val,
+                                     int argc, JSValueConst *argv)
+{
+    return JS_UNDEFINED;
+}
+
+static void test_native_function_initial_name(void)
+{
+    static const char *const invalid[] = {
+        "a b", "x-y", "/* injected */", "a) {}", "get ", "[Symbol.]",
+    };
+    char name[] = "hostFunction";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue global, function;
+    size_t i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    global = JS_GetGlobalObject(ctx);
+    function = JS_NewCFunction(ctx, native_name_callback, name, 0);
+    assert(!JS_IsException(function));
+    memset(name, 'x', sizeof(name) - 1);
+    assert(JS_SetPropertyStr(ctx, global, "hostFunction", function) >= 0);
+    check_eval(ctx,
+        "(() => {"
+        " Object.defineProperty(hostFunction, 'name', {"
+        "   get() { throw Error('host name read'); }"
+        " });"
+        " return hostFunction.toString() ==="
+        "   'function hostFunction() {\\n    [native code]\\n}';"
+        "})()");
+    for (i = 0; i < countof(invalid); i++) {
+        function = JS_NewCFunction(ctx, native_name_callback, invalid[i], 0);
+        assert(!JS_IsException(function));
+        assert(JS_SetPropertyStr(ctx, global, "hostFunction", function) >= 0);
+        check_eval(ctx,
+            "hostFunction.toString() ==="
+            " 'function () {\\n    [native code]\\n}'");
+    }
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "native-name", test_native_function_initial_name },
         { "stripped-function", test_stripped_function_to_string },
         { "iterator-realm", test_iterator_constructor_realm },
         { "typed-array-overlap", test_typed_array_external_overlap },

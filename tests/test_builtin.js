@@ -100,6 +100,48 @@ function test_function_native_fallback()
     assert_throws(TypeError, () => toString.call(null));
 }
 
+function test_function_initial_name()
+{
+    const toString = Function.prototype.toString;
+    const suffix = "() {\n    [native code]\n}";
+    const samples = [
+        [Math.abs, "abs"],
+        [Array.prototype[Symbol.iterator], "values"],
+        [RegExp.prototype[Symbol.match], "[Symbol.match]"],
+        [Object.getOwnPropertyDescriptor(Map.prototype, "size").get,
+         "get size"],
+        [Object.getOwnPropertyDescriptor(Iterator.prototype, "constructor").get,
+         "get constructor"],
+        [Object.getOwnPropertyDescriptor(Iterator.prototype, "constructor").set,
+         "set constructor"],
+    ];
+    for (const [fn, name] of samples) {
+        const expected = "function " + name + suffix;
+        const descriptor = Object.getOwnPropertyDescriptor(fn, "name");
+        assert(toString.call(fn), expected);
+        try {
+            Object.defineProperty(fn, "name", { value: "changed", configurable: true });
+            assert(toString.call(fn), expected);
+            delete fn.name;
+            assert(toString.call(fn), expected);
+            Object.defineProperty(fn, "name", {
+                get() { throw Error("native name read"); }, configurable: true,
+            });
+            assert(toString.call(fn), expected);
+        } finally {
+            Object.defineProperty(fn, "name", descriptor);
+        }
+    }
+    const anonymous = [Proxy.revocable({}, {}).revoke];
+    new Promise((resolve, reject) => anonymous.push(resolve, reject));
+    for (const fn of anonymous) {
+        Object.defineProperty(fn, "name", {
+            get() { throw Error("anonymous native name read"); },
+        });
+        assert(toString.call(fn), "function " + suffix);
+    }
+}
+
 function test_function()
 {
     function f(a, b) {
@@ -2694,6 +2736,7 @@ function test_line_column_numbers()
 test();
 test_function();
 test_function_native_fallback();
+test_function_initial_name();
 test_enum();
 test_array();
 test_string();

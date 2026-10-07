@@ -39,6 +39,7 @@
 #include "internal/object.h"
 #include "internal/gc.h"
 #include "internal/function.h"
+#include "internal/c-function.h"
 #include "internal/iterator.h"
 #include "internal/error.h"
 #include "internal/function-list.h"
@@ -747,8 +748,16 @@ JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
     JSObject *p;
     int i;
     
+#ifdef JS_PTR64
     js_trigger_gc(ctx->rt, sizeof(JSObject));
     p = js_malloc(ctx, sizeof(JSObject));
+#else
+    size_t size = sizeof(JSObject);
+    if (class_id == JS_CLASS_C_FUNCTION)
+        size += sizeof(JSAtom);
+    js_trigger_gc(ctx->rt, size);
+    p = js_malloc(ctx, size);
+#endif
     if (unlikely(!p))
         goto fail;
     p->class_id = class_id;
@@ -807,6 +816,7 @@ JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
         break;
     case JS_CLASS_C_FUNCTION:
         p->prop[0].u.value = JS_UNDEFINED;
+        *js_c_function_initial_name(p) = JS_ATOM_NULL;
         break;
     case JS_CLASS_ARGUMENTS:
     case JS_CLASS_MAPPED_ARGUMENTS:

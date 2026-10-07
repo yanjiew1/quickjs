@@ -129,12 +129,15 @@ struct JSObject {
             JSVarRef **var_refs;
             JSObject *home_object; /* for 'super' access */
         } func;
-        struct { /* JS_CLASS_C_FUNCTION: 12/20 bytes */
+        struct { /* JS_CLASS_C_FUNCTION: 12/24 bytes */
             JSContext *realm;
             JSCFunctionType c_function;
             uint8_t length;
             uint8_t cproto;
             int16_t magic;
+#ifdef JS_PTR64
+            JSAtom initial_name;
+#endif
         } cfunc;
         /* array part for fast arrays and typed arrays */
         struct { /* JS_CLASS_ARRAY, JS_CLASS_ARGUMENTS, JS_CLASS_MAPPED_ARGUMENTS, JS_CLASS_UINT8C_ARRAY..JS_CLASS_FLOAT64_ARRAY */

@@ -28,6 +28,7 @@
 #include "../internal/runtime.h"
 #include "../internal/string.h"
 #include "../internal/object.h"
+#include "../internal/c-function.h"
 #include "../internal/generator.h"
 #include "../internal/bytecode-format.h"
 #include "../internal/eval.h"
@@ -359,18 +360,17 @@ static JSValue js_function_toString(JSContext *ctx, JSValueConst this_val,
             return JS_NewStringLen(ctx, b->debug.source, b->debug.source_len);
         }
     }
-    if (p->class_id != JS_CLASS_C_FUNCTION &&
-        p->class_id != JS_CLASS_C_FUNCTION_DATA)
-        return JS_NewString(ctx, "function () {\n    [native code]\n}");
-    {
-        JSValue name;
-        const char *pref = "function ";
-        const char *suff = "() {\n    [native code]\n}";
-        name = JS_GetProperty(ctx, this_val, JS_ATOM_name);
-        if (JS_IsUndefined(name))
-            name = JS_AtomToString(ctx, JS_ATOM_empty_string);
-        return JS_ConcatString3(ctx, pref, name, suff);
+    if (p->class_id == JS_CLASS_C_FUNCTION) {
+        JSAtom atom = *js_c_function_initial_name(p);
+        if (atom != JS_ATOM_NULL) {
+            JSValue name = JS_AtomToString(ctx, atom);
+            if (JS_IsException(name))
+                return JS_EXCEPTION;
+            return JS_ConcatString3(ctx, "function ", name,
+                                     "() {\n    [native code]\n}");
+        }
     }
+    return JS_NewString(ctx, "function () {\n    [native code]\n}");
 }
 
 static JSValue js_function_hasInstance(JSContext *ctx, JSValueConst this_val,
