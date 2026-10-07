@@ -811,8 +811,8 @@ int JS_ToIndex(JSContext *ctx, uint64_t *plen, JSValueConst val)
 
 /* convert a value to a length between 0 and MAX_SAFE_INTEGER.
    return -1 for exception */
-__exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
-                                JSValue val)
+__exception int __JS_ToLengthFree(JSContext *ctx, int64_t *plen,
+                                  JSValue val)
 {
     int res = JS_ToInt64Clamp(ctx, plen, val, 0, MAX_SAFE_INTEGER, 0);
     JS_FreeValue(ctx, val);

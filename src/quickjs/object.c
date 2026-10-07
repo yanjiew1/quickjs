@@ -2434,15 +2434,13 @@ int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValu
     return present;
 }
 
-JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx)
+static no_inline JSValue js_get_property_int64_slow(JSContext *ctx,
+                                                    JSValueConst obj,
+                                                    int64_t idx)
 {
     JSAtom prop;
     JSValue val;
 
-    if ((uint64_t)idx <= INT32_MAX) {
-        /* fast path for fast arrays */
-        return JS_GetPropertyValue(ctx, obj, JS_NewInt32(ctx, idx));
-    }
     prop = JS_NewAtomInt64(ctx, idx);
     if (prop == JS_ATOM_NULL)
         return JS_EXCEPTION;
@@ -2450,6 +2448,15 @@ JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx)
     val = JS_GetProperty(ctx, obj, prop);
     JS_FreeAtom(ctx, prop);
     return val;
+}
+
+JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx)
+{
+    if ((uint64_t)idx <= INT32_MAX) {
+        /* fast path for fast arrays */
+        return JS_GetPropertyValue(ctx, obj, JS_NewInt32(ctx, idx));
+    }
+    return js_get_property_int64_slow(ctx, obj, idx);
 }
 
 JSValue JS_GetPropertyStr(JSContext *ctx, JSValueConst this_obj,

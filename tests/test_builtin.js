@@ -3103,7 +3103,80 @@ function test_group_by_own_elements()
     }
 }
 
+function test_array_iterator_length()
+{
+    function check(result, kind, index, value) {
+        assert(result.done, false);
+        if (kind === "keys") {
+            assert(result.value, index);
+        } else if (kind === "values") {
+            assert(result.value, value);
+        } else {
+            assert(result.value.length, 2);
+            assert(result.value[0], index);
+            assert(result.value[1], value);
+        }
+    }
+    for (const kind of ["keys", "values", "entries"]) {
+        for (const length of [-1, -0.5, NaN]) {
+            const iterator = Array.prototype[kind].call({ 0: "zero", length });
+            assert(iterator.next().done, true);
+        }
+        for (const length of [2 ** 32, 2 ** 32 + 1, Infinity]) {
+            let reads = 0, conversions = 0;
+            const iterator = Array.prototype[kind].call({
+                0: "zero",
+                1: "one",
+                get length() {
+                    reads++;
+                    return { valueOf() { conversions++; return length; } };
+                },
+            });
+            check(iterator.next(), kind, 0, "zero");
+            assert(reads, 1);
+            assert(conversions, 1);
+            check(iterator.next(), kind, 1, "one");
+            assert(reads, 2);
+            assert(conversions, 2);
+        }
+        let iterator, inner, entered = false;
+        iterator = Array.prototype[kind].call({
+            0: "zero",
+            1: "one",
+            get length() {
+                if (!entered) {
+                    entered = true;
+                    inner = iterator.next();
+                }
+                return 2;
+            },
+        });
+        const outer = iterator.next();
+        check(inner, kind, 0, "zero");
+        check(outer, kind, 0, "zero");
+        check(iterator.next(), kind, 1, "one");
+        assert(iterator.next().done, true);
+
+        entered = false;
+        iterator = Array.prototype[kind].call({
+            0: "zero",
+            get length() {
+                if (entered)
+                    return 0;
+                entered = true;
+                inner = iterator.next();
+                return 1;
+            },
+        });
+        const last = iterator.next();
+        assert(inner.done, true);
+        check(last, kind, 0, "zero");
+        assert(iterator.next().done, true);
+    }
+}
+
 test();
+test_array_iterator_length();
 test_group_by_own_elements();
 test_group_by_callback_receiver();
 test_function();
