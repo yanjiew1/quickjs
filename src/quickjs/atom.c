@@ -609,6 +609,31 @@ JSValue JS_NewSymbolInternal(JSContext *ctx, JSString *p, int atom_type)
     return JS_MKPTR(JS_TAG_SYMBOL, rt->atom_array[atom]);
 }
 
+JSValue JS_GetWellKnownSymbol(JSContext *ctx, JSWellKnownSymbolEnum symbol)
+{
+    static const JSAtom atoms[] = {
+        [JS_WELL_KNOWN_SYMBOL_ASYNC_ITERATOR] = JS_ATOM_Symbol_asyncIterator,
+        [JS_WELL_KNOWN_SYMBOL_HAS_INSTANCE] = JS_ATOM_Symbol_hasInstance,
+        [JS_WELL_KNOWN_SYMBOL_IS_CONCAT_SPREADABLE] = JS_ATOM_Symbol_isConcatSpreadable,
+        [JS_WELL_KNOWN_SYMBOL_ITERATOR] = JS_ATOM_Symbol_iterator,
+        [JS_WELL_KNOWN_SYMBOL_MATCH] = JS_ATOM_Symbol_match,
+        [JS_WELL_KNOWN_SYMBOL_MATCH_ALL] = JS_ATOM_Symbol_matchAll,
+        [JS_WELL_KNOWN_SYMBOL_REPLACE] = JS_ATOM_Symbol_replace,
+        [JS_WELL_KNOWN_SYMBOL_SEARCH] = JS_ATOM_Symbol_search,
+        [JS_WELL_KNOWN_SYMBOL_SPECIES] = JS_ATOM_Symbol_species,
+        [JS_WELL_KNOWN_SYMBOL_SPLIT] = JS_ATOM_Symbol_split,
+        [JS_WELL_KNOWN_SYMBOL_TO_PRIMITIVE] = JS_ATOM_Symbol_toPrimitive,
+        [JS_WELL_KNOWN_SYMBOL_TO_STRING_TAG] = JS_ATOM_Symbol_toStringTag,
+        [JS_WELL_KNOWN_SYMBOL_UNSCOPABLES] = JS_ATOM_Symbol_unscopables,
+        [JS_WELL_KNOWN_SYMBOL_DISPOSE] = JS_ATOM_Symbol_dispose,
+        [JS_WELL_KNOWN_SYMBOL_ASYNC_DISPOSE] = JS_ATOM_Symbol_asyncDispose,
+    };
+
+    if ((unsigned)symbol >= countof(atoms))
+        return JS_ThrowRangeError(ctx, "invalid well-known symbol");
+    return JS_AtomToValue(ctx, atoms[symbol]);
+}
+
 /* description is UTF-8 encoded or NULL */
 JSValue JS_NewSymbol(JSContext *ctx, const char *description, BOOL is_global)
 {

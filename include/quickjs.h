@@ -765,6 +765,29 @@ static inline const char *JS_ToCString(JSContext *ctx, JSValueConst val1)
 }
 void JS_FreeCString(JSContext *ctx, const char *ptr);
 
+typedef enum JSWellKnownSymbolEnum {
+    JS_WELL_KNOWN_SYMBOL_ASYNC_ITERATOR = 0,
+    JS_WELL_KNOWN_SYMBOL_HAS_INSTANCE = 1,
+    JS_WELL_KNOWN_SYMBOL_IS_CONCAT_SPREADABLE = 2,
+    JS_WELL_KNOWN_SYMBOL_ITERATOR = 3,
+    JS_WELL_KNOWN_SYMBOL_MATCH = 4,
+    JS_WELL_KNOWN_SYMBOL_MATCH_ALL = 5,
+    JS_WELL_KNOWN_SYMBOL_REPLACE = 6,
+    JS_WELL_KNOWN_SYMBOL_SEARCH = 7,
+    JS_WELL_KNOWN_SYMBOL_SPECIES = 8,
+    JS_WELL_KNOWN_SYMBOL_SPLIT = 9,
+    JS_WELL_KNOWN_SYMBOL_TO_PRIMITIVE = 10,
+    JS_WELL_KNOWN_SYMBOL_TO_STRING_TAG = 11,
+    JS_WELL_KNOWN_SYMBOL_UNSCOPABLES = 12,
+    JS_WELL_KNOWN_SYMBOL_DISPOSE = 13,
+    JS_WELL_KNOWN_SYMBOL_ASYNC_DISPOSE = 14,
+} JSWellKnownSymbolEnum;
+
+/* Returns an owned well-known symbol without accessing global Symbol
+   or invoking JavaScript. Works in raw contexts. An invalid selector
+   throws RangeError and returns JS_EXCEPTION. */
+JSValue JS_GetWellKnownSymbol(JSContext *ctx, JSWellKnownSymbolEnum symbol);
+
 JSValue JS_NewSymbol(JSContext *ctx, const char *description, JS_BOOL is_global);
 
 JSValue JS_NewObjectProtoClass(JSContext *ctx, JSValueConst proto, JSClassID class_id);

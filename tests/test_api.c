@@ -2831,6 +2831,145 @@ static void test_typed_array_public_api(void)
     JS_FreeRuntime(rt);
 }
 
+static int well_known_dispose_calls;
+
+static JSValue well_known_dispose_data(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv,
+                                      int magic, JSValue *data)
+{
+    int32_t increment;
+    JSValue value;
+
+    assert(argc == 0 && magic == 0);
+    value = JS_GetPropertyStr(ctx, data[0], "increment");
+    assert(JS_ToInt32(ctx, &increment, value) == 0);
+    JS_FreeValue(ctx, value);
+    well_known_dispose_calls += increment;
+    return JS_UNDEFINED;
+}
+
+static void test_well_known_symbol_api(void)
+{
+    static const struct {
+        JSWellKnownSymbolEnum selector;
+        const char *name;
+    } cases[] = {
+        { JS_WELL_KNOWN_SYMBOL_ASYNC_ITERATOR, "asyncIterator" },
+        { JS_WELL_KNOWN_SYMBOL_HAS_INSTANCE, "hasInstance" },
+        { JS_WELL_KNOWN_SYMBOL_IS_CONCAT_SPREADABLE, "isConcatSpreadable" },
+        { JS_WELL_KNOWN_SYMBOL_ITERATOR, "iterator" },
+        { JS_WELL_KNOWN_SYMBOL_MATCH, "match" },
+        { JS_WELL_KNOWN_SYMBOL_MATCH_ALL, "matchAll" },
+        { JS_WELL_KNOWN_SYMBOL_REPLACE, "replace" },
+        { JS_WELL_KNOWN_SYMBOL_SEARCH, "search" },
+        { JS_WELL_KNOWN_SYMBOL_SPECIES, "species" },
+        { JS_WELL_KNOWN_SYMBOL_SPLIT, "split" },
+        { JS_WELL_KNOWN_SYMBOL_TO_PRIMITIVE, "toPrimitive" },
+        { JS_WELL_KNOWN_SYMBOL_TO_STRING_TAG, "toStringTag" },
+        { JS_WELL_KNOWN_SYMBOL_UNSCOPABLES, "unscopables" },
+        { JS_WELL_KNOWN_SYMBOL_DISPOSE, "dispose" },
+        { JS_WELL_KNOWN_SYMBOL_ASYNC_DISPOSE, "asyncDispose" },
+    };
+    static const char source[] =
+        "Symbol = {}; { using resource = hostResource; }";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx, *raw;
+    JSValue first, second, other, global, symbol_ctor, property;
+    JSValue resource, hook, capture, result, exception;
+    JSAtom atom;
+    size_t i;
+
+    assert(rt);
+    ctx = JS_NewContextRaw(rt);
+    raw = JS_NewContextRaw(rt);
+    assert(ctx && raw);
+    global = JS_GetGlobalObject(raw);
+    symbol_ctor = JS_GetPropertyStr(raw, global, "Symbol");
+    assert(JS_IsUndefined(symbol_ctor));
+    JS_FreeValue(raw, symbol_ctor);
+    JS_FreeValue(raw, global);
+    for (i = 0; i < countof(cases); i++) {
+        first = JS_GetWellKnownSymbol(ctx, cases[i].selector);
+        second = JS_GetWellKnownSymbol(ctx, cases[i].selector);
+        other = JS_GetWellKnownSymbol(raw, cases[i].selector);
+        assert(JS_IsSymbol(first) && JS_IsSymbol(second) && JS_IsSymbol(other));
+        assert(JS_StrictEq(ctx, first, second) && JS_StrictEq(ctx, first, other));
+        JS_FreeValue(ctx, first);
+        assert(JS_IsSymbol(second) && JS_StrictEq(ctx, second, other));
+        JS_FreeValue(ctx, second);
+        JS_FreeValue(raw, other);
+    }
+    assert(JS_AddIntrinsicBaseObjects(ctx) == 0);
+    assert(JS_AddIntrinsicEval(ctx) == 0);
+    global = JS_GetGlobalObject(ctx);
+    symbol_ctor = JS_GetPropertyStr(ctx, global, "Symbol");
+    assert(JS_IsFunction(ctx, symbol_ctor));
+    for (i = 0; i < countof(cases); i++) {
+        first = JS_GetWellKnownSymbol(ctx, cases[i].selector);
+        property = JS_GetPropertyStr(ctx, symbol_ctor, cases[i].name);
+        assert(JS_StrictEq(ctx, first, property));
+        JS_FreeValue(ctx, property);
+        JS_FreeValue(ctx, first);
+    }
+    JS_FreeValue(ctx, symbol_ctor);
+    result = JS_GetWellKnownSymbol(ctx, (JSWellKnownSymbolEnum)-1);
+    assert(JS_IsException(result) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    property = JS_GetPropertyStr(ctx, exception, "name");
+    {
+        const char *name = JS_ToCString(ctx, property);
+        assert(name && strcmp(name, "RangeError") == 0);
+        JS_FreeCString(ctx, name);
+    }
+    JS_FreeValue(ctx, property);
+    JS_FreeValue(ctx, exception);
+    result = JS_GetWellKnownSymbol(ctx, (JSWellKnownSymbolEnum)countof(cases));
+    assert(JS_IsException(result) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+
+    first = JS_GetWellKnownSymbol(ctx, JS_WELL_KNOWN_SYMBOL_DISPOSE);
+    second = JS_NewSymbol(ctx, "Symbol.dispose", FALSE);
+    assert(JS_IsSymbol(second) && !JS_StrictEq(ctx, first, second));
+    JS_FreeValue(ctx, second);
+    JS_ThrowTypeError(ctx, "preserved exception");
+    second = JS_GetWellKnownSymbol(ctx, JS_WELL_KNOWN_SYMBOL_DISPOSE);
+    assert(JS_StrictEq(ctx, first, second) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, second);
+    resource = JS_NewObject(ctx);
+    assert(!JS_IsException(resource));
+    capture = JS_NewObject(ctx);
+    assert(!JS_IsException(capture));
+    assert(JS_SetPropertyStr(ctx, capture, "increment", JS_NewInt32(ctx, 3)) == 1);
+    hook = JS_NewCFunctionData(ctx, well_known_dispose_data, 0, 0, 1,
+                               (JSValueConst *)&capture);
+    assert(!JS_IsException(hook));
+    JS_FreeValue(ctx, capture);
+    atom = JS_ValueToAtom(ctx, first);
+    assert(atom != JS_ATOM_NULL);
+    assert(JS_DefinePropertyValue(ctx, resource, atom, hook,
+                                  JS_PROP_C_W_E | JS_PROP_THROW) == 1);
+    JS_FreeAtom(ctx, atom);
+    assert(JS_SetPropertyStr(ctx, global, "hostResource", resource) == 1);
+    JS_FreeValue(ctx, global);
+    JS_RunGC(rt);
+    well_known_dispose_calls = 0;
+    result = JS_Eval(ctx, source, sizeof(source) - 1,
+                     "well-known-symbol-host-disposal", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(result) && well_known_dispose_calls == 3);
+    JS_FreeValue(ctx, result);
+    second = JS_GetWellKnownSymbol(ctx, JS_WELL_KNOWN_SYMBOL_DISPOSE);
+    assert(JS_StrictEq(ctx, first, second));
+    JS_FreeValue(ctx, second);
+    JS_FreeValue(ctx, first);
+    assert(!JS_HasException(ctx) && !JS_HasException(raw));
+    JS_FreeContext(raw);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static JSValue test_resource_realms_gc(JSContext *ctx, JSValueConst value,
                                        int argc, JSValueConst *argv)
 {
@@ -2903,6 +3042,7 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
+        { "well-known-symbol-api", test_well_known_symbol_api },
         { "typed-array-public-api", test_typed_array_public_api },
         { "int64-property-api", test_int64_property_api },
         { "async-iterator-disposal-realm", test_async_iterator_disposal_realm },
