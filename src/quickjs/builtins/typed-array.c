@@ -1938,6 +1938,10 @@ static JSValue js_typed_array_constructor_ta(JSContext *ctx,
         JS_ThrowTypeErrorArrayBufferOOB(ctx);
         goto fail;
     }
+    if (typed_array_is_bigint(p->class_id) != typed_array_is_bigint(classid)) {
+        JS_ThrowTypeError(ctx, "incompatible typed array content types");
+        goto fail;
+    }
     size_log2 = typed_array_size_log2(classid);
     buffer = js_array_buffer_constructor1(ctx, JS_UNDEFINED,
                                           (uint64_t)len << size_log2,

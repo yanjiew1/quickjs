@@ -734,6 +734,25 @@ function test_typed_array_set_content()
     assert(big.set([], 1), undefined);
 }
 
+function test_typed_array_constructor_content()
+{
+    const numberTypes = [Uint8ClampedArray, Uint8Array, Int8Array, Uint16Array,
+                         Int16Array, Uint32Array, Int32Array, Float16Array,
+                         Float32Array, Float64Array];
+    for (const NumberType of numberTypes) {
+        for (const BigType of [BigInt64Array, BigUint64Array]) {
+            assert_throws(TypeError, () => new NumberType(new BigType(0)));
+            assert_throws(TypeError, () => new BigType(new NumberType(0)));
+            assert_throws(TypeError, () => new NumberType(new BigType(1)));
+            assert_throws(TypeError, () => new BigType(new NumberType(1)));
+        }
+        assert(new NumberType(new Float64Array(0)).length, 0);
+        assert(new NumberType(new Float64Array([3]))[0], 3);
+    }
+    assert(new BigInt64Array(new BigUint64Array(0)).length, 0);
+    assert(new BigInt64Array(new BigUint64Array([3n]))[0], 3n);
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -1984,6 +2003,7 @@ test_typed_array();
 test_typed_array_with_conversion();
 test_typed_array_copywithin_zero();
 test_typed_array_set_content();
+test_typed_array_constructor_content();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();
