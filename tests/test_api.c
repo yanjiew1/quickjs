@@ -2735,6 +2735,102 @@ static void test_int64_property_api(void)
     assert(releases == 2);
 }
 
+static void check_typed_array_copy_api(JSContext *ctx)
+{
+    uint8_t input[] = { 0, 17, 255 };
+    JSValue array, buffer;
+    uint8_t *bytes;
+    size_t offset, length, element_size, backing_length;
+
+    array = JS_NewUint8ArrayCopy(ctx, input, sizeof(input));
+    assert(!JS_IsException(array));
+    assert(JS_GetTypedArrayType(array) == JS_TYPED_ARRAY_UINT8);
+    input[1] = 99;
+    buffer = JS_GetTypedArrayBuffer(ctx, array, &offset, &length, &element_size);
+    assert(!JS_IsException(buffer));
+    assert(offset == 0 && length == sizeof(input) && element_size == 1);
+    bytes = JS_GetArrayBuffer(ctx, &backing_length, buffer);
+    assert(bytes && backing_length == sizeof(input));
+    assert(bytes[0] == 0 && bytes[1] == 17 && bytes[2] == 255);
+    bytes[0] = 42;
+    assert(input[0] == 0);
+    JS_FreeValue(ctx, buffer);
+    JS_FreeValue(ctx, array);
+
+    array = JS_NewUint8ArrayCopy(ctx, NULL, 0);
+    assert(!JS_IsException(array));
+    assert(JS_GetTypedArrayType(array) == JS_TYPED_ARRAY_UINT8);
+    buffer = JS_GetTypedArrayBuffer(ctx, array, &offset, &length, &element_size);
+    assert(!JS_IsException(buffer) && offset == 0 && length == 0 && element_size == 1);
+    assert(JS_GetArrayBuffer(ctx, &backing_length, buffer) != NULL);
+    assert(backing_length == 0);
+    JS_DetachArrayBuffer(ctx, buffer);
+    assert(JS_GetTypedArrayType(array) == JS_TYPED_ARRAY_UINT8);
+    JS_FreeValue(ctx, buffer);
+    JS_FreeValue(ctx, array);
+}
+
+static void test_typed_array_public_api(void)
+{
+    static const char *other_objects[] = {
+        "({ [Symbol.toStringTag]: 'Uint8Array' })",
+        "new DataView(new ArrayBuffer(0))",
+        "new Proxy(new Uint8Array(0), { get() { throw Error('trap'); } })",
+    };
+    static const char oob_source[] =
+        "(() => { let b = new ArrayBuffer(8, { maxByteLength: 8 });"
+        " let a = new Uint16Array(b, 4, 2); b.resize(2); return a; })()";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx, *raw;
+    JSValue zero, array, exception;
+    int (*get_type)(JSValueConst) = JS_GetTypedArrayType;
+    int type;
+    size_t i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    assert(get_type(JS_NULL) == -1 && get_type(JS_UNDEFINED) == -1);
+    assert(get_type(JS_NewInt32(ctx, 0)) == -1);
+    zero = JS_NewInt32(ctx, 0);
+    for (type = JS_TYPED_ARRAY_UINT8C; type <= JS_TYPED_ARRAY_FLOAT64; type++) {
+        array = JS_NewTypedArray(ctx, 1, (JSValueConst *)&zero,
+                                 (JSTypedArrayEnum)type);
+        assert(!JS_IsException(array) && get_type(array) == type);
+        JS_FreeValue(ctx, array);
+    }
+    for (i = 0; i < countof(other_objects); i++) {
+        array = JS_Eval(ctx, other_objects[i], strlen(other_objects[i]),
+                        "typed-array-brand-api", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(array) && get_type(array) == -1);
+        assert(!JS_HasException(ctx));
+        JS_FreeValue(ctx, array);
+    }
+    array = JS_Eval(ctx, oob_source, sizeof(oob_source) - 1,
+                    "typed-array-oob-brand-api", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(array) && get_type(array) == JS_TYPED_ARRAY_UINT16);
+    assert(!JS_HasException(ctx));
+    JS_ThrowTypeError(ctx, "preserved exception");
+    assert(get_type(array) == JS_TYPED_ARRAY_UINT16 && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, array);
+    check_typed_array_copy_api(ctx);
+
+    raw = JS_NewContextRaw(rt);
+    assert(raw);
+    assert(JS_AddIntrinsicBaseObjects(raw) == 0);
+    assert(JS_AddIntrinsicTypedArrays(raw) == 0);
+    check_typed_array_copy_api(raw);
+    array = JS_NewTypedArray(raw, 1, (JSValueConst *)&zero, JS_TYPED_ARRAY_FLOAT16);
+    assert(!JS_IsException(array) && get_type(array) == JS_TYPED_ARRAY_FLOAT16);
+    JS_FreeValue(raw, array);
+    JS_FreeContext(raw);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static JSValue test_resource_realms_gc(JSContext *ctx, JSValueConst value,
                                        int argc, JSValueConst *argv)
 {
@@ -2807,6 +2903,7 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
+        { "typed-array-public-api", test_typed_array_public_api },
         { "int64-property-api", test_int64_property_api },
         { "async-iterator-disposal-realm", test_async_iterator_disposal_realm },
         { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },

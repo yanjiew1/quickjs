@@ -228,6 +228,19 @@ static JSValue js_typed_array_get_byteOffset(JSContext *ctx,
     return JS_NewUint32(ctx, ta->offset);
 }
 
+int JS_GetTypedArrayType(JSValueConst obj)
+{
+    JSObject *p;
+
+    if (!JS_IsObject(obj))
+        return -1;
+    p = JS_VALUE_GET_OBJ(obj);
+    if (p->class_id < JS_CLASS_UINT8C_ARRAY ||
+        p->class_id > JS_CLASS_FLOAT64_ARRAY)
+        return -1;
+    return p->class_id - JS_CLASS_UINT8C_ARRAY;
+}
+
 JSValue JS_NewTypedArray(JSContext *ctx, int argc, JSValueConst *argv,
                          JSTypedArrayEnum type)
 {
