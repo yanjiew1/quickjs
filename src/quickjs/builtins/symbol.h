@@ -30,6 +30,6 @@
 JSValue js_symbol_constructor(JSContext *ctx, JSValueConst new_target,
                               int argc, JSValueConst *argv);
 extern const JSCFunctionListEntry js_symbol_proto_funcs[5];
-extern const JSCFunctionListEntry js_symbol_funcs[15];
+extern const JSCFunctionListEntry js_symbol_funcs[17];
 
 #endif

@@ -5641,3 +5641,25 @@ test_finalization_registry();
 test_generator();
 test_rope();
 test_line_column_numbers();
+
+function test_disposal_symbols()
+{
+    for (const name of ["dispose", "asyncDispose"]) {
+        const symbol = Symbol[name];
+        assert(typeof symbol, "symbol");
+        assert(symbol.description, "Symbol." + name);
+        const descriptor = Object.getOwnPropertyDescriptor(Symbol, name);
+        assert(descriptor.value === symbol, true);
+        assert(descriptor.writable, false);
+        assert(descriptor.enumerable, false);
+        assert(descriptor.configurable, false);
+        assert(Symbol.keyFor(symbol), undefined);
+        assert(Symbol.for("Symbol." + name) === symbol, false);
+        const object = { [symbol]: name };
+        assert(object[symbol], name);
+        assert(Object.getOwnPropertySymbols(object)[0] === symbol, true);
+    }
+    assert(Symbol.dispose === Symbol.asyncDispose, false);
+}
+
+test_disposal_symbols();
