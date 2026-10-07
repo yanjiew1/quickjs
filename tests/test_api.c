@@ -307,6 +307,43 @@ static void free_shared(void *opaque, void *ptr)
     }
 }
 
+static void test_default_shared_buffer_growth(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue buffer, global;
+    uint8_t *ptr;
+    size_t size;
+    const char *script = "new SharedArrayBuffer(1, { maxByteLength: 4096 })";
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    buffer = JS_Eval(ctx, script, strlen(script), "shared-buffer-capacity",
+                     JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(buffer));
+    ptr = JS_GetArrayBuffer(ctx, &size, buffer);
+    assert(ptr && size == 1);
+    assert(js_malloc_usable_size(ctx, ptr) >= 4096);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "sharedBuffer", buffer) >= 0);
+    JS_FreeValue(ctx, global);
+    check_eval(ctx,
+        "(() => {"
+        " const array = new Uint8Array(sharedBuffer);"
+        " const view = new DataView(sharedBuffer);"
+        " sharedBuffer.grow(4096);"
+        " if (array.length !== 4096 || view.byteLength !== 4096)"
+        "   throw Error('shared view length');"
+        " if (array[4095] !== 0) throw Error('shared growth zero fill');"
+        " array[4095] = 42;"
+        " return view.getUint8(4095) === 42;"
+        "})()");
+    assert(ptr[4095] == 42);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_shared_buffer_allocation(void)
 {
     SharedBufferData data = { 0 };
@@ -774,6 +811,7 @@ int main(int argc, char **argv)
         { "allocator-capacity", test_allocator_capacity_and_reuse },
         { "buffer-allocation", test_empty_buffer_allocation },
         { "shared-buffer-allocation", test_shared_buffer_allocation },
+        { "shared-buffer-growth", test_default_shared_buffer_growth },
         { "typed-array-arguments", test_typed_array_arguments },
         { "atom", test_empty_atom },
         { "buffer-transfer", test_empty_buffer_transfer },
