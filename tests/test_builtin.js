@@ -784,6 +784,41 @@ function test_typed_array_species_content()
     assert(big.slice() instanceof BigUint64Array, true);
 }
 
+function test_typed_array_set_overlap()
+{
+    for (const [Source, Destination] of [[Uint8Array, Uint16Array],
+                                        [Uint16Array, Uint8Array],
+                                        [Float32Array, Uint8Array],
+                                        [Uint8Array, Float32Array],
+                                        [BigInt64Array, BigUint64Array]]) {
+        for (const sourceOffset of [0, Source.BYTES_PER_ELEMENT]) {
+            for (const destinationOffset of [0, Destination.BYTES_PER_ELEMENT]) {
+                const buffer = new ArrayBuffer(64);
+                const source = new Source(buffer, sourceOffset, 3);
+                const destination = new Destination(buffer, destinationOffset, 3);
+                source.set(Source === BigInt64Array ? [1n, 2n, 3n] : [1, 2, 3]);
+                const expected = new Destination(new Source(source));
+                assert(destination.set(source), undefined);
+                assert([...destination].join(","), [...expected].join(","));
+            }
+        }
+    }
+
+    const buffer = new ArrayBuffer(8);
+    const bytes = new Uint8Array(buffer);
+    bytes.set([1, 2, 3, 4, 5, 6, 7, 8]);
+    const words = new Uint16Array(buffer);
+    words.set(bytes.subarray(0, 2), 1);
+    assert(words[1], 1);
+    assert(words[2], 2);
+
+    const source = new Uint8Array([1, 2, 3]);
+    const destination = new Uint16Array(3);
+    destination.set(source);
+    assert([...destination].join(","), "1,2,3");
+    assert([...source].join(","), "1,2,3");
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -2036,6 +2071,7 @@ test_typed_array_copywithin_zero();
 test_typed_array_set_content();
 test_typed_array_constructor_content();
 test_typed_array_species_content();
+test_typed_array_set_overlap();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();

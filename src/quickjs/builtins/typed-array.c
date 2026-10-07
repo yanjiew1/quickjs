@@ -322,9 +322,26 @@ static JSValue js_typed_array_set_internal(JSContext *ctx,
                     src_abuf->data + src_ta->offset, src_len << shift);
             goto done;
         }
-        if (dest_abuf->data == src_abuf->data) {
-            /* copying between the same buffer using different types of mappings
-               would require a temporary buffer */
+        {
+            uintptr_t dest_ptr, src_ptr;
+            uint64_t dest_size, src_size;
+
+            dest_ptr = (uintptr_t)(dest_abuf->data + dest_ta->offset +
+                                   (offset << shift));
+            src_ptr = (uintptr_t)(src_abuf->data + src_ta->offset);
+            dest_size = (uint64_t)src_len << shift;
+            src_size = (uint64_t)src_len << typed_array_size_log2(src_p->class_id);
+            if (dest_abuf->data == src_abuf->data ||
+                (dest_ptr <= src_ptr ? src_ptr - dest_ptr < dest_size :
+                 dest_ptr - src_ptr < src_size)) {
+                /* Snapshot shared or overlapping storage before conversion. */
+                val = js_typed_array_constructor_ta(ctx, JS_UNDEFINED, src_obj,
+                                                     src_p->class_id, src_len);
+                if (JS_IsException(val))
+                    goto fail;
+                JS_FreeValue(ctx, src_obj);
+                src_obj = val;
+            }
         }
         /* otherwise, default behavior is slow but correct */
     } else {
