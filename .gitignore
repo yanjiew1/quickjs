@@ -64,3 +64,5 @@ libwinpthread*.dll
 /tests/test_fuzz_regexp_timeout.exe
 
 /tests/test_wait_queue
+
+/tests/test_native_jobs

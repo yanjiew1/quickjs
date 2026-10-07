@@ -2,6 +2,7 @@
  * QuickJS Javascript Engine
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
+ * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2021 Charlie Gordon
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1034,6 +1035,20 @@ int JS_EnqueueJob(JSContext *ctx, JSJobFunc *job_func, int argc, JSValueConst *a
 
 JS_BOOL JS_IsJobPending(JSRuntime *rt);
 int JS_ExecutePendingJob(JSRuntime *rt, JSContext **pctx);
+
+/* Native asynchronous waits. All four functions run on the runtime owner
+   thread. Pending native waits retain their realm and shared backing storage.
+   The borrowed wake handle is a POSIX fd or Windows HANDLE; -1 means inactive.
+   Hosts may wait for readiness, but must not close, reset or read this handle.
+   Use JS_PollNativeJobs(rt, 0) and JS_ExecutePendingJob to make owner progress.
+   Timeout is a ceiling in milliseconds, capped at INT_MAX; -1 means no finite
+   deadline. Poll accepts any negative timeout as an unlimited wait, returns
+   1 for queued work, 0 for no work/interruption, and -1 for an OS failure with
+   errno (POSIX) or GetLastError (Windows). Poll never executes JavaScript. */
+JS_BOOL JS_IsNativeJobPending(JSRuntime *rt);
+intptr_t JS_GetNativeJobWakeHandle(JSRuntime *rt);
+int JS_GetNativeJobTimeout(JSRuntime *rt);
+int JS_PollNativeJobs(JSRuntime *rt, int timeout_ms);
 
 /* Object Writer/Reader (currently only used to handle precompiled code) */
 #define JS_WRITE_OBJ_BYTECODE  (1 << 0) /* allow function/module */
