@@ -1001,6 +1001,79 @@ static void test_shared_buffer_clone_views(void)
     assert(data.allocations == 1 && data.duplications == 1 && data.releases == 2);
 }
 
+static void test_shared_slice_clone_species(void)
+{
+    static const char *sources[] = {
+        "new SharedArrayBuffer(0)",
+        "new SharedArrayBuffer(8)",
+        "new SharedArrayBuffer(0, { maxByteLength: 0 })",
+        "new SharedArrayBuffer(8, { maxByteLength: 32 })",
+    };
+    size_t i;
+
+    for (i = 0; i < countof(sources); i++) {
+        SharedBufferData data = { 0 };
+        JSSharedArrayBufferFunctions functions = {
+            alloc_shared, free_shared, dup_shared, &data,
+        };
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx;
+        JSValue source, clone, global;
+        uint8_t *encoded, **pointers;
+        size_t encoded_size, pointer_count;
+
+        assert(rt);
+        JS_SetSharedArrayBufferFunctions(rt, &functions);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        source = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                         "shared-slice-source", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(source));
+        encoded = JS_WriteObject2(ctx, &encoded_size, source, JS_WRITE_OBJ_SAB,
+                                  &pointers, &pointer_count);
+        assert(encoded && pointer_count == 1 && pointers[0] == data.ptr);
+        clone = JS_ReadObject(ctx, encoded, encoded_size, JS_READ_OBJ_SAB);
+        assert(!JS_IsException(clone));
+        js_free(ctx, encoded);
+        js_free(ctx, pointers);
+        global = JS_GetGlobalObject(ctx);
+        assert(JS_SetPropertyStr(ctx, global, "source", source) >= 0);
+        assert(JS_SetPropertyStr(ctx, global, "clone", clone) >= 0);
+        JS_FreeValue(ctx, global);
+        check_eval(ctx,
+            "(() => {"
+            " if (source === clone) throw Error('same SAB object');"
+            " source.constructor = { [Symbol.species]: function() { return clone; } };"
+            " try { source.slice(0, 0); }"
+            " catch (e) { return e instanceof TypeError; }"
+            " return false;"
+            "})()");
+        check_eval(ctx,
+            "(() => {"
+            " if (source.byteLength === 0) return true;"
+            " const bytes = new Uint8Array(source);"
+            " for (let i = 0; i < bytes.length; i++) bytes[i] = i + 1;"
+            " const expected = Array.from(bytes);"
+            " for (const [start, end] of [[0, bytes.length], [1, bytes.length - 1]]) {"
+            "   if (end <= start) throw Error('empty nonempty-slice fixture');"
+            "   let rejected = false;"
+            "   try { source.slice(start, end); }"
+            "   catch (e) { if (!(e instanceof TypeError)) throw e; rejected = true; }"
+            "   if (!rejected) throw Error('aliased nonempty SAB slice accepted');"
+            "   if (bytes.length !== expected.length ||"
+            "       bytes.some((value, index) => value !== expected[index]))"
+            "     throw Error('shared source bytes changed');"
+            " }"
+            " return true;"
+            "})()");
+        assert(data.references == 2 && data.duplications == 1 && data.releases == 0);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(data.references == 0 && data.allocations == 1 &&
+               data.duplications == 1 && data.releases == 2);
+    }
+}
+
 static void test_shared_buffer_queued_clone(void)
 {
     static const char *sources[] = {
@@ -1606,6 +1679,7 @@ int main(int argc, char **argv)
         { "shared-buffer-allocation", test_shared_buffer_allocation },
         { "shared-buffer-growth", test_default_shared_buffer_growth },
         { "shared-buffer-clone", test_shared_buffer_clone_views },
+        { "shared-buffer-slice-clone", test_shared_slice_clone_species },
         { "shared-buffer-queued-clone", test_shared_buffer_queued_clone },
         { "shared-length-alignment", test_shared_buffer_length_alignment },
         { "shared-buffer-alignment-rejection", test_shared_buffer_alignment_rejection },
