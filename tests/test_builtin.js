@@ -2127,6 +2127,77 @@ function test_iterator_helper_start_return()
     assert(closes, 1);
 }
 
+function test_iterator_flatmap_close()
+{
+    let innerCloses = 0, outerCloses = 0;
+    const source = Object.assign(Object.create(Iterator.prototype), {
+        index: 0,
+        next() { return { done: this.index++ > 1, value: this.index }; },
+        return() { outerCloses++; return {}; }
+    });
+    const helper = source.flatMap(value => ({
+        next() { return { done: true }; },
+        get return() { innerCloses++; throw Error("must not close exhausted inner"); }
+    }));
+    assert(helper.next().done, true);
+    assert(innerCloses, 0);
+    assert(outerCloses, 0);
+
+    const marker = {};
+    for (const kind of ["get", "call", "primitive", "done", "value"]) {
+        let outerNexts = 0, innerNexts = 0;
+        innerCloses = outerCloses = 0;
+        const outer = Object.assign(Object.create(Iterator.prototype), {
+            next() { outerNexts++; return { done: false, value: 1 }; },
+            return() { outerCloses++; throw {}; }
+        });
+        const inner = {
+            get next() {
+                if (kind === "get")
+                    throw marker;
+                return function() {
+                    innerNexts++;
+                    if (kind === "call")
+                        throw marker;
+                    if (kind === "primitive")
+                        return 1;
+                    return {
+                        get done() { if (kind === "done") throw marker; return false; },
+                        get value() { throw marker; }
+                    };
+                };
+            },
+            get return() { innerCloses++; throw Error("must not close failed inner"); }
+        };
+        const current = outer.flatMap(() => inner);
+        let caught;
+        try { current.next(); } catch (error) { caught = error; }
+        if (kind === "primitive")
+            assert(caught instanceof TypeError, true);
+        else
+            assert(caught === marker, true);
+        assert(current.next().done, true);
+        assert(current.return().done, true);
+        assert(outerNexts, 1);
+        assert(innerNexts, kind === "get" ? 0 : 1);
+        assert(innerCloses, 0);
+        assert(outerCloses, 1);
+    }
+
+    const events = [];
+    const outer = Object.assign(Object.create(Iterator.prototype), {
+        next() { return { done: false, value: 1 }; },
+        return() { events.push("outer"); return {}; }
+    });
+    const current = outer.flatMap(() => ({
+        next() { return { done: false, value: 2 }; },
+        return() { events.push("inner"); return {}; }
+    }));
+    assert(current.next().value, 2);
+    assert(current.return().done, true);
+    assert(events.join(","), "inner,outer");
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2435,6 +2506,7 @@ test_iterator_wrapper();
 test_iterator_accessors();
 test_iterator_helper_completion();
 test_iterator_helper_start_return();
+test_iterator_flatmap_close();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
