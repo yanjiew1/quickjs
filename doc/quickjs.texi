@@ -903,6 +903,28 @@ Custom memory allocation functions can be provided with
 
 The maximum system stack size can be set with @code{JS_SetMaxStackSize()}.
 
+@subsection External buffer storage
+
+@code{JS_NewArrayBuffer()} can wrap nonshared external storage at an unaligned
+byte address. TypedArray accesses and Atomics operations on that nonshared
+buffer use byte-based access when necessary. The embedding must synchronize
+any concurrent host access to nonshared storage; wrapping an address as a
+nonshared buffer does not make that storage safe to share between threads.
+
+When Atomics is enabled, shared backing storage must meet the maximum
+alignment of the engine's supported @code{_Atomic(uint8_t)},
+@code{_Atomic(uint16_t)}, @code{_Atomic(uint32_t)}, and
+@code{_Atomic(uint64_t)} types. An unaligned pointer passed to
+@code{JS_NewArrayBuffer()} with @code{is_shared} set is rejected with a
+@code{TypeError}. The caller retains ownership: neither @code{free_func} nor
+@code{sab_dup} is called on this failure.
+
+The same requirement applies to @code{sab_alloc}. A misaligned allocation is
+released once using the @code{sab_free} and @code{sab_opaque} captured before
+the allocator was called, and construction throws a @code{TypeError}. This
+also applies to empty and growable shared buffers. Without Atomics, shared
+backing storage has no added host alignment requirement.
+
 @subsection Shared buffer serialization
 
 @code{JS_WriteObject()} and @code{JS_WriteObject2()} serialize a

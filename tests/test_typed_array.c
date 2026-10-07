@@ -163,11 +163,16 @@ static void test_empty_views(JSContext *ctx, JSTypedArrayEnum type,
 struct UnalignedBuffer {
     uint8_t *ptr;
     int freed;
+    int null_calls;
 };
 
 static void free_unaligned_buffer(JSRuntime *rt, void *opaque, void *ptr)
 {
     struct UnalignedBuffer *buffer = opaque;
+    if (!ptr) {
+        buffer->null_calls++;
+        return;
+    }
     assert(ptr == buffer->ptr);
     buffer->freed++;
 }
@@ -282,6 +287,7 @@ static void test_unaligned_views(JSContext *ctx, JSTypedArrayEnum type,
         data = storage.bytes + misalignment;
         owner.ptr = data;
         owner.freed = 0;
+        owner.null_calls = 0;
         buffer = JS_NewArrayBuffer(ctx, data, 9 * element_size,
                                    free_unaligned_buffer, &owner, FALSE);
         assert(!JS_IsException(buffer));
@@ -307,9 +313,119 @@ static void test_unaligned_views(JSContext *ctx, JSTypedArrayEnum type,
         JS_FreeValue(ctx, view);
         JS_FreeValue(ctx, buffer);
         assert(owner.freed == 1);
+        assert(owner.null_calls == 0);
     }
     JS_FreeValue(ctx, function);
 }
+
+#ifdef CONFIG_ATOMICS
+static void test_unaligned_atomics(JSContext *ctx, JSTypedArrayEnum type,
+                                   int element_size)
+{
+    static const char source[] =
+        "(function(a) {"
+        "  const C = a.constructor;"
+        "  const b = new C(a.length);"
+        "  const bigint = typeof a[0] === 'bigint';"
+        "  const scalar = bigint ? BigInt : x => x;"
+        "  const values = bigint ?"
+        "    [-1n, 257n, 65537n, 4294967297n, 0xffffffffffffffffn,"
+        "     -(1n << 70n), (1n << 80n) + 513n] :"
+        "    [-1, 257, 65537, 4294967297, 2 ** 40 + 3, 3.75,"
+        "     NaN, Infinity, -Infinity];"
+        "  function check(actual, expected, label) {"
+        "    if (!Object.is(actual, expected)) throw Error(label);"
+        "  }"
+        "  function run(method, index, ...args) {"
+        "    const result = Atomics[method](a, index, ...args);"
+        "    check(result, Atomics[method](b, index, ...args), method + ' return');"
+        "    for (let i = 0; i < a.length; i++) check(a[i], b[i], method + ' data');"
+        "    return result;"
+        "  }"
+        "  for (const value of values) {"
+        "    for (const method of ['add', 'and', 'or', 'sub', 'xor', 'exchange']) {"
+        "      a.fill(scalar(-1)); b.fill(scalar(-1));"
+        "      run(method, 1, value);"
+        "      run('load', 1);"
+        "      run(method, 1, value);"
+        "    }"
+        "    a.fill(scalar(0)); b.fill(scalar(0));"
+        "    a[1] = value; b[1] = value;"
+        "    run('compareExchange', 1, value, scalar(513));"
+        "    run('compareExchange', 1, scalar(2), value);"
+        "    run('store', 2, value);"
+        "    run('load', 2);"
+        "  }"
+        "  const stored = bigint ? (1n << 80n) + 65537n : 65537.75;"
+        "  check(run('store', 0, stored), bigint ? stored : 65537,"
+        "        'untruncated store return');"
+        "  const events = [];"
+        "  a[0] = scalar(0);"
+        "  check(Atomics.compareExchange(a,"
+        "        { valueOf() { events.push('index'); return 0; } },"
+        "        { valueOf() { events.push('expected'); return scalar(0); } },"
+        "        { valueOf() { events.push('replacement'); return scalar(7); } }),"
+        "        scalar(0), 'conversion return');"
+        "  check(events.join(','), 'index,expected,replacement', 'conversion order');"
+        "  check(a[0], scalar(7), 'replacement value');"
+        "  const offset = a.byteOffset, length = a.length;"
+        "  const moved = new C(a.buffer.transfer(), offset, length);"
+        "  check(Atomics.store(moved, 0, scalar(11)), scalar(11), 'external transfer');"
+        "  check(Atomics.load(moved, 0), scalar(11), 'transferred backing');"
+        "  const size = C.BYTES_PER_ELEMENT;"
+        "  const rab = new ArrayBuffer(4 * size, { maxByteLength: 8 * size });"
+        "  const tracking = new C(rab);"
+        "  rab.resize(6 * size);"
+        "  check(Atomics.store(tracking, 5, scalar(13)), scalar(13), 'resize store');"
+        "  check(Atomics.load(tracking, 5), scalar(13), 'resize load');"
+        "  const grown = new C(rab.transfer(7 * size));"
+        "  check(Atomics.load(grown, 5), scalar(13), 'realloc transfer load');"
+        "  check(Atomics.store(grown, 6, scalar(17)), scalar(17), 'realloc transfer store');"
+        "})";
+    union {
+        uint64_t alignment;
+        uint8_t bytes[5 * 8 + 16];
+    } storage;
+    struct UnalignedBuffer owner;
+    JSValue function, buffer, view, result;
+    size_t i;
+    int offset;
+
+    function = JS_Eval(ctx, source, strlen(source), "unaligned-atomics",
+                       JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(function));
+    for (offset = 1; offset < 8; offset++) {
+        memset(storage.bytes, 0xa5, sizeof(storage.bytes));
+        owner.ptr = storage.bytes + offset;
+        owner.freed = 0;
+        owner.null_calls = 0;
+        buffer = JS_NewArrayBuffer(ctx, owner.ptr, 5 * element_size,
+                                   free_unaligned_buffer, &owner, FALSE);
+        assert(!JS_IsException(buffer));
+        view = new_view(ctx, buffer, type, element_size, 4);
+        result = JS_Call(ctx, function, JS_UNDEFINED, 1, &view);
+        if (JS_IsException(result)) {
+            JSValue exception = JS_GetException(ctx);
+            const char *message = JS_ToCString(ctx, exception);
+            fprintf(stderr, "Atomics type %d, offset %d: %s\n", type, offset,
+                     message ? message : "exception");
+            JS_FreeCString(ctx, message);
+            JS_FreeValue(ctx, exception);
+            assert(!JS_IsException(result));
+        }
+        JS_FreeValue(ctx, result);
+        for (i = 0; i < (size_t)offset + element_size; i++)
+            assert(storage.bytes[i] == 0xa5);
+        for (i = offset + 5 * element_size; i < sizeof(storage.bytes); i++)
+            assert(storage.bytes[i] == 0xa5);
+        JS_FreeValue(ctx, view);
+        JS_FreeValue(ctx, buffer);
+        assert(owner.freed == 1);
+        assert(owner.null_calls == 1);
+    }
+    JS_FreeValue(ctx, function);
+}
+#endif
 
 int main(void)
 {
@@ -325,6 +441,10 @@ int main(void)
         test_resizable_views(ctx, type, element_size);
         test_empty_views(ctx, type, element_size);
         test_unaligned_views(ctx, type, element_size);
+#ifdef CONFIG_ATOMICS
+        if (type >= JS_TYPED_ARRAY_INT8 && type <= JS_TYPED_ARRAY_BIG_UINT64)
+            test_unaligned_atomics(ctx, type, element_size);
+#endif
     }
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
