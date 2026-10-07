@@ -3175,7 +3175,68 @@ function test_array_iterator_length()
     }
 }
 
+function test_object_from_entries_close()
+{
+    const marker = new Error("entry failure");
+    const close_error = new Error("close failure");
+    function failure(setup, expected, close) {
+        let reads = 0, calls = 0, caught;
+        const iterator = {
+            get return() {
+                reads++;
+                return function() {
+                    calls++;
+                    throw close_error;
+                };
+            },
+        };
+        setup(iterator);
+        const items = { [Symbol.iterator]() { return iterator; } };
+        try {
+            Object.fromEntries(items);
+        } catch (error) {
+            caught = error;
+        }
+        if (expected === TypeError)
+            assert(caught instanceof TypeError, true);
+        else
+            assert(caught, expected);
+        assert(reads, close ? 1 : 0);
+        assert(calls, close ? 1 : 0);
+    }
+    failure(iterator => {
+        Object.defineProperty(iterator, "next", { get() { throw marker; } });
+    }, marker, false);
+    failure(iterator => { iterator.next = 1; }, TypeError, false);
+    failure(iterator => { iterator.next = () => { throw marker; }; }, marker, false);
+    failure(iterator => { iterator.next = () => 1; }, TypeError, false);
+    failure(iterator => {
+        iterator.next = () => ({ get done() { throw marker; } });
+    }, marker, false);
+    failure(iterator => {
+        iterator.next = () => ({ done: false, get value() { throw marker; } });
+    }, marker, false);
+    failure(iterator => {
+        iterator.next = () => ({ done: false, value: 1 });
+    }, TypeError, true);
+    failure(iterator => {
+        iterator.next = () => ({ done: false, value: {
+            get 0() { throw marker; },
+        } });
+    }, marker, true);
+    failure(iterator => {
+        iterator.next = () => ({ done: false, value: {
+            0: "key", get 1() { throw marker; },
+        } });
+    }, marker, true);
+    failure(iterator => {
+        const key = { [Symbol.toPrimitive]() { throw marker; } };
+        iterator.next = () => ({ done: false, value: [key, "value"] });
+    }, marker, true);
+}
+
 test();
+test_object_from_entries_close();
 test_array_iterator_length();
 test_group_by_own_elements();
 test_group_by_callback_receiver();
