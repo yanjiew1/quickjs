@@ -61,7 +61,7 @@ static inline BOOL typed_array_is_bigint(int class_id)
 static JSValue js_typed_array_constructor_ta(JSContext *ctx,
                                              JSValueConst new_target,
                                              JSValueConst src_obj,
-                                             int classid, uint32_t len);
+                                             int classid, int64_t len);
 
 static JSValue js_array_from_iterator(JSContext *ctx, uint32_t *plen,
                                       JSValueConst obj, JSValueConst method);
@@ -1944,7 +1944,7 @@ static JSValue js_typed_array_constructor_obj(JSContext *ctx,
 static JSValue js_typed_array_constructor_ta(JSContext *ctx,
                                              JSValueConst new_target,
                                              JSValueConst src_obj,
-                                             int classid, uint32_t len)
+                                             int classid, int64_t len)
 {
     JSObject *p, *src_buffer;
     JSTypedArray *ta;
@@ -1961,6 +1961,8 @@ static JSValue js_typed_array_constructor_ta(JSContext *ctx,
         JS_ThrowTypeErrorArrayBufferOOB(ctx);
         goto fail;
     }
+    if (len < 0)
+        len = p->u.array.count;
     if (typed_array_is_bigint(p->class_id) != typed_array_is_bigint(classid)) {
         JS_ThrowTypeError(ctx, "incompatible typed array content types");
         goto fail;
@@ -2073,7 +2075,7 @@ JSValue js_typed_array_constructor(JSContext *ctx,
             if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
                 p->class_id <= JS_CLASS_FLOAT64_ARRAY) {
                 return js_typed_array_constructor_ta(ctx, new_target, argv[0],
-                                                     classid, p->u.array.count);
+                                                     classid, -1);
             } else {
                 return js_typed_array_constructor_obj(ctx, new_target, argv[0], classid);
             }
