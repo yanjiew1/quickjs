@@ -60,6 +60,8 @@ struct JSResourceScope {
     struct JSResourceScope *prev;
     BlockEnv block;
     BOOL declarations_allowed;
+    BOOL has_async;
+    int label_step, label_await_failed, label_disposed;
     int resources_idx;
     int error_idx;
     int has_error_idx;
@@ -4794,6 +4796,7 @@ static void push_resource_scope(JSParseState *s, JSResourceScope *scope,
 {
     scope->prev = s->cur_func->resource_scope;
     scope->declarations_allowed = declarations_allowed;
+    scope->has_async = FALSE;
     scope->resources_idx = -1;
     push_break_entry(s->cur_func, &scope->block, JS_ATOM_NULL, -1, -1, 0);
     s->cur_func->resource_scope = scope;
@@ -4851,6 +4854,29 @@ static int activate_resource_scope(JSParseState *s, BOOL preserve_value)
         emit_op(s, OP_put_loc);
         emit_u16(s, scope->error_idx);
     }
+    return 0;
+}
+
+/* Async hints belong to records in the shared list. A scope containing
+   any await using declaration can suspend even while disposing sync records. */
+static int mark_resource_scope_async(JSParseState *s)
+{
+    JSFunctionDef *fd = s->cur_func;
+    JSResourceScope *scope = fd->resource_scope;
+
+    if (!(fd->func_kind & JS_FUNC_ASYNC) || !fd->in_function_body)
+        return js_parse_error(s, "await using requires an asynchronous body");
+    assert(scope && scope->resources_idx >= 0);
+    if (!scope->has_async) {
+        scope->label_step = new_label(s);
+        scope->label_await_failed = new_label(s);
+        scope->label_disposed = new_label(s);
+        if (scope->label_step < 0 || scope->label_await_failed < 0 ||
+            scope->label_disposed < 0)
+            return -1;
+        scope->has_async = TRUE;
+    }
+    fd->has_await = TRUE;
     return 0;
 }
 
@@ -5026,17 +5052,58 @@ static void pop_resource_scope(JSParseState *s, JSResourceScope *scope)
             emit_u16(s, scope_level);
         }
     }
+    if (scope->has_async)
+        emit_label(s, scope->label_step);
     emit_op(s, OP_get_loc);
     emit_u16(s, scope->resources_idx);
     emit_op(s, OP_get_loc);
     emit_u16(s, scope->error_idx);
     emit_op(s, OP_get_loc);
     emit_u16(s, scope->has_error_idx);
+    /* The cursor owns the seeded completion or resumed Await result.
+       Release the duplicate hidden roots before advancing the cursor. */
+    emit_op(s, OP_undefined);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->error_idx);
+    emit_op(s, OP_push_false);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->has_error_idx);
     emit_op(s, OP_resource_management);
     emit_u8(s, OP_RESOURCE_DISPOSE_STEP);
-    /* No async records are emitted by synchronous declarations. */
-    emit_op(s, OP_drop);
-    emit_op(s, OP_drop);
+    if (scope->has_async) {
+        /* Stack: pending completion, return address, Await operand, flag.
+           Suspend directly, without disposeAsync's overall promise. */
+        emit_goto(s, OP_if_false, scope->label_disposed);
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->error_idx);
+        /* Emit the catch below the operand; never swap a catch marker. */
+        emit_goto(s, OP_catch, scope->label_await_failed);
+        emit_op(s, OP_get_loc);
+        emit_u16(s, scope->error_idx);
+        emit_op(s, OP_undefined);
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->error_idx);
+        emit_op(s, OP_await);
+        emit_op(s, OP_nip); /* remove catch, preserve fulfillment */
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->error_idx);
+        emit_op(s, OP_push_false);
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->has_error_idx);
+        emit_goto(s, OP_goto, scope->label_step);
+        emit_label(s, scope->label_await_failed);
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->error_idx);
+        emit_op(s, OP_push_true);
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->has_error_idx);
+        emit_goto(s, OP_goto, scope->label_step);
+        emit_label(s, scope->label_disposed);
+        emit_op(s, OP_drop); /* unused normal result */
+    } else {
+        emit_op(s, OP_drop); /* false Await flag */
+        emit_op(s, OP_drop); /* unused normal result */
+    }
     emit_op(s, OP_undefined);
     emit_op(s, OP_put_loc);
     emit_u16(s, scope->resources_idx);
@@ -5400,6 +5467,38 @@ static int is_using_declaration(JSParseState *s, BOOL for_in_of)
     return result;
 }
 
+static int is_await_using_declaration(JSParseState *s)
+{
+    JSParsePos pos;
+    int result = FALSE;
+
+    if (s->token.val != TOK_AWAIT)
+        return FALSE;
+    js_parse_get_pos(s, &pos);
+    if (next_token(s)) {
+        result = -1;
+    } else if (!s->got_lf) {
+        result = is_using_declaration(s, FALSE);
+    }
+    if (js_parse_seek_token(s, &pos))
+        result = -1;
+    return result;
+}
+
+static int resource_declaration_operation(JSParseState *s, BOOL for_in_of)
+{
+    int result = is_await_using_declaration(s);
+
+    if (result < 0)
+        return -2;
+    if (result)
+        return OP_RESOURCE_ADD_ASYNC;
+    result = is_using_declaration(s, for_in_of);
+    if (result < 0)
+        return -2;
+    return result ? OP_RESOURCE_ADD_SYNC : -1;
+}
+
 /* A resource frame belongs inside the iterator frame. The binding
    chunk runs only after a value is produced, before the body. */
 static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
@@ -5409,7 +5508,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     JSFunctionDef *fd = s->cur_func;
     JSAtom var_name;
     BOOL has_initializer, is_for_of, has_destructuring, is_using;
-    int tok, tok1, opcode, scope, block_scope_level;
+    int tok, tok1, opcode, scope, block_scope_level, resource_operation;
     int label_next, label_expr, label_cont, label_body, label_break;
     int pos_next, pos_expr;
     BlockEnv break_entry;
@@ -5454,10 +5553,10 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     default:
         return -1;
     }
-    switch (is_using_declaration(s, TRUE)) {
-    case TRUE:
-        if (is_async)
-            return js_parse_error(s, "resource for-await-of heads are not supported yet");
+    resource_operation = resource_declaration_operation(s, TRUE);
+    if (resource_operation == -2)
+        return -1;
+    if (resource_operation >= 0) {
         is_using = TRUE;
         tok = TOK_CONST;
         /* A new lexical environment is required before method lookup,
@@ -5468,11 +5567,10 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         if (activate_resource_scope(s, TRUE) < 0)
             return -1;
         /* Stack: iterator record, resource catch offset, value. */
-        break;
-    case FALSE:
-        break;
-    default:
-        return -1;
+        if (resource_operation == OP_RESOURCE_ADD_ASYNC) {
+            if (mark_resource_scope_async(s) < 0 || next_token(s))
+                return -1;
+        }
     }
     if (tok == TOK_VAR || tok == TOK_LET || tok == TOK_CONST) {
         if (next_token(s))
@@ -5500,7 +5598,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
                 return -1;
             }
             if (is_using)
-                emit_resource_registration(s, OP_RESOURCE_ADD_SYNC);
+                emit_resource_registration(s, resource_operation);
             emit_op(s, (tok == TOK_CONST || tok == TOK_LET) ?
                     OP_scope_put_var_init : OP_scope_put_var);
             emit_atom(s, var_name);
@@ -5966,7 +6064,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             int pos_cont, pos_body, block_scope_level;
             BlockEnv break_entry;
             JSResourceScope resources;
-            int tok, bits;
+            int tok, bits, resource_operation;
             BOOL is_async, is_using;
 
             if (next_token(s))
@@ -6014,8 +6112,10 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 default:
                     goto fail;
                 }
-                switch (is_using_declaration(s, FALSE)) {
-                case TRUE:
+                resource_operation = resource_declaration_operation(s, FALSE);
+                if (resource_operation == -2)
+                    goto fail;
+                if (resource_operation >= 0) {
                     is_using = TRUE;
                     tok = TOK_CONST;
                     /* One list for the whole loop. Same-loop continue
@@ -6023,17 +6123,16 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                     push_resource_scope(s, &resources, TRUE);
                     if (activate_resource_scope(s, FALSE) < 0)
                         goto fail;
-                    break;
-                case FALSE:
-                    break;
-                default:
-                    goto fail;
+                    if (resource_operation == OP_RESOURCE_ADD_ASYNC) {
+                        if (mark_resource_scope_async(s) < 0 || next_token(s))
+                            goto fail;
+                    }
                 }
                 if (tok == TOK_VAR || tok == TOK_LET || tok == TOK_CONST) {
                     if (next_token(s))
                         goto fail;
                     if (js_parse_var(s, FALSE, tok, FALSE,
-                                     is_using ? OP_RESOURCE_ADD_SYNC : -1))
+                                     is_using ? resource_operation : -1))
                         goto fail;
                 } else {
                     if (js_parse_expr2(s, FALSE))
@@ -6447,6 +6546,27 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
         if (!(decl_mask & DECL_MASK_OTHER) && peek_token(s, FALSE) == '*')
             goto func_decl_error;
         goto parse_func_var;
+    case TOK_AWAIT:
+        switch (is_await_using_declaration(s)) {
+        case TRUE:
+            if (!(decl_mask & DECL_MASK_OTHER)) {
+                js_parse_error(s, "await using declaration requires a statement list");
+                goto fail;
+            }
+            if (activate_resource_scope(s, FALSE) < 0 ||
+                mark_resource_scope_async(s) < 0 ||
+                next_token(s) || next_token(s))
+                goto fail;
+            if (js_parse_var(s, PF_IN_ACCEPTED, TOK_CONST, FALSE,
+                             OP_RESOURCE_ADD_ASYNC) ||
+                js_parse_expect_semi(s))
+                goto fail;
+            goto done;
+        case FALSE:
+            goto hasexpr;
+        default:
+            goto fail;
+        }
     case TOK_IDENT:
         if (s->token.u.ident.is_reserved) {
             js_parse_error_reserved_identifier(s);

@@ -796,6 +796,507 @@ async function test_async_iterator_result_order()
 
 await test_async_iterator_result_order();
 
+/* Source-only regression additions; append to tests/test_async.js. */
+async function test_await_using_registration_and_mixed_order()
+{
+    const events = [];
+    let asyncReads = 0, fallbackReads = 0;
+    const asyncResource = {
+        get [Symbol.asyncDispose]() {
+            asyncReads++;
+            return function() {
+                assert(this, asyncResource);
+                assert(arguments.length, 0);
+                events.push("async start");
+                return { then(resolve) { events.push("async end"); resolve(7); } };
+            };
+        },
+        get [Symbol.dispose]() { throw Error("fallback must not be read"); }
+    };
+    const fallback = {
+        [Symbol.asyncDispose]: null,
+        get [Symbol.dispose]() {
+            fallbackReads++;
+            return function() {
+                assert(this, fallback);
+                events.push("fallback");
+                return { get then() { throw Error("sync fallback return must be ignored"); } };
+            };
+        }
+    };
+    {
+        using first = { [Symbol.dispose]() { events.push("first"); } };
+        await using second = asyncResource, third = fallback;
+        using last = { [Symbol.dispose]() { events.push("last"); } };
+        events.push("body");
+    }
+    assert(asyncReads, 1);
+    assert(fallbackReads, 1);
+    assert(events.join(","), "body,last,fallback,async start,async end,first");
+
+    const original = {};
+    let caught;
+    events.length = 0;
+    try {
+        await using first = { [Symbol.asyncDispose]() { events.push("first"); } },
+                    second = { get [Symbol.asyncDispose]() { throw original; } };
+        assert(false);
+    } catch (error) { caught = error; }
+    assert(caught, original);
+    assert(events.join(","), "first");
+    for (const bad of [0, "text", false, {}, { [Symbol.asyncDispose]: 1 }]) {
+        let threw = false;
+        try { await using resource = bad; }
+        catch (error) { threw = error instanceof TypeError; }
+        assert(threw, true);
+    }
+}
+
+async function test_await_using_await_boundaries()
+{
+    let sameTurn = true, before, after;
+    async function nullish() {
+        {
+            await using first = null, second = undefined;
+            before = sameTurn;
+        }
+        after = sameTurn;
+    }
+    const pending = nullish();
+    sameTurn = false;
+    await pending;
+    assert(before, true);
+    assert(after, false);
+    sameTurn = true;
+    async function skipped() {
+        outer: {
+            if (true) break outer;
+            await using resource = null;
+        }
+        after = sameTurn;
+    }
+    const skippedPromise = skipped();
+    sameTurn = false;
+    await skippedPromise;
+    assert(after, true);
+
+    sameTurn = true;
+    async function syncOnly() {
+        using first = { [Symbol.dispose]() { assert(sameTurn, true); } };
+        if (true) return 42;
+        await using unevaluated = null;
+    }
+    const syncPromise = syncOnly();
+    sameTurn = false;
+    assert(await syncPromise, 42);
+
+    const events = [];
+    async function between() {
+        {
+            using first = { [Symbol.dispose]() { events.push("sync"); } };
+            await using second = null;
+            events.push("body");
+        }
+        events.push("after");
+    }
+    const betweenPromise = between();
+    assert(events.join(","), "body");
+    await betweenPromise;
+    assert(events.join(","), "body,sync,after");
+}
+
+async function test_await_using_suppression_and_capture()
+{
+    const bodyError = {}, asyncError = {}, syncError = {};
+    const intrinsic = SuppressedError;
+    let caught;
+    globalThis.SuppressedError = function() { throw Error("intrinsic required"); };
+    try {
+        try {
+            using first = { [Symbol.dispose]() { throw syncError; } };
+            await using second = { [Symbol.asyncDispose]() {
+                return Promise.reject(asyncError);
+            } };
+            throw bodyError;
+        } catch (error) { caught = error; }
+    } finally { globalThis.SuppressedError = intrinsic; }
+    assert(caught instanceof intrinsic, true);
+    assert(caught.error, syncError);
+    assert(caught.suppressed instanceof intrinsic, true);
+    assert(caught.suppressed.error, asyncError);
+    assert(caught.suppressed.suppressed, bodyError);
+    let threw = false;
+    try {
+        await using resource = { [Symbol.asyncDispose]() { throw undefined; } };
+    } catch (error) { threw = true; assert(error, undefined); }
+    assert(threw, true);
+    threw = false;
+    try { await using resource = null; throw undefined; }
+    catch (error) { threw = true; assert(error, undefined); }
+    assert(threw, true);
+
+    let capture;
+    async function divertedReturn() {
+        try {
+            await using resource = { [Symbol.asyncDispose]() {
+                return Promise.reject(asyncError);
+            } };
+            { let retained = 42; capture = () => retained; return 1; }
+        } catch (error) { assert(error, asyncError); }
+        { let reused = 99; assert(reused, 99); }
+        return capture();
+    }
+    assert(await divertedReturn(), 42);
+
+    const events = [];
+    async function returning() {
+        await using resource = { [Symbol.asyncDispose]() {
+            events.push("start");
+            return Promise.resolve().then(() => events.push("end"));
+        } };
+        return 43;
+    }
+    const pending = returning();
+    assert(events.join(","), "start");
+    assert(await pending, 43);
+    assert(events.join(","), "start,end");
+
+    events.length = 0;
+    async function* generator() {
+        await using resource = { [Symbol.asyncDispose]() {
+            events.push("start");
+            return Promise.resolve().then(() => events.push("end"));
+        } };
+        yield 1;
+    }
+    const iterator = generator();
+    assert((await iterator.next()).value, 1);
+    assert(events.length, 0);
+    const result = await iterator.return(44);
+    assert(result.done, true);
+    assert(result.value, 44);
+    assert(events.join(","), "start,end");
+}
+
+async function test_await_using_classic_for()
+{
+    const events = [], captures = [];
+    function resource(name) {
+        return { [Symbol.asyncDispose]() {
+            events.push(name + " start");
+            return Promise.resolve().then(() => events.push(name + " end"));
+        } };
+    }
+    let index = 0, retained;
+    for (await using first = resource("first"), second = resource("second");
+         index < 3; index++) {
+        retained = first;
+        captures.push(() => first);
+        if (index === 0) continue;
+        if (index === 1) break;
+    }
+    assert(index, 1);
+    assert(captures[0](), retained);
+    assert(captures[1](), retained);
+    assert(events.join(","), "second start,second end,first start,first end");
+    events.length = 0;
+    const original = {};
+    let caught;
+    try {
+        for (await using first = resource("first"), second = (() => { throw original; })();
+             false;) assert(false);
+    } catch (error) { caught = error; }
+    assert(caught, original);
+    assert(events.join(","), "first start,first end");
+}
+
+async function test_resource_iteration_heads()
+{
+    for (const asynchronousIterator of [false, true]) {
+        for (const asynchronousDisposal of [false, true]) {
+            const events = [], captures = [];
+            let count = 0;
+            const source = {
+                [asynchronousIterator ? Symbol.asyncIterator : Symbol.iterator]() { return this; },
+                next() {
+                    events.push("next " + count);
+                    const index = count++;
+                    const value = {
+                        index,
+                        [Symbol.dispose]() { events.push("sync " + index); },
+                        [Symbol.asyncDispose]() {
+                            events.push("async start " + index);
+                            return Promise.resolve().then(() => events.push("async end " + index));
+                        }
+                    };
+                    return { value, done: index === 2 };
+                },
+                return() {
+                    events.push("close start");
+                    if (!asynchronousIterator) return {};
+                    return Promise.resolve().then(() => { events.push("close end"); return {}; });
+                }
+            };
+            if (asynchronousIterator && asynchronousDisposal) {
+                for await (await using value of source) {
+                    captures.push(() => value.index);
+                    if (value.index === 0) continue;
+                    break;
+                }
+            } else if (asynchronousIterator) {
+                for await (using value of source) {
+                    captures.push(() => value.index);
+                    if (value.index === 0) continue;
+                    break;
+                }
+            } else if (asynchronousDisposal) {
+                for (await using value of source) {
+                    captures.push(() => value.index);
+                    if (value.index === 0) continue;
+                    break;
+                }
+            } else {
+                for (using value of source) {
+                    captures.push(() => value.index);
+                    if (value.index === 0) continue;
+                    break;
+                }
+            }
+            assert(captures[0](), 0);
+            assert(captures[1](), 1);
+            const disposal0 = asynchronousDisposal ? "async start 0,async end 0" : "sync 0";
+            const disposal1 = asynchronousDisposal ? "async start 1,async end 1" : "sync 1";
+            assert(events.join(","), "next 0," + disposal0 + ",next 1," + disposal1 +
+                   ",close start" + (asynchronousIterator ? ",close end" : ""));
+        }
+    }
+
+    const original = {}, disposalError = {}, closeError = {}, events = [];
+    const source = {
+        [Symbol.asyncIterator]() { return this; },
+        next() { return { value: { [Symbol.asyncDispose]() {
+            events.push("dispose"); return Promise.reject(disposalError);
+        } }, done: false }; },
+        return() { events.push("close"); return Promise.reject(closeError); }
+    };
+    let caught;
+    try { for await (await using value of source) throw original; }
+    catch (error) { caught = error; }
+    assert(caught instanceof SuppressedError, true);
+    assert(caught.error, disposalError);
+    assert(caught.suppressed, original);
+    assert(events.join(","), "dispose,close");
+
+    for (await using of of []) assert(false);
+    for await (await using of of []) assert(false);
+}
+
+async function test_await_using_syntax_and_tdz()
+{
+    const AsyncFunction = Object.getPrototypeOf(async function() {}).constructor;
+    for (const source of [
+        "await using value;", "await using [value] = null;",
+        "await using {value} = null;", "await using let = null;",
+        "if (true) await using value = null;", "label: await using value = null;",
+        "switch (0) { case 0: await using value = null; }",
+        "for (await using value in {}) {}", "for (await using value = null of []) {}",
+        "for (await using first, second of []) {}", "for (await using [value] of []) {}",
+        "await using value = null; var value;", "await using value = null; let value;",
+        "await using value = null, value = null;", "await using value = null; value = 1;"
+    ]) {
+        if (source.endsWith("value = 1;")) {
+            let caught = false;
+            try { await new AsyncFunction(source)(); }
+            catch (error) { caught = error instanceof TypeError; }
+            assert(caught, true);
+        } else {
+            let caught = false;
+            try { new AsyncFunction(source); }
+            catch (error) { caught = error instanceof SyntaxError; }
+            assert(caught, true);
+        }
+    }
+    for (const source of ["await using value = null;", "{ await using value = null; }"]) {
+        let caught = false;
+        try { new Function(source); }
+        catch (error) { caught = error instanceof SyntaxError; }
+        assert(caught, true);
+    }
+    let caught = false;
+    try { await using resource = resource; }
+    catch (error) { caught = error instanceof ReferenceError; }
+    assert(caught, true);
+    const using = { item: 42 };
+    assert((await using["item"]), 42);
+    assert(await new AsyncFunction("const using = 43; return await\nusing;")(), 43);
+}
+
+async function test_await_using_suspended_roots_and_cached_method()
+{
+    let collectGarbage = globalThis.gc;
+    if (typeof collectGarbage !== "function") {
+        try {
+            collectGarbage = (await import("std")).gc;
+        } catch (error) {
+            /* Other engines may not provide explicit garbage collection. */
+        }
+    }
+    let release, calls = 0, capture;
+    const gate = new Promise(resolve => { release = resolve; });
+    async function disposing() {
+        await using resource = {
+            cycle: null,
+            [Symbol.asyncDispose]() {
+                calls++;
+                assert(this.cycle, this);
+                return gate;
+            }
+        };
+        resource.cycle = resource;
+        capture = () => resource;
+        resource[Symbol.asyncDispose] = () => { throw Error("cached method required"); };
+    }
+    const pending = disposing();
+    assert(calls, 1);
+    if (typeof collectGarbage === "function")
+        collectGarbage();
+    assert(capture().cycle, capture());
+    release();
+    await pending;
+    assert(calls, 1);
+}
+
+await test_await_using_registration_and_mixed_order();
+await test_await_using_await_boundaries();
+await test_await_using_suppression_and_capture();
+await test_await_using_classic_for();
+await test_resource_iteration_heads();
+await test_await_using_syntax_and_tdz();
+await test_await_using_suspended_roots_and_cached_method();
+
+/* Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
+/* Deferred unit: requires the composed native resource syntax package. */
+async function test_async_generator_return_await_order()
+{
+    for (const asyncIterator of [false, true]) {
+        for (const resourceHead of [false, true]) {
+            for (const returnRequest of [false, true]) {
+                for (const rejectValue of [false, true]) {
+                    const events = [], valueError = {}, closeError = {};
+                    let release;
+                    const value = {
+                        get then() {
+                            events.push("value then");
+                            return function(resolve, reject) {
+                                release = () => rejectValue ? reject(valueError) : resolve(42);
+                            };
+                        }
+                    };
+                    const resource = {
+                        [Symbol.dispose]() { events.push("dispose"); },
+                        [Symbol.asyncDispose]() {
+                            events.push("dispose start");
+                            return Promise.resolve().then(() => events.push("dispose end"));
+                        }
+                    };
+                    const source = {
+                        [asyncIterator ? Symbol.asyncIterator : Symbol.iterator]() {
+                            return this;
+                        },
+                        next() { return { value: resource, done: false }; },
+                        return() {
+                            events.push("close");
+                            if (asyncIterator) {
+                                return { then(resolve, reject) {
+                                    events.push("close await");
+                                    if (rejectValue) reject(closeError);
+                                    else resolve({});
+                                } };
+                            }
+                            return { get then() {
+                                events.push("wrong sync close await");
+                                throw closeError;
+                            } };
+                        }
+                    };
+                    async function* generator() {
+                        if (asyncIterator && resourceHead) {
+                            for await (await using item of source) {
+                                if (returnRequest) yield 1;
+                                return value;
+                            }
+                        } else if (asyncIterator) {
+                            for await (const item of source) {
+                                if (returnRequest) yield 1;
+                                return value;
+                            }
+                        } else if (resourceHead) {
+                            for (using item of source) {
+                                if (returnRequest) yield 1;
+                                return value;
+                            }
+                        } else {
+                            for (const item of source) {
+                                if (returnRequest) yield 1;
+                                return value;
+                            }
+                        }
+                    }
+                    const iterator = generator();
+                    let pending;
+                    if (returnRequest) {
+                        assert((await iterator.next()).value, 1);
+                        pending = iterator.return(value);
+                    } else {
+                        pending = iterator.next();
+                    }
+                    /* Allow the async iterator's next Await to finish. A
+                       fixed bound also detects failure to await the value. */
+                    for (let turn = 0; !release && turn < 32; turn++)
+                        await Promise.resolve();
+                    assert(typeof release, "function");
+                    assert(events.join(","), "value then");
+                    release();
+                    let caught = false;
+                    try {
+                        const result = await pending;
+                        assert(rejectValue, false);
+                        assert(result.done, true);
+                        assert(result.value, 42);
+                    } catch (error) {
+                        caught = true;
+                        assert(rejectValue, true);
+                        assert(error, valueError);
+                    }
+                    assert(caught, rejectValue);
+                    const cleanup = resourceHead ? (asyncIterator ?
+                        ",dispose start,dispose end" : ",dispose") : "";
+                    assert(events.join(","), "value then" + cleanup + ",close" +
+                           (asyncIterator ? ",close await" : ""));
+                }
+            }
+        }
+    }
+
+    /* Ordinary async function return assimilation follows sync cleanup. */
+    const events = [];
+    const source = {
+        [Symbol.iterator]() { return this; },
+        next() { return { value: { [Symbol.dispose]() {
+            events.push("dispose");
+        } }, done: false }; },
+        return() { events.push("close"); return {}; }
+    };
+    async function ordinary() {
+        for (using item of source)
+            return { then(resolve) { events.push("value then"); resolve(43); } };
+    }
+    assert(await ordinary(), 43);
+    assert(events.join(","), "dispose,close,value then");
+}
+
+await test_async_generator_return_await_order();
+
 async function assert_array_from_async_rejects(operation, expected)
 {
     let rejected = false;

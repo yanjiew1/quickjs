@@ -244,6 +244,11 @@ import { usingModuleEvents, usingModuleResource } from "./fixture_using_module.j
 assert(usingModuleEvents.join(","), "evaluated,disposed");
 assert(typeof usingModuleResource[Symbol.dispose], "function");
 
+/* Source-only module regression additions; append to tests/test_module.js. */
+import { awaitUsingModuleEvents, awaitUsingModuleResource } from "./fixture_await_using_module.js";
+assert(awaitUsingModuleEvents.join(","), "evaluated,async start,async end,sync");
+assert(typeof awaitUsingModuleResource[Symbol.asyncDispose], "function");
+
 async function test_module_reserved_bindings()
 {
     const invalid = [
