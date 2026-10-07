@@ -19,7 +19,7 @@ index 9828b15..9e24d64 100644
 +  long: 200,
 +  huge: 1000,
  };
- 
+
  /**
 diff --git a/harness/regExpUtils.js b/harness/regExpUtils.js
 index b397be0..c197ddc 100644
@@ -28,7 +28,7 @@ index b397be0..c197ddc 100644
 @@ -6,27 +6,30 @@ description: |
  defines: [buildString, testPropertyEscapes, testPropertyOfStrings, testExtendedCharacterClass, matchValidator]
  ---*/
- 
+
 +if ($262 && typeof $262.codePointRange === "function") {
 +    /* use C function to build the codePointRange (much faster with
 +       slow JS engines) */
@@ -70,3 +70,229 @@ index b397be0..c197ddc 100644
    }
    return result;
  }
+
+--- a/test/built-ins/Iterator/prototype/drop/limit-rangeerror.js
++++ b/test/built-ins/Iterator/prototype/drop/limit-rangeerror.js
+@@ -3,8 +3,8 @@
+ /*---
+ esid: sec-iterator.prototype.drop
+ description: >
+-  Throws a RangeError exception when limit argument is NaN, less than 0, or
+-  finite and greater than Number.MAX_SAFE_INTEGER.
++  Throws a RangeError exception for NaN or negative integer limits.
++  Every nonnegative finite limit and positive infinity are accepted.
+ info: |
+   Iterator.prototype.drop ( limit )
+
+@@ -15,7 +15,7 @@
+      a. Let error be ThrowCompletion(a newly created RangeError object).
+      b. Return ? IteratorClose(iterated, error).
+   8. Let integerLimit be ! ToIntegerOrInfinity(numLimit).
+-  9. If integerLimit < 0, then
++  8. If integerLimit < 0, then
+      a. Let error be ThrowCompletion(a newly created RangeError object).
+      b. Return ? IteratorClose(iterated, error).
+
+@@ -28,6 +28,9 @@
+ iterator.drop(null);
+ iterator.drop(Number.MAX_SAFE_INTEGER);
+ iterator.drop(Infinity);
++iterator.drop(Number.MAX_SAFE_INTEGER + 1);
++iterator.drop(2 ** 63);
++iterator.drop(Number.MAX_VALUE);
+
+ assert.throws(RangeError, () => {
+   iterator.drop(-1);
+@@ -46,5 +49,5 @@
+ });
+
+ assert.throws(RangeError, () => {
+-  iterator.drop(Number.MAX_SAFE_INTEGER + 1);
++  iterator.drop(-Infinity);
+ });
+
+--- a/test/built-ins/Iterator/prototype/drop/argument-effect-order.js
++++ b/test/built-ins/Iterator/prototype/drop/argument-effect-order.js
+@@ -60,7 +60,7 @@
+     {
+       valueOf() {
+         effects.push('ToNumber limit');
+-        return Number.MAX_SAFE_INTEGER + 1;
++        return -Infinity;
+       },
+     }
+   );
+@@ -85,3 +85,18 @@
+ });
+
+ assert.compareArray(effects, []);
++
++// Large valid limits still perform conversion before acquiring next.
++effects = [];
++Iterator.prototype.drop.call({
++  get next() {
++    effects.push('get next');
++    return function () { return { done: true }; };
++  }
++}, {
++  valueOf() {
++    effects.push('ToNumber limit');
++    return Number.MAX_VALUE;
++  }
++});
++assert.compareArray(effects, ['ToNumber limit', 'get next']);
+
+--- a/test/built-ins/Iterator/prototype/drop/argument-validation-failure-closes-underlying.js
++++ b/test/built-ins/Iterator/prototype/drop/argument-validation-failure-closes-underlying.js
+@@ -36,7 +36,7 @@
+
+ closed = false;
+ assert.throws(RangeError, function() {
+-  closable.drop(Number.MAX_SAFE_INTEGER + 1);
++  closable.drop(-Infinity);
+ });
+ assert.sameValue(closed, true);
+
+@@ -52,3 +52,18 @@
+   closable.drop({ get valueOf() { throw new ShouldNotGetValueOf(); }});
+ });
+ assert.sameValue(closed, true);
++
++// A large valid limit does not close the source during helper creation.
++closed = false;
++let acquired = 0;
++let large = {
++  __proto__: Iterator.prototype,
++  get next() {
++    acquired += 1;
++    return function () { return { done: true }; };
++  },
++  return() { closed = true; return {}; }
++};
++large.drop(Number.MAX_VALUE);
++assert.sameValue(acquired, 1);
++assert.sameValue(closed, false);
+
+--- a/test/built-ins/Iterator/prototype/take/limit-rangeerror.js
++++ b/test/built-ins/Iterator/prototype/take/limit-rangeerror.js
+@@ -3,19 +3,16 @@
+ /*---
+ esid: sec-iterator.prototype.take
+ description: >
+-  Throws a RangeError exception when limit argument is NaN, less than 0, or
+-  finite and greater than Number.MAX_SAFE_INTEGER.
++  Throws a RangeError exception for NaN or negative integer limits.
++  Every nonnegative finite limit and positive infinity are accepted.
+ info: |
+   Iterator.prototype.take ( limit )
+
+   6. If numLimit is NaN, then
+     a. Let error be ThrowCompletion(a newly created RangeError object).
+     b. Return ? IteratorClose(iterated, error).
+-  7. If numLimit is finite and numLimit > 𝔽(2**53 - 1), then
+-    a. Let error be ThrowCompletion(a newly created RangeError object).
+-    b. Return ? IteratorClose(iterated, error).
+-  8. Let integerLimit be ! ToIntegerOrInfinity(numLimit).
+-  9. If integerLimit < 0, then
++  7. Let integerLimit be ! ToIntegerOrInfinity(numLimit).
++  8. If integerLimit < 0, then
+     a. Let error be ThrowCompletion(a newly created RangeError object).
+     b. Return ? IteratorClose(iterated, error).
+
+@@ -28,6 +25,9 @@
+ iterator.take(null);
+ iterator.take(Number.MAX_SAFE_INTEGER);
+ iterator.take(Infinity);
++iterator.take(Number.MAX_SAFE_INTEGER + 1);
++iterator.take(2 ** 63);
++iterator.take(Number.MAX_VALUE);
+
+ assert.throws(RangeError, () => {
+   iterator.take(-1);
+@@ -46,5 +46,5 @@
+ });
+
+ assert.throws(RangeError, () => {
+-  iterator.take(Number.MAX_SAFE_INTEGER + 1);
++  iterator.take(-Infinity);
+ });
+
+--- a/test/built-ins/Iterator/prototype/take/argument-effect-order.js
++++ b/test/built-ins/Iterator/prototype/take/argument-effect-order.js
+@@ -15,14 +15,11 @@
+   6. If numLimit is NaN, then
+      a. Let error be ThrowCompletion(a newly created RangeError object).
+      b. Return ? IteratorClose(iterated, error).
+-  7. If numLimit is finite and numLimit > 𝔽(2**53 - 1), then
++  7. Let integerLimit be ! ToIntegerOrInfinity(numLimit).
++  8. If integerLimit < 0, then
+      a. Let error be ThrowCompletion(a newly created RangeError object).
+      b. Return ? IteratorClose(iterated, error).
+-  8. Let integerLimit be ! ToIntegerOrInfinity(numLimit).
+-  9. If integerLimit < 0, then
+-     a. Let error be ThrowCompletion(a newly created RangeError object).
+-     b. Return ? IteratorClose(iterated, error).
+-  10. Set iterated to ? GetIteratorDirect(obj).
++  9. Set iterated to ? GetIteratorDirect(obj).
+
+ includes: [compareArray.js]
+ features: [iterator-helpers]
+@@ -77,7 +74,7 @@
+     {
+       valueOf() {
+         effects.push('ToNumber limit');
+-        return Number.MAX_SAFE_INTEGER + 1;
++        return -Infinity;
+       },
+     }
+   );
+@@ -102,3 +99,18 @@
+ });
+
+ assert.compareArray(effects, []);
++
++// Large valid limits still perform conversion before acquiring next.
++effects = [];
++Iterator.prototype.take.call({
++  get next() {
++    effects.push('get next');
++    return function () { return { done: true }; };
++  }
++}, {
++  valueOf() {
++    effects.push('ToNumber limit');
++    return Number.MAX_VALUE;
++  }
++});
++assert.compareArray(effects, ['ToNumber limit', 'get next']);
+
+--- a/test/built-ins/Iterator/prototype/take/argument-validation-failure-closes-underlying.js
++++ b/test/built-ins/Iterator/prototype/take/argument-validation-failure-closes-underlying.js
+@@ -36,7 +36,7 @@
+
+ closed = false;
+ assert.throws(RangeError, function() {
+-  closable.take(Number.MAX_SAFE_INTEGER + 1);
++  closable.take(-Infinity);
+ });
+ assert.sameValue(closed, true);
+
+@@ -52,3 +52,18 @@
+   closable.take({ get valueOf() { throw new ShouldNotGetValueOf(); }});
+ });
+ assert.sameValue(closed, true);
++
++// A large valid limit does not close the source during helper creation.
++closed = false;
++let acquired = 0;
++let large = {
++  __proto__: Iterator.prototype,
++  get next() {
++    acquired += 1;
++    return function () { return { done: true }; };
++  },
++  return() { closed = true; return {}; }
++};
++large.take(Number.MAX_VALUE);
++assert.sameValue(acquired, 1);
++assert.sameValue(closed, false);

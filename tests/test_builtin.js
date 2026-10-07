@@ -2282,6 +2282,31 @@ function test_iterator_reduce_close()
     assert(closes, 2);
 }
 
+function test_iterator_large_limits()
+{
+    for (const limit of [2 ** 53, 2 ** 63, 2 ** 64, Number.MAX_VALUE, Infinity]) {
+        assert([1, 2, 3].values().take(limit).toArray().join(","), "1,2,3");
+        assert([1, 2, 3].values().drop(limit).next().done, true);
+        let conversions = 0;
+        const helper = [1, 2, 3].values().take({
+            valueOf() { conversions++; return limit; }
+        });
+        assert(helper.next().value, 1);
+        assert(helper.next().value, 2);
+        assert(helper.return().done, true);
+        assert(conversions, 1);
+    }
+    assert([1, 2, 3].values().take(2.9).toArray().join(","), "1,2");
+    assert([1, 2, 3].values().drop(2.9).toArray().join(","), "3");
+    assert([1, 2, 3].values().take(-0.5).next().done, true);
+    assert([1, 2, 3].values().drop(-0.5).next().value, 1);
+    for (const method of ["take", "drop"]) {
+        assert_throws(RangeError, () => [1].values()[method](NaN));
+        assert_throws(RangeError, () => [1].values()[method](-Infinity));
+        assert_throws(TypeError, () => [1].values()[method](1n));
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2593,6 +2618,7 @@ test_iterator_helper_start_return();
 test_iterator_flatmap_close();
 test_iterator_helper_acquisition();
 test_iterator_reduce_close();
+test_iterator_large_limits();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
