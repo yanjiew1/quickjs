@@ -583,6 +583,7 @@ C_TESTS+=tests/test_fuzz_allocations$(EXE)
 C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 
 C_TESTS+=tests/test_atomics_wait$(EXE)
+C_TESTS+=tests/test_wait_async$(EXE)
 C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
 
@@ -604,6 +605,9 @@ tests/test_wait_queue$(EXE): $(OBJDIR)/tests/test_wait_queue.o $(WAIT_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_native_jobs$(EXE): $(OBJDIR)/tests/test_native_jobs.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_wait_async$(EXE): $(OBJDIR)/tests/test_wait_async.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
@@ -629,6 +633,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
+	$(WINE) ./tests/test_wait_async$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
