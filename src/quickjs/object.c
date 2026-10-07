@@ -2341,31 +2341,37 @@ JSValue JS_GetPropertyValue(JSContext *ctx, JSValueConst this_obj,
             return JS_NewInt32(ctx, p->u.array.u.uint8_ptr[idx]);
         case JS_CLASS_INT16_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return JS_NewInt32(ctx, p->u.array.u.int16_ptr[idx]);
+            return JS_NewInt32(ctx, get_i16(p->u.array.u.uint8_ptr + (size_t)idx * 2));
         case JS_CLASS_UINT16_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return JS_NewInt32(ctx, p->u.array.u.uint16_ptr[idx]);
+            return JS_NewInt32(ctx, get_u16(p->u.array.u.uint8_ptr + (size_t)idx * 2));
         case JS_CLASS_INT32_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return JS_NewInt32(ctx, p->u.array.u.int32_ptr[idx]);
+            return JS_NewInt32(ctx,
+                               (int32_t)get_u32(p->u.array.u.uint8_ptr + (size_t)idx * 4));
         case JS_CLASS_UINT32_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return JS_NewUint32(ctx, p->u.array.u.uint32_ptr[idx]);
+            return JS_NewUint32(ctx, get_u32(p->u.array.u.uint8_ptr + (size_t)idx * 4));
         case JS_CLASS_BIG_INT64_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return JS_NewBigInt64(ctx, p->u.array.u.int64_ptr[idx]);
+            return JS_NewBigInt64(ctx,
+                                  (int64_t)get_u64(p->u.array.u.uint8_ptr + (size_t)idx * 8));
         case JS_CLASS_BIG_UINT64_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return JS_NewBigUint64(ctx, p->u.array.u.uint64_ptr[idx]);
+            return JS_NewBigUint64(ctx,
+                                   get_u64(p->u.array.u.uint8_ptr + (size_t)idx * 8));
         case JS_CLASS_FLOAT16_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return __JS_NewFloat64(ctx, fromfp16(p->u.array.u.fp16_ptr[idx]));
+            return __JS_NewFloat64(ctx,
+                                   fromfp16(get_u16(p->u.array.u.uint8_ptr + (size_t)idx * 2)));
         case JS_CLASS_FLOAT32_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return __JS_NewFloat64(ctx, p->u.array.u.float_ptr[idx]);
+            return __JS_NewFloat64(ctx,
+                                   js_typed_array_get_float32(p->u.array.u.uint8_ptr + (size_t)idx * 4));
         case JS_CLASS_FLOAT64_ARRAY:
             if (unlikely(idx >= p->u.array.count)) goto slow_path;
-            return __JS_NewFloat64(ctx, p->u.array.u.double_ptr[idx]);
+            return __JS_NewFloat64(ctx,
+                                   js_typed_array_get_float64(p->u.array.u.uint8_ptr + (size_t)idx * 8));
         default:
             goto slow_path;
         }
@@ -3221,6 +3227,16 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
     }
 }
 
+static inline void js_typed_array_put_float32(uint8_t *ptr, float val)
+{
+    memcpy(ptr, &val, sizeof(val));
+}
+
+static inline void js_typed_array_put_float64(uint8_t *ptr, double val)
+{
+    memcpy(ptr, &val, sizeof(val));
+}
+
 /* flags can be JS_PROP_THROW or JS_PROP_THROW_STRICT */
 int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                         JSValue prop, JSValue val, int flags)
@@ -3285,7 +3301,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
             if (unlikely(idx >= (uint32_t)p->u.array.count) &&
                 idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
-            p->u.array.u.uint16_ptr[idx] = v;
+            put_u16(p->u.array.u.uint8_ptr + (size_t)idx * 2, v);
             break;
         case JS_CLASS_INT32_ARRAY:
         case JS_CLASS_UINT32_ARRAY:
@@ -3294,7 +3310,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
             if (unlikely(idx >= (uint32_t)p->u.array.count) &&
                 idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
-            p->u.array.u.uint32_ptr[idx] = v;
+            put_u32(p->u.array.u.uint8_ptr + (size_t)idx * 4, v);
             break;
         case JS_CLASS_BIG_INT64_ARRAY:
         case JS_CLASS_BIG_UINT64_ARRAY:
@@ -3306,7 +3322,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                 if (unlikely(idx >= (uint32_t)p->u.array.count) &&
                     idx >= js_typed_array_update_length(p))
                     goto ta_out_of_bound;
-                p->u.array.u.uint64_ptr[idx] = v;
+                put_u64(p->u.array.u.uint8_ptr + (size_t)idx * 8, v);
             }
             break;
         case JS_CLASS_FLOAT16_ARRAY:
@@ -3315,7 +3331,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
             if (unlikely(idx >= (uint32_t)p->u.array.count) &&
                 idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
-            p->u.array.u.fp16_ptr[idx] = tofp16(d);
+            put_u16(p->u.array.u.uint8_ptr + (size_t)idx * 2, tofp16(d));
             break;
         case JS_CLASS_FLOAT32_ARRAY:
             if (JS_ToFloat64Free(ctx, &d, val))
@@ -3323,7 +3339,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
             if (unlikely(idx >= (uint32_t)p->u.array.count) &&
                 idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
-            p->u.array.u.float_ptr[idx] = d;
+            js_typed_array_put_float32(p->u.array.u.uint8_ptr + (size_t)idx * 4, d);
             break;
         case JS_CLASS_FLOAT64_ARRAY:
             if (JS_ToFloat64Free(ctx, &d, val))
@@ -3333,7 +3349,7 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
             ta_out_of_bound:
                 return TRUE;
             }
-            p->u.array.u.double_ptr[idx] = d;
+            js_typed_array_put_float64(p->u.array.u.uint8_ptr + (size_t)idx * 8, d);
             break;
         default:
             goto slow_path;
