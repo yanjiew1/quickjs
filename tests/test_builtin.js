@@ -270,6 +270,128 @@ function test()
     assert(err, true, "extensible");
 }
 
+function test_copy_data_property_reentrancy()
+{
+    const copies = [
+        source => Object.assign({}, source),
+        source => ({ ...source }),
+        source => { const { ...result } = source; return result; },
+    ];
+    for (const copy of copies) {
+        const hidden = {
+            get a() {
+                Object.defineProperty(this, "b", { enumerable: false });
+                return 1;
+            },
+            b: 2,
+        };
+        const hidden_result = copy(hidden);
+        assert(hidden_result.a, 1);
+        assert(Object.hasOwn(hidden_result, "b"), false);
+
+        const visible = {
+            get a() {
+                Object.defineProperty(this, "b", { enumerable: true });
+                this.c = 3;
+                return 1;
+            },
+        };
+        Object.defineProperty(visible, "b", {
+            configurable: true, value: 2,
+        });
+        const visible_result = copy(visible);
+        assert(visible_result.b, 2);
+        assert(Object.hasOwn(visible_result, "c"), false);
+
+        let inherited_reads = 0;
+        const deleted = {
+            get a() { delete this.b; return 1; },
+            b: 2,
+        };
+        Object.setPrototypeOf(deleted, {
+            get b() { inherited_reads++; return 3; },
+        });
+        const deleted_result = copy(deleted);
+        assert(Object.hasOwn(deleted_result, "b"), false);
+        assert(inherited_reads, 0);
+
+        let getter_calls = 0;
+        const changed = {
+            get a() {
+                Object.defineProperty(this, "b", {
+                    enumerable: true,
+                    get() { getter_calls++; return 4; },
+                });
+                return 1;
+            },
+            b: 2,
+        };
+        assert(copy(changed).b, 4);
+        assert(getter_calls, 1);
+
+        const symbol = Symbol("later");
+        const symbols = {
+            get a() {
+                Object.defineProperty(this, symbol, { enumerable: true });
+                return 1;
+            },
+        };
+        Object.defineProperty(symbols, symbol, { configurable: true, value: 5 });
+        assert(copy(symbols)[symbol], 5);
+
+        let proxy_gets = 0, proxy_descriptors = 0;
+        const proxy = new Proxy({ a: "stored" }, {
+            getOwnPropertyDescriptor(target, key) {
+                proxy_descriptors++;
+                return { configurable: true, enumerable: true,
+                         writable: true, value: "descriptor" };
+            },
+            get(target, key) { proxy_gets++; return "actual"; },
+        });
+        assert(copy(proxy).a, "actual");
+        assert(proxy_descriptors, 1);
+        assert(proxy_gets, 1);
+    }
+    let later_reads = 0;
+    const source = { a: 1, get b() { later_reads++; return 2; } };
+    const target = {
+        set a(value) {
+            assert(value, 1);
+            Object.defineProperty(source, "b", { enumerable: false });
+        },
+    };
+    Object.assign(target, source);
+    assert(later_reads, 0);
+    assert(Object.hasOwn(target, "b"), false);
+
+    const proto = { marker: true };
+    const special = {};
+    Object.defineProperty(special, "__proto__", { enumerable: true, value: proto });
+    assert(Object.getPrototypeOf(Object.assign({}, special)), proto);
+    for (const copy of copies.slice(1)) {
+        const result = copy(special);
+        assert(Object.getPrototypeOf(result), Object.prototype);
+        assert(Object.hasOwn(result, "__proto__"), true);
+        assert(result.__proto__, proto);
+    }
+    const events = [];
+    const proxy = new Proxy({ skip: 1, keep: 2 }, {
+        ownKeys() { events.push("keys"); return ["skip", "keep"]; },
+        getOwnPropertyDescriptor(target, key) {
+            events.push("descriptor " + key);
+            if (key === "skip")
+                throw new Error("excluded descriptor");
+            return Reflect.getOwnPropertyDescriptor(target, key);
+        },
+        get(target, key) { events.push("get " + key); return target[key]; },
+    });
+    const { skip, ...rest } = proxy;
+    assert(skip, 1);
+    assert(rest.keep, 2);
+    assert(Object.hasOwn(rest, "skip"), false);
+    assert(events.join(","), "get skip,keys,descriptor keep,get keep");
+}
+
 function test_enum()
 {
     var a, tab;
@@ -3333,6 +3455,7 @@ test_function_native_fallback();
 test_function_initial_name();
 test_function_constructor_boundaries();
 test_enum();
+test_copy_data_property_reentrancy();
 test_array();
 test_array_sort_writeback();
 test_string();

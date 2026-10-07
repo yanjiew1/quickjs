@@ -4229,9 +4229,8 @@ __exception int JS_CopyDataProperties(JSContext *ctx,
     uint32_t i, tab_atom_count;
     JSObject *p;
     JSObject *pexcl = NULL;
-    int ret, gpn_flags;
+    int ret;
     JSPropertyDescriptor desc;
-    BOOL is_enumerable;
 
     if (JS_VALUE_GET_TAG(source) != JS_TAG_OBJECT)
         return 0;
@@ -4241,17 +4240,8 @@ __exception int JS_CopyDataProperties(JSContext *ctx,
 
     p = JS_VALUE_GET_OBJ(source);
 
-    gpn_flags = JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK | JS_GPN_ENUM_ONLY;
-    if (p->is_exotic) {
-        const JSClassExoticMethods *em = ctx->rt->class_array[p->class_id].exotic;
-        /* cannot use JS_GPN_ENUM_ONLY with e.g. proxies because it
-           introduces a visible change */
-        if (em && em->get_own_property_names) {
-            gpn_flags &= ~JS_GPN_ENUM_ONLY;
-        }
-    }
     if (JS_GetOwnPropertyNamesInternal(ctx, &tab_atom, &tab_atom_count, p,
-                                       gpn_flags))
+                                       JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK))
         return -1;
 
     for (i = 0; i < tab_atom_count; i++) {
@@ -4263,21 +4253,24 @@ __exception int JS_CopyDataProperties(JSContext *ctx,
                 continue;
             }
         }
-        if (!(gpn_flags & JS_GPN_ENUM_ONLY)) {
-            /* test if the property is enumerable */
-            ret = JS_GetOwnPropertyInternal(ctx, &desc, p, tab_atom[i].atom);
-            if (ret < 0)
-                goto exception;
-            if (!ret)
-                continue;
-            is_enumerable = (desc.flags & JS_PROP_ENUMERABLE) != 0;
-            js_free_desc(ctx, &desc);
-            if (!is_enumerable)
-                continue;
-        }
-        val = JS_GetProperty(ctx, source, tab_atom[i].atom);
-        if (JS_IsException(val))
+        ret = JS_GetOwnPropertyInternal(ctx, &desc, p, tab_atom[i].atom);
+        if (ret < 0)
             goto exception;
+        if (!ret)
+            continue;
+        if (!(desc.flags & JS_PROP_ENUMERABLE)) {
+            js_free_desc(ctx, &desc);
+            continue;
+        }
+        if (!p->is_exotic && !(desc.flags & JS_PROP_GETSET)) {
+            /* An ordinary data descriptor already owns the value of Get. */
+            val = desc.value;
+        } else {
+            js_free_desc(ctx, &desc);
+            val = JS_GetProperty(ctx, source, tab_atom[i].atom);
+            if (JS_IsException(val))
+                goto exception;
+        }
         if (setprop)
             ret = JS_SetProperty(ctx, target, tab_atom[i].atom, val);
         else
