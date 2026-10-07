@@ -454,6 +454,45 @@ async function test_synchronous_using_in_async_bodies()
 
 await test_synchronous_using_in_async_bodies();
 
+async function test_async_generator_sync_iterator_return()
+{
+    for (const resourceHead of [false, true]) {
+        const events = [], closeError = {};
+        let thenReads = 0;
+        const iterable = {
+            [Symbol.iterator]() {
+                return {
+                    next() { return { value: { [Symbol.dispose]() {
+                        events.push("dispose");
+                    } }, done: false }; },
+                    return() {
+                        events.push("close");
+                        return { get then() {
+                            thenReads++;
+                            throw closeError;
+                        } };
+                    }
+                };
+            }
+        };
+        async function* plain() {
+            for (const value of iterable)
+                return 42;
+        }
+        async function* usingHead() {
+            for (using value of iterable)
+                return 42;
+        }
+        const result = await (resourceHead ? usingHead() : plain()).next();
+        assert(result.done, true);
+        assert(result.value, 42);
+        assert(thenReads, 0);
+        assert(events.join(","), resourceHead ? "dispose,close" : "close");
+    }
+}
+
+await test_async_generator_sync_iterator_return();
+
 async function assert_array_from_async_rejects(operation, expected)
 {
     let rejected = false;
