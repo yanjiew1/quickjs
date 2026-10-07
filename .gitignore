@@ -57,3 +57,5 @@ libwinpthread*.dll
 /tests/test_fuzz_exception_ownership.exe
 /tests/test_fuzz_allocations
 /tests/test_fuzz_allocations.exe
+/tests/test_fuzz_regexp_timeout
+/tests/test_fuzz_regexp_timeout.exe
