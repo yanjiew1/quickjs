@@ -540,10 +540,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
     waiter->linked = TRUE;
     list_add_tail(&waiter->link, &js_atomics_waiter_list);
 
-    if (timeout == INT64_MAX) {
-        pthread_cond_wait(&waiter->cond, &js_atomics_mutex);
-        ret = 0;
-    } else {
+    if (timeout != INT64_MAX) {
         /* XXX: use clock monotonic */
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += timeout / 1000;
@@ -552,11 +549,21 @@ static JSValue js_atomics_wait(JSContext *ctx,
             ts.tv_nsec -= 1000000000;
             ts.tv_sec++;
         }
-        ret = pthread_cond_timedwait(&waiter->cond, &js_atomics_mutex,
-                                     &ts);
+    }
+    ret = 0;
+    while (waiter->linked) {
+        if (timeout == INT64_MAX)
+            ret = pthread_cond_wait(&waiter->cond, &js_atomics_mutex);
+        else
+            ret = pthread_cond_timedwait(&waiter->cond, &js_atomics_mutex,
+                                         &ts);
+        if (ret != 0)
+            break;
     }
     if (waiter->linked)
         list_del(&waiter->link);
+    else
+        ret = 0;
     pthread_mutex_unlock(&js_atomics_mutex);
     pthread_cond_destroy(&waiter->cond);
     if (ret == ETIMEDOUT) {
