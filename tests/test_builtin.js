@@ -563,6 +563,54 @@ function test_array_buffer_transfer_range()
     assert(next.detached, true);
 }
 
+function test_array_buffer_slice_shrink()
+{
+    for (const resized of [0, 1, 2, 3, 6]) {
+        const buffer = new ArrayBuffer(4, { maxByteLength: 8 });
+        new Uint8Array(buffer).set([1, 2, 3, 4]);
+        let calls = 0;
+        let destination;
+        buffer.constructor = {
+            [Symbol.species]: function(length) {
+                calls++;
+                assert(length, 3);
+                buffer.resize(resized);
+                destination = new ArrayBuffer(length);
+                new Uint8Array(destination).fill(99);
+                return destination;
+            }
+        };
+        const result = buffer.slice(1, 4);
+        assert(result === destination, true);
+        assert(result.byteLength, 3);
+        assert(calls, 1);
+        const expected = [99, 99, 99];
+        for (let i = 0; i < Math.min(3, Math.max(resized - 1, 0)); i++)
+            expected[i] = i + 2;
+        assert([...new Uint8Array(result)].join(","), expected.join(","));
+    }
+
+    const buffer = new ArrayBuffer(4, { maxByteLength: 4 });
+    buffer.constructor = {
+        [Symbol.species]: function(length) {
+            buffer.resize(0);
+            return new ArrayBuffer(length);
+        }
+    };
+    assert(buffer.slice(4, 4).byteLength, 0);
+
+    for (const end of [0, 3]) {
+        const detached = new ArrayBuffer(3, { maxByteLength: 3 });
+        detached.constructor = {
+            [Symbol.species]: function(length) {
+                detached.transfer();
+                return new ArrayBuffer(length);
+            }
+        };
+        assert_throws(TypeError, () => detached.slice(0, end));
+    }
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -1808,6 +1856,7 @@ test_eval();
 test_array_buffer_max_index();
 test_array_buffer_resize_order();
 test_array_buffer_transfer_range();
+test_array_buffer_slice_shrink();
 test_typed_array();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
