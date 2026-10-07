@@ -685,6 +685,66 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
+static JSValue js_iterator_proto_includes(JSContext *ctx, JSValueConst this_val,
+                                          int argc, JSValueConst *argv)
+{
+    JSValueConst skipped = argc > 1 ? argv[1] : JS_UNDEFINED;
+    JSValue method, item, result = JS_FALSE;
+    double to_skip = 0;
+    uint64_t remaining;
+    BOOL skip_all, match;
+    int done;
+
+    if (!JS_IsObject(this_val))
+        return JS_ThrowTypeErrorNotAnObject(ctx);
+    if (!JS_IsUndefined(skipped)) {
+        if (!JS_IsNumber(skipped))
+            goto type_error;
+        if (JS_ToFloat64(ctx, &to_skip, skipped))
+            goto validation_error;
+        if (isnan(to_skip) || trunc(to_skip) != to_skip)
+            goto type_error;
+        if (to_skip < 0 || (isfinite(to_skip) && to_skip > MAX_SAFE_INTEGER)) {
+            JS_ThrowRangeError(ctx, "skippedElements is out of range");
+            goto validation_error;
+        }
+    }
+    skip_all = isinf(to_skip);
+    remaining = skip_all ? 0 : (uint64_t)to_skip;
+    method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
+    if (JS_IsException(method))
+        return JS_EXCEPTION;
+    for (;;) {
+        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+        if (JS_IsException(item)) {
+            result = JS_EXCEPTION;
+            break;
+        }
+        if (done)
+            break;
+        if (skip_all || remaining > 0) {
+            if (remaining > 0)
+                remaining--;
+            JS_FreeValue(ctx, item);
+            continue;
+        }
+        match = js_same_value_zero(ctx, item, argv[0]);
+        JS_FreeValue(ctx, item);
+        if (match) {
+            result = JS_IteratorClose(ctx, this_val, FALSE) < 0 ?
+                JS_EXCEPTION : JS_TRUE;
+            break;
+        }
+    }
+    JS_FreeValue(ctx, method);
+    return result;
+ type_error:
+    JS_ThrowTypeError(ctx, "skippedElements must be an integer Number");
+ validation_error:
+    JS_IteratorClose(ctx, this_val, TRUE);
+    return JS_EXCEPTION;
+}
+
 static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
                                         int argc, JSValueConst *argv)
 {
@@ -1107,6 +1167,7 @@ const JSCFunctionListEntry js_iterator_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("find", 1, js_iterator_proto_func, JS_ITERATOR_HELPER_KIND_FIND),
     JS_CFUNC_MAGIC_DEF("forEach", 1, js_iterator_proto_func, JS_ITERATOR_HELPER_KIND_FOR_EACH ),
     JS_CFUNC_MAGIC_DEF("some", 1, js_iterator_proto_func, JS_ITERATOR_HELPER_KIND_SOME ),
+    JS_CFUNC_DEF("includes", 1, js_iterator_proto_includes ),
     JS_CFUNC_DEF("reduce", 1, js_iterator_proto_reduce ),
     JS_CFUNC_DEF("toArray", 0, js_iterator_proto_toArray ),
     JS_CFUNC_DEF("[Symbol.iterator]", 0, js_iterator_proto_iterator ),

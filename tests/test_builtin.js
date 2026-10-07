@@ -2904,6 +2904,306 @@ function test_iterator_helper_acquisition()
     }
 }
 
+function test_iterator_includes_values()
+{
+    const includes = Iterator.prototype.includes;
+    const desc = Object.getOwnPropertyDescriptor(Iterator.prototype, "includes");
+    assert(typeof includes, "function");
+    assert(includes.name, "includes");
+    assert(includes.length, 1);
+    assert(desc.writable, true);
+    assert(desc.configurable, true);
+    assert(desc.enumerable, false);
+    assert_throws(TypeError, () => new includes());
+    assert([].values().includes(undefined), false);
+    assert([undefined].values().includes(), true);
+    assert(Array(1).values().includes(undefined), true);
+    assert([NaN].values().includes(NaN), true);
+    assert([0].values().includes(-0), true);
+    assert([-0].values().includes(0), true);
+    assert([1n].values().includes(1n), true);
+    assert([1n].values().includes(1), false);
+    const object = {}, symbol = Symbol("item");
+    assert([object].values().includes(object), true);
+    assert([object].values().includes({}), false);
+    assert([symbol].values().includes(symbol), true);
+    assert([symbol].values().includes(Symbol("item")), false);
+    const identity = new Proxy({}, { get() { throw {}; } });
+    assert([identity].values().includes(identity), true);
+    assert([identity].values().includes({}), false);
+    const prefix = "abcdefgh".repeat(32);
+    assert([prefix + "suffix"].values().includes(prefix + "suffix"), true);
+    assert(["a\0b"].values().includes("a\0b"), true);
+    assert("a\uD83D\uDE00b"[Symbol.iterator]().includes("\uD83D\uDE00"), true);
+    assert("a\uD83D\uDE00b"[Symbol.iterator]().includes("\uD83D"), false);
+    for (const skip of [undefined, 0, -0])
+        assert([1, 2].values().includes(1, skip), true);
+    assert([1, 2, 1].values().includes(1, 1), true);
+    assert([1, 2].values().includes(1, 1), false);
+    assert([1, 2].values().includes(2, 2), false);
+    assert([1, 2].values().includes(2, Number.MAX_SAFE_INTEGER), false);
+    const remaining = [1, 2].values();
+    assert(remaining.includes(1), true);
+    assert(remaining.next().value, 2);
+    let closed = false;
+    function* values() {
+        try { yield 1; yield 2; }
+        finally { closed = true; }
+    }
+    const generator = values();
+    assert(generator.includes(1), true);
+    assert(closed, true);
+    assert(generator.next().done, true);
+    const callable = function() {};
+    let called = false;
+    callable.next = () => called ? { done: true } :
+        (called = true, { done: false, value: 7 });
+    assert(includes.call(callable, 7), true);
+}
+
+function test_iterator_includes_validation()
+{
+    const includes = Iterator.prototype.includes;
+    let coercions = 0;
+    const coercible = {
+        [Symbol.toPrimitive]() { coercions++; return 0; },
+        valueOf() { coercions++; return 0; },
+        toString() { coercions++; return "0"; }
+    };
+    const proxyArgument = new Proxy({}, {
+        get() { coercions++; throw {}; }
+    });
+    const invalid = [NaN, 0.5, -0.5, null, true, "0", 1n, Symbol(),
+                     {}, [], new Number(0), coercible, proxyArgument];
+    const cases = invalid.map(value => [value, TypeError]);
+    for (const value of [-1, -Infinity, Number.MAX_SAFE_INTEGER + 1,
+                         Number.MAX_VALUE])
+        cases.push([value, RangeError]);
+    for (const [value, ErrorType] of cases) {
+        const events = [];
+        let receiver, argumentCount;
+        const source = new Proxy({}, {
+            get(target, key) {
+                events.push("get " + String(key));
+                if (key !== "return")
+                    throw {};
+                return function() {
+                    receiver = this;
+                    argumentCount = arguments.length;
+                    events.push("call return");
+                    return {};
+                };
+            }
+        });
+        assert_throws(ErrorType, () => includes.call(source, 0, value));
+        assert(events.join(","), "get return,call return");
+        assert(receiver === source, true);
+        assert(argumentCount, 0);
+    }
+    assert(coercions, 0);
+    for (const receiver of [undefined, null, true, 0, "", Symbol(), 1n])
+        assert_throws(TypeError, () => includes.call(receiver, 0, -1));
+
+    for (const mode of ["get", "noncallable", "call", "primitive"])
+        for (const [skip, ErrorType] of [[NaN, TypeError], [-1, RangeError]]) {
+            let returnReads = 0, returnCalls = 0, nextReads = 0;
+            const marker = {};
+            const source = {
+                get next() { nextReads++; throw marker; },
+                get return() {
+                    returnReads++;
+                    if (mode === "get")
+                        throw marker;
+                    if (mode === "noncallable")
+                        return 1;
+                    return function() {
+                        returnCalls++;
+                        if (mode === "call")
+                            throw marker;
+                        return 1;
+                    };
+                }
+            };
+            assert_throws(ErrorType, () => includes.call(source, 0, skip));
+            assert(nextReads, 0);
+            assert(returnReads, 1);
+            assert(returnCalls, mode === "call" || mode === "primitive" ? 1 : 0);
+        }
+}
+
+function test_iterator_includes_protocol()
+{
+    const includes = Iterator.prototype.includes;
+    const marker = {};
+    for (const mode of ["next get", "next call", "noncallable", "result",
+                        "done", "value"])
+        for (const skip of [0, 1, Infinity]) {
+            let closes = 0, nextCalls = 0;
+            const source = {
+                get next() {
+                    if (mode === "next get")
+                        throw marker;
+                    if (mode === "noncallable")
+                        return 1;
+                    return function() {
+                        if (++nextCalls > 1)
+                            throw {};
+                        if (mode === "next call")
+                            throw marker;
+                        if (mode === "result")
+                            return 1;
+                        return {
+                            get done() {
+                                if (mode === "done")
+                                    throw marker;
+                                return false;
+                            },
+                            get value() { throw marker; }
+                        };
+                    };
+                },
+                get return() { closes++; throw {}; }
+            };
+            let caught;
+            try { includes.call(source, 1, skip); }
+            catch (error) { caught = error; }
+            if (mode === "noncallable" || mode === "result")
+                assert(caught instanceof TypeError, true);
+            else
+                assert(caught === marker, true);
+            assert(closes, 0);
+            assert(nextCalls, mode === "next get" || mode === "noncallable" ? 0 : 1);
+        }
+
+    const events = [];
+    let index = 0, nextReads = 0;
+    const target = {
+        get next() {
+            nextReads++;
+            return function() {
+                assert(this === source, true);
+                assert(arguments.length, 0);
+                events.push("next");
+                Object.defineProperty(target, "next", {
+                    value() { throw marker; }, configurable: true
+                });
+                const value = ++index * 10;
+                return new Proxy({ done: value > 20, value }, {
+                    get(result, key) {
+                        events.push(String(key) + value);
+                        return result[key];
+                    }
+                });
+            };
+        },
+        get return() {
+            return function() {
+                assert(this === source, true);
+                assert(arguments.length, 0);
+                events.push("return");
+                return new Proxy({}, { get() { throw marker; } });
+            };
+        }
+    };
+    const source = new Proxy(target, {
+        get(object, key, receiver) {
+            events.push("get " + String(key));
+            return Reflect.get(object, key, receiver);
+        }
+    });
+    assert(includes.call(source, 20, 1), true);
+    assert(nextReads, 1);
+    assert(events.join(","),
+           "get next,next,done10,value10,next,done20,value20,get return,return");
+
+    for (const skip of [0, 1, Infinity]) {
+        let closes = 0, values = 0;
+        const exhausted = {
+            next() {
+                return { done: true, get value() { values++; throw marker; } };
+            },
+            get return() { closes++; throw marker; }
+        };
+        assert(includes.call(exhausted, undefined, skip), false);
+        assert(values, 0);
+        assert(closes, 0);
+    }
+    events.length = 0;
+    index = 0;
+    const infiniteSkip = {
+        next() {
+            const current = index++;
+            events.push("next" + current);
+            return {
+                get done() {
+                    events.push("done" + current);
+                    return current === 2;
+                },
+                get value() { events.push("value" + current); return 1; }
+            };
+        },
+        get return() { throw marker; }
+    };
+    assert(includes.call(infiniteSkip, 1, Infinity), false);
+    assert(events.join(","),
+           "next0,done0,value0,next1,done1,value1,next2,done2");
+}
+
+function test_iterator_includes_close()
+{
+    const includes = Iterator.prototype.includes;
+    const marker = {};
+    for (const mode of ["absent", "undefined", "null", "object",
+                        "noncallable", "primitive", "get", "call"]) {
+        let returnReads = 0, returnCalls = 0, receiver, argumentCount;
+        let nextCalls = 0;
+        const source = {
+            next() {
+                return ++nextCalls === 1 ? { done: false, value: 1 } : { done: true };
+            }
+        };
+        if (mode !== "absent")
+            Object.defineProperty(source, "return", {
+                get() {
+                    returnReads++;
+                    if (mode === "get")
+                        throw marker;
+                    if (mode === "undefined")
+                        return undefined;
+                    if (mode === "null")
+                        return null;
+                    if (mode === "noncallable")
+                        return 1;
+                    return function() {
+                        returnCalls++;
+                        receiver = this;
+                        argumentCount = arguments.length;
+                        if (mode === "call")
+                            throw marker;
+                        return mode === "primitive" ? 1 : {};
+                    };
+                }
+            });
+        if (mode === "get" || mode === "call") {
+            let caught;
+            try { includes.call(source, 1); }
+            catch (error) { caught = error; }
+            assert(caught === marker, true);
+        } else if (mode === "noncallable" || mode === "primitive") {
+            assert_throws(TypeError, () => includes.call(source, 1));
+        } else {
+            assert(includes.call(source, 1), true);
+        }
+        assert(nextCalls, 1);
+        assert(returnReads, mode === "absent" ? 0 : 1);
+        assert(returnCalls, ["object", "primitive", "call"].includes(mode) ? 1 : 0);
+        if (returnCalls) {
+            assert(receiver === source, true);
+            assert(argumentCount, 0);
+        }
+    }
+}
+
 function test_iterator_reduce_close()
 {
     const marker = {};
@@ -3739,6 +4039,10 @@ test_iterator_helper_completion();
 test_iterator_helper_start_return();
 test_iterator_flatmap_close();
 test_iterator_helper_acquisition();
+test_iterator_includes_values();
+test_iterator_includes_validation();
+test_iterator_includes_protocol();
+test_iterator_includes_close();
 test_iterator_reduce_close();
 test_iterator_limits();
 test_iterator_concat_return();
