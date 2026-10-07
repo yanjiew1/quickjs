@@ -2983,6 +2983,10 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
             /* fast case */
             set_value(ctx, &pr->u.value, val);
             return TRUE;
+        } else if (p1->class_id == JS_CLASS_MODULE_NS) {
+            /* Namespace [[Set]] always rejects the write without reading
+               or initializing an exported binding. */
+            goto read_only_prop;
         } else if (prs->flags & JS_PROP_LENGTH) {
             assert(p->class_id == JS_CLASS_ARRAY);
             assert(prop == JS_ATOM_length);
@@ -2991,9 +2995,6 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
             return call_setter(ctx, pr->u.getset.setter, this_obj, val, flags);
         } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) {
             JSVarRef *var_ref = pr->u.var_ref;
-            /* Namespace [[Set]] does not read the exported binding. */
-            if (p->class_id == JS_CLASS_MODULE_NS)
-                goto read_only_prop;
             if (var_ref->is_lexical && JS_IsUninitialized(*var_ref->pvalue)) {
                 JS_FreeValue(ctx, val);
                 JS_ThrowReferenceErrorUninitialized(ctx, prop);
@@ -3072,6 +3073,8 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                 }
             } else {
                 const JSClassExoticMethods *em = ctx->rt->class_array[p1->class_id].exotic;
+                if (p1->class_id == JS_CLASS_MODULE_NS)
+                    goto read_only_prop;
                 if (em) {
                     JSValue obj1;
                     if (em->set_property) {
@@ -3131,6 +3134,8 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
     retry2:
         prs = find_own_property(&pr, p1, prop);
         if (prs) {
+            if (p1->class_id == JS_CLASS_MODULE_NS)
+                goto read_only_prop;
             if ((prs->flags & JS_PROP_TMASK) == JS_PROP_GETSET) {
                 return call_setter(ctx, pr->u.getset.setter, this_obj, val, flags);
             } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_AUTOINIT) {
