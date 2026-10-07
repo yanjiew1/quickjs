@@ -1725,6 +1725,107 @@ static void test_iterator_helper_creation_realm(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_iterator_buffer_creation_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx[2];
+    JSValue global;
+    static const char script[] =
+        "(function () {\n"
+        "    const realms = [globalThis, foreign];\n"
+        "    function check(actual, expected, message) {\n"
+        "        if (actual !== expected) throw Error(message);\n"
+        "    }\n"
+        "    for (let index = 0; index < realms.length; index++) {\n"
+        "        const creator = realms[index], caller = realms[1 - index];\n"
+        "        const borrowed = Object.getPrototypeOf(caller.Iterator.from([]).map(x => x));\n"
+        "        const next = borrowed.next, close = borrowed.return;\n"
+        "        const makers = [\n"
+        "            source => creator.Iterator.prototype.chunks.call(source, 2),\n"
+        "        ];\n"
+        "        for (const make of makers) {\n"
+        "            let advances = 0, closes = 0;\n"
+        "            function source(length) {\n"
+        "                let position = 0;\n"
+        "                return {\n"
+        "                    next() {\n"
+        "                        advances++;\n"
+        "                        return position < length ? { value: ++position } : { done: true };\n"
+        "                    },\n"
+        "                    return() { closes++; return {}; },\n"
+        "                };\n"
+        "            }\n"
+        "            let helper = make(source(3));\n"
+        "            Object.setPrototypeOf(helper, null);\n"
+        "            let result = next.call(helper);\n"
+        "            check(Object.getPrototypeOf(result), creator.Object.prototype,\n"
+        "                  \"buffer result uses creator realm\");\n"
+        "            check(Object.getPrototypeOf(result.value), creator.Array.prototype,\n"
+        "                  \"buffer row uses creator realm\");\n"
+        "            check(result.value.join(), \"1,2\", \"buffer has first two values\");\n"
+        "            const second = next.call(helper);\n"
+        "            check(Object.getPrototypeOf(second), creator.Object.prototype,\n"
+        "                  \"resumed buffer result uses creator realm\");\n"
+        "            check(Object.getPrototypeOf(second.value), creator.Array.prototype,\n"
+        "                  \"resumed buffer row uses creator realm\");\n"
+        "            check(next.call(helper).done, true, \"buffer completes\");\n"
+        "            check(Object.getPrototypeOf(next.call(helper)), caller.Object.prototype,\n"
+        "                  \"completed buffer next uses method realm\");\n"
+        "            check(Object.getPrototypeOf(close.call(helper)), caller.Object.prototype,\n"
+        "                  \"completed buffer return uses method realm\");\n"
+        "            check(closes, 0, \"natural exhaustion does not close\");\n"
+        "\n"
+        "            helper = make(source(4));\n"
+        "            const before = advances;\n"
+        "            check(Object.getPrototypeOf(close.call(helper)), caller.Object.prototype,\n"
+        "                  \"buffer return before start uses method realm\");\n"
+        "            check(advances, before, \"early return does not advance source\");\n"
+        "            check(closes, 1, \"early return closes source once\");\n"
+        "\n"
+        "            helper = make(source(4));\n"
+        "            next.call(helper);\n"
+        "            check(Object.getPrototypeOf(close.call(helper)), creator.Object.prototype,\n"
+        "                  \"buffer active return uses creator realm\");\n"
+        "            check(closes, 2, \"active return closes source once\");\n"
+        "            check(Object.getPrototypeOf(close.call(helper)), caller.Object.prototype,\n"
+        "                  \"buffer completed return uses method realm\");\n"
+        "\n"
+        "            helper = make({ next: null });\n"
+        "            let caught = false;\n"
+        "            try { next.call(helper); } catch (error) {\n"
+        "                caught = true;\n"
+        "                check(Object.getPrototypeOf(error), creator.TypeError.prototype,\n"
+        "                      \"buffer protocol TypeError uses creator realm\");\n"
+        "            }\n"
+        "            check(caught, true, \"bad cached next throws\");\n"
+        "            check(Object.getPrototypeOf(next.call(helper)), caller.Object.prototype,\n"
+        "                  \"buffer completion after failure uses method realm\");\n"
+        "\n"
+        "            helper = make(source(3));\n"
+        "            helper.contextGlobal = creator;\n"
+        "            creator.__bufferRealmCycle = helper;\n"
+        "            next.call(helper);\n"
+        "        }\n"
+        "    }\n"
+        "    return true;\n"
+        "})()\n";
+
+    assert(rt);
+    ctx[0] = JS_NewContext(rt);
+    ctx[1] = JS_NewContext(rt);
+    assert(ctx[0] && ctx[1]);
+    global = JS_GetGlobalObject(ctx[0]);
+    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
+                             JS_GetGlobalObject(ctx[1])) >= 0);
+    JS_FreeValue(ctx[0], global);
+    check_eval(ctx[0], script);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx[1]);
+    JS_FreeContext(ctx[0]);
+    JS_RunGC(rt);
+    JS_FreeRuntime(rt);
+}
+
 static void test_iterator_concat_creation_realm(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -2080,6 +2181,7 @@ int main(int argc, char **argv)
         { "iterator-realm", test_iterator_constructor_realm },
         { "iterator-concat-creation-realm", test_iterator_concat_creation_realm },
         { "iterator-helper-creation-realm", test_iterator_helper_creation_realm },
+        { "iterator-buffer-creation-realm", test_iterator_buffer_creation_realm },
         { "native-iterator-next-realm", test_native_iterator_next_realm },
         { "typed-array-overlap", test_typed_array_external_overlap },
         { "typed-buffer-resized-length", test_typed_buffer_resized_length },

@@ -436,9 +436,16 @@ typedef enum JSIteratorHelperKindEnum {
     JS_ITERATOR_HELPER_KIND_MAP,
     JS_ITERATOR_HELPER_KIND_SOME,
     JS_ITERATOR_HELPER_KIND_TAKE,
+    JS_ITERATOR_HELPER_KIND_CHUNKS,
 } JSIteratorHelperKindEnum;
 
 #define JS_ITERATOR_LIMIT_INFINITY (-1)
+
+typedef struct JSIteratorHelperBuffer {
+    JSValue *values;
+    uint32_t count, capacity, size;
+    uint8_t underlying_done;
+} JSIteratorHelperBuffer;
 
 typedef struct JSIteratorHelperData {
     JSContext *realm;
@@ -448,6 +455,9 @@ typedef struct JSIteratorHelperData {
     JSValue inner; // innerValue (flatMap)
     JSValue inner_next; // innerValue next method (flatMap)
     int64_t count; // limit (drop, take; -1 means infinity) or callback counter
+    union {
+        JSIteratorHelperBuffer *buffer;
+    } extra;
     JSIteratorHelperKindEnum kind : 8;
     uint8_t executing : 1;
     uint8_t done : 1;
@@ -522,6 +532,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
     it->executing = 0;
     it->done = 0;
     it->started = 0;
+    it->extra.buffer = NULL;
     JS_SetOpaque(obj, it);
     return obj;
 range_error:
@@ -529,6 +540,137 @@ range_error:
 fail:
     JS_IteratorClose(ctx, this_val, TRUE);
     return JS_EXCEPTION;
+}
+
+/* Primitive integral Numbers only: argument validation never coerces. */
+static int js_iterator_buffer_size(JSContext *ctx, JSValueConst value,
+                                   uint32_t *psize)
+{
+    double size;
+
+    if (!JS_IsNumber(value))
+        goto type_error;
+    if (JS_ToFloat64(ctx, &size, value) < 0)
+        return -1;
+    if (!isfinite(size) || trunc(size) != size)
+        goto type_error;
+    if (size < 1 || size > UINT32_MAX) {
+        JS_ThrowRangeError(ctx, "size must be between 1 and 2^32 - 1");
+        return -1;
+    }
+    *psize = (uint32_t)size;
+    return 0;
+type_error:
+    JS_ThrowTypeError(ctx, "size must be an integral Number");
+    return -1;
+}
+
+static JSValue js_create_iterator_buffer_helper(JSContext *ctx,
+                                                JSValueConst this_val,
+                                                int argc, JSValueConst *argv,
+                                                int magic)
+{
+    JSValue obj = JS_UNDEFINED, method = JS_UNDEFINED;
+    JSIteratorHelperData *it = NULL;
+    JSIteratorHelperBuffer *buffer;
+    uint32_t size;
+
+    if (!JS_IsObject(this_val))
+        return JS_ThrowTypeErrorNotAnObject(ctx);
+    if (js_iterator_buffer_size(ctx, argv[0], &size) < 0)
+        goto fail;
+    method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
+    if (JS_IsException(method))
+        return JS_EXCEPTION;
+    obj = JS_NewObjectClass(ctx, JS_CLASS_ITERATOR_HELPER);
+    if (JS_IsException(obj))
+        goto fail;
+    it = js_mallocz(ctx, sizeof(*it));
+    if (!it)
+        goto fail;
+    buffer = js_mallocz(ctx, sizeof(*buffer));
+    if (!buffer)
+        goto fail;
+    buffer->size = size;
+    it->realm = JS_DupContext(ctx);
+    it->obj = JS_DupValue(ctx, this_val);
+    it->next = method;
+    it->argument = JS_UNDEFINED;
+    it->inner = JS_UNDEFINED;
+    it->inner_next = JS_UNDEFINED;
+    it->kind = magic;
+    it->extra.buffer = buffer;
+    JS_SetOpaque(obj, it);
+    return obj;
+fail:
+    js_free(ctx, it);
+    JS_FreeValue(ctx, obj);
+    JS_FreeValue(ctx, method);
+    JS_IteratorClose(ctx, this_val, TRUE);
+    return JS_EXCEPTION;
+}
+
+static void js_iterator_buffer_free(JSRuntime *rt, JSIteratorHelperData *it)
+{
+    JSIteratorHelperBuffer *buffer = it->extra.buffer;
+    uint32_t i;
+
+    if (!buffer)
+        return;
+    for (i = 0; i < buffer->count; i++)
+        JS_FreeValueRT(rt, buffer->values[i]);
+    js_free_rt(rt, buffer->values);
+    js_free_rt(rt, buffer);
+    it->extra.buffer = NULL;
+}
+
+/* Grow only as items arrive, including when the requested size is huge. */
+static int js_iterator_buffer_reserve(JSContext *ctx,
+                                      JSIteratorHelperBuffer *buffer)
+{
+    JSValue *values;
+    uint64_t capacity;
+
+    if (buffer->count < buffer->capacity)
+        return 0;
+    capacity = buffer->capacity ? (uint64_t)buffer->capacity * 2 : 8;
+    if (capacity > buffer->size)
+        capacity = buffer->size;
+    if (capacity > SIZE_MAX / sizeof(*values))
+        capacity = SIZE_MAX / sizeof(*values);
+    if (capacity <= buffer->count) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
+    values = js_realloc(ctx, buffer->values, (size_t)capacity * sizeof(*values));
+    if (!values)
+        return -1;
+    buffer->values = values;
+    buffer->capacity = capacity;
+    return 0;
+}
+
+/* Transfer the chunk refs into fresh own indexed data properties. */
+static JSValue js_iterator_buffer_array(JSContext *ctx,
+                                        JSIteratorHelperBuffer *buffer)
+{
+    JSValue array, value;
+    uint32_t i;
+
+    array = JS_NewArray(ctx);
+    if (JS_IsException(array))
+        return array;
+    for (i = 0; i < buffer->count; i++) {
+        value = buffer->values[i];
+        buffer->values[i] = JS_UNDEFINED;
+        if (JS_DefinePropertyValueInt64(ctx, array, i, value,
+                                       JS_PROP_C_W_E | JS_PROP_THROW) < 0) {
+            JS_FreeValue(ctx, array);
+            return JS_EXCEPTION;
+        }
+    }
+    buffer->count = 0;
+    return array;
 }
 
 static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
@@ -952,6 +1094,8 @@ void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
         JS_FreeValueRT(rt, it->next);
         JS_FreeValueRT(rt, it->inner);
         JS_FreeValueRT(rt, it->inner_next);
+        if (it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS)
+            js_iterator_buffer_free(rt, it);
         if (it->realm)
             JS_FreeContext(it->realm);
         js_free_rt(rt, it);
@@ -971,6 +1115,12 @@ void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
         JS_MarkValue(rt, it->inner_next, mark_func);
         if (it->realm)
             mark_func(rt, &it->realm->header);
+        if (it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS && it->extra.buffer) {
+            JSIteratorHelperBuffer *buffer = it->extra.buffer;
+            uint32_t i;
+            for (i = 0; i < buffer->count; i++)
+                JS_MarkValue(rt, buffer->values[i], mark_func);
+        }
     }
 }
 
@@ -1006,6 +1156,8 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
         *pdone = TRUE;
         ret = JS_IteratorClose(ctx, it->obj, FALSE)
             ? JS_EXCEPTION : JS_UNDEFINED;
+        if (it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS)
+            js_iterator_buffer_free(ctx->rt, it);
         JS_FreeContext(it->realm);
         it->realm = NULL;
         return ret;
@@ -1026,12 +1178,49 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             it->inner = JS_UNDEFINED;
             it->inner_next = JS_UNDEFINED;
         }
-        if (JS_IteratorClose(ctx, it->obj, JS_IsException(ret)))
+        if (!(it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS &&
+              it->extra.buffer->underlying_done) &&
+            JS_IteratorClose(ctx, it->obj, JS_IsException(ret)))
             ret = JS_EXCEPTION;
         goto done;
     }
 
     switch (it->kind) {
+    case JS_ITERATOR_HELPER_KIND_CHUNKS:
+        {
+            JSIteratorHelperBuffer *buffer = it->extra.buffer;
+            JSValue item;
+
+            if (buffer->underlying_done) {
+                *pdone = TRUE;
+                ret = JS_UNDEFINED;
+                break;
+            }
+            while (buffer->count < buffer->size) {
+                item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                if (JS_IsException(item))
+                    goto fail_no_close;
+                if (*pdone) {
+                    buffer->underlying_done = TRUE;
+                    JS_FreeValue(ctx, item);
+                    break;
+                }
+                if (js_iterator_buffer_reserve(ctx, buffer) < 0) {
+                    JS_FreeValue(ctx, item);
+                    goto fail;
+                }
+                buffer->values[buffer->count++] = item;
+            }
+            if (!buffer->count) {
+                ret = JS_UNDEFINED;
+                break;
+            }
+            ret = js_iterator_buffer_array(ctx, buffer);
+            if (JS_IsException(ret))
+                goto fail;
+            *pdone = FALSE;
+        }
+        break;
     case JS_ITERATOR_HELPER_KIND_DROP:
         {
             JSValue item;
@@ -1208,10 +1397,14 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 it->inner = JS_UNDEFINED;
                 it->inner_next = JS_UNDEFINED;
             }
-            JS_IteratorClose(ctx, it->obj, TRUE);
+            if (!(it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS &&
+                  it->extra.buffer->underlying_done))
+                JS_IteratorClose(ctx, it->obj, TRUE);
             *pdone = TRUE;
         }
     }
+    if (*pdone && it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS)
+        js_iterator_buffer_free(ctx->rt, it);
     it->done = *pdone;
     it->executing = 0;
     if (*pdone) {
@@ -1222,7 +1415,9 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     return ret;
  fail:
     /* close the iterator object, preserving pending exception */
-    JS_IteratorClose(ctx, it->obj, TRUE);
+    if (!(it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS &&
+          it->extra.buffer->underlying_done))
+        JS_IteratorClose(ctx, it->obj, TRUE);
  fail_no_close:
     *pdone = TRUE;
     ret = JS_EXCEPTION;
@@ -1235,6 +1430,7 @@ const JSCFunctionListEntry js_iterator_funcs[] = {
 };
 
 const JSCFunctionListEntry js_iterator_proto_funcs[] = {
+    JS_CFUNC_MAGIC_DEF("chunks", 1, js_create_iterator_buffer_helper, JS_ITERATOR_HELPER_KIND_CHUNKS ),
     JS_CFUNC_MAGIC_DEF("drop", 1, js_create_iterator_helper, JS_ITERATOR_HELPER_KIND_DROP ),
     JS_CFUNC_MAGIC_DEF("filter", 1, js_create_iterator_helper, JS_ITERATOR_HELPER_KIND_FILTER ),
     JS_CFUNC_MAGIC_DEF("flatMap", 1, js_create_iterator_helper, JS_ITERATOR_HELPER_KIND_FLAT_MAP ),

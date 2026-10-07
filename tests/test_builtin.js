@@ -3570,6 +3570,311 @@ function test_iterator_join_strings()
     assert(values.values().join("\0"), values.join("\0"));
 }
 
+function test_iterator_buffer_helper(method)
+{
+    const proto = Iterator.prototype;
+    const marker = {};
+    const make = source => proto[method].call(source, 2);
+    function source(values) {
+        let index = 0;
+        return {
+            next() {
+                return index < values.length ? { value: values[index++], done: false }
+                                             : { done: true };
+            }
+        };
+    }
+    function caught(fn) {
+        let error, threw = false;
+        try { fn(); } catch (value) { error = value; threw = true; }
+        assert(threw, true);
+        return error;
+    }
+
+    assert(proto[method].length, 1);
+    assert(proto[method].name, method);
+    assert_throws(TypeError, () => new proto[method](2));
+    for (const receiver of [undefined, null, true, 1, "x", 1n, Symbol()])
+        assert_throws(TypeError, () => proto[method].call(receiver, 0));
+    for (const [values, errorType] of [
+        [[undefined, null, true, "2", 2n, Symbol(), {}, new Number(2),
+          NaN, Infinity, -Infinity, 1.5, -1.5, 4294967296.5], TypeError],
+        [[0, -0, -1, 4294967296, Number.MAX_VALUE], RangeError]
+    ]) {
+        for (const size of values) {
+            const events = [];
+            const input = {
+                get next() { events.push("next"); throw marker; },
+                get return() {
+                    events.push("return");
+                    return () => { events.push("close"); throw marker; };
+                }
+            };
+            assert(caught(() => proto[method].call(input, size)) instanceof errorType,
+                   true);
+            assert(events.join(","), "return,close");
+        }
+    }
+    let conversions = 0, closes = 0;
+    assert_throws(TypeError, () => proto[method].call({
+        return() { closes++; return 0; }
+    }, { valueOf() { conversions++; return 2; } }));
+    assert(conversions, 0);
+    assert(closes, 1);
+
+    for (const thrown of [marker, undefined, null]) {
+        let closes = 0;
+        assert(caught(() => make({
+            get next() { throw thrown; },
+            return() { closes++; return {}; }
+        })) === thrown, true);
+        assert(closes, 0);
+    }
+    for (const kind of ["call", "primitive", "done", "value", "noncallable"]) {
+        let reads = 0, nexts = 0, closes = 0;
+        const input = {
+            get next() {
+                reads++;
+                if (kind === "noncallable")
+                    return 1;
+                return function() {
+                    assert(this === input, true);
+                    assert(arguments.length, 0);
+                    nexts++;
+                    if (kind === "call") throw marker;
+                    if (kind === "primitive") return 1;
+                    return {
+                        get done() { if (kind === "done") throw marker; return false; },
+                        get value() { throw marker; }
+                    };
+                };
+            },
+            return() { closes++; throw {}; }
+        };
+        const helper = make(input);
+        assert(reads, 1);
+        assert(nexts, 0);
+        const error = caught(() => helper.next());
+        assert(kind === "primitive" || kind === "noncallable"
+               ? error instanceof TypeError : error === marker, true);
+        assert(helper.next().done, true);
+        assert(helper.return().done, true);
+        assert(reads, 1);
+        assert(nexts, kind === "noncallable" ? 0 : 1);
+        assert(closes, 0);
+    }
+    const events = [];
+    let index = 0;
+    const input = {
+        get next() {
+            events.push("get-next");
+            return function() {
+                events.push("next");
+                if (index++ === 2)
+                    return { done: true, get value() { throw marker; } };
+                return {
+                    get done() { events.push("done"); return false; },
+                    get value() { events.push("value"); return index; }
+                };
+            };
+        },
+        get [Symbol.iterator]() { throw marker; },
+        get return() { throw marker; }
+    };
+    const helper = make(input);
+    Object.defineProperty(input, "next", { value: undefined });
+    assert(events.join(","), "get-next");
+    assert(JSON.stringify(helper.next().value), "[1,2]");
+    assert(helper.next().done, true);
+    assert(events.join(","), "get-next,next,done,value,next,done,value,next");
+
+    for (const thrown of [marker, undefined, null]) {
+        let helper, index = 0, closes = 0;
+        const value = {};
+        helper = make({
+            next() {
+                if (index++ === 0) {
+                    value.helper = helper;
+                    return { value, done: false };
+                }
+                if (typeof std !== "undefined") std.gc();
+                throw thrown;
+            },
+            return() { closes++; return {}; }
+        });
+        assert(caught(() => helper.next()) === thrown, true);
+        assert(helper.next().done, true);
+        assert(helper.return().done, true);
+        assert(closes, 0);
+    }
+
+    for (const started of [false, true]) {
+        for (const closeKind of ["normal", "get", "call", "primitive", "noncallable", "null"]) {
+            let helper, reads = 0, calls = 0;
+            const input = source([1, 2, 3]);
+            Object.defineProperty(input, "return", {
+                get() {
+                    reads++;
+                    if (started) {
+                        assert_throws(TypeError, () => helper.next());
+                        assert_throws(TypeError, () => helper.return());
+                    } else {
+                        assert(helper.next().done, true);
+                        assert(helper.return().done, true);
+                    }
+                    if (closeKind === "get") throw marker;
+                    if (closeKind === "noncallable") return 1;
+                    if (closeKind === "null") return null;
+                    return function() {
+                        calls++;
+                        assert(this === input, true);
+                        assert(arguments.length, 0);
+                        if (started) {
+                            assert_throws(TypeError, () => helper.next());
+                            assert_throws(TypeError, () => helper.return());
+                        } else {
+                            assert(helper.next().done, true);
+                            assert(helper.return().done, true);
+                        }
+                        if (closeKind === "call") throw marker;
+                        return closeKind === "primitive" ? 1 : {};
+                    };
+                }
+            });
+            helper = make(input);
+            if (started)
+                assert(JSON.stringify(helper.next().value), "[1,2]");
+            if (closeKind === "normal" || closeKind === "null") {
+                assert(helper.return(9).done, true);
+            } else {
+                const error = caught(() => helper.return());
+                assert(closeKind === "primitive" || closeKind === "noncallable"
+                       ? error instanceof TypeError : error === marker, true);
+            }
+            assert(helper.next().done, true);
+            assert(helper.return().done, true);
+            assert(reads, 1);
+            assert(calls, closeKind === "normal" || closeKind === "call" ||
+                          closeKind === "primitive" ? 1 : 0);
+        }
+    }
+    for (const stage of ["next", "done", "value"]) {
+        let helper;
+        function reenter() {
+            assert_throws(TypeError, () => helper.next());
+            assert_throws(TypeError, () => helper.return());
+        }
+        helper = make({
+            next() {
+                if (stage === "next") reenter();
+                return {
+                    get done() { if (stage === "done") reenter(); return false; },
+                    get value() { if (stage === "value") reenter(); return 1; }
+                };
+            }
+        });
+        assert(JSON.stringify(helper.next().value), "[1,1]");
+        assert(helper.return().done, true);
+    }
+    assert(make(source([])).next().done, true);
+    const many = proto[method].call(source([undefined, null, true, 1, "x", 1n,
+                                          Symbol.for("chunk"), marker]), 1);
+    for (const value of [undefined, null, true, 1, "x", 1n, Symbol.for("chunk"), marker]) {
+        const row = many.next().value;
+        assert(row.length, 1);
+        assert(row[0] === value, true);
+    }
+    assert(many.next().done, true);
+
+    let arrayCloses = 0;
+    Object.defineProperty(Array.prototype, "return", {
+        configurable: true,
+        get() { arrayCloses++; throw Error("arrays are held values"); }
+    });
+    try {
+        const helper = make(source([[1], [2], [3]]));
+        assert(helper.next().value.length, 2);
+        assert(helper.return().done, true);
+    } finally {
+        delete Array.prototype.return;
+    }
+    assert(arrayCloses, 0);
+
+    let gcHelper, gcItem = {};
+    const gcSource = {
+        next() {
+            if (!gcItem) return { done: true };
+            const value = gcItem;
+            gcItem = null;
+            value.helper = gcHelper;
+            return { value, done: false };
+        }
+    };
+    gcHelper = proto[method].call(gcSource, 2);
+    if (typeof std !== "undefined") std.gc();
+    const gcResult = gcHelper.next();
+    if (method === "chunks") {
+        assert(gcResult.value[0].helper === gcHelper, true);
+        gcResult.value.length = 0;
+    } else {
+        assert(gcResult.done, true);
+    }
+    gcHelper = null;
+    if (typeof std !== "undefined") std.gc();
+}
+
+function test_iterator_chunks()
+{
+    test_iterator_buffer_helper("chunks");
+    function collect(values, size) {
+        return JSON.stringify(values.values().chunks(size).toArray());
+    }
+    assert(collect([1, 2, 3, 4], 2), "[[1,2],[3,4]]");
+    assert(collect([1, 2, 3, 4, 5], 2), "[[1,2],[3,4],[5]]");
+    assert(collect([1, 2, 3], 4294967295), "[[1,2,3]]");
+    const source = [1, 2, 3, 4, 5].values();
+    const helper = source.chunks(2);
+    const first = helper.next().value;
+    first[0] = 99;
+    first.push(99);
+    assert(source.next().value, 3);
+    const second = helper.next().value;
+    assert(first !== second, true);
+    assert(JSON.stringify(second), "[4,5]");
+    assert(helper.next().done, true);
+
+    for (const length of [1, 2]) {
+        let index = 0, closes = 0;
+        const helper = Iterator.prototype.chunks.call({
+            next() { return { done: index >= length, value: index++ }; },
+            get return() { closes++; return () => ({}); }
+        }, 2);
+        assert(helper.next().done, false);
+        assert(helper.return().done, true);
+        assert(closes, length === 1 ? 0 : 1);
+    }
+    let finallyCalls = 0;
+    function* input() {
+        try { yield 1; yield 2; yield 3; } finally { finallyCalls++; }
+    }
+    const external = input(), remaining = external.chunks(2);
+    assert(JSON.stringify(remaining.next().value), "[1,2]");
+    external.return();
+    assert(remaining.next().done, true);
+    assert(finallyCalls, 1);
+
+    let setters = 0, row;
+    Object.defineProperty(Array.prototype, "0", {
+        configurable: true, set() { setters++; }
+    });
+    try { row = [1, 2].values().chunks(2).next().value; }
+    finally { delete Array.prototype[0]; }
+    assert(setters, 0);
+    assert(JSON.stringify(row), "[1,2]");
+    const desc = Object.getOwnPropertyDescriptor(row, "0");
+    assert(desc.writable && desc.enumerable && desc.configurable, true);
+}
+
 function test_iterator_constructor_identity()
 {
     assert_throws(TypeError, () => Iterator());
@@ -4374,6 +4679,7 @@ test_iterator_limits();
 test_iterator_concat_return();
 test_iterator_concat_completion();
 test_iterator_concat_prototype();
+test_iterator_chunks();
 test_iterator_constructor_identity();
 test_weak_map();
 test_weak_map_cycles();
