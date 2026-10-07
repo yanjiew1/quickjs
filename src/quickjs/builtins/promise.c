@@ -24,6 +24,7 @@
  */
 #include "intrinsics.h"
 #include "async.h"
+#include "array-from-async.h"
 #include "../internal/vm.h"
 #include "../internal/class.h"
 #include "../internal/base.h"
@@ -1127,5 +1128,7 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
         return -1;
     ctx->promise_ctor = obj1;
     
-    return js_init_async_intrinsics(ctx);
+    if (js_init_async_intrinsics(ctx))
+        return -1;
+    return js_init_array_from_async(ctx);
 }

@@ -186,6 +186,7 @@ enum {
     JS_CLASS_ASYNC_GENERATOR,   /* u.async_generator_data */
     JS_CLASS_WEAK_REF,
     JS_CLASS_FINALIZATION_REGISTRY,
+    JS_CLASS_ARRAY_FROM_ASYNC, /* opaque asynchronous construction state */
 
     JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
 };
