@@ -819,6 +819,45 @@ function test_typed_array_set_overlap()
     assert([...source].join(","), "1,2,3");
 }
 
+function test_typed_array_constructor_length()
+{
+    for (const C of [Uint8Array, Float32Array, BigInt64Array]) {
+        const size = C.BYTES_PER_ELEMENT;
+        for (const resized of [0, 2, 6]) {
+            const buffer = new ArrayBuffer(4 * size, { maxByteLength: 8 * size });
+            const source = new C(buffer);
+            source.set(C === BigInt64Array ? [1n, 2n, 3n, 4n] : [1, 2, 3, 4]);
+            let reads = 0;
+            const target = new Proxy(function() {}, {
+                get(target, key) {
+                    assert(key, "prototype");
+                    reads++;
+                    buffer.resize(resized * size);
+                    return C.prototype;
+                }
+            });
+            const copy = Reflect.construct(C, [source], target);
+            assert(reads, 1);
+            assert(copy.length, resized);
+            assert([...copy].join(","), [...source].join(","));
+            assert(copy.buffer === buffer, false);
+        }
+    }
+
+    const buffer = new ArrayBuffer(4, { maxByteLength: 4 });
+    const fixed = new Uint8Array(buffer, 0, 4);
+    const target = new Proxy(function() {}, {
+        get(target, key) { buffer.resize(2); return Uint8Array.prototype; }
+    });
+    assert_throws(TypeError, () => Reflect.construct(Uint8Array, [fixed], target));
+
+    buffer.resize(4);
+    const detachedTarget = new Proxy(function() {}, {
+        get(target, key) { buffer.transfer(); return Uint8Array.prototype; }
+    });
+    assert_throws(TypeError, () => Reflect.construct(Uint8Array, [fixed], detachedTarget));
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -2072,6 +2111,7 @@ test_typed_array_set_content();
 test_typed_array_constructor_content();
 test_typed_array_species_content();
 test_typed_array_set_overlap();
+test_typed_array_constructor_length();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();
