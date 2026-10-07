@@ -453,6 +453,9 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt);
 JSAtom JS_NewAtomLen(JSContext *ctx, const char *str, size_t len);
 JSAtom JS_NewAtom(JSContext *ctx, const char *str);
 JSAtom JS_NewAtomUInt32(JSContext *ctx, uint32_t n);
+/* Exact signed decimal key; returns an owned atom or JS_ATOM_NULL
+   with an exception. Release the result with JS_FreeAtom. */
+JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
 JSAtom JS_DupAtom(JSContext *ctx, JSAtom v);
 void JS_FreeAtom(JSContext *ctx, JSAtom v);
 void JS_FreeAtomRT(JSRuntime *rt, JSAtom v);
@@ -790,6 +793,11 @@ JSValue JS_GetPropertyStr(JSContext *ctx, JSValueConst this_obj,
                           const char *prop);
 JSValue JS_GetPropertyUint32(JSContext *ctx, JSValueConst this_obj,
                              uint32_t idx);
+/* Int64 property helpers use the exact signed decimal property key,
+   including values outside the ECMAScript Number safe integer range.
+   Get returns an owned value or JS_EXCEPTION and may invoke user code. */
+JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst this_obj,
+                            int64_t idx);
 
 int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                            JSAtom prop, JSValue val, JSValueConst this_obj,
@@ -809,6 +817,9 @@ int JS_HasProperty(JSContext *ctx, JSValueConst this_obj, JSAtom prop);
 int JS_IsExtensible(JSContext *ctx, JSValueConst obj);
 int JS_PreventExtensions(JSContext *ctx, JSValueConst obj);
 int JS_DeleteProperty(JSContext *ctx, JSValueConst obj, JSAtom prop, int flags);
+/* Same flags and return convention as JS_DeleteProperty. */
+int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj,
+                           int64_t idx, int flags);
 int JS_SetPrototype(JSContext *ctx, JSValueConst obj, JSValueConst proto_val);
 JSValue JS_GetPrototype(JSContext *ctx, JSValueConst val);
 
@@ -853,6 +864,10 @@ int JS_DefinePropertyValue(JSContext *ctx, JSValueConst this_obj,
                            JSAtom prop, JSValue val, int flags);
 int JS_DefinePropertyValueUint32(JSContext *ctx, JSValueConst this_obj,
                                  uint32_t idx, JSValue val, int flags);
+/* Consumes val on success and failure; uses the exact Int64 key.
+   Same flags and return convention as JS_DefinePropertyValue. */
+int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
+                              int64_t idx, JSValue val, int flags);
 int JS_DefinePropertyValueStr(JSContext *ctx, JSValueConst this_obj,
                               const char *prop, JSValue val, int flags);
 int JS_DefinePropertyGetSet(JSContext *ctx, JSValueConst this_obj,

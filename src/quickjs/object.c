@@ -4028,8 +4028,17 @@ int JS_DefinePropertyValueUint32(JSContext *ctx, JSValueConst this_obj,
 int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
                                 int64_t idx, JSValue val, int flags)
 {
-    return JS_DefinePropertyValueValue(ctx, this_obj, JS_NewInt64(ctx, idx),
-                                       val, flags);
+    JSAtom atom;
+    int ret;
+
+    atom = JS_NewAtomInt64(ctx, idx);
+    if (atom == JS_ATOM_NULL) {
+        JS_FreeValue(ctx, val);
+        return -1;
+    }
+    ret = JS_DefinePropertyValue(ctx, this_obj, atom, val, flags);
+    JS_FreeAtom(ctx, atom);
+    return ret;
 }
 
 int JS_DefinePropertyValueStr(JSContext *ctx, JSValueConst this_obj,

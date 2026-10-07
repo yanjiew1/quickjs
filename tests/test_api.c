@@ -2650,6 +2650,91 @@ static void test_async_iterator_disposal_raw_context(void)
     JS_FreeRuntime(rt);
 }
 
+static void int64_property_value_free(JSRuntime *rt, void *opaque, void *ptr)
+{
+    int *releases = opaque;
+    (*releases)++;
+}
+
+static void test_int64_property_api(void)
+{
+    static const struct {
+        int64_t index;
+        const char *key;
+    } cases[] = {
+        { 0, "0" },
+        { -1, "-1" },
+        { INT64_C(2147483648), "2147483648" },
+        { INT64_C(4294967296), "4294967296" },
+        { INT64_C(9007199254740993), "9007199254740993" },
+        { -INT64_C(9007199254740993), "-9007199254740993" },
+        { INT64_MIN, "-9223372036854775808" },
+        { INT64_MAX, "9223372036854775807" },
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue object, value, exception;
+    JSAtom atom;
+    const char *key;
+    int32_t number;
+    size_t i;
+    uint8_t external = 0;
+    int releases = 0;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    object = JS_NewObject(ctx);
+    assert(!JS_IsException(object));
+    for (i = 0; i < countof(cases); i++) {
+        assert(JS_DefinePropertyValueInt64(ctx, object, cases[i].index,
+                                          JS_NewInt32(ctx, 100 + (int)i),
+                                          JS_PROP_C_W_E) == 1);
+        value = JS_GetPropertyInt64(ctx, object, cases[i].index);
+        assert(JS_ToInt32(ctx, &number, value) == 0 && number == 100 + (int)i);
+        JS_FreeValue(ctx, value);
+        value = JS_GetPropertyStr(ctx, object, cases[i].key);
+        assert(JS_ToInt32(ctx, &number, value) == 0 && number == 100 + (int)i);
+        JS_FreeValue(ctx, value);
+        assert(JS_SetPropertyInt64(ctx, object, cases[i].index,
+                                  JS_NewInt32(ctx, 200 + (int)i)) == 1);
+        value = JS_GetPropertyInt64(ctx, object, cases[i].index);
+        assert(JS_ToInt32(ctx, &number, value) == 0 && number == 200 + (int)i);
+        JS_FreeValue(ctx, value);
+        assert(JS_DeletePropertyInt64(ctx, object, cases[i].index,
+                                     JS_PROP_THROW) == 1);
+        atom = JS_NewAtomInt64(ctx, cases[i].index);
+        assert(atom != JS_ATOM_NULL && JS_HasProperty(ctx, object, atom) == 0);
+        key = JS_AtomToCString(ctx, atom);
+        assert(key && strcmp(key, cases[i].key) == 0);
+        JS_FreeCString(ctx, key);
+        JS_FreeAtom(ctx, atom);
+    }
+
+    assert(JS_PreventExtensions(ctx, object) == 1);
+    value = JS_NewArrayBuffer(ctx, &external, 1, int64_property_value_free,
+                              &releases, FALSE);
+    assert(!JS_IsException(value));
+    assert(JS_DefinePropertyValueInt64(ctx, object, INT64_MAX, value,
+                                      JS_PROP_C_W_E | JS_PROP_THROW) == -1);
+    assert(releases == 1 && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    value = JS_NewArrayBuffer(ctx, &external, 1, int64_property_value_free,
+                              &releases, FALSE);
+    assert(!JS_IsException(value));
+    assert(JS_DefinePropertyValueInt64(ctx, JS_NULL, INT64_MIN, value,
+                                      JS_PROP_C_W_E | JS_PROP_THROW) == -1);
+    assert(releases == 2 && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, object);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(releases == 2);
+}
+
 static JSValue test_resource_realms_gc(JSContext *ctx, JSValueConst value,
                                        int argc, JSValueConst *argv)
 {
@@ -2722,6 +2807,7 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
+        { "int64-property-api", test_int64_property_api },
         { "async-iterator-disposal-realm", test_async_iterator_disposal_realm },
         { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },
         { "iterator-disposal-realm", test_iterator_disposal_realm },
