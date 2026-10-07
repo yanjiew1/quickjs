@@ -478,8 +478,10 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     BOOL is_pseudo_var, is_arg_scope, is_decl;
 
     is_decl = (op == OP_scope_put_var_decl);
-    if (is_decl)
+    if (is_decl) {
         op = OP_scope_put_var;
+        scope_level = 0;
+    }
     label_done = -1;
 
     /* XXX: could be simpler to use a specific function to
@@ -3430,6 +3432,8 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     
     if (fd->has_parameter_expressions && fd->has_arguments_binding &&
         add_arguments_arg(ctx, fd) < 0)
+        goto fail;
+    if (resolve_annex_function_declarations(ctx, fd) < 0)
         goto fail;
 
     /* recompute scope linkage */

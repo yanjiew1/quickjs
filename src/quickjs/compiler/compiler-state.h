@@ -116,6 +116,7 @@ typedef struct JSFunctionDef {
     BOOL has_parameter_expressions; /* if true, an argument scope is created */
     BOOL has_use_strict; /* to reject directive in special cases */
     BOOL has_eval_call; /* true if the function contains a call to eval() */
+    BOOL has_annex_b_declarations; /* deferred variable binding copies */
     BOOL has_arguments_binding; /* true if the 'arguments' binding is
                                    available in the function */
     BOOL has_this_binding; /* true if the 'this' and new.target binding are
@@ -139,6 +140,7 @@ typedef struct JSFunctionDef {
     int arg_size; /* allocated size for args[] */
     int arg_count; /* number of arguments */
     int defined_arg_count;
+    int parameter_var_count; /* parsed formal bindings before the body */
     int var_ref_count; /* number of local/arg variable references */
     int var_object_idx; /* -1 if none */
     int arg_var_object_idx; /* -1 if none (var object for the argument scope) */
