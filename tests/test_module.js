@@ -240,6 +240,10 @@ assertThrows(TypeError, () => { selfNamespace.namespace_set_reexport = 7; });
 export * as namespace_set_reexport from "./fixture_module.js";
 assert(selfNamespace.namespace_set_reexport, namespace);
 
+import { usingModuleEvents, usingModuleResource } from "./fixture_using_module.js";
+assert(usingModuleEvents.join(","), "evaluated,disposed");
+assert(typeof usingModuleResource[Symbol.dispose], "function");
+
 async function test_module_reserved_bindings()
 {
     const invalid = [

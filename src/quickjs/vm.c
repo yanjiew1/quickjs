@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,6 +46,7 @@
 #include "builtins/typed-array.h"
 #include "builtins/regexp.h"
 #include "builtins/function.h"
+#include "builtins/resource-management.h"
 
 #if defined(__EMSCRIPTEN__)
 #define DIRECT_DISPATCH  0
@@ -2585,6 +2587,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     break;
                 case OP_SPECIAL_OBJECT_IMPORT_META:
                     *sp++ = js_import_meta(ctx);
+                    if (unlikely(JS_IsException(sp[-1])))
+                        goto exception;
+                    break;
+                case OP_SPECIAL_OBJECT_DISPOSABLE_RESOURCE_LIST:
+                    sf->cur_pc = pc;
+                    *sp++ = js_new_disposable_resource_list(ctx);
                     if (unlikely(JS_IsException(sp[-1])))
                         goto exception;
                     break;
@@ -5227,6 +5235,42 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             ret_val = JS_NewInt32(ctx, FUNC_RET_INITIAL_YIELD);
             goto done_generator;
 
+        CASE(OP_resource_management):
+            {
+                int operation = *pc++;
+                int status;
+                JSValue result;
+
+                sf->cur_pc = pc;
+                if (operation == OP_RESOURCE_ADD_SYNC ||
+                    operation == OP_RESOURCE_ADD_ASYNC) {
+                    status = js_add_disposable_resource(ctx, sp[-3], sp[-2],
+                        operation == OP_RESOURCE_ADD_ASYNC ?
+                        JS_DISPOSAL_ASYNC : JS_DISPOSAL_SYNC);
+                    if (unlikely(status < 0))
+                        goto exception;
+                    result = sp[-2];
+                    JS_FreeValue(ctx, sp[-3]);
+                    JS_FreeValue(ctx, sp[-1]);
+                    sp[-3] = result;
+                    sp[-2] = JS_FALSE;
+                } else if (operation == OP_RESOURCE_DISPOSE_STEP) {
+                    status = js_dispose_resources_step(ctx, sp[-3], sp[-2],
+                        JS_ToBool(ctx, sp[-1]), &result);
+                    if (unlikely(status < 0))
+                        goto exception;
+                    JS_FreeValue(ctx, sp[-3]);
+                    JS_FreeValue(ctx, sp[-2]);
+                    JS_FreeValue(ctx, sp[-1]);
+                    sp[-3] = result;
+                    sp[-2] = JS_NewBool(ctx, status != 0);
+                } else {
+                    JS_ThrowInternalError(ctx, "invalid resource operation");
+                    goto exception;
+                }
+                sp--;
+            }
+            BREAK;
         CASE(OP_nop):
             BREAK;
         CASE(OP_is_undefined_or_null):

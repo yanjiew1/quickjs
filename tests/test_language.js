@@ -1756,3 +1756,347 @@ test_parse_arrow_function();
 test_unicode_ident();
 test_global_var_opt();
 test_number_literals();
+
+function test_using_registration_and_bindings()
+{
+    const events = [];
+    let reads = 0, check;
+    const resource = {
+        get [Symbol.dispose]() {
+            reads++;
+            assert_throws(ReferenceError, check);
+            return function() {
+                assert(this, resource);
+                assert(arguments.length, 0);
+                events.push("dispose");
+                return { get then() { throw Error("result must be ignored"); } };
+            };
+        }
+    };
+    {
+        check = () => value;
+        assert_throws(ReferenceError, check);
+        using value = resource;
+        assert(value, resource);
+        assert_throws(TypeError, () => { value = null; });
+        Object.defineProperty(resource, Symbol.dispose, {
+            value() { throw Error("method must be cached"); }
+        });
+        events.push("body");
+    }
+    assert(reads, 1);
+    assert(events.join(","), "body,dispose");
+    assert(check(), resource);
+    assert(eval("4; { using empty = null; }"), 4);
+    assert(eval("6; { using first = null, second = undefined; }"), 6);
+    let readDisposed, disposed = 0;
+    {
+        using current = { [Symbol.dispose]() { disposed++; } };
+        readDisposed = eval("() => current");
+        assert(readDisposed(), current);
+        assert(eval("7; { using nested = null; }"), 7);
+    }
+    assert(disposed, 1);
+    assert(typeof readDisposed()[Symbol.dispose], "function");
+    {
+        using empty = null, absent = undefined;
+        assert(empty, null);
+        assert(absent, undefined);
+    }
+    for (const value of [0, "", true, Symbol(), 0n, {}]) {
+        assert_throws(TypeError, () => { using resource = value; });
+    }
+    assert_throws(TypeError, () => {
+        using resource = { [Symbol.dispose]: 1 };
+    });
+    {
+        using Named = class { static [Symbol.dispose]() {} };
+        assert(Named.name, "Named");
+    }
+}
+
+function test_using_completions_and_suppression()
+{
+    const events = [];
+    function resource(name, error, shouldThrow = false) {
+        return { [Symbol.dispose]() {
+            events.push(name);
+            if (shouldThrow)
+                throw error;
+        } };
+    }
+    const initial = {}, firstError = {}, secondError = {};
+    let caught;
+    try {
+        using first = resource("first", firstError, true),
+              second = resource("second", secondError, true);
+        throw initial;
+    } catch (error) { caught = error; }
+    assert(events.join(","), "second,first");
+    assert(caught instanceof SuppressedError, true);
+    assert(caught.error, firstError);
+    assert(caught.suppressed.error, secondError);
+    assert(caught.suppressed.suppressed, initial);
+
+    events.length = 0;
+    caught = false;
+    try {
+        using value = resource("undefined", undefined, true);
+        throw undefined;
+    } catch (error) {
+        caught = true;
+        assert(error instanceof SuppressedError, true);
+        assert(error.error, undefined);
+        assert(error.suppressed, undefined);
+    }
+    assert(caught, true);
+    assert(events.join(","), "undefined");
+
+    events.length = 0;
+    try {
+        using first = resource("first"),
+              second = (() => { throw initial; })();
+    } catch (error) { assert(error, initial); }
+    assert(events.join(","), "first");
+
+    events.length = 0;
+    function returns() {
+        using value = resource("return");
+        try { return initial; } finally { events.push("finally"); }
+    }
+    assert(returns(), initial);
+    assert(events.join(","), "finally,return");
+
+    events.length = 0;
+    outer: for (let i = 0; i < 3; i++) {
+        using value = resource(String(i));
+        if (i < 2)
+            continue outer;
+        break outer;
+    }
+    assert(events.join(","), "0,1,2");
+    events.length = 0;
+    exit: {
+        using outer = resource("outer");
+        {
+            using inner = resource("inner");
+            break exit;
+        }
+    }
+    assert(events.join(","), "inner,outer");
+
+    events.length = 0;
+    const iterable = {
+        [Symbol.iterator]() {
+            return {
+                next() { return { value: resource("resource"), done: false }; },
+                return() { events.push("iterator"); return {}; }
+            };
+        }
+    };
+    for (const value of iterable) {
+        using current = value;
+        break;
+    }
+    assert(events.join(","), "resource,iterator");
+
+    const captured = [];
+    for (let i = 0; i < 2; i++) {
+        try {
+            using value = {
+                id: i,
+                [Symbol.dispose]() { throw initial; }
+            };
+            captured.push(() => value.id);
+        } catch (error) { assert(error, initial); }
+    }
+    assert(captured.map(get => get()).join(","), "0,1");
+
+    let after;
+    {
+        let changed = 0;
+        using value = { [Symbol.dispose]() { changed++; } };
+        after = () => changed;
+    }
+    assert(after(), 1);
+}
+
+function test_using_contextual_grammar()
+{
+    let using = [], value = 0;
+    using[0] = 1;
+    us\u0069ng[1] = 2;
+    using
+    value = 3;
+    assert(using.join(","), "1,2");
+    assert(value, 3);
+    Function("using", "value", "using [value] = null;")(using, "computed");
+    assert(using.computed, null);
+    for (const source of [
+        "using value;", "using first = null, second;",
+        "using let = null;", "using first = null, [value] = null;",
+        "using first = null, {value} = null;",
+        "using {value} = null;", "using value = null; let value;",
+        "let value; using value = null;",
+        "if (true) using value = null;",
+        "label: using value = null;",
+        "switch (1) { case 1: using value = null; }",
+        "switch (1) { default: using value = null; }",
+        "us\\u0069ng value = null;"
+    ]) {
+        assert_throws(SyntaxError, () => Function(source));
+    }
+    assert_throws(SyntaxError, () => eval("using value = null;"));
+    assert_throws(SyntaxError, () => (0, eval)("using value = null;"));
+    Function("switch (1) { case 1: { using value = null; } }")();
+    Function("var using = 1, let; using\nlet = 2;")();
+    assert(Function("{ using us\\u0069ng = null; return using; }")(), null);
+    assert_throws(SyntaxError,
+        () => Function("class C { static { using await = null; } }"));
+    Function("class C { static { (() => { using await = null; }); } }")();
+}
+
+function test_using_generator_cleanup()
+{
+    const events = [], error = {};
+    function* generator() {
+        using value = { [Symbol.dispose]() { events.push("dispose"); } };
+        yield value;
+    }
+    const first = generator();
+    assert(first.next().done, false);
+    assert(events.length, 0);
+    assert(first.return(42).value, 42);
+    assert(events.join(","), "dispose");
+    events.length = 0;
+    const second = generator();
+    assert(second.next().done, false);
+    if (typeof gc === "function")
+        gc();
+    try {
+        second.throw(error);
+        assert(false);
+    } catch (caught) { assert(caught, error); }
+    assert(events.join(","), "dispose");
+}
+
+function test_using_intrinsic_cleanup()
+{
+    const Stack = DisposableStack, Suppressed = SuppressedError;
+    const first = {}, second = {};
+    globalThis.DisposableStack = function() {
+        throw Error("syntax must not construct a public stack");
+    };
+    globalThis.SuppressedError = function() {
+        throw Error("cleanup must use the intrinsic error prototype");
+    };
+    try {
+        try {
+            using resource = { [Symbol.dispose]() { throw second; } };
+            throw first;
+        } catch (error) {
+            assert(error instanceof Suppressed, true);
+            assert(error.error, second);
+            assert(error.suppressed, first);
+        }
+    } finally {
+        globalThis.DisposableStack = Stack;
+        globalThis.SuppressedError = Suppressed;
+    }
+}
+
+test_using_registration_and_bindings();
+test_using_completions_and_suppression();
+test_using_contextual_grammar();
+test_using_generator_cleanup();
+test_using_intrinsic_cleanup();
+
+/* Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
+/* Source-review regressions. Prepared only; not compiled or executed.
+   Append to tests/test_language.js after native using integration.
+   Uses its existing assert helper. */
+
+function test_using_return_disposal_failure_detaches_inner_capture()
+{
+    const captured = [], events = [], failure = {};
+    function exercise() {
+        for (let i = 0; i < 2; i++) {
+            try {
+                using resource = {
+                    [Symbol.dispose]() { events.push(i); throw failure; }
+                };
+                {
+                    let value = i;
+                    captured.push(() => value);
+                    return "discarded";
+                }
+            } catch (error) { assert(error, failure); }
+        }
+        return "caught";
+    }
+    assert(exercise(), "caught");
+    assert(events.join(","), "0,1");
+    assert(captured.map(read => read()).join(","), "0,1");
+}
+
+function test_using_abrupt_inner_capture_preserves_disposer_mutation()
+{
+    const captured = [], failure = {};
+    for (let i = 0; i < 2; i++) {
+        let update;
+        try {
+            using resource = { [Symbol.dispose]() { update(); } };
+            {
+                let value = i;
+                captured.push(() => value);
+                update = () => { value += 10; };
+                throw failure;
+            }
+        } catch (error) { assert(error, failure); }
+    }
+    assert(captured.map(read => read()).join(","), "10,11");
+}
+
+function test_using_inner_capture_registration_failure()
+{
+    const captured = [], failure = {};
+    for (let i = 0; i < 2; i++) {
+        try {
+            using outer = { [Symbol.dispose]() {} };
+            {
+                let value = i;
+                captured.push(() => value);
+                using inner = {
+                    get [Symbol.dispose]() { throw failure; }
+                };
+            }
+        } catch (error) { assert(error, failure); }
+    }
+    assert(captured.map(read => read()).join(","), "0,1");
+}
+
+function test_using_descendant_cleanup_preserves_outer_capture()
+{
+    const captured = [], failure = {};
+    let outer = 0;
+    const readOuter = () => outer;
+    for (let i = 0; i < 2; i++) {
+        try {
+            using resource = { [Symbol.dispose]() { outer++; } };
+            {
+                let value = i;
+                captured.push(() => value);
+                throw failure;
+            }
+        } catch (error) { assert(error, failure); }
+    }
+    assert(captured.map(read => read()).join(","), "0,1");
+    assert(readOuter(), 2);
+    outer = 3;
+    assert(readOuter(), 3);
+}
+
+test_using_return_disposal_failure_detaches_inner_capture();
+test_using_abrupt_inner_capture_preserves_disposer_mutation();
+test_using_inner_capture_registration_failure();
+test_using_descendant_cleanup_preserves_outer_capture();

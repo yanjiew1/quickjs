@@ -270,6 +270,8 @@ DEF(apply_eval_strict, 3, 2, 1, u16)
 
 DEF(define_field_ro, 5, 2, 1, atom) /* immutable binding reference */
 
+DEF(resource_management, 2, 3, 2, u8)
+
 DEF(            nop, 1, 0, 0, none)
 
 /* temporary opcodes: never emitted in the final bytecode */

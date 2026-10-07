@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +50,18 @@ struct BlockEnv {
     int scope_level;
     uint8_t has_iterator : 1;
     uint8_t is_regular_stmt : 1; /* i.e. not a loop statement */
+};
+
+/* Kept in the parser: no runtime object layout depends on these fields. */
+struct JSResourceScope {
+    struct JSResourceScope *prev;
+    BlockEnv block;
+    BOOL declarations_allowed;
+    int resources_idx;
+    int error_idx;
+    int has_error_idx;
+    int label_catch;
+    int label_end;
 };
 
 typedef enum JSParseExportEnum {
@@ -4762,6 +4775,130 @@ static void pop_break_entry(JSFunctionDef *fd)
     fd->top_break = be->prev;
 }
 
+static void push_resource_scope(JSParseState *s, JSResourceScope *scope,
+                                BOOL declarations_allowed)
+{
+    scope->prev = s->cur_func->resource_scope;
+    scope->declarations_allowed = declarations_allowed;
+    scope->resources_idx = -1;
+    push_break_entry(s->cur_func, &scope->block, JS_ATOM_NULL, -1, -1, 0);
+    s->cur_func->resource_scope = scope;
+}
+
+/* Emit no instructions or hidden locals for scopes without resources. */
+static int activate_resource_scope(JSParseState *s)
+{
+    JSFunctionDef *fd = s->cur_func;
+    JSResourceScope *scope = fd->resource_scope;
+
+    if (!scope || !scope->declarations_allowed ||
+        scope->block.scope_level != fd->scope_level)
+        return js_parse_error(s, "using declaration is not allowed here");
+    if (scope->resources_idx >= 0)
+        return 0;
+    scope->resources_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
+    scope->error_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
+    scope->has_error_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
+    if (scope->resources_idx < 0 || scope->error_idx < 0 ||
+        scope->has_error_idx < 0)
+        return -1;
+    scope->label_catch = new_label(s);
+    scope->label_end = new_label(s);
+    scope->block.label_finally = new_label(s);
+    if (scope->label_catch < 0 || scope->label_end < 0 ||
+        scope->block.label_finally < 0)
+        return -1;
+    scope->block.drop_count = 1;
+
+    emit_op(s, OP_special_object);
+    emit_u8(s, OP_SPECIAL_OBJECT_DISPOSABLE_RESOURCE_LIST);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->resources_idx);
+    emit_op(s, OP_undefined);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->error_idx);
+    emit_op(s, OP_push_false);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->has_error_idx);
+    emit_goto(s, OP_catch, scope->label_catch);
+    return 0;
+}
+
+static void emit_resource_registration(JSParseState *s, int operation)
+{
+    emit_op(s, OP_get_loc);
+    emit_u16(s, s->cur_func->resource_scope->resources_idx);
+    emit_op(s, OP_swap);
+    emit_op(s, OP_push_false);
+    emit_op(s, OP_resource_management);
+    emit_u8(s, operation);
+    emit_op(s, OP_drop);
+}
+
+static void pop_resource_scope(JSParseState *s, JSResourceScope *scope)
+{
+    JSFunctionDef *fd = s->cur_func;
+    int scope_level;
+
+    assert(s->cur_func->resource_scope == scope);
+    assert(s->cur_func->top_break == &scope->block);
+    s->cur_func->resource_scope = scope->prev;
+    pop_break_entry(s->cur_func);
+    if (scope->resources_idx < 0)
+        return;
+
+    if (js_is_live_code(s)) {
+        emit_op(s, OP_drop); /* resource catch offset */
+        emit_op(s, OP_undefined); /* pending completion value */
+        emit_goto(s, OP_gosub, scope->block.label_finally);
+        emit_op(s, OP_drop);
+        emit_goto(s, OP_goto, scope->label_end);
+    }
+    emit_label(s, scope->label_catch);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->error_idx);
+    emit_op(s, OP_push_true);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->has_error_idx);
+    emit_op(s, OP_undefined);
+    emit_goto(s, OP_gosub, scope->block.label_finally);
+    emit_op(s, OP_drop);
+    /* A seeded throw is rethrown by the cursor, including throw undefined. */
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->error_idx);
+    emit_op(s, OP_throw);
+
+    emit_label(s, scope->block.label_finally);
+    /* Stack: pending completion value, gosub return address. */
+    /* A return or exception can skip an inner scope's normal leave.
+       Detach all exited lexical bindings before a disposer can throw
+       into an enclosing catch and permit their slots to be reused. */
+    for (scope_level = fd->scope_count - 1;
+         scope_level >= scope->block.scope_level; scope_level--) {
+        if (is_child_scope(s->ctx, fd, scope_level,
+                           scope->block.scope_level)) {
+            emit_op(s, OP_leave_scope);
+            emit_u16(s, scope_level);
+        }
+    }
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->resources_idx);
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->error_idx);
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->has_error_idx);
+    emit_op(s, OP_resource_management);
+    emit_u8(s, OP_RESOURCE_DISPOSE_STEP);
+    /* No async records are emitted by synchronous declarations. */
+    emit_op(s, OP_drop);
+    emit_op(s, OP_drop);
+    emit_op(s, OP_undefined);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->resources_idx);
+    emit_op(s, OP_ret);
+    emit_label(s, scope->label_end);
+}
+
 static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
 {
     BlockEnv *top;
@@ -4931,16 +5068,21 @@ static __exception int js_parse_statement(JSParseState *s)
 
 static __exception int js_parse_block(JSParseState *s)
 {
+    JSResourceScope resources;
+
     if (js_parse_expect(s, '{'))
         return -1;
     if (s->token.val != '}') {
-        push_scope(s);
+        if (push_scope(s) < 0)
+            return -1;
+        push_resource_scope(s, &resources, TRUE);
         for(;;) {
             if (js_parse_statement_or_decl(s, DECL_MASK_ALL))
                 return -1;
             if (s->token.val == '}')
                 break;
         }
+        pop_resource_scope(s, &resources);
         pop_scope(s);
     }
     if (next_token(s))
@@ -4950,7 +5092,7 @@ static __exception int js_parse_block(JSParseState *s)
 
 /* allowed parse_flags: PF_IN_ACCEPTED */
 static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
-                                    BOOL export_flag)
+                                    BOOL export_flag, int resource_operation)
 {
     JSContext *ctx = s->ctx;
     JSFunctionDef *fd = s->cur_func;
@@ -5003,6 +5145,8 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
                         goto var_error;
                     set_object_name(s, name);
                     emit_source_pos(s, source_ptr);
+                    if (resource_operation >= 0)
+                        emit_resource_registration(s, resource_operation);
                     emit_op(s, (tok == TOK_CONST || tok == TOK_LET) ?
                         OP_scope_put_var_init : OP_scope_put_var);
                     emit_atom(s, name);
@@ -5024,7 +5168,8 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
             JS_FreeAtom(ctx, name);
         } else {
             int skip_bits;
-            if ((s->token.val == '[' || s->token.val == '{')
+            if (resource_operation < 0 &&
+                (s->token.val == '[' || s->token.val == '{')
             &&  js_parse_skip_parens_token(s, &skip_bits, FALSE) == '=') {
                 emit_op(s, OP_undefined);
                 if (js_parse_destructuring_element(s, tok, 0, TRUE, skip_bits & SKIP_HAS_ELLIPSIS, TRUE, export_flag) < 0)
@@ -5095,6 +5240,28 @@ static int is_let(JSParseState *s, int decl_mask)
         }
     }
     return res;
+}
+
+/* A contextual keyword requires lexer lookahead to retain escape and
+   line terminator information; using[expr] remains an ordinary expression. */
+static int is_using_declaration(JSParseState *s)
+{
+    JSParsePos pos;
+    int result = FALSE;
+
+    if (!token_is_pseudo_keyword(s, JS_ATOM_using))
+        return FALSE;
+    js_parse_get_pos(s, &pos);
+    if (next_token(s)) {
+        result = -1;
+    } else if (!s->got_lf &&
+               (s->token.val == TOK_IDENT || s->token.val == TOK_AWAIT ||
+                s->token.val == TOK_YIELD || s->token.val == TOK_LET)) {
+        result = TRUE;
+    }
+    if (js_parse_seek_token(s, &pos))
+        result = -1;
+    return result;
 }
 
 /* XXX: handle IteratorClose when exiting the loop before the
@@ -5450,7 +5617,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
     case TOK_VAR:
         if (next_token(s))
             goto fail;
-        if (js_parse_var(s, TRUE, tok, FALSE))
+        if (js_parse_var(s, TRUE, tok, FALSE, -1))
             goto fail;
         if (js_parse_expect_semi(s))
             goto fail;
@@ -5610,7 +5777,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 if (tok == TOK_VAR || tok == TOK_LET || tok == TOK_CONST) {
                     if (next_token(s))
                         goto fail;
-                    if (js_parse_var(s, FALSE, tok, FALSE))
+                    if (js_parse_var(s, FALSE, tok, FALSE, -1))
                         goto fail;
                 } else {
                     if (js_parse_expr2(s, FALSE))
@@ -6024,6 +6191,24 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             js_parse_error_reserved_identifier(s);
             goto fail;
         }
+        switch (is_using_declaration(s)) {
+        case TRUE:
+            if (!(decl_mask & DECL_MASK_OTHER)) {
+                js_parse_error(s, "using declaration requires a statement list");
+                goto fail;
+            }
+            if (activate_resource_scope(s) < 0 || next_token(s))
+                goto fail;
+            if (js_parse_var(s, PF_IN_ACCEPTED, TOK_CONST, FALSE,
+                             OP_RESOURCE_ADD_SYNC) ||
+                js_parse_expect_semi(s))
+                goto fail;
+            goto done;
+        case FALSE:
+            break;
+        default:
+            goto fail;
+        }
         /* Determine if `let` introduces a Declaration or an ExpressionStatement */
         switch (is_let(s, decl_mask)) {
         case TRUE:
@@ -6375,7 +6560,7 @@ static __exception int js_parse_export(JSParseState *s)
     case TOK_VAR:
     case TOK_LET:
     case TOK_CONST:
-        return js_parse_var(s, TRUE, tok, TRUE);
+        return js_parse_var(s, TRUE, tok, TRUE, -1);
     default:
         return js_parse_error(s, "invalid export syntax");
     }
@@ -6756,6 +6941,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     int func_idx, lexical_func_idx = -1;
     BOOL has_opt_arg;
     BOOL create_func_var = FALSE;
+    BOOL resource_scope_open = FALSE;
+    JSResourceScope resources;
 
     is_expr = (func_type != JS_PARSE_FUNC_STATEMENT &&
                func_type != JS_PARSE_FUNC_VAR);
@@ -7165,6 +7352,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     if (js_parse_function_check_names(s, fd, func_name))
         goto fail;
 
+    push_resource_scope(s, &resources, TRUE);
+    resource_scope_open = TRUE;
     while (s->token.val != '}') {
         if (js_parse_source_element(s))
             goto fail;
@@ -7191,6 +7380,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         emit_return(s, FALSE);
     }
  done:
+    if (resource_scope_open)
+        pop_resource_scope(s, &resources);
     s->cur_func = fd->parent;
 
     /* Reparse identifiers after the function is terminated so that
@@ -7320,6 +7511,7 @@ __exception int js_parse_function_constructor(JSParseState *s,
 __exception int js_parse_program(JSParseState *s)
 {
     JSFunctionDef *fd = s->cur_func;
+    JSResourceScope resources;
     int idx;
 
     if (next_token(s))
@@ -7339,6 +7531,7 @@ __exception int js_parse_program(JSParseState *s)
             return -1;
     }
 
+    push_resource_scope(s, &resources, s->is_module);
     while (s->token.val != TOK_EOF) {
         if (js_parse_source_element(s))
             return -1;
@@ -7365,6 +7558,7 @@ __exception int js_parse_program(JSParseState *s)
     } else {
         emit_return(s, FALSE);
     }
+    pop_resource_scope(s, &resources);
 
     return 0;
 }

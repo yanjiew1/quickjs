@@ -66,7 +66,16 @@ typedef enum {
     OP_SPECIAL_OBJECT_HOME_OBJECT,
     OP_SPECIAL_OBJECT_VAR_OBJECT,
     OP_SPECIAL_OBJECT_IMPORT_META,
+    OP_SPECIAL_OBJECT_DISPOSABLE_RESOURCE_LIST,
 } OPSpecialObjectEnum;
+
+/* Argument of OP_resource_management. All forms have the same stack
+   effect: list, value, is_throw -> value, needs_await. */
+typedef enum {
+    OP_RESOURCE_ADD_SYNC,
+    OP_RESOURCE_ADD_ASYNC,
+    OP_RESOURCE_DISPOSE_STEP,
+} OPResourceManagementEnum;
 
 #define JS_DEFINE_CLASS_HAS_HERITAGE     (1 << 0)
 #define JS_THROW_VAR_RO             0

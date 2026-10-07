@@ -427,6 +427,33 @@ async function test_resource_cursor_nullish_traversal()
 
 await test_resource_cursor_nullish_traversal();
 
+async function test_synchronous_using_in_async_bodies()
+{
+    const events = [];
+    async function functionBody() {
+        using resource = { [Symbol.dispose]() { events.push("function"); } };
+        await Promise.resolve();
+        return 42;
+    }
+    const pending = functionBody();
+    assert(events.length, 0);
+    assert(await pending, 42);
+    assert(events.join(","), "function");
+
+    events.length = 0;
+    async function* generatorBody() {
+        using resource = { [Symbol.dispose]() { events.push("generator"); } };
+        yield 1;
+    }
+    const iterator = generatorBody();
+    assert((await iterator.next()).value, 1);
+    assert(events.length, 0);
+    assert((await iterator.return(2)).value, 2);
+    assert(events.join(","), "generator");
+}
+
+await test_synchronous_using_in_async_bodies();
+
 async function assert_array_from_async_rejects(operation, expected)
 {
     let rejected = false;

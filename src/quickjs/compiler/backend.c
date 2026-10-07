@@ -1511,6 +1511,7 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
         for(i = 0; i < b->var_count; i++) {
             vd = &b->vardefs[b->arg_count + i];
             if (!vd->has_scope && vd->var_name != JS_ATOM__ret_ &&
+                vd->var_name != JS_ATOM_NULL &&
                 vd->var_kind != JS_VAR_PARAMETER_COPY) {
                 JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
                 set_closure_from_var(ctx, cv, vd, i);

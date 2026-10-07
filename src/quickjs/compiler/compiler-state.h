@@ -29,6 +29,7 @@
 #include "../internal/function.h"
 
 typedef struct BlockEnv BlockEnv;
+typedef struct JSResourceScope JSResourceScope;
 typedef struct JSGlobalVar JSGlobalVar;
 typedef struct RelocEntry RelocEntry;
 typedef struct JumpSlot JumpSlot;
@@ -181,6 +182,7 @@ typedef struct JSFunctionDef {
     int label_size; /* allocated size for label_slots[] */
     int label_count;
     BlockEnv *top_break; /* break/continue label stack */
+    JSResourceScope *resource_scope; /* parser only */
 
     /* constant pool (strings, functions, numbers) */
     JSValue *cpool;
