@@ -5161,6 +5161,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                             if (unlikely(JS_IsException(val)))
                                 goto exception;
                         }
+                        if (!is_with)
+                            set_value(ctx, &sp[-1], JS_UNDEFINED);
                         *sp++ = val;
                         break;
                     }
