@@ -1823,6 +1823,85 @@ function test_set_iterator_factory()
     }
 }
 
+function test_iterator_wrapper()
+{
+    for (const value of [undefined, null, false, 0, "text", Symbol("value"), 1n, {}]) {
+        const iterator = {
+            next() { assert(this === iterator, true); assert(arguments.length, 0); return value; },
+            return() { assert(this === iterator, true); assert(arguments.length, 0); return value; }
+        };
+        const wrapper = Iterator.from(iterator);
+        assert(wrapper.next(1) === value, true);
+        assert(wrapper.return(1) === value, true);
+    }
+
+    let reads = 0;
+    const result = {
+        get done() { reads++; throw Error("done read"); },
+        get value() { reads++; throw Error("value read"); }
+    };
+    const iterator = { next() { return result; }, return() { return result; } };
+    const wrapper = Iterator.from(iterator);
+    assert(wrapper.next() === result, true);
+    assert(wrapper.return() === result, true);
+    assert(reads, 0);
+    iterator.next = () => { throw Error("replacement next"); };
+    assert(wrapper.next() === result, true);
+
+    let returnReads = 0;
+    Object.defineProperty(iterator, "return", {
+        get() { returnReads++; return () => returnReads; }
+    });
+    assert(wrapper.return(), 1);
+    assert(wrapper.return(), 2);
+    assert(returnReads, 2);
+
+    for (const method of [undefined, null]) {
+        const current = Iterator.from({ next() { return result; }, return: method });
+        const first = current.return();
+        const second = current.return();
+        assert(first === second, false);
+        assert(first.done, true);
+        assert(first.value, undefined);
+        assert(Object.getPrototypeOf(first) === Object.prototype, true);
+        assert(current.next() === result, true);
+    }
+
+    const marker = {};
+    let closes = 0;
+    const failed = Iterator.from({
+        next() { throw marker; },
+        return() { closes++; return {}; }
+    });
+    let caught;
+    try { failed.next(); } catch (error) { caught = error; }
+    assert(caught === marker, true);
+    assert(closes, 0);
+    assert_throws(TypeError, () => wrapper.next.call({}));
+    assert_throws(TypeError, () => wrapper.return.call({}));
+    assert_throws(TypeError, () => Iterator.from({ next() {}, return: 1 }).return());
+    assert_throws(TypeError, () => Iterator.from({ next: 1 }).next());
+
+    const iteratorDescriptor = Object.getOwnPropertyDescriptor(String.prototype, Symbol.iterator);
+    const nextDescriptor = Object.getOwnPropertyDescriptor(String.prototype, "next");
+    let nextReads = 0;
+    try {
+        Object.defineProperty(String.prototype, Symbol.iterator, { value: undefined });
+        Object.defineProperty(String.prototype, "next", {
+            configurable: true,
+            get() { nextReads++; return () => ({ done: true }); }
+        });
+        assert_throws(TypeError, () => Iterator.from("text"));
+        assert(nextReads, 0);
+    } finally {
+        Object.defineProperty(String.prototype, Symbol.iterator, iteratorDescriptor);
+        if (nextDescriptor)
+            Object.defineProperty(String.prototype, "next", nextDescriptor);
+        else
+            delete String.prototype.next;
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2127,6 +2206,7 @@ test_map_computed_reentrancy();
 test_set_record();
 test_set_iterator_close();
 test_set_iterator_factory();
+test_iterator_wrapper();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
