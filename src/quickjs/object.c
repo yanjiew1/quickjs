@@ -1838,13 +1838,15 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
     uint32_t num_keys_count, str_keys_count, sym_keys_count, atom_count;
     uint32_t array_count = 0;
     uint32_t num_index, str_index, sym_index, exotic_count, exotic_keys_count;
-    BOOL is_enumerable, num_sorted;
+    BOOL is_enumerable, num_sorted, is_module_ns;
     uint32_t num_key;
     JSAtomKindEnum kind;
 
     /* clear pointer for consistency in case of failure */
     *ptab = NULL;
     *plen = 0;
+
+    is_module_ns = (p->class_id == JS_CLASS_MODULE_NS);
 
     /* compute the number of returned properties */
     num_keys_count = 0;
@@ -1871,7 +1873,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
                         return -1;
                     }
                 }
-                if (JS_AtomIsArrayIndex(ctx, &num_key, atom)) {
+                if (!is_module_ns && JS_AtomIsArrayIndex(ctx, &num_key, atom)) {
                     num_keys_count++;
                 } else if (kind == JS_ATOM_KIND_STRING) {
                     str_keys_count++;
@@ -1967,7 +1969,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
             kind = JS_AtomGetKind(ctx, atom);
             if ((!(flags & JS_GPN_ENUM_ONLY) || is_enumerable) &&
                 ((flags >> kind) & 1) != 0) {
-                if (JS_AtomIsArrayIndex(ctx, &num_key, atom)) {
+                if (!is_module_ns && JS_AtomIsArrayIndex(ctx, &num_key, atom)) {
                     j = num_index++;
                     num_sorted = FALSE;
                 } else if (kind == JS_ATOM_KIND_STRING) {
