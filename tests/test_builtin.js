@@ -1136,6 +1136,47 @@ function test_typed_array_copywithin_zero()
     }, 0));
 }
 
+function test_atomics_initial_oob()
+{
+    if (typeof Atomics === "undefined")
+        return;
+    const methods = ["load", "store", "add", "sub", "and", "or", "xor",
+                     "exchange", "compareExchange", "notify"];
+    for (const C of [Int32Array, BigInt64Array]) {
+        const size = C.BYTES_PER_ELEMENT;
+        for (const tracking of [false, true]) {
+            const buffer = new ArrayBuffer(2 * size, { maxByteLength: 2 * size });
+            const view = tracking ? new C(buffer, size) : new C(buffer, size, 1);
+            buffer.resize(0);
+            for (const method of methods) {
+                const calls = [];
+                const index = { valueOf() { calls.push("index"); return 0; } };
+                const value = { valueOf() { calls.push("value"); return C === BigInt64Array ? 0n : 0; } };
+                const replacement = { valueOf() { calls.push("replacement"); return C === BigInt64Array ? 0n : 0; } };
+                assert_throws(TypeError, () => Atomics[method](view, index, value, replacement));
+                assert(calls.length, 0);
+            }
+            if (tracking) {
+                buffer.resize(size);
+                for (const method of methods) {
+                    const calls = [];
+                    const index = { valueOf() { calls.push("index"); return 0; } };
+                    const value = { valueOf() { calls.push("value"); return C === BigInt64Array ? 0n : 0; } };
+                    assert_throws(RangeError, () => Atomics[method](view, index, value, value));
+                    assert(calls.join(","), "index");
+                }
+            }
+        }
+        const buffer = new ArrayBuffer(2 * size, { maxByteLength: 2 * size });
+        const view = new C(buffer, 0, 2);
+        let calls = 0;
+        assert_throws(TypeError, () => Atomics.load(view, {
+            valueOf() { calls++; buffer.resize(0); return 0; }
+        }));
+        assert(calls, 1);
+    }
+}
+
 function test_typed_array_set_content()
 {
     const numberTypes = [Uint8ClampedArray, Uint8Array, Int8Array, Uint16Array,
@@ -3521,6 +3562,7 @@ test_typed_array_signed_search();
 test_typed_array_with_conversion();
 test_typed_array_copywithin_zero();
 test_typed_array_set_content();
+test_atomics_initial_oob();
 test_typed_array_constructor_content();
 test_typed_array_from_constructor_order();
 test_typed_array_species_content();
