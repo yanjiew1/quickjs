@@ -6706,7 +6706,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         }
     }
 
-    fd = js_new_function_def(ctx, fd, FALSE, is_expr,
+    fd = js_new_function_def(ctx, fd, FALSE, is_expr && !ctor,
                              s->filename, ptr,
                              &s->get_line_col_cache);
     if (!fd) {

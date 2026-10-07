@@ -623,6 +623,7 @@ test: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) --std tests/test_builtin.js
 	$(WINE) ./qjs$(EXE) tests/test_loop.js
 	$(WINE) ./qjs$(EXE) tests/test_bigint.js
+	$(WINE) ./qjs$(EXE) -m tests/test_async.js
 	$(WINE) ./qjs$(EXE) tests/test_cyclic_import.js
 	$(WINE) ./qjs$(EXE) tests/test_worker.js
 ifndef CONFIG_WIN32
