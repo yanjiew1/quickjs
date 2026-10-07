@@ -667,6 +667,47 @@ function test_typed_array_with_conversion()
     }));
 }
 
+function test_typed_array_copywithin_zero()
+{
+    for (const C of [Uint8Array, BigInt64Array]) {
+        for (const argument of [0, 1, 2]) {
+            const array = new C(2);
+            const buffer = array.buffer;
+            const args = [0, 0, 2];
+            args[argument] = {
+                valueOf() {
+                    buffer.transfer();
+                    return argument === 2 ? 0 : 2;
+                }
+            };
+            assert(array.copyWithin(...args) === array, true);
+            assert(buffer.detached, true);
+        }
+        const array = new C(2);
+        assert_throws(TypeError, () => array.copyWithin({
+            valueOf() { array.buffer.transfer(); return 0; }
+        }, 0));
+
+        const empty = new C(0);
+        assert(empty.copyWithin({
+            valueOf() { empty.buffer.transfer(); return 0; }
+        }, 0) === empty, true);
+    }
+
+    const buffer = new ArrayBuffer(2, { maxByteLength: 2 });
+    const tracking = new Uint8Array(buffer);
+    assert(tracking.copyWithin({
+        valueOf() { buffer.resize(0); return 0; }
+    }, 0) === tracking, true);
+    assert(tracking.length, 0);
+
+    buffer.resize(2);
+    const fixed = new Uint8Array(buffer, 0, 2);
+    assert_throws(TypeError, () => fixed.copyWithin({
+        valueOf() { buffer.resize(1); return 0; }
+    }, 0));
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -1915,6 +1956,7 @@ test_array_buffer_transfer_range();
 test_array_buffer_slice_shrink();
 test_typed_array();
 test_typed_array_with_conversion();
+test_typed_array_copywithin_zero();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();

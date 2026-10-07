@@ -624,18 +624,20 @@ static JSValue js_typed_array_copyWithin(JSContext *ctx, JSValueConst this_val,
             return JS_EXCEPTION;
     }
 
-    if (typed_array_is_oob(p))
-        return JS_ThrowTypeErrorArrayBufferOOB(ctx);
-
-    // RAB may have been resized by evil .valueOf method
-    space = p->u.array.count - max_int(to, from);
     count = min_int(final - from, len - to);
-    count = min_int(count, space);
     if (count > 0) {
-        shift = typed_array_size_log2(p->class_id);
-        memmove(p->u.array.u.uint8_ptr + (to << shift),
-                p->u.array.u.uint8_ptr + (from << shift),
-                count << shift);
+        if (typed_array_is_oob(p))
+            return JS_ThrowTypeErrorArrayBufferOOB(ctx);
+
+        // RAB may have been resized by evil .valueOf method
+        space = p->u.array.count - max_int(to, from);
+        count = min_int(count, space);
+        if (count > 0) {
+            shift = typed_array_size_log2(p->class_id);
+            memmove(p->u.array.u.uint8_ptr + (to << shift),
+                    p->u.array.u.uint8_ptr + (from << shift),
+                    count << shift);
+        }
     }
     return JS_DupValue(ctx, this_val);
 }
