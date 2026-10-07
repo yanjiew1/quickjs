@@ -28,6 +28,7 @@
 #include "../internal/base.h"
 
 extern const JSCFunctionListEntry js_iterator_funcs[2];
+extern const JSCFunctionListEntry js_iterator_constructor_proto_funcs[1];
 extern const JSCFunctionListEntry js_iterator_proto_funcs[13];
 extern const JSCFunctionListEntry js_iterator_concat_proto_funcs[3];
 extern const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
@@ -45,10 +46,6 @@ void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
                            JS_MarkFunc *mark_func);
 JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv);
-JSValue js_iterator_constructor_getset(JSContext *ctx,
-                                       JSValueConst this_val,
-                                       int argc, JSValueConst *argv,
-                                       int magic,
-                                       JSValue *func_data);
+
 
 #endif

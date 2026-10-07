@@ -238,25 +238,13 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
                                      0);
     if (JS_IsException(obj2))
         return -1;
-    // quirk: Iterator.prototype.constructor is an accessor property
-    // TODO(bnoordhuis) mildly inefficient because JS_NewGlobalCConstructor
-    // first creates a .constructor value property that we then replace with
-    // an accessor
-    obj1 = JS_NewCFunctionData(ctx, js_iterator_constructor_getset,
-                               0, 0, 1, (JSValueConst *)&obj2);
-    if (JS_IsException(obj1)) {
+    /* Install the accessor after the constructor's default data property. */
+    if (JS_SetPropertyFunctionList(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
+                                   js_iterator_constructor_proto_funcs,
+                                   countof(js_iterator_constructor_proto_funcs))) {
         JS_FreeValue(ctx, obj2);
         return -1;
     }
-    if (JS_DefineProperty(ctx, ctx->class_proto[JS_CLASS_ITERATOR],
-                          JS_ATOM_constructor, JS_UNDEFINED,
-                          obj1, obj1,
-                          JS_PROP_HAS_GET | JS_PROP_HAS_SET | JS_PROP_CONFIGURABLE) < 0) {
-        JS_FreeValue(ctx, obj2);
-        JS_FreeValue(ctx, obj1);
-        return -1;
-    }
-    JS_FreeValue(ctx, obj1);
     ctx->iterator_ctor = obj2;
     
     ctx->class_proto[JS_CLASS_ITERATOR_CONCAT] =

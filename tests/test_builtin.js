@@ -1902,6 +1902,97 @@ function test_iterator_wrapper()
     }
 }
 
+function test_iterator_accessors()
+{
+    const home = Iterator.prototype;
+    const constructor = Object.getOwnPropertyDescriptor(home, "constructor");
+    assert(constructor.enumerable, false);
+    assert(constructor.configurable, true);
+    assert(constructor.get === constructor.set, false);
+    assert(constructor.get.name, "get constructor");
+    assert(constructor.set.name, "set constructor");
+    assert(constructor.get.length, 0);
+    assert(constructor.set.length, 1);
+    assert(constructor.get.call(null, 1) === Iterator, true);
+    assert_throws(TypeError, () => new constructor.get());
+    assert_throws(TypeError, () => new constructor.set());
+
+    for (const key of ["constructor", Symbol.toStringTag]) {
+        const setter = Object.getOwnPropertyDescriptor(home, key).set;
+        for (const receiver of [undefined, null, false, 1, "text", Symbol("x")])
+            assert_throws(TypeError, () => setter.call(receiver, {}));
+        assert_throws(TypeError, () => setter.call(home, {}));
+        for (const value of [undefined, null, false, 1, "text", Symbol("x"), {}]) {
+            const receiver = Object.create(home);
+            assert(setter.call(receiver, value), undefined);
+            const descriptor = Object.getOwnPropertyDescriptor(receiver, key);
+            assert(descriptor.value === value, true);
+            assert(descriptor.writable, true);
+            assert(descriptor.enumerable, true);
+            assert(descriptor.configurable, true);
+        }
+        const missing = Object.create(home);
+        setter.call(missing);
+        assert(Object.hasOwn(missing, key), true);
+        assert(missing[key], undefined);
+        assert_throws(TypeError, () => setter.call(Object.preventExtensions({}), 1));
+
+        const readOnly = {};
+        Object.defineProperty(readOnly, key, { value: 0, configurable: true });
+        assert_throws(TypeError, () => setter.call(readOnly, 1));
+        const writable = {};
+        Object.defineProperty(writable, key, { value: 0, writable: true });
+        setter.call(writable, 1);
+        const descriptor = Object.getOwnPropertyDescriptor(writable, key);
+        assert(descriptor.value, 1);
+        assert(descriptor.enumerable, false);
+        assert(descriptor.configurable, false);
+
+        let calls = 0;
+        const accessor = {};
+        Object.defineProperty(accessor, key, {
+            get() { throw Error("getter must not run"); },
+            set(value) { assert(this === accessor, true); assert(value, 1); calls++; }
+        });
+        setter.call(accessor, 1);
+        assert(calls, 1);
+        const getterOnly = {};
+        Object.defineProperty(getterOnly, key, { get() { return 0; }, configurable: true });
+        assert_throws(TypeError, () => setter.call(getterOnly, 1));
+
+        const events = [];
+        const target = {};
+        const proxy = new Proxy(target, {
+            getOwnPropertyDescriptor(target, property) {
+                assert(property, key);
+                events.push("descriptor");
+                return Reflect.getOwnPropertyDescriptor(target, property);
+            },
+            defineProperty(target, property, descriptor) {
+                events.push("define");
+                return Reflect.defineProperty(target, property, descriptor);
+            },
+            set(target, property, value) {
+                assert(property, key);
+                assert(value, 2);
+                events.push("set");
+                return true;
+            }
+        });
+        setter.call(proxy, 1);
+        assert(events.join(","), "descriptor,define");
+        events.length = 0;
+        setter.call(proxy, 2);
+        assert(events.join(","), "descriptor,set");
+        assert_throws(TypeError, () => setter.call(new Proxy({}, {
+            defineProperty() { return false; }
+        }), 1));
+        assert_throws(TypeError, () => setter.call(new Proxy({ [key]: 0 }, {
+            set() { return false; }
+        }), 1));
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2207,6 +2298,7 @@ test_set_record();
 test_set_iterator_close();
 test_set_iterator_factory();
 test_iterator_wrapper();
+test_iterator_accessors();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
