@@ -257,6 +257,19 @@ DEF(is_undefined_or_null, 1, 1, 1, none)
 DEF(     private_in, 1, 2, 1, none)
 DEF(push_bigint_i32, 5, 0, 1, i32)
 /* must be the last non short and non temporary opcode */
+/* Explicit lexical strictness for class expressions in sloppy functions. */
+DEF(put_field_strict, 5, 2, 0, atom)
+DEF(put_array_el_strict, 1, 3, 0, none)
+DEF(put_ref_value_strict, 1, 3, 0, none)
+DEF(get_ref_value_strict, 1, 2, 3, none)
+DEF( put_var_strict, 3, 1, 0, var_ref)
+DEF(put_super_value_strict, 1, 4, 0, none)
+DEF(  delete_strict, 1, 2, 1, none)
+DEF(    eval_strict, 5, 1, 1, npop_u16)
+DEF(apply_eval_strict, 3, 2, 1, u16)
+
+DEF(define_field_ro, 5, 2, 1, atom) /* immutable function name reference */
+
 DEF(            nop, 1, 0, 0, none)
 
 /* temporary opcodes: never emitted in the final bytecode */

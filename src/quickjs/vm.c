@@ -1266,7 +1266,7 @@ static __exception int js_operator_typeof(JSContext *ctx, JSValueConst op1)
     return atom;
 }
 
-static __exception int js_operator_delete(JSContext *ctx, JSValue *sp)
+static __exception int js_operator_delete(JSContext *ctx, JSValue *sp, int flags)
 {
     JSValue op1, op2;
     JSAtom atom;
@@ -1277,7 +1277,7 @@ static __exception int js_operator_delete(JSContext *ctx, JSValue *sp)
     atom = JS_ValueToAtom(ctx, op2);
     if (unlikely(atom == JS_ATOM_NULL))
         return -1;
-    ret = JS_DeleteProperty(ctx, op1, atom, JS_PROP_THROW_STRICT);
+    ret = JS_DeleteProperty(ctx, op1, atom, flags);
     JS_FreeAtom(ctx, atom);
     if (unlikely(ret < 0))
         return -1;
@@ -2945,6 +2945,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             goto exception;
 
+        CASE(OP_eval_strict):
         CASE(OP_eval):
             {
                 JSValueConst obj;
@@ -2960,7 +2961,9 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     else
                         obj = JS_UNDEFINED;
                     ret_val = JS_EvalObject(ctx, JS_UNDEFINED, obj,
-                                            JS_EVAL_TYPE_DIRECT, scope_idx);
+                                            JS_EVAL_TYPE_DIRECT |
+                                            (opcode == OP_eval_strict ?
+                                             JS_EVAL_FLAG_STRICT : 0), scope_idx);
                 } else {
                     ret_val = JS_CallInternal(ctx, call_argv[-1], JS_UNDEFINED,
                                               JS_UNDEFINED, call_argc, call_argv, 0);
@@ -2974,6 +2977,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
             /* could merge with OP_apply */
+        CASE(OP_apply_eval_strict):
         CASE(OP_apply_eval):
             {
                 int scope_idx;
@@ -2993,7 +2997,9 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     else
                         obj = JS_UNDEFINED;
                     ret_val = JS_EvalObject(ctx, JS_UNDEFINED, obj,
-                                            JS_EVAL_TYPE_DIRECT, scope_idx);
+                                            JS_EVAL_TYPE_DIRECT |
+                                            (opcode == OP_apply_eval_strict ?
+                                             JS_EVAL_FLAG_STRICT : 0), scope_idx);
                 } else {
                     ret_val = JS_Call(ctx, sp[-2], JS_UNDEFINED, len,
                                       (JSValueConst *)tab);
@@ -3072,6 +3078,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
+        CASE(OP_put_var_strict):
         CASE(OP_put_var):
         CASE(OP_put_var_init):
             {
@@ -3096,12 +3103,13 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         ret = JS_HasProperty(ctx, ctx->global_obj, cv->var_name);
                         if (ret < 0)
                             goto exception;
-                        if (ret == 0 && is_strict_mode(ctx)) {
+                        if (ret == 0 && (opcode == OP_put_var_strict || is_strict_mode(ctx))) {
                             JS_ThrowReferenceErrorNotDefined(ctx, cv->var_name);
                             goto exception;
                         }
                         ret = JS_SetPropertyInternal(ctx, ctx->global_obj, cv->var_name, sp[-1],
-                                                     ctx->global_obj, JS_PROP_THROW_STRICT);
+                                                     ctx->global_obj, (opcode == OP_put_var_strict ?
+                                                      JS_PROP_THROW : JS_PROP_THROW_STRICT));
                         sp--;
                         if (ret < 0)
                             goto exception;
@@ -3759,6 +3767,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             BREAK;
 #endif
             
+        CASE(OP_put_field_strict):
         CASE(OP_put_field):
             {
                 int ret;
@@ -3790,7 +3799,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 put_field_slow_path:
                     sf->cur_pc = pc;
                     ret = JS_SetPropertyInternal(ctx, obj, atom, sp[-1], obj,
-                                                 JS_PROP_THROW_STRICT);
+                                                 (opcode == OP_put_field_strict ?
+                                                      JS_PROP_THROW : JS_PROP_THROW_STRICT));
                     JS_FreeValue(ctx, obj);
                     sp -= 2;
                     if (unlikely(ret < 0))
@@ -3851,6 +3861,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
+        CASE(OP_define_field_ro):
         CASE(OP_define_field):
             {
                 int ret;
@@ -3859,7 +3870,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
 
                 ret = JS_DefinePropertyValue(ctx, sp[-2], atom, sp[-1],
-                                             JS_PROP_C_W_E | JS_PROP_THROW);
+                                             (opcode == OP_define_field_ro ? 0 :
+                                              JS_PROP_C_W_E) | JS_PROP_THROW);
                 sp--;
                 if (unlikely(ret < 0))
                     goto exception;
@@ -4070,6 +4082,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
             
+        CASE(OP_get_ref_value_strict):
         CASE(OP_get_ref_value):
             {
                 JSValue val;
@@ -4091,7 +4104,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         JS_FreeAtom(ctx, atom);
                         goto exception;
                     }
-                    if (is_strict_mode(ctx)) {
+                    if ((opcode == OP_get_ref_value_strict || is_strict_mode(ctx))) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
                         JS_FreeAtom(ctx, atom);
                         goto exception;
@@ -4132,6 +4145,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
+        CASE(OP_put_array_el_strict):
         CASE(OP_put_array_el):
             {
                 int ret;
@@ -4173,7 +4187,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 } else {
                 put_array_el_slow_path:
                     sf->cur_pc = pc;
-                    ret = JS_SetPropertyValue(ctx, sp[-3], sp[-2], sp[-1], JS_PROP_THROW_STRICT);
+                    ret = JS_SetPropertyValue(ctx, sp[-3], sp[-2], sp[-1], (opcode == OP_put_array_el_strict ?
+                                             JS_PROP_THROW : JS_PROP_THROW_STRICT));
                     JS_FreeValue(ctx, sp[-3]);
                     sp -= 3;
                     if (unlikely(ret < 0))
@@ -4182,6 +4197,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
+        CASE(OP_put_ref_value_strict):
         CASE(OP_put_ref_value):
             {
                 int ret;
@@ -4191,7 +4207,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 if (unlikely(atom == JS_ATOM_NULL))
                     goto exception;
                 if (unlikely(JS_IsUndefined(sp[-3]))) {
-                    if (is_strict_mode(ctx)) {
+                    if ((opcode == OP_put_ref_value_strict || is_strict_mode(ctx))) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
                         JS_FreeAtom(ctx, atom);
                         goto exception;
@@ -4205,13 +4221,14 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         JS_FreeAtom(ctx, atom);
                         goto exception;
                     }
-                    if (is_strict_mode(ctx)) {
+                    if ((opcode == OP_put_ref_value_strict || is_strict_mode(ctx))) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
                         JS_FreeAtom(ctx, atom);
                         goto exception;
                     }
                 }
-                ret = JS_SetPropertyInternal(ctx, sp[-3], atom, sp[-1], sp[-3], JS_PROP_THROW_STRICT);
+                ret = JS_SetPropertyInternal(ctx, sp[-3], atom, sp[-1], sp[-3], (opcode == OP_put_ref_value_strict ?
+                                             JS_PROP_THROW : JS_PROP_THROW_STRICT));
                 JS_FreeAtom(ctx, atom);
                 JS_FreeValue(ctx, sp[-2]);
                 JS_FreeValue(ctx, sp[-3]);
@@ -4221,6 +4238,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
+        CASE(OP_put_super_value_strict):
         CASE(OP_put_super_value):
             {
                 int ret;
@@ -4234,7 +4252,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 if (unlikely(atom == JS_ATOM_NULL))
                     goto exception;
                 ret = JS_SetPropertyInternal(ctx, sp[-3], atom, sp[-1], sp[-4],
-                                             JS_PROP_THROW_STRICT);
+                                             (opcode == OP_put_super_value_strict ?
+                                             JS_PROP_THROW : JS_PROP_THROW_STRICT));
                 JS_FreeAtom(ctx, atom);
                 JS_FreeValue(ctx, sp[-4]);
                 JS_FreeValue(ctx, sp[-3]);
@@ -5015,9 +5034,11 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 sp[-1] = JS_AtomToString(ctx, atom);
             }
             BREAK;
+        CASE(OP_delete_strict):
         CASE(OP_delete):
             sf->cur_pc = pc;
-            if (js_operator_delete(ctx, sp))
+            if (js_operator_delete(ctx, sp, opcode == OP_delete_strict ?
+                                   JS_PROP_THROW : JS_PROP_THROW_STRICT))
                 goto exception;
             sp--;
             BREAK;
@@ -5085,10 +5106,11 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSAtom atom;
                 int32_t diff;
                 JSValue obj, val;
-                int ret, is_with;
+                int ret, is_with, is_strict;
                 atom = get_u32(pc);
                 diff = get_u32(pc + 4);
-                is_with = pc[8];
+                is_with = pc[8] & 1;
+                is_strict = (pc[8] & 2) != 0;
                 pc += 9;
                 sf->cur_pc = pc;
 
@@ -5111,7 +5133,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         if (unlikely(ret <= 0)) {
                             if (ret < 0)
                                 goto exception;
-                            if (is_strict_mode(ctx)) {
+                            if ((is_strict || is_strict_mode(ctx))) {
                                 JS_ThrowReferenceErrorNotDefined(ctx, atom);
                                 goto exception;
                             } 
@@ -5129,13 +5151,14 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         if (unlikely(ret <= 0)) {
                             if (ret < 0)
                                 goto exception;
-                            if (is_strict_mode(ctx)) {
+                            if ((is_strict || is_strict_mode(ctx))) {
                                 JS_ThrowReferenceErrorNotDefined(ctx, atom);
                                 goto exception;
                             } 
                         }
                         ret = JS_SetPropertyInternal(ctx, obj, atom, sp[-2], obj,
-                                                     JS_PROP_THROW_STRICT);
+                                                     (is_strict ? JS_PROP_THROW :
+                                                      JS_PROP_THROW_STRICT));
                         JS_FreeValue(ctx, sp[-1]);
                         sp -= 2;
                         if (unlikely(ret < 0))
@@ -5159,6 +5182,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         if (unlikely(ret < 0))
                             goto exception;
                         if (!ret) {
+                            if (is_strict || is_strict_mode(ctx)) {
+                                JS_ThrowReferenceErrorNotDefined(ctx, atom);
+                                goto exception;
+                            }
                             val = JS_UNDEFINED;
                         } else {
                             val = JS_GetProperty(ctx, obj, atom);
