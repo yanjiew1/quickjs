@@ -1494,6 +1494,90 @@ static void test_typed_array_external_overlap(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_native_iterator_next_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx[2];
+    JSValue global;
+    static const char script[] =
+        "(function () {\n"
+        "    const realms = [globalThis, foreign];\n"
+        "    function check(actual, expected, message) {\n"
+        "        if (actual !== expected) throw Error(message);\n"
+        "    }\n"
+        "    function wrongReceiver(callback, realm) {\n"
+        "        let caught = false;\n"
+        "        try { callback(); } catch (error) {\n"
+        "            caught = true;\n"
+        "            check(Object.getPrototypeOf(error), realm.TypeError.prototype,\n"
+        "                  \"native next receiver validation uses its function realm\");\n"
+        "        }\n"
+        "        check(caught, true, \"invalid native next receiver must throw\");\n"
+        "    }\n"
+        "    for (let i = 0; i < 2; i++) {\n"
+        "        const owner = realms[i], consumer = realms[1 - i];\n"
+        "        const methods = [\n"
+        "            owner.Array.prototype.values.call([]).next,\n"
+        "            new owner.Map().entries().next,\n"
+        "            new owner.Set().values().next,\n"
+        "            owner.String.prototype[Symbol.iterator].call(\"\").next,\n"
+        "        ];\n"
+        "        const consumers = [\n"
+        "            iterable => consumer.Array.from(iterable),\n"
+        "            iterable => new consumer.Set(iterable),\n"
+        "            iterable => consumer.Iterator.prototype.toArray.call(iterable),\n"
+        "            iterable => { for (const value of iterable) break; },\n"
+        "        ];\n"
+        "        for (const next of methods) {\n"
+        "            for (const consume of consumers) {\n"
+        "                const input = { next, [Symbol.iterator]() { return this; } };\n"
+        "                wrongReceiver(() => consume(input), owner);\n"
+        "            }\n"
+        "        }\n"
+        "\n"
+        "        // Entries create their row arrays inside the cached native method.\n"
+        "        // An iterable consumer must preserve that function's array realm.\n"
+        "        const inputs = [\n"
+        "            owner.Array.prototype.entries.call([11]),\n"
+        "            new owner.Map([[12, 13]]).entries(),\n"
+        "            new owner.Set([14]).entries(),\n"
+        "        ];\n"
+        "        for (const input of inputs) {\n"
+        "            const nativeNext = input.next;\n"
+        "            let reads = 0;\n"
+        "            Object.defineProperty(input, \"next\", { get() {\n"
+        "                reads++;\n"
+        "                return nativeNext;\n"
+        "            } });\n"
+        "            const rows = consumer.Array.from(input);\n"
+        "            check(reads, 1, \"native next is cached once\");\n"
+        "            check(rows.length, 1, \"one entry is yielded\");\n"
+        "            check(Object.getPrototypeOf(rows), consumer.Array.prototype,\n"
+        "                  \"Array.from result belongs to the consuming function\");\n"
+        "            check(Object.getPrototypeOf(rows[0]), owner.Array.prototype,\n"
+        "                  \"entry row belongs to the native next function\");\n"
+        "            check(rows[0].length, 2, \"entry row has key and value\");\n"
+        "        }\n"
+        "    }\n"
+        "    return true;\n"
+        "})()\n";
+
+    assert(rt);
+    ctx[0] = JS_NewContext(rt);
+    ctx[1] = JS_NewContext(rt);
+    assert(ctx[0] && ctx[1]);
+    global = JS_GetGlobalObject(ctx[0]);
+    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
+                              JS_GetGlobalObject(ctx[1])) >= 0);
+    JS_FreeValue(ctx[0], global);
+    check_eval(ctx[0], script);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx[1]);
+    JS_FreeContext(ctx[0]);
+    JS_RunGC(rt);
+    JS_FreeRuntime(rt);
+}
+
 static void test_iterator_constructor_realm(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -1717,6 +1801,7 @@ int main(int argc, char **argv)
         { "native-name", test_native_function_initial_name },
         { "stripped-function", test_stripped_function_to_string },
         { "iterator-realm", test_iterator_constructor_realm },
+        { "native-iterator-next-realm", test_native_iterator_next_realm },
         { "typed-array-overlap", test_typed_array_external_overlap },
         { "typed-buffer-resized-length", test_typed_buffer_resized_length },
         { "regexp-interrupt", test_regexp_interrupt },

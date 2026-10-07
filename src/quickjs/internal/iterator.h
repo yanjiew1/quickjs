@@ -58,7 +58,7 @@ static inline JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
                 argv = args;
             }
             func = p->u.cfunc.c_function;
-            return func.iterator_next(ctx, enum_obj, argc, argv,
+            return func.iterator_next(p->u.cfunc.realm, enum_obj, argc, argv,
                                       pdone, p->u.cfunc.magic);
         }
     }
