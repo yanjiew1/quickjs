@@ -506,6 +506,12 @@ JSValue js_typed_array___speciesCreate(JSContext *ctx,
         ret = js_typed_array_create(ctx, ctor, argc1, argv + 1);
         JS_FreeValue(ctx, ctor);
     }
+    if (!JS_IsException(ret) &&
+        typed_array_is_bigint(p->class_id) !=
+        typed_array_is_bigint(JS_VALUE_GET_OBJ(ret)->class_id)) {
+        JS_FreeValue(ctx, ret);
+        return JS_ThrowTypeError(ctx, "incompatible typed array content types");
+    }
     return ret;
 }
 
