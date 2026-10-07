@@ -294,12 +294,6 @@ static JSValue js_iterator_concat_return(JSContext *ctx, JSValueConst this_val,
     return js_create_iterator_result(ctx, JS_UNDEFINED, TRUE);
 }
 
-const JSCFunctionListEntry js_iterator_concat_proto_funcs[] = {
-    JS_ITERATOR_NEXT_DEF("next", 0, js_iterator_concat_next, 0 ),
-    JS_CFUNC_DEF("return", 0, js_iterator_concat_return ),
-    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Iterator Concat", JS_PROP_CONFIGURABLE ),
-};
-
 static JSValue js_iterator_concat(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv)
 {
@@ -817,6 +811,14 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
 
     *pdone = FALSE;
 
+    if (JS_IsObject(this_val) &&
+        JS_VALUE_GET_OBJ(this_val)->class_id == JS_CLASS_ITERATOR_CONCAT) {
+        if (magic == GEN_MAGIC_RETURN) {
+            *pdone = 2;
+            return js_iterator_concat_return(ctx, this_val, argc, argv);
+        }
+        return js_iterator_concat_next(ctx, this_val, argc, argv, pdone, magic);
+    }
     it = JS_GetOpaque2(ctx, this_val, JS_CLASS_ITERATOR_HELPER);
     if (!it)
         return JS_EXCEPTION;

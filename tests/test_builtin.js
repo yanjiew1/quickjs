@@ -2469,6 +2469,21 @@ function test_iterator_concat_completion()
     }
 }
 
+function test_iterator_concat_prototype()
+{
+    const helper = [1].values().map(x => x);
+    const concat = Iterator.concat([2]);
+    assert(Object.getPrototypeOf(concat) === Object.getPrototypeOf(helper));
+    assert(concat.next === helper.next && concat.return === helper.return);
+    assert(Object.prototype.toString.call(concat), "[object Iterator Helper]");
+    assert(helper.next.call(concat).value, 2);
+    assert(concat.next.call(helper).value, 1);
+    const result = helper.return.call(concat);
+    assert(result.done === true && result.value === undefined);
+    assert_throws(TypeError, () => helper.next.call({}));
+    assert_throws(TypeError, () => helper.return.call({}));
+}
+
 function test_iterator_limits()
 {
     for (const limit of [Number.MAX_SAFE_INTEGER, Infinity]) {
@@ -2895,6 +2910,7 @@ test_iterator_reduce_close();
 test_iterator_limits();
 test_iterator_concat_return();
 test_iterator_concat_completion();
+test_iterator_concat_prototype();
 test_iterator_constructor_identity();
 test_weak_map();
 test_weak_map_cycles();
