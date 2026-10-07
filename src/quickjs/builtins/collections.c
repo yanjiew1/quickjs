@@ -670,7 +670,7 @@ JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
 
         args[0] = v;
         args[1] = JS_NewInt64(ctx, idx);
-        key = JS_Call(ctx, cb, ctx->global_obj, 2, args);
+        key = JS_Call(ctx, cb, JS_UNDEFINED, 2, args);
         if (JS_IsException(key))
             goto iterator_close_exception;
 

@@ -3037,7 +3037,28 @@ function test_line_column_numbers()
     eval_error('var a;\n 1 + (a @+= poisoned_number);', Error, 1);
 }
 
+function test_group_by_callback_receiver()
+{
+    for (const groupBy of [Object.groupBy, Map.groupBy]) {
+        let calls = 0;
+        const groups = groupBy([10, 20], function(value, index) {
+            "use strict";
+            assert(this, undefined);
+            assert(arguments.length, 2);
+            assert(value, (index + 1) * 10);
+            assert(index, calls++);
+            return "group";
+        });
+        const group = groups instanceof Map ? groups.get("group") : groups.group;
+        assert(calls, 2);
+        assert(group.length, 2);
+        assert(group[0], 10);
+        assert(group[1], 20);
+    }
+}
+
 test();
+test_group_by_callback_receiver();
 test_function();
 test_function_native_fallback();
 test_function_initial_name();
