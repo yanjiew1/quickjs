@@ -321,6 +321,48 @@ function test_arguments()
     f2(1, 3);
 }
 
+function test_super_base_order()
+{
+    const first = { value: "first", call() { return "first"; } };
+    const second = { value: "second", call() { return "second"; } };
+    const home = {
+        __proto__: first,
+        read(key) { return super[key()]; },
+        call(key, arg) { return super[key()](arg()); },
+        put(key, rhs) { return super[key()] = rhs(); },
+    };
+    assert(home.read(() => { Object.setPrototypeOf(home, second); return "value"; }),
+           "second");
+    Object.setPrototypeOf(home, first);
+    assert(home.read(() => ({ toString() {
+        Object.setPrototypeOf(home, second); return "value";
+    }})), "first");
+    Object.setPrototypeOf(home, first);
+    assert(home.call(() => "call", () => Object.setPrototypeOf(home, second)),
+           "first");
+    const order = [];
+    Object.defineProperty(first, "target", { set(v) { order.push("first:" + v); } });
+    Object.defineProperty(second, "target", { set(v) { order.push("second:" + v); } });
+    Object.setPrototypeOf(home, first);
+    home.put(() => {
+        order.push("key");
+        return { toString() { order.push("coerce"); return "target"; } };
+    }, () => {
+        order.push("rhs"); Object.setPrototypeOf(home, second); return 42;
+    });
+    assert(JSON.stringify(order), '["key","rhs","coerce","first:42"]');
+    Object.setPrototypeOf(home, first);
+    assert_throws(TypeError, () => home.read(() => {
+        Object.setPrototypeOf(home, null); return "value";
+    }));
+    let evaluated = false;
+    class Uninitialized extends Object {
+        constructor() { super[(evaluated = true, "value")]; }
+    }
+    assert_throws(ReferenceError, () => new Uninitialized());
+    assert(evaluated, false);
+}
+
 function test_class()
 {
     var o;
@@ -729,6 +771,7 @@ test_delete();
 test_prototype();
 test_arguments();
 test_class();
+test_super_base_order();
 test_template();
 test_template_skip();
 test_object_literal();
