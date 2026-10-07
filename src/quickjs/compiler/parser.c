@@ -601,6 +601,7 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
                           fd->vars[idx].var_kind == JS_VAR_FUNCTION_DECL)) {
                         goto redef_lex_error;
                     }
+                    return idx;
                 } else if (fd->vars[idx].var_kind == JS_VAR_CATCH && (fd->vars[idx].scope_level + 2) == fd->scope_level) {
                     goto redef_lex_error;
                 }
@@ -6689,9 +6690,13 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     }
 
     if (func_type == JS_PARSE_FUNC_VAR) {
+        int outer_scope = fd->scope_first;
+        while (outer_scope >= 0 &&
+               fd->vars[outer_scope].scope_level == fd->scope_level)
+            outer_scope = fd->vars[outer_scope].scope_next;
         if (!(fd->js_mode & JS_MODE_STRICT)
         && func_kind == JS_FUNC_NORMAL
-        &&  find_lexical_decl(ctx, fd, func_name, fd->scope_first, FALSE) < 0
+        &&  find_lexical_decl(ctx, fd, func_name, outer_scope, FALSE) < 0
         &&  !((func_idx = find_var(ctx, fd, func_name)) >= 0 && (func_idx & ARGUMENT_VAR_OFFSET))
         &&  !(func_name == JS_ATOM_arguments && fd->has_arguments_binding)) {
             create_func_var = TRUE;

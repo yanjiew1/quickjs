@@ -467,6 +467,43 @@ function test_annex_function_identity()
     assert(outer === saved);
 }
 
+function test_annex_duplicate_binding()
+{
+    function outer() {
+        let saved;
+        const read = () => local;
+        const write = value => { local = value; };
+        {
+            function local() { return 1; }
+            assert(local(), 2);
+            write(() => 99);
+            assert(read()(), 99);
+            function local() { return 2; }
+            saved = local;
+            assert(read() === saved);
+        }
+        assert(read() === saved);
+    }
+    outer();
+    function blocked() {
+        let local = "outer";
+        {
+            function local() { return 1; }
+            function local() { return 2; }
+            assert(local(), 2);
+        }
+        return local;
+    }
+    assert(blocked(), "outer");
+    for (const body of [
+        "'use strict'; { function f() {} function f() {} }",
+        "{ let f; function f() {} }",
+        "{ function f() {} const f = 1; }",
+        "{ function* f() {} function f() {} }",
+    ])
+        assert_throws(SyntaxError, () => Function(body));
+}
+
 function test_class()
 {
     var o;
@@ -879,6 +916,7 @@ test_super_base_order();
 test_super_null_key_coercion();
 test_annex_if_function_scopes();
 test_annex_function_identity();
+test_annex_duplicate_binding();
 test_template();
 test_template_skip();
 test_object_literal();
