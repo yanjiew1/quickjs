@@ -409,6 +409,52 @@ function test_enum()
     assert(tab, ["1","4294967294","x","18014398509481984","9007199254740992","9007199254740991","4294967296","4294967295","y"], "keys");
 }
 
+function test_array_constructor_own_elements()
+{
+    for (const values of [["first"], ["first", "second"]]) {
+        for (const setter of [true, false]) {
+            let writes = 0;
+            function Constructor() {}
+            const proto = {};
+            Constructor.prototype = proto;
+            for (let i = 0; i < values.length; i++) {
+                if (setter) {
+                    Object.defineProperty(proto, i, {
+                        set(value) { writes++; },
+                    });
+                } else {
+                    Object.defineProperty(proto, i, {
+                        writable: false, value: "inherited",
+                    });
+                }
+            }
+            const array = Reflect.construct(Array, values, Constructor);
+            assert(Array.isArray(array), true);
+            assert(Object.getPrototypeOf(array), proto);
+            assert(writes, 0);
+            assert(array.length, values.length);
+            for (let i = 0; i < values.length; i++) {
+                const descriptor = Object.getOwnPropertyDescriptor(array, i);
+                assert(descriptor !== undefined, true);
+                assert(descriptor.value, values[i]);
+                assert(descriptor.writable, true);
+                assert(descriptor.enumerable, true);
+                assert(descriptor.configurable, true);
+            }
+            const holes = Reflect.construct(Array, [2], Constructor);
+            assert(holes.length, 2);
+            assert(Object.hasOwn(holes, "0"), false);
+            assert(writes, 0);
+        }
+    }
+    function Constructor() {}
+    Object.defineProperty(Constructor.prototype, "0", {
+        set(value) { throw new Error("inherited setter"); },
+    });
+    const array = Reflect.construct(Array, ["value"], Constructor);
+    assert(array[0], "value");
+}
+
 function test_array_sort_writeback()
 {
     for (const values of [[1], [1, 2], [undefined]])
@@ -3457,6 +3503,7 @@ test_function_constructor_boundaries();
 test_enum();
 test_copy_data_property_reentrancy();
 test_array();
+test_array_constructor_own_elements();
 test_array_sort_writeback();
 test_string();
 test_string_unicode_18();
