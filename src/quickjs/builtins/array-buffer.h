@@ -27,9 +27,18 @@
 
 #include "../internal/base.h"
 
+#ifdef CONFIG_ATOMICS
+typedef _Atomic(uint32_t) JSSharedArrayBufferLength;
+#else
+typedef uint32_t JSSharedArrayBufferLength;
+#endif
+
 typedef struct JSArrayBuffer {
-    int byte_length; /* 0 if detached */
-    int max_byte_length; /* -1 if not resizable; >= byte_length otherwise */
+    union {
+        int byte_length; /* ordinary or fixed buffer; 0 if detached */
+        JSSharedArrayBufferLength *shared_length; /* growable shared buffer */
+    };
+    int max_byte_length; /* -1 if fixed; reserved payload capacity otherwise */
     uint8_t detached;
     uint8_t shared; /* if shared, the array buffer cannot be detached */
     uint8_t *data; /* NULL if detached */
@@ -37,6 +46,29 @@ typedef struct JSArrayBuffer {
     void *opaque;
     JSFreeArrayBufferDataFunc *free_func;
 } JSArrayBuffer;
+
+static inline size_t js_shared_array_buffer_allocation_size(size_t maximum)
+{
+    size_t payload = maximum ? maximum : 1;
+    return payload + _Alignof(JSSharedArrayBufferLength) - 1 +
+        sizeof(JSSharedArrayBufferLength);
+}
+
+/* Growable shared lengths belong to the backing allocation, not a runtime. */
+static inline uint32_t js_array_buffer_byte_length(const JSArrayBuffer *abuf)
+{
+    if (abuf->shared && abuf->max_byte_length >= 0) {
+#ifdef CONFIG_ATOMICS
+        return atomic_load_explicit(abuf->shared_length, memory_order_seq_cst);
+#else
+        return *abuf->shared_length;
+#endif
+    }
+    return abuf->byte_length;
+}
+
+JSValue js_clone_shared_array_buffer(JSContext *ctx, uint32_t len,
+                                     uint64_t *max_len, uint8_t *data);
 
 JSValue js_array_buffer_constructor3(JSContext *ctx, JSValueConst new_target,
                                      uint64_t len, uint64_t *max_len,

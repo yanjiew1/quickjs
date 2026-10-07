@@ -42,6 +42,7 @@
 #include "internal/bytecode.h"
 #include "internal/eval.h"
 #include "builtins/array.h"
+#include "builtins/typed-array.h"
 #include "builtins/regexp.h"
 #include "builtins/function.h"
 
@@ -1495,7 +1496,9 @@ static JSValue build_for_in_iterator(JSContext *ctx, JSValue obj)
         }
         /* for fast arrays, we only store the number of elements */
         it->is_array = TRUE;
-        it->atom_count = p->u.array.count;
+        it->atom_count = p->class_id >= JS_CLASS_UINT8C_ARRAY &&
+            p->class_id <= JS_CLASS_FLOAT64_ARRAY ?
+            js_typed_array_update_length(p) : p->u.array.count;
     } else {
     normal_case:
         if (JS_GetOwnPropertyNamesInternal(ctx, &tab_atom, &tab_atom_count, p,

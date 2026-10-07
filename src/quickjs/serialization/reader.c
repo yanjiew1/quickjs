@@ -880,7 +880,7 @@ static JSValue JS_ReadTypedArray(BCReaderState *s)
     }
     args[0] = array_buffer;
     args[1] = JS_NewInt64(ctx, offset);
-    args[2] = JS_NewInt64(ctx, len);
+    args[2] = len == UINT32_MAX ? JS_UNDEFINED : JS_NewInt64(ctx, len);
     obj = js_typed_array_constructor(ctx, JS_UNDEFINED,
                                      3, args,
                                      JS_CLASS_UINT8C_ARRAY + array_tag);
@@ -959,11 +959,8 @@ static JSValue JS_ReadSharedArrayBuffer(BCReaderState *s)
         return JS_EXCEPTION;
     data_ptr = (uint8_t *)(uintptr_t)u64;
     /* the SharedArrayBuffer is cloned */
-    obj = js_array_buffer_constructor3(ctx, JS_UNDEFINED,
-                                       byte_length, pmax_byte_length,
-                                       JS_CLASS_SHARED_ARRAY_BUFFER,
-                                       data_ptr,
-                                       NULL, NULL, FALSE);
+    obj = js_clone_shared_array_buffer(ctx, byte_length,
+                                       pmax_byte_length, data_ptr);
     if (JS_IsException(obj))
         goto fail;
     if (BC_add_object_ref(s, obj))

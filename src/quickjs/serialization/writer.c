@@ -640,7 +640,7 @@ static int JS_WriteTypedArray(BCWriterState *s, JSValueConst obj)
 
     bc_put_u8(s, BC_TAG_TYPED_ARRAY);
     bc_put_u8(s, p->class_id - JS_CLASS_UINT8C_ARRAY);
-    bc_put_leb128(s, p->u.array.count);
+    bc_put_leb128(s, ta->track_rab ? UINT32_MAX : p->u.array.count);
     bc_put_leb128(s, ta->offset);
     if (JS_WriteObjectRec(s, JS_MKPTR(JS_TAG_OBJECT, ta->buffer)))
         return -1;
@@ -668,7 +668,7 @@ static int JS_WriteSharedArrayBuffer(BCWriterState *s, JSValueConst obj)
     JSArrayBuffer *abuf = p->u.array_buffer;
     assert(!abuf->detached); /* SharedArrayBuffer are never detached */
     bc_put_u8(s, BC_TAG_SHARED_ARRAY_BUFFER);
-    bc_put_leb128(s, abuf->byte_length);
+    bc_put_leb128(s, js_array_buffer_byte_length(abuf));
     bc_put_leb128(s, abuf->max_byte_length);
     bc_put_u64(s, (uintptr_t)abuf->data);
     if (js_resize_array(s->ctx, (void **)&s->sab_tab, sizeof(s->sab_tab[0]),
