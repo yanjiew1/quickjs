@@ -5663,3 +5663,79 @@ function test_disposal_symbols()
 }
 
 test_disposal_symbols();
+
+function test_suppressed_error()
+{
+    const first = {}, second = {};
+    for (const error of [SuppressedError(first, second),
+                        new SuppressedError(first, second)]) {
+        assert(error instanceof SuppressedError, true);
+        assert(error instanceof Error, true);
+        assert(Error.isError(error), true);
+        assert(Object.prototype.toString.call(error), "[object Error]");
+        assert(error.error === first, true);
+        assert(error.suppressed === second, true);
+        assert(Object.hasOwn(error, "message"), false);
+        assert(Object.hasOwn(error, "cause"), false);
+        for (const key of ["error", "suppressed"]) {
+            const descriptor = Object.getOwnPropertyDescriptor(error, key);
+            assert(descriptor.writable, true);
+            assert(descriptor.enumerable, false);
+            assert(descriptor.configurable, true);
+        }
+    }
+    const missing = SuppressedError();
+    assert(Object.hasOwn(missing, "error"), true);
+    assert(Object.hasOwn(missing, "suppressed"), true);
+    assert(missing.error, undefined);
+    assert(missing.suppressed, undefined);
+    assert(SuppressedError.length, 3);
+    assert(SuppressedError.name, "SuppressedError");
+    assert(Object.getPrototypeOf(SuppressedError) === Error, true);
+    assert(Object.getPrototypeOf(SuppressedError.prototype) === Error.prototype,
+           true);
+    assert(Error.isError(SuppressedError.prototype), false);
+    assert(SuppressedError.prototype.name, "SuppressedError");
+    assert(SuppressedError.prototype.message, "");
+    const text = { toString() { return "message"; } };
+    const error = new SuppressedError(first, second, text, {
+        get cause() { throw Error("options must be ignored"); }
+    });
+    const message = Object.getOwnPropertyDescriptor(error, "message");
+    assert(message.value, "message");
+    assert(message.writable, true);
+    assert(message.enumerable, false);
+    assert(message.configurable, true);
+    assert(error.toString(), "SuppressedError: message");
+    class Derived extends SuppressedError {}
+    const derived = new Derived(first, second, "subclass");
+    assert(derived instanceof Derived, true);
+    assert(derived.error === first, true);
+    const prototype = {};
+    let order = "";
+    const target = new Proxy(function() {}, {
+        get(target, key) {
+            if (key === "prototype") {
+                order += "prototype;";
+                return prototype;
+            }
+            return Reflect.get(target, key);
+        }
+    });
+    const custom = Reflect.construct(SuppressedError,
+        [first, second, { toString() { order += "message;"; return "x"; } }],
+        target);
+    assert(Object.getPrototypeOf(custom) === prototype, true);
+    assert(order, "prototype;message;");
+    assert(Error.isError(custom), true);
+    const sentinel = {};
+    let caught;
+    try {
+        SuppressedError(first, second, { toString() { throw sentinel; } });
+    } catch (error) {
+        caught = error;
+    }
+    assert(caught === sentinel, true);
+}
+
+test_suppressed_error();
