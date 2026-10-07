@@ -142,6 +142,43 @@ function test_function_initial_name()
     }
 }
 
+function test_function_constructor_boundaries()
+{
+    const constructors = [Function, (function*() {}).constructor,
+                          (async function() {}).constructor,
+                          (async function*() {}).constructor];
+    const invalid = [
+        ["/*", "*/) {"], ["//", ") {"], ["a = `", "` ) {"],
+        [") { var x = function (", "} "], ["x = function (", "}) {"],
+        ["", "}); globalThis.constructorSideEffect = true; (function() {"],
+    ];
+    globalThis.constructorSideEffect = false;
+    for (const ctor of constructors) {
+        for (const args of invalid)
+            assert_throws(SyntaxError, () => ctor(...args));
+        const valid = ctor("café", "x = function nested(a) { return a; }",
+                           "/* body comment */ return café;");
+        assert(valid.name, "anonymous");
+        assert(valid.length, 1);
+        assert(valid.toString().includes("café"));
+        assert(ctor("// parameter comment", "// body comment").length, 0);
+        assert(ctor("a = `text`", "return a;").length, 0);
+        const order = [];
+        ctor({ toString() { order.push(1); return "x"; } },
+             { toString() { order.push(2); return "y"; } },
+             { toString() { order.push(3); return "return x + y;"; } });
+        assert(JSON.stringify(order), "[1,2,3]");
+        const target = new Proxy(function() {}, {
+            get(object, key) { if (key === "prototype") throw Error("prototype read");
+                               return Reflect.get(object, key); },
+        });
+        assert_throws(SyntaxError, () => Reflect.construct(ctor, ["/*", "*/"], target));
+    }
+    assert(globalThis.constructorSideEffect, false);
+    delete globalThis.constructorSideEffect;
+    assert(Function("value", "return value + 1;")(41), 42);
+}
+
 function test_function()
 {
     function f(a, b) {
@@ -2865,6 +2902,7 @@ test();
 test_function();
 test_function_native_fallback();
 test_function_initial_name();
+test_function_constructor_boundaries();
 test_enum();
 test_array();
 test_array_sort_writeback();

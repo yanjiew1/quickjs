@@ -52,6 +52,13 @@ int update_label(JSFunctionDef *s, int label, int delta);
 
 
 int push_scope(JSParseState *s);
+typedef struct JSFunctionConstructorParse {
+    const uint8_t *parameters_end;
+    const uint8_t *body_end;
+} JSFunctionConstructorParse;
+
+__exception int js_parse_function_constructor(JSParseState *s,
+                                              const JSFunctionConstructorParse *ctor);
 __exception int js_parse_program(JSParseState *s);
 
 int new_label_fd(JSFunctionDef *fd);

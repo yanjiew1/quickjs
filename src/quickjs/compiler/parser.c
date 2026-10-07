@@ -733,7 +733,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                                                const uint8_t *ptr,
                                                JSParseExportEnum export_flag,
                                                JSFunctionDef **pfd,
-                                               int body_parse_flags);
+                                               int body_parse_flags,
+                                               const JSFunctionConstructorParse *ctor);
 static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags);
 static __exception int js_parse_assign_expr(JSParseState *s);
 static __exception int js_parse_unary(JSParseState *s, int parse_flags);
@@ -1658,7 +1659,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
                 if (js_parse_function_decl2(s, JS_PARSE_FUNC_CLASS_STATIC_INIT,
                                             JS_FUNC_NORMAL, JS_ATOM_NULL,
                                             s->token.ptr,
-                                            JS_PARSE_EXPORT_NONE, &init, PF_IN_ACCEPTED) < 0) {
+                                            JS_PARSE_EXPORT_NONE, &init, PF_IN_ACCEPTED, NULL) < 0) {
                     goto fail;
                 }
                 // stack is now: fclosure
@@ -1733,7 +1734,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             if (js_parse_function_decl2(s, JS_PARSE_FUNC_GETTER + is_set,
                                         JS_FUNC_NORMAL, JS_ATOM_NULL,
                                         start_ptr,
-                                        JS_PARSE_EXPORT_NONE, &method_fd, PF_IN_ACCEPTED))
+                                        JS_PARSE_EXPORT_NONE, &method_fd, PF_IN_ACCEPTED, NULL))
                 goto fail;
             if (is_private) {
                 method_fd->need_home_object = TRUE; /* needed for brand check */
@@ -1876,7 +1877,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             if (is_private) {
                 class_fields[is_static].need_brand = TRUE;
             }
-            if (js_parse_function_decl2(s, func_type, func_kind, JS_ATOM_NULL, start_ptr, JS_PARSE_EXPORT_NONE, &method_fd, PF_IN_ACCEPTED))
+            if (js_parse_function_decl2(s, func_type, func_kind, JS_ATOM_NULL, start_ptr, JS_PARSE_EXPORT_NONE, &method_fd, PF_IN_ACCEPTED, NULL))
                 goto fail;
             if (func_type == JS_PARSE_FUNC_DERIVED_CLASS_CONSTRUCTOR ||
                 func_type == JS_PARSE_FUNC_CLASS_CONSTRUCTOR) {
@@ -4434,7 +4435,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
         return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
                                        JS_FUNC_NORMAL, JS_ATOM_NULL,
                                        s->token.ptr, JS_PARSE_EXPORT_NONE,
-                                       NULL, parse_flags & PF_IN_ACCEPTED);
+                                       NULL, parse_flags & PF_IN_ACCEPTED, NULL);
     } else if (token_is_pseudo_keyword(s, JS_ATOM_async)) {
         const uint8_t *source_ptr;
         int tok;
@@ -4456,7 +4457,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
             return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
                                        JS_FUNC_ASYNC, JS_ATOM_NULL,
                                        source_ptr, JS_PARSE_EXPORT_NONE,
-                                       NULL, parse_flags & PF_IN_ACCEPTED);
+                                       NULL, parse_flags & PF_IN_ACCEPTED, NULL);
         } else {
             /* undo the token parsing */
             if (js_parse_seek_token(s, &pos))
@@ -4467,7 +4468,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
         return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
                                        JS_FUNC_NORMAL, JS_ATOM_NULL,
                                        s->token.ptr, JS_PARSE_EXPORT_NONE,
-                                       NULL, parse_flags & PF_IN_ACCEPTED);
+                                       NULL, parse_flags & PF_IN_ACCEPTED, NULL);
     } else if ((s->token.val == '{' || s->token.val == '[') &&
                js_parse_skip_parens_token(s, &skip_bits, FALSE) == '=') {
         if (js_parse_destructuring_element(s, 0, 0, FALSE, skip_bits & SKIP_HAS_ELLIPSIS, TRUE, FALSE) < 0)
@@ -6082,7 +6083,7 @@ static __exception int js_parse_export(JSParseState *s)
         return js_parse_function_decl2(s, JS_PARSE_FUNC_STATEMENT,
                                        JS_FUNC_NORMAL, JS_ATOM_NULL,
                                        s->token.ptr,
-                                       JS_PARSE_EXPORT_NAMED, NULL, PF_IN_ACCEPTED);
+                                       JS_PARSE_EXPORT_NAMED, NULL, PF_IN_ACCEPTED, NULL);
     }
 
     if (next_token(s))
@@ -6190,7 +6191,7 @@ static __exception int js_parse_export(JSParseState *s)
             return js_parse_function_decl2(s, JS_PARSE_FUNC_STATEMENT,
                                            JS_FUNC_NORMAL, JS_ATOM_NULL,
                                            s->token.ptr,
-                                           JS_PARSE_EXPORT_DEFAULT, NULL, PF_IN_ACCEPTED);
+                                           JS_PARSE_EXPORT_DEFAULT, NULL, PF_IN_ACCEPTED, NULL);
         } else {
             if (js_parse_assign_expr(s))
                 return -1;
@@ -6599,7 +6600,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                                                const uint8_t *ptr,
                                                JSParseExportEnum export_flag,
                                                JSFunctionDef **pfd,
-                                               int body_parse_flags)
+                                               int body_parse_flags,
+                                               const JSFunctionConstructorParse *ctor)
 {
     JSContext *ctx = s->ctx;
     JSFunctionDef *fd = s->cur_func;
@@ -6961,6 +6963,10 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         fd->scope_first = fd->scopes[fd->scope_level].first;
     }
 
+    if (ctor && s->token.ptr != ctor->parameters_end) {
+        js_parse_error(s, "invalid function constructor parameters");
+        goto fail;
+    }
     if (next_token(s))
         goto fail;
 
@@ -7019,6 +7025,10 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     while (s->token.val != '}') {
         if (js_parse_source_element(s))
             goto fail;
+    }
+    if (ctor && s->token.ptr != ctor->body_end) {
+        js_parse_error(s, "invalid function constructor body");
+        goto fail;
     }
     if (!fd->strip_source) {
         /* save the function source code */
@@ -7163,7 +7173,25 @@ static __exception int js_parse_function_decl(JSParseState *s,
                                               const uint8_t *ptr)
 {
     return js_parse_function_decl2(s, func_type, func_kind, func_name, ptr,
-                                   JS_PARSE_EXPORT_NONE, NULL, PF_IN_ACCEPTED);
+                                   JS_PARSE_EXPORT_NONE, NULL, PF_IN_ACCEPTED, NULL);
+}
+
+__exception int js_parse_function_constructor(JSParseState *s,
+                                              const JSFunctionConstructorParse *ctor)
+{
+    s->cur_func->is_global_var = TRUE;
+    if (next_token(s) || js_parse_expect(s, '('))
+        return -1;
+    if (js_parse_function_decl2(s, JS_PARSE_FUNC_EXPR, JS_FUNC_NORMAL,
+                                JS_ATOM_NULL, s->token.ptr,
+                                JS_PARSE_EXPORT_NONE, NULL, PF_IN_ACCEPTED, ctor))
+        return -1;
+    if (js_parse_expect(s, ')'))
+        return -1;
+    if (s->token.val != TOK_EOF)
+        return js_parse_error(s, "unexpected function constructor input");
+    emit_op(s, OP_return);
+    return 0;
 }
 
 __exception int js_parse_program(JSParseState *s)

@@ -81,27 +81,15 @@ JSValue js_function_proto(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
-/* XXX: add a specific eval mode so that Function("}), ({") is rejected */
 JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
                                 int argc, JSValueConst *argv, int magic)
 {
     JSFunctionKindEnum func_kind = magic;
     int i, n, ret;
-    JSValue s, proto, obj = JS_UNDEFINED;
+    JSValue s, body, proto, obj = JS_UNDEFINED;
     StringBuffer b_s, *b = &b_s;
 
     string_buffer_init(ctx, b, 0);
-    string_buffer_putc8(b, '(');
-
-    if (func_kind == JS_FUNC_ASYNC || func_kind == JS_FUNC_ASYNC_GENERATOR) {
-        string_buffer_puts8(b, "async ");
-    }
-    string_buffer_puts8(b, "function");
-
-    if (func_kind == JS_FUNC_GENERATOR || func_kind == JS_FUNC_ASYNC_GENERATOR) {
-        string_buffer_putc8(b, '*');
-    }
-    string_buffer_puts8(b, " anonymous(");
 
     n = argc - 1;
     for(i = 0; i < n; i++) {
@@ -111,17 +99,17 @@ JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
         if (string_buffer_concat_value(b, argv[i]))
             goto fail;
     }
-    string_buffer_puts8(b, "\n) {\n");
-    if (n >= 0) {
-        if (string_buffer_concat_value(b, argv[n]))
-            goto fail;
-    }
-    string_buffer_puts8(b, "\n})");
     s = string_buffer_end(b);
     if (JS_IsException(s))
         goto fail1;
-
-    obj = JS_EvalObject(ctx, ctx->global_obj, s, JS_EVAL_TYPE_INDIRECT, -1);
+    body = n >= 0 ? JS_ToString(ctx, argv[n]) :
+        JS_AtomToString(ctx, JS_ATOM_empty_string);
+    if (JS_IsException(body)) {
+        JS_FreeValue(ctx, s);
+        goto fail1;
+    }
+    obj = JS_EvalFunctionConstructor(ctx, s, body, func_kind);
+    JS_FreeValue(ctx, body);
     JS_FreeValue(ctx, s);
     if (JS_IsException(obj))
         goto fail1;
