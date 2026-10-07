@@ -675,7 +675,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
     func = JS_DupValue(ctx, argv[0]);
     method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
     if (JS_IsException(method))
-        goto exception;
+        goto exception_no_close;
     if (argc > 1) {
         acc = JS_DupValue(ctx, argv[1]);
         idx = 0;
@@ -685,7 +685,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
             goto exception_no_close;
         if (done) {
             JS_ThrowTypeError(ctx, "empty iterator");
-            goto exception;
+            goto exception_no_close;
         }
         idx = 1;
     }
