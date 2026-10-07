@@ -55,7 +55,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             direct_parse[script_len++] = c;
         }
     }
-    strcat(direct_parse + script_len, "');");
+    memcpy(direct_parse + script_len, "');", sizeof("');"));
     
     JSValue direct_result = JS_Eval(ctx, direct_parse, strlen(direct_parse), 
                                      "<json-direct>", 0);
