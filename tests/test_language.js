@@ -36,6 +36,24 @@ try { __loadScript("test_assert.js"); } catch(e) {}
 
 /*----------------*/
 
+function test_arrow_for_in_grammar()
+{
+    for (const arrow of ["x =>", "(x) =>", "async x =>", "async (x) =>",
+                         "x => y =>", "async x => y =>"]) {
+        assert_throws(SyntaxError,
+                      () => Function("for (" + arrow + " 0 in 1;;) break;"));
+        assert_throws(SyntaxError,
+                      () => Function("for (let f = " + arrow + " 0 in 1;;) break;"));
+        Function("for (let f = " + arrow + " (0 in {}); false;) break;");
+        Function("for (let f = (" + arrow + " 0 in {}); false;) break;");
+    }
+    Function("for (let f = (x = (0 in {})) => x; false;) break;");
+    Function("for (let f = x => { return 0 in {}; }; false;) break;");
+    Function("for (let f = async x => { return 0 in {}; }; false;) break;");
+    const value = x => 0 in {};
+    assert(value(), false);
+}
+
 function test_op1()
 {
     var r, a;
@@ -675,6 +693,7 @@ function test_number_literals()
 }
 
 test_op1();
+test_arrow_for_in_grammar();
 test_cvt();
 test_eq();
 test_inc_dec();

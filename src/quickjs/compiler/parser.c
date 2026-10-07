@@ -732,7 +732,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                                                JSAtom func_name,
                                                const uint8_t *ptr,
                                                JSParseExportEnum export_flag,
-                                               JSFunctionDef **pfd);
+                                               JSFunctionDef **pfd,
+                                               int body_parse_flags);
 static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags);
 static __exception int js_parse_assign_expr(JSParseState *s);
 static __exception int js_parse_unary(JSParseState *s, int parse_flags);
@@ -1657,7 +1658,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
                 if (js_parse_function_decl2(s, JS_PARSE_FUNC_CLASS_STATIC_INIT,
                                             JS_FUNC_NORMAL, JS_ATOM_NULL,
                                             s->token.ptr,
-                                            JS_PARSE_EXPORT_NONE, &init) < 0) {
+                                            JS_PARSE_EXPORT_NONE, &init, PF_IN_ACCEPTED) < 0) {
                     goto fail;
                 }
                 // stack is now: fclosure
@@ -1732,7 +1733,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             if (js_parse_function_decl2(s, JS_PARSE_FUNC_GETTER + is_set,
                                         JS_FUNC_NORMAL, JS_ATOM_NULL,
                                         start_ptr,
-                                        JS_PARSE_EXPORT_NONE, &method_fd))
+                                        JS_PARSE_EXPORT_NONE, &method_fd, PF_IN_ACCEPTED))
                 goto fail;
             if (is_private) {
                 method_fd->need_home_object = TRUE; /* needed for brand check */
@@ -1875,7 +1876,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             if (is_private) {
                 class_fields[is_static].need_brand = TRUE;
             }
-            if (js_parse_function_decl2(s, func_type, func_kind, JS_ATOM_NULL, start_ptr, JS_PARSE_EXPORT_NONE, &method_fd))
+            if (js_parse_function_decl2(s, func_type, func_kind, JS_ATOM_NULL, start_ptr, JS_PARSE_EXPORT_NONE, &method_fd, PF_IN_ACCEPTED))
                 goto fail;
             if (func_type == JS_PARSE_FUNC_DERIVED_CLASS_CONSTRUCTOR ||
                 func_type == JS_PARSE_FUNC_CLASS_CONSTRUCTOR) {
@@ -4430,9 +4431,10 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
         return 0;
     } else if (s->token.val == '(' &&
                js_parse_skip_parens_token(s, NULL, TRUE) == TOK_ARROW) {
-        return js_parse_function_decl(s, JS_PARSE_FUNC_ARROW,
-                                      JS_FUNC_NORMAL, JS_ATOM_NULL,
-                                      s->token.ptr);
+        return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
+                                       JS_FUNC_NORMAL, JS_ATOM_NULL,
+                                       s->token.ptr, JS_PARSE_EXPORT_NONE,
+                                       NULL, parse_flags & PF_IN_ACCEPTED);
     } else if (token_is_pseudo_keyword(s, JS_ATOM_async)) {
         const uint8_t *source_ptr;
         int tok;
@@ -4451,9 +4453,10 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
              js_parse_skip_parens_token(s, NULL, TRUE) == TOK_ARROW) ||
             (s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved &&
              peek_token(s, TRUE) == TOK_ARROW)) {
-            return js_parse_function_decl(s, JS_PARSE_FUNC_ARROW,
-                                          JS_FUNC_ASYNC, JS_ATOM_NULL,
-                                          source_ptr);
+            return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
+                                       JS_FUNC_ASYNC, JS_ATOM_NULL,
+                                       source_ptr, JS_PARSE_EXPORT_NONE,
+                                       NULL, parse_flags & PF_IN_ACCEPTED);
         } else {
             /* undo the token parsing */
             if (js_parse_seek_token(s, &pos))
@@ -4461,9 +4464,10 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
         }
     } else if (s->token.val == TOK_IDENT &&
                peek_token(s, TRUE) == TOK_ARROW) {
-        return js_parse_function_decl(s, JS_PARSE_FUNC_ARROW,
-                                      JS_FUNC_NORMAL, JS_ATOM_NULL,
-                                      s->token.ptr);
+        return js_parse_function_decl2(s, JS_PARSE_FUNC_ARROW,
+                                       JS_FUNC_NORMAL, JS_ATOM_NULL,
+                                       s->token.ptr, JS_PARSE_EXPORT_NONE,
+                                       NULL, parse_flags & PF_IN_ACCEPTED);
     } else if ((s->token.val == '{' || s->token.val == '[') &&
                js_parse_skip_parens_token(s, &skip_bits, FALSE) == '=') {
         if (js_parse_destructuring_element(s, 0, 0, FALSE, skip_bits & SKIP_HAS_ELLIPSIS, TRUE, FALSE) < 0)
@@ -6078,7 +6082,7 @@ static __exception int js_parse_export(JSParseState *s)
         return js_parse_function_decl2(s, JS_PARSE_FUNC_STATEMENT,
                                        JS_FUNC_NORMAL, JS_ATOM_NULL,
                                        s->token.ptr,
-                                       JS_PARSE_EXPORT_NAMED, NULL);
+                                       JS_PARSE_EXPORT_NAMED, NULL, PF_IN_ACCEPTED);
     }
 
     if (next_token(s))
@@ -6186,7 +6190,7 @@ static __exception int js_parse_export(JSParseState *s)
             return js_parse_function_decl2(s, JS_PARSE_FUNC_STATEMENT,
                                            JS_FUNC_NORMAL, JS_ATOM_NULL,
                                            s->token.ptr,
-                                           JS_PARSE_EXPORT_DEFAULT, NULL);
+                                           JS_PARSE_EXPORT_DEFAULT, NULL, PF_IN_ACCEPTED);
         } else {
             if (js_parse_assign_expr(s))
                 return -1;
@@ -6594,7 +6598,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                                                JSAtom func_name,
                                                const uint8_t *ptr,
                                                JSParseExportEnum export_flag,
-                                               JSFunctionDef **pfd)
+                                               JSFunctionDef **pfd,
+                                               int body_parse_flags)
 {
     JSContext *ctx = s->ctx;
     JSFunctionDef *fd = s->cur_func;
@@ -6978,7 +6983,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
             if (js_parse_function_check_names(s, fd, func_name))
                 goto fail;
 
-            if (js_parse_assign_expr(s))
+            if (js_parse_assign_expr2(s, body_parse_flags))
                 goto fail;
 
             if (func_kind != JS_FUNC_NORMAL)
@@ -7158,7 +7163,7 @@ static __exception int js_parse_function_decl(JSParseState *s,
                                               const uint8_t *ptr)
 {
     return js_parse_function_decl2(s, func_type, func_kind, func_name, ptr,
-                                   JS_PARSE_EXPORT_NONE, NULL);
+                                   JS_PARSE_EXPORT_NONE, NULL, PF_IN_ACCEPTED);
 }
 
 __exception int js_parse_program(JSParseState *s)
