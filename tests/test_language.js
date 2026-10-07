@@ -391,6 +391,44 @@ function test_super_null_key_coercion()
     assert(actual === error);
 }
 
+function test_annex_if_function_scopes()
+{
+    function choose(flag) {
+        if (flag) function selected() { return "left"; }
+        else function selected() { return "right"; }
+        return selected();
+    }
+    assert(choose(true), "left");
+    assert(choose(false), "right");
+    function before() {
+        let kind;
+        if ((kind = typeof hidden, false)) function hidden() {}
+        return kind;
+    }
+    assert(before(), "undefined");
+    function blocked(flag) {
+        let hidden = "lexical";
+        if (flag) function hidden() { return "branch"; }
+        return hidden;
+    }
+    assert(blocked(true), "lexical");
+    assert(blocked(false), "lexical");
+    function nested(a, b) {
+        if (a) if (b) function inner() { return 42; }
+        return typeof inner;
+    }
+    assert(nested(true, true), "function");
+    assert(nested(true, false), "undefined");
+    assert(nested(false, true), "undefined");
+    for (const source of [
+        "'use strict'; if (true) function f() {}",
+        "if (true) function* f() {}",
+        "if (true) async function f() {}",
+        "if (true) label: function f() {}",
+    ])
+        assert_throws(SyntaxError, () => Function(source));
+}
+
 function test_class()
 {
     var o;
@@ -801,6 +839,7 @@ test_arguments();
 test_class();
 test_super_base_order();
 test_super_null_key_coercion();
+test_annex_if_function_scopes();
 test_template();
 test_template_skip();
 test_object_literal();

@@ -4791,6 +4791,20 @@ static void emit_return(JSParseState *s, BOOL hasval)
 static __exception int js_parse_statement_or_decl(JSParseState *s,
                                                   int decl_mask);
 
+static __exception int js_parse_if_clause(JSParseState *s, int decl_mask)
+{
+    BOOL function_scope = (s->token.val == TOK_FUNCTION &&
+                           (decl_mask & DECL_MASK_FUNC));
+
+    if (function_scope && push_scope(s) < 0)
+        return -1;
+    if (js_parse_statement_or_decl(s, decl_mask))
+        return -1;
+    if (function_scope)
+        pop_scope(s);
+    return 0;
+}
+
 static __exception int js_parse_statement(JSParseState *s)
 {
     return js_parse_statement_or_decl(s, 0);
@@ -5327,8 +5341,6 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             int label1, label2, mask;
             if (next_token(s))
                 goto fail;
-            /* create a new scope for `let f;if(1) function f(){}` */
-            push_scope(s);
             set_eval_ret_undefined(s);
             if (js_parse_expr_paren(s))
                 goto fail;
@@ -5338,7 +5350,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             else
                 mask = DECL_MASK_FUNC; /* Annex B.3.4 */
 
-            if (js_parse_statement_or_decl(s, mask))
+            if (js_parse_if_clause(s, mask))
                 goto fail;
 
             if (s->token.val == TOK_ELSE) {
@@ -5347,13 +5359,12 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                     goto fail;
 
                 emit_label(s, label1);
-                if (js_parse_statement_or_decl(s, mask))
+                if (js_parse_if_clause(s, mask))
                     goto fail;
 
                 label1 = label2;
             }
             emit_label(s, label1);
-            pop_scope(s);
         }
         break;
     case TOK_WHILE:
