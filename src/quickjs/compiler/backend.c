@@ -959,6 +959,23 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             }
             switch (op) {
             case OP_scope_make_ref:
+                if (s->closure_var[idx].var_kind == JS_VAR_IMPORT) {
+                    /* Imported bindings are immutable, but their value is
+                       shared with an exporter whose binding may be mutable.
+                       A pure write must not read an uninitialized exporter. */
+                    dbuf_putc(bc, OP_object);
+                    if (bc_buf[pos_next] == OP_get_ref_value ||
+                        bc_buf[pos_next] == OP_get_ref_value_strict) {
+                        dbuf_putc(bc, OP_get_var_ref_check);
+                        dbuf_put_u16(bc, idx);
+                    } else {
+                        dbuf_putc(bc, OP_undefined);
+                    }
+                    dbuf_putc(bc, OP_define_field_ro);
+                    dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
+                    dbuf_putc(bc, OP_push_atom_value);
+                    dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
+                } else
                 if (s->closure_var[idx].var_kind == JS_VAR_FUNCTION_NAME) {
                     /* Create a dummy object reference for the func_var */
                     dbuf_putc(bc, OP_object);
