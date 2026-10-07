@@ -5739,3 +5739,239 @@ function test_suppressed_error()
 }
 
 test_suppressed_error();
+
+function test_disposable_stack_registration()
+{
+    const prototype = DisposableStack.prototype;
+    assert(DisposableStack.length, 0);
+    assert(DisposableStack.name, "DisposableStack");
+    assert(prototype[Symbol.dispose] === prototype.dispose, true);
+    assert(Object.prototype.toString.call(new DisposableStack()),
+           "[object DisposableStack]");
+    assert(Object.getPrototypeOf(prototype) === Object.prototype, true);
+    const disposed = Object.getOwnPropertyDescriptor(prototype, "disposed");
+    assert(disposed.set, undefined);
+    assert(disposed.enumerable, false);
+    assert(disposed.configurable, true);
+    for (const [name, length] of [["use", 1], ["adopt", 2], ["defer", 1],
+                                 ["move", 0], ["dispose", 0]]) {
+        assert(prototype[name].length, length);
+        assert(prototype[name].name, name);
+        assert(Object.hasOwn(prototype[name], "prototype"), false);
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+        assert(descriptor.writable, true);
+        assert(descriptor.enumerable, false);
+        assert(descriptor.configurable, true);
+    }
+    assert_throws(TypeError, () => DisposableStack());
+    class Derived extends DisposableStack {}
+    assert(new Derived() instanceof Derived, true);
+    const custom = Reflect.construct(DisposableStack, [],
+                                    function Custom() {});
+    assert(custom.disposed, undefined);
+    assert(disposed.get.call(custom), false);
+    const stack = new DisposableStack();
+    const order = [];
+    const resource = {
+        [Symbol.dispose]() {
+            "use strict";
+            assert(this === resource, true);
+            assert(arguments.length, 0);
+            order.push("use");
+            return { get then() { throw Error("sync result is ignored"); } };
+        }
+    };
+    const adopted = {};
+    assert(stack.disposed, false);
+    assert(stack.use(resource) === resource, true);
+    assert(stack.adopt(adopted, function(value) {
+        "use strict";
+        assert(this, undefined);
+        assert(value === adopted, true);
+        assert(arguments.length, 1);
+        order.push("adopt");
+    }) === adopted, true);
+    assert(stack.defer(function() {
+        "use strict";
+        assert(this, undefined);
+        assert(arguments.length, 0);
+        order.push("defer");
+    }), undefined);
+    resource[Symbol.dispose] = () => { throw Error("method must be cached"); };
+    assert(stack.use(null), null);
+    assert(stack.use(undefined), undefined);
+    assert(stack.dispose(), undefined);
+    assert(stack.disposed, true);
+    assert(order.join(","), "defer,adopt,use");
+    assert(stack.dispose(), undefined);
+    assert(order.length, 3);
+    for (const receiver of [null, undefined, 1, {}, prototype,
+                            new Proxy(new DisposableStack(), {})]) {
+        assert_throws(TypeError, () => prototype.use.call(receiver, resource));
+        assert_throws(TypeError, () => prototype.adopt.call(receiver, 0, () => {}));
+        assert_throws(TypeError, () => prototype.defer.call(receiver, () => {}));
+        assert_throws(TypeError, () => prototype.move.call(receiver));
+        assert_throws(TypeError, () => prototype.dispose.call(receiver));
+        assert_throws(TypeError, () => disposed.get.call(receiver));
+    }
+    const pending = new DisposableStack();
+    for (const value of [1, "x", true, Symbol(), 1n, {},
+                         { [Symbol.dispose]: null },
+                         { [Symbol.dispose]: 1 }]) {
+        assert_throws(TypeError, () => pending.use(value));
+    }
+    assert_throws(TypeError, () => pending.defer(1));
+    assert_throws(TypeError, () => pending.adopt({}, null));
+    const sentinel = {};
+    let reads = 0;
+    const throwing = {
+        get [Symbol.dispose]() { reads++; throw sentinel; }
+    };
+    let caught;
+    try { pending.use(throwing); } catch (error) { caught = error; }
+    assert(caught === sentinel, true);
+    assert(reads, 1);
+    pending.dispose();
+    assert_throws(ReferenceError, () => pending.use(throwing));
+    assert(reads, 1);
+    assert_throws(ReferenceError, () => pending.adopt({}, 1));
+    assert_throws(ReferenceError, () => pending.defer(1));
+    assert_throws(ReferenceError, () => pending.move());
+}
+
+function test_disposable_stack_move_and_reentrancy()
+{
+    class Derived extends DisposableStack {}
+    const source = new Derived();
+    const calls = [];
+    source.defer(() => calls.push("first"));
+    source.constructor = { get [Symbol.species]() {
+        throw Error("move does not consult species");
+    } };
+    const moved = source.move();
+    assert(Object.getPrototypeOf(moved) === DisposableStack.prototype, true);
+    assert(moved instanceof Derived, false);
+    assert(source.disposed, true);
+    assert(moved.disposed, false);
+    assert(source.dispose(), undefined);
+    assert(calls.length, 0);
+    moved.defer(() => calls.push("second"));
+    moved.dispose();
+    assert(calls.join(","), "second,first");
+
+    const getterSource = new DisposableStack();
+    let getterMoved, reads = 0;
+    const resource = {
+        get [Symbol.dispose]() {
+            reads++;
+            getterMoved = getterSource.move();
+            return function() {
+                assert(this === resource, true);
+                calls.push("getter move");
+            };
+        }
+    };
+    assert(getterSource.use(resource) === resource, true);
+    assert(reads, 1);
+    assert(getterSource.disposed, true);
+    getterSource.dispose();
+    assert(calls.length, 2);
+    getterMoved.dispose();
+    assert(calls[2], "getter move");
+
+    const recursive = new DisposableStack();
+    let count = 0;
+    recursive.defer(() => {
+        count++;
+        assert(recursive.disposed, true);
+        assert(recursive.dispose(), undefined);
+        assert_throws(ReferenceError, () => recursive.defer(() => {}));
+    });
+    recursive.dispose();
+    assert(count, 1);
+
+    const getterDispose = new DisposableStack();
+    getterDispose.defer(() => calls.push("existing"));
+    getterDispose.use({
+        get [Symbol.dispose]() {
+            getterDispose.dispose();
+            return () => { throw Error("late resource must not be traversed"); };
+        }
+    });
+    assert(getterDispose.disposed, true);
+    assert(calls[3], "existing");
+    getterDispose.dispose();
+
+    const nested = new DisposableStack();
+    nested.use({
+        get [Symbol.dispose]() {
+            nested.defer(() => calls.push("nested"));
+            return () => calls.push("outer");
+        }
+    });
+    nested.dispose();
+    assert(calls.slice(-2).join(","), "outer,nested");
+}
+
+function collect_disposable_stack_garbage()
+{
+    if (typeof std !== "undefined" && typeof std.gc === "function")
+        std.gc();
+    else if (typeof gc === "function")
+        gc();
+}
+
+function test_disposable_stack_failures_and_gc()
+{
+    const first = {}, second = {}, third = {};
+    const stack = new DisposableStack();
+    stack.defer(() => { throw third; });
+    stack.defer(() => { throw second; });
+    stack.defer(() => { throw first; });
+    const intrinsic = SuppressedError;
+    globalThis.SuppressedError = function() {
+        throw Error("suppression must use the intrinsic");
+    };
+    let caught;
+    try {
+        try { stack.dispose(); } catch (error) { caught = error; }
+    } finally {
+        globalThis.SuppressedError = intrinsic;
+    }
+    assert(caught instanceof intrinsic, true);
+    assert(caught.error === third, true);
+    assert(caught.suppressed instanceof intrinsic, true);
+    assert(caught.suppressed.error === second, true);
+    assert(caught.suppressed.suppressed === first, true);
+    assert(stack.disposed, true);
+    const undefinedFailure = new DisposableStack();
+    undefinedFailure.defer(() => { throw undefined; });
+    let threw = false;
+    try { undefinedFailure.dispose(); } catch (error) {
+        threw = true;
+        assert(error, undefined);
+    }
+    assert(threw, true);
+    const gcStack = new DisposableStack();
+    let called = 0;
+    const resource = {
+        stack: gcStack,
+        [Symbol.dispose]() { called++; }
+    };
+    gcStack.use(resource);
+    gcStack.defer(() => {
+        collect_disposable_stack_garbage();
+    });
+    collect_disposable_stack_garbage();
+    gcStack.dispose();
+    assert(called, 1);
+    for (let index = 0; index < 100; index++) {
+        const cycle = new DisposableStack();
+        cycle.use({ stack: cycle, [Symbol.dispose]() {} });
+    }
+    collect_disposable_stack_garbage();
+}
+
+test_disposable_stack_registration();
+test_disposable_stack_move_and_reentrancy();
+test_disposable_stack_failures_and_gc();

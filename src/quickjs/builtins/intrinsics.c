@@ -44,6 +44,7 @@
 #include "object.h"
 #include "math.h"
 #include "string.h"
+#include "resource-management.h"
 
 JSValue js_get_this(JSContext *ctx,
                     JSValueConst this_val)
@@ -382,6 +383,10 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
     if (JS_DefinePropertyValue(ctx, ctx->global_obj, JS_ATOM_globalThis,
                                JS_DupValue(ctx, ctx->global_obj),
                                JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE) < 0)
+        return -1;
+
+    /* DisposableStack */
+    if (js_init_disposable_stack(ctx))
         return -1;
 
     /* BigInt */
