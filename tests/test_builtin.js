@@ -736,6 +736,36 @@ function test_array_buffer_max_index()
     }
 }
 
+function test_shared_array_buffer_atomics()
+{
+    if (typeof Atomics === "undefined")
+        return;
+    for (const C of [BigInt64Array, BigUint64Array]) {
+        for (const length of [0, 1, 7, 8, 9, 16]) {
+            const fixed = new SharedArrayBuffer(length);
+            assert(fixed.byteLength, length);
+            const growable = new SharedArrayBuffer(length, { maxByteLength: 16 });
+            assert(growable.byteLength, length);
+            growable.grow(16);
+            assert(growable.byteLength, 16);
+            for (const buffer of [fixed, growable]) {
+                const view = new C(buffer, 0, Math.floor(buffer.byteLength / 8));
+                for (let i = 0; i < view.length; i++) {
+                    assert(Atomics.load(view, i), 0n);
+                    assert(Atomics.store(view, i, 0x1122334455667788n),
+                           0x1122334455667788n);
+                    assert(Atomics.add(view, i, 1n), 0x1122334455667788n);
+                    assert(Atomics.load(view, i), 0x1122334455667789n);
+                    assert(Atomics.compareExchange(view, i,
+                                                  0x1122334455667789n, 37n),
+                           0x1122334455667789n);
+                    assert(view[i], 37n);
+                }
+            }
+        }
+    }
+}
+
 function test_array_buffer_resize_order()
 {
     for (const [buffer, method] of [[new ArrayBuffer(0), "resize"],
@@ -3022,6 +3052,7 @@ test_math();
 test_number();
 test_eval();
 test_array_buffer_max_index();
+test_shared_array_buffer_atomics();
 test_array_buffer_resize_order();
 test_array_buffer_transfer_range();
 test_array_buffer_slice_shrink();

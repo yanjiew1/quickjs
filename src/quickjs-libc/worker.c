@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -211,7 +212,9 @@ typedef struct {
 
 typedef struct {
     int ref_count;
-    uint64_t buf[0];
+    /* Native atomic types may require stricter alignment than integers. */
+    _Alignas(_Atomic(uint8_t)) _Alignas(_Atomic(uint16_t))
+    _Alignas(_Atomic(uint32_t)) _Alignas(_Atomic(uint64_t)) uint8_t buf[];
 } JSSABHeader;
 
 static JSClassID js_worker_class_id;
@@ -237,7 +240,7 @@ void js_sab_free(void *opaque, void *ptr)
 {
     JSSABHeader *sab;
     int ref_count;
-    sab = (JSSABHeader *)((uint8_t *)ptr - sizeof(JSSABHeader));
+    sab = (JSSABHeader *)((uint8_t *)ptr - offsetof(JSSABHeader, buf));
     ref_count = atomic_add_int(&sab->ref_count, -1);
     assert(ref_count >= 0);
     if (ref_count == 0) {
@@ -248,7 +251,7 @@ void js_sab_free(void *opaque, void *ptr)
 void js_sab_dup(void *opaque, void *ptr)
 {
     JSSABHeader *sab;
-    sab = (JSSABHeader *)((uint8_t *)ptr - sizeof(JSSABHeader));
+    sab = (JSSABHeader *)((uint8_t *)ptr - offsetof(JSSABHeader, buf));
     atomic_add_int(&sab->ref_count, 1);
 }
 

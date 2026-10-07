@@ -324,7 +324,7 @@ static void free_shared(void *opaque, void *ptr)
     }
 }
 
-static void test_misaligned_shared_buffer_length(void)
+static void test_shared_buffer_length_alignment(void)
 {
     static const unsigned int capacities[] = { 0, 1, 2, 3, 4, 5, 8, 31, 32 };
     size_t capacity_index;
@@ -334,7 +334,7 @@ static void test_misaligned_shared_buffer_length(void)
         for (first = 0; first < 2; first++) {
             SharedBufferData data = { 0 };
             JSSharedArrayBufferFunctions functions = {
-                alloc_misaligned_shared, free_shared, dup_shared, &data,
+                alloc_shared, free_shared, dup_shared, &data,
             };
             JSRuntime *runtimes[2] = { JS_NewRuntime(), JS_NewRuntime() };
             JSContext *contexts[2];
@@ -354,9 +354,9 @@ static void test_misaligned_shared_buffer_length(void)
                      "new SharedArrayBuffer(0, { maxByteLength: %u })",
                      capacities[capacity_index]);
             buffer = JS_Eval(contexts[0], source, strlen(source),
-                             "misaligned-shared-length", JS_EVAL_TYPE_GLOBAL);
+                             "shared-length-alignment", JS_EVAL_TYPE_GLOBAL);
             assert(!JS_IsException(buffer));
-            assert(((uintptr_t)data.ptr & 3) == 1);
+            assert(((uintptr_t)data.ptr & 3) == 0);
             encoded = JS_WriteObject2(contexts[0], &encoded_size, buffer,
                                       JS_WRITE_OBJ_SAB, &pointers, &pointer_count);
             assert(encoded && pointer_count == 1 && pointers[0] == data.ptr);
@@ -391,6 +391,125 @@ static void test_misaligned_shared_buffer_length(void)
             assert(data.allocations == 1 && data.duplications == 1 && data.releases == 2);
         }
     }
+}
+
+static void check_type_error(JSContext *ctx)
+{
+    JSValue exception = JS_GetException(ctx);
+    JSValue name = JS_GetPropertyStr(ctx, exception, "name");
+    const char *text = JS_ToCString(ctx, name);
+    assert(text && !strcmp(text, "TypeError"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, exception);
+}
+
+static void count_unclaimed_shared_free(JSRuntime *rt, void *opaque, void *ptr)
+{
+    int *count = opaque;
+    (*count)++;
+}
+
+typedef struct SwitchingSharedAllocation {
+    SharedBufferData data;
+    JSRuntime *rt;
+    JSSharedArrayBufferFunctions replacement;
+} SwitchingSharedAllocation;
+
+static void *alloc_misaligned_and_switch(void *opaque, size_t size)
+{
+    SwitchingSharedAllocation *owner = opaque;
+    void *ptr = alloc_misaligned_shared(&owner->data, size);
+    JS_SetSharedArrayBufferFunctions(owner->rt, &owner->replacement);
+    return ptr;
+}
+
+static void free_original_shared_allocation(void *opaque, void *ptr)
+{
+    SwitchingSharedAllocation *owner = opaque;
+    free_shared(&owner->data, ptr);
+}
+
+static void test_shared_buffer_alignment_rejection(void)
+{
+    static const char *sources[] = {
+        "new SharedArrayBuffer(0)",
+        "new SharedArrayBuffer(8)",
+        "new SharedArrayBuffer(0, { maxByteLength: 0 })",
+        "new SharedArrayBuffer(3, { maxByteLength: 31 })",
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue global, atomics, buffer;
+    JSSharedArrayBufferFunctions none = { 0 };
+    SharedBufferData replacement = { 0 };
+    SwitchingSharedAllocation owner = { 0 };
+    size_t i;
+    int mode;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    global = JS_GetGlobalObject(ctx);
+    atomics = JS_GetPropertyStr(ctx, global, "Atomics");
+    JS_FreeValue(ctx, global);
+    if (JS_IsUndefined(atomics)) {
+        JS_FreeValue(ctx, atomics);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        return;
+    }
+    assert(!JS_IsException(atomics));
+    JS_FreeValue(ctx, atomics);
+    owner.rt = rt;
+    owner.replacement = (JSSharedArrayBufferFunctions) {
+        alloc_shared, free_shared, dup_shared, &replacement,
+    };
+    for (i = 0; i <= countof(sources); i++) {
+        JSSharedArrayBufferFunctions functions = {
+            alloc_misaligned_and_switch, free_original_shared_allocation,
+            NULL, &owner,
+        };
+        JS_SetSharedArrayBufferFunctions(rt, &functions);
+        if (i == countof(sources)) {
+            buffer = JS_NewArrayBuffer(ctx, NULL, 0, NULL, NULL, TRUE);
+        } else {
+            buffer = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                             "shared-alignment-rejection", JS_EVAL_TYPE_GLOBAL);
+        }
+        assert(JS_IsException(buffer));
+        check_type_error(ctx);
+        assert(owner.data.allocations == (int)i + 1);
+        assert(owner.data.releases == (int)i + 1);
+        assert(owner.data.references == 0 && owner.data.ptr == NULL &&
+               owner.data.allocation == NULL && owner.data.duplications == 0);
+        assert(replacement.allocations == 0 && replacement.releases == 0 &&
+               replacement.references == 0 && replacement.duplications == 0);
+    }
+    for (mode = 0; mode < 4; mode++) {
+        SharedBufferData external = { 0 };
+        JSSharedArrayBufferFunctions functions = {
+            NULL, free_shared, dup_shared, &external,
+        };
+        uint8_t *ptr = alloc_misaligned_shared(&external, 8);
+        int free_count = 0;
+
+        JS_SetSharedArrayBufferFunctions(rt, mode & 1 ? &functions : &none);
+        buffer = JS_NewArrayBuffer(ctx, ptr, mode >= 2 ? 0 : 8,
+                                   count_unclaimed_shared_free,
+                                   &free_count, TRUE);
+        assert(JS_IsException(buffer));
+        check_type_error(ctx);
+        assert(free_count == 0 && external.references == 1 &&
+               external.duplications == 0 && external.releases == 0 &&
+               external.ptr == ptr);
+        free_shared(&external, ptr);
+        assert(external.references == 0 && external.releases == 1);
+    }
+    JS_SetSharedArrayBufferFunctions(rt, &none);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(owner.data.releases == (int)countof(sources) + 1);
 }
 
 static void check_shared_serialization_rejection(JSContext *ctx, JSValueConst buffer)
@@ -1338,7 +1457,8 @@ int main(int argc, char **argv)
         { "shared-buffer-growth", test_default_shared_buffer_growth },
         { "shared-buffer-clone", test_shared_buffer_clone_views },
         { "shared-buffer-queued-clone", test_shared_buffer_queued_clone },
-        { "shared-buffer-misaligned-length", test_misaligned_shared_buffer_length },
+        { "shared-length-alignment", test_shared_buffer_length_alignment },
+        { "shared-buffer-alignment-rejection", test_shared_buffer_alignment_rejection },
         { "shared-buffer-serialization-lifetime", test_shared_serialization_lifetime },
         { "shared-buffer-external-owner", test_external_shared_buffer_owner },
         { "shared-buffer-clone-release", test_shared_clone_release_callback },
