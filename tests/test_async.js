@@ -1697,3 +1697,276 @@ await test_array_from_async_sources();
 await test_array_from_async_construction();
 await test_array_from_async_failure_routing();
 await test_array_from_async_intrinsic_promises();
+
+/* Copyright (c) 2026 Yan-Jie Wang. SPDX-License-Identifier: MIT */
+
+async function test_async_iterator_dispose()
+{
+    let collectGarbage = globalThis.gc;
+    if (typeof collectGarbage !== "function") {
+        try {
+            collectGarbage = (await import("std")).gc;
+        } catch (error) {
+            /* Other engines may not provide explicit garbage collection. */
+        }
+    }
+    async function* generator() {}
+    const prototype = Object.getPrototypeOf(Object.getPrototypeOf(generator.prototype));
+    const dispose = prototype[Symbol.asyncDispose];
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, Symbol.asyncDispose);
+    assert(typeof dispose, "function");
+    assert(descriptor.value === dispose, true);
+    assert(descriptor.writable, true);
+    assert(descriptor.enumerable, false);
+    assert(descriptor.configurable, true);
+    assert(dispose.name, "[Symbol.asyncDispose]");
+    assert(dispose.length, 0);
+    for (const key of ["name", "length"]) {
+        const property = Object.getOwnPropertyDescriptor(dispose, key);
+        assert(property.writable, false);
+        assert(property.enumerable, false);
+        assert(property.configurable, true);
+    }
+    assert(Object.hasOwn(dispose, "prototype"), false);
+    assert(Object.hasOwn(globalThis, "AsyncIterator"), false);
+    assert(generator()[Symbol.asyncDispose] === dispose, true);
+    let constructionError;
+    try { new dispose(); } catch (error) { constructionError = error; }
+    assert(constructionError instanceof TypeError, true);
+
+    async function rejects(promise, expected) {
+        assert(promise instanceof Promise, true);
+        let threw = false;
+        try { await promise; } catch (error) {
+            threw = true;
+            assert(error === expected, true);
+        }
+        assert(threw, true);
+    }
+    async function rejectsTypeError(receiver) {
+        const promise = dispose.call(receiver);
+        assert(promise instanceof Promise, true);
+        let caught;
+        try { await promise; } catch (error) { caught = error; }
+        assert(caught instanceof TypeError, true);
+    }
+    for (const receiver of [{}, { return: undefined }, { return: null },
+                            0, true, "x", Symbol("x"), 1n]) {
+        const first = dispose.call(receiver);
+        const second = dispose.call(receiver);
+        assert(first instanceof Promise, true);
+        assert(first !== second, true);
+        assert(await first, undefined);
+        assert(await second, undefined);
+    }
+    for (const receiver of [null, undefined])
+        await rejectsTypeError(receiver);
+    for (const method of [0, false, "x", Symbol("x"), 1n, {}])
+        await rejectsTypeError({ return: method });
+
+    let reads = 0, calls = 0;
+    const receiver = {
+        get next() { throw Error("next must not be read"); },
+        get [Symbol.asyncIterator]() { throw Error("iterator must not be read"); },
+        get return() {
+            assert(this === receiver, true);
+            reads++;
+            Object.defineProperty(this, "return", {
+                value() { throw Error("return must be captured once"); }
+            });
+            return function() {
+                calls++;
+                assert(this === receiver, true);
+                assert(arguments.length, 0);
+                return 42;
+            };
+        }
+    };
+    const returned = dispose.call(receiver, "ignored argument");
+    assert(reads, 1);
+    assert(calls, 1);
+    assert(await returned, undefined);
+    for (const result of [undefined, null, false, 3, "x", Symbol(), 1n, {},
+                         Promise.resolve(43)])
+        assert(await dispose.call({ return() { return result; } }), undefined);
+
+    for (const sentinel of [{}, undefined]) {
+        await rejects(dispose.call({ get return() { throw sentinel; } }), sentinel);
+        await rejects(dispose.call({ return() { throw sentinel; } }), sentinel);
+        await rejects(dispose.call({ return() { return Promise.reject(sentinel); } }),
+                      sentinel);
+        await rejects(dispose.call({ return() {
+            return { get then() { throw sentinel; } };
+        } }), sentinel);
+        await rejects(dispose.call({ return() {
+            return { then(resolve, reject) { reject(sentinel); } };
+        } }), sentinel);
+        const promise = Promise.resolve();
+        Object.defineProperty(promise, "constructor", {
+            get() { throw sentinel; }
+        });
+        await rejects(dispose.call({ return() { return promise; } }), sentinel);
+    }
+
+    for (const [value, primitivePrototype] of [
+        [7, Number.prototype], [true, Boolean.prototype],
+        ["primitive", String.prototype], [Symbol("primitive"), Symbol.prototype],
+        [9n, BigInt.prototype]
+    ]) {
+        const saved = Object.getOwnPropertyDescriptor(primitivePrototype, "return");
+        let primitiveReads = 0, primitiveCalls = 0;
+        try {
+            Object.defineProperty(primitivePrototype, "return", {
+                configurable: true,
+                get: function() {
+                    assert(this === value, true);
+                    primitiveReads++;
+                    return function() {
+                        assert(this === value, true);
+                        assert(arguments.length, 0);
+                        primitiveCalls++;
+                        return 42;
+                    };
+                }
+            });
+            assert(await dispose.call(value), undefined);
+            assert(primitiveReads, 1);
+            assert(primitiveCalls, 1);
+        } finally {
+            delete primitivePrototype.return;
+            if (saved)
+                Object.defineProperty(primitivePrototype, "return", saved);
+        }
+    }
+
+    let proxyReads = 0;
+    const target = { return() {
+        assert(this === proxy, true);
+        assert(arguments.length, 0);
+        return Promise.resolve(1);
+    } };
+    const proxy = new Proxy(target, {
+        get(object, key, value) {
+            assert(key, "return");
+            assert(value === proxy, true);
+            proxyReads++;
+            return Reflect.get(object, key, value);
+        }
+    });
+    assert(await dispose.call(proxy), undefined);
+    assert(proxyReads, 1);
+    const revoked = Proxy.revocable(() => {}, {});
+    revoked.revoke();
+    await rejectsTypeError({ return: revoked.proxy });
+
+    const assimilation = [];
+    const thenable = {
+        get then() {
+            assimilation.push("get then");
+            assert(this === thenable, true);
+            return function(resolve, reject) {
+                assert(this === thenable, true);
+                assert(arguments.length, 2);
+                assimilation.push("call then");
+                resolve(42);
+                reject(Error("second settlement must be ignored"));
+                throw Error("throw after settlement must be ignored");
+            };
+        }
+    };
+    const assimilated = dispose.call({ return() {
+        assimilation.push("return");
+        return thenable;
+    } });
+    assert(assimilation.join(","), "return,get then");
+    assert(await assimilated, undefined);
+    assert(assimilation.join(","), "return,get then,call then");
+
+    async function trace(object) {
+        const events = [];
+        const disposal = dispose.call(object);
+        disposal.then(() => events.push("disposed"),
+                      () => events.push("rejected"));
+        Promise.resolve().then(() => events.push("marker"));
+        try { await disposal; } catch (_) {}
+        await Promise.resolve();
+        return events.join(",");
+    }
+    assert(await trace({}), "disposed,marker");
+    assert(await trace({ return: null }), "disposed,marker");
+    assert(await trace({ get return() { throw undefined; } }), "rejected,marker");
+    assert(await trace({ return() { throw undefined; } }), "rejected,marker");
+    assert(await trace({ return() { return 1; } }), "marker,disposed");
+    assert(await trace({ return() { return Promise.resolve(); } }), "marker,disposed");
+    assert(await trace({ return() { return Promise.reject(undefined); } }),
+           "marker,rejected");
+    const constructorThrow = Promise.resolve();
+    Object.defineProperty(constructorThrow, "constructor", {
+        get() { throw undefined; }
+    });
+    assert(await trace({ return() { return constructorThrow; } }), "rejected,marker");
+
+    const intrinsicPromise = Promise;
+    const savedResolve = Promise.resolve;
+    const savedThen = Promise.prototype.then;
+    const savedSpecies = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+    const wrappedPromise = Promise.resolve(100);
+    let constructorReads = 0;
+    Object.defineProperty(wrappedPromise, "constructor", {
+        get() { constructorReads++; return intrinsicPromise; }
+    });
+    Object.defineProperty(wrappedPromise, "then", {
+        get() { throw Error("intrinsic promise then must not be read"); }
+    });
+    const poison = () => { throw Error("mutable Promise API must be ignored"); };
+    let poisonedResult, primitiveResult;
+    try {
+        intrinsicPromise.resolve = poison;
+        intrinsicPromise.prototype.then = poison;
+        Object.defineProperty(intrinsicPromise, Symbol.species, {
+            configurable: true, get: poison
+        });
+        globalThis.Promise = poison;
+        poisonedResult = dispose.call({ return() { return wrappedPromise; } });
+        primitiveResult = dispose.call({ return() { return 42; } });
+    } finally {
+        globalThis.Promise = intrinsicPromise;
+        intrinsicPromise.resolve = savedResolve;
+        intrinsicPromise.prototype.then = savedThen;
+        Object.defineProperty(intrinsicPromise, Symbol.species, savedSpecies);
+    }
+    assert(poisonedResult instanceof intrinsicPromise, true);
+    assert(primitiveResult instanceof intrinsicPromise, true);
+    assert(constructorReads, 1);
+    assert(await poisonedResult, undefined);
+    assert(await primitiveResult, undefined);
+
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    let collectedReceiver = { return() { return gate; } };
+    const pending = dispose.call(collectedReceiver);
+    let settled = false;
+    pending.then(() => { settled = true; });
+    collectedReceiver = null;
+    if (typeof collectGarbage === "function")
+        collectGarbage();
+    await Promise.resolve();
+    assert(settled, false);
+    release({ ignored: true });
+    assert(await pending, undefined);
+    assert(settled, true);
+
+    let finalized = 0;
+    async function* closingGenerator() {
+        try { yield 1; yield 2; }
+        finally { await Promise.resolve(); finalized++; }
+    }
+    const iterator = closingGenerator();
+    await iterator.next();
+    const closing = iterator[Symbol.asyncDispose]();
+    assert(await closing, undefined);
+    assert(finalized, 1);
+    assert((await iterator.next()).done, true);
+}
+
+await test_async_iterator_dispose();

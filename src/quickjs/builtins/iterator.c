@@ -1647,7 +1647,7 @@ JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
 }
 
 /* GetMethod preserves the original primitive receiver. */
-static JSValue js_iterator_get_return_method(JSContext *ctx, JSValueConst obj)
+JSValue js_iterator_get_return_method(JSContext *ctx, JSValueConst obj)
 {
     JSValue method = JS_GetProperty(ctx, obj, JS_ATOM_return);
 

@@ -2503,6 +2503,153 @@ static void test_iterator_disposal_realm(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_async_iterator_disposal_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *owner, *caller, *job_ctx;
+    JSValue completion, result;
+    int status;
+    const char *source =
+        "(() => {"
+        " const check = condition => { if (!condition) throw Error('async disposal realm'); };"
+        " const input = Promise.resolve(7);"
+        " let constructorReads = 0, thenReads = 0;"
+        " Object.defineProperty(input, 'constructor', { get() { constructorReads++; return Promise; } });"
+        " Object.defineProperty(input, 'then', { get() { thenReads++; return Promise.prototype.then; } });"
+        " const pending = foreignAsyncDispose.call({ return() { return input; } });"
+        " const absent = foreignAsyncDispose.call({});"
+        " const rejected = foreignAsyncDispose.call(null);"
+        " for (const promise of [pending, absent, rejected]) {"
+        "  check(Object.getPrototypeOf(promise) === ForeignPromise.prototype);"
+        "  check(!(promise instanceof Promise));"
+        " }"
+        " check(pending !== input);"
+        " const reason = rejected.then(() => { throw Error('expected rejection'); },"
+        "  error => { check(error instanceof ForeignTypeError); check(!(error instanceof TypeError)); });"
+        " return Promise.all([pending, absent, reason]).then(values => {"
+        "  check(values[0] === undefined && values[1] === undefined);"
+        "  check(constructorReads === 2 && thenReads === 1);"
+        "  return true;"
+        " });"
+        "})()";
+
+    assert(rt);
+    owner = JS_NewContext(rt);
+    caller = JS_NewContext(rt);
+    assert(owner && caller);
+    publish_disposal_realm(owner, caller, "foreignAsyncDispose",
+            "Object.getPrototypeOf(Object.getPrototypeOf((async function*(){}).prototype))[Symbol.asyncDispose]");
+    publish_disposal_realm(owner, caller, "ForeignPromise", "Promise");
+    publish_disposal_realm(owner, caller, "ForeignTypeError", "TypeError");
+    completion = JS_Eval(caller, source, strlen(source), "native-realms.js",
+                         JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(completion));
+    /* Pending reactions/functions must keep the owning realm reachable. */
+    JS_FreeContext(owner);
+    JS_RunGC(rt);
+    while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        ;
+    assert(status == 0);
+    assert(JS_PromiseState(caller, completion) == JS_PROMISE_FULFILLED);
+    result = JS_PromiseResult(caller, completion);
+    assert(JS_ToBool(caller, result) == 1);
+    JS_FreeValue(caller, result);
+    JS_FreeValue(caller, completion);
+    assert(!JS_HasException(caller));
+    JS_FreeContext(caller);
+    JS_FreeRuntime(rt);
+}
+
+static JSValue disposal_return_primitive(JSContext *ctx, JSValueConst this_val,
+                                         int argc, JSValueConst *argv)
+{
+    assert(argc == 0);
+    return JS_NewInt32(ctx, 42);
+}
+
+static void test_async_iterator_disposal_raw_context(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue iterator, prototype, next_prototype, dispose = JS_UNDEFINED;
+    JSValue function, name, receiver, promise, result;
+    JSPropertyEnum *properties;
+    uint32_t count, i;
+    JSContext *job_ctx;
+    int status;
+    const char *string;
+    const char *source = "(async function*() {})()";
+
+    assert(rt);
+    ctx = JS_NewContextRaw(rt);
+    assert(ctx);
+    /* Exercise Promise initialization without base or Symbol intrinsics. */
+    assert(JS_AddIntrinsicPromise(ctx) == 0);
+    assert(JS_AddIntrinsicEval(ctx) == 0);
+    iterator = JS_Eval(ctx, source, strlen(source), "raw-context.js",
+                       JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(iterator));
+    prototype = JS_DupValue(ctx, iterator);
+    for (i = 0; i < 3; i++) {
+        next_prototype = JS_GetPrototype(ctx, prototype);
+        JS_FreeValue(ctx, prototype);
+        prototype = next_prototype;
+        assert(JS_IsObject(prototype));
+    }
+    assert(JS_GetOwnPropertyNames(ctx, &properties, &count, prototype,
+                                  JS_GPN_SYMBOL_MASK) == 0);
+    for (i = 0; i < count; i++) {
+        function = JS_GetProperty(ctx, prototype, properties[i].atom);
+        assert(!JS_IsException(function));
+        name = JS_GetPropertyStr(ctx, function, "name");
+        assert(!JS_IsException(name));
+        string = JS_ToCString(ctx, name);
+        assert(string);
+        if (!strcmp(string, "[Symbol.asyncDispose]"))
+            dispose = JS_DupValue(ctx, function);
+        JS_FreeCString(ctx, string);
+        JS_FreeValue(ctx, name);
+        JS_FreeValue(ctx, function);
+        JS_FreeAtom(ctx, properties[i].atom);
+    }
+    js_free(ctx, properties);
+    assert(JS_IsFunction(ctx, dispose));
+    receiver = JS_NewObject(ctx);
+    assert(!JS_IsException(receiver));
+    promise = JS_Call(ctx, dispose, receiver, 0, NULL);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+    result = JS_PromiseResult(ctx, promise);
+    assert(JS_IsUndefined(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, promise);
+    promise = JS_Call(ctx, dispose, JS_NULL, 0, NULL);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    assert(!JS_HasException(ctx));
+    JS_FreeValue(ctx, promise);
+    assert(JS_SetPropertyStr(ctx, receiver, "return",
+                             JS_NewCFunction(ctx, disposal_return_primitive, "return", 0)) == 1);
+    promise = JS_Call(ctx, dispose, receiver, 0, NULL);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+    while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        ;
+    assert(status == 0);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+    result = JS_PromiseResult(ctx, promise);
+    assert(JS_IsUndefined(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, receiver);
+    JS_FreeValue(ctx, dispose);
+    JS_FreeValue(ctx, prototype);
+    JS_FreeValue(ctx, iterator);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static JSValue test_resource_realms_gc(JSContext *ctx, JSValueConst value,
                                        int argc, JSValueConst *argv)
 {
@@ -2575,6 +2722,8 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
+        { "async-iterator-disposal-realm", test_async_iterator_disposal_realm },
+        { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },
         { "iterator-disposal-realm", test_iterator_disposal_realm },
         { "allocator-overflow", test_allocator_size_overflow },
         { "bigint-locale-realm", test_bigint_locale_realm },

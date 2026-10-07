@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,10 +30,12 @@
 #include "../internal/object.h"
 #include "../internal/generator.h"
 #include "../internal/function-list.h"
+#include "../internal/vm.h"
 #include "../internal/iterator.h"
 #include "function.h"
 #include "iterator.h"
 #include "async-from-sync-iterator.h"
+#include "promise.h"
 
 /* AsyncFunction */
 static const JSCFunctionListEntry js_async_function_proto_funcs[] = {
@@ -41,7 +44,76 @@ static const JSCFunctionListEntry js_async_function_proto_funcs[] = {
 
 /* AsyncIteratorPrototype */
 
+static JSValue js_async_iterator_dispose_unwrap(JSContext *ctx,
+                                               JSValueConst this_val,
+                                               int argc, JSValueConst *argv)
+{
+    return JS_UNDEFINED;
+}
+
+static JSValue js_async_iterator_proto_async_dispose(JSContext *ctx,
+                                                    JSValueConst this_val,
+                                                    int argc,
+                                                    JSValueConst *argv)
+{
+    JSValue promise, resolving_funcs[2], method, result, wrapper, handlers[2];
+    JSValue ret;
+    BOOL reject = FALSE;
+    int status;
+
+    promise = JS_NewPromiseCapability(ctx, resolving_funcs);
+    if (JS_IsException(promise))
+        return promise;
+    method = js_iterator_get_return_method(ctx, this_val);
+    if (JS_IsException(method))
+        goto reject;
+    if (JS_IsUndefined(method)) {
+        result = JS_UNDEFINED;
+        goto settle;
+    }
+    result = JS_CallFree(ctx, method, this_val, 0, NULL);
+    if (JS_IsException(result))
+        goto reject;
+    wrapper = js_promise_resolve(ctx, ctx->promise_ctor, 1,
+                                (JSValueConst *)&result, 0);
+    JS_FreeValue(ctx, result);
+    if (JS_IsException(wrapper))
+        goto reject;
+    handlers[0] = JS_NewCFunction(ctx, js_async_iterator_dispose_unwrap, "", 1);
+    handlers[1] = JS_UNDEFINED;
+    if (JS_IsException(handlers[0])) {
+        JS_FreeValue(ctx, wrapper);
+        goto reject;
+    }
+    status = perform_promise_then(ctx, wrapper, (JSValueConst *)handlers,
+                                 (JSValueConst *)resolving_funcs);
+    JS_FreeValue(ctx, handlers[0]);
+    JS_FreeValue(ctx, wrapper);
+    if (status < 0)
+        goto reject;
+    goto done;
+
+ reject:
+    result = JS_GetException(ctx);
+    reject = TRUE;
+ settle:
+    ret = JS_Call(ctx, resolving_funcs[reject], JS_UNDEFINED, 1,
+                  (JSValueConst *)&result);
+    JS_FreeValue(ctx, result);
+    if (JS_IsException(ret)) {
+        JS_FreeValue(ctx, promise);
+        promise = ret;
+    } else {
+        JS_FreeValue(ctx, ret);
+    }
+ done:
+    JS_FreeValue(ctx, resolving_funcs[0]);
+    JS_FreeValue(ctx, resolving_funcs[1]);
+    return promise;
+}
+
 static const JSCFunctionListEntry js_async_iterator_proto_funcs[] = {
+    JS_CFUNC_DEF("[Symbol.asyncDispose]", 0, js_async_iterator_proto_async_dispose ),
     JS_CFUNC_DEF("[Symbol.asyncIterator]", 0, js_iterator_proto_iterator ),
 };
 
