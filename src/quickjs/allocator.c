@@ -332,8 +332,9 @@ void js_trigger_gc(JSRuntime *rt, size_t size)
 #ifdef FORCE_GC_AT_MALLOC
     force_gc = TRUE;
 #else
-    force_gc = ((rt->malloc_ctx.malloc_state.malloc_size + size) >
-                rt->malloc_gc_threshold);
+    force_gc = (size > rt->malloc_gc_threshold ||
+                rt->malloc_ctx.malloc_state.malloc_size >
+                rt->malloc_gc_threshold - size);
 #endif
     if (force_gc) {
 #ifdef DUMP_GC
@@ -341,8 +342,11 @@ void js_trigger_gc(JSRuntime *rt, size_t size)
                (uint64_t)rt->malloc_ctx.malloc_state.malloc_size);
 #endif
         JS_RunGC(rt);
-        rt->malloc_gc_threshold = rt->malloc_ctx.malloc_state.malloc_size +
-            (rt->malloc_ctx.malloc_state.malloc_size >> 1);
+        size = rt->malloc_ctx.malloc_state.malloc_size;
+        if ((size >> 1) > SIZE_MAX - size)
+            rt->malloc_gc_threshold = SIZE_MAX;
+        else
+            rt->malloc_gc_threshold = size + (size >> 1);
     }
 }
 
