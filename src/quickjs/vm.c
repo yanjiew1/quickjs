@@ -4113,6 +4113,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValue val;
                 JSAtom atom;
                 sf->cur_pc = pc;
+                if (unlikely(!JS_IsObject(sp[-2]))) {
+                    JS_ThrowTypeErrorNotAnObject(ctx);
+                    goto exception;
+                }
                 atom = JS_ValueToAtom(ctx, sp[-1]);
                 if (unlikely(atom == JS_ATOM_NULL))
                     goto exception;

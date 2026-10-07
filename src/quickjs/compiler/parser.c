@@ -2307,6 +2307,9 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
             emit_op(s, OP_get_array_el3);
             break;
         case OP_get_super_value:
+            emit_op(s, OP_swap);
+            emit_op(s, OP_to_object);
+            emit_op(s, OP_swap);
             emit_op(s, OP_to_propkey);
             emit_op(s, OP_dup3);
             emit_op(s, OP_get_super_value);
