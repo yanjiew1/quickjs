@@ -540,6 +540,29 @@ function test_array_buffer_resize_order()
     assert(buffer.detached, true);
 }
 
+function test_array_buffer_transfer_range()
+{
+    const buffer = new ArrayBuffer(1, { maxByteLength: 2 });
+    new Uint8Array(buffer)[0] = 42;
+    assert_throws(RangeError, () => buffer.transfer(3));
+    assert(buffer.detached, false);
+    assert(buffer.byteLength, 1);
+    assert(buffer.maxByteLength, 2);
+    assert(new Uint8Array(buffer)[0], 42);
+    const fixed = buffer.transferToFixedLength(3);
+    assert(fixed.byteLength, 3);
+    assert(fixed.resizable, false);
+    assert([...new Uint8Array(fixed)].join(","), "42,0,0");
+    assert(buffer.detached, true);
+
+    const next = new ArrayBuffer(0, { maxByteLength: 2 });
+    const resizable = next.transfer(2);
+    assert(resizable.byteLength, 2);
+    assert(resizable.maxByteLength, 2);
+    assert(resizable.resizable, true);
+    assert(next.detached, true);
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -1784,6 +1807,7 @@ test_number();
 test_eval();
 test_array_buffer_max_index();
 test_array_buffer_resize_order();
+test_array_buffer_transfer_range();
 test_typed_array();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
