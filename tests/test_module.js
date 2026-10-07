@@ -4,6 +4,8 @@ import * as namespace from "./fixture_module.js";
 import * as selfNamespace from "./test_module.js";
 import { module_const_write_tdz as uninitializedImport } from "./test_module.js";
 
+import "./test_module_bindings_review.js";
+
 assert(Reflect.set(namespace, "mutable", 9), false);
 assertThrows(TypeError, () => { namespace.mutable = 9; });
 
@@ -189,3 +191,31 @@ assert(Reflect.set(selfNamespace, "namespace_set_reexport", 7, {}), false);
 assertThrows(TypeError, () => { selfNamespace.namespace_set_reexport = 7; });
 export * as namespace_set_reexport from "./fixture_module.js";
 assert(selfNamespace.namespace_set_reexport, namespace);
+
+async function test_module_reserved_bindings()
+{
+    const invalid = [
+        "named_await", "named_class", "named_yield", "named_static",
+        "escaped_await", "escaped_class", "namespace_let",
+        "namespace_escaped_let", "shorthand_let", "shorthand_escaped_await",
+        "default_escaped_await", "export_await", "export_escaped_await",
+        "export_let", "export_class"
+    ];
+    for (const name of invalid) {
+        let error;
+        try {
+            await import("./fixture_module_reserved_invalid_" + name + ".js");
+        } catch (e) {
+            error = e;
+        }
+        assert(error instanceof SyntaxError, true, name);
+    }
+
+    const valid = await import("./fixture_module_reserved_valid.js");
+    for (const name of ["awaited", "klass", "letValue", "from", "await",
+                        "class", "let", "default"])
+        assert(valid[name], 42, name);
+    assert(valid.namespace.value, 42);
+}
+
+await test_module_reserved_bindings();

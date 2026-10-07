@@ -6203,6 +6203,12 @@ static __exception int js_parse_from_clause(JSParseState *s, JSModuleDef *m)
     return idx;
 }
 
+/* Local module bindings use IdentifierReference or strict BindingIdentifier. */
+static BOOL js_is_module_reserved_identifier(JSAtom name)
+{
+    return name <= JS_ATOM_LAST_STRICT_KEYWORD || name == JS_ATOM_await;
+}
+
 static __exception int js_parse_export(JSParseState *s)
 {
     JSContext *ctx = s->ctx;
@@ -6291,6 +6297,12 @@ static __exception int js_parse_export(JSParseState *s)
                 me->export_type = JS_EXPORT_TYPE_INDIRECT;
                 me->u.req_module_idx = idx;
             }
+        } else {
+            for(i = first_export; i < m->export_entries_count; i++) {
+                me = &m->export_entries[i];
+                if (js_is_module_reserved_identifier(me->local_name))
+                    return js_parse_error(s, "invalid export binding");
+            }
         }
         break;
     case '*':
@@ -6369,7 +6381,8 @@ static int add_import(JSParseState *s, JSModuleDef *m,
     int i, var_idx;
     JSImportEntry *mi;
 
-    if (local_name == JS_ATOM_arguments || local_name == JS_ATOM_eval)
+    if (js_is_module_reserved_identifier(local_name) ||
+        local_name == JS_ATOM_arguments || local_name == JS_ATOM_eval)
         return js_parse_error(s, "invalid import binding");
 
     if (local_name != JS_ATOM_default) {
