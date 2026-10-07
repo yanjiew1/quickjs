@@ -994,6 +994,47 @@ function test_typed_array_set_content()
     assert(big.set([], 1), undefined);
 }
 
+function test_typed_array_from_constructor_order()
+{
+    const from = Uint8Array.from;
+    const marker = new Error("source read");
+    const receivers = [undefined, null, 1, "x", {}, Math.max, () => {},
+                       new Proxy(() => {}, {})];
+    for (const receiver of receivers) {
+        let iterator_reads = 0, length_reads = 0;
+        const iterable = {
+            get [Symbol.iterator]() { iterator_reads++; throw marker; },
+        };
+        const arrayLike = {
+            get length() { length_reads++; throw marker; },
+        };
+        assert_throws(TypeError, () => from.call(receiver, iterable));
+        assert_throws(TypeError, () => from.call(receiver, arrayLike));
+        assert(iterator_reads, 0);
+        assert(length_reads, 0);
+    }
+    const order = [];
+    function Constructor(length) {
+        order.push("construct");
+        assert(length, 1);
+        return new Uint8Array(length);
+    }
+    const iterable = {
+        *[Symbol.iterator]() {
+            order.push("iterate");
+            yield 7;
+            order.push("done");
+        },
+    };
+    const result = from.call(Constructor, iterable, value => {
+        order.push("map");
+        return value + 1;
+    });
+    assert(order.join(","), "iterate,done,construct,map");
+    assert(result.length, 1);
+    assert(result[0], 8);
+}
+
 function test_typed_array_constructor_content()
 {
     const numberTypes = [Uint8ClampedArray, Uint8Array, Int8Array, Uint16Array,
@@ -3311,6 +3352,7 @@ test_typed_array_with_conversion();
 test_typed_array_copywithin_zero();
 test_typed_array_set_content();
 test_typed_array_constructor_content();
+test_typed_array_from_constructor_order();
 test_typed_array_species_content();
 test_typed_array_set_overlap();
 test_typed_array_constructor_length();
