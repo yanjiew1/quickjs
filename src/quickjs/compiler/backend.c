@@ -487,6 +487,21 @@ static int resolve_parameter_copy(JSFunctionDef *fd, int var_idx)
     abort();
 }
 
+/* The RHS has already been evaluated. A lexical binding must be
+   initialized before its immutable write is rejected. */
+static void emit_var_read_only_error(JSContext *ctx, DynBuf *bc,
+                                     JSAtom var_name, int get_op, int var_idx)
+{
+    if (get_op != OP_invalid) {
+        dbuf_putc(bc, get_op);
+        dbuf_put_u16(bc, var_idx);
+        dbuf_putc(bc, OP_drop);
+    }
+    dbuf_putc(bc, OP_throw_error);
+    dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
+    dbuf_putc(bc, JS_THROW_VAR_RO);
+}
+
 static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                              JSAtom var_name, int scope_level, int op,
                              DynBuf *bc, uint8_t *bc_buf,
@@ -528,14 +543,6 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     for (idx = s->scopes[scope_level].first; idx >= 0;) {
         vd = &s->vars[idx];
         if (vd->var_name == var_name) {
-            if (op == OP_scope_put_var) {
-                if (vd->is_const) {
-                    dbuf_putc(bc, OP_throw_error);
-                    dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
-                    dbuf_putc(bc, JS_THROW_VAR_RO);
-                    goto done;
-                }
-            }
             var_idx = idx;
             break;
         } else
@@ -588,11 +595,9 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             (s->vars[var_idx].is_const ||
              (is_strict_binding &&
               s->vars[var_idx].var_kind == JS_VAR_FUNCTION_NAME))) {
-            /* only happens when assigning a function expression name
-               in strict mode */
-            dbuf_putc(bc, OP_throw_error);
-            dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
-            dbuf_putc(bc, JS_THROW_VAR_RO);
+            emit_var_read_only_error(ctx, bc, var_name,
+                                     s->vars[var_idx].is_lexical ?
+                                     OP_get_loc_check : OP_invalid, var_idx);
             goto done;
         }
         /* OP_scope_put_var_init is only used to initialize a
@@ -719,14 +724,6 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         for (idx = fd->scopes[scope_level].first; idx >= 0;) {
             vd = &fd->vars[idx];
             if (vd->var_name == var_name) {
-                if (op == OP_scope_put_var) {
-                    if (vd->is_const) {
-                        dbuf_putc(bc, OP_throw_error);
-                        dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
-                        dbuf_putc(bc, JS_THROW_VAR_RO);
-                        goto done;
-                    }
-                }
                 var_idx = idx;
                 break;
             } else if (vd->var_name == JS_ATOM__with_ && !is_pseudo_var && !is_decl) {
@@ -950,9 +947,14 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 (s->closure_var[idx].is_const ||
                  (is_strict_binding &&
                   s->closure_var[idx].var_kind == JS_VAR_FUNCTION_NAME))) {
-                dbuf_putc(bc, OP_throw_error);
-                dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
-                dbuf_putc(bc, JS_THROW_VAR_RO);
+                JSClosureVar *cv = &s->closure_var[idx];
+                /* An import is initialized independently of the target
+                   binding, whose value must not be read for this write. */
+                emit_var_read_only_error(ctx, bc, var_name,
+                                         cv->is_lexical &&
+                                         cv->var_kind != JS_VAR_IMPORT ?
+                                         OP_get_var_ref_check : OP_invalid,
+                                         idx);
                 goto done;
             }
             switch (op) {

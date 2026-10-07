@@ -926,6 +926,77 @@ function test_class_lexical_strictness()
 
 const global_const_reference = 1;
 
+function test_const_write_tdz()
+{
+    let effects = 0;
+    assert_throws(ReferenceError, function() {
+        binding = ++effects;
+        const binding = 1;
+    });
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        const binding = (binding = ++effects);
+    });
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        "use strict";
+        binding = ++effects;
+        const binding = 1;
+    });
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        const run = () => { binding = ++effects; };
+        run();
+        const binding = 1;
+    });
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        const run = () => () => { binding = ++effects; };
+        run()();
+        const binding = 1;
+    });
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        eval("binding = ++effects");
+        const binding = 1;
+    });
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        const run = () => eval("binding = ++effects");
+        run();
+        const binding = 1;
+    });
+    assert(effects, 1);
+    const rhsError = new Error("RHS");
+    function abrupt() { throw rhsError; }
+    try {
+        const binding = (binding = abrupt());
+        assert(false);
+    } catch (e) {
+        assert(e, rhsError);
+    }
+    effects = 0;
+    const initialized = 1;
+    assert_throws(TypeError, () => { initialized = ++effects; });
+    assert(effects, 1);
+    assert(initialized, 1);
+    effects = 0;
+    assert_throws(ReferenceError, () => { global_const_write_tdz = ++effects; });
+    assert(effects, 1);
+    globalThis.const_write_effects = 0;
+    assert_throws(ReferenceError, () => {
+        (0, eval)("global_const_write_tdz = ++globalThis.const_write_effects");
+    });
+    assert(globalThis.const_write_effects, 1);
+    delete globalThis.const_write_effects;
+}
+
 function test_const_reference_timing()
 {
     let effects = 0;
@@ -1579,6 +1650,8 @@ test_parameter_arguments_binding();
 test_annex_deferred_applicability();
 test_annex_arguments_binding();
 test_class_lexical_strictness();
+test_const_write_tdz();
+const global_const_write_tdz = 1;
 test_const_reference_timing();
 test_parameter_environment_bindings();
 test_computed_parameter_environment();
