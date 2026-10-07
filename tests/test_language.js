@@ -1090,6 +1090,76 @@ function test_parameter_environment_bindings()
     assert(rest()[1], 0);
 }
 
+function test_computed_parameter_environment()
+{
+    let read;
+    function key(fn) { read = fn; return "value"; }
+    function separate({ [key(() => a)]: a }) {
+        var a;
+        a = 2;
+        return read();
+    }
+    assert(separate({ value: 1 }), 1);
+    function shared({ [key(() => a)]: a }) {
+        a = 2;
+        return read();
+    }
+    assert(shared({ value: 1 }), 2);
+    function nested([{ [key(() => a)]: a }]) {
+        var a;
+        a = 2;
+        return read();
+    }
+    assert(nested([{ value: 1 }]), 1);
+    function later({ ignored, [key(() => a)]: a }) {
+        var a;
+        a = 2;
+        return read();
+    }
+    assert(later({ value: 1 }), 1);
+    const arrow = ({ [key(() => a)]: a }) => {
+        var a;
+        a = 2;
+        return read();
+    };
+    assert(arrow({ value: 1 }), 1);
+    function* generator({ [key(() => a)]: a }) {
+        var a;
+        a = 2;
+        yield read();
+    }
+    assert(generator({ value: 1 }).next().value, 1);
+    const obj = {
+        method({ [key(() => a)]: a }) {
+            var a;
+            a = 2;
+            return read();
+        }
+    };
+    assert(obj.method({ value: 1 }), 1);
+    let a = "value";
+    function uninitialized({ [a]: a }) {}
+    assert_throws(ReferenceError, () => uninitialized({ value: 1 }));
+    function future({ [b]: a }, b) {}
+    assert_throws(ReferenceError, () => future({ value: 1 }, "value"));
+    function evaluated({ [eval("a")]: a }) {}
+    assert_throws(ReferenceError, () => evaluated({ value: 1 }));
+    function plainObject({ first: [a], nested: { b } }) {
+        var a, b;
+        a++;
+        b++;
+        assert(eval("a + b"), 5);
+    }
+    plainObject({ first: [1], nested: { b: 2 } });
+    function plainArray([a, { b }]) {
+        var a, b;
+        a++;
+        b++;
+        assert(eval("a + b"), 5);
+    }
+    plainArray([1, { b: 2 }]);
+}
+
 function test_class()
 {
     var o;
@@ -1511,6 +1581,7 @@ test_annex_arguments_binding();
 test_class_lexical_strictness();
 test_const_reference_timing();
 test_parameter_environment_bindings();
+test_computed_parameter_environment();
 test_template();
 test_template_skip();
 test_object_literal();

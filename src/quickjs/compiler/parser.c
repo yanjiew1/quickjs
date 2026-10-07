@@ -1162,6 +1162,7 @@ static BOOL is_regexp_allowed(int tok)
 #define SKIP_HAS_SEMI       (1 << 0)
 #define SKIP_HAS_ELLIPSIS   (1 << 1)
 #define SKIP_HAS_ASSIGNMENT (1 << 2)
+#define SKIP_HAS_COMPUTED_KEY (1 << 3)
 
 static BOOL has_lf_in_range(const uint8_t *p1, const uint8_t *p2)
 {
@@ -1193,8 +1194,15 @@ static int js_parse_skip_parens_token(JSParseState *s, int *pbits, BOOL no_line_
     last_tok = 0;
     for (;;) {
         switch(s->token.val) {
-        case '(':
         case '[':
+            /* A computed property name in an object binding pattern is
+               a parameter expression even without an initializer. An
+               array binding after ':' or '[' does not qualify. */
+            if (state[level - 1] == '{' &&
+                (last_tok == '{' || last_tok == ','))
+                bits |= SKIP_HAS_COMPUTED_KEY;
+            /* fall through */
+        case '(':
         case '{':
             if (level >= sizeof(state))
                 goto done;
@@ -6917,10 +6925,10 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     } else if (func_type != JS_PARSE_FUNC_CLASS_STATIC_INIT) {
         if (s->token.val == '(') {
             int skip_bits;
-            /* if there is an '=' inside the parameter list, we
-               consider there is a parameter expression inside */
+            /* Initializers and computed binding property names require
+               a separate parameter environment. */
             js_parse_skip_parens_token(s, &skip_bits, FALSE);
-            if (skip_bits & SKIP_HAS_ASSIGNMENT)
+            if (skip_bits & (SKIP_HAS_ASSIGNMENT | SKIP_HAS_COMPUTED_KEY))
                 fd->has_parameter_expressions = TRUE;
             if (next_token(s))
                 goto fail;
