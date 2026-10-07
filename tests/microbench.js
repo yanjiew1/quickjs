@@ -792,6 +792,64 @@ function bigint256_arith(n)
     return bigint_arith(n, 256);
 }
 
+function bigint_to_string(n)
+{
+    var j, result, value = BigInt(255);
+    for(j = 0; j < n; j++) {
+        result = value.toString();
+    }
+    global_res = result;
+    if (result !== "255")
+        throw Error("incorrect BigInt decimal formatting");
+    return n;
+}
+
+function bigint_to_string_large(n)
+{
+    var j, result, value = bigint_to_string_large.value;
+    if (value === undefined) {
+        value = (BigInt(1) << BigInt(4096)) - BigInt(1);
+        bigint_to_string_large.value = value;
+        bigint_to_string_large.expected = String(value);
+    }
+    for(j = 0; j < n; j++) {
+        result = value.toString();
+    }
+    global_res = result;
+    if (result !== bigint_to_string_large.expected)
+        throw Error("incorrect large BigInt decimal formatting");
+    return n;
+}
+
+function bigint_to_locale_string(n)
+{
+    var j, result, value = BigInt(255);
+    for(j = 0; j < n; j++) {
+        result = value.toLocaleString();
+    }
+    global_res = result;
+    if (result !== "255")
+        throw Error("incorrect BigInt locale fallback");
+    return n;
+}
+
+function bigint_to_locale_string_large(n)
+{
+    var j, result, value = bigint_to_locale_string_large.value;
+    if (value === undefined) {
+        value = (BigInt(1) << BigInt(4096)) - BigInt(1);
+        bigint_to_locale_string_large.value = value;
+        bigint_to_locale_string_large.expected = String(value);
+    }
+    for(j = 0; j < n; j++) {
+        result = value.toLocaleString();
+    }
+    global_res = result;
+    if (result !== bigint_to_locale_string_large.expected)
+        throw Error("incorrect large BigInt locale fallback");
+    return n;
+}
+
 function map_set_string(n)
 {
     var s, i, j, len = 1000;
@@ -1511,6 +1569,13 @@ function main(argc, argv, g)
         test_list.push(bigint32_arith);
         test_list.push(bigint64_arith);
         test_list.push(bigint256_arith);
+        test_list.push(bigint_to_string);
+        test_list.push(bigint_to_string_large);
+        if (Object.prototype.hasOwnProperty.call(BigInt.prototype,
+                                                 "toLocaleString")) {
+            test_list.push(bigint_to_locale_string);
+            test_list.push(bigint_to_locale_string_large);
+        }
     }
     test_list.push(sort_bench);
 

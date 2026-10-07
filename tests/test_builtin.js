@@ -810,6 +810,110 @@ function test_number()
     assert((1.3).toString(35), "1.ahhhhhhhhhm");
 }
 
+function test_bigint_to_locale_string()
+{
+    const descriptor = Object.getOwnPropertyDescriptor(BigInt.prototype,
+                                                       "toLocaleString");
+    assert(descriptor !== undefined);
+    const toLocaleString = descriptor.value;
+    assert(typeof toLocaleString, "function");
+    assert(descriptor.writable, true);
+    assert(descriptor.enumerable, false);
+    assert(descriptor.configurable, true);
+    assert(toLocaleString !== Object.prototype.toLocaleString);
+    assert(toLocaleString !== BigInt.prototype.toString);
+    for (const [key, value] of [["name", "toLocaleString"], ["length", 0]]) {
+        const property = Object.getOwnPropertyDescriptor(toLocaleString, key);
+        assert(property.value, value);
+        assert(property.writable, false);
+        assert(property.enumerable, false);
+        assert(property.configurable, true);
+    }
+
+    /* Decimal formatting applies to primitive and boxed BigInts. */
+    const values = [
+        [0n, "0"], [-0n, "0"], [1n, "1"], [-1n, "-1"],
+        [255n, "255"], [-255n, "-255"],
+        [12345678901234567890123456789012345678901234567890n,
+         "12345678901234567890123456789012345678901234567890"],
+        [-12345678901234567890123456789012345678901234567890n,
+         "-12345678901234567890123456789012345678901234567890"],
+    ];
+    for (const [value, expected] of values) {
+        assert(toLocaleString.call(value), expected);
+        assert(value.toLocaleString(), expected);
+        assert(Object(value).toLocaleString(), expected);
+    }
+
+    let observed = 0;
+    function fail() {
+        observed++;
+        throw Error("BigInt locale conversion observed user code");
+    }
+
+    /* The method requires a BigInt or an object with [[BigIntData]]. */
+    const invalid = [
+        undefined, null, false, true, 0, 1.5, NaN, Infinity, "1", Symbol("1"),
+        {}, [], function() {}, Object(1), Object("1"), Object(Symbol("1")),
+        BigInt.prototype, Object.create(BigInt.prototype),
+        { valueOf: fail, toString: fail, [Symbol.toPrimitive]: fail },
+        { [Symbol.toStringTag]: "BigInt", valueOf() { return 1n; } },
+        new Proxy(Object(1n), { get: fail }),
+    ];
+    for (const receiver of invalid) {
+        assert_throws(TypeError, () => toLocaleString.call(receiver));
+    }
+    const revoked = Proxy.revocable(Object(1n), {});
+    revoked.revoke();
+    assert_throws(TypeError, () => toLocaleString.call(revoked.proxy));
+
+    /* ECMA-262 reserves both optional parameters for ECMA-402. */
+    const hostile = {
+        get [Symbol.toPrimitive]() { return fail(); },
+        valueOf: fail,
+        toString: fail,
+        get length() { return fail(); },
+        get 0() { return fail(); },
+        get [Symbol.iterator]() { return fail(); },
+        get localeMatcher() { return fail(); },
+        get style() { return fail(); },
+        get useGrouping() { return fail(); },
+    };
+    const proxy = new Proxy({}, {
+        get: fail, has: fail, ownKeys: fail, getOwnPropertyDescriptor: fail,
+    });
+    const arguments_list = [
+        [undefined, undefined], ["en-US", {}],
+        [["fr", "zh-TW"], { useGrouping: true }],
+        [2, { style: "currency" }], [36, undefined],
+        [0, undefined], [1, undefined], [null, null],
+        [Symbol("locale"), Symbol("options")],
+        [hostile, hostile], [proxy, proxy], [revoked.proxy, revoked.proxy],
+    ];
+    for (const [locales, options] of arguments_list) {
+        assert(toLocaleString.call(255n, locales, options), "255");
+        assert(toLocaleString.call(Object(-255n), locales, options), "-255");
+    }
+
+    /* Formatting must not look up an overridden toString property. */
+    const boxed = Object(123456789n);
+    boxed.toString = fail;
+    assert(boxed.toLocaleString(), "123456789");
+    Object.defineProperty(boxed, "toString", { get: fail });
+    assert(boxed.toLocaleString(), "123456789");
+    const saved = Object.getOwnPropertyDescriptor(BigInt.prototype, "toString");
+    try {
+        BigInt.prototype.toString = fail;
+        assert((123n).toLocaleString(), "123");
+        Object.defineProperty(BigInt.prototype, "toString", { get: fail });
+        assert((123n).toLocaleString(), "123");
+        assert(boxed.toLocaleString(), "123456789");
+    } finally {
+        Object.defineProperty(BigInt.prototype, "toString", saved);
+    }
+    assert(observed, 0);
+}
+
 function test_eval2()
 {
     var g_call_count = 0;
@@ -3594,6 +3698,7 @@ test_string_unicode_18();
 test_string_normalize();
 test_math();
 test_number();
+test_bigint_to_locale_string();
 test_eval();
 test_array_buffer_max_index();
 test_shared_array_buffer_atomics();

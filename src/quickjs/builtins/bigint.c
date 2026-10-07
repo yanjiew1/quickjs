@@ -133,6 +133,12 @@ static JSValue js_bigint_toString(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
+static JSValue js_bigint_toLocaleString(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv)
+{
+    return js_bigint_toString(ctx, this_val, 0, NULL);
+}
+
 static JSValue js_bigint_valueOf(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv)
 {
@@ -235,6 +241,7 @@ static const JSCFunctionListEntry js_bigint_funcs[] = {
 
 static const JSCFunctionListEntry js_bigint_proto_funcs[] = {
     JS_CFUNC_DEF("toString", 0, js_bigint_toString ),
+    JS_CFUNC_DEF("toLocaleString", 0, js_bigint_toLocaleString ),
     JS_CFUNC_DEF("valueOf", 0, js_bigint_valueOf ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "BigInt", JS_PROP_CONFIGURABLE ),
 };

@@ -1660,6 +1660,52 @@ static void test_allocator_size_overflow(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_bigint_locale_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx[2];
+    JSValue global;
+    static const char script[] =
+        "(function () {\n"
+        "    const realms = [globalThis, foreign];\n"
+        "    function check(condition, message) {\n"
+        "        if (!condition) throw Error(message);\n"
+        "    }\n"
+        "    for (let index = 0; index < realms.length; index++) {\n"
+        "        const owner = realms[index], receiverRealm = realms[1 - index];\n"
+        "        const method = owner.BigInt.prototype.toLocaleString;\n"
+        "        const boxed = receiverRealm.Object(-42n);\n"
+        "        boxed.toString = () => { throw Error(\"dynamic toString\"); };\n"
+        "        check(method.call(boxed) === \"-42\", \"foreign boxed BigInt works\");\n"
+        "        for (const invalid of [{}, new receiverRealm.Proxy(boxed, {})]) {\n"
+        "            let caught = false;\n"
+        "            try { method.call(invalid); } catch (error) {\n"
+        "                caught = true;\n"
+        "                check(Object.getPrototypeOf(error) === owner.TypeError.prototype,\n"
+        "                      \"BigInt receiver TypeError uses the native function realm\");\n"
+        "            }\n"
+        "            check(caught, \"invalid foreign receiver throws\");\n"
+        "        }\n"
+        "    }\n"
+        "    return true;\n"
+        "})()\n";
+
+    assert(rt);
+    ctx[0] = JS_NewContext(rt);
+    ctx[1] = JS_NewContext(rt);
+    assert(ctx[0] && ctx[1]);
+    global = JS_GetGlobalObject(ctx[0]);
+    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
+                             JS_GetGlobalObject(ctx[1])) >= 0);
+    JS_FreeValue(ctx[0], global);
+    check_eval(ctx[0], script);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx[1]);
+    JS_FreeContext(ctx[0]);
+    JS_RunGC(rt);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -1667,6 +1713,7 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "allocator-overflow", test_allocator_size_overflow },
+        { "bigint-locale-realm", test_bigint_locale_realm },
         { "native-name", test_native_function_initial_name },
         { "stripped-function", test_stripped_function_to_string },
         { "iterator-realm", test_iterator_constructor_realm },
