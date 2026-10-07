@@ -250,6 +250,39 @@ function test_enum()
     assert(tab, ["1","4294967294","x","18014398509481984","9007199254740992","9007199254740991","4294967296","4294967295","y"], "keys");
 }
 
+function test_array_sort_writeback()
+{
+    for (const values of [[1], [1, 2], [undefined]])
+        assert_throws(TypeError, () => Object.freeze(values).sort(() => 0));
+    const writes = [];
+    const accessors = {
+        length: 2,
+        get 0() { return 1; },
+        set 0(value) { writes.push([0, value]); },
+        get 1() { return 2; },
+        set 1(value) { writes.push([1, value]); },
+    };
+    assert(Array.prototype.sort.call(accessors, () => 0) === accessors);
+    assert(JSON.stringify(writes), "[[0,1],[1,2]]");
+    writes.length = 0;
+    const proxy = new Proxy([1, 2], {
+        set(target, key, value, receiver) {
+            writes.push([key, value]);
+            return Reflect.set(target, key, value, receiver);
+        },
+    });
+    assert(proxy.sort(() => 0) === proxy);
+    assert(JSON.stringify(writes), '[["0",1],["1",2]]');
+    const values = [1, 2];
+    values.sort(() => { values[0] = 99; return 0; });
+    assert(JSON.stringify(values), "[1,2]");
+    const shrunk = [1, 2];
+    shrunk.sort(() => { shrunk.length = 0; return 0; });
+    assert(JSON.stringify(shrunk), "[1,2]");
+    const rejected = new Proxy([1], { set() { return false; } });
+    assert_throws(TypeError, () => rejected.sort());
+}
+
 function test_array()
 {
     var a, err;
@@ -2739,6 +2772,7 @@ test_function_native_fallback();
 test_function_initial_name();
 test_enum();
 test_array();
+test_array_sort_writeback();
 test_string();
 test_string_normalize();
 test_math();
