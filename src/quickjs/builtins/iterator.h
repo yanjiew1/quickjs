@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +30,7 @@
 
 extern const JSCFunctionListEntry js_iterator_funcs[4];
 extern const JSCFunctionListEntry js_iterator_constructor_proto_funcs[1];
-extern const JSCFunctionListEntry js_iterator_proto_funcs[17];
+extern const JSCFunctionListEntry js_iterator_proto_funcs[18];
 extern const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
 extern const JSCFunctionListEntry js_iterator_wrap_proto_funcs[2];
 JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,

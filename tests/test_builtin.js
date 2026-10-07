@@ -5975,3 +5975,150 @@ function test_disposable_stack_failures_and_gc()
 test_disposable_stack_registration();
 test_disposable_stack_move_and_reentrancy();
 test_disposable_stack_failures_and_gc();
+
+/* Copyright (c) 2026 Yan-Jie Wang. SPDX-License-Identifier: MIT */
+
+function test_iterator_dispose()
+{
+    const prototype = Iterator.prototype;
+    const dispose = prototype[Symbol.dispose];
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, Symbol.dispose);
+    assert(typeof dispose, "function");
+    assert(descriptor.value === dispose, true);
+    assert(descriptor.writable, true);
+    assert(descriptor.enumerable, false);
+    assert(descriptor.configurable, true);
+    assert(dispose.name, "[Symbol.dispose]");
+    assert(dispose.length, 0);
+    for (const key of ["name", "length"]) {
+        const property = Object.getOwnPropertyDescriptor(dispose, key);
+        assert(property.writable, false);
+        assert(property.enumerable, false);
+        assert(property.configurable, true);
+    }
+    assert(Object.hasOwn(dispose, "prototype"), false);
+    assert_throws(TypeError, () => new dispose());
+    assert([1][Symbol.iterator]()[Symbol.dispose] === dispose, true);
+    assert(new Map()[Symbol.iterator]()[Symbol.dispose] === dispose, true);
+    assert(new Set()[Symbol.iterator]()[Symbol.dispose] === dispose, true);
+    assert("x"[Symbol.iterator]()[Symbol.dispose] === dispose, true);
+    assert(Iterator.from([]).map(value => value)[Symbol.dispose] === dispose, true);
+
+    for (const receiver of [{}, { return: undefined }, { return: null },
+                            0, true, "x", Symbol("x"), 1n])
+        assert(dispose.call(receiver), undefined);
+    for (const receiver of [null, undefined])
+        assert_throws(TypeError, () => dispose.call(receiver));
+    for (const method of [0, false, "x", Symbol("x"), 1n, {}])
+        assert_throws(TypeError, () => dispose.call({ return: method }));
+
+    let reads = 0, calls = 0;
+    const receiver = {
+        get next() { throw Error("next must not be read"); },
+        get [Symbol.iterator]() { throw Error("iterator must not be read"); },
+        get return() {
+            assert(this === receiver, true);
+            reads++;
+            Object.defineProperty(this, "return", {
+                value() { throw Error("return must be captured once"); }
+            });
+            return function() {
+                "use strict";
+                calls++;
+                assert(this === receiver, true);
+                assert(arguments.length, 0);
+                return { get then() { throw Error("result must be ignored"); } };
+            };
+        }
+    };
+    assert(dispose.call(receiver, "ignored argument"), undefined);
+    assert(reads, 1);
+    assert(calls, 1);
+    for (const result of [undefined, null, false, 3, "x", Symbol(), 1n, {}])
+        assert(dispose.call({ return() { return result; } }), undefined);
+    const ignoredPromise = Promise.reject("ignored synchronous result");
+    ignoredPromise.catch(() => {});
+    assert(dispose.call({ return() { return ignoredPromise; } }), undefined);
+
+    for (const sentinel of [{}, undefined]) {
+        for (const object of [
+            { get return() { throw sentinel; } },
+            { return() { throw sentinel; } }
+        ]) {
+            let threw = false;
+            try { dispose.call(object); } catch (error) {
+                threw = true;
+                assert(error === sentinel, true);
+            }
+            assert(threw, true);
+        }
+    }
+
+    for (const [value, primitivePrototype] of [
+        [7, Number.prototype], [true, Boolean.prototype],
+        ["primitive", String.prototype], [Symbol("primitive"), Symbol.prototype],
+        [9n, BigInt.prototype]
+    ]) {
+        const saved = Object.getOwnPropertyDescriptor(primitivePrototype, "return");
+        let primitiveReads = 0, primitiveCalls = 0;
+        try {
+            Object.defineProperty(primitivePrototype, "return", {
+                configurable: true,
+                get: function() {
+                    "use strict";
+                    assert(this === value, true);
+                    primitiveReads++;
+                    return function() {
+                        "use strict";
+                        assert(this === value, true);
+                        assert(arguments.length, 0);
+                        primitiveCalls++;
+                        return 42;
+                    };
+                }
+            });
+            assert(dispose.call(value), undefined);
+            assert(primitiveReads, 1);
+            assert(primitiveCalls, 1);
+        } finally {
+            delete primitivePrototype.return;
+            if (saved)
+                Object.defineProperty(primitivePrototype, "return", saved);
+        }
+    }
+
+    let proxyReads = 0;
+    const target = { return() {
+        assert(this === proxy, true);
+        assert(arguments.length, 0);
+    } };
+    const proxy = new Proxy(target, {
+        get(object, key, value) {
+            assert(key, "return");
+            assert(value === proxy, true);
+            proxyReads++;
+            return Reflect.get(object, key, value);
+        }
+    });
+    assert(dispose.call(proxy), undefined);
+    assert(proxyReads, 1);
+    const revoked = Proxy.revocable(() => {}, {});
+    revoked.revoke();
+    assert_throws(TypeError, () => dispose.call({ return: revoked.proxy }));
+
+    let finalized = 0;
+    function* generator() {
+        try { yield 1; yield 2; } finally { finalized++; }
+    }
+    const iterator = generator();
+    iterator.next();
+    assert(iterator[Symbol.dispose](), undefined);
+    assert(finalized, 1);
+    assert(iterator.next().done, true);
+    const helper = generator().map(value => value);
+    helper.next();
+    assert(helper[Symbol.dispose](), undefined);
+    assert(finalized, 2);
+}
+
+test_iterator_dispose();

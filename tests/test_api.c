@@ -2439,6 +2439,70 @@ static void test_bigint_locale_realm(void)
     JS_FreeRuntime(rt);
 }
 
+/* The public C API creates a second realm for JS assertions. */
+static void publish_disposal_realm(JSContext *from, JSContext *to,
+                                   const char *name, const char *expression)
+{
+    JSValue value, global;
+
+    value = JS_Eval(from, expression, strlen(expression), "disposal-export.js",
+                    JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(value));
+    global = JS_GetGlobalObject(to);
+    assert(JS_SetPropertyStr(to, global, name, value) == 1);
+    JS_FreeValue(to, global);
+}
+
+static void test_iterator_disposal_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *owner, *caller;
+    JSValue result;
+    static const char source[] =
+        "(() => {"
+        " const check = condition => { if (!condition) throw Error('disposal realm'); };"
+        " for (const receiver of [null, undefined, { return: 1 }]) {"
+        "  let caught; try { foreignDispose.call(receiver); } catch (error) { caught = error; }"
+        "  check(caught instanceof ForeignTypeError); check(!(caught instanceof TypeError));"
+        " }"
+        " const sentinel = {}; let caught;"
+        " try { foreignDispose.call({ get return() { throw sentinel; } }); }"
+        " catch (error) { caught = error; } check(caught === sentinel);"
+        " const saved = Object.getOwnPropertyDescriptor(foreignNumberProto, 'return');"
+        " let reads = 0, calls = 0;"
+        " try {"
+        "  Object.defineProperty(foreignNumberProto, 'return', { configurable: true,"
+        "   get: function() { 'use strict'; check(this === 3); reads++;"
+        "    return function() { 'use strict'; check(this === 3);"
+        "     check(arguments.length === 0); calls++; return { get then() { throw sentinel; } }; };"
+        "   } });"
+        "  check(foreignDispose.call(3) === undefined);"
+        " } finally { delete foreignNumberProto.return;"
+        "  if (saved) Object.defineProperty(foreignNumberProto, 'return', saved); }"
+        " check(reads === 1 && calls === 1); return true;"
+        "})()";
+
+    assert(rt);
+    owner = JS_NewContext(rt);
+    caller = JS_NewContext(rt);
+    assert(owner && caller);
+    publish_disposal_realm(owner, caller, "foreignDispose",
+                           "Iterator.prototype[Symbol.dispose]");
+    publish_disposal_realm(owner, caller, "ForeignTypeError", "TypeError");
+    publish_disposal_realm(owner, caller, "foreignNumberProto", "Number.prototype");
+    JS_FreeContext(owner);
+    JS_RunGC(rt);
+    result = JS_Eval(caller, source, strlen(source), "iterator-disposal-realm.js",
+                     JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(result));
+    assert(JS_ToBool(caller, result) == 1);
+    JS_FreeValue(caller, result);
+    assert(!JS_HasException(caller));
+    JS_FreeContext(caller);
+    JS_RunGC(rt);
+    JS_FreeRuntime(rt);
+}
+
 static JSValue test_resource_realms_gc(JSContext *ctx, JSValueConst value,
                                        int argc, JSValueConst *argv)
 {
@@ -2511,6 +2575,7 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
+        { "iterator-disposal-realm", test_iterator_disposal_realm },
         { "allocator-overflow", test_allocator_size_overflow },
         { "bigint-locale-realm", test_bigint_locale_realm },
         { "native-name", test_native_function_initial_name },

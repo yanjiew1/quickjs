@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1645,6 +1646,39 @@ JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
     return JS_DupValue(ctx, this_val);
 }
 
+/* GetMethod preserves the original primitive receiver. */
+static JSValue js_iterator_get_return_method(JSContext *ctx, JSValueConst obj)
+{
+    JSValue method = JS_GetProperty(ctx, obj, JS_ATOM_return);
+
+    if (JS_IsException(method))
+        return method;
+    if (JS_IsNull(method)) {
+        JS_FreeValue(ctx, method);
+        return JS_UNDEFINED;
+    }
+    if (!JS_IsUndefined(method) && check_function(ctx, method)) {
+        JS_FreeValue(ctx, method);
+        return JS_EXCEPTION;
+    }
+    return method;
+}
+
+static JSValue js_iterator_proto_dispose(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv)
+{
+    JSValue method, result;
+
+    method = js_iterator_get_return_method(ctx, this_val);
+    if (JS_IsException(method) || JS_IsUndefined(method))
+        return method;
+    result = JS_CallFree(ctx, method, this_val, 0, NULL);
+    if (JS_IsException(result))
+        return result;
+    JS_FreeValue(ctx, result);
+    return JS_UNDEFINED;
+}
+
 static JSValue js_iterator_proto_get_toStringTag(JSContext *ctx, JSValueConst this_val)
 {
     return JS_AtomToString(ctx, JS_ATOM_Iterator);
@@ -2105,6 +2139,7 @@ const JSCFunctionListEntry js_iterator_proto_funcs[] = {
     JS_CFUNC_DEF("join", 1, js_iterator_proto_join ),
     JS_CFUNC_DEF("reduce", 1, js_iterator_proto_reduce ),
     JS_CFUNC_DEF("toArray", 0, js_iterator_proto_toArray ),
+    JS_CFUNC_DEF("[Symbol.dispose]", 0, js_iterator_proto_dispose ),
     JS_CFUNC_DEF("[Symbol.iterator]", 0, js_iterator_proto_iterator ),
     JS_CGETSET_DEF("[Symbol.toStringTag]", js_iterator_proto_get_toStringTag, js_iterator_proto_set_toStringTag),
 };
