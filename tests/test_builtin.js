@@ -3875,6 +3875,144 @@ function test_iterator_chunks()
     assert(desc.writable && desc.enumerable && desc.configurable, true);
 }
 
+function test_iterator_windows()
+{
+    test_iterator_buffer_helper("windows");
+    const windows = Iterator.prototype.windows;
+    function collect(values, size, undersized) {
+        return JSON.stringify(values.values().windows(size, undersized).toArray());
+    }
+    assert(collect([1, 2, 3, 4], 2), "[[1,2],[2,3],[3,4]]");
+    assert(collect([1, 2, 3, 4], 3), "[[1,2,3],[2,3,4]]");
+    assert(collect([1, 2, 3], 1), "[[1],[2],[3]]");
+    assert(collect([1, 2], 3), "[]");
+    assert(collect([1, 2], 3, "only-full"), "[]");
+    assert(collect([1, 2], 3, "allow-partial"), "[[1,2]]");
+    assert(collect([1, 2, 3, 4], 3, "allow-partial"), "[[1,2,3],[2,3,4]]");
+    assert(collect([], 3, "allow-partial"), "[]");
+    assert(collect([1, 2], 4294967295), "[]");
+    assert(collect([1, 2], 4294967295, "allow-partial"), "[[1,2]]");
+    assert(collect([1], 2, "allow-" + "partial"), "[[1]]");
+    assert(collect([1], 2, ("x" + "allow-partial").slice(1)), "[[1]]");
+
+    for (const option of [null, 1, 1n, true, Symbol(), {}, new String("only-full"),
+                          "", "only-full\0", "allow-partial\0", "ONLY-FULL"]) {
+        const events = [];
+        const input = {
+            get next() { events.push("next"); throw {}; },
+            return() { events.push("return"); throw {}; }
+        };
+        assert_throws(TypeError, () => windows.call(input, 2, option));
+        assert(events.join(","), "return");
+    }
+    let coerced = 0, closes = 0, nexts = 0;
+    const input = {
+        get next() { nexts++; return () => ({ done: true }); },
+        return() { closes++; return {}; }
+    };
+    const option = { toString() { coerced++; return "only-full"; } };
+    assert_throws(RangeError, () => windows.call(input, 0, option));
+    assert_throws(TypeError, () => windows.call(input, 2, option));
+    assert(coerced, 0);
+    assert(closes, 2);
+    assert(nexts, 0);
+
+    const source = [1, 2, 3, 4, 5].values();
+    const helper = source.windows(2);
+    const first = helper.next().value;
+    first[0] = 99;
+    first.length = 0;
+    first.push(99);
+    assert(source.next().value, 3);
+    const second = helper.next().value;
+    assert(first !== second, true);
+    assert(JSON.stringify(second), "[2,4]");
+    assert(JSON.stringify(helper.next().value), "[4,5]");
+    assert(helper.next().done, true);
+
+    const ring = Array.from({ length: 40 }, (_, i) => i).values().windows(9);
+    for (let i = 0; i < 32; i++) {
+        const row = ring.next().value;
+        assert(row.length, 9);
+        for (let j = 0; j < 9; j++) assert(row[j], i + j);
+    }
+    assert(ring.next().done, true);
+
+    for (const length of [1, 2, 3]) {
+        let index = 0, closes = 0;
+        const helper = windows.call({
+            next() { return { done: index >= length, value: index++ }; },
+            get return() { closes++; return () => ({}); }
+        }, 2, "allow-partial");
+        assert(helper.next().done, false);
+        assert(helper.return().done, true);
+        assert(closes, length === 1 ? 0 : 1);
+    }
+    let finallyCalls = 0;
+    function* inputGenerator() {
+        try { yield 1; yield 2; yield 3; } finally { finallyCalls++; }
+    }
+    const external = inputGenerator(), remaining = external.windows(2);
+    assert(JSON.stringify(remaining.next().value), "[1,2]");
+    external.return();
+    assert(remaining.next().done, true);
+    assert(finallyCalls, 1);
+
+    const ordinary = [1, 2, 3].values().map(x => x);
+    const chunks = [1, 2, 3].values().chunks(2);
+    const window = [1, 2, 3].values().windows(2);
+    const next = ordinary.next, close = window.return;
+    assert(JSON.stringify(next.call(chunks).value), "[1,2]");
+    assert(JSON.stringify(next.call(window).value), "[1,2]");
+    assert(next.call(ordinary).value, 1);
+    assert(close.call(chunks).done, true);
+    assert(close.call(ordinary).done, true);
+    assert(close.call(window).done, true);
+    const concat = Iterator.concat([1]);
+    assert(next.call(concat).value, 1);
+    assert(close.call(concat).done, true);
+
+    let setters = 0, row;
+    Object.defineProperty(Array.prototype, "0", {
+        configurable: true, set() { setters++; }
+    });
+    try { row = [1, 2, 3].values().windows(2).next().value; }
+    finally { delete Array.prototype[0]; }
+    assert(setters, 0);
+    assert(JSON.stringify(row), "[1,2]");
+    const desc = Object.getOwnPropertyDescriptor(row, "0");
+    assert(desc.writable && desc.enumerable && desc.configurable, true);
+
+    let live, index = 0, captured = {};
+    const sourceCycle = {
+        next() {
+            if (++index === 3) {
+                captured.helper = live;
+                return { value: captured, done: false };
+            }
+            return { value: index, done: false };
+        }
+    };
+    live = windows.call(sourceCycle, 3);
+    let retained = live.next().value;
+    assert(retained[2] === captured, true);
+    captured = null;
+    retained = null;
+    retained = live.next().value;
+    assert(retained[1].helper === live, true);
+    retained = null;
+    if (typeof std !== "undefined") std.gc();
+    retained = live.next().value;
+    assert(retained[0].helper === live, true);
+    assert(retained[1], 4);
+    assert(retained[2], 5);
+    retained = null;
+    assert(JSON.stringify(live.next().value), "[4,5,6]");
+    assert(live.return().done, true);
+    live = null;
+    if (typeof std !== "undefined") std.gc();
+}
+
 function test_iterator_constructor_identity()
 {
     assert_throws(TypeError, () => Iterator());
@@ -4680,6 +4818,7 @@ test_iterator_concat_return();
 test_iterator_concat_completion();
 test_iterator_concat_prototype();
 test_iterator_chunks();
+test_iterator_windows();
 test_iterator_constructor_identity();
 test_weak_map();
 test_weak_map_cycles();

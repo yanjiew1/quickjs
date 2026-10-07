@@ -29,7 +29,7 @@
 
 extern const JSCFunctionListEntry js_iterator_funcs[2];
 extern const JSCFunctionListEntry js_iterator_constructor_proto_funcs[1];
-extern const JSCFunctionListEntry js_iterator_proto_funcs[14];
+extern const JSCFunctionListEntry js_iterator_proto_funcs[17];
 extern const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
 extern const JSCFunctionListEntry js_iterator_wrap_proto_funcs[2];
 JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,

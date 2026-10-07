@@ -437,14 +437,15 @@ typedef enum JSIteratorHelperKindEnum {
     JS_ITERATOR_HELPER_KIND_SOME,
     JS_ITERATOR_HELPER_KIND_TAKE,
     JS_ITERATOR_HELPER_KIND_CHUNKS,
+    JS_ITERATOR_HELPER_KIND_WINDOWS,
 } JSIteratorHelperKindEnum;
 
 #define JS_ITERATOR_LIMIT_INFINITY (-1)
 
 typedef struct JSIteratorHelperBuffer {
     JSValue *values;
-    uint32_t count, capacity, size;
-    uint8_t underlying_done;
+    uint32_t count, capacity, size, head;
+    uint8_t underlying_done, allow_partial;
 } JSIteratorHelperBuffer;
 
 typedef struct JSIteratorHelperData {
@@ -574,11 +575,35 @@ static JSValue js_create_iterator_buffer_helper(JSContext *ctx,
     JSIteratorHelperData *it = NULL;
     JSIteratorHelperBuffer *buffer;
     uint32_t size;
+    int allow_partial = FALSE;
 
     if (!JS_IsObject(this_val))
         return JS_ThrowTypeErrorNotAnObject(ctx);
     if (js_iterator_buffer_size(ctx, argv[0], &size) < 0)
         goto fail;
+    if (magic == JS_ITERATOR_HELPER_KIND_WINDOWS) {
+        JSValueConst undersized = argc > 1 ? argv[1] : JS_UNDEFINED;
+        if (!JS_IsUndefined(undersized)) {
+            const char *str;
+            size_t len;
+            int valid;
+
+            if (!JS_IsString(undersized)) {
+                JS_ThrowTypeError(ctx, "invalid undersized option");
+                goto fail;
+            }
+            str = JS_ToCStringLen(ctx, &len, undersized);
+            if (!str)
+                goto fail;
+            allow_partial = len == 13 && !memcmp(str, "allow-partial", 13);
+            valid = allow_partial || (len == 9 && !memcmp(str, "only-full", 9));
+            JS_FreeCString(ctx, str);
+            if (!valid) {
+                JS_ThrowTypeError(ctx, "invalid undersized option");
+                goto fail;
+            }
+        }
+    }
     method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
     if (JS_IsException(method))
         return JS_EXCEPTION;
@@ -592,6 +617,7 @@ static JSValue js_create_iterator_buffer_helper(JSContext *ctx,
     if (!buffer)
         goto fail;
     buffer->size = size;
+    buffer->allow_partial = allow_partial;
     it->realm = JS_DupContext(ctx);
     it->obj = JS_DupValue(ctx, this_val);
     it->next = method;
@@ -610,6 +636,21 @@ fail:
     return JS_EXCEPTION;
 }
 
+static BOOL js_iterator_has_buffer(const JSIteratorHelperData *it)
+{
+    return it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS ||
+           it->kind == JS_ITERATOR_HELPER_KIND_WINDOWS;
+}
+
+/* Compute head + offset without overflowing uint32_t. */
+static uint32_t js_iterator_buffer_index(const JSIteratorHelperBuffer *buffer,
+                                         uint32_t offset)
+{
+    uint32_t tail = buffer->capacity - buffer->head;
+
+    return offset < tail ? buffer->head + offset : offset - tail;
+}
+
 static void js_iterator_buffer_free(JSRuntime *rt, JSIteratorHelperData *it)
 {
     JSIteratorHelperBuffer *buffer = it->extra.buffer;
@@ -618,7 +659,7 @@ static void js_iterator_buffer_free(JSRuntime *rt, JSIteratorHelperData *it)
     if (!buffer)
         return;
     for (i = 0; i < buffer->count; i++)
-        JS_FreeValueRT(rt, buffer->values[i]);
+        JS_FreeValueRT(rt, buffer->values[js_iterator_buffer_index(buffer, i)]);
     js_free_rt(rt, buffer->values);
     js_free_rt(rt, buffer);
     it->extra.buffer = NULL;
@@ -630,6 +671,7 @@ static int js_iterator_buffer_reserve(JSContext *ctx,
 {
     JSValue *values;
     uint64_t capacity;
+    uint32_t i;
 
     if (buffer->count < buffer->capacity)
         return 0;
@@ -642,34 +684,45 @@ static int js_iterator_buffer_reserve(JSContext *ctx,
         JS_ThrowOutOfMemory(ctx);
         return -1;
     }
-    values = js_realloc(ctx, buffer->values, (size_t)capacity * sizeof(*values));
+    values = js_malloc(ctx, (size_t)capacity * sizeof(*values));
     if (!values)
         return -1;
+    for (i = 0; i < buffer->count; i++)
+        values[i] = buffer->values[js_iterator_buffer_index(buffer, i)];
+    js_free(ctx, buffer->values);
     buffer->values = values;
     buffer->capacity = capacity;
+    buffer->head = 0;
     return 0;
 }
 
-/* Transfer the chunk refs into fresh own indexed data properties. */
+/* Chunks transfer refs; windows retain refs for subsequent windows. */
 static JSValue js_iterator_buffer_array(JSContext *ctx,
-                                        JSIteratorHelperBuffer *buffer)
+                                        JSIteratorHelperBuffer *buffer, BOOL keep)
 {
     JSValue array, value;
-    uint32_t i;
+    uint32_t i, index;
 
     array = JS_NewArray(ctx);
     if (JS_IsException(array))
         return array;
     for (i = 0; i < buffer->count; i++) {
-        value = buffer->values[i];
-        buffer->values[i] = JS_UNDEFINED;
+        index = js_iterator_buffer_index(buffer, i);
+        value = buffer->values[index];
+        if (keep)
+            value = JS_DupValue(ctx, value);
+        else
+            buffer->values[index] = JS_UNDEFINED;
         if (JS_DefinePropertyValueInt64(ctx, array, i, value,
                                        JS_PROP_C_W_E | JS_PROP_THROW) < 0) {
             JS_FreeValue(ctx, array);
             return JS_EXCEPTION;
         }
     }
-    buffer->count = 0;
+    if (!keep) {
+        buffer->count = 0;
+        buffer->head = 0;
+    }
     return array;
 }
 
@@ -1094,7 +1147,7 @@ void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
         JS_FreeValueRT(rt, it->next);
         JS_FreeValueRT(rt, it->inner);
         JS_FreeValueRT(rt, it->inner_next);
-        if (it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS)
+        if (js_iterator_has_buffer(it))
             js_iterator_buffer_free(rt, it);
         if (it->realm)
             JS_FreeContext(it->realm);
@@ -1115,11 +1168,11 @@ void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
         JS_MarkValue(rt, it->inner_next, mark_func);
         if (it->realm)
             mark_func(rt, &it->realm->header);
-        if (it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS && it->extra.buffer) {
+        if (js_iterator_has_buffer(it) && it->extra.buffer) {
             JSIteratorHelperBuffer *buffer = it->extra.buffer;
             uint32_t i;
             for (i = 0; i < buffer->count; i++)
-                JS_MarkValue(rt, buffer->values[i], mark_func);
+                JS_MarkValue(rt, buffer->values[js_iterator_buffer_index(buffer, i)], mark_func);
         }
     }
 }
@@ -1156,7 +1209,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
         *pdone = TRUE;
         ret = JS_IteratorClose(ctx, it->obj, FALSE)
             ? JS_EXCEPTION : JS_UNDEFINED;
-        if (it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS)
+        if (js_iterator_has_buffer(it))
             js_iterator_buffer_free(ctx->rt, it);
         JS_FreeContext(it->realm);
         it->realm = NULL;
@@ -1178,7 +1231,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             it->inner = JS_UNDEFINED;
             it->inner_next = JS_UNDEFINED;
         }
-        if (!(it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS &&
+        if (!(js_iterator_has_buffer(it) &&
               it->extra.buffer->underlying_done) &&
             JS_IteratorClose(ctx, it->obj, JS_IsException(ret)))
             ret = JS_EXCEPTION;
@@ -1215,7 +1268,53 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 ret = JS_UNDEFINED;
                 break;
             }
-            ret = js_iterator_buffer_array(ctx, buffer);
+            ret = js_iterator_buffer_array(ctx, buffer, FALSE);
+            if (JS_IsException(ret))
+                goto fail;
+            *pdone = FALSE;
+        }
+        break;
+    case JS_ITERATOR_HELPER_KIND_WINDOWS:
+        {
+            JSIteratorHelperBuffer *buffer = it->extra.buffer;
+            JSValue item;
+
+            if (buffer->underlying_done) {
+                *pdone = TRUE;
+                ret = JS_UNDEFINED;
+                break;
+            }
+            for (;;) {
+                item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                if (JS_IsException(item))
+                    goto fail_no_close;
+                if (*pdone) {
+                    buffer->underlying_done = TRUE;
+                    JS_FreeValue(ctx, item);
+                    if (!buffer->allow_partial || !buffer->count ||
+                        buffer->count == buffer->size) {
+                        ret = JS_UNDEFINED;
+                        goto done;
+                    }
+                    break;
+                }
+                if (buffer->count == buffer->size) {
+                    JS_FreeValue(ctx, buffer->values[buffer->head]);
+                    buffer->values[buffer->head] = item;
+                    buffer->head = buffer->head == buffer->capacity - 1
+                                   ? 0 : buffer->head + 1;
+                } else {
+                    if (js_iterator_buffer_reserve(ctx, buffer) < 0) {
+                        JS_FreeValue(ctx, item);
+                        goto fail;
+                    }
+                    buffer->values[js_iterator_buffer_index(buffer, buffer->count)] = item;
+                    buffer->count++;
+                }
+                if (buffer->count == buffer->size)
+                    break;
+            }
+            ret = js_iterator_buffer_array(ctx, buffer, TRUE);
             if (JS_IsException(ret))
                 goto fail;
             *pdone = FALSE;
@@ -1397,13 +1496,13 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 it->inner = JS_UNDEFINED;
                 it->inner_next = JS_UNDEFINED;
             }
-            if (!(it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS &&
+            if (!(js_iterator_has_buffer(it) &&
                   it->extra.buffer->underlying_done))
                 JS_IteratorClose(ctx, it->obj, TRUE);
             *pdone = TRUE;
         }
     }
-    if (*pdone && it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS)
+    if (*pdone && js_iterator_has_buffer(it))
         js_iterator_buffer_free(ctx->rt, it);
     it->done = *pdone;
     it->executing = 0;
@@ -1415,7 +1514,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     return ret;
  fail:
     /* close the iterator object, preserving pending exception */
-    if (!(it->kind == JS_ITERATOR_HELPER_KIND_CHUNKS &&
+    if (!(js_iterator_has_buffer(it) &&
           it->extra.buffer->underlying_done))
         JS_IteratorClose(ctx, it->obj, TRUE);
  fail_no_close:
@@ -1430,6 +1529,7 @@ const JSCFunctionListEntry js_iterator_funcs[] = {
 };
 
 const JSCFunctionListEntry js_iterator_proto_funcs[] = {
+    JS_CFUNC_MAGIC_DEF("windows", 1, js_create_iterator_buffer_helper, JS_ITERATOR_HELPER_KIND_WINDOWS ),
     JS_CFUNC_MAGIC_DEF("chunks", 1, js_create_iterator_buffer_helper, JS_ITERATOR_HELPER_KIND_CHUNKS ),
     JS_CFUNC_MAGIC_DEF("drop", 1, js_create_iterator_helper, JS_ITERATOR_HELPER_KIND_DROP ),
     JS_CFUNC_MAGIC_DEF("filter", 1, js_create_iterator_helper, JS_ITERATOR_HELPER_KIND_FILTER ),
