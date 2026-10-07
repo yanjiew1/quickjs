@@ -902,7 +902,7 @@ __exception int perform_promise_then(JSContext *ctx,
 {
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
     JSPromiseReactionData *rd_array[2], *rd;
-    int i, j;
+    int i, j, ret = 0;
 
     rd_array[0] = NULL;
     rd_array[1] = NULL;
@@ -942,12 +942,12 @@ __exception int perform_promise_then(JSContext *ctx,
         args[2] = rd->handler;
         args[3] = JS_NewBool(ctx, i);
         args[4] = s->promise_result;
-        JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
+        ret = JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
         for(i = 0; i < 2; i++)
             promise_reaction_data_free(ctx->rt, rd_array[i]);
     }
     s->is_handled = TRUE;
-    return 0;
+    return ret;
 }
 
 JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
