@@ -1890,6 +1890,52 @@ function test_json()
     assert_json_error('\n{ "a": @x }"');
 }
 
+function test_json_parse_source_duplicates()
+{
+    const cases = [
+        ["2", "4", "4"],
+        ["1.00", "1e0", "1e0"],
+        ['"\\u0061"', '"a"', '"a"'],
+        ["false", "true", "true"],
+        ["1", "null", "null"],
+        ['{"leaf":2}', "4", "4"],
+        ["[2]", "4", "4"],
+        ["4", '{"leaf":4e0}', undefined, "leaf"],
+        ['{"leaf":2}', '{"leaf":4e0}', undefined, "leaf"],
+        ["4", "[4e0]", undefined, "0"],
+        ["[2]", "[4e0]", undefined, "0"],
+    ];
+    for (const count of [0, 5, 6, 7, 15, 31]) {
+        let properties = "";
+        for (let i = 0; i < count; i++)
+            properties += ',"p' + i + '":0';
+        for (const [first, last, source, child] of cases) {
+            let calls = 0, child_calls = 0;
+            const text = '{"value":' + first + properties +
+                         ',"value":' + last + '}';
+            const result = JSON.parse(text, function (key, value, context) {
+                assert(arguments.length, 3);
+                if (key === "value") {
+                    calls++;
+                    assert(Object.hasOwn(context, "source"),
+                           source !== undefined);
+                    assert(context.source, source);
+                } else if (key === child) {
+                    child_calls++;
+                    assert(context.source, "4e0");
+                } else if (key === "") {
+                    assert(Object.hasOwn(context, "source"), false);
+                }
+                return value;
+            });
+            assert(calls, 1);
+            assert(child_calls, child === undefined ? 0 : 1);
+            assert(JSON.stringify(result.value),
+                   JSON.stringify(JSON.parse(last)));
+        }
+    }
+}
+
 function test_date()
 {
     // Date Time String format is YYYY-MM-DDTHH:mm:ss.sssZ
@@ -5601,6 +5647,7 @@ test_typed_array_resize_bounds();
 test_empty_typed_array_transfer();
 test_error_stack();
 test_json();
+test_json_parse_source_duplicates();
 test_date();
 test_regexp();
 test_regexp_unicode_18();
