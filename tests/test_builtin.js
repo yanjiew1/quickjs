@@ -2389,6 +2389,50 @@ function test_iterator_constructor_identity()
     assert(Object.getPrototypeOf(value), Iterator.prototype);
 }
 
+function test_iterator_concat_return()
+{
+    function completed(result) {
+        assert(result.done === true && result.value === undefined);
+    }
+    for (const method of [undefined, null, () => ({ done: false, value: 42 })]) {
+        const inner = { next() { return { value: 1, done: false }; }, return: method };
+        const iterable = { [Symbol.iterator]() { return inner; } };
+        const concat = Iterator.concat(iterable);
+        assert(concat.next().value, 1);
+        completed(concat.return(99));
+        completed(concat.next());
+        completed(concat.return());
+    }
+    for (const kind of ["getter", "call", "primitive", "noncallable"]) {
+        let calls = 0;
+        const error = Error(kind);
+        const inner = { next() { return { value: 1, done: false }; } };
+        Object.defineProperty(inner, "return", { get() {
+            calls++;
+            if (kind === "getter") throw error;
+            if (kind === "noncallable") return 1;
+            return () => { if (kind === "call") throw error; return 1; };
+        }});
+        const concat = Iterator.concat({ [Symbol.iterator]() { return inner; } });
+        concat.next();
+        let actual;
+        try { concat.return(); } catch (e) { actual = e; }
+        assert(kind === "getter" || kind === "call" ? actual === error
+                                                     : actual instanceof TypeError);
+        completed(concat.next());
+        completed(concat.return());
+        assert(calls, 1);
+    }
+    let opens = 0;
+    const unopened = Iterator.concat({ [Symbol.iterator]() { opens++; return {}; } });
+    completed(unopened.return());
+    completed(unopened.next());
+    assert(opens, 0);
+    const first = Iterator.concat();
+    const a = first.return(), b = first.return();
+    completed(a); completed(b); assert(a !== b);
+}
+
 function test_iterator_limits()
 {
     for (const limit of [Number.MAX_SAFE_INTEGER, Infinity]) {
@@ -2813,6 +2857,7 @@ test_iterator_flatmap_close();
 test_iterator_helper_acquisition();
 test_iterator_reduce_close();
 test_iterator_limits();
+test_iterator_concat_return();
 test_iterator_constructor_identity();
 test_weak_map();
 test_weak_map_cycles();

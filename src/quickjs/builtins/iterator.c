@@ -180,6 +180,17 @@ void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
     }
 }
 
+static void js_iterator_concat_complete(JSContext *ctx,
+                                         JSIteratorConcatData *it)
+{
+    while (it->index < it->count)
+        JS_FreeValue(ctx, it->values[it->index++]);
+    JS_FreeValue(ctx, it->iter);
+    JS_FreeValue(ctx, it->next);
+    it->iter = JS_UNDEFINED;
+    it->next = JS_UNDEFINED;
+}
+
 static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
                                        int argc, JSValueConst *argv,
                                        int *pdone, int magic)
@@ -269,21 +280,14 @@ static JSValue js_iterator_concat_return(JSContext *ctx, JSValueConst this_val,
     ret = JS_UNDEFINED;
     if (!JS_IsUndefined(it->iter)) {
         it->running = TRUE;
-        ret = JS_GetProperty(ctx, it->iter, JS_ATOM_return);
-        if (JS_IsException(ret)) {
-            it->running = FALSE;
-            return JS_EXCEPTION;
-        }
-        ret = JS_CallFree(ctx, ret, it->iter, 0, NULL);
-        it->running = FALSE;
+        if (JS_IteratorClose(ctx, it->iter, FALSE) < 0)
+            ret = JS_EXCEPTION;
     }
-    while (it->index < it->count)
-        JS_FreeValue(ctx, it->values[it->index++]);
-    JS_FreeValue(ctx, it->iter);
-    JS_FreeValue(ctx, it->next);
-    it->iter = JS_UNDEFINED;
-    it->next = JS_UNDEFINED;
-    return ret;
+    js_iterator_concat_complete(ctx, it);
+    it->running = FALSE;
+    if (JS_IsException(ret))
+        return ret;
+    return js_create_iterator_result(ctx, JS_UNDEFINED, TRUE);
 }
 
 const JSCFunctionListEntry js_iterator_concat_proto_funcs[] = {
