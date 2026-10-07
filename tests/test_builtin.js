@@ -2433,6 +2433,42 @@ function test_iterator_concat_return()
     completed(a); completed(b); assert(a !== b);
 }
 
+function test_iterator_concat_completion()
+{
+    for (const kind of ["iterator", "next-get", "next-call", "primitive", "done", "value"]) {
+        const error = Error(kind);
+        let opens = 0, closes = 0;
+        const inner = {
+            get next() {
+                if (kind === "next-get") throw error;
+                return () => {
+                    if (kind === "next-call") throw error;
+                    if (kind === "primitive") return 1;
+                    return {
+                        get done() { if (kind === "done") throw error; return false; },
+                        get value() { if (kind === "value") throw error; return 42; },
+                    };
+                };
+            },
+            return() { closes++; return {}; },
+        };
+        const source = { [Symbol.iterator]() {
+            opens++;
+            if (kind === "iterator") throw error;
+            return inner;
+        }};
+        const concat = Iterator.concat(source, source);
+        let actual;
+        try { concat.next(); } catch (e) { actual = e; }
+        assert(kind === "primitive" ? actual instanceof TypeError : actual === error);
+        const next = concat.next(), result = concat.return();
+        assert(next.done === true && next.value === undefined);
+        assert(result.done === true && result.value === undefined);
+        assert(opens, 1);
+        assert(closes, 0);
+    }
+}
+
 function test_iterator_limits()
 {
     for (const limit of [Number.MAX_SAFE_INTEGER, Infinity]) {
@@ -2858,6 +2894,7 @@ test_iterator_helper_acquisition();
 test_iterator_reduce_close();
 test_iterator_limits();
 test_iterator_concat_return();
+test_iterator_concat_completion();
 test_iterator_constructor_identity();
 test_weak_map();
 test_weak_map_cycles();

@@ -262,6 +262,10 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
             it->index += 2;
         }
     }
+    if (JS_IsException(ret)) {
+        js_iterator_concat_complete(ctx, it);
+        *pdone = TRUE;
+    }
     it->running = FALSE;
     return ret;
 }
