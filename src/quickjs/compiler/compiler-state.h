@@ -71,6 +71,7 @@ struct JSVarDef {
     /* if is_captured = TRUE, provides, the index of the corresponding
        JSVarRef on stack */
     uint16_t var_ref_idx;
+    BOOL is_body_var; /* explicit VarDeclaredName in the function body */
     /* function pool index for lexical variables with var_kind =
        JS_VAR_FUNCTION_DECL/JS_VAR_NEW_FUNCTION_DECL or scope level of
        the definition of the 'var' variables (they have scope_level =

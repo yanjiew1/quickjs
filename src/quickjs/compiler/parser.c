@@ -786,13 +786,21 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
         } else {
             /* if the variable already exists, don't add it again  */
             idx = find_var(ctx, fd, name);
-            if (idx >= 0)
+            if (idx >= 0) {
+                if (fd->in_function_body) {
+                    if (idx & ARGUMENT_VAR_OFFSET)
+                        fd->args[idx - ARGUMENT_VAR_OFFSET].is_body_var = TRUE;
+                    else
+                        fd->vars[idx].is_body_var = TRUE;
+                }
                 break;
+            }
             idx = add_var(ctx, fd, name);
             if (idx >= 0) {
                 if (name == JS_ATOM_arguments && fd->has_arguments_binding)
                     fd->arguments_var_idx = idx;
                 fd->vars[idx].scope_next = fd->scope_level;
+                fd->vars[idx].is_body_var = fd->in_function_body;
             }
         }
         break;
@@ -7058,10 +7066,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     if (fd->has_parameter_expressions) {
         int idx;
 
-        /* Copy the variables in the argument scope to the variable
-           scope (see FunctionDeclarationInstantiation() in spec). The
-           normal arguments are already present, so no need to copy
-           them. */
+        /* Reserve body slots for formal names. The backend distinguishes
+           explicit body var declarations from parameter-only bindings. */
         idx = fd->scopes[fd->scope_level].first;
         while (idx >= 0) {
             JSVarDef *vd = &fd->vars[idx];
@@ -7071,12 +7077,6 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                 if (add_var(ctx, fd, vd->var_name) < 0)
                     goto fail;
                 vd = &fd->vars[idx]; /* fd->vars may have been reallocated */
-                emit_op(s, OP_scope_get_var);
-                emit_atom(s, vd->var_name);
-                emit_u16(s, fd->scope_level);
-                emit_op(s, OP_scope_put_var);
-                emit_atom(s, vd->var_name);
-                emit_u16(s, 0);
             }
             idx = vd->scope_next;
         }

@@ -466,6 +466,27 @@ static inline void capture_var(JSFunctionDef *s, JSVarDef *vd)
 }
 
 /* return the position of the next opcode or -1 if error */
+/* Parameter-only bindings live in the parameter environment. Body slots
+   with explicit var declarations instead receive a separate initial value. */
+static int resolve_parameter_copy(JSFunctionDef *fd, int var_idx)
+{
+    JSVarDef *vd;
+    int i;
+
+    if (var_idx < 0 || !fd->has_parameter_expressions)
+        return var_idx;
+    vd = (var_idx & ARGUMENT_VAR_OFFSET) ?
+        &fd->args[var_idx - ARGUMENT_VAR_OFFSET] : &fd->vars[var_idx];
+    if (vd->var_kind != JS_VAR_PARAMETER_COPY)
+        return var_idx;
+    for (i = 0; i < fd->parameter_var_count; i++) {
+        if (fd->vars[i].scope_level == ARG_SCOPE_INDEX &&
+            fd->vars[i].var_name == vd->var_name)
+            return i;
+    }
+    abort();
+}
+
 static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                              JSAtom var_name, int scope_level, int op,
                              DynBuf *bc, uint8_t *bc_buf,
@@ -530,11 +551,13 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     is_arg_scope = (idx == ARG_SCOPE_END ||
                     (var_idx >= 0 && s->has_parameter_expressions &&
                      s->vars[var_idx].scope_level == ARG_SCOPE_INDEX));
+    if (var_idx >= 0)
+        var_idx = resolve_parameter_copy(s, var_idx);
     if (var_idx < 0) {
         /* argument scope: variables are not visible but pseudo
            variables are visible */
         if (!is_arg_scope) {
-            var_idx = find_var(ctx, s, var_name);
+            var_idx = resolve_parameter_copy(s, find_var(ctx, s, var_name));
         }
 
         if (var_idx < 0 && is_pseudo_var)
@@ -551,14 +574,16 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         }
     }
     if (var_idx >= 0) {
-        if (var_idx == s->arguments_arg_idx) {
-            if (add_arguments_var(ctx, s) < 0)
-                return -1;
-            if (!is_arg_scope && s->var_object_idx >= 0) {
-                dbuf_putc(bc, OP_get_loc);
-                dbuf_put_u16(bc, s->var_object_idx);
-                var_object_test(ctx, s, var_name, op, bc, &label_done, 0, is_strict);
-            }
+        if (var_idx == s->arguments_arg_idx &&
+            add_arguments_var(ctx, s) < 0)
+            return -1;
+        if (s->has_parameter_expressions &&
+            !(var_idx & ARGUMENT_VAR_OFFSET) &&
+            s->vars[var_idx].scope_level == ARG_SCOPE_INDEX &&
+            !is_arg_scope && s->var_object_idx >= 0) {
+            dbuf_putc(bc, OP_get_loc);
+            dbuf_put_u16(bc, s->var_object_idx);
+            var_object_test(ctx, s, var_name, op, bc, &label_done, 0, is_strict);
         }
         if ((op == OP_scope_put_var || op == OP_scope_make_ref) &&
             !(var_idx & ARGUMENT_VAR_OFFSET) &&
@@ -721,13 +746,27 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         is_arg_scope = (idx == ARG_SCOPE_END ||
                         (var_idx >= 0 && fd->has_parameter_expressions &&
                          fd->vars[var_idx].scope_level == ARG_SCOPE_INDEX));
-        if (var_idx >= 0)
-            break;
-
-        if (!is_arg_scope) {
+        if (var_idx < 0 && !is_arg_scope)
             var_idx = find_var(ctx, fd, var_name);
-            if (var_idx >= 0)
-                break;
+        var_idx = resolve_parameter_copy(fd, var_idx);
+        if (var_idx >= 0) {
+            if (fd->has_parameter_expressions &&
+                !(var_idx & ARGUMENT_VAR_OFFSET) && !is_arg_scope &&
+                fd->vars[var_idx].scope_level == ARG_SCOPE_INDEX &&
+                fd->var_object_idx >= 0) {
+                vd = &fd->vars[fd->var_object_idx];
+                capture_var(fd, vd);
+                idx = get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL,
+                                      fd->var_object_idx, vd->var_name,
+                                      FALSE, FALSE, JS_VAR_NORMAL);
+                if (idx < 0)
+                    return -1;
+                dbuf_putc(bc, OP_get_var_ref);
+                dbuf_put_u16(bc, idx);
+                var_object_test(ctx, s, var_name, op, bc, &label_done,
+                                0, is_strict);
+            }
+            break;
         }
         if (is_pseudo_var) {
             var_idx = resolve_pseudo_var(ctx, fd, var_name);
@@ -1274,7 +1313,9 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
     for(i = 0; i < s->var_count; i++) {
         vd = &s->vars[i];
         /* do not close top level last result */
-        if (vd->scope_level == 0 &&
+        if ((vd->scope_level == 0 ||
+             (s->has_parameter_expressions &&
+              vd->scope_level == ARG_SCOPE_INDEX)) &&
             vd->var_name != JS_ATOM__ret_ &&
             vd->var_name != JS_ATOM_NULL) {
             capture_var(s, vd);
@@ -1319,9 +1360,12 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
         scope_idx = fd->scopes[scope_level].first;
         while (scope_idx >= 0) {
             vd = &fd->vars[scope_idx];
-            capture_var(fd, vd);
-            get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL, scope_idx,
-                            vd->var_name, vd->is_const, vd->is_lexical, vd->var_kind);
+            if (vd->scope_level != 0) {
+                capture_var(fd, vd);
+                get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL, scope_idx,
+                                vd->var_name, vd->is_const,
+                                vd->is_lexical, vd->var_kind);
+            }
             scope_idx = vd->scope_next;
         }
         is_arg_scope = (scope_idx == ARG_SCOPE_END);
@@ -1330,7 +1374,8 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
             /* XXX: propagate is_const and var_kind too ? */
             for(i = 0; i < fd->arg_count; i++) {
                 vd = &fd->args[i];
-                if (vd->var_name != JS_ATOM_NULL) {
+                if (vd->var_name != JS_ATOM_NULL &&
+                    vd->var_kind != JS_VAR_PARAMETER_COPY) {
                     capture_var(fd, vd);
                     get_closure_var(ctx, s, fd,
                                     JS_CLOSURE_ARG, i, vd->var_name, FALSE,
@@ -1342,19 +1387,23 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
                 /* do not close top level last result */
                 if (vd->scope_level == 0 &&
                     vd->var_name != JS_ATOM__ret_ &&
-                    vd->var_name != JS_ATOM_NULL) {
+                    vd->var_name != JS_ATOM_NULL &&
+                    vd->var_kind != JS_VAR_PARAMETER_COPY) {
                     capture_var(fd, vd);
                     get_closure_var(ctx, s, fd,
                                     JS_CLOSURE_LOCAL, i, vd->var_name, FALSE,
                                     vd->is_lexical, JS_VAR_NORMAL);
                 }
             }
-            if (fd->arguments_arg_idx >= 0) {
-                i = fd->arguments_arg_idx;
-                vd = &fd->vars[i];
-                capture_var(fd, vd);
-                get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL, i,
-                                vd->var_name, FALSE, TRUE, vd->var_kind);
+            if (fd->has_parameter_expressions) {
+                for (i = 0; i < fd->var_count; i++) {
+                    vd = &fd->vars[i];
+                    if (vd->scope_level != ARG_SCOPE_INDEX)
+                        continue;
+                    capture_var(fd, vd);
+                    get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL, i,
+                                    vd->var_name, FALSE, TRUE, vd->var_kind);
+                }
             }
         } else {
             for(i = 0; i < fd->var_count; i++) {
@@ -1431,8 +1480,11 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
     if (!is_arg_scope) {
         /* Add argument variables */
         for(i = 0; i < b->arg_count; i++) {
-            JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
+            JSClosureVar *cv;
             vd = &b->vardefs[i];
+            if (vd->var_kind == JS_VAR_PARAMETER_COPY)
+                continue;
+            cv = &s->closure_var[s->closure_var_count++];
             cv->closure_type = JS_CLOSURE_ARG;
             cv->is_const = FALSE;
             cv->is_lexical = FALSE;
@@ -1443,7 +1495,8 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
         /* Add local non lexical variables */
         for(i = 0; i < b->var_count; i++) {
             vd = &b->vardefs[b->arg_count + i];
-            if (!vd->has_scope && vd->var_name != JS_ATOM__ret_) {
+            if (!vd->has_scope && vd->var_name != JS_ATOM__ret_ &&
+                vd->var_kind != JS_VAR_PARAMETER_COPY) {
                 JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
                 set_closure_from_var(ctx, cv, vd, i);
             }
@@ -1452,7 +1505,7 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
         for(i = 0; i < b->var_count; i++) {
             int end = i;
             vd = &b->vardefs[b->arg_count + i];
-            if (!vd->has_scope || vd->var_name != JS_ATOM_arguments)
+            if (!vd->has_scope)
                 continue;
             while (end >= 0)
                 end = b->vardefs[b->arg_count + end].scope_next;
@@ -2077,8 +2130,32 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                 int scope_idx, scope = get_u16(bc_buf + pos + 1);
 
                 /* Parameter bindings remain live throughout the body. */
-                if (s->has_parameter_expressions && scope == ARG_SCOPE_INDEX)
+                if (s->has_parameter_expressions && scope == ARG_SCOPE_INDEX) {
+                    for (scope_idx = s->scopes[scope].first; scope_idx >= 0;) {
+                        JSVarDef *vd = &s->vars[scope_idx];
+                        int body_idx = find_var(ctx, s, vd->var_name);
+
+                        if (body_idx >= 0 && body_idx != scope_idx) {
+                            JSVarDef *body = (body_idx & ARGUMENT_VAR_OFFSET) ?
+                                &s->args[body_idx - ARGUMENT_VAR_OFFSET] :
+                                &s->vars[body_idx];
+                            if (body->is_body_var) {
+                                dbuf_putc(&bc_out, OP_get_loc_check);
+                                dbuf_put_u16(&bc_out, scope_idx);
+                                if (body_idx & ARGUMENT_VAR_OFFSET) {
+                                    dbuf_putc(&bc_out, OP_put_arg);
+                                    dbuf_put_u16(&bc_out,
+                                                 body_idx - ARGUMENT_VAR_OFFSET);
+                                } else {
+                                    dbuf_putc(&bc_out, OP_put_loc);
+                                    dbuf_put_u16(&bc_out, body_idx);
+                                }
+                            }
+                        }
+                        scope_idx = vd->scope_next;
+                    }
                     break;
+                }
                 for(scope_idx = s->scopes[scope].first; scope_idx >= 0;) {
                     JSVarDef *vd = &s->vars[scope_idx];
                     if (vd->scope_level == scope) {
@@ -3463,6 +3540,24 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
         goto fail;
     if (resolve_annex_function_declarations(ctx, fd) < 0)
         goto fail;
+
+    if (fd->has_parameter_expressions) {
+        for (idx = 0; idx < fd->arg_count + fd->parameter_var_count; idx++) {
+            JSVarDef *vd = idx < fd->arg_count ? &fd->args[idx] :
+                &fd->vars[idx - fd->arg_count];
+            if (vd->scope_level == 0 && !vd->is_body_var &&
+                vd->var_name != JS_ATOM_NULL) {
+                int i;
+                for (i = 0; i < fd->parameter_var_count; i++) {
+                    if (fd->vars[i].scope_level == ARG_SCOPE_INDEX &&
+                        fd->vars[i].var_name == vd->var_name) {
+                        vd->var_kind = JS_VAR_PARAMETER_COPY;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     /* recompute scope linkage */
     for (scope = 0; scope < fd->scope_count; scope++) {

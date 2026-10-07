@@ -924,6 +924,74 @@ function test_class_lexical_strictness()
     assert(calls, 3);
 }
 
+function test_parameter_environment_bindings()
+{
+    function shared(a = 1, read = () => a) {
+        a = 2;
+        assert(read(), 2);
+        eval("a = 3");
+        assert(read(), 3);
+        const write = () => { a = 4; };
+        write();
+        assert(read(), 4);
+        return a;
+    }
+    assert(shared(), 4);
+    function separate(a = 1, read = () => a) {
+        var a;
+        a = 2;
+        assert(read(), 1);
+        eval("a = 3");
+        assert(read(), 1);
+        return a;
+    }
+    assert(separate(), 3);
+    function current(a = 1, b = (a = 7), read = () => a) {
+        var a;
+        assert(a, 7);
+        a = 8;
+        assert(read(), 7);
+    }
+    current();
+    function destructured({ a } = { a: 1 }, read = () => a) {
+        a = 2;
+        assert(read(), 2);
+        assert(eval("a"), 2);
+    }
+    destructured();
+    function destructuredSeparate({ a } = { a: 1 }, b = (a = 7), read = () => a) {
+        var a;
+        assert(a, 7);
+        a = 8;
+        assert(read(), 7);
+    }
+    destructuredSeparate();
+    function dynamic(a = 1, read = () => a) {
+        const bodyRead = () => a;
+        const bodyEval = () => eval("a");
+        assert(bodyRead(), 1);
+        assert(bodyEval(), 1);
+        eval("var a = 9");
+        assert(bodyRead(), 9);
+        assert(bodyEval(), 9);
+        assert(read(), 1);
+    }
+    dynamic();
+    function hoisted(a = 1, read = () => a) {
+        function a() { return 42; }
+        assert(a(), 42);
+        assert(read(), 1);
+    }
+    hoisted();
+    const arrow = (a = 1, read = () => a) => { a = 2; return read(); };
+    assert(arrow(), 2);
+    function* generator(a = 1, read = () => a) { a = 2; yield read(); }
+    assert(generator().next().value, 2);
+    const rest = (a = 1, ...values) => { a = 2; return [a, values.length]; };
+    assert(rest()[0], 2);
+    assert(rest()[1], 0);
+}
+
 function test_class()
 {
     var o;
@@ -1343,6 +1411,7 @@ test_parameter_arguments_binding();
 test_annex_deferred_applicability();
 test_annex_arguments_binding();
 test_class_lexical_strictness();
+test_parameter_environment_bindings();
 test_template();
 test_template_skip();
 test_object_literal();
