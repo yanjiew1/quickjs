@@ -34,7 +34,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (!JS_IsException(eval_result)) {
         JS_FreeValue(ctx, eval_result);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     const char* simple_script = "({ a: 1, b: 'test', c: function() { return 42; } })";
@@ -56,10 +56,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
                 if (!JS_IsException(result)) {
                     JS_FreeValue(ctx, result);
                 } else {
-                    JS_GetException(ctx);
+                    JS_FreeValue(ctx, JS_GetException(ctx));
                 }
             } else {
-                JS_GetException(ctx);
+                JS_FreeValue(ctx, JS_GetException(ctx));
             }
             
             js_free(ctx, bytecode_buf);
@@ -67,7 +67,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         
         JS_FreeValue(ctx, bytecode);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     if (size >= 8) {
@@ -87,7 +87,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             if (!JS_IsException(malformed)) {
                 JS_FreeValue(ctx, malformed);
             } else {
-                JS_GetException(ctx);
+                JS_FreeValue(ctx, JS_GetException(ctx));
             }
             
             free(fake_bytecode);
@@ -100,7 +100,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (!JS_IsException(std_check)) {
         JS_FreeValue(ctx, std_check);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     const char* module_script = "export default 42; export const x = 123;";
@@ -121,10 +121,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
                 if (!JS_IsException(mod_result)) {
                     JS_FreeValue(ctx, mod_result);
                 } else {
-                    JS_GetException(ctx);
+                    JS_FreeValue(ctx, JS_GetException(ctx));
                 }
             } else {
-                JS_GetException(ctx);
+                JS_FreeValue(ctx, JS_GetException(ctx));
             }
             
             js_free(ctx, mod_bc_buf);
@@ -132,7 +132,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         
         JS_FreeValue(ctx, module_bytecode);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     JS_FreeContext(ctx);

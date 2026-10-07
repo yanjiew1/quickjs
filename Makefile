@@ -572,6 +572,8 @@ C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
 
 C_TESTS+=tests/test_fuzz_json$(EXE)
 
+C_TESTS+=tests/test_fuzz_exception_ownership$(EXE)
+
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
 	mkdir -p $(@D)
@@ -600,6 +602,7 @@ tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/l
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_fuzz_exception_ownership$(EXE)
 	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
@@ -770,4 +773,7 @@ clean-fuzz-test:
 clean: clean-fuzz-test
 
 tests/test_fuzz_json$(EXE): $(OBJDIR)/tests/test_fuzz_json.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_fuzz_exception_ownership$(EXE): $(OBJDIR)/tests/test_fuzz_exception_ownership.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
