@@ -1139,6 +1139,72 @@ static void check_typed_array_arguments(JSContext *ctx, int argc,
     JS_FreeValue(ctx, array);
 }
 
+static void check_typed_buffer_length(JSContext *ctx, JSValueConst array,
+                                     size_t expected_length, size_t buffer_length)
+{
+    JSValue buffer;
+    size_t offset, length, element_size, backing_length;
+
+    buffer = JS_GetTypedArrayBuffer(ctx, array, &offset, &length, &element_size);
+    assert(!JS_IsException(buffer));
+    assert(offset == 2 && length == expected_length && element_size == 2);
+    assert(JS_GetArrayBuffer(ctx, &backing_length, buffer) != NULL);
+    assert(backing_length == buffer_length && offset + length <= backing_length);
+    JS_FreeValue(ctx, buffer);
+}
+
+static void test_typed_buffer_resized_length(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue array, fixed, buffer, global, result, exception;
+    const char *source = "new ArrayBuffer(8, { maxByteLength: 16 })";
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    buffer = JS_Eval(ctx, source, strlen(source), "typed-buffer-rab", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(buffer));
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "rab", buffer) >= 0);
+    JS_FreeValue(ctx, global);
+    source = "new Uint16Array(rab, 2)";
+    array = JS_Eval(ctx, source, strlen(source), "typed-buffer-tracking", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(array));
+    source = "new Uint16Array(rab, 2, 2)";
+    fixed = JS_Eval(ctx, source, strlen(source), "typed-buffer-fixed", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(fixed));
+    check_typed_buffer_length(ctx, array, 6, 8);
+    check_typed_buffer_length(ctx, fixed, 4, 8);
+    check_eval(ctx, "rab.resize(5) === undefined");
+    check_typed_buffer_length(ctx, array, 2, 5);
+    result = JS_GetTypedArrayBuffer(ctx, fixed, NULL, NULL, NULL);
+    assert(JS_IsException(result));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    check_eval(ctx, "rab.resize(9) === undefined");
+    check_typed_buffer_length(ctx, array, 6, 9);
+    check_typed_buffer_length(ctx, fixed, 4, 9);
+    check_eval(ctx, "rab.resize(2) === undefined");
+    check_typed_buffer_length(ctx, array, 0, 2);
+    check_eval(ctx, "rab.resize(1) === undefined");
+    result = JS_GetTypedArrayBuffer(ctx, array, NULL, NULL, NULL);
+    assert(JS_IsException(result));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    check_eval(ctx, "rab.resize(8) === undefined");
+    check_typed_buffer_length(ctx, array, 6, 8);
+    check_eval(ctx, "rab.transfer().byteLength === 8");
+    result = JS_GetTypedArrayBuffer(ctx, array, NULL, NULL, NULL);
+    assert(JS_IsException(result));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, fixed);
+    JS_FreeValue(ctx, array);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_typed_array_arguments(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -1532,6 +1598,7 @@ int main(int argc, char **argv)
         { "stripped-function", test_stripped_function_to_string },
         { "iterator-realm", test_iterator_constructor_realm },
         { "typed-array-overlap", test_typed_array_external_overlap },
+        { "typed-buffer-resized-length", test_typed_buffer_resized_length },
         { "regexp-interrupt", test_regexp_interrupt },
         { "allocator-api", test_allocator_api_entry_point },
         { "allocator-capacity", test_allocator_capacity_and_reuse },
