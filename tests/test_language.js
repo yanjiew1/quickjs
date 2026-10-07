@@ -1378,6 +1378,63 @@ function test_labels2()
     assert(i, 1)
 }
 
+function test_destructuring_property_colon()
+{
+    const invalid = [
+        "({''})",
+        "({''} = {})",
+        "var {''};",
+        "var {'', a} = {a: 0};",
+        "var {'bad'};",
+        "({'bad'} = {bad: 0});",
+        "var {'if'};",
+        "function f({''}) {}",
+        "function f({a, 'bad', c}) {}",
+        "let {'quoted', target} = {};",
+        "const {'quoted', target} = {};",
+        "({'quoted', target} = {});",
+        "function f({'quoted', target}) {}",
+        "({'quoted', target}) => target;",
+        "let {nested: {'quoted', target}} = {};",
+        "for (let {'quoted', target} of []) {}",
+        "try {} catch ({'quoted', target}) {}",
+        "var {0, target} = {};",
+        "var {['computed'], target} = {};",
+    ];
+    for (const source of invalid) {
+        assert_throws(SyntaxError, () => Function(source));
+        assert_throws(SyntaxError, () => Function('"use strict"; ' + source));
+    }
+
+    const source = {'': 1, if: 2, 0: 3, computed: 4, quoted: 5};
+    var {'': empty, 'if': keyword, 0: numeric,
+         ['computed']: computed} = source;
+    assert(empty, 1);
+    assert(keyword, 2);
+    assert(numeric, 3);
+    assert(computed, 4);
+    let {'quoted': alias, ...rest} = source;
+    assert(alias, 5);
+    assert(rest.quoted, undefined);
+    assert(rest[''], 1);
+    const {nested: {'quoted': nested}} = {nested: source};
+    assert(nested, 5);
+    function binding({'quoted': value = 6}) { return value; }
+    assert(binding(source), 5);
+    assert(binding({}), 6);
+    assert((({'quoted': value}) => value)(source), 5);
+    let assigned;
+    ({'quoted': assigned} = source);
+    assert(assigned, 5);
+    ({['computed']: assigned} = source);
+    assert(assigned, 4);
+    const shorthand = 7;
+    const {shorthand: ordinary} = {shorthand};
+    assert(ordinary, 7);
+    function shorthand_binding({shorthand}) { return shorthand; }
+    assert(shorthand_binding({shorthand}), 7);
+}
+
 function test_destructuring()
 {
     function * g () { return 0; };
@@ -1687,6 +1744,7 @@ test_object_literal();
 test_regexp_skip();
 test_labels();
 test_labels2();
+test_destructuring_property_colon();
 test_destructuring();
 test_spread();
 test_function_length();
