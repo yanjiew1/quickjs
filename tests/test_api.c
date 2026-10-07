@@ -628,12 +628,50 @@ static void test_iterator_constructor_realm(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_stripped_function_to_string(void)
+{
+    static const char *const functions[] = {
+        "(function named() {})",
+        "(function* named() {})",
+        "(async function named() {})",
+        "(async function* named() {})",
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue function, global;
+    size_t i;
+
+    assert(rt);
+    JS_SetStripInfo(rt, JS_STRIP_SOURCE);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    for (i = 0; i < countof(functions); i++) {
+        function = JS_Eval(ctx, functions[i], strlen(functions[i]),
+                           "<stripped-function>", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(function));
+        global = JS_GetGlobalObject(ctx);
+        assert(JS_SetPropertyStr(ctx, global, "strippedFunction", function) >= 0);
+        JS_FreeValue(ctx, global);
+        check_eval(ctx,
+            "(() => {"
+            " Object.defineProperty(strippedFunction, 'name', {"
+            "   get() { throw Error('source-stripped name read'); }"
+            " });"
+            " return Function.prototype.toString.call(strippedFunction) ==="
+            "   'function () {\\n    [native code]\\n}';"
+            "})()");
+    }
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "stripped-function", test_stripped_function_to_string },
         { "iterator-realm", test_iterator_constructor_realm },
         { "typed-array-overlap", test_typed_array_external_overlap },
         { "regexp-interrupt", test_regexp_interrupt },

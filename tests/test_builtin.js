@@ -80,6 +80,26 @@ function my_func(a, b)
     return a + b;
 }
 
+function test_function_native_fallback()
+{
+    const native = "function () {\n    [native code]\n}";
+    const toString = Function.prototype.toString;
+    const fail = () => { throw Error("unexpected property read"); };
+    function original() { /* preserved source */ return 42; }
+    assert(toString.call(original),
+           "function original() { /* preserved source */ return 42; }");
+    const bound = original.bind(null);
+    Object.defineProperty(bound, "name", { get: fail });
+    assert(toString.call(bound), native);
+    const proxy = new Proxy(original, { get: fail });
+    assert(toString.call(proxy), native);
+    const revocable = Proxy.revocable(original, { get: fail });
+    revocable.revoke();
+    assert(toString.call(revocable.proxy), native);
+    assert_throws(TypeError, () => toString.call(new Proxy({}, {})));
+    assert_throws(TypeError, () => toString.call(null));
+}
+
 function test_function()
 {
     function f(a, b) {
@@ -2673,6 +2693,7 @@ function test_line_column_numbers()
 
 test();
 test_function();
+test_function_native_fallback();
 test_enum();
 test_array();
 test_string();

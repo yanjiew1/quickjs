@@ -348,7 +348,6 @@ static JSValue js_function_toString(JSContext *ctx, JSValueConst this_val,
                                     int argc, JSValueConst *argv)
 {
     JSObject *p;
-    JSFunctionKindEnum func_kind = JS_FUNC_NORMAL;
 
     if (check_function(ctx, this_val))
         return JS_EXCEPTION;
@@ -359,28 +358,14 @@ static JSValue js_function_toString(JSContext *ctx, JSValueConst this_val,
         if (b->has_debug && b->debug.source) {
             return JS_NewStringLen(ctx, b->debug.source, b->debug.source_len);
         }
-        func_kind = b->func_kind;
     }
+    if (p->class_id != JS_CLASS_C_FUNCTION &&
+        p->class_id != JS_CLASS_C_FUNCTION_DATA)
+        return JS_NewString(ctx, "function () {\n    [native code]\n}");
     {
         JSValue name;
-        const char *pref, *suff;
-
-        switch(func_kind) {
-        default:
-        case JS_FUNC_NORMAL:
-            pref = "function ";
-            break;
-        case JS_FUNC_GENERATOR:
-            pref = "function *";
-            break;
-        case JS_FUNC_ASYNC:
-            pref = "async function ";
-            break;
-        case JS_FUNC_ASYNC_GENERATOR:
-            pref = "async function *";
-            break;
-        }
-        suff = "() {\n    [native code]\n}";
+        const char *pref = "function ";
+        const char *suff = "() {\n    [native code]\n}";
         name = JS_GetProperty(ctx, this_val, JS_ATOM_name);
         if (JS_IsUndefined(name))
             name = JS_AtomToString(ctx, JS_ATOM_empty_string);
