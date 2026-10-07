@@ -1527,6 +1527,49 @@ function test_empty_typed_array()
     }
 }
 
+function test_dataview_oob_error_order()
+{
+    for (const tracking of [false, true]) {
+        const buffer = new ArrayBuffer(8, { maxByteLength: 8 });
+        const view = tracking ? new DataView(buffer, 2) : new DataView(buffer, 2, 4);
+        buffer.resize(1);
+        for (const width of [8, 16]) {
+            const get = "getUint" + width;
+            const set = "setUint" + width;
+            for (const position of [0, 32]) {
+                const calls = [];
+                const index = { valueOf() { calls.push("index"); return position; } };
+                const value = { valueOf() { calls.push("value"); return 1; } };
+                assert_throws(TypeError, () => view[get](index));
+                assert(calls.join(","), "index");
+                calls.length = 0;
+                assert_throws(TypeError, () => view[set](index, value));
+                assert(calls.join(","), "index,value");
+            }
+            let calls = 0;
+            assert_throws(RangeError, () => view[set](-1, {
+                valueOf() { calls++; return 1; }
+            }));
+            assert(calls, 0);
+            const marker = {};
+            try {
+                view[set](0, { valueOf() { throw marker; } });
+                assert(false);
+            } catch (e) {
+                assert(e, marker);
+            }
+        }
+    }
+    const buffer = new ArrayBuffer(8, { maxByteLength: 8 });
+    const fixed = new DataView(buffer, 2, 4);
+    buffer.resize(5);
+    assert_throws(TypeError, () => fixed.getUint8(32));
+    assert_throws(TypeError, () => fixed.setUint8(32, 1));
+    const empty = new DataView(buffer, 5);
+    assert_throws(RangeError, () => empty.getUint8(0));
+    assert_throws(RangeError, () => empty.setUint8(0, 1));
+}
+
 function test_typed_array_resize_bounds()
 {
     const constructors = [
@@ -3571,6 +3614,7 @@ test_typed_array_constructor_length();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();
+test_dataview_oob_error_order();
 test_typed_array_resize_bounds();
 test_empty_typed_array_transfer();
 test_error_stack();
