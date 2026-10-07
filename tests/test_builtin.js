@@ -2059,6 +2059,74 @@ function test_iterator_helper_completion()
     assert(helper.next().done, true);
 }
 
+function test_iterator_helper_start_return()
+{
+    const makeHelper = [source => source.drop(0), source => source.take(1),
+                        source => source.filter(() => true),
+                        source => source.flatMap(value => [value]),
+                        source => source.map(value => value)];
+    for (const make of makeHelper) {
+        let helper, nexts = 0, reads = 0, closes = 0;
+        const source = Object.assign(Object.create(Iterator.prototype), {
+            next() { nexts++; return { done: false, value: 1 }; }
+        });
+        Object.defineProperty(source, "return", {
+            get() {
+                reads++;
+                assert(helper.next().done, true);
+                assert(helper.return().done, true);
+                return function() {
+                    closes++;
+                    assert(helper.next().done, true);
+                    assert(helper.return().done, true);
+                    return {};
+                };
+            }
+        });
+        helper = make(source);
+        assert(helper.return().done, true);
+        assert(helper.next().done, true);
+        assert(nexts, 0);
+        assert(reads, 1);
+        assert(closes, 1);
+    }
+
+    for (const kind of ["get", "call"]) {
+        const marker = {};
+        const source = Object.assign(Object.create(Iterator.prototype), {
+            next() { throw Error("must not call next"); }
+        });
+        Object.defineProperty(source, "return", {
+            get() {
+                if (kind === "get")
+                    throw marker;
+                return () => { throw marker; };
+            }
+        });
+        const helper = source.map(value => value);
+        let caught;
+        try { helper.return(); } catch (error) { caught = error; }
+        assert(caught === marker, true);
+        assert(helper.next().done, true);
+        assert(helper.return().done, true);
+    }
+
+    let helper, closes = 0;
+    const source = Object.assign(Object.create(Iterator.prototype), {
+        next() { return { done: false, value: 1 }; },
+        return() {
+            closes++;
+            assert_throws(TypeError, () => helper.next());
+            assert_throws(TypeError, () => helper.return());
+            return {};
+        }
+    });
+    helper = source.map(value => value);
+    assert(helper.next().value, 1);
+    assert(helper.return().done, true);
+    assert(closes, 1);
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2366,6 +2434,7 @@ test_set_iterator_factory();
 test_iterator_wrapper();
 test_iterator_accessors();
 test_iterator_helper_completion();
+test_iterator_helper_start_return();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();

@@ -420,6 +420,7 @@ typedef struct JSIteratorHelperData {
     JSIteratorHelperKindEnum kind : 8;
     uint8_t executing : 1;
     uint8_t done : 1;
+    uint8_t started : 1;
 } JSIteratorHelperData;
 
 static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
@@ -491,6 +492,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
     it->count = count;
     it->executing = 0;
     it->done = 0;
+    it->started = 0;
     JS_SetOpaque(obj, it);
     return obj;
 range_error:
@@ -822,7 +824,15 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
         return JS_UNDEFINED;
     }
 
+    if (magic == GEN_MAGIC_RETURN && !it->started) {
+        it->done = 1;
+        *pdone = TRUE;
+        if (JS_IteratorClose(ctx, it->obj, FALSE))
+            return JS_EXCEPTION;
+        return JS_UNDEFINED;
+    }
     it->executing = 1;
+    it->started = 1;
 
     if (magic == GEN_MAGIC_RETURN) {
         *pdone = TRUE;
