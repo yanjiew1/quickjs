@@ -149,6 +149,7 @@ JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
 // note: deliberately doesn't use space-saving bit fields for
 // |index|, |count| and |running| because tcc miscompiles them
 typedef struct JSIteratorConcatData {
+    JSContext *realm;
     int index, count;             // elements (not pairs!) in values[] array
     BOOL running;
     JSValue iter, next, values[]; // array of (object, method) pairs
@@ -163,6 +164,8 @@ void js_iterator_concat_finalizer(JSRuntime *rt, JSValue val)
         JS_FreeValueRT(rt, it->next);
         for (int i = it->index; i < it->count; i++)
             JS_FreeValueRT(rt, it->values[i]);
+        if (it->realm)
+            JS_FreeContext(it->realm);
         js_free_rt(rt, it);
     }
 }
@@ -177,6 +180,8 @@ void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
         JS_MarkValue(rt, it->next, mark_func);
         for (int i = it->index; i < it->count; i++)
             JS_MarkValue(rt, it->values[i], mark_func);
+        if (it->realm)
+            mark_func(rt, &it->realm->header);
     }
 }
 
@@ -206,7 +211,12 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (it->running)
         return JS_ThrowTypeError(ctx, "already running");
+    if (!it->realm) {
+        *pdone = TRUE;
+        return JS_UNDEFINED;
+    }
 
+    ctx = it->realm;
     it->running = TRUE;
     for(;;) {
         if (it->index >= it->count) {
@@ -265,8 +275,20 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(ret)) {
         js_iterator_concat_complete(ctx, it);
         *pdone = TRUE;
+    } else {
+        ret = js_create_iterator_result(ctx, ret, *pdone);
+        if (JS_IsException(ret) && !*pdone) {
+            JS_IteratorClose(ctx, it->iter, TRUE);
+            js_iterator_concat_complete(ctx, it);
+            *pdone = TRUE;
+        }
     }
     it->running = FALSE;
+    if (*pdone) {
+        JS_FreeContext(it->realm);
+        it->realm = NULL;
+    }
+    *pdone = 2;
     return ret;
 }
 
@@ -283,15 +305,20 @@ static JSValue js_iterator_concat_return(JSContext *ctx, JSValueConst this_val,
         return JS_ThrowTypeError(ctx, "already running");
     ret = JS_UNDEFINED;
     if (!JS_IsUndefined(it->iter)) {
+        ctx = it->realm;
         it->running = TRUE;
         if (JS_IteratorClose(ctx, it->iter, FALSE) < 0)
             ret = JS_EXCEPTION;
     }
     js_iterator_concat_complete(ctx, it);
+    if (!JS_IsException(ret))
+        ret = js_create_iterator_result(ctx, JS_UNDEFINED, TRUE);
     it->running = FALSE;
-    if (JS_IsException(ret))
-        return ret;
-    return js_create_iterator_result(ctx, JS_UNDEFINED, TRUE);
+    if (it->realm) {
+        JS_FreeContext(it->realm);
+        it->realm = NULL;
+    }
+    return ret;
 }
 
 static JSValue js_iterator_concat(JSContext *ctx, JSValueConst this_val,
@@ -303,6 +330,7 @@ static JSValue js_iterator_concat(JSContext *ctx, JSValueConst this_val,
     it = js_malloc(ctx, sizeof(*it) + 2*argc * sizeof(it->values[0]));
     if (!it)
         return JS_EXCEPTION;
+    it->realm = JS_DupContext(ctx);
     it->running = FALSE;
     it->index = 0;
     it->count = 0;
@@ -333,6 +361,7 @@ static JSValue js_iterator_concat(JSContext *ctx, JSValueConst this_val,
 fail:
     for (int i = 0; i < it->count; i++)
         JS_FreeValue(ctx, it->values[i]);
+    JS_FreeContext(it->realm);
     js_free(ctx, it);
     return JS_EXCEPTION;
 }
