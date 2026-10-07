@@ -108,16 +108,16 @@ static JS_ALLOCATOR_INLINE void *__js_malloc(JSMallocContext *s, size_t size)
         JSMallocBlockHeader *b = get_zero_size_block(s);
         return b->user_data;
     } else {
-        total_size = ((size + JS_MALLOC_ALIGN - 1) & ~(JS_MALLOC_ALIGN - 1)) +
-            sizeof(JSMallocBlockHeader);
         if (!JS_MALLOC_LARGE_BLOCKS_ONLY &&
-            total_size <= JS_MALLOC_MAX_SMALL_SIZE) {
+            size <= JS_MALLOC_MAX_SMALL_SIZE - sizeof(JSMallocBlockHeader)) {
             int block_size_idx;
             unsigned int block_idx, block_size;
             JSMallocBlockHeader *b;
             JSMallocArena *ar;
             struct list_head *el, *head;
 
+            total_size = ((size + JS_MALLOC_ALIGN - 1) & ~(JS_MALLOC_ALIGN - 1)) +
+                sizeof(JSMallocBlockHeader);
             block_size_idx = get_block_size_index(total_size);
             block_size = js_malloc_small_block_size(total_size);
             head = &s->free_arena_list[block_size_idx];

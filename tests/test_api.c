@@ -711,12 +711,60 @@ static void test_native_function_initial_name(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_allocator_size_overflow(void)
+{
+    static const size_t requests[] = { SIZE_MAX, SIZE_MAX - 1, SIZE_MAX - 7 };
+    static const size_t initial_sizes[] = { 0, 31, 1024 };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    uint8_t *ptr;
+    JSValue exception;
+    size_t i, j, k;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    for (i = 0; i < countof(requests); i++) {
+        assert(js_malloc_rt(rt, requests[i]) == NULL);
+        assert(js_realloc_rt(rt, NULL, requests[i]) == NULL);
+        assert(js_malloc(ctx, requests[i]) == NULL);
+        assert(JS_HasException(ctx));
+        exception = JS_GetException(ctx);
+        JS_FreeValue(ctx, exception);
+        assert(js_mallocz(ctx, requests[i]) == NULL);
+        assert(JS_HasException(ctx));
+        exception = JS_GetException(ctx);
+        JS_FreeValue(ctx, exception);
+    }
+    for (i = 0; i < countof(initial_sizes); i++) {
+        ptr = js_malloc_rt(rt, initial_sizes[i]);
+        assert(ptr);
+        memset(ptr, 0xa5, initial_sizes[i]);
+        for (j = 0; j < countof(requests); j++) {
+            assert(js_realloc_rt(rt, ptr, requests[j]) == NULL);
+            for (k = 0; k < initial_sizes[i]; k++)
+                assert(ptr[k] == 0xa5);
+            assert(js_realloc(ctx, ptr, requests[j]) == NULL);
+            assert(JS_HasException(ctx));
+            exception = JS_GetException(ctx);
+            JS_FreeValue(ctx, exception);
+            for (k = 0; k < initial_sizes[i]; k++)
+                assert(ptr[k] == 0xa5);
+        }
+        js_free_rt(rt, ptr);
+    }
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "allocator-overflow", test_allocator_size_overflow },
         { "native-name", test_native_function_initial_name },
         { "stripped-function", test_stripped_function_to_string },
         { "iterator-realm", test_iterator_constructor_realm },
