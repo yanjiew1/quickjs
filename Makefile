@@ -620,6 +620,7 @@ endif
 test: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_closure.js
 	$(WINE) ./qjs$(EXE) tests/test_language.js
+	$(WINE) ./qjs$(EXE) -m tests/test_module.js
 	$(WINE) ./qjs$(EXE) --std tests/test_builtin.js
 	$(WINE) ./qjs$(EXE) tests/test_loop.js
 	$(WINE) ./qjs$(EXE) tests/test_bigint.js

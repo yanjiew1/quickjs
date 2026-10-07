@@ -1888,8 +1888,8 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
     js_rc(var_ref)->ref_count = 1;
     add_gc_object(ctx->rt, &var_ref->header, JS_GC_OBJ_TYPE_VAR_REF);
     var_ref->is_detached = FALSE;
-    var_ref->is_lexical = FALSE;
-    var_ref->is_const = FALSE;
+    var_ref->is_lexical = vd->is_lexical;
+    var_ref->is_const = vd->is_const;
     var_ref->var_ref_idx = var_ref_idx;
     var_ref->stack_frame = sf;
     sf->var_refs[var_ref_idx] = var_ref;

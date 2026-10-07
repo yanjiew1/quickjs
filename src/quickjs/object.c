@@ -2972,11 +2972,21 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
         } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_GETSET) {
             return call_setter(ctx, pr->u.getset.setter, this_obj, val, flags);
         } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_VARREF) {
-            /* XXX: already use var_ref->is_const. Cannot simplify use the
-               writable flag for JS_CLASS_MODULE_NS. */
-            if (p->class_id == JS_CLASS_MODULE_NS || pr->u.var_ref->is_const)
+            JSVarRef *var_ref = pr->u.var_ref;
+            /* Namespace [[Set]] does not read the exported binding. */
+            if (p->class_id == JS_CLASS_MODULE_NS)
                 goto read_only_prop;
-            set_value(ctx, pr->u.var_ref->pvalue, val);
+            if (var_ref->is_lexical && JS_IsUninitialized(*var_ref->pvalue)) {
+                JS_FreeValue(ctx, val);
+                JS_ThrowReferenceErrorUninitialized(ctx, prop);
+                return -1;
+            }
+            if (var_ref->is_const) {
+                if (var_ref->is_lexical)
+                    flags |= JS_PROP_THROW;
+                goto read_only_prop;
+            }
+            set_value(ctx, var_ref->pvalue, val);
             return TRUE;
         } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_AUTOINIT) {
             /* Instantiate property and retry (potentially useless) */

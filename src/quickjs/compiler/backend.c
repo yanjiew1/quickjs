@@ -528,10 +528,8 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     for (idx = s->scopes[scope_level].first; idx >= 0;) {
         vd = &s->vars[idx];
         if (vd->var_name == var_name) {
-            if (op == OP_scope_put_var || op == OP_scope_make_ref) {
-                if (vd->is_const &&
-                    (vd->var_kind != JS_VAR_FUNCTION_NAME ||
-                     op != OP_scope_make_ref)) {
+            if (op == OP_scope_put_var) {
+                if (vd->is_const) {
                     dbuf_putc(bc, OP_throw_error);
                     dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
                     dbuf_putc(bc, JS_THROW_VAR_RO);
@@ -585,12 +583,10 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             dbuf_put_u16(bc, s->var_object_idx);
             var_object_test(ctx, s, var_name, op, bc, &label_done, 0, is_strict);
         }
-        if ((op == OP_scope_put_var || op == OP_scope_make_ref) &&
+        if (op == OP_scope_put_var &&
             !(var_idx & ARGUMENT_VAR_OFFSET) &&
-            ((s->vars[var_idx].is_const &&
-              (s->vars[var_idx].var_kind != JS_VAR_FUNCTION_NAME ||
-               op != OP_scope_make_ref)) ||
-             (is_strict_binding && op == OP_scope_put_var &&
+            (s->vars[var_idx].is_const ||
+             (is_strict_binding &&
               s->vars[var_idx].var_kind == JS_VAR_FUNCTION_NAME))) {
             /* only happens when assigning a function expression name
                in strict mode */
@@ -615,7 +611,10 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 dbuf_putc(bc, OP_push_atom_value);
                 dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
             } else
-            if (!is_strict && label_done == -1 && can_opt_put_ref_value(bc_buf, ls->pos)) {
+            if (!is_strict && label_done == -1 &&
+                ((var_idx & ARGUMENT_VAR_OFFSET) ||
+                 !s->vars[var_idx].is_const) &&
+                can_opt_put_ref_value(bc_buf, ls->pos)) {
                 int get_op;
                 if (var_idx & ARGUMENT_VAR_OFFSET) {
                     get_op = OP_get_arg;
@@ -720,10 +719,8 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         for (idx = fd->scopes[scope_level].first; idx >= 0;) {
             vd = &fd->vars[idx];
             if (vd->var_name == var_name) {
-                if (op == OP_scope_put_var || op == OP_scope_make_ref) {
-                    if (vd->is_const &&
-                    (vd->var_kind != JS_VAR_FUNCTION_NAME ||
-                     op != OP_scope_make_ref)) {
+                if (op == OP_scope_put_var) {
+                    if (vd->is_const) {
                         dbuf_putc(bc, OP_throw_error);
                         dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
                         dbuf_putc(bc, JS_THROW_VAR_RO);
@@ -949,11 +946,9 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         }
         if (idx >= 0) {
         has_idx:
-            if ((op == OP_scope_put_var || op == OP_scope_make_ref) &&
-                ((s->closure_var[idx].is_const &&
-                  (s->closure_var[idx].var_kind != JS_VAR_FUNCTION_NAME ||
-                   op != OP_scope_make_ref)) ||
-                 (is_strict_binding && op == OP_scope_put_var &&
+            if (op == OP_scope_put_var &&
+                (s->closure_var[idx].is_const ||
+                 (is_strict_binding &&
                   s->closure_var[idx].var_kind == JS_VAR_FUNCTION_NAME))) {
                 dbuf_putc(bc, OP_throw_error);
                 dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
@@ -973,6 +968,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                     dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
                 } else
                 if (!is_strict && label_done == -1 &&
+                    !s->closure_var[idx].is_const &&
                     can_opt_put_ref_value(bc_buf, ls->pos)) {
                     int get_op;
                     if (s->closure_var[idx].is_lexical)
