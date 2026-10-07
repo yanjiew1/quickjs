@@ -3511,7 +3511,8 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
                     JS_FreeAtom(ctx, me->local_name);
                     if (mi->is_star) {
                         /* namespace import re-exported */
-                        me->local_name = JS_DupAtom(ctx, JS_ATOM__star_);
+                        me->export_type = JS_EXPORT_TYPE_NAMESPACE;
+                        me->local_name = JS_ATOM_NULL;
                     } else {
                         /* XXX: check */
                         me->local_name = JS_DupAtom(ctx, mi->import_name);

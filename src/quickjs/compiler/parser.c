@@ -6234,6 +6234,7 @@ static __exception int js_parse_export(JSParseState *s)
     JSModuleDef *m = s->cur_func->module;
     JSAtom local_name, export_name;
     int first_export, idx, i, tok;
+    BOOL has_string_local = FALSE;
     JSExportEntry *me;
 
     if (next_token(s))
@@ -6258,11 +6259,11 @@ static __exception int js_parse_export(JSParseState *s)
     case '{':
         first_export = m->export_entries_count;
         while (s->token.val != '}') {
-            if (!token_is_ident(s->token.val)) {
-                js_parse_error(s, "identifier expected");
+            BOOL is_string;
+            local_name = js_parse_module_export_name(s, &is_string);
+            if (local_name == JS_ATOM_NULL)
                 return -1;
-            }
-            local_name = JS_DupAtom(ctx, s->token.u.ident.atom);
+            has_string_local |= is_string;
             export_name = JS_ATOM_NULL;
             if (next_token(s))
                 goto fail;
@@ -6304,6 +6305,8 @@ static __exception int js_parse_export(JSParseState *s)
                 me->export_type = JS_EXPORT_TYPE_INDIRECT;
                 me->u.req_module_idx = idx;
             }
+        } else if (has_string_local) {
+            return js_parse_error(s, "quoted local export requires a from clause");
         } else {
             for(i = first_export; i < m->export_entries_count; i++) {
                 me = &m->export_entries[i];
@@ -6325,8 +6328,8 @@ static __exception int js_parse_export(JSParseState *s)
             idx = js_parse_from_clause(s, m);
             if (idx < 0)
                 goto fail1;
-            me = add_export_entry(s, m, JS_ATOM__star_, export_name,
-                                  JS_EXPORT_TYPE_INDIRECT);
+            me = add_export_entry(s, m, JS_ATOM_NULL, export_name,
+                                  JS_EXPORT_TYPE_NAMESPACE);
             JS_FreeAtom(ctx, export_name);
             if (!me)
                 return -1;

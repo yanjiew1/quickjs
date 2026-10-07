@@ -481,6 +481,10 @@ static int JS_WriteModule(BCWriterState *s, JSValueConst obj)
     bc_put_leb128(s, m->export_entries_count);
     for(i = 0; i < m->export_entries_count; i++) {
         JSExportEntry *me = &m->export_entries[i];
+        if ((unsigned)me->export_type > JS_EXPORT_TYPE_NAMESPACE) {
+            JS_ThrowTypeError(s->ctx, "invalid module export type");
+            goto fail;
+        }
         bc_put_u8(s, me->export_type);
         if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
             bc_put_leb128(s, me->u.local.var_idx);
