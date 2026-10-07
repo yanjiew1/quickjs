@@ -3057,7 +3057,54 @@ function test_group_by_callback_receiver()
     }
 }
 
+function test_group_by_own_elements()
+{
+    for (const groupBy of [Object.groupBy, Map.groupBy]) {
+        for (const setter of [true, false]) {
+            let writes = 0, group, descriptor;
+            const saved = Object.getOwnPropertyDescriptor(Array.prototype, "0");
+            try {
+                if (setter) {
+                    Object.defineProperty(Array.prototype, "0", {
+                        configurable: true,
+                        set(value) { writes++; },
+                    });
+                } else {
+                    Object.defineProperty(Array.prototype, "0", {
+                        configurable: true,
+                        writable: false,
+                        value: "inherited",
+                    });
+                }
+                const items = {
+                    *[Symbol.iterator]() {
+                        yield "first";
+                        yield "second";
+                    },
+                };
+                const groups = groupBy(items, () => "group");
+                group = groups instanceof Map ? groups.get("group") : groups.group;
+                descriptor = Object.getOwnPropertyDescriptor(group, "0");
+            } finally {
+                if (saved)
+                    Object.defineProperty(Array.prototype, "0", saved);
+                else
+                    delete Array.prototype[0];
+            }
+            assert(writes, 0);
+            assert(group.length, 2);
+            assert(descriptor !== undefined, true);
+            assert(descriptor.value, "first");
+            assert(descriptor.writable, true);
+            assert(descriptor.enumerable, true);
+            assert(descriptor.configurable, true);
+            assert(group[1], "second");
+        }
+    }
+}
+
 test();
+test_group_by_own_elements();
 test_group_by_callback_receiver();
 test_function();
 test_function_native_fallback();
