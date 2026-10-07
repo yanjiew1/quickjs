@@ -2,6 +2,7 @@
  * QuickJS Atomics builtin
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2025 Charlie Gordon
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,6 +26,7 @@
 #include "../internal/base.h"
 #include "../internal/atom.h"
 #include "../internal/runtime.h"
+#include "../internal/native-jobs.h"
 #include "../internal/number.h"
 #include "../internal/bigint.h"
 #include "../internal/object.h"
@@ -425,15 +427,39 @@ static JSValue js_atomics_isLockFree(JSContext *ctx,
 }
 
 typedef struct JSAtomicsWaiter {
-    struct list_head link;
-    BOOL linked;
+    JSNativeWaiter native;
     pthread_cond_t cond;
-    int32_t *ptr;
 } JSAtomicsWaiter;
 
-static pthread_mutex_t js_atomics_mutex = PTHREAD_MUTEX_INITIALIZER;
-static struct list_head js_atomics_waiter_list =
-    LIST_HEAD_INIT(js_atomics_waiter_list);
+typedef struct JSAtomicsAsyncWaiter {
+    JSNativeAsyncRecord record;
+    JSValue resolve;
+    JSValue buffer;
+} JSAtomicsAsyncWaiter;
+
+static JSValue js_atomics_resolve_async(JSNativeAsyncRecord *record,
+                                       JSNativeWaitResult result)
+{
+    JSAtomicsAsyncWaiter *waiter = (JSAtomicsAsyncWaiter *)record;
+    JSContext *ctx = record->ctx;
+    JSValue value, ret;
+    value = JS_AtomToString(ctx, result == JS_NATIVE_WAIT_OK ? JS_ATOM_ok :
+                           JS_ATOM_timed_out);
+    ret = JS_Call(ctx, waiter->resolve, JS_UNDEFINED, 1,
+                  (JSValueConst *)&value);
+    JS_FreeValue(ctx, value);
+    return ret;
+}
+
+static void js_atomics_release_async(JSNativeAsyncRecord *record)
+{
+    JSAtomicsAsyncWaiter *waiter = (JSAtomicsAsyncWaiter *)record;
+    JSContext *ctx = record->ctx;
+    JS_FreeValue(ctx, waiter->resolve);
+    JS_FreeValue(ctx, waiter->buffer);
+    js_free(ctx, waiter);
+    JS_FreeContext(ctx);
+}
 
 #if defined(__aarch64__)
 static inline void cpu_pause(void)
@@ -490,6 +516,8 @@ static JSValue js_atomics_wait(JSContext *ctx,
     int64_t timeout;
     struct timespec ts;
     JSAtomicsWaiter waiter_s, *waiter;
+    JSNativeWaitQueue *queue;
+    JSNativeWaitResult result;
     int ret, size_log2, res;
     double d;
 
@@ -523,22 +551,29 @@ static JSValue js_atomics_wait(JSContext *ctx,
     /* XXX: inefficient if large number of waiters, should hash on
        'ptr' value */
     /* XXX: use Linux futexes when available ? */
-    pthread_mutex_lock(&js_atomics_mutex);
+    queue = js_native_jobs_wait_queue();
+    if (!queue)
+        return JS_ThrowInternalError(ctx, "cannot initialize native wait queue");
+    js_native_wait_queue_lock(queue);
     if (size_log2 == 3) {
         res = atomic_load((_Atomic(int64_t) *)ptr) != v;
     } else {
         res = atomic_load((_Atomic(int32_t) *)ptr) != v;
     }
     if (res) {
-        pthread_mutex_unlock(&js_atomics_mutex);
+        js_native_wait_queue_unlock(queue);
         return JS_AtomToString(ctx, JS_ATOM_not_equal);
     }
 
     waiter = &waiter_s;
-    waiter->ptr = ptr;
-    pthread_cond_init(&waiter->cond, NULL);
-    waiter->linked = TRUE;
-    list_add_tail(&waiter->link, &js_atomics_waiter_list);
+    ret = pthread_cond_init(&waiter->cond, NULL);
+    if (ret) {
+        js_native_wait_queue_unlock(queue);
+        return JS_ThrowInternalError(ctx, "cannot initialize native wait");
+    }
+    js_native_waiter_init(&waiter->native, NULL);
+    js_native_wait_add_locked(queue, &waiter->native, ptr, NULL,
+                              &waiter->cond, JS_NATIVE_WAIT_FOREVER);
 
     if (timeout != INT64_MAX) {
         /* XXX: use clock monotonic */
@@ -551,20 +586,17 @@ static JSValue js_atomics_wait(JSContext *ctx,
         }
     }
     ret = 0;
-    while (waiter->linked) {
+    do {
         if (timeout == INT64_MAX)
-            ret = pthread_cond_wait(&waiter->cond, &js_atomics_mutex);
+            ret = pthread_cond_wait(&waiter->cond, &queue->mutex);
         else
-            ret = pthread_cond_timedwait(&waiter->cond, &js_atomics_mutex,
-                                         &ts);
-        if (ret != 0)
-            break;
-    }
-    if (waiter->linked)
-        list_del(&waiter->link);
-    else
+            ret = pthread_cond_timedwait(&waiter->cond, &queue->mutex, &ts);
+        result = js_native_wait_finish_sync_locked(queue, &waiter->native,
+                                                   ret != 0);
+    } while (result == JS_NATIVE_WAIT_NO_EVENT);
+    if (result == JS_NATIVE_WAIT_OK)
         ret = 0;
-    pthread_mutex_unlock(&js_atomics_mutex);
+    js_native_wait_queue_unlock(queue);
     pthread_cond_destroy(&waiter->cond);
     if (ret == ETIMEDOUT) {
         return JS_AtomToString(ctx, JS_ATOM_timed_out);
@@ -573,56 +605,175 @@ static JSValue js_atomics_wait(JSContext *ctx,
     }
 }
 
+static JSValue js_atomics_waitAsync(JSContext *ctx, JSValueConst this_obj,
+                                    int argc, JSValueConst *argv)
+{
+    JSObject *p;
+    JSAtomicsAsyncWaiter *waiter = NULL;
+    JSNativeJobOwner *owner = NULL;
+    JSNativeWaitQueue *queue;
+    JSValue promise, resolving[2], result;
+    JSAtom immediate;
+    int64_t expected;
+    int32_t expected32;
+    uint64_t idx;
+    int size_log2, unequal;
+    void *ptr;
+    double timeout;
+    long double now = 0;
+
+    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 2);
+    if (!p)
+        return JS_EXCEPTION;
+    size_log2 = typed_array_size_log2(p->class_id);
+    ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
+    if (size_log2 == 3) {
+        if (JS_ToBigInt64(ctx, &expected, argv[2]))
+            return JS_EXCEPTION;
+    } else {
+        if (JS_ToInt32(ctx, &expected32, argv[2]))
+            return JS_EXCEPTION;
+        expected = expected32;
+    }
+    if (JS_ToFloat64(ctx, &timeout, argv[3]))
+        return JS_EXCEPTION;
+    if (isnan(timeout))
+        timeout = INFINITY;
+    else if (timeout < 0)
+        timeout = 0;
+
+    /* DoWait creates the intrinsic capability and ordinary result in the
+       active function realm even when the witness or zero timeout is immediate.
+       Prepare every result property before publishing a waiter, so an OOM
+       cannot leave a wait behind an exceptional return. */
+    promise = JS_NewPromiseCapability(ctx, resolving);
+    if (JS_IsException(promise))
+        return promise;
+    JS_FreeValue(ctx, resolving[1]);
+    result = JS_NewObject(ctx);
+    if (JS_IsException(result))
+        goto exception;
+    if (JS_DefinePropertyValue(ctx, result, JS_ATOM_async, JS_TRUE,
+                               JS_PROP_C_W_E) < 0 ||
+        JS_DefinePropertyValue(ctx, result, JS_ATOM_value,
+                               JS_DupValue(ctx, promise), JS_PROP_C_W_E) < 0)
+        goto exception;
+    queue = js_native_jobs_wait_queue();
+    if (!queue) {
+        JS_ThrowInternalError(ctx, "cannot initialize native wait queue");
+        goto exception;
+    }
+    if (timeout > 0) {
+        now = js_native_jobs_now();
+        if (isnan(now)) {
+            JS_ThrowInternalError(ctx, "native wait clock failed");
+            goto exception;
+        }
+        owner = js_native_jobs_get_owner(ctx);
+        if (!owner)
+            goto exception;
+        waiter = js_mallocz(ctx, sizeof(*waiter));
+        if (!waiter)
+            goto exception;
+        waiter->record.ctx = JS_DupContext(ctx);
+        waiter->record.resolve = js_atomics_resolve_async;
+        waiter->record.release = js_atomics_release_async;
+        waiter->resolve = JS_DupValue(ctx, resolving[0]);
+        waiter->buffer = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT,
+                                         p->u.typed_array->buffer));
+        js_native_waiter_init(&waiter->record.native, &waiter->record);
+    }
+    js_native_wait_queue_lock(queue);
+    unequal = size_log2 == 3 ?
+        atomic_load((_Atomic(int64_t) *)ptr) != expected :
+        atomic_load((_Atomic(int32_t) *)ptr) != expected;
+    if (unequal || timeout == 0) {
+        immediate = unequal ? JS_ATOM_not_equal : JS_ATOM_timed_out;
+        js_native_wait_queue_unlock(queue);
+        if (waiter)
+            waiter->record.release(&waiter->record);
+        waiter = NULL;
+        /* Both properties are existing writable own data properties. */
+        if (JS_SetProperty(ctx, result, JS_ATOM_async, JS_FALSE) < 0 ||
+            JS_SetProperty(ctx, result, JS_ATOM_value,
+                           JS_AtomToString(ctx, immediate)) < 0)
+            goto exception;
+    } else {
+        /* The host timeout starts when this waiter is published, after all
+           allocations and capability construction. Round real delays upward. */
+        now = js_native_jobs_now();
+        if (isnan(now)) {
+            js_native_wait_queue_unlock(queue);
+            JS_ThrowInternalError(ctx, "native wait clock failed");
+            goto exception;
+        }
+        js_native_wait_add_relative_locked(queue, &waiter->record.native,
+                                           ptr, &owner->native, now, timeout);
+        js_native_wait_queue_unlock(queue);
+        waiter = NULL; /* owner record now retains realm, capability, backing */
+    }
+    JS_FreeValue(ctx, resolving[0]);
+    JS_FreeValue(ctx, promise);
+    return result;
+exception:
+    if (waiter)
+        waiter->record.release(&waiter->record);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, resolving[0]);
+    JS_FreeValue(ctx, promise);
+    return JS_EXCEPTION;
+}
+
 static JSValue js_atomics_notify(JSContext *ctx,
                                  JSValueConst this_obj,
                                  int argc, JSValueConst *argv)
 {
-    struct list_head *el, *el1, waiter_list;
-    int32_t count, n;
+    int32_t count, n = 0;
     uint64_t idx;
-    int size_log2;
+    int size_log2, error = 0;
     void *ptr;
-    JSAtomicsWaiter *waiter;
+    JSNativeWaiter *inline_waiter;
+    JSNativeWaitQueue *queue;
+    JSNativeWaitOwner *calling_owner;
     JSArrayBuffer *abuf;
     JSObject *p;
-    
+
     p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 1);
     if (!p)
         return JS_EXCEPTION;
     size_log2 = typed_array_size_log2(p->class_id);
-    
     if (JS_IsUndefined(argv[2])) {
         count = INT32_MAX;
-    } else {
-        if (JS_ToInt32Clamp(ctx, &count, argv[2], 0, INT32_MAX, 0))
-            return JS_EXCEPTION;
+    } else if (JS_ToInt32Clamp(ctx, &count, argv[2], 0, INT32_MAX, 0)) {
+        return JS_EXCEPTION;
     }
-
-    n = 0;
     abuf = p->u.typed_array->buffer->u.array_buffer;
     if (abuf->shared && count > 0) {
-        /* 'argv[0]' is a SharedArrayBuffer so it cannot be detached nor reduced */
         ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
-        pthread_mutex_lock(&js_atomics_mutex);
-        init_list_head(&waiter_list);
-        list_for_each_safe(el, el1, &js_atomics_waiter_list) {
-            waiter = list_entry(el, JSAtomicsWaiter, link);
-            if (waiter->ptr == ptr) {
-                list_del(&waiter->link);
-                waiter->linked = FALSE;
-                list_add_tail(&waiter->link, &waiter_list);
-                n++;
-                if (n >= count)
-                    break;
+        queue = js_native_jobs_wait_queue();
+        if (!queue)
+            return JS_ThrowInternalError(ctx, "cannot initialize native wait queue");
+        calling_owner = ctx->rt->native_jobs ?
+                        &ctx->rt->native_jobs->native : NULL;
+        js_native_wait_queue_lock(queue);
+        while (n < count &&
+               js_native_wait_notify_one_locked(queue, ptr, calling_owner,
+                                                &inline_waiter)) {
+            n++;
+            if (inline_waiter &&
+                js_native_jobs_complete(ctx->rt, inline_waiter,
+                                        JS_NATIVE_WAIT_OK, NULL) < 0) {
+                error = 1;
+                break;
             }
         }
-        list_for_each(el, &waiter_list) {
-            waiter = list_entry(el, JSAtomicsWaiter, link);
-            pthread_cond_signal(&waiter->cond);
-        }
-        pthread_mutex_unlock(&js_atomics_mutex);
+        /* Each same-agent resolve publishes its reaction jobs before selecting
+           the next waiter or permitting a foreign notifier to append work. */
+        js_native_wait_queue_unlock(queue);
+        if (ctx->rt->native_jobs)
+            js_native_jobs_flush_retired(ctx->rt);
     }
-    return JS_NewInt32(ctx, n);
+    return error ? JS_EXCEPTION : JS_NewInt32(ctx, n);
 }
 
 static const JSCFunctionListEntry js_atomics_funcs[] = {
@@ -638,6 +789,7 @@ static const JSCFunctionListEntry js_atomics_funcs[] = {
     JS_CFUNC_DEF("isLockFree", 1, js_atomics_isLockFree ),
     JS_CFUNC_DEF("pause", 0, js_atomics_pause ),
     JS_CFUNC_DEF("wait", 4, js_atomics_wait ),
+    JS_CFUNC_DEF("waitAsync", 4, js_atomics_waitAsync ),
     JS_CFUNC_DEF("notify", 3, js_atomics_notify ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Atomics", JS_PROP_CONFIGURABLE ),
 };

@@ -167,7 +167,7 @@ static void test_wait_result(JSContext *ctx, TestWaitMode mode,
     string = JS_ToCString(ctx, result);
     assert(string && !strcmp(string, expected));
     assert(test_wait_calls == expected_calls);
-    assert(list_empty(&js_atomics_waiter_list));
+    assert(!js_native_jobs_wait_queue()->first);
     JS_FreeCString(ctx, string);
     JS_FreeValue(ctx, result);
     test_wait_context = NULL;
