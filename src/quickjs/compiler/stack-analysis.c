@@ -223,7 +223,8 @@ __exception int compute_stack_size(JSContext *ctx,
             catch_pos = pos;
             break;
         case OP_for_of_start:
-        case OP_for_await_of_start:
+            /* Async loop and yield* lowering immediately drop their virtual
+               marker. Async loops then install an explicit OP_catch. */
             catch_pos = pos;
             break;
             /* we assume the catch offset entry is only removed with
@@ -240,14 +241,14 @@ __exception int compute_stack_size(JSContext *ctx,
         case OP_iterator_close:
             catch_level = stack_len + 2;
         check_catch:
-            /* Note: for for_of_start/for_await_of_start we consider
+            /* Note: for for_of_start we consider
                the catch offset is on the first stack entry instead of
-               the thirst */
+               the third */
             if (catch_pos >= 0) {
                 int level;
                 level = s->stack_level_tab[catch_pos];
                 if (bc_buf[catch_pos] != OP_catch)
-                    level++; /* for_of_start, for_wait_of_start */
+                    level++; /* for_of_start */
                 /* catch_level = stack_level before op_catch is executed ? */
                 if (catch_level == level) {
                     catch_pos = s->catch_pos_tab[catch_pos];
@@ -261,7 +262,7 @@ __exception int compute_stack_size(JSContext *ctx,
             }
             stack_len = s->stack_level_tab[catch_pos];
             if (bc_buf[catch_pos] != OP_catch)
-                stack_len++; /* for_of_start, for_wait_of_start */
+                stack_len++; /* for_of_start */
             stack_len++; /* no stack overflow is possible by construction */
             catch_pos = s->catch_pos_tab[catch_pos];
             break;

@@ -47,6 +47,8 @@ struct BlockEnv {
     int label_cont; /* -1 if none */
     int drop_count; /* number of stack elements to drop */
     int label_finally; /* -1 if none */
+    int label_async_close; /* compiler-owned AsyncIteratorClose subroutine */
+    int iterator_idx; /* unnamed local used only while closing */
     int scope_level;
     uint8_t has_iterator : 1;
     uint8_t is_async_iterator : 1;
@@ -64,6 +66,14 @@ struct JSResourceScope {
     int label_catch;
     int label_end;
 };
+
+typedef struct JSAsyncIteratorScope {
+    int scope_level;
+    int error_idx, has_error_idx, value_idx;
+    int label_catch, label_close, label_end, label_value;
+    int label_first_next;
+    int label_missing, label_failed, label_ignore, label_result, label_finish, label_return;
+} JSAsyncIteratorScope;
 
 typedef enum JSParseExportEnum {
     JS_PARSE_EXPORT_NONE,
@@ -4764,6 +4774,8 @@ static void push_break_entry(JSFunctionDef *fd, BlockEnv *be,
     be->label_cont = label_cont;
     be->drop_count = drop_count;
     be->label_finally = -1;
+    be->label_async_close = -1;
+    be->iterator_idx = -1;
     be->scope_level = fd->scope_level;
     be->has_iterator = FALSE;
     be->is_async_iterator = FALSE;
@@ -4851,6 +4863,121 @@ static void emit_resource_registration(JSParseState *s, int operation)
     emit_op(s, OP_resource_management);
     emit_u8(s, operation);
     emit_op(s, OP_drop);
+}
+
+/* Remove the iterator record before gosub so its stack effect stays zero.
+   Input: iterator, next, pending value. Output after ret: pending value. */
+static void emit_async_iterator_close_call(JSParseState *s, BlockEnv *block)
+{
+    emit_op(s, OP_rot3l);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, block->iterator_idx);
+    emit_op(s, OP_nip);
+    emit_goto(s, OP_gosub, block->label_async_close);
+}
+
+static int init_async_iterator_scope(JSParseState *s, BlockEnv *block,
+                                     JSAsyncIteratorScope *scope)
+{
+    JSFunctionDef *fd = s->cur_func;
+
+    scope->scope_level = fd->scope_level;
+    block->iterator_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
+    scope->error_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
+    scope->has_error_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
+    scope->value_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
+    if (block->iterator_idx < 0 || scope->error_idx < 0 ||
+        scope->has_error_idx < 0 || scope->value_idx < 0)
+        return -1;
+    scope->label_catch = new_label(s);
+    scope->label_close = new_label(s);
+    scope->label_end = new_label(s);
+    scope->label_value = new_label(s);
+    scope->label_first_next = new_label(s);
+    scope->label_missing = new_label(s);
+    scope->label_failed = new_label(s);
+    scope->label_ignore = new_label(s);
+    scope->label_result = new_label(s);
+    scope->label_finish = new_label(s);
+    scope->label_return = new_label(s);
+    if (scope->label_catch < 0 || scope->label_close < 0 ||
+        scope->label_end < 0 || scope->label_value < 0 ||
+        scope->label_first_next < 0 ||
+        scope->label_missing < 0 || scope->label_failed < 0 ||
+        scope->label_ignore < 0 || scope->label_result < 0 ||
+        scope->label_finish < 0 ||
+        scope->label_return < 0)
+        return -1;
+    block->label_async_close = scope->label_close;
+    return 0;
+}
+
+/* The iterator body catch has already been removed before every call.
+   Only the return lookup, call and Await use the local close catch. */
+static void emit_async_iterator_close_body(JSParseState *s, BlockEnv *block,
+                                           JSAsyncIteratorScope *scope)
+{
+    JSFunctionDef *fd = s->cur_func;
+    int level;
+
+    emit_label(s, scope->label_close);
+    for (level = fd->scope_count - 1; level >= scope->scope_level; level--) {
+        if (is_child_scope(s->ctx, fd, level, scope->scope_level)) {
+            emit_op(s, OP_leave_scope);
+            emit_u16(s, level);
+        }
+    }
+    /* Stack: pending value, return address, catch, iterator, method. */
+    emit_goto(s, OP_catch, scope->label_failed);
+    emit_op(s, OP_get_loc);
+    emit_u16(s, block->iterator_idx);
+    emit_op(s, OP_undefined);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, block->iterator_idx);
+    emit_op(s, OP_get_field2);
+    emit_atom(s, JS_ATOM_return);
+    emit_op(s, OP_dup);
+    emit_op(s, OP_is_undefined_or_null);
+    emit_goto(s, OP_if_true, scope->label_missing);
+    emit_op(s, OP_call_method);
+    emit_u16(s, 0);
+    emit_op(s, OP_await);
+    /* Incoming throw wins before testing the fulfilled close result. */
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->has_error_idx);
+    emit_goto(s, OP_if_true, scope->label_result);
+    emit_op(s, OP_iterator_check_object);
+    emit_label(s, scope->label_result);
+    emit_op(s, OP_drop); /* awaited result */
+    emit_op(s, OP_drop); /* local catch */
+    emit_goto(s, OP_goto, scope->label_finish);
+    emit_label(s, scope->label_missing);
+    emit_op(s, OP_drop); /* missing method */
+    emit_op(s, OP_drop); /* iterator */
+    emit_op(s, OP_drop); /* local catch */
+    emit_goto(s, OP_goto, scope->label_finish);
+    emit_label(s, scope->label_failed);
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->has_error_idx);
+    emit_goto(s, OP_if_true, scope->label_ignore);
+    emit_op(s, OP_throw); /* close error replaces non-throw completion */
+    emit_label(s, scope->label_ignore);
+    emit_op(s, OP_drop); /* close error loses to the incoming throw */
+    emit_label(s, scope->label_finish);
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->has_error_idx);
+    emit_goto(s, OP_if_false, scope->label_return);
+    emit_op(s, OP_get_loc);
+    emit_u16(s, scope->error_idx);
+    emit_op(s, OP_undefined);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->error_idx);
+    emit_op(s, OP_push_false);
+    emit_op(s, OP_put_loc);
+    emit_u16(s, scope->has_error_idx);
+    emit_op(s, OP_throw); /* incoming throw wins over all close failures */
+    emit_label(s, scope->label_return);
+    emit_op(s, OP_ret);
 }
 
 static void pop_resource_scope(JSParseState *s, JSResourceScope *scope)
@@ -4943,7 +5070,14 @@ static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
         }
         i = 0;
         if (top->has_iterator) {
-            emit_op(s, OP_iterator_close);
+            if (top->is_async_iterator) {
+                emit_op(s, OP_drop); /* iterator body catch */
+                emit_op(s, OP_undefined);
+                emit_async_iterator_close_call(s, top);
+                emit_op(s, OP_drop);
+            } else {
+                emit_op(s, OP_iterator_close);
+            }
             i += 3;
         }
         for(; i < top->drop_count; i++)
@@ -4997,26 +5131,8 @@ static void emit_return(JSParseState *s, BOOL hasval)
             emit_op(s, OP_nip_catch);
             /* stack: iter_obj next ret_val */
             if (top->has_iterator) {
-                if (s->cur_func->func_kind == JS_FUNC_ASYNC_GENERATOR &&
-                    top->is_async_iterator) {
-                    int label_next, label_next2;
-                    emit_op(s, OP_nip); /* next */
-                    emit_op(s, OP_swap);
-                    emit_op(s, OP_get_field2);
-                    emit_atom(s, JS_ATOM_return);
-                    /* stack: iter_obj return_func */
-                    emit_op(s, OP_dup);
-                    emit_op(s, OP_is_undefined_or_null);
-                    label_next = emit_goto(s, OP_if_true, -1);
-                    emit_op(s, OP_call_method);
-                    emit_u16(s, 0);
-                    emit_op(s, OP_iterator_check_object);
-                    emit_op(s, OP_await);
-                    label_next2 = emit_goto(s, OP_goto, -1);
-                    emit_label(s, label_next);
-                    emit_op(s, OP_drop);
-                    emit_label(s, label_next2);
-                    emit_op(s, OP_drop);
+                if (top->is_async_iterator) {
+                    emit_async_iterator_close_call(s, top);
                 } else {
                     emit_op(s, OP_rot3r);
                     emit_op(s, OP_undefined); /* dummy catch offset */
@@ -5298,6 +5414,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     int pos_next, pos_expr;
     BlockEnv break_entry;
     JSResourceScope resources;
+    JSAsyncIteratorScope async_scope;
 
     has_initializer = FALSE;
     has_destructuring = FALSE;
@@ -5319,6 +5436,8 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     push_break_entry(s->cur_func, &break_entry,
                      label_name, label_break, label_cont, 1);
     break_entry.scope_level = block_scope_level;
+    if (is_async && init_async_iterator_scope(s, &break_entry, &async_scope) < 0)
+        return -1;
 
     label_expr = emit_goto(s, OP_goto, -1);
 
@@ -5483,16 +5602,24 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         break_entry.has_iterator = TRUE;
         break_entry.is_async_iterator = is_async;
         break_entry.drop_count += 2;
-        if (is_async)
+        if (is_async) {
+            emit_op(s, OP_undefined);
+            emit_op(s, OP_put_loc);
+            emit_u16(s, async_scope.error_idx);
+            emit_op(s, OP_push_false);
+            emit_op(s, OP_put_loc);
+            emit_u16(s, async_scope.has_error_idx);
             emit_op(s, OP_for_await_of_start);
-        else
+            emit_op(s, OP_drop); /* no body catch before the first next */
+        } else {
             emit_op(s, OP_for_of_start);
+        }
         /* on stack: enum_rec */
     } else {
         emit_op(s, OP_for_in_start);
         /* on stack: enum_obj */
     }
-    emit_goto(s, OP_goto, label_cont);
+    emit_goto(s, OP_goto, is_async ? async_scope.label_first_next : label_cont);
 
     if (js_parse_expect(s, ')'))
         return -1;
@@ -5534,13 +5661,35 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     emit_label(s, label_cont);
     if (is_for_of) {
         if (is_async) {
-            /* stack: iter_obj next catch_offset */
-            /* call the next method */
-            emit_op(s, OP_for_await_of_next); 
-            /* get the result of the promise */
+            /* No close on next(), Await(next), done or value failure. */
+            emit_op(s, OP_drop); /* remove the compiler-owned body catch */
+            /* Initial entry has no body catch; join only after removing it. */
+            emit_label(s, async_scope.label_first_next);
+            emit_op(s, OP_undefined);
+            emit_op(s, OP_for_await_of_next);
             emit_op(s, OP_await);
-            /* unwrap the value and done values */
-            emit_op(s, OP_iterator_get_value_done);
+            emit_op(s, OP_iterator_check_object);
+            emit_op(s, OP_get_field2);
+            emit_atom(s, JS_ATOM_done);
+            emit_goto(s, OP_if_false, async_scope.label_value);
+            emit_op(s, OP_drop); /* result: do not read value when done */
+            emit_op(s, OP_drop); /* virtual catch */
+            emit_op(s, OP_drop); /* next */
+            emit_op(s, OP_drop); /* iterator: natural exhaustion never closes */
+            emit_goto(s, OP_goto, async_scope.label_end);
+            emit_label(s, async_scope.label_value);
+            emit_op(s, OP_get_field);
+            emit_atom(s, JS_ATOM_value);
+            emit_op(s, OP_put_loc);
+            emit_u16(s, async_scope.value_idx);
+            emit_op(s, OP_drop); /* next helper left an undefined marker */
+            emit_goto(s, OP_catch, async_scope.label_catch);
+            emit_op(s, OP_get_loc);
+            emit_u16(s, async_scope.value_idx);
+            emit_op(s, OP_undefined);
+            emit_op(s, OP_put_loc);
+            emit_u16(s, async_scope.value_idx);
+            emit_goto(s, OP_goto, label_next);
         } else {
             emit_op(s, OP_for_of_next);
             emit_u8(s, 0);
@@ -5548,19 +5697,39 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     } else {
         emit_op(s, OP_for_in_next);
     }
-    /* on stack: enum_rec / enum_obj value bool */
-    emit_goto(s, OP_if_false, label_next);
-    /* drop the undefined value from for_xx_next */
-    emit_op(s, OP_drop);
+    if (!is_async) {
+        /* on stack: enum_rec / enum_obj value bool */
+        emit_goto(s, OP_if_false, label_next);
+        emit_op(s, OP_drop);
+    }
 
     emit_label(s, label_break);
-    if (is_for_of) {
-        /* close and drop enum_rec */
+    if (is_async) {
+        emit_op(s, OP_drop); /* iterator body catch */
+        emit_op(s, OP_undefined);
+        emit_async_iterator_close_call(s, &break_entry);
+        emit_op(s, OP_drop);
+        emit_goto(s, OP_goto, async_scope.label_end);
+        emit_label(s, async_scope.label_catch);
+        /* Stack: iterator, next, the incoming thrown value. */
+        emit_op(s, OP_put_loc);
+        emit_u16(s, async_scope.error_idx);
+        emit_op(s, OP_push_true);
+        emit_op(s, OP_put_loc);
+        emit_u16(s, async_scope.has_error_idx);
+        emit_op(s, OP_undefined);
+        emit_async_iterator_close_call(s, &break_entry);
+        emit_op(s, OP_throw); /* seeded throw cannot return normally */
+    } else if (is_for_of) {
         emit_op(s, OP_iterator_close);
     } else {
         emit_op(s, OP_drop);
     }
     pop_break_entry(s->cur_func);
+    if (is_async) {
+        emit_async_iterator_close_body(s, &break_entry, &async_scope);
+        emit_label(s, async_scope.label_end);
+    }
     pop_scope(s);
     return 0;
 }
