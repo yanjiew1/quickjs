@@ -506,6 +506,40 @@ function test_array_buffer_max_index()
     }
 }
 
+function test_array_buffer_resize_order()
+{
+    for (const [buffer, method] of [[new ArrayBuffer(0), "resize"],
+                                    [new SharedArrayBuffer(0), "grow"]]) {
+        let calls = 0;
+        assert_throws(TypeError, () => buffer[method]({
+            valueOf() { calls++; return 0; }
+        }));
+        assert(calls, 0);
+    }
+
+    const detached = new ArrayBuffer(0, { maxByteLength: 2 });
+    detached.transfer();
+    const marker = {};
+    let calls = 0, caught;
+    try {
+        detached.resize({ valueOf() { calls++; throw marker; } });
+    } catch (error) {
+        caught = error;
+    }
+    assert(caught === marker, true);
+    assert(calls, 1);
+    assert_throws(TypeError, () => detached.resize({
+        valueOf() { calls++; return 0; }
+    }));
+    assert(calls, 2);
+
+    const buffer = new ArrayBuffer(0, { maxByteLength: 2 });
+    assert_throws(TypeError, () => buffer.resize({
+        valueOf() { buffer.transfer(); return 0; }
+    }));
+    assert(buffer.detached, true);
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -1749,6 +1783,7 @@ test_math();
 test_number();
 test_eval();
 test_array_buffer_max_index();
+test_array_buffer_resize_order();
 test_typed_array();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
