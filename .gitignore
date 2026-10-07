@@ -55,3 +55,5 @@ libwinpthread*.dll
 /tests/test_fuzz_json.exe
 /tests/test_fuzz_exception_ownership
 /tests/test_fuzz_exception_ownership.exe
+/tests/test_fuzz_allocations
+/tests/test_fuzz_allocations.exe

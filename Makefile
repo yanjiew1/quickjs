@@ -574,6 +574,8 @@ C_TESTS+=tests/test_fuzz_json$(EXE)
 
 C_TESTS+=tests/test_fuzz_exception_ownership$(EXE)
 
+C_TESTS+=tests/test_fuzz_allocations$(EXE)
+
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
 	mkdir -p $(@D)
@@ -602,6 +604,7 @@ tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/l
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_fuzz_allocations$(EXE)
 	$(WINE) ./tests/test_fuzz_exception_ownership$(EXE)
 	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
@@ -776,4 +779,11 @@ tests/test_fuzz_json$(EXE): $(OBJDIR)/tests/test_fuzz_json.o libquickjs$(LTOEXT)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_fuzz_exception_ownership$(EXE): $(OBJDIR)/tests/test_fuzz_exception_ownership.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(OBJDIR)/tests/test_fuzz_allocations.o: tests/test_fuzz_allocations.c | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
+
+tests/test_fuzz_allocations$(EXE): $(OBJDIR)/tests/test_fuzz_allocations.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
