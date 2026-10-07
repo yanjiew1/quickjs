@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: benchmarks-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  group: benchmarks-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   compare:
