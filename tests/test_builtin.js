@@ -753,6 +753,37 @@ function test_typed_array_constructor_content()
     assert(new BigInt64Array(new BigUint64Array([3n]))[0], 3n);
 }
 
+function test_typed_array_species_content()
+{
+    for (const [Source, Destination] of [[Uint8Array, BigInt64Array],
+                                        [Float64Array, BigUint64Array],
+                                        [BigInt64Array, Uint8Array],
+                                        [BigUint64Array, Float64Array]]) {
+        const source = new Source(0);
+        let calls = 0;
+        source.constructor = {
+            [Symbol.species]: function(length) {
+                calls++;
+                return new Destination(length);
+            }
+        };
+        assert_throws(TypeError, () => source.slice());
+        assert_throws(TypeError, () => source.map(() => {
+            throw Error("empty mapper");
+        }));
+        assert_throws(TypeError, () => source.filter(() => {
+            throw Error("empty filter");
+        }));
+        assert(calls, 3);
+    }
+    const numbers = new Uint8Array(0);
+    numbers.constructor = { [Symbol.species]: Float64Array };
+    assert(numbers.slice() instanceof Float64Array, true);
+    const big = new BigInt64Array(0);
+    big.constructor = { [Symbol.species]: BigUint64Array };
+    assert(big.slice() instanceof BigUint64Array, true);
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -2004,6 +2035,7 @@ test_typed_array_with_conversion();
 test_typed_array_copywithin_zero();
 test_typed_array_set_content();
 test_typed_array_constructor_content();
+test_typed_array_species_content();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();
