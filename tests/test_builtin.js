@@ -4741,7 +4741,585 @@ function test_aggregate_error_iterator_close()
     assert(errors[1], 42);
 }
 
+function iterator_zip_throws_value(fn, expected)
+{
+    let threw = false, caught;
+    try { fn(); } catch (error) { threw = true; caught = error; }
+    assert(threw, true);
+    assert(caught, expected);
+}
+
+function iterator_zip_source(values, name, log)
+{
+    let index = 0;
+    const source = {
+        get next() {
+            log.push("get " + name);
+            return function() {
+                assert(this === source, true);
+                assert(arguments.length, 0);
+                log.push("next " + name);
+                if (index === values.length) return { done: true };
+                return { value: values[index++], done: false };
+            };
+        },
+        return() {
+            assert(this === source, true);
+            assert(arguments.length, 0);
+            log.push("close " + name);
+            return {};
+        },
+    };
+    return source;
+}
+
+function iterator_zip_row(value)
+{
+    if (Array.isArray(value)) return value;
+    return Reflect.ownKeys(value).map(key => value[key]);
+}
+
+function test_iterator_zip_common(make)
+{
+    const marker = {}, close_marker = {};
+    let log, a, b, c, helper, result;
+
+    // Sources are acquired now; stepping is deferred and uses cached next.
+    log = [];
+    a = iterator_zip_source([1, 2], "a", log);
+    b = iterator_zip_source([3], "b", log);
+    helper = make([a, b]);
+    assert(log.join(), "get a,get b");
+    Object.defineProperty(a, "next", { value() { throw marker; } });
+    result = helper.next(42);
+    assert(result.done, false);
+    assert(iterator_zip_row(result.value).join(), "1,3");
+    assert(log.join(), "get a,get b,next a,next b");
+    result = helper.next();
+    assert(result.done, true);
+    assert(result.value, undefined);
+    assert(log.join(), "get a,get b,next a,next b,next a,next b,close a");
+    assert(helper.next().done, true);
+    assert(helper.return(42).value, undefined);
+
+    // Shortest mode stops immediately and closes remaining records in reverse.
+    log = [];
+    a = iterator_zip_source([1], "a", log);
+    b = iterator_zip_source([], "b", log);
+    c = iterator_zip_source([3], "c", log);
+    helper = make([a, b, c], { mode: "shortest" });
+    log.length = 0;
+    assert(helper.next().done, true);
+    assert(log.join(), "next a,next b,close c,close a");
+
+    // Longest mode retires exhausted records; padding cannot add a final row.
+    log = [];
+    a = iterator_zip_source([], "a", log);
+    b = iterator_zip_source([1, 2], "b", log);
+    helper = make([a, b], { mode: "longest" });
+    log.length = 0;
+    result = iterator_zip_row(helper.next().value);
+    assert(result[0], undefined);
+    assert(result[1], 1);
+    result = iterator_zip_row(helper.next().value);
+    assert(result[0], undefined);
+    assert(result[1], 2);
+    assert(helper.next().done, true);
+    assert(helper.return().done, true);
+    assert(log.join(), "next a,next b,next b,next b");
+    log = [];
+    a = iterator_zip_source([], "a", log);
+    b = iterator_zip_source([1, 2], "b", log);
+    helper = make([a, b], { mode: "longest" });
+    helper.next();
+    log.length = 0;
+    helper.return();
+    assert(log.join(), "close b");
+
+    // Strict mode's final probes read done and deliberately omit value.
+    log = [];
+    a = iterator_zip_source([], "a", log);
+    b = { next() {
+        log.push("probe b");
+        return { done: true, get value() { throw marker; } };
+    }, return() { throw marker; } };
+    c = { next() {
+        log.push("probe c");
+        return { done: true, get value() { throw marker; } };
+    }, return() { throw marker; } };
+    helper = make([a, b, c], { mode: "strict" });
+    log.length = 0;
+    assert(helper.next().done, true);
+    assert(log.join(), "next a,probe b,probe c");
+    log = [];
+    a = iterator_zip_source([], "a", log);
+    b = { next() {
+        log.push("probe b");
+        return { done: false, get value() { throw marker; } };
+    }, return() { log.push("close b"); throw close_marker; } };
+    c = iterator_zip_source([], "c", log);
+    helper = make([a, b, c], { mode: "strict" });
+    log.length = 0;
+    assert_throws(TypeError, () => helper.next());
+    assert(log.join(), "next a,probe b,close c,close b");
+    assert(helper.next().done, true);
+    log = [];
+    a = iterator_zip_source([1], "a", log);
+    b = iterator_zip_source([], "b", log);
+    c = iterator_zip_source([3], "c", log);
+    helper = make([a, b, c], { mode: "strict" });
+    log.length = 0;
+    assert_throws(TypeError, () => helper.next());
+    assert(log.join(), "next a,next b,close c,close a");
+    log = [];
+    helper = make([[1, 2], [3, 4]], { mode: "strict" });
+    assert(iterator_zip_row(helper.next().value).join(), "1,3");
+    assert(iterator_zip_row(helper.next().value).join(), "2,4");
+    assert(helper.next().done, true);
+
+    // Every source protocol failure excludes that record from close-all.
+    const failures = [
+        () => { throw marker; },
+        () => 1,
+        () => ({ get done() { throw marker; } }),
+        () => ({ done: false, get value() { throw marker; } }),
+    ];
+    for (let position = 0; position < 3; position++) {
+        for (let n = 0; n < failures.length; n++) {
+            log = [];
+            const sources = ["a", "b", "c"].map(name =>
+                iterator_zip_source([1], name, log));
+            Object.defineProperty(sources[position], "next", {
+                value: failures[n], configurable: true,
+            });
+            helper = make(sources);
+            log.length = 0;
+            if (n === 1) assert_throws(TypeError, () => helper.next());
+            else iterator_zip_throws_value(() => helper.next(), marker);
+            const expected = ["a", "b", "c"].slice(0, position)
+                .map(name => "next " + name).concat(["c", "b", "a"]
+                    .filter((name, index) => 2 - index !== position)
+                    .map(name => "close " + name));
+            assert(log.join(), expected.join());
+            const length = log.length;
+            assert(helper.next().done, true);
+            assert(helper.return().done, true);
+            assert(log.length, length);
+        }
+    }
+    // Strict IteratorStep must also exclude a failed final probe.
+    log = [];
+    a = iterator_zip_source([], "a", log);
+    b = { next() { throw marker; }, return() { throw close_marker; } };
+    c = iterator_zip_source([3], "c", log);
+    helper = make([a, b, c], { mode: "strict" });
+    log.length = 0;
+    iterator_zip_throws_value(() => helper.next(), marker);
+    assert(log.join(), "next a,close c");
+    // An uncallable cached next fails lazily.
+    log = [];
+    helper = make([iterator_zip_source([1], "a", log),
+                   { next: null, return() { throw marker; } }]);
+    assert_throws(TypeError, () => helper.next());
+    assert(log.join(), "get a,next a,close a");
+
+    // A throw completion survives all closing getters, calls and bad results.
+    for (const thrown of [undefined, null, false, 0, "failure", marker]) {
+        log = [];
+        helper = make([
+            { next() { throw thrown; }, return() { throw close_marker; } },
+            { next() { return { value: 1 }; }, get return() {
+                log.push("get b return"); throw close_marker;
+            } },
+            { next() { return { value: 2 }; }, return() {
+                log.push("close c"); return 0;
+            } },
+        ]);
+        iterator_zip_throws_value(() => helper.next(), thrown);
+        assert(log.join(), "close c,get b return");
+    }
+
+    // Return from suspended-start completes before callbacks and closes all.
+    for (const started of [false, true]) {
+        log = [];
+        const sources = ["a", "b", "c"].map(name => ({
+            next() { return { value: 1, done: false }; },
+            return() {
+                log.push("close " + name);
+                if (started) {
+                    assert_throws(TypeError, () => helper.next());
+                    assert_throws(TypeError, () => helper.return());
+                } else {
+                    assert(helper.next().done, true);
+                    assert(helper.return().done, true);
+                }
+                return {};
+            },
+        }));
+        helper = make(sources);
+        if (started) helper.next();
+        assert(helper.return("ignored").done, true);
+        assert(log.join(), "close c,close b,close a");
+        assert(helper.next().done, true);
+        assert(helper.return().done, true);
+        assert(log.length, 3);
+    }
+    for (const started of [false, true]) {
+        log = [];
+        helper = make([
+            { next() { return { value: 1 }; }, return() {
+                log.push("a"); throw marker;
+            } },
+            { next() { return { value: 2 }; }, return() {
+                log.push("b"); throw close_marker;
+            } },
+            { next() { return { value: 3 }; }, return() {
+                log.push("c"); return {};
+            } },
+        ]);
+        if (started) helper.next();
+        iterator_zip_throws_value(() => helper.return(), close_marker);
+        assert(log.join(), "c,b,a");
+        assert(helper.next().done, true);
+    }
+    for (const badReturn of [1, () => 1, () => null]) {
+        log = [];
+        helper = make([
+            iterator_zip_source([1], "a", log),
+            { next() { return { value: 2 }; }, return: badReturn },
+        ]);
+        assert_throws(TypeError, () => helper.return());
+        assert(log.join(), "get a,close a");
+    }
+    for (const noReturn of [undefined, null]) {
+        helper = make([{ next() { return { value: 1 }; }, return: noReturn }]);
+        assert(helper.return().done, true);
+    }
+    // Duplicate objects are separate records with separate cached next methods.
+    log = [];
+    const duplicate = iterator_zip_source([1, 2, 3], "duplicate", log);
+    helper = make([duplicate, duplicate]);
+    assert(iterator_zip_row(helper.next().value).join(), "1,2");
+    assert(helper.next().done, true);
+    assert(log.join(), "get duplicate,get duplicate,next duplicate,next duplicate,"
+           + "next duplicate,next duplicate,close duplicate");
+    let duplicateCloses = 0;
+    const duplicateStart = { next() { throw marker; }, return() {
+        duplicateCloses++; return {};
+    } };
+    helper = make([duplicateStart, duplicateStart]);
+    helper.return();
+    assert(duplicateCloses, 2);
+    // A shortest normal close failure becomes the first reverse-order throw.
+    log = [];
+    helper = make([
+        { next() { return { done: true }; }, return() { throw marker; } },
+        { next() { throw marker; }, return() { log.push("b"); throw marker; } },
+        { next() { throw marker; }, return() {
+            log.push("c"); throw close_marker;
+        } },
+    ]);
+    iterator_zip_throws_value(() => helper.next(), close_marker);
+    assert(log.join(), "c,b");
+
+    // Reentry from next, done and value observes the single helper state.
+    for (const phase of ["next", "done", "value"]) {
+        const source = { next() {
+            if (phase === "next") reenter();
+            return {
+                get done() { if (phase === "done") reenter(); return false; },
+                get value() { if (phase === "value") reenter(); return 7; },
+            };
+        } };
+        function reenter() {
+            assert_throws(TypeError, () => helper.next());
+            assert_throws(TypeError, () => helper.return());
+        }
+        helper = make([source]);
+        assert(iterator_zip_row(helper.next().value)[0], 7);
+        helper.return();
+    }
+
+    // Shared helper prototype and borrowed methods retain their native brands.
+    helper = make([[1, 2]]);
+    const map = Iterator.from([3]).map(value => value);
+    const concat = Iterator.concat([4]);
+    const proto = Object.getPrototypeOf(map);
+    assert(Object.getPrototypeOf(helper) === proto, true);
+    assert(helper[Symbol.iterator]() === helper, true);
+    assert(Object.prototype.toString.call(helper), "[object Iterator Helper]");
+    assert(iterator_zip_row(proto.next.call(helper).value)[0], 1);
+    assert(proto.next.call(map).value, 3);
+    assert(proto.next.call(concat).value, 4);
+    assert(proto.return.call(helper).done, true);
+    for (const receiver of [undefined, null, 1, {}, Iterator.prototype]) {
+        assert_throws(TypeError, () => proto.next.call(receiver));
+        assert_throws(TypeError, () => proto.return.call(receiver));
+    }
+    for (const mode of ["shortest", "longest", "strict"]) {
+        helper = make([], { mode });
+        assert(helper.next().done, true);
+        assert(helper.return().done, true);
+    }
+    const symbol = Symbol(), object = {};
+    const values = [undefined, null, false, NaN, -0, 1n, symbol, object];
+    helper = make([values], { mode: "strict" });
+    for (const value of values)
+        assert(iterator_zip_row(helper.next().value)[0], value);
+    assert(helper.next().done, true);
+
+    // Temporary row values and padding survive GC inside later next calls.
+    let held = {}, gcHelper;
+    const heldSource = { next() {
+        if (!held) return { done: true };
+        const value = held;
+        held = null;
+        value.helper = gcHelper;
+        return { value };
+    } };
+    const gcSource = { next() {
+        if (typeof std !== "undefined") std.gc();
+        return { value: 2 };
+    } };
+    gcHelper = make([heldSource, gcSource]);
+    assert(iterator_zip_row(gcHelper.next().value)[0].helper === gcHelper, true);
+    gcHelper.return();
+    gcHelper = null;
+    if (typeof std !== "undefined") std.gc();
+}
+
+function test_iterator_zip_options(method)
+{
+    let reads = 0;
+    const options = { get mode() { reads++; throw 42; } };
+    for (const primitive of [undefined, null, false, 1, 1n, "abc", Symbol()])
+        assert_throws(TypeError, () => method(primitive, options));
+    assert(reads, 0);
+    for (const option of [null, false, 1, 1n, "", Symbol()])
+        assert_throws(TypeError, () => method([], option));
+    for (const mode of [null, false, 1, 1n, Symbol(), "", "short", "strict\0",
+                        "longest\0", new String("shortest"), {
+        [Symbol.toPrimitive]() { throw 42; },
+    }]) {
+        assert_throws(TypeError, () => method([], {
+            mode, get padding() { throw 42; },
+        }));
+    }
+    for (const mode of [undefined, "shortest", "strict"])
+        assert(method([], { mode, get padding() { throw 42; } }).next().done, true);
+    for (const padding of [null, false, 1, 1n, "", Symbol()])
+        assert_throws(TypeError, () => method([], { mode: "longest", padding }));
+    for (const mode of ["shortest", "longest", "strict"])
+        assert(method([], { mode: (mode + "!").slice(0, -1) }).next().done, true);
+    iterator_zip_throws_value(() => method([], options), 42);
+    assert(reads, 1);
+    iterator_zip_throws_value(() => method([], {
+        mode: "longest", get padding() { throw 42; },
+    }), 42);
+    const oldMode = Object.getOwnPropertyDescriptor(Object.prototype, "mode");
+    Object.defineProperty(Object.prototype, "mode", {
+        configurable: true, get() { throw 42; },
+    });
+    let completed;
+    try { completed = method([]).next().done; }
+    finally {
+        if (oldMode) Object.defineProperty(Object.prototype, "mode", oldMode);
+        else delete Object.prototype.mode;
+    }
+    assert(completed, true);
+    function callableOptions() {}
+    callableOptions.mode = "strict";
+    assert(method([], callableOptions).next().done, true);
+}
+
+function test_iterator_zip_acquisition()
+{
+    const marker = {}, close_marker = {};
+    let log = [], calls = 0;
+    const input = {
+        [Symbol.iterator]() {
+            assert(this === input, true);
+            assert(arguments.length, 0);
+            log.push("open input");
+            return this;
+        },
+        get next() {
+            log.push("get input next");
+            return function() {
+                assert(this === input, true);
+                assert(arguments.length, 0);
+                log.push("next input");
+                return calls++ ? { done: true } : { value: inner };
+            };
+        },
+        return() { throw marker; },
+    };
+    const inner = {
+        [Symbol.iterator]: null,
+        get next() { log.push("get inner next"); return () => ({ value: 9 }); },
+    };
+    let helper = Iterator.zip(input, {
+        get mode() { log.push("mode"); return undefined; },
+    });
+    assert(log.join(), "mode,open input,get input next,next input,get inner next,next input");
+    assert(helper.next().value[0], 9);
+    helper.return();
+    assert_throws(TypeError, () => Iterator.zip({ next() { return { done: true }; } }));
+    assert(Iterator.zip([new String("xy")]).toArray().map(row => row[0]).join(), "x,y");
+    const failures = [
+        "primitive", null, 1,
+        { get [Symbol.iterator]() { throw marker; } },
+        { [Symbol.iterator]: 1 },
+        { [Symbol.iterator]() { throw marker; } },
+        { [Symbol.iterator]() { return 1; } },
+        { get next() { throw marker; }, return() { throw close_marker; } },
+    ];
+    for (const failure of failures) {
+        log = [];
+        const a = iterator_zip_source([1], "a", log);
+        const b = iterator_zip_source([2], "b", log);
+        const values = [a, b, failure];
+        let index = 0;
+        const outer = {
+            [Symbol.iterator]() { return this; },
+            next() { return { value: values[index++] }; },
+            return() { log.push("close input"); throw close_marker; },
+        };
+        let threw = false, caught;
+        try { Iterator.zip(outer); } catch (error) { threw = true; caught = error; }
+        assert(threw, true);
+        assert(caught === marker || caught instanceof TypeError, true);
+        assert(log.join(), "get a,get b,close b,close a,close input");
+    }
+    // Input IteratorStepValue errors close records but omit the failed input.
+    for (const phase of ["call", "result", "done", "value"]) {
+        log = [];
+        let index = 0;
+        const source = iterator_zip_source([1], "a", log);
+        const outer = {
+            [Symbol.iterator]() { return this; },
+            next() {
+                if (!index++) return { value: source };
+                if (phase === "call") throw marker;
+                if (phase === "result") return 1;
+                if (phase === "done") return { get done() { throw marker; } };
+                return { get value() { throw marker; } };
+            },
+            return() { log.push("unexpected input close"); return {}; },
+        };
+        if (phase === "result") assert_throws(TypeError, () => Iterator.zip(outer));
+        else iterator_zip_throws_value(() => Iterator.zip(outer), marker);
+        assert(log.join(), "get a,close a");
+    }
+    let closes = 0;
+    const outer = { [Symbol.iterator]() { return this; },
+        get next() { throw marker; }, return() { closes++; return {}; } };
+    iterator_zip_throws_value(() => Iterator.zip(outer), marker);
+    assert(closes, 0);
+}
+
+function test_iterator_zip_padding()
+{
+    const marker = {};
+    for (let count = 0; count <= 3; count++) {
+        for (let length = 0; length <= 5; length++) {
+            let steps = 0, closes = 0;
+            const padding = {
+                [Symbol.iterator]() { assert(this === padding, true); return this; },
+                next() {
+                    assert(this === padding, true);
+                    assert(arguments.length, 0);
+                    return steps++ < length ? { value: steps } : { done: true };
+                },
+                return() {
+                    assert(this === padding, true);
+                    assert(arguments.length, 0);
+                    closes++; return {};
+                },
+            };
+            const helper = Iterator.zip(Array(count).fill([]), { mode: "longest", padding });
+            assert(steps, Math.min(count, length + 1));
+            assert(closes, count <= length ? 1 : 0);
+            assert(helper.next().done, true);
+        }
+    }
+    let helper = Iterator.zip([[], [1, 2], []], {
+        mode: "longest", padding: ["a"],
+    });
+    let row = helper.next().value;
+    assert(row[0], "a"); assert(row[1], 1); assert(row[2], undefined);
+    row = helper.next().value;
+    assert(row[0], "a"); assert(row[1], 2); assert(row[2], undefined);
+    assert(helper.next().done, true);
+    for (const phase of ["iterator", "next-get", "call", "done", "value", "close"]) {
+        const log = [];
+        const a = iterator_zip_source([1], "a", log);
+        const b = iterator_zip_source([2], "b", log);
+        const padding = {
+            get [Symbol.iterator]() {
+                if (phase === "iterator") throw marker;
+                return function() { return this; };
+            },
+            get next() {
+                if (phase === "next-get") throw marker;
+                return function() {
+                    if (phase === "call") throw marker;
+                    if (phase === "done") return { get done() { throw marker; } };
+                    if (phase === "value") return { get value() { throw marker; } };
+                    return { value: 0 };
+                };
+            },
+            return() { log.push("close padding"); throw marker; },
+        };
+        iterator_zip_throws_value(() => Iterator.zip([a, b], { mode: "longest", padding }), marker);
+        assert(log.join(), "get a,get b," + (phase === "close" ? "close padding," : "")
+               + "close b,close a");
+    }
+    assert_throws(TypeError, () => Iterator.zip([], { mode: "longest", padding: {} }));
+    const held = { cycle: null };
+    helper = Iterator.zip([[], [1, 2]], { mode: "longest", padding: [held] });
+    held.cycle = helper;
+    if (typeof std !== "undefined") std.gc();
+    assert(helper.next().value[0] === held, true);
+    assert(helper.next().value[0] === held, true);
+    helper.return();
+    held.cycle = null;
+}
+
+function test_iterator_zip_results()
+{
+    assert(Iterator.zip.name, "zip");
+    assert(Iterator.zip.length, 1);
+    const desc = Object.getOwnPropertyDescriptor(Iterator, "zip");
+    assert(desc.writable, true); assert(desc.enumerable, false); assert(desc.configurable, true);
+    assert_throws(TypeError, () => new Iterator.zip([]));
+    const helper = Iterator.zip([[1, 2], [3, 4]]);
+    const first = helper.next().value;
+    first[0] = 42;
+    const second = helper.next().value;
+    assert(first !== second, true);
+    assert(second.join(), "2,4");
+    assert(Object.getPrototypeOf(second) === Array.prototype, true);
+    const element = Object.getOwnPropertyDescriptor(second, "0");
+    assert(element.writable, true); assert(element.enumerable, true); assert(element.configurable, true);
+    let setterCalls = 0, row;
+    const old = Object.getOwnPropertyDescriptor(Array.prototype, "0");
+    Object.defineProperty(Array.prototype, "0", { configurable: true,
+        set() { setterCalls++; throw 42; } });
+    try { row = Iterator.zip([[5]]).next().value; }
+    finally {
+        if (old) Object.defineProperty(Array.prototype, "0", old);
+        else delete Array.prototype[0];
+    }
+    assert(setterCalls, 0); assert(row[0], 5);
+}
+
 test();
+test_iterator_zip_common((iterables, options) => Iterator.zip(iterables, options));
+test_iterator_zip_options(Iterator.zip);
+test_iterator_zip_acquisition();
+test_iterator_zip_padding();
+test_iterator_zip_results();
 test_aggregate_error_iterator_close();
 test_object_from_entries_close();
 test_array_iterator_length();
