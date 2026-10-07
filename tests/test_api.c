@@ -2439,12 +2439,78 @@ static void test_bigint_locale_realm(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue test_resource_realms_gc(JSContext *ctx, JSValueConst value,
+                                       int argc, JSValueConst *argv)
+{
+    JS_RunGC(JS_GetRuntime(ctx));
+    return JS_UNDEFINED;
+}
+
+static void test_async_disposable_stack_realms(void)
+{
+    const char *filename = "tests/test_resource_realms.js";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx[2], *job_ctx;
+    JSValue global, result, value;
+    FILE *file;
+    char *script;
+    long length;
+    int ret;
+
+    assert(rt);
+    ctx[0] = JS_NewContext(rt);
+    ctx[1] = JS_NewContext(rt);
+    assert(ctx[0] && ctx[1]);
+    global = JS_GetGlobalObject(ctx[0]);
+    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
+                             JS_GetGlobalObject(ctx[1])) >= 0);
+    assert(JS_SetPropertyStr(ctx[0], global, "runGC",
+                             JS_NewCFunction(ctx[0], test_resource_realms_gc,
+                                              "runGC", 0)) >= 0);
+    JS_FreeValue(ctx[0], global);
+    file = fopen(filename, "rb");
+    assert(file);
+    assert(fseek(file, 0, SEEK_END) == 0);
+    length = ftell(file);
+    assert(length > 0 && length < 65536);
+    assert(fseek(file, 0, SEEK_SET) == 0);
+    script = malloc((size_t)length + 1);
+    assert(script);
+    assert(fread(script, 1, (size_t)length, file) == (size_t)length);
+    assert(fclose(file) == 0);
+    script[length] = '\0';
+    result = JS_Eval(ctx[0], script, (size_t)length, filename,
+                     JS_EVAL_TYPE_GLOBAL);
+    free(script);
+    assert(!JS_IsException(result));
+    /* Suspended callbacks and private data must retain the released realm. */
+    JS_FreeContext(ctx[1]);
+    JS_RunGC(rt);
+    while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        JS_RunGC(rt);
+    assert(ret == 0);
+    value = JS_PromiseResult(ctx[0], result);
+    if (JS_PromiseState(ctx[0], result) != JS_PROMISE_FULFILLED) {
+        const char *message = JS_ToCString(ctx[0], value);
+        fprintf(stderr, "%s: %s\n", filename, message ? message : "pending");
+        JS_FreeCString(ctx[0], message);
+    }
+    assert(JS_PromiseState(ctx[0], result) == JS_PROMISE_FULFILLED);
+    assert(JS_ToBool(ctx[0], value) == 1);
+    JS_FreeValue(ctx[0], value);
+    JS_FreeValue(ctx[0], result);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx[0]);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "async-disposable-stack-realms", test_async_disposable_stack_realms },
         { "allocator-overflow", test_allocator_size_overflow },
         { "bigint-locale-realm", test_bigint_locale_realm },
         { "native-name", test_native_function_initial_name },

@@ -44,6 +44,7 @@
 #include "iterator.h"
 #include "function.h"
 #include "error.h"
+#include "resource-management.h"
 
 /* Promise */
 
@@ -1128,6 +1129,8 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
         return -1;
     ctx->promise_ctor = obj1;
     
+    if (js_init_async_disposable_stack(ctx) < 0)
+        return -1;
     if (js_init_async_intrinsics(ctx))
         return -1;
     return js_init_array_from_async(ctx);

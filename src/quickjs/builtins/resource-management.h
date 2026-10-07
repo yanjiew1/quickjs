@@ -34,6 +34,9 @@ typedef struct JSDisposableStackData {
 } JSDisposableStackData;
 
 int js_init_disposable_stack(JSContext *ctx);
+int js_init_disposable_resource_list(JSContext *ctx);
+int js_init_async_disposable_stack(JSContext *ctx);
+JSValue js_get_async_dispose_method(JSContext *ctx, JSValueConst value);
 JSValue js_new_disposable_stack(JSContext *ctx, JSValueConst new_target,
                                 int class_id, size_t data_size);
 void js_disposable_stack_clear(JSRuntime *rt, JSDisposableStackData *stack);

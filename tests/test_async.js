@@ -53,6 +53,357 @@ async function test_function_constructor_binding()
 
 await test_function_constructor_binding();
 
+function assert_async_disposal_throws(constructor, callback)
+{
+    let caught;
+    try { callback(); } catch (error) { caught = error; }
+    assert(caught instanceof constructor, true);
+}
+
+async function test_async_disposable_stack_registration()
+{
+    const prototype = AsyncDisposableStack.prototype;
+    assert(AsyncDisposableStack.length, 0);
+    assert(AsyncDisposableStack.name, "AsyncDisposableStack");
+    assert(prototype[Symbol.asyncDispose] === prototype.disposeAsync, true);
+    assert(Object.prototype.toString.call(new AsyncDisposableStack()),
+           "[object AsyncDisposableStack]");
+    assert(Object.getPrototypeOf(prototype) === Object.prototype, true);
+    const disposed = Object.getOwnPropertyDescriptor(prototype, "disposed");
+    assert(disposed.set, undefined);
+    assert(disposed.enumerable, false);
+    assert(disposed.configurable, true);
+    for (const [name, length] of [["use", 1], ["adopt", 2], ["defer", 1],
+                                 ["move", 0], ["disposeAsync", 0]]) {
+        assert(prototype[name].length, length);
+        assert(prototype[name].name, name);
+        assert(Object.hasOwn(prototype[name], "prototype"), false);
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+        assert(descriptor.writable, true);
+        assert(descriptor.enumerable, false);
+        assert(descriptor.configurable, true);
+    }
+    assert_async_disposal_throws(TypeError, () => AsyncDisposableStack());
+    class Derived extends AsyncDisposableStack {}
+    assert(new Derived() instanceof Derived, true);
+    const stack = new AsyncDisposableStack();
+    const order = [];
+    const resource = {
+        [Symbol.asyncDispose]() {
+            "use strict";
+            assert(this === resource, true);
+            assert(arguments.length, 0);
+            order.push("use");
+            return Promise.resolve().then(() => order.push("use awaited"));
+        },
+        get [Symbol.dispose]() { throw Error("async lookup has priority"); }
+    };
+    const adopted = {};
+    assert(stack.use(resource) === resource, true);
+    assert(stack.adopt(adopted, function(value) {
+        "use strict";
+        assert(this, undefined);
+        assert(value === adopted, true);
+        assert(arguments.length, 1);
+        order.push("adopt");
+        return Promise.resolve().then(() => order.push("adopt awaited"));
+    }) === adopted, true);
+    assert(stack.defer(function() {
+        "use strict";
+        assert(this, undefined);
+        assert(arguments.length, 0);
+        order.push("defer");
+        return Promise.resolve().then(() => order.push("defer awaited"));
+    }), undefined);
+    resource[Symbol.asyncDispose] = () => {
+        throw Error("method must be cached");
+    };
+    assert(stack.disposed, false);
+    const promise = stack.disposeAsync();
+    assert(promise instanceof Promise, true);
+    assert(stack.disposed, true);
+    assert(order.join(","), "defer");
+    assert(await promise, undefined);
+    assert(order.join(","),
+           "defer,defer awaited,adopt,adopt awaited,use,use awaited");
+    const repeated = stack.disposeAsync();
+    assert(repeated !== promise, true);
+    assert(await repeated, undefined);
+    for (const receiver of [null, undefined, 1, {}, prototype,
+                            new Proxy(new AsyncDisposableStack(), {}),
+                            new DisposableStack()]) {
+        assert_async_disposal_throws(TypeError,
+            () => prototype.use.call(receiver, resource));
+        assert_async_disposal_throws(TypeError,
+            () => prototype.adopt.call(receiver, 0, () => {}));
+        assert_async_disposal_throws(TypeError,
+            () => prototype.defer.call(receiver, () => {}));
+        assert_async_disposal_throws(TypeError,
+            () => prototype.move.call(receiver));
+        assert_async_disposal_throws(TypeError,
+            () => disposed.get.call(receiver));
+        const invalid = prototype.disposeAsync.call(receiver);
+        assert(invalid instanceof Promise, true);
+        let caught;
+        try { await invalid; } catch (error) { caught = error; }
+        assert(caught instanceof TypeError, true);
+    }
+    const pending = new AsyncDisposableStack();
+    for (const value of [1, "x", true, Symbol(), 1n, {},
+                         { [Symbol.asyncDispose]: null },
+                         { [Symbol.asyncDispose]: 1 },
+                         { [Symbol.dispose]: 1 }]) {
+        assert_async_disposal_throws(TypeError, () => pending.use(value));
+    }
+    assert_async_disposal_throws(TypeError, () => pending.defer(1));
+    assert_async_disposal_throws(TypeError, () => pending.adopt({}, null));
+    let reads = 0;
+    const throwing = {
+        get [Symbol.asyncDispose]() { reads++; throw Error("getter"); }
+    };
+    assert_async_disposal_throws(Error, () => pending.use(throwing));
+    assert(reads, 1);
+    await pending.disposeAsync();
+    assert_async_disposal_throws(ReferenceError, () => pending.use(throwing));
+    assert(reads, 1);
+    assert_async_disposal_throws(ReferenceError, () => pending.adopt({}, 1));
+    assert_async_disposal_throws(ReferenceError, () => pending.defer(1));
+    assert_async_disposal_throws(ReferenceError, () => pending.move());
+}
+
+async function test_async_disposable_stack_fallback_and_await()
+{
+    const stack = new AsyncDisposableStack();
+    let order = "", fallbackReads = 0;
+    const ignored = Promise.reject("ignored result");
+    ignored.catch(() => {});
+    const resource = {
+        get [Symbol.asyncDispose]() { order += "async lookup;"; return null; },
+        get [Symbol.dispose]() {
+            fallbackReads++;
+            order += "sync lookup;";
+            return function() {
+                assert(this === resource, true);
+                assert(arguments.length, 0);
+                order += "sync call;";
+                return ignored;
+            };
+        }
+    };
+    stack.use(resource);
+    Object.defineProperty(resource, Symbol.dispose, {
+        value() { throw Error("fallback method must be cached"); }
+    });
+    assert(await stack.disposeAsync(), undefined);
+    assert(fallbackReads, 1);
+    assert(order, "async lookup;sync lookup;sync call;");
+    const ignoredThen = new AsyncDisposableStack();
+    ignoredThen.use({ [Symbol.dispose]() {
+        return { get then() { throw Error("fallback result is ignored"); } };
+    } });
+    assert(await ignoredThen.disposeAsync(), undefined);
+    const sentinel = {};
+    const throwing = new AsyncDisposableStack();
+    throwing.use({ [Symbol.dispose]() { throw sentinel; } });
+    let caught;
+    try { await throwing.disposeAsync(); } catch (error) { caught = error; }
+    assert(caught === sentinel, true);
+
+    const thenable = new AsyncDisposableStack();
+    let awaited = false;
+    thenable.use({ [Symbol.asyncDispose]() {
+        return { then(resolve) { awaited = true; resolve(); } };
+    } });
+    await thenable.disposeAsync();
+    assert(awaited, true);
+
+    async function trace(nullish, directThrow) {
+        const current = new AsyncDisposableStack();
+        if (directThrow)
+            current.defer(() => { throw sentinel; });
+        if (nullish) {
+            assert(current.use(null), null);
+            assert(current.use(undefined), undefined);
+        }
+        const events = [];
+        const disposal = current.disposeAsync();
+        disposal.then(() => events.push("disposed"),
+                      error => {
+                          assert(error === sentinel, true);
+                          events.push("disposed");
+                      });
+        Promise.resolve().then(() => events.push("marker"));
+        try { await disposal; } catch (error) {
+            assert(error === sentinel, true);
+        }
+        await Promise.resolve();
+        return events.join(",");
+    }
+    assert(await trace(false, false), "disposed,marker");
+    assert(await trace(true, false), "marker,disposed");
+    assert(await trace(false, true), "disposed,marker");
+    assert(await trace(true, true), "marker,disposed");
+
+    const intrinsicPromise = Promise;
+    const resolve = Promise.resolve;
+    const then = Promise.prototype.then;
+    const ownPromise = Promise.resolve();
+    Object.defineProperty(ownPromise, "then", {
+        get() { throw Error("Await must use internal promise reactions"); }
+    });
+    const poisoned = new AsyncDisposableStack();
+    poisoned.defer(() => ownPromise);
+    const poison = () => { throw Error("mutable Promise API must be ignored"); };
+    let disposal;
+    try {
+        Promise.resolve = poison;
+        Promise.prototype.then = poison;
+        globalThis.Promise = poison;
+        disposal = poisoned.disposeAsync();
+    } finally {
+        globalThis.Promise = intrinsicPromise;
+        Promise.resolve = resolve;
+        Promise.prototype.then = then;
+    }
+    assert(disposal instanceof intrinsicPromise, true);
+    assert(await disposal, undefined);
+}
+
+async function test_async_disposable_stack_move_reentrancy_and_gc()
+{
+    let collectGarbage = globalThis.gc;
+    if (typeof collectGarbage !== "function") {
+        try {
+            collectGarbage = (await import("std")).gc;
+        } catch (error) {
+            /* Other engines may not provide explicit garbage collection. */
+        }
+    }
+    class Derived extends AsyncDisposableStack {}
+    const source = new Derived();
+    let calls = 0;
+    source.defer(() => { calls++; });
+    source.constructor = { get [Symbol.species]() {
+        throw Error("move does not consult species");
+    } };
+    const moved = source.move();
+    assert(Object.getPrototypeOf(moved) === AsyncDisposableStack.prototype, true);
+    assert(moved instanceof Derived, false);
+    assert(source.disposed, true);
+    assert(moved.disposed, false);
+    await source.disposeAsync();
+    assert(calls, 0);
+    await moved.disposeAsync();
+    assert(calls, 1);
+
+    const getterSource = new AsyncDisposableStack();
+    let getterMoved;
+    getterSource.use({ get [Symbol.asyncDispose]() {
+        getterMoved = getterSource.move();
+        return () => { calls++; };
+    } });
+    assert(getterSource.disposed, true);
+    await getterSource.disposeAsync();
+    assert(calls, 1);
+    await getterMoved.disposeAsync();
+    assert(calls, 2);
+
+    const recursive = new AsyncDisposableStack();
+    let repeated;
+    recursive.defer(() => {
+        assert(recursive.disposed, true);
+        repeated = recursive.disposeAsync();
+        assert_async_disposal_throws(ReferenceError,
+            () => recursive.defer(() => {}));
+    });
+    const first = recursive.disposeAsync();
+    assert(first !== repeated, true);
+    assert(await repeated, undefined);
+    assert(await first, undefined);
+
+    const getterDispose = new AsyncDisposableStack();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    let active;
+    getterDispose.defer(() => gate);
+    getterDispose.use({ get [Symbol.asyncDispose]() {
+        active = getterDispose.disposeAsync();
+        return () => { throw Error("late resource must not be traversed"); };
+    } });
+    assert(getterDispose.disposed, true);
+    assert(await getterDispose.disposeAsync(), undefined);
+    release();
+    assert(await active, undefined);
+
+    let gcStack = new AsyncDisposableStack();
+    let gcRelease;
+    const gcGate = new Promise(resolve => { gcRelease = resolve; });
+    gcStack.use({
+        stack: gcStack,
+        [Symbol.asyncDispose]() { calls++; }
+    });
+    gcStack.defer(() => gcGate);
+    const gcDisposal = gcStack.disposeAsync();
+    gcStack = null;
+    if (typeof collectGarbage === "function")
+        collectGarbage();
+    gcRelease();
+    await gcDisposal;
+    assert(calls, 3);
+}
+
+async function test_async_disposable_stack_suppression()
+{
+    const first = {}, second = {}, third = {};
+    const stack = new AsyncDisposableStack();
+    stack.defer(() => { throw third; });
+    stack.defer(() => Promise.reject(second));
+    stack.use({ [Symbol.asyncDispose]() {
+        return { then(resolve, reject) { reject(first); } };
+    } });
+    const intrinsic = SuppressedError;
+    globalThis.SuppressedError = function() {
+        throw Error("suppression must use the intrinsic");
+    };
+    let caught;
+    try {
+        try { await stack.disposeAsync(); } catch (error) { caught = error; }
+    } finally {
+        globalThis.SuppressedError = intrinsic;
+    }
+    assert(caught instanceof intrinsic, true);
+    assert(caught.error === third, true);
+    assert(caught.suppressed instanceof intrinsic, true);
+    assert(caught.suppressed.error === second, true);
+    assert(caught.suppressed.suppressed === first, true);
+    assert(stack.disposed, true);
+    const undefinedFailure = new AsyncDisposableStack();
+    undefinedFailure.defer(() => { throw undefined; });
+    let threw = false;
+    try { await undefinedFailure.disposeAsync(); } catch (error) {
+        threw = true;
+        assert(error, undefined);
+    }
+    assert(threw, true);
+    const next = new AsyncDisposableStack();
+    const poisoned = Promise.resolve();
+    Object.defineProperty(poisoned, "constructor", {
+        get() { throw first; }
+    });
+    let continued = false;
+    next.defer(() => { continued = true; });
+    next.defer(() => poisoned);
+    caught = undefined;
+    try { await next.disposeAsync(); } catch (error) { caught = error; }
+    assert(caught === first, true);
+    assert(continued, true);
+}
+
+await test_async_disposable_stack_registration();
+await test_async_disposable_stack_fallback_and_await();
+await test_async_disposable_stack_move_reentrancy_and_gc();
+await test_async_disposable_stack_suppression();
+
 async function assert_array_from_async_rejects(operation, expected)
 {
     let rejected = false;

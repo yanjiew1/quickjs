@@ -229,23 +229,29 @@ JSValue js_disposable_stack_use(JSContext *ctx, JSValueConst value,
         js_get_disposable_stack(ctx, value, class_id, TRUE);
     JSValue resources, method;
     int result;
+    BOOL nullish = JS_IsNull(argv[0]) || JS_IsUndefined(argv[0]);
 
     if (!stack)
         return JS_EXCEPTION;
-    if (JS_IsNull(argv[0]) || JS_IsUndefined(argv[0]))
+
+    if (nullish && class_id == JS_CLASS_DISPOSABLE_STACK)
         return JS_DupValue(ctx, argv[0]);
-    if (!JS_IsObject(argv[0]))
+    if (!nullish && !JS_IsObject(argv[0]))
         return JS_ThrowTypeError(ctx, "resource is not an object");
     /* GetDisposeMethod can move the receiver or begin disposing this list. */
     resources = JS_DupValue(ctx, stack->resources);
-    method = js_get_dispose_method(ctx, argv[0]);
-    if (JS_IsUndefined(method))
+    method = nullish ? JS_UNDEFINED :
+        class_id == JS_CLASS_ASYNC_DISPOSABLE_STACK ?
+        js_get_async_dispose_method(ctx, argv[0]) :
+        js_get_dispose_method(ctx, argv[0]);
+    if (JS_IsUndefined(method) && !nullish)
         method = JS_ThrowTypeError(ctx, "resource has no dispose method");
     if (JS_IsException(method)) {
         JS_FreeValue(ctx, resources);
         return JS_EXCEPTION;
     }
-    result = js_disposable_resource_add(ctx, resources, argv[0], method,
+    result = js_disposable_resource_add(ctx, resources,
+                                        nullish ? JS_UNDEFINED : argv[0], method,
                                         JS_DISPOSABLE_USE);
     JS_FreeValue(ctx, resources);
     if (result < 0)
@@ -397,13 +403,22 @@ static const JSCFunctionListEntry js_disposable_stack_proto_funcs[] = {
                        JS_PROP_CONFIGURABLE),
 };
 
-int js_init_disposable_stack(JSContext *ctx)
+int js_init_disposable_resource_list(JSContext *ctx)
 {
     static const JSClassDef list_class = {
         .class_name = "DisposableResourceList",
         .finalizer = js_disposable_resource_list_finalizer,
         .gc_mark = js_disposable_resource_list_mark,
     };
+
+    if (!JS_IsRegisteredClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST))
+        return JS_NewClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST,
+                            &list_class);
+    return 0;
+}
+
+int js_init_disposable_stack(JSContext *ctx)
+{
     static const JSClassDef stack_class = {
         .class_name = "DisposableStack",
         .finalizer = js_disposable_stack_finalizer,
@@ -411,9 +426,7 @@ int js_init_disposable_stack(JSContext *ctx)
     };
     JSValue constructor;
 
-    if (!JS_IsRegisteredClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST) &&
-        JS_NewClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST,
-                     &list_class) < 0)
+    if (js_init_disposable_resource_list(ctx) < 0)
         return -1;
     if (!JS_IsRegisteredClass(ctx->rt, JS_CLASS_DISPOSABLE_STACK) &&
         JS_NewClass(ctx->rt, JS_CLASS_DISPOSABLE_STACK, &stack_class) < 0)

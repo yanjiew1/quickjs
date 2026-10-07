@@ -189,6 +189,7 @@ enum {
     JS_CLASS_ARRAY_FROM_ASYNC, /* opaque asynchronous construction state */
     JS_CLASS_DISPOSABLE_RESOURCE_LIST,
     JS_CLASS_DISPOSABLE_STACK,
+    JS_CLASS_ASYNC_DISPOSABLE_STACK,
 
     JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
 };
