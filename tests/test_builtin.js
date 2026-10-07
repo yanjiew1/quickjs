@@ -3235,7 +3235,54 @@ function test_object_from_entries_close()
     }, marker, true);
 }
 
+function test_aggregate_error_iterator_close()
+{
+    const marker = new Error("iterator failure");
+    function failure(setup, expected) {
+        let reads = 0, calls = 0, caught;
+        const iterator = {
+            get return() {
+                reads++;
+                return function() {
+                    calls++;
+                    throw new Error("unexpected close");
+                };
+            },
+        };
+        setup(iterator);
+        const items = { [Symbol.iterator]() { return iterator; } };
+        try {
+            new AggregateError(items);
+        } catch (error) {
+            caught = error;
+        }
+        if (expected === TypeError)
+            assert(caught instanceof TypeError, true);
+        else
+            assert(caught, expected);
+        assert(reads, 0);
+        assert(calls, 0);
+    }
+    failure(iterator => {
+        Object.defineProperty(iterator, "next", { get() { throw marker; } });
+    }, marker);
+    failure(iterator => { iterator.next = 1; }, TypeError);
+    failure(iterator => { iterator.next = () => { throw marker; }; }, marker);
+    failure(iterator => { iterator.next = () => 1; }, TypeError);
+    failure(iterator => {
+        iterator.next = () => ({ get done() { throw marker; } });
+    }, marker);
+    failure(iterator => {
+        iterator.next = () => ({ done: false, get value() { throw marker; } });
+    }, marker);
+    const errors = new AggregateError([marker, 42]).errors;
+    assert(errors.length, 2);
+    assert(errors[0], marker);
+    assert(errors[1], 42);
+}
+
 test();
+test_aggregate_error_iterator_close();
 test_object_from_entries_close();
 test_array_iterator_length();
 test_group_by_own_elements();
