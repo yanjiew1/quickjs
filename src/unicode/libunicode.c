@@ -1105,7 +1105,7 @@ static int compose_pair(uint32_t c0, uint32_t c1)
         return 0xac00 + (c0 - 0x1100) * 588 + (c1 - 0x1161) * 28;
     } else if (c0 >= 0xac00 && c0 < 0xac00 + 11172 &&
                (c0 - 0xac00) % 28 == 0 &&
-               c1 >= 0x11a7 && c1 < 0x11a7 + 28) {
+               c1 > 0x11a7 && c1 < 0x11a7 + 28) {
         return c0 + c1 - 0x11a7;
     } else {
         return unicode_compose_pair(c0, c1);
