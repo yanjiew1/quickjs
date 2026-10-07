@@ -537,6 +537,89 @@ static void check_shared_serialization_rejection(JSContext *ctx, JSValueConst bu
     JS_FreeValue(ctx, exception);
 }
 
+static void check_shared_write_cleanup(JSContext *ctx, JSValueConst array,
+                                       int reject)
+{
+    uint8_t *encoded, **pointers = (uint8_t **)(uintptr_t)1;
+    size_t encoded_size = 1, pointer_count = 1;
+    JSValue exception;
+
+    if (reject) {
+        encoded = JS_WriteObject2(ctx, &encoded_size, array, JS_WRITE_OBJ_SAB,
+                                  &pointers, &pointer_count);
+        assert(!encoded && encoded_size == 0 && pointers == NULL && pointer_count == 0);
+        exception = JS_GetException(ctx);
+        assert(JS_IsError(ctx, exception));
+        JS_FreeValue(ctx, exception);
+    } else {
+        encoded = JS_WriteObject(ctx, &encoded_size, array, JS_WRITE_OBJ_SAB);
+        assert(encoded && encoded_size > 0 && !JS_HasException(ctx));
+        js_free(ctx, encoded);
+    }
+}
+
+static void run_shared_write_cleanup(int reject)
+{
+    SharedBufferData data = { 0 };
+    JSSharedArrayBufferFunctions functions = {
+        alloc_shared, free_shared, dup_shared, &data,
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue local, shared, array;
+    JSMemoryUsage before, after;
+    uint8_t *encoded, **pointers;
+    size_t encoded_size, pointer_count, i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    local = JS_NewArrayBuffer(ctx, NULL, 0, NULL, NULL, TRUE);
+    assert(!JS_IsException(local));
+    JS_SetSharedArrayBufferFunctions(rt, &functions);
+    shared = JS_NewArrayBuffer(ctx, NULL, 0, NULL, NULL, TRUE);
+    assert(!JS_IsException(shared));
+    array = JS_NewArray(ctx);
+    assert(!JS_IsException(array));
+    /* A table beyond the small allocation pool is visible in malloc_count. */
+    for (i = 0; i < 65; i++)
+        assert(JS_SetPropertyUint32(ctx, array, i, JS_DupValue(ctx, shared)) >= 0);
+    if (reject)
+        assert(JS_SetPropertyUint32(ctx, array, 65, JS_DupValue(ctx, local)) >= 0);
+    else {
+        encoded = JS_WriteObject2(ctx, &encoded_size, array, JS_WRITE_OBJ_SAB,
+                                  &pointers, &pointer_count);
+        assert(encoded && pointer_count == 65);
+        for (i = 0; i < pointer_count; i++)
+            assert(pointers[i] == data.ptr);
+        js_free(ctx, encoded);
+        js_free(ctx, pointers);
+    }
+    check_shared_write_cleanup(ctx, array, reject);
+    JS_ComputeMemoryUsage(rt, &before);
+    for (i = 0; i < 16; i++)
+        check_shared_write_cleanup(ctx, array, reject);
+    JS_ComputeMemoryUsage(rt, &after);
+    assert(after.malloc_count == before.malloc_count);
+    assert(data.references == 1 && data.duplications == 0 && data.releases == 0);
+    JS_FreeValue(ctx, array);
+    JS_FreeValue(ctx, shared);
+    JS_FreeValue(ctx, local);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(data.references == 0 && data.allocations == 1 && data.releases == 1);
+}
+
+static void test_shared_write_cleanup(void)
+{
+    run_shared_write_cleanup(FALSE);
+}
+
+static void test_shared_write_failure_cleanup(void)
+{
+    run_shared_write_cleanup(TRUE);
+}
+
 static void test_shared_serialization_lifetime(void)
 {
     static const char *sources[] = {
@@ -1460,6 +1543,8 @@ int main(int argc, char **argv)
         { "shared-length-alignment", test_shared_buffer_length_alignment },
         { "shared-buffer-alignment-rejection", test_shared_buffer_alignment_rejection },
         { "shared-buffer-serialization-lifetime", test_shared_serialization_lifetime },
+        { "shared-buffer-write-cleanup", test_shared_write_cleanup },
+        { "shared-buffer-write-failure-cleanup", test_shared_write_failure_cleanup },
         { "shared-buffer-external-owner", test_external_shared_buffer_owner },
         { "shared-buffer-clone-release", test_shared_clone_release_callback },
         { "typed-array-arguments", test_typed_array_arguments },
