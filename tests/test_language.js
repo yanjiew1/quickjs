@@ -429,6 +429,44 @@ function test_annex_if_function_scopes()
         assert_throws(SyntaxError, () => Function(source));
 }
 
+function test_annex_function_identity()
+{
+    function single() {
+        let saved;
+        {
+            saved = local;
+            function local() { return local; }
+            assert(local === saved);
+            assert(local() === saved);
+        }
+        assert(local === saved);
+        return local;
+    }
+    const first = single(), second = single();
+    assert(first !== second);
+    function duplicate() {
+        let saved;
+        {
+            saved = local;
+            assert(local(), 2);
+            function local() { return 1; }
+            assert(local === saved);
+            function local() { return 2; }
+            assert(local === saved);
+        }
+        assert(local === saved);
+        assert(local(), 2);
+    }
+    duplicate();
+    let saved;
+    const outer = Function("save", `{
+        save(local);
+        function local() { return 42; }
+    }
+    return local;`)(value => { saved = value; });
+    assert(outer === saved);
+}
+
 function test_class()
 {
     var o;
@@ -840,6 +878,7 @@ test_class();
 test_super_base_order();
 test_super_null_key_coercion();
 test_annex_if_function_scopes();
+test_annex_function_identity();
 test_template();
 test_template_skip();
 test_object_literal();

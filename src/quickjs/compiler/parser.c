@@ -7100,8 +7100,15 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                 }
             }
         } else if (func_type == JS_PARSE_FUNC_VAR) {
-            emit_op(s, OP_fclosure);
-            emit_u32(s, idx);
+            if (lexical_func_idx >= 0) {
+                s->cur_func->vars[lexical_func_idx].func_pool_idx = idx;
+                emit_op(s, OP_scope_get_var);
+                emit_atom(s, func_name);
+                emit_u16(s, s->cur_func->scope_level);
+            } else {
+                emit_op(s, OP_fclosure);
+                emit_u32(s, idx);
+            }
             if (create_func_var) {
                 if (s->cur_func->is_global_var) {
                     JSGlobalVar *hf;
@@ -7136,8 +7143,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                 }
             }
             if (lexical_func_idx >= 0) {
-                /* lexical variable will be initialized upon entering scope */
-                s->cur_func->vars[lexical_func_idx].func_pool_idx = idx;
+                /* lexical variable was initialized upon entering scope */
                 emit_op(s, OP_drop);
             } else {
                 /* store function object into its lexical name */
