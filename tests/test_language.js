@@ -2011,6 +2011,455 @@ test_using_contextual_grammar();
 test_using_generator_cleanup();
 test_using_intrinsic_cleanup();
 
+function test_using_classic_head_lifetime()
+{
+    const events = [];
+    let i = 0, before, after;
+    const resource = { [Symbol.dispose]() {
+        events.push("dispose");
+        assert(before(), resource);
+        assert(after(), resource);
+    } };
+    for (using value = (() => {
+             before = () => value;
+             assert_throws(ReferenceError, before);
+             events.push("init");
+             return resource;
+         })();
+         (events.push("test" + i), i < 2);
+         (events.push("update" + i), i++)) {
+        after = () => value;
+        assert(value, resource);
+        assert_throws(TypeError, () => { value = null; });
+        events.push("body" + i);
+        continue;
+    }
+    assert(events.join(","),
+           "init,test0,body0,update0,test1,body1,update1,test2,dispose");
+    assert(before(), resource);
+    assert(after(), resource);
+
+    events.length = 0;
+    for (using Named = class { static [Symbol.dispose]() {
+             assert(this.name, "Named");
+             events.push("named");
+         } }; false;) {
+        assert(false);
+    }
+    assert(events.join(","), "named");
+
+    events.length = 0;
+    const error = {};
+    let caught;
+    try {
+        for (using first = { [Symbol.dispose]() { events.push("first"); } },
+                   second = (() => { throw error; })();;) {}
+    } catch (e) { caught = e; }
+    assert(caught, error);
+    assert(events.join(","), "first");
+
+    events.length = 0;
+    for (using first = { [Symbol.dispose]() { events.push("first"); } },
+               second = { [Symbol.dispose]() { events.push("second"); } };;)
+        break;
+    assert(events.join(","), "second,first");
+}
+
+function test_using_classic_head_abrupt()
+{
+    const events = [], initial = {}, disposeError = {};
+    function resource(name, shouldThrow = false) {
+        return { [Symbol.dispose]() {
+            events.push(name);
+            if (shouldThrow)
+                throw disposeError;
+        } };
+    }
+    function returns() {
+        for (using head = resource("head");;) {
+            try {
+                using body = resource("body");
+                return initial;
+            } finally { events.push("finally"); }
+        }
+    }
+    assert(returns(), initial);
+    assert(events.join(","), "body,finally,head");
+
+    for (const position of ["test", "update", "body"]) {
+        events.length = 0;
+        let caught;
+        function failAt(name) {
+            if (position == name)
+                throw initial;
+            return true;
+        }
+        try {
+            for (using head = resource("head", true);
+                 failAt("test"); failAt("update")) {
+                failAt("body");
+            }
+        } catch (e) { caught = e; }
+        assert(caught instanceof SuppressedError, true);
+        assert(caught.error, disposeError);
+        assert(caught.suppressed, initial);
+        assert(events.join(","), "head");
+    }
+
+    events.length = 0;
+    outer: for (let i = 0; i < 2; i++) {
+        for (using head = resource("head" + i);;) {
+            using body = resource("body" + i);
+            continue outer;
+        }
+    }
+    assert(events.join(","), "body0,head0,body1,head1");
+
+    function replacedReturn() {
+        for (using head = resource("head", true);;)
+            return initial;
+    }
+    try {
+        replacedReturn();
+        assert(false);
+    } catch (e) { assert(e, disposeError); }
+}
+
+function test_using_for_of_lifetime_and_capture()
+{
+    const events = [], captures = [], initial = {}, resources = [];
+    for (let i = 0; i < 3; i++) {
+        resources.push({ id: i, [Symbol.dispose]() {
+            events.push("dispose" + this.id);
+        } });
+    }
+    let next = 0;
+    const iterable = {
+        [Symbol.iterator]() {
+            return {
+                next() {
+                    events.push("next" + next);
+                    return next < resources.length ?
+                        { value: resources[next++], done: false } : { done: true };
+                },
+                return() { events.push("close"); return {}; }
+            };
+        }
+    };
+    for (using value of iterable) {
+        assert_throws(TypeError, () => { value = null; });
+        captures.push(() => value.id);
+        events.push("body" + value.id);
+        continue;
+    }
+    assert(events.join(","),
+           "next0,body0,dispose0,next1,body1,dispose1,next2,body2,dispose2,next3");
+    assert(captures.map(get => get()).join(","), "0,1,2");
+
+    events.length = 0;
+    next = 0;
+    for (using value of iterable) {
+        using nested = { [Symbol.dispose]() { events.push("nested"); } };
+        break;
+    }
+    assert(events.join(","), "next0,nested,dispose0,close");
+
+    events.length = 0;
+    next = 0;
+    function returns() {
+        for (using value of iterable) {
+            try { return initial; } finally { events.push("finally"); }
+        }
+    }
+    assert(returns(), initial);
+    assert(events.join(","), "next0,finally,dispose0,close");
+
+    events.length = 0;
+    outer: for (let i = 0; i < 2; i++) {
+        next = 0;
+        for (using value of iterable)
+            continue outer;
+    }
+    assert(events.join(","), "next0,dispose0,close,next0,dispose0,close");
+
+    let headTDZ;
+    for (using value of (headTDZ = () => value, resources)) {}
+    assert_throws(ReferenceError, headTDZ);
+    assert_throws(ReferenceError, () => {
+        let value = resources[0];
+        for (using value of [value]) {}
+    });
+
+    const descendants = [];
+    for (let i = 0; i < 3; i++) {
+        try {
+            for (using value of [{ id: i, [Symbol.dispose]() { throw initial; } }]) {
+                {
+                    let child = i;
+                    descendants.push(() => [value.id, child].join(":"));
+                    if (i == 0)
+                        break;
+                    if (i == 1)
+                        continue;
+                    throw undefined;
+                }
+            }
+        } catch (e) {
+            if (i < 2)
+                assert(e, initial);
+            else {
+                assert(e instanceof SuppressedError, true);
+                assert(e.error, initial);
+                assert(e.suppressed, undefined);
+            }
+        }
+    }
+    assert(descendants.map(get => get()).join(","), "0:0,1:1,2:2");
+}
+
+function test_using_for_of_close_precedence()
+{
+    const initial = {}, disposeError = {}, closeError = {}, acquireError = {};
+    for (const mode of ["break", "continue", "return", "throw", "normal"]) {
+        for (const throwDispose of [false, true]) {
+            const events = [];
+            let caught, count = 0;
+            const iterable = {
+                [Symbol.iterator]() {
+                    return {
+                        next() {
+                            events.push("next");
+                            if (count++)
+                                return { done: true };
+                            return { done: false, value: { [Symbol.dispose]() {
+                                events.push("dispose");
+                                if (throwDispose)
+                                    throw disposeError;
+                            } } };
+                        },
+                        return() { events.push("close"); throw closeError; }
+                    };
+                }
+            };
+            function run() {
+                for (using value of iterable) {
+                    if (mode == "break")
+                        break;
+                    if (mode == "continue")
+                        continue;
+                    if (mode == "return")
+                        return initial;
+                    if (mode == "throw")
+                        throw initial;
+                }
+            }
+            try { run(); } catch (e) { caught = e; }
+            if (throwDispose && mode == "throw") {
+                assert(caught instanceof SuppressedError, true);
+                assert(caught.error, disposeError);
+                assert(caught.suppressed, initial);
+            } else if (throwDispose) {
+                assert(caught, disposeError);
+            } else if (mode == "throw") {
+                assert(caught, initial);
+            } else if (mode == "break" || mode == "return") {
+                assert(caught, closeError);
+            } else {
+                assert(caught, undefined);
+            }
+            assert(events.join(","),
+                   throwDispose || mode == "break" || mode == "return" || mode == "throw" ?
+                   "next,dispose,close" : "next,dispose,next");
+        }
+    }
+
+    for (const closeFailure of ["getter", "call", "primitive"]) {
+        const events = [];
+        const iterable = {
+            [Symbol.iterator]() {
+                return {
+                    next() { return { value: { [Symbol.dispose]() {
+                        events.push("dispose");
+                    } }, done: false }; },
+                    get return() {
+                        events.push("return-get");
+                        if (closeFailure == "getter")
+                            throw closeError;
+                        return function() {
+                            events.push("return-call");
+                            if (closeFailure == "call")
+                                throw closeError;
+                            return 1;
+                        };
+                    }
+                };
+            }
+        };
+        let caught;
+        try { for (using value of iterable) break; } catch (e) { caught = e; }
+        if (closeFailure == "primitive")
+            assert(caught instanceof TypeError, true);
+        else
+            assert(caught, closeError);
+        assert(events.join(","), closeFailure == "getter" ?
+               "dispose,return-get" : "dispose,return-get,return-call");
+        events.length = 0;
+        try { for (using value of iterable) throw initial; } catch (e) { caught = e; }
+        assert(caught, initial);
+    }
+
+    for (const failure of ["getter", "non-callable", "primitive"]) {
+        const events = [];
+        const value = failure == "primitive" ? 1 : {
+            get [Symbol.dispose]() {
+                events.push("get");
+                if (failure == "getter")
+                    throw acquireError;
+                return 1;
+            }
+        };
+        const iterable = {
+            [Symbol.iterator]() {
+                return {
+                    next() { return { value, done: false }; },
+                    return() { events.push("close"); throw closeError; }
+                };
+            }
+        };
+        let caught;
+        try { for (using current of iterable) assert(false); } catch (e) { caught = e; }
+        if (failure == "getter")
+            assert(caught, acquireError);
+        else
+            assert(caught instanceof TypeError, true);
+        assert(events.join(","), failure == "primitive" ? "close" : "get,close");
+    }
+
+    for (const failure of ["next", "result", "done", "value"]) {
+        const events = [];
+        const iterable = {
+            [Symbol.iterator]() {
+                return {
+                    next() {
+                        if (failure == "next")
+                            throw initial;
+                        if (failure == "result")
+                            return 1;
+                        return {
+                            get done() { if (failure == "done") throw initial; return false; },
+                            get value() { throw initial; }
+                        };
+                    },
+                    return() { events.push("close"); return {}; }
+                };
+            }
+        };
+        let caught;
+        try { for (using current of iterable) assert(false); } catch (e) { caught = e; }
+        if (failure == "result")
+            assert(caught instanceof TypeError, true);
+        else
+            assert(caught, initial);
+        assert(events.length, 0);
+    }
+}
+
+function test_using_loop_head_grammar_and_generators()
+{
+    for (const source of [
+        "for (using value;;) {}", "for (using value = null, other;;) {}",
+        "for (using let = null;;) {}", "for (using value in {}) {}",
+        "for (using value = null of []) {}", "for (using first, second of []) {}",
+        "for (using let of []) {}", "for (using value of []) { var value; }",
+        "for (using value = null;;) { var value; }",
+        "for (us\\u0069ng value = null;;) {}",
+        "for (us\\u0069ng value of []) {}",
+        "for (using\nvalue of []) {}", "for (using\nvalue = null;;) {}"
+    ]) {
+        assert_throws(SyntaxError, () => Function(source));
+    }
+    const resources = [null, undefined];
+    for (using value of resources)
+        assert(value == null, true);
+    Function("var using; for (using\nof [null]) {}")();
+    let using, of = [[9], [8], [7]], result = [];
+    for (using of of [0, 1, 2])
+        result.push(using);
+    assert(result.join(","), "7");
+    Function("for (using o\\u0066 of [null]) {}")();
+    Function("for (using /* comment */ value of [null]) {}")();
+    Function("var using = []; for (using[0] of [1]) {}")();
+
+    const events = [], error = {};
+    function* generator() {
+        for (using value of [{ [Symbol.dispose]() { events.push("dispose"); } }])
+            yield value;
+    }
+    const first = generator();
+    assert(first.next().done, false);
+    assert(first.return(42).value, 42);
+    assert(events.join(","), "dispose");
+    events.length = 0;
+    const second = generator();
+    second.next();
+    try { second.throw(error); assert(false); } catch (e) { assert(e, error); }
+    assert(events.join(","), "dispose");
+
+    events.length = 0;
+    function* beforeIterator() {
+        for (using value of (yield "before", [null])) {}
+    }
+    const third = beforeIterator();
+    assert(third.next().value, "before");
+    assert(third.return(12).value, 12);
+    assert(events.length, 0);
+}
+
+test_using_classic_head_lifetime();
+test_using_classic_head_abrupt();
+test_using_for_of_lifetime_and_capture();
+test_using_for_of_close_precedence();
+test_using_loop_head_grammar_and_generators();
+
+/* Source-only synchronous prerequisite regression additions. */
+function test_using_for_of_catch_baseline()
+{
+    const original = {}, disposalError = {}, events = [];
+    const resource = { [Symbol.dispose]() { events.push("dispose"); throw disposalError; } };
+    const iterable = {
+        [Symbol.iterator]() {
+            return {
+                next() { return { value: resource, done: false }; },
+                return() { events.push("close"); return {}; }
+            };
+        }
+    };
+    let caught;
+    try {
+        for (using value of iterable) {
+            assert(value, resource);
+            throw original;
+        }
+    } catch (error) { caught = error; }
+    assert(caught instanceof SuppressedError, true);
+    assert(caught.error, disposalError);
+    assert(caught.suppressed, original);
+    assert(events.join(","), "dispose,close");
+
+    events.length = 0;
+    Object.defineProperty(resource, Symbol.dispose, {
+        get() { events.push("lookup"); throw original; }
+    });
+    caught = undefined;
+    try {
+        for (using value of iterable) assert(false);
+    } catch (error) { caught = error; }
+    assert(caught, original);
+    assert(events.join(","), "lookup,close");
+}
+
+test_using_for_of_catch_baseline();
+
 /* Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
 /* Source-review regressions. Prepared only; not compiled or executed.
    Append to tests/test_language.js after native using integration.

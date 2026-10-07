@@ -4786,7 +4786,7 @@ static void push_resource_scope(JSParseState *s, JSResourceScope *scope,
 }
 
 /* Emit no instructions or hidden locals for scopes without resources. */
-static int activate_resource_scope(JSParseState *s)
+static int activate_resource_scope(JSParseState *s, BOOL preserve_value)
 {
     JSFunctionDef *fd = s->cur_func;
     JSResourceScope *scope = fd->resource_scope;
@@ -4820,7 +4820,23 @@ static int activate_resource_scope(JSParseState *s)
     emit_op(s, OP_push_false);
     emit_op(s, OP_put_loc);
     emit_u16(s, scope->has_error_idx);
+    if (preserve_value) {
+        /* List allocation has succeeded. Stash the iteration value
+           before installing the catch so its analyzed baseline is
+           the iterator record, matching the runtime unwind stack. */
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->error_idx);
+    }
     emit_goto(s, OP_catch, scope->label_catch);
+    if (preserve_value) {
+        /* The throw flag is still false. Reuse its error slot only
+           for this nonthrowing transfer and immediately clear it. */
+        emit_op(s, OP_get_loc);
+        emit_u16(s, scope->error_idx);
+        emit_op(s, OP_undefined);
+        emit_op(s, OP_put_loc);
+        emit_u16(s, scope->error_idx);
+    }
     return 0;
 }
 
@@ -5244,7 +5260,7 @@ static int is_let(JSParseState *s, int decl_mask)
 
 /* A contextual keyword requires lexer lookahead to retain escape and
    line terminator information; using[expr] remains an ordinary expression. */
-static int is_using_declaration(JSParseState *s)
+static int is_using_declaration(JSParseState *s, BOOL for_in_of)
 {
     JSParsePos pos;
     int result = FALSE;
@@ -5255,6 +5271,7 @@ static int is_using_declaration(JSParseState *s)
     if (next_token(s)) {
         result = -1;
     } else if (!s->got_lf &&
+               !(for_in_of && token_is_pseudo_keyword(s, JS_ATOM_of)) &&
                (s->token.val == TOK_IDENT || s->token.val == TOK_AWAIT ||
                 s->token.val == TOK_YIELD || s->token.val == TOK_LET)) {
         result = TRUE;
@@ -5264,23 +5281,25 @@ static int is_using_declaration(JSParseState *s)
     return result;
 }
 
-/* XXX: handle IteratorClose when exiting the loop before the
-   enumeration is done */
+/* A resource frame belongs inside the iterator frame. The binding
+   chunk runs only after a value is produced, before the body. */
 static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
                                           BOOL is_async)
 {
     JSContext *ctx = s->ctx;
     JSFunctionDef *fd = s->cur_func;
     JSAtom var_name;
-    BOOL has_initializer, is_for_of, has_destructuring;
+    BOOL has_initializer, is_for_of, has_destructuring, is_using;
     int tok, tok1, opcode, scope, block_scope_level;
     int label_next, label_expr, label_cont, label_body, label_break;
     int pos_next, pos_expr;
     BlockEnv break_entry;
+    JSResourceScope resources;
 
     has_initializer = FALSE;
     has_destructuring = FALSE;
     is_for_of = FALSE;
+    is_using = FALSE;
     block_scope_level = fd->scope_level;
     label_cont = new_label(s);
     label_body = new_label(s);
@@ -5313,12 +5332,32 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     default:
         return -1;
     }
+    switch (is_using_declaration(s, TRUE)) {
+    case TRUE:
+        if (is_async)
+            return js_parse_error(s, "resource for-await-of heads are not supported yet");
+        is_using = TRUE;
+        tok = TOK_CONST;
+        /* A new lexical environment is required before method lookup,
+           including a TDZ for bindings reused by later iterations. */
+        emit_op(s, OP_enter_scope);
+        emit_u16(s, fd->scope_level);
+        push_resource_scope(s, &resources, TRUE);
+        if (activate_resource_scope(s, TRUE) < 0)
+            return -1;
+        /* Stack: iterator record, resource catch offset, value. */
+        break;
+    case FALSE:
+        break;
+    default:
+        return -1;
+    }
     if (tok == TOK_VAR || tok == TOK_LET || tok == TOK_CONST) {
         if (next_token(s))
             return -1;
 
         if (!(s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved)) {
-            if (s->token.val == '[' || s->token.val == '{') {
+            if (!is_using && (s->token.val == '[' || s->token.val == '{')) {
                 if (js_parse_destructuring_element(s, tok, 0, TRUE, -1, FALSE, FALSE) < 0)
                     return -1;
                 has_destructuring = TRUE;
@@ -5327,6 +5366,8 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
             }
             var_name = JS_ATOM_NULL;
         } else {
+            if (is_using && s->token.u.ident.atom == JS_ATOM_let)
+                return js_parse_error(s, "'let' is not a valid lexical identifier");
             var_name = JS_DupAtom(ctx, s->token.u.ident.atom);
             if (next_token(s)) {
                 JS_FreeAtom(s->ctx, var_name);
@@ -5336,6 +5377,8 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
                 JS_FreeAtom(s->ctx, var_name);
                 return -1;
             }
+            if (is_using)
+                emit_resource_registration(s, OP_RESOURCE_ADD_SYNC);
             emit_op(s, (tok == TOK_CONST || tok == TOK_LET) ?
                     OP_scope_put_var_init : OP_scope_put_var);
             emit_atom(s, var_name);
@@ -5364,10 +5407,22 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     }
     emit_goto(s, OP_goto, label_body);
 
+    if (is_using) {
+        /* The iterable expression precedes the iteration resource
+           list and iterator creation, including suspended yields. */
+        assert(fd->resource_scope == &resources);
+        assert(fd->top_break == &resources.block);
+        fd->resource_scope = resources.prev;
+        pop_break_entry(fd);
+    }
     pos_expr = s->cur_func->byte_code.size;
     emit_label(s, label_expr);
     if (s->token.val == '=') {
         const uint8_t *source_ptr = s->token.ptr;
+        if (is_using) {
+            JS_FreeAtom(ctx, var_name);
+            return js_parse_error(s, "resource for-of binding cannot have an initializer");
+        }
         /* XXX: potential scoping issue if inside `with` statement */
         has_initializer = TRUE;
         /* parse and evaluate initializer prior to evaluating the
@@ -5392,6 +5447,8 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         if (has_initializer)
             goto initializer_error;
     } else if (s->token.val == TOK_IN) {
+        if (is_using)
+            return js_parse_error(s, "using declaration is not allowed in a for-in head");
         if (is_async)
             return js_parse_error(s, "'for await' loop should be used with 'of'");
         if (has_initializer &&
@@ -5456,9 +5513,17 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         }
     }
 
+    if (is_using) {
+        assert(fd->resource_scope == resources.prev);
+        assert(fd->top_break == resources.block.prev);
+        fd->resource_scope = &resources;
+        fd->top_break = &resources.block;
+    }
     emit_label(s, label_body);
     if (js_parse_statement(s))
         return -1;
+    if (is_using)
+        pop_resource_scope(s, &resources);
 
     close_scopes(s, s->cur_func->scope_level, block_scope_level);
 
@@ -5727,8 +5792,9 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             int label_cont, label_break, label_body, label_test;
             int pos_cont, pos_body, block_scope_level;
             BlockEnv break_entry;
+            JSResourceScope resources;
             int tok, bits;
-            BOOL is_async;
+            BOOL is_async, is_using;
 
             if (next_token(s))
                 goto fail;
@@ -5758,6 +5824,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 break;
             }
             block_scope_level = s->cur_func->scope_level;
+            is_using = FALSE;
 
             /* create scope for the lexical variables declared in the initial,
                test and increment expressions */
@@ -5774,10 +5841,26 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 default:
                     goto fail;
                 }
+                switch (is_using_declaration(s, FALSE)) {
+                case TRUE:
+                    is_using = TRUE;
+                    tok = TOK_CONST;
+                    /* One list for the whole loop. Same-loop continue
+                       stops at the later loop frame and keeps it. */
+                    push_resource_scope(s, &resources, TRUE);
+                    if (activate_resource_scope(s, FALSE) < 0)
+                        goto fail;
+                    break;
+                case FALSE:
+                    break;
+                default:
+                    goto fail;
+                }
                 if (tok == TOK_VAR || tok == TOK_LET || tok == TOK_CONST) {
                     if (next_token(s))
                         goto fail;
-                    if (js_parse_var(s, FALSE, tok, FALSE, -1))
+                    if (js_parse_var(s, FALSE, tok, FALSE,
+                                     is_using ? OP_RESOURCE_ADD_SYNC : -1))
                         goto fail;
                 } else {
                     if (js_parse_expr2(s, FALSE))
@@ -5785,8 +5868,10 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                     emit_op(s, OP_drop);
                 }
 
-                /* close the closures before the first iteration */
-                close_scopes(s, s->cur_func->scope_level, block_scope_level);
+                /* Resource heads keep their one immutable binding
+                   environment until disposal after the whole loop. */
+                if (!is_using)
+                    close_scopes(s, s->cur_func->scope_level, block_scope_level);
             }
             if (js_parse_expect(s, ';'))
                 goto fail;
@@ -5837,8 +5922,9 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 goto fail;
 
             /* close the closures before the next iteration */
-            /* XXX: check continue case */
-            close_scopes(s, s->cur_func->scope_level, block_scope_level);
+            /* XXX: check continue case for ordinary lexical heads */
+            if (!is_using)
+                close_scopes(s, s->cur_func->scope_level, block_scope_level);
 
             if (OPTIMIZE && label_test != label_body && label_cont != label_test) {
                 /* move the increment code here */
@@ -5865,6 +5951,8 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             emit_label(s, label_break);
 
             pop_break_entry(s->cur_func);
+            if (is_using)
+                pop_resource_scope(s, &resources);
             pop_scope(s);
         }
         break;
@@ -6191,13 +6279,13 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             js_parse_error_reserved_identifier(s);
             goto fail;
         }
-        switch (is_using_declaration(s)) {
+        switch (is_using_declaration(s, FALSE)) {
         case TRUE:
             if (!(decl_mask & DECL_MASK_OTHER)) {
                 js_parse_error(s, "using declaration requires a statement list");
                 goto fail;
             }
-            if (activate_resource_scope(s) < 0 || next_token(s))
+            if (activate_resource_scope(s, FALSE) < 0 || next_token(s))
                 goto fail;
             if (js_parse_var(s, PF_IN_ACCEPTED, TOK_CONST, FALSE,
                              OP_RESOURCE_ADD_SYNC) ||
