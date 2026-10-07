@@ -2198,6 +2198,44 @@ function test_iterator_flatmap_close()
     assert(events.join(","), "inner,outer");
 }
 
+function test_iterator_helper_acquisition()
+{
+    const marker = {};
+    for (const [method, argument] of [["drop", 0], ["take", 1],
+                                     ["map", value => value], ["filter", () => true],
+                                     ["flatMap", value => [value]]]) {
+        let closes = 0;
+        const source = Object.create(Iterator.prototype);
+        Object.defineProperties(source, {
+            next: { get() { throw marker; } },
+            return: { get() { closes++; throw {}; } }
+        });
+        let caught;
+        try { source[method](argument); } catch (error) { caught = error; }
+        assert(caught === marker, true);
+        assert(closes, 0);
+    }
+
+    for (const method of ["map", "filter", "flatMap", "take", "drop"]) {
+        let closes = 0, reads = 0;
+        const source = Object.create(Iterator.prototype);
+        Object.defineProperties(source, {
+            next: { get() { reads++; throw marker; } },
+            return: { value() { closes++; throw {}; } }
+        });
+        if (method === "take" || method === "drop") {
+            let caught;
+            try { source[method]({ valueOf() { throw marker; } }); }
+            catch (error) { caught = error; }
+            assert(caught === marker, true);
+        } else {
+            assert_throws(TypeError, () => source[method](undefined));
+        }
+        assert(closes, 1);
+        assert(reads, 0);
+    }
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2507,6 +2545,7 @@ test_iterator_accessors();
 test_iterator_helper_completion();
 test_iterator_helper_start_return();
 test_iterator_flatmap_close();
+test_iterator_helper_acquisition();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
