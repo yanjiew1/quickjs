@@ -1,0 +1,80 @@
+name: benchmarks
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Workloads (Zoo always excludes zlib and uses 10 paired rounds)
+        type: choice
+        options: [core, zoo, all]
+        default: core
+      rounds:
+        description: Paired rounds for V8 v7 and 72 microbenchmarks
+        type: choice
+        options: ['1', '3', '4', '5', '6']
+        default: '3'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    name: Informational ${{ matrix.compiler }} benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    env:
+      SUITE: ${{ inputs.suite || 'core' }}
+      ROUNDS: ${{ inputs.rounds || '1' }}
+      COMPILER: ${{ matrix.compiler }}
+      CANDIDATE_SHA: ${{ github.sha }}
+    steps:
+      - name: Select report directory
+        run: |
+          echo "REPORT=$RUNNER_TEMP/quickjs-benchmarks-$COMPILER" >> "$GITHUB_ENV"
+      - name: Check out exact candidate
+        uses: actions/checkout@v4
+        with:
+          path: candidate
+          ref: ${{ github.sha }}
+      - name: Check out pinned upstream
+        uses: actions/checkout@v4
+        with:
+          path: upstream
+          ref: 535a7c250ff4a577ec36c3e103daab6dadeea650
+      - name: Verify benchmark tool contracts
+        run: |
+          python3 -m unittest discover -s candidate/tools/benchmarks -p 'test_*.py'
+      - name: Build and compare fresh JavaScript processes
+        run: |
+          python3 candidate/tools/benchmarks/run.py \
+            --candidate candidate --candidate-revision "$CANDIDATE_SHA" \
+            --upstream upstream --compiler "$COMPILER" \
+            --suite "$SUITE" --rounds "$ROUNDS" --build-jobs 2 \
+            --cpu auto --output "$REPORT"
+      - name: Publish measurements and observed environment
+        if: always()
+        run: |
+          if test -f "$REPORT/summary.md"; then
+            cat "$REPORT/summary.md" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Benchmark setup failed before a report was created.' \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve raw measurements, environment, and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ matrix.compiler }}-${{ github.sha }}
+          path: ${{ env.REPORT }}
+          if-no-files-found: warn
+          retention-days: 30
