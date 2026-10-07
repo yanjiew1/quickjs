@@ -967,7 +967,7 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
     case JS_CLASS_UINT8_ARRAY:
         if (is_int && (uint8_t)v64 == v64) {
             const uint8_t *pv, *pp;
-            uint16_t v;
+            uint8_t v;
         scan8:
             pv = p->u.array.u.uint8_ptr;
             v = v64;

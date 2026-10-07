@@ -1412,6 +1412,17 @@ function assert_json_error(str, line_num, col_num)
     }
 }
 
+function test_typed_array_signed_search()
+{
+    const array = new Int8Array([-128, -7, -1, -7, -128]);
+    assert(array.indexOf(-128), 0);
+    assert(array.lastIndexOf(-128), 4);
+    assert(array.lastIndexOf(-7), 3);
+    assert(array.lastIndexOf(-7, 2), 1);
+    assert(array.lastIndexOf(-1), 2);
+    assert(array.includes(-7), true);
+}
+
 function test_error_stack()
 {
     function collect_stack_trace(depth) {
@@ -3015,6 +3026,7 @@ test_array_buffer_resize_order();
 test_array_buffer_transfer_range();
 test_array_buffer_slice_shrink();
 test_typed_array();
+test_typed_array_signed_search();
 test_typed_array_with_conversion();
 test_typed_array_copywithin_zero();
 test_typed_array_set_content();
