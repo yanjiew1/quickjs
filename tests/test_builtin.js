@@ -465,6 +465,47 @@ function test_eval()
     test_eval2();
 }
 
+function test_array_buffer_max_index()
+{
+    for (const C of [ArrayBuffer, SharedArrayBuffer]) {
+        for (const value of [Infinity, -Infinity, 2 ** 64, -(2 ** 64), -1])
+            assert_throws(RangeError, () => new C(0, { maxByteLength: value }));
+        assert_throws(TypeError, () => new C(0, { maxByteLength: Symbol("max") }));
+        for (const value of [NaN, -0.5, 0.5, 1.9, "2"])
+            assert(new C(0, { maxByteLength: value }).maxByteLength,
+                   Number.isNaN(value) ? 0 : Math.trunc(Number(value)) || 0);
+        assert_throws(RangeError, () => new C(2, { maxByteLength: 1.9 }));
+        assert(new C(0, { maxByteLength: undefined }).maxByteLength, 0);
+
+        const marker = {};
+        let caught;
+        try {
+            new C(0, { maxByteLength: { valueOf() { throw marker; } } });
+        } catch (error) {
+            caught = error;
+        }
+        assert(caught === marker, true);
+
+        const events = [];
+        const length = { valueOf() { events.push("length"); return 0; } };
+        const options = {
+            get maxByteLength() {
+                events.push("max");
+                return { valueOf() { events.push("index"); return 2; } };
+            }
+        };
+        const target = new Proxy(function() {}, {
+            get(target, key) {
+                assert(key, "prototype");
+                events.push("prototype");
+                return C.prototype;
+            }
+        });
+        assert(Reflect.construct(C, [length, options], target).maxByteLength, 2);
+        assert(events.join(","), "length,max,index,prototype");
+    }
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -1707,6 +1748,7 @@ test_string_normalize();
 test_math();
 test_number();
 test_eval();
+test_array_buffer_max_index();
 test_typed_array();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
