@@ -578,6 +578,8 @@ C_TESTS+=tests/test_fuzz_allocations$(EXE)
 
 C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 
+C_TESTS+=tests/test_atomics_wait$(EXE)
+
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
 	mkdir -p $(@D)
@@ -587,6 +589,9 @@ tests/test_bytecode_trace$(EXE): $(OBJDIR)/tests/test_bytecode.o $(OBJDIR)/src/q
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_allocator$(EXE): $(OBJDIR)/tests/test_allocator.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_atomics_wait$(EXE): $(OBJDIR)/tests/test_atomics_wait.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
@@ -611,6 +616,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_fuzz_exception_ownership$(EXE)
 	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
+	$(WINE) ./tests/test_atomics_wait$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)

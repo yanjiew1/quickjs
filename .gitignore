@@ -51,6 +51,9 @@ libwinpthread*.dll
 
 /tests/test_fuzz_support
 /tests/test_fuzz_support.exe
+
+/tests/test_atomics_wait
+/tests/test_atomics_wait.exe
 /tests/test_fuzz_json
 /tests/test_fuzz_json.exe
 /tests/test_fuzz_exception_ownership
