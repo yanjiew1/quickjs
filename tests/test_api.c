@@ -1578,6 +1578,153 @@ static void test_native_iterator_next_realm(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_iterator_helper_creation_realm(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx[2];
+    JSValue global;
+    static const char script[] =
+        "(function () {\n"
+        "    const realms = [globalThis, foreign];\n"
+        "    function check(actual, expected, message) {\n"
+        "        if (actual !== expected) throw Error(message);\n"
+        "    }\n"
+        "    function resultRealm(result, realm, message) {\n"
+        "        check(Object.getPrototypeOf(result), realm.Object.prototype, message);\n"
+        "    }\n"
+        "    function thrownRealm(callback, realm, message) {\n"
+        "        let caught = false;\n"
+        "        try { callback(); } catch (error) {\n"
+        "            caught = true;\n"
+        "            check(Object.getPrototypeOf(error), realm.TypeError.prototype, message);\n"
+        "        }\n"
+        "        check(caught, true, message + \": expected an exception\");\n"
+        "    }\n"
+        "    function finiteSource(value) {\n"
+        "        let used = false;\n"
+        "        return { next() {\n"
+        "            if (used) return { done: true };\n"
+        "            used = true;\n"
+        "            return { value };\n"
+        "        } };\n"
+        "    }\n"
+        "    for (let i = 0; i < 2; i++) {\n"
+        "        const creator = realms[i], caller = realms[1 - i];\n"
+        "        const borrowed = Object.getPrototypeOf(caller.Iterator.from([]).map(x => x));\n"
+        "        const next = borrowed.next, close = borrowed.return;\n"
+        "        const makers = [\n"
+        "            input => creator.Iterator.prototype.map.call(input, x => x),\n"
+        "            input => creator.Iterator.prototype.filter.call(input, x => true),\n"
+        "            input => creator.Iterator.prototype.flatMap.call(input, x => [x]),\n"
+        "            input => creator.Iterator.prototype.drop.call(input, 0),\n"
+        "            input => creator.Iterator.prototype.take.call(input, 1),\n"
+        "        ];\n"
+        "        for (const make of makers) {\n"
+        "            let helper = make(finiteSource(1));\n"
+        "            Object.setPrototypeOf(helper, null);\n"
+        "            let result = next.call(helper);\n"
+        "            resultRealm(result, creator, \"yielded result uses the saved creation realm\");\n"
+        "            check(result.value, 1, \"borrowed next yields the input value\");\n"
+        "            check(result.done, false, \"first resume yields\");\n"
+        "            result = next.call(helper);\n"
+        "            resultRealm(result, creator, \"first completion uses the creation realm\");\n"
+        "            check(result.done, true, \"second resume completes\");\n"
+        "            resultRealm(next.call(helper), caller,\n"
+        "                        \"already-completed next uses the invoked method realm\");\n"
+        "            resultRealm(close.call(helper), caller,\n"
+        "                        \"already-completed return uses the invoked method realm\");\n"
+        "\n"
+        "            helper = make(finiteSource(2));\n"
+        "            resultRealm(close.call(helper), caller,\n"
+        "                        \"suspended-start return uses the invoked method realm\");\n"
+        "            resultRealm(next.call(helper), caller,\n"
+        "                        \"next after suspended-start return stays in the method realm\");\n"
+        "\n"
+        "            helper = make(finiteSource(3));\n"
+        "            next.call(helper);\n"
+        "            resultRealm(close.call(helper), creator,\n"
+        "                        \"suspended-yield return resumes the saved creation realm\");\n"
+        "            resultRealm(close.call(helper), caller,\n"
+        "                        \"return after completion uses the method realm\");\n"
+        "\n"
+        "            helper = make({ next: null });\n"
+        "            thrownRealm(() => next.call(helper), creator,\n"
+        "                        \"uncallable cached next is validated in the generator realm\");\n"
+        "            resultRealm(next.call(helper), caller,\n"
+        "                        \"next after failure uses the method realm\");\n"
+        "\n"
+        "            const badClose = () => ({ next() { return { value: 4 }; },\n"
+        "                                     return() { return 0; } });\n"
+        "            helper = make(badClose());\n"
+        "            thrownRealm(() => close.call(helper), caller,\n"
+        "                        \"suspended-start close validation uses the method realm\");\n"
+        "            helper = make(badClose());\n"
+        "            next.call(helper);\n"
+        "            thrownRealm(() => close.call(helper), creator,\n"
+        "                        \"suspended-yield close validation uses the generator realm\");\n"
+        "\n"
+        "            const source = { next() {\n"
+        "                thrownRealm(() => next.call(helper), caller,\n"
+        "                            \"running next validation uses the method realm\");\n"
+        "                thrownRealm(() => close.call(helper), caller,\n"
+        "                            \"running return validation uses the method realm\");\n"
+        "                return { value: 5 };\n"
+        "            }, return() {\n"
+        "                thrownRealm(() => next.call(helper), caller,\n"
+        "                            \"active close keeps generator execution guarded\");\n"
+        "                return {};\n"
+        "            } };\n"
+        "            helper = make(source);\n"
+        "            resultRealm(next.call(helper), creator,\n"
+        "                        \"reentry does not change the outer generator realm\");\n"
+        "            close.call(helper);\n"
+        "\n"
+        "            const startClose = { next() { throw 42; }, return() {\n"
+        "                resultRealm(next.call(helper), caller,\n"
+        "                            \"suspended-start return completes before callbacks\");\n"
+        "                resultRealm(close.call(helper), caller,\n"
+        "                            \"completed return reentry uses the method realm\");\n"
+        "                return {};\n"
+        "            } };\n"
+        "            helper = make(startClose);\n"
+        "            close.call(helper);\n"
+        "        }\n"
+        "        const source = { next() { return { value: 6 }; } };\n"
+        "        const flat = creator.Iterator.prototype.flatMap.call(source, () => 0);\n"
+        "        thrownRealm(() => next.call(flat), creator,\n"
+        "                    \"flatMap primitive-result error is created by the saved realm\");\n"
+        "        thrownRealm(() => next.call({}), caller,\n"
+        "                    \"invalid helper receiver is validated in the method realm\");\n"
+        "        thrownRealm(() => close.call({}), caller,\n"
+        "                    \"invalid return receiver is validated in the method realm\");\n"
+        "\n"
+        "        // The bootstrap releases both realm roots and runs GC after this\n"
+        "        // script. This unreachable global/helper/context cycle requires\n"
+        "        // the retained context to be marked and freed by the helper owner.\n"
+        "        const cycle = creator.Iterator.prototype.map.call(finiteSource(17), x => x);\n"
+        "        Object.setPrototypeOf(cycle, null);\n"
+        "        cycle.contextGlobal = creator;\n"
+        "        creator.__helperRealmCycle = cycle;\n"
+        "    }\n"
+        "    return true;\n"
+        "})()\n";
+
+    assert(rt);
+    ctx[0] = JS_NewContext(rt);
+    ctx[1] = JS_NewContext(rt);
+    assert(ctx[0] && ctx[1]);
+    global = JS_GetGlobalObject(ctx[0]);
+    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
+                              JS_GetGlobalObject(ctx[1])) >= 0);
+    JS_FreeValue(ctx[0], global);
+    check_eval(ctx[0], script);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx[1]);
+    JS_FreeContext(ctx[0]);
+    JS_RunGC(rt);
+    JS_FreeRuntime(rt);
+}
+
 static void test_iterator_constructor_realm(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -1801,6 +1948,7 @@ int main(int argc, char **argv)
         { "native-name", test_native_function_initial_name },
         { "stripped-function", test_stripped_function_to_string },
         { "iterator-realm", test_iterator_constructor_realm },
+        { "iterator-helper-creation-realm", test_iterator_helper_creation_realm },
         { "native-iterator-next-realm", test_native_iterator_next_realm },
         { "typed-array-overlap", test_typed_array_external_overlap },
         { "typed-buffer-resized-length", test_typed_buffer_resized_length },

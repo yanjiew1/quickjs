@@ -411,6 +411,7 @@ typedef enum JSIteratorHelperKindEnum {
 #define JS_ITERATOR_LIMIT_INFINITY (-1)
 
 typedef struct JSIteratorHelperData {
+    JSContext *realm;
     JSValue obj;
     JSValue next;
     JSValue argument; // callback
@@ -480,6 +481,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
         JS_FreeValue(ctx, method);
         goto fail;
     }
+    it->realm = JS_DupContext(ctx);
     it->kind = magic;
     it->obj = JS_DupValue(ctx, this_val);
     it->argument = JS_DupValue(ctx, func);
@@ -784,6 +786,8 @@ void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
         JS_FreeValueRT(rt, it->next);
         JS_FreeValueRT(rt, it->inner);
         JS_FreeValueRT(rt, it->inner_next);
+        if (it->realm)
+            JS_FreeContext(it->realm);
         js_free_rt(rt, it);
     }
 }
@@ -799,6 +803,8 @@ void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
         JS_MarkValue(rt, it->next, mark_func);
         JS_MarkValue(rt, it->inner, mark_func);
         JS_MarkValue(rt, it->inner_next, mark_func);
+        if (it->realm)
+            mark_func(rt, &it->realm->header);
     }
 }
 
@@ -832,12 +838,15 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     if (magic == GEN_MAGIC_RETURN && !it->started) {
         it->done = 1;
         *pdone = TRUE;
-        if (JS_IteratorClose(ctx, it->obj, FALSE))
-            return JS_EXCEPTION;
-        return JS_UNDEFINED;
+        ret = JS_IteratorClose(ctx, it->obj, FALSE)
+            ? JS_EXCEPTION : JS_UNDEFINED;
+        JS_FreeContext(it->realm);
+        it->realm = NULL;
+        return ret;
     }
     it->executing = 1;
     it->started = 1;
+    ctx = it->realm;
 
     if (magic == GEN_MAGIC_RETURN) {
         *pdone = TRUE;
@@ -1023,8 +1032,27 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     }
 
  done:
+    if (!JS_IsException(ret)) {
+        ret = js_create_iterator_result(ctx, ret, *pdone);
+        if (JS_IsException(ret) && !*pdone) {
+            if (!JS_IsUndefined(it->inner)) {
+                JS_IteratorClose(ctx, it->inner, TRUE);
+                JS_FreeValue(ctx, it->inner);
+                JS_FreeValue(ctx, it->inner_next);
+                it->inner = JS_UNDEFINED;
+                it->inner_next = JS_UNDEFINED;
+            }
+            JS_IteratorClose(ctx, it->obj, TRUE);
+            *pdone = TRUE;
+        }
+    }
     it->done = *pdone;
     it->executing = 0;
+    if (*pdone) {
+        JS_FreeContext(it->realm);
+        it->realm = NULL;
+    }
+    *pdone = 2;
     return ret;
  fail:
     /* close the iterator object, preserving pending exception */
