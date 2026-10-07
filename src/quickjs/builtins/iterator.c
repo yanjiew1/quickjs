@@ -31,6 +31,7 @@
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/string.h"
+#include "../internal/string-buffer.h"
 #include "../internal/function.h"
 #include "../internal/object.h"
 #include "../internal/error.h"
@@ -810,6 +811,82 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
     return JS_EXCEPTION;
 }
 
+static JSValue js_iterator_proto_join(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv)
+{
+    JSValue separator = JS_UNDEFINED, method, item;
+    StringBuffer b_s, *b = &b_s;
+    JSString *separator_string = NULL;
+    int separator_char = ',', done;
+    BOOL first = TRUE;
+
+    if (!JS_IsObject(this_val))
+        return JS_ThrowTypeErrorNotAnObject(ctx);
+    if (!JS_IsUndefined(argv[0])) {
+        separator = JS_ToString(ctx, argv[0]);
+        if (JS_IsException(separator)) {
+            JS_IteratorClose(ctx, this_val, TRUE);
+            return JS_EXCEPTION;
+        }
+        separator_string = JS_VALUE_GET_STRING(separator);
+        if (separator_string->len == 1 && !separator_string->is_wide_char)
+            separator_char = separator_string->u.str8[0];
+        else
+            separator_char = -1;
+    }
+    /* GetIteratorDirect comes after separator conversion. */
+    method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
+    if (JS_IsException(method)) {
+        JS_FreeValue(ctx, separator);
+        return JS_EXCEPTION;
+    }
+    if (string_buffer_init(ctx, b, 0))
+        goto fail;
+    for (;;) {
+        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+        if (JS_IsException(item))
+            goto fail;
+        if (done)
+            break;
+        if (!first) {
+            int ret;
+            if (separator_char >= 0)
+                ret = string_buffer_putc8(b, separator_char);
+            else
+                ret = string_buffer_concat(b, separator_string, 0,
+                                           separator_string->len);
+            if (ret) {
+                JS_FreeValue(ctx, item);
+                goto fail;
+            }
+        }
+        first = FALSE;
+        if (!JS_IsNull(item) && !JS_IsUndefined(item)) {
+            /* Strings, including ropes, need no observable conversion. */
+            if (!JS_IsString(item)) {
+                item = JS_ToStringFree(ctx, item);
+                if (JS_IsException(item)) {
+                    JS_IteratorClose(ctx, this_val, TRUE);
+                    goto fail;
+                }
+            }
+            if (string_buffer_concat_value(b, item)) {
+                JS_FreeValue(ctx, item);
+                goto fail;
+            }
+        }
+        JS_FreeValue(ctx, item);
+    }
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, separator);
+    return string_buffer_end(b);
+fail:
+    string_buffer_free(b);
+    JS_FreeValue(ctx, method);
+    JS_FreeValue(ctx, separator);
+    return JS_EXCEPTION;
+}
+
 static JSValue js_iterator_proto_toArray(JSContext *ctx, JSValueConst this_val,
                                          int argc, JSValueConst *argv)
 {
@@ -1168,6 +1245,7 @@ const JSCFunctionListEntry js_iterator_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("forEach", 1, js_iterator_proto_func, JS_ITERATOR_HELPER_KIND_FOR_EACH ),
     JS_CFUNC_MAGIC_DEF("some", 1, js_iterator_proto_func, JS_ITERATOR_HELPER_KIND_SOME ),
     JS_CFUNC_DEF("includes", 1, js_iterator_proto_includes ),
+    JS_CFUNC_DEF("join", 1, js_iterator_proto_join ),
     JS_CFUNC_DEF("reduce", 1, js_iterator_proto_reduce ),
     JS_CFUNC_DEF("toArray", 0, js_iterator_proto_toArray ),
     JS_CFUNC_DEF("[Symbol.iterator]", 0, js_iterator_proto_iterator ),

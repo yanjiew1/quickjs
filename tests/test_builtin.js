@@ -3250,6 +3250,326 @@ function test_iterator_reduce_close()
     assert(closes, 2);
 }
 
+function test_iterator_join()
+{
+    const join = Iterator.prototype.join;
+    const descriptor = Object.getOwnPropertyDescriptor(Iterator.prototype, "join");
+    assert(descriptor.value === join, true);
+    assert(descriptor.writable, true);
+    assert(descriptor.enumerable, false);
+    assert(descriptor.configurable, true);
+    for (const [key, value] of [["name", "join"], ["length", 1]]) {
+        const property = Object.getOwnPropertyDescriptor(join, key);
+        assert(property.value, value);
+        assert(property.writable, false);
+        assert(property.enumerable, false);
+        assert(property.configurable, true);
+    }
+    assert_throws(TypeError, () => new join());
+    assert_throws(TypeError, () => Reflect.construct(join, []));
+
+    let conversions = 0;
+    const separator = { toString() { conversions++; return "&"; } };
+    for (const receiver of [undefined, null, false, 1, "text", Symbol("x"), 1n])
+        assert_throws(TypeError, () => join.call(receiver, separator));
+    assert(conversions, 0);
+    assert([].values().join(separator), "");
+    assert([1].values().join(separator), "1");
+    assert(conversions, 2);
+    assert([1, 2, 3].values().join(), "1,2,3");
+    assert([1, 2, 3].values().join(undefined), "1,2,3");
+    assert([1, 2].values().join(null), "1null2");
+    assert([1, 2].values().join(""), "12");
+    assert([null, undefined, 1, null].values().join(), ",,1,");
+    assert([null, undefined].values().join("|"), "|");
+    assert([0, false, -0, NaN, Infinity, 12n].values().join(":"),
+           "0:false:0:NaN:Infinity:12");
+
+    const log = [];
+    const item = {
+        toString() { log.push("toString"); return {}; },
+        valueOf() { log.push("valueOf"); return 42; }
+    };
+    assert([item].values().join(), "42");
+    assert(log.join(","), "toString,valueOf");
+    function receiver() {}
+    receiver.next = () => ({ done: true });
+    assert(join.call(receiver), "");
+}
+
+function test_iterator_join_order()
+{
+    const log = [];
+    let index = 0;
+    const source = {
+        get [Symbol.iterator]() { throw Error("iterator must not be read"); },
+        get return() { throw Error("exhaustion must not close"); },
+        get next() {
+            log.push("next:get");
+            return function() {
+                assert(this === source, true);
+                assert(arguments.length, 0);
+                const current = index++;
+                log.push("next:" + current);
+                Object.defineProperty(source, "next", {
+                    configurable: true,
+                    value() { throw Error("cached next must be used"); }
+                });
+                return {
+                    get done() {
+                        log.push("done:" + current);
+                        return current === 2 ? {
+                            [Symbol.toPrimitive]() { throw Error("done is not coerced"); }
+                        } : false;
+                    },
+                    get value() {
+                        log.push("value:" + current);
+                        if (current === 2)
+                            throw Error("completed value must not be read");
+                        if (current === 1)
+                            return null;
+                        return {
+                            get [Symbol.toPrimitive]() {
+                                log.push("item:primitive:get");
+                                return hint => {
+                                    log.push("item:" + hint);
+                                    return "one";
+                                };
+                            }
+                        };
+                    }
+                };
+            };
+        }
+    };
+    const separator = {
+        get [Symbol.toPrimitive]() {
+            log.push("separator:primitive:get");
+            return hint => {
+                log.push("separator:" + hint);
+                return "&";
+            };
+        }
+    };
+    assert(Iterator.prototype.join.call(source, separator), "one&");
+    assert(log.join(","), "separator:primitive:get,separator:string,next:get," +
+           "next:0,done:0,value:0,item:primitive:get,item:string," +
+           "next:1,done:1,value:1,next:2,done:2");
+
+    let nexts = 0;
+    const changed = { next() { throw Error("old next must not be called"); } };
+    const changingSeparator = {
+        toString() {
+            changed.next = () => ++nexts === 1 ? { value: "new" } : { done: true };
+            return ":";
+        }
+    };
+    assert(Iterator.prototype.join.call(changed, changingSeparator), "new");
+    assert(nexts, 2);
+}
+
+function test_iterator_join_protocol_errors()
+{
+    const marker = {};
+    function failure(setup, expected) {
+        let closes = 0;
+        const source = {
+            get return() { closes++; throw Error("protocol error must not close"); }
+        };
+        setup(source);
+        let caught;
+        try { Iterator.prototype.join.call(source); }
+        catch (error) { caught = error; }
+        if (expected === TypeError)
+            assert(caught instanceof TypeError, true);
+        else
+            assert(caught === expected, true);
+        assert(closes, 0);
+    }
+    failure(source => {
+        Object.defineProperty(source, "next", { get() { throw marker; } });
+    }, marker);
+    for (const next of [undefined, null, false, 1, "next", Symbol("next"), {}])
+        failure(source => { source.next = next; }, TypeError);
+    failure(source => { source.next = () => { throw marker; }; }, marker);
+    for (const result of [undefined, null, false, 1, "result", Symbol("result")])
+        failure(source => { source.next = () => result; }, TypeError);
+    failure(source => {
+        source.next = () => ({ get done() { throw marker; } });
+    }, marker);
+    failure(source => {
+        source.next = () => ({ done: false, get value() { throw marker; } });
+    }, marker);
+
+    const completed = {
+        next() {
+            return { done: true, get value() { throw Error("value must not be read"); } };
+        },
+        get return() { throw Error("exhaustion must not close"); }
+    };
+    assert(Iterator.prototype.join.call(completed), "");
+}
+
+function test_iterator_join_coercion_close()
+{
+    const marker = {}, closeMarker = {};
+    for (const stage of ["separator", "item"]) {
+        for (const mode of ["missing", "undefined", "null", "noncallable",
+                            "getter-throw", "call-throw", "primitive", "object"]) {
+            let nextReads = 0, nextCalls = 0, returnReads = 0, returnCalls = 0;
+            const poison = {
+                [Symbol.toPrimitive](hint) {
+                    assert(hint, "string");
+                    throw marker;
+                }
+            };
+            const source = {
+                get next() {
+                    nextReads++;
+                    return function() {
+                        assert(this === source, true);
+                        assert(arguments.length, 0);
+                        nextCalls++;
+                        return { value: poison, done: false };
+                    };
+                }
+            };
+            if (mode !== "missing") {
+                Object.defineProperty(source, "return", {
+                    get() {
+                        assert(this === source, true);
+                        returnReads++;
+                        if (mode === "getter-throw")
+                            throw closeMarker;
+                        if (mode === "undefined")
+                            return undefined;
+                        if (mode === "null")
+                            return null;
+                        if (mode === "noncallable")
+                            return 1;
+                        return function() {
+                            assert(this === source, true);
+                            assert(arguments.length, 0);
+                            returnCalls++;
+                            if (mode === "call-throw")
+                                throw closeMarker;
+                            return mode === "primitive" ? 1 : {};
+                        };
+                    }
+                });
+            }
+            let caught;
+            try {
+                Iterator.prototype.join.call(source, stage === "separator" ? poison : "|");
+            } catch (error) { caught = error; }
+            assert(caught === marker, true);
+            assert(nextReads, stage === "separator" ? 0 : 1);
+            assert(nextCalls, stage === "separator" ? 0 : 1);
+            assert(returnReads, mode === "missing" ? 0 : 1);
+            assert(returnCalls, ["call-throw", "primitive", "object"].includes(mode) ? 1 : 0);
+        }
+    }
+
+    for (const stage of ["separator", "item"]) {
+        let nexts = 0, closes = 0;
+        const source = {
+            next() { nexts++; return { value: Symbol("item"), done: false }; },
+            return() { closes++; throw closeMarker; }
+        };
+        assert_throws(TypeError, () => Iterator.prototype.join.call(source,
+                      stage === "separator" ? Symbol("separator") : undefined));
+        assert(nexts, stage === "separator" ? 0 : 1);
+        assert(closes, 1);
+    }
+
+    let closes = 0;
+    const source = {
+        next() {
+            return { value: { get [Symbol.toPrimitive]() { throw marker; } } };
+        },
+        return() { closes++; return {}; }
+    };
+    let caught;
+    try { Iterator.prototype.join.call(source); }
+    catch (error) { caught = error; }
+    assert(caught === marker, true);
+    assert(closes, 1);
+    source.next = () => ({ value: { [Symbol.toPrimitive]() { return {}; } } });
+    assert_throws(TypeError, () => Iterator.prototype.join.call(source));
+    assert(closes, 2);
+}
+
+function test_iterator_join_reentrancy()
+{
+    const join = Iterator.prototype.join;
+    let index = 0, nexts = 0, closes = 0, nested;
+    const source = {
+        next() {
+            nexts++;
+            return index < 3 ? { value: ["a", "b", "c"][index++] } : { done: true };
+        },
+        return() { closes++; return {}; }
+    };
+    const separator = {
+        toString() { nested = join.call(source, "|"); return ":"; }
+    };
+    assert(join.call(source, separator), "");
+    assert(nested, "a|b|c");
+    assert(nexts, 5);
+    assert(closes, 0);
+
+    index = 0;
+    nexts = 0;
+    const item = {
+        [Symbol.toPrimitive](hint) {
+            assert(hint, "string");
+            return "inner:" + join.call(source, "|");
+        }
+    };
+    source.next = () => {
+        nexts++;
+        return index < 3 ? { value: [item, "b", "c"][index++] } : { done: true };
+    };
+    assert(join.call(source, ":"), "inner:b|c");
+    assert(nexts, 5);
+    assert(closes, 0);
+
+    const marker = {};
+    const changed = {
+        next() {
+            return { value: { toString() {
+                changed.return = function() { closes++; return {}; };
+                throw marker;
+            } } };
+        },
+        return() { throw Error("old return must not be called"); }
+    };
+    let caught;
+    try { join.call(changed); } catch (error) { caught = error; }
+    assert(caught === marker, true);
+    assert(closes, 1);
+}
+
+function test_iterator_join_strings()
+{
+    let narrow = "", wide = "", separator = "";
+    for (let i = 0; i < 128; i++) {
+        narrow += "abc\0\u00e9";
+        wide += "\u0100\ud800\udfff";
+        separator += "x\0";
+    }
+    for (const sep of ["", "\0", "\u0100", "\ud800", separator]) {
+        assert([narrow, wide, narrow].values().join(sep),
+               narrow + sep + wide + sep + narrow);
+    }
+    const wrapped = { [Symbol.toPrimitive]() { return wide; } };
+    assert([wrapped, narrow].values().join(separator), wide + separator + narrow);
+    const values = [];
+    for (let i = 0; i < 512; i++)
+        values.push(i & 1 ? "\u0100" : "a\0");
+    assert(values.values().join("\0"), values.join("\0"));
+}
+
 function test_iterator_constructor_identity()
 {
     assert_throws(TypeError, () => Iterator());
@@ -4044,6 +4364,12 @@ test_iterator_includes_validation();
 test_iterator_includes_protocol();
 test_iterator_includes_close();
 test_iterator_reduce_close();
+test_iterator_join();
+test_iterator_join_order();
+test_iterator_join_protocol_errors();
+test_iterator_join_coercion_close();
+test_iterator_join_reentrancy();
+test_iterator_join_strings();
 test_iterator_limits();
 test_iterator_concat_return();
 test_iterator_concat_completion();
