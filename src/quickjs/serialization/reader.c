@@ -1094,7 +1094,8 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
         obj = JS_ReadArrayBuffer(s);
         break;
     case BC_TAG_SHARED_ARRAY_BUFFER:
-        if (!s->allow_sab || !ctx->rt->sab_funcs.sab_dup)
+        if (!s->allow_sab || !ctx->rt->sab_funcs.sab_dup ||
+            !ctx->rt->sab_funcs.sab_free)
             goto invalid_tag;
         obj = JS_ReadSharedArrayBuffer(s);
         break;

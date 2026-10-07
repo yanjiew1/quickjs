@@ -903,6 +903,47 @@ Custom memory allocation functions can be provided with
 
 The maximum system stack size can be set with @code{JS_SetMaxStackSize()}.
 
+@subsection Shared buffer serialization
+
+@code{JS_WriteObject()} and @code{JS_WriteObject2()} serialize a
+@code{SharedArrayBuffer} only when @code{JS_WRITE_OBJ_SAB} is enabled, its
+backing allocation uses shared buffer callbacks, and the source runtime
+has @code{sab_dup} and @code{sab_free} registered with
+@code{JS_SetSharedArrayBufferFunctions()}. Otherwise serialization fails
+with a @code{TypeError}. Reading a shared buffer also requires these two
+callbacks. A @code{sab_alloc} callback is needed to allocate shared backing
+through that callback family, but is not needed to adopt an externally
+supplied allocation or read a shared clone.
+
+Ordinary local shared buffers can still be created without sharing
+callbacks. If @code{sab_alloc} is installed, @code{sab_free} must also be
+provided or construction fails before calling the allocator. When no
+@code{sab_alloc} is installed, JavaScript-created shared buffers use the
+runtime's ordinary allocator and cannot be serialized for sharing.
+
+Shared buffer serialization preserves a backing allocation pointer; it
+does not copy the shared bytes or acquire another allocation reference.
+The embedding must keep each backing allocation live until reading is
+complete. For queued messages, it can retain each pointer returned by
+@code{JS_WriteObject2()} with @code{sab_dup} and release that reference
+with @code{sab_free} after the message is read or discarded.
+
+All runtimes that read the serialized shared buffer must use a compatible
+callback family and @code{sab_opaque} state that recognizes the same
+backing allocation. The callback state must outlive the final allocation
+release, including queued messages and clones in other runtimes. Callback
+presence alone does not establish compatibility between unrelated
+allocators. Buffers supplied through @code{JS_NewArrayBuffer()} with
+@code{is_shared} set must follow the same allocation ownership contract.
+Shared buffer pointer serialization is for use within one process.
+
+Each buffer captures its free callback and opaque state when it acquires
+the backing allocation. Changing a runtime's callback registration does
+not transfer ownership of existing buffers to a new callback family.
+Before serializing an existing buffer, the embedding must ensure that
+the current duplicate/free callbacks are compatible with its original
+allocation owner.
+
 @subsection Execution timeout and interrupts
 
 Use @code{JS_SetInterruptHandler()} to set a callback which is

@@ -666,7 +666,13 @@ static int JS_WriteSharedArrayBuffer(BCWriterState *s, JSValueConst obj)
 {
     JSObject *p = JS_VALUE_GET_OBJ(obj);
     JSArrayBuffer *abuf = p->u.array_buffer;
+    JSSharedArrayBufferFunctions *functions = &s->ctx->rt->sab_funcs;
     assert(!abuf->detached); /* SharedArrayBuffer are never detached */
+    if (!abuf->uses_shared_callbacks || !functions->sab_dup || !functions->sab_free) {
+        JS_ThrowTypeError(s->ctx,
+                          "SharedArrayBuffer sharing callbacks are not configured");
+        return -1;
+    }
     bc_put_u8(s, BC_TAG_SHARED_ARRAY_BUFFER);
     bc_put_leb128(s, js_array_buffer_byte_length(abuf));
     bc_put_leb128(s, abuf->max_byte_length);

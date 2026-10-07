@@ -53,10 +53,12 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
                                             void *opaque, BOOL alloc_flag, BOOL shared_clone)
 {
     JSRuntime *rt = ctx->rt;
+    JSSharedArrayBufferFunctions shared_functions;
     JSValue obj;
     JSArrayBuffer *abuf = NULL;
     size_t alloc_len;
     BOOL growable_shared = class_id == JS_CLASS_SHARED_ARRAY_BUFFER && max_len;
+    BOOL uses_shared_callbacks = FALSE;
 
     if (!alloc_flag && buf && max_len &&
         free_func != js_array_buffer_free && !shared_clone) {
@@ -99,13 +101,21 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
         alloc_flag = TRUE;
         free_func = js_array_buffer_free;
     }
+    if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER)
+        shared_functions = rt->sab_funcs;
     if (alloc_flag) {
         if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
-            rt->sab_funcs.sab_alloc) {
-            abuf->data = rt->sab_funcs.sab_alloc(rt->sab_funcs.sab_opaque,
-                                                 alloc_len);
+            shared_functions.sab_alloc) {
+            if (!shared_functions.sab_free) {
+                JS_ThrowTypeError(ctx,
+                                  "SharedArrayBuffer allocator has no free callback");
+                goto fail;
+            }
+            abuf->data = shared_functions.sab_alloc(shared_functions.sab_opaque,
+                                                    alloc_len);
             if (!abuf->data)
                 goto fail;
+            uses_shared_callbacks = TRUE;
             memset(abuf->data, 0, alloc_len);
         } else {
             /* the allocation must be done after the object creation */
@@ -115,10 +125,17 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
         }
     } else {
         if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
-            rt->sab_funcs.sab_dup) {
-            rt->sab_funcs.sab_dup(rt->sab_funcs.sab_opaque, buf);
+            shared_functions.sab_dup) {
+            if (!shared_functions.sab_free) {
+                JS_ThrowTypeError(ctx,
+                                  "SharedArrayBuffer duplicate has no free callback");
+                goto fail;
+            }
+            shared_functions.sab_dup(shared_functions.sab_opaque, buf);
         }
         abuf->data = buf;
+        uses_shared_callbacks =
+            class_id == JS_CLASS_SHARED_ARRAY_BUFFER && shared_functions.sab_free;
     }
     if (growable_shared) {
         size_t length_offset = js_shared_array_buffer_length_offset(abuf->data,
@@ -135,8 +152,14 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
     init_list_head(&abuf->array_list);
     abuf->detached = FALSE;
     abuf->shared = (class_id == JS_CLASS_SHARED_ARRAY_BUFFER);
-    abuf->opaque = opaque;
-    abuf->free_func = free_func;
+    abuf->uses_shared_callbacks = uses_shared_callbacks;
+    if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER && uses_shared_callbacks) {
+        abuf->opaque = shared_functions.sab_opaque;
+        abuf->shared_free_func = shared_functions.sab_free;
+    } else {
+        abuf->opaque = opaque;
+        abuf->free_func = free_func;
+    }
     if (alloc_flag && buf)
         memcpy(abuf->data, buf, len);
     JS_SetOpaque(obj, abuf);
@@ -299,8 +322,8 @@ void js_array_buffer_finalizer(JSRuntime *rt, JSValue val)
                 p1->u.array.u.ptr = NULL;
             }
         }
-        if (abuf->shared && rt->sab_funcs.sab_free) {
-            rt->sab_funcs.sab_free(rt->sab_funcs.sab_opaque, abuf->data);
+        if (abuf->uses_shared_callbacks) {
+            abuf->shared_free_func(abuf->opaque, abuf->data);
         } else {
             if (abuf->free_func)
                 abuf->free_func(rt, abuf->opaque, abuf->data);
@@ -734,4 +757,3 @@ const JSCFunctionListEntry js_shared_array_buffer_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("slice", 2, js_array_buffer_slice, JS_CLASS_SHARED_ARRAY_BUFFER ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "SharedArrayBuffer", JS_PROP_CONFIGURABLE ),
 };
-

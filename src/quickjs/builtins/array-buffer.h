@@ -41,10 +41,14 @@ typedef struct JSArrayBuffer {
     int max_byte_length; /* -1 if fixed; reserved payload capacity otherwise */
     uint8_t detached;
     uint8_t shared; /* if shared, the array buffer cannot be detached */
+    uint8_t uses_shared_callbacks; /* backing owns one shared callback reference */
     uint8_t *data; /* NULL if detached */
     struct list_head array_list;
     void *opaque;
-    JSFreeArrayBufferDataFunc *free_func;
+    union {
+        JSFreeArrayBufferDataFunc *free_func;
+        void (*shared_free_func)(void *opaque, void *ptr);
+    };
 } JSArrayBuffer;
 
 static inline size_t js_shared_array_buffer_allocation_size(size_t maximum)
