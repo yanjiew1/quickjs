@@ -611,6 +611,62 @@ function test_array_buffer_slice_shrink()
     }
 }
 
+function test_typed_array_with_conversion()
+{
+    const numberTypes = [Uint8ClampedArray, Uint8Array, Int8Array, Uint16Array,
+                         Int16Array, Uint32Array, Int32Array, Float16Array,
+                         Float32Array, Float64Array];
+    for (const C of numberTypes) {
+        const empty = new C(0);
+        assert_throws(TypeError, () => empty.with(0, 1n));
+        assert_throws(TypeError, () => empty.with(0, Symbol("value")));
+        assert_throws(RangeError, () => empty.with(0, 1));
+        const events = [];
+        assert(new C([1, 2]).with({
+            valueOf() { events.push("index"); return 1; }
+        }, {
+            [Symbol.toPrimitive](hint) {
+                events.push("value");
+                assert(hint, "number");
+                return "3";
+            }
+        })[1], 3);
+        assert(events.join(","), "index,value");
+    }
+    for (const C of [BigInt64Array, BigUint64Array]) {
+        const empty = new C(0);
+        assert_throws(TypeError, () => empty.with(0, 1));
+        assert_throws(TypeError, () => empty.with(0, Symbol("value")));
+        assert_throws(RangeError, () => empty.with(0, 1n << 128n));
+        let calls = 0;
+        assert(new C([1n, 2n]).with(-1, {
+            [Symbol.toPrimitive](hint) {
+                calls++;
+                assert(hint, "number");
+                return "3";
+            }
+        })[1], 3n);
+        assert(calls, 1);
+    }
+
+    const marker = {};
+    let caught;
+    try {
+        new Uint8Array(0).with(0, {
+            valueOf() { throw marker; }
+        });
+    } catch (error) {
+        caught = error;
+    }
+    assert(caught === marker, true);
+
+    const buffer = new ArrayBuffer(2, { maxByteLength: 2 });
+    const array = new Uint8Array(buffer);
+    assert_throws(RangeError, () => array.with(1, {
+        valueOf() { buffer.resize(1); return 3; }
+    }));
+}
+
 function test_typed_array()
 {
     var buffer, a, i, str;
@@ -1858,6 +1914,7 @@ test_array_buffer_resize_order();
 test_array_buffer_transfer_range();
 test_array_buffer_slice_shrink();
 test_typed_array();
+test_typed_array_with_conversion();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();
