@@ -538,6 +538,69 @@ function test_eval_catch_var_declaration()
     delete globalThis.evalCatchGlobal;
 }
 
+function test_annex_eval_variable_target()
+{
+    function local() {
+        function target() { return "outer"; }
+        const object = { target() { return "with"; } };
+        const original = object.target;
+        with (object) {
+            eval("{ function target() { return 'eval'; } }");
+        }
+        assert(target(), "eval");
+        assert(object.target === original);
+        assert(object.target(), "with");
+        with (object) {
+            eval("target = 42;");
+        }
+        assert(object.target, 42);
+        assert(target(), "eval");
+    }
+    local();
+    function nested() {
+        var target = "outer";
+        const first = { target: "first" }, second = { target: "second" };
+        with (first) {
+            with (second) {
+                eval("{ function target() { return 42; } }");
+            }
+        }
+        assert(target(), 42);
+        assert(first.target, "first");
+        assert(second.target, "second");
+    }
+    nested();
+    function caught() {
+        var target = "outer";
+        try { throw "caught"; } catch (target) {
+            eval("{ function target() { return 42; } }");
+            assert(target, "caught");
+        }
+        assert(target(), 42);
+    }
+    caught();
+    function created() {
+        const object = { newBinding: 42 };
+        with (object) {
+            eval("{ function newBinding() { return 7; } }");
+        }
+        assert(object.newBinding, 42);
+        assert(newBinding(), 7);
+        assert(delete newBinding);
+    }
+    created();
+    function lexical() {
+        const object = { value: 42 };
+        with (object) {
+            eval("{ let value = 7; assert(value, 7); }");
+            eval("var value = 99;");
+        }
+        assert(object.value, 99);
+        assert(value, undefined);
+    }
+    lexical();
+}
+
 function test_class()
 {
     var o;
@@ -952,6 +1015,7 @@ test_annex_if_function_scopes();
 test_annex_function_identity();
 test_annex_duplicate_binding();
 test_eval_catch_var_declaration();
+test_annex_eval_variable_target();
 test_template();
 test_template_skip();
 test_object_literal();
