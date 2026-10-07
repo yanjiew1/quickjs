@@ -1588,6 +1588,32 @@ function test_unicode_ident()
 {
     var Ãµ = 3;
     assert(typeof õ, "undefined");
+
+    const starts = [
+        0x125a8, 0x1264b, 0x18e00, 0x19191, 0x191a0, 0x191d2,
+        0x2b81e, 0x3d000, 0x3fc3f,
+    ];
+    for (const code of starts) {
+        const character = String.fromCodePoint(code);
+        const escaped = "\\u{" + code.toString(16) + "}";
+        for (const prefix of ["", "a"]) {
+            for (const name of [prefix + character, prefix + escaped]) {
+                assert(Function("let " + name + " = 42; return " + name + ";")(), 42);
+            }
+        }
+        const match = new RegExp("(?<" + character + ">.)\\k<" + character + ">", "u").exec("xx");
+        assert(match.groups[character], "x");
+    }
+    for (const code of [0x20c2, 0x20c3, 0x20c4, 0x19192, 0x191d3,
+                        0x2b81f, 0x3fc40]) {
+        const character = String.fromCodePoint(code);
+        const escaped = "\\u{" + code.toString(16) + "}";
+        for (const prefix of ["", "a"]) {
+            for (const name of [prefix + character, prefix + escaped]) {
+                assert_throws(SyntaxError, () => Function("let " + name + " = 42;"));
+            }
+        }
+    }
 }
 
 /* check global variable optimization */

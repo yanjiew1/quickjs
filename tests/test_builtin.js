@@ -492,6 +492,95 @@ function test_string_normalize()
     }
     for (const form of ["NFD", "NFKD"])
         assert("\uac00\u11a7".normalize(form), "\u1100\u1161\u11a7");
+    for (const [source, target] of [["\u209d", "w"], ["\u0558", "\u0567"],
+                                   ["\u{1df95}", "\u00df"], ["\u{1d6a6}", "\u00df"]]) {
+        for (const form of ["NFC", "NFD"])
+            assert(source.normalize(form), source);
+        for (const form of ["NFKC", "NFKD"])
+            assert(source.normalize(form), target);
+    }
+    const reordered = "a\u05ae\u0300\u{10ecb}\u0315b";
+    const composed = "\u00e0\u05ae\u{10ecb}\u0315b";
+    const input = "a\u0315\u0300\u05ae\u{10ecb}b";
+    for (const form of ["NFD", "NFKD"])
+        assert(input.normalize(form), reordered);
+    for (const form of ["NFC", "NFKC"])
+        assert(input.normalize(form), composed);
+}
+
+function test_string_unicode_18()
+{
+    const pairs = [
+        [0xa7dd, 0x0277], [0xa7e2, 0x027c], [0xab6c, 0xab4b], [0xab6d, 0xab4c],
+        [0x1df40, 0x1df41], [0x1df48, 0x1df49], [0x1df4a, 0x1df4b],
+        [0x1df4d, 0x1df4e], [0x1df51, 0x1df52], [0x1df68, 0x1df69],
+        [0x1df6a, 0x1df6b], [0x1df6c, 0x1df6d], [0x1df6e, 0x1df6f],
+        [0x1df72, 0x1df73], [0x1df74, 0x1df75], [0x1df76, 0x1df77],
+        [0x1df78, 0x1df79], [0x1df7a, 0x1df7b], [0x1df7c, 0x1df7d],
+        [0x1df7e, 0x1df7f],
+    ];
+    for (const [upperCode, lowerCode] of pairs) {
+        const upper = String.fromCodePoint(upperCode);
+        const lower = String.fromCodePoint(lowerCode);
+        assert(upper.toLowerCase(), lower);
+        assert(lower.toUpperCase(), upper);
+        for (const flags of ["iu", "iv"]) {
+            assert(new RegExp("^" + upper + "$", flags).test(lower), true);
+            assert(new RegExp("^[" + upper + "-" + upper + "]$", flags).test(lower), true);
+            assert(new RegExp("^(" + lower + ")\\1$", flags).test(lower + upper), true);
+            assert(new RegExp("^" + lower + "$", flags).test("A"), false);
+        }
+    }
+    assert("\u{1df95}".toUpperCase(), "SS");
+    assert("\u{1df95}".toLowerCase(), "\u{1df95}");
+}
+
+function test_regexp_unicode_18()
+{
+    const scripts = [
+        ["Jurchen", "Jurc", 0x18e00, 0x191d2, "Lo"],
+        ["Proto_Cuneiform", "Pcun", 0x125a8, 0x1264b, "Nl"],
+        ["Seal", "Seal", 0x3d000, 0x3fc3f, "Lo"],
+    ];
+    for (const [script, alias, first, last, category] of scripts) {
+        const text = String.fromCodePoint(first, last);
+        for (const flags of ["u", "v"]) {
+            for (const property of ["Script", "sc", "Script_Extensions", "scx"]) {
+                for (const name of [script, alias]) {
+                    const expression = property + "=" + name;
+                    assert(new RegExp("^\\p{" + expression + "}+$", flags).test(text), true);
+                    assert(new RegExp("^\\p{" + expression + "}+$", flags).test("A"), false);
+                    assert(new RegExp("^\\P{" + expression + "}+$", flags).test("A"), true);
+                }
+            }
+            assert(new RegExp("^\\p{" + category + "}+$", flags).test(text), true);
+            assert(new RegExp("^\\p{ID_Start}+$", flags).test(text), true);
+            assert(new RegExp("^\\p{ID_Continue}+$", flags).test(text), true);
+        }
+        assert(new RegExp("^[\\p{sc=" + script + "}&&\\p{" + category + "}]+$", "v").test(text), true);
+    }
+    assert(/^[\p{sc=Han}&&\p{Lo}]$/v.test("\u{2b81e}"), true);
+    assert(/^\p{Sc}+$/u.test("\u20c2\u20c3\u20c4"), true);
+    assert(/^\p{ID_Start}$/u.test("\u20c2"), false);
+
+    for (const flags of ["iu", "iv"]) {
+        for (const target of ["\u00df", "\u1e9e", "\u{1df95}"]) {
+            assert(new RegExp("^\\u{1df95}$", flags).test(target), true);
+            assert(new RegExp("^[\\u{1df95}]$", flags).test(target), true);
+            assert(new RegExp("^(\\u{1df95})\\1$", flags).test("\u{1df95}" + target), true);
+        }
+        assert(new RegExp("^\\u{1df95}$", flags).test("ss"), false);
+        for (const [source, target] of [["\u1fd3", "\u0390"], ["\u1fe3", "\u03b0"],
+                                       ["\ufb05", "\ufb06"]]) {
+            assert(new RegExp("^" + source + "$", flags).test(target), true);
+            assert(new RegExp("^" + target + "$", flags).test(source), true);
+        }
+    }
+    assert(new RegExp("^" + "\u{1df95}" + "$", "i").test("\u00df"), false);
+    assert(/^\p{Emoji}+$/u.test("\u{1f6d9}\u{1fadd}"), true);
+    assert(/^\p{Basic_Emoji}+$/v.test("\u{1f6d9}\u{1fadd}"), true);
+    assert(/^\p{RGI_Emoji_Modifier_Sequence}$/v.test("\u{1faf9}\u{1f3fb}"), true);
+    assert(/^\p{RGI_Emoji_Modifier_Sequence}$/v.test("\u{1faf9}A"), false);
 }
 
 function test_math()
@@ -2916,6 +3005,7 @@ test_enum();
 test_array();
 test_array_sort_writeback();
 test_string();
+test_string_unicode_18();
 test_string_normalize();
 test_math();
 test_number();
@@ -2941,6 +3031,7 @@ test_error_stack();
 test_json();
 test_date();
 test_regexp();
+test_regexp_unicode_18();
 test_symbol();
 test_map();
 test_map_computed_reentrancy();

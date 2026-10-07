@@ -396,9 +396,11 @@ typedef struct {
     uint8_t u_len;
     uint8_t l_len;
     uint8_t f_len;
+    uint8_t full_f_len;
     int u_data[CC_LEN_MAX]; /* to upper case */
     int l_data[CC_LEN_MAX]; /* to lower case */
     int f_data[CC_LEN_MAX]; /* to case folding */
+    int full_f_data[CC_LEN_MAX]; /* full fold when a simple fold also exists */
 
     uint8_t combining_class;
     uint8_t is_compat:1;
@@ -721,6 +723,9 @@ void parse_case_folding(CCInfo *tab, const char *filename)
             /* we always select the simple case folding and assume it
              * comes after the full case folding case */
             assert(ci->f_len >= 2);
+            ci->full_f_len = ci->f_len;
+            memcpy(ci->full_f_data, ci->f_data,
+                   ci->f_len * sizeof(ci->f_data[0]));
             ci->f_len = 0;
         } else {
             assert(ci->f_len == 0);
@@ -730,7 +735,7 @@ void parse_case_folding(CCInfo *tab, const char *filename)
                 p++;
             if (*p == ';')
                 break;
-            assert(ci->l_len < CC_LEN_MAX);
+            assert(ci->f_len < CC_LEN_MAX);
             ci->f_data[ci->f_len++] = strtoul(p, (char **)&p, 16);
         }
     }
@@ -1414,17 +1419,17 @@ void find_run_type(TableEntry *te, CCInfo *tab, int code)
             te->ext_data[2] = ci->u_data[2];
             te->ext_len = 3;
         } else if (ci->u_len == 2 && ci->l_len == 0 && ci->f_len == 1) {
-            // U+FB05 LATIN SMALL LIGATURE LONG S T
-            assert(code == 0xFB05);
+            /* Keep the full uppercase mapping; the simple fold is emitted
+               separately. For example: U+FB05 LATIN SMALL LIGATURE LONG S T. */
             te->len = 1;
             te->type = RUN_TYPE_UF_EXT2;
             te->ext_data[0] = ci->u_data[0];
             te->ext_data[1] = ci->u_data[1];
             te->ext_len = 2;
         } else if (ci->u_len == 3 && ci->l_len == 0 && ci->f_len == 1) {
-            // U+1FD3 GREEK SMALL LETTER IOTA WITH DIALYTIKA AND OXIA or
-            // U+1FE3 GREEK SMALL LETTER UPSILON WITH DIALYTIKA AND OXIA
-            assert(code == 0x1FD3 || code == 0x1FE3);
+            /* For example, U+1FD3 GREEK SMALL LETTER IOTA WITH DIALYTIKA
+               AND OXIA or U+1FE3 GREEK SMALL LETTER UPSILON WITH DIALYTIKA
+               AND OXIA. Their simple folds are emitted separately. */
             te->len = 1;
             te->type = RUN_TYPE_UF_EXT3;
             te->ext_data[0] = ci->u_data[0];
@@ -1682,6 +1687,23 @@ void dump_case_conv_table(FILE *f)
         fprintf(f, " 0x%04x,", ext_data[i]);
     }
     fprintf(f, "\n};\n\n");
+
+    /* The compressed conversion table keeps the full fold for these
+       entries. Regexp canonicalization must instead use the simple fold. */
+    total_tables++;
+    fprintf(f, "static const uint32_t case_conv_simple_folding[][2] = {\n");
+    for(i = 0; i < conv_table_len; i++) {
+        const CCInfo *ci;
+        te = &conv_table[i];
+        ci = &unicode_db[te->code];
+        if ((te->type == RUN_TYPE_UF_EXT2 || te->type == RUN_TYPE_UF_EXT3) &&
+            ci->f_len == 1 && ci->full_f_len != 0) {
+            assert(te->len == 1);
+            fprintf(f, "    { 0x%05x, 0x%05x },\n", te->code, ci->f_data[0]);
+            total_table_bytes += 2 * sizeof(uint32_t);
+        }
+    }
+    fprintf(f, "};\n\n");
 }
 
 
@@ -2480,18 +2502,21 @@ void check_case_conv(void)
             error++;
         }
         l = check_conv(res, code, 2);
-        /* These three characters have both full and simple folds.  The
-           table keeps the full fold for case conversion, while regexp
-           canonicalization groups them with their simple fold. */
-        if (code == 0x1FD3 || code == 0x1FE3 || code == 0xFB05) {
-            if (l != (code == 0xFB05 ? 2 : 3) ||
-                lre_canonicalize(code, TRUE) !=
-                lre_canonicalize(ci->f_data[0], TRUE)) {
+        /* Some entries keep the full fold for case conversion while
+           regexp canonicalization must use their distinct simple fold. */
+        if (ci->full_f_len != 0 && l > 1) {
+            if (l != ci->full_f_len ||
+                tabcmp((int *)res, ci->full_f_data, l)) {
                 printf("ERROR: F\n");
                 error++;
             }
         } else if (l != ci->f_len || tabcmp((int *)res, ci->f_data, l)) {
             printf("ERROR: F\n");
+            error++;
+        }
+        if (lre_canonicalize(code, TRUE) !=
+            (ci->f_len == 1 ? ci->f_data[0] : code)) {
+            printf("ERROR: simple F\n");
             error++;
         }
         if (error) {

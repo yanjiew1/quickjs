@@ -646,10 +646,14 @@ microbench: qjs$(EXE)
 ifeq ($(wildcard test262/features.txt),)
 test2-bootstrap:
 	git clone --single-branch --shallow-since=$(TEST262_SINCE) https://github.com/tc39/test262.git
-	(cd test262 && git checkout -q $(TEST262_COMMIT) && patch -p1 < ../tests/test262.patch && cd ..)
+	(cd test262 && git checkout -q $(TEST262_COMMIT) && \
+	 patch -p1 < ../tests/test262.patch && \
+	 patch -p1 < ../tests/test262-unicode18.patch && cd ..)
 else
 test2-bootstrap:
-	(cd test262 && git fetch && git reset --hard $(TEST262_COMMIT) && patch -p1 < ../tests/test262.patch && cd ..)
+	(cd test262 && git fetch && git reset --hard $(TEST262_COMMIT) && \
+	 patch -p1 < ../tests/test262.patch && \
+	 patch -p1 < ../tests/test262-unicode18.patch && cd ..)
 endif
 
 ifeq ($(wildcard test262o/tests.txt),)
