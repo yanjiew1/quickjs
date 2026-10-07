@@ -404,6 +404,29 @@ await test_async_disposable_stack_fallback_and_await();
 await test_async_disposable_stack_move_reentrancy_and_gc();
 await test_async_disposable_stack_suppression();
 
+async function test_resource_cursor_nullish_traversal()
+{
+    const events = [], error = {};
+    const stack = new AsyncDisposableStack();
+    stack.defer(() => { events.push("last"); throw error; });
+    stack.use(null);
+    stack.use(undefined);
+    stack.defer(() => {
+        events.push("first");
+        return Promise.resolve().then(() => events.push("awaited"));
+    });
+    const disposal = stack.disposeAsync();
+    assert(events.join(","), "first");
+    try {
+        await disposal;
+        assert(false);
+    } catch (caught) { assert(caught, error); }
+    assert(events.join(","), "first,awaited,last");
+    assert(await stack.disposeAsync(), undefined);
+}
+
+await test_resource_cursor_nullish_traversal();
+
 async function assert_array_from_async_rejects(operation, expected)
 {
     let rejected = false;

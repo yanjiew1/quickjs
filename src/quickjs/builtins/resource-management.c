@@ -15,7 +15,40 @@
 #include "resource-management.h"
 #include "error.h"
 
-void js_disposable_resource_free(JSRuntime *rt, JSDisposableResource *resource)
+typedef enum {
+    JS_DISPOSABLE_USE,
+    JS_DISPOSABLE_ADOPT,
+    JS_DISPOSABLE_DEFER,
+} JSDisposableInvocation;
+
+typedef struct JSDisposableResource {
+    struct JSDisposableResource *next;
+    JSValue value;
+    JSValue method;
+    JSDisposableInvocation invocation;
+    JSDisposalKind kind;
+} JSDisposableResource;
+
+typedef enum {
+    JS_DISPOSAL_AWAIT_NONE,
+    JS_DISPOSAL_AWAIT_METHOD,
+    JS_DISPOSAL_AWAIT_BEFORE_SYNC,
+    JS_DISPOSAL_AWAIT_END,
+} JSDisposalAwaitReason;
+
+typedef struct JSDisposableResourceList {
+    JSDisposableResource *head;
+    JSDisposableResource *active;
+    JSValue error;
+    BOOL started;
+    BOOL done;
+    BOOL has_error;
+    BOOL needs_await;
+    BOOL has_awaited;
+    JSDisposalAwaitReason await_reason;
+} JSDisposableResourceList;
+
+static void js_disposable_resource_free(JSRuntime *rt, JSDisposableResource *resource)
 {
     JS_FreeValueRT(rt, resource->value);
     JS_FreeValueRT(rt, resource->method);
@@ -51,6 +84,7 @@ static void js_disposable_resource_list_finalizer(JSRuntime *rt, JSValue value)
         return;
     js_disposable_resource_chain_free(rt, list->head);
     js_disposable_resource_chain_free(rt, list->active);
+    JS_FreeValueRT(rt, list->error);
     js_free_rt(rt, list);
 }
 
@@ -64,13 +98,16 @@ static void js_disposable_resource_list_mark(JSRuntime *rt, JSValueConst value,
         return;
     js_disposable_resource_chain_mark(rt, list->head, mark_func);
     js_disposable_resource_chain_mark(rt, list->active, mark_func);
+    JS_MarkValue(rt, list->error, mark_func);
 }
 
-static JSValue js_new_disposable_resource_list(JSContext *ctx)
+JSValue js_new_disposable_resource_list(JSContext *ctx)
 {
     JSDisposableResourceList *list;
     JSValue value;
 
+    if (js_init_disposable_resource_list(ctx) < 0)
+        return JS_EXCEPTION;
     value = JS_NewObjectProtoClass(ctx, JS_NULL,
                                   JS_CLASS_DISPOSABLE_RESOURCE_LIST);
     if (JS_IsException(value))
@@ -80,6 +117,7 @@ static JSValue js_new_disposable_resource_list(JSContext *ctx)
         JS_FreeValue(ctx, value);
         return JS_EXCEPTION;
     }
+    list->error = JS_UNDEFINED;
     JS_SetOpaque(value, list);
     return value;
 }
@@ -203,7 +241,7 @@ static JSValue js_get_dispose_method(JSContext *ctx, JSValueConst value)
 static int js_disposable_resource_add(JSContext *ctx,
                                       JSValueConst resources,
                                       JSValueConst value, JSValue method,
-                                      int invocation)
+                                      int invocation, JSDisposalKind kind)
 {
     JSDisposableResourceList *list =
         JS_GetOpaque(resources, JS_CLASS_DISPOSABLE_RESOURCE_LIST);
@@ -217,9 +255,35 @@ static int js_disposable_resource_add(JSContext *ctx,
     resource->value = JS_DupValue(ctx, value);
     resource->method = method;
     resource->invocation = invocation;
+    resource->kind = kind;
     resource->next = list->head;
     list->head = resource;
     return 0;
+}
+
+int js_add_disposable_resource(JSContext *ctx,
+                               JSValueConst resources, JSValueConst value,
+                               JSDisposalKind kind)
+{
+    BOOL nullish = JS_IsNull(value) || JS_IsUndefined(value);
+    JSValue method;
+
+    if (nullish && kind == JS_DISPOSAL_SYNC)
+        return 0;
+    if (!nullish && !JS_IsObject(value)) {
+        JS_ThrowTypeError(ctx, "resource is not an object");
+        return -1;
+    }
+    method = nullish ? JS_UNDEFINED : kind == JS_DISPOSAL_ASYNC ?
+        js_get_async_dispose_method(ctx, value) :
+        js_get_dispose_method(ctx, value);
+    if (JS_IsUndefined(method) && !nullish)
+        method = JS_ThrowTypeError(ctx, "resource has no dispose method");
+    if (JS_IsException(method))
+        return -1;
+    return js_disposable_resource_add(ctx, resources,
+                                      nullish ? JS_UNDEFINED : value, method,
+                                      JS_DISPOSABLE_USE, kind);
 }
 
 JSValue js_disposable_stack_use(JSContext *ctx, JSValueConst value,
@@ -227,32 +291,16 @@ JSValue js_disposable_stack_use(JSContext *ctx, JSValueConst value,
 {
     JSDisposableStackData *stack =
         js_get_disposable_stack(ctx, value, class_id, TRUE);
-    JSValue resources, method;
+    JSValue resources;
     int result;
-    BOOL nullish = JS_IsNull(argv[0]) || JS_IsUndefined(argv[0]);
 
     if (!stack)
         return JS_EXCEPTION;
-
-    if (nullish && class_id == JS_CLASS_DISPOSABLE_STACK)
-        return JS_DupValue(ctx, argv[0]);
-    if (!nullish && !JS_IsObject(argv[0]))
-        return JS_ThrowTypeError(ctx, "resource is not an object");
-    /* GetDisposeMethod can move the receiver or begin disposing this list. */
+    /* Method lookup can move the receiver or begin disposing this list. */
     resources = JS_DupValue(ctx, stack->resources);
-    method = nullish ? JS_UNDEFINED :
+    result = js_add_disposable_resource(ctx, resources, argv[0],
         class_id == JS_CLASS_ASYNC_DISPOSABLE_STACK ?
-        js_get_async_dispose_method(ctx, argv[0]) :
-        js_get_dispose_method(ctx, argv[0]);
-    if (JS_IsUndefined(method) && !nullish)
-        method = JS_ThrowTypeError(ctx, "resource has no dispose method");
-    if (JS_IsException(method)) {
-        JS_FreeValue(ctx, resources);
-        return JS_EXCEPTION;
-    }
-    result = js_disposable_resource_add(ctx, resources,
-                                        nullish ? JS_UNDEFINED : argv[0], method,
-                                        JS_DISPOSABLE_USE);
+        JS_DISPOSAL_ASYNC : JS_DISPOSAL_SYNC);
     JS_FreeValue(ctx, resources);
     if (result < 0)
         return JS_EXCEPTION;
@@ -271,7 +319,9 @@ JSValue js_disposable_stack_adopt(JSContext *ctx, JSValueConst value,
         return JS_ThrowTypeError(ctx, "disposal callback is not callable");
     if (js_disposable_resource_add(ctx, stack->resources, argv[0],
                                    JS_DupValue(ctx, argv[1]),
-                                   JS_DISPOSABLE_ADOPT) < 0)
+                                   JS_DISPOSABLE_ADOPT,
+                                   class_id == JS_CLASS_ASYNC_DISPOSABLE_STACK ?
+                                   JS_DISPOSAL_ASYNC : JS_DISPOSAL_SYNC) < 0)
         return JS_EXCEPTION;
     return JS_DupValue(ctx, argv[0]);
 }
@@ -288,7 +338,9 @@ JSValue js_disposable_stack_defer(JSContext *ctx, JSValueConst value,
         return JS_ThrowTypeError(ctx, "disposal callback is not callable");
     if (js_disposable_resource_add(ctx, stack->resources, JS_UNDEFINED,
                                    JS_DupValue(ctx, argv[0]),
-                                   JS_DISPOSABLE_DEFER) < 0)
+                                   JS_DISPOSABLE_DEFER,
+                                   class_id == JS_CLASS_ASYNC_DISPOSABLE_STACK ?
+                                   JS_DISPOSAL_ASYNC : JS_DISPOSAL_SYNC) < 0)
         return JS_EXCEPTION;
     return JS_UNDEFINED;
 }
@@ -325,8 +377,8 @@ static JSValue js_disposable_stack_move_sync(JSContext *ctx,
                                     sizeof(JSDisposableStackData));
 }
 
-JSValue js_disposable_resource_call(JSContext *ctx,
-                                    const JSDisposableResource *resource)
+static JSValue js_disposable_resource_call(JSContext *ctx,
+                                           const JSDisposableResource *resource)
 {
     if (resource->invocation == JS_DISPOSABLE_ADOPT)
         return JS_Call(ctx, resource->method, JS_UNDEFINED, 1,
@@ -336,8 +388,8 @@ JSValue js_disposable_resource_call(JSContext *ctx,
                    resource->value : JS_UNDEFINED, 0, NULL);
 }
 
-void js_disposable_resource_add_error(JSContext *ctx, JSValue *error,
-                                      BOOL *has_error, JSValue next_error)
+static void js_disposable_resource_add_error(JSContext *ctx, JSValue *error,
+                                             BOOL *has_error, JSValue next_error)
 {
     if (*has_error) {
         JSValue combined = js_new_suppressed_error(ctx, next_error, *error);
@@ -350,41 +402,104 @@ void js_disposable_resource_add_error(JSContext *ctx, JSValue *error,
     }
 }
 
+int js_dispose_resources_step(JSContext *ctx,
+                              JSValueConst resources, JSValueConst input,
+                              BOOL is_throw, JSValue *await_value)
+{
+    JSDisposableResourceList *list =
+        JS_GetOpaque(resources, JS_CLASS_DISPOSABLE_RESOURCE_LIST);
+
+    *await_value = JS_UNDEFINED;
+    if (!list) {
+        JS_ThrowInternalError(ctx, "invalid disposal resource list");
+        return -1;
+    }
+    if (list->done)
+        return 0;
+    if (!list->started) {
+        list->started = TRUE;
+        list->active = list->head;
+        list->head = NULL;
+        if (is_throw) {
+            list->error = JS_DupValue(ctx, input);
+            list->has_error = TRUE;
+        }
+    } else if (list->await_reason != JS_DISPOSAL_AWAIT_NONE) {
+        if (list->await_reason == JS_DISPOSAL_AWAIT_METHOD)
+            list->has_awaited = TRUE;
+        list->await_reason = JS_DISPOSAL_AWAIT_NONE;
+        if (is_throw)
+            js_disposable_resource_add_error(ctx, &list->error,
+                                              &list->has_error,
+                                              JS_DupValue(ctx, input));
+    }
+
+    while (list->active) {
+        JSDisposableResource *resource = list->active;
+        JSDisposalKind kind = resource->kind;
+        JSValue result;
+
+        if (kind == JS_DISPOSAL_SYNC &&
+            list->needs_await && !list->has_awaited) {
+            list->needs_await = FALSE;
+            list->await_reason = JS_DISPOSAL_AWAIT_BEFORE_SYNC;
+            return 1;
+        }
+        list->active = resource->next;
+        if (JS_IsUndefined(resource->method)) {
+            assert(kind == JS_DISPOSAL_ASYNC);
+            list->needs_await = TRUE;
+            js_disposable_resource_free(ctx->rt, resource);
+            continue;
+        }
+        result = js_disposable_resource_call(ctx, resource);
+        js_disposable_resource_free(ctx->rt, resource);
+        if (JS_IsException(result)) {
+            js_disposable_resource_add_error(ctx, &list->error,
+                                              &list->has_error,
+                                              JS_GetException(ctx));
+        } else if (kind == JS_DISPOSAL_SYNC) {
+            JS_FreeValue(ctx, result);
+        } else {
+            list->await_reason = JS_DISPOSAL_AWAIT_METHOD;
+            *await_value = result;
+            return 1;
+        }
+    }
+    if (list->needs_await && !list->has_awaited) {
+        list->needs_await = FALSE;
+        list->await_reason = JS_DISPOSAL_AWAIT_END;
+        return 1;
+    }
+    list->done = TRUE;
+    if (list->has_error) {
+        JSValue error = list->error;
+        list->error = JS_UNDEFINED;
+        list->has_error = FALSE;
+        JS_Throw(ctx, error);
+        return -1;
+    }
+    return 0;
+}
+
 static JSValue js_disposable_stack_dispose(JSContext *ctx, JSValueConst value,
                                            int argc, JSValueConst *argv)
 {
     JSDisposableStackData *stack =
         js_get_disposable_stack(ctx, value, JS_CLASS_DISPOSABLE_STACK, FALSE);
-    JSDisposableResourceList *list;
-    JSValue error = JS_UNDEFINED;
-    BOOL has_error = FALSE;
+    JSValue result;
+    int status;
 
     if (!stack)
         return JS_EXCEPTION;
     if (stack->disposed)
         return JS_UNDEFINED;
     stack->disposed = TRUE;
-    list = JS_GetOpaque(stack->resources, JS_CLASS_DISPOSABLE_RESOURCE_LIST);
-    /* Retain a fixed traversal even if a previously started use() appends. */
-    list->active = list->head;
-    list->head = NULL;
-    while (list->active) {
-        JSDisposableResource *resource = list->active;
-        JSValue result;
-
-        list->active = resource->next;
-        result = js_disposable_resource_call(ctx, resource);
-        js_disposable_resource_free(ctx->rt, resource);
-        if (JS_IsException(result)) {
-            js_disposable_resource_add_error(ctx, &error, &has_error,
-                                              JS_GetException(ctx));
-        } else {
-            JS_FreeValue(ctx, result);
-        }
-    }
-    if (has_error)
-        return JS_Throw(ctx, error);
-    return JS_UNDEFINED;
+    status = js_dispose_resources_step(ctx, stack->resources,
+                                       JS_UNDEFINED, FALSE, &result);
+    assert(status != 1);
+    JS_FreeValue(ctx, result);
+    return status < 0 ? JS_EXCEPTION : JS_UNDEFINED;
 }
 
 static const JSCFunctionListEntry js_disposable_stack_proto_funcs[] = {

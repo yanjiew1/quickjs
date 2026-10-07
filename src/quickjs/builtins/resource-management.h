@@ -11,22 +11,9 @@
 #include "../internal/base.h"
 
 typedef enum {
-    JS_DISPOSABLE_USE,
-    JS_DISPOSABLE_ADOPT,
-    JS_DISPOSABLE_DEFER,
-} JSDisposableInvocation;
-
-typedef struct JSDisposableResource {
-    struct JSDisposableResource *next;
-    JSValue value;
-    JSValue method;
-    JSDisposableInvocation invocation;
-} JSDisposableResource;
-
-typedef struct JSDisposableResourceList {
-    JSDisposableResource *head;
-    JSDisposableResource *active;
-} JSDisposableResourceList;
+    JS_DISPOSAL_SYNC,
+    JS_DISPOSAL_ASYNC,
+} JSDisposalKind;
 
 typedef struct JSDisposableStackData {
     JSValue resources;
@@ -53,10 +40,14 @@ JSValue js_disposable_stack_defer(JSContext *ctx, JSValueConst value,
                                   int argc, JSValueConst *argv, int class_id);
 JSValue js_disposable_stack_move(JSContext *ctx, JSValueConst value,
                                  int class_id, size_t data_size);
-JSValue js_disposable_resource_call(JSContext *ctx,
-                                    const JSDisposableResource *resource);
-void js_disposable_resource_free(JSRuntime *rt, JSDisposableResource *resource);
-void js_disposable_resource_add_error(JSContext *ctx, JSValue *error,
-                                      BOOL *has_error, JSValue next_error);
+JSValue js_new_disposable_resource_list(JSContext *ctx);
+int js_add_disposable_resource(JSContext *ctx, JSValueConst resources,
+                               JSValueConst value, JSDisposalKind kind);
+/* First input seeds the completion; subsequent input resumes Await.
+   Return 0 for normal completion, 1 for an owned Await operand, and
+   -1 with the final throw completion in the context exception slot. */
+int js_dispose_resources_step(JSContext *ctx, JSValueConst resources,
+                              JSValueConst input, BOOL is_throw,
+                              JSValue *await_value);
 
 #endif
