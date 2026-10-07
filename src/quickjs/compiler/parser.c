@@ -630,6 +630,17 @@ int resolve_annex_function_declarations(JSContext *ctx, JSFunctionDef *fd)
                     return -1;
                 hf->scope_level = 0;
             }
+        } else if (name == JS_ATOM_arguments && fd->has_arguments_binding) {
+            if (fd->has_parameter_expressions && find_var(ctx, fd, name) < 0) {
+                fd->has_annex_arguments = TRUE;
+                if (fd->var_object_idx < 0) {
+                    fd->var_object_idx = add_var(ctx, fd, JS_ATOM__var_);
+                    if (fd->var_object_idx < 0)
+                        return -1;
+                }
+            }
+            if (add_arguments_var(ctx, fd) < 0)
+                return -1;
         } else if (find_var(ctx, fd, name) < 0) {
             if (add_var(ctx, fd, name) < 0)
                 return -1;
@@ -6766,8 +6777,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     if (func_type == JS_PARSE_FUNC_VAR) {
         if (!(fd->js_mode & JS_MODE_STRICT)
         && func_kind == JS_FUNC_NORMAL
-        &&  !((func_idx = find_var(ctx, fd, func_name)) >= 0 && (func_idx & ARGUMENT_VAR_OFFSET))
-        &&  !(func_name == JS_ATOM_arguments && fd->has_arguments_binding)) {
+        &&  !((func_idx = find_var(ctx, fd, func_name)) >= 0 && (func_idx & ARGUMENT_VAR_OFFSET))) {
             create_func_var = TRUE;
         }
         /* Create the lexical name here so that the function closure

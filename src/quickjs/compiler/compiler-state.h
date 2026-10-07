@@ -116,6 +116,7 @@ typedef struct JSFunctionDef {
     BOOL has_parameter_expressions; /* if true, an argument scope is created */
     BOOL has_use_strict; /* to reject directive in special cases */
     BOOL has_eval_call; /* true if the function contains a call to eval() */
+    BOOL has_annex_arguments; /* lazy body binding with parameter expressions */
     BOOL has_annex_b_declarations; /* deferred variable binding copies */
     BOOL has_arguments_binding; /* true if the 'arguments' binding is
                                    available in the function */

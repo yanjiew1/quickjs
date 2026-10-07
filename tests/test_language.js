@@ -753,6 +753,76 @@ function test_annex_deferred_applicability()
     assert_throws(SyntaxError, () => Function("{ var target; } let target;"));
 }
 
+function test_annex_arguments_binding()
+{
+    function simple() {
+        assert(typeof arguments, "object");
+        let saved;
+        { saved = arguments; function arguments() { return 42; } }
+        assert(arguments === saved);
+        assert(arguments(), 42);
+    }
+    simple();
+    function evaluated() {
+        eval("42");
+        { function arguments() { return 42; } }
+        assert(arguments(), 42);
+    }
+    evaluated();
+    function formal(arguments) {
+        { function arguments() {} }
+        assert(arguments, 7);
+    }
+    formal(7);
+    function defaultFormal(arguments = 7) {
+        { function arguments() {} }
+        assert(arguments, 7);
+    }
+    defaultFormal();
+    function separate(read = () => arguments) {
+        arguments = 1;
+        assert(read(), 1);
+        const bodyRead = () => arguments;
+        let saved;
+        { saved = arguments; function arguments() { return 42; } }
+        assert(arguments === saved);
+        assert(bodyRead() === saved);
+        assert(read(), 1);
+        assert(arguments(), 42);
+    }
+    separate();
+    function skipped(read = () => arguments) {
+        arguments = 3;
+        if (false) { function arguments() {} }
+        assert(arguments, 3);
+        assert(read(), 3);
+    }
+    skipped();
+    function explicit(read = () => arguments) {
+        var arguments;
+        const initial = arguments;
+        { function arguments() { return 42; } }
+        assert(arguments(), 42);
+        assert(read() === initial);
+    }
+    explicit();
+    function nestedEval(read = () => arguments) {
+        arguments = 5;
+        eval("{ function arguments() { return 42; } }");
+        assert(arguments(), 42);
+        assert(read(), 5);
+    }
+    nestedEval();
+    assert_throws(SyntaxError, () => Function("'use strict'; { function arguments() {} }"));
+    const strictFunction = Function(`"use strict"; return function(read = () => arguments) {
+        const before = arguments;
+        { function local() {} }
+        assert(arguments === before);
+        assert(read() === before);
+    };`)();
+    strictFunction();
+}
+
 function test_class()
 {
     var o;
@@ -1170,6 +1240,7 @@ test_eval_catch_var_declaration();
 test_annex_eval_variable_target();
 test_parameter_arguments_binding();
 test_annex_deferred_applicability();
+test_annex_arguments_binding();
 test_template();
 test_template_skip();
 test_object_literal();
