@@ -162,7 +162,8 @@ static void test_public_poll_timeout_and_cancel(void)
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx = JS_NewContext(rt);
     JSNativeJobOwner *owner;
-    int locations[2], timeout;
+    int locations[2], timeout, ret;
+    long double retry_end;
     assert(rt && ctx);
     JS_SetRuntimeOpaque(rt, &log);
     owner = js_native_jobs_get_owner(ctx);
@@ -171,7 +172,12 @@ static void test_public_poll_timeout_and_cancel(void)
     add_record(ctx, owner, &locations[1], JS_NATIVE_WAIT_FOREVER);
     timeout = JS_GetNativeJobTimeout(rt);
     assert(timeout == 0 || timeout == 1);
-    assert(JS_PollNativeJobs(rt, -1) == 1);
+    retry_end = js_native_jobs_now() + 10000000000.0L;
+    do {
+        ret = JS_PollNativeJobs(rt, -1);
+        assert(ret >= 0);
+        assert(js_native_jobs_now() < retry_end);
+    } while (ret != 1);
     drain(rt);
     assert(!strcmp(log.text, "timeout") && log.released == 1);
     assert(JS_IsNativeJobPending(rt) && JS_GetNativeJobTimeout(rt) == -1);

@@ -544,7 +544,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
     else if (d < 0)
         timeout = 0;
     else
-        timeout = (int64_t)d;
+        timeout = (int64_t)ceil(d);
     if (!ctx->rt->can_block)
         return JS_ThrowTypeError(ctx, "cannot block in this thread");
 
