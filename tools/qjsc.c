@@ -35,6 +35,12 @@
 
 #include "cutils.h"
 #include "quickjs-libc.h"
+#ifdef CONFIG_ICU
+#ifndef QJSC_INTL_LINK_HEADER
+#define QJSC_INTL_LINK_HEADER "qjsc-intl-link.h"
+#endif
+#include QJSC_INTL_LINK_HEADER
+#endif
 
 typedef struct {
     char *name;
@@ -77,6 +83,12 @@ static const FeatureEntry feature_list[] = {
 #define FE_MODULE_LOADER 9
     { "module-loader", NULL },
     { "weakref", "WeakRef" },
+#ifdef CONFIG_TEMPORAL
+    { "temporal", "Temporal" },
+#endif
+#ifdef CONFIG_INTL
+    { "intl", "Intl" },
+#endif
 };
 
 void namelist_add(namelist_t *lp, const char *name, const char *short_name,
@@ -451,7 +463,12 @@ int exec_cmd(char **argv)
 static int output_executable(const char *out_filename, const char *cfilename,
                              BOOL use_lto, BOOL verbose, const char *exename)
 {
+#ifdef CONFIG_ICU
+    const char *argv[64 + countof(qjsc_intl_link_args)];
+    int intl_arg;
+#else
     const char *argv[64];
+#endif
     const char **arg, *bn_suffix, *lto_suffix;
     char libjsname[1024];
     char exe_dir[1024], inc_dir[1024], lib_dir[1024], buf[1024], *p;
@@ -503,6 +520,10 @@ static int output_executable(const char *out_filename, const char *cfilename,
     snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s%s.a",
              lib_dir, bn_suffix, lto_suffix);
     *arg++ = libjsname;
+#ifdef CONFIG_ICU
+    for (intl_arg = 0; qjsc_intl_link_args[intl_arg]; intl_arg++)
+        *arg++ = qjsc_intl_link_args[intl_arg];
+#endif
     *arg++ = "-lm";
     *arg++ = "-ldl";
     *arg++ = "-lpthread";
