@@ -1117,6 +1117,8 @@ typedef enum JSCFunctionEnum {  /* XXX: should rename for namespace isolation */
     JS_CFUNC_getter_magic,
     JS_CFUNC_setter_magic,
     JS_CFUNC_iterator_next,
+    /* Preserves the call receiver and separately supplies new.target. */
+    JS_CFUNC_constructor_or_func_receiver,
 } JSCFunctionEnum;
 
 typedef union JSCFunctionType {
@@ -1125,6 +1127,10 @@ typedef union JSCFunctionType {
     JSCFunction *constructor;
     JSValue (*constructor_magic)(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv, int magic);
     JSCFunction *constructor_or_func;
+    JSValue (*constructor_or_func_receiver)(JSContext *ctx,
+                                            JSValueConst this_val,
+                                            JSValueConst new_target,
+                                            int argc, JSValueConst *argv);
     double (*f_f)(double);
     double (*f_f_f)(double, double);
     JSValue (*getter)(JSContext *ctx, JSValueConst this_val);
