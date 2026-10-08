@@ -610,6 +610,7 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
     ctx->regexp_ctor = JS_NULL;
     ctx->promise_ctor = JS_NULL;
     init_list_head(&ctx->loaded_modules);
+    ctx->module_load_request = NULL;
 
     if (JS_AddIntrinsicBasicObjects(ctx)) {
         JS_FreeContext(ctx);
@@ -665,11 +666,14 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
 {
     int i;
     struct list_head *el;
+    JSModuleLoadRequest *request;
 
     list_for_each(el, &ctx->loaded_modules) {
         JSModuleDef *m = list_entry(el, JSModuleDef, link);
         JS_MarkValue(rt, JS_MKPTR(JS_TAG_MODULE, m), mark_func);
     }
+    for (request = ctx->module_load_request; request; request = request->previous)
+        JS_MarkValue(rt, request->attributes, mark_func);
 
     JS_MarkValue(rt, ctx->global_obj, mark_func);
     JS_MarkValue(rt, ctx->global_var_obj, mark_func);
