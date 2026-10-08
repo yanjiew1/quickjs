@@ -433,7 +433,8 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/number-common.c \
     src/quickjs/builtins/intl/number-format.c \
     src/quickjs/builtins/intl/plural-rules.c \
-    src/quickjs/builtins/intl/relative-time-format.c
+    src/quickjs/builtins/intl/relative-time-format.c \
+    src/quickjs/builtins/intl/duration-format.c
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
@@ -744,6 +745,7 @@ C_TESTS+=tests/test_temporal_zones$(EXE)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+C_TESTS+=tests/test_intl_duration_format_embed$(EXE)
 C_TESTS+=tests/test_intl_plural$(EXE)
 C_TESTS+=tests/test_intl_number_format_embed$(EXE)
 C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
@@ -832,6 +834,8 @@ $(OBJDIR)/src/temporal/time-zone.date-test.o: src/temporal/time-zone.c .obj/intl
 
 endif
 
+tests/test_intl_duration_format_embed$(EXE): $(OBJDIR)/tests/test_intl_duration_format_embed.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Compile the actual qjsc-generated context/main into the native fault unit.
 $(OBJDIR)/tests/qjsc-context-generated.c: $(QJSC) tests/fixture_qjsc_context.js .obj/intl-build-config
@@ -878,6 +882,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+	$(WINE) ./tests/test_intl_duration_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_plural$(EXE)
 	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
@@ -941,6 +946,7 @@ ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_duration_format.js
 ifeq ($(CONFIG_TEMPORAL),y)
 endif
 	$(WINE) ./qjs$(EXE) tests/test_intl_relative_time_format.js
