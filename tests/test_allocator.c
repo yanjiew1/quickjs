@@ -524,6 +524,7 @@ typedef struct AllocationFailure {
     unsigned failures;
     JSRuntime *rt;
     BOOL context_registered_at_failure;
+    BOOL fail_table_realloc;
 } AllocationFailure;
 
 static BOOL allocation_should_fail(AllocationFailure *failure)
@@ -569,6 +570,11 @@ static void *allocation_failure_realloc(JSMallocState *s, void *ptr,
     BOOL had_ptr = ptr != NULL;
     void *result;
 
+    if (size != 0 && ptr && failure->fail_table_realloc) {
+        failure->fail_table_realloc = FALSE;
+        failure->failures++;
+        return NULL;
+    }
     if (size != 0 && allocation_should_fail(failure))
         return NULL;
     result = def_malloc_funcs.js_realloc(s, ptr, size);
@@ -658,8 +664,78 @@ static void test_backtrace_allocation_failure(void)
     check_backtrace_allocation_failure(3);
 }
 
+static void test_int64_atom_table_allocation_failure(void)
+{
+    AllocationFailure failure = { 0 };
+    JSRuntime *rt = new_allocation_failure_runtime(&failure);
+    JSContext *ctx = JS_NewContext(rt);
+    JSAtom *atoms, atom;
+    JSValue object, value, result, exception;
+    size_t count = 0, capacity;
+    int operation, ret;
+
+    assert(ctx);
+    object = JS_NewObject(ctx);
+    value = JS_NewObject(ctx);
+    assert(!JS_IsException(object) && !JS_IsException(value));
+    capacity = rt->atom_size;
+    atoms = malloc(capacity * sizeof(*atoms));
+    assert(atoms);
+    while (rt->atom_free_index != 0) {
+        assert(count < capacity);
+        atoms[count] = JS_NewAtomInt64(ctx, INT64_MIN + (int64_t)count);
+        assert(atoms[count] != JS_ATOM_NULL && !JS_HasException(ctx));
+        count++;
+    }
+    for (operation = 0; operation < 5; operation++) {
+        failure.fail_table_realloc = TRUE;
+        switch (operation) {
+        case 0:
+            atom = JS_NewAtomInt64(ctx, INT64_MAX);
+            assert(atom == JS_ATOM_NULL);
+            break;
+        case 1:
+            result = JS_GetPropertyInt64(ctx, object, INT64_MAX);
+            assert(JS_IsException(result));
+            break;
+        case 2:
+            ret = JS_SetPropertyInt64(ctx, object, INT64_MAX,
+                                      JS_DupValue(ctx, value));
+            assert(ret == -1);
+            break;
+        case 3:
+            ret = JS_DefinePropertyValueInt64(ctx, object, INT64_MAX,
+                                              JS_DupValue(ctx, value),
+                                              JS_PROP_C_W_E);
+            assert(ret == -1);
+            break;
+        default:
+            ret = JS_DeletePropertyInt64(ctx, object, INT64_MAX,
+                                         JS_PROP_THROW);
+            assert(ret == -1);
+            break;
+        }
+        assert(!failure.fail_table_realloc);
+        assert(failure.failures == operation + 1);
+        assert(JS_HasException(ctx));
+        exception = JS_GetException(ctx);
+        JS_FreeValue(ctx, exception);
+        assert(js_rc(JS_VALUE_GET_OBJ(value))->ref_count == 1);
+        assert(rt->atom_free_index == 0);
+    }
+    while (count)
+        JS_FreeAtom(ctx, atoms[--count]);
+    free(atoms);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, object);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
 int main(void)
 {
+    test_int64_atom_table_allocation_failure();
     test_backtrace_allocation_failure();
     test_raw_context_allocation_failure();
     test_malloc_limit_overflow();
