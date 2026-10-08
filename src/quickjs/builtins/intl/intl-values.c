@@ -91,9 +91,38 @@ int intl_values_list(JSContext *ctx, const char *key, JSIntlLocaleList *list)
         if (U_FAILURE(status)) { uenum_close(e); js_intl_icu_error(ctx, status, "collations"); goto fail; }
         if (values_from_enum(ctx, e, "co", list) < 0) goto fail;
     } else if (!strcmp(key, "currency")) {
+        const char *name;
+        int32_t n;
         e = ucurr_openISOCurrencies(UCURR_ALL, &status);
         if (U_FAILURE(status)) { uenum_close(e); js_intl_icu_error(ctx, status, "currencies"); goto fail; }
-        if (values_from_enum(ctx, e, NULL, list) < 0) goto fail;
+        while ((name = uenum_next(e, &n, &status))) {
+            UChar code[4];
+            const UChar *display;
+            UErrorCode name_status = U_ZERO_ERROR;
+            int32_t length;
+            if (n != 3)
+                continue;
+            for (i = 0; i < 3; i++)
+                code[i] = (unsigned char)name[i];
+            code[3] = 0;
+            display = ucurr_getName(code, "en", UCURR_LONG_NAME, NULL,
+                                    &length, &name_status);
+            if (js_intl_icu_error(ctx, name_status, "currency display name") < 0) {
+                uenum_close(e);
+                goto fail;
+            }
+            /* Match DisplayNames' treatment of a substituted currency code. */
+            if (!length || (length == 3 && display[0] == code[0] &&
+                display[1] == code[1] && display[2] == code[2]))
+                continue;
+            if (js_intl_locale_list_append(ctx, list, name) < 0) {
+                uenum_close(e);
+                goto fail;
+            }
+        }
+        uenum_close(e);
+        if (js_intl_icu_error(ctx, status, "currencies") < 0)
+            goto fail;
     } else if (!strcmp(key, "numberingSystem")) {
         const char *name; int32_t n;
         e = unumsys_openAvailableNames(&status);

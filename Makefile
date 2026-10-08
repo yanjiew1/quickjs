@@ -427,6 +427,7 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/segmenter.c \
     src/quickjs/builtins/intl/date-time-format.c \
     src/quickjs/builtins/intl/list-format.c \
+    src/quickjs/builtins/intl/display-names.c \
     src/quickjs/builtins/intl/number-common.c \
     src/quickjs/builtins/intl/number-format.c
 QUICKJS_SRCS+=$(INTL_SRCS)
@@ -1028,6 +1029,7 @@ ifeq ($(CONFIG_INTL_LEGACY),y)
 else
 	$(WINE) ./qjs$(EXE) --std -e "globalThis.intlLegacyExpected = false; std.loadScript('tests/test_intl_number_format.js');"
 endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_display_names.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_list_format.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_date_time.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_date_time_hour_cycle.js

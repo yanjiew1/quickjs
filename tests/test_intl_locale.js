@@ -129,3 +129,19 @@ for (const [tag, direction] of [["ar-Latn", "ltr"], ["en-Arab", "rtl"],
     same(new Intl.Locale(tag).getTextInfo().direction, direction);
 const nastaliqDirection = new Intl.Locale("ur-Aran").getTextInfo().direction;
 same(nastaliqDirection === "rtl" || nastaliqDirection === undefined, true);
+
+/* Inventory entries need actual DisplayNames data, not currency-code fallback. */
+const namedCurrencies = Intl.supportedValuesOf("currency");
+const currencyNames = new Intl.DisplayNames("en", {
+    type: "currency", fallback: "none"
+});
+for (const currency of namedCurrencies) {
+    same(typeof currencyNames.of(currency), "string");
+    const formatter = new Intl.NumberFormat("en", {style: "currency", currency});
+    same(formatter.resolvedOptions().currency, currency);
+    same(typeof formatter.format(1), "string");
+}
+// LSM exposed the inventory/code-fallback disagreement in ICU 78.3.
+for (const currency of ["USD", "EUR", "JPY", "LSM", "ZZZ"])
+    same(namedCurrencies.includes(currency),
+         typeof currencyNames.of(currency) === "string");
