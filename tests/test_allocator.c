@@ -664,6 +664,91 @@ static void test_backtrace_allocation_failure(void)
     check_backtrace_allocation_failure(3);
 }
 
+/* The VM and parser borrow an exception owned only by the pending slot.
+   Pre-existing metadata removes property allocations from the schedule:
+   DynBuf, filename string, DynBuf growth, then the final stack string. */
+static void check_pending_backtrace_allocation_failure(unsigned fail_at,
+                                                       BOOL retain_error)
+{
+    AllocationFailure failure = { 0 };
+    JSRuntime *rt = new_allocation_failure_runtime(&failure);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue error, retained, exception, stack, message;
+    const char *text;
+    uintptr_t original;
+    char filename[2048];
+    const int flags = JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE;
+
+    assert(ctx);
+    assert(rt->current_stack_frame == NULL);
+    error = JS_NewError(ctx);
+    assert(!JS_IsException(error));
+    assert(JS_DefinePropertyValueStr(ctx, error, "fileName", JS_UNDEFINED,
+                                    flags) >= 0);
+    assert(JS_DefinePropertyValueStr(ctx, error, "lineNumber", JS_UNDEFINED,
+                                    flags) >= 0);
+    assert(JS_DefinePropertyValueStr(ctx, error, "columnNumber", JS_UNDEFINED,
+                                    flags) >= 0);
+    assert(JS_DefinePropertyValueStr(ctx, error, "stack", JS_UNDEFINED,
+                                    flags) >= 0);
+    retained = retain_error ? JS_DupValue(ctx, error) : JS_UNDEFINED;
+    original = (uintptr_t)JS_VALUE_GET_PTR(error);
+    assert(JS_IsException(JS_Throw(ctx, error))); /* transfers ownership */
+    error = JS_UNDEFINED;
+    JS_SetUncatchableException(ctx, TRUE);
+    memset(filename, 'x', sizeof(filename) - 1);
+    filename[sizeof(filename) - 1] = '\0';
+    failure.allocations_until_failure = fail_at;
+    build_backtrace(ctx, rt->current_exception, filename, -1, 1, 0);
+    assert(failure.failures == (fail_at != 0));
+    assert(failure.allocations_until_failure == 0);
+    assert(JS_HasException(ctx));
+    assert(rt->current_exception_is_uncatchable == (fail_at == 0));
+    exception = JS_GetException(ctx);
+    assert(JS_IsError(ctx, exception));
+    if (fail_at) {
+        /* Backtrace OOM keeps its existing replacement/propagation policy. */
+        assert((uintptr_t)JS_VALUE_GET_PTR(exception) != original);
+        message = JS_GetPropertyStr(ctx, exception, "message");
+        assert(!JS_IsException(message));
+        text = JS_ToCString(ctx, message);
+        assert(text && !strcmp(text, "out of memory"));
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, message);
+        if (retain_error) {
+            /* A failed string must not become a JS_EXCEPTION stack value. */
+            stack = JS_GetPropertyStr(ctx, retained, "stack");
+            assert(JS_IsUndefined(stack));
+            JS_FreeValue(ctx, stack);
+        }
+    } else {
+        assert((uintptr_t)JS_VALUE_GET_PTR(exception) == original);
+        stack = JS_GetPropertyStr(ctx, exception, "stack");
+        assert(JS_IsString(stack));
+        text = JS_ToCString(ctx, stack);
+        assert(text && strlen(text) == sizeof(filename) - 1 + 8);
+        assert(!memcmp(text, "    at ", 7));
+        assert(!memcmp(text + 7, filename, sizeof(filename) - 1));
+        assert(text[sizeof(filename) - 1 + 7] == '\n');
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, stack);
+    }
+    assert(!JS_HasException(ctx));
+    JS_FreeValue(ctx, retained);
+    JS_FreeValue(ctx, exception);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
+static void test_pending_backtrace_allocation_failure(void)
+{
+    check_pending_backtrace_allocation_failure(0, FALSE);
+    check_pending_backtrace_allocation_failure(2, FALSE);
+    check_pending_backtrace_allocation_failure(4, FALSE);
+    check_pending_backtrace_allocation_failure(4, TRUE);
+}
+
 static void test_int64_atom_table_allocation_failure(void)
 {
     AllocationFailure failure = { 0 };
@@ -737,6 +822,7 @@ int main(void)
 {
     test_int64_atom_table_allocation_failure();
     test_backtrace_allocation_failure();
+    test_pending_backtrace_allocation_failure();
     test_raw_context_allocation_failure();
     test_malloc_limit_overflow();
     test_realloc_limit_overflow();
