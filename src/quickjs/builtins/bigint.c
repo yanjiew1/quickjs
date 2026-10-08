@@ -31,6 +31,9 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "bigint.h"
+#ifdef CONFIG_INTL
+#include "intl/intl-number.h"
+#endif
 
 /* BigInt */
 
@@ -136,7 +139,19 @@ static JSValue js_bigint_toString(JSContext *ctx, JSValueConst this_val,
 static JSValue js_bigint_toLocaleString(JSContext *ctx, JSValueConst this_val,
                                         int argc, JSValueConst *argv)
 {
+#ifdef CONFIG_INTL
+    JSValue value = js_thisBigIntValue(ctx, this_val);
+    JSValue result;
+    if (JS_IsException(value))
+        return value;
+    result = js_intl_number_to_locale_string(ctx, value,
+                         argc > 0 ? argv[0] : JS_UNDEFINED,
+                         argc > 1 ? argv[1] : JS_UNDEFINED);
+    JS_FreeValue(ctx, value);
+    return result;
+#else
     return js_bigint_toString(ctx, this_val, 0, NULL);
+#endif
 }
 
 static JSValue js_bigint_valueOf(JSContext *ctx, JSValueConst this_val,
