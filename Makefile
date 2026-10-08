@@ -827,3 +827,16 @@ tests/test_fuzz_allocations$(EXE): $(OBJDIR)/tests/test_fuzz_allocations.o $(OBJ
 
 tests/test_fuzz_regexp_timeout$(EXE): $(OBJDIR)/tests/test_fuzz_regexp_timeout.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+C_TESTS+=tests/test_qjsc_context_failures$(EXE)
+$(OBJDIR)/tests/qjsc-context-generated.c: $(QJSC) tests/fixture_qjsc_context.js
+	mkdir -p $(@D)
+	$(QJSC) -e -o $@ tests/fixture_qjsc_context.js
+$(OBJDIR)/tests/test_qjsc_context_failures.o: $(OBJDIR)/tests/qjsc-context-generated.c
+$(OBJDIR)/tests/test_qjsc_context_failures.o: CFLAGS+=-I$(OBJDIR)/tests
+tests/test_qjsc_context_failures$(EXE): $(OBJDIR)/tests/test_qjsc_context_failures.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-qjsc-context-prepared
+test-c: test-qjsc-context-prepared
+test-qjsc-context-prepared: tests/test_qjsc_context_failures$(EXE)
+	$(WINE) ./tests/test_qjsc_context_failures$(EXE)
