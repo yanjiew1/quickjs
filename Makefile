@@ -423,7 +423,8 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/intl-values.c \
     src/quickjs/builtins/intl/locale.c \
     src/quickjs/builtins/intl/bound-function.c \
-    src/quickjs/builtins/intl/collator.c
+    src/quickjs/builtins/intl/collator.c \
+    src/quickjs/builtins/intl/segmenter.c
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
@@ -728,6 +729,7 @@ C_TESTS+=tests/test_temporal_zones$(EXE)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
 ifeq ($(CONFIG_INTL),y)
 endif
 
@@ -793,6 +795,8 @@ tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/l
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 
+tests/test_intl_collator_segmenter$(EXE): $(OBJDIR)/tests/test_intl_collator_segmenter.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 
 
@@ -850,6 +854,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
 ifeq ($(CONFIG_INTL),y)
 endif
@@ -914,6 +919,7 @@ else
 endif
 ifeq ($(CONFIG_INTL_LEGACY),y)
 endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_segmenter.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_collator.js
 endif
 
