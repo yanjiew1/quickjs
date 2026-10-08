@@ -33,6 +33,10 @@
 #include "../internal/string.h"
 #include "../internal/object.h"
 #include "../internal/error.h"
+#ifdef CONFIG_INTL
+#include "intl/locale-integration.h"
+#include "intl/intl-internal.h"
+#endif
 #include "libunicode.h"
 #include "string.h"
 #include "array.h"
@@ -1508,6 +1512,7 @@ static JSValue js_string_normalize(JSContext *ctx, JSValueConst this_val,
     return val;
 }
 
+#ifndef CONFIG_INTL
 /* return < 0, 0 or > 0 */
 static int js_UTF32_compare(const uint32_t *buf1, int buf1_len,
                             const uint32_t *buf2, int buf2_len)
@@ -1562,7 +1567,8 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
     js_free(ctx, b_buf);
     return JS_NewInt32(ctx, cmp);
 }
-#else /* CONFIG_ALL_UNICODE */
+#endif /* !CONFIG_INTL */
+#elif !defined(CONFIG_INTL)
 static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
                                        int argc, JSValueConst *argv)
 {
@@ -1769,7 +1775,11 @@ static const JSCFunctionListEntry js_string_proto_normalize[] = {
 #ifdef CONFIG_ALL_UNICODE
     JS_CFUNC_DEF("normalize", 0, js_string_normalize ),
 #endif
+#ifdef CONFIG_INTL
+    JS_CFUNC_DEF("localeCompare", 1, js_intl_string_locale_compare ),
+#else
     JS_CFUNC_DEF("localeCompare", 1, js_string_localeCompare ),
+#endif
 };
 
 int JS_AddIntrinsicStringNormalize(JSContext *ctx)
