@@ -3070,7 +3070,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 val = *var_refs[idx]->pvalue;
                 if (unlikely(JS_IsUninitialized(val))) {
                     JSClosureVar *cv = &b->closure_var[idx];
-                    if (cv->is_lexical) {
+                    if (cv->is_lexical || var_refs[idx]->is_lexical) {
                         JS_ThrowReferenceErrorUninitialized(ctx, cv->var_name);
                         goto exception;
                     } else {
