@@ -385,7 +385,7 @@ static double time_clip(double t) {
 
 /* The spec mandates the use of 'double' and it specifies the order
    of the operations */
-static __exception int set_date_fields(JSContext *ctx,
+static __exception int make_date_fields(JSContext *ctx,
                                         double fields[minimum_length(7)],
                                        int is_local, double *result)
 {
@@ -451,7 +451,17 @@ static __exception int set_date_fields(JSContext *ctx,
         tv += getTimezoneOffset(ti) * 60000;
 #endif
     }
-    *result = time_clip(tv);
+    *result = tv;
+    return 0;
+}
+
+static __exception int set_date_fields(JSContext *ctx,
+                                       double fields[minimum_length(7)],
+                                       int is_local, double *result)
+{
+    if (make_date_fields(ctx, fields, is_local, result))
+        return -1;
+    *result = time_clip(*result);
     return 0;
 }
 
@@ -1218,10 +1228,10 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
         if (valid) {
             for(i = 0; i < 7; i++)
                 fields1[i] = fields[i];
-            if (set_date_fields(ctx, fields1, is_local, &d)) {
+            if (make_date_fields(ctx, fields1, is_local, &d)) {
                 rv = JS_EXCEPTION;
             } else {
-                d -= fields[8] * 60000;
+                d = time_clip(d - fields[8] * 60000);
                 rv = JS_NewFloat64(ctx, d);
             }
         }

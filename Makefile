@@ -954,6 +954,7 @@ test: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) -m tests/test_module_names.js
 	$(WINE) ./qjs$(EXE) --std tests/test_builtin.js
 	$(WINE) ./qjs$(EXE) tests/test_date_setter_snapshot.js
+	$(WINE) ./qjs$(EXE) tests/test_date_parse_boundaries.js
 	$(WINE) ./qjs$(EXE) tests/test_loop.js
 	$(WINE) ./qjs$(EXE) tests/test_bigint.js
 	$(WINE) ./qjs$(EXE) -m tests/test_async.js
