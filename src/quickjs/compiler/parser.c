@@ -1,8 +1,10 @@
 /*
  * QuickJS parser and initial bytecode emission
  *
- * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -6668,13 +6670,18 @@ fail:
     return -1;
 }
 
-static __exception int js_parse_with_clause(JSParseState *s, JSReqModuleEntry *rme)
+/* Attribute collection adapted from QuickJS-NG
+   a6b82a358a3c4c9bb375d1b5cae44a3b73db6222, reviewed 2026-10-08. */
+static __exception int js_parse_with_clause(JSParseState *s, JSValue *pattributes)
 {
     JSContext *ctx = s->ctx;
     JSAtom key;
     int ret;
     const uint8_t *key_token_ptr;
     
+    *pattributes = JS_UNDEFINED;
+    if (s->token.val != TOK_WITH)
+        return 0;
     if (next_token(s))
         return -1;
     if (js_parse_expect(s, '{'))
@@ -6692,25 +6699,28 @@ static __exception int js_parse_with_clause(JSParseState *s, JSReqModuleEntry *r
             }
             key = JS_DupAtom(ctx, s->token.u.ident.atom);
         }
-        if (next_token(s))
+        if (next_token(s)) {
+            JS_FreeAtom(ctx, key);
             return -1;
+        }
         if (js_parse_expect(s, ':')) {
             JS_FreeAtom(ctx, key);
             return -1;
         }
         if (s->token.val != TOK_STRING) {
             js_parse_error_pos(s, key_token_ptr, "string expected");
+            JS_FreeAtom(ctx, key);
             return -1;
         }
-        if (JS_IsUndefined(rme->attributes)) {
+        if (JS_IsUndefined(*pattributes)) {
             JSValue attributes = JS_NewObjectProto(ctx, JS_NULL);
             if (JS_IsException(attributes)) {
                 JS_FreeAtom(ctx, key);
                 return -1;
             }
-            rme->attributes = attributes;
+            *pattributes = attributes;
         }
-        ret = JS_HasProperty(ctx, rme->attributes, key);
+        ret = JS_HasProperty(ctx, *pattributes, key);
         if (ret != 0) {
             JS_FreeAtom(ctx, key);
             if (ret < 0)
@@ -6718,7 +6728,7 @@ static __exception int js_parse_with_clause(JSParseState *s, JSReqModuleEntry *r
             else
                 return js_parse_error(s, "duplicate with key");
         }
-        ret = JS_DefinePropertyValue(ctx, rme->attributes, key,
+        ret = JS_DefinePropertyValue(ctx, *pattributes, key,
                                      JS_DupValue(ctx, s->token.u.str.str), JS_PROP_C_W_E);
         JS_FreeAtom(ctx, key);
         if (ret < 0)
@@ -6730,9 +6740,9 @@ static __exception int js_parse_with_clause(JSParseState *s, JSReqModuleEntry *r
         if (next_token(s))
             return -1;
     }
-    if (!JS_IsUndefined(rme->attributes) &&
+    if (!JS_IsUndefined(*pattributes) &&
         ctx->rt->module_check_attrs &&
-        ctx->rt->module_check_attrs(ctx, ctx->rt->module_loader_opaque, rme->attributes) < 0) {
+        ctx->rt->module_check_attrs(ctx, ctx->rt->module_loader_opaque, *pattributes) < 0) {
         return -1;
     }
     return js_parse_expect(s, '}');
@@ -6742,6 +6752,7 @@ static __exception int js_parse_with_clause(JSParseState *s, JSReqModuleEntry *r
 static __exception int js_parse_from_clause(JSParseState *s, JSModuleDef *m)
 {
     JSAtom module_name;
+    JSValue attributes;
     int idx;
 
     if (!token_is_pseudo_keyword(s, JS_ATOM_from)) {
@@ -6762,14 +6773,14 @@ static __exception int js_parse_from_clause(JSParseState *s, JSModuleDef *m)
         return -1;
     }
 
-    idx = add_req_module_entry(s->ctx, m, module_name);
-    JS_FreeAtom(s->ctx, module_name);
-    if (idx < 0)
+    if (js_parse_with_clause(s, &attributes)) {
+        JS_FreeValue(s->ctx, attributes);
+        JS_FreeAtom(s->ctx, module_name);
         return -1;
-    if (s->token.val == TOK_WITH) {
-        if (js_parse_with_clause(s, &m->req_module_entries[idx]))
-            return -1;
     }
+    idx = add_req_module_entry(s->ctx, m, module_name, attributes);
+    JS_FreeValue(s->ctx, attributes);
+    JS_FreeAtom(s->ctx, module_name);
     return idx;
 }
 
@@ -7000,6 +7011,8 @@ static __exception int js_parse_import(JSParseState *s)
 
     first_import = m->import_entries_count;
     if (s->token.val == TOK_STRING) {
+        JSValue attributes;
+
         module_name = JS_ValueToAtom(ctx, s->token.u.str.str);
         if (module_name == JS_ATOM_NULL)
             return -1;
@@ -7007,14 +7020,16 @@ static __exception int js_parse_import(JSParseState *s)
             JS_FreeAtom(ctx, module_name);
             return -1;
         }
-        idx = add_req_module_entry(ctx, m, module_name);
+        if (js_parse_with_clause(s, &attributes)) {
+            JS_FreeValue(ctx, attributes);
+            JS_FreeAtom(ctx, module_name);
+            return -1;
+        }
+        idx = add_req_module_entry(ctx, m, module_name, attributes);
+        JS_FreeValue(ctx, attributes);
         JS_FreeAtom(ctx, module_name);
         if (idx < 0)
             return -1;
-        if (s->token.val == TOK_WITH) {
-            if (js_parse_with_clause(s, &m->req_module_entries[idx]))
-                return -1;
-        }
     } else {
         if (s->token.val == TOK_IDENT) {
             if (s->token.u.ident.is_reserved) {

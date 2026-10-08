@@ -1,8 +1,10 @@
 /*
  * QuickJS module types
  *
- * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +30,13 @@
 #include "runtime.h"
 
 typedef struct JSParseState JSParseState;
+
+/* A synchronous host loader owns this scoped request until it returns. */
+typedef struct JSModuleLoadRequest {
+    struct JSModuleLoadRequest *previous;
+    JSAtom module_name;
+    JSValue attributes;
+} JSModuleLoadRequest;
 
 typedef struct JSReqModuleEntry {
     JSAtom module_name;
@@ -124,6 +133,9 @@ struct JSModuleDef {
     JSValue eval_exception;
     JSValue meta_obj; /* for import.meta */
     JSValue private_value; /* private value for C modules */
+    /* Import request identity from QuickJS-NG
+       a6b82a358a3c4c9bb375d1b5cae44a3b73db6222, reviewed 2026-10-08. */
+    JSValue attributes; /* first attributed host request, for cache identity */
 };
 
 typedef enum JSFreeModuleEnum {
@@ -148,7 +160,7 @@ void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
                         JS_MarkFunc *mark_func);
 
 int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
-                         JSAtom module_name);
+                         JSAtom module_name, JSValueConst attributes);
 int add_star_export_entry(JSContext *ctx, JSModuleDef *m,
                           int req_module_idx);
 int js_resolve_module(JSContext *ctx, JSModuleDef *m);

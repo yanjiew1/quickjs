@@ -3035,12 +3035,270 @@ static void test_async_disposable_stack_realms(void)
     JS_FreeRuntime(rt);
 }
 
+typedef struct ModuleAttributeIdentityState {
+    int normalize_calls;
+    int loader_calls;
+    int shared_calls;
+    int self_calls;
+    int cycle_a_calls;
+    int cycle_b_calls;
+    JSModuleDef *shared;
+} ModuleAttributeIdentityState;
+
+static char *module_attribute_identity_normalize(JSContext *ctx,
+                                                  const char *base_name,
+                                                  const char *name,
+                                                  void *opaque)
+{
+    ModuleAttributeIdentityState *state = opaque;
+    (void)base_name;
+    state->normalize_calls++;
+    return js_strdup(ctx, name);
+}
+
+static JSValue module_attribute_identity_compile_named(JSContext *ctx,
+                                                         const char *filename,
+                                                         const char *module_name);
+
+static JSModuleDef *module_attribute_identity_load(JSContext *ctx,
+                                                    const char *name,
+                                                    void *opaque,
+                                                    JSValueConst attributes)
+{
+    ModuleAttributeIdentityState *state = opaque;
+    const char *source;
+    JSValue kind, compiled;
+    JSModuleDef *module;
+
+    state->loader_calls++;
+    if (strcmp(name, "attribute-self") == 0 ||
+        strcmp(name, "attribute-cycle-a") == 0 ||
+        strcmp(name, "attribute-cycle-b") == 0) {
+        const char *filename;
+        if (strcmp(name, "attribute-self") == 0) {
+            state->self_calls++;
+            filename = "tests/fixture_module_attributes_host_self.js";
+        } else if (strcmp(name, "attribute-cycle-a") == 0) {
+            state->cycle_a_calls++;
+            filename = "tests/fixture_module_attributes_host_cycle_a.js";
+        } else {
+            state->cycle_b_calls++;
+            filename = "tests/fixture_module_attributes_host_cycle_b.js";
+        }
+        /* Active nested loader frames must keep their owned values alive. */
+        JS_RunGC(JS_GetRuntime(ctx));
+        compiled = module_attribute_identity_compile_named(ctx, filename, name);
+        module = JS_VALUE_GET_PTR(compiled);
+        JS_FreeValue(ctx, compiled);
+        return module;
+    }
+    if (strcmp(name, "attribute-shared") == 0) {
+        state->shared_calls++;
+        if (state->shared)
+            return state->shared;
+        source = "export default 'shared';";
+    } else if (strcmp(name, "attribute-empty") == 0) {
+        source = "export default 'empty';";
+    } else {
+        assert(strcmp(name, "attribute-target") == 0);
+        kind = JS_GetPropertyStr(ctx, attributes, "other");
+        if (JS_IsString(kind)) {
+            const char *text = JS_ToCString(ctx, kind);
+            assert(text && strcmp(text, "first") == 0);
+            JS_FreeCString(ctx, text);
+            source = "export default 'alternate';";
+        } else {
+            assert(JS_IsUndefined(kind));
+            JS_FreeValue(ctx, kind);
+            kind = JS_GetPropertyStr(ctx, attributes, "kind");
+            assert(JS_IsString(kind));
+            const char *text = JS_ToCString(ctx, kind);
+            assert(text);
+            if (strcmp(text, "first") == 0)
+                source = "export default 'first';";
+            else {
+                assert(strcmp(text, "second") == 0);
+                source = "export default 'second';";
+            }
+            JS_FreeCString(ctx, text);
+        }
+        JS_FreeValue(ctx, kind);
+    }
+    compiled = JS_Eval(ctx, source, strlen(source), name,
+                        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    module = JS_VALUE_GET_PTR(compiled);
+    JS_FreeValue(ctx, compiled);
+    if (strcmp(name, "attribute-shared") == 0)
+        state->shared = module;
+    return module;
+}
+
+static JSValue module_attribute_identity_compile_named(JSContext *ctx,
+                                                         const char *filename,
+                                                         const char *module_name)
+{
+    FILE *file = fopen(filename, "rb");
+    char *source;
+    long length;
+    JSValue compiled;
+
+    assert(file);
+    assert(fseek(file, 0, SEEK_END) == 0);
+    length = ftell(file);
+    assert(length > 0 && length < 65536);
+    assert(fseek(file, 0, SEEK_SET) == 0);
+    source = malloc((size_t)length + 1);
+    assert(source);
+    assert(fread(source, 1, (size_t)length, file) == (size_t)length);
+    assert(fclose(file) == 0);
+    source[length] = '\0';
+    compiled = JS_Eval(ctx, source, (size_t)length, module_name,
+                        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    free(source);
+    assert(!JS_IsException(compiled));
+    return compiled;
+}
+
+static JSValue module_attribute_identity_compile(JSContext *ctx,
+                                                   const char *filename)
+{
+    return module_attribute_identity_compile_named(ctx, filename, filename);
+}
+
+/* Consumes the compiled module, then observes its asynchronous completion. */
+static void module_attribute_identity_evaluate(JSContext *ctx, JSValue compiled)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSContext *job_ctx;
+    JSValue promise, result;
+    int ret;
+
+    JS_RunGC(rt);
+    promise = JS_EvalFunction(ctx, compiled);
+    assert(!JS_IsException(promise));
+    while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        JS_RunGC(rt);
+    assert(ret == 0);
+    result = JS_PromiseResult(ctx, promise);
+    if (JS_PromiseState(ctx, promise) != JS_PROMISE_FULFILLED) {
+        const char *text = JS_ToCString(ctx, result);
+        fprintf(stderr, "module attribute identity: %s\n", text ? text : "pending");
+        JS_FreeCString(ctx, text);
+    }
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, promise);
+    assert(!JS_HasException(ctx));
+}
+
+static void test_module_attribute_identity(void)
+{
+    ModuleAttributeIdentityState state = { 0 };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetModuleLoaderFunc2(rt, module_attribute_identity_normalize,
+                             module_attribute_identity_load, NULL, &state);
+    compiled = module_attribute_identity_compile(ctx,
+                  "tests/fixture_module_attributes_host.js");
+    /* Equal requests deduplicate; unequal requests reach the host. */
+    assert(state.normalize_calls == 6 && state.loader_calls == 6);
+    assert(state.shared_calls == 2);
+    module_attribute_identity_evaluate(ctx, compiled);
+    compiled = module_attribute_identity_compile(ctx,
+                  "tests/fixture_module_attributes_host_dynamic.js");
+    module_attribute_identity_evaluate(ctx, compiled);
+    assert(state.normalize_calls == 15);
+    /* Only the unequal shared request needs another loader call. */
+    assert(state.loader_calls == 7 && state.shared_calls == 3);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_module_attribute_bytecode(void)
+{
+    ModuleAttributeIdentityState state = { 0 };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled;
+    uint8_t *bytecode, *copy;
+    size_t bytecode_size;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetModuleLoaderFunc2(rt, module_attribute_identity_normalize,
+                             module_attribute_identity_load, NULL, &state);
+    compiled = module_attribute_identity_compile(ctx,
+                  "tests/fixture_module_attributes_host.js");
+    assert(state.normalize_calls == 6 && state.loader_calls == 6);
+    bytecode = JS_WriteObject(ctx, &bytecode_size, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(bytecode && bytecode_size > 0);
+    copy = malloc(bytecode_size);
+    assert(copy);
+    memcpy(copy, bytecode, bytecode_size);
+    js_free(ctx, bytecode);
+    JS_FreeValue(ctx, compiled);
+    JS_FreeContext(ctx);
+    JS_RunGC(rt);
+
+    memset(&state, 0, sizeof(state));
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    compiled = JS_ReadObject(ctx, copy, bytecode_size, JS_READ_OBJ_BYTECODE);
+    free(copy);
+    assert(!JS_IsException(compiled));
+    {
+        const char *pollution = "Object.prototype.kind = 'first';";
+        JSValue value = JS_Eval(ctx, pollution, strlen(pollution),
+                                 "attribute-prototype-pollution",
+                                 JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(value));
+        JS_FreeValue(ctx, value);
+    }
+    assert(JS_ResolveModule(ctx, compiled) == 0);
+    assert(state.normalize_calls == 6 && state.loader_calls == 6);
+    assert(state.shared_calls == 2);
+    module_attribute_identity_evaluate(ctx, compiled);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_module_attribute_cycles(void)
+{
+    ModuleAttributeIdentityState state = { 0 };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetModuleLoaderFunc2(rt, module_attribute_identity_normalize,
+                             module_attribute_identity_load, NULL, &state);
+    compiled = module_attribute_identity_compile(ctx,
+                  "tests/fixture_module_attributes_host_cycles.js");
+    module_attribute_identity_evaluate(ctx, compiled);
+    assert(state.self_calls == 1 && state.cycle_a_calls == 1);
+    assert(state.cycle_b_calls == 1 && state.loader_calls == 3);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "module-attribute-cycles", test_module_attribute_cycles },
+        { "module-attribute-identity", test_module_attribute_identity },
+        { "module-attribute-bytecode", test_module_attribute_bytecode },
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
         { "well-known-symbol-api", test_well_known_symbol_api },
         { "typed-array-public-api", test_typed_array_public_api },

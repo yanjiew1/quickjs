@@ -1,4 +1,5 @@
 import { assert, assertThrows } from "./assert.js";
+import "./test_module_import_attributes.js";
 import * as keyNamespace from "./fixture_module_namespace_keys.js";
 import { mutable as imported, update } from "./fixture_module.js";
 import * as namespace from "./fixture_module.js";
