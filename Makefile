@@ -434,7 +434,8 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/number-format.c \
     src/quickjs/builtins/intl/plural-rules.c \
     src/quickjs/builtins/intl/relative-time-format.c \
-    src/quickjs/builtins/intl/duration-format.c
+    src/quickjs/builtins/intl/duration-format.c \
+    src/quickjs/builtins/intl/case-conversion.c
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
@@ -946,6 +947,7 @@ ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_locale_integration.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_duration_format.js
 ifeq ($(CONFIG_TEMPORAL),y)
 endif
