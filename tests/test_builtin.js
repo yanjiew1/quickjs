@@ -2039,6 +2039,53 @@ function test_date()
     assert(Date.UTC(2017, 9, 22, 18, 10, 11 - 1e12, 91 + 1000e12), 1508695811091);
 }
 
+function test_date_setyear_coercion()
+{
+    const initial = new Date(2004, 6, 23, 14, 15, 16, 17).getTime();
+    const changed = new Date(2010, 2, 4, 5, 6, 7, 8).getTime();
+    for (const mutation of [changed, NaN]) {
+        const date = new Date(initial);
+        const expected = new Date(initial);
+        expected.setFullYear(2001);
+        let calls = 0;
+        const result = date.setYear({ valueOf() {
+            calls++;
+            date.setTime(mutation);
+            return 2001;
+        } });
+        assert(calls, 1);
+        assert(result, expected.getTime(), "setYear preserves the original date fields");
+        assert(date.getTime(), result);
+    }
+
+    const invalid = new Date(NaN);
+    const zeroFields = new Date(1970, 0, 1);
+    zeroFields.setFullYear(1901);
+    const result = invalid.setYear({ valueOf() {
+        invalid.setTime(changed);
+        return 1;
+    } });
+    assert(result, zeroFields.getTime(), "invalid original date starts from +0 local fields");
+    assert(invalid.getTime(), result);
+
+    const date = new Date(initial);
+    const sentinel = {};
+    let caught;
+    try {
+        date.setYear({ valueOf() { date.setTime(changed); throw sentinel; } });
+    } catch (error) {
+        caught = error;
+    }
+    assert(caught === sentinel, true);
+    assert(date.getTime(), changed, "throwing coercion preserves its own date mutation");
+
+    let coerced = false;
+    assert_throws(TypeError, () => Date.prototype.setYear.call({}, {
+        valueOf() { coerced = true; return 2001; }
+    }));
+    assert(coerced, false, "receiver brand is checked before year coercion");
+}
+
 function test_regexp()
 {
     var a, str;
@@ -5649,6 +5696,7 @@ test_error_stack();
 test_json();
 test_json_parse_source_duplicates();
 test_date();
+test_date_setyear_coercion();
 test_regexp();
 test_regexp_unicode_18();
 test_symbol();
