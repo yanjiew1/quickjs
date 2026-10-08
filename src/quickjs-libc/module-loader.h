@@ -29,5 +29,7 @@
 
 JSModuleDef *create_json_module(JSContext *ctx, const char *module_name,
                                 JSValue val);
+JSModuleDef *create_json_module2(JSContext *ctx, const char *module_name,
+                                 JSValue val, JSValueConst attributes);
 
 #endif

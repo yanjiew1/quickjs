@@ -361,6 +361,21 @@ JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str,
     return m;
 }
 
+/* Create a module with explicit import attribute identity. */
+JSModuleDef *JS_NewCModule2(JSContext *ctx, const char *name_str,
+                            JSModuleInitFunc *func,
+                            JSValueConst attributes)
+{
+    JSModuleDef *m;
+
+    m = JS_NewCModule(ctx, name_str, func);
+    if (!m || JS_IsUndefined(attributes))
+        return m;
+    JS_FreeValue(ctx, m->attributes);
+    m->attributes = JS_DupValue(ctx, attributes);
+    return m;
+}
+
 int JS_AddModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name)
 {
     JSExportEntry *me;

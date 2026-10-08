@@ -1232,6 +1232,14 @@ typedef int JSModuleInitFunc(JSContext *ctx, JSModuleDef *m);
 
 JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str,
                            JSModuleInitFunc *func);
+/* An attribute object is borrowed and retained. Supply normalized own
+   enumerable string key/value pairs and do not mutate after creation.
+   An explicit object supersedes the active loader request. Undefined uses
+   the same active-request inheritance as JS_NewCModule; outside a loader
+   request it creates a module with no attributes. */
+JSModuleDef *JS_NewCModule2(JSContext *ctx, const char *name_str,
+                            JSModuleInitFunc *func,
+                            JSValueConst attributes);
 /* can only be called before the module is instantiated */
 int JS_AddModuleExport(JSContext *ctx, JSModuleDef *m, const char *name_str);
 int JS_AddModuleExportList(JSContext *ctx, JSModuleDef *m,
