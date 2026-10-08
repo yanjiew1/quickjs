@@ -259,6 +259,18 @@ JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val)
     return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 0, NULL);
 }
 
+#ifdef CONFIG_INTL
+/* ECMA-402 Invoke passes both optional arguments even when absent. */
+JSValue JS_ToLocaleStringArgsFree(JSContext *ctx, JSValue val,
+                                   JSValueConst locales, JSValueConst options)
+{
+    JSValueConst args[2] = { locales, options };
+    if (JS_IsUndefined(val) || JS_IsNull(val))
+        return JS_ToStringFree(ctx, val);
+    return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 2, args);
+}
+#endif
+
 JSValue JS_ToPropertyKey(JSContext *ctx, JSValueConst val)
 {
     return JS_ToStringInternal(ctx, val, TRUE);
