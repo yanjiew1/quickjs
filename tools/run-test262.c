@@ -37,6 +37,12 @@
 #include <ftw.h>
 #include <stdatomic.h>
 #include <pthread.h>
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+#define RUN_TEST262_MSAN
+#endif
+#endif
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -517,6 +523,10 @@ void namelist_free(namelist_t *lp)
 static int add_test_file(const char *filename, const struct stat *ptr, int flag)
 {
     namelist_t *lp = &test_list;
+#ifdef RUN_TEST262_MSAN
+    /* ftw initializes this string in libc without updating MSan shadow. */
+    __msan_unpoison_string(filename);
+#endif
     if (has_suffix(filename, ".js") && !has_suffix(filename, "_FIXTURE.js"))
         namelist_add(lp, NULL, filename);
     return 0;
@@ -538,8 +548,8 @@ static void js_print_value_write(void *opaque, const char *buf, size_t len)
     fwrite(buf, 1, len, fo);
 }
 
-static JSValue js_print(JSContext *ctx, JSValueConst this_val,
-                        int argc, JSValueConst *argv)
+static JSValue js_print_to(JSContext *ctx, FILE *outfile,
+                           int argc, JSValueConst *argv)
 {
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     int i;
@@ -573,6 +583,12 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val,
     if (outfile)
         fputc('\n', outfile);
     return JS_UNDEFINED;
+}
+
+static JSValue js_print(JSContext *ctx, JSValueConst this_val,
+                        int argc, JSValueConst *argv)
+{
+    return js_print_to(ctx, outfile, argc, argv);
 }
 
 static JSValue js_detachArrayBuffer(JSContext *ctx, JSValue this_val,
@@ -1679,7 +1695,7 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
             if (!is_error)
                 fprintf(outfile, "%sThrow: ", (eval_flags & JS_EVAL_FLAG_STRICT) ?
                         "strict mode: " : "");
-            js_print(ctx, JS_NULL, 1, &exception_val);
+            js_print_to(ctx, outfile, 1, &exception_val);
         }
         if (is_error) {
             JSValue name, stack;

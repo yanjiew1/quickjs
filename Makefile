@@ -647,7 +647,11 @@ test-c: $(C_TESTS)
 test-regexp: regexp_test$(EXE)
 	sh tests/test_regexp.sh "$(WINE)" "./regexp_test$(EXE)"
 
-test: test-c test-regexp test-build-dependencies
+.PHONY: test-run-test262
+test-run-test262: run-test262$(EXE)
+	sh tests/test_run_test262.sh "$(WINE)" "./run-test262$(EXE)"
+
+test: test-c test-regexp test-build-dependencies test-run-test262
 
 .PHONY: test-build-dependencies
 test-build-dependencies:
