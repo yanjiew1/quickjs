@@ -174,6 +174,7 @@ typedef enum {
     CNAME_TYPE_SCRIPT,
     CNAME_TYPE_MODULE,
     CNAME_TYPE_JSON_MODULE,
+    CNAME_TYPE_RESERVED,
 } CNameTypeEnum;
 
 static void output_object_code(JSContext *ctx,
@@ -208,20 +209,69 @@ static void output_object_code(JSContext *ctx,
     js_free(ctx, out_buf);
 }
 
+static const char * const json_attribute_suffixes[] = {
+    "_attributes", "_attributes_size",
+};
+
+static BOOL json_cname_used(const char *c_name)
+{
+    char symbol[1024 + sizeof("_attributes_size")];
+    int i;
+
+    if (namelist_find(&cname_list, c_name))
+        return TRUE;
+    for (i = 0; i < countof(json_attribute_suffixes); i++) {
+        snprintf(symbol, sizeof(symbol), "%s%s", c_name,
+                 json_attribute_suffixes[i]);
+        if (namelist_find(&cname_list, symbol))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static void output_json_attributes(JSContext *ctx, FILE *fo,
+                                   JSValueConst attributes,
+                                   const char *c_name)
+{
+    uint8_t *buf;
+    size_t len;
+    int flags = byte_swap ? JS_WRITE_OBJ_BSWAP : 0;
+    char symbol[1024 + sizeof("_attributes_size")];
+    int i;
+
+    buf = JS_WriteObject(ctx, &len, attributes, flags);
+    if (!buf) {
+        js_std_dump_error(ctx);
+        exit(1);
+    }
+    for (i = 0; i < countof(json_attribute_suffixes); i++) {
+        snprintf(symbol, sizeof(symbol), "%s%s", c_name,
+                 json_attribute_suffixes[i]);
+        namelist_add(&cname_list, symbol, NULL, CNAME_TYPE_RESERVED);
+    }
+    fprintf(fo, "static const uint32_t %s_attributes_size = %u;\n\n",
+            c_name, (unsigned int)len);
+    fprintf(fo, "static const uint8_t %s_attributes[%u] = {\n",
+            c_name, (unsigned int)len);
+    dump_hex(fo, buf, len);
+    fprintf(fo, "};\n\n");
+    js_free(ctx, buf);
+}
+
 static int js_module_dummy_init(JSContext *ctx, JSModuleDef *m)
 {
     /* should never be called when compiling JS code */
     abort();
 }
 
-static void find_unique_cname(char *cname, size_t cname_size)
+static void find_unique_cname(char *cname, size_t cname_size, BOOL json)
 {
     char cname1[1024];
     int suffix_num;
     size_t len, max_len;
     assert(cname_size >= 32);
-    /* find a C name not matching an existing module C name by
-       adding a numeric suffix */
+    /* Add a numeric suffix until the identifier is free. JSON names
+       also require both attribute sidecar identifiers to be free. */
     len = strlen(cname);
     max_len = cname_size - 16;
     if (len > max_len)
@@ -229,7 +279,8 @@ static void find_unique_cname(char *cname, size_t cname_size)
     suffix_num = 1;
     for(;;) {
         snprintf(cname1, sizeof(cname1), "%s_%d", cname, suffix_num);
-        if (!namelist_find(&cname_list, cname1))
+        if (json ? !json_cname_used(cname1) :
+            !namelist_find(&cname_list, cname1))
             break;
         suffix_num++;
     }
@@ -242,15 +293,21 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
 {
     JSModuleDef *m;
     namelist_entry_t *e;
+    int res;
+
+    /* A JSON attribute selects source parsing before native dispatch. */
+    res = js_module_test_json(ctx, attributes);
+    if (res < 0 || JS_HasException(ctx))
+        return NULL;
 
     /* check if it is a declared C or system module */
     e = namelist_find(&cmodule_list, module_name);
-    if (e) {
+    if (e && res == 0) {
         /* add in the static init module list */
         namelist_add(&init_module_list, e->name, e->short_name, 0);
         /* create a dummy module */
         m = JS_NewCModule(ctx, module_name, js_module_dummy_init);
-    } else if (has_suffix(module_name, ".so")) {
+    } else if (has_suffix(module_name, ".so") && res == 0) {
         fprintf(stderr, "Warning: binary module '%s' will be dynamically loaded\n", module_name);
         /* create a dummy module */
         m = JS_NewCModule(ctx, module_name, js_module_dummy_init);
@@ -261,7 +318,6 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
         size_t buf_len;
         uint8_t *buf;
         char cname[1024];
-        int res;
         
         buf = js_load_file(ctx, &buf_len, module_name);
         if (!buf) {
@@ -270,7 +326,6 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
             return NULL;
         }
 
-        res = js_module_test_json(ctx, attributes);
         if (has_suffix(module_name, ".json") || res > 0) {
             /* compile as JSON or JSON5 depending on "type" */
             JSValue val;
@@ -292,8 +347,8 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
             }
 
             get_c_name(cname, sizeof(cname), module_name);
-            if (namelist_find(&cname_list, cname)) {
-                find_unique_cname(cname, sizeof(cname));
+            if (json_cname_used(cname)) {
+                find_unique_cname(cname, sizeof(cname), TRUE);
             }
 
             /* output the module name */
@@ -302,6 +357,7 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
             dump_hex(outfile, (const uint8_t *)module_name, strlen(module_name) + 1);
             fprintf(outfile, "};\n\n");
 
+            output_json_attributes(ctx, outfile, attributes, cname);
             output_object_code(ctx, outfile, val, cname, CNAME_TYPE_JSON_MODULE);
             JS_FreeValue(ctx, val);
         } else {
@@ -315,7 +371,7 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
                 return NULL;
             get_c_name(cname, sizeof(cname), module_name);
             if (namelist_find(&cname_list, cname)) {
-                find_unique_cname(cname, sizeof(cname));
+                find_unique_cname(cname, sizeof(cname), FALSE);
             }
             output_object_code(ctx, outfile, func_val, cname, CNAME_TYPE_MODULE);
             
@@ -359,11 +415,19 @@ static void compile_file(JSContext *ctx, FILE *fo,
     }
     js_free(ctx, buf);
     if (c_name1) {
+        namelist_entry_t *entry;
+
         pstrcpy(c_name, sizeof(c_name), c_name1);
+        entry = namelist_find(&cname_list, c_name);
+        if (entry && entry->flags == CNAME_TYPE_RESERVED) {
+            fprintf(stderr, "C name '%s' is a reserved JSON attribute identifier\n",
+                    c_name);
+            exit(1);
+        }
     } else {
         get_c_name(c_name, sizeof(c_name), filename);
         if (namelist_find(&cname_list, c_name)) {
-            find_unique_cname(c_name, sizeof(c_name));
+            find_unique_cname(c_name, sizeof(c_name), FALSE);
         }
     }
     output_object_code(ctx, fo, obj, c_name, CNAME_TYPE_SCRIPT);
@@ -832,8 +896,8 @@ int main(int argc, char **argv)
                 fprintf(fo, "  js_std_eval_binary(ctx, %s, %s_size, 1);\n",
                         e->name, e->name);
             } else if (e->flags == CNAME_TYPE_JSON_MODULE) {
-                fprintf(fo, "  js_std_eval_binary_json_module(ctx, %s, %s_size, (const char *)%s_module_name);\n",
-                        e->name, e->name, e->name);
+                fprintf(fo, "  js_std_eval_binary_json_module2(ctx, %s, %s_size, (const char *)%s_module_name, %s_attributes, %s_attributes_size);\n",
+                        e->name, e->name, e->name, e->name, e->name);
             }
         }
         fprintf(fo,
