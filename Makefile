@@ -936,3 +936,11 @@ test-c: test-receiver-prepared
 test-receiver-prepared: tests/test_intl_receiver_api$(EXE)
 	$(WINE) ./tests/test_intl_receiver_api$(EXE)
 
+
+C_TESTS+=tests/test_temporal$(EXE)
+tests/test_temporal$(EXE): $(OBJDIR)/tests/test_temporal.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-test_temporal-prepared
+test-c: test-test_temporal-prepared
+test-test_temporal-prepared: tests/test_temporal$(EXE)
+	$(WINE) ./tests/test_temporal$(EXE)
