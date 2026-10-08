@@ -421,7 +421,9 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/locale-syntax.c \
     src/quickjs/builtins/intl/locale-resolution.c \
     src/quickjs/builtins/intl/intl-values.c \
-    src/quickjs/builtins/intl/locale.c
+    src/quickjs/builtins/intl/locale.c \
+    src/quickjs/builtins/intl/bound-function.c \
+    src/quickjs/builtins/intl/collator.c
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
@@ -912,6 +914,7 @@ else
 endif
 ifeq ($(CONFIG_INTL_LEGACY),y)
 endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_collator.js
 endif
 
 ifeq ($(CONFIG_TEMPORAL),y)
