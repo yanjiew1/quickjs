@@ -32,6 +32,9 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "date.h"
+#ifdef CONFIG_INTL
+#include "intl/locale-integration.h"
+#endif
 
 /* Date */
 
@@ -1212,6 +1215,23 @@ done:
     return rv;
 }
 
+#ifdef CONFIG_INTL
+static JSValue js_date_toLocaleString(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv, int magic)
+{
+    double time;
+    if (JS_ThisTimeValue(ctx, &time, this_val))
+        return JS_EXCEPTION;
+    if (isnan(time))
+        return JS_NewString(ctx, "Invalid Date");
+    return js_intl_date_format(ctx, time,
+        argc > 0 ? argv[0] : JS_UNDEFINED,
+        argc > 1 ? argv[1] : JS_UNDEFINED,
+        magic == 3 ? JS_INTL_DTF_ANY : magic,
+        magic == 3 ? JS_INTL_DTF_ALL : magic);
+}
+#endif
+
 static const JSCFunctionListEntry js_date_funcs[] = {
     JS_CFUNC_DEF("now", 0, js_Date_now ),
     JS_CFUNC_DEF("parse", 1, js_Date_parse ),
@@ -1227,9 +1247,15 @@ static const JSCFunctionListEntry js_date_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("toISOString", 0, get_date_string, 0x23 ),
     JS_CFUNC_MAGIC_DEF("toDateString", 0, get_date_string, 0x11 ),
     JS_CFUNC_MAGIC_DEF("toTimeString", 0, get_date_string, 0x12 ),
+#ifdef CONFIG_INTL
+    JS_CFUNC_MAGIC_DEF("toLocaleString", 0, js_date_toLocaleString, 3 ),
+    JS_CFUNC_MAGIC_DEF("toLocaleDateString", 0, js_date_toLocaleString, JS_INTL_DTF_DATE ),
+    JS_CFUNC_MAGIC_DEF("toLocaleTimeString", 0, js_date_toLocaleString, JS_INTL_DTF_TIME ),
+#else
     JS_CFUNC_MAGIC_DEF("toLocaleString", 0, get_date_string, 0x33 ),
     JS_CFUNC_MAGIC_DEF("toLocaleDateString", 0, get_date_string, 0x31 ),
     JS_CFUNC_MAGIC_DEF("toLocaleTimeString", 0, get_date_string, 0x32 ),
+#endif
     JS_CFUNC_DEF("getTimezoneOffset", 0, js_date_getTimezoneOffset ),
     JS_CFUNC_DEF("getTime", 0, js_date_getTime ),
     JS_CFUNC_MAGIC_DEF("getYear", 0, get_date_field, 0x101 ),
