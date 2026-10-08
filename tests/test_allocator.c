@@ -30,6 +30,7 @@
 #include "../src/quickjs/internal/error.h"
 #include "../src/quickjs/internal/allocator-inlines.h"
 #include "../src/quickjs/internal/runtime.h"
+#include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
 
@@ -818,8 +819,145 @@ static void test_int64_atom_table_allocation_failure(void)
     assert(failure.live_allocations == 0);
 }
 
+static JSValue autoinit_oom_callback(JSContext *ctx, JSValueConst this_val,
+                                    int argc, JSValueConst *argv)
+{
+    return JS_NewInt32(ctx, 42);
+}
+
+/* An embedding allocation failure must preserve the lazy recipe for retry.
+   Pool exhaustion forces the actual initializer (or global binding reference)
+   to reach the host allocator under both pooled and direct allocation builds. */
+static void test_autoinit_allocation_failure(int kind, BOOL retry)
+{
+    static const JSCFunctionListEntry function_entry[] = {
+        JS_CFUNC_DEF("autoinitValue", 0, autoinit_oom_callback),
+    };
+    static const JSCFunctionListEntry string_entry[] = {
+        JS_PROP_STRING_DEF("autoinitValue", "autoinit-global-owned-value",
+                           JS_PROP_C_W_E),
+    };
+    static const char source[] = "(function autoinitPrototype() {})";
+    PromiseAllocationFailure failure = { 0 };
+    JSMallocFunctions mf = def_malloc_funcs;
+    JSRuntime *rt;
+    JSContext *ctx;
+    JSObject *object;
+    JSProperty *pr;
+    JSShapeProperty *prs;
+    JSValue target, result, again, exception, retained = JS_UNDEFINED;
+    JSAtom atom;
+    uintptr_t realm_and_id;
+    void *opaque, *ptr;
+    int flags, realm_refs, string_refs = 0, i;
+
+    mf.js_malloc = promise_failure_malloc;
+    mf.js_free = promise_failure_free;
+    mf.js_realloc = promise_failure_realloc;
+    rt = JS_NewRuntime2(&mf, &failure);
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetGCThreshold(rt, SIZE_MAX);
+    if (kind == 1) {
+        target = JS_Eval(ctx, source, sizeof(source) - 1,
+                         "autoinit-oom", JS_EVAL_TYPE_GLOBAL);
+    } else {
+        target = kind == 2 ? JS_GetGlobalObject(ctx) : JS_NewObject(ctx);
+    }
+    assert(!JS_IsException(target));
+    if (kind != 1)
+        assert(JS_SetPropertyFunctionList(ctx, target,
+                   kind == 2 ? string_entry : function_entry, 1) == 0);
+    atom = JS_NewAtom(ctx, kind == 1 ? "prototype" : "autoinitValue");
+    assert(atom != JS_ATOM_NULL);
+    /* Separate the shape before arming injection, so shape cloning cannot
+       consume the failure intended for property materialization. */
+    assert(JS_SetPropertyStr(ctx, target, "__autoinit_oom_shape__", JS_NULL) >= 0);
+    object = JS_VALUE_GET_OBJ(target);
+    assert(!object->shape->is_hashed || js_rc(object->shape)->ref_count == 1);
+    prs = find_own_property(&pr, object, atom);
+    assert(prs && (prs->flags & JS_PROP_TMASK) == JS_PROP_AUTOINIT);
+    flags = prs->flags;
+    realm_and_id = pr->u.init.realm_and_id;
+    opaque = pr->u.init.opaque;
+    if (kind == 2) {
+        /* Intern the initializer value ahead of time. Its next instantiation
+           only duplicates this string, making global var-ref allocation the
+           first allocator call; the saved refcount also detects a lost value. */
+        retained = JS_NewAtomString(ctx, string_entry[0].u.str);
+        assert(!JS_IsException(retained));
+        string_refs = js_rc(JS_VALUE_GET_PTR(retained))->ref_count;
+    }
+    realm_refs = js_rc(ctx)->ref_count;
+    for (i = 0; i < 2; i++) {
+        exhaust_pooled_free_blocks(rt, &failure);
+        failure.fail_next = TRUE;
+        result = JS_GetProperty(ctx, target, atom);
+        assert(JS_IsException(result));
+        assert(!failure.fail_next && failure.failures == i + 1);
+        assert(JS_HasException(ctx));
+        exception = JS_GetException(ctx);
+        JS_FreeValue(ctx, exception);
+        assert(!JS_HasException(ctx));
+        /* Re-find the property after every attempt: shape preparation can
+           replace a shape even though the initializer preserves its recipe. */
+        prs = find_own_property(&pr, object, atom);
+        assert(prs && prs->flags == flags);
+        assert(pr->u.init.realm_and_id == realm_and_id);
+        assert(pr->u.init.opaque == opaque);
+        assert(js_rc(ctx)->ref_count == realm_refs);
+        if (kind == 2)
+            assert(js_rc(JS_VALUE_GET_PTR(retained))->ref_count == string_refs);
+    }
+    while ((ptr = failure.padding) != NULL) {
+        memcpy(&failure.padding, ptr, sizeof(failure.padding));
+        js_free_rt(rt, ptr);
+    }
+    if (retry) {
+        result = JS_GetProperty(ctx, target, atom);
+        assert(!JS_IsException(result) && !JS_HasException(ctx));
+        prs = find_own_property(&pr, object, atom);
+        assert(prs && prs->flags == ((flags & ~JS_PROP_TMASK) |
+                                    (kind == 2 ? JS_PROP_VARREF : 0)));
+        again = JS_GetProperty(ctx, target, atom);
+        assert(!JS_IsException(again));
+        assert(JS_VALUE_GET_PTR(again) == JS_VALUE_GET_PTR(result));
+        JS_FreeValue(ctx, again);
+        if (kind == 0) {
+            assert(JS_IsFunction(ctx, result));
+            again = JS_Call(ctx, result, target, 0, NULL);
+            assert(JS_IsNumber(again) && JS_VALUE_GET_INT(again) == 42);
+        } else if (kind == 1) {
+            assert(JS_IsObject(result));
+            again = JS_GetPropertyStr(ctx, result, "constructor");
+            assert(JS_IsObject(again));
+            assert(JS_VALUE_GET_OBJ(again) == object);
+        } else {
+            assert(JS_IsString(result));
+            assert(JS_VALUE_GET_PTR(result) == JS_VALUE_GET_PTR(retained));
+            again = JS_UNDEFINED;
+        }
+        JS_FreeValue(ctx, again);
+        JS_FreeValue(ctx, result);
+    }
+    JS_FreeValue(ctx, retained);
+    JS_FreeAtom(ctx, atom);
+    JS_FreeValue(ctx, target);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
 int main(void)
 {
+    int kind;
+
+    for (kind = 0; kind < 3; kind++) {
+        test_autoinit_allocation_failure(kind, FALSE);
+        test_autoinit_allocation_failure(kind, TRUE);
+    }
     test_int64_atom_table_allocation_failure();
     test_backtrace_allocation_failure();
     test_pending_backtrace_allocation_failure();
