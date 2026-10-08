@@ -1,9 +1,11 @@
 /*
  * QuickJS runtime types
  *
- * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +29,20 @@
 #define QUICKJS_RUNTIME_H
 
 #include "allocator-types.h"
+
+#define JS_MODULE_LOADER_HAS_ATTR (1 << 0)
+#define JS_MODULE_NORMALIZE_HAS_ATTR (1 << 1)
+
+typedef union {
+    JSModuleNormalizeFunc *module_normalize_func;
+    JSModuleNormalizeFunc2 *module_normalize_func2;
+} JSModuleNormalizeFunctions;
+
+/* Reuse the existing callback slot and BOOL selector without layout growth. */
+_Static_assert(sizeof(JSModuleNormalizeFunctions) == sizeof(JSModuleNormalizeFunc *),
+               "module normalizer callback slot size");
+_Static_assert(_Alignof(JSModuleNormalizeFunctions) == _Alignof(JSModuleNormalizeFunc *),
+               "module normalizer callback slot alignment");
 
 struct JSRuntime {
     JSMallocContext malloc_ctx;
@@ -77,8 +93,8 @@ struct JSRuntime {
 
     struct list_head job_list; /* list of JSJobEntry.link */
 
-    JSModuleNormalizeFunc *module_normalize_func;
-    BOOL module_loader_has_attr;
+    JSModuleNormalizeFunctions normalize_u;
+    BOOL module_loader_flags;
     union {
         JSModuleLoaderFunc *module_loader_func;
         JSModuleLoaderFunc2 *module_loader_func2;

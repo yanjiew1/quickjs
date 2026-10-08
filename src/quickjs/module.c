@@ -411,8 +411,8 @@ void JS_SetModuleLoaderFunc(JSRuntime *rt,
                             JSModuleNormalizeFunc *module_normalize,
                             JSModuleLoaderFunc *module_loader, void *opaque)
 {
-    rt->module_normalize_func = module_normalize;
-    rt->module_loader_has_attr = FALSE;
+    rt->module_loader_flags = 0;
+    rt->normalize_u.module_normalize_func = module_normalize;
     rt->u.module_loader_func = module_loader;
     rt->module_check_attrs = NULL;
     rt->module_loader_opaque = opaque;
@@ -424,11 +424,18 @@ void JS_SetModuleLoaderFunc2(JSRuntime *rt,
                              JSModuleCheckSupportedImportAttributes *module_check_attrs,
                              void *opaque)
 {
-    rt->module_normalize_func = module_normalize;
-    rt->module_loader_has_attr = TRUE;
+    rt->module_loader_flags = JS_MODULE_LOADER_HAS_ATTR;
+    rt->normalize_u.module_normalize_func = module_normalize;
     rt->u.module_loader_func2 = module_loader;
     rt->module_check_attrs = module_check_attrs;
     rt->module_loader_opaque = opaque;
+}
+
+void JS_SetModuleNormalizeFunc2(JSRuntime *rt,
+                                JSModuleNormalizeFunc2 *module_normalize)
+{
+    rt->module_loader_flags |= JS_MODULE_NORMALIZE_HAS_ATTR;
+    rt->normalize_u.module_normalize_func2 = module_normalize;
 }
 
 /* default module filename normalizer */
@@ -541,11 +548,21 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
     char *cname;
     JSAtom module_name;
 
-    if (!rt->module_normalize_func) {
-        cname = js_default_module_normalize_name(ctx, base_cname, cname1);
+    if (rt->module_loader_flags & JS_MODULE_NORMALIZE_HAS_ATTR) {
+        if (!rt->normalize_u.module_normalize_func2) {
+            cname = js_default_module_normalize_name(ctx, base_cname, cname1);
+        } else {
+            cname = rt->normalize_u.module_normalize_func2(ctx, base_cname, cname1,
+                                                          attributes,
+                                                          rt->module_loader_opaque);
+        }
     } else {
-        cname = rt->module_normalize_func(ctx, base_cname, cname1,
-                                          rt->module_loader_opaque);
+        if (!rt->normalize_u.module_normalize_func) {
+            cname = js_default_module_normalize_name(ctx, base_cname, cname1);
+        } else {
+            cname = rt->normalize_u.module_normalize_func(ctx, base_cname, cname1,
+                                                         rt->module_loader_opaque);
+        }
     }
     if (!cname)
         return NULL;
@@ -569,7 +586,8 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
     }
 
     /* load the module */
-    if (!rt->u.module_loader_func) {
+    if ((rt->module_loader_flags & JS_MODULE_LOADER_HAS_ATTR) ?
+        !rt->u.module_loader_func2 : !rt->u.module_loader_func) {
         /* XXX: use a syntax error ? */
         JS_ThrowReferenceError(ctx, "could not load module '%s'",
                                cname);
@@ -582,7 +600,7 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
     request.attributes = JS_DupValue(ctx, attributes);
     JS_FreeAtom(ctx, module_name);
     ctx->module_load_request = &request;
-    if (rt->module_loader_has_attr) {
+    if (rt->module_loader_flags & JS_MODULE_LOADER_HAS_ATTR) {
         m = rt->u.module_loader_func2(ctx, cname, rt->module_loader_opaque, attributes);
     } else {
         m = rt->u.module_loader_func(ctx, cname, rt->module_loader_opaque);
