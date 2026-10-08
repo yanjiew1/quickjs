@@ -62,6 +62,13 @@ check_recipes clang yes CONFIG_CLANG=y
 check_recipes cosmo yes CONFIG_COSMO=y
 check_recipes clang-cosmo yes CONFIG_CLANG=y CONFIG_COSMO=y
 
+# This target reads Make's source selection without compiling any extra unit.
+cat > "$build_tmp/selected-core.mk" <<'SELECTED_CORE'
+.PHONY: qjs-test-selected-core-checks
+qjs-test-selected-core-checks:
+	@printf '%s\n' $(patsubst %.c,%.check.o,$(filter src/quickjs/%,$(QUICKJS_SRCS)))
+SELECTED_CORE
+
 check_core_coverage() {
     build_mode=$1
     shift
@@ -72,9 +79,15 @@ check_core_coverage() {
     "$build_make" --no-print-directory -s CONFIG_CLANG= CONFIG_COSMO= \
         CONFIG_ASAN= CONFIG_UBSAN= PROGS= OBJDIR="$build_obj" \
         CC="$build_tmp/compiler" HOST_CC="$build_tmp/compiler" "$@" all
-    # Compare source paths, not only counts: equal basenames have distinct owners.
-    find src/quickjs -name '*.c' | sed 's/\.c$/.check.o/' | sort \
-        > "$build_tmp/expected-checks"
+    # Query the selected core sources in exactly the profile built above.
+    # Files for disabled features remain present but are not build inputs.
+    "$build_make" --no-print-directory -s -f Makefile \
+        -f "$build_tmp/selected-core.mk" CONFIG_CLANG= CONFIG_COSMO= \
+        CONFIG_ASAN= CONFIG_UBSAN= PROGS= OBJDIR="$build_obj" \
+        CC="$build_tmp/compiler" HOST_CC="$build_tmp/compiler" "$@" \
+        qjs-test-selected-core-checks > "$build_tmp/selected-checks"
+    sort "$build_tmp/selected-checks" > "$build_tmp/expected-checks"
+    [ -s "$build_tmp/expected-checks" ]
     if [ ! -d "$build_obj/src/quickjs" ]; then
         echo "all omitted the core CONFIG_CHECK_JSVALUE checks" >&2
         exit 1

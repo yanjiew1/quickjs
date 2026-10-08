@@ -35,6 +35,9 @@
 #include "internal/generator.h"
 #include "internal/error.h"
 #include "value/compare.h"
+#ifdef CONFIG_INTL
+#include "builtins/intl/bound-function.h"
+#endif
 
 void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
 {
@@ -398,6 +401,14 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
     case JS_CLASS_C_FUNCTION:
         realm = p->u.cfunc.realm;
         break;
+#ifdef CONFIG_INTL
+    case JS_CLASS_INTL_BOUND_FUNCTION:
+        {
+            JSIntlBoundFunctionData *s = p->u.opaque;
+            realm = s ? s->realm : ctx;
+        }
+        break;
+#endif
     case JS_CLASS_BYTECODE_FUNCTION:
     case JS_CLASS_GENERATOR_FUNCTION:
     case JS_CLASS_ASYNC_FUNCTION:

@@ -412,6 +412,11 @@ int JS_AddIntrinsicMapSet(JSContext *ctx);
 int JS_AddIntrinsicTypedArrays(JSContext *ctx);
 int JS_AddIntrinsicPromise(JSContext *ctx);
 int JS_AddIntrinsicWeakRef(JSContext *ctx);
+/* Add native Intl intrinsics to this realm. Enabled builds return 0 on success
+   or -1 with a pending exception. Initialization is idempotent; raw contexts
+   require JS_AddIntrinsicBaseObjects first. Disabled builds return 0 without
+   creating a global Intl object or loading an internationalization backend. */
+int JS_AddIntrinsicIntl(JSContext *ctx);
 
 JSValue js_string_codePointRange(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv);
