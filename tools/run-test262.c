@@ -538,8 +538,8 @@ static void js_print_value_write(void *opaque, const char *buf, size_t len)
     fwrite(buf, 1, len, fo);
 }
 
-static JSValue js_print(JSContext *ctx, JSValueConst this_val,
-                        int argc, JSValueConst *argv)
+static JSValue js_print_to(JSContext *ctx, FILE *outfile,
+                           int argc, JSValueConst *argv)
 {
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     int i;
@@ -573,6 +573,12 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val,
     if (outfile)
         fputc('\n', outfile);
     return JS_UNDEFINED;
+}
+
+static JSValue js_print(JSContext *ctx, JSValueConst this_val,
+                        int argc, JSValueConst *argv)
+{
+    return js_print_to(ctx, outfile, argc, argv);
 }
 
 static JSValue js_detachArrayBuffer(JSContext *ctx, JSValue this_val,
@@ -1679,7 +1685,7 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
             if (!is_error)
                 fprintf(outfile, "%sThrow: ", (eval_flags & JS_EVAL_FLAG_STRICT) ?
                         "strict mode: " : "");
-            js_print(ctx, JS_NULL, 1, &exception_val);
+            js_print_to(ctx, outfile, 1, &exception_val);
         }
         if (is_error) {
             JSValue name, stack;
