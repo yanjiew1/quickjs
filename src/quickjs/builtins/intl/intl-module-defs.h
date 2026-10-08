@@ -27,3 +27,4 @@
    The complete CONFIG_INTL build contains every entry below. */
 JS_INTL_MODULE(-1, JS_CLASS_INTL_LOCALE, js_intl_init_locale)
 JS_INTL_MODULE(JS_INTL_COLLATOR, JS_CLASS_INTL_COLLATOR, js_intl_init_collator)
+JS_INTL_MODULE(JS_INTL_SEGMENTER, JS_CLASS_INTL_SEGMENTER, js_intl_init_segmenter)
