@@ -206,7 +206,11 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
                           JS_PROP_HAS_GET | JS_PROP_HAS_SET |
                           JS_PROP_HAS_CONFIGURABLE | JS_PROP_CONFIGURABLE) < 0)
         return -1;
-    JS_FreeValue(ctx, js_object_seal(ctx, JS_UNDEFINED, 1, (JSValueConst *)&ctx->throw_type_error, 1));
+    obj1 = js_object_seal(ctx, JS_UNDEFINED, 1,
+                          (JSValueConst *)&ctx->throw_type_error, 1);
+    if (JS_IsException(obj1))
+        return -1;
+    JS_FreeValue(ctx, obj1);
 
     /* Object */
     obj1 = JS_NewCConstructor(ctx, JS_CLASS_OBJECT, "Object",
