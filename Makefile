@@ -748,6 +748,12 @@ test-qjsc-json-attributes: tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json
 	$(PYTHON) tests/run_qjsc_json_collisions.py "$(QJSC_TEST_RUNNER) $(WINE)" "./tests/test_qjsc_json_collision_size-first$(EXE)" qjsc-json-collision-ok
 	$(PYTHON) tests/run_qjsc_json_collisions.py "$(QJSC_TEST_RUNNER) $(WINE)" "./tests/test_qjsc_json_collision_size-last$(EXE)" qjsc-json-collision-ok
 
+.PHONY: test-qjs-cli
+test-qjs-cli: qjs$(EXE)
+	sh tests/test_qjs_cli.sh "$(WINE)" "./qjs$(EXE)"
+
+test: test-qjs-cli
+
 .PHONY: test-build-dependencies
 test-build-dependencies:
 	sh tests/test_build_dependencies.sh "$(MAKE)"
