@@ -641,6 +641,30 @@ function test_string()
     assert("abc".padStart(Infinity, ""), "abc");
 }
 
+function test_string_html_attribute_coercion()
+{
+    for (const [method, tag, attribute] of [
+        ["anchor", "a", "name"], ["link", "a", "href"],
+        ["fontcolor", "font", "color"], ["fontsize", "font", "size"]
+    ]) {
+        const prefix = "<" + tag + " " + attribute + '="';
+        const suffix = '">contents</' + tag + ">";
+        assert("contents"[method](), prefix + "undefined" + suffix);
+        for (const value of [undefined, null, false, 0, 1n])
+            assert("contents"[method](value), prefix + String(value) + suffix);
+        assert("contents"[method]('"&<>'), prefix + "&quot;&<>" + suffix);
+
+        const order = [];
+        const contents = { toString() { order.push("contents"); return "contents"; } };
+        const value = { toString() { order.push("attribute"); return "value"; } };
+        assert(String.prototype[method].call(contents, value), prefix + "value" + suffix);
+        assert(order.join(","), "contents,attribute");
+        assert_throws(TypeError, () => String.prototype[method].call(null, value));
+        assert_throws(TypeError, () => String.prototype[method].call(undefined, value));
+        assert_throws(TypeError, () => "contents"[method](Symbol("attribute")));
+    }
+}
+
 function test_string_normalize()
 {
     for (const form of ["NFC", "NFD", "NFKC", "NFKD"]) {
@@ -5664,6 +5688,7 @@ test_array();
 test_array_constructor_own_elements();
 test_array_sort_writeback();
 test_string();
+test_string_html_attribute_coercion();
 test_string_unicode_18();
 test_string_normalize();
 test_math();
