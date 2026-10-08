@@ -1,0 +1,119 @@
+name: ci-sanitizers
+
+on:
+  pull_request:
+    paths:
+      - '**'
+      - '!.gitignore'
+      - '!LICENSE'
+      - '!TODO'
+      - '!doc/**'
+      - '!examples/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/ci-sanitizers.yml'
+  push:
+    branches:
+      - '*'
+
+jobs:
+  linux-sanitizers:
+    name: Linux ${{ matrix.compiler }} ${{ matrix.sanitizer }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        sanitizer: [ASan, UBSan]
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      COMPILER: ${{ matrix.compiler }}
+      USE_CLANG: ${{ matrix.compiler == 'clang' && 'y' || '' }}
+      USE_ASAN: ${{ matrix.sanitizer == 'ASan' && 'y' || '' }}
+      USE_UBSAN: ${{ matrix.sanitizer == 'UBSan' && 'y' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO= \
+            CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
+            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN"
+      - name: Run built-in tests
+        run: |
+          make CONFIG_WERROR=y CONFIG_LTO= \
+            CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
+            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" test
+      - name: Install pinned Test262
+        run: make test2-bootstrap
+      - name: Run Test262
+        run: |
+          ./run-test262 -T 2 -t -m -c test262.conf -a
+      - name: Preserve Test262 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test262-${{ matrix.compiler }}-${{ matrix.sanitizer }}
+          path: |
+            test262_report.txt
+            test262_errors.txt
+
+  linux-msan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build
+        env:
+          CC: clang
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_MSAN=y CONFIG_CLANG=y
+      - name: Run built-in tests
+        env:
+          MSAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_MSAN=y CONFIG_CLANG=y test
+      - name: Install pinned Test262
+        run: make test2-bootstrap
+      - name: Run Test262
+        env:
+          MSAN_OPTIONS: halt_on_error=1
+        run: |
+          ./run-test262 -T 2 -t -m -c test262.conf -a
+      - name: Preserve Test262 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test262-clang-MSan
+          path: |
+            test262_report.txt
+            test262_errors.txt
+
+  macos-asan:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
+      - name: Run built-in tests
+        env:
+          ASAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_ASAN=y test
+
+  macos-ubsan:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
+      - name: Run built-in tests
+        env:
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          make CONFIG_UBSAN=y test
+
