@@ -425,6 +425,7 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/bound-function.c \
     src/quickjs/builtins/intl/collator.c \
     src/quickjs/builtins/intl/segmenter.c \
+    src/quickjs/builtins/intl/date-time-format.c \
     src/quickjs/builtins/intl/number-common.c \
     src/quickjs/builtins/intl/number-format.c
 QUICKJS_SRCS+=$(INTL_SRCS)
@@ -1016,6 +1017,8 @@ endif
 
 ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
 ifeq ($(CONFIG_TEMPORAL),y)
 endif
 	$(WINE) ./qjs$(EXE) tests/test_intl_number_locale_methods.js
@@ -1024,7 +1027,11 @@ ifeq ($(CONFIG_INTL_LEGACY),y)
 else
 	$(WINE) ./qjs$(EXE) --std -e "globalThis.intlLegacyExpected = false; std.loadScript('tests/test_intl_number_format.js');"
 endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time_hour_cycle.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time_numbering_parts.js
 ifeq ($(CONFIG_INTL_LEGACY),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time_legacy.js
 endif
 	$(WINE) ./qjs$(EXE) tests/test_intl_segmenter.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_collator.js
