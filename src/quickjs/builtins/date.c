@@ -1158,20 +1158,21 @@ static JSValue js_date_setTime(JSContext *ctx, JSValueConst this_val,
 static JSValue js_date_setYear(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv)
 {
-    // setYear(y)
-    double y;
-    JSValueConst args[1];
+    double fields[9], y, d;
 
-    if (JS_ThisTimeValue(ctx, &y, this_val) || JS_ToFloat64(ctx, &y, argv[0]))
+    /* Capture the date fields before year coercion can change the receiver. */
+    if (get_date_fields(ctx, this_val, fields, TRUE, TRUE) < 0 ||
+        JS_ToFloat64(ctx, &y, argv[0]))
         return JS_EXCEPTION;
-    y = +y;
+    d = NAN;
     if (isfinite(y)) {
         y = trunc(y);
         if (y >= 0 && y < 100)
             y += 1900;
+        fields[0] = y;
+        d = set_date_fields(fields, TRUE);
     }
-    args[0] = JS_NewFloat64(ctx, y);
-    return set_date_field(ctx, this_val, 1, args, 0x011);
+    return JS_SetThisTimeValue(ctx, this_val, d);
 }
 
 static JSValue js_date_toJSON(JSContext *ctx, JSValueConst this_val,
