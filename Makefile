@@ -575,6 +575,9 @@ C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
         tests/test_typed_array$(EXE) tests/test_allocator$(EXE)
 C_TESTS+=tests/test_qjsc_context_failures$(EXE)
 C_TESTS+=tests/test_qjsc_json_preload$(EXE)
+C_TESTS+=tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json_exec$(EXE) tests/test_qjsc_native_std_exec$(EXE)
+QJSC_JSON_COLLISION_CASES:=attributes-first attributes-last size-first size-last
+C_TESTS+=$(addprefix tests/test_qjsc_json_collision_,$(addsuffix $(EXE),$(QJSC_JSON_COLLISION_CASES)))
 
 C_TESTS+=tests/test_fuzz_json$(EXE)
 
@@ -633,6 +636,47 @@ tests/test_qjsc_context_failures$(EXE): $(OBJDIR)/tests/test_qjsc_context_failur
 tests/test_qjsc_json_preload$(EXE): $(OBJDIR)/tests/test_qjsc_json_preload.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+# Use the actual compiler loader for deterministic attribute-probe errors.
+$(OBJDIR)/tools/qjsc.json-probe.o: tools/qjsc.c $(OBJDIR)/tools/qjsc.o | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(QJSC_DEFINES) $(DEPFLAGS) -Dmain=qjsc_json_probe_tool_main -c -o $@ $<
+
+tests/test_qjsc_json_probe$(EXE): $(OBJDIR)/tests/test_qjsc_json_probe.o $(OBJDIR)/tools/qjsc.json-probe.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(OBJDIR)/tests/qjsc-json-attributes.c: $(QJSC) tests/prepare_qjsc_json_attributes.py $(wildcard tests/qjsc-json-attributes/*)
+	mkdir -p $(@D)
+	python3 tests/prepare_qjsc_json_attributes.py "$(QJSC)" "$@"
+
+$(OBJDIR)/tests/qjsc-json-attributes.o: $(OBJDIR)/tests/qjsc-json-attributes.c
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+
+tests/test_qjsc_json_exec$(EXE): $(OBJDIR)/tests/qjsc-json-attributes.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(OBJDIR)/tests/qjsc-native-std.c: $(QJSC) tests/qjsc-json-attributes/native-std.js
+	mkdir -p $(@D)
+	$(QJSC) -e -o $@ tests/qjsc-json-attributes/native-std.js
+
+$(OBJDIR)/tests/qjsc-native-std.o: $(OBJDIR)/tests/qjsc-native-std.c
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+
+tests/test_qjsc_native_std_exec$(EXE): $(OBJDIR)/tests/qjsc-native-std.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(OBJDIR)/tests/qjsc-json-collision-%.c: $(QJSC) tests/prepare_qjsc_json_collisions.py $(wildcard tests/qjsc-json-collisions/*)
+	mkdir -p $(@D)
+	python3 tests/prepare_qjsc_json_collisions.py "$(QJSC)" "$@" "$*"
+
+$(OBJDIR)/tests/qjsc-json-collision-%.o: $(OBJDIR)/tests/qjsc-json-collision-%.c
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+
+tests/test_qjsc_json_collision_%$(EXE): $(OBJDIR)/tests/qjsc-json-collision-%.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -656,6 +700,13 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_qjsc_json_preload$(EXE)
+	$(WINE) ./tests/test_qjsc_json_probe$(EXE)
+	python3 tests/run_qjsc_json_attributes.py "$(WINE)" "./tests/test_qjsc_json_exec$(EXE)" qjsc-json-attribute-payload-ok
+	python3 tests/run_qjsc_json_attributes.py "$(WINE)" "./tests/test_qjsc_native_std_exec$(EXE)" qjsc-native-std-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_attributes-first$(EXE)" qjsc-json-collision-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_attributes-last$(EXE)" qjsc-json-collision-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_size-first$(EXE)" qjsc-json-collision-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_size-last$(EXE)" qjsc-json-collision-ok
 	$(WINE) ./tests/test_qjsc_context_failures$(EXE)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
 	$(WINE) ./tests/test_wait_async$(EXE)
@@ -682,6 +733,17 @@ test: test-c test-regexp test-build-dependencies test-run-test262
 .PHONY: test-qjsc-json-preloads
 test-qjsc-json-preloads: tests/test_qjsc_json_preload$(EXE)
 	$(WINE) ./tests/test_qjsc_json_preload$(EXE)
+
+.PHONY: test-qjsc-json-attributes
+test-qjsc-json-attributes: tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json_exec$(EXE) tests/test_qjsc_native_std_exec$(EXE) tests/test_qjsc_json_preload$(EXE) $(addprefix tests/test_qjsc_json_collision_,$(addsuffix $(EXE),$(QJSC_JSON_COLLISION_CASES)))
+	$(WINE) ./tests/test_qjsc_json_preload$(EXE)
+	$(WINE) ./tests/test_qjsc_json_probe$(EXE)
+	python3 tests/run_qjsc_json_attributes.py "$(WINE)" "./tests/test_qjsc_json_exec$(EXE)" qjsc-json-attribute-payload-ok
+	python3 tests/run_qjsc_json_attributes.py "$(WINE)" "./tests/test_qjsc_native_std_exec$(EXE)" qjsc-native-std-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_attributes-first$(EXE)" qjsc-json-collision-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_attributes-last$(EXE)" qjsc-json-collision-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_size-first$(EXE)" qjsc-json-collision-ok
+	python3 tests/run_qjsc_json_collisions.py "$(WINE)" "./tests/test_qjsc_json_collision_size-last$(EXE)" qjsc-json-collision-ok
 
 .PHONY: test-build-dependencies
 test-build-dependencies:
