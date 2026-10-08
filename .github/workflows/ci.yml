@@ -13,6 +13,8 @@ on:
   push:
     branches:
       - '*'
+      # Scratch publication gets exact-commit correctness CI; history/** stays excluded.
+      - 'scratch/**'
 
 jobs:
   linux:
@@ -26,20 +28,20 @@ jobs:
           submodules: true
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
       - name: Stats
         run: |
           ./qjs -qd
       - name: Run built-in tests
         run: |
-          make test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test
       - name: Run microbench
         run: |
-          make microbench
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n microbench
       - name: Run test262
         run: |
-          make test2-bootstrap
-          make test2
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test2-bootstrap
+          ./run-test262 -t -m -c test262-ci-none.conf -a
 
   linux-lto:
     name: Linux LTO
@@ -52,13 +54,13 @@ jobs:
           submodules: true
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y
       - name: Run built-in tests
         run: |
-          make test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test
       - name: Run microbench
         run: |
-          make microbench
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n microbench
 
   linux-32bit:
     name: Linux 32bit
@@ -75,14 +77,14 @@ jobs:
           sudo apt install -y gcc-multilib
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_M32=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_M32=y
       - name: Run built-in tests
         run: |
-          make CONFIG_M32=y test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_M32=y test
       - name: Run test262
         run: |
-          make test2-bootstrap
-          make CONFIG_M32=y test2
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test2-bootstrap
+          ./run-test262 -t -m -c test262-ci-none.conf -a
 
   linux-sanitizers:
     name: Linux ${{ matrix.compiler }} ${{ matrix.sanitizer }}
@@ -105,19 +107,20 @@ jobs:
           submodules: true
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO= \
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO= \
             CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
             CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN"
       - name: Run built-in tests
         run: |
-          make CONFIG_WERROR=y CONFIG_LTO= \
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_WERROR=y CONFIG_LTO= \
             CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
             CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" test
       - name: Install pinned Test262
-        run: make test2-bootstrap
+        run: |
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test2-bootstrap
       - name: Run Test262
         run: |
-          ./run-test262 -T 2 -t -m -c test262.conf -a
+          ./run-test262 -T 2 -t -m -c test262-ci-none.conf -a
       - name: Preserve Test262 diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -137,12 +140,12 @@ jobs:
         env:
           CC: clang
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_MSAN=y CONFIG_CLANG=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_MSAN=y CONFIG_CLANG=y
       - name: Run built-in tests
         env:
           MSAN_OPTIONS: halt_on_error=1
         run: |
-          make CONFIG_MSAN=y CONFIG_CLANG=y test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_MSAN=y CONFIG_CLANG=y test
 
   macos:
     name: macOS
@@ -153,17 +156,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
       - name: Stats
         run: |
           ./qjs -qd
       - name: Run built-in tests
         run: |
-          make test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test
       - name: Run test262
         run: |
-          make test2-bootstrap
-          make test2
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test2-bootstrap
+          ./run-test262 -t -m -c test262-ci-none.conf -a
 
   macos-asan:
     runs-on: macos-latest
@@ -171,12 +174,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
       - name: Run built-in tests
         env:
           ASAN_OPTIONS: halt_on_error=1
         run: |
-          make CONFIG_ASAN=y test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_ASAN=y test
 
   macos-ubsan:
     runs-on: macos-latest
@@ -184,12 +187,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
       - name: Run built-in tests
         env:
           UBSAN_OPTIONS: halt_on_error=1
         run: |
-          make CONFIG_UBSAN=y test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_UBSAN=y test
 
   freebsd:
     runs-on: ubuntu-latest
@@ -204,9 +207,9 @@ jobs:
           prepare: |
             pkg install -y gmake
           run: |
-            gmake
+            gmake CONFIG_TEMPORAL=n CONFIG_INTL=n
             ./qjs -qd
-            gmake test
+            gmake CONFIG_TEMPORAL=n CONFIG_INTL=n test
 
   cosmopolitan:
     name: Cosmopolitan
@@ -226,14 +229,14 @@ jobs:
           echo "$HOME/cosmocc/bin" >> "$GITHUB_PATH"
       - name: Build
         run: |
-          make CONFIG_COSMO=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_COSMO=y
       - name: Run built-in tests
         run: |
-          make CONFIG_COSMO=y test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_COSMO=y test
       - name: Run test262
         run: |
-          make test2-bootstrap
-          make CONFIG_COSMO=y test2
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test2-bootstrap
+          ./run-test262 -t -m -c test262-ci-none.conf -a
 
   mingw-windows:
     name: MinGW Windows target
@@ -259,11 +262,11 @@ jobs:
           #sudo systemctl restart systemd-binfmt
       - name: Build
         run: |
-          make CONFIG_WIN32=y
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_WIN32=y
       - name: Run built-in tests
         run: |
           # If binfmt support worked, could just run `make CONFIG_WIN32=y test`
-          make WINE=/usr/bin/wine CONFIG_WIN32=y test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n WINE=/usr/bin/wine CONFIG_WIN32=y test
 
   windows-msys:
     name: Windows MSYS2
@@ -280,16 +283,16 @@ jobs:
           install: git make diffutils mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
       - name: Build
         run: |
-           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+           make CONFIG_TEMPORAL=n CONFIG_INTL=n -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
       - name: Stats
         run: |
           ./qjs -qd
       - name: Run built-in tests
         run: |
-          make test
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n test
       - name: Run microbench
         run: |
-          make microbench
+          make CONFIG_TEMPORAL=n CONFIG_INTL=n microbench
 
 
   qemu-alpine:
@@ -315,4 +318,4 @@ jobs:
         # See https://github.com/tonistiigi/binfmt/issues/215#issuecomment-2613004741
         run: docker run --privileged --rm tonistiigi/binfmt:master --install all
       - name: Run tests on ${{ matrix.platform }}
-        run: docker run --rm --interactive --mount type=bind,source=$(pwd),target=/host --platform ${{ matrix.platform }} alpine sh -c "apk add git patch make gcc libc-dev && cd /host && make test"
+        run: docker run --rm --interactive --mount type=bind,source=$(pwd),target=/host --platform ${{ matrix.platform }} alpine sh -c "apk add git patch make gcc libc-dev && cd /host && make CONFIG_TEMPORAL=n CONFIG_INTL=n test"
