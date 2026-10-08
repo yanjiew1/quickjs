@@ -136,21 +136,39 @@ done:
     js_free(ctx, canonical);
     return result;
 }
-static int available_locales(JSContext *ctx, JSIntlService service, JSIntlLocaleList *result)
+static const JSIntlLocaleList *available_locales(JSContext *ctx,
+                                                 JSIntlService service)
 {
-    int i; memset(result, 0, sizeof(*result));
-    for (i = 0; i < available_count(service); i++) {
+    JSIntlLocaleList result = { 0 };
+    JSIntlLocaleList *cached = js_intl_available_locale_cache(ctx, service);
+    int i, count;
+
+    if (!cached)
+        return NULL;
+    if (cached->items)
+        return cached;
+    count = available_count(service);
+    for (i = 0; i < count; i++) {
         char *tag = js_intl_locale_from_icu(ctx, available_at(service, i));
-        if (!tag) goto fail;
-        if (available_locale_append(ctx, result, tag) < 0) { js_free(ctx, tag); goto fail; }
+        if (!tag)
+            goto fail;
+        if (available_locale_append(ctx, &result, tag) < 0) {
+            js_free(ctx, tag);
+            goto fail;
+        }
         js_free(ctx, tag);
     }
-    /* ECMA402 requires every service's AvailableLocales to contain the
-     * context's stable DefaultLocale, including an ICU root default. */
-    if (available_locale_append(ctx, result, js_intl_default_locale(ctx)) < 0) goto fail;
-    return intl_list_sort_unique(ctx, result);
+    /* Cache only canonical backend data plus this realm's stable default;
+       requested locales, options, and observable conversions remain fresh. */
+    if (available_locale_append(ctx, &result, js_intl_default_locale(ctx)) < 0 ||
+        intl_list_sort_unique(ctx, &result) < 0)
+        goto fail;
+    /* No partial list becomes visible after an allocation or ICU failure. */
+    *cached = result;
+    return cached;
 fail:
-    js_intl_locale_list_free(ctx, result); return -1;
+    js_intl_locale_list_free(ctx, &result);
+    return NULL;
 }
 /* Best fit is implementation-defined. This implementation uses the same
  * deterministic prefix match as lookup, including the singleton rule. */
@@ -169,10 +187,10 @@ static char *matching_locale(JSContext *ctx, const JSIntlLocaleList *available, 
 }
 char *intl_lookup_locale(JSContext *ctx, JSIntlService service, const char *requested)
 {
-    JSIntlLocaleList available = { 0 }; char *result;
-    if (available_locales(ctx, service, &available) < 0) return NULL;
-    result = matching_locale(ctx, &available, requested);
-    js_intl_locale_list_free(ctx, &available); return result;
+    const JSIntlLocaleList *available = available_locales(ctx, service);
+    if (!available)
+        return NULL;
+    return matching_locale(ctx, available, requested);
 }
 static int enum_types(JSContext *ctx, UEnumeration *enumeration, const char *key, JSIntlLocaleList *list)
 {
@@ -304,14 +322,15 @@ int js_intl_resolve_locale(JSContext *ctx, JSIntlService service,
                            const JSIntlLocaleList *requested, const char *matcher,
                            const JSIntlResolutionKey *keys, int count, JSIntlResolvedLocale *result)
 {
-    JSIntlLocaleList available = { 0 }; IntlTag request = { 0 }, public_tag = { 0 }, backend_tag = { 0 };
+    const JSIntlLocaleList *available; IntlTag request = { 0 }, public_tag = { 0 }, backend_tag = { 0 };
     char *matched = NULL, *base_icu = NULL, *public_string = NULL, *backend_string = NULL; size_t i; int k, r = -1;
     memset(result, 0, sizeof(*result));
     if (count < 0 || count > JS_INTL_MAX_RESOLUTION_KEYS) { JS_ThrowInternalError(ctx, "too many Intl resolution keys"); return -1; }
     (void)matcher;
-    if (available_locales(ctx, service, &available) < 0) goto done;
+    available = available_locales(ctx, service);
+    if (!available) goto done;
     for (i = 0; i < requested->count; i++) {
-        matched = matching_locale(ctx, &available, requested->items[i]);
+        matched = matching_locale(ctx, available, requested->items[i]);
         if (matched) { if (intl_parse_tag(ctx, requested->items[i], strlen(requested->items[i]), &request) < 0) goto done; break; }
         if (JS_HasException(ctx)) goto done;
     }
@@ -352,7 +371,7 @@ int js_intl_resolve_locale(JSContext *ctx, JSIntlService service,
     if (!result->locale || !result->icu_locale) goto done;
     r = 0;
 done:
-    js_intl_locale_list_free(ctx, &available); intl_tag_free(ctx, &request); intl_tag_free(ctx, &public_tag); intl_tag_free(ctx, &backend_tag);
+    intl_tag_free(ctx, &request); intl_tag_free(ctx, &public_tag); intl_tag_free(ctx, &backend_tag);
     js_free(ctx, matched); js_free(ctx, base_icu); js_free(ctx, public_string); js_free(ctx, backend_string);
     if (r < 0)
         js_intl_resolved_locale_free(ctx, result);
@@ -361,19 +380,20 @@ done:
 JSValue js_intl_supported_locales(JSContext *ctx, JSIntlService service, JSValueConst locales, JSValueConst options)
 {
     static const char *const matchers[] = { "lookup", "best fit" };
-    JSIntlLocaleList requested = { 0 }, available = { 0 }, supported = { 0 }; JSValue object = JS_UNDEFINED, result = JS_EXCEPTION; size_t i; int matcher;
+    JSIntlLocaleList requested = { 0 }, supported = { 0 }; const JSIntlLocaleList *available; JSValue object = JS_UNDEFINED, result = JS_EXCEPTION; size_t i; int matcher;
     if (js_intl_canonicalize_locale_list(ctx, locales, &requested) < 0) goto done;
     object = js_intl_coerce_options(ctx, options); if (JS_IsException(object)) goto done;
     if (js_intl_get_string_option(ctx, object, "localeMatcher", matchers, 2, 1, &matcher) < 0) goto done;
-    if (available_locales(ctx, service, &available) < 0) goto done;
+    available = available_locales(ctx, service);
+    if (!available) goto done;
     for (i = 0; i < requested.count; i++) {
-        char *match = matching_locale(ctx, &available, requested.items[i]);
+        char *match = matching_locale(ctx, available, requested.items[i]);
         if (match) { js_free(ctx, match); if (js_intl_locale_list_append(ctx, &supported, requested.items[i]) < 0) goto done; }
         else if (JS_HasException(ctx)) goto done;
     }
     result = intl_array_from_list(ctx, &supported);
 done:
-    JS_FreeValue(ctx, object); js_intl_locale_list_free(ctx, &requested); js_intl_locale_list_free(ctx, &available); js_intl_locale_list_free(ctx, &supported); return result;
+    JS_FreeValue(ctx, object); js_intl_locale_list_free(ctx, &requested); js_intl_locale_list_free(ctx, &supported); return result;
 }
 JSValue js_intl_get_canonical_locales(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {

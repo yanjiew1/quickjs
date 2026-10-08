@@ -50,7 +50,8 @@ typedef struct JSIntlLocaleList {
 typedef enum JSIntlService {
     JS_INTL_COLLATOR, JS_INTL_COLLATOR_SEARCH, JS_INTL_NUMBER_FORMAT, JS_INTL_DATE_TIME_FORMAT,
     JS_INTL_PLURAL_RULES, JS_INTL_LIST_FORMAT, JS_INTL_RELATIVE_TIME_FORMAT,
-    JS_INTL_DISPLAY_NAMES, JS_INTL_SEGMENTER, JS_INTL_DURATION_FORMAT
+    JS_INTL_DISPLAY_NAMES, JS_INTL_SEGMENTER, JS_INTL_DURATION_FORMAT,
+    JS_INTL_SERVICE_COUNT
 } JSIntlService;
 
 #define JS_INTL_MAX_RESOLUTION_KEYS 4
@@ -135,6 +136,11 @@ JSValue js_intl_new_object(JSContext *ctx, JSValueConst new_target,
 /* Borrowed context roots, retained independently of global property edits. */
 JSValueConst js_intl_constructor(JSContext *ctx, JSClassID class_id);
 JSValueConst js_intl_fallback_symbol(JSContext *ctx);
+/* Context owns these lists. Only locale-resolution may publish a detached,
+   fully built list into an empty slot. All lookup callers borrow it read-only.
+   A non-NULL items array denotes a completed list containing DefaultLocale. */
+JSIntlLocaleList *js_intl_available_locale_cache(JSContext *ctx,
+                                                 JSIntlService service);
 const char *js_intl_default_locale(JSContext *ctx);
 const char *js_intl_default_time_zone(JSContext *ctx);
 void js_intl_context_mark(JSRuntime *rt, JSContext *ctx,

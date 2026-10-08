@@ -41,6 +41,7 @@ struct JSIntlContext {
     char *default_time_zone;
     JSValue fallback_symbol;
     JSValue constructors[JS_INTL_CLASS_COUNT];
+    JSIntlLocaleList available_locales[JS_INTL_SERVICE_COUNT];
     BOOL installed;
 };
 
@@ -145,6 +146,18 @@ fail:
     return -1;
 }
 
+JSIntlLocaleList *js_intl_available_locale_cache(JSContext *ctx,
+                                                 JSIntlService service)
+{
+    if ((unsigned)service >= JS_INTL_SERVICE_COUNT) {
+        JS_ThrowInternalError(ctx, "invalid Intl locale-cache service");
+        return NULL;
+    }
+    if (js_intl_ensure_context(ctx))
+        return NULL;
+    return &ctx->intl->available_locales[service];
+}
+
 const char *js_intl_default_locale(JSContext *ctx)
 {
     assert(ctx->intl);
@@ -192,6 +205,8 @@ void js_intl_context_free(JSContext *ctx)
     JS_FreeValue(ctx, state->fallback_symbol);
     for (i = 0; i < JS_INTL_CLASS_COUNT; i++)
         JS_FreeValue(ctx, state->constructors[i]);
+    for (i = 0; i < JS_INTL_SERVICE_COUNT; i++)
+        js_intl_locale_list_free(ctx, &state->available_locales[i]);
     js_free(ctx, state->default_locale);
     js_free(ctx, state->default_time_zone);
     js_free(ctx, state);
@@ -205,6 +220,15 @@ void js_intl_context_memory_usage(JSContext *ctx, JSMemoryUsage *usage)
     usage->memory_used_count += 3;
     usage->memory_used_size += sizeof(*state) + strlen(state->default_locale) +
         strlen(state->default_time_zone) + 2;
+    for (int i = 0; i < JS_INTL_SERVICE_COUNT; i++) {
+        const JSIntlLocaleList *list = &state->available_locales[i];
+        if (!list->items)
+            continue;
+        usage->memory_used_count += list->count + 1;
+        usage->memory_used_size += list->capacity * sizeof(*list->items);
+        for (size_t j = 0; j < list->count; j++)
+            usage->memory_used_size += strlen(list->items[j]) + 1;
+    }
 }
 
 int js_intl_register_class(JSContext *ctx, JSClassID class_id,
