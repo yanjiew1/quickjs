@@ -41,6 +41,9 @@
 #include "internal/module.h"
 #include "internal/atom.h"
 #include "builtins/intrinsics.h"
+#ifdef CONFIG_INTL
+#include "builtins/intl.h"
+#endif
 #include "builtins/collections.h"
 #include "builtins/array.h"
 #include "builtins/iterator.h"
@@ -609,6 +612,10 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
     ctx->iterator_ctor = JS_NULL;
     ctx->regexp_ctor = JS_NULL;
     ctx->promise_ctor = JS_NULL;
+#ifdef CONFIG_TEMPORAL
+    ctx->temporal_intrinsics = JS_UNDEFINED;
+    ctx->temporal_published = FALSE;
+#endif
     init_list_head(&ctx->loaded_modules);
 
     if (JS_AddIntrinsicBasicObjects(ctx)) {
@@ -636,7 +643,14 @@ JSContext *JS_NewContext(JSRuntime *rt)
         JS_AddIntrinsicMapSet(ctx) ||
         JS_AddIntrinsicTypedArrays(ctx) ||
         JS_AddIntrinsicPromise(ctx) ||
-        JS_AddIntrinsicWeakRef(ctx)) {
+        JS_AddIntrinsicWeakRef(ctx)
+#ifdef CONFIG_INTL
+        || JS_AddIntrinsicIntl(ctx)
+#endif
+#ifdef CONFIG_TEMPORAL
+        || JS_AddIntrinsicTemporal(ctx)
+#endif
+        ) {
         JS_FreeContext(ctx);
         return NULL;
     }
@@ -673,6 +687,9 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
 
     JS_MarkValue(rt, ctx->global_obj, mark_func);
     JS_MarkValue(rt, ctx->global_var_obj, mark_func);
+#ifdef CONFIG_TEMPORAL
+    JS_MarkValue(rt, ctx->temporal_intrinsics, mark_func);
+#endif
 
     JS_MarkValue(rt, ctx->throw_type_error, mark_func);
     JS_MarkValue(rt, ctx->eval_obj, mark_func);
@@ -691,6 +708,9 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
     JS_MarkValue(rt, ctx->regexp_ctor, mark_func);
     JS_MarkValue(rt, ctx->function_ctor, mark_func);
     JS_MarkValue(rt, ctx->function_proto, mark_func);
+#ifdef CONFIG_INTL
+    js_intl_context_mark(rt, ctx, mark_func);
+#endif
 
     if (ctx->array_shape)
         mark_func(rt, &ctx->array_shape->header);
@@ -745,9 +765,15 @@ void JS_FreeContext(JSContext *ctx)
 #endif
 
     js_free_modules(ctx, JS_FREE_MODULE_ALL);
+#ifdef CONFIG_INTL
+    js_intl_context_free(ctx);
+#endif
 
     JS_FreeValue(ctx, ctx->global_obj);
     JS_FreeValue(ctx, ctx->global_var_obj);
+#ifdef CONFIG_TEMPORAL
+    JS_FreeValue(ctx, ctx->temporal_intrinsics);
+#endif
 
     JS_FreeValue(ctx, ctx->throw_type_error);
     JS_FreeValue(ctx, ctx->eval_obj);

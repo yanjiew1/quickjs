@@ -26,6 +26,12 @@
 #include "internal/base.h"
 #include "internal/c-function.h"
 #include "internal/runtime.h"
+#ifdef CONFIG_TEMPORAL
+#include "builtins/temporal.h"
+#endif
+#ifdef CONFIG_INTL
+#include "builtins/intl.h"
+#endif
 #include "internal/atom.h"
 #include "internal/string.h"
 #include "internal/object.h"
@@ -33,6 +39,9 @@
 #include "internal/vm.h"
 #include "internal/module.h"
 #include "builtins/array-buffer.h"
+#ifdef CONFIG_INTL
+#include "builtins/intl/bound-function.h"
+#endif
 
 /* Compute memory used by various object types */
 /* XXX: poor man's approach to handling multiply referenced objects */
@@ -132,6 +141,9 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
             sizeof(JSValue) * rt->class_count;
         s->binary_object_count += ctx->binary_object_count;
         s->binary_object_size += ctx->binary_object_size;
+#ifdef CONFIG_INTL
+        js_intl_context_memory_usage(ctx, s);
+#endif
 
         /* the hashed shapes are counted separately */
         if (sh && !sh->is_hashed) {
@@ -247,6 +259,27 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
         case JS_CLASS_BIG_INT:           /* u.object_data */
             compute_value_size(p->u.object_data, hp);
             break;
+#ifdef CONFIG_TEMPORAL
+        case JS_CLASS_TEMPORAL_INSTANT:
+        case JS_CLASS_TEMPORAL_DURATION:
+        case JS_CLASS_TEMPORAL_PLAIN_DATE:
+        case JS_CLASS_TEMPORAL_PLAIN_TIME:
+        case JS_CLASS_TEMPORAL_PLAIN_DATE_TIME:
+        case JS_CLASS_TEMPORAL_PLAIN_YEAR_MONTH:
+        case JS_CLASS_TEMPORAL_PLAIN_MONTH_DAY:
+        case JS_CLASS_TEMPORAL_ZONED_DATE_TIME:
+            {
+                JSValue owned_value;
+                size_t payload_size = js_temporal_memory_usage(
+                    JS_MKPTR(JS_TAG_OBJECT, p), &owned_value);
+                if (payload_size) {
+                    s->memory_used_count++;
+                    s->memory_used_size += payload_size;
+                    compute_value_size(owned_value, hp);
+                }
+            }
+            break;
+#endif
         case JS_CLASS_C_FUNCTION:        /* u.cfunc */
             s->c_func_count++;
 #ifndef JS_PTR64
@@ -299,6 +332,22 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
                 }
             }
             break;
+#ifdef CONFIG_INTL
+        case JS_CLASS_INTL_BOUND_FUNCTION:
+            {
+                JSIntlBoundFunctionData *fd = p->u.opaque;
+                if (fd) {
+                    for (i = 0; i < fd->data_len; i++)
+                        compute_value_size(fd->data[i], hp);
+                    s->c_func_count++;
+                    s->memory_used_count++;
+                    s->memory_used_size += sizeof(*fd) +
+                        fd->data_len * sizeof(*fd->data);
+                    /* Retained contexts are counted by context_list above. */
+                }
+            }
+            break;
+#endif
         case JS_CLASS_REGEXP:            /* u.regexp */
             compute_jsstring_size(p->u.regexp.pattern, hp);
             compute_jsstring_size(p->u.regexp.bytecode, hp);
