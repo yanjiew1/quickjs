@@ -586,6 +586,7 @@ C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 C_TESTS+=tests/test_atomics_wait$(EXE)
 C_TESTS+=tests/test_wait_async$(EXE)
 C_TESTS+=tests/test_native_jobs$(EXE)
+C_TESTS+=tests/test_worker_context_failure$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
 
 # Link the tracing reader before the archive so it replaces the normal reader.
@@ -606,6 +607,12 @@ tests/test_wait_queue$(EXE): $(OBJDIR)/tests/test_wait_queue.o $(WAIT_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_native_jobs$(EXE): $(OBJDIR)/tests/test_native_jobs.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# The native unit includes the actual Worker caller with test call redirection.
+$(OBJDIR)/tests/test_worker_context_failure.o: src/quickjs-libc/worker.c
+
+tests/test_worker_context_failure$(EXE): $(OBJDIR)/tests/test_worker_context_failure.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_wait_async$(EXE): $(OBJDIR)/tests/test_wait_async.o libquickjs$(LTOEXT).a
@@ -648,6 +655,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
 	$(WINE) ./tests/test_wait_async$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
+	$(WINE) ./tests/test_worker_context_failure$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
