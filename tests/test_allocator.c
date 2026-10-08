@@ -518,8 +518,107 @@ static void test_lvalue_label_oom(void)
     check_lvalue_label_oom("label_oom_keep_fresh", " += 0;");
 }
 
+typedef struct AllocationFailure {
+    size_t live_allocations;
+    unsigned allocations_until_failure;
+    unsigned failures;
+    JSRuntime *rt;
+    BOOL context_registered_at_failure;
+} AllocationFailure;
+
+static BOOL allocation_should_fail(AllocationFailure *failure)
+{
+    if (!failure->allocations_until_failure ||
+        --failure->allocations_until_failure != 0)
+        return FALSE;
+    failure->failures++;
+    if (failure->rt)
+        failure->context_registered_at_failure =
+            !list_empty(&failure->rt->gc_obj_list);
+    return TRUE;
+}
+
+static void *allocation_failure_malloc(JSMallocState *s, size_t size)
+{
+    AllocationFailure *failure = s->opaque;
+    void *ptr;
+
+    if (allocation_should_fail(failure))
+        return NULL;
+    ptr = def_malloc_funcs.js_malloc(s, size);
+    if (ptr)
+        failure->live_allocations++;
+    return ptr;
+}
+
+static void allocation_failure_free(JSMallocState *s, void *ptr)
+{
+    AllocationFailure *failure = s->opaque;
+
+    if (ptr) {
+        assert(failure->live_allocations > 0);
+        failure->live_allocations--;
+    }
+    def_malloc_funcs.js_free(s, ptr);
+}
+
+static void *allocation_failure_realloc(JSMallocState *s, void *ptr,
+                                       size_t size)
+{
+    AllocationFailure *failure = s->opaque;
+    BOOL had_ptr = ptr != NULL;
+    void *result;
+
+    if (size != 0 && allocation_should_fail(failure))
+        return NULL;
+    result = def_malloc_funcs.js_realloc(s, ptr, size);
+    if (!had_ptr && result) {
+        failure->live_allocations++;
+    } else if (had_ptr && size == 0) {
+        assert(failure->live_allocations > 0);
+        failure->live_allocations--;
+    }
+    return result;
+}
+
+static JSRuntime *new_allocation_failure_runtime(AllocationFailure *failure)
+{
+    JSMallocFunctions mf = def_malloc_funcs;
+    JSRuntime *rt;
+
+    mf.js_malloc = allocation_failure_malloc;
+    mf.js_free = allocation_failure_free;
+    mf.js_realloc = allocation_failure_realloc;
+    rt = JS_NewRuntime2(&mf, failure);
+    assert(rt);
+    failure->rt = rt;
+    return rt;
+}
+
+static void test_raw_context_allocation_failure(void)
+{
+    AllocationFailure failure = { 0 };
+    JSRuntime *rt = new_allocation_failure_runtime(&failure);
+    JSContext *ctx;
+
+    assert(list_empty(&rt->gc_obj_list));
+    failure.allocations_until_failure = 2;
+    ctx = JS_NewContextRaw(rt);
+    assert(!ctx);
+    assert(failure.failures == 1);
+    assert(failure.context_registered_at_failure);
+    assert(list_empty(&rt->gc_obj_list));
+    ctx = JS_NewContextRaw(rt);
+    assert(ctx);
+    JS_RunGC(rt);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
 int main(void)
 {
+    test_raw_context_allocation_failure();
     test_malloc_limit_overflow();
     test_realloc_limit_overflow();
     test_gc_accounting_overflow();
