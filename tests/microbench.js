@@ -1578,6 +1578,8 @@ function main(argc, argv, g)
         }
     }
     test_list.push(sort_bench);
+    if (typeof register_intl_number_duration_benchmarks === "function")
+        register_intl_number_duration_benchmarks(test_list);
 
     for (i = 1; i < argc;) {
         name = argv[i++];

@@ -1029,6 +1029,7 @@ ifeq ($(CONFIG_INTL),y)
 .PHONY: microbench-intl
 microbench-intl: qjs$(EXE)
 	@set -e; for name in intl_number_format intl_number_bigint intl_number_decimal intl_number_parts intl_number_range intl_number_constructor intl_duration_digital intl_duration_textual; do \
+	    $(WINE) ./qjs$(EXE) --std tests/microbench-intl.js $$name; \
 	done
 endif
 
