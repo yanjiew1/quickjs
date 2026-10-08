@@ -58,3 +58,21 @@ void test_one_input_init(JSRuntime *rt, JSContext *ctx) {
     std_val = js_std_await(ctx, std_val);
     JS_FreeValue(ctx, std_val);
 }
+
+/* Never wait for host I/O or a future native deadline while fuzzing. */
+void test_one_input_jobs(JSContext *ctx)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    int i, ret;
+
+    /* Ready native jobs use the ordinary executor too. A bounded drain also
+       prevents callbacks which continually append jobs from pinning an input. */
+    for (i = 0; i < 1000; i++) {
+        ret = JS_ExecutePendingJob(rt, NULL);
+        if (ret <= 0) {
+            if (ret < 0)
+                js_std_dump_error(ctx);
+            break;
+        }
+    }
+}

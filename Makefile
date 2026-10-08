@@ -657,7 +657,7 @@ ifdef CONFIG_SHARED_LIBS
 test: tests/bjson.so examples/point.so
 endif
 
-test: qjs$(EXE)
+test: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_closure.js
 	$(WINE) ./qjs$(EXE) tests/test_language.js
 	$(WINE) ./qjs$(EXE) -m tests/test_module.js
@@ -666,8 +666,13 @@ test: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_loop.js
 	$(WINE) ./qjs$(EXE) tests/test_bigint.js
 	$(WINE) ./qjs$(EXE) -m tests/test_async.js
+	$(WINE) ./qjs$(EXE) -m tests/test_wait_async.js
+	$(WINE) ./run-test262$(EXE) -N tests/test_wait_async_agents.js
 	$(WINE) ./qjs$(EXE) tests/test_cyclic_import.js
 	$(WINE) ./qjs$(EXE) tests/test_worker.js
+ifdef CONFIG_WIN32
+	$(WINE) ./qjs$(EXE) -m tests/test_wait_async_worker_overflow.js
+endif
 	$(WINE) ./qjs$(EXE) tests/test_gsab_worker.js
 ifndef CONFIG_WIN32
 	$(WINE) ./qjs$(EXE) tests/test_std.js

@@ -2,6 +2,7 @@
  * ECMA Test 262 Runner for QuickJS
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
+ * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2021 Charlie Gordon
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -44,6 +45,13 @@
 #include "list.h"
 #include "quickjs-libc.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <poll.h>
+#include <fcntl.h>
+#endif
+
 #define CMD_NAME "run-test262"
 
 typedef struct namelist_t {
@@ -66,6 +74,11 @@ typedef struct {
     int async_done;
 } ThreadLocalStorage;
 
+typedef struct Test262SharedBufferRoot {
+    struct Test262SharedBufferRoot *next;
+    JSValue value; /* accessed and released only by the main runtime owner */
+} Test262SharedBufferRoot;
+
 typedef struct {
     struct list_head link;
     ThreadLocalStorage *tls;
@@ -73,7 +86,11 @@ typedef struct {
     char *script;
     JSValue broadcast_func;
     BOOL broadcast_pending;
-    JSValue broadcast_sab; /* in the main context */
+    BOOL leaving; /* owner thread only */
+    BOOL departed; /* protected by tls->agent_mutex */
+    BOOL stopping; /* protected by tls->agent_mutex */
+    intptr_t wake_read, wake_write; /* host-owned until after pthread_join */
+    Test262SharedBufferRoot *broadcast_roots; /* main-owned through join */
     uint8_t *broadcast_sab_buf;
     size_t broadcast_sab_size;
     int32_t broadcast_val;
@@ -582,6 +599,127 @@ static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
 static JSValue add_helpers1(JSContext *ctx);
 static void add_helpers(JSContext *ctx);
 
+static int agent_wake_init(Test262Agent *agent)
+{
+#ifdef _WIN32
+    HANDLE h = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (!h)
+        return -1;
+    agent->wake_read = agent->wake_write = (intptr_t)h;
+#else
+    int fds[2], i, flags;
+    if (pipe(fds))
+        return -1;
+    for (i = 0; i < 2; i++) {
+        flags = fcntl(fds[i], F_GETFL);
+        if (flags < 0 || fcntl(fds[i], F_SETFL, flags | O_NONBLOCK) < 0 ||
+            fcntl(fds[i], F_SETFD, FD_CLOEXEC) < 0) {
+            close(fds[0]);
+            close(fds[1]);
+            return -1;
+        }
+    }
+    agent->wake_read = fds[0];
+    agent->wake_write = fds[1];
+#endif
+    return 0;
+}
+
+/* The agent mutex protects broadcast_pending and wake set/reset. The main
+   host closes this source only after joining its agent, never from a notifier. */
+static void agent_wake_set(Test262Agent *agent)
+{
+#ifdef _WIN32
+    if (!SetEvent((HANDLE)agent->wake_write))
+        fatal(1, "agent wake failure");
+#else
+    unsigned char byte = 0;
+    ssize_t n;
+    do {
+        n = write((int)agent->wake_write, &byte, 1);
+    } while (n < 0 && errno == EINTR);
+    if (n != 1 && !(n < 0 && errno == EAGAIN))
+        fatal(1, "agent wake failure");
+#endif
+}
+
+static void agent_wake_clear(Test262Agent *agent)
+{
+#ifdef _WIN32
+    if (!ResetEvent((HANDLE)agent->wake_read))
+        fatal(1, "agent wake reset failure");
+#else
+    unsigned char bytes[32];
+    ssize_t n;
+    do {
+        n = read((int)agent->wake_read, bytes, sizeof(bytes));
+    } while (n > 0 || (n < 0 && errno == EINTR));
+    if (n == 0 || (n < 0 && errno != EAGAIN))
+        fatal(1, "agent wake reset failure");
+#endif
+}
+
+static void agent_wake_close(Test262Agent *agent)
+{
+#ifdef _WIN32
+    CloseHandle((HANDLE)agent->wake_read);
+#else
+    close((int)agent->wake_read);
+    close((int)agent->wake_write);
+#endif
+}
+
+static int agent_wait(Test262Agent *agent, JSRuntime *rt)
+{
+    intptr_t native = JS_IsNativeJobPending(rt) ?
+                      JS_GetNativeJobWakeHandle(rt) : -1;
+    int timeout = JS_GetNativeJobTimeout(rt);
+    int ready = JS_PollNativeJobs(rt, 0);
+    if (ready < 0)
+        return -1;
+    if (ready > 0)
+        return 0;
+#ifdef _WIN32
+    {
+        HANDLE handles[2] = { (HANDLE)agent->wake_read, (HANDLE)native };
+        DWORD result = WaitForMultipleObjects(native == -1 ? 1 : 2,
+                                              handles, FALSE,
+                                              timeout < 0 ? INFINITE :
+                                              (DWORD)timeout);
+        if (result == WAIT_FAILED)
+            return -1;
+    }
+#else
+    {
+        struct pollfd fds[2] = {
+            { (int)agent->wake_read, POLLIN, 0 },
+            { (int)native, POLLIN, 0 },
+        };
+        if (poll(fds, native == -1 ? 1 : 2, timeout) < 0)
+            return errno == EINTR ? 0 : -1;
+        if ((fds[0].revents | fds[1].revents) &
+            (POLLERR | POLLHUP | POLLNVAL))
+            return -1;
+    }
+#endif
+    return JS_PollNativeJobs(rt, 0) < 0 ? -1 : 0;
+}
+
+static void agent_mark_departed(Test262Agent *agent)
+{
+    ThreadLocalStorage *tls = agent->tls;
+    pthread_mutex_lock(&tls->agent_mutex);
+    agent->departed = TRUE;
+    if (agent->broadcast_pending) {
+        agent->broadcast_pending = FALSE;
+        agent_wake_clear(agent);
+    }
+    /* A main broadcaster may already be waiting for this agent to claim
+       its broadcast. Departure acknowledges that publication too. */
+    pthread_cond_broadcast(&tls->agent_cond);
+    pthread_mutex_unlock(&tls->agent_mutex);
+}
+
 static void *agent_start(void *arg)
 {
     Test262Agent *agent = arg;
@@ -615,42 +753,60 @@ static void *agent_start(void *arg)
     JS_FreeValue(ctx, ret_val);
 
     for(;;) {
+        BOOL stopping;
+        pthread_mutex_lock(&tls->agent_mutex);
+        stopping = agent->stopping;
+        pthread_mutex_unlock(&tls->agent_mutex);
+        if (stopping)
+            break;
         ret = JS_ExecutePendingJob(JS_GetRuntime(ctx), NULL);
         if (ret < 0) {
             js_std_dump_error(ctx);
             break;
         } else if (ret == 0) {
-            if (JS_IsUndefined(agent->broadcast_func)) {
+            JSValue args[2];
+            uint8_t *broadcast_buf;
+            size_t broadcast_size;
+            int32_t broadcast_val;
+            BOOL pending;
+            if (agent->leaving ||
+                (JS_IsUndefined(agent->broadcast_func) &&
+                 !JS_IsNativeJobPending(rt)))
                 break;
-            } else {
-                JSValue args[2];
-
-                pthread_mutex_lock(&tls->agent_mutex);
-                while (!agent->broadcast_pending) {
-                    pthread_cond_wait(&tls->agent_cond, &tls->agent_mutex);
-                }
-
+            pthread_mutex_lock(&tls->agent_mutex);
+            pending = agent->broadcast_pending;
+            if (pending) {
+                broadcast_buf = agent->broadcast_sab_buf;
+                broadcast_size = agent->broadcast_sab_size;
+                broadcast_val = agent->broadcast_val;
                 agent->broadcast_pending = FALSE;
+                agent_wake_clear(agent);
                 pthread_cond_signal(&tls->agent_cond);
-
-                pthread_mutex_unlock(&tls->agent_mutex);
-
-                args[0] = JS_NewArrayBuffer(ctx, agent->broadcast_sab_buf,
-                                            agent->broadcast_sab_size,
-                                            NULL, NULL, TRUE);
-                args[1] = JS_NewInt32(ctx, agent->broadcast_val);
-                ret_val = JS_Call(ctx, agent->broadcast_func, JS_UNDEFINED,
-                                  2, (JSValueConst *)args);
-                JS_FreeValue(ctx, args[0]);
-                JS_FreeValue(ctx, args[1]);
-                if (JS_IsException(ret_val))
-                    js_std_dump_error(ctx);
-                JS_FreeValue(ctx, ret_val);
-                JS_FreeValue(ctx, agent->broadcast_func);
-                agent->broadcast_func = JS_UNDEFINED;
             }
+            pthread_mutex_unlock(&tls->agent_mutex);
+            if (!pending) {
+                if (agent_wait(agent, rt) < 0) {
+                    JS_ThrowInternalError(ctx, "agent polling failed");
+                    js_std_dump_error(ctx);
+                    break;
+                }
+                continue;
+            }
+            args[0] = JS_NewArrayBuffer(ctx, broadcast_buf, broadcast_size,
+                                        NULL, NULL, TRUE);
+            args[1] = JS_NewInt32(ctx, broadcast_val);
+            ret_val = JS_Call(ctx, agent->broadcast_func, JS_UNDEFINED,
+                              2, (JSValueConst *)args);
+            JS_FreeValue(ctx, args[0]);
+            JS_FreeValue(ctx, args[1]);
+            if (JS_IsException(ret_val))
+                js_std_dump_error(ctx);
+            JS_FreeValue(ctx, ret_val);
+            JS_FreeValue(ctx, agent->broadcast_func);
+            agent->broadcast_func = JS_UNDEFINED;
         }
     }
+    agent_mark_departed(agent);
     JS_FreeValue(ctx, agent->broadcast_func);
 
     JS_FreeContext(ctx);
@@ -673,19 +829,41 @@ static JSValue js_agent_start(JSContext *ctx, JSValue this_val,
     if (!script)
         return JS_EXCEPTION;
     agent = malloc(sizeof(*agent));
+    if (!agent) {
+        JS_FreeCString(ctx, script);
+        return JS_ThrowOutOfMemory(ctx);
+    }
     memset(agent, 0, sizeof(*agent));
     agent->tls = tls;
+    if (agent_wake_init(agent)) {
+        JS_FreeCString(ctx, script);
+        free(agent);
+        return JS_ThrowInternalError(ctx, "cannot initialize agent wake source");
+    }
     agent->broadcast_func = JS_UNDEFINED;
-    agent->broadcast_sab = JS_UNDEFINED;
     agent->script = strdup(script);
     JS_FreeCString(ctx, script);
+    if (!agent->script) {
+        agent_wake_close(agent);
+        free(agent);
+        return JS_ThrowOutOfMemory(ctx);
+    }
     list_add_tail(&agent->link, &tls->agent_list);
     pthread_attr_init(&attr);
     // musl libc gives threads 80 kb stacks, much smaller than
     // JS_DEFAULT_STACK_SIZE (256 kb)
     pthread_attr_setstacksize(&attr, 2 << 20); // 2 MB, glibc default
-    pthread_create(&agent->tid, &attr, agent_start, agent);
-    pthread_attr_destroy(&attr);
+    {
+        int ret = pthread_create(&agent->tid, &attr, agent_start, agent);
+        pthread_attr_destroy(&attr);
+        if (ret) {
+            list_del(&agent->link);
+            agent_wake_close(agent);
+            free(agent->script);
+            free(agent);
+            return JS_ThrowInternalError(ctx, "cannot start agent thread");
+        }
+    }
     return JS_UNDEFINED;
 }
 
@@ -695,10 +873,27 @@ static void js_agent_free(JSContext *ctx)
     struct list_head *el, *el1;
     Test262Agent *agent;
 
+    /* A pending native wait must not make test cleanup join an agent forever.
+       Stop requests touch host state only; each agent tears down its own rt. */
+    pthread_mutex_lock(&tls->agent_mutex);
+    list_for_each(el, &tls->agent_list) {
+        agent = list_entry(el, Test262Agent, link);
+        agent->stopping = TRUE;
+        agent->broadcast_pending = FALSE;
+        agent_wake_set(agent);
+    }
+    pthread_cond_broadcast(&tls->agent_cond);
+    pthread_mutex_unlock(&tls->agent_mutex);
     list_for_each_safe(el, el1, &tls->agent_list) {
+        Test262SharedBufferRoot *root, *next;
         agent = list_entry(el, Test262Agent, link);
         pthread_join(agent->tid, NULL);
-        JS_FreeValue(ctx, agent->broadcast_sab);
+        agent_wake_close(agent);
+        for (root = agent->broadcast_roots; root; root = next) {
+            next = root->next;
+            JS_FreeValue(ctx, root->value);
+            free(root);
+        }
         list_del(&agent->link);
         free(agent);
     }
@@ -710,7 +905,8 @@ static JSValue js_agent_leaving(JSContext *ctx, JSValue this_val,
     Test262Agent *agent = JS_GetContextOpaque(ctx);
     if (!agent)
         return JS_ThrowTypeError(ctx, "must be called inside an agent");
-    /* nothing to do */
+    agent->leaving = TRUE;
+    agent_mark_departed(agent);
     return JS_UNDEFINED;
 }
 
@@ -720,7 +916,7 @@ static BOOL is_broadcast_pending(ThreadLocalStorage *tls)
     Test262Agent *agent;
     list_for_each(el, &tls->agent_list) {
         agent = list_entry(el, Test262Agent, link);
-        if (agent->broadcast_pending)
+        if (!agent->departed && !agent->stopping && agent->broadcast_pending)
             return TRUE;
     }
     return FALSE;
@@ -749,15 +945,31 @@ static JSValue js_agent_broadcast(JSContext *ctx, JSValue this_val,
     /* broadcast the values and wait until all agents have started
        calling their callbacks */
     pthread_mutex_lock(&tls->agent_mutex);
+    /* Retain every published backing until join. Replacing a single JSValue
+       would leak its old reference or free data still viewed by an agent. */
+    list_for_each(el, &tls->agent_list) {
+        Test262SharedBufferRoot *root;
+        agent = list_entry(el, Test262Agent, link);
+        if (agent->departed || agent->stopping)
+            continue;
+        root = malloc(sizeof(*root));
+        if (!root) {
+            pthread_mutex_unlock(&tls->agent_mutex);
+            return JS_ThrowOutOfMemory(ctx);
+        }
+        root->value = JS_DupValue(ctx, sab);
+        root->next = agent->broadcast_roots;
+        agent->broadcast_roots = root;
+    }
     list_for_each(el, &tls->agent_list) {
         agent = list_entry(el, Test262Agent, link);
+        if (agent->departed || agent->stopping)
+            continue;
         agent->broadcast_pending = TRUE;
-        /* the shared array buffer is used by the thread, so increment
-           its refcount */
-        agent->broadcast_sab = JS_DupValue(ctx, sab);
         agent->broadcast_sab_buf = buf;
         agent->broadcast_sab_size = buf_size;
         agent->broadcast_val = val;
+        agent_wake_set(agent);
     }
     pthread_cond_broadcast(&tls->agent_cond);
 
@@ -1427,6 +1639,15 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                 res_val = JS_EXCEPTION;
                 break;
             } else if (ret == 0) {
+                BOOL needs_progress = is_async ? tls->async_done == 0 :
+                    JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING;
+                if (needs_progress && JS_IsNativeJobPending(JS_GetRuntime(ctx))) {
+                    if (JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
+                        res_val = JS_ThrowInternalError(ctx, "native job polling failed");
+                        break;
+                    }
+                    continue;
+                }
                 if (is_async) {
                     /* test if the test called $DONE() once */
                     if (tls->async_done != 1) {
@@ -2104,6 +2325,15 @@ int run_test262_harness_test(ThreadLocalStorage *tls,
                 js_std_dump_error(ctx);
                 ret_code = 1;
             } else if (ret == 0) {
+                if (JS_IsNativeJobPending(JS_GetRuntime(ctx))) {
+                    if (JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
+                        JS_ThrowInternalError(ctx, "native job polling failed");
+                        js_std_dump_error(ctx);
+                        ret_code = 1;
+                        break;
+                    }
+                    continue;
+                }
                 break;
             }
         }

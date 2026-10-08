@@ -257,8 +257,6 @@ The following features are not supported yet:
 
 @item Tail calls@footnote{We believe the current specification of tails calls is too complicated and presents limited practical interests.}
 
-@item Atomics.waitAsync
-
 @end itemize
 
 @subsection ECMA402
@@ -974,6 +972,38 @@ callback can be used to implement an execution timeout.
 
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
+
+@subsection Native asynchronous waits
+
+@code{Atomics.waitAsync} never blocks JavaScript execution, including in a
+runtime where @code{JS_SetCanBlock} disables synchronous waits. A pending
+wait retains its creator context, promise resolver and shared backing buffer.
+Freeing the runtime cancels its waits before releasing those references.
+
+An embedding event loop must continue while @code{JS_IsNativeJobPending(rt)}
+is true. First drain @code{JS_ExecutePendingJob}; then wait with
+@code{JS_PollNativeJobs(rt, timeout_ms)} and drain jobs again. Polling does
+not execute JavaScript. It returns 1 for queued work, 0 for no work or an
+interrupted wait, and -1 for an operating system failure. All these calls
+run on the runtime owner thread. This does not make other QuickJS APIs
+safe to call from foreign threads.
+
+Hosts with their own event multiplexing can combine the borrowed
+@code{JS_GetNativeJobWakeHandle(rt)} with their existing sources. The
+handle is a readable POSIX file descriptor or a Windows HANDLE; -1 means
+that no native source has been activated. Never close, read, consume or
+reset it. After wake or a deadline, call @code{JS_PollNativeJobs(rt, 0)}
+on the owner, then drain jobs. The handle stays valid until runtime
+teardown. @code{JS_GetNativeJobTimeout(rt)} supplies a ceiling in
+milliseconds, bounded by INT_MAX; -1 means no finite deadline. Any
+negative poll timeout requests an unlimited wait; the next native
+deadline still bounds it. On failure, inspect errno on POSIX or
+GetLastError on Windows before another operating system call.
+
+Native completions and ordinary jobs retain their enqueue order. A timeout
+becomes effective when its owner job executes, so a notification can still
+win after the host's elapsed-time check and before that job. The bundled
+command line and Test262 hosts perform these owner-loop steps automatically.
 
 @chapter Internals
 

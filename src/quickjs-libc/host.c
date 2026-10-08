@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -313,8 +314,22 @@ void js_std_loop(JSContext *ctx)
 
         js_std_promise_rejection_check(ctx);
 
-        if (!os_poll_func || os_poll_func(ctx))
+        if (os_poll_func) {
+            err = os_poll_func(ctx);
+            if (err) {
+                if (err == -2)
+                    js_std_dump_error(ctx);
+                break;
+            }
+        } else if (JS_IsNativeJobPending(JS_GetRuntime(ctx))) {
+            if (JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
+                JS_ThrowInternalError(ctx, "native job polling failed");
+                js_std_dump_error(ctx);
+                break;
+            }
+        } else {
             break;
+        }
     }
 }
 
@@ -345,8 +360,18 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
             if (err == 0) {
                 js_std_promise_rejection_check(ctx);
 
-                if (os_poll_func)
-                    os_poll_func(ctx);
+                if (os_poll_func) {
+                    if (os_poll_func(ctx) == -2) {
+                        ret = JS_EXCEPTION;
+                        JS_FreeValue(ctx, obj);
+                        break;
+                    }
+                } else if (JS_IsNativeJobPending(JS_GetRuntime(ctx)) &&
+                           JS_PollNativeJobs(JS_GetRuntime(ctx), -1) < 0) {
+                    ret = JS_ThrowInternalError(ctx, "native job polling failed");
+                    JS_FreeValue(ctx, obj);
+                    break;
+                }
             }
         } else {
             /* not a promise */
