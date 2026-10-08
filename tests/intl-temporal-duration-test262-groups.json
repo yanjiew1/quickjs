@@ -1,0 +1,16 @@
+{
+  "ecma402_sha": "7ae78cfdf8255468ffc8ebda33dafaea952808dd",
+  "ecma262_sha": "6db9135b3d77fd38a81a5a1f1bb6ed77fcca9066",
+  "temporal_proposal_sha": "e8cc03fc970a65a3359e8870e3b35e687ac94e55",
+  "groups": [
+    "test/intl402/DurationFormat/",
+    "test/built-ins/Temporal/Duration/prototype/toLocaleString/"
+  ],
+  "requirements": [
+    "Pinned official test262 checkout and runner remain root-owned",
+    "All strict/sloppy/negative variants; keep Temporal duration string and private-slot cases",
+    "Do not silently filter any required test, locale, option or cross-realm case"
+  ],
+  "executed": false,
+  "reason": "Source-only CPU0 restriction; root scheduling/runtime gate"
+}
