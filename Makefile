@@ -573,6 +573,7 @@ doc/%.html: doc/%.html.pre
 C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
         tests/test_unicode$(EXE) tests/test_bytecode_trace$(EXE) \
         tests/test_typed_array$(EXE) tests/test_allocator$(EXE)
+C_TESTS+=tests/test_qjsc_context_failures$(EXE)
 
 C_TESTS+=tests/test_fuzz_json$(EXE)
 
@@ -610,6 +611,17 @@ tests/test_native_jobs$(EXE): $(OBJDIR)/tests/test_native_jobs.o libquickjs$(LTO
 tests/test_wait_async$(EXE): $(OBJDIR)/tests/test_wait_async.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+# Compile the actual qjsc-generated context/main into the native fault unit.
+$(OBJDIR)/tests/qjsc-context-generated.c: $(QJSC) tests/fixture_qjsc_context.js
+	mkdir -p $(@D)
+	$(QJSC) -e -o $@ tests/fixture_qjsc_context.js
+
+$(OBJDIR)/tests/test_qjsc_context_failures.o: $(OBJDIR)/tests/qjsc-context-generated.c
+$(OBJDIR)/tests/test_qjsc_context_failures.o: CFLAGS+=-I$(OBJDIR)/tests
+
+tests/test_qjsc_context_failures$(EXE): $(OBJDIR)/tests/test_qjsc_context_failures.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -632,6 +644,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_fuzz_exception_ownership$(EXE)
 	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
+	$(WINE) ./tests/test_qjsc_context_failures$(EXE)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
 	$(WINE) ./tests/test_wait_async$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
