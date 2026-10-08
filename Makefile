@@ -45,10 +45,7 @@ endif
 # Temporal defaults on; CONFIG_TEMPORAL=n CONFIG_INTL=n needs no ICU.
 # JavaScript Intl remains optional; ICU is the shared native backend.
 CONFIG_INTL?=n
-CONFIG_TEMPORAL?=n
-ifeq ($(CONFIG_TEMPORAL),y)
-$(error Complete Temporal activation is not part of this preparation commit)
-endif
+CONFIG_TEMPORAL?=y
 # Derived backend switch; callers select the two JavaScript features above.
 override CONFIG_ICU:=n
 ifeq ($(CONFIG_TEMPORAL),y)
@@ -875,10 +872,20 @@ tests/test_qjsc_context_failures$(EXE): $(OBJDIR)/tests/test_qjsc_context_failur
 tests/test_temporal_api$(EXE): $(OBJDIR)/tests/test_temporal_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_temporal$(EXE): $(OBJDIR)/tests/test_temporal.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_temporal_civil$(EXE): $(OBJDIR)/tests/test_temporal_civil.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_temporal_duration_math$(EXE): $(OBJDIR)/tests/test_temporal_duration_math.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_temporal_calendars$(EXE): $(OBJDIR)/tests/test_temporal_calendars.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 .PHONY: test-c
 test-c: $(C_TESTS)
@@ -983,6 +990,7 @@ ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_integration.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_duration_format.js
 ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_temporal_duration.js
 endif
 	$(WINE) ./qjs$(EXE) tests/test_intl_relative_time_format.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_plural_rules.js
@@ -1013,6 +1021,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_date_temporal_bridge.js
 ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned_intl.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_intl.js
 endif
 endif
 
@@ -1175,65 +1184,6 @@ test-date-temporal-time-zone: qjs$(EXE)
 	TZ=US/Eastern ./qjs$(EXE) tests/test_date_temporal_time_zone.js
 
 test-qjsc-temporal: qjsc$(EXE)
+	sh tests/test_qjsc_temporal.sh "./qjsc$(EXE)"
 endif
 endif
-
-C_TESTS+=tests/test_temporal$(EXE)
-tests/test_temporal$(EXE): $(OBJDIR)/tests/test_temporal.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-.PHONY: test-test_temporal-prepared
-test-c: test-test_temporal-prepared
-test-test_temporal-prepared: tests/test_temporal$(EXE)
-	$(WINE) ./tests/test_temporal$(EXE)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o: .obj/intl-build-config
-
-C_TESTS+=tests/test_temporal_calendars$(EXE)
-tests/test_temporal_calendars$(EXE): $(OBJDIR)/tests/test_temporal_calendars.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/calendar.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-.PHONY: test-test_temporal_calendars-prepared
-test-c: test-test_temporal_calendars-prepared
-test-test_temporal_calendars-prepared: tests/test_temporal_calendars$(EXE)
-	$(WINE) ./tests/test_temporal_calendars$(EXE)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/calendar.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/calendar.o: .obj/intl-build-config
-
-C_TESTS+=tests/test_temporal_civil$(EXE)
-tests/test_temporal_civil$(EXE): $(OBJDIR)/tests/test_temporal_civil.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o $(OBJDIR)/src/temporal/relative.o $(OBJDIR)/src/temporal/calendar.o $(OBJDIR)/src/temporal/time-zone.o $(if $(filter y,$(CONFIG_ICU)),$(OBJDIR)/src/intl/locale-data.o)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-.PHONY: test-test_temporal_civil-prepared
-test-c: test-test_temporal_civil-prepared
-test-test_temporal_civil-prepared: tests/test_temporal_civil$(EXE)
-	$(WINE) ./tests/test_temporal_civil$(EXE)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o $(OBJDIR)/src/temporal/relative.o $(OBJDIR)/src/temporal/calendar.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o $(OBJDIR)/src/temporal/relative.o $(OBJDIR)/src/temporal/calendar.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: .obj/intl-build-config
-
-C_TESTS+=tests/test_temporal_duration_math$(EXE)
-tests/test_temporal_duration_math$(EXE): $(OBJDIR)/tests/test_temporal_duration_math.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-.PHONY: test-test_temporal_duration_math-prepared
-test-c: test-test_temporal_duration_math-prepared
-test-test_temporal_duration_math-prepared: tests/test_temporal_duration_math$(EXE)
-	$(WINE) ./tests/test_temporal_duration_math$(EXE)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o: .obj/intl-build-config
-
-C_TESTS+=tests/test_temporal_zones$(EXE)
-tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o $(if $(filter y,$(CONFIG_ICU)),$(OBJDIR)/src/intl/locale-data.o)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-.PHONY: test-test_temporal_zones-prepared
-test-c: test-test_temporal_zones-prepared
-test-test_temporal_zones-prepared: tests/test_temporal_zones$(EXE)
-	$(WINE) ./tests/test_temporal_zones$(EXE)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
-$(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: .obj/intl-build-config
-
-TEMPORAL_PREPARATION_OBJECTS=$(OBJDIR)/src/quickjs/builtins/temporal/calendar-fields.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/calendar-fields.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/duration.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/duration.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/instant.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/instant.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/now.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/now.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/plain-time.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/plain-time.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/plain.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/plain.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-arithmetic.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-arithmetic.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-date-time.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-date-time.prepare.check.o
-$(OBJDIR)/%.prepare.o: %.c | $(OBJDIR)
-	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_CFLAGS) -DCONFIG_TEMPORAL $(DEPFLAGS) -c -o $@ $<
-$(OBJDIR)/%.prepare.check.o: %.c | $(OBJDIR)
-	mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(ICU_CFLAGS) -DCONFIG_TEMPORAL -DCONFIG_CHECK_JSVALUE $(DEPFLAGS) -c -o $@ $<
-.PHONY: check-temporal-preparation
-check-temporal-preparation: $(TEMPORAL_PREPARATION_OBJECTS)
