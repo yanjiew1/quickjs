@@ -3290,12 +3290,590 @@ static void test_module_attribute_cycles(void)
     JS_FreeRuntime(rt);
 }
 
+/* Public module normalization callbacks choose the cache key before lookup. */
+typedef struct ModuleNormalizeState {
+    int normalize1_calls, normalize2_calls, loader1_calls, loader2_calls;
+    int checker_calls, reject_json, source_text;
+    const char *old_prefix, *throw_reason;
+    char last_name[128];
+    JSValue retained_attributes;
+} ModuleNormalizeState;
+
+static void module_normalize_drain(JSRuntime *rt)
+{
+    JSContext *job_ctx;
+    int status, jobs = 0;
+
+    while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        assert(++jobs < 100);
+    assert(status == 0);
+}
+
+static void module_normalize_run(JSContext *ctx, const char *source,
+                                  const char *filename, int flags)
+{
+    JSValue promise = JS_Eval(ctx, source, strlen(source), filename, flags);
+
+    assert(!JS_IsException(promise));
+    module_normalize_drain(JS_GetRuntime(ctx));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, promise);
+    assert(!JS_HasException(ctx));
+}
+
+static void module_normalize_rejection(JSContext *ctx, const char *source,
+                                        const char *filename, int flags,
+                                        const char *reason)
+{
+    JSValue result, error;
+    const char *text;
+
+    result = JS_Eval(ctx, source, strlen(source), filename, flags);
+    if (JS_IsException(result)) {
+        assert(JS_HasException(ctx));
+        error = JS_GetException(ctx);
+    } else {
+        module_normalize_drain(JS_GetRuntime(ctx));
+        assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+        error = JS_PromiseResult(ctx, result);
+    }
+    text = JS_ToCString(ctx, error);
+    assert(text && strcmp(text, reason) == 0);
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, result);
+    assert(!JS_HasException(ctx));
+}
+
+static int module_normalize_check_attributes(JSContext *ctx, void *opaque,
+                                               JSValueConst attributes)
+{
+    ModuleNormalizeState *state = opaque;
+    JSPropertyEnum *properties;
+    uint32_t length, i;
+    int status = 0;
+
+    state->checker_calls++;
+    if (JS_GetOwnPropertyNames(ctx, &properties, &length, attributes,
+                               JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0)
+        return -1;
+    for (i = 0; i < length; i++) {
+        const char *key = JS_AtomToCString(ctx, properties[i].atom);
+        if (!key) {
+            status = -1;
+            break;
+        }
+        if (strcmp(key, "type") && strcmp(key, "flavor")) {
+            JS_ThrowTypeError(ctx, "unsupported test attribute");
+            status = -1;
+        }
+        JS_FreeCString(ctx, key);
+        if (status < 0)
+            break;
+    }
+    JS_FreePropertyEnum(ctx, properties, length);
+    return status;
+}
+
+/* Imported attributes are own enumerable data properties, regardless of proto. */
+static JSValue module_normalize_own_attribute(JSContext *ctx,
+                                               JSValueConst attributes,
+                                               const char *name)
+{
+    JSPropertyDescriptor descriptor;
+    JSAtom atom;
+    int status;
+
+    if (!JS_IsObject(attributes))
+        return JS_UNDEFINED;
+    atom = JS_NewAtom(ctx, name);
+    if (atom == JS_ATOM_NULL)
+        return JS_EXCEPTION;
+    status = JS_GetOwnProperty(ctx, &descriptor, attributes, atom);
+    JS_FreeAtom(ctx, atom);
+    if (status < 0)
+        return JS_EXCEPTION;
+    if (status == 0)
+        return JS_UNDEFINED;
+    JS_FreeValue(ctx, descriptor.getter);
+    JS_FreeValue(ctx, descriptor.setter);
+    if (!(descriptor.flags & JS_PROP_ENUMERABLE)) {
+        JS_FreeValue(ctx, descriptor.value);
+        return JS_UNDEFINED;
+    }
+    return descriptor.value;
+}
+
+static char *module_normalize_legacy(JSContext *ctx, const char *base_name,
+                                      const char *name, void *opaque)
+{
+    ModuleNormalizeState *state = opaque;
+    char key[128];
+    int length;
+
+    (void)base_name;
+    state->normalize1_calls++;
+    length = snprintf(key, sizeof(key), "%s:%s", state->old_prefix, name);
+    assert(length >= 0 && (size_t)length < sizeof(key));
+    return js_strdup(ctx, key);
+}
+
+static char *module_normalize_with_attributes(JSContext *ctx,
+                                                const char *base_name,
+                                                const char *name,
+                                                JSValueConst attributes,
+                                                void *opaque)
+{
+    ModuleNormalizeState *state = opaque;
+    JSValue type = JS_UNDEFINED;
+    const char *text = NULL;
+    char key[128];
+    int length;
+
+    (void)base_name;
+    state->normalize2_calls++;
+    if (state->throw_reason) {
+        JS_Throw(ctx, JS_NewString(ctx, state->throw_reason));
+        return NULL;
+    }
+    if (JS_IsObject(attributes)) {
+        if (JS_IsUndefined(state->retained_attributes))
+            state->retained_attributes = JS_DupValue(ctx, attributes);
+        /* The borrowed input remains live while the callback runs GC. */
+        JS_RunGC(JS_GetRuntime(ctx));
+        type = module_normalize_own_attribute(ctx, attributes, "type");
+        if (JS_IsException(type))
+            return NULL;
+        if (!JS_IsUndefined(type)) {
+            assert(JS_IsString(type));
+            text = JS_ToCString(ctx, type);
+            if (!text) {
+                JS_FreeValue(ctx, type);
+                return NULL;
+            }
+        }
+    } else {
+        assert(JS_IsUndefined(attributes));
+    }
+    if (text && state->reject_json && !strcmp(text, "json")) {
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, type);
+        JS_Throw(ctx, JS_NewString(ctx, "cached type=json rejected"));
+        return NULL;
+    }
+    /* The host chooses a name; the core may also distinguish attributes. */
+    length = snprintf(key, sizeof(key), "%s%s%s", name, text ? "#" : "",
+                       text ? text : "");
+    assert(length >= 0 && (size_t)length < sizeof(key));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, type);
+    return js_strdup(ctx, key);
+}
+
+static int module_normalize_module_init(JSContext *ctx, JSModuleDef *module)
+{
+    return JS_SetModuleExport(ctx, module, "default",
+                              JS_GetModulePrivateValue(ctx, module));
+}
+
+static JSModuleDef *module_normalize_load(JSContext *ctx, const char *name,
+                                           ModuleNormalizeState *state)
+{
+    JSModuleDef *module;
+    JSValue value;
+
+    assert(strlen(name) < sizeof(state->last_name));
+    strcpy(state->last_name, name);
+    if (state->source_text) {
+        static const char source[] = "export default 'source-text';";
+        value = JS_Eval(ctx, source, sizeof(source) - 1, name,
+                        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        if (JS_IsException(value))
+            return NULL;
+        module = JS_VALUE_GET_PTR(value);
+        JS_FreeValue(ctx, value);
+        return module;
+    }
+    value = JS_NewString(ctx, name);
+    if (JS_IsException(value))
+        return NULL;
+    module = JS_NewCModule(ctx, name, module_normalize_module_init);
+    if (!module) {
+        JS_FreeValue(ctx, value);
+        return NULL;
+    }
+    JS_SetModulePrivateValue(ctx, module, value);
+    if (JS_AddModuleExport(ctx, module, "default") < 0)
+        return NULL;
+    return module;
+}
+
+static JSModuleDef *module_normalize_loader1(JSContext *ctx, const char *name,
+                                               void *opaque)
+{
+    ModuleNormalizeState *state = opaque;
+
+    state->loader1_calls++;
+    return module_normalize_load(ctx, name, state);
+}
+
+static JSModuleDef *module_normalize_loader2(JSContext *ctx, const char *name,
+                                               void *opaque,
+                                               JSValueConst attributes)
+{
+    ModuleNormalizeState *state = opaque;
+
+    assert(JS_IsUndefined(attributes) || JS_IsObject(attributes));
+    state->loader2_calls++;
+    return module_normalize_load(ctx, name, state);
+}
+
+static void test_module_normalize_attributes(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx, *other;
+    JSValue global, other_global, first, second, type;
+    ModuleNormalizeState state = { .retained_attributes = JS_UNDEFINED };
+    JSModuleNormalizeFunc2 *normalize = module_normalize_with_attributes;
+    void (*install)(JSRuntime *, JSModuleNormalizeFunc2 *) =
+        JS_SetModuleNormalizeFunc2;
+    int calls, loads;
+    const char *text;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetModuleLoaderFunc2(rt, NULL, module_normalize_loader2,
+                            module_normalize_check_attributes, &state);
+    install(rt, normalize);
+    module_normalize_run(ctx,
+        "import * as a from 'virtual' with {type:'variant-a'};"
+        "import * as again from 'virtual' with {type:'variant-a'};"
+        "globalThis.moduleNormalA=a;"
+        "if(a!==again || a.default!=='virtual#variant-a')"
+        "throw Error('static identity');",
+        "attribute-identity.js", JS_EVAL_TYPE_MODULE);
+    assert(state.loader2_calls == 1 && state.normalize2_calls >= 1);
+    calls = state.normalize2_calls;
+    module_normalize_run(ctx,
+        "(async()=>{"
+        "const a=await import('virtual',{with:{type:'variant-a'}});"
+        "const b=await import('virtual',{with:{type:'variant-b'}});"
+        "const again=await import('virtual',{with:{type:'variant-b'}});"
+        "if(a!==moduleNormalA || a===b || again!==b ||"
+        "b.default!=='virtual#variant-b')"
+        "throw Error('host identity'); globalThis.moduleNormalB=b;"
+        "})()", "attribute-two-types.js", JS_EVAL_TYPE_GLOBAL);
+    assert(state.normalize2_calls == calls + 3 && state.loader2_calls == 2);
+    calls = state.normalize2_calls;
+    module_normalize_run(ctx,
+        "(async()=>{"
+        "const x=await import('virtual',"
+        "{with:{type:'variant-a',flavor:'stable'}});"
+        "const y=await import('virtual',"
+        "{with:{flavor:'stable',type:'variant-a'}});"
+        "let reads=0; const options={with:{get type(){reads++;"
+        "return 'variant-a'}}};"
+        "const z=await import('virtual',options);"
+        "if(x!==y || z!==moduleNormalA || reads!==1)"
+        "throw Error('cache/getters');"
+        "})()", "attribute-repeat.js", JS_EVAL_TYPE_GLOBAL);
+    assert(state.normalize2_calls == calls + 3);
+    loads = state.loader2_calls;
+    calls = state.normalize2_calls;
+    module_normalize_run(ctx,
+        "(async()=>{try {await import('virtual',{with:{type:7}})}"
+        "catch(e){if(e instanceof TypeError)return; throw e}"
+        "throw Error('non-string accepted')})()",
+        "attribute-invalid.js", JS_EVAL_TYPE_GLOBAL);
+    assert(state.normalize2_calls == calls && state.loader2_calls == loads);
+    module_normalize_run(ctx,
+        "(async()=>{try {await import('virtual',{with:{unsupported:'yes'}})}"
+        "catch(e){if(e instanceof TypeError)return; throw e}"
+        "throw Error('unsupported accepted')})()",
+        "attribute-unsupported.js", JS_EVAL_TYPE_GLOBAL);
+    assert(state.normalize2_calls == calls && state.loader2_calls == loads);
+    module_normalize_run(ctx,
+        "import * as a from 'empty';"
+        "import * as b from 'empty' with {};"
+        "if(a!==b || a.default!=='empty') throw Error('static empty');"
+        "globalThis.moduleEmpty=a;",
+        "attribute-empty.js", JS_EVAL_TYPE_MODULE);
+    module_normalize_run(ctx,
+        "(async()=>{const a=await import('empty');"
+        "const b=await import('empty',{with:{}});"
+        "if(a!==moduleEmpty || b!==a) throw Error('dynamic empty')})()",
+        "attribute-empty-dynamic.js", JS_EVAL_TYPE_GLOBAL);
+    assert(state.loader2_calls == loads + 1);
+    other = JS_NewContext(rt);
+    assert(other);
+    module_normalize_run(other,
+        "import * as a from 'virtual' with {type:'variant-a'};"
+        "globalThis.moduleNormalA=a;", "other-context.js", JS_EVAL_TYPE_MODULE);
+    assert(state.loader2_calls == loads + 2);
+    global = JS_GetGlobalObject(ctx);
+    other_global = JS_GetGlobalObject(other);
+    first = JS_GetPropertyStr(ctx, global, "moduleNormalA");
+    second = JS_GetPropertyStr(other, other_global, "moduleNormalA");
+    assert(JS_IsObject(first) && JS_IsObject(second));
+    assert(!JS_StrictEq(ctx, first, second));
+    JS_FreeValue(ctx, first);
+    JS_FreeValue(other, second);
+    JS_FreeValue(ctx, global);
+    JS_FreeValue(other, other_global);
+    JS_FreeContext(other);
+    JS_RunGC(rt);
+    type = module_normalize_own_attribute(ctx, state.retained_attributes, "type");
+    text = JS_ToCString(ctx, type);
+    assert(text && !strcmp(text, "variant-a"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, type);
+    JS_FreeValue(ctx, state.retained_attributes);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_module_normalize_rejection(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    ModuleNormalizeState state = {
+        .reject_json = 1, .source_text = 1,
+        .retained_attributes = JS_UNDEFINED,
+    };
+    int calls;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetModuleLoaderFunc2(rt, NULL, module_normalize_loader2,
+                            module_normalize_check_attributes, &state);
+    JS_SetModuleNormalizeFunc2(rt, module_normalize_with_attributes);
+    module_normalize_run(ctx,
+        "import source from 'cached'; if(source!=='source-text')"
+        "throw Error('fixture');", "cache-source.js", JS_EVAL_TYPE_MODULE);
+    assert(state.loader2_calls == 1);
+    calls = state.normalize2_calls;
+    module_normalize_rejection(ctx,
+        "import source from 'cached' with {type:'json'};",
+        "cache-reject-static.js", JS_EVAL_TYPE_MODULE,
+        "cached type=json rejected");
+    assert(state.normalize2_calls == calls + 1 && state.loader2_calls == 1);
+    module_normalize_rejection(ctx, "import('cached',{with:{type:'json'}})",
+        "cache-reject-dynamic.js", JS_EVAL_TYPE_GLOBAL,
+        "cached type=json rejected");
+    assert(state.normalize2_calls == calls + 2 && state.loader2_calls == 1);
+    state.throw_reason = "normalizer sentinel";
+    module_normalize_rejection(ctx, "import 'uncached-static';",
+        "throw-static.js", JS_EVAL_TYPE_MODULE, "normalizer sentinel");
+    module_normalize_rejection(ctx, "import('uncached-dynamic')",
+        "throw-dynamic.js", JS_EVAL_TYPE_GLOBAL, "normalizer sentinel");
+    assert(state.normalize2_calls == calls + 4 && state.loader2_calls == 1);
+    state.throw_reason = NULL;
+    module_normalize_rejection(ctx, "import('reverse',{with:{type:'json'}})",
+        "reverse-json.js", JS_EVAL_TYPE_GLOBAL, "cached type=json rejected");
+    assert(state.loader2_calls == 1);
+    module_normalize_run(ctx, "import('reverse')", "reverse-source.js",
+                          JS_EVAL_TYPE_GLOBAL);
+    assert(state.loader2_calls == 2 && !strcmp(state.last_name, "reverse"));
+    JS_FreeValue(ctx, state.retained_attributes);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_module_normalize_setters(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    ModuleNormalizeState first = {
+        .old_prefix = "one", .retained_attributes = JS_UNDEFINED,
+    }, second = {
+        .old_prefix = "two", .retained_attributes = JS_UNDEFINED,
+    };
+    int checks, normalizers, loads;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetModuleLoaderFunc2(rt, module_normalize_legacy, module_normalize_loader2,
+                            module_normalize_check_attributes, &first);
+    JS_SetModuleNormalizeFunc2(rt, module_normalize_with_attributes);
+    module_normalize_run(ctx, "import('first',{with:{type:'variant-a'}})",
+                          "setters.js", JS_EVAL_TYPE_GLOBAL);
+    assert(first.normalize1_calls == 0 && first.normalize2_calls == 1);
+    assert(first.loader2_calls == 1 && first.checker_calls == 1);
+    assert(!strcmp(first.last_name, "first#variant-a"));
+    JS_SetModuleLoaderFunc2(rt, module_normalize_legacy, module_normalize_loader2,
+                            module_normalize_check_attributes, &second);
+    module_normalize_run(ctx, "import('second',{with:{type:'variant-a'}})",
+                          "setters.js", JS_EVAL_TYPE_GLOBAL);
+    assert(second.normalize1_calls == 1 && second.normalize2_calls == 0);
+    assert(second.loader2_calls == 1 && second.checker_calls == 1);
+    assert(!strcmp(second.last_name, "two:second"));
+    JS_SetModuleNormalizeFunc2(rt, module_normalize_with_attributes);
+    module_normalize_run(ctx, "import('third',{with:{type:'variant-a'}})",
+                          "setters.js", JS_EVAL_TYPE_GLOBAL);
+    assert(second.normalize2_calls == 1 && second.loader2_calls == 2);
+    assert(second.checker_calls == 2);
+    assert(!strcmp(second.last_name, "third#variant-a"));
+    checks = first.checker_calls;
+    JS_SetModuleLoaderFunc(rt, module_normalize_legacy,
+                           module_normalize_loader1, &first);
+    module_normalize_run(ctx, "import('fourth',{with:{unsupported:'yes'}})",
+                          "setters.js", JS_EVAL_TYPE_GLOBAL);
+    assert(first.normalize1_calls == 1 && first.normalize2_calls == 1);
+    assert(first.loader1_calls == 1 && first.checker_calls == checks);
+    assert(!strcmp(first.last_name, "one:fourth"));
+    JS_SetModuleNormalizeFunc2(rt, module_normalize_with_attributes);
+    module_normalize_run(ctx, "import('fifth',{with:{type:'variant-b'}})",
+                          "setters.js", JS_EVAL_TYPE_GLOBAL);
+    assert(first.normalize2_calls == 2 && first.loader1_calls == 2);
+    assert(first.checker_calls == checks);
+    assert(!strcmp(first.last_name, "fifth#variant-b"));
+    normalizers = first.normalize1_calls + first.normalize2_calls;
+    JS_SetModuleNormalizeFunc2(rt, NULL);
+    module_normalize_run(ctx, "import('./target')", "dir/entry.js",
+                          JS_EVAL_TYPE_GLOBAL);
+    assert(!strcmp(first.last_name, "dir/target"));
+    assert(first.normalize1_calls + first.normalize2_calls == normalizers);
+    loads = first.loader1_calls;
+    JS_SetModuleLoaderFunc(rt, NULL, NULL, &second);
+    module_normalize_run(ctx, "import('./target')", "dir/entry.js",
+                          JS_EVAL_TYPE_GLOBAL);
+    module_normalize_rejection(ctx, "import('./missing')", "dir/entry.js",
+        JS_EVAL_TYPE_GLOBAL,
+        "ReferenceError: could not load module 'dir/missing'");
+    assert(first.loader1_calls == loads && second.loader1_calls == 0);
+    JS_SetModuleLoaderFunc2(rt, NULL, NULL,
+                            module_normalize_check_attributes, &second);
+    JS_SetModuleNormalizeFunc2(rt, NULL);
+    checks = second.checker_calls;
+    module_normalize_run(ctx, "import('./target',{with:{}})",
+                          "dir/entry.js", JS_EVAL_TYPE_GLOBAL);
+    module_normalize_rejection(ctx,
+        "import('./missing',{with:{type:'variant-b'}})", "dir/entry.js",
+        JS_EVAL_TYPE_GLOBAL,
+        "ReferenceError: could not load module 'dir/missing'");
+    assert(second.checker_calls == checks + 2 && second.loader2_calls == 2);
+    assert(second.normalize1_calls == 1 && second.normalize2_calls == 1);
+    JS_FreeValue(ctx, first.retained_attributes);
+    JS_FreeValue(ctx, second.retained_attributes);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+/* Bytecode restoration can give the attribute object Object.prototype. */
+static void test_module_normalize_bytecode(void)
+{
+    static const struct {
+        const char *source, *expected_name, *expected_type;
+    } cases[] = {
+        {
+            "import value from 'restored-flavor' with {flavor:'stable'};"
+            "globalThis.moduleNormalRestored=value;",
+            "restored-flavor", NULL,
+        },
+        {
+            "import value from 'restored-own' with "
+            "{type:'variant-a',flavor:'stable'};"
+            "globalThis.moduleNormalRestored=value;",
+            "restored-own#variant-a", "variant-a",
+        },
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    size_t i;
+
+    assert(rt);
+    for (i = 0; i < countof(cases); i++) {
+        ModuleNormalizeState compile_state = {
+            .retained_attributes = JS_UNDEFINED,
+        }, state = {
+            .reject_json = 1, .retained_attributes = JS_UNDEFINED,
+        };
+        JSContext *compile_ctx = JS_NewContext(rt), *ctx;
+        JSValue compiled, restored, promise, global, value, type, flavor;
+        uint8_t *bytecode;
+        size_t bytecode_size;
+        const char *text;
+
+        assert(compile_ctx);
+        JS_SetModuleLoaderFunc2(rt, NULL, module_normalize_loader2,
+                                module_normalize_check_attributes, &compile_state);
+        JS_SetModuleNormalizeFunc2(rt, module_normalize_with_attributes);
+        compiled = JS_Eval(compile_ctx, cases[i].source, strlen(cases[i].source),
+                           "normalizer-bytecode.js",
+                           JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        assert(!JS_IsException(compiled));
+        bytecode = JS_WriteObject(compile_ctx, &bytecode_size, compiled,
+                                   JS_WRITE_OBJ_BYTECODE);
+        assert(bytecode && bytecode_size > 0);
+        JS_FreeValue(compile_ctx, compiled);
+        JS_FreeValue(compile_ctx, compile_state.retained_attributes);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        JS_SetModuleLoaderFunc2(rt, NULL, module_normalize_loader2,
+                                module_normalize_check_attributes, &state);
+        JS_SetModuleNormalizeFunc2(rt, module_normalize_with_attributes);
+        restored = JS_ReadObject(ctx, bytecode, bytecode_size, JS_READ_OBJ_BYTECODE);
+        js_free(compile_ctx, bytecode);
+        assert(!JS_IsException(restored));
+        JS_FreeContext(compile_ctx);
+        /* An inherited type must neither choose a key nor reject this request. */
+        check_eval(ctx, "Object.prototype.type = 'json'; true");
+        assert(state.normalize2_calls == 0 && state.loader2_calls == 0);
+        JS_RunGC(rt);
+        assert(JS_ResolveModule(ctx, restored) == 0);
+        assert(state.normalize2_calls == 1 && state.loader2_calls == 1);
+        assert(!strcmp(state.last_name, cases[i].expected_name));
+        assert(JS_IsObject(state.retained_attributes));
+        promise = JS_EvalFunction(ctx, restored);
+        assert(!JS_IsException(promise));
+        module_normalize_drain(rt);
+        assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+        JS_FreeValue(ctx, promise);
+        global = JS_GetGlobalObject(ctx);
+        value = JS_GetPropertyStr(ctx, global, "moduleNormalRestored");
+        text = JS_ToCString(ctx, value);
+        assert(text && !strcmp(text, cases[i].expected_name));
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, global);
+        /* The callback duplicated the borrowed object; inspect it after GC. */
+        JS_RunGC(rt);
+        type = module_normalize_own_attribute(ctx, state.retained_attributes, "type");
+        assert(!JS_IsException(type));
+        if (cases[i].expected_type) {
+            text = JS_ToCString(ctx, type);
+            assert(text && !strcmp(text, cases[i].expected_type));
+            JS_FreeCString(ctx, text);
+        } else {
+            assert(JS_IsUndefined(type));
+        }
+        JS_FreeValue(ctx, type);
+        flavor = module_normalize_own_attribute(ctx, state.retained_attributes,
+                                                  "flavor");
+        text = JS_ToCString(ctx, flavor);
+        assert(text && !strcmp(text, "stable"));
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, flavor);
+        check_eval(ctx, "delete Object.prototype.type; true");
+        JS_FreeValue(ctx, state.retained_attributes);
+        assert(!JS_HasException(ctx));
+        JS_FreeContext(ctx);
+        JS_RunGC(rt);
+    }
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "module-normalize-attributes", test_module_normalize_attributes },
+        { "module-normalize-rejection", test_module_normalize_rejection },
+        { "module-normalize-setters", test_module_normalize_setters },
+        { "module-normalize-bytecode", test_module_normalize_bytecode },
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },

@@ -1,9 +1,11 @@
 /*
  * QuickJS Javascript Engine
  *
- * Copyright (c) 2017-2021 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2026 Yan-Jie Wang
- * Copyright (c) 2017-2021 Charlie Gordon
+ * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1002,6 +1004,19 @@ typedef struct JSModuleDef JSModuleDef;
 typedef char *JSModuleNormalizeFunc(JSContext *ctx,
                                     const char *module_base_name,
                                     const char *module_name, void *opaque);
+/* Called before loaded-module lookup. Return a js_malloc()-allocated name,
+   or NULL with a pending exception. Base/specifier strings and attributes are
+   borrowed for the callback. Attributes are undefined or an object whose own
+   enumerable properties with string keys contain string-valued import
+   attributes. No prototype is guaranteed. Read attributes as own properties;
+   do not free or mutate them. Retain with JS_DupValue() if needed after return.
+   A normalized name need not be the complete request identity; attributes may
+   also distinguish it. */
+typedef char *JSModuleNormalizeFunc2(JSContext *ctx,
+                                     const char *module_base_name,
+                                     const char *module_name,
+                                     JSValueConst attributes,
+                                     void *opaque);
 typedef JSModuleDef *JSModuleLoaderFunc(JSContext *ctx,
                                         const char *module_name, void *opaque);
 typedef JSModuleDef *JSModuleLoaderFunc2(JSContext *ctx,
@@ -1023,6 +1038,12 @@ void JS_SetModuleLoaderFunc2(JSRuntime *rt,
                              JSModuleLoaderFunc2 *module_loader,
                              JSModuleCheckSupportedImportAttributes *module_check_attrs,
                              void *opaque);
+/* Set an attributes-aware normalizer after either module loader setter.
+   Uses the loader opaque; leaves loader, checker and loaded modules intact.
+   NULL selects the default filename normalizer. Either loader setter resets
+   this callback. Configure callbacks on the runtime's owner thread. */
+void JS_SetModuleNormalizeFunc2(JSRuntime *rt,
+                                JSModuleNormalizeFunc2 *module_normalize);
 /* return the import.meta object of a module */
 JSValue JS_GetImportMeta(JSContext *ctx, JSModuleDef *m);
 JSAtom JS_GetModuleName(JSContext *ctx, JSModuleDef *m);
