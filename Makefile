@@ -416,6 +416,8 @@ ifeq ($(CONFIG_INTL),y)
 # Source components join libquickjs.a; no additional archive is produced.
 INTL_SRCS= \
     src/intl/libintl.c \
+    src/intl/plural.c \
+    src/intl/plural-icu.c \
     src/quickjs/builtins/intl/options.c \
     src/quickjs/builtins/intl/values.c \
     src/quickjs/builtins/intl/locale-syntax.c \
@@ -734,6 +736,7 @@ C_TESTS+=tests/test_temporal_zones$(EXE)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+C_TESTS+=tests/test_intl_plural$(EXE)
 C_TESTS+=tests/test_intl_number_format_embed$(EXE)
 C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
 ifeq ($(CONFIG_INTL),y)
@@ -811,6 +814,8 @@ tests/test_intl_number_format_embed$(EXE): $(OBJDIR)/tests/test_intl_number_form
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 
+tests/test_intl_plural$(EXE): $(OBJDIR)/tests/test_intl_plural.o $(OBJDIR)/src/intl/plural.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 ifeq ($(CONFIG_ICU),y)
 $(OBJDIR)/src/temporal/time-zone.date-test.o: src/temporal/time-zone.c .obj/intl-build-config | $(OBJDIR)
@@ -865,6 +870,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+	$(WINE) ./tests/test_intl_plural$(EXE)
 	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
