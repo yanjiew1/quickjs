@@ -143,6 +143,21 @@ jobs:
           MSAN_OPTIONS: halt_on_error=1
         run: |
           make CONFIG_MSAN=y CONFIG_CLANG=y test
+      - name: Install pinned Test262
+        run: make test2-bootstrap
+      - name: Run Test262
+        env:
+          MSAN_OPTIONS: halt_on_error=1
+        run: |
+          ./run-test262 -T 2 -t -m -c test262.conf -a
+      - name: Preserve Test262 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test262-clang-MSan
+          path: |
+            test262_report.txt
+            test262_errors.txt
 
   macos:
     name: macOS
