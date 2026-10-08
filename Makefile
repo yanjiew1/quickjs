@@ -750,6 +750,7 @@ C_TESTS+=tests/test_temporal_calendars$(EXE)
 C_TESTS+=tests/test_temporal_zones$(EXE)
 endif
 ifeq ($(CONFIG_ICU),y)
+C_TESTS+=tests/test_date_zone_order$(EXE)
 endif
 C_TESTS+=tests/test_intl_duration_format_embed$(EXE)
 C_TESTS+=tests/test_intl_services_api$(EXE)
@@ -847,6 +848,8 @@ $(OBJDIR)/src/temporal/time-zone.date-test.o: src/temporal/time-zone.c .obj/intl
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(ICU_CFLAGS) $(DEPFLAGS) -Dqjs_temporal_system_zone=qjs_temporal_system_zone_test_backend -c -o $@ $<
 
+tests/test_date_zone_order$(EXE): $(OBJDIR)/tests/test_date_zone_order.o $(OBJDIR)/src/temporal/time-zone.date-test.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 endif
 
 tests/test_intl_duration_format_embed$(EXE): $(OBJDIR)/tests/test_intl_duration_format_embed.o libquickjs$(LTOEXT).a
@@ -900,6 +903,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./tests/test_temporal_zones$(EXE)
 endif
 ifeq ($(CONFIG_ICU),y)
+	$(WINE) ./tests/test_date_zone_order$(EXE)
 endif
 	$(WINE) ./tests/test_intl_duration_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_services_api$(EXE)
@@ -943,6 +947,7 @@ test: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) -m tests/test_module.js
 	$(WINE) ./qjs$(EXE) -m tests/test_module_names.js
 	$(WINE) ./qjs$(EXE) --std tests/test_builtin.js
+	$(WINE) ./qjs$(EXE) tests/test_date_setter_snapshot.js
 	$(WINE) ./qjs$(EXE) tests/test_loop.js
 	$(WINE) ./qjs$(EXE) tests/test_bigint.js
 	$(WINE) ./qjs$(EXE) -m tests/test_async.js
@@ -998,6 +1003,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_zones.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_now.js
+	$(WINE) ./qjs$(EXE) tests/test_date_temporal_bridge.js
 ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned_intl.js
 endif
@@ -1158,6 +1164,8 @@ ifneq ($(CONFIG_WIN32),y)
 test: test-date-temporal-time-zone test-qjsc-temporal
 
 test-date-temporal-time-zone: qjs$(EXE)
+	TZ=America/New_York ./qjs$(EXE) tests/test_date_temporal_time_zone.js
+	TZ=US/Eastern ./qjs$(EXE) tests/test_date_temporal_time_zone.js
 
 test-qjsc-temporal: qjsc$(EXE)
 endif
