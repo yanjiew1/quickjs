@@ -865,6 +865,14 @@ test-c: test-test_temporal_calendars-prepared
 test-test_temporal_calendars-prepared: tests/test_temporal_calendars$(EXE)
 	$(WINE) ./tests/test_temporal_calendars$(EXE)
 
+C_TESTS+=tests/test_temporal_civil$(EXE)
+tests/test_temporal_civil$(EXE): $(OBJDIR)/tests/test_temporal_civil.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o $(OBJDIR)/src/temporal/relative.o $(OBJDIR)/src/temporal/calendar.o $(OBJDIR)/src/temporal/time-zone.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-test_temporal_civil-prepared
+test-c: test-test_temporal_civil-prepared
+test-test_temporal_civil-prepared: tests/test_temporal_civil$(EXE)
+	$(WINE) ./tests/test_temporal_civil$(EXE)
+
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
 tests/test_temporal_duration_math$(EXE): $(OBJDIR)/tests/test_temporal_duration_math.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -872,3 +880,11 @@ tests/test_temporal_duration_math$(EXE): $(OBJDIR)/tests/test_temporal_duration_
 test-c: test-test_temporal_duration_math-prepared
 test-test_temporal_duration_math-prepared: tests/test_temporal_duration_math$(EXE)
 	$(WINE) ./tests/test_temporal_duration_math$(EXE)
+
+C_TESTS+=tests/test_temporal_zones$(EXE)
+tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-test_temporal_zones-prepared
+test-c: test-test_temporal_zones-prepared
+test-test_temporal_zones-prepared: tests/test_temporal_zones$(EXE)
+	$(WINE) ./tests/test_temporal_zones$(EXE)
