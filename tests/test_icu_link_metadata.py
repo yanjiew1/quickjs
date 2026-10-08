@@ -44,7 +44,7 @@ class PrivateLibraryMetadata(unittest.TestCase):
                    "CONFIG_COSMO=", "CONFIG_DARWIN=", "CONFIG_FREEBSD=",
                    "CONFIG_LTO=", "CONFIG_M32=", "CONFIG_PROFILE=",
                    "CONFIG_ASAN=", "CONFIG_UBSAN=", "CONFIG_MSAN=",
-                   "CONFIG_TSAN=", "CONFIG_TEMPORAL=y", "CONFIG_INTL=n",
+                   "CONFIG_TSAN=", "CONFIG_TEMPORAL=n", "CONFIG_INTL=y",
                    "CONFIG_WIN32=" + ("y" if windows else ""),
                    "CROSS_PREFIX=" + ("fixture-target-" if windows else ""),
                    "CC=" + str(self.compiler), "HOST_CC=" + str(self.compiler),
