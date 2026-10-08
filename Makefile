@@ -432,7 +432,8 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/display-names.c \
     src/quickjs/builtins/intl/number-common.c \
     src/quickjs/builtins/intl/number-format.c \
-    src/quickjs/builtins/intl/plural-rules.c
+    src/quickjs/builtins/intl/plural-rules.c \
+    src/quickjs/builtins/intl/relative-time-format.c
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
@@ -1030,6 +1031,7 @@ ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
 ifeq ($(CONFIG_TEMPORAL),y)
 endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_relative_time_format.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_plural_rules.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_number_locale_methods.js
 ifeq ($(CONFIG_INTL_LEGACY),y)
