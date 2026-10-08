@@ -134,8 +134,10 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
             dbuf_printf(&dbuf, ":%d:%d", line_num, col_num);
         dbuf_putc(&dbuf, '\n');
         str = JS_NewString(ctx, filename);
-        if (JS_IsException(str))
+        if (JS_IsException(str)) {
+            dbuf_free(&dbuf);
             return;
+        }
         /* Note: SpiderMonkey does that, could update once there is a standard */
         if (JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_fileName, str,
                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
@@ -143,6 +145,7 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
             JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, col_num),
                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0) {
+            dbuf_free(&dbuf);
             return;
         }
     }

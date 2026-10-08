@@ -616,8 +616,51 @@ static void test_raw_context_allocation_failure(void)
     assert(failure.live_allocations == 0);
 }
 
+static void check_backtrace_allocation_failure(unsigned fail_at)
+{
+    AllocationFailure failure = { 0 };
+    PromiseAllocationFailure padding = { 0 };
+    JSRuntime *rt = new_allocation_failure_runtime(&failure);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue error, exception;
+    char filename[2048];
+    void *ptr;
+
+    assert(ctx);
+    error = JS_NewError(ctx);
+    assert(!JS_IsException(error));
+    memset(filename, 'x', sizeof(filename) - 1);
+    filename[sizeof(filename) - 1] = '\0';
+    exhaust_pooled_free_blocks(rt, &padding);
+    failure.allocations_until_failure = fail_at;
+    build_backtrace(ctx, error, filename, -1, 1, 0);
+    assert(failure.failures == 1);
+    assert(failure.allocations_until_failure == 0);
+    assert(JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, error);
+    while (padding.padding) {
+        ptr = padding.padding;
+        memcpy(&padding.padding, ptr, sizeof(padding.padding));
+        js_free_rt(rt, ptr);
+    }
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
+static void test_backtrace_allocation_failure(void)
+{
+    /* The large filename follows the DynBuf allocation. Exhausting spare
+       pool blocks exposes the subsequent metadata allocation as well. */
+    check_backtrace_allocation_failure(2);
+    check_backtrace_allocation_failure(3);
+}
+
 int main(void)
 {
+    test_backtrace_allocation_failure();
     test_raw_context_allocation_failure();
     test_malloc_limit_overflow();
     test_realloc_limit_overflow();
