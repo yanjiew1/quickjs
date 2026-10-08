@@ -1,0 +1,59 @@
+name: ci-qemu
+
+on:
+  pull_request:
+    paths:
+      - '**'
+      - '!.gitignore'
+      - '!LICENSE'
+      - '!TODO'
+      - '!doc/**'
+      - '!examples/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/ci-qemu.yml'
+  push:
+    branches:
+      - '*'
+
+jobs:
+  freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + test
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          copyback: false
+          mem: 16384
+          prepare: |
+            pkg install -y gmake python3
+          run: |
+            gmake
+            ./qjs -qd
+            gmake test
+
+  qemu-alpine:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/386
+          - linux/riscv64
+          - linux/arm64
+          - linux/arm/v6
+          - linux/arm/v7
+          - linux/s390x
+          - linux/ppc64le
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: recursive
+      - name: Get qemu
+        # See https://github.com/tonistiigi/binfmt/issues/215#issuecomment-2613004741
+        run: docker run --privileged --rm tonistiigi/binfmt:master --install all
+      - name: Run tests on ${{ matrix.platform }}
+        run: docker run --rm --interactive --mount type=bind,source=$(pwd),target=/host --platform ${{ matrix.platform }} alpine sh -c "apk add git patch make gcc libc-dev python3 && cd /host && make test"
