@@ -238,6 +238,9 @@ jobs:
   mingw-windows:
     name: MinGW Windows target
     runs-on: ubuntu-latest
+    env:
+      WINEARCH: win64
+      WINEDEBUG: "-all"
     strategy:
       fail-fast: false
     steps:
@@ -247,13 +250,18 @@ jobs:
       - name: Install MinGW and Wine
         run: |
           sudo apt update
-          sudo apt install -y wine mingw-w64
+          sudo apt install -y wine64 mingw-w64
           cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll .
           cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll tests/
       - name: Setup Wine
         run: |
-          wine --version
-          winecfg /v
+          # Set the prefix here, where runner shell variables are available.
+          export WINEPREFIX="$RUNNER_TEMP/quickjs-wine64"
+          printf 'WINEPREFIX=%s\n' "$WINEPREFIX" >> "$GITHUB_ENV"
+          # Use the 64-bit loader directly; the wrapper warns about wine32.
+          test -x /usr/lib/wine/wine64
+          /usr/lib/wine/wine64 --version
+          /usr/lib/wine/wine64 wineboot.exe --init
           # binfmt doesn't work in GitHub Actions
           #sudo apt install -y binfmt-support wine-binfmt
           #echo ":Wine:M::MZ::/usr/bin/wine:" > /etc/binfmt.d/wine.conf
@@ -264,7 +272,7 @@ jobs:
       - name: Run built-in tests
         run: |
           # If binfmt support worked, could just run `make CONFIG_WIN32=y test`
-          make WINE=/usr/bin/wine CONFIG_WIN32=y test
+          make WINE=/usr/lib/wine/wine64 CONFIG_WIN32=y test
 
   windows-msys:
     name: Windows MSYS2
