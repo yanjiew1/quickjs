@@ -424,7 +424,9 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/locale.c \
     src/quickjs/builtins/intl/bound-function.c \
     src/quickjs/builtins/intl/collator.c \
-    src/quickjs/builtins/intl/segmenter.c
+    src/quickjs/builtins/intl/segmenter.c \
+    src/quickjs/builtins/intl/number-common.c \
+    src/quickjs/builtins/intl/number-format.c
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
@@ -729,8 +731,10 @@ C_TESTS+=tests/test_temporal_zones$(EXE)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+C_TESTS+=tests/test_intl_number_format_embed$(EXE)
 C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
 ifeq ($(CONFIG_INTL),y)
+C_TESTS+=tests/test_intl_locale_lookup$(EXE)
 endif
 
 C_TESTS+=tests/test_fuzz_json$(EXE)
@@ -766,6 +770,8 @@ tests/test_allocator$(EXE): $(OBJDIR)/tests/test_allocator.o libquickjs$(LTOEXT)
 tests/test_intl_receiver_api$(EXE): $(OBJDIR)/tests/test_intl_receiver_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_intl_locale_lookup$(EXE): $(OBJDIR)/tests/test_intl_locale_lookup.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_atomics_wait$(EXE): $(OBJDIR)/tests/test_atomics_wait.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -798,6 +804,8 @@ tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/l
 tests/test_intl_collator_segmenter$(EXE): $(OBJDIR)/tests/test_intl_collator_segmenter.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_intl_number_format_embed$(EXE): $(OBJDIR)/tests/test_intl_number_format_embed.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 
 
@@ -854,9 +862,11 @@ ifeq ($(CONFIG_TEMPORAL),y)
 endif
 ifeq ($(CONFIG_ICU),y)
 endif
+	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
 ifeq ($(CONFIG_INTL),y)
+	$(WINE) ./tests/test_intl_locale_lookup$(EXE)
 endif
 
 .PHONY: test-regexp
@@ -912,10 +922,14 @@ endif
 
 ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
 ifeq ($(CONFIG_TEMPORAL),y)
 endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_number_locale_methods.js
 ifeq ($(CONFIG_INTL_LEGACY),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_number_format.js
 else
+	$(WINE) ./qjs$(EXE) --std -e "globalThis.intlLegacyExpected = false; std.loadScript('tests/test_intl_number_format.js');"
 endif
 ifeq ($(CONFIG_INTL_LEGACY),y)
 endif
