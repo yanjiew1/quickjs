@@ -944,3 +944,11 @@ tests/test_temporal$(EXE): $(OBJDIR)/tests/test_temporal.o $(OBJDIR)/src/tempora
 test-c: test-test_temporal-prepared
 test-test_temporal-prepared: tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal$(EXE)
+
+C_TESTS+=tests/test_temporal_duration_math$(EXE)
+tests/test_temporal_duration_math$(EXE): $(OBJDIR)/tests/test_temporal_duration_math.o $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/duration.o $(OBJDIR)/src/temporal/time.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-test_temporal_duration_math-prepared
+test-c: test-test_temporal_duration_math-prepared
+test-test_temporal_duration_math-prepared: tests/test_temporal_duration_math$(EXE)
+	$(WINE) ./tests/test_temporal_duration_math$(EXE)
