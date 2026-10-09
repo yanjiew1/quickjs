@@ -754,9 +754,16 @@ static JSValue js_temporal_zoned_round(JSContext *ctx, JSValueConst this_val,
     if (unit == QJS_TEMPORAL_DAY) {
         if (zdt_day_bounds(ctx, &s->time_zone, datetime.date, &start, &end))
             return JS_EXCEPTION;
+        /* A backward shift can repeat this date after tomorrow first began.
+           Clamp progress to one nanosecond before tomorrow's first start. */
+        epoch = s->epoch_nanoseconds;
+        if (qjs_temporal_epoch_ns_compare(epoch, end) >= 0 &&
+            qjs_temporal_epoch_ns_subtract(&epoch, end,
+                qjs_temporal_epoch_ns_from_int64(1)))
+            return JS_ThrowRangeError(ctx, "invalid Temporal day rounding");
         if (qjs_temporal_epoch_ns_subtract(&difference, end, start) ||
             qjs_temporal_epoch_ns_to_int64(&length, difference) || length <= 0 ||
-            qjs_temporal_epoch_ns_subtract(&difference, s->epoch_nanoseconds, start) ||
+            qjs_temporal_epoch_ns_subtract(&difference, epoch, start) ||
             qjs_temporal_epoch_ns_round(&rounded, difference, length, mode) ||
             qjs_temporal_epoch_ns_add(&epoch, start, rounded))
             return JS_ThrowRangeError(ctx, "invalid Temporal day rounding");
