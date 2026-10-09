@@ -711,6 +711,11 @@ static int dtf_make_formatter(JSContext *ctx, JSIntlDateTimeFormat *s, int match
     }
 #endif
 
+    /* AdjustDateTimeStyleFormat preserves an already suitable pattern. */
+#ifdef CONFIG_TEMPORAL
+    if (s->prepared && s->pattern)
+        goto pattern_ready;
+#endif
     if (s->date_style >= 0 || s->time_style >= 0) {
         style = udat_open(s->time_style < 0 ? UDAT_NONE : (UDateFormatStyle)s->time_style,
                          s->date_style < 0 ? UDAT_NONE : (UDateFormatStyle)s->date_style,
@@ -743,6 +748,9 @@ static int dtf_make_formatter(JSContext *ctx, JSIntlDateTimeFormat *s, int match
             goto fail;
         }
     }
+#ifdef CONFIG_TEMPORAL
+ pattern_ready:
+#endif
     if (dtf_pattern_fields(s->pattern, s->pattern_length, s->fields)) {
         JS_ThrowInternalError(ctx, "unsupported ICU date pattern field");
         goto fail;
@@ -829,6 +837,7 @@ static int dtf_temporal_formats(JSContext *ctx, JSIntlDateTimeFormat *s)
     for (kind = 0; kind < 6; kind++) {
         JSIntlDateTimeFormat *t;
         int present = 0;
+        BOOL conflicting_fields = FALSE;
         if (styles && ((kind <= DTF_TEMP_MONTH_DAY && s->date_style < 0) ||
                        (kind == DTF_TEMP_TIME && s->time_style < 0)))
             continue;
@@ -859,12 +868,20 @@ static int dtf_temporal_formats(JSContext *ctx, JSIntlDateTimeFormat *s)
                 (kind == DTF_TEMP_DATE || kind == DTF_TEMP_YEAR_MONTH ||
                  kind == DTF_TEMP_DATETIME))
                 keep = TRUE;
+            if (styles && !keep && s->fields[field] >= 0)
+                conflicting_fields = TRUE;
             t->fields[field] = keep ? (styles ? s->fields[field] :
                                       s->requested_fields[field]) : -1;
         }
-        if (styles && kind == DTF_TEMP_INSTANT) {
+        if (styles && !conflicting_fields) {
             t->date_style = s->date_style;
             t->time_style = s->time_style;
+            t->pattern = js_intl_alloc_uchar(ctx, s->pattern_length);
+            if (!t->pattern)
+                return -1;
+            memcpy(t->pattern, s->pattern,
+                   (s->pattern_length + 1) * sizeof(*t->pattern));
+            t->pattern_length = s->pattern_length;
         } else if (!styles && !present) {
             if (kind != DTF_TEMP_TIME) {
                 if (kind != DTF_TEMP_MONTH_DAY)

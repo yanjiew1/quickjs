@@ -1111,6 +1111,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_date_temporal_bridge.js
 ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned_intl.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_temporal_style_preservation.js
 endif
 endif
 
