@@ -448,7 +448,11 @@ int qjs_temporal_calendar_date_from_fields(QJSTemporalCalendar calendar,
                     const QJSTemporalCalendarFields *fields,
                     QJSTemporalOverflow overflow, QJSTemporalISODate *result)
 {
-    return resolve(calendar, fields, 0, overflow, result);
+    int error = resolve(calendar, fields, 0, overflow, result);
+
+    if (!error && !qjs_temporal_iso_date_within_limits(*result))
+        return RANGE;
+    return error;
 }
 int qjs_temporal_calendar_year_month_from_fields(QJSTemporalCalendar calendar,
                     const QJSTemporalCalendarFields *fields,

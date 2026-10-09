@@ -1100,6 +1100,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_identifier_boundaries.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_icu_calendar_target.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_plain_date_duration_balance.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_year_month_date_boundaries.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_zones.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_now.js
