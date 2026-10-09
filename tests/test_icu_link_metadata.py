@@ -4,6 +4,7 @@
 Windows is a simulated Make configuration. These tool tests make no claim
 about Windows ICU development files or an enabled Windows runtime.
 """
+import errno
 import json
 import os
 from pathlib import Path
@@ -12,6 +13,84 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
+
+
+def check_make_call(command, *, cwd, env):
+    try:
+        return subprocess.check_call(command, cwd=cwd, env=env)
+    except OSError as error:
+        if os.name != "posix" or error.errno != errno.ENOEXEC:
+            raise
+    # POSIX shells can launch APE executables after exec returns ENOEXEC.
+    # Pass every argument separately, including Make variable assignments.
+    return subprocess.check_call(
+        ["/bin/sh", "-c", 'exec "$@"', "qjs-test-make"] + command,
+        cwd=cwd, env=env)
+
+
+class MakeLauncher(unittest.TestCase):
+    def setUp(self):
+        self.command = ["/fixture/make with spaces", "-s",
+                        "ICU_LIBS=-L/fixture/ICU library -licuuc",
+                        "EXTRA_LIBS=$(touch unexpected); 'quoted'", ""]
+        self.options = {"cwd": "/fixture/scratch", "env": {"PATH": "/fixture/bin"}}
+
+    def test_native_launch_preserves_arguments_and_options(self):
+        with mock.patch.object(subprocess, "check_call", return_value=0) as launch:
+            self.assertEqual(check_make_call(self.command, **self.options), 0)
+        launch.assert_called_once_with(self.command, **self.options)
+
+    def test_posix_enoexec_retries_through_shell_without_interpolation(self):
+        original = list(self.command)
+        error = OSError(errno.ENOEXEC, "Exec format error")
+        with mock.patch.object(os, "name", "posix"), mock.patch.object(
+                subprocess, "check_call", side_effect=[error, 0]) as launch:
+            self.assertEqual(check_make_call(self.command, **self.options), 0)
+        self.assertEqual(launch.call_args_list, [
+            mock.call(original, **self.options),
+            mock.call(["/bin/sh", "-c", 'exec "$@"', "qjs-test-make"] + original,
+                      **self.options)])
+        self.assertEqual(self.command, original)
+
+    def test_other_launch_errors_are_not_retried(self):
+        for code in (errno.EACCES, errno.ENOENT):
+            with self.subTest(errno=code):
+                error = OSError(code, "Cannot launch Make")
+                with mock.patch.object(os, "name", "posix"), mock.patch.object(
+                        subprocess, "check_call", side_effect=error) as launch:
+                    with self.assertRaises(OSError) as raised:
+                        check_make_call(self.command, **self.options)
+                self.assertIs(raised.exception, error)
+                launch.assert_called_once_with(self.command, **self.options)
+
+    def test_windows_executable_is_not_retried_through_posix_shell(self):
+        command = [r"C:\Program Files\Make\make.exe", "-s"]
+        error = OSError(errno.ENOEXEC, "Exec format error")
+        with mock.patch.object(os, "name", "nt"), mock.patch.object(
+                subprocess, "check_call", side_effect=error) as launch:
+            with self.assertRaises(OSError) as raised:
+                check_make_call(command, **self.options)
+        self.assertIs(raised.exception, error)
+        launch.assert_called_once_with(command, **self.options)
+
+    def test_make_failure_is_not_retried(self):
+        error = subprocess.CalledProcessError(2, self.command)
+        with mock.patch.object(subprocess, "check_call", side_effect=error) as launch:
+            with self.assertRaises(subprocess.CalledProcessError) as raised:
+                check_make_call(self.command, **self.options)
+        self.assertIs(raised.exception, error)
+        launch.assert_called_once_with(self.command, **self.options)
+
+    def test_shell_failure_remains_a_failure(self):
+        error = subprocess.CalledProcessError(2, self.command)
+        with mock.patch.object(os, "name", "posix"), mock.patch.object(
+                subprocess, "check_call", side_effect=[
+                    OSError(errno.ENOEXEC, "Exec format error"), error]) as launch:
+            with self.assertRaises(subprocess.CalledProcessError) as raised:
+                check_make_call(self.command, **self.options)
+        self.assertIs(raised.exception, error)
+        self.assertEqual(launch.call_count, 2)
 
 
 class PrivateLibraryMetadata(unittest.TestCase):
@@ -100,7 +179,7 @@ class PrivateLibraryMetadata(unittest.TestCase):
                    "metadata/qjsc-intl-host-link.h", "metadata/config-consumer"] + self.object_targets
         if objects_only:
             command = command[:-4 - len(self.object_targets)] + self.object_targets
-        subprocess.check_call(command, cwd=str(self.scratch), env=env)
+        check_make_call(command, cwd=str(self.scratch), env=env)
         if objects_only:
             return
         for name, expected in (("qjsc-intl-link.h", self.icu),
