@@ -1097,6 +1097,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_duration.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_plain_time.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_plain.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_icu_calendar_target.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_plain_date_duration_balance.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_zones.js

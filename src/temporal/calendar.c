@@ -665,6 +665,10 @@ static int calendar_year_month(QJSTemporalCalendar calendar,
         if (!handle) return U_SUCCESS(status) ? QJS_TEMPORAL_ERROR_MEMORY : backend_error(status);
         calendar_set(handle, calendar, (int32_t)year, month, 1);
         ucal_add(handle, UCAL_MONTH, (int32_t)months, &status);
+        /* ICU month addition can leave a newer Julian day together with
+           stale month fields. Complete the target before getActualMaximum
+           clones the handle and writes a new day-of-month field. */
+        (void)ucal_get(handle, UCAL_DATE, &status);
         count = ucal_getLimit(handle, UCAL_DATE, UCAL_ACTUAL_MAXIMUM, &status);
         milliseconds = ucal_getMillis(handle, &status);
         error = backend_error(status);
