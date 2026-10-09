@@ -669,8 +669,22 @@ static JSValue plain_add(JSContext *ctx, JSValueConst this_val,
         for (i = 0; i < QJS_TEMPORAL_UNIT_COUNT; i++)
             input.fields[i] = -input.fields[i];
     if (kind != PLAIN_DATETIME &&
-        qjs_temporal_duration_normalize(&normalized, &input, FALSE))
+        qjs_temporal_duration_normalize(&normalized, &input,
+                                        kind == PLAIN_DATE))
         return JS_ThrowRangeError(ctx, "Temporal duration outside range");
+    if (kind == PLAIN_DATE) {
+        QJSTemporalEpochNs whole_days;
+        uint64_t remainder;
+
+        if (qjs_temporal_epoch_ns_divide(&whole_days, &remainder,
+                  normalized.time, UINT64_C(86400000000000)) ||
+            qjs_temporal_epoch_ns_to_int64(&overflow_days, whole_days))
+            return JS_ThrowRangeError(ctx, "Temporal duration outside range");
+        /* Division floors; date-only durations truncate towards zero. */
+        if ((normalized.time.high >> 63) && remainder)
+            overflow_days++;
+        normalized.date.days = overflow_days;
+    }
     if (get_overflow(ctx, argument(argc, argv, 1), &overflow))
         return JS_EXCEPTION;
     if (kind == PLAIN_DATETIME &&

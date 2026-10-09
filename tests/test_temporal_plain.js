@@ -13,7 +13,7 @@ function throws(type, callback) {
 let date = new Temporal.PlainDate(2020, 2, 29);
 same(date.add({ years: 1 }).toString(), "2021-02-28");
 throws(RangeError, () => date.add({ years: 1 }, { overflow: "reject" }));
-same(date.add({ hours: 48 }).toString(), "2020-02-29");
+same(date.add({ hours: 48 }).toString(), "2020-03-02");
 same(date.with({ month: 1 }).toString(), "2020-01-29");
 same(new Temporal.PlainDate(2021, 1, 31).until("2021-02-28", {
     largestUnit: "month"
