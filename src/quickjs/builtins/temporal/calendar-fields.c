@@ -412,7 +412,7 @@ int js_temporal_interpret_offset(JSContext *ctx,
 {
     QJSTemporalEpochNs wall, epoch, choices[2], difference;
     int n;
-    int64_t actual, magnitude, rounded;
+    int64_t actual, magnitude, rounded, days;
     if (start_of_day)
         return js_temporal_time_zone_start_of_day(ctx, zone, datetime.date, result);
     if (behaviour == JS_TEMPORAL_OFFSET_WALL ||
@@ -427,6 +427,9 @@ int js_temporal_interpret_offset(JSContext *ctx,
             return js_temporal_calendar_error(ctx, QJS_TEMPORAL_ERROR_RANGE);
         *result = epoch; return 0;
     }
+    if (qjs_temporal_iso_date_to_days(&days, datetime.date) ||
+        days < -INT64_C(100000000) || days > INT64_C(100000000))
+        return js_temporal_calendar_error(ctx, QJS_TEMPORAL_ERROR_RANGE);
     if (js_temporal_time_zone_possible_epochs(ctx, zone, datetime, choices, &n)) return -1;
     for (int i = 0; i < n; i++) {
         if (qjs_temporal_epoch_ns_subtract(&difference, wall, choices[i]) ||
