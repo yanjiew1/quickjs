@@ -87,7 +87,6 @@ int js_temporal_zoned_difference_round(JSContext *ctx,
     QJSTemporalISODateTime origin;
     QJSTemporalZone native;
     uint64_t increment;
-    if (!qjs_temporal_epoch_ns_compare(start, end)) { *result = duration; return 0; }
     if (settings->largest_unit >= QJS_TEMPORAL_HOUR) {
         increment = qjs_temporal_unit_nanoseconds(settings->smallest_unit) *
             settings->rounding_increment;
@@ -114,7 +113,11 @@ int js_temporal_zoned_difference_total(JSContext *ctx,
     QJSTemporalInternalDuration duration = {0};
     QJSTemporalISODateTime origin;
     QJSTemporalZone native;
-    if (!qjs_temporal_epoch_ns_compare(start, end)) { *result = 0; return 0; }
+    if (unit >= QJS_TEMPORAL_HOUR &&
+        !qjs_temporal_epoch_ns_compare(start, end)) {
+        *result = 0;
+        return 0;
+    }
     if (js_temporal_zoned_difference_raw(ctx, start, end, zone, calendar,
                                      unit, &duration)) return -1;
     if (js_temporal_time_zone_to_native(ctx, zone, &native) ||

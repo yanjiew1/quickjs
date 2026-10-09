@@ -260,7 +260,7 @@ int qjs_temporal_relative_round(
     QJSTemporalEpochNs nudged;
     int error, sign, expanded = 0;
     QJSTemporalUnit smallest = settings->smallest_unit;
-    if (qjs_temporal_epoch_ns_compare(origin, dest) == 0) {
+    if (!zone && qjs_temporal_epoch_ns_compare(origin, dest) == 0) {
         *result = (QJSTemporalInternalDuration){ {0}, {0} };
         return 0;
     }
@@ -409,7 +409,7 @@ int qjs_temporal_relative_total(
     double value;
     if (unit < QJS_TEMPORAL_YEAR || unit > QJS_TEMPORAL_NANOSECOND)
         return QJS_TEMPORAL_ERROR_RANGE;
-    if (qjs_temporal_epoch_ns_compare(origin, dest) == 0) {
+    if (!zone && qjs_temporal_epoch_ns_compare(origin, dest) == 0) {
         *result = 0;
         return 0;
     }
