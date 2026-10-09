@@ -408,7 +408,8 @@ TEMPORAL_ENGINE_SRCS= \
     src/quickjs/builtins/temporal/options.c \
     src/quickjs/builtins/temporal/plain-time.c \
     src/quickjs/builtins/temporal/plain.c \
-    src/quickjs/builtins/temporal/zoned-arithmetic.c
+    src/quickjs/builtins/temporal/zoned-arithmetic.c \
+    src/quickjs/builtins/temporal/zoned-date-time.c
 QUICKJS_SRCS+=$(TEMPORAL_LIBRARY_SRCS) $(TEMPORAL_ENGINE_SRCS)
 endif
 ifeq ($(CONFIG_ICU),y)
@@ -1089,8 +1090,10 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_duration.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_plain_time.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_plain.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_zones.js
 ifeq ($(CONFIG_INTL),y)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned_intl.js
 endif
 endif
 
@@ -1303,7 +1306,7 @@ test-test_temporal_zones-prepared: tests/test_temporal_zones$(EXE)
 $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
 $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: .obj/intl-build-config
 
-TEMPORAL_PREPARATION_OBJECTS=$(OBJDIR)/src/quickjs/builtins/temporal/calendar-fields.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/calendar-fields.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/duration.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/duration.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/instant.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/instant.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/plain-time.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/plain-time.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/plain.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/plain.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-arithmetic.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-arithmetic.prepare.check.o
+TEMPORAL_PREPARATION_OBJECTS=$(OBJDIR)/src/quickjs/builtins/temporal/calendar-fields.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/calendar-fields.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/duration.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/duration.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/instant.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/instant.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/plain-time.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/plain-time.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/plain.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/plain.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-arithmetic.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-arithmetic.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-date-time.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/zoned-date-time.prepare.check.o
 $(OBJDIR)/%.prepare.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(ICU_CFLAGS) -DCONFIG_TEMPORAL $(DEPFLAGS) -c -o $@ $<
