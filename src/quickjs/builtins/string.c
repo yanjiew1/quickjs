@@ -1747,8 +1747,13 @@ const JSCFunctionListEntry js_string_proto_funcs[] = {
     JS_CFUNC_DEF("valueOf", 0, js_string_toString ),
     JS_CFUNC_MAGIC_DEF("toLowerCase", 0, js_string_toLowerCase, 1 ),
     JS_CFUNC_MAGIC_DEF("toUpperCase", 0, js_string_toLowerCase, 0 ),
+#ifdef CONFIG_INTL
+    JS_CFUNC_MAGIC_DEF("toLocaleLowerCase", 0, js_intl_string_locale_case, 1 ),
+    JS_CFUNC_MAGIC_DEF("toLocaleUpperCase", 0, js_intl_string_locale_case, 0 ),
+#else
     JS_CFUNC_MAGIC_DEF("toLocaleLowerCase", 0, js_string_toLowerCase, 1 ),
     JS_CFUNC_MAGIC_DEF("toLocaleUpperCase", 0, js_string_toLowerCase, 0 ),
+#endif
     JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, js_create_array_iterator, JS_ITERATOR_KIND_VALUE | 4 ),
     /* ES6 Annex B 2.3.2 etc. */
     JS_CFUNC_MAGIC_DEF("anchor", 1, js_string_CreateHTML, magic_string_anchor ),
