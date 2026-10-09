@@ -226,6 +226,21 @@ int js_temporal_interpret_datetime_fields(JSContext *ctx,
     return 0;
 }
 
+static int canonicalize_calendar(JSContext *ctx, JSValueConst value,
+                                 QJSTemporalCalendar *result)
+{
+    const char *text;
+    size_t length;
+    int error;
+
+    text = JS_ToCStringLen(ctx, &length, value);
+    if (!text)
+        return -1;
+    error = qjs_temporal_calendar_from_identifier(result, text, length);
+    JS_FreeCString(ctx, text);
+    return js_temporal_calendar_error(ctx, error);
+}
+
 static JSValue to_plain(JSContext *ctx, JSValueConst item,
                          JSValueConst options, int kind)
 {
@@ -298,7 +313,7 @@ static JSValue to_plain(JSContext *ctx, JSValueConst item,
     JS_FreeCString(ctx, text);
     if (JS_IsException(calendar_string))
         return JS_EXCEPTION;
-    error = js_temporal_to_calendar(ctx, calendar_string, &value.calendar);
+    error = canonicalize_calendar(ctx, calendar_string, &value.calendar);
     JS_FreeValue(ctx, calendar_string);
     if (error || get_overflow(ctx, options, &overflow))
         return JS_EXCEPTION;
@@ -366,7 +381,7 @@ static JSValue plain_constructor(JSContext *ctx, JSValueConst new_target,
     if (!JS_IsUndefined(calendar)) {
         if (!JS_IsString(calendar))
             return JS_ThrowTypeError(ctx, "calendar must be a string");
-        if (js_temporal_to_calendar(ctx, calendar, &value.calendar))
+        if (canonicalize_calendar(ctx, calendar, &value.calendar))
             return JS_EXCEPTION;
     }
     if (kind == PLAIN_YEAR_MONTH || kind == PLAIN_MONTH_DAY) {
