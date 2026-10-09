@@ -529,13 +529,19 @@ int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
         if (error) return error;
         if (HAS(&fields, MONTH_CODE) && !valid_month_code(calendar, fields.month_code)) return RANGE;
         if (HAS(&fields, YEAR)) {
+            int32_t arithmetic_year;
+            if (checked_i32(fields.year, &arithmetic_year)) return RANGE;
+            /* Chinese/Dangi arithmetic years are Gregorian years. Reject
+               an impossible year before asking ICU to calculate its moons. */
+            if ((calendar == QJS_TEMPORAL_CAL_CHINESE ||
+                 calendar == QJS_TEMPORAL_CAL_DANGI) &&
+                (arithmetic_year < -271821 || arithmetic_year > 275760))
+                return RANGE;
             error = resolve(calendar, &fields, 0, overflow, &source);
             if (error) return error;
             {
                 QJSTemporalISODate first, next;
-                int32_t arithmetic_year;
                 int64_t first_days, next_days;
-                if (checked_i32(fields.year, &arithmetic_year)) return RANGE;
                 error = calendar_integers_to_iso(calendar, arithmetic_year, 1, 1, &first);
                 if (error) return error;
                 error = calendar_integers_to_iso(calendar, arithmetic_year + 1, 1, 1, &next);
