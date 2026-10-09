@@ -564,6 +564,21 @@ static int output_executable(const char *out_filename, const char *cfilename,
     arg = argv;
     *arg++ = CONFIG_CC;
     *arg++ = "-O2";
+#ifdef CONFIG_ASAN
+    *arg++ = "-fsanitize=address";
+#endif
+#ifdef CONFIG_MSAN
+    *arg++ = "-fsanitize=memory";
+#endif
+#ifdef CONFIG_UBSAN
+    *arg++ = "-fsanitize=undefined";
+#endif
+#ifdef CONFIG_TSAN
+    *arg++ = "-fsanitize=thread";
+#endif
+#if defined(CONFIG_ASAN) || defined(CONFIG_MSAN) || defined(CONFIG_UBSAN) || defined(CONFIG_TSAN)
+    *arg++ = "-fno-omit-frame-pointer";
+#endif
 #ifdef CONFIG_LTO
     if (use_lto) {
         *arg++ = "-flto";

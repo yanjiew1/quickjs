@@ -15,6 +15,9 @@ on:
     branches:
       - '*'
 
+env:
+  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
+
 jobs:
   linux-sanitizers:
     name: Linux ${{ matrix.compiler }} ${{ matrix.sanitizer }}

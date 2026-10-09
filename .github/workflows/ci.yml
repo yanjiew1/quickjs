@@ -14,6 +14,9 @@ on:
     branches:
       - '*'
 
+env:
+  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
+
 jobs:
   linux:
     name: Linux (Ubuntu)

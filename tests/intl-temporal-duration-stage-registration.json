@@ -1,0 +1,20 @@
+{
+  "stage": "Temporal Duration Intl amendment after native Duration + Date-owned Temporal dispatcher",
+  "replace": [
+    "tests/test_intl_duration_format.js"
+  ],
+  "add": [
+    "tests/test_intl_temporal_duration.js"
+  ],
+  "commands_when_authorized": [
+    "qjs tests/test_intl_duration_format.js",
+    "qjs tests/test_intl_temporal_duration.js"
+  ],
+  "dependencies": [
+    "CONFIG_INTL enabled and pinned ICU78.3 data",
+    "CONFIG_TEMPORAL enabled for native-slot integration unit",
+    "pure src/temporal/duration.c and its native epoch/iso/options dependencies linked for CONFIG_INTL even when global Temporal is disabled"
+  ],
+  "preserve": "Existing separate NumberFormat/Number+BigInt locale/Duration embedding units remain registered; combined v1 units remain evidence only.",
+  "executed": false
+}

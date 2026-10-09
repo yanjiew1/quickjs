@@ -15,6 +15,9 @@ on:
     branches:
       - '*'
 
+env:
+  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
+
 jobs:
   freebsd:
     runs-on: ubuntu-latest
@@ -29,6 +32,7 @@ jobs:
           prepare: |
             pkg install -y gmake python3
           run: |
+            export MAKEFLAGS='CONFIG_TEMPORAL=n CONFIG_INTL=n'
             gmake
             ./qjs -qd
             gmake test
@@ -56,4 +60,4 @@ jobs:
         # See https://github.com/tonistiigi/binfmt/issues/215#issuecomment-2613004741
         run: docker run --privileged --rm tonistiigi/binfmt:master --install all
       - name: Run tests on ${{ matrix.platform }}
-        run: docker run --rm --interactive --mount type=bind,source=$(pwd),target=/host --platform ${{ matrix.platform }} alpine sh -c "apk add git patch make gcc libc-dev python3 && cd /host && make test"
+        run: docker run --rm --interactive --env MAKEFLAGS --mount type=bind,source=$(pwd),target=/host --platform ${{ matrix.platform }} alpine sh -c "apk add git patch make gcc libc-dev python3 && cd /host && make test"

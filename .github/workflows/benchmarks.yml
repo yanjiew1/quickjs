@@ -23,6 +23,9 @@ concurrency:
   group: benchmarks-${{ github.run_id }}
   cancel-in-progress: false
 
+env:
+  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
+
 jobs:
   compare:
     name: Informational ${{ matrix.compiler }} benchmarks
