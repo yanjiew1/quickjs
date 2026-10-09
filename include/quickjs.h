@@ -402,6 +402,10 @@ JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id);
 JSContext *JS_NewContextRaw(JSRuntime *rt);
 int JS_AddIntrinsicBaseObjects(JSContext *ctx);
 int JS_AddIntrinsicDate(JSContext *ctx);
+/* Initialize the native Temporal constructors and namespace. Returns 0
+   on success and -1 with a pending exception on allocation or publication
+   failure. Raw contexts must initialize base objects first. */
+int JS_AddIntrinsicTemporal(JSContext *ctx);
 int JS_AddIntrinsicEval(JSContext *ctx);
 int JS_AddIntrinsicStringNormalize(JSContext *ctx);
 void JS_AddIntrinsicRegExpCompiler(JSContext *ctx);

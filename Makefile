@@ -339,6 +339,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/global.c \
     src/quickjs/builtins/intrinsics.c \
     src/quickjs/builtins/intl/core.c \
+    src/quickjs/builtins/temporal/common.c \
     src/quickjs/builtins/iterator.c \
     src/quickjs/builtins/json-stringify.c \
     src/quickjs/builtins/json.c \
@@ -400,7 +401,8 @@ TEMPORAL_LIBRARY_SRCS= \
     src/temporal/civil.c \
     src/temporal/relative.c \
     src/temporal/time.c
-TEMPORAL_ENGINE_SRCS=
+TEMPORAL_ENGINE_SRCS= \
+    src/quickjs/builtins/temporal/options.c
 QUICKJS_SRCS+=$(TEMPORAL_LIBRARY_SRCS) $(TEMPORAL_ENGINE_SRCS)
 endif
 ifeq ($(CONFIG_ICU),y)
@@ -744,6 +746,7 @@ C_TESTS+=tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json_exec$(EXE) tests/
 QJSC_JSON_COLLISION_CASES:=attributes-first attributes-last size-first size-last
 C_TESTS+=$(addprefix tests/test_qjsc_json_collision_,$(addsuffix $(EXE),$(QJSC_JSON_COLLISION_CASES)))
 C_TESTS+=tests/test_intl_receiver_api$(EXE)
+C_TESTS+=tests/test_temporal_api$(EXE)
 ifeq ($(CONFIG_TEMPORAL),y)
 C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_civil$(EXE)
@@ -916,6 +919,8 @@ endif
 tests/test_intl_duration_format_embed$(EXE): $(OBJDIR)/tests/test_intl_duration_format_embed.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_temporal_api$(EXE): $(OBJDIR)/tests/test_temporal_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 
 
@@ -951,6 +956,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_cutils$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
 	$(WINE) ./tests/test_intl_receiver_api$(EXE)
+	$(WINE) ./tests/test_temporal_api$(EXE)
 ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal_civil$(EXE)
@@ -1285,3 +1291,13 @@ test-test_temporal_zones-prepared: tests/test_temporal_zones$(EXE)
 	$(WINE) ./tests/test_temporal_zones$(EXE)
 $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
 $(OBJDIR)/src/temporal/epoch.o $(OBJDIR)/src/temporal/iso.o $(OBJDIR)/src/temporal/options.o $(OBJDIR)/src/temporal/parse.o $(OBJDIR)/src/temporal/format.o $(OBJDIR)/src/temporal/civil.o $(OBJDIR)/src/temporal/time-zone.o $(OBJDIR)/src/intl/locale-data.o: .obj/intl-build-config
+
+TEMPORAL_PREPARATION_OBJECTS=$(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/common.prepare.check.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.o $(OBJDIR)/src/quickjs/builtins/temporal/options.prepare.check.o
+$(OBJDIR)/%.prepare.o: %.c .obj/intl-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_CFLAGS) -DCONFIG_TEMPORAL $(DEPFLAGS) -c -o $@ $<
+$(OBJDIR)/%.prepare.check.o: %.c .obj/intl-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(ICU_CFLAGS) -DCONFIG_TEMPORAL -DCONFIG_CHECK_JSVALUE $(DEPFLAGS) -c -o $@ $<
+.PHONY: check-temporal-preparation
+check-temporal-preparation: $(TEMPORAL_PREPARATION_OBJECTS)
