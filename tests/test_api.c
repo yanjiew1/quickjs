@@ -41,6 +41,7 @@
 #undef js_realloc2
 #undef js_malloc_usable_size
 #include "cutils.h"
+#include "qjsc-allocation-probe.h"
 
 static uint8_t allocator_test_byte(size_t block, size_t offset)
 {
@@ -3864,6 +3865,176 @@ static void test_module_normalize_bytecode(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue utf16_api_eval(JSContext *ctx, const char *source)
+{
+    JSValue value = JS_Eval(ctx, source, strlen(source), "utf16-api",
+                            JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(value));
+    return value;
+}
+
+static void test_utf16_public_api(void)
+{
+    static const uint16_t expected[] = { 'A', 0, 0xe9, 0xd834, 0xdf06,
+                                        0xd800, 'Z', 0xdc00 };
+    uint16_t input[countof(expected)];
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue value, marker, exception;
+    const uint16_t *wide;
+    const char *bytes;
+    size_t length, i;
+
+    assert(rt);
+    ctx = JS_NewContextRaw(rt);
+    assert(ctx);
+    assert(JS_AddIntrinsicBaseObjects(ctx) == 0);
+    assert(JS_AddIntrinsicEval(ctx) == 0);
+    memcpy(input, expected, sizeof(input));
+    value = JS_NewStringUTF16(ctx, input, countof(input));
+    assert(!JS_IsException(value));
+    memset(input, 0, sizeof(input));
+    wide = JS_ToCStringLenUTF16(ctx, &length, value);
+    assert(wide && length == countof(expected));
+    JS_FreeValue(ctx, value);
+    JS_RunGC(rt);
+    assert(!memcmp(wide, expected, sizeof(expected)));
+    JS_FreeCStringUTF16(ctx, wide);
+
+    value = JS_NewStringUTF16(ctx, NULL, 0);
+    assert(!JS_IsException(value));
+    wide = JS_ToCStringLenUTF16(ctx, &length, value);
+    assert(wide && length == 0);
+    JS_FreeCStringUTF16(ctx, wide);
+    JS_FreeValue(ctx, value);
+    value = JS_NewStringLen(ctx, "a\0\xc3\xa9", 4);
+    assert(!JS_IsException(value));
+    wide = JS_ToCStringLenUTF16(ctx, &length, value);
+    assert(wide && length == 3 && wide[0] == 'a' && wide[1] == 0 &&
+           wide[2] == 0xe9);
+    JS_FreeCStringUTF16(ctx, wide);
+    JS_FreeValue(ctx, value);
+
+    value = utf16_api_eval(ctx, "'x'.repeat(10000) + '\\ud800\\u0000\\udc00'");
+    assert(JS_VALUE_GET_TAG(value) == JS_TAG_STRING_ROPE);
+    wide = JS_ToCStringLenUTF16(ctx, &length, value);
+    assert(wide && length == 10003);
+    for (i = 0; i < 10000; i++)
+        assert(wide[i] == 'x');
+    assert(wide[10000] == 0xd800 && wide[10001] == 0 && wide[10002] == 0xdc00);
+    JS_FreeValue(ctx, value);
+    JS_FreeCStringUTF16(ctx, wide);
+
+    value = utf16_api_eval(ctx,
+        "globalThis.utf16Calls = 0; ({ [Symbol.toPrimitive](hint) {"
+        " if (hint !== 'string') throw Error('wrong hint');"
+        " utf16Calls++; return '\\ud800\\u0000'; } })");
+    wide = JS_ToCStringUTF16(ctx, value);
+    assert(wide && wide[0] == 0xd800 && wide[1] == 0);
+    JS_FreeCStringUTF16(ctx, wide);
+    JS_FreeValue(ctx, value);
+    marker = utf16_api_eval(ctx, "utf16Calls === 1");
+    assert(JS_ToBool(ctx, marker) == 1);
+    JS_FreeValue(ctx, marker);
+
+    value = JS_NewSymbol(ctx, "UTF16 TypeError", 0);
+    assert(!JS_IsException(value));
+    length = 123;
+    assert(JS_ToCStringLenUTF16(ctx, &length, value) == NULL && length == 0);
+    assert(JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, value);
+    value = utf16_api_eval(ctx, "({ toString() { throw 'utf16-marker'; } })");
+    length = 123;
+    assert(JS_ToCStringLenUTF16(ctx, &length, value) == NULL && length == 0);
+    exception = JS_GetException(ctx);
+    bytes = JS_ToCString(ctx, exception);
+    assert(bytes && !strcmp(bytes, "utf16-marker"));
+    JS_FreeCString(ctx, bytes);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, value);
+    value = JS_NewStringUTF16(ctx, expected, SIZE_MAX);
+    assert(JS_IsException(value) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+
+    value = JS_NewStringUTF16(ctx, expected, countof(expected));
+    assert(!JS_IsException(value));
+    wide = JS_ToCStringLenUTF16(ctx, &length, value);
+    assert(wide && length == countof(expected));
+    JS_FreeValue(ctx, value);
+    value = JS_NewStringLen(ctx, "lifetime\0x", 10);
+    assert(!JS_IsException(value));
+    bytes = JS_ToCStringLen(ctx, &length, value);
+    assert(bytes && length == 10);
+    JS_FreeValue(ctx, value);
+    JS_FreeContext(ctx);
+    JS_RunGC(rt);
+    assert(!memcmp(wide, expected, sizeof(expected)));
+    assert(!memcmp(bytes, "lifetime\0x", 10));
+    JS_FreeCStringRT_UTF16(rt, wide);
+    JS_FreeCStringRT(rt, bytes);
+    JS_FreeCStringRT_UTF16(rt, NULL);
+    JS_FreeCStringRT(rt, NULL);
+    JS_FreeRuntime(rt);
+}
+
+static void test_utf16_public_api_oom(void)
+{
+    uint16_t *input = malloc(50000 * sizeof(*input));
+    char *narrow = malloc(50000);
+    int operation;
+
+    assert(input && narrow);
+    memset(input, 0x61, 50000 * sizeof(*input));
+    memset(narrow, 'a', 50000);
+    for (operation = 0; operation < 3; operation++) {
+        AllocationProbe probe = { 0 };
+        JSRuntime *rt = JS_NewRuntime2(&probe_functions, &probe);
+        JSContext *ctx;
+        JSValue source = JS_UNDEFINED, result, exception;
+        const uint16_t *wide;
+        size_t length = 77;
+
+        assert(rt);
+        ctx = JS_NewContextRaw(rt);
+        assert(ctx && JS_AddIntrinsicBaseObjects(ctx) == 0);
+        assert(JS_AddIntrinsicEval(ctx) == 0);
+        if (operation == 1) {
+            source = JS_NewStringLen(ctx, narrow, 50000);
+            assert(!JS_IsException(source));
+        } else if (operation == 2) {
+            source = utf16_api_eval(ctx, "'x'.repeat(10000) + 'y'.repeat(10000)");
+            assert(JS_VALUE_GET_TAG(source) == JS_TAG_STRING_ROPE);
+        }
+        probe.attempts = 0;
+        probe.failure_at = 1;
+        if (operation == 0) {
+            result = JS_NewStringUTF16(ctx, input, 50000);
+            assert(JS_IsException(result));
+        } else {
+            wide = JS_ToCStringLenUTF16(ctx, &length, source);
+            assert(wide == NULL && length == 0);
+        }
+        assert(probe.failed && JS_HasException(ctx));
+        probe.failure_at = 0;
+        exception = JS_GetException(ctx);
+        JS_FreeValue(ctx, exception);
+        if (operation != 0) {
+            wide = JS_ToCStringLenUTF16(ctx, &length, source);
+            assert(wide && length == (operation == 1 ? 50000 : 20000));
+            JS_FreeCStringUTF16(ctx, wide);
+        }
+        JS_FreeValue(ctx, source);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(probe.live == 0);
+    }
+    free(narrow);
+    free(input);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3877,6 +4048,8 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "utf16-public-api", test_utf16_public_api },
+        { "utf16-public-api-oom", test_utf16_public_api_oom },
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
         { "well-known-symbol-api", test_well_known_symbol_api },
         { "typed-array-public-api", test_typed_array_public_api },

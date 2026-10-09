@@ -404,7 +404,8 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx);
 int JS_AddIntrinsicDate(JSContext *ctx);
 /* Initialize the native Temporal constructors and namespace. Returns 0
    on success and -1 with a pending exception on allocation or publication
-   failure. Raw contexts must initialize base objects first. */
+   failure. Raw contexts must initialize base objects first. Disabled
+   builds return -1 with a pending TypeError; no namespace is created. */
 int JS_AddIntrinsicTemporal(JSContext *ctx);
 int JS_AddIntrinsicEval(JSContext *ctx);
 int JS_AddIntrinsicStringNormalize(JSContext *ctx);
@@ -763,6 +764,10 @@ static inline JSValue JS_NewString(JSContext *ctx, const char *str)
 {
     return JS_NewStringLen(ctx, str, strlen(str));
 }
+/* Copies len native-endian UTF-16 code units, preserving embedded NULs
+   and unmatched surrogates. buf may be NULL only when len is zero.
+   Returns an owned string or JS_EXCEPTION; oversized len throws RangeError. */
+JSValue JS_NewStringUTF16(JSContext *ctx, const uint16_t *buf, size_t len);
 JSValue JS_NewAtomString(JSContext *ctx, const char *str);
 JSValue JS_ToString(JSContext *ctx, JSValueConst val);
 JSValue JS_ToPropertyKey(JSContext *ctx, JSValueConst val);
@@ -776,6 +781,25 @@ static inline const char *JS_ToCString(JSContext *ctx, JSValueConst val1)
     return JS_ToCStringLen2(ctx, NULL, val1, 0);
 }
 void JS_FreeCString(JSContext *ctx, const char *ptr);
+/* Releases a JS_ToCString result after its originating context is freed.
+   rt must remain alive and must be the runtime that owns ptr. */
+void JS_FreeCStringRT(JSRuntime *rt, const char *ptr);
+/* ToString conversion, including observable user coercion. The returned
+   owned UTF-16 buffer is native-endian, not NUL-terminated, and preserves
+   all code units. *plen counts uint16_t units, not Unicode code points.
+   On failure returns NULL, sets *plen to zero and leaves an exception.
+   Release with a UTF16 free function, even after freeing the input value. */
+const uint16_t *JS_ToCStringLenUTF16(JSContext *ctx, size_t *plen,
+                                    JSValueConst val);
+static inline const uint16_t *JS_ToCStringUTF16(JSContext *ctx,
+                                               JSValueConst val)
+{
+    return JS_ToCStringLenUTF16(ctx, NULL, val);
+}
+/* NULL is allowed. ctx/rt must belong to the buffer's originating runtime.
+   The runtime form permits releasing it after context destruction. */
+void JS_FreeCStringUTF16(JSContext *ctx, const uint16_t *ptr);
+void JS_FreeCStringRT_UTF16(JSRuntime *rt, const uint16_t *ptr);
 
 typedef enum JSWellKnownSymbolEnum {
     JS_WELL_KNOWN_SYMBOL_ASYNC_ITERATOR = 0,
