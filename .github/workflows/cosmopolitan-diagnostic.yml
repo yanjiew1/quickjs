@@ -1,0 +1,150 @@
+name: Cosmopolitan diagnostic
+
+on:
+  push:
+    branches:
+      - 'scratch/cosmopolitan-diagnostic-20261009**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    name: Cosmopolitan hosted harness diagnostic
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      REPORT: ${{ runner.temp }}/cosmopolitan-diagnostic
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Record host identity
+        run: |
+          mkdir -p "$REPORT"
+          {
+            printf 'revision=%s\n' "$GITHUB_SHA"
+            printf 'runner_os=%s\nrunner_arch=%s\n' "$RUNNER_OS" "$RUNNER_ARCH"
+            printf 'image_os=%s\nimage_version=%s\n' "${ImageOS-}" "${ImageVersion-}"
+            uname -a
+            cat /etc/os-release
+            lscpu
+            getconf _NPROCESSORS_ONLN
+            readlink -f /bin/sh
+            make --version
+            git submodule status
+          } > "$REPORT/host.txt" 2>&1
+          cat "$REPORT/host.txt"
+      - name: Install Cosmopolitan
+        run: |
+          set -o pipefail
+          {
+            mkdir ~/cosmocc
+            cd ~/cosmocc
+            wget https://cosmo.zip/pub/cosmocc/cosmocc.zip
+            sha256sum cosmocc.zip
+            unzip cosmocc.zip
+            echo "$HOME/cosmocc/bin" >> "$GITHUB_PATH"
+          } 2>&1 | tee "$REPORT/install.log"
+      - name: Record toolchain identity
+        run: |
+          sha256sum "$HOME/cosmocc/cosmocc.zip" > "$REPORT/archive.sha256"
+          find "$HOME/cosmocc" -type f -print0 | sort -z | xargs -0 sha256sum > "$REPORT/toolchain-files.sha256"
+          {
+            command -v cosmocc
+            command -v cosmoar
+            cosmocc --version
+            cosmoar --version
+          } > "$REPORT/toolchain.txt" 2>&1
+          cat "$REPORT/archive.sha256" "$REPORT/toolchain.txt"
+      - name: Build
+        run: |
+          set -o pipefail
+          make CONFIG_COSMO=y 2>&1 | tee "$REPORT/build.log"
+      - name: Run built-in tests
+        run: |
+          set -o pipefail
+          make CONFIG_COSMO=y test 2>&1 | tee "$REPORT/built-in.log"
+      - name: Install pinned Test262
+        run: |
+          set -o pipefail
+          make test2-bootstrap 2>&1 | tee "$REPORT/bootstrap.log"
+      - name: Record products and harness bytes
+        run: |
+          sha256sum ./qjs ./run-test262 test262.conf \
+            test262/harness/sta.js test262/harness/assert.js \
+            test262/harness/propertyHelper.js test262/harness/isConstructor.js \
+            > "$REPORT/products-and-harness.sha256"
+          {
+            file ./qjs ./run-test262
+            git -C test262 rev-parse HEAD
+            printf 'getYear cases:\n'
+            find test262/test/annexB/built-ins/Date/prototype/getYear -type f -name '*.js' | sort
+            for harness in sta.js assert.js propertyHelper.js isConstructor.js; do
+              printf '\n%s size and first 96 bytes:\n' "$harness"
+              wc -c < "test262/harness/$harness"
+              od -An -tx1 -v -N96 "test262/harness/$harness"
+            done
+          } > "$REPORT/products-and-harness.txt" 2>&1
+          cat "$REPORT/products-and-harness.sha256" "$REPORT/products-and-harness.txt"
+      - name: Probe before the original full suite and repeat after failure
+        run: |
+          # Every APE probe uses the same /bin/sh launcher used by Make.
+          # The fixed command string passes all filenames and flags as argv.
+          capture_probe() {
+            local label="$1"
+            shift
+            local status=0
+            printf '%s' "$label" >> "$REPORT/probe-argv.txt"
+            printf ' %q' "$@" >> "$REPORT/probe-argv.txt"
+            printf '\n' >> "$REPORT/probe-argv.txt"
+            "$@" > "$REPORT/$label.log" 2>&1 || status=$?
+            printf '%s\t%s\n' "$label" "$status" >> "$REPORT/probe-status.tsv"
+            cat "$REPORT/$label.log"
+            # A failed probe is an observation; the full suite remains authoritative.
+            return 0
+          }
+          probes() {
+            local phase="$1"
+            local directory=test262/test/annexB/built-ins/Date/prototype/getYear
+            capture_probe "$phase-qjs-sta" /bin/sh -c 'exec "$@"' diagnostic \
+              ./qjs test262/harness/sta.js
+            capture_probe "$phase-first-main" /bin/sh -c 'exec "$@"' diagnostic \
+              ./run-test262 -t -m -c test262.conf -a -f "$directory/this-not-date.js"
+            for threads in 1 2; do
+              # Inclusive indices 0..0 retain full config enumeration and allocation.
+              capture_probe "$phase-first-enumerated-T$threads" /bin/sh -c 'exec "$@"' diagnostic \
+                ./run-test262 -t -m -c test262.conf -a -T "$threads" 0 0
+              capture_probe "$phase-seven-T$threads" /bin/sh -c 'exec "$@"' diagnostic \
+                ./run-test262 -t -m -c test262.conf -a -T "$threads" -d "$directory"
+            done
+          }
+          probes before
+          full_status=0
+          make CONFIG_COSMO=y test2 > "$REPORT/full-suite.log" 2>&1 || full_status=$?
+          printf '%s\n' "$full_status" > "$REPORT/full-suite-status.txt"
+          cat "$REPORT/full-suite.log"
+          # Preserve the full suite's report before later probes can overwrite it.
+          if test -f test262_report.txt; then
+            cp test262_report.txt "$REPORT/full-suite-report.txt"
+          fi
+          if test -f test262_errors.txt; then
+            cp test262_errors.txt "$REPORT/full-suite-errors.txt"
+          fi
+          if test "$full_status" -ne 0; then
+            probes after
+          fi
+          exit "$full_status"
+      - name: Preserve raw diagnostic observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosmopolitan-diagnostic-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.REPORT }}
+          if-no-files-found: warn
+          retention-days: 14
