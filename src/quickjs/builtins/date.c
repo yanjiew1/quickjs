@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,12 +33,88 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "date.h"
+#ifdef CONFIG_ICU
+#include "../../temporal/time-zone.h"
+#endif
+#ifdef CONFIG_TEMPORAL
+#include "temporal/temporal-internal.h"
+#endif
 #ifdef CONFIG_INTL
 #include "intl/locale-integration.h"
 #endif
 
 /* Date */
 
+#ifdef CONFIG_ICU
+/* Date and Temporal copy the same configured host/embedding zone for one
+   operation. ICU's cached default is not automatically rediscovered; the
+   embedder configures it before creating runtimes, never concurrently. */
+static __exception int date_backend_error(JSContext *ctx, int error)
+{
+    if (!error)
+        return 0;
+    if (error == QJS_TEMPORAL_ERROR_MEMORY)
+        JS_ThrowOutOfMemory(ctx);
+    else if (error == QJS_TEMPORAL_ERROR_BACKEND)
+        JS_ThrowInternalError(ctx, "Date time-zone backend failed");
+    else
+        JS_ThrowRangeError(ctx, "invalid Date time-zone value");
+    return -1;
+}
+static __exception int date_local_offset(JSContext *ctx, int64_t milliseconds,
+                                         int64_t *result)
+{
+    QJSTemporalZone zone;
+    QJSTemporalEpochNs epoch;
+    int64_t offset;
+    int error;
+    if (date_backend_error(ctx, qjs_temporal_system_zone(&zone)))
+        return -1;
+    error = qjs_temporal_epoch_ns_from_milliseconds(&epoch, (double)milliseconds);
+    if (date_backend_error(ctx, error ? QJS_TEMPORAL_ERROR_RANGE :
+                                        qjs_temporal_zone_offset(&zone, epoch, &offset)))
+        return -1;
+    *result = offset / 1000000;
+    return 0;
+}
+static __exception int date_utc(JSContext *ctx, double milliseconds,
+                                double *result)
+{
+    QJSTemporalZone zone;
+    QJSTemporalEpochNs wall, epoch;
+    QJSTemporalISODateTime local;
+    int64_t value;
+    int error;
+    /* UTC(t) accepts a wall clock just outside the Instant domain. A zone
+       offset can bring it back inside before TimeClip. Larger values cannot
+       survive TimeClip because every supported offset is less than one day. */
+    if (!isfinite(milliseconds) || fabs(milliseconds) > 8640000086400000.0) {
+        *result = NAN;
+        return 0;
+    }
+    if (date_backend_error(ctx, qjs_temporal_system_zone(&zone)))
+        return -1;
+    wall = qjs_temporal_epoch_ns_from_int64((int64_t)trunc(milliseconds));
+    if (qjs_temporal_epoch_ns_multiply(&wall, wall, 1000000) ||
+        qjs_temporal_iso_datetime_from_epoch_ns(&local, wall)) {
+        *result = NAN;
+        return 0;
+    }
+    error = qjs_temporal_zone_epoch(&zone, local, QJS_TEMPORAL_COMPATIBLE, &epoch);
+    if (error == QJS_TEMPORAL_ERROR_RANGE) {
+        *result = NAN;
+        return 0;
+    }
+    if (date_backend_error(ctx, error))
+        return -1;
+    if (date_backend_error(ctx,
+            qjs_temporal_epoch_ns_to_milliseconds(&value, epoch) ?
+            QJS_TEMPORAL_ERROR_RANGE : 0))
+        return -1;
+    *result = (double)value;
+    return 0;
+}
+#else
 /* OS dependent. d = argv[0] is in ms from 1970. Return the difference
    between UTC time and local time 'd' in minutes */
 static int getTimezoneOffset(int64_t time)
@@ -93,6 +170,8 @@ static int getTimezoneOffset(int64_t time)
 #endif
     return res;
 }
+
+#endif
 
 #if 0
 static JSValue js___date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
@@ -166,6 +245,20 @@ static __exception int JS_ThisTimeValue(JSContext *ctx, double *valp, JSValueCon
     return -1;
 }
 
+#ifdef CONFIG_TEMPORAL
+static JSValue js_date_toTemporalInstant(JSContext *ctx, JSValueConst this_val,
+                                         int argc, JSValueConst *argv)
+{
+    double milliseconds;
+    QJSTemporalEpochNs epoch;
+    if (JS_ThisTimeValue(ctx, &milliseconds, this_val))
+        return JS_EXCEPTION;
+    if (qjs_temporal_epoch_ns_from_milliseconds(&epoch, milliseconds))
+        return JS_ThrowRangeError(ctx, "invalid Date for Temporal.Instant");
+    return js_temporal_create_instant(ctx, JS_UNDEFINED, epoch);
+}
+#endif
+
 static JSValue JS_SetThisTimeValue(JSContext *ctx, JSValueConst this_val, double v)
 {
     if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
@@ -215,14 +308,11 @@ static int const month_days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 static char const month_names[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
 static char const day_names[] = "SunMonTueWedThuFriSat";
 
-static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
-                                       double fields[minimum_length(9)], int is_local, int force)
+static __exception int get_date_fields_from_time(JSContext *ctx, double dval,
+                                                 double fields[minimum_length(9)],
+                                                 int is_local, int force)
 {
-    double dval;
     int64_t d, days, wd, y, i, md, h, m, s, ms, tz = 0;
-
-    if (JS_ThisTimeValue(ctx, &dval, obj))
-        return -1;
 
     if (isnan(dval)) {
         if (!force)
@@ -231,8 +321,16 @@ static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
     } else {
         d = dval;     /* assuming -8.64e15 <= dval <= -8.64e15 */
         if (is_local) {
+#ifdef CONFIG_ICU
+            int64_t offset;
+            if (date_local_offset(ctx, d, &offset))
+                return -1;
+            d += offset;
+            tz = offset / 60000; /* Date string output uses whole minutes. */
+#else
             tz = -getTimezoneOffset(d);
             d += tz * 60000;
+#endif
         }
     }
 
@@ -268,6 +366,16 @@ static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
     return TRUE;
 }
 
+static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
+                                       double fields[minimum_length(9)],
+                                       int is_local, int force)
+{
+    double value;
+    if (JS_ThisTimeValue(ctx, &value, obj))
+        return -1;
+    return get_date_fields_from_time(ctx, value, fields, is_local, force);
+}
+
 static double time_clip(double t) {
     if (t >= -8.64e15 && t <= 8.64e15)
         return trunc(t) + 0.0;  /* convert -0 to +0 */
@@ -277,7 +385,10 @@ static double time_clip(double t) {
 
 /* The spec mandates the use of 'double' and it specifies the order
    of the operations */
-static double set_date_fields(double fields[minimum_length(7)], int is_local) {
+static __exception int set_date_fields(JSContext *ctx,
+                                        double fields[minimum_length(7)],
+                                       int is_local, double *result)
+{
     double y, m, dt, ym, mn, day, h, s, milli, time, tv;
     int yi, mi, i;
     int64_t days;
@@ -291,8 +402,10 @@ static double set_date_fields(double fields[minimum_length(7)], int is_local) {
     mn = fmod(m, 12);
     if (mn < 0)
         mn += 12;
-    if (ym < -271821 || ym > 275760)
-        return NAN;
+    if (ym < -271821 || ym > 275760) {
+        *result = NAN;
+        return 0;
+    }
 
     yi = ym;
     mi = mn;
@@ -323,30 +436,42 @@ static double set_date_fields(double fields[minimum_length(7)], int is_local) {
 
     /* emulate 21.4.1.16 MakeDate ( day, time ) */
     tv = (temp = day * 86400000) + time;   /* prevent generation of FMA */
-    if (!isfinite(tv))
-        return NAN;
+    if (!isfinite(tv)) {
+        *result = NAN;
+        return 0;
+    }
 
     /* adjust for local time and clip */
     if (is_local) {
+#ifdef CONFIG_ICU
+        if (date_utc(ctx, tv, &tv))
+            return -1;
+#else
         int64_t ti = tv < INT64_MIN ? INT64_MIN : tv >= 0x1p63 ? INT64_MAX : (int64_t)tv;
         tv += getTimezoneOffset(ti) * 60000;
+#endif
     }
-    return time_clip(tv);
+    *result = time_clip(tv);
+    return 0;
 }
 
-static double set_date_fields_checked(double fields[minimum_length(7)], int is_local)
+static __exception int set_date_fields_checked(JSContext *ctx,
+                                               double fields[minimum_length(7)],
+                                               int is_local, double *result)
 {
     int i;
     double a;
     for(i = 0; i < 7; i++) {
         a = fields[i];
-        if (!isfinite(a))
-            return NAN;
+        if (!isfinite(a)) {
+            *result = NAN;
+            return 0;
+        }
         fields[i] = trunc(a);
         if (i == 0 && fields[0] >= 0 && fields[0] < 100)
             fields[0] += 1900;
     }
-    return set_date_fields(fields, is_local);
+    return set_date_fields(ctx, fields, is_local, result);
 }
 
 static JSValue get_date_field(JSContext *ctx, JSValueConst this_val,
@@ -376,33 +501,46 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
     // _field(obj, first_field, end_field, args, is_local)
     double fields[9];
     int res, first_field, end_field, is_local, i, n, res1;
-    double d, a;
+    double d, a, values[7];
+    int converted;
 
     d = NAN;
     first_field = (magic >> 8) & 0x0F;
     end_field = (magic >> 4) & 0x0F;
     is_local = magic & 0x0F;
 
-    res = get_date_fields(ctx, this_val, fields, is_local, first_field == 0);
+    /* Keep the slot captured before coercion. setFullYear performs LocalTime
+       after its first ToNumber; the other setters convert all arguments first. */
+    if (JS_ThisTimeValue(ctx, &d, this_val))
+        return JS_EXCEPTION;
+    n = min_int(argc, end_field - first_field);
+    converted = first_field == 0 ? 1 : max_int(n, 1);
+    for(i = 0; i < converted; i++) {
+        if (JS_ToFloat64(ctx, &values[i], i < argc ? argv[i] : JS_UNDEFINED))
+            return JS_EXCEPTION;
+    }
+    res = get_date_fields_from_time(ctx, d, fields, is_local, first_field == 0);
     if (res < 0)
         return JS_EXCEPTION;
     res1 = res;
-    
-    // Argument coercion is observable and must be done unconditionally.
-    n = min_int(argc, end_field - first_field);
-    for(i = 0; i < n; i++) {
-        if (JS_ToFloat64(ctx, &a, argv[i]))
+    // Optional setFullYear arguments are converted after LocalTime.
+    for(i = converted; i < n; i++) {
+        if (JS_ToFloat64(ctx, &values[i], argv[i]))
             return JS_EXCEPTION;
+    }
+    for(i = 0; i < max_int(n, 1); i++) {
+        a = values[i];
         if (!isfinite(a))
             res = FALSE;
         fields[first_field + i] = trunc(a);
     }
+    d = NAN;
 
     if (!res1)
         return JS_NAN; /* thisTimeValue is NaN */
 
-    if (res && argc > 0)
-        d = set_date_fields(fields, is_local);
+    if (res && argc > 0 && set_date_fields(ctx, fields, is_local, &d))
+        return JS_EXCEPTION;
 
     return JS_SetThisTimeValue(ctx, this_val, d);
 }
@@ -575,7 +713,8 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
             if (JS_ToFloat64(ctx, &fields[i], argv[i]))
                 return JS_EXCEPTION;
         }
-        val = set_date_fields_checked(fields, 1);
+        if (set_date_fields_checked(ctx, fields, 1, &val))
+            return JS_EXCEPTION;
     }
 has_val:
 #if 0
@@ -615,7 +754,12 @@ static JSValue js_Date_UTC(JSContext *ctx, JSValueConst this_val,
         if (JS_ToFloat64(ctx, &fields[i], argv[i]))
             return JS_EXCEPTION;
     }
-    return JS_NewFloat64(ctx, set_date_fields_checked(fields, 0));
+    {
+        double value;
+        if (set_date_fields_checked(ctx, fields, 0, &value))
+            return JS_EXCEPTION;
+        return JS_NewFloat64(ctx, value);
+    }
 }
 
 /* Date string parsing */
@@ -1074,8 +1218,12 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
         if (valid) {
             for(i = 0; i < 7; i++)
                 fields1[i] = fields[i];
-            d = set_date_fields(fields1, is_local) - fields[8] * 60000;
-            rv = JS_NewFloat64(ctx, d);
+            if (set_date_fields(ctx, fields1, is_local, &d)) {
+                rv = JS_EXCEPTION;
+            } else {
+                d -= fields[8] * 60000;
+                rv = JS_NewFloat64(ctx, d);
+            }
         }
     }
     JS_FreeValue(ctx, s);
@@ -1131,9 +1279,18 @@ static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (isnan(v))
         return JS_NAN;
+#ifdef CONFIG_ICU
+    else {
+        int64_t offset;
+        if (date_local_offset(ctx, (int64_t)trunc(v), &offset))
+            return JS_EXCEPTION;
+        return JS_NewFloat64(ctx, -offset / 60000.0);
+    }
+#else
     else
         /* assuming -8.64e15 <= v <= -8.64e15 */
         return JS_NewInt64(ctx, getTimezoneOffset((int64_t)trunc(v)));
+#endif
 }
 
 static JSValue js_date_getTime(JSContext *ctx, JSValueConst this_val,
@@ -1173,7 +1330,8 @@ static JSValue js_date_setYear(JSContext *ctx, JSValueConst this_val,
         if (y >= 0 && y < 100)
             y += 1900;
         fields[0] = y;
-        d = set_date_fields(fields, TRUE);
+        if (set_date_fields(ctx, fields, TRUE, &d))
+            return JS_EXCEPTION;
     }
     return JS_SetThisTimeValue(ctx, this_val, d);
 }
@@ -1240,6 +1398,9 @@ static const JSCFunctionListEntry js_date_funcs[] = {
 };
 
 static const JSCFunctionListEntry js_date_proto_funcs[] = {
+#ifdef CONFIG_TEMPORAL
+    JS_CFUNC_DEF("toTemporalInstant", 0, js_date_toTemporalInstant),
+#endif
     JS_CFUNC_DEF("valueOf", 0, js_date_getTime ),
     JS_CFUNC_MAGIC_DEF("toString", 0, get_date_string, 0x13 ),
     JS_CFUNC_DEF("[Symbol.toPrimitive]", 1, js_date_Symbol_toPrimitive ),
