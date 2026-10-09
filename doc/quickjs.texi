@@ -884,6 +884,35 @@ created object.
 
 Examples are available in @file{src/quickjs-libc/std.c}.
 
+@subsection Temporal Instant embedding
+
+When Temporal is enabled, @code{JS_NewTemporalInstant(ctx, low, high)}
+creates an owned @code{Temporal.Instant} in @code{ctx}'s intrinsic realm.
+The two unsigned words encode signed two's-complement epoch nanoseconds,
+with the least significant word first, exactly as for
+@code{JS_NewBigInt128}. This word order is independent of host byte order
+and requires no native 128-bit integer type. Epochs are limited to the
+inclusive interval of +/- 100,000,000 days. Invalid epochs throw
+@code{RangeError}; allocation failure returns @code{JS_EXCEPTION} with a
+pending exception. Release a successful result with @code{JS_FreeValue}.
+
+@code{JS_GetTemporalInstantEpochNanoseconds(ctx, value, plow, phigh)}
+borrows @code{value} and reads its exact native Instant slots. It returns
+zero on success, or minus one with @code{TypeError} for a value without
+the Instant brand or invalid output pointers. Both output words remain
+unchanged on error. Supply distinct non-null pointers to valid
+@code{uint64_t} storage. Instant subclass instances are accepted; proxies
+and objects with similar properties are rejected. Values must belong to
+the context's runtime. Reading a valid Instant allocates no memory.
+
+These calls do not invoke JavaScript coercions or getters and do not
+access the global @code{Temporal} binding. Creation in a raw context
+requires @code{JS_AddIntrinsicBaseObjects} first and initializes private
+Temporal intrinsics without publishing a global namespace. Later
+@code{JS_AddIntrinsicTemporal} publishes those same intrinsics. In a
+disabled Temporal build both calls throw @code{TypeError}, and the getter
+leaves its outputs unchanged.
+
 @subsection C Modules
 
 Native ES6 modules are supported and can be dynamically or statically

@@ -165,10 +165,54 @@ int JS_AddIntrinsicTemporal(JSContext *ctx)
     return 0;
 }
 
+JSValue JS_NewTemporalInstant(JSContext *ctx, uint64_t low, uint64_t high)
+{
+    QJSTemporalEpochNs epoch = { low, high };
+
+    if (!qjs_temporal_epoch_ns_is_valid(epoch))
+        return JS_ThrowRangeError(ctx,
+                    "Temporal epoch nanoseconds are outside the valid range");
+    return js_temporal_create_instant(ctx, JS_UNDEFINED, epoch);
+}
+
+int JS_GetTemporalInstantEpochNanoseconds(JSContext *ctx, JSValueConst value,
+                                        uint64_t *plow, uint64_t *phigh)
+{
+    JSTemporalInstantData *instant;
+
+    if (!plow || !phigh || plow == phigh) {
+        JS_ThrowTypeError(ctx, "distinct Temporal epoch outputs are required");
+        return -1;
+    }
+    instant = JS_GetOpaque2(ctx, value, JS_CLASS_TEMPORAL_INSTANT);
+    if (!instant)
+        return -1;
+    *plow = instant->low;
+    *phigh = instant->high;
+    return 0;
+}
+
 #else
 
 int JS_AddIntrinsicTemporal(JSContext *ctx)
 {
+    JS_ThrowTypeError(ctx, "Temporal support is disabled in this build");
+    return -1;
+}
+
+JSValue JS_NewTemporalInstant(JSContext *ctx, uint64_t low, uint64_t high)
+{
+    (void)low;
+    (void)high;
+    return JS_ThrowTypeError(ctx, "Temporal support is disabled in this build");
+}
+
+int JS_GetTemporalInstantEpochNanoseconds(JSContext *ctx, JSValueConst value,
+                                        uint64_t *plow, uint64_t *phigh)
+{
+    (void)value;
+    (void)plow;
+    (void)phigh;
     JS_ThrowTypeError(ctx, "Temporal support is disabled in this build");
     return -1;
 }

@@ -404,8 +404,9 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx);
 int JS_AddIntrinsicDate(JSContext *ctx);
 /* Initialize the native Temporal constructors and namespace. Returns 0
    on success and -1 with a pending exception on allocation or publication
-   failure. Raw contexts must initialize base objects first. Disabled
-   builds return -1 with a pending TypeError; no namespace is created. */
+   failure. Initialization is idempotent. Raw contexts must initialize
+   base objects first. Disabled builds throw TypeError and return -1;
+   no namespace is created. */
 int JS_AddIntrinsicTemporal(JSContext *ctx);
 int JS_AddIntrinsicEval(JSContext *ctx);
 int JS_AddIntrinsicStringNormalize(JSContext *ctx);
@@ -839,6 +840,25 @@ JSValue JS_NewArray(JSContext *ctx);
 int JS_IsArray(JSContext *ctx, JSValueConst val);
 
 JSValue JS_NewDate(JSContext *ctx, double epoch_ms);
+
+/* Create an owned Temporal.Instant from signed two's-complement epoch
+   nanoseconds. low is the least significant 64-bit word, independent of
+   machine byte order, as in JS_NewBigInt128. The inclusive range is
+   +/- 100,000,000 days. No JavaScript coercion or global lookup occurs.
+   Raw contexts require base objects first; private Temporal intrinsics are
+   initialized as needed without publishing the Temporal global. Returns
+   JS_EXCEPTION with RangeError for an invalid epoch, or a pending exception
+   on allocation failure. Disabled Temporal builds throw TypeError. */
+JSValue JS_NewTemporalInstant(JSContext *ctx, uint64_t low, uint64_t high);
+/* Read exact native Temporal.Instant slots, including subclass instances.
+   value is borrowed and must belong to ctx's runtime. No coercion, property
+   access, proxy unwrapping, or allocation occurs on success. plow and phigh
+   must be distinct non-null pointers to valid uint64_t storage. Returns 0
+   on success, or -1 with TypeError for an invalid output pointer, a value
+   without the Instant brand, or a disabled Temporal build. Both outputs
+   remain unchanged on error. Words use the JS_NewBigInt128 convention. */
+int JS_GetTemporalInstantEpochNanoseconds(JSContext *ctx, JSValueConst value,
+                                        uint64_t *plow, uint64_t *phigh);
 
 JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                                JSAtom prop, JSValueConst receiver,

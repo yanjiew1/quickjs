@@ -295,6 +295,268 @@ static void test_foreign_raw_intrinsics(JSRuntime *rt)
     JS_FreeContext(source);
 }
 
+static void assert_embedding_error(JSContext *ctx, const char *expected)
+{
+    JSValue error, name;
+    const char *text;
+
+    assert(JS_HasException(ctx));
+    error = JS_GetException(ctx);
+    assert(JS_IsObject(error));
+    name = JS_GetPropertyStr(ctx, error, "name");
+    assert(!JS_IsException(name));
+    text = JS_ToCString(ctx, name);
+    assert(text && !strcmp(text, expected));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, error);
+    assert(!JS_HasException(ctx));
+}
+
+static JSValue embedding_poison_getter(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv)
+{
+    return JS_ThrowInternalError(ctx, "Instant embedding must not call getters");
+}
+
+static void assert_instant_words(JSContext *ctx, JSValueConst value,
+                                 uint64_t expected_low, uint64_t expected_high)
+{
+    uint64_t low = 7, high = 11;
+
+    assert(JS_GetTemporalInstantEpochNanoseconds(ctx, value, &low, &high) == 0);
+    assert(low == expected_low && high == expected_high);
+    assert(!JS_HasException(ctx));
+}
+
+static void test_instant_embedding_raw(JSRuntime *rt)
+{
+    JSContext *ctx = JS_NewContextRaw(rt);
+    JSValue global, instant, namespace_object, constructor, expected, prototype;
+    JSValue getter, value;
+    JSAtom atom;
+
+    assert(ctx && JS_AddIntrinsicBaseObjects(ctx) == 0);
+    global = JS_GetGlobalObject(ctx);
+    /* A hostile global cannot prevent private intrinsic initialization. */
+    getter = JS_NewCFunction(ctx, embedding_poison_getter, "get Temporal", 0);
+    atom = JS_NewAtom(ctx, "Temporal");
+    assert(!JS_IsException(getter) && atom);
+    assert(JS_DefinePropertyGetSet(ctx, global, atom, getter, JS_UNDEFINED,
+                                   JS_PROP_CONFIGURABLE) >= 0);
+    instant = JS_NewTemporalInstant(ctx, UINT64_MAX, UINT64_MAX);
+    assert(!JS_IsException(instant));
+    assert_instant_words(ctx, instant, UINT64_MAX, UINT64_MAX);
+    /* Slot extraction ignores an own getter with the standard field name. */
+    getter = JS_NewCFunction(ctx, embedding_poison_getter,
+                             "get epochNanoseconds", 0);
+    {
+        JSAtom field = JS_NewAtom(ctx, "epochNanoseconds");
+
+        assert(!JS_IsException(getter) && field);
+        assert(JS_DefinePropertyGetSet(ctx, instant, field, getter,
+                                       JS_UNDEFINED, JS_PROP_CONFIGURABLE) >= 0);
+        JS_FreeAtom(ctx, field);
+    }
+    assert_instant_words(ctx, instant, UINT64_MAX, UINT64_MAX);
+    prototype = JS_GetPrototype(ctx, instant);
+    expected = JS_GetClassProto(ctx, JS_GetClassID(instant));
+    assert(JS_StrictEq(ctx, prototype, expected));
+    /* Private initialization does not replace or invoke the global getter. */
+    value = JS_GetProperty(ctx, global, atom);
+    assert(JS_IsException(value));
+    assert_embedding_error(ctx, "InternalError");
+    assert(JS_DeleteProperty(ctx, global, atom, 0) == 1);
+    JS_FreeAtom(ctx, atom);
+    value = get_global_temporal(ctx);
+    assert(JS_IsUndefined(value));
+    JS_FreeValue(ctx, value);
+    assert(JS_AddIntrinsicTemporal(ctx) == 0);
+    namespace_object = get_global_temporal(ctx);
+    constructor = JS_GetPropertyStr(ctx, namespace_object, "Instant");
+    value = JS_GetPropertyStr(ctx, constructor, "prototype");
+    assert(JS_StrictEq(ctx, prototype, value));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, constructor);
+    JS_FreeValue(ctx, namespace_object);
+    JS_FreeValue(ctx, expected);
+    JS_FreeValue(ctx, prototype);
+    JS_FreeValue(ctx, instant);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+}
+
+static void test_instant_embedding_bounds(JSRuntime *rt)
+{
+    static const uint64_t words[][2] = {
+        { 0, 0 },
+        { UINT64_MAX, UINT64_MAX }, /* -1 ns, not rounded to milliseconds. */
+        { UINT64_C(9007199254740993), 0 }, /* Above binary64's exact range. */
+        { UINT64_C(0x60162f516f000000), UINT64_C(0x1d4) },
+        { UINT64_C(0x9fe9d0ae91000000), UINT64_C(0xfffffffffffffe2b) },
+    };
+    static const uint64_t invalid[][2] = {
+        { UINT64_C(0x60162f516f000001), UINT64_C(0x1d4) },
+        { UINT64_C(0x9fe9d0ae90ffffff), UINT64_C(0xfffffffffffffe2b) },
+        { 0, UINT64_C(0x8000000000000000) },
+        { UINT64_MAX, UINT64_C(0x7fffffffffffffff) },
+    };
+    JSContext *ctx = JS_NewContext(rt), *other = JS_NewContext(rt);
+    JSValue instant;
+    size_t i;
+
+    assert(ctx && other);
+    for (i = 0; i < sizeof(words) / sizeof(words[0]); i++) {
+        instant = JS_NewTemporalInstant(ctx, words[i][0], words[i][1]);
+        assert(!JS_IsException(instant));
+        assert_instant_words(ctx, instant, words[i][0], words[i][1]);
+        assert_instant_words(other, instant, words[i][0], words[i][1]);
+        JS_FreeValue(ctx, instant);
+    }
+    for (i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
+        instant = JS_NewTemporalInstant(ctx, invalid[i][0], invalid[i][1]);
+        assert(JS_IsException(instant));
+        assert_embedding_error(ctx, "RangeError");
+    }
+    JS_FreeContext(other);
+    JS_FreeContext(ctx);
+}
+
+static JSValue embedding_eval(JSContext *ctx, const char *source)
+{
+    JSValue value = JS_Eval(ctx, source, strlen(source),
+                            "instant-embedding.js", JS_EVAL_TYPE_GLOBAL);
+
+    assert(!JS_IsException(value));
+    return value;
+}
+
+static void test_instant_embedding_brand(JSRuntime *rt)
+{
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue subclass, fake, proxy, prototype, zoned, number, string, instant;
+    JSValue values[9];
+    uint64_t low, high;
+    size_t i;
+
+    assert(ctx);
+    subclass = embedding_eval(ctx, "new (class extends Temporal.Instant {})(-1n)");
+    assert_instant_words(ctx, subclass, UINT64_MAX, UINT64_MAX);
+    fake = embedding_eval(ctx,
+        "({ get epochNanoseconds() { throw 'must not run'; },"
+        " [Symbol.toPrimitive]() { throw 'must not run'; } })");
+    proxy = embedding_eval(ctx,
+        "new Proxy(new Temporal.Instant(1n), {"
+        " get() { throw 'proxy must not run'; } })");
+    prototype = embedding_eval(ctx, "Temporal.Instant.prototype");
+    zoned = embedding_eval(ctx, "new Temporal.ZonedDateTime(1n, 'UTC')");
+    number = JS_NewInt32(ctx, 1);
+    string = JS_NewString(ctx, "1970-01-01T00:00:00Z");
+    assert(!JS_IsException(string));
+    values[0] = fake;
+    values[1] = proxy;
+    values[2] = prototype;
+    values[3] = zoned;
+    values[4] = number;
+    values[5] = string;
+    values[6] = JS_NULL;
+    values[7] = JS_UNDEFINED;
+    values[8] = JS_NewBigInt64(ctx, 1);
+    assert(!JS_IsException(values[8]));
+    for (i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        low = 7;
+        high = 11;
+        assert(JS_GetTemporalInstantEpochNanoseconds(ctx, values[i],
+                                                      &low, &high) == -1);
+        assert(low == 7 && high == 11);
+        assert_embedding_error(ctx, "TypeError");
+        JS_FreeValue(ctx, values[i]);
+    }
+    instant = JS_NewTemporalInstant(ctx, 1, 0);
+    assert(!JS_IsException(instant));
+    low = 7;
+    high = 11;
+    assert(JS_GetTemporalInstantEpochNanoseconds(ctx, instant, NULL, &high) == -1);
+    assert(low == 7 && high == 11);
+    assert_embedding_error(ctx, "TypeError");
+    assert(JS_GetTemporalInstantEpochNanoseconds(ctx, instant, &low, NULL) == -1);
+    assert(low == 7 && high == 11);
+    assert_embedding_error(ctx, "TypeError");
+    assert(JS_GetTemporalInstantEpochNanoseconds(ctx, instant, &low, &low) == -1);
+    assert(low == 7 && high == 11);
+    assert_embedding_error(ctx, "TypeError");
+    JS_FreeValue(ctx, instant);
+    JS_FreeValue(ctx, subclass);
+    JS_FreeContext(ctx);
+}
+
+/* A zero host-memory limit still permits spare arena blocks to be reused.
+   Retain them so the operation must fail if it requests any allocation. */
+static void exhaust_spare_blocks(JSRuntime *rt, void **padding)
+{
+    size_t size;
+    void *ptr;
+
+    JS_SetMemoryLimit(rt, 0);
+    for (size = sizeof(void *); size <= 512; size += sizeof(void *)) {
+        while ((ptr = js_malloc_rt(rt, size)) != NULL) {
+            memcpy(ptr, padding, sizeof(*padding));
+            *padding = ptr;
+        }
+    }
+}
+
+static void test_instant_embedding_allocation(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *cold, *warm;
+    JSValue value, owned, exception;
+    uint64_t low = 7, high = 11;
+    void *padding = NULL, *next;
+
+    assert(rt);
+    cold = new_raw_context(rt);
+    warm = JS_NewContext(rt);
+    assert(warm);
+    owned = JS_NewTemporalInstant(warm, UINT64_MAX, UINT64_MAX);
+    assert(!JS_IsException(owned));
+    JS_RunGC(rt);
+    JS_SetGCThreshold(rt, (size_t)-1);
+    exhaust_spare_blocks(rt, &padding);
+    /* Slot reads do not allocate or need JavaScript intrinsic publication. */
+    assert(JS_GetTemporalInstantEpochNanoseconds(warm, owned, &low, &high) == 0);
+    assert(low == UINT64_MAX && high == UINT64_MAX && !JS_HasException(warm));
+    value = JS_NewTemporalInstant(warm, 0, 0);
+    assert(JS_IsException(value) && JS_HasException(warm));
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    exception = JS_GetException(warm);
+    JS_FreeValue(warm, exception);
+    /* Error cleanup may return blocks to an arena. Retain those as well. */
+    exhaust_spare_blocks(rt, &padding);
+    value = JS_NewTemporalInstant(cold, 0, 0);
+    assert(JS_IsException(value) && JS_HasException(cold));
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    exception = JS_GetException(cold);
+    JS_FreeValue(cold, exception);
+    /* Failed lazy initialization must permit a later successful retry. */
+    value = JS_NewTemporalInstant(cold, 0, 0);
+    assert(!JS_IsException(value) && !JS_HasException(cold));
+    assert_instant_words(cold, value, 0, 0);
+    JS_FreeValue(cold, value);
+    value = get_global_temporal(cold);
+    assert(JS_IsUndefined(value));
+    JS_FreeValue(cold, value);
+    while (padding) {
+        memcpy(&next, padding, sizeof(next));
+        js_free_rt(rt, padding);
+        padding = next;
+    }
+    JS_FreeValue(warm, owned);
+    JS_FreeContext(cold);
+    JS_FreeContext(warm);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -304,6 +566,10 @@ int main(void)
     test_publication_failure(rt);
     test_intrinsic_realm(rt);
     test_foreign_raw_intrinsics(rt);
+    test_instant_embedding_raw(rt);
+    test_instant_embedding_bounds(rt);
+    test_instant_embedding_brand(rt);
+    test_instant_embedding_allocation();
     JS_RunGC(rt);
     JS_FreeRuntime(rt);
     return 0;
@@ -335,6 +601,29 @@ int main(void)
     JS_FreeCString(ctx, text);
     JS_FreeValue(ctx, name);
     JS_FreeValue(ctx, exception);
+    {
+        uint64_t low = 7, high = 11;
+        JSValue value = JS_NewTemporalInstant(ctx, 0, 0);
+
+        assert(JS_IsException(value) && JS_HasException(ctx));
+        exception = JS_GetException(ctx);
+        name = JS_GetPropertyStr(ctx, exception, "name");
+        text = JS_ToCString(ctx, name);
+        assert(text && !strcmp(text, "TypeError"));
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, name);
+        JS_FreeValue(ctx, exception);
+        assert(JS_GetTemporalInstantEpochNanoseconds(ctx, JS_UNDEFINED,
+                                                      &low, &high) == -1);
+        assert(low == 7 && high == 11 && JS_HasException(ctx));
+        exception = JS_GetException(ctx);
+        name = JS_GetPropertyStr(ctx, exception, "name");
+        text = JS_ToCString(ctx, name);
+        assert(text && !strcmp(text, "TypeError"));
+        JS_FreeCString(ctx, text);
+        JS_FreeValue(ctx, name);
+        JS_FreeValue(ctx, exception);
+    }
     temporal = JS_GetPropertyStr(ctx, global, "Temporal");
     assert(JS_IsUndefined(temporal) && !JS_HasException(ctx));
     JS_FreeValue(ctx, temporal);
