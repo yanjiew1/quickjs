@@ -472,7 +472,7 @@ ifeq ($(CONFIG_ICU),y)
 LIBS+=$(ICU_LIBS)
 HOST_LIBS+=$(HOST_ICU_LIBS)
 # Host and target include paths stay separate for cross compilation.
-ICU_HEADER_SRCS=$(QUICKJS_SRCS) src/quickjs-libc/host.c tools/qjs.c tests/test_intl_embedder.c tests/test_intl_locale_lookup.c tests/test_intl_plural.c
+ICU_HEADER_SRCS=$(QUICKJS_SRCS) src/quickjs-libc/host.c tools/qjs.c tests/test_intl_embedder.c tests/test_intl_locale_lookup.c tests/test_intl_plural.c tests/test_intl_oom.c
 ICU_TARGET_OBJECTS=$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(ICU_HEADER_SRCS)))
 $(ICU_TARGET_OBJECTS): ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
 $(patsubst %.c,$(OBJDIR)/%.host.o,$(ICU_HEADER_SRCS)): ICU_COMPILE_CFLAGS=$(HOST_ICU_CFLAGS)
@@ -754,9 +754,11 @@ endif
 ifeq ($(CONFIG_ICU),y)
 endif
 C_TESTS+=tests/test_intl_duration_format_embed$(EXE)
+C_TESTS+=tests/test_intl_services_api$(EXE)
 C_TESTS+=tests/test_intl_plural$(EXE)
 C_TESTS+=tests/test_intl_number_format_embed$(EXE)
 C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
+C_TESTS+=tests/test_native_data_realms$(EXE)
 ifeq ($(CONFIG_INTL),y)
 C_TESTS+=tests/test_intl_locale_lookup$(EXE)
 endif
@@ -775,11 +777,14 @@ C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_worker_context_failure$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
 C_TESTS+=tests/test_intl_embedder$(EXE)
+C_TESTS+=tests/test_intl_oom$(EXE)
 $(patsubst tests/%$(EXE),$(OBJDIR)/tests/%.o,$(C_TESTS)): .obj/intl-build-config
 
 tests/test_intl_embedder$(EXE): $(OBJDIR)/tests/test_intl_embedder.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_intl_oom$(EXE): $(OBJDIR)/tests/test_intl_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c .obj/intl-build-config | $(OBJDIR)
@@ -886,6 +891,8 @@ tests/test_cutils$(EXE): $(OBJDIR)/tests/test_cutils.o $(OBJDIR)/src/cutils/cuti
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_native_data_realms$(EXE): $(OBJDIR)/tests/test_native_data_realms.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_collator_segmenter$(EXE): $(OBJDIR)/tests/test_intl_collator_segmenter.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -893,6 +900,8 @@ tests/test_intl_collator_segmenter$(EXE): $(OBJDIR)/tests/test_intl_collator_seg
 tests/test_intl_number_format_embed$(EXE): $(OBJDIR)/tests/test_intl_number_format_embed.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_intl_services_api$(EXE): $(OBJDIR)/tests/test_intl_services_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_plural$(EXE): $(OBJDIR)/tests/test_intl_plural.o $(OBJDIR)/src/intl/plural.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -935,6 +944,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_worker_context_failure$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
 	$(WINE) ./tests/test_intl_embedder$(EXE)
+	$(WINE) ./tests/test_intl_oom$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
@@ -951,9 +961,11 @@ endif
 ifeq ($(CONFIG_ICU),y)
 endif
 	$(WINE) ./tests/test_intl_duration_format_embed$(EXE)
+	$(WINE) ./tests/test_intl_services_api$(EXE)
 	$(WINE) ./tests/test_intl_plural$(EXE)
 	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
+	$(WINE) ./tests/test_native_data_realms$(EXE)
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
 ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./tests/test_intl_locale_lookup$(EXE)
@@ -1035,6 +1047,7 @@ ifeq ($(CONFIG_INTL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
+	$(WINE) ./run-test262$(EXE) -N tests/test_intl_bound_function_realms.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_integration.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_duration_format.js
 ifeq ($(CONFIG_TEMPORAL),y)
