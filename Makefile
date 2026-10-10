@@ -412,7 +412,7 @@ TEMPORAL_SHARED_SRCS= \
     src/temporal/epoch.c \
     src/temporal/options.c \
     src/temporal/duration.c
-ifeq ($(CONFIG_ICU),y)
+ifneq ($(filter y,$(CONFIG_ICU) $(CONFIG_INTL_NATIVE)),)
 QUICKJS_SRCS+=$(TEMPORAL_SHARED_SRCS)
 endif
 ifeq ($(CONFIG_TEMPORAL),y)
@@ -484,7 +484,11 @@ INTL_BACKEND_SRCS= \
     src/intl/plural-native.c \
     src/intl/plural-native-data.c \
     src/quickjs/builtins/intl/native-number-common.c \
-    src/quickjs/builtins/intl/native-number-format.c
+    src/quickjs/builtins/intl/native-number-format.c \
+    src/intl/duration-native.c \
+    src/intl/duration-native-data.c \
+    src/intl/provider-native-duration.c \
+    src/quickjs/builtins/intl/native-duration-format.c
 else
 INTL_BACKEND_SRCS= \
     src/intl/libintl.c \
@@ -873,6 +877,7 @@ C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
 C_TESTS+=tests/test_intl_native_number_oom$(EXE)
 C_TESTS+=tests/test_intl_native_number_provider$(EXE)
 C_TESTS+=tests/test_intl_native_number_engine$(EXE)
+C_TESTS+=tests/test_intl_native_duration_engine$(EXE) tests/test_intl_native_duration_provider$(EXE) tests/test_intl_native_duration_oom$(EXE)
 endif
 endif
 
@@ -935,6 +940,12 @@ tests/test_intl_native_number_oom$(EXE): $(OBJDIR)/tests/test_intl_native_number
 tests/test_intl_native_number_provider$(EXE): $(OBJDIR)/tests/test_intl_native_number_provider.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_intl_native_duration_engine$(EXE): $(OBJDIR)/tests/test_intl_native_duration_engine.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_intl_native_duration_provider$(EXE): $(OBJDIR)/tests/test_intl_native_duration_provider.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_intl_native_duration_oom$(EXE): $(OBJDIR)/tests/test_intl_native_duration_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 tests/test_intl_native_number_engine$(EXE): $(OBJDIR)/tests/test_intl_native_number_engine.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -1145,6 +1156,9 @@ ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_native_number_oom$(EXE)
 	$(WINE) ./tests/test_intl_native_number_provider$(EXE)
 	$(WINE) ./tests/test_intl_native_number_engine$(EXE)
+	$(WINE) ./tests/test_intl_native_duration_engine$(EXE)
+	$(WINE) ./tests/test_intl_native_duration_provider$(EXE)
+	$(WINE) ./tests/test_intl_native_duration_oom$(EXE)
 endif
 endif
 
@@ -1226,6 +1240,7 @@ ifeq ($(CONFIG_INTL),y)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_number.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_duration.js
 else
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
