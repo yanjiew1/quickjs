@@ -1,0 +1,24 @@
+{
+  "status": "validated mirrored transcription; no runtime activation",
+  "provenance_class": "pinned CC0 mirrored transcription, not direct primary PDF capture",
+  "upstream_commit": "bc1a519a68b5b0cc78c1d74b6fdb41825c677a65",
+  "source_url": "https://raw.githubusercontent.com/roozbehp/persiancalendar/bc1a519a68b5b0cc78c1d74b6fdb41825c677a65/kabise.txt",
+  "original_authority_url": "https://calendar.ut.ac.ir/documents/2139738/7092644/Kabise+Shamsi+1206-1498.pdf",
+  "source_sha256": "39e85faf0235c1c60087c27be92fae9d6571b83261b9690c76e90f49899500a8",
+  "readme_sha256": "209e48e1c7722a41e432d419fbce82168e10990c2c1391690db5dacb1defb751",
+  "first_year": 1206,
+  "last_year": 1498,
+  "year_count": 293,
+  "first_epoch_day": -52150,
+  "exclusive_end_epoch_day": 54866,
+  "successor_boundary": {
+    "role": "derived exclusive end only",
+    "year": 1499,
+    "epoch_day": 54866,
+    "iso_date": "2120-03-21",
+    "proof": "1498* 2119-03-21 explicitly marks leap; add 366 days",
+    "independent_primary_1499_capture": false
+  },
+  "binary_sha256": "c8dc6cc18129252d6605618fecca61b9757f784273a334f5bab297097c138217",
+  "c_source_sha256": "134b50b1f67b725852bce98779848cf33e1bac8b4c077c314b49d99cc0269f7b"
+}

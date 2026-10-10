@@ -1,0 +1,999 @@
+{
+  "status": "root-generated candidate; C/frontend acceptance remains separate",
+  "input_sha256": {
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-month-parser-root-gates-20261009-v4/kasi-generated/kasi-months.bin": "fef7f7839e1896f3ac9d496f3ed25bb176d2f44df63fa7bcd87c563f6d9a5508",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-month-parser-root-gates-20261009-v4/kasi-generated/kasi-months.inc": "71441ea90cdcc604ac3c13821331fce5526f478fc99cae2754feb14f0901ed87",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-month-parser-root-gates-20261009-v4/kasi-generated/provenance.json": "08f20d1f35ff70cdd8514fd4cdd7c04ec2eeb28bd6a33950bd011929f55c27dc",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-month-parser-root-gates-20261009-v4/kasi-captures.json": "5ffb8a5e66b40a7bb477e147db6b4ab1422afba9efabec1fc14f02a64e44e907",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-month-parser-root-gates-20261009-v2/pmo-generated/pmo-months.bin": "c9c93b75fe6dc9c25a8627051ed9fdf666eec09f3f996bf42826b5661a9f0536",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-lunisolar-boundary-provider-root-gates-20261009-v1/chinese-provider/provider.c": "4b5cf5edc4a1b1ec2862d22dac16c97f36f0540dc556811946f877c0a0fdaa61",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-lunisolar-boundary-provider-root-gates-20261009-v1/chinese-provider/provenance.json": "e9d83eaed6a902b907429d38f73b767b45d5b6fab5d0efb7e4b0ac65dee07fde",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-lunisolar-boundary-provider-root-gates-20261009-v1/dangi-provider/provider.c": "c71b912d7cb606af687362409b8d7326df6f4ae2b641d3a71a2b20838232ffe3",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-lunisolar-boundary-provider-root-gates-20261009-v1/dangi-provider/provenance.json": "56f9911e0276fec6dca016321885e325986aeda07def5a42fad4be83363c813a",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-widget-domain-review-root-gates-20261009-v1/compare.json": "1a94a1d4a4d857ab777e564bafe0bde1cc3d5097b20f2d0a35f269b3bc7883dc",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-widget-domain-review-root-gates-20261009-v1/state.json": "4324064f5c5caa87bcec39c0e1774c983df0dbb0c57d10268d87f69b08865da7",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-integrated-provider-root-gates-20261009-v1/generated/provider.c": "b907bd5bffbb473c1af729a281ee7fb57779b69c498424baf1923dd9c33c91f1",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-hko-parser-source-preparation-20261009-v4/prepare_hko.py": "818da295e07864ebdc24166ecd486d0ec4dbe86ced2f8ed8c09403309b7054da",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-hko-parser-source-preparation-20261009-v4/prepare_pmo_months.py": "3f845f3cabc2a5ce7ed394678d797bb3965f5e171edce7c4e22ede569f4f523f",
+    "/srv/data/work/quickjs-tmp/quickjs-Chinese-primary-calendar-root-fetch-20261008/pmo-calendar.js": "d9bda47311deb984d1c307406561ee5eb133e035c5c83645bd47534c70c303cd",
+    "/srv/data/work/quickjs-tmp/quickjs-Chinese-primary-calendar-root-fetch-20261008/pmo-calendar.js.receipt.json": "6d923404d78097e36ed82d1c3c79399720b2053ca1f4db8a5530d6938c4070db",
+    "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-source-fetch-root-20261009-v1/pmo-index.html": "6ce51486cb689a7fb2095e4b9d290d27aa4914efb0a691265bc6fb4c532c69fa",
+    "/srv/data/work/quickjs-tmp/quickjs-current-stage4-living-feature-gap-inventory-20261008/era-spec.emu": "e68f6d071f9df155d0117d913ef6e14bc3535b80e31425fb8b92054fd89c8031"
+  },
+  "provider_sha256": "17142b9e3d4761334b954d75355cc50a176bc04f2a8c244212bbea3020232ca5",
+  "day_oracle_sha256": "ae53fce46fef8baec2ebb952fa745862948c83f0ec9ce335f208beda0ccbcb7a",
+  "day_oracle_rows": 73414,
+  "authority_policy": "Exact Era5833 Chinese row names PMO-published data; HKO is corroboration, not substitution",
+  "pmo_publication": "Exact spec-linked PMO page hosts and actively uses third-party-attributed factual sequence",
+  "pmo_authorship_claimed": false,
+  "separate_gb_certification_claimed": false,
+  "upstream_attribution": "Jea Yang (JJonline@JJonline.Cn), calendar.js v1.0.3, 2014..2017",
+  "upstream_js_license": "No license grant declared in cached script; no JS implementation copied",
+  "calendars": {
+    "chinese": {
+      "primary_spans": [
+        [
+          -25567,
+          -25537
+        ],
+        [
+          -25537,
+          47875
+        ]
+      ],
+      "bounds": {
+        "first_day": -25892,
+        "end_day": 47875,
+        "mandatory_first_day": -25567,
+        "mandatory_end_day": 47847,
+        "entire_mandatory_window_primary_covered": true,
+        "private_1899_approximation_months": 11,
+        "next_m01_role": "derived zero-length 2101 M01 boundary, not acquired primary 2101 year"
+      },
+      "complete_arithmetic_years": [
+        1899,
+        1900,
+        1901,
+        1902,
+        1903,
+        1904,
+        1905,
+        1906,
+        1907,
+        1908,
+        1909,
+        1910,
+        1911,
+        1912,
+        1913,
+        1914,
+        1915,
+        1916,
+        1917,
+        1918,
+        1919,
+        1920,
+        1921,
+        1922,
+        1923,
+        1924,
+        1925,
+        1926,
+        1927,
+        1928,
+        1929,
+        1930,
+        1931,
+        1932,
+        1933,
+        1934,
+        1935,
+        1936,
+        1937,
+        1938,
+        1939,
+        1940,
+        1941,
+        1942,
+        1943,
+        1944,
+        1945,
+        1946,
+        1947,
+        1948,
+        1949,
+        1950,
+        1951,
+        1952,
+        1953,
+        1954,
+        1955,
+        1956,
+        1957,
+        1958,
+        1959,
+        1960,
+        1961,
+        1962,
+        1963,
+        1964,
+        1965,
+        1966,
+        1967,
+        1968,
+        1969,
+        1970,
+        1971,
+        1972,
+        1973,
+        1974,
+        1975,
+        1976,
+        1977,
+        1978,
+        1979,
+        1980,
+        1981,
+        1982,
+        1983,
+        1984,
+        1985,
+        1986,
+        1987,
+        1988,
+        1989,
+        1990,
+        1991,
+        1992,
+        1993,
+        1994,
+        1995,
+        1996,
+        1997,
+        1998,
+        1999,
+        2000,
+        2001,
+        2002,
+        2003,
+        2004,
+        2005,
+        2006,
+        2007,
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031,
+        2032,
+        2033,
+        2034,
+        2035,
+        2036,
+        2037,
+        2038,
+        2039,
+        2040,
+        2041,
+        2042,
+        2043,
+        2044,
+        2045,
+        2046,
+        2047,
+        2048,
+        2049,
+        2050,
+        2051,
+        2052,
+        2053,
+        2054,
+        2055,
+        2056,
+        2057,
+        2058,
+        2059,
+        2060,
+        2061,
+        2062,
+        2063,
+        2064,
+        2065,
+        2066,
+        2067,
+        2068,
+        2069,
+        2070,
+        2071,
+        2072,
+        2073,
+        2074,
+        2075,
+        2076,
+        2077,
+        2078,
+        2079,
+        2080,
+        2081,
+        2082,
+        2083,
+        2084,
+        2085,
+        2086,
+        2087,
+        2088,
+        2089,
+        2090,
+        2091,
+        2092,
+        2093,
+        2094,
+        2095,
+        2096,
+        2097,
+        2098,
+        2099,
+        2100
+      ]
+    },
+    "dangi": {
+      "primary_spans": [
+        [
+          -25892,
+          29597
+        ]
+      ],
+      "bounds": {
+        "first_day": -25892,
+        "end_day": 29626,
+        "boundary_year_first_day": 29242,
+        "boundary_year_end_day": 29626,
+        "mandatory_first_day": -25567,
+        "mandatory_end_day": 29585,
+        "entire_mandatory_window_primary_covered": true,
+        "accepted_approximate_months": [
+          {
+            "epoch_day": 29597,
+            "lunar_year": 2050,
+            "month": 12,
+            "is_leap": 0,
+            "length": 29
+          }
+        ]
+      },
+      "complete_arithmetic_years": [
+        1899,
+        1900,
+        1901,
+        1902,
+        1903,
+        1904,
+        1905,
+        1906,
+        1907,
+        1908,
+        1909,
+        1910,
+        1911,
+        1912,
+        1913,
+        1914,
+        1915,
+        1916,
+        1917,
+        1918,
+        1919,
+        1920,
+        1921,
+        1922,
+        1923,
+        1924,
+        1925,
+        1926,
+        1927,
+        1928,
+        1929,
+        1930,
+        1931,
+        1932,
+        1933,
+        1934,
+        1935,
+        1936,
+        1937,
+        1938,
+        1939,
+        1940,
+        1941,
+        1942,
+        1943,
+        1944,
+        1945,
+        1946,
+        1947,
+        1948,
+        1949,
+        1950,
+        1951,
+        1952,
+        1953,
+        1954,
+        1955,
+        1956,
+        1957,
+        1958,
+        1959,
+        1960,
+        1961,
+        1962,
+        1963,
+        1964,
+        1965,
+        1966,
+        1967,
+        1968,
+        1969,
+        1970,
+        1971,
+        1972,
+        1973,
+        1974,
+        1975,
+        1976,
+        1977,
+        1978,
+        1979,
+        1980,
+        1981,
+        1982,
+        1983,
+        1984,
+        1985,
+        1986,
+        1987,
+        1988,
+        1989,
+        1990,
+        1991,
+        1992,
+        1993,
+        1994,
+        1995,
+        1996,
+        1997,
+        1998,
+        1999,
+        2000,
+        2001,
+        2002,
+        2003,
+        2004,
+        2005,
+        2006,
+        2007,
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031,
+        2032,
+        2033,
+        2034,
+        2035,
+        2036,
+        2037,
+        2038,
+        2039,
+        2040,
+        2041,
+        2042,
+        2043,
+        2044,
+        2045,
+        2046,
+        2047,
+        2048,
+        2049,
+        2050
+      ]
+    }
+  },
+  "chinese_primary_roles": [
+    "PMO PDF January1900",
+    "PMO-hosted numerical table 1900M01..2100M12"
+  ],
+  "chinese_mandatory_gregorian_coverage": "1900-01-01..2100-12-31 inclusive",
+  "dangi_mandatory_gregorian_coverage": "1900-01-01..2050-12-31 inclusive; emitted C unchanged",
+  "historical_pmo_pdf": {
+    "compared": 45991,
+    "matched": 45991,
+    "additional_initial_january_days": 30
+  },
+  "hko_comparison_status": "original all-source comparison remains FAILED",
+  "hko_known_differences": [
+    {
+      "date": "2057-09-28",
+      "fields": [
+        "month",
+        "day"
+      ],
+      "widget": [
+        2057,
+        8,
+        0,
+        30
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        1
+      ]
+    },
+    {
+      "date": "2057-09-29",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        1
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        2
+      ]
+    },
+    {
+      "date": "2057-09-30",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        2
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        3
+      ]
+    },
+    {
+      "date": "2057-10-01",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        3
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        4
+      ]
+    },
+    {
+      "date": "2057-10-02",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        4
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        5
+      ]
+    },
+    {
+      "date": "2057-10-03",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        5
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        6
+      ]
+    },
+    {
+      "date": "2057-10-04",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        6
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        7
+      ]
+    },
+    {
+      "date": "2057-10-05",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        7
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        8
+      ]
+    },
+    {
+      "date": "2057-10-06",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        8
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        9
+      ]
+    },
+    {
+      "date": "2057-10-07",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        9
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        10
+      ]
+    },
+    {
+      "date": "2057-10-08",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        10
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        11
+      ]
+    },
+    {
+      "date": "2057-10-09",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        11
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        12
+      ]
+    },
+    {
+      "date": "2057-10-10",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        12
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        13
+      ]
+    },
+    {
+      "date": "2057-10-11",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        13
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        14
+      ]
+    },
+    {
+      "date": "2057-10-12",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        14
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        15
+      ]
+    },
+    {
+      "date": "2057-10-13",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        15
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        16
+      ]
+    },
+    {
+      "date": "2057-10-14",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        16
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        17
+      ]
+    },
+    {
+      "date": "2057-10-15",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        17
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        18
+      ]
+    },
+    {
+      "date": "2057-10-16",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        18
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        19
+      ]
+    },
+    {
+      "date": "2057-10-17",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        19
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        20
+      ]
+    },
+    {
+      "date": "2057-10-18",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        20
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        21
+      ]
+    },
+    {
+      "date": "2057-10-19",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        21
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        22
+      ]
+    },
+    {
+      "date": "2057-10-20",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        22
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        23
+      ]
+    },
+    {
+      "date": "2057-10-21",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        23
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        24
+      ]
+    },
+    {
+      "date": "2057-10-22",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        24
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        25
+      ]
+    },
+    {
+      "date": "2057-10-23",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        25
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        26
+      ]
+    },
+    {
+      "date": "2057-10-24",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        26
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        27
+      ]
+    },
+    {
+      "date": "2057-10-25",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        27
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        28
+      ]
+    },
+    {
+      "date": "2057-10-26",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        28
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        29
+      ]
+    },
+    {
+      "date": "2057-10-27",
+      "fields": [
+        "day"
+      ],
+      "widget": [
+        2057,
+        9,
+        0,
+        29
+      ],
+      "hko": [
+        2057,
+        9,
+        0,
+        30
+      ]
+    }
+  ],
+  "hko_compared": 73048,
+  "hko_matched": 73018,
+  "hko_missing_date": "2069-12-30",
+  "continuous_hko_1901_2100_certified": false,
+  "discovery_authorization": false
+}
