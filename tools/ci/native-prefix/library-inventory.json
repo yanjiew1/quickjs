@@ -1,0 +1,2605 @@
+{
+  "01-native-locale-list-foundation": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "07c38e571df3d947e2e04f5191fdd6e9caeb72870517ac4b036cc600bf51d7e0",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/number-template-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-range.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      }
+    ]
+  },
+  "02-default-locale-public-api": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "a8d558bb7b643dce50d82fcb3bb9c2408df65b9d724556240b9f89895183cd67",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/number-template-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-range.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      }
+    ]
+  },
+  "03-private-provider-view-prerequisite": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "4ff88d2b1692830600c154f293381d3753fd35d84457a574a015846d665d8e0a",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/number-template-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-range.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      }
+    ]
+  },
+  "04-native-number": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "c9ad7df328859e555feff45a4cc9a7fa6465f5f401adcfc15f33956295c981e5",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      }
+    ]
+  },
+  "05-native-collator": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "c1ddb67ea24b9af86e3d48e149b8b2c27a8e939e75804f236623e08f6dd6b13f",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      }
+    ]
+  },
+  "06-native-segmenter": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "e02c8f491ceab5d23514236dc56cd08b248226c94fb37920f4655e2bf444dfcf",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      }
+    ]
+  },
+  "06-native-segmenter-alignment-fix": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "7e0ebbc60013aefdb2c1d9c93b18a300fae52c9ed9114d59600bd789eb8cc479",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      }
+    ]
+  },
+  "07-native-duration": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "d92e9d1217715a201f0e478b81314d1324384dfb2d5b568ef6051b898bfcd779",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      }
+    ]
+  },
+  "08-native-plural": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "629517cd83db9c9762976cbebf1e6f7a1a7b90d19f566cc017dfd5964057234b",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      }
+    ]
+  },
+  "09-native-relative": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "2224a229ea9743d6334bd7970c003cab75b08a5be1b94647b52d2f82f7f78899",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      }
+    ]
+  },
+  "10-native-display": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "e3d46f0935a1b1df1d060fc23a9697f788fe94e67339d45216ca509796ab6260",
+    "sources": [
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      }
+    ]
+  },
+  "11-native-calendar-library-prerequisite": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "a75aad4be73745a5474f3ab33d328912ac9a4d5898856292ec8d0f02e572f8c6",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      }
+    ]
+  },
+  "12-native-timezone-prerequisite": {
+    "binary_sha256": "ecf4819efa98cd00a5e70f31e1933ada0e8008fc68c69916b6c5df2db3661f60",
+    "source_map": "b9d499c05d2ef75a974c6d5fafee237459e6d02eb70daf298e42d303faf546f2",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      }
+    ]
+  },
+  "13-native-date-bank-calendar-data": {
+    "binary_sha256": "1b18fbf3f5dcd13b502c56b450bc596cfd7df9a71a246a5869089cfa96b792e8",
+    "source_map": "6c0d7d622f6e670a60d2d176fbb8afe98f3c79539e8e33f4ce72b74ab5287d30",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      }
+    ]
+  },
+  "14-native-date-frontend": {
+    "binary_sha256": "1b18fbf3f5dcd13b502c56b450bc596cfd7df9a71a246a5869089cfa96b792e8",
+    "source_map": "3e70f01f5c6fe7759a24c1e0b525942305a41df27ab79cf689e97c6d6a6c281e",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "15-native-locale-inventory-data": {
+    "binary_sha256": "ec06d5991bb02ab3fc74dfa59e7e0ff420084b18fdc24cd268008e9e1a3610f8",
+    "source_map": "0615e053c63888ee9a3200f99ab279e268ce1a0c96832e26c91178f99416c5ce",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "16-native-general-operations": {
+    "binary_sha256": "ec06d5991bb02ab3fc74dfa59e7e0ff420084b18fdc24cd268008e9e1a3610f8",
+    "source_map": "765a5b53020c924bbde7ee2bf7f37c5796eea3e17e58363c755d4b67b37e961c",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-general.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "17-all-services-default-locale-tests": {
+    "binary_sha256": "ec06d5991bb02ab3fc74dfa59e7e0ff420084b18fdc24cd268008e9e1a3610f8",
+    "source_map": "7e0a4dd5739a010035c57a952bec26362e84617683d4ea074929c9ddead164a1",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-general.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "18-shared-calendar-reference-helpers": {
+    "binary_sha256": "ec06d5991bb02ab3fc74dfa59e7e0ff420084b18fdc24cd268008e9e1a3610f8",
+    "source_map": "d950deaf1bacc2ffb63d79e27bf1a896335771cfdea42ee194af0b84558868b1",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-general.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "19-native-temporal-calendar-activation": {
+    "binary_sha256": "ec06d5991bb02ab3fc74dfa59e7e0ff420084b18fdc24cd268008e9e1a3610f8",
+    "source_map": "b7fe1a38ccd35a8dabc95157b13e61dead25d76472954fa93e7a7c7d8448ca2c",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-general.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "20-released-cldr-schema-generator-prerequisite": {
+    "binary_sha256": "ec06d5991bb02ab3fc74dfa59e7e0ff420084b18fdc24cd268008e9e1a3610f8",
+    "source_map": "bd03132a6de1d86d6b3539fdfb51871067896203d837d5ab63d7f698f67186a1",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-general.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "23-native-date-daylight-records": {
+    "binary_sha256": "ec06d5991bb02ab3fc74dfa59e7e0ff420084b18fdc24cd268008e9e1a3610f8",
+    "source_map": "5e3c3edc6ce16e91d577e51c49e43733cb176a52699b7c04275dddbb2cf2885d",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-general.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  },
+  "24-native-released-data-frontend-closure": {
+    "binary_sha256": "b90f06c2572d0cdad80ce4c14ee4139d92f59df1a20d4825c0fd6a4dffa9ade1",
+    "source_map": "fc0b672b6d664ed99e15d1bae3fc9d8b6cd8b321128ed8185ee2125252a7aff9",
+    "sources": [
+      "src/calendar/astronomy.c",
+      "src/calendar/calendar.c",
+      "src/calendar/hebrew.c",
+      "src/calendar/islamic.c",
+      "src/calendar/lunisolar.c",
+      "src/calendar/provider.c",
+      "src/calendar/solar.c",
+      "src/cutils/cutils.c",
+      "src/dtoa/dtoa.c",
+      "src/intl/collator-native-data.c",
+      "src/intl/collator-native.c",
+      "src/intl/data/date-data-validation.c",
+      "src/intl/data/duration-data-validation.c",
+      "src/intl/data/locale-metadata.c",
+      "src/intl/data/native-data-reader.c",
+      "src/intl/data/number-data-validation.c",
+      "src/intl/data/number-extra-validation.c",
+      "src/intl/data/plural-data-validation.c",
+      "src/intl/data/relative-data-validation.c",
+      "src/intl/date-native-bank.c",
+      "src/intl/date-native-calendar-data.c",
+      "src/intl/date-native-calendar.c",
+      "src/intl/date-native-data.c",
+      "src/intl/date-native-zone.c",
+      "src/intl/date-native.c",
+      "src/intl/date-pattern.c",
+      "src/intl/decimal.c",
+      "src/intl/display-names-native.c",
+      "src/intl/duration-native-data.c",
+      "src/intl/duration-native.c",
+      "src/intl/list-native-data.c",
+      "src/intl/list-native.c",
+      "src/intl/locale-grammar.c",
+      "src/intl/native-locale-id.c",
+      "src/intl/native-locale-info.c",
+      "src/intl/number-compact.c",
+      "src/intl/number-decimal.c",
+      "src/intl/number-native-data.c",
+      "src/intl/number-native.c",
+      "src/intl/number-range.c",
+      "src/intl/number-unit.c",
+      "src/intl/plural-native-data.c",
+      "src/intl/plural-native.c",
+      "src/intl/plural.c",
+      "src/intl/provider-native-collator.c",
+      "src/intl/provider-native-date.c",
+      "src/intl/provider-native-display.c",
+      "src/intl/provider-native-duration.c",
+      "src/intl/provider-native-general.c",
+      "src/intl/provider-native-number.c",
+      "src/intl/provider-native-plural.c",
+      "src/intl/provider-native-relative.c",
+      "src/intl/provider-native-segmenter.c",
+      "src/intl/provider-native.c",
+      "src/intl/relative-native-data.c",
+      "src/intl/relative-native.c",
+      "src/intl/segmenter-native-data.c",
+      "src/intl/segmenter-native.c",
+      "src/intl/segmenter-unicode.c",
+      "src/temporal/civil.c",
+      "src/temporal/epoch.c",
+      "src/temporal/iso.c",
+      "src/timezone/embedded.c",
+      "src/timezone/timezone.c",
+      "src/timezone/tzif.c",
+      "src/unicode/libunicode.c"
+    ],
+    "support_flags": {
+      "clang": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers"
+      ],
+      "gcc": [
+        "-fwrapv",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare",
+        "-Wno-missing-field-initializers",
+        "-Wno-array-bounds",
+        "-Wno-format-truncation",
+        "-Wno-infinite-recursion"
+      ]
+    },
+    "units": [
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_locale_id"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_locale_info"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_list_engine"
+      },
+      {
+        "binary_argument": true,
+        "name": "test_intl_native_list_data"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_number_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_engine"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_duration_provider"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_relative_decimal"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_portable"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_persian_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_integrated_authority"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_calendar_domain"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_timezone"
+      },
+      {
+        "binary_argument": false,
+        "name": "test_intl_native_date_bank_data"
+      }
+    ]
+  }
+}
