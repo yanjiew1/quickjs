@@ -3,6 +3,7 @@
  * This profile exposes Locale operations and ListFormat for en/en-US only.
  * It makes no complete Intl or wire service_coverage claim. */
 #include "provider-native.h"
+#include "provider-native-relative.h"
 #include "provider-native-plural.h"
 #include "provider-native-duration.h"
 #include "provider-native-segmenter.h"
@@ -262,6 +263,9 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
     } else if (service == QJS_INTL_PLURAL_RULES) {
         QJSIntlStatus status = qjs_intl_native_provider_plural_available(p);
         if (status != QJS_INTL_OK) return status;
+    } else if (service == QJS_INTL_RELATIVE_TIME_FORMAT) {
+        QJSIntlStatus status = qjs_intl_native_provider_relative_available(p);
+        if (status != QJS_INTL_OK) return status;
     } else if (service != QJS_INTL_LIST_FORMAT) return QJS_INTL_UNSUPPORTED;
     out->items = p->allocator.malloc(p->allocator.opaque, sizeof(*out->items) * 2);
     if (!out->items) return QJS_INTL_NO_MEMORY;
@@ -278,7 +282,7 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
 QJSIntlStatus qjs_intl_locale_key_values(QJSIntlProvider *p, QJSIntlService service,
     QJSIntlBytes locale, QJSIntlBytes key, QJSIntlTagList *out)
 {
-    if (service == QJS_INTL_NUMBER_FORMAT)
+    if (service == QJS_INTL_NUMBER_FORMAT || service == QJS_INTL_RELATIVE_TIME_FORMAT)
         return qjs_intl_native_provider_number_key_values(p, locale, key, out);
     if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH)
         return qjs_intl_native_provider_collator_key_values(p, service, locale, key, out);
