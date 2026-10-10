@@ -530,6 +530,29 @@ INTL_SRCS=$(INTL_COMMON_SRCS) $(INTL_BACKEND_SRCS)
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
+# The pure C calendar library shares one accepted arithmetic provider.
+# Only its own translation units receive authority and publication flags.
+ifeq ($(CONFIG_INTL_NATIVE),y)
+CALENDAR_SRCS= \
+    src/calendar/calendar.c \
+    src/calendar/solar.c \
+    src/calendar/hebrew.c \
+    src/calendar/islamic.c \
+    src/calendar/astronomy.c \
+    src/calendar/lunisolar.c \
+    src/calendar/provider.c
+CALENDAR_AUTHORITY_CFLAGS= \
+    -DQJS_CAL_USE_PERSIAN_AUTHORITY_TABLE \
+    -DQJS_CAL_ENABLE_LUNISOLAR_CANDIDATE \
+    -DQJS_CAL_HAVE_PUBLISHED_LUNISOLAR_DATA \
+    -DQJS_CAL_PERSIAN_AUTHORITY_VERIFIED \
+    -DQJS_CAL_CHINESE_AUTHORITY_VERIFIED \
+    -DQJS_CAL_DANGI_AUTHORITY_VERIFIED
+CALENDAR_CONFIG_OBJECTS=$(foreach suffix,o host.o pic.o nolto.o debug.o fuzz.o check.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(CALENDAR_SRCS)))
+$(CALENDAR_CONFIG_OBJECTS): private CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
+QUICKJS_SRCS+=$(CALENDAR_SRCS)
+endif
+
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
 all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
@@ -698,35 +721,35 @@ endif
 
 $(OBJDIR)/%.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/fuzz/%.o: fuzz/%.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
 
 $(OBJDIR)/%.host.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.pic.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
 $(OBJDIR)/%.nolto.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_NOLTO) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_NOLTO) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.debug.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_DEBUG) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_DEBUG) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.fuzz.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
 
 $(OBJDIR)/%.check.o: %.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
+	$(CC) $(CFLAGS) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
 regexp_test$(EXE): tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
@@ -736,11 +759,11 @@ unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host
 
 $(OBJDIR)/tools/unicode_gen.test.host.o: tools/unicode_gen.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
 
 $(OBJDIR)/src/unicode/libunicode.test.host.o: src/unicode/libunicode.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
 
 unicode_gen_test: $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o
@@ -884,6 +907,7 @@ ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_collator_oom$(EXE)
 C_TESTS+=tests/test_intl_native_segmenter_oom$(EXE)
 C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
+C_TESTS+=tests/test_intl_calendar_portable$(EXE) tests/test_intl_calendar_persian_authority$(EXE) tests/test_intl_calendar_integrated_authority$(EXE) tests/test_intl_calendar_domain$(EXE)
 C_TESTS+=tests/test_intl_native_display_oom$(EXE)
 C_TESTS+=tests/test_intl_native_relative_oom$(EXE)
 C_TESTS+=tests/test_intl_native_relative_decimal$(EXE)
@@ -926,7 +950,7 @@ tests/test_intl_oom$(EXE): $(OBJDIR)/tests/test_intl_oom.o libquickjs$(LTOEXT).a
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
 
 tests/test_bytecode_trace$(EXE): $(OBJDIR)/tests/test_bytecode.o $(OBJDIR)/src/quickjs/serialization/reader.trace.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -1430,11 +1454,11 @@ qjsc$(EXE) $(QJSC): | quickjs.h quickjs-libc.h
 ifneq ($(wildcard fuzz/fuzz_common.c),)
 $(OBJDIR)/fuzz/fuzz_common.o: fuzz/fuzz_common.c fuzz/fuzz_common.h .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
 
 $(OBJDIR)/tests/test_fuzz_support.o: tests/test_fuzz_support.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
 
 tests/test_fuzz_support$(EXE): $(OBJDIR)/tests/test_fuzz_support.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -1460,7 +1484,7 @@ tests/test_fuzz_exception_ownership$(EXE): $(OBJDIR)/tests/test_fuzz_exception_o
 
 $(OBJDIR)/tests/test_fuzz_allocations.o: tests/test_fuzz_allocations.c .obj/intl-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
 
 tests/test_fuzz_allocations$(EXE): $(OBJDIR)/tests/test_fuzz_allocations.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -1526,6 +1550,21 @@ tests/test_intl_native_relative_decimal$(EXE): $(OBJDIR)/tests/test_intl_native_
 tests/test_intl_native_display_oom$(EXE): $(OBJDIR)/tests/test_intl_native_display_oom.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+
+# Integrated native calendar units use the same single library provider.
+ifeq ($(CONFIG_INTL_NATIVE),y)
+INTL_CALENDAR_TEST_SRCS=tests/test_intl_calendar_portable.c tests/test_intl_calendar_persian_authority.c tests/test_intl_calendar_integrated_authority.c tests/test_intl_calendar_domain.c
+INTL_CALENDAR_TEST_OBJECTS=$(patsubst %.c,$(OBJDIR)/%.o,$(INTL_CALENDAR_TEST_SRCS))
+$(INTL_CALENDAR_TEST_OBJECTS): private CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
+tests/test_intl_calendar_portable$(EXE): $(OBJDIR)/tests/test_intl_calendar_portable.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_intl_calendar_persian_authority$(EXE): $(OBJDIR)/tests/test_intl_calendar_persian_authority.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_intl_calendar_integrated_authority$(EXE): $(OBJDIR)/tests/test_intl_calendar_integrated_authority.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_intl_calendar_domain$(EXE): $(OBJDIR)/tests/test_intl_calendar_domain.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+endif
 
 # Exercise qjsc's own compiler invocation for every native feature profile.
 ifeq ($(CROSS_PREFIX),)

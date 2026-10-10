@@ -1,0 +1,19 @@
+{
+  "class": "pinned CC0 mirrored primary authority transcription, not direct PDF capture",
+  "upstream_commit": "bc1a519a68b5b0cc78c1d74b6fdb41825c677a65",
+  "fetch_receipt": "/srv/data/work/quickjs-tmp/quickjs-calendar-persian-pinned-source-fetch-root-20261009-v1/state.json",
+  "primary_fetch_unusable_pdf_preserved": "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-source-fetch-root-20261009-v1/persian-leap-1206-1498.pdf",
+  "prior_core_receipt": "/srv/data/work/quickjs-tmp/quickjs-portable-calendar-core-root-gates-20261009-v1/state.json",
+  "portable_source_origin": "/srv/data/work/quickjs-tmp/quickjs-portable-calendar-backend-source-preparation-20261009-v1",
+  "original_files": {
+    "src/calendar/solar.c": "9bd87843057350e4d71f656f72a34ce8e5bb49c90962efe5959d8bf08e785016",
+    "src/calendar/calendar.c": "9b13191cbb5a6f6f8a58dade1fd7aa425093369c0eb8d076cbecb8203c47164b",
+    "tests/test_calendar_portable.c": "a9c10fe8b1b5a309172627d37af033b1bc28180520a6362e055b08240f1a8bb0"
+  },
+  "table_interval": [
+    1206,
+    1498
+  ],
+  "successor_boundary": "1498 explicit star -> +366 days; derived end only, no captured 1499 row",
+  "test262_origin": "/home/yanjie/src/quickjs/test262/test/intl402/Temporal/PlainDate/from/persian-new-year-dates.js"
+}
