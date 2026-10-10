@@ -102,6 +102,103 @@ static void *promise_failure_realloc(JSMallocState *s, void *ptr, size_t size)
     return result;
 }
 
+/* Check the public refcount offset as well as the payload address. */
+static void check_block_alignment(void *ptr)
+{
+    assert(ptr && (uintptr_t)ptr % _Alignof(max_align_t) == 0);
+    assert(&js_rc(ptr)->ref_count == &__js_rc(ptr)->ref_count);
+}
+
+static void check_block_contents(uint8_t *ptr, size_t size, uint8_t value)
+{
+    size_t i;
+
+    check_block_alignment(ptr);
+    assert(js_rc(ptr)->ref_count == 17);
+    assert(js_rc(ptr)->gc_obj_type == 3 && js_rc(ptr)->mark == 1);
+    for (i = 0; i < size; i++)
+        assert(ptr[i] == value);
+}
+
+static void test_payload_alignment(void)
+{
+    enum { BLOCK_COUNT = 4 };
+    PromiseAllocationFailure failure = { 0 };
+    JSMallocFunctions mf = def_malloc_funcs;
+    JSRuntime *rt;
+    JSMallocState *state;
+    uint8_t *blocks[BLOCK_COUNT], *ptr;
+    size_t size, count_before, bytes_before, live_before;
+    int i;
+
+    mf.js_malloc = promise_failure_malloc;
+    mf.js_free = promise_failure_free;
+    mf.js_realloc = promise_failure_realloc;
+    rt = JS_NewRuntime2(&mf, &failure);
+    assert(rt);
+    state = &rt->malloc_ctx.malloc_state;
+    count_before = state->malloc_count;
+    bytes_before = state->malloc_size;
+    live_before = failure.live_allocations;
+    ptr = js_malloc_rt(rt, 0);
+    check_block_alignment(ptr);
+    ptr = js_realloc_rt(rt, ptr, 1);
+    check_block_alignment(ptr);
+    assert(js_realloc_rt(rt, ptr, 0) == NULL);
+    ptr = js_realloc_rt(rt, NULL, 0);
+    check_block_alignment(ptr);
+    js_free_rt(rt, ptr);
+    /* Consecutive live blocks expose arena stride errors. Every size covers
+       pool class edges, the pool/host boundary, and direct host allocations. */
+    for (size = 1; size <= 1025; size++) {
+        for (i = 0; i < BLOCK_COUNT; i++) {
+            blocks[i] = (i & 1) ? js_realloc_rt(rt, NULL, size) :
+                                   js_malloc_rt(rt, size);
+            check_block_alignment(blocks[i]);
+            js_rc(blocks[i])->ref_count = 17;
+            js_rc(blocks[i])->gc_obj_type = 3;
+            js_rc(blocks[i])->mark = 1;
+            memset(blocks[i], 0xa0 + i, size);
+        }
+        for (i = 0; i < BLOCK_COUNT; i++) {
+            blocks[i] = js_realloc_rt(rt, blocks[i], size);
+            check_block_contents(blocks[i], size, 0xa0 + i);
+            blocks[i] = js_realloc_rt(rt, blocks[i], size + 1025);
+            check_block_contents(blocks[i], size, 0xa0 + i);
+            blocks[i] = js_realloc_rt(rt, blocks[i], size);
+            check_block_contents(blocks[i], size, 0xa0 + i);
+        }
+        for (i = BLOCK_COUNT - 1; i >= 0; i--)
+            js_free_rt(rt, blocks[i]);
+        assert(state->malloc_count == count_before);
+        assert(state->malloc_size == bytes_before);
+        assert(failure.live_allocations == live_before);
+    }
+    /* Force host failures without relying on whether a pool has spare room. */
+    ptr = js_malloc_rt(rt, 1024);
+    check_block_alignment(ptr);
+    js_rc(ptr)->ref_count = 17;
+    js_rc(ptr)->gc_obj_type = 3;
+    js_rc(ptr)->mark = 1;
+    memset(ptr, 0xa5, 1024);
+    count_before = state->malloc_count;
+    bytes_before = state->malloc_size;
+    live_before = failure.live_allocations;
+    failure.fail_next = TRUE;
+    assert(js_realloc_rt(rt, ptr, 4096) == NULL);
+    assert(!failure.fail_next && failure.failures == 1);
+    check_block_contents(ptr, 1024, 0xa5);
+    failure.fail_next = TRUE;
+    assert(js_malloc_rt(rt, 4096) == NULL);
+    assert(!failure.fail_next && failure.failures == 2);
+    assert(state->malloc_count == count_before);
+    assert(state->malloc_size == bytes_before);
+    assert(failure.live_allocations == live_before);
+    assert(js_realloc_rt(rt, ptr, 0) == NULL);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
 static void reaction_owner_finalizer(JSRuntime *rt, JSValue value)
 {
     ReactionOwner *owner = JS_GetOpaque(value, reaction_owner_class_id);
@@ -954,6 +1051,7 @@ int main(void)
 {
     int kind;
 
+    test_payload_alignment();
     for (kind = 0; kind < 3; kind++) {
         test_autoinit_allocation_failure(kind, FALSE);
         test_autoinit_allocation_failure(kind, TRUE);
