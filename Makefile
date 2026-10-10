@@ -509,6 +509,9 @@ endif
 ifeq ($(CONFIG_INTL_NATIVE),y)
 INTL_BACKEND_SRCS+=src/intl/collator-native.c src/intl/provider-native-collator.c src/quickjs/builtins/intl/native-collator.c
 endif
+ifeq ($(CONFIG_INTL_NATIVE),y)
+INTL_BACKEND_SRCS+=src/intl/segmenter-native.c src/intl/segmenter-native-data.c src/intl/segmenter-unicode.c src/intl/provider-native-segmenter.c src/quickjs/builtins/intl/native-segmenter.c
+endif
 INTL_SRCS=$(INTL_COMMON_SRCS) $(INTL_BACKEND_SRCS)
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
@@ -865,6 +868,7 @@ endif
 C_TESTS+=tests/test_intl_text$(EXE)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_collator_oom$(EXE)
+C_TESTS+=tests/test_intl_native_segmenter_oom$(EXE)
 C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
 C_TESTS+=tests/test_intl_native_number_oom$(EXE)
 C_TESTS+=tests/test_intl_native_number_provider$(EXE)
@@ -1455,6 +1459,16 @@ test-intl-native-collator: qjs$(EXE) tests/test_intl_native_collator_oom$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_collator.js
 	$(WINE) ./tests/test_intl_native_collator_oom$(EXE)
 test: test-intl-native-collator
+endif
+
+ifeq ($(CONFIG_INTL_NATIVE),y)
+tests/test_intl_native_segmenter_oom$(EXE): $(OBJDIR)/tests/test_intl_native_segmenter_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-intl-native-segmenter
+test-intl-native-segmenter: qjs$(EXE) tests/test_intl_native_segmenter_oom$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_segmenter.js
+	$(WINE) ./tests/test_intl_native_segmenter_oom$(EXE)
+test: test-intl-native-segmenter
 endif
 
 # Exercise qjsc's own compiler invocation for every native feature profile.

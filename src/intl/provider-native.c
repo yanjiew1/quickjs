@@ -3,6 +3,7 @@
  * This profile exposes Locale operations and ListFormat for en/en-US only.
  * It makes no complete Intl or wire service_coverage claim. */
 #include "provider-native.h"
+#include "provider-native-segmenter.h"
 #include "provider-native-collator.h"
 #include "provider-native-number.h"
 #include "native-locale-info.h"
@@ -249,6 +250,9 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
         if (status != QJS_INTL_OK) return status;
     } else if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH) {
         QJSIntlStatus status = qjs_intl_native_provider_collator_available(p);
+        if (status != QJS_INTL_OK) return status;
+    } else if (service == QJS_INTL_SEGMENTER) {
+        QJSIntlStatus status = qjs_intl_native_provider_segmenter_available(p);
         if (status != QJS_INTL_OK) return status;
     } else if (service != QJS_INTL_LIST_FORMAT) return QJS_INTL_UNSUPPORTED;
     out->items = p->allocator.malloc(p->allocator.opaque, sizeof(*out->items) * 2);
