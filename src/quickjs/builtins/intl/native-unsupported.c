@@ -29,8 +29,6 @@ int js_intl_init_##module(JSContext *ctx, JSValueConst intl) \
         name, module##_constructor, length, proto, unsupported_static, \
         countof(unsupported_static), NULL, 0); \
 }
-NATIVE_UNSUPPORTED(collator, JS_CLASS_INTL_COLLATOR, "Collator", 0,
-                   JS_CFUNC_constructor_or_func)
 NATIVE_UNSUPPORTED(date_time_format, JS_CLASS_INTL_DATE_TIME_FORMAT, "DateTimeFormat", 0,
                    JS_CFUNC_constructor_or_func)
 NATIVE_UNSUPPORTED(plural_rules, JS_CLASS_INTL_PLURAL_RULES, "PluralRules", 0,
@@ -62,17 +60,6 @@ JSValue js_intl_supported_values_of(JSContext *ctx, JSValueConst receiver,
     }
     JS_FreeCString(ctx, key);
     return JS_ThrowRangeError(ctx, "invalid Intl enumeration key");
-}
-JSValue js_intl_string_locale_compare(JSContext *ctx, JSValueConst value,
-                                      int argc, JSValueConst *argv)
-{
-    JSValue left = JS_ToStringCheckObject(ctx, value), right;
-    if (JS_IsException(left)) return JS_EXCEPTION;
-    right = JS_ToString(ctx, argc ? argv[0] : JS_UNDEFINED);
-    JS_FreeValue(ctx, left);
-    if (JS_IsException(right)) return JS_EXCEPTION;
-    JS_FreeValue(ctx, right);
-    return unsupported(ctx, "Collator");
 }
 JSValue js_intl_string_locale_case(JSContext *ctx, JSValueConst value,
                                    int argc, JSValueConst *argv, int lower)

@@ -98,6 +98,9 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
                       UnicodeNormalizationEnum n_type,
                       void *opaque, void *(*realloc_func)(void *opaque, void *ptr, size_t size));
 
+/* Unicode18 CCC; collation reuses the sole normalization table owner. */
+int unicode_get_combining_class(uint32_t c);
+
 /* Unicode character range functions */
 
 int unicode_script(CharRange *cr, const char *script_name, int is_ext);

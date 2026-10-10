@@ -98,6 +98,6 @@ const broken = { [Symbol.iterator]() { return {
 try { f.format(broken); assert(false); } catch (error) { assert(error, original); }
 assert(returns, 0);
 assertEquals(new Intl.NumberFormat("en").resolvedOptions().locale, "en");
-assertThrows(InternalError, () => Intl.Collator.supportedLocalesOf("en"));
+assertArrayEquals(Intl.Collator.supportedLocalesOf("en"), ["en"]);
 assertThrows(InternalError, () => Intl.supportedValuesOf("calendar"));
 assertThrows(RangeError, () => Intl.supportedValuesOf("calendar\0"));
