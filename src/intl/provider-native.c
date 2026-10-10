@@ -3,6 +3,7 @@
  * This profile exposes Locale operations and ListFormat for en/en-US only.
  * It makes no complete Intl or wire service_coverage claim. */
 #include "provider-native.h"
+#include "provider-native-number.h"
 #include "native-locale-info.h"
 #include "data/locale-metadata.h" /* externs; generated .c has the only owner */
 #include <string.h>
@@ -242,7 +243,10 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
     memset(out, 0, sizeof(*out));
     if (!p || (unsigned int)service >= QJS_INTL_SERVICE_COUNT)
         return QJS_INTL_INVALID_ARGUMENT;
-    if (service != QJS_INTL_LIST_FORMAT) return QJS_INTL_UNSUPPORTED;
+    if (service == QJS_INTL_NUMBER_FORMAT) {
+        QJSIntlStatus status = qjs_intl_native_provider_number_available(p);
+        if (status != QJS_INTL_OK) return status;
+    } else if (service != QJS_INTL_LIST_FORMAT) return QJS_INTL_UNSUPPORTED;
     out->items = p->allocator.malloc(p->allocator.opaque, sizeof(*out->items) * 2);
     if (!out->items) return QJS_INTL_NO_MEMORY;
     memset(out->items, 0, sizeof(*out->items) * 2);
@@ -258,6 +262,8 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
 QJSIntlStatus qjs_intl_locale_key_values(QJSIntlProvider *p, QJSIntlService service,
     QJSIntlBytes locale, QJSIntlBytes key, QJSIntlTagList *out)
 {
+    if (service == QJS_INTL_NUMBER_FORMAT)
+        return qjs_intl_native_provider_number_key_values(p, locale, key, out);
     (void)p; (void)service; (void)locale; (void)key;
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     memset(out, 0, sizeof(*out));

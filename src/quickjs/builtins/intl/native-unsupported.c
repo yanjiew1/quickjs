@@ -31,8 +31,6 @@ int js_intl_init_##module(JSContext *ctx, JSValueConst intl) \
 }
 NATIVE_UNSUPPORTED(collator, JS_CLASS_INTL_COLLATOR, "Collator", 0,
                    JS_CFUNC_constructor_or_func)
-NATIVE_UNSUPPORTED(number_format, JS_CLASS_INTL_NUMBER_FORMAT, "NumberFormat", 0,
-                   JS_CFUNC_constructor_or_func)
 NATIVE_UNSUPPORTED(date_time_format, JS_CLASS_INTL_DATE_TIME_FORMAT, "DateTimeFormat", 0,
                    JS_CFUNC_constructor_or_func)
 NATIVE_UNSUPPORTED(plural_rules, JS_CLASS_INTL_PLURAL_RULES, "PluralRules", 0,
@@ -83,11 +81,6 @@ JSValue js_intl_string_locale_case(JSContext *ctx, JSValueConst value,
     if (JS_IsException(string)) return JS_EXCEPTION;
     JS_FreeValue(ctx, string);
     return unsupported(ctx, "locale case conversion");
-}
-JSValue js_intl_number_to_locale_string(JSContext *ctx, JSValueConst number,
-                                       JSValueConst locales, JSValueConst options)
-{
-    return unsupported(ctx, "NumberFormat");
 }
 JSValue js_intl_date_format(JSContext *ctx, double time,
                             JSValueConst locales, JSValueConst options,

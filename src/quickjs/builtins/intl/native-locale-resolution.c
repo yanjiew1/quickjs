@@ -186,37 +186,104 @@ char *intl_lookup_locale(JSContext *ctx, JSIntlService service, const char *requ
         return NULL;
     return matching_locale(ctx, available, requested);
 }
-int js_intl_resolve_locale(JSContext *ctx, JSIntlService service,
-    const JSIntlLocaleList *requested, const char *matcher,
-    const JSIntlResolutionKey *keys, int count, JSIntlResolvedLocale *result)
+/* qjs_intl_locale_key_values returns the default first. A null first
+ * item represents the spec's null default; all nonnull items are supported
+ * canonical Unicode types. This query never reads JS options. */
+static int native_key_data(JSContext *ctx, JSIntlService service,
+                           const char *locale, const char *key,
+                           JSIntlLocaleList *supported, char **default_value)
 {
-    const JSIntlLocaleList *available;
-    char *matched = NULL;
+    QJSIntlProvider *p = js_intl_native_provider(ctx);
+    QJSIntlTagList native = {0};
+    QJSIntlStatus status;
     size_t i;
-    (void)matcher; (void)keys;
-    memset(result, 0, sizeof(*result));
-    if (count) {
-        js_intl_native_error(ctx, QJS_INTL_UNSUPPORTED, "ResolveLocale keys");
-        return -1;
+    int ret = -1;
+    *default_value = NULL;
+    if (!p) return -1;
+    status = qjs_intl_locale_key_values(p, native_service_id(service),
+        (QJSIntlBytes){locale, strlen(locale)}, (QJSIntlBytes){key, strlen(key)}, &native);
+    if (js_intl_native_error(ctx, status, "LocaleData keys")) goto done;
+    if (!native.count || !native.items) {
+        JS_ThrowInternalError(ctx, "empty native LocaleData key list"); goto done;
     }
+    for (i = 0; i < native.count; i++) {
+        const QJSIntlBytes *value = &native.items[i];
+        if (!value->data) {
+            if (i || value->length) {
+                JS_ThrowInternalError(ctx, "invalid native null LocaleData key"); goto done;
+            }
+            continue;
+        }
+        if (!value->length || strlen(value->data) != value->length ||
+            (!js_intl_is_unicode_type(value->data) && strcmp(value->data, "true") && strcmp(value->data, "false"))) {
+            JS_ThrowInternalError(ctx, "invalid native LocaleData key"); goto done;
+        }
+        if (!i) {
+            *default_value = js_intl_strdup(ctx, value->data);
+            if (!*default_value) goto done;
+        }
+        if (js_intl_locale_list_append(ctx, supported, value->data) < 0) goto done;
+    }
+    ret = 0;
+ done:
+    qjs_intl_tag_list_clear(p, &native);
+    return ret;
+}
+int js_intl_resolve_locale(JSContext *ctx, JSIntlService service,
+                           const JSIntlLocaleList *requested, const char *matcher,
+                           const JSIntlResolutionKey *keys, int count, JSIntlResolvedLocale *result)
+{
+    const JSIntlLocaleList *available; IntlTag request = { 0 }, public_tag = { 0 };
+    char *matched = NULL, *public_string = NULL; size_t i; int k, r = -1;
+    memset(result, 0, sizeof(*result));
+    if (count < 0 || count > JS_INTL_MAX_RESOLUTION_KEYS) { JS_ThrowInternalError(ctx, "too many Intl resolution keys"); return -1; }
+    (void)matcher;
     available = available_locales(ctx, service);
-    if (!available) return -1;
+    if (!available) goto done;
     for (i = 0; i < requested->count; i++) {
         matched = matching_locale(ctx, available, requested->items[i]);
-        if (matched) break;
-        if (JS_HasException(ctx)) goto fail;
+        if (matched) { if (intl_parse_tag(ctx, requested->items[i], strlen(requested->items[i]), &request) < 0) goto done; break; }
+        if (JS_HasException(ctx)) goto done;
     }
     if (!matched) matched = js_intl_strdup(ctx, js_intl_default_locale(ctx));
-    if (!matched) goto fail;
-    result->locale = matched;
-    matched = NULL;
-    result->data_locale = js_intl_strdup(ctx, result->locale);
-    if (!result->data_locale) goto fail;
-    return 0;
-fail:
-    js_free(ctx, matched);
-    js_intl_resolved_locale_free(ctx, result);
-    return -1;
+    if (!matched) goto done;
+    result->data_locale = js_intl_strdup(ctx, matched); if (!result->data_locale) goto done;
+    if (intl_parse_tag(ctx, matched, strlen(matched), &public_tag) < 0) goto done;
+    result->key_count = count;
+    for (k = 0; k < count; k++) {
+        JSIntlLocaleList supported = { 0 }; char *value = NULL, *option = NULL; const char *extension; BOOL retain = FALSE;
+        if (native_key_data(ctx, service, matched, keys[k].key, &supported, &value) < 0) { js_intl_locale_list_free(ctx, &supported); js_free(ctx, value); goto done; }
+        extension = intl_tag_keyword(&request, keys[k].key);
+        if (extension && !keys[k].suppress_extension) {
+            const char *candidate = *extension ? extension : "true";
+            if (list_has(&supported, candidate)) {
+                js_free(ctx, value); value = js_intl_strdup(ctx, candidate); if (!value) { js_intl_locale_list_free(ctx, &supported); goto done; } retain = TRUE;
+            }
+        }
+        if (keys[k].option) {
+            option = intl_canonicalize_uvalue(ctx, keys[k].key, keys[k].option);
+            if (!option) { js_intl_locale_list_free(ctx, &supported); js_free(ctx, value); goto done; }
+            if (!*option) { js_free(ctx, option); option = js_intl_strdup(ctx, "true"); if (!option) { js_intl_locale_list_free(ctx, &supported); js_free(ctx, value); goto done; } }
+            if ((!value || strcmp(option, value)) && list_has(&supported, option)) {
+                js_free(ctx, value); value = option; option = NULL; retain = FALSE;
+            }
+            js_free(ctx, option);
+        }
+        js_intl_locale_list_free(ctx, &supported);
+        result->values[k] = value;
+        if (retain && intl_tag_set_keyword(ctx, &public_tag, keys[k].key, !strcmp(value, "true") ? "" : value) < 0) goto done;
+    }
+    public_string = intl_tag_string(ctx, &public_tag);
+    if (!public_string) goto done;
+    result->locale = js_intl_canonicalize_tag(ctx, public_string, strlen(public_string));
+    if (!result->locale) goto done;
+    r = 0;
+done:
+    intl_tag_free(ctx, &request); intl_tag_free(ctx, &public_tag);
+    js_free(ctx, matched); js_free(ctx, public_string);
+    if (r < 0)
+        js_intl_resolved_locale_free(ctx, result);
+    return r;
 }
 JSValue js_intl_supported_locales(JSContext *ctx, JSIntlService service, JSValueConst locales, JSValueConst options)
 {

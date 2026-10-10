@@ -4,6 +4,38 @@
 #include "intl-internal.h"
 #ifdef CONFIG_INTL
 #ifdef CONFIG_INTL_NATIVE
+#include "../../../intl/provider-native-number.h"
+enum JSIntlRoundingMode { JS_INTL_CEIL, JS_INTL_FLOOR, JS_INTL_EXPAND,
+    JS_INTL_TRUNC, JS_INTL_HALF_CEIL, JS_INTL_HALF_FLOOR,
+    JS_INTL_HALF_EXPAND, JS_INTL_HALF_TRUNC, JS_INTL_HALF_EVEN };
+enum JSIntlRoundingType { JS_INTL_FRACTION, JS_INTL_SIGNIFICANT,
+    JS_INTL_MORE_PRECISION, JS_INTL_LESS_PRECISION };
+typedef struct JSIntlDigitOptions {
+    int minimum_integer_digits, minimum_fraction_digits, maximum_fraction_digits;
+    int minimum_significant_digits, maximum_significant_digits;
+    int rounding_increment, rounding_mode, rounding_type, rounding_priority;
+    int trailing_zero_display;
+} JSIntlDigitOptions;
+enum JSIntlMVKind { JS_INTL_MV_FINITE, JS_INTL_MV_NAN,
+    JS_INTL_MV_POSITIVE_INFINITY, JS_INTL_MV_NEGATIVE_INFINITY,
+    JS_INTL_MV_NEGATIVE_ZERO };
+typedef struct JSIntlMathematicalValue {
+    enum JSIntlMVKind kind;
+    char *decimal; /* owned, ASCII exact decimal, including exponent */
+    size_t length;
+} JSIntlMathematicalValue;
+
+
+int js_intl_set_digit_options(JSContext *, JSValueConst, int, int, int,
+                              JSIntlDigitOptions *);
+int js_intl_to_mathematical_value(JSContext *, JSValueConst,
+                                 JSIntlMathematicalValue *);
+void js_intl_free_mathematical_value(JSContext *, JSIntlMathematicalValue *);
+QJSIntlMathematicalValue js_intl_native_mathematical_value(const JSIntlMathematicalValue *);
+void js_intl_native_digit_options(const JSIntlDigitOptions *, QJSIntlDecimalOptions *);
+JSValue js_intl_number_format_value(JSContext *, JSValueConst, JSValueConst,
+                                   const JSIntlMathematicalValue *, int);
+int js_intl_number_unit_valid(const char *);
 JSValue js_intl_number_to_locale_string(JSContext *, JSValueConst,
                                        JSValueConst, JSValueConst);
 #ifdef CONFIG_TEMPORAL

@@ -464,7 +464,6 @@ INTL_BACKEND_SRCS= \
     src/intl/data/relative-data-validation.c \
     src/intl/data/number-data-validation.c \
     src/intl/data/number-extra-validation.c \
-    src/intl/data/number-template-validation.c \
     src/intl/number-range.c \
     src/intl/data/duration-data-validation.c \
     src/intl/data/date-data-validation.c \
@@ -475,7 +474,17 @@ INTL_BACKEND_SRCS= \
     src/quickjs/builtins/intl/native-locale-resolution.c \
     src/quickjs/builtins/intl/native-unsupported.c \
     src/quickjs/builtins/intl/native-locale.c \
-    src/quickjs/builtins/intl/native-list-format.c
+    src/quickjs/builtins/intl/native-list-format.c \
+    src/intl/provider-native-number.c \
+    src/intl/number-native.c \
+    src/intl/number-native-data.c \
+    src/intl/number-compact.c \
+    src/intl/number-unit.c \
+    src/intl/decimal.c \
+    src/intl/plural-native.c \
+    src/intl/plural-native-data.c \
+    src/quickjs/builtins/intl/native-number-common.c \
+    src/quickjs/builtins/intl/native-number-format.c
 else
 INTL_BACKEND_SRCS= \
     src/intl/libintl.c \
@@ -853,6 +862,9 @@ endif
 C_TESTS+=tests/test_intl_text$(EXE)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
+C_TESTS+=tests/test_intl_native_number_oom$(EXE)
+C_TESTS+=tests/test_intl_native_number_provider$(EXE)
+C_TESTS+=tests/test_intl_native_number_engine$(EXE)
 endif
 endif
 
@@ -907,6 +919,15 @@ tests/test_intl_text$(EXE): $(OBJDIR)/tests/test_intl_text.o libquickjs$(LTOEXT)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_native_frontend_oom$(EXE): $(OBJDIR)/tests/test_intl_native_frontend_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_number_oom$(EXE): $(OBJDIR)/tests/test_intl_native_number_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_number_provider$(EXE): $(OBJDIR)/tests/test_intl_native_number_provider.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_number_engine$(EXE): $(OBJDIR)/tests/test_intl_native_number_engine.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_atomics_wait$(EXE): $(OBJDIR)/tests/test_atomics_wait.o libquickjs$(LTOEXT).a
@@ -1113,6 +1134,9 @@ endif
 	$(WINE) ./tests/test_intl_text$(EXE)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_native_frontend_oom$(EXE)
+	$(WINE) ./tests/test_intl_native_number_oom$(EXE)
+	$(WINE) ./tests/test_intl_native_number_provider$(EXE)
+	$(WINE) ./tests/test_intl_native_number_engine$(EXE)
 endif
 endif
 
@@ -1193,6 +1217,7 @@ endif
 ifeq ($(CONFIG_INTL),y)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_number.js
 else
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
