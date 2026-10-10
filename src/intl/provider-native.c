@@ -15,6 +15,7 @@
 #include "provider-native-number.h"
 #include "provider-native-date.h"
 #include "native-locale-info.h"
+#include "provider-native-general.h"
 #include "data/locale-metadata.h" /* externs; generated .c has the only owner */
 #include "../timezone/timezone.h"
 #include <string.h>
@@ -229,8 +230,8 @@ QJSIntlStatus qjs_intl_locale_info_get(QJSIntlProvider *p,
     QJSIntlLocaleInfoResult *out)
 {
     if (!p) { if (out) memset(out, 0, sizeof(*out)); return QJS_INTL_INVALID_ARGUMENT; }
-    return qjs_intl_native_locale_info_get(&p->allocator, &p->view,
-                                          &p->capabilities, request, field, out);
+    return qjs_intl_native_provider_locale_info_get(&p->allocator, &p->view,
+                                                   p, request, field, out);
 }
 void qjs_intl_locale_info_result_clear(QJSIntlProvider *p,
                                        QJSIntlLocaleInfoResult *result)

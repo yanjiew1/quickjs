@@ -485,9 +485,10 @@ INTL_BACKEND_SRCS= \
     src/intl/data/locale-metadata.c \
     src/intl/provider-native-date.c \
     src/quickjs/builtins/intl/native-date-time-format.c \
+    src/quickjs/builtins/intl/native-general.c \
+    src/intl/provider-native-general.c \
     src/quickjs/builtins/intl/native-values.c \
     src/quickjs/builtins/intl/native-locale-resolution.c \
-    src/quickjs/builtins/intl/native-unsupported.c \
     src/quickjs/builtins/intl/native-locale.c \
     src/quickjs/builtins/intl/native-list-format.c \
     src/intl/provider-native-number.c \
@@ -945,6 +946,7 @@ ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_collator_oom$(EXE)
 C_TESTS+=tests/test_intl_native_timezone$(EXE) tests/test_intl_native_timezone_runtime$(EXE)
 C_TESTS+=tests/test_intl_native_segmenter_oom$(EXE)
+C_TESTS+=tests/test_intl_native_general_oom$(EXE)
 C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
 C_TESTS+=tests/test_intl_native_date_bank_data$(EXE) tests/test_intl_native_date_frontend_oom$(EXE)
 C_TESTS+=tests/test_intl_calendar_portable$(EXE) tests/test_intl_calendar_persian_authority$(EXE) tests/test_intl_calendar_integrated_authority$(EXE) tests/test_intl_calendar_domain$(EXE)
@@ -1673,6 +1675,16 @@ test-intl-native-segmenter: qjs$(EXE) tests/test_intl_native_segmenter_oom$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_segmenter.js
 	$(WINE) ./tests/test_intl_native_segmenter_oom$(EXE)
 test: test-intl-native-segmenter
+
+ifeq ($(CONFIG_INTL_NATIVE),y)
+tests/test_intl_native_general_oom$(EXE): $(OBJDIR)/tests/test_intl_native_general_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-intl-native-general
+test-intl-native-general: qjs$(EXE) tests/test_intl_native_general_oom$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_general.js
+	$(WINE) ./tests/test_intl_native_general_oom$(EXE)
+test: test-intl-native-general
+endif
 endif
 
 tests/test_intl_native_plural_oom$(EXE): $(OBJDIR)/tests/test_intl_native_plural_oom.o libquickjs$(LTOEXT).a
