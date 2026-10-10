@@ -156,6 +156,28 @@ void qjs_intl_provider_free(QJSIntlProvider *p)
     a.free(a.opaque, p->default_locale);
     a.free(a.opaque, p);
 }
+
+QJSIntlStatus qjs_intl_native_provider_set_default_locale(QJSIntlProvider *p,
+                                                        QJSIntlBytes locale)
+{
+    char *copy, *old;
+    if (!p || !locale.data)
+        return QJS_INTL_INVALID_ARGUMENT;
+    /* The frontend canonicalizes and removes 'u'. Admit only the profile with
+       proved patterns and fallback closure. Keep metadata/handle lifetimes. */
+    if (!same(locale, "en") && !same(locale, "en-US"))
+        return QJS_INTL_UNSUPPORTED;
+    copy = p->allocator.malloc(p->allocator.opaque, locale.length + 1);
+    if (!copy)
+        return QJS_INTL_NO_MEMORY;
+    memcpy(copy, locale.data, locale.length);
+    copy[locale.length] = 0;
+    old = p->default_locale;
+    p->default_locale = copy;
+    p->allocator.free(p->allocator.opaque, old);
+    return QJS_INTL_OK;
+}
+
 const QJSIntlAllocator *qjs_intl_native_provider_allocator(const QJSIntlProvider *p)
 {
     return p ? &p->allocator : NULL;

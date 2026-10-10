@@ -424,6 +424,25 @@ int JS_AddIntrinsicWeakRef(JSContext *ctx);
    creating a global Intl object or loading an internationalization backend. */
 int JS_AddIntrinsicIntl(JSContext *ctx);
 
+/* Configure this context's DefaultLocale without installing global Intl.
+   Raw contexts require JS_AddIntrinsicBaseObjects first. locale must be a
+   non-NULL NUL-terminated Unicode locale identifier. The engine copies and
+   canonicalizes it, removing its Unicode 'u' extension. ICU uses its ordinary
+   locale-data fallback; the initial native provider accepts only en/en-US.
+   Return 0 on success, or -1 with a pending exception (RangeError for NULL,
+   invalid or unsupported locale). Failure preserves an existing locale and
+   its caches. Future constructions use the new default; existing objects
+   retain their snapshots. This never changes a process-wide backend default.
+   Disabled Intl builds throw TypeError and return -1. */
+int JS_SetIntlDefaultLocale(JSContext *ctx, const char *locale);
+/* Return an owned JS string snapshot, or JS_EXCEPTION with a pending exception.
+   Free it with JS_FreeValue(ctx, value), or JS_FreeValueRT(rt, value) while rt
+   remains alive after ctx destruction. Raw contexts require base intrinsics.
+   Calling this may initialize context-local backend state but does not install
+   global Intl. Disabled Intl builds throw TypeError and return JS_EXCEPTION. */
+JSValue JS_GetIntlDefaultLocale(JSContext *ctx);
+
+
 JSValue js_string_codePointRange(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv);
 

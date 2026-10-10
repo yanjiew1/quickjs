@@ -31,6 +31,18 @@ int JS_AddIntrinsicIntl(JSContext *ctx)
     (void)ctx;
     return 0;
 }
+
+int JS_SetIntlDefaultLocale(JSContext *ctx, const char *locale)
+{
+    (void)locale;
+    JS_ThrowTypeError(ctx, "Intl is disabled in this build");
+    return -1;
+}
+
+JSValue JS_GetIntlDefaultLocale(JSContext *ctx)
+{
+    return JS_ThrowTypeError(ctx, "Intl is disabled in this build");
+}
 #else
 #ifndef CONFIG_INTL_NATIVE
 #include "../../../intl/libintl.h"
@@ -204,6 +216,98 @@ QJSIntlProvider *js_intl_native_provider(JSContext *ctx)
     return ctx->intl->provider;
 }
 #endif
+
+
+/* Canonical tags are ASCII. Preserve other extensions and private-use 'u'. */
+static void intl_default_locale_remove_unicode_extension(char *tag)
+{
+    char *part = strchr(tag, '-');
+    while (part) {
+        char *next = strchr(part + 1, '-');
+        size_t length = next ? (size_t)(next - part - 1) : strlen(part + 1);
+        if (length == 1) {
+            if (part[1] == 'x')
+                return;
+            if (part[1] == 'u') {
+                char *end = next;
+                while (end) {
+                    char *following = strchr(end + 1, '-');
+                    size_t n = following ? (size_t)(following - end - 1) :
+                                           strlen(end + 1);
+                    if (n == 1)
+                        break;
+                    end = following;
+                }
+                if (end)
+                    memmove(part, end, strlen(end) + 1);
+                else
+                    *part = 0;
+                return;
+            }
+        }
+        part = next;
+    }
+}
+
+/* ECMA402 7ae78cfdf8255468ffc8ebda33dafaea952808dd (2026-10-06):
+ * sec-defaultlocale, sec-internal-slots, sec-resolvelocale. */
+int JS_SetIntlDefaultLocale(JSContext *ctx, const char *locale)
+{
+    char *canonical, *old;
+    int i;
+    if (!locale) {
+        JS_ThrowRangeError(ctx, "Intl default locale must not be NULL");
+        return -1;
+    }
+    if (js_intl_ensure_context(ctx))
+        return -1;
+    canonical = js_intl_canonicalize_tag(ctx, locale, strlen(locale));
+    if (!canonical)
+        return -1;
+    intl_default_locale_remove_unicode_extension(canonical);
+#ifdef CONFIG_INTL_NATIVE
+    {
+        QJSIntlStatus status = qjs_intl_native_provider_set_default_locale(
+            ctx->intl->provider,
+            (QJSIntlBytes){ canonical, strlen(canonical) });
+        if (status != QJS_INTL_OK) {
+            js_free(ctx, canonical);
+            if (status == QJS_INTL_UNSUPPORTED)
+                JS_ThrowRangeError(ctx, "unsupported Intl default locale");
+            else
+                js_intl_native_error(ctx, status, "default locale");
+            return -1;
+        }
+    }
+#else
+    {
+        /* Verify complete ICU conversion, including preserved extensions.
+           ICU locale services supply their ordinary parent/root fallback. */
+        char *backend_locale = js_intl_locale_to_icu(ctx, canonical);
+        if (!backend_locale) {
+            js_free(ctx, canonical);
+            return -1;
+        }
+        js_free(ctx, backend_locale);
+    }
+#endif
+    /* All validation and allocations precede the commit. Cache disposal and
+       string disposal cannot fail or invoke JavaScript. Provider identity and
+       service handles remain alive; objects own their resolved snapshots. */
+    old = ctx->intl->default_locale;
+    ctx->intl->default_locale = canonical;
+    for (i = 0; i < JS_INTL_SERVICE_COUNT; i++)
+        js_intl_locale_list_free(ctx, &ctx->intl->available_locales[i]);
+    js_free(ctx, old);
+    return 0;
+}
+
+JSValue JS_GetIntlDefaultLocale(JSContext *ctx)
+{
+    if (js_intl_ensure_context(ctx))
+        return JS_EXCEPTION;
+    return JS_NewString(ctx, ctx->intl->default_locale);
+}
 
 JSIntlLocaleList *js_intl_available_locale_cache(JSContext *ctx,
                                                  JSIntlService service)

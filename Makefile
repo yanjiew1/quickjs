@@ -534,7 +534,7 @@ ifeq ($(CONFIG_ICU),y)
 LIBS+=$(ICU_LIBS)
 HOST_LIBS+=$(HOST_ICU_LIBS)
 # Host and target include paths stay separate for cross compilation.
-ICU_HEADER_SRCS=$(QUICKJS_SRCS) src/quickjs-libc/host.c tools/qjs.c tests/test_intl_embedder.c tests/test_intl_locale_lookup.c tests/test_intl_plural.c tests/test_intl_oom.c
+ICU_HEADER_SRCS=$(QUICKJS_SRCS) src/quickjs-libc/host.c tools/qjs.c tests/test_intl_default_locale_api.c tests/test_intl_embedder.c tests/test_intl_locale_lookup.c tests/test_intl_plural.c tests/test_intl_oom.c
 ICU_TARGET_OBJECTS=$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(ICU_HEADER_SRCS)))
 $(ICU_TARGET_OBJECTS): ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
 $(patsubst %.c,$(OBJDIR)/%.host.o,$(ICU_HEADER_SRCS)): ICU_COMPILE_CFLAGS=$(HOST_ICU_CFLAGS)
@@ -816,6 +816,7 @@ C_TESTS+=tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json_exec$(EXE) tests/
 QJSC_JSON_COLLISION_CASES:=attributes-first attributes-last size-first size-last
 C_TESTS+=$(addprefix tests/test_qjsc_json_collision_,$(addsuffix $(EXE),$(QJSC_JSON_COLLISION_CASES)))
 C_TESTS+=tests/test_intl_receiver_api$(EXE)
+C_TESTS+=tests/test_intl_default_locale_api$(EXE)
 C_TESTS+=tests/test_temporal_api$(EXE)
 ifeq ($(CONFIG_TEMPORAL),y)
 C_TESTS+=tests/test_temporal$(EXE)
@@ -894,6 +895,9 @@ tests/test_allocator$(EXE): $(OBJDIR)/tests/test_allocator.o libquickjs$(LTOEXT)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_receiver_api$(EXE): $(OBJDIR)/tests/test_intl_receiver_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_default_locale_api$(EXE): $(OBJDIR)/tests/test_intl_default_locale_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_locale_lookup$(EXE): $(OBJDIR)/tests/test_intl_locale_lookup.o libquickjs$(LTOEXT).a
@@ -1071,6 +1075,7 @@ endif
 	$(WINE) ./tests/test_cutils$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
 	$(WINE) ./tests/test_intl_receiver_api$(EXE)
+	$(WINE) ./tests/test_intl_default_locale_api$(EXE)
 	$(WINE) ./tests/test_temporal_api$(EXE)
 ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./tests/test_temporal$(EXE)
