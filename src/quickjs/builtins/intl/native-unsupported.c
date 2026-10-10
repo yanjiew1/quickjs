@@ -37,8 +37,6 @@ NATIVE_UNSUPPORTED(relative_time_format, JS_CLASS_INTL_RELATIVE_TIME_FORMAT, "Re
                    JS_CFUNC_constructor)
 NATIVE_UNSUPPORTED(display_names, JS_CLASS_INTL_DISPLAY_NAMES, "DisplayNames", 2,
                    JS_CFUNC_constructor)
-NATIVE_UNSUPPORTED(duration_format, JS_CLASS_INTL_DURATION_FORMAT, "DurationFormat", 0,
-                   JS_CFUNC_constructor)
 #undef NATIVE_UNSUPPORTED
 
 JSValue js_intl_supported_values_of(JSContext *ctx, JSValueConst receiver,
@@ -74,11 +72,6 @@ JSValue js_intl_date_format(JSContext *ctx, double time,
     return unsupported(ctx, "DateTimeFormat");
 }
 #ifdef CONFIG_TEMPORAL
-JSValue js_intl_temporal_duration_to_locale_string(JSContext *ctx,
-    JSValueConst duration, JSValueConst locales, JSValueConst options)
-{
-    return unsupported(ctx, "DurationFormat");
-}
 JSValue js_intl_temporal_to_locale_string(JSContext *ctx, JSValueConst value,
     JSValueConst locales, JSValueConst options)
 {
