@@ -1,0 +1,39 @@
+Chinese PMO calendar facts used by ICU
+====================================
+
+The Era/monthCode calendar table names the PMO publication for Chinese
+calendar values in Gregorian 1900..2100 inclusive:
+https://tc39.es/proposal-intl-era-monthcode/#table-calendar-types
+https://pmo.cas.cn/xwdt2019/kpdt2019/202203/t20220309_6386774.html
+
+The exact PMO page hosts and actively uses the calendar.js factual
+lunarInfo sequence at https://pmo.cas.cn/images/calendar.js. The cached
+header credits Jea Yang (JJonline@JJonline.Cn), calendar.js v1.0.3,
+2014..2017. This ICU integration copies numeric calendar facts, with that
+attribution, and contains independently written search/integration code.
+It neither copies nor evaluates the retrieved JavaScript implementation.
+The cached script declares no license grant; this integration makes no
+claim about a license for that JavaScript implementation, PMO authorship
+of that implementation, separate GB/T certification, or public-domain
+status for the complete script. ICU/Unicode source notices are retained.
+
+The PMO historical PDF supplies the initial January 1900 facts (lunar
+1899 M12), which are outside the hosted sequence's first lunar year:
+https://pmo.cas.cn/xwdt2019/kpdt2019/202203/P020250414456381274062.pdf
+The first eleven lunar 1899 months are a private approximation outside
+the mandatory Gregorian interval. They complete the enclosing arithmetic
+year for January 1900. They are not acquired PMO 1899 observations.
+The final zero-length 2101 M01 row is the boundary derived from the
+published 2100 M12 length. It closes 2100 year limits and month addition;
+it is not an acquired 2101 lunar year or an ordinary zero-day month.
+
+The table owns calendar civil days, not new-moon/solar-term instants.
+Its full data interval is [-25892,47875), in days since 1970-01-01, with
+the primary required Gregorian interval [-25567,47847). Astronomical
+calculation remains for dates/years outside the available data, except
+the closing 2101 M01 start needed to close the final published year.
+Dangi keeps its separate settings and astronomical calculation.
+
+The pinned independent HKO comparison disagrees with the PMO-hosted
+sequence on 30 dates in 2057 and lacks 2069-12-30. Those facts are retained
+in packet provenance; HKO is corroboration, not substituted authority.
