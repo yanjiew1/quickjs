@@ -40,6 +40,15 @@ static int identifier(QJSIntlDataSlice s, int calendar)
     }
     return 1;
 }
+static int word(QJSIntlDataSlice s, const char *value)
+{
+    size_t n = strlen(value);
+    return s.length == n && (!n || !memcmp(s.data, value, n));
+}
+static int lunar(QJSIntlDataSlice calendar)
+{
+    return word(calendar, "chinese") || word(calendar, "dangi");
+}
 static int template_valid(QJSIntlDataSlice s, unsigned int expected, int quoted)
 {
     size_t i;
@@ -85,6 +94,14 @@ static int common(const QJSIntlDataSection *s, uint32_t row, uint32_t locales,
     return qjs_intl_data_record_u32(s, row, 0, locale) == QJS_INTL_DATA_OK &&
            *locale < locales && qjs_intl_data_record(s, row, bytes) == QJS_INTL_DATA_OK;
 }
+static QJSIntlStatus year_kind(void *opaque, QJSIntlBytes literal,
+                              unsigned int symbol, unsigned int count)
+{
+    unsigned int *present = opaque;
+    (void)literal; (void)count;
+    if (symbol == 'r' || symbol == 'U') *present = 1;
+    return QJS_INTL_OK;
+}
 static int patterns(const QJSIntlDataView *v, const QJSIntlDataSection *s,
                      uint32_t locales)
 {
@@ -103,8 +120,10 @@ static int patterns(const QJSIntlDataView *v, const QJSIntlDataSection *s,
         if (kind == 3) {
             if (family || skeleton.length || !template_valid(pattern, 3, 1)) return 0;
         } else {
+            unsigned int cyclic = 0;
             p.data = (const char *)pattern.data; p.length = pattern.length;
             if (qjs_intl_date_pattern_fields(p, fields, &parsed) || parsed != family) return 0;
+            if (qjs_intl_date_pattern_visit(p, year_kind, &cyclic) || (cyclic && !lunar(calendar))) return 0;
             if (kind == 0 && !skeleton.length) return 0;
             if (kind == 1 && family) return 0;
             if (kind == 2 && !family) return 0;
@@ -132,10 +151,14 @@ static int names(const QJSIntlDataView *v, const QJSIntlDataSection *s,
             !string(v, s, i, 20, &text) || !text.length ||
             qjs_intl_data_record_u32(s, i, 16, &index)) return 0;
         field = row.data[12]; context = row.data[13]; width = row.data[14];
-        if (field > 3 || context > 1 || width > 3 || row.data[15] ||
+        if (field > 5 || context > 1 || width > 3 || row.data[15] ||
             (field == 0 && context) || (width == 3 && field != 2) ||
-            (field == 1 && (index < 1 || index > 13)) ||
-            (field == 2 && (index < 1 || index > 7)) || (field == 3 && index >= 12)) return 0;
+            (field == 1 && (index < 1 || index > 14 ||
+                (index == 14 && !word(calendar, "hebrew")))) ||
+            (field == 2 && (index < 1 || index > 7)) || (field == 3 && index >= 12) ||
+            (field == 4 && (!lunar(calendar) || context || index < 1 || index > 60)) ||
+            (field == 5 && (!lunar(calendar) || index > 1 ||
+                (!index && (context || width)) || !template_valid(text, 1, 0)))) return 0;
         c = locale < previous_locale ? -1 : locale > previous_locale ? 1 : compare(calendar, previous_calendar);
         if (!c) c = field < previous_field ? -1 : field > previous_field ? 1 : context < previous_context ? -1 :
                     context > previous_context ? 1 : width < previous_width ? -1 : width > previous_width ? 1 :

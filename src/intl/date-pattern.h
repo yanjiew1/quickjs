@@ -39,8 +39,10 @@ QJSIntlStatus qjs_intl_date_range_template_visit(QJSIntlBytes,
     QJSIntlDateRangeTemplateVisitor, void *);
 /* Family:0 no hour,1 twelve-hour (h/K),2 twenty-four-hour (H/k).
  * fields use -1 absent; fraction1..3; other widths use the enums above.
- * The subset excludes week/quarter/ordinal/cyclic and calendar year-name
- * letters. Unsupported field letters return UNSUPPORTED, malformed UTF8 or
+ * Related Gregorian year r and cyclic year-name U share the public YEAR
+ * component; r(U) is valid and emits two part types. U width1..5 and r1..20
+ * preserve exact pattern grammar. The subset excludes week/quarter/ordinal.
+ * Unsupported field letters return UNSUPPORTED, malformed UTF8 or
  * quotation DATA_ERROR. This distinction does not confer data capabilities.
  */
 int qjs_intl_date_basic_score(const int *requested, const int *candidate);

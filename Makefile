@@ -566,6 +566,19 @@ $(CALENDAR_CONFIG_OBJECTS): private CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY
 QUICKJS_SRCS+=$(CALENDAR_SRCS)
 endif
 
+# Native Date banks use one shared civil/ISO arithmetic owner.
+ifeq ($(CONFIG_INTL_NATIVE),y)
+INTL_NATIVE_DATE_ENGINE_SRCS= \
+    src/intl/date-native-bank.c \
+    src/intl/date-native-calendar.c \
+    src/intl/date-native-calendar-data.c \
+    src/intl/date-native-data.c \
+    src/intl/date-native-zone.c \
+    src/intl/date-native.c
+INTL_NATIVE_DATE_SHARED_SRCS=src/temporal/epoch.c src/temporal/iso.c src/temporal/civil.c
+QUICKJS_SRCS:=$(strip $(QUICKJS_SRCS) $(INTL_NATIVE_DATE_ENGINE_SRCS) $(filter-out $(QUICKJS_SRCS),$(INTL_NATIVE_DATE_SHARED_SRCS)))
+endif
+
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
 all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)

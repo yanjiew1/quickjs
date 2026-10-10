@@ -27,4 +27,16 @@ enum {
 #define QJS_INTL_DATE_META_PERIOD_WIDTH 32u
 #define QJS_INTL_DATE_ZONE_ALIAS_WIDTH 16u
 #define QJS_INTL_DATE_RANGE_FALLBACK_WIDTH 20u
+/* Additive section101 semantics; record widths/IDs and wire1.3 unchanged.
+ * field4: cyclic year1..60, format context0, width0..2.
+ * field5: exact leap-month template, one literal {0}; named index1 with
+ * context0/1,width0..2; numeric index0 with context0,width0 only.
+ * Month index14 exists only for Hebrew month7@yeartype=leap.
+ * Japanese era237/238 source exact Gregorian BCE/CE labels for the proposal's
+ * pre-1873 Gregorian era rule. Other era indices retain the CLDR numeric key.
+ * Presence never establishes arithmetic support or service coverage.
+ */
+#define QJS_INTL_DATE_HEBREW_ADAR_II 14u
+#define QJS_INTL_DATE_JAPANESE_BCE 237u
+#define QJS_INTL_DATE_JAPANESE_CE 238u
 #endif

@@ -49,11 +49,18 @@ static QJSIntlStatus field(unsigned int ch, unsigned int n, int *f, int *v)
     case 'y':
         if (n > 20) return QJS_INTL_DATA_ERROR;
         *f = QJS_DATE_YEAR; *v = n == 2 ? 0 : 1; break;
+    case 'r':
+        if (n > 20) return QJS_INTL_DATA_ERROR;
+        *f = QJS_DATE_YEAR; *v = QJS_DATE_NUMERIC; break;
+    case 'U':
+        if (n > 5) return QJS_INTL_DATA_ERROR;
+        *f = QJS_DATE_YEAR; *v = QJS_DATE_NUMERIC; break;
     case 'M': case 'L':
         if (n > 5) return QJS_INTL_DATA_ERROR;
         *f = QJS_DATE_MONTH; *v = n == 5 ? 2 : n == 4 ? 4 : n == 3 ? 3 : n == 2 ? 0 : 1; break;
     case 'd':
-        if (n > 2) return QJS_INTL_DATA_ERROR;
+        if (n > 3) return QJS_INTL_DATA_ERROR;
+        if (n == 3) return QJS_INTL_UNSUPPORTED;
         *f = QJS_DATE_DAY; *v = n == 2 ? 0 : 1; break;
     case 'E': case 'e': case 'c':
         if (n > 6) return QJS_INTL_DATA_ERROR;
@@ -132,6 +139,7 @@ QJSIntlStatus qjs_intl_date_pattern_visit(QJSIntlBytes pattern,
 typedef struct Fields {
     int *fields;
     unsigned int family;
+    unsigned int year_symbols;
 } Fields;
 static QJSIntlStatus fields_visit(void *opaque, QJSIntlBytes literal,
                                  unsigned int ch, unsigned int n)
@@ -144,7 +152,13 @@ static QJSIntlStatus fields_visit(void *opaque, QJSIntlBytes literal,
     r = field(ch, n, &f, &v);
     if (r) return r;
     if (f >= 0) {
-        if (state->fields[f] >= 0) return QJS_INTL_DATA_ERROR;
+        if (f == QJS_DATE_YEAR) {
+            unsigned int bit = ch == 'y' ? 1u : ch == 'r' ? 2u : 4u;
+            if ((state->year_symbols & bit) ||
+                (state->year_symbols && (bit == 1 || (state->year_symbols & 1))))
+                return QJS_INTL_DATA_ERROR;
+            state->year_symbols |= bit;
+        } else if (state->fields[f] >= 0) return QJS_INTL_DATA_ERROR;
         state->fields[f] = v;
     }
     if (ch == 'h' || ch == 'K') state->family = 1;
@@ -160,7 +174,7 @@ QJSIntlStatus qjs_intl_date_pattern_fields(QJSIntlBytes pattern, int *fields,
     if (!fields || !family) return QJS_INTL_INVALID_ARGUMENT;
     for (i = 0; i < QJS_DATE_FIELD_COUNT; i++) fields[i] = -1;
     *family = 0;
-    state.fields = fields; state.family = 0;
+    state.fields = fields; state.family = 0; state.year_symbols = 0;
     r = qjs_intl_date_pattern_visit(pattern, fields_visit, &state);
     if (!r) *family = state.family;
     return r;
