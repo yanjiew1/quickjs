@@ -33,15 +33,16 @@ int main(void)
             }
         }
     }
-    /* Extreme lunisolar approximation can fail numerically. Intl range
-     * acceptance never promises physical accuracy or a valid extreme year. */
+    /* The continuous outer-domain solar extension must render both lunar
+     * calendars at the complete Date domain and bounded Intl reference edges.
+     * Astronomical accuracy outside authority spans remains unspecified. */
     for (id = QJS_CAL_CHINESE; id <= QJS_CAL_DANGI; id += QJS_CAL_DANGI - QJS_CAL_CHINESE) {
         for (side = 0; side < 2; side++) {
             int64_t edge = side ? QJS_CAL_INTL_MAX_EPOCH_DAY : QJS_CAL_INTL_MIN_EPOCH_DAY;
             intl = before;
             status = qjs_calendar_from_epoch_day_for_intl((QJSCalendarId)id, edge, &intl);
-            assert(status == QJS_CAL_OK || status == QJS_CAL_BACKEND);
-            if (status) assert(!memcmp(&intl, &before, sizeof(intl)));
+            assert(status == QJS_CAL_OK);
+            assert(intl.day >= 1 && intl.day <= intl.days_in_month);
             ordinary = before;
             assert(qjs_calendar_from_epoch_day((QJSCalendarId)id, edge, &ordinary) == QJS_CAL_RANGE);
             assert(!memcmp(&ordinary, &before, sizeof(ordinary)));

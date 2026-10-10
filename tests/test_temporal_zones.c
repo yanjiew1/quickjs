@@ -39,7 +39,6 @@ static void test_start_of_day(void)
     assert(qjs_temporal_zone_start_of_day(&zone, date, &epoch) ==
            QJS_TEMPORAL_ERROR_RANGE);
     assert(!qjs_temporal_epoch_ns_compare(epoch, unchanged));
-#ifdef CONFIG_ICU
     /* Sao Paulo skipped midnight; the date starts at the transition. */
     assert(!qjs_temporal_zone_parse(&zone, "America/Sao_Paulo", 17));
     date = (QJSTemporalISODate){2018, 11, 4};
@@ -50,16 +49,6 @@ static void test_start_of_day(void)
     assert(local.date.year == 2018 && local.date.month == 11 &&
            local.date.day == 4 && local.time.hour == 1 &&
            !local.time.minute && !local.time.second);
-#else
-    /* Native helpers reject a named zone when the backend is absent. */
-    memset(&zone, 0, sizeof(zone));
-    memcpy(zone.identifier, "America/New_York", 17);
-    epoch = unchanged;
-    date = (QJSTemporalISODate){1970, 1, 1};
-    assert(qjs_temporal_zone_start_of_day(&zone, date, &epoch) ==
-           QJS_TEMPORAL_ERROR_UNSUPPORTED);
-    assert(!qjs_temporal_epoch_ns_compare(epoch, unchanged));
-#endif
 }
 
 int main(void)
@@ -82,7 +71,6 @@ int main(void)
     assert(!qjs_temporal_zone_parse(&other, "UTC", 3));
     assert(!qjs_temporal_zones_equal(&zone, &other, &equal) && !equal);
     assert(!qjs_temporal_zone_transition(&other, epoch, 1, candidates, &found) && !found);
-#ifdef CONFIG_ICU
     assert(!qjs_temporal_zone_parse(&zone, "America/New_York", 16));
     datetime = (QJSTemporalISODateTime){{2024,11,3},{1,30,0,0,0,0}};
     assert(!qjs_temporal_zone_possible_epochs(&zone, datetime, candidates, &count));
@@ -90,9 +78,5 @@ int main(void)
     assert(qjs_temporal_epoch_ns_compare(candidates[0], candidates[1]) < 0);
     assert(!qjs_temporal_zone_parse(&other, "US/Eastern", 10));
     assert(!qjs_temporal_zones_equal(&zone, &other, &equal) && equal);
-#else
-    assert(qjs_temporal_zone_parse(&zone, "America/New_York", 16));
-    assert(!qjs_temporal_system_zone(&zone) && !strcmp(zone.identifier, "UTC"));
-#endif
     return 0;
 }

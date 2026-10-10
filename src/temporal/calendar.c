@@ -4,6 +4,9 @@
  */
 #include "calendar.h"
 #include "civil.h"
+#ifndef CONFIG_ICU
+#include "../calendar/calendar.h"
+#endif
 #include <math.h>
 #include <limits.h>
 #include <stdio.h>
@@ -17,12 +20,14 @@
 #define HAS(f, name) ((f)->present & QJS_TEMPORAL_FIELD_##name)
 #define RANGE QJS_TEMPORAL_ERROR_RANGE
 #define MISSING QJS_TEMPORAL_ERROR_MISSING
+#ifdef CONFIG_ICU
 static const char *const identifiers[] = {
     "iso8601", "buddhist", "chinese", "coptic", "dangi", "ethioaa",
     "ethiopic", "gregory", "hebrew", "indian", "islamic-civil",
     "islamic-tbla", "islamic-umalqura", "japanese", "persian",
     "roc"
 };
+#endif
 static int has_era(QJSTemporalCalendar calendar)
 {
     return calendar != QJS_TEMPORAL_CAL_ISO8601 &&
@@ -30,11 +35,21 @@ static int has_era(QJSTemporalCalendar calendar)
 }
 const char *qjs_temporal_calendar_identifier(QJSTemporalCalendar calendar)
 {
+#ifdef CONFIG_ICU
     return (unsigned)calendar < QJS_TEMPORAL_CAL_COUNT ? identifiers[calendar] : NULL;
+#else
+    return qjs_calendar_identifier((QJSCalendarId)calendar);
+#endif
 }
 int qjs_temporal_calendar_from_identifier(QJSTemporalCalendar *result,
                                          const char *text, size_t length)
 {
+#ifndef CONFIG_ICU
+    QJSCalendarId id;
+    int error = qjs_calendar_from_identifier(&id, text, length);
+    if (!error) *result = (QJSTemporalCalendar)id;
+    return error;
+#else
     size_t i, j;
     static const struct { const char *alias, *canonical; } aliases[] = {
         {"ethiopic-amete-alem", "ethioaa"}, {"islamicc", "islamic-civil"}
@@ -58,15 +73,12 @@ int qjs_temporal_calendar_from_identifier(QJSTemporalCalendar *result,
             if (c != (unsigned char)identifiers[i][j]) break;
         }
         if (j == length) {
-#ifndef CONFIG_ICU
-            if (i != QJS_TEMPORAL_CAL_ISO8601)
-                return QJS_TEMPORAL_ERROR_UNSUPPORTED;
-#endif
             *result = (QJSTemporalCalendar)i;
             return 0;
         }
     }
     return RANGE;
+#endif
 }
 unsigned qjs_temporal_calendar_extra_fields(QJSTemporalCalendar calendar,
                                              unsigned requested)
@@ -124,6 +136,7 @@ static void make_month_code(char result[5], int month, int is_leap)
     result[2] = (char)('0' + month % 10); result[3] = is_leap ? 'L' : 0;
     result[4] = 0;
 }
+#ifdef CONFIG_ICU
 typedef struct Era {
     QJSTemporalCalendar calendar;
     const char *name, *alias;
@@ -157,9 +170,11 @@ static const Era eras[] = {
     {QJS_TEMPORAL_CAL_ROC,"roc",NULL,1,0},
     {QJS_TEMPORAL_CAL_ROC,"broc",NULL,1,1},
 };
+#endif
 static int resolve_era(QJSTemporalCalendar calendar,
                        QJSTemporalCalendarFields *fields)
 {
+#ifdef CONFIG_ICU
     size_t i;
     double year;
     if (!has_era(calendar)) return 0;
@@ -178,6 +193,22 @@ static int resolve_era(QJSTemporalCalendar calendar,
         return 0;
     }
     return RANGE;
+#else
+    int32_t era_year, year;
+    int error;
+    if (!has_era(calendar)) return 0;
+    if (!!HAS(fields, ERA) != !!HAS(fields, ERA_YEAR)) return MISSING;
+    if (!HAS(fields, ERA_YEAR)) return 0;
+    if (checked_i32(fields->era_year, &era_year)) return RANGE;
+    error = qjs_calendar_year_from_era((QJSCalendarId)calendar, fields->era,
+                                        era_year, &year);
+    if (error) return error;
+    if (HAS(fields, YEAR) && fields->year != year) return RANGE;
+    fields->year = year;
+    fields->present |= QJS_TEMPORAL_FIELD_YEAR;
+    fields->present &= ~(QJS_TEMPORAL_FIELD_ERA | QJS_TEMPORAL_FIELD_ERA_YEAR);
+    return 0;
+#endif
 }
 #ifdef CONFIG_ICU
 static void set_era(QJSTemporalCalendar calendar, QJSTemporalISODate iso,
@@ -345,6 +376,29 @@ static int calendar_integers_to_iso(QJSTemporalCalendar calendar, int32_t year,
     ucal_close(handle);
     return error;
 }
+#else
+static int month_info(QJSTemporalCalendar calendar, int32_t year, int month,
+                       int *months, int *days, char code[5])
+{
+    return qjs_calendar_month_info((QJSCalendarId)calendar, year, month,
+                                    months, days, code);
+}
+static int month_ordinal(QJSTemporalCalendar calendar, int32_t year,
+                          const char *code, QJSTemporalOverflow overflow,
+                          int *result)
+{
+    return qjs_calendar_month_ordinal((QJSCalendarId)calendar, year, code,
+                         overflow == QJS_TEMPORAL_OVERFLOW_CONSTRAIN, result);
+}
+static int calendar_integers_to_iso(QJSTemporalCalendar calendar, int32_t year,
+                                     int month, int day, QJSTemporalISODate *result)
+{
+    int64_t days;
+    int error = qjs_calendar_to_epoch_day_unbounded((QJSCalendarId)calendar,
+                                                    year, month, day, &days);
+    if (error) return error;
+    return qjs_temporal_iso_date_from_days(result, days) ? RANGE : 0;
+}
 #endif
 static int resolve(QJSTemporalCalendar calendar,
                     const QJSTemporalCalendarFields *input, int type,
@@ -402,7 +456,6 @@ static int resolve(QJSTemporalCalendar calendar,
         *result = (QJSTemporalISODate){year, month, day};
         return 0;
     }
-#ifdef CONFIG_ICU
     if (!HAS(&fields, YEAR)) return MISSING; /* MonthDay has its own reference search. */
     if (checked_i32(fields.year, &year) || year < -1000000 || year > 1000000) return RANGE;
     if (HAS(&fields, MONTH_CODE)) {
@@ -440,9 +493,6 @@ static int resolve(QJSTemporalCalendar calendar,
         numeric = max_day;
     }
     return calendar_integers_to_iso(calendar, year, month, (int)numeric, result);
-#else
-    return QJS_TEMPORAL_ERROR_UNSUPPORTED;
-#endif
 }
 int qjs_temporal_calendar_date_from_fields(QJSTemporalCalendar calendar,
                     const QJSTemporalCalendarFields *fields,
@@ -503,7 +553,19 @@ int qjs_temporal_calendar_fields(QJSTemporalCalendar calendar,
         if (error) return error;
         set_era(calendar, date, &fields);
 #else
-        return QJS_TEMPORAL_ERROR_UNSUPPORTED;
+        QJSCalendarDate native;
+        int error = qjs_calendar_from_epoch_day_unbounded((QJSCalendarId)calendar,
+                                                           days, &native);
+        if (error) return error;
+        fields.year = native.year; fields.month = native.month; fields.day = native.day;
+        fields.era_year = native.era_year;
+        memcpy(fields.month_code, native.month_code, sizeof(fields.month_code));
+        memcpy(fields.era, native.era, sizeof(fields.era));
+        fields.day_of_year = native.day_of_year;
+        fields.days_in_month = native.days_in_month;
+        fields.days_in_year = native.days_in_year;
+        fields.months_in_year = native.months_in_year;
+        fields.has_era = native.has_era; fields.in_leap_year = native.in_leap_year;
 #endif
     }
     *result = fields;
@@ -515,7 +577,6 @@ int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
 {
     if (calendar == QJS_TEMPORAL_CAL_ISO8601)
         return resolve(calendar, input, 2, overflow, result);
-#ifdef CONFIG_ICU
     {
         QJSTemporalCalendarFields fields = *input;
         QJSTemporalCalendarDate record;
@@ -537,8 +598,19 @@ int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
                  calendar == QJS_TEMPORAL_CAL_DANGI) &&
                 (arithmetic_year < -271821 || arithmetic_year > 275760))
                 return RANGE;
+#ifndef CONFIG_ICU
+            int supported;
+            /* Guard the supplied year before lunar month lookup, as the
+             * reference-date operation requires. An edge year may include
+             * dates outside the public construction domain. */
+            error = qjs_calendar_year_has_supported_date((QJSCalendarId)calendar,
+                                                          arithmetic_year, &supported);
+            if (error) return error;
+            if (!supported) return RANGE;
+#endif
             error = resolve(calendar, &fields, 0, overflow, &source);
             if (error) return error;
+#ifdef CONFIG_ICU
             {
                 QJSTemporalISODate first, next;
                 int64_t first_days, next_days;
@@ -551,6 +623,7 @@ int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
                     first_days > INT64_C(100000000) || next_days <= -INT64_C(100000001))
                     return RANGE;
             }
+#endif
             error = qjs_temporal_calendar_fields(calendar, source, &record);
             if (error) return error;
             strcpy(code, record.month_code); desired_day = record.day;
@@ -632,10 +705,7 @@ int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
         }
         return QJS_TEMPORAL_ERROR_BACKEND;
     }
-#else
-    (void)input; (void)overflow; (void)result;
-    return QJS_TEMPORAL_ERROR_UNSUPPORTED;
-#endif
+
 }
 static int add_checked(int64_t *result, int64_t a, int64_t b)
 {
@@ -690,8 +760,21 @@ static int calendar_year_month(QJSTemporalCalendar calendar,
         return error;
     }
 #else
-    (void)overflow;
-    return QJS_TEMPORAL_ERROR_UNSUPPORTED;
+    {
+        int32_t target_year;
+        int target_month, count, error;
+        char code[5];
+        error = month_ordinal(calendar, (int32_t)year, record.month_code,
+                              overflow, &month);
+        if (error) return error;
+        error = qjs_calendar_add_months((QJSCalendarId)calendar, (int32_t)year,
+                                         month, months, &target_year, &target_month);
+        if (error) return error;
+        error = month_info(calendar, target_year, target_month, &count,
+                            maximum_day, code);
+        if (error) return error;
+        return calendar_integers_to_iso(calendar, target_year, target_month, 1, first);
+    }
 #endif
 }
 int qjs_temporal_calendar_date_add(QJSTemporalCalendar calendar,

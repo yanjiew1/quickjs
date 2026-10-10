@@ -85,8 +85,8 @@ if (typeof Temporal !== "undefined" &&
        US:182-183 supplies 1918 Mar lastSun 02:00 local (07:00 UTC). */
     transitionBoundary("America/New_York", -2717650800, null, -1633280400, -238);
     transitionBoundary("US/Eastern", -2717650800, null, -1633280400, -238, "iso8601");
-    /* Non-ISO Temporal calendars are enabled with Intl in this configuration.
-       The Intl-disabled configuration makes no non-ISO support claim. */
+    /* This shared-provider configuration also enables non-ISO calendars.
+       The dedicated calendar fixture covers Intl enabled and disabled. */
     if (typeof Intl !== "undefined") {
         transitionBoundary("US/Eastern", -2717650800, null, -1633280400, -238, "gregory");
     }

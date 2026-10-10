@@ -548,7 +548,8 @@ endif
 
 # The pure C calendar library shares one accepted arithmetic provider.
 # Only its own translation units receive authority and publication flags.
-ifeq ($(CONFIG_INTL_NATIVE),y)
+ifeq ($(CONFIG_ICU),n)
+ifneq ($(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL_NATIVE)),)
 CALENDAR_SRCS= \
     src/calendar/calendar.c \
     src/calendar/solar.c \
@@ -567,6 +568,7 @@ CALENDAR_AUTHORITY_CFLAGS= \
 CALENDAR_CONFIG_OBJECTS=$(foreach suffix,o host.o pic.o nolto.o debug.o fuzz.o check.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(CALENDAR_SRCS)))
 $(CALENDAR_CONFIG_OBJECTS): private CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
 QUICKJS_SRCS+=$(CALENDAR_SRCS)
+endif
 endif
 
 # Native Date banks use one shared civil/ISO arithmetic owner.
@@ -910,6 +912,9 @@ C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_civil$(EXE)
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
 C_TESTS+=tests/test_temporal_calendars$(EXE)
+ifeq ($(CONFIG_ICU),n)
+C_TESTS+=tests/test_temporal_native_calendars$(EXE)
+endif
 C_TESTS+=tests/test_temporal_zones$(EXE)
 C_TESTS+=tests/test_temporal_runtime_zone_provider$(EXE) tests/test_temporal_system_clock$(EXE)
 ifeq ($(CONFIG_ICU),n)
@@ -1735,6 +1740,18 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_temporal_bank.js
 endif
 test: test-intl-native-date
+endif
+
+ifeq ($(CONFIG_ICU),n)
+ifeq ($(CONFIG_TEMPORAL),y)
+tests/test_temporal_native_calendars$(EXE): $(OBJDIR)/tests/test_temporal_native_calendars.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-temporal-native-calendars
+test-temporal-native-calendars: qjs$(EXE) tests/test_temporal_native_calendars$(EXE)
+	$(WINE) ./tests/test_temporal_native_calendars$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_native_calendars.js
+test: test-temporal-native-calendars
+endif
 endif
 
 # Exercise qjsc's own compiler invocation for every native feature profile.

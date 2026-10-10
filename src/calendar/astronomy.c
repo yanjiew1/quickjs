@@ -20,6 +20,7 @@
  * This source candidate has not been compiled or executed by its author.
  */
 #include "astronomy.h"
+#include "internal.h"
 #include <math.h>
 #include <stddef.h>
 
@@ -28,6 +29,7 @@
 #define DEG (PI / 180.0)
 #define DAY_MS QJS_CAL_ASTRO_DAY_MS
 #define TROPICAL_YEAR 365.242191
+#define GREGORIAN_MEAN_YEAR (146097.0 / 400.0)
 #define JULIAN_EPOCH_MS (-210866760000000.0)
 #define JD_EPOCH 2447891.5
 #define SUN_ETA_G (279.403303 * DEG)
@@ -63,9 +65,34 @@ static double epoch_days(double time)
     return (time - JULIAN_EPOCH_MS) / DAY_MS - JD_EPOCH;
 }
 
+/* The adopted calendar algorithm leaves astronomical accuracy unspecified
+ * outside the required published intervals. Keep ICU's fixed-epoch phase
+ * exactly throughout the broad historical interval. Its tropical year differs
+ * from the Gregorian mean by 0.000309 days/year; unconstrained extrapolation
+ * would move solstices across the Dec 1 search anchor and disconnect month
+ * construction from inverse conversion. Beyond each boundary, continue the
+ * same unwrapped phase at the Gregorian mean-year rate. The phase is
+ * continuous and strictly increasing, and solstices retain their season
+ * throughout the complete Date and internal reference-year domains.
+ * Lunar perturbation arguments continue to use the original epoch days. */
+static double solar_epoch_days(double day)
+{
+    double first = epoch_days((double)
+        qjs_calendar_gregorian_to_epoch_day_unchecked(
+            QJS_CAL_ASTRO_LINEAR_MIN_YEAR, 1, 1) * DAY_MS);
+    double last = epoch_days((double)
+        qjs_calendar_gregorian_to_epoch_day_unchecked(
+            QJS_CAL_ASTRO_LINEAR_MAX_YEAR, 1, 1) * DAY_MS);
+    if (day < first)
+        return first + (day - first) * (TROPICAL_YEAR / GREGORIAN_MEAN_YEAR);
+    if (day > last)
+        return last + (day - last) * (TROPICAL_YEAR / GREGORIAN_MEAN_YEAR);
+    return day;
+}
+
 static int sun_position(double time, double *longitude, double *anomaly)
 {
-    double day = epoch_days(time);
+    double day = solar_epoch_days(epoch_days(time));
     double epoch_angle = norm2pi(PI2 / TROPICAL_YEAR * day);
     double mean = norm2pi(epoch_angle + SUN_ETA_G - SUN_OMEGA_G);
     double eccentric = mean;
@@ -236,7 +263,16 @@ int qjs_calendar_astro_mean_lunation_number(double epoch_ms, int64_t *result)
     /* The linear mean phase is unwrapped; rounding at computed new moons
      * avoids the secular drift of using SYNODIC_MONTH as an absolute index.
      * See the limits and validation requirement in the handoff document. */
-    cycles = (13.1763966 * DEG - PI2 / TROPICAL_YEAR) * epoch_days(epoch_ms);
+    {
+        double day = epoch_days(epoch_ms), solar_day = solar_epoch_days(day);
+        /* Preserve the historical operation order exactly. The remote index
+         * uses the same unwrapped solar phase as the event evaluator, so a
+         * verified add-months target names the same consecutive lunation. */
+        if (solar_day == day)
+            cycles = (13.1763966 * DEG - PI2 / TROPICAL_YEAR) * day;
+        else
+            cycles = 13.1763966 * DEG * day - PI2 / TROPICAL_YEAR * solar_day;
+    }
     cycles += MOON_L0 - SUN_ETA_G;
     cycles = floor(cycles / PI2 + 0.5);
     if (!isfinite(cycles) || cycles < -1000000000.0 || cycles > 1000000000.0)

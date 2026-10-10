@@ -9,6 +9,10 @@
 #define QJS_CAL_ASTRO_PI 3.14159265358979323846
 #define QJS_CAL_ASTRO_SYNODIC_MONTH 29.530588853
 #define QJS_CAL_ASTRO_DAY_MS 86400000.0
+/* Original ICU solar evaluation interval, inclusive Jan 1 boundaries.
+ * Outside it, solar phase has a continuous Gregorian mean-year extension. */
+#define QJS_CAL_ASTRO_LINEAR_MIN_YEAR (-10000)
+#define QJS_CAL_ASTRO_LINEAR_MAX_YEAR 10000
 /* Numerical guard, not an assertion of physical or historical accuracy.
  * It includes metadata for the common internal year domain +/-1000000. */
 #define QJS_CAL_ASTRO_MAX_ABS_MS 32000000000000000.0

@@ -28,7 +28,6 @@ int main(void)
         &input, QJS_TEMPORAL_OVERFLOW_CONSTRAIN, &target));
     assert(target.year == 1972 && target.day == 29);
     assert(qjs_temporal_calendar_from_identifier(&calendar, "islamic", 7));
-#ifdef CONFIG_ICU
     for (int i = QJS_TEMPORAL_CAL_BUDDHIST; i < QJS_TEMPORAL_CAL_COUNT; i++) {
         assert(!qjs_temporal_calendar_fields((QJSTemporalCalendar)i, leap, &fields));
         input.present = QJS_TEMPORAL_FIELD_YEAR | QJS_TEMPORAL_FIELD_MONTH_CODE | QJS_TEMPORAL_FIELD_DAY;
@@ -41,8 +40,6 @@ int main(void)
     }
     assert(!qjs_temporal_calendar_from_identifier(&calendar, "islamicc", 8));
     assert(calendar == QJS_TEMPORAL_CAL_ISLAMIC_CIVIL);
-#else
-    assert(qjs_temporal_calendar_from_identifier(&calendar, "gregory", 7));
-#endif
+
     return 0;
 }
