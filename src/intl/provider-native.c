@@ -307,3 +307,8 @@ void qjs_intl_native_provider_memory_usage(const QJSIntlProvider *p,
     *count = p ? 2 : 0;
     *size = p ? sizeof(*p) + strlen(p->default_locale) + 1 : 0;
 }
+
+const QJSIntlDataView *qjs_intl_native_provider_view(const QJSIntlProvider *p)
+{
+    return p ? &p->view : NULL;
+}

@@ -16,4 +16,6 @@ QJSIntlStatus qjs_intl_native_provider_set_default_locale(QJSIntlProvider *,
                                                         QJSIntlBytes);
 void qjs_intl_native_provider_memory_usage(const QJSIntlProvider *,
                                            size_t *count, size_t *bytes);
+/* Borrowed immutable canonical data; provider/blob outlive its use. */
+const QJSIntlDataView *qjs_intl_native_provider_view(const QJSIntlProvider *);
 #endif
