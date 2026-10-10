@@ -135,16 +135,12 @@ static void check_caches_empty(JSContext *ctx)
 
 static void warm_services(JSContext *ctx)
 {
-#ifdef CONFIG_INTL_NATIVE
-    eval_ok(ctx, "Intl.ListFormat.supportedLocalesOf(['en', 'en-US']);");
-#else
     eval_ok(ctx,
         "for (const name of ['Collator','Segmenter','NumberFormat','DateTimeFormat',"
         "'PluralRules','ListFormat','RelativeTimeFormat','DisplayNames','DurationFormat'])"
         " Intl[name].supportedLocalesOf(['en','en-US']);");
     /* The search service has a distinct cache and supported key data. */
     eval_ok(ctx, "new Intl.Collator(undefined, {usage:'search'});");
-#endif
 }
 
 static void make_old_objects(JSContext *ctx)
@@ -153,7 +149,6 @@ static void make_old_objects(JSContext *ctx)
         "var oldList = new Intl.ListFormat();"
         "var oldListText = oldList.format(['a','b','c']);"
         "var oldListParts = JSON.stringify(oldList.formatToParts(['a','b','c']));");
-#ifndef CONFIG_INTL_NATIVE
     eval_ok(ctx,
         "var serviceNames = ['Collator','Segmenter','NumberFormat','DateTimeFormat',"
         "'PluralRules','ListFormat','RelativeTimeFormat','DisplayNames','DurationFormat'];"
@@ -171,7 +166,6 @@ static void make_old_objects(JSContext *ctx)
         " oldTemporalValue = new Temporal.PlainDate(2024,3,4);"
         " oldTemporalText = oldTemporalDtf.format(oldTemporalValue);"
         "}");
-#endif
 }
 
 static void check_old_objects(JSContext *ctx)
@@ -183,7 +177,6 @@ static void check_old_objects(JSContext *ctx)
         " throw Error('old ListFormat snapshot changed');"
         "if (new Intl.ListFormat().resolvedOptions().locale !== 'en')"
         " throw Error('new ListFormat did not use the new default');");
-#ifndef CONFIG_INTL_NATIVE
     eval_ok(ctx,
         "oldObjects.forEach((o,i) => {"
         " if (o.resolvedOptions().locale !== oldLocales[i])"
@@ -197,7 +190,6 @@ static void check_old_objects(JSContext *ctx)
         " oldDate(0) !== oldDateText) throw Error('old bound formatter changed');"
         "if (oldTemporalDtf && oldTemporalDtf.format(oldTemporalValue) !== oldTemporalText)"
         " throw Error('old Temporal formatter bank changed');");
-#endif
 }
 
 static void check_basic_contract(void)
@@ -215,8 +207,9 @@ static void check_basic_contract(void)
     check_locale(a, "en-US");
     assert(!JS_AddIntrinsicEval(a) && !JS_AddIntrinsicJSON(a));
     assert(!JS_AddIntrinsicProxy(a));
-#if defined(CONFIG_TEMPORAL) && !defined(CONFIG_INTL_NATIVE)
-    assert(!JS_AddIntrinsicDate(a) && !JS_AddIntrinsicTemporal(a));
+    assert(!JS_AddIntrinsicDate(a));
+#ifdef CONFIG_TEMPORAL
+    assert(!JS_AddIntrinsicTemporal(a));
 #endif
     assert(!JS_AddIntrinsicIntl(a));
     b = JS_NewContext(rt);
