@@ -350,7 +350,13 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
     }
     for (i = 0; i < d->meta_period_count; i++)
         if (!text_size(&bytes, d->meta_periods[i].zone) || !text_size(&bytes, d->meta_periods[i].metazone) ||
-            d->meta_periods[i].from_ms >= d->meta_periods[i].before_ms) return QJS_INTL_DATA_ERROR;
+            d->meta_periods[i].from_ms >= d->meta_periods[i].before_ms ||
+            d->meta_periods[i].has_name_offsets < 0 || d->meta_periods[i].has_name_offsets > 1 ||
+            (d->meta_periods[i].has_name_offsets &&
+             (d->meta_periods[i].standard_name_offset <= -86400 || d->meta_periods[i].standard_name_offset >= 86400 ||
+              d->meta_periods[i].daylight_name_offset <= -86400 || d->meta_periods[i].daylight_name_offset >= 86400 ||
+              d->meta_periods[i].standard_name_offset == d->meta_periods[i].daylight_name_offset)))
+            return QJS_INTL_DATA_ERROR;
     for (i = 0; i < d->zone_format_count; i++) {
         const QJSIntlDateZoneFormat *row = &d->zone_formats[i];
         if (!row->zone.length || !text_size(&bytes, row->zone) ||
@@ -477,7 +483,8 @@ typedef struct Builder {
     size_t text_capacity, part_capacity;
     QJSIntlDateFields fields;
     QJSIntlDateZoneInfo zone;
-    int64_t epoch_ms;
+    int64_t epoch_ms, epoch_seconds;
+    int zone_stability_checked, zone_stability_proven;
     int utc_view;
     QJSIntlPartSource source;
 } Builder;
@@ -719,22 +726,49 @@ static QJSIntlStatus offset_name(Builder *b, int long_form)
         return utf8(b, suffix);
     }
 }
-/* CLDR Type Fallback rule1 is data-driven: when a daylight label is
- * absent, generic then standard can serve all three requested types.
- * The conditional184-day rule needs an independent environment proof and
- * remains a separate extension; this helper never infers DST from an offset.
- */
-static QJSIntlBytes zone_label(const QJSIntlDateZoneName *row,
-                               unsigned int base, int requested, int enhanced)
+/* CLDR48.2 TR35 Dates Type Fallback1/2. The expensive provider proof is
+ * requested only when a missing generic has a usable standard alternative.
+ * The whole +/-184-day window must stay inside the active metazone period,
+ * keeping its explicit name-offset policy unchanged. */
+static QJSIntlStatus zone_stable(Builder *b, const QJSIntlDateMetaPeriod *period,
+                                 int *proven)
 {
-    QJSIntlBytes empty = { NULL, 0 };
-    if (requested >= 0 && row->names[base + (unsigned int)requested].length)
-        return row->names[base + (unsigned int)requested];
-    if (enhanced && !row->names[1].length && !row->names[4].length) {
-        if (row->names[base + 2].length) return row->names[base + 2];
-        if (row->names[base].length) return row->names[base];
+    const int64_t days = INT64_C(184) * 86400, ms = days * 1000;
+    QJSIntlNativeDate *p = b->owner;
+    QJSIntlStatus r;
+    *proven = 0;
+    if (!period || b->epoch_ms - ms < period->from_ms ||
+        b->epoch_ms + ms >= period->before_ms || !p->environment.zone_name_stable)
+        return QJS_INTL_OK;
+    if (!b->zone_stability_checked) {
+        r = p->environment.zone_name_stable(p->environment.opaque,
+            p->options.time_zone, b->epoch_seconds - days, b->epoch_seconds + days,
+            &b->zone_stability_proven);
+        if (r) return r;
+        if (b->zone_stability_proven < 0 || b->zone_stability_proven > 1) return QJS_INTL_DATA_ERROR;
+        b->zone_stability_checked = 1;
     }
-    return empty;
+    *proven = b->zone_stability_proven; return QJS_INTL_OK;
+}
+static QJSIntlStatus zone_label(Builder *b, const QJSIntlDateZoneName *row,
+    unsigned int base, int requested, int enhanced,
+    const QJSIntlDateMetaPeriod *period, QJSIntlBytes *out)
+{
+    int proven;
+    QJSIntlStatus r;
+    *out = (QJSIntlBytes){ NULL, 0 };
+    if (requested >= 0 && row->names[base + (unsigned int)requested].length) {
+        *out = row->names[base + (unsigned int)requested]; return QJS_INTL_OK;
+    }
+    if (enhanced && !row->names[1].length && !row->names[4].length) {
+        if (row->names[base + 2].length) *out = row->names[base + 2];
+        else if (row->names[base].length) *out = row->names[base];
+    } else if (enhanced && requested == 2 && row->names[base].length) {
+        r = zone_stable(b, period, &proven);
+        if (r) return r;
+        if (proven) *out = row->names[base];
+    }
+    return QJS_INTL_OK;
 }
 static const QJSIntlDateZoneFormat *zone_format(const QJSIntlNativeDate *p,
                                                 QJSIntlBytes meta)
@@ -773,30 +807,38 @@ static QJSIntlStatus zone_name(Builder *b, int style)
     QJSIntlNativeDate *p = b->owner;
     QJSIntlBytes meta = { NULL, 0 }, label;
     const QJSIntlDateZoneFormat *format;
+    const QJSIntlDateMetaPeriod *period = NULL;
+    QJSIntlStatus r;
     size_t i;
     unsigned int base = style == 1 || style == 5 ? 3 : 0;
     int requested = style >= 4 ? 2 : b->zone.daylight;
     if (b->utc_view) return offset_name(b, style == 1 || style == 3 || style == 5);
     if (style == 2 || style == 3) return offset_name(b, style == 3);
-    for (i = 0; i < p->data.zone_name_count; i++) {
-        const QJSIntlDateZoneName *row = &p->data.zone_names[i];
-        if (!row->metazone && equal(row->key, p->data.data_zone)) {
-            label = zone_label(row, base, requested, p->data.zone_format_count != 0);
-            if (label.length) return utf8(b, label); /* explicit TZID translation */
-        }
-    }
     for (i = 0; i < p->data.meta_period_count; i++) {
         const QJSIntlDateMetaPeriod *row = &p->data.meta_periods[i];
         if (equal(row->zone, p->data.data_zone) &&
             b->epoch_ms >= row->from_ms && b->epoch_ms < row->before_ms) {
-            meta = row->metazone; break;
+            period = row; meta = row->metazone; break;
+        }
+    }
+    if (requested != 2 && period && period->has_name_offsets) {
+        requested = b->zone.offset_seconds == period->standard_name_offset ? 0 :
+            b->zone.offset_seconds == period->daylight_name_offset ? 1 : -1;
+    }
+    for (i = 0; i < p->data.zone_name_count; i++) {
+        const QJSIntlDateZoneName *row = &p->data.zone_names[i];
+        if (!row->metazone && equal(row->key, p->data.data_zone)) {
+            r = zone_label(b, row, base, requested, p->data.zone_format_count != 0, period, &label);
+            if (r) return r;
+            if (label.length) return utf8(b, label); /* explicit TZID translation */
         }
     }
     format = zone_format(p, meta);
     if (meta.length) for (i = 0; i < p->data.zone_name_count; i++) {
         const QJSIntlDateZoneName *row = &p->data.zone_names[i];
         if (row->metazone && equal(row->key, meta)) {
-            label = zone_label(row, base, requested, p->data.zone_format_count != 0);
+            r = zone_label(b, row, base, requested, p->data.zone_format_count != 0, period, &label);
+            if (r) return r;
             if (label.length) return qualified_zone(b, label, format);
         }
     }
@@ -945,6 +987,7 @@ static QJSIntlStatus prepare_ns(Builder *b, QJSIntlNativeDate *p,
         qjs_temporal_epoch_ns_divide(&quotient, &remainder, epoch,
                                     UINT64_C(1000000000)) ||
         qjs_temporal_epoch_ns_to_int64(&seconds, quotient)) return QJS_INTL_OVERFLOW;
+    b->epoch_seconds = seconds;
     if (utc_view) {
         b->zone.offset_seconds = 0; b->zone.daylight = 0;
     } else {
@@ -1081,6 +1124,9 @@ static QJSIntlStatus range_piece(void *opaque, QJSIntlBytes literal,
     b->fields = range->endpoints[argument]->fields;
     b->zone = range->endpoints[argument]->zone;
     b->epoch_ms = range->endpoints[argument]->epoch_ms;
+    b->epoch_seconds = range->endpoints[argument]->epoch_seconds;
+    b->zone_stability_checked = range->endpoints[argument]->zone_stability_checked;
+    b->zone_stability_proven = range->endpoints[argument]->zone_stability_proven;
     b->utc_view = range->endpoints[argument]->utc_view;
     b->source = argument ? QJS_INTL_SOURCE_END_RANGE : QJS_INTL_SOURCE_START_RANGE;
     return render_selected(b);

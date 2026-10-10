@@ -48,6 +48,10 @@ typedef struct QJSIntlDateZoneName {
 typedef struct QJSIntlDateMetaPeriod {
     QJSIntlBytes zone, metazone;
     int64_t from_ms, before_ms;  /* half-open UTC interval, INT64 extrema unbounded */
+    /* Explicit CLDR stdOffset/dstOffset are absolute offsets for NAME
+       classification, independently of negative tzdb SAVE or TZif isdst. */
+    int32_t standard_name_offset, daylight_name_offset;
+    int has_name_offsets;
 } QJSIntlDateMetaPeriod;
 /* Localized CLDR generic-location and metazone qualifier snapshot.
  * Empty metazone is the zone's location-only fallback row. A nonempty
@@ -100,6 +104,11 @@ typedef struct QJSIntlDateEnvironment {
     int (*calendar_supported)(void *, QJSIntlBytes calendar);
     QJSIntlStatus (*calendar)(void *, QJSIntlBytes calendar,
                               const QJSTemporalISODateTime *, QJSIntlDateFields *);
+    /* Optional lazy proof for CLDR Type Fallback2. Closed UTC window, only
+       called when generic is absent, daylight exists and standard exists.
+       Unknown provider policy returns OK with proven=0. */
+    QJSIntlStatus (*zone_name_stable)(void *, QJSIntlBytes canonical_zone,
+        int64_t from_seconds, int64_t through_seconds, int *proven);
 } QJSIntlDateEnvironment;
 /* A calendar callback supplies raw calendar_year/has_calendar_year for range
  * identity. Core assigns weekday from the shared ISO epoch-day conversion.

@@ -39,6 +39,8 @@ int qjs_tzif_parse(QJSTzifState *, const unsigned char *, size_t);
 int qjs_tzif_system_complete(const QJSTzifState *, const QJSTzifState *);
 int qjs_tzif_is_utc(const QJSTzifState *);
 int qjs_tzif_offset(const QJSTzifState *, int64_t, int32_t *);
+int qjs_tzif_info(const QJSTzifState *, int64_t, QJSTzInfo *);
+int qjs_tzif_name_stable(const QJSTzifState *, int64_t, int64_t, int *);
 int qjs_tzif_transition(const QJSTzifState *, int64_t, int, int, int64_t *, int *);
 int qjs_tzif_local_offsets(const QJSTzifState *, int64_t, int32_t [2]);
 #endif

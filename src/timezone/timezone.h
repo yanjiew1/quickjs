@@ -45,6 +45,19 @@ void qjs_tz_provider_free(QJSTzProvider *);
 int qjs_tz_provider_open(QJSTzProvider *, const char *, size_t, const QJSTimeZone **);
 int qjs_tz_origin(const QJSTimeZone *);
 int qjs_tz_offset(const QJSTimeZone *, int64_t epoch_seconds, int32_t *);
+/* TZif daylight classification is independent of the signed daylight
+   adjustment. Historical TZif types omit STDOFF/SAVE: their adjustment
+   is unknown for either flag value. POSIX tails prove both. */
+typedef struct QJSTzInfo {
+    int32_t offset_seconds, daylight_offset_seconds;
+    int daylight, daylight_offset_known;
+} QJSTzInfo;
+int qjs_tz_info(const QJSTimeZone *, int64_t epoch_seconds, QJSTzInfo *);
+/* Prove constant total offset, classification and known signed daylight
+   adjustment on the closed interval. False includes an unknown adjustment.
+   Raw DST/base-policy transitions are inspected independently of Temporal. */
+int qjs_tz_name_stable(const QJSTimeZone *, int64_t from_seconds,
+                       int64_t through_seconds, int *proven);
 /* Return the offsets bounding a wall time. Equal offsets mean an ordinary
    time. In a gap or overlap, offsets[0] is before and offsets[1] is after. */
 int qjs_tz_local_offsets(const QJSTimeZone *, int64_t wall_seconds,

@@ -53,7 +53,7 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
     const QJSIntlDateOptions *o, const QJSIntlDateEnvironment *e, QJSIntlNativeDate **out,
     const QJSIntlDateBankOptions *bank_options, QJSIntlNativeDateBank **bank_out)
 {
-    QJSIntlDataSection s[9], locales, digits;
+    QJSIntlDataSection s[10], locales, digits;
     QJSIntlDataSlice row;
     QJSIntlDateData d;
     QJSIntlDatePattern *patterns = NULL;
@@ -67,7 +67,7 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
     QJSCalendarId calendar_id;
     const char *canonical;
     uint32_t begin[5], end[5], i, j;
-    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20, 36 };
+    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20, 36, 32 };
     if (bank_options) {
         if (!bank_out) return QJS_INTL_INVALID_ARGUMENT;
         *bank_out = NULL;
@@ -78,7 +78,7 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
     if (!a || !a->malloc || !a->free || !v || !o || !o->calendar.data ||
         !o->calendar.length || !o->time_zone.data || !o->time_zone.length) return QJS_INTL_INVALID_ARGUMENT;
     memset(&d, 0, sizeof(d));
-    for (i = 0; i < 9; i++) {
+    for (i = 0; i < 10; i++) {
         result = section(v, 100 + i, widths[i], i < 3, &s[i]);
         if (result) return result;
     }
@@ -196,6 +196,7 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
         if (!text(v, &s[4], i, 8, &zones[j].key) || !text(v, &s[4], i, 64, &zones[j].exemplar)) goto done;
         for (n = 0; n < 6; n++) if (!text(v, &s[4], i, 16 + n * 8, &zones[j].names[n])) goto done;
     }
+    if (meta) memset(meta, 0, d.meta_period_count * sizeof(*meta));
     for (i = 0; i < s[5].record_count; i++)
         if (!text(v, &s[5], i, 0, &meta[i].zone) || !text(v, &s[5], i, 8, &meta[i].metazone) ||
             qjs_intl_date_data_i64(&s[5], i, 16, &meta[i].from_ms) ||
@@ -208,6 +209,22 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
                 !text(v, &s[8], i, 12, &formats[j].metazone) ||
                 !text(v, &s[8], i, 20, &formats[j].location) ||
                 !text(v, &s[8], i, 28, &formats[j].name_pattern)) goto done;
+    }
+    for (i = 0; i < s[9].record_count; i++) {
+        QJSIntlBytes zone;
+        int64_t from, before;
+        uint32_t standard, daylight;
+        if (!text(v, &s[9], i, 0, &zone) ||
+            qjs_intl_date_data_i64(&s[9], i, 8, &from) ||
+            qjs_intl_date_data_i64(&s[9], i, 16, &before) ||
+            qjs_intl_data_record_u32(&s[9], i, 24, &standard) ||
+            qjs_intl_data_record_u32(&s[9], i, 28, &daylight)) goto done;
+        for (j = 0; j < d.meta_period_count; j++)
+            if (same(zone, meta[j].zone) && from == meta[j].from_ms && before == meta[j].before_ms) break;
+        if (j == d.meta_period_count || meta[j].has_name_offsets) goto done;
+        meta[j].standard_name_offset = standard <= INT32_MAX ? (int32_t)standard : -1 - (int32_t)(UINT32_MAX - standard);
+        meta[j].daylight_name_offset = daylight <= INT32_MAX ? (int32_t)daylight : -1 - (int32_t)(UINT32_MAX - daylight);
+        meta[j].has_name_offsets = 1;
     }
     d.patterns = patterns; d.names = names; d.periods = periods; d.zone_names = zones; d.meta_periods = meta;
     d.zone_formats = formats;

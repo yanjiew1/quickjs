@@ -9,7 +9,7 @@ import struct
 import metadata as m
 import locale_subset
 
-WIDTHS = {100: 32, 101: 28, 102: 48, 103: 16, 104: 72, 105: 32, 106: 16, 107: 20, 108: 36}
+WIDTHS = {100: 32, 101: 28, 102: 48, 103: 16, 104: 72, 105: 32, 106: 16, 107: 20, 108: 36, 109: 32}
 STYLES = ('full', 'long', 'medium', 'short')
 PERIODS = ('am', 'pm', 'midnight', 'noon', 'morning1', 'morning2',
            'afternoon1', 'afternoon2', 'evening1', 'evening2', 'night1', 'night2')
@@ -421,6 +421,30 @@ def metazones(data):
     return tuple(sorted(result, key=lambda row: (row[0], row[2])))
 
 
+def name_offset_records(data):
+    root = m.parse_xml(data, 'supplementalData')
+    result = []
+    def offset(value):
+        match = re.fullmatch(r'([+-])([0-9]{2})(?::([0-9]{2})(?::([0-9]{2}))?)?', value)
+        m.require(match, 'invalid CLDR metazone name offset')
+        sign, hour, minute, second = match.groups()
+        hour, minute, second = int(hour), int(minute or 0), int(second or 0)
+        m.require(hour < 24 and minute < 60 and second < 60, 'CLDR name offset out of range')
+        seconds = hour * 3600 + minute * 60 + second
+        return -seconds if sign == '-' else seconds
+    for zone in root.findall('./metaZones/metazoneInfo/timezone'):
+        for element in zone:
+            standard, daylight = element.get('stdOffset'), element.get('dstOffset')
+            if standard is None and daylight is None:
+                continue
+            m.require(standard is not None and daylight is not None, 'partial CLDR name offset policy')
+            standard, daylight = offset(standard), offset(daylight)
+            m.require(standard != daylight, 'ambiguous CLDR name offset policy')
+            result.append((zone.get('type'), epoch_ms(element.get('from'), -(1 << 63)),
+                           epoch_ms(element.get('to'), (1 << 63) - 1), standard, daylight))
+    return tuple(sorted(result))
+
+
 def zone_aliases(data, known):
     root = m.parse_xml(data, 'ldmlBCP47')
     result = {}
@@ -716,6 +740,7 @@ def collect(inputs, metadata, period_xml, meta_xml, timezone_xml, likely_xml=Non
             'symbols': tuple(sorted(symbols)), 'rules': tuple(sorted(rules)),
             'zones': tuple(sorted(zone_names)), 'meta': meta, 'aliases': aliases,
             'range_fallbacks': tuple(sorted(fallbacks)), 'zone_formats': formats,
+            'name_offsets': name_offset_records(meta_xml),
             'evidence': {'calendars': tuple(canonical for canonical, unused in CALENDARS),
                          'calendar_policy': 'each canonical calendar resolves actual CLDR calendar subtree and aliases; ISO8601 has its own source patterns',
                          'record_origins': tuple(sorted(origins)),
@@ -761,6 +786,8 @@ def strings(data):
         values.extend(row[1:])
     for row in data['zone_formats']:
         values.extend(row[1:])
+    for row in data['name_offsets']:
+        values.append(row[0])
     return tuple(values)
 
 
@@ -785,6 +812,8 @@ def encode(data, pool):
         for row in data['range_fallbacks'])
     sections[108] = b''.join(m.u32(row[0]) + b''.join(pool.ref(value) for value in row[1:])
         for row in data['zone_formats'])
+    sections[109] = b''.join(pool.ref(row[0]) + struct.pack('<qqii', *row[1:])
+                             for row in data['name_offsets'])
     for section_id, value in sections.items():
         m.require(len(value) % WIDTHS[section_id] == 0, 'DateTimeFormat record width drift')
     return sections

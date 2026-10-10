@@ -318,15 +318,50 @@ static int zone_formats(const QJSIntlDataView *v, const QJSIntlDataSection *s,
     }
     return 1;
 }
+static int name_offsets(const QJSIntlDataView *v, const QJSIntlDataSection *s,
+                         const QJSIntlDataSection *periods)
+{
+    uint32_t i, lo = 0;
+    QJSIntlDataSlice zone, previous = { NULL, 0 };
+    int64_t from, before, previous_before = 0;
+    for (i = 0; i < s->record_count; i++) {
+        QJSIntlDataSlice key;
+        int64_t first, limit;
+        uint32_t standard, daylight;
+        int c;
+        if (!string(v, s, i, 0, &zone) || !identifier(zone, 0) ||
+            qjs_intl_date_data_i64(s, i, 8, &from) || qjs_intl_date_data_i64(s, i, 16, &before) ||
+            qjs_intl_data_record_u32(s, i, 24, &standard) || qjs_intl_data_record_u32(s, i, 28, &daylight) ||
+            from >= before || standard == daylight ||
+            (standard >= 86400u && standard <= UINT32_MAX - 86400u + 1u) ||
+            (daylight >= 86400u && daylight <= UINT32_MAX - 86400u + 1u)) return 0;
+        c = compare(zone, previous);
+        if (i && (c < 0 || (!c && from < previous_before))) return 0;
+        /* Monotone join with105 proves exact period ownership, no duplicates
+           or orphan overrides. Both tables are sorted zone/from. */
+        while (lo < periods->record_count) {
+            if (!string(v, periods, lo, 0, &key) ||
+                qjs_intl_date_data_i64(periods, lo, 16, &first) ||
+                qjs_intl_date_data_i64(periods, lo, 24, &limit)) return 0;
+            c = compare(key, zone);
+            if (c < 0 || (!c && first < from)) { lo++; continue; }
+            if (c || first != from || limit != before) return 0;
+            break;
+        }
+        if (lo == periods->record_count) return 0;
+        lo++; previous = zone; previous_before = before;
+    }
+    return 1;
+}
 QJSIntlDataStatus qjs_intl_date_data_validate(const QJSIntlDataView *v)
 {
-    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20, 36 };
-    QJSIntlDataSection s[9], locales, numbering;
+    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20, 36, 32 };
+    QJSIntlDataSection s[10], locales, numbering;
     QJSIntlDataStatus r;
     unsigned int i, mask = 0;
     if (!v) return QJS_INTL_DATA_INVALID_ARGUMENT;
     memset(s, 0, sizeof(s));
-    for (i = 0; i < 9; i++) {
+    for (i = 0; i < 10; i++) {
         r = qjs_intl_data_section(v, 100 + i, &s[i]);
         if (r == QJS_INTL_DATA_NOT_FOUND) continue;
         if (r || s[i].record_width != widths[i]) return QJS_INTL_DATA_INVALID;
@@ -341,6 +376,7 @@ QJSIntlDataStatus qjs_intl_date_data_validate(const QJSIntlDataView *v)
         ((mask & 16) && !zones(v, &s[4], locales.record_count)) ||
         ((mask & 32) && !metazones(v, &s[5])) || ((mask & 64) && !aliases(v, &s[6])) ||
         ((mask & 128) && !range_fallbacks(v, &s[7], locales.record_count)) ||
-        ((mask & 256) && !zone_formats(v, &s[8], locales.record_count))) return QJS_INTL_DATA_INVALID;
+        ((mask & 256) && !zone_formats(v, &s[8], locales.record_count)) ||
+        ((mask & 512) && (!(mask & 32) || !name_offsets(v, &s[9], &s[5])))) return QJS_INTL_DATA_INVALID;
     return QJS_INTL_DATA_OK;
 }

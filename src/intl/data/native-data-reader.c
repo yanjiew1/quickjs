@@ -337,6 +337,7 @@ static uint32_t section_width(uint32_t id)
     case QJS_INTL_DATA_DATE_ZONE_ALIAS: return 16;
     case QJS_INTL_DATA_DATE_RANGE_FALLBACK: return 20;
     case QJS_INTL_DATA_DATE_ZONE_FORMAT: return 36;
+    case QJS_INTL_DATA_DATE_NAME_OFFSETS: return 32;
     case QJS_INTL_DATA_DURATION_CLOCK: return 32;
     case QJS_INTL_DATA_NUMBER_COMPACT: return 76;
     case QJS_INTL_DATA_NUMBER_DENOMINATOR: return 32;
@@ -932,6 +933,7 @@ static int validate_records(const QJSIntlDataView *view, QJSIntlDataSlice pool,
         case QJS_INTL_DATA_DATE_ZONE_ALIAS:
         case QJS_INTL_DATA_DATE_RANGE_FALLBACK:
         case QJS_INTL_DATA_DATE_ZONE_FORMAT:
+        case QJS_INTL_DATA_DATE_NAME_OFFSETS:
         case QJS_INTL_DATA_DURATION_CLOCK:
         case QJS_INTL_DATA_NUMBER_COMPACT:
         case QJS_INTL_DATA_NUMBER_DENOMINATOR:
@@ -951,6 +953,8 @@ static int validate_records(const QJSIntlDataView *view, QJSIntlDataSlice pool,
             case QJS_INTL_DATA_DATE_META_PERIOD:
             case QJS_INTL_DATA_DATE_ZONE_ALIAS:
                 offsets[refs++] = 0; offsets[refs++] = 8; break;
+            case QJS_INTL_DATA_DATE_NAME_OFFSETS:
+                offsets[refs++] = 0; break;
             case QJS_INTL_DATA_DATE_RANGE_FALLBACK:
                 offsets[refs++] = 4; offsets[refs++] = 12; break;
             case QJS_INTL_DATA_DATE_ZONE_FORMAT:

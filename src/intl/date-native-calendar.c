@@ -130,6 +130,14 @@ static QJSIntlStatus calendar(void *opaque, QJSIntlBytes identifier,
     fields.millisecond = (unsigned int)iso->time.millisecond;
     *out = fields; return QJS_INTL_OK;
 }
+static QJSIntlStatus zone_name_stable(void *opaque, QJSIntlBytes name,
+    int64_t from, int64_t through, int *proven)
+{
+    QJSIntlDateCalendarBridge *bridge = opaque;
+    *proven = 0;
+    return bridge->upstream.zone_name_stable ?
+        bridge->upstream.zone_name_stable(bridge->upstream.opaque, name, from, through, proven) : QJS_INTL_OK;
+}
 QJSIntlStatus qjs_intl_native_date_calendar_environment(
     QJSIntlDateCalendarBridge *bridge, QJSIntlDateEnvironment *out)
 {
@@ -138,6 +146,7 @@ QJSIntlStatus qjs_intl_native_date_calendar_environment(
     if (!bridge || !bridge->supports_data || !bridge->resolve_names)
         return QJS_INTL_INVALID_ARGUMENT;
     out->opaque = bridge; out->zone = zone;
+    out->zone_name_stable = zone_name_stable;
     out->calendar_supported = supported; out->calendar = calendar;
     return QJS_INTL_OK;
 }

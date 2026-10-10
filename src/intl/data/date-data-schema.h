@@ -13,10 +13,11 @@ enum {
     QJS_INTL_DATA_DATE_META_PERIOD = 105,
     QJS_INTL_DATA_DATE_ZONE_ALIAS = 106,
     QJS_INTL_DATA_DATE_RANGE_FALLBACK = 107,
-    QJS_INTL_DATA_DATE_ZONE_FORMAT = 108
+    QJS_INTL_DATA_DATE_ZONE_FORMAT = 108,
+    QJS_INTL_DATA_DATE_NAME_OFFSETS = 109
 };
-/* 109 is reserved, unused. Exact layouts in WIRE-SCHEMA.json.
- * 100+101+102 form an atomic group;103..107 optional, require the group.
+/* 100+101+102 form an atomic group;103..109 optional, require the group.
+ * Section109 additionally requires its exact owning105 period.
  * Group presence confers no service coverage or calendar capability.
  * UTF8 strings are shared pool1 references; digits are shared section17.
  */
@@ -29,6 +30,7 @@ enum {
 #define QJS_INTL_DATE_ZONE_ALIAS_WIDTH 16u
 #define QJS_INTL_DATE_RANGE_FALLBACK_WIDTH 20u
 #define QJS_INTL_DATE_ZONE_FORMAT_WIDTH 36u
+#define QJS_INTL_DATE_NAME_OFFSETS_WIDTH 32u
 /* 108: locale u32; zone, metazone, location, name_pattern pool refs at4/12/20/28.
  * Sorted by(locale,zone,metazone). Metazone may be empty for fallback rows.
  * Pattern may be empty, otherwise exactly one literal {0}. Optional108
@@ -46,4 +48,7 @@ enum {
 #define QJS_INTL_DATE_HEBREW_ADAR_II 14u
 #define QJS_INTL_DATE_JAPANESE_BCE 237u
 #define QJS_INTL_DATE_JAPANESE_CE 238u
+/* 109: zone pool ref0; UTC from_ms/before_ms i64 at8/16; signed absolute
+ * CLDR standard/daylight name offsets i32 at24/28. Optional and locale-free;
+ * must exactly match one105 period. It never changes the QJTZ schema. */
 #endif

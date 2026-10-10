@@ -5,10 +5,13 @@
 #include "timezone/timezone.h"
 /* environment.opaque is the borrowed runtime QJSTzProvider. Its owner must
  * outlive all formatters and serialize access. No ICU or process localtime.
- * The current provider exposes total offset only: daylight is unknown, and
- * specific timezone labels take the localized offset fallback. A richer
- * explicit callback may supply the real daylight flag without changing core.
+ * The provider supplies raw TZif daylight classification. Core applies any
+ * explicit CLDR period stdOffset/dstOffset for name classification. The lazy
+ * stability callback proves signed adjustment constancy without inferring
+ * historical SAVE from either DST flag or a neighboring type.
  */
 QJSIntlStatus qjs_intl_native_date_iana_zone(void *, QJSIntlBytes, int64_t,
                                            QJSIntlDateZoneInfo *);
+QJSIntlStatus qjs_intl_native_date_iana_zone_stable(void *, QJSIntlBytes,
+    int64_t from_seconds, int64_t through_seconds, int *proven);
 #endif

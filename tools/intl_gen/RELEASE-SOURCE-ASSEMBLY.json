@@ -2,7 +2,11 @@
   "CLDR_commit": "11299982335beb974c1c63c45265184e759c0f41",
   "CLDR_release": "48.2",
   "CLDR_tag": "release-48-2",
+  "Date_name_offset_section": 109,
+  "Date_name_offset_width": 32,
   "Date_timezone_section": 108,
+  "Daylight_source_owner": "/srv/data/work/quickjs-tmp/quickjs-native-date-daylight-stability-source-20261009-v1",
+  "Daylight_source_owner_seal_sha256": "52b97621c0d757e265e240f12ddec88aca6f12265775144cad320dd78b7a4c6b",
   "collation_data": "UCA17 bundled by CLDR48.2",
   "core_Unicode": "18 separate project provider",
   "country_names_repair": "/srv/data/work/quickjs-tmp/quickjs-native-date108-country-names-failure-repair-source-20261009-v1",
@@ -10,8 +14,8 @@
   "generators_executed": false,
   "module_sha256": {
     "tools/intl_gen/collation.py": "ef026bf8770bb3e454586aa8f1986f2ed0e6da0a8faa8a87b377072a83d79873",
-    "tools/intl_gen/combined_bundle.py": "6dacb833907b3afa786e8fbfb89aed0b23261f1df2c96083e20c30fe35af576a",
-    "tools/intl_gen/date_patterns.py": "1e131d21e66800dda80e9894855ebfac0d2fae91ba91d04b443e1935a2b7b36b",
+    "tools/intl_gen/combined_bundle.py": "3efacb1fd030c591134f63080882dc7bc3506805731d8f4aff2033ce4d215fa8",
+    "tools/intl_gen/date_patterns.py": "9f9708d0abe946034dea147f0bfb6e2689ca7158469d4696b9622328027946cd",
     "tools/intl_gen/display_names.py": "a797207358630eca7e4999a6a588ed01f5f1bae70f2eddb09676b86ffb2018ed",
     "tools/intl_gen/duration_patterns.py": "a7c57dba223887e1fd42850c45ab5bfa9fbaa190d94561047d93619cee0493c2",
     "tools/intl_gen/list_bundle.py": "ed3ceddc6a44cead9a8c94ff1cbacc9e9c51d7b4ffe70f503e45ca267e119f8c",
@@ -29,6 +33,6 @@
   },
   "owner": "/srv/data/work/quickjs-tmp/quickjs-native-intl-cldr48-2-release-generator-rebind-source-20261009-v3",
   "owner_seal_sha256": "831aff78355b0efecd4e206d9338ecb16a542376a4c3759f39222bf459335bee",
-  "recognized_sections": 62,
+  "recognized_sections": 63,
   "source_only": true
 }

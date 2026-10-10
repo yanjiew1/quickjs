@@ -139,7 +139,7 @@ def generated_outputs(args):
     identity['generator_dependencies'] = dependencies
     identity['generator_entrypoint_sha256'] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     identity['list_context_reference'] = {'commit': base.ICU_COMMIT, 'sha256': base.ICU_SOURCE_SHA256}
-    identity['wire_schema'] = {'version': [1, 3], 'reader_recognized_sections': 62,
+    identity['wire_schema'] = {'version': [1, 3], 'reader_recognized_sections': 63,
         'absent_capabilities': [20, 25, 26],
         'segmenter_ep': 'packed64' if segmenter['standalone_ep'] else 'sole existing libunicode18 owner',
         'collation': 'atomic90..95; paired sort/search shared root; optional96..98 excluded'}

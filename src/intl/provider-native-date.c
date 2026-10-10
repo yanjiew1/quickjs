@@ -139,6 +139,7 @@ QJSIntlStatus qjs_intl_native_provider_date_open(QJSIntlProvider *p,
     if (!calendar_data_supported(state, calendar)) return QJS_INTL_UNSUPPORTED;
     state->bridge.upstream.opaque = tz;
     state->bridge.upstream.zone = qjs_intl_native_date_iana_zone;
+    state->bridge.upstream.zone_name_stable = qjs_intl_native_date_iana_zone_stable;
     state->bridge.names_opaque = state;
     state->bridge.supports_data = calendar_data_supported;
     state->bridge.resolve_names = qjs_intl_native_date_calendar_names;
