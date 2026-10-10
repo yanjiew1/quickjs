@@ -1,0 +1,5404 @@
+{
+  "pin": "039ef27cc5f062a2055cb67435d6d71adbefd27d",
+  "release": "2026e",
+  "format": "QJTZ",
+  "format_version": 1,
+  "payload_format": "fat TZif",
+  "primary_algorithm": "ECMA-402 AvailableNamedTimeZoneIdentifiers",
+  "country_metadata": {
+    "cldr_commit": "11299982335beb974c1c63c45265184e759c0f41",
+    "xml_sha256": "54ce7d9f1d385101e24356df7d48ae62cf2acc4421378da60a4007d2488c1aad"
+  },
+  "packratdata": "backzone",
+  "packratlist": "zone.tab",
+  "leaps": false,
+  "range_limited": false,
+  "data_sha256": "2cd5eaeb524ec7e0d15b60bef8a4991722797da98e7b9d17ddf15c9ba3a676ad",
+  "binary_size": 481848,
+  "final_binary_files": 1,
+  "runtime_tzcode": false,
+  "records": [
+    {
+      "identifier": "Africa/Abidjan",
+      "primary": "Africa/Abidjan",
+      "identifier_offset": 9600,
+      "primary_offset": 9600,
+      "offset": 18702,
+      "length": 148,
+      "sha256": "d2efac4e5f23d88c95d72c1db42807170f52f43dd98a205af5a92a91b9f2d997"
+    },
+    {
+      "identifier": "Africa/Accra",
+      "primary": "Africa/Accra",
+      "identifier_offset": 9615,
+      "primary_offset": 9615,
+      "offset": 18850,
+      "length": 1060,
+      "sha256": "7346770dc7af569c724fd1ce816d7149ffdff3e303420059faa1557cc959e115"
+    },
+    {
+      "identifier": "Africa/Addis_Ababa",
+      "primary": "Africa/Addis_Ababa",
+      "identifier_offset": 9628,
+      "primary_offset": 9628,
+      "offset": 19910,
+      "length": 185,
+      "sha256": "fc87a606ec2e31f061a7806193472eb39181dd3b1a8a3563f404992bc693a77b"
+    },
+    {
+      "identifier": "Africa/Algiers",
+      "primary": "Africa/Algiers",
+      "identifier_offset": 9647,
+      "primary_offset": 9647,
+      "offset": 20095,
+      "length": 735,
+      "sha256": "bda1698cd542c0e6e76dfbbcdab390cdd26f37a9d5826a57a50d5aab37f3b2a6"
+    },
+    {
+      "identifier": "Africa/Asmara",
+      "primary": "Africa/Asmara",
+      "identifier_offset": 9662,
+      "primary_offset": 9662,
+      "offset": 20830,
+      "length": 204,
+      "sha256": "65af76431c1dd400e1ada6687e648e0fba1f80138acccdf7987cd3e1cd01b199"
+    },
+    {
+      "identifier": "Africa/Asmera",
+      "primary": "Africa/Asmara",
+      "identifier_offset": 9676,
+      "primary_offset": 9662,
+      "offset": 20830,
+      "length": 204,
+      "sha256": "65af76431c1dd400e1ada6687e648e0fba1f80138acccdf7987cd3e1cd01b199"
+    },
+    {
+      "identifier": "Africa/Bamako",
+      "primary": "Africa/Bamako",
+      "identifier_offset": 9690,
+      "primary_offset": 9690,
+      "offset": 21034,
+      "length": 208,
+      "sha256": "a212ea76ad201e8a956438bd008cd333ead81dac3ebcd2df4fcddc5b0f59165e"
+    },
+    {
+      "identifier": "Africa/Bangui",
+      "primary": "Africa/Bangui",
+      "identifier_offset": 9704,
+      "primary_offset": 9704,
+      "offset": 21242,
+      "length": 149,
+      "sha256": "a72ce103a74d3432bfd869efa0276a8eb4f83398f93d94e922f793b9ef7beaef"
+    },
+    {
+      "identifier": "Africa/Banjul",
+      "primary": "Africa/Banjul",
+      "identifier_offset": 9718,
+      "primary_offset": 9718,
+      "offset": 21391,
+      "length": 216,
+      "sha256": "f511d8d1785320b80330d02f1d8ff3a6619f71f09539a73daba97f91cf630f5e"
+    },
+    {
+      "identifier": "Africa/Bissau",
+      "primary": "Africa/Bissau",
+      "identifier_offset": 9732,
+      "primary_offset": 9732,
+      "offset": 21607,
+      "length": 194,
+      "sha256": "223bb10cfe846620c716f97f6c74ba34deec751c4b297965a28042f36f69a1a9"
+    },
+    {
+      "identifier": "Africa/Blantyre",
+      "primary": "Africa/Blantyre",
+      "identifier_offset": 9746,
+      "primary_offset": 9746,
+      "offset": 21801,
+      "length": 209,
+      "sha256": "de96b327c8198764a41bc035efd36b63075f618e7db479ebf451226a54d4bd42"
+    },
+    {
+      "identifier": "Africa/Brazzaville",
+      "primary": "Africa/Brazzaville",
+      "identifier_offset": 9762,
+      "primary_offset": 9762,
+      "offset": 22010,
+      "length": 149,
+      "sha256": "4680eb49f8aa6b167969f6e27221d859792357cefe0285eb03f60725db664d57"
+    },
+    {
+      "identifier": "Africa/Bujumbura",
+      "primary": "Africa/Bujumbura",
+      "identifier_offset": 9781,
+      "primary_offset": 9781,
+      "offset": 22159,
+      "length": 149,
+      "sha256": "c880a655aba172cecd4ae8eddd5f8d4cdde07686f00223e4adcc086dad320e7e"
+    },
+    {
+      "identifier": "Africa/Cairo",
+      "primary": "Africa/Cairo",
+      "identifier_offset": 9798,
+      "primary_offset": 9798,
+      "offset": 22308,
+      "length": 2399,
+      "sha256": "2dfb7e1822d085a4899bd56a526b041681c84b55617daee91499fd1990a989fb"
+    },
+    {
+      "identifier": "Africa/Casablanca",
+      "primary": "Africa/Casablanca",
+      "identifier_offset": 9811,
+      "primary_offset": 9811,
+      "offset": 24707,
+      "length": 1200,
+      "sha256": "a7f132b9488727f34030a78a111d9b84f5e0bbb8f56c6eb83e26f26730394171"
+    },
+    {
+      "identifier": "Africa/Ceuta",
+      "primary": "Africa/Ceuta",
+      "identifier_offset": 9829,
+      "primary_offset": 9829,
+      "offset": 25907,
+      "length": 2052,
+      "sha256": "0b0fb6fe714319b37c5aa22c56971abb2668a165fc8f72a6c763e70b47c7badf"
+    },
+    {
+      "identifier": "Africa/Conakry",
+      "primary": "Africa/Conakry",
+      "identifier_offset": 9842,
+      "primary_offset": 9842,
+      "offset": 27959,
+      "length": 208,
+      "sha256": "93b62b3d76c1d4a477d84d232c576f9b9f21e428a42635db94eaca2c59b7b2ec"
+    },
+    {
+      "identifier": "Africa/Dakar",
+      "primary": "Africa/Dakar",
+      "identifier_offset": 9857,
+      "primary_offset": 9857,
+      "offset": 28167,
+      "length": 182,
+      "sha256": "40733be9374ab5a9bd38be2be2664e538f97a265bbe7d898a6167d3800cb228b"
+    },
+    {
+      "identifier": "Africa/Dar_es_Salaam",
+      "primary": "Africa/Dar_es_Salaam",
+      "identifier_offset": 9870,
+      "primary_offset": 9870,
+      "offset": 28349,
+      "length": 213,
+      "sha256": "4fc4f312a5287024c7f8473d753b6d1bcde396138d778adf5fce60dddcc9b53f"
+    },
+    {
+      "identifier": "Africa/Djibouti",
+      "primary": "Africa/Djibouti",
+      "identifier_offset": 9891,
+      "primary_offset": 9891,
+      "offset": 28562,
+      "length": 149,
+      "sha256": "b92bac77f2dd9edd59397c0315e116fd0dc4fbc1ae6cd266687a2822877959f1"
+    },
+    {
+      "identifier": "Africa/Douala",
+      "primary": "Africa/Douala",
+      "identifier_offset": 9907,
+      "primary_offset": 9907,
+      "offset": 28711,
+      "length": 149,
+      "sha256": "3b014a5d1cbee2524ae309a895cbe0fe47da87c12016fe8cc2562ac79906590b"
+    },
+    {
+      "identifier": "Africa/El_Aaiun",
+      "primary": "Africa/El_Aaiun",
+      "identifier_offset": 9921,
+      "primary_offset": 9921,
+      "offset": 28860,
+      "length": 1066,
+      "sha256": "d9b5d8cf88070b1958cfef9a9bedb8fc252f8cbae64a29dd2b3690f8f58e96d1"
+    },
+    {
+      "identifier": "Africa/Freetown",
+      "primary": "Africa/Freetown",
+      "identifier_offset": 9937,
+      "primary_offset": 9937,
+      "offset": 29926,
+      "length": 464,
+      "sha256": "77d05b2ed586a9d22f6e4a791ec0634256dc919faac6279bdb7db388a9c1f67b"
+    },
+    {
+      "identifier": "Africa/Gaborone",
+      "primary": "Africa/Gaborone",
+      "identifier_offset": 9953,
+      "primary_offset": 9953,
+      "offset": 30390,
+      "length": 235,
+      "sha256": "3ca27c9dd26ccfd118a270eaee39195154cd63f15700d14de650bf7493cec628"
+    },
+    {
+      "identifier": "Africa/Harare",
+      "primary": "Africa/Harare",
+      "identifier_offset": 9969,
+      "primary_offset": 9969,
+      "offset": 30625,
+      "length": 149,
+      "sha256": "22720486f3e24b8e4b4f746afd2e0020f22d3a6c055b79579457e3efc2373ee5"
+    },
+    {
+      "identifier": "Africa/Johannesburg",
+      "primary": "Africa/Johannesburg",
+      "identifier_offset": 9983,
+      "primary_offset": 9983,
+      "offset": 30774,
+      "length": 246,
+      "sha256": "6c1bcc752668e77585a308ae8543bd0bccd8e813865626e809bf94f3fe3d977e"
+    },
+    {
+      "identifier": "Africa/Juba",
+      "primary": "Africa/Juba",
+      "identifier_offset": 10003,
+      "primary_offset": 10003,
+      "offset": 31020,
+      "length": 679,
+      "sha256": "5159c8a843c9c072d3302fabe6a6501cdbfda29a1856c29dabeb5aff95d4c3f4"
+    },
+    {
+      "identifier": "Africa/Kampala",
+      "primary": "Africa/Kampala",
+      "identifier_offset": 10015,
+      "primary_offset": 10015,
+      "offset": 31699,
+      "length": 251,
+      "sha256": "5e23eb14b36a74840f4490a272ffc7b1f271a5829a349015f878ddb2bf34d9aa"
+    },
+    {
+      "identifier": "Africa/Khartoum",
+      "primary": "Africa/Khartoum",
+      "identifier_offset": 10030,
+      "primary_offset": 10030,
+      "offset": 31950,
+      "length": 679,
+      "sha256": "318583a09dc070222d65d029a1e3a0b565830f1aaec13a27e6fe533863fbd3ea"
+    },
+    {
+      "identifier": "Africa/Kigali",
+      "primary": "Africa/Kigali",
+      "identifier_offset": 10046,
+      "primary_offset": 10046,
+      "offset": 32629,
+      "length": 149,
+      "sha256": "8cd9c1bb40c4452e61520a9dfc9a409a67109bad6f41f413c786998d00cbc9cf"
+    },
+    {
+      "identifier": "Africa/Kinshasa",
+      "primary": "Africa/Kinshasa",
+      "identifier_offset": 10060,
+      "primary_offset": 10060,
+      "offset": 32778,
+      "length": 149,
+      "sha256": "7ae6d0e96d674a4c232cb01faf61a954340d84ea92a71a63ebd060e1c67d8c08"
+    },
+    {
+      "identifier": "Africa/Lagos",
+      "primary": "Africa/Lagos",
+      "identifier_offset": 10076,
+      "primary_offset": 10076,
+      "offset": 32927,
+      "length": 235,
+      "sha256": "cffeb0282ccbd7fba0e493ff8677a1e5a6dd5197885042e437f95a773f844846"
+    },
+    {
+      "identifier": "Africa/Libreville",
+      "primary": "Africa/Libreville",
+      "identifier_offset": 10089,
+      "primary_offset": 10089,
+      "offset": 33162,
+      "length": 149,
+      "sha256": "44575c7c30a1281ec495adb7a404888ed4d7e41c0234f13767ae7b1a1458be73"
+    },
+    {
+      "identifier": "Africa/Lome",
+      "primary": "Africa/Lome",
+      "identifier_offset": 10107,
+      "primary_offset": 10107,
+      "offset": 33311,
+      "length": 148,
+      "sha256": "5b031c585ed04311c7c7c14b2ee23ba49cb22ded8ddee8adffc9f14de68d2ba8"
+    },
+    {
+      "identifier": "Africa/Luanda",
+      "primary": "Africa/Luanda",
+      "identifier_offset": 10119,
+      "primary_offset": 10119,
+      "offset": 33459,
+      "length": 187,
+      "sha256": "c87aa48fc0f0043c6d101335acc8c7ab4ffc2707c14a8f5b1d6d1abf3bdec69a"
+    },
+    {
+      "identifier": "Africa/Lubumbashi",
+      "primary": "Africa/Lubumbashi",
+      "identifier_offset": 10133,
+      "primary_offset": 10133,
+      "offset": 33646,
+      "length": 183,
+      "sha256": "ed509eccb6e51d5cd529388c57692a641a5b9313233897a1bfabdb612a415c04"
+    },
+    {
+      "identifier": "Africa/Lusaka",
+      "primary": "Africa/Lusaka",
+      "identifier_offset": 10151,
+      "primary_offset": 10151,
+      "offset": 33829,
+      "length": 149,
+      "sha256": "fac7c446a8dcddffc75a7dca5c762444f74df9f83c70cc505b138db85242dea4"
+    },
+    {
+      "identifier": "Africa/Malabo",
+      "primary": "Africa/Malabo",
+      "identifier_offset": 10165,
+      "primary_offset": 10165,
+      "offset": 33978,
+      "length": 183,
+      "sha256": "8d17cee7263820e7a14499ba087cd792f4f4b358bb4c874f24c42537ce975704"
+    },
+    {
+      "identifier": "Africa/Maputo",
+      "primary": "Africa/Maputo",
+      "identifier_offset": 10179,
+      "primary_offset": 10179,
+      "offset": 34161,
+      "length": 149,
+      "sha256": "444ed3a710414bc6bf43eb27e591da49d3be3db153449a6a0c9473f7e39fdbcb"
+    },
+    {
+      "identifier": "Africa/Maseru",
+      "primary": "Africa/Maseru",
+      "identifier_offset": 10193,
+      "primary_offset": 10193,
+      "offset": 34310,
+      "length": 192,
+      "sha256": "be0b75733f8dfc6ff35bd69c3d0f94abc72e1d6897c81f53d0ba7da1d72227b6"
+    },
+    {
+      "identifier": "Africa/Mbabane",
+      "primary": "Africa/Mbabane",
+      "identifier_offset": 10207,
+      "primary_offset": 10207,
+      "offset": 34502,
+      "length": 152,
+      "sha256": "b0b8a11ab3cc1a97295b0bcde33b1129de82616b2f83987687926e100d3adf91"
+    },
+    {
+      "identifier": "Africa/Mogadishu",
+      "primary": "Africa/Mogadishu",
+      "identifier_offset": 10222,
+      "primary_offset": 10222,
+      "offset": 34654,
+      "length": 213,
+      "sha256": "cf5c8032414fd86bdafddb2cdfd6813730f7ec4a08cb92b22a5f1403490fa7e2"
+    },
+    {
+      "identifier": "Africa/Monrovia",
+      "primary": "Africa/Monrovia",
+      "identifier_offset": 10239,
+      "primary_offset": 10239,
+      "offset": 34867,
+      "length": 208,
+      "sha256": "f95b095b9714e0a76f7e061a415bf895cbb399a28854531de369cee915ce05d5"
+    },
+    {
+      "identifier": "Africa/Nairobi",
+      "primary": "Africa/Nairobi",
+      "identifier_offset": 10255,
+      "primary_offset": 10255,
+      "offset": 35075,
+      "length": 265,
+      "sha256": "c89b2e253a8926a6cecf7eff34e4bfcdb7fe24daff22d84718c30deec0ea4968"
+    },
+    {
+      "identifier": "Africa/Ndjamena",
+      "primary": "Africa/Ndjamena",
+      "identifier_offset": 10270,
+      "primary_offset": 10270,
+      "offset": 35340,
+      "length": 199,
+      "sha256": "f13dc0d199bd1a3d01be6eab77cf2ddc60172a229d1947c7948a98964608d0a3"
+    },
+    {
+      "identifier": "Africa/Niamey",
+      "primary": "Africa/Niamey",
+      "identifier_offset": 10286,
+      "primary_offset": 10286,
+      "offset": 35539,
+      "length": 217,
+      "sha256": "78a49cb93c76e4f036933c36ace93e46ea1d7ccf58c7b086dd8f1c5eb441a400"
+    },
+    {
+      "identifier": "Africa/Nouakchott",
+      "primary": "Africa/Nouakchott",
+      "identifier_offset": 10300,
+      "primary_offset": 10300,
+      "offset": 35756,
+      "length": 208,
+      "sha256": "7fde47dac81d3d51ed1bf257f8834faa4da20d4ba1d85b824f86bf2cd79ac801"
+    },
+    {
+      "identifier": "Africa/Ouagadougou",
+      "primary": "Africa/Ouagadougou",
+      "identifier_offset": 10318,
+      "primary_offset": 10318,
+      "offset": 35964,
+      "length": 148,
+      "sha256": "fe2dc2c6ab2ef71c41bb3542802a3c18a2d657befa39f3e61321c12677d16caf"
+    },
+    {
+      "identifier": "Africa/Porto-Novo",
+      "primary": "Africa/Porto-Novo",
+      "identifier_offset": 10337,
+      "primary_offset": 10337,
+      "offset": 36112,
+      "length": 183,
+      "sha256": "30a8a8c8c9337afff37986d7c36afe814c8b56cb75e958dd89bca1ef6dff731d"
+    },
+    {
+      "identifier": "Africa/Sao_Tome",
+      "primary": "Africa/Sao_Tome",
+      "identifier_offset": 10355,
+      "primary_offset": 10355,
+      "offset": 36295,
+      "length": 254,
+      "sha256": "31d8f1a50dbaf2ecc9ed9c7566ba0552d454c2ab09e85ff263701857d157c352"
+    },
+    {
+      "identifier": "Africa/Timbuktu",
+      "primary": "Africa/Bamako",
+      "identifier_offset": 10371,
+      "primary_offset": 9690,
+      "offset": 21034,
+      "length": 208,
+      "sha256": "a212ea76ad201e8a956438bd008cd333ead81dac3ebcd2df4fcddc5b0f59165e"
+    },
+    {
+      "identifier": "Africa/Tripoli",
+      "primary": "Africa/Tripoli",
+      "identifier_offset": 10387,
+      "primary_offset": 10387,
+      "offset": 36549,
+      "length": 625,
+      "sha256": "5b5769b460fbd13ee9a46a28d1f733150783888a749ee96d2cd3d5eba3300767"
+    },
+    {
+      "identifier": "Africa/Tunis",
+      "primary": "Africa/Tunis",
+      "identifier_offset": 10402,
+      "primary_offset": 10402,
+      "offset": 37174,
+      "length": 689,
+      "sha256": "38554c10ce1e613d84cf46deba1114093488a5c165756c6c576b84a1364850d2"
+    },
+    {
+      "identifier": "Africa/Windhoek",
+      "primary": "Africa/Windhoek",
+      "identifier_offset": 10415,
+      "primary_offset": 10415,
+      "offset": 37863,
+      "length": 955,
+      "sha256": "c6e86fb9dacc1f86a59d59a8b924d023c60bf05fc76e0b05d8443b0192b3b87b"
+    },
+    {
+      "identifier": "America/Adak",
+      "primary": "America/Adak",
+      "identifier_offset": 10431,
+      "primary_offset": 10431,
+      "offset": 38818,
+      "length": 2356,
+      "sha256": "9d767d4f8dfffee4fdf29e594a8552a41aa77d41cdb4a2e5f7687c94b5699e54"
+    },
+    {
+      "identifier": "America/Anchorage",
+      "primary": "America/Anchorage",
+      "identifier_offset": 10444,
+      "primary_offset": 10444,
+      "offset": 41174,
+      "length": 2371,
+      "sha256": "385fe1232365859f607e890bbc1b37bcac6c2d13932ecf8cee82ed76ee156043"
+    },
+    {
+      "identifier": "America/Anguilla",
+      "primary": "America/Anguilla",
+      "identifier_offset": 10462,
+      "primary_offset": 10462,
+      "offset": 43545,
+      "length": 148,
+      "sha256": "434fbfb6b97c6d6ef4a036030bb901a49c74b7a4df8b6e0a1dcfd3cedf8a1fc1"
+    },
+    {
+      "identifier": "America/Antigua",
+      "primary": "America/Antigua",
+      "identifier_offset": 10479,
+      "primary_offset": 10479,
+      "offset": 43693,
+      "length": 182,
+      "sha256": "d63c0dde8af51ad22539678225d3f58c760f0f8971dc5e43783644853087b14e"
+    },
+    {
+      "identifier": "America/Araguaina",
+      "primary": "America/Araguaina",
+      "identifier_offset": 10495,
+      "primary_offset": 10495,
+      "offset": 43875,
+      "length": 870,
+      "sha256": "1babfdc18159f040785907c8b2a45b6e288a7766f6ee3ed9b797458c16f3c76a"
+    },
+    {
+      "identifier": "America/Argentina/Buenos_Aires",
+      "primary": "America/Argentina/Buenos_Aires",
+      "identifier_offset": 10513,
+      "primary_offset": 10513,
+      "offset": 44745,
+      "length": 1062,
+      "sha256": "26653c941c26cb6f6047a3a67b2b6f15d311c7a39b24a9d834798bc8c9975f63"
+    },
+    {
+      "identifier": "America/Argentina/Catamarca",
+      "primary": "America/Argentina/Catamarca",
+      "identifier_offset": 10544,
+      "primary_offset": 10544,
+      "offset": 45807,
+      "length": 1062,
+      "sha256": "b8c0895d719898d1121d5be3e5160167431cace744d788709b5ee5db9320456d"
+    },
+    {
+      "identifier": "America/Argentina/ComodRivadavia",
+      "primary": "America/Argentina/Catamarca",
+      "identifier_offset": 10572,
+      "primary_offset": 10544,
+      "offset": 45807,
+      "length": 1062,
+      "sha256": "b8c0895d719898d1121d5be3e5160167431cace744d788709b5ee5db9320456d"
+    },
+    {
+      "identifier": "America/Argentina/Cordoba",
+      "primary": "America/Argentina/Cordoba",
+      "identifier_offset": 10605,
+      "primary_offset": 10605,
+      "offset": 46869,
+      "length": 1062,
+      "sha256": "ba788d8a184c1e7af85cae16a7088f527ac04f460f9afcea07a7f48512ed5ef6"
+    },
+    {
+      "identifier": "America/Argentina/Jujuy",
+      "primary": "America/Argentina/Jujuy",
+      "identifier_offset": 10631,
+      "primary_offset": 10631,
+      "offset": 47931,
+      "length": 1034,
+      "sha256": "3c69807a1ca90b18f45c27a70925aaca50c83db28b2b40e5af024aff6e03e7dd"
+    },
+    {
+      "identifier": "America/Argentina/La_Rioja",
+      "primary": "America/Argentina/La_Rioja",
+      "identifier_offset": 10655,
+      "primary_offset": 10655,
+      "offset": 48965,
+      "length": 1076,
+      "sha256": "526e97a155e1b2beb669dd665ae79b7ba358d191dab81751f6d3060e0a823878"
+    },
+    {
+      "identifier": "America/Argentina/Mendoza",
+      "primary": "America/Argentina/Mendoza",
+      "identifier_offset": 10682,
+      "primary_offset": 10682,
+      "offset": 50041,
+      "length": 1062,
+      "sha256": "c5c395b6f47255814053dd32d90630a72421a4c2f2029efe171be4bb89209747"
+    },
+    {
+      "identifier": "America/Argentina/Rio_Gallegos",
+      "primary": "America/Argentina/Rio_Gallegos",
+      "identifier_offset": 10708,
+      "primary_offset": 10708,
+      "offset": 51103,
+      "length": 1062,
+      "sha256": "17d64a478a3c80b1d7ed006e22331aa4621d9b3271a6ac1ba2e3e067932a0e96"
+    },
+    {
+      "identifier": "America/Argentina/Salta",
+      "primary": "America/Argentina/Salta",
+      "identifier_offset": 10739,
+      "primary_offset": 10739,
+      "offset": 52165,
+      "length": 1034,
+      "sha256": "875298ac33486a9bc3918862d4f681f160f5a9639ee2f8618032560c2195e237"
+    },
+    {
+      "identifier": "America/Argentina/San_Juan",
+      "primary": "America/Argentina/San_Juan",
+      "identifier_offset": 10763,
+      "primary_offset": 10763,
+      "offset": 53199,
+      "length": 1076,
+      "sha256": "008d8696d03cd263cdce11f163272e13021b3b500d5f222a05064ca63a8aa9d4"
+    },
+    {
+      "identifier": "America/Argentina/San_Luis",
+      "primary": "America/Argentina/San_Luis",
+      "identifier_offset": 10790,
+      "primary_offset": 10790,
+      "offset": 54275,
+      "length": 1088,
+      "sha256": "d88b4645c2d52b6c31f0cc89b076c8041780914e01f8c379c7567137267b5091"
+    },
+    {
+      "identifier": "America/Argentina/Tucuman",
+      "primary": "America/Argentina/Tucuman",
+      "identifier_offset": 10817,
+      "primary_offset": 10817,
+      "offset": 55363,
+      "length": 1090,
+      "sha256": "b703be16ab4d255f173b3593bc543ec6711c582a035076378295481b43336dff"
+    },
+    {
+      "identifier": "America/Argentina/Ushuaia",
+      "primary": "America/Argentina/Ushuaia",
+      "identifier_offset": 10843,
+      "primary_offset": 10843,
+      "offset": 56453,
+      "length": 1062,
+      "sha256": "03a21ba55958f4820fa1228c15147d0cc44e7705d44837361ec012b9e3929eaa"
+    },
+    {
+      "identifier": "America/Aruba",
+      "primary": "America/Aruba",
+      "identifier_offset": 10869,
+      "primary_offset": 10869,
+      "offset": 57515,
+      "length": 186,
+      "sha256": "e05ef0b458a717e7c83d8bc16c50e3a74a719fb5f3725b1c4fe7569a1b07fcfc"
+    },
+    {
+      "identifier": "America/Asuncion",
+      "primary": "America/Asuncion",
+      "identifier_offset": 10883,
+      "primary_offset": 10883,
+      "offset": 57701,
+      "length": 1644,
+      "sha256": "f727c68843615cd81ddbfd311d5b05fa12de264192a91b3ecc3f4ef78e4a2567"
+    },
+    {
+      "identifier": "America/Atikokan",
+      "primary": "America/Atikokan",
+      "identifier_offset": 10900,
+      "primary_offset": 10900,
+      "offset": 59345,
+      "length": 336,
+      "sha256": "e1af781ad3c751d43edac773f568a7b0a9fd57f4223385e6163e3c1533cc7920"
+    },
+    {
+      "identifier": "America/Atka",
+      "primary": "America/Adak",
+      "identifier_offset": 10917,
+      "primary_offset": 10431,
+      "offset": 38818,
+      "length": 2356,
+      "sha256": "9d767d4f8dfffee4fdf29e594a8552a41aa77d41cdb4a2e5f7687c94b5699e54"
+    },
+    {
+      "identifier": "America/Bahia",
+      "primary": "America/Bahia",
+      "identifier_offset": 10930,
+      "primary_offset": 10930,
+      "offset": 59681,
+      "length": 1010,
+      "sha256": "aa2edd03a1687c384bc553267762fc6cadc779a42773d5fe8e28a3c327e1b378"
+    },
+    {
+      "identifier": "America/Bahia_Banderas",
+      "primary": "America/Bahia_Banderas",
+      "identifier_offset": 10944,
+      "primary_offset": 10944,
+      "offset": 60691,
+      "length": 1100,
+      "sha256": "32fad7189e4bcda1ce7a0b89ab1b33c63c4c85569f1956e4fa88d711ceff6042"
+    },
+    {
+      "identifier": "America/Barbados",
+      "primary": "America/Barbados",
+      "identifier_offset": 10967,
+      "primary_offset": 10967,
+      "offset": 61791,
+      "length": 436,
+      "sha256": "8a66be42bae16b3bb841fbeed99d3e7ba13e193898927b8906ee9cdb2546f4b1"
+    },
+    {
+      "identifier": "America/Belem",
+      "primary": "America/Belem",
+      "identifier_offset": 10984,
+      "primary_offset": 10984,
+      "offset": 62227,
+      "length": 562,
+      "sha256": "69931482d1437473484a9ab241161b992d88043f81012dc26899e1bbaa272c26"
+    },
+    {
+      "identifier": "America/Belize",
+      "primary": "America/Belize",
+      "identifier_offset": 10998,
+      "primary_offset": 10998,
+      "offset": 62789,
+      "length": 1614,
+      "sha256": "a647cb63629f3dc85b7896b5a56717996030a7866546fc562d57b35e7adb930b"
+    },
+    {
+      "identifier": "America/Blanc-Sablon",
+      "primary": "America/Blanc-Sablon",
+      "identifier_offset": 11013,
+      "primary_offset": 11013,
+      "offset": 64403,
+      "length": 298,
+      "sha256": "b5537964f9883b7bdcdff6b2a3083aa9bbe385e838389b43153f72f08b96df7e"
+    },
+    {
+      "identifier": "America/Boa_Vista",
+      "primary": "America/Boa_Vista",
+      "identifier_offset": 11034,
+      "primary_offset": 11034,
+      "offset": 64701,
+      "length": 618,
+      "sha256": "74cb5a1b5d641a526b8092601961036590269cefc77d3dcbe17f2923bd8b2c56"
+    },
+    {
+      "identifier": "America/Bogota",
+      "primary": "America/Bogota",
+      "identifier_offset": 11052,
+      "primary_offset": 11052,
+      "offset": 65319,
+      "length": 232,
+      "sha256": "bf2235f43af0084d48823ee6ad21024299281e7bbc51620863daa154781978dd"
+    },
+    {
+      "identifier": "America/Boise",
+      "primary": "America/Boise",
+      "identifier_offset": 11067,
+      "primary_offset": 11067,
+      "offset": 65551,
+      "length": 2410,
+      "sha256": "ec742c34f262521790805cf99152ef4e77f9c615c061a78036a0ec9312b3d95b"
+    },
+    {
+      "identifier": "America/Buenos_Aires",
+      "primary": "America/Argentina/Buenos_Aires",
+      "identifier_offset": 11081,
+      "primary_offset": 10513,
+      "offset": 44745,
+      "length": 1062,
+      "sha256": "26653c941c26cb6f6047a3a67b2b6f15d311c7a39b24a9d834798bc8c9975f63"
+    },
+    {
+      "identifier": "America/Cambridge_Bay",
+      "primary": "America/Cambridge_Bay",
+      "identifier_offset": 11102,
+      "primary_offset": 11102,
+      "offset": 67961,
+      "length": 2254,
+      "sha256": "ff8c51957dd6755a4472aa13ea6c83ecd7930979e7f4e624fe21f4d3a6f050ba"
+    },
+    {
+      "identifier": "America/Campo_Grande",
+      "primary": "America/Campo_Grande",
+      "identifier_offset": 11124,
+      "primary_offset": 11124,
+      "offset": 70215,
+      "length": 1430,
+      "sha256": "8083625e0e62d9ee9187635ba366c5aa13c024be05e1c02a1a705a9e45d30d7c"
+    },
+    {
+      "identifier": "America/Cancun",
+      "primary": "America/Cancun",
+      "identifier_offset": 11145,
+      "primary_offset": 11145,
+      "offset": 71645,
+      "length": 864,
+      "sha256": "11d574370d968cced59e3147a2ae63b126cbbae13b78fd4e13be2eb44c96246e"
+    },
+    {
+      "identifier": "America/Caracas",
+      "primary": "America/Caracas",
+      "identifier_offset": 11160,
+      "primary_offset": 11160,
+      "offset": 72509,
+      "length": 250,
+      "sha256": "99434c15d0f364b6affde3c0d68701766a950627ab91e12ccd3205a4d0a6e49d"
+    },
+    {
+      "identifier": "America/Catamarca",
+      "primary": "America/Argentina/Catamarca",
+      "identifier_offset": 11176,
+      "primary_offset": 10544,
+      "offset": 45807,
+      "length": 1062,
+      "sha256": "b8c0895d719898d1121d5be3e5160167431cace744d788709b5ee5db9320456d"
+    },
+    {
+      "identifier": "America/Cayenne",
+      "primary": "America/Cayenne",
+      "identifier_offset": 11194,
+      "primary_offset": 11194,
+      "offset": 72759,
+      "length": 184,
+      "sha256": "e24ec8bf5c285f86ada9e3caadcbcc403d9593d4e699aeeb5bf016fd1eb6a427"
+    },
+    {
+      "identifier": "America/Cayman",
+      "primary": "America/Cayman",
+      "identifier_offset": 11210,
+      "primary_offset": 11210,
+      "offset": 72943,
+      "length": 182,
+      "sha256": "8a2ab69b8045ea3681c799a08704335f1111f7373e21f4ee08e8ae84eb408fc9"
+    },
+    {
+      "identifier": "America/Chicago",
+      "primary": "America/Chicago",
+      "identifier_offset": 11225,
+      "primary_offset": 11225,
+      "offset": 73125,
+      "length": 3592,
+      "sha256": "feba326ebe88eac20017a718748c46c68469a1e7f5e7716dcb8f1d43a6e6f686"
+    },
+    {
+      "identifier": "America/Chihuahua",
+      "primary": "America/Chihuahua",
+      "identifier_offset": 11241,
+      "primary_offset": 11241,
+      "offset": 76717,
+      "length": 1102,
+      "sha256": "dcd8336de760f00cc0ab1b1b4121b48d5471f8bc58970d62de4c7e63397ed887"
+    },
+    {
+      "identifier": "America/Ciudad_Juarez",
+      "primary": "America/Ciudad_Juarez",
+      "identifier_offset": 11259,
+      "primary_offset": 11259,
+      "offset": 77819,
+      "length": 1538,
+      "sha256": "8abe1bdbb0e216b84bd07e1f650f769c46be041a0f7cb588cf7a61537ef77601"
+    },
+    {
+      "identifier": "America/Coral_Harbour",
+      "primary": "America/Atikokan",
+      "identifier_offset": 11281,
+      "primary_offset": 10900,
+      "offset": 59345,
+      "length": 336,
+      "sha256": "e1af781ad3c751d43edac773f568a7b0a9fd57f4223385e6163e3c1533cc7920"
+    },
+    {
+      "identifier": "America/Cordoba",
+      "primary": "America/Argentina/Cordoba",
+      "identifier_offset": 11303,
+      "primary_offset": 10605,
+      "offset": 46869,
+      "length": 1062,
+      "sha256": "ba788d8a184c1e7af85cae16a7088f527ac04f460f9afcea07a7f48512ed5ef6"
+    },
+    {
+      "identifier": "America/Costa_Rica",
+      "primary": "America/Costa_Rica",
+      "identifier_offset": 11319,
+      "primary_offset": 11319,
+      "offset": 79357,
+      "length": 316,
+      "sha256": "ef8ad86ba96b80893296cf4f907a3c482625f683aa8ae1b94bb31676725e94fe"
+    },
+    {
+      "identifier": "America/Coyhaique",
+      "primary": "America/Coyhaique",
+      "identifier_offset": 11338,
+      "primary_offset": 11338,
+      "offset": 79673,
+      "length": 2126,
+      "sha256": "6de65753a2f0e63c765a9ddd3519058a87d71a66b674ce83b2abc94fd0921dd7"
+    },
+    {
+      "identifier": "America/Creston",
+      "primary": "America/Creston",
+      "identifier_offset": 11356,
+      "primary_offset": 11356,
+      "offset": 81799,
+      "length": 208,
+      "sha256": "74d39aef5420436779ba1edc97ec5999efbcbb79cc47d189ecf4a4b562033914"
+    },
+    {
+      "identifier": "America/Cuiaba",
+      "primary": "America/Cuiaba",
+      "identifier_offset": 11372,
+      "primary_offset": 11372,
+      "offset": 82007,
+      "length": 1402,
+      "sha256": "19126a92145736c3947208d975d43144825d4586b0f6933f60b59bba7f3c7648"
+    },
+    {
+      "identifier": "America/Curacao",
+      "primary": "America/Curacao",
+      "identifier_offset": 11387,
+      "primary_offset": 11387,
+      "offset": 83409,
+      "length": 186,
+      "sha256": "646108ca5019e62cbfac806c5d112d1ff65f5912242c8f5d4233ff108ca7dec6"
+    },
+    {
+      "identifier": "America/Danmarkshavn",
+      "primary": "America/Danmarkshavn",
+      "identifier_offset": 11403,
+      "primary_offset": 11403,
+      "offset": 83595,
+      "length": 698,
+      "sha256": "6116407d40a856d68bd4bf8c60c60c1f5c3239a5509df528fe0167bcc5d2bb3c"
+    },
+    {
+      "identifier": "America/Dawson",
+      "primary": "America/Dawson",
+      "identifier_offset": 11424,
+      "primary_offset": 11424,
+      "offset": 84293,
+      "length": 1614,
+      "sha256": "ac01e1cae32eca37ff7b20364811bbe8c4417ff7e3ff18b9140ba2595420261c"
+    },
+    {
+      "identifier": "America/Dawson_Creek",
+      "primary": "America/Dawson_Creek",
+      "identifier_offset": 11439,
+      "primary_offset": 11439,
+      "offset": 85907,
+      "length": 1050,
+      "sha256": "6895c2c8fe23de0804e3018237e2eb4bd8690ffe73587cd04de4802935843d43"
+    },
+    {
+      "identifier": "America/Denver",
+      "primary": "America/Denver",
+      "identifier_offset": 11460,
+      "primary_offset": 11460,
+      "offset": 86957,
+      "length": 2460,
+      "sha256": "32e819c00a43b3c348f539d700d425504f20b8d068c16418d26fa9b693e775c9"
+    },
+    {
+      "identifier": "America/Detroit",
+      "primary": "America/Detroit",
+      "identifier_offset": 11475,
+      "primary_offset": 11475,
+      "offset": 89417,
+      "length": 2230,
+      "sha256": "85e733f32a98d828f907ad46de02d9740559bd180af65d0ff7473f80dfae0f98"
+    },
+    {
+      "identifier": "America/Dominica",
+      "primary": "America/Dominica",
+      "identifier_offset": 11491,
+      "primary_offset": 11491,
+      "offset": 91647,
+      "length": 148,
+      "sha256": "7e7db465be161ee7c531100137bf880f3acee56b1874e20661be218ae48f0a8c"
+    },
+    {
+      "identifier": "America/Edmonton",
+      "primary": "America/Edmonton",
+      "identifier_offset": 11508,
+      "primary_offset": 11508,
+      "offset": 91795,
+      "length": 2030,
+      "sha256": "b5e3d3820009abc262c82a3ebfa9261dd12fc210f77322ef121067b040866587"
+    },
+    {
+      "identifier": "America/Eirunepe",
+      "primary": "America/Eirunepe",
+      "identifier_offset": 11525,
+      "primary_offset": 11525,
+      "offset": 93825,
+      "length": 642,
+      "sha256": "8f9784c648c56aab42f83f172b4ac6ce817dc8481b4a54db3ea546f562a111af"
+    },
+    {
+      "identifier": "America/El_Salvador",
+      "primary": "America/El_Salvador",
+      "identifier_offset": 11542,
+      "primary_offset": 11542,
+      "offset": 94467,
+      "length": 224,
+      "sha256": "82f18df0b923fac1a6dbfaecf0e52300c7f5a0cb4aa765deb3a51f593d16aa05"
+    },
+    {
+      "identifier": "America/Ensenada",
+      "primary": "America/Tijuana",
+      "identifier_offset": 11562,
+      "primary_offset": 13473,
+      "offset": 94691,
+      "length": 2906,
+      "sha256": "8c2e7b321726e6345912da396796bdb3672bfc4bd1a91c65ee58b38e004d4ca5"
+    },
+    {
+      "identifier": "America/Fort_Nelson",
+      "primary": "America/Fort_Nelson",
+      "identifier_offset": 11579,
+      "primary_offset": 11579,
+      "offset": 97597,
+      "length": 2240,
+      "sha256": "7ab7ce0ebdc3ad2a73eb990074eed3b367466d9c6f75d10fea0c78057df2d89d"
+    },
+    {
+      "identifier": "America/Fort_Wayne",
+      "primary": "America/Indiana/Indianapolis",
+      "identifier_offset": 11599,
+      "primary_offset": 11843,
+      "offset": 99837,
+      "length": 1682,
+      "sha256": "90d2b2f4a8fd202b226187c209b020833300edec5ff86a463ccc685e8707532c"
+    },
+    {
+      "identifier": "America/Fortaleza",
+      "primary": "America/Fortaleza",
+      "identifier_offset": 11618,
+      "primary_offset": 11618,
+      "offset": 101519,
+      "length": 702,
+      "sha256": "ae3892074ab5701b8c0ce33da2b5bfbb07b950e2c1c1395f8c5a2dc0e61ed665"
+    },
+    {
+      "identifier": "America/Glace_Bay",
+      "primary": "America/Glace_Bay",
+      "identifier_offset": 11636,
+      "primary_offset": 11636,
+      "offset": 102221,
+      "length": 2192,
+      "sha256": "1bc0c62c609aa47fda60217f3a168be50a277fb14e02000fc1e94ee61b425817"
+    },
+    {
+      "identifier": "America/Godthab",
+      "primary": "America/Nuuk",
+      "identifier_offset": 11654,
+      "primary_offset": 12793,
+      "offset": 104413,
+      "length": 1889,
+      "sha256": "2865eb30df98918a550a02dda5c7f030543bec4b11006b235021b7c8052f55fc"
+    },
+    {
+      "identifier": "America/Goose_Bay",
+      "primary": "America/Goose_Bay",
+      "identifier_offset": 11670,
+      "primary_offset": 11670,
+      "offset": 106302,
+      "length": 3210,
+      "sha256": "26068bb9e8214af5f683bdb914e7c882982fb2ac591b29163a1019586a506516"
+    },
+    {
+      "identifier": "America/Grand_Turk",
+      "primary": "America/Grand_Turk",
+      "identifier_offset": 11688,
+      "primary_offset": 11688,
+      "offset": 109512,
+      "length": 1834,
+      "sha256": "e1838510f2bad017a5dbf7c2b18eaf499c5470c24a8e22adc8e7ff4349211305"
+    },
+    {
+      "identifier": "America/Grenada",
+      "primary": "America/Grenada",
+      "identifier_offset": 11707,
+      "primary_offset": 11707,
+      "offset": 111346,
+      "length": 148,
+      "sha256": "c9885c70cded8b2588d77c3834a38a148e0836ccfa5c5e7e2bc25f6033aae7bb"
+    },
+    {
+      "identifier": "America/Guadeloupe",
+      "primary": "America/Guadeloupe",
+      "identifier_offset": 11723,
+      "primary_offset": 11723,
+      "offset": 111494,
+      "length": 148,
+      "sha256": "add9720f2ed382210e7a64178c261615160071b7d576af02633317deae9cc702"
+    },
+    {
+      "identifier": "America/Guatemala",
+      "primary": "America/Guatemala",
+      "identifier_offset": 11742,
+      "primary_offset": 11742,
+      "offset": 111642,
+      "length": 280,
+      "sha256": "76e81480277a418e76c87907b943f88d15b3a39c78dfd2108a06980af105e3a4"
+    },
+    {
+      "identifier": "America/Guayaquil",
+      "primary": "America/Guayaquil",
+      "identifier_offset": 11760,
+      "primary_offset": 11760,
+      "offset": 111922,
+      "length": 232,
+      "sha256": "8f652e228fb846048e95335fbbbee6859f76c1a35378a152be6a157a6268a13d"
+    },
+    {
+      "identifier": "America/Guyana",
+      "primary": "America/Guyana",
+      "identifier_offset": 11778,
+      "primary_offset": 11778,
+      "offset": 112154,
+      "length": 248,
+      "sha256": "4746cebc24430bc49121ec6686c76e3dd1db6d13f02361af883f68b44c6252b9"
+    },
+    {
+      "identifier": "America/Halifax",
+      "primary": "America/Halifax",
+      "identifier_offset": 11793,
+      "primary_offset": 11793,
+      "offset": 112402,
+      "length": 3424,
+      "sha256": "4d9a667393f05a82df4df42843f6f7535ec113689529278d911d07a3c99b4e7f"
+    },
+    {
+      "identifier": "America/Havana",
+      "primary": "America/Havana",
+      "identifier_offset": 11809,
+      "primary_offset": 11809,
+      "offset": 115826,
+      "length": 2416,
+      "sha256": "1d441e02e281b04908e522d98eaca75c808e51539a8e42b3287e6bf8ebf939d7"
+    },
+    {
+      "identifier": "America/Hermosillo",
+      "primary": "America/Hermosillo",
+      "identifier_offset": 11824,
+      "primary_offset": 11824,
+      "offset": 118242,
+      "length": 388,
+      "sha256": "8b160a7acb4b992ee05a86e4f4aaba16d2d9a35caa6d601cb6b1542a5bb372dc"
+    },
+    {
+      "identifier": "America/Indiana/Indianapolis",
+      "primary": "America/Indiana/Indianapolis",
+      "identifier_offset": 11843,
+      "primary_offset": 11843,
+      "offset": 99837,
+      "length": 1682,
+      "sha256": "90d2b2f4a8fd202b226187c209b020833300edec5ff86a463ccc685e8707532c"
+    },
+    {
+      "identifier": "America/Indiana/Knox",
+      "primary": "America/Indiana/Knox",
+      "identifier_offset": 11872,
+      "primary_offset": 11872,
+      "offset": 118630,
+      "length": 2444,
+      "sha256": "0acbd9e412b0daa55abf7c7f17c094f6d68974393b8d7e3509fb2a9acea35d5f"
+    },
+    {
+      "identifier": "America/Indiana/Marengo",
+      "primary": "America/Indiana/Marengo",
+      "identifier_offset": 11893,
+      "primary_offset": 11893,
+      "offset": 121074,
+      "length": 1738,
+      "sha256": "7f7b50fa580c49403b9ef9fae295e12ad24bee65b319a8e809e81ae4c10949b2"
+    },
+    {
+      "identifier": "America/Indiana/Petersburg",
+      "primary": "America/Indiana/Petersburg",
+      "identifier_offset": 11917,
+      "primary_offset": 11917,
+      "offset": 122812,
+      "length": 1920,
+      "sha256": "03cf0e1ee334460de230b1e32a05eafddda36427554b2b5442cfbd5b429c1724"
+    },
+    {
+      "identifier": "America/Indiana/Tell_City",
+      "primary": "America/Indiana/Tell_City",
+      "identifier_offset": 11944,
+      "primary_offset": 11944,
+      "offset": 124732,
+      "length": 1700,
+      "sha256": "e1d5aa02bf58d815df2f8a40424fbcd5cde01a5d9c35d1d7383effc09861867f"
+    },
+    {
+      "identifier": "America/Indiana/Vevay",
+      "primary": "America/Indiana/Vevay",
+      "identifier_offset": 11970,
+      "primary_offset": 11970,
+      "offset": 126432,
+      "length": 1430,
+      "sha256": "1fb551d86fbfb03fc2e519b83f78358910b515608f8389b43060f73f53cbcec9"
+    },
+    {
+      "identifier": "America/Indiana/Vincennes",
+      "primary": "America/Indiana/Vincennes",
+      "identifier_offset": 11992,
+      "primary_offset": 11992,
+      "offset": 127862,
+      "length": 1710,
+      "sha256": "eb6980c53ec03c509aa3281f96713374ea5ef9fb96d7239b23a9ba11451c4bb0"
+    },
+    {
+      "identifier": "America/Indiana/Winamac",
+      "primary": "America/Indiana/Winamac",
+      "identifier_offset": 12018,
+      "primary_offset": 12018,
+      "offset": 129572,
+      "length": 1794,
+      "sha256": "69918cda347c087f411d252aed7ca08b078377a768ad72cf5e0db8e97b1b47ab"
+    },
+    {
+      "identifier": "America/Indianapolis",
+      "primary": "America/Indiana/Indianapolis",
+      "identifier_offset": 12042,
+      "primary_offset": 11843,
+      "offset": 99837,
+      "length": 1682,
+      "sha256": "90d2b2f4a8fd202b226187c209b020833300edec5ff86a463ccc685e8707532c"
+    },
+    {
+      "identifier": "America/Inuvik",
+      "primary": "America/Inuvik",
+      "identifier_offset": 12063,
+      "primary_offset": 12063,
+      "offset": 131366,
+      "length": 1768,
+      "sha256": "3992044b9bfa8c0abde7438eab008bc4efd5d36792ae0ca26f7037dd57ef728a"
+    },
+    {
+      "identifier": "America/Iqaluit",
+      "primary": "America/Iqaluit",
+      "identifier_offset": 12078,
+      "primary_offset": 12078,
+      "offset": 133134,
+      "length": 2202,
+      "sha256": "7de3a7c40374374afe335aa592b03824cc9ac28734b6a69ed2288108f0c0b389"
+    },
+    {
+      "identifier": "America/Jamaica",
+      "primary": "America/Jamaica",
+      "identifier_offset": 12094,
+      "primary_offset": 12094,
+      "offset": 135336,
+      "length": 482,
+      "sha256": "c256a089e50f45fe7e6de89efa1ed0b0e35b3738c6b26f2f32cf2e7f6f29c36f"
+    },
+    {
+      "identifier": "America/Jujuy",
+      "primary": "America/Argentina/Jujuy",
+      "identifier_offset": 12110,
+      "primary_offset": 10631,
+      "offset": 47931,
+      "length": 1034,
+      "sha256": "3c69807a1ca90b18f45c27a70925aaca50c83db28b2b40e5af024aff6e03e7dd"
+    },
+    {
+      "identifier": "America/Juneau",
+      "primary": "America/Juneau",
+      "identifier_offset": 12124,
+      "primary_offset": 12124,
+      "offset": 135818,
+      "length": 2353,
+      "sha256": "17db0b8cc14d0ae8f210903ffda6a5f68679cbbfa7cc270834acedb3a4086b31"
+    },
+    {
+      "identifier": "America/Kentucky/Louisville",
+      "primary": "America/Kentucky/Louisville",
+      "identifier_offset": 12139,
+      "primary_offset": 12139,
+      "offset": 138171,
+      "length": 2788,
+      "sha256": "b4fd3bdb157f9ffbc8423c71709efb0067868fac8bd4a3e99f77f089db3d8355"
+    },
+    {
+      "identifier": "America/Kentucky/Monticello",
+      "primary": "America/Kentucky/Monticello",
+      "identifier_offset": 12167,
+      "primary_offset": 12167,
+      "offset": 140959,
+      "length": 2368,
+      "sha256": "2ed7720a8f3906b5d0b3aae51fad589bef0aa961c7e8fc003a30f44318487733"
+    },
+    {
+      "identifier": "America/Knox_IN",
+      "primary": "America/Indiana/Knox",
+      "identifier_offset": 12195,
+      "primary_offset": 11872,
+      "offset": 118630,
+      "length": 2444,
+      "sha256": "0acbd9e412b0daa55abf7c7f17c094f6d68974393b8d7e3509fb2a9acea35d5f"
+    },
+    {
+      "identifier": "America/Kralendijk",
+      "primary": "America/Kralendijk",
+      "identifier_offset": 12211,
+      "primary_offset": 12211,
+      "offset": 143327,
+      "length": 246,
+      "sha256": "8491e557ff801a8306516b8ca5946ff5f2e6821af31477eb47d7d191cc5a6497"
+    },
+    {
+      "identifier": "America/La_Paz",
+      "primary": "America/La_Paz",
+      "identifier_offset": 12230,
+      "primary_offset": 12230,
+      "offset": 143573,
+      "length": 218,
+      "sha256": "86a7c3f0b407ba97598638b67bddfff69390013f91ee6bb3ce33f49f27db1576"
+    },
+    {
+      "identifier": "America/Lima",
+      "primary": "America/Lima",
+      "identifier_offset": 12245,
+      "primary_offset": 12245,
+      "offset": 143791,
+      "length": 392,
+      "sha256": "1c78139c3527099ce26ef2f432b1bcab23aebe3998630ddedd1e556e7c4c66cf"
+    },
+    {
+      "identifier": "America/Los_Angeles",
+      "primary": "America/Los_Angeles",
+      "identifier_offset": 12258,
+      "primary_offset": 12258,
+      "offset": 144183,
+      "length": 2852,
+      "sha256": "68977bb9ad6d186fefc6c7abd36010a66e30008dcb2d376087a41c49861e7268"
+    },
+    {
+      "identifier": "America/Louisville",
+      "primary": "America/Kentucky/Louisville",
+      "identifier_offset": 12278,
+      "primary_offset": 12139,
+      "offset": 138171,
+      "length": 2788,
+      "sha256": "b4fd3bdb157f9ffbc8423c71709efb0067868fac8bd4a3e99f77f089db3d8355"
+    },
+    {
+      "identifier": "America/Lower_Princes",
+      "primary": "America/Lower_Princes",
+      "identifier_offset": 12297,
+      "primary_offset": 12297,
+      "offset": 143327,
+      "length": 246,
+      "sha256": "8491e557ff801a8306516b8ca5946ff5f2e6821af31477eb47d7d191cc5a6497"
+    },
+    {
+      "identifier": "America/Maceio",
+      "primary": "America/Maceio",
+      "identifier_offset": 12319,
+      "primary_offset": 12319,
+      "offset": 147035,
+      "length": 730,
+      "sha256": "dd1e439527b7da44039a8495216a5cca4da8eeaa21afeae58b0a834861483324"
+    },
+    {
+      "identifier": "America/Managua",
+      "primary": "America/Managua",
+      "identifier_offset": 12334,
+      "primary_offset": 12334,
+      "offset": 147765,
+      "length": 430,
+      "sha256": "c41cc5d350079f61367c3f10772f831c57b7e94aa878da4a3df0a176e04a59d9"
+    },
+    {
+      "identifier": "America/Manaus",
+      "primary": "America/Manaus",
+      "identifier_offset": 12350,
+      "primary_offset": 12350,
+      "offset": 148195,
+      "length": 590,
+      "sha256": "17a44b38e78e8bd972999890990f6947cb45a4f67a120b8d74f7ce73a0615c31"
+    },
+    {
+      "identifier": "America/Marigot",
+      "primary": "America/Marigot",
+      "identifier_offset": 12365,
+      "primary_offset": 12365,
+      "offset": 143327,
+      "length": 246,
+      "sha256": "8491e557ff801a8306516b8ca5946ff5f2e6821af31477eb47d7d191cc5a6497"
+    },
+    {
+      "identifier": "America/Martinique",
+      "primary": "America/Martinique",
+      "identifier_offset": 12381,
+      "primary_offset": 12381,
+      "offset": 148785,
+      "length": 232,
+      "sha256": "7ccb3cd24394d9816f0b47fdcb67a37bdec9780b536016a65eb9e54ee9cd2f34"
+    },
+    {
+      "identifier": "America/Matamoros",
+      "primary": "America/Matamoros",
+      "identifier_offset": 12400,
+      "primary_offset": 12400,
+      "offset": 149017,
+      "length": 1418,
+      "sha256": "7eaf8fa9d999ad0f7c52c1661c0f62be3059bf91840514ceb8b4390aee5a8d6f"
+    },
+    {
+      "identifier": "America/Mazatlan",
+      "primary": "America/Mazatlan",
+      "identifier_offset": 12418,
+      "primary_offset": 12418,
+      "offset": 150435,
+      "length": 1060,
+      "sha256": "0561f636a54f0353ecc842cf37fd8117c2a596bb26424aa0d5eba3b10be79f1f"
+    },
+    {
+      "identifier": "America/Mendoza",
+      "primary": "America/Argentina/Mendoza",
+      "identifier_offset": 12435,
+      "primary_offset": 10682,
+      "offset": 50041,
+      "length": 1062,
+      "sha256": "c5c395b6f47255814053dd32d90630a72421a4c2f2029efe171be4bb89209747"
+    },
+    {
+      "identifier": "America/Menominee",
+      "primary": "America/Menominee",
+      "identifier_offset": 12451,
+      "primary_offset": 12451,
+      "offset": 151495,
+      "length": 2274,
+      "sha256": "02bbfd58b6df84d72946c5231c353be7b044770969d3c1addf4022c46de0674e"
+    },
+    {
+      "identifier": "America/Merida",
+      "primary": "America/Merida",
+      "identifier_offset": 12469,
+      "primary_offset": 12469,
+      "offset": 153769,
+      "length": 1004,
+      "sha256": "4953441c26b38e899fb67b8f5416b2148f84f884345a696e1df4e91cfd21dddd"
+    },
+    {
+      "identifier": "America/Metlakatla",
+      "primary": "America/Metlakatla",
+      "identifier_offset": 12484,
+      "primary_offset": 12484,
+      "offset": 154773,
+      "length": 1423,
+      "sha256": "09fb18b409c5defed5f7d11d9fdc10dafc8fd2e0267afd2e07679ddfbcbbb657"
+    },
+    {
+      "identifier": "America/Mexico_City",
+      "primary": "America/Mexico_City",
+      "identifier_offset": 12503,
+      "primary_offset": 12503,
+      "offset": 156196,
+      "length": 1222,
+      "sha256": "528836f85316cf6a35da347ab0af6f7a625a98b7a8e8e105310477b34c53c647"
+    },
+    {
+      "identifier": "America/Miquelon",
+      "primary": "America/Miquelon",
+      "identifier_offset": 12523,
+      "primary_offset": 12523,
+      "offset": 157418,
+      "length": 1652,
+      "sha256": "979b7104961ef474d166520b71b48bfc734362b8d46f4a2e79c372ed012483d7"
+    },
+    {
+      "identifier": "America/Moncton",
+      "primary": "America/Moncton",
+      "identifier_offset": 12540,
+      "primary_offset": 12540,
+      "offset": 159070,
+      "length": 3154,
+      "sha256": "5a6bfe6e4f5a28a7165b33a9735505bbaec739fc1a224d969a1dcb82a19cb72b"
+    },
+    {
+      "identifier": "America/Monterrey",
+      "primary": "America/Monterrey",
+      "identifier_offset": 12556,
+      "primary_offset": 12556,
+      "offset": 162224,
+      "length": 1114,
+      "sha256": "622c5311226e6dfe990545f2ea0df6840336811e065d73ea394e2dbf42f7906d"
+    },
+    {
+      "identifier": "America/Montevideo",
+      "primary": "America/Montevideo",
+      "identifier_offset": 12574,
+      "primary_offset": 12574,
+      "offset": 163338,
+      "length": 1496,
+      "sha256": "7501011389a364fb724632972ba67e6cc1c9745aa9c21233c431f8c74e2b2989"
+    },
+    {
+      "identifier": "America/Montreal",
+      "primary": "America/Toronto",
+      "identifier_offset": 12593,
+      "primary_offset": 13489,
+      "offset": 164834,
+      "length": 3494,
+      "sha256": "a587a1a1607439f7bac283e1815f2bdbafb9649a453d18e06c2e44e6996d888f"
+    },
+    {
+      "identifier": "America/Montserrat",
+      "primary": "America/Montserrat",
+      "identifier_offset": 12610,
+      "primary_offset": 12610,
+      "offset": 168328,
+      "length": 148,
+      "sha256": "c5048b50bdc8f0e2e1ca4643fea2eda2375c64df32c6d4ca7d36bf23e5165df7"
+    },
+    {
+      "identifier": "America/Nassau",
+      "primary": "America/Nassau",
+      "identifier_offset": 12629,
+      "primary_offset": 12629,
+      "offset": 168476,
+      "length": 2388,
+      "sha256": "304a41fcbd71dd49f0c2a8cec0da83bc27e04183ce9e10768dec0bc223b15788"
+    },
+    {
+      "identifier": "America/New_York",
+      "primary": "America/New_York",
+      "identifier_offset": 12644,
+      "primary_offset": 12644,
+      "offset": 170864,
+      "length": 3552,
+      "sha256": "e9ed07d7bee0c76a9d442d091ef1f01668fee7c4f26014c0a868b19fe6c18a95"
+    },
+    {
+      "identifier": "America/Nipigon",
+      "primary": "America/Toronto",
+      "identifier_offset": 12661,
+      "primary_offset": 13489,
+      "offset": 164834,
+      "length": 3494,
+      "sha256": "a587a1a1607439f7bac283e1815f2bdbafb9649a453d18e06c2e44e6996d888f"
+    },
+    {
+      "identifier": "America/Nome",
+      "primary": "America/Nome",
+      "identifier_offset": 12677,
+      "primary_offset": 12677,
+      "offset": 174416,
+      "length": 2367,
+      "sha256": "b0cf6377a846706c9fcff994a561dfde0c88347b21ab57798d3541cc8339f28d"
+    },
+    {
+      "identifier": "America/Noronha",
+      "primary": "America/Noronha",
+      "identifier_offset": 12690,
+      "primary_offset": 12690,
+      "offset": 176783,
+      "length": 702,
+      "sha256": "7de7910228d0a8aca5660a9ef389ca86c14bc9c4f9cc8066ee62c8bddc86c38c"
+    },
+    {
+      "identifier": "America/North_Dakota/Beulah",
+      "primary": "America/North_Dakota/Beulah",
+      "identifier_offset": 12706,
+      "primary_offset": 12706,
+      "offset": 177485,
+      "length": 2396,
+      "sha256": "aad81ba8dbbc3370241c5da7fbfa12a6cd69613e12c607256e490f29b5da047b"
+    },
+    {
+      "identifier": "America/North_Dakota/Center",
+      "primary": "America/North_Dakota/Center",
+      "identifier_offset": 12734,
+      "primary_offset": 12734,
+      "offset": 179881,
+      "length": 2396,
+      "sha256": "f5959b2bd60a92ab942f2054152dcbaff89dc5bb7b57bcb85b810ed0a9f6d2cc"
+    },
+    {
+      "identifier": "America/North_Dakota/New_Salem",
+      "primary": "America/North_Dakota/New_Salem",
+      "identifier_offset": 12762,
+      "primary_offset": 12762,
+      "offset": 182277,
+      "length": 2396,
+      "sha256": "0c7fdbb107ee5272b6a1b75bd3a2a08ac3b85cbaa1b75d815ddae052c659bde8"
+    },
+    {
+      "identifier": "America/Nuuk",
+      "primary": "America/Nuuk",
+      "identifier_offset": 12793,
+      "primary_offset": 12793,
+      "offset": 104413,
+      "length": 1889,
+      "sha256": "2865eb30df98918a550a02dda5c7f030543bec4b11006b235021b7c8052f55fc"
+    },
+    {
+      "identifier": "America/Ojinaga",
+      "primary": "America/Ojinaga",
+      "identifier_offset": 12806,
+      "primary_offset": 12806,
+      "offset": 184673,
+      "length": 1524,
+      "sha256": "6f7f10ffb55d902673695c1bece5ee75d8a1240cd428f4d3a97726a419b59ed1"
+    },
+    {
+      "identifier": "America/Panama",
+      "primary": "America/Panama",
+      "identifier_offset": 12822,
+      "primary_offset": 12822,
+      "offset": 186197,
+      "length": 182,
+      "sha256": "91ac80fe976931c490d058c8ce8b5d71ffa6d4961f6ca13ea9c153f0b0bccea0"
+    },
+    {
+      "identifier": "America/Pangnirtung",
+      "primary": "America/Iqaluit",
+      "identifier_offset": 12837,
+      "primary_offset": 12078,
+      "offset": 133134,
+      "length": 2202,
+      "sha256": "7de3a7c40374374afe335aa592b03824cc9ac28734b6a69ed2288108f0c0b389"
+    },
+    {
+      "identifier": "America/Paramaribo",
+      "primary": "America/Paramaribo",
+      "identifier_offset": 12857,
+      "primary_offset": 12857,
+      "offset": 186379,
+      "length": 248,
+      "sha256": "67b519bcd96077ea845078c43d85c890b35382331c0b393d11f51412653277b3"
+    },
+    {
+      "identifier": "America/Phoenix",
+      "primary": "America/Phoenix",
+      "identifier_offset": 12876,
+      "primary_offset": 12876,
+      "offset": 186627,
+      "length": 360,
+      "sha256": "8a5973d2c62e2cbf2520f2b44e4a2ee9d2f455c93f0f45bfdeb4533af1584664"
+    },
+    {
+      "identifier": "America/Port-au-Prince",
+      "primary": "America/Port-au-Prince",
+      "identifier_offset": 12892,
+      "primary_offset": 12892,
+      "offset": 186987,
+      "length": 1434,
+      "sha256": "d3d64025de083a23297dda54b85d54e3847f851b7a06fa409055ce9d83bdc8e3"
+    },
+    {
+      "identifier": "America/Port_of_Spain",
+      "primary": "America/Port_of_Spain",
+      "identifier_offset": 12915,
+      "primary_offset": 12915,
+      "offset": 188421,
+      "length": 148,
+      "sha256": "d7b813d9e39530528917fb32a700cfb9d905c061228eb45f90153e68adc52fad"
+    },
+    {
+      "identifier": "America/Porto_Acre",
+      "primary": "America/Rio_Branco",
+      "identifier_offset": 12937,
+      "primary_offset": 13105,
+      "offset": 188569,
+      "length": 614,
+      "sha256": "d20a49525e3a8506e9d0fe978f54b4340ac859e02bcaeb835e3b2576f0791871"
+    },
+    {
+      "identifier": "America/Porto_Velho",
+      "primary": "America/Porto_Velho",
+      "identifier_offset": 12956,
+      "primary_offset": 12956,
+      "offset": 189183,
+      "length": 562,
+      "sha256": "b92315da16568fe572061141c02f79d3071385f3778eae8a9727044a64132ce0"
+    },
+    {
+      "identifier": "America/Puerto_Rico",
+      "primary": "America/Puerto_Rico",
+      "identifier_offset": 12976,
+      "primary_offset": 12976,
+      "offset": 143327,
+      "length": 246,
+      "sha256": "8491e557ff801a8306516b8ca5946ff5f2e6821af31477eb47d7d191cc5a6497"
+    },
+    {
+      "identifier": "America/Punta_Arenas",
+      "primary": "America/Punta_Arenas",
+      "identifier_offset": 12996,
+      "primary_offset": 12996,
+      "offset": 189745,
+      "length": 1902,
+      "sha256": "b51e6e21fd77e7501616aaea36d9979e14169ca444989699a8a0736964553134"
+    },
+    {
+      "identifier": "America/Rainy_River",
+      "primary": "America/Winnipeg",
+      "identifier_offset": 13017,
+      "primary_offset": 13573,
+      "offset": 191647,
+      "length": 2566,
+      "sha256": "4cbeda42e9c21c0e3b8017248071bbd194136350581e3c71ee3312c0f6ddb383"
+    },
+    {
+      "identifier": "America/Rankin_Inlet",
+      "primary": "America/Rankin_Inlet",
+      "identifier_offset": 13037,
+      "primary_offset": 13037,
+      "offset": 194213,
+      "length": 2066,
+      "sha256": "9d782a8cbdced815747a6f9793ca9545165bfd7d324261c4eaf9924af23d2b37"
+    },
+    {
+      "identifier": "America/Recife",
+      "primary": "America/Recife",
+      "identifier_offset": 13058,
+      "primary_offset": 13058,
+      "offset": 196279,
+      "length": 702,
+      "sha256": "6c9fc7134f89162a38fa8c29674a4b3bc5376a2d1f886bbc4072f40dec4b88b7"
+    },
+    {
+      "identifier": "America/Regina",
+      "primary": "America/Regina",
+      "identifier_offset": 13073,
+      "primary_offset": 13073,
+      "offset": 196981,
+      "length": 980,
+      "sha256": "ca3a93d3ca476c80987bcdc7f099ad68306f085a91bfb4dfcdedd8f31b97ba4c"
+    },
+    {
+      "identifier": "America/Resolute",
+      "primary": "America/Resolute",
+      "identifier_offset": 13088,
+      "primary_offset": 13088,
+      "offset": 197961,
+      "length": 2066,
+      "sha256": "0a7314d9d048fbadefb7cf89d10d51a29c7ef1bf694422e386faf270c21e7468"
+    },
+    {
+      "identifier": "America/Rio_Branco",
+      "primary": "America/Rio_Branco",
+      "identifier_offset": 13105,
+      "primary_offset": 13105,
+      "offset": 188569,
+      "length": 614,
+      "sha256": "d20a49525e3a8506e9d0fe978f54b4340ac859e02bcaeb835e3b2576f0791871"
+    },
+    {
+      "identifier": "America/Rosario",
+      "primary": "America/Argentina/Cordoba",
+      "identifier_offset": 13124,
+      "primary_offset": 10605,
+      "offset": 46869,
+      "length": 1062,
+      "sha256": "ba788d8a184c1e7af85cae16a7088f527ac04f460f9afcea07a7f48512ed5ef6"
+    },
+    {
+      "identifier": "America/Santa_Isabel",
+      "primary": "America/Tijuana",
+      "identifier_offset": 13140,
+      "primary_offset": 13473,
+      "offset": 94691,
+      "length": 2906,
+      "sha256": "8c2e7b321726e6345912da396796bdb3672bfc4bd1a91c65ee58b38e004d4ca5"
+    },
+    {
+      "identifier": "America/Santarem",
+      "primary": "America/Santarem",
+      "identifier_offset": 13161,
+      "primary_offset": 13161,
+      "offset": 200027,
+      "length": 588,
+      "sha256": "56664ff52e693ee705c72a80395f74f049965d066f8028162e6949253525d0b1"
+    },
+    {
+      "identifier": "America/Santiago",
+      "primary": "America/Santiago",
+      "identifier_offset": 13178,
+      "primary_offset": 13178,
+      "offset": 200615,
+      "length": 2515,
+      "sha256": "d020f0d77742314b28aae32ea68260ba99330143610cae84d2557151103ba2c0"
+    },
+    {
+      "identifier": "America/Santo_Domingo",
+      "primary": "America/Santo_Domingo",
+      "identifier_offset": 13195,
+      "primary_offset": 13195,
+      "offset": 203130,
+      "length": 458,
+      "sha256": "0cab5a123f1f43ddb26c84d3594e019b5eb44bda732665156e36964677a7c54e"
+    },
+    {
+      "identifier": "America/Sao_Paulo",
+      "primary": "America/Sao_Paulo",
+      "identifier_offset": 13217,
+      "primary_offset": 13217,
+      "offset": 203588,
+      "length": 1430,
+      "sha256": "04c06744ee3fe078ef3b8b779e38eb30666bf993e67a092fcaf2fc28f63a64ce"
+    },
+    {
+      "identifier": "America/Scoresbysund",
+      "primary": "America/Scoresbysund",
+      "identifier_offset": 13235,
+      "primary_offset": 13235,
+      "offset": 205018,
+      "length": 1935,
+      "sha256": "2beaa488c08216039ef1c70f300040fa50e373dbdbeb0a65b8138255f88174b2"
+    },
+    {
+      "identifier": "America/Shiprock",
+      "primary": "America/Denver",
+      "identifier_offset": 13256,
+      "primary_offset": 11460,
+      "offset": 86957,
+      "length": 2460,
+      "sha256": "32e819c00a43b3c348f539d700d425504f20b8d068c16418d26fa9b693e775c9"
+    },
+    {
+      "identifier": "America/Sitka",
+      "primary": "America/Sitka",
+      "identifier_offset": 13273,
+      "primary_offset": 13273,
+      "offset": 206953,
+      "length": 2329,
+      "sha256": "4c55dbd6a95eeb899aea20d3197b2287e693ad80150a4b7c19e2df4c14806842"
+    },
+    {
+      "identifier": "America/St_Barthelemy",
+      "primary": "America/St_Barthelemy",
+      "identifier_offset": 13287,
+      "primary_offset": 13287,
+      "offset": 143327,
+      "length": 246,
+      "sha256": "8491e557ff801a8306516b8ca5946ff5f2e6821af31477eb47d7d191cc5a6497"
+    },
+    {
+      "identifier": "America/St_Johns",
+      "primary": "America/St_Johns",
+      "identifier_offset": 13309,
+      "primary_offset": 13309,
+      "offset": 209282,
+      "length": 3655,
+      "sha256": "af5fb5eee2afdbb799dc9b15930fc32d941ba3ac2f8eeb95bbb0b6a43b263a02"
+    },
+    {
+      "identifier": "America/St_Kitts",
+      "primary": "America/St_Kitts",
+      "identifier_offset": 13326,
+      "primary_offset": 13326,
+      "offset": 212937,
+      "length": 148,
+      "sha256": "afc412c84fb12ae86faca5a8e0878cbf91c32dd3c4b7485ead82d4533d0059f6"
+    },
+    {
+      "identifier": "America/St_Lucia",
+      "primary": "America/St_Lucia",
+      "identifier_offset": 13343,
+      "primary_offset": 13343,
+      "offset": 213085,
+      "length": 182,
+      "sha256": "236ae9122a1b4b1cc9f8e7a2f59dcf167198b208d5cc058bea4642d60a2d94de"
+    },
+    {
+      "identifier": "America/St_Thomas",
+      "primary": "America/St_Thomas",
+      "identifier_offset": 13360,
+      "primary_offset": 13360,
+      "offset": 213267,
+      "length": 148,
+      "sha256": "5b1f38380e227d9d815400286437a6fbdd8ef838e724683db5f4655a6f351553"
+    },
+    {
+      "identifier": "America/St_Vincent",
+      "primary": "America/St_Vincent",
+      "identifier_offset": 13378,
+      "primary_offset": 13378,
+      "offset": 213415,
+      "length": 182,
+      "sha256": "3549bddd8952b7e47d6a5d04d501d522521e3380e3b04e864cf13b661f5ffdef"
+    },
+    {
+      "identifier": "America/Swift_Current",
+      "primary": "America/Swift_Current",
+      "identifier_offset": 13397,
+      "primary_offset": 13397,
+      "offset": 213597,
+      "length": 560,
+      "sha256": "45128e17bbd90bc56f6310fc3cfe09d7f8543dac8a04fecbbbcd1abd191f3c36"
+    },
+    {
+      "identifier": "America/Tegucigalpa",
+      "primary": "America/Tegucigalpa",
+      "identifier_offset": 13419,
+      "primary_offset": 13419,
+      "offset": 214157,
+      "length": 252,
+      "sha256": "1333b3ee7b5396b78cabaf4967609c01bf0fb3df15f5b50c378f34b693c8cb0e"
+    },
+    {
+      "identifier": "America/Thule",
+      "primary": "America/Thule",
+      "identifier_offset": 13439,
+      "primary_offset": 13439,
+      "offset": 214409,
+      "length": 1502,
+      "sha256": "f31b8f45a654f1180ee440aa1581d89a71e2a1cf35b0139a8a5915bbc634da2f"
+    },
+    {
+      "identifier": "America/Thunder_Bay",
+      "primary": "America/Toronto",
+      "identifier_offset": 13453,
+      "primary_offset": 13489,
+      "offset": 164834,
+      "length": 3494,
+      "sha256": "a587a1a1607439f7bac283e1815f2bdbafb9649a453d18e06c2e44e6996d888f"
+    },
+    {
+      "identifier": "America/Tijuana",
+      "primary": "America/Tijuana",
+      "identifier_offset": 13473,
+      "primary_offset": 13473,
+      "offset": 94691,
+      "length": 2906,
+      "sha256": "8c2e7b321726e6345912da396796bdb3672bfc4bd1a91c65ee58b38e004d4ca5"
+    },
+    {
+      "identifier": "America/Toronto",
+      "primary": "America/Toronto",
+      "identifier_offset": 13489,
+      "primary_offset": 13489,
+      "offset": 164834,
+      "length": 3494,
+      "sha256": "a587a1a1607439f7bac283e1815f2bdbafb9649a453d18e06c2e44e6996d888f"
+    },
+    {
+      "identifier": "America/Tortola",
+      "primary": "America/Tortola",
+      "identifier_offset": 13505,
+      "primary_offset": 13505,
+      "offset": 215911,
+      "length": 148,
+      "sha256": "2630eeb7e722f660ef4df14899437b18d2cbc092f66304427c0538257a08bda2"
+    },
+    {
+      "identifier": "America/Vancouver",
+      "primary": "America/Vancouver",
+      "identifier_offset": 13521,
+      "primary_offset": 13521,
+      "offset": 216059,
+      "length": 2590,
+      "sha256": "e182e20ec67c46a7dd0aedb3d45fb1395edcb14ff2af2ac694a5776b307bed31"
+    },
+    {
+      "identifier": "America/Virgin",
+      "primary": "America/St_Thomas",
+      "identifier_offset": 13539,
+      "primary_offset": 13360,
+      "offset": 213267,
+      "length": 148,
+      "sha256": "5b1f38380e227d9d815400286437a6fbdd8ef838e724683db5f4655a6f351553"
+    },
+    {
+      "identifier": "America/Whitehorse",
+      "primary": "America/Whitehorse",
+      "identifier_offset": 13554,
+      "primary_offset": 13554,
+      "offset": 218649,
+      "length": 1614,
+      "sha256": "4eb47a3c29d81be9920a504ca21aa53fcaa76215cc52cc9d23e2feaae5c5c723"
+    },
+    {
+      "identifier": "America/Winnipeg",
+      "primary": "America/Winnipeg",
+      "identifier_offset": 13573,
+      "primary_offset": 13573,
+      "offset": 191647,
+      "length": 2566,
+      "sha256": "4cbeda42e9c21c0e3b8017248071bbd194136350581e3c71ee3312c0f6ddb383"
+    },
+    {
+      "identifier": "America/Yakutat",
+      "primary": "America/Yakutat",
+      "identifier_offset": 13590,
+      "primary_offset": 13590,
+      "offset": 220263,
+      "length": 2305,
+      "sha256": "bba6f211a06eba4abf0cc777414ef41431e634bd72573b13caadd61a24b873f6"
+    },
+    {
+      "identifier": "America/Yellowknife",
+      "primary": "America/Edmonton",
+      "identifier_offset": 13606,
+      "primary_offset": 11508,
+      "offset": 91795,
+      "length": 2030,
+      "sha256": "b5e3d3820009abc262c82a3ebfa9261dd12fc210f77322ef121067b040866587"
+    },
+    {
+      "identifier": "Antarctica/Casey",
+      "primary": "Antarctica/Casey",
+      "identifier_offset": 13626,
+      "primary_offset": 13626,
+      "offset": 222568,
+      "length": 423,
+      "sha256": "55e68b3b14df0f28df197ab9525f7924420c5cd587496fb4377c8ea12ed52be7"
+    },
+    {
+      "identifier": "Antarctica/Davis",
+      "primary": "Antarctica/Davis",
+      "identifier_offset": 13643,
+      "primary_offset": 13643,
+      "offset": 222991,
+      "length": 283,
+      "sha256": "5c1d76744ab443edd793304d4cd0bb1b57f31fe5b1c5cb48b99a88df3a7cca92"
+    },
+    {
+      "identifier": "Antarctica/DumontDUrville",
+      "primary": "Antarctica/DumontDUrville",
+      "identifier_offset": 13660,
+      "primary_offset": 13660,
+      "offset": 223274,
+      "length": 180,
+      "sha256": "bb609a35ef45882fcaa9d546b9d46cf558149238c53bac702a16b248da182a33"
+    },
+    {
+      "identifier": "Antarctica/Macquarie",
+      "primary": "Antarctica/Macquarie",
+      "identifier_offset": 13686,
+      "primary_offset": 13686,
+      "offset": 223454,
+      "length": 2260,
+      "sha256": "89eed195a53c4474e8ad5563f8c5fc4ad28cab1fe85dfe141f63d4aa9cdcc1ed"
+    },
+    {
+      "identifier": "Antarctica/Mawson",
+      "primary": "Antarctica/Mawson",
+      "identifier_offset": 13707,
+      "primary_offset": 13707,
+      "offset": 225714,
+      "length": 185,
+      "sha256": "1232056ea45daf664905a2355efa16469b679d6d4b16b961c9dc430ee2108d22"
+    },
+    {
+      "identifier": "Antarctica/McMurdo",
+      "primary": "Antarctica/McMurdo",
+      "identifier_offset": 13725,
+      "primary_offset": 13725,
+      "offset": 225899,
+      "length": 1993,
+      "sha256": "bfcb3bf057d9b44e1c5fab524e1493c8c05f24fcd78785de5ec9a06e9733a322"
+    },
+    {
+      "identifier": "Antarctica/Palmer",
+      "primary": "Antarctica/Palmer",
+      "identifier_offset": 13744,
+      "primary_offset": 13744,
+      "offset": 227892,
+      "length": 1404,
+      "sha256": "1d3658d0cf2d77ba14c794443e04421eea8a8395777e32448b895804d2f812d8"
+    },
+    {
+      "identifier": "Antarctica/Rothera",
+      "primary": "Antarctica/Rothera",
+      "identifier_offset": 13762,
+      "primary_offset": 13762,
+      "offset": 229296,
+      "length": 150,
+      "sha256": "ffd358f9ff2f928cd062b8db5073f96237080a0d3e2eec80f4f9c878ad76dd15"
+    },
+    {
+      "identifier": "Antarctica/South_Pole",
+      "primary": "Antarctica/McMurdo",
+      "identifier_offset": 13781,
+      "primary_offset": 13725,
+      "offset": 225899,
+      "length": 1993,
+      "sha256": "bfcb3bf057d9b44e1c5fab524e1493c8c05f24fcd78785de5ec9a06e9733a322"
+    },
+    {
+      "identifier": "Antarctica/Syowa",
+      "primary": "Antarctica/Syowa",
+      "identifier_offset": 13803,
+      "primary_offset": 13803,
+      "offset": 229446,
+      "length": 151,
+      "sha256": "505c1d07be893222938513db045c0cd92e2bc8cd9c4daded545f8e6248b59caa"
+    },
+    {
+      "identifier": "Antarctica/Troll",
+      "primary": "Antarctica/Troll",
+      "identifier_offset": 13820,
+      "primary_offset": 13820,
+      "offset": 229597,
+      "length": 1148,
+      "sha256": "7e3718a69c2bd459e312cb1e7be44b806380373a14c9f8ec7be4462b8e8f4761"
+    },
+    {
+      "identifier": "Antarctica/Vostok",
+      "primary": "Antarctica/Vostok",
+      "identifier_offset": 13837,
+      "primary_offset": 13837,
+      "offset": 230745,
+      "length": 213,
+      "sha256": "29f7edc1dccae8f90c0f3d1df83df3e0728806063d2aab2a1e74e7aac3ccad48"
+    },
+    {
+      "identifier": "Arctic/Longyearbyen",
+      "primary": "Arctic/Longyearbyen",
+      "identifier_offset": 13855,
+      "primary_offset": 13855,
+      "offset": 230958,
+      "length": 2298,
+      "sha256": "5ee475f71a0fc1a32faeb849f8c39c6e7aa66d6d41ec742b97b3a7436b3b0701"
+    },
+    {
+      "identifier": "Asia/Aden",
+      "primary": "Asia/Aden",
+      "identifier_offset": 13875,
+      "primary_offset": 13875,
+      "offset": 233256,
+      "length": 151,
+      "sha256": "96a3ebcde1fc338ef6911805551c31d7f16f271fa27e8d0fe68421dba876e898"
+    },
+    {
+      "identifier": "Asia/Almaty",
+      "primary": "Asia/Almaty",
+      "identifier_offset": 13885,
+      "primary_offset": 13885,
+      "offset": 233407,
+      "length": 983,
+      "sha256": "94f2d65e4d9fd66598450645908aeaff91e486872c5018acd0cfb285d0c77014"
+    },
+    {
+      "identifier": "Asia/Amman",
+      "primary": "Asia/Amman",
+      "identifier_offset": 13897,
+      "primary_offset": 13897,
+      "offset": 234390,
+      "length": 1433,
+      "sha256": "42fe1c5d7c3b28141613cf367208f4923437c21d6fa55d68ac9dafd898f1af65"
+    },
+    {
+      "identifier": "Asia/Anadyr",
+      "primary": "Asia/Anadyr",
+      "identifier_offset": 13908,
+      "primary_offset": 13908,
+      "offset": 235823,
+      "length": 1174,
+      "sha256": "5aa2a71e8e481d2599d3c776b12e72b47b6fd0c40ca1cccfdd6f736c30eb6d85"
+    },
+    {
+      "identifier": "Asia/Aqtau",
+      "primary": "Asia/Aqtau",
+      "identifier_offset": 13920,
+      "primary_offset": 13920,
+      "offset": 236997,
+      "length": 969,
+      "sha256": "e27eb9e0566d0ecb1749f850b338d91b93a6b5b136ce8d4a6e259c62b149834d"
+    },
+    {
+      "identifier": "Asia/Aqtobe",
+      "primary": "Asia/Aqtobe",
+      "identifier_offset": 13931,
+      "primary_offset": 13931,
+      "offset": 237966,
+      "length": 997,
+      "sha256": "d681474dbfb26dc4ea2d79b4af564e5607583131e51a836cf8f82fbb1e747771"
+    },
+    {
+      "identifier": "Asia/Ashgabat",
+      "primary": "Asia/Ashgabat",
+      "identifier_offset": 13943,
+      "primary_offset": 13943,
+      "offset": 238963,
+      "length": 605,
+      "sha256": "fac7c69d1ba68a8eff06cf30f581f8c510d6823077c01796edcd02e7a42a93ae"
+    },
+    {
+      "identifier": "Asia/Ashkhabad",
+      "primary": "Asia/Ashgabat",
+      "identifier_offset": 13957,
+      "primary_offset": 13943,
+      "offset": 238963,
+      "length": 605,
+      "sha256": "fac7c69d1ba68a8eff06cf30f581f8c510d6823077c01796edcd02e7a42a93ae"
+    },
+    {
+      "identifier": "Asia/Atyrau",
+      "primary": "Asia/Atyrau",
+      "identifier_offset": 13972,
+      "primary_offset": 13972,
+      "offset": 239568,
+      "length": 977,
+      "sha256": "fd4f02394204f671bf1ca75d644d50d2c3eecf7accc1f8f099f9d50d8fef4a68"
+    },
+    {
+      "identifier": "Asia/Baghdad",
+      "primary": "Asia/Baghdad",
+      "identifier_offset": 13984,
+      "primary_offset": 13984,
+      "offset": 240545,
+      "length": 969,
+      "sha256": "4bea65288e3308ba88d22746001124de84536b3372ac88f64fdf3e12d5ad643f"
+    },
+    {
+      "identifier": "Asia/Bahrain",
+      "primary": "Asia/Bahrain",
+      "identifier_offset": 13997,
+      "primary_offset": 13997,
+      "offset": 241514,
+      "length": 223,
+      "sha256": "94b760c3b4252e939ec05f7adc78b6b73a41bf790998285fc3b150ef692c39a3"
+    },
+    {
+      "identifier": "Asia/Baku",
+      "primary": "Asia/Baku",
+      "identifier_offset": 14010,
+      "primary_offset": 14010,
+      "offset": 241737,
+      "length": 1213,
+      "sha256": "ebf86af7c4861b48f4240f2a631f7a59c20c6522d6e30e3ad105e1fce33f71c8"
+    },
+    {
+      "identifier": "Asia/Bangkok",
+      "primary": "Asia/Bangkok",
+      "identifier_offset": 14020,
+      "primary_offset": 14020,
+      "offset": 242950,
+      "length": 185,
+      "sha256": "85fff93d57a041c1524bad028d2f340bb87e4c63ab7d0e27726f3737c5666649"
+    },
+    {
+      "identifier": "Asia/Barnaul",
+      "primary": "Asia/Barnaul",
+      "identifier_offset": 14033,
+      "primary_offset": 14033,
+      "offset": 243135,
+      "length": 1207,
+      "sha256": "df37948a62d332b219134bd7e971c5bc1dcca2a131a156c4e424a6e86574cdfd"
+    },
+    {
+      "identifier": "Asia/Beirut",
+      "primary": "Asia/Beirut",
+      "identifier_offset": 14046,
+      "primary_offset": 14046,
+      "offset": 244342,
+      "length": 2154,
+      "sha256": "fd9ff664083f88bf6f539d490c1f02074e2e5c10eb7f590b222b3e2675da4b6a"
+    },
+    {
+      "identifier": "Asia/Bishkek",
+      "primary": "Asia/Bishkek",
+      "identifier_offset": 14058,
+      "primary_offset": 14058,
+      "offset": 246496,
+      "length": 969,
+      "sha256": "20ea14ca300120b0a45eed6b8c222a4b002e7d16059257396000b88dd855c3a4"
+    },
+    {
+      "identifier": "Asia/Brunei",
+      "primary": "Asia/Brunei",
+      "identifier_offset": 14071,
+      "primary_offset": 14071,
+      "offset": 247465,
+      "length": 189,
+      "sha256": "36cc4dc9f07f0bd5cad91a69715752f6a981a7108f2d5d00da0453e7b880bf2c"
+    },
+    {
+      "identifier": "Asia/Calcutta",
+      "primary": "Asia/Kolkata",
+      "identifier_offset": 14083,
+      "primary_offset": 14493,
+      "offset": 247654,
+      "length": 285,
+      "sha256": "e90c341036cb7203200e293cb3b513267e104a39a594f35e195254e6bc0a17cf"
+    },
+    {
+      "identifier": "Asia/Chita",
+      "primary": "Asia/Chita",
+      "identifier_offset": 14097,
+      "primary_offset": 14097,
+      "offset": 247939,
+      "length": 1207,
+      "sha256": "2db4a54b6decc0590035449c83cce4351d2298035635f388698777f476cb7484"
+    },
+    {
+      "identifier": "Asia/Choibalsan",
+      "primary": "Asia/Ulaanbaatar",
+      "identifier_offset": 14108,
+      "primary_offset": 15049,
+      "offset": 249146,
+      "length": 877,
+      "sha256": "a9491746c4dcfeeec1f7427150b4aeef2cca6c6b467ca71f10521ab063c2d9e7"
+    },
+    {
+      "identifier": "Asia/Chongqing",
+      "primary": "Asia/Shanghai",
+      "identifier_offset": 14124,
+      "primary_offset": 14870,
+      "offset": 250023,
+      "length": 561,
+      "sha256": "64ffc2e43a94435a043c040d1d3af7e92d031adc78e7737af1861baa4eeef3e6"
+    },
+    {
+      "identifier": "Asia/Chungking",
+      "primary": "Asia/Shanghai",
+      "identifier_offset": 14139,
+      "primary_offset": 14870,
+      "offset": 250023,
+      "length": 561,
+      "sha256": "64ffc2e43a94435a043c040d1d3af7e92d031adc78e7737af1861baa4eeef3e6"
+    },
+    {
+      "identifier": "Asia/Colombo",
+      "primary": "Asia/Colombo",
+      "identifier_offset": 14154,
+      "primary_offset": 14154,
+      "offset": 250584,
+      "length": 358,
+      "sha256": "c39d8bedb813e26e6172046e7af20f63cdf1cad7e406690b86728cc29d7a2ac6"
+    },
+    {
+      "identifier": "Asia/Dacca",
+      "primary": "Asia/Dhaka",
+      "identifier_offset": 14167,
+      "primary_offset": 14192,
+      "offset": 250942,
+      "length": 323,
+      "sha256": "fb1ba527629586f2a9eab9592ccc9da70ee85d58ab93eae2107fb5f35c4f139e"
+    },
+    {
+      "identifier": "Asia/Damascus",
+      "primary": "Asia/Damascus",
+      "identifier_offset": 14178,
+      "primary_offset": 14178,
+      "offset": 251265,
+      "length": 1873,
+      "sha256": "12d84685e6875a6cb922b2c273d3663378ef0124051edf13b01174ec8d6d81b8"
+    },
+    {
+      "identifier": "Asia/Dhaka",
+      "primary": "Asia/Dhaka",
+      "identifier_offset": 14192,
+      "primary_offset": 14192,
+      "offset": 250942,
+      "length": 323,
+      "sha256": "fb1ba527629586f2a9eab9592ccc9da70ee85d58ab93eae2107fb5f35c4f139e"
+    },
+    {
+      "identifier": "Asia/Dili",
+      "primary": "Asia/Dili",
+      "identifier_offset": 14203,
+      "primary_offset": 14203,
+      "offset": 253138,
+      "length": 257,
+      "sha256": "d80f6e166c12c28140e68d9e9352c0d2e72884f9cce368215af0fd0f94dd9c99"
+    },
+    {
+      "identifier": "Asia/Dubai",
+      "primary": "Asia/Dubai",
+      "identifier_offset": 14213,
+      "primary_offset": 14213,
+      "offset": 253395,
+      "length": 151,
+      "sha256": "a667613e16894702b038dbf18993467854880a3956cf263d265147bfe1fdba96"
+    },
+    {
+      "identifier": "Asia/Dushanbe",
+      "primary": "Asia/Dushanbe",
+      "identifier_offset": 14224,
+      "primary_offset": 14224,
+      "offset": 253546,
+      "length": 577,
+      "sha256": "9286279d85ae16c057775bc97d9b06769c276c51c4c2f9060664abaf1dca22cb"
+    },
+    {
+      "identifier": "Asia/Famagusta",
+      "primary": "Asia/Famagusta",
+      "identifier_offset": 14238,
+      "primary_offset": 14238,
+      "offset": 254123,
+      "length": 2028,
+      "sha256": "085adcca077cb9d7b9c7a384b5f33f0f0d0a607a31a4f3f3ab8e8aa075718e37"
+    },
+    {
+      "identifier": "Asia/Gaza",
+      "primary": "Asia/Gaza",
+      "identifier_offset": 14253,
+      "primary_offset": 14253,
+      "offset": 256151,
+      "length": 3844,
+      "sha256": "b7463171440be7754d2a729b2a28e7d0e13f31aaf21329e89da6ec7be893b73b"
+    },
+    {
+      "identifier": "Asia/Harbin",
+      "primary": "Asia/Shanghai",
+      "identifier_offset": 14263,
+      "primary_offset": 14870,
+      "offset": 250023,
+      "length": 561,
+      "sha256": "64ffc2e43a94435a043c040d1d3af7e92d031adc78e7737af1861baa4eeef3e6"
+    },
+    {
+      "identifier": "Asia/Hebron",
+      "primary": "Asia/Hebron",
+      "identifier_offset": 14275,
+      "primary_offset": 14275,
+      "offset": 259995,
+      "length": 3872,
+      "sha256": "e98d144872b1fb1a02c42aff5a90ae337a253f5bd41a7ceb7271a2c9015ca9d4"
+    },
+    {
+      "identifier": "Asia/Ho_Chi_Minh",
+      "primary": "Asia/Ho_Chi_Minh",
+      "identifier_offset": 14287,
+      "primary_offset": 14287,
+      "offset": 263867,
+      "length": 329,
+      "sha256": "104fb731857d439d5f3f42f1ab3a09c4e66cc7ed197c894ad70fa5c6e0803070"
+    },
+    {
+      "identifier": "Asia/Hong_Kong",
+      "primary": "Asia/Hong_Kong",
+      "identifier_offset": 14304,
+      "primary_offset": 14304,
+      "offset": 264196,
+      "length": 1233,
+      "sha256": "6a5fcee243e5ab92698242d88c4699ceb7208a22ee97d342d11e41ebd2555a17"
+    },
+    {
+      "identifier": "Asia/Hovd",
+      "primary": "Asia/Hovd",
+      "identifier_offset": 14319,
+      "primary_offset": 14319,
+      "offset": 265429,
+      "length": 877,
+      "sha256": "667e0f2c6943f944490ec6c2868af96ea593cee022976b5bac6256d23e532dbb"
+    },
+    {
+      "identifier": "Asia/Irkutsk",
+      "primary": "Asia/Irkutsk",
+      "identifier_offset": 14329,
+      "primary_offset": 14329,
+      "offset": 266306,
+      "length": 1229,
+      "sha256": "215ba85c2c1d788f8a2147c5904b7ac818ea60fdd5f464eb17efd62e77df1739"
+    },
+    {
+      "identifier": "Asia/Istanbul",
+      "primary": "Europe/Istanbul",
+      "identifier_offset": 14342,
+      "primary_offset": 16747,
+      "offset": 267535,
+      "length": 1933,
+      "sha256": "264e308e7743b5afee2d673c5b57567636dabc925bb0be513939996e856718a5"
+    },
+    {
+      "identifier": "Asia/Jakarta",
+      "primary": "Asia/Jakarta",
+      "identifier_offset": 14356,
+      "primary_offset": 14356,
+      "offset": 269468,
+      "length": 383,
+      "sha256": "4ef13306f4b37f314274eb0c019d10811f79240e717f790064e361cb98045d11"
+    },
+    {
+      "identifier": "Asia/Jayapura",
+      "primary": "Asia/Jayapura",
+      "identifier_offset": 14369,
+      "primary_offset": 14369,
+      "offset": 269851,
+      "length": 221,
+      "sha256": "8a1cd477e2fc1d456a1be35ad743323c4f986308d5163fb17abaa34cde04259b"
+    },
+    {
+      "identifier": "Asia/Jerusalem",
+      "primary": "Asia/Jerusalem",
+      "identifier_offset": 14383,
+      "primary_offset": 14383,
+      "offset": 270072,
+      "length": 2388,
+      "sha256": "254b964265b94e16b4a498f0eb543968dec25f4cf80fba29b3d38e4a775ae837"
+    },
+    {
+      "identifier": "Asia/Kabul",
+      "primary": "Asia/Kabul",
+      "identifier_offset": 14398,
+      "primary_offset": 14398,
+      "offset": 272460,
+      "length": 194,
+      "sha256": "25911ba3c6d28ff2fb1e75d49b68005253650af2654498459121c2839a378209"
+    },
+    {
+      "identifier": "Asia/Kamchatka",
+      "primary": "Asia/Kamchatka",
+      "identifier_offset": 14409,
+      "primary_offset": 14409,
+      "offset": 272654,
+      "length": 1152,
+      "sha256": "298d4f949bd148d918ff9872241c63e430f079e61541a04ad396602f791d7026"
+    },
+    {
+      "identifier": "Asia/Karachi",
+      "primary": "Asia/Karachi",
+      "identifier_offset": 14424,
+      "primary_offset": 14424,
+      "offset": 273806,
+      "length": 379,
+      "sha256": "881fa658c4d75327c1c00919773f3f526130d31b20c48b9bf8a348eda9338649"
+    },
+    {
+      "identifier": "Asia/Kashgar",
+      "primary": "Asia/Urumqi",
+      "identifier_offset": 14437,
+      "primary_offset": 15082,
+      "offset": 274185,
+      "length": 151,
+      "sha256": "17564e759643b151f00c98a792c47e86372a3f3a8e963bddade648585ba52716"
+    },
+    {
+      "identifier": "Asia/Kathmandu",
+      "primary": "Asia/Kathmandu",
+      "identifier_offset": 14450,
+      "primary_offset": 14450,
+      "offset": 274336,
+      "length": 198,
+      "sha256": "fd1b1f79259b0abf24338611262ed7bfa8401221d6d7820586c5ec7e16cf8e83"
+    },
+    {
+      "identifier": "Asia/Katmandu",
+      "primary": "Asia/Kathmandu",
+      "identifier_offset": 14465,
+      "primary_offset": 14450,
+      "offset": 274336,
+      "length": 198,
+      "sha256": "fd1b1f79259b0abf24338611262ed7bfa8401221d6d7820586c5ec7e16cf8e83"
+    },
+    {
+      "identifier": "Asia/Khandyga",
+      "primary": "Asia/Khandyga",
+      "identifier_offset": 14479,
+      "primary_offset": 14479,
+      "offset": 274534,
+      "length": 1257,
+      "sha256": "6ca7e6c3a939a980d0b041c6dccbfe5588acdd8842795eea8a30f17f140d9ff8"
+    },
+    {
+      "identifier": "Asia/Kolkata",
+      "primary": "Asia/Kolkata",
+      "identifier_offset": 14493,
+      "primary_offset": 14493,
+      "offset": 247654,
+      "length": 285,
+      "sha256": "e90c341036cb7203200e293cb3b513267e104a39a594f35e195254e6bc0a17cf"
+    },
+    {
+      "identifier": "Asia/Krasnoyarsk",
+      "primary": "Asia/Krasnoyarsk",
+      "identifier_offset": 14506,
+      "primary_offset": 14506,
+      "offset": 275791,
+      "length": 1193,
+      "sha256": "0f9284ff5c16483d98762c43cbc9f72c135a025135ff2dd3597c3a36bc4528a0"
+    },
+    {
+      "identifier": "Asia/Kuala_Lumpur",
+      "primary": "Asia/Kuala_Lumpur",
+      "identifier_offset": 14523,
+      "primary_offset": 14523,
+      "offset": 276984,
+      "length": 401,
+      "sha256": "16c33d8c3ebac8eddde9149085d9224330539bad676a2f3ff34bc6d46703d24a"
+    },
+    {
+      "identifier": "Asia/Kuching",
+      "primary": "Asia/Kuching",
+      "identifier_offset": 14541,
+      "primary_offset": 14541,
+      "offset": 277385,
+      "length": 469,
+      "sha256": "0f9aadc9627f48cf1b4d0789248621aaaa23c6554a6eb142d4460c0d4f46cd74"
+    },
+    {
+      "identifier": "Asia/Kuwait",
+      "primary": "Asia/Kuwait",
+      "identifier_offset": 14554,
+      "primary_offset": 14554,
+      "offset": 277854,
+      "length": 151,
+      "sha256": "a65c6e8397449b5325d884f1d9e23ed765b2a2b98394e0010ef896e6648c653a"
+    },
+    {
+      "identifier": "Asia/Macao",
+      "primary": "Asia/Macau",
+      "identifier_offset": 14566,
+      "primary_offset": 14577,
+      "offset": 278005,
+      "length": 1227,
+      "sha256": "32f02447246cac0dabd39d88b65c85e5b8761617918c8d233f0834b88887d989"
+    },
+    {
+      "identifier": "Asia/Macau",
+      "primary": "Asia/Macau",
+      "identifier_offset": 14577,
+      "primary_offset": 14577,
+      "offset": 278005,
+      "length": 1227,
+      "sha256": "32f02447246cac0dabd39d88b65c85e5b8761617918c8d233f0834b88887d989"
+    },
+    {
+      "identifier": "Asia/Magadan",
+      "primary": "Asia/Magadan",
+      "identifier_offset": 14588,
+      "primary_offset": 14588,
+      "offset": 279232,
+      "length": 1208,
+      "sha256": "1dc704117050bcc98ba02fc913eccffcc94b019d5698d2d02df337b49b79e4ce"
+    },
+    {
+      "identifier": "Asia/Makassar",
+      "primary": "Asia/Makassar",
+      "identifier_offset": 14601,
+      "primary_offset": 14601,
+      "offset": 280440,
+      "length": 254,
+      "sha256": "3a126d0aa493114faee67d28a4154ee41bbec10cdc60fcbd4bfe9a02125780ec"
+    },
+    {
+      "identifier": "Asia/Manila",
+      "primary": "Asia/Manila",
+      "identifier_offset": 14615,
+      "primary_offset": 14615,
+      "offset": 280694,
+      "length": 422,
+      "sha256": "f314d21c542e615756dd385d36a896cd57ba16fef983fe6b4d061444bbf1ac9e"
+    },
+    {
+      "identifier": "Asia/Muscat",
+      "primary": "Asia/Muscat",
+      "identifier_offset": 14627,
+      "primary_offset": 14627,
+      "offset": 281116,
+      "length": 151,
+      "sha256": "4d08ca780545a5026472af7a37542e3efcbf96a6f6f1f0b44070aff23dacb99c"
+    },
+    {
+      "identifier": "Asia/Nicosia",
+      "primary": "Asia/Nicosia",
+      "identifier_offset": 14639,
+      "primary_offset": 14639,
+      "offset": 281267,
+      "length": 2002,
+      "sha256": "d149e6d08153ec7c86790ec5def4daffe9257f2b0282bba5a853ba043d699595"
+    },
+    {
+      "identifier": "Asia/Novokuznetsk",
+      "primary": "Asia/Novokuznetsk",
+      "identifier_offset": 14652,
+      "primary_offset": 14652,
+      "offset": 283269,
+      "length": 1151,
+      "sha256": "a72c71b5252d6037959859340a0f85df795a652d222ad75ef7f1899cbf5fd0a3"
+    },
+    {
+      "identifier": "Asia/Novosibirsk",
+      "primary": "Asia/Novosibirsk",
+      "identifier_offset": 14670,
+      "primary_offset": 14670,
+      "offset": 284420,
+      "length": 1207,
+      "sha256": "e4adbe1b1d794e19477e89725bce52e73444b4070c8de1c16162b813cc762dd6"
+    },
+    {
+      "identifier": "Asia/Omsk",
+      "primary": "Asia/Omsk",
+      "identifier_offset": 14687,
+      "primary_offset": 14687,
+      "offset": 285627,
+      "length": 1193,
+      "sha256": "1f25c8588b495c12951d4cd67103e2d4c99de992e6664f90851528f4abf65ce2"
+    },
+    {
+      "identifier": "Asia/Oral",
+      "primary": "Asia/Oral",
+      "identifier_offset": 14697,
+      "primary_offset": 14697,
+      "offset": 286820,
+      "length": 991,
+      "sha256": "5904f8a91982f5123f965f3307d16f9002fc7b319bf2aa2a59def9193942ee44"
+    },
+    {
+      "identifier": "Asia/Phnom_Penh",
+      "primary": "Asia/Phnom_Penh",
+      "identifier_offset": 14707,
+      "primary_offset": 14707,
+      "offset": 287811,
+      "length": 273,
+      "sha256": "c1f492d1407f752783915a596113190f29175ae0a9faf3cafcea2611f8c1fabc"
+    },
+    {
+      "identifier": "Asia/Pontianak",
+      "primary": "Asia/Pontianak",
+      "identifier_offset": 14723,
+      "primary_offset": 14723,
+      "offset": 288084,
+      "length": 353,
+      "sha256": "8a7397c2e2ad8cabf5cff7a588f65222a8d2b7ac21b6ec613de1b56298d4fc14"
+    },
+    {
+      "identifier": "Asia/Pyongyang",
+      "primary": "Asia/Pyongyang",
+      "identifier_offset": 14738,
+      "primary_offset": 14738,
+      "offset": 288437,
+      "length": 237,
+      "sha256": "ffe8371a70c0b5f0d7e17024b571fd8c5a2e2d40e63a8be78e839fbd1a540ec1"
+    },
+    {
+      "identifier": "Asia/Qatar",
+      "primary": "Asia/Qatar",
+      "identifier_offset": 14753,
+      "primary_offset": 14753,
+      "offset": 288674,
+      "length": 185,
+      "sha256": "c2494663758f1a9fb3d4e5306ff28e1f3453c019ddb7545f0e0f54b6db77e86e"
+    },
+    {
+      "identifier": "Asia/Qostanay",
+      "primary": "Asia/Qostanay",
+      "identifier_offset": 14764,
+      "primary_offset": 14764,
+      "offset": 288859,
+      "length": 1025,
+      "sha256": "1c88e59fc4083cd454e8c916cf23e2eaf0eb8e59956785f31717141ed5cc8bbb"
+    },
+    {
+      "identifier": "Asia/Qyzylorda",
+      "primary": "Asia/Qyzylorda",
+      "identifier_offset": 14778,
+      "primary_offset": 14778,
+      "offset": 289884,
+      "length": 1011,
+      "sha256": "2592cd37a36e2e4a9a5847956826625bf80be81ac814bf65afae622bb9b254f8"
+    },
+    {
+      "identifier": "Asia/Rangoon",
+      "primary": "Asia/Yangon",
+      "identifier_offset": 14793,
+      "primary_offset": 15153,
+      "offset": 290895,
+      "length": 254,
+      "sha256": "fd81c04aae19e5871420b21d844ce0dbb0862f36ab5073c31ecd438f44203463"
+    },
+    {
+      "identifier": "Asia/Riyadh",
+      "primary": "Asia/Riyadh",
+      "identifier_offset": 14806,
+      "primary_offset": 14806,
+      "offset": 291149,
+      "length": 151,
+      "sha256": "a02287eee69f37c475a3e8a35c6a13e54d49671c2fa0bcc9bbfd82ab28b68543"
+    },
+    {
+      "identifier": "Asia/Saigon",
+      "primary": "Asia/Ho_Chi_Minh",
+      "identifier_offset": 14818,
+      "primary_offset": 14287,
+      "offset": 263867,
+      "length": 329,
+      "sha256": "104fb731857d439d5f3f42f1ab3a09c4e66cc7ed197c894ad70fa5c6e0803070"
+    },
+    {
+      "identifier": "Asia/Sakhalin",
+      "primary": "Asia/Sakhalin",
+      "identifier_offset": 14830,
+      "primary_offset": 14830,
+      "offset": 291300,
+      "length": 1188,
+      "sha256": "c73028afcda28407bec971300ba39688cce8f5be99fa8425dfd348914e4785bb"
+    },
+    {
+      "identifier": "Asia/Samarkand",
+      "primary": "Asia/Samarkand",
+      "identifier_offset": 14844,
+      "primary_offset": 14844,
+      "offset": 292488,
+      "length": 563,
+      "sha256": "cc929246dde512f77a42f83d6f8f500323b87132725674cac8f61ccae7691f19"
+    },
+    {
+      "identifier": "Asia/Seoul",
+      "primary": "Asia/Seoul",
+      "identifier_offset": 14859,
+      "primary_offset": 14859,
+      "offset": 293051,
+      "length": 617,
+      "sha256": "2c8f4bb15dd77090b497e2a841ff3323ecbbae4f9dbb9edead2f8dd8fb5d8bb4"
+    },
+    {
+      "identifier": "Asia/Shanghai",
+      "primary": "Asia/Shanghai",
+      "identifier_offset": 14870,
+      "primary_offset": 14870,
+      "offset": 250023,
+      "length": 561,
+      "sha256": "64ffc2e43a94435a043c040d1d3af7e92d031adc78e7737af1861baa4eeef3e6"
+    },
+    {
+      "identifier": "Asia/Singapore",
+      "primary": "Asia/Singapore",
+      "identifier_offset": 14884,
+      "primary_offset": 14884,
+      "offset": 293668,
+      "length": 401,
+      "sha256": "5e67952267aa709f212739bb4e302d8b59d6240c5ac0eaaaee32330e71d7da12"
+    },
+    {
+      "identifier": "Asia/Srednekolymsk",
+      "primary": "Asia/Srednekolymsk",
+      "identifier_offset": 14899,
+      "primary_offset": 14899,
+      "offset": 294069,
+      "length": 1194,
+      "sha256": "79f69a4fc8851eb71c729f9564a34cbed4ee3cb3631b957d247e4a287847dd22"
+    },
+    {
+      "identifier": "Asia/Taipei",
+      "primary": "Asia/Taipei",
+      "identifier_offset": 14918,
+      "primary_offset": 14918,
+      "offset": 295263,
+      "length": 761,
+      "sha256": "0cc990c0ea4faa5db9b9edcd7fcbc028a4f87a6d3a0f567dac76cb222b718b19"
+    },
+    {
+      "identifier": "Asia/Tashkent",
+      "primary": "Asia/Tashkent",
+      "identifier_offset": 14930,
+      "primary_offset": 14930,
+      "offset": 296024,
+      "length": 577,
+      "sha256": "6a944fcb6e757d2472fe2c6c83704e64d9946c774ef3a3f9f8f7600b55f0b3b5"
+    },
+    {
+      "identifier": "Asia/Tbilisi",
+      "primary": "Asia/Tbilisi",
+      "identifier_offset": 14944,
+      "primary_offset": 14944,
+      "offset": 296601,
+      "length": 1007,
+      "sha256": "7d3d348baa1b893b23089d35781696b9147d07034fcca02a2cc3b5fd6557f04b"
+    },
+    {
+      "identifier": "Asia/Tehran",
+      "primary": "Asia/Tehran",
+      "identifier_offset": 14957,
+      "primary_offset": 14957,
+      "offset": 297608,
+      "length": 1248,
+      "sha256": "30095335232a07c7181a1ced11b253f3912069845b8f43ea5f897d24349cd0ce"
+    },
+    {
+      "identifier": "Asia/Tel_Aviv",
+      "primary": "Asia/Jerusalem",
+      "identifier_offset": 14969,
+      "primary_offset": 14383,
+      "offset": 270072,
+      "length": 2388,
+      "sha256": "254b964265b94e16b4a498f0eb543968dec25f4cf80fba29b3d38e4a775ae837"
+    },
+    {
+      "identifier": "Asia/Thimbu",
+      "primary": "Asia/Thimphu",
+      "identifier_offset": 14983,
+      "primary_offset": 14995,
+      "offset": 298856,
+      "length": 189,
+      "sha256": "1b69d341510c98a956b7407be3f7d400beca437600bbffc9e87722898b362325"
+    },
+    {
+      "identifier": "Asia/Thimphu",
+      "primary": "Asia/Thimphu",
+      "identifier_offset": 14995,
+      "primary_offset": 14995,
+      "offset": 298856,
+      "length": 189,
+      "sha256": "1b69d341510c98a956b7407be3f7d400beca437600bbffc9e87722898b362325"
+    },
+    {
+      "identifier": "Asia/Tokyo",
+      "primary": "Asia/Tokyo",
+      "identifier_offset": 15008,
+      "primary_offset": 15008,
+      "offset": 299045,
+      "length": 309,
+      "sha256": "a02b9e66044dc5c35c5f76467627fdcba4aee1cc958606b85c777095cad82ceb"
+    },
+    {
+      "identifier": "Asia/Tomsk",
+      "primary": "Asia/Tomsk",
+      "identifier_offset": 15019,
+      "primary_offset": 15019,
+      "offset": 299354,
+      "length": 1207,
+      "sha256": "72bd142d981606741fcc38897989aaa40ed7a39411ceeaefac7b2b6d9b2784e4"
+    },
+    {
+      "identifier": "Asia/Ujung_Pandang",
+      "primary": "Asia/Makassar",
+      "identifier_offset": 15030,
+      "primary_offset": 14601,
+      "offset": 280440,
+      "length": 254,
+      "sha256": "3a126d0aa493114faee67d28a4154ee41bbec10cdc60fcbd4bfe9a02125780ec"
+    },
+    {
+      "identifier": "Asia/Ulaanbaatar",
+      "primary": "Asia/Ulaanbaatar",
+      "identifier_offset": 15049,
+      "primary_offset": 15049,
+      "offset": 249146,
+      "length": 877,
+      "sha256": "a9491746c4dcfeeec1f7427150b4aeef2cca6c6b467ca71f10521ab063c2d9e7"
+    },
+    {
+      "identifier": "Asia/Ulan_Bator",
+      "primary": "Asia/Ulaanbaatar",
+      "identifier_offset": 15066,
+      "primary_offset": 15049,
+      "offset": 249146,
+      "length": 877,
+      "sha256": "a9491746c4dcfeeec1f7427150b4aeef2cca6c6b467ca71f10521ab063c2d9e7"
+    },
+    {
+      "identifier": "Asia/Urumqi",
+      "primary": "Asia/Urumqi",
+      "identifier_offset": 15082,
+      "primary_offset": 15082,
+      "offset": 274185,
+      "length": 151,
+      "sha256": "17564e759643b151f00c98a792c47e86372a3f3a8e963bddade648585ba52716"
+    },
+    {
+      "identifier": "Asia/Ust-Nera",
+      "primary": "Asia/Ust-Nera",
+      "identifier_offset": 15094,
+      "primary_offset": 15094,
+      "offset": 300561,
+      "length": 1238,
+      "sha256": "cec1bc9209f0d0572ce4dd96c0d4d59af5a44e5a707fb3a8f32ebc1dc5e3632c"
+    },
+    {
+      "identifier": "Asia/Vientiane",
+      "primary": "Asia/Vientiane",
+      "identifier_offset": 15108,
+      "primary_offset": 15108,
+      "offset": 301799,
+      "length": 301,
+      "sha256": "7c7008302a510dc8d17ab82fddb164fea31ce06b89c49731295765c23118f35a"
+    },
+    {
+      "identifier": "Asia/Vladivostok",
+      "primary": "Asia/Vladivostok",
+      "identifier_offset": 15123,
+      "primary_offset": 15123,
+      "offset": 302100,
+      "length": 1194,
+      "sha256": "5cc40b321e523db23a0b847750ee0a85b9c6e2159590735e7730907aac4593a0"
+    },
+    {
+      "identifier": "Asia/Yakutsk",
+      "primary": "Asia/Yakutsk",
+      "identifier_offset": 15140,
+      "primary_offset": 15140,
+      "offset": 303294,
+      "length": 1193,
+      "sha256": "3cf36b446820f6379f39433ee8cf17a9a226f8495f991652580b5218a2f33574"
+    },
+    {
+      "identifier": "Asia/Yangon",
+      "primary": "Asia/Yangon",
+      "identifier_offset": 15153,
+      "primary_offset": 15153,
+      "offset": 290895,
+      "length": 254,
+      "sha256": "fd81c04aae19e5871420b21d844ce0dbb0862f36ab5073c31ecd438f44203463"
+    },
+    {
+      "identifier": "Asia/Yekaterinburg",
+      "primary": "Asia/Yekaterinburg",
+      "identifier_offset": 15165,
+      "primary_offset": 15165,
+      "offset": 304487,
+      "length": 1229,
+      "sha256": "e0dc845ba5e3af852c58f87adc720f2381ba193fed546d57920736c5bc068f30"
+    },
+    {
+      "identifier": "Asia/Yerevan",
+      "primary": "Asia/Yerevan",
+      "identifier_offset": 15184,
+      "primary_offset": 15184,
+      "offset": 305716,
+      "length": 1137,
+      "sha256": "14cd29500e0d6d35816ff0ac2792822d5acba0d99a77b9e304aa85ac9043a311"
+    },
+    {
+      "identifier": "Atlantic/Azores",
+      "primary": "Atlantic/Azores",
+      "identifier_offset": 15197,
+      "primary_offset": 15197,
+      "offset": 306853,
+      "length": 3442,
+      "sha256": "eba843c5a2bcc459e4b4b32ba4dc640f8af58069214be3c4a657aec33b86440d"
+    },
+    {
+      "identifier": "Atlantic/Bermuda",
+      "primary": "Atlantic/Bermuda",
+      "identifier_offset": 15213,
+      "primary_offset": 15213,
+      "offset": 310295,
+      "length": 2396,
+      "sha256": "2cd18a7ccb2762fc089a34f2cd7acb84c3871c3bbba88ebb45b60d2afbc8d792"
+    },
+    {
+      "identifier": "Atlantic/Canary",
+      "primary": "Atlantic/Canary",
+      "identifier_offset": 15230,
+      "primary_offset": 15230,
+      "offset": 312691,
+      "length": 1897,
+      "sha256": "ca62bdb9faa986f3630cade1ce290de067e4711dd07820623cac9573a16395b0"
+    },
+    {
+      "identifier": "Atlantic/Cape_Verde",
+      "primary": "Atlantic/Cape_Verde",
+      "identifier_offset": 15246,
+      "primary_offset": 15246,
+      "offset": 314588,
+      "length": 256,
+      "sha256": "a3dda92dd2c55ff6fdbd48aadeb36971ae2dba920edddc7dacdae73dc03ce3be"
+    },
+    {
+      "identifier": "Atlantic/Faeroe",
+      "primary": "Atlantic/Faroe",
+      "identifier_offset": 15266,
+      "primary_offset": 15282,
+      "offset": 314844,
+      "length": 1815,
+      "sha256": "3626dd64f66d6a99d847f9b22199cc753692286b0e04682e8e3d3f4f636f033b"
+    },
+    {
+      "identifier": "Atlantic/Faroe",
+      "primary": "Atlantic/Faroe",
+      "identifier_offset": 15282,
+      "primary_offset": 15282,
+      "offset": 314844,
+      "length": 1815,
+      "sha256": "3626dd64f66d6a99d847f9b22199cc753692286b0e04682e8e3d3f4f636f033b"
+    },
+    {
+      "identifier": "Atlantic/Jan_Mayen",
+      "primary": "Arctic/Longyearbyen",
+      "identifier_offset": 15297,
+      "primary_offset": 13855,
+      "offset": 230958,
+      "length": 2298,
+      "sha256": "5ee475f71a0fc1a32faeb849f8c39c6e7aa66d6d41ec742b97b3a7436b3b0701"
+    },
+    {
+      "identifier": "Atlantic/Madeira",
+      "primary": "Atlantic/Madeira",
+      "identifier_offset": 15316,
+      "primary_offset": 15316,
+      "offset": 316659,
+      "length": 3377,
+      "sha256": "95863ce4c0b9f8650a1319b7e778b1c2d643c5ab186af4d35842efbf94572f11"
+    },
+    {
+      "identifier": "Atlantic/Reykjavik",
+      "primary": "Atlantic/Reykjavik",
+      "identifier_offset": 15333,
+      "primary_offset": 15333,
+      "offset": 320036,
+      "length": 1162,
+      "sha256": "99291a4411992de52b9bcf0478771a5a711ddf95a7f808361b5d07b48dc6d9f8"
+    },
+    {
+      "identifier": "Atlantic/South_Georgia",
+      "primary": "Atlantic/South_Georgia",
+      "identifier_offset": 15352,
+      "primary_offset": 15352,
+      "offset": 321198,
+      "length": 150,
+      "sha256": "23d48070f3ee9b2e977fd3fb760d9a135ea8c700c8ab2285aa29c94c2f97b203"
+    },
+    {
+      "identifier": "Atlantic/St_Helena",
+      "primary": "Atlantic/St_Helena",
+      "identifier_offset": 15375,
+      "primary_offset": 15375,
+      "offset": 321348,
+      "length": 182,
+      "sha256": "a6dfe04a0d3889bca9b71df65370184b41c8a83efb4eb1222da544478d0f6d5d"
+    },
+    {
+      "identifier": "Atlantic/Stanley",
+      "primary": "Atlantic/Stanley",
+      "identifier_offset": 15394,
+      "primary_offset": 15394,
+      "offset": 321530,
+      "length": 1200,
+      "sha256": "b221235d302e4ee9bfe171ad4bdf0c044df85d6ff9c605d28445f938c9d2163a"
+    },
+    {
+      "identifier": "Australia/ACT",
+      "primary": "Australia/Sydney",
+      "identifier_offset": 15411,
+      "primary_offset": 15727,
+      "offset": 322730,
+      "length": 2190,
+      "sha256": "42c3857585b16db2f8ffd47ba19faa60f473340de8d4fe9320ea7be861605906"
+    },
+    {
+      "identifier": "Australia/Adelaide",
+      "primary": "Australia/Adelaide",
+      "identifier_offset": 15425,
+      "primary_offset": 15425,
+      "offset": 324920,
+      "length": 2208,
+      "sha256": "95dd846f153be6856098f7bbd37cfe23a6aa2e0d0a9afeb665c086ce44f9476d"
+    },
+    {
+      "identifier": "Australia/Brisbane",
+      "primary": "Australia/Brisbane",
+      "identifier_offset": 15444,
+      "primary_offset": 15444,
+      "offset": 327128,
+      "length": 419,
+      "sha256": "796e90cf37b6b74faca5e2669afb7524ccdb91269d20a744f385c773b254b467"
+    },
+    {
+      "identifier": "Australia/Broken_Hill",
+      "primary": "Australia/Broken_Hill",
+      "identifier_offset": 15463,
+      "primary_offset": 15463,
+      "offset": 327547,
+      "length": 2229,
+      "sha256": "de4ff79634ef4b91927e8ed787ac3bd54811dda03060f06c9c227e9a51180aa4"
+    },
+    {
+      "identifier": "Australia/Canberra",
+      "primary": "Australia/Sydney",
+      "identifier_offset": 15485,
+      "primary_offset": 15727,
+      "offset": 322730,
+      "length": 2190,
+      "sha256": "42c3857585b16db2f8ffd47ba19faa60f473340de8d4fe9320ea7be861605906"
+    },
+    {
+      "identifier": "Australia/Currie",
+      "primary": "Australia/Hobart",
+      "identifier_offset": 15504,
+      "primary_offset": 15554,
+      "offset": 329776,
+      "length": 2358,
+      "sha256": "18b412ce021fb16c4ebe628eae1a5fa1f5aa20d41fea1dfa358cb799caba81c8"
+    },
+    {
+      "identifier": "Australia/Darwin",
+      "primary": "Australia/Darwin",
+      "identifier_offset": 15521,
+      "primary_offset": 15521,
+      "offset": 332134,
+      "length": 325,
+      "sha256": "7e7d08661216f7c1409f32e283efc606d5b92c0e788da8dd79e533838b421afa"
+    },
+    {
+      "identifier": "Australia/Eucla",
+      "primary": "Australia/Eucla",
+      "identifier_offset": 15538,
+      "primary_offset": 15538,
+      "offset": 332459,
+      "length": 456,
+      "sha256": "8b5f97186f08e84d1d5c8756185e039647c32d686203127fde0329b7e9e6feee"
+    },
+    {
+      "identifier": "Australia/Hobart",
+      "primary": "Australia/Hobart",
+      "identifier_offset": 15554,
+      "primary_offset": 15554,
+      "offset": 329776,
+      "length": 2358,
+      "sha256": "18b412ce021fb16c4ebe628eae1a5fa1f5aa20d41fea1dfa358cb799caba81c8"
+    },
+    {
+      "identifier": "Australia/LHI",
+      "primary": "Australia/Lord_Howe",
+      "identifier_offset": 15571,
+      "primary_offset": 15604,
+      "offset": 332915,
+      "length": 1846,
+      "sha256": "a323c5433991a963eb497b7da4d1d09848bf3ef5f5d64d9c9649f388e4bab9df"
+    },
+    {
+      "identifier": "Australia/Lindeman",
+      "primary": "Australia/Lindeman",
+      "identifier_offset": 15585,
+      "primary_offset": 15585,
+      "offset": 334761,
+      "length": 475,
+      "sha256": "c4ce94771db6a0b3682d1d58ec64211ce628bfc9f0df140daa073f35543624ae"
+    },
+    {
+      "identifier": "Australia/Lord_Howe",
+      "primary": "Australia/Lord_Howe",
+      "identifier_offset": 15604,
+      "primary_offset": 15604,
+      "offset": 332915,
+      "length": 1846,
+      "sha256": "a323c5433991a963eb497b7da4d1d09848bf3ef5f5d64d9c9649f388e4bab9df"
+    },
+    {
+      "identifier": "Australia/Melbourne",
+      "primary": "Australia/Melbourne",
+      "identifier_offset": 15624,
+      "primary_offset": 15624,
+      "offset": 335236,
+      "length": 2190,
+      "sha256": "96fc7f31072e9cc73abb6b2622b97c5f8dbb6cbb17be3920a4249d8d80933413"
+    },
+    {
+      "identifier": "Australia/NSW",
+      "primary": "Australia/Sydney",
+      "identifier_offset": 15644,
+      "primary_offset": 15727,
+      "offset": 322730,
+      "length": 2190,
+      "sha256": "42c3857585b16db2f8ffd47ba19faa60f473340de8d4fe9320ea7be861605906"
+    },
+    {
+      "identifier": "Australia/North",
+      "primary": "Australia/Darwin",
+      "identifier_offset": 15658,
+      "primary_offset": 15521,
+      "offset": 332134,
+      "length": 325,
+      "sha256": "7e7d08661216f7c1409f32e283efc606d5b92c0e788da8dd79e533838b421afa"
+    },
+    {
+      "identifier": "Australia/Perth",
+      "primary": "Australia/Perth",
+      "identifier_offset": 15674,
+      "primary_offset": 15674,
+      "offset": 337426,
+      "length": 446,
+      "sha256": "025d4339487853fa1f3144127959734b20f7c7b4948cff5d72149a0541a67968"
+    },
+    {
+      "identifier": "Australia/Queensland",
+      "primary": "Australia/Brisbane",
+      "identifier_offset": 15690,
+      "primary_offset": 15444,
+      "offset": 327128,
+      "length": 419,
+      "sha256": "796e90cf37b6b74faca5e2669afb7524ccdb91269d20a744f385c773b254b467"
+    },
+    {
+      "identifier": "Australia/South",
+      "primary": "Australia/Adelaide",
+      "identifier_offset": 15711,
+      "primary_offset": 15425,
+      "offset": 324920,
+      "length": 2208,
+      "sha256": "95dd846f153be6856098f7bbd37cfe23a6aa2e0d0a9afeb665c086ce44f9476d"
+    },
+    {
+      "identifier": "Australia/Sydney",
+      "primary": "Australia/Sydney",
+      "identifier_offset": 15727,
+      "primary_offset": 15727,
+      "offset": 322730,
+      "length": 2190,
+      "sha256": "42c3857585b16db2f8ffd47ba19faa60f473340de8d4fe9320ea7be861605906"
+    },
+    {
+      "identifier": "Australia/Tasmania",
+      "primary": "Australia/Hobart",
+      "identifier_offset": 15744,
+      "primary_offset": 15554,
+      "offset": 329776,
+      "length": 2358,
+      "sha256": "18b412ce021fb16c4ebe628eae1a5fa1f5aa20d41fea1dfa358cb799caba81c8"
+    },
+    {
+      "identifier": "Australia/Victoria",
+      "primary": "Australia/Melbourne",
+      "identifier_offset": 15763,
+      "primary_offset": 15624,
+      "offset": 335236,
+      "length": 2190,
+      "sha256": "96fc7f31072e9cc73abb6b2622b97c5f8dbb6cbb17be3920a4249d8d80933413"
+    },
+    {
+      "identifier": "Australia/West",
+      "primary": "Australia/Perth",
+      "identifier_offset": 15782,
+      "primary_offset": 15674,
+      "offset": 337426,
+      "length": 446,
+      "sha256": "025d4339487853fa1f3144127959734b20f7c7b4948cff5d72149a0541a67968"
+    },
+    {
+      "identifier": "Australia/Yancowinna",
+      "primary": "Australia/Broken_Hill",
+      "identifier_offset": 15797,
+      "primary_offset": 15463,
+      "offset": 327547,
+      "length": 2229,
+      "sha256": "de4ff79634ef4b91927e8ed787ac3bd54811dda03060f06c9c227e9a51180aa4"
+    },
+    {
+      "identifier": "Brazil/Acre",
+      "primary": "America/Rio_Branco",
+      "identifier_offset": 15818,
+      "primary_offset": 13105,
+      "offset": 188569,
+      "length": 614,
+      "sha256": "d20a49525e3a8506e9d0fe978f54b4340ac859e02bcaeb835e3b2576f0791871"
+    },
+    {
+      "identifier": "Brazil/DeNoronha",
+      "primary": "America/Noronha",
+      "identifier_offset": 15830,
+      "primary_offset": 12690,
+      "offset": 176783,
+      "length": 702,
+      "sha256": "7de7910228d0a8aca5660a9ef389ca86c14bc9c4f9cc8066ee62c8bddc86c38c"
+    },
+    {
+      "identifier": "Brazil/East",
+      "primary": "America/Sao_Paulo",
+      "identifier_offset": 15847,
+      "primary_offset": 13217,
+      "offset": 203588,
+      "length": 1430,
+      "sha256": "04c06744ee3fe078ef3b8b779e38eb30666bf993e67a092fcaf2fc28f63a64ce"
+    },
+    {
+      "identifier": "Brazil/West",
+      "primary": "America/Manaus",
+      "identifier_offset": 15859,
+      "primary_offset": 12350,
+      "offset": 148195,
+      "length": 590,
+      "sha256": "17a44b38e78e8bd972999890990f6947cb45a4f67a120b8d74f7ce73a0615c31"
+    },
+    {
+      "identifier": "CET",
+      "primary": "Europe/Brussels",
+      "identifier_offset": 15871,
+      "primary_offset": 16566,
+      "offset": 337872,
+      "length": 2933,
+      "sha256": "812f55aeb6e8cde9ddf4786e15eb4256b21e82cf5f5d28da1bad17d94570cac0"
+    },
+    {
+      "identifier": "CST6CDT",
+      "primary": "CST6CDT",
+      "identifier_offset": 15875,
+      "primary_offset": 15875,
+      "offset": 340805,
+      "length": 2248,
+      "sha256": "ab704feef157fc1533d519d9f9e712985b39fb29b4aad2fb0bb06e83177ba8b8"
+    },
+    {
+      "identifier": "Canada/Atlantic",
+      "primary": "America/Halifax",
+      "identifier_offset": 15883,
+      "primary_offset": 11793,
+      "offset": 112402,
+      "length": 3424,
+      "sha256": "4d9a667393f05a82df4df42843f6f7535ec113689529278d911d07a3c99b4e7f"
+    },
+    {
+      "identifier": "Canada/Central",
+      "primary": "America/Winnipeg",
+      "identifier_offset": 15899,
+      "primary_offset": 13573,
+      "offset": 191647,
+      "length": 2566,
+      "sha256": "4cbeda42e9c21c0e3b8017248071bbd194136350581e3c71ee3312c0f6ddb383"
+    },
+    {
+      "identifier": "Canada/Eastern",
+      "primary": "America/Toronto",
+      "identifier_offset": 15914,
+      "primary_offset": 13489,
+      "offset": 164834,
+      "length": 3494,
+      "sha256": "a587a1a1607439f7bac283e1815f2bdbafb9649a453d18e06c2e44e6996d888f"
+    },
+    {
+      "identifier": "Canada/Mountain",
+      "primary": "America/Edmonton",
+      "identifier_offset": 15929,
+      "primary_offset": 11508,
+      "offset": 91795,
+      "length": 2030,
+      "sha256": "b5e3d3820009abc262c82a3ebfa9261dd12fc210f77322ef121067b040866587"
+    },
+    {
+      "identifier": "Canada/Newfoundland",
+      "primary": "America/St_Johns",
+      "identifier_offset": 15945,
+      "primary_offset": 13309,
+      "offset": 209282,
+      "length": 3655,
+      "sha256": "af5fb5eee2afdbb799dc9b15930fc32d941ba3ac2f8eeb95bbb0b6a43b263a02"
+    },
+    {
+      "identifier": "Canada/Pacific",
+      "primary": "America/Vancouver",
+      "identifier_offset": 15965,
+      "primary_offset": 13521,
+      "offset": 216059,
+      "length": 2590,
+      "sha256": "e182e20ec67c46a7dd0aedb3d45fb1395edcb14ff2af2ac694a5776b307bed31"
+    },
+    {
+      "identifier": "Canada/Saskatchewan",
+      "primary": "America/Regina",
+      "identifier_offset": 15980,
+      "primary_offset": 13073,
+      "offset": 196981,
+      "length": 980,
+      "sha256": "ca3a93d3ca476c80987bcdc7f099ad68306f085a91bfb4dfcdedd8f31b97ba4c"
+    },
+    {
+      "identifier": "Canada/Yukon",
+      "primary": "America/Whitehorse",
+      "identifier_offset": 16000,
+      "primary_offset": 13554,
+      "offset": 218649,
+      "length": 1614,
+      "sha256": "4eb47a3c29d81be9920a504ca21aa53fcaa76215cc52cc9d23e2feaae5c5c723"
+    },
+    {
+      "identifier": "Chile/Continental",
+      "primary": "America/Santiago",
+      "identifier_offset": 16013,
+      "primary_offset": 13178,
+      "offset": 200615,
+      "length": 2515,
+      "sha256": "d020f0d77742314b28aae32ea68260ba99330143610cae84d2557151103ba2c0"
+    },
+    {
+      "identifier": "Chile/EasterIsland",
+      "primary": "Pacific/Easter",
+      "identifier_offset": 16031,
+      "primary_offset": 17870,
+      "offset": 343053,
+      "length": 2219,
+      "sha256": "41bb9b06cff1425bcac1e027bab8721e320ae238bbec68781bebac5ee97a5d53"
+    },
+    {
+      "identifier": "Cuba",
+      "primary": "America/Havana",
+      "identifier_offset": 16050,
+      "primary_offset": 11809,
+      "offset": 115826,
+      "length": 2416,
+      "sha256": "1d441e02e281b04908e522d98eaca75c808e51539a8e42b3287e6bf8ebf939d7"
+    },
+    {
+      "identifier": "EET",
+      "primary": "Europe/Athens",
+      "identifier_offset": 16055,
+      "primary_offset": 16489,
+      "offset": 345272,
+      "length": 2262,
+      "sha256": "5c363e14151d751c901cdf06c502d9e1ac23b8e956973954763bfb39d5c53730"
+    },
+    {
+      "identifier": "EST",
+      "primary": "America/Panama",
+      "identifier_offset": 16059,
+      "primary_offset": 12822,
+      "offset": 186197,
+      "length": 182,
+      "sha256": "91ac80fe976931c490d058c8ce8b5d71ffa6d4961f6ca13ea9c153f0b0bccea0"
+    },
+    {
+      "identifier": "EST5EDT",
+      "primary": "EST5EDT",
+      "identifier_offset": 16063,
+      "primary_offset": 16063,
+      "offset": 347534,
+      "length": 2248,
+      "sha256": "d70ef7d0e9860984e8b41ab4d67b188001cda616aa4e8de18f26e2972f2fcbc4"
+    },
+    {
+      "identifier": "Egypt",
+      "primary": "Africa/Cairo",
+      "identifier_offset": 16071,
+      "primary_offset": 9798,
+      "offset": 22308,
+      "length": 2399,
+      "sha256": "2dfb7e1822d085a4899bd56a526b041681c84b55617daee91499fd1990a989fb"
+    },
+    {
+      "identifier": "Eire",
+      "primary": "Europe/Dublin",
+      "identifier_offset": 16077,
+      "primary_offset": 16665,
+      "offset": 349782,
+      "length": 3492,
+      "sha256": "0676251fa5226d9b79a6967c02b110e59399cdedc423610af2350715f3431684"
+    },
+    {
+      "identifier": "Etc/GMT",
+      "primary": "UTC",
+      "identifier_offset": 16082,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/GMT+0",
+      "primary": "UTC",
+      "identifier_offset": 16090,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/GMT+1",
+      "primary": "Etc/GMT+1",
+      "identifier_offset": 16100,
+      "primary_offset": 16100,
+      "offset": 353388,
+      "length": 116,
+      "sha256": "d50ce5d97f6b43f45711fd75c87d3dc10642affa61e947453fb134caef6cf884"
+    },
+    {
+      "identifier": "Etc/GMT+10",
+      "primary": "Etc/GMT+10",
+      "identifier_offset": 16110,
+      "primary_offset": 16110,
+      "offset": 353504,
+      "length": 117,
+      "sha256": "244432432425902d28e994dd7958d984220e87a70ae5317b1f4d0f925b3eb142"
+    },
+    {
+      "identifier": "Etc/GMT+11",
+      "primary": "Etc/GMT+11",
+      "identifier_offset": 16121,
+      "primary_offset": 16121,
+      "offset": 353621,
+      "length": 117,
+      "sha256": "b56bdcbd830509a13ad27255bc3aeba2feecb49becd4a4183b2ae1977773714b"
+    },
+    {
+      "identifier": "Etc/GMT+12",
+      "primary": "Etc/GMT+12",
+      "identifier_offset": 16132,
+      "primary_offset": 16132,
+      "offset": 353738,
+      "length": 117,
+      "sha256": "6fbd0712112babc2099aaf31edc399cb8791fffddfab9b871e98ef3c1107a8c0"
+    },
+    {
+      "identifier": "Etc/GMT+2",
+      "primary": "Etc/GMT+2",
+      "identifier_offset": 16143,
+      "primary_offset": 16143,
+      "offset": 353855,
+      "length": 116,
+      "sha256": "4fa129e7386c94129b61a10215407a8142a1de24d93f23285b59238689f1ad4a"
+    },
+    {
+      "identifier": "Etc/GMT+3",
+      "primary": "Etc/GMT+3",
+      "identifier_offset": 16153,
+      "primary_offset": 16153,
+      "offset": 353971,
+      "length": 116,
+      "sha256": "406a18ac4d386d427e3b32f7eddb763194f917158d2e92433d55e025bb2d6190"
+    },
+    {
+      "identifier": "Etc/GMT+4",
+      "primary": "Etc/GMT+4",
+      "identifier_offset": 16163,
+      "primary_offset": 16163,
+      "offset": 354087,
+      "length": 116,
+      "sha256": "456ae43648bec15ed7f9ca1ed15bee7c17ba2eb595a643c98226b94106049c1a"
+    },
+    {
+      "identifier": "Etc/GMT+5",
+      "primary": "Etc/GMT+5",
+      "identifier_offset": 16173,
+      "primary_offset": 16173,
+      "offset": 354203,
+      "length": 116,
+      "sha256": "a1199e0b8d5d8185d3fb3cf264844a5cdf48bdd2f60dae674eec261b6fe9ac80"
+    },
+    {
+      "identifier": "Etc/GMT+6",
+      "primary": "Etc/GMT+6",
+      "identifier_offset": 16183,
+      "primary_offset": 16183,
+      "offset": 354319,
+      "length": 116,
+      "sha256": "77a7409f089e8f2148da7ec0cc59455b4685013eb360d123048106d2ebb4b1b4"
+    },
+    {
+      "identifier": "Etc/GMT+7",
+      "primary": "Etc/GMT+7",
+      "identifier_offset": 16193,
+      "primary_offset": 16193,
+      "offset": 354435,
+      "length": 116,
+      "sha256": "4ea8d86f3774607a71d708ac160d3c275f704e983aced24b2e89e0658fe5a33b"
+    },
+    {
+      "identifier": "Etc/GMT+8",
+      "primary": "Etc/GMT+8",
+      "identifier_offset": 16203,
+      "primary_offset": 16203,
+      "offset": 354551,
+      "length": 116,
+      "sha256": "b61ffc6c832662044f09eb01adb981851af48d03bbc2177bd0b898f477f02729"
+    },
+    {
+      "identifier": "Etc/GMT+9",
+      "primary": "Etc/GMT+9",
+      "identifier_offset": 16213,
+      "primary_offset": 16213,
+      "offset": 354667,
+      "length": 116,
+      "sha256": "42ae44ea2512ec9309232993ed8a2a948f0cb6ab55cb49abf6deb3585b5673d6"
+    },
+    {
+      "identifier": "Etc/GMT-0",
+      "primary": "UTC",
+      "identifier_offset": 16223,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/GMT-1",
+      "primary": "Etc/GMT-1",
+      "identifier_offset": 16233,
+      "primary_offset": 16233,
+      "offset": 354783,
+      "length": 117,
+      "sha256": "ef7175794f2e01018fde6728076abdf428df31a9c61479377de7e58e9f69602e"
+    },
+    {
+      "identifier": "Etc/GMT-10",
+      "primary": "Etc/GMT-10",
+      "identifier_offset": 16243,
+      "primary_offset": 16243,
+      "offset": 354900,
+      "length": 118,
+      "sha256": "7ca5963702c13a9d4e90a8ed735c3d2c85c94759934c3f8976f61f951cb522b5"
+    },
+    {
+      "identifier": "Etc/GMT-11",
+      "primary": "Etc/GMT-11",
+      "identifier_offset": 16254,
+      "primary_offset": 16254,
+      "offset": 355018,
+      "length": 118,
+      "sha256": "0f64bbf67ea9b1af6df7fdaf8f9c08ac5a471f63892dc08a3fabedc3315920d6"
+    },
+    {
+      "identifier": "Etc/GMT-12",
+      "primary": "Etc/GMT-12",
+      "identifier_offset": 16265,
+      "primary_offset": 16265,
+      "offset": 355136,
+      "length": 118,
+      "sha256": "99ee15ea599623c812afc1fb378d56003d04c30d5a9e1fc4177e10afd5284a72"
+    },
+    {
+      "identifier": "Etc/GMT-13",
+      "primary": "Etc/GMT-13",
+      "identifier_offset": 16276,
+      "primary_offset": 16276,
+      "offset": 355254,
+      "length": 118,
+      "sha256": "c5b99b1b505003a0e5a5afe2530106c89c56e1adedea599ac1d3ca004f2f6d1f"
+    },
+    {
+      "identifier": "Etc/GMT-14",
+      "primary": "Etc/GMT-14",
+      "identifier_offset": 16287,
+      "primary_offset": 16287,
+      "offset": 355372,
+      "length": 118,
+      "sha256": "3e95e8444061d36a85a6fc55323da957d200cd242f044ed73ef9cdf6a499f8a7"
+    },
+    {
+      "identifier": "Etc/GMT-2",
+      "primary": "Etc/GMT-2",
+      "identifier_offset": 16298,
+      "primary_offset": 16298,
+      "offset": 355490,
+      "length": 117,
+      "sha256": "bdeea158b75eba22e1a9a81a58ba8c0fa1cdc9b4b57214708ee75f4d9d9b6011"
+    },
+    {
+      "identifier": "Etc/GMT-3",
+      "primary": "Etc/GMT-3",
+      "identifier_offset": 16308,
+      "primary_offset": 16308,
+      "offset": 355607,
+      "length": 117,
+      "sha256": "37bee320b6a7b8b0d590bb1dba35d94aef9db078b0379308a7087b7cc5227eca"
+    },
+    {
+      "identifier": "Etc/GMT-4",
+      "primary": "Etc/GMT-4",
+      "identifier_offset": 16318,
+      "primary_offset": 16318,
+      "offset": 355724,
+      "length": 117,
+      "sha256": "2d2928e5f547a8f979cdfc231aa91b31afce167beda53ea8ff8c58c4dcfd9f9a"
+    },
+    {
+      "identifier": "Etc/GMT-5",
+      "primary": "Etc/GMT-5",
+      "identifier_offset": 16328,
+      "primary_offset": 16328,
+      "offset": 355841,
+      "length": 117,
+      "sha256": "b8b69247931bd7c1d14ec000e52bde63d3c027dedd3bc433216a8d5dedf065be"
+    },
+    {
+      "identifier": "Etc/GMT-6",
+      "primary": "Etc/GMT-6",
+      "identifier_offset": 16338,
+      "primary_offset": 16338,
+      "offset": 355958,
+      "length": 117,
+      "sha256": "25237e454029849e747e922fedc602eae9ebb6bcfd4b55a66bea620c79467bb7"
+    },
+    {
+      "identifier": "Etc/GMT-7",
+      "primary": "Etc/GMT-7",
+      "identifier_offset": 16348,
+      "primary_offset": 16348,
+      "offset": 356075,
+      "length": 117,
+      "sha256": "bd500e17cc54f53f444a7c3af1cd12157a5cbe4a28a5a8b04d1d336de7c71d25"
+    },
+    {
+      "identifier": "Etc/GMT-8",
+      "primary": "Etc/GMT-8",
+      "identifier_offset": 16358,
+      "primary_offset": 16358,
+      "offset": 356192,
+      "length": 117,
+      "sha256": "4bbc4541b14ca620d9cb8bf92f80fd7c2ae3448cf3a0b0b9a7c49edb7c62eeeb"
+    },
+    {
+      "identifier": "Etc/GMT-9",
+      "primary": "Etc/GMT-9",
+      "identifier_offset": 16368,
+      "primary_offset": 16368,
+      "offset": 356309,
+      "length": 117,
+      "sha256": "239bc736650af98ca0fd2d6c905378e15195cc1824b6316055088320a3b868c2"
+    },
+    {
+      "identifier": "Etc/GMT0",
+      "primary": "UTC",
+      "identifier_offset": 16378,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/Greenwich",
+      "primary": "UTC",
+      "identifier_offset": 16387,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/UCT",
+      "primary": "UTC",
+      "identifier_offset": 16401,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/UTC",
+      "primary": "UTC",
+      "identifier_offset": 16409,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/Universal",
+      "primary": "UTC",
+      "identifier_offset": 16417,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Etc/Zulu",
+      "primary": "UTC",
+      "identifier_offset": 16431,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Europe/Amsterdam",
+      "primary": "Europe/Amsterdam",
+      "identifier_offset": 16440,
+      "primary_offset": 16440,
+      "offset": 356426,
+      "length": 2910,
+      "sha256": "a70f079e056dddb53942b473bbbd2a3a67faf5323292592096f554b5ef67b4aa"
+    },
+    {
+      "identifier": "Europe/Andorra",
+      "primary": "Europe/Andorra",
+      "identifier_offset": 16457,
+      "primary_offset": 16457,
+      "offset": 359336,
+      "length": 1742,
+      "sha256": "8130798c2426bc8c372498b5fef01c398ba1b733c147a457531f60555ea9eae8"
+    },
+    {
+      "identifier": "Europe/Astrakhan",
+      "primary": "Europe/Astrakhan",
+      "identifier_offset": 16472,
+      "primary_offset": 16472,
+      "offset": 361078,
+      "length": 1151,
+      "sha256": "65e183663c15551a1e47e27ae36cc49cddba04f2f9f1589324b6f09e4ee92d79"
+    },
+    {
+      "identifier": "Europe/Athens",
+      "primary": "Europe/Athens",
+      "identifier_offset": 16489,
+      "primary_offset": 16489,
+      "offset": 345272,
+      "length": 2262,
+      "sha256": "5c363e14151d751c901cdf06c502d9e1ac23b8e956973954763bfb39d5c53730"
+    },
+    {
+      "identifier": "Europe/Belfast",
+      "primary": "Europe/London",
+      "identifier_offset": 16503,
+      "primary_offset": 16864,
+      "offset": 362229,
+      "length": 3664,
+      "sha256": "c85495070dca42687df6a1c3ee780a27cbcb82f1844750ea6f642833a44d29b4"
+    },
+    {
+      "identifier": "Europe/Belgrade",
+      "primary": "Europe/Belgrade",
+      "identifier_offset": 16518,
+      "primary_offset": 16518,
+      "offset": 365893,
+      "length": 1920,
+      "sha256": "3a95adb06156044fd2fa662841c0268c2b5af47c1b19000d9d299563d387093a"
+    },
+    {
+      "identifier": "Europe/Berlin",
+      "primary": "Europe/Berlin",
+      "identifier_offset": 16534,
+      "primary_offset": 16534,
+      "offset": 230958,
+      "length": 2298,
+      "sha256": "5ee475f71a0fc1a32faeb849f8c39c6e7aa66d6d41ec742b97b3a7436b3b0701"
+    },
+    {
+      "identifier": "Europe/Bratislava",
+      "primary": "Europe/Bratislava",
+      "identifier_offset": 16548,
+      "primary_offset": 16548,
+      "offset": 367813,
+      "length": 2301,
+      "sha256": "1bd7dd8545e6cf1eb9d419f267a57b00e60857d115e5a309326e3878968b2d9c"
+    },
+    {
+      "identifier": "Europe/Brussels",
+      "primary": "Europe/Brussels",
+      "identifier_offset": 16566,
+      "primary_offset": 16566,
+      "offset": 337872,
+      "length": 2933,
+      "sha256": "812f55aeb6e8cde9ddf4786e15eb4256b21e82cf5f5d28da1bad17d94570cac0"
+    },
+    {
+      "identifier": "Europe/Bucharest",
+      "primary": "Europe/Bucharest",
+      "identifier_offset": 16582,
+      "primary_offset": 16582,
+      "offset": 370114,
+      "length": 2184,
+      "sha256": "9df83af9b5360fa0cc1166fd10c2014799319cdb1b0d2c7450a7c71ff673a857"
+    },
+    {
+      "identifier": "Europe/Budapest",
+      "primary": "Europe/Budapest",
+      "identifier_offset": 16599,
+      "primary_offset": 16599,
+      "offset": 372298,
+      "length": 2368,
+      "sha256": "94dc2ac5672206fc3d7a2f35550c082876c2fd90c98e980753a1c5838c025246"
+    },
+    {
+      "identifier": "Europe/Busingen",
+      "primary": "Europe/Busingen",
+      "identifier_offset": 16615,
+      "primary_offset": 16615,
+      "offset": 374666,
+      "length": 1909,
+      "sha256": "2b9418ed48e3d9551c84a4786e185bd2181d009866c040fbd729170d038629ef"
+    },
+    {
+      "identifier": "Europe/Chisinau",
+      "primary": "Europe/Chisinau",
+      "identifier_offset": 16631,
+      "primary_offset": 16631,
+      "offset": 376575,
+      "length": 2424,
+      "sha256": "7b4941ae82ed7958f8897d198bf937e7ccf5460065caca2728e2a471cb3e9d93"
+    },
+    {
+      "identifier": "Europe/Copenhagen",
+      "primary": "Europe/Copenhagen",
+      "identifier_offset": 16647,
+      "primary_offset": 16647,
+      "offset": 378999,
+      "length": 2137,
+      "sha256": "abb8806e477bcbd42f6c08ba5c664450e4f034309161646ef55402c54ad9d355"
+    },
+    {
+      "identifier": "Europe/Dublin",
+      "primary": "Europe/Dublin",
+      "identifier_offset": 16665,
+      "primary_offset": 16665,
+      "offset": 349782,
+      "length": 3492,
+      "sha256": "0676251fa5226d9b79a6967c02b110e59399cdedc423610af2350715f3431684"
+    },
+    {
+      "identifier": "Europe/Gibraltar",
+      "primary": "Europe/Gibraltar",
+      "identifier_offset": 16679,
+      "primary_offset": 16679,
+      "offset": 381136,
+      "length": 3068,
+      "sha256": "6bced6a5a065bf123880053d3a940e90df155096e2ad55987fe55f14b4c8a12e"
+    },
+    {
+      "identifier": "Europe/Guernsey",
+      "primary": "Europe/Guernsey",
+      "identifier_offset": 16696,
+      "primary_offset": 16696,
+      "offset": 384204,
+      "length": 3732,
+      "sha256": "63454225987aa547bd9b47d41f274ee90de8d52c66c3c624d42508da55cf8cb0"
+    },
+    {
+      "identifier": "Europe/Helsinki",
+      "primary": "Europe/Helsinki",
+      "identifier_offset": 16712,
+      "primary_offset": 16712,
+      "offset": 387936,
+      "length": 1900,
+      "sha256": "184901ecbb158667a0b7b62eb9685e083bc3182edbecdc3d6d3743192f6a9097"
+    },
+    {
+      "identifier": "Europe/Isle_of_Man",
+      "primary": "Europe/Isle_of_Man",
+      "identifier_offset": 16728,
+      "primary_offset": 16728,
+      "offset": 389836,
+      "length": 3648,
+      "sha256": "8c20e22715c8950b0a30c68f191d9fbf2ebef60189279f2ca99cbabc14ec1b12"
+    },
+    {
+      "identifier": "Europe/Istanbul",
+      "primary": "Europe/Istanbul",
+      "identifier_offset": 16747,
+      "primary_offset": 16747,
+      "offset": 267535,
+      "length": 1933,
+      "sha256": "264e308e7743b5afee2d673c5b57567636dabc925bb0be513939996e856718a5"
+    },
+    {
+      "identifier": "Europe/Jersey",
+      "primary": "Europe/Jersey",
+      "identifier_offset": 16763,
+      "primary_offset": 16763,
+      "offset": 393484,
+      "length": 3732,
+      "sha256": "7ae8f42ddba0b50ac3b52b23f967a0cd0da7cddbbfdbc711152b38d4146b673d"
+    },
+    {
+      "identifier": "Europe/Kaliningrad",
+      "primary": "Europe/Kaliningrad",
+      "identifier_offset": 16777,
+      "primary_offset": 16777,
+      "offset": 397216,
+      "length": 1493,
+      "sha256": "b3b19749ed58bcc72cec089484735303a2389c03909ff2a6cff66a2583be2cc3"
+    },
+    {
+      "identifier": "Europe/Kiev",
+      "primary": "Europe/Kyiv",
+      "identifier_offset": 16796,
+      "primary_offset": 16821,
+      "offset": 398709,
+      "length": 2120,
+      "sha256": "fb0ae91bd8cfb882853f5360055be7c6c3117fd2ff879cf727a4378e3d40c0d3"
+    },
+    {
+      "identifier": "Europe/Kirov",
+      "primary": "Europe/Kirov",
+      "identifier_offset": 16808,
+      "primary_offset": 16808,
+      "offset": 400829,
+      "length": 1185,
+      "sha256": "3fb4f665fe44a3aa382f80db83f05f8858d48138f47505e5af063e419d5e0559"
+    },
+    {
+      "identifier": "Europe/Kyiv",
+      "primary": "Europe/Kyiv",
+      "identifier_offset": 16821,
+      "primary_offset": 16821,
+      "offset": 398709,
+      "length": 2120,
+      "sha256": "fb0ae91bd8cfb882853f5360055be7c6c3117fd2ff879cf727a4378e3d40c0d3"
+    },
+    {
+      "identifier": "Europe/Lisbon",
+      "primary": "Europe/Lisbon",
+      "identifier_offset": 16833,
+      "primary_offset": 16833,
+      "offset": 402014,
+      "length": 3527,
+      "sha256": "92b07cb24689226bf934308d1f1bd33c306aa4da610c52cd5bce25077960502c"
+    },
+    {
+      "identifier": "Europe/Ljubljana",
+      "primary": "Europe/Ljubljana",
+      "identifier_offset": 16847,
+      "primary_offset": 16847,
+      "offset": 405541,
+      "length": 1920,
+      "sha256": "2267951ff4cc76cebc3e804b8cca03648c169ec16ce0cbf9e5dfbe51e748043f"
+    },
+    {
+      "identifier": "Europe/London",
+      "primary": "Europe/London",
+      "identifier_offset": 16864,
+      "primary_offset": 16864,
+      "offset": 362229,
+      "length": 3664,
+      "sha256": "c85495070dca42687df6a1c3ee780a27cbcb82f1844750ea6f642833a44d29b4"
+    },
+    {
+      "identifier": "Europe/Luxembourg",
+      "primary": "Europe/Luxembourg",
+      "identifier_offset": 16878,
+      "primary_offset": 16878,
+      "offset": 407461,
+      "length": 2946,
+      "sha256": "f7be03bdffd7d50212286d732224c92487c66afa1b3b6d475154be1dfcac39c6"
+    },
+    {
+      "identifier": "Europe/Madrid",
+      "primary": "Europe/Madrid",
+      "identifier_offset": 16896,
+      "primary_offset": 16896,
+      "offset": 410407,
+      "length": 2614,
+      "sha256": "9a42d7d37ad6dedd2d9b328120f7bf9e852f6850c4af00baff964f659b161cea"
+    },
+    {
+      "identifier": "Europe/Malta",
+      "primary": "Europe/Malta",
+      "identifier_offset": 16910,
+      "primary_offset": 16910,
+      "offset": 413021,
+      "length": 2620,
+      "sha256": "12129c6cf2f8efbeb9b56022439edcbac68ad9368842a64282d268119b3751dd"
+    },
+    {
+      "identifier": "Europe/Mariehamn",
+      "primary": "Europe/Mariehamn",
+      "identifier_offset": 16923,
+      "primary_offset": 16923,
+      "offset": 387936,
+      "length": 1900,
+      "sha256": "184901ecbb158667a0b7b62eb9685e083bc3182edbecdc3d6d3743192f6a9097"
+    },
+    {
+      "identifier": "Europe/Minsk",
+      "primary": "Europe/Minsk",
+      "identifier_offset": 16940,
+      "primary_offset": 16940,
+      "offset": 415641,
+      "length": 1307,
+      "sha256": "2a03e6d1f1f2727b60777c5b4e69839783b5dd787ff5edb352777c5c5494dbda"
+    },
+    {
+      "identifier": "Europe/Monaco",
+      "primary": "Europe/Monaco",
+      "identifier_offset": 16953,
+      "primary_offset": 16953,
+      "offset": 416948,
+      "length": 2944,
+      "sha256": "e74b956576175ea7e7afe2b8b6c48d976e8265b463bbae42f924e9f35f305fce"
+    },
+    {
+      "identifier": "Europe/Moscow",
+      "primary": "Europe/Moscow",
+      "identifier_offset": 16967,
+      "primary_offset": 16967,
+      "offset": 419892,
+      "length": 1535,
+      "sha256": "2a69287d1723e93f0f876f0f242866f09569d77b91bde7fa4d9d06b8fcd4883c"
+    },
+    {
+      "identifier": "Europe/Nicosia",
+      "primary": "Asia/Nicosia",
+      "identifier_offset": 16981,
+      "primary_offset": 14639,
+      "offset": 281267,
+      "length": 2002,
+      "sha256": "d149e6d08153ec7c86790ec5def4daffe9257f2b0282bba5a853ba043d699595"
+    },
+    {
+      "identifier": "Europe/Oslo",
+      "primary": "Europe/Oslo",
+      "identifier_offset": 16996,
+      "primary_offset": 16996,
+      "offset": 421427,
+      "length": 2228,
+      "sha256": "51d0844618f5258a71de88e68a5691a32568478a8c035f8f12fea11b09e9b090"
+    },
+    {
+      "identifier": "Europe/Paris",
+      "primary": "Europe/Paris",
+      "identifier_offset": 17008,
+      "primary_offset": 17008,
+      "offset": 423655,
+      "length": 2962,
+      "sha256": "ab77a1488a2dd4667a4f23072236e0d2845fe208405eec1b4834985629ba7af8"
+    },
+    {
+      "identifier": "Europe/Podgorica",
+      "primary": "Europe/Podgorica",
+      "identifier_offset": 17021,
+      "primary_offset": 17021,
+      "offset": 365893,
+      "length": 1920,
+      "sha256": "3a95adb06156044fd2fa662841c0268c2b5af47c1b19000d9d299563d387093a"
+    },
+    {
+      "identifier": "Europe/Prague",
+      "primary": "Europe/Prague",
+      "identifier_offset": 17038,
+      "primary_offset": 17038,
+      "offset": 367813,
+      "length": 2301,
+      "sha256": "1bd7dd8545e6cf1eb9d419f267a57b00e60857d115e5a309326e3878968b2d9c"
+    },
+    {
+      "identifier": "Europe/Riga",
+      "primary": "Europe/Riga",
+      "identifier_offset": 17052,
+      "primary_offset": 17052,
+      "offset": 426617,
+      "length": 2198,
+      "sha256": "849dbfd26d6d696f48b80fa13323f99fe597ed83ab47485e2accc98609634569"
+    },
+    {
+      "identifier": "Europe/Rome",
+      "primary": "Europe/Rome",
+      "identifier_offset": 17064,
+      "primary_offset": 17064,
+      "offset": 428815,
+      "length": 2641,
+      "sha256": "d5ade82cc4a232949b87d43157c84b2c355b66a6ac87cf6250ed6ead80b5018f"
+    },
+    {
+      "identifier": "Europe/Samara",
+      "primary": "Europe/Samara",
+      "identifier_offset": 17076,
+      "primary_offset": 17076,
+      "offset": 431456,
+      "length": 1201,
+      "sha256": "9d72f42316d3eaabb5d0236e6831f1c785b539a02769a293b4827d37d5113285"
+    },
+    {
+      "identifier": "Europe/San_Marino",
+      "primary": "Europe/San_Marino",
+      "identifier_offset": 17090,
+      "primary_offset": 17090,
+      "offset": 428815,
+      "length": 2641,
+      "sha256": "d5ade82cc4a232949b87d43157c84b2c355b66a6ac87cf6250ed6ead80b5018f"
+    },
+    {
+      "identifier": "Europe/Sarajevo",
+      "primary": "Europe/Sarajevo",
+      "identifier_offset": 17108,
+      "primary_offset": 17108,
+      "offset": 432657,
+      "length": 1920,
+      "sha256": "a3e49aca8bf331e3c6d0faf68ab466cde901c8051a8674e926acd2c66deaff57"
+    },
+    {
+      "identifier": "Europe/Saratov",
+      "primary": "Europe/Saratov",
+      "identifier_offset": 17124,
+      "primary_offset": 17124,
+      "offset": 434577,
+      "length": 1169,
+      "sha256": "ca0c23bd7375dd381a5b18e0eb2b161271d6371c2b56d9046eb93cb7d6f3555c"
+    },
+    {
+      "identifier": "Europe/Simferopol",
+      "primary": "Europe/Simferopol",
+      "identifier_offset": 17139,
+      "primary_offset": 17139,
+      "offset": 435746,
+      "length": 1469,
+      "sha256": "b7397bc5d355499a6b342ba5e181392d2a6847d268ba398eabc55b6c1f301e27"
+    },
+    {
+      "identifier": "Europe/Skopje",
+      "primary": "Europe/Skopje",
+      "identifier_offset": 17157,
+      "primary_offset": 17157,
+      "offset": 437215,
+      "length": 1920,
+      "sha256": "50301171643800580da77e75187dc2f9ec2e0b40860578248c9c3dd0c348dcb8"
+    },
+    {
+      "identifier": "Europe/Sofia",
+      "primary": "Europe/Sofia",
+      "identifier_offset": 17171,
+      "primary_offset": 17171,
+      "offset": 439135,
+      "length": 2077,
+      "sha256": "84240a5df30dae7039c47370feecd38cacd5c38f81becab9a063b8c940afe6d6"
+    },
+    {
+      "identifier": "Europe/Stockholm",
+      "primary": "Europe/Stockholm",
+      "identifier_offset": 17184,
+      "primary_offset": 17184,
+      "offset": 441212,
+      "length": 1909,
+      "sha256": "5e0a7819287cfa9cdd78978ff13436d235830d48f5ed1ebd87a4584db2d87768"
+    },
+    {
+      "identifier": "Europe/Tallinn",
+      "primary": "Europe/Tallinn",
+      "identifier_offset": 17201,
+      "primary_offset": 17201,
+      "offset": 443121,
+      "length": 2148,
+      "sha256": "e1ae890b4688a4ccea215ecedf9ce81b42cb270910ab90285d9da2be489cebec"
+    },
+    {
+      "identifier": "Europe/Tirane",
+      "primary": "Europe/Tirane",
+      "identifier_offset": 17216,
+      "primary_offset": 17216,
+      "offset": 445269,
+      "length": 2084,
+      "sha256": "ced959c824bd5825de556f2706e9f74f28b91d463412d15b8816c473582e72ec"
+    },
+    {
+      "identifier": "Europe/Tiraspol",
+      "primary": "Europe/Chisinau",
+      "identifier_offset": 17230,
+      "primary_offset": 16631,
+      "offset": 376575,
+      "length": 2424,
+      "sha256": "7b4941ae82ed7958f8897d198bf937e7ccf5460065caca2728e2a471cb3e9d93"
+    },
+    {
+      "identifier": "Europe/Ulyanovsk",
+      "primary": "Europe/Ulyanovsk",
+      "identifier_offset": 17246,
+      "primary_offset": 17246,
+      "offset": 447353,
+      "length": 1253,
+      "sha256": "73c01de69ec22a3ff570203b95546970fa9b417198697f3772ebbab88171f818"
+    },
+    {
+      "identifier": "Europe/Uzhgorod",
+      "primary": "Europe/Kyiv",
+      "identifier_offset": 17263,
+      "primary_offset": 16821,
+      "offset": 398709,
+      "length": 2120,
+      "sha256": "fb0ae91bd8cfb882853f5360055be7c6c3117fd2ff879cf727a4378e3d40c0d3"
+    },
+    {
+      "identifier": "Europe/Vaduz",
+      "primary": "Europe/Vaduz",
+      "identifier_offset": 17279,
+      "primary_offset": 17279,
+      "offset": 448606,
+      "length": 1888,
+      "sha256": "a7b7adba7d5cbdab931406b197603bdb12f5b9952ca7e91cf8f17c5d729955c8"
+    },
+    {
+      "identifier": "Europe/Vatican",
+      "primary": "Europe/Vatican",
+      "identifier_offset": 17292,
+      "primary_offset": 17292,
+      "offset": 428815,
+      "length": 2641,
+      "sha256": "d5ade82cc4a232949b87d43157c84b2c355b66a6ac87cf6250ed6ead80b5018f"
+    },
+    {
+      "identifier": "Europe/Vienna",
+      "primary": "Europe/Vienna",
+      "identifier_offset": 17307,
+      "primary_offset": 17307,
+      "offset": 450494,
+      "length": 2200,
+      "sha256": "6662379000c4e9b9eb24471caa1ef75d7058dfa2f51b80e4a624d0226b4dad49"
+    },
+    {
+      "identifier": "Europe/Vilnius",
+      "primary": "Europe/Vilnius",
+      "identifier_offset": 17321,
+      "primary_offset": 17321,
+      "offset": 452694,
+      "length": 2162,
+      "sha256": "505cd15f7a2b09307c77d23397124fcb9794036a013ee0aed54265fb60fb0b75"
+    },
+    {
+      "identifier": "Europe/Volgograd",
+      "primary": "Europe/Volgograd",
+      "identifier_offset": 17336,
+      "primary_offset": 17336,
+      "offset": 454856,
+      "length": 1193,
+      "sha256": "46016fb7b9b367e4ed20a2fd0551e6a0d64b21e2c8ba20dd5de635d20dbfbe4b"
+    },
+    {
+      "identifier": "Europe/Warsaw",
+      "primary": "Europe/Warsaw",
+      "identifier_offset": 17353,
+      "primary_offset": 17353,
+      "offset": 456049,
+      "length": 2654,
+      "sha256": "4e22c33db79517472480b54491a49e0da299f3072d7490ce97f1c4fd6779acab"
+    },
+    {
+      "identifier": "Europe/Zagreb",
+      "primary": "Europe/Zagreb",
+      "identifier_offset": 17367,
+      "primary_offset": 17367,
+      "offset": 458703,
+      "length": 1920,
+      "sha256": "799e8a8826651db19a97b6231c4aca1813391e942ddaf289ceefcb1f868e620d"
+    },
+    {
+      "identifier": "Europe/Zaporozhye",
+      "primary": "Europe/Kyiv",
+      "identifier_offset": 17381,
+      "primary_offset": 16821,
+      "offset": 398709,
+      "length": 2120,
+      "sha256": "fb0ae91bd8cfb882853f5360055be7c6c3117fd2ff879cf727a4378e3d40c0d3"
+    },
+    {
+      "identifier": "Europe/Zurich",
+      "primary": "Europe/Zurich",
+      "identifier_offset": 17399,
+      "primary_offset": 17399,
+      "offset": 374666,
+      "length": 1909,
+      "sha256": "2b9418ed48e3d9551c84a4786e185bd2181d009866c040fbd729170d038629ef"
+    },
+    {
+      "identifier": "Factory",
+      "primary": "Factory",
+      "identifier_offset": 17413,
+      "primary_offset": 17413,
+      "offset": 460623,
+      "length": 116,
+      "sha256": "6851652b1f771d7a09a05e124ae4e50fc719b4903e9dee682b301ae9e5f65789"
+    },
+    {
+      "identifier": "GB",
+      "primary": "Europe/London",
+      "identifier_offset": 17421,
+      "primary_offset": 16864,
+      "offset": 362229,
+      "length": 3664,
+      "sha256": "c85495070dca42687df6a1c3ee780a27cbcb82f1844750ea6f642833a44d29b4"
+    },
+    {
+      "identifier": "GB-Eire",
+      "primary": "Europe/London",
+      "identifier_offset": 17424,
+      "primary_offset": 16864,
+      "offset": 362229,
+      "length": 3664,
+      "sha256": "c85495070dca42687df6a1c3ee780a27cbcb82f1844750ea6f642833a44d29b4"
+    },
+    {
+      "identifier": "GMT",
+      "primary": "UTC",
+      "identifier_offset": 17432,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "GMT+0",
+      "primary": "UTC",
+      "identifier_offset": 17436,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "GMT-0",
+      "primary": "UTC",
+      "identifier_offset": 17442,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "GMT0",
+      "primary": "UTC",
+      "identifier_offset": 17448,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Greenwich",
+      "primary": "UTC",
+      "identifier_offset": 17453,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "HST",
+      "primary": "Pacific/Honolulu",
+      "identifier_offset": 17463,
+      "primary_offset": 18030,
+      "offset": 460739,
+      "length": 329,
+      "sha256": "7f03d1bf5264e7ab023a2ef9b997ddfc8cb6936692407c770762b9c549523f33"
+    },
+    {
+      "identifier": "Hongkong",
+      "primary": "Asia/Hong_Kong",
+      "identifier_offset": 17467,
+      "primary_offset": 14304,
+      "offset": 264196,
+      "length": 1233,
+      "sha256": "6a5fcee243e5ab92698242d88c4699ceb7208a22ee97d342d11e41ebd2555a17"
+    },
+    {
+      "identifier": "Iceland",
+      "primary": "Atlantic/Reykjavik",
+      "identifier_offset": 17476,
+      "primary_offset": 15333,
+      "offset": 320036,
+      "length": 1162,
+      "sha256": "99291a4411992de52b9bcf0478771a5a711ddf95a7f808361b5d07b48dc6d9f8"
+    },
+    {
+      "identifier": "Indian/Antananarivo",
+      "primary": "Indian/Antananarivo",
+      "identifier_offset": 17484,
+      "primary_offset": 17484,
+      "offset": 461068,
+      "length": 219,
+      "sha256": "7c045fb862767cb86ae329a1a808dbfb8d04910550be71a4fcf5ebe5e5824c99"
+    },
+    {
+      "identifier": "Indian/Chagos",
+      "primary": "Indian/Chagos",
+      "identifier_offset": 17504,
+      "primary_offset": 17504,
+      "offset": 461287,
+      "length": 185,
+      "sha256": "d9eaeb5f329d1487295342fe5d18521f184d69b2336c8e655d5dcfaba96de346"
+    },
+    {
+      "identifier": "Indian/Christmas",
+      "primary": "Indian/Christmas",
+      "identifier_offset": 17518,
+      "primary_offset": 17518,
+      "offset": 461472,
+      "length": 151,
+      "sha256": "091b425a489f23f6570e58e9e6dbe6a9ace1031b239848b1eed0f1ec23855b2d"
+    },
+    {
+      "identifier": "Indian/Cocos",
+      "primary": "Indian/Cocos",
+      "identifier_offset": 17535,
+      "primary_offset": 17535,
+      "offset": 461623,
+      "length": 160,
+      "sha256": "4cf1a8ba68d9da36e51d7e8e2f58fb5179c7b3d51ad9e211eb8637b904d97c8c"
+    },
+    {
+      "identifier": "Indian/Comoro",
+      "primary": "Indian/Comoro",
+      "identifier_offset": 17548,
+      "primary_offset": 17548,
+      "offset": 461783,
+      "length": 149,
+      "sha256": "4f2dc7f436427a68c992f877d9c331baffef0f65023fd9bca4c0dd697e88ff70"
+    },
+    {
+      "identifier": "Indian/Kerguelen",
+      "primary": "Indian/Kerguelen",
+      "identifier_offset": 17562,
+      "primary_offset": 17562,
+      "offset": 461932,
+      "length": 151,
+      "sha256": "993f72e2d4c318a331e6fba16e526c416575bba7878b1fdefa09a88ac8c4e908"
+    },
+    {
+      "identifier": "Indian/Mahe",
+      "primary": "Indian/Mahe",
+      "identifier_offset": 17579,
+      "primary_offset": 17579,
+      "offset": 462083,
+      "length": 151,
+      "sha256": "a0144cd0e7274c509ab19d5bad430573a876f63e8378aae989f08be5d9053fa6"
+    },
+    {
+      "identifier": "Indian/Maldives",
+      "primary": "Indian/Maldives",
+      "identifier_offset": 17591,
+      "primary_offset": 17591,
+      "offset": 462234,
+      "length": 185,
+      "sha256": "17bddf7d57c1a14a07aded3e0f0b2242b60970ba4f396f892469379fcf253395"
+    },
+    {
+      "identifier": "Indian/Mauritius",
+      "primary": "Indian/Mauritius",
+      "identifier_offset": 17607,
+      "primary_offset": 17607,
+      "offset": 462419,
+      "length": 227,
+      "sha256": "667aab7357218a695c889b1804e97436f2079eb35d0b19dc1b159ccead4f05e2"
+    },
+    {
+      "identifier": "Indian/Mayotte",
+      "primary": "Indian/Mayotte",
+      "identifier_offset": 17624,
+      "primary_offset": 17624,
+      "offset": 462646,
+      "length": 149,
+      "sha256": "ab52952d2b74e897e330f67b329a0a4c7d34e9e585cce1ada8a10cbd4d11523f"
+    },
+    {
+      "identifier": "Indian/Reunion",
+      "primary": "Indian/Reunion",
+      "identifier_offset": 17639,
+      "primary_offset": 17639,
+      "offset": 462795,
+      "length": 151,
+      "sha256": "6cd43bc15d219dfb98653d350d5f87682f0518e2ee08faa03ee5fbbef1dd08e1"
+    },
+    {
+      "identifier": "Iran",
+      "primary": "Asia/Tehran",
+      "identifier_offset": 17654,
+      "primary_offset": 14957,
+      "offset": 297608,
+      "length": 1248,
+      "sha256": "30095335232a07c7181a1ced11b253f3912069845b8f43ea5f897d24349cd0ce"
+    },
+    {
+      "identifier": "Israel",
+      "primary": "Asia/Jerusalem",
+      "identifier_offset": 17659,
+      "primary_offset": 14383,
+      "offset": 270072,
+      "length": 2388,
+      "sha256": "254b964265b94e16b4a498f0eb543968dec25f4cf80fba29b3d38e4a775ae837"
+    },
+    {
+      "identifier": "Jamaica",
+      "primary": "America/Jamaica",
+      "identifier_offset": 17666,
+      "primary_offset": 12094,
+      "offset": 135336,
+      "length": 482,
+      "sha256": "c256a089e50f45fe7e6de89efa1ed0b0e35b3738c6b26f2f32cf2e7f6f29c36f"
+    },
+    {
+      "identifier": "Japan",
+      "primary": "Asia/Tokyo",
+      "identifier_offset": 17674,
+      "primary_offset": 15008,
+      "offset": 299045,
+      "length": 309,
+      "sha256": "a02b9e66044dc5c35c5f76467627fdcba4aee1cc958606b85c777095cad82ceb"
+    },
+    {
+      "identifier": "Kwajalein",
+      "primary": "Pacific/Kwajalein",
+      "identifier_offset": 17680,
+      "primary_offset": 18113,
+      "offset": 462946,
+      "length": 302,
+      "sha256": "4e667fd1ffb2490fac6810254575747f8f48b709dee755415e7eab59cad6a874"
+    },
+    {
+      "identifier": "Libya",
+      "primary": "Africa/Tripoli",
+      "identifier_offset": 17690,
+      "primary_offset": 10387,
+      "offset": 36549,
+      "length": 625,
+      "sha256": "5b5769b460fbd13ee9a46a28d1f733150783888a749ee96d2cd3d5eba3300767"
+    },
+    {
+      "identifier": "MET",
+      "primary": "Europe/Brussels",
+      "identifier_offset": 17696,
+      "primary_offset": 16566,
+      "offset": 337872,
+      "length": 2933,
+      "sha256": "812f55aeb6e8cde9ddf4786e15eb4256b21e82cf5f5d28da1bad17d94570cac0"
+    },
+    {
+      "identifier": "MST",
+      "primary": "America/Phoenix",
+      "identifier_offset": 17700,
+      "primary_offset": 12876,
+      "offset": 186627,
+      "length": 360,
+      "sha256": "8a5973d2c62e2cbf2520f2b44e4a2ee9d2f455c93f0f45bfdeb4533af1584664"
+    },
+    {
+      "identifier": "MST7MDT",
+      "primary": "MST7MDT",
+      "identifier_offset": 17704,
+      "primary_offset": 17704,
+      "offset": 463248,
+      "length": 2248,
+      "sha256": "7acb6074e9374c036b9d760d27abfe778a9749cf162375785f668d0890b2d48e"
+    },
+    {
+      "identifier": "Mexico/BajaNorte",
+      "primary": "America/Tijuana",
+      "identifier_offset": 17712,
+      "primary_offset": 13473,
+      "offset": 94691,
+      "length": 2906,
+      "sha256": "8c2e7b321726e6345912da396796bdb3672bfc4bd1a91c65ee58b38e004d4ca5"
+    },
+    {
+      "identifier": "Mexico/BajaSur",
+      "primary": "America/Mazatlan",
+      "identifier_offset": 17729,
+      "primary_offset": 12418,
+      "offset": 150435,
+      "length": 1060,
+      "sha256": "0561f636a54f0353ecc842cf37fd8117c2a596bb26424aa0d5eba3b10be79f1f"
+    },
+    {
+      "identifier": "Mexico/General",
+      "primary": "America/Mexico_City",
+      "identifier_offset": 17744,
+      "primary_offset": 12503,
+      "offset": 156196,
+      "length": 1222,
+      "sha256": "528836f85316cf6a35da347ab0af6f7a625a98b7a8e8e105310477b34c53c647"
+    },
+    {
+      "identifier": "NZ",
+      "primary": "Pacific/Auckland",
+      "identifier_offset": 17759,
+      "primary_offset": 17802,
+      "offset": 465496,
+      "length": 2437,
+      "sha256": "8000e3a323e8fd0212414e9426b020707a771c368ca0e151747f9ddb7b814b27"
+    },
+    {
+      "identifier": "NZ-CHAT",
+      "primary": "Pacific/Chatham",
+      "identifier_offset": 17762,
+      "primary_offset": 17840,
+      "offset": 467933,
+      "length": 2054,
+      "sha256": "c617b155ce657c9fea02fd9ddc7ac823a95f452c4a6580408d8db3a58902184f"
+    },
+    {
+      "identifier": "Navajo",
+      "primary": "America/Denver",
+      "identifier_offset": 17770,
+      "primary_offset": 11460,
+      "offset": 86957,
+      "length": 2460,
+      "sha256": "32e819c00a43b3c348f539d700d425504f20b8d068c16418d26fa9b693e775c9"
+    },
+    {
+      "identifier": "PRC",
+      "primary": "Asia/Shanghai",
+      "identifier_offset": 17777,
+      "primary_offset": 14870,
+      "offset": 250023,
+      "length": 561,
+      "sha256": "64ffc2e43a94435a043c040d1d3af7e92d031adc78e7737af1861baa4eeef3e6"
+    },
+    {
+      "identifier": "PST8PDT",
+      "primary": "PST8PDT",
+      "identifier_offset": 17781,
+      "primary_offset": 17781,
+      "offset": 469987,
+      "length": 2248,
+      "sha256": "dd110d921d05e6a049769ca3dfd13be41273e477e9543042332a2c431cbe7058"
+    },
+    {
+      "identifier": "Pacific/Apia",
+      "primary": "Pacific/Apia",
+      "identifier_offset": 17789,
+      "primary_offset": 17789,
+      "offset": 472235,
+      "length": 598,
+      "sha256": "33740ab29ef943b1f55f769e13ff59a90962f5a12434209072d650e6c10abb4d"
+    },
+    {
+      "identifier": "Pacific/Auckland",
+      "primary": "Pacific/Auckland",
+      "identifier_offset": 17802,
+      "primary_offset": 17802,
+      "offset": 465496,
+      "length": 2437,
+      "sha256": "8000e3a323e8fd0212414e9426b020707a771c368ca0e151747f9ddb7b814b27"
+    },
+    {
+      "identifier": "Pacific/Bougainville",
+      "primary": "Pacific/Bougainville",
+      "identifier_offset": 17819,
+      "primary_offset": 17819,
+      "offset": 472833,
+      "length": 254,
+      "sha256": "85613ce9e5e7371faf0016e9efe61222a5b279c1cf30858b7ed565a00a0f84bf"
+    },
+    {
+      "identifier": "Pacific/Chatham",
+      "primary": "Pacific/Chatham",
+      "identifier_offset": 17840,
+      "primary_offset": 17840,
+      "offset": 467933,
+      "length": 2054,
+      "sha256": "c617b155ce657c9fea02fd9ddc7ac823a95f452c4a6580408d8db3a58902184f"
+    },
+    {
+      "identifier": "Pacific/Chuuk",
+      "primary": "Pacific/Chuuk",
+      "identifier_offset": 17856,
+      "primary_offset": 17856,
+      "offset": 473087,
+      "length": 255,
+      "sha256": "1faba48c1b9392bf8daa049689f4d9aa6c0ba3e890ed1db0f5696fb8ce0a1047"
+    },
+    {
+      "identifier": "Pacific/Easter",
+      "primary": "Pacific/Easter",
+      "identifier_offset": 17870,
+      "primary_offset": 17870,
+      "offset": 343053,
+      "length": 2219,
+      "sha256": "41bb9b06cff1425bcac1e027bab8721e320ae238bbec68781bebac5ee97a5d53"
+    },
+    {
+      "identifier": "Pacific/Efate",
+      "primary": "Pacific/Efate",
+      "identifier_offset": 17885,
+      "primary_offset": 17885,
+      "offset": 473342,
+      "length": 524,
+      "sha256": "a12c4d710631e7ed45536ff21f31c8fa14fe74c25c3f1cf2e1799d2355315c0a"
+    },
+    {
+      "identifier": "Pacific/Enderbury",
+      "primary": "Pacific/Kanton",
+      "identifier_offset": 17899,
+      "primary_offset": 18064,
+      "offset": 473866,
+      "length": 220,
+      "sha256": "1cd4c02abb07fd1d96dd046529c98d95de4a71774fd328170a3128bdcd62fba4"
+    },
+    {
+      "identifier": "Pacific/Fakaofo",
+      "primary": "Pacific/Fakaofo",
+      "identifier_offset": 17917,
+      "primary_offset": 17917,
+      "offset": 474086,
+      "length": 186,
+      "sha256": "a8ea1da5330a8f3b6f6485d52defdffe467a59c1e5f5f08b13d66ccaf74528b2"
+    },
+    {
+      "identifier": "Pacific/Fiji",
+      "primary": "Pacific/Fiji",
+      "identifier_offset": 17933,
+      "primary_offset": 17933,
+      "offset": 474272,
+      "length": 564,
+      "sha256": "8c1e456ceb029c7550436a213e25844143e11ba2726c1dcda20dea4fa5894342"
+    },
+    {
+      "identifier": "Pacific/Funafuti",
+      "primary": "Pacific/Funafuti",
+      "identifier_offset": 17946,
+      "primary_offset": 17946,
+      "offset": 474836,
+      "length": 152,
+      "sha256": "3df36747c8f10d8478944b8b55d81ae3ebb9fa6db3b11e971e7d33145d2d5648"
+    },
+    {
+      "identifier": "Pacific/Galapagos",
+      "primary": "Pacific/Galapagos",
+      "identifier_offset": 17963,
+      "primary_offset": 17963,
+      "offset": 474988,
+      "length": 224,
+      "sha256": "fc625460e8d28888e83413b6a9dab6de2b0b309e0d0959370ca21119e0dcf010"
+    },
+    {
+      "identifier": "Pacific/Gambier",
+      "primary": "Pacific/Gambier",
+      "identifier_offset": 17981,
+      "primary_offset": 17981,
+      "offset": 475212,
+      "length": 150,
+      "sha256": "8004bb82bd471ffaded2e6272fa796a3928627e07941a88cf26576718e664311"
+    },
+    {
+      "identifier": "Pacific/Guadalcanal",
+      "primary": "Pacific/Guadalcanal",
+      "identifier_offset": 17997,
+      "primary_offset": 17997,
+      "offset": 475362,
+      "length": 152,
+      "sha256": "3389135aa69241a57500c8722d2be6c2804917b5fd89cac82dbbd0270a7de348"
+    },
+    {
+      "identifier": "Pacific/Guam",
+      "primary": "Pacific/Guam",
+      "identifier_offset": 18017,
+      "primary_offset": 18017,
+      "offset": 475514,
+      "length": 494,
+      "sha256": "131f739e67faacd7c6cdeea036964908caf54d3e2b925d929eb85e72b749b9f2"
+    },
+    {
+      "identifier": "Pacific/Honolulu",
+      "primary": "Pacific/Honolulu",
+      "identifier_offset": 18030,
+      "primary_offset": 18030,
+      "offset": 460739,
+      "length": 329,
+      "sha256": "7f03d1bf5264e7ab023a2ef9b997ddfc8cb6936692407c770762b9c549523f33"
+    },
+    {
+      "identifier": "Pacific/Johnston",
+      "primary": "Pacific/Honolulu",
+      "identifier_offset": 18047,
+      "primary_offset": 18030,
+      "offset": 460739,
+      "length": 329,
+      "sha256": "7f03d1bf5264e7ab023a2ef9b997ddfc8cb6936692407c770762b9c549523f33"
+    },
+    {
+      "identifier": "Pacific/Kanton",
+      "primary": "Pacific/Kanton",
+      "identifier_offset": 18064,
+      "primary_offset": 18064,
+      "offset": 473866,
+      "length": 220,
+      "sha256": "1cd4c02abb07fd1d96dd046529c98d95de4a71774fd328170a3128bdcd62fba4"
+    },
+    {
+      "identifier": "Pacific/Kiritimati",
+      "primary": "Pacific/Kiritimati",
+      "identifier_offset": 18079,
+      "primary_offset": 18079,
+      "offset": 476008,
+      "length": 224,
+      "sha256": "8589353a8cfe2e3d4fb9909b355d96248bce2ed0b04b0ab6bbaddc6f567edcd4"
+    },
+    {
+      "identifier": "Pacific/Kosrae",
+      "primary": "Pacific/Kosrae",
+      "identifier_offset": 18098,
+      "primary_offset": 18098,
+      "offset": 476232,
+      "length": 337,
+      "sha256": "4348eb6f8cde0eb77ad5b53857c4ea8cc73421ea7cad667266a274baab2e9f1b"
+    },
+    {
+      "identifier": "Pacific/Kwajalein",
+      "primary": "Pacific/Kwajalein",
+      "identifier_offset": 18113,
+      "primary_offset": 18113,
+      "offset": 462946,
+      "length": 302,
+      "sha256": "4e667fd1ffb2490fac6810254575747f8f48b709dee755415e7eab59cad6a874"
+    },
+    {
+      "identifier": "Pacific/Majuro",
+      "primary": "Pacific/Majuro",
+      "identifier_offset": 18131,
+      "primary_offset": 18131,
+      "offset": 476569,
+      "length": 296,
+      "sha256": "0dfce301c3b5ce88ebe20b9b61064890ca9e20fdbb43f45e06ba3190145192a0"
+    },
+    {
+      "identifier": "Pacific/Marquesas",
+      "primary": "Pacific/Marquesas",
+      "identifier_offset": 18146,
+      "primary_offset": 18146,
+      "offset": 476865,
+      "length": 159,
+      "sha256": "153c4f2535ad938f0b55bdcdd94eb828ba4bb26beed03401b9b4c283e76fc863"
+    },
+    {
+      "identifier": "Pacific/Midway",
+      "primary": "Pacific/Midway",
+      "identifier_offset": 18164,
+      "primary_offset": 18164,
+      "offset": 477024,
+      "length": 217,
+      "sha256": "9b903c517a790a878e17f41acd44f8782af3963a4673ae296d93ab906494cad9"
+    },
+    {
+      "identifier": "Pacific/Nauru",
+      "primary": "Pacific/Nauru",
+      "identifier_offset": 18179,
+      "primary_offset": 18179,
+      "offset": 477241,
+      "length": 238,
+      "sha256": "f4048a80b1c1fbc9ec4c42b5029cdf4c7d3242d6cd026197f8923bb87662aa70"
+    },
+    {
+      "identifier": "Pacific/Niue",
+      "primary": "Pacific/Niue",
+      "identifier_offset": 18193,
+      "primary_offset": 18193,
+      "offset": 477479,
+      "length": 189,
+      "sha256": "3a5957c6e927711edaf92326745a31e5acf5c6920f3216da85086d39b9a9b833"
+    },
+    {
+      "identifier": "Pacific/Norfolk",
+      "primary": "Pacific/Norfolk",
+      "identifier_offset": 18206,
+      "primary_offset": 18206,
+      "offset": 477668,
+      "length": 866,
+      "sha256": "0cc757d419b5f25ccdba2096cf07de1d43111973d2f2fe405a787efc45ff019c"
+    },
+    {
+      "identifier": "Pacific/Noumea",
+      "primary": "Pacific/Noumea",
+      "identifier_offset": 18222,
+      "primary_offset": 18222,
+      "offset": 478534,
+      "length": 290,
+      "sha256": "b641f1c67c6c5d33aacf76335a2d269214c220e37383e5bb12949131d3e329d4"
+    },
+    {
+      "identifier": "Pacific/Pago_Pago",
+      "primary": "Pacific/Pago_Pago",
+      "identifier_offset": 18237,
+      "primary_offset": 18237,
+      "offset": 478824,
+      "length": 175,
+      "sha256": "7c262b62985863aad47f13b0ef5db2e5cc917b5d38002de9a2ea83ddb0883458"
+    },
+    {
+      "identifier": "Pacific/Palau",
+      "primary": "Pacific/Palau",
+      "identifier_offset": 18255,
+      "primary_offset": 18255,
+      "offset": 478999,
+      "length": 166,
+      "sha256": "68dd876d3d2b7aac0aaed2ca0caf4cdb36f47748a474d953aeb9ed571747ebaa"
+    },
+    {
+      "identifier": "Pacific/Pitcairn",
+      "primary": "Pacific/Pitcairn",
+      "identifier_offset": 18269,
+      "primary_offset": 18269,
+      "offset": 479165,
+      "length": 188,
+      "sha256": "5388c052ebec44da32f17acf6b5e98a5c5c272a1c9634bba26f08d80f1163b57"
+    },
+    {
+      "identifier": "Pacific/Pohnpei",
+      "primary": "Pacific/Pohnpei",
+      "identifier_offset": 18286,
+      "primary_offset": 18286,
+      "offset": 479353,
+      "length": 289,
+      "sha256": "394e49033055cfca49245832fe283191982e924f13ac0e3bfb81f97a11f85bf0"
+    },
+    {
+      "identifier": "Pacific/Ponape",
+      "primary": "Pacific/Pohnpei",
+      "identifier_offset": 18302,
+      "primary_offset": 18286,
+      "offset": 479353,
+      "length": 289,
+      "sha256": "394e49033055cfca49245832fe283191982e924f13ac0e3bfb81f97a11f85bf0"
+    },
+    {
+      "identifier": "Pacific/Port_Moresby",
+      "primary": "Pacific/Port_Moresby",
+      "identifier_offset": 18317,
+      "primary_offset": 18317,
+      "offset": 479642,
+      "length": 172,
+      "sha256": "9c1dfa1c15994dd8774e53f40cb14dcf529143468721f1dba7b2c2e14ae9f5f0"
+    },
+    {
+      "identifier": "Pacific/Rarotonga",
+      "primary": "Pacific/Rarotonga",
+      "identifier_offset": 18338,
+      "primary_offset": 18338,
+      "offset": 479814,
+      "length": 589,
+      "sha256": "c0f12ca176f20e7ba17f39202ef52a852ceb331fc50f8dae00f96e48f321dc17"
+    },
+    {
+      "identifier": "Pacific/Saipan",
+      "primary": "Pacific/Saipan",
+      "identifier_offset": 18356,
+      "primary_offset": 18356,
+      "offset": 480403,
+      "length": 480,
+      "sha256": "f1d685991ea1f04d186f9c9920b6d5905220348b5291a34be8be71f4aa717774"
+    },
+    {
+      "identifier": "Pacific/Samoa",
+      "primary": "Pacific/Pago_Pago",
+      "identifier_offset": 18371,
+      "primary_offset": 18237,
+      "offset": 478824,
+      "length": 175,
+      "sha256": "7c262b62985863aad47f13b0ef5db2e5cc917b5d38002de9a2ea83ddb0883458"
+    },
+    {
+      "identifier": "Pacific/Tahiti",
+      "primary": "Pacific/Tahiti",
+      "identifier_offset": 18385,
+      "primary_offset": 18385,
+      "offset": 480883,
+      "length": 151,
+      "sha256": "0517dff46dc4fa258a84e591d56bb4d99d223208ebc035d5f9736ba88b577536"
+    },
+    {
+      "identifier": "Pacific/Tarawa",
+      "primary": "Pacific/Tarawa",
+      "identifier_offset": 18400,
+      "primary_offset": 18400,
+      "offset": 481034,
+      "length": 152,
+      "sha256": "53268a8a6b11f0b8e02fc67683ae48d074efaf7b4c66e036c1478107afd9a7d7"
+    },
+    {
+      "identifier": "Pacific/Tongatapu",
+      "primary": "Pacific/Tongatapu",
+      "identifier_offset": 18415,
+      "primary_offset": 18415,
+      "offset": 481186,
+      "length": 358,
+      "sha256": "3a9a4166a4c06626fd1d8ed4f400be25abceee6e8dc4f194b547cf40097da016"
+    },
+    {
+      "identifier": "Pacific/Truk",
+      "primary": "Pacific/Chuuk",
+      "identifier_offset": 18433,
+      "primary_offset": 17856,
+      "offset": 473087,
+      "length": 255,
+      "sha256": "1faba48c1b9392bf8daa049689f4d9aa6c0ba3e890ed1db0f5696fb8ce0a1047"
+    },
+    {
+      "identifier": "Pacific/Wake",
+      "primary": "Pacific/Wake",
+      "identifier_offset": 18446,
+      "primary_offset": 18446,
+      "offset": 481544,
+      "length": 152,
+      "sha256": "483c1f91de23a0b0bc408712c2683cf69f720267bfe028d763b0b998c2ec22ea"
+    },
+    {
+      "identifier": "Pacific/Wallis",
+      "primary": "Pacific/Wallis",
+      "identifier_offset": 18459,
+      "primary_offset": 18459,
+      "offset": 481696,
+      "length": 152,
+      "sha256": "0e68cea3f0d2ef4ca81686b2baf04dfb081bbf4262c9a4d9d2eca7c08239a468"
+    },
+    {
+      "identifier": "Pacific/Yap",
+      "primary": "Pacific/Chuuk",
+      "identifier_offset": 18474,
+      "primary_offset": 17856,
+      "offset": 473087,
+      "length": 255,
+      "sha256": "1faba48c1b9392bf8daa049689f4d9aa6c0ba3e890ed1db0f5696fb8ce0a1047"
+    },
+    {
+      "identifier": "Poland",
+      "primary": "Europe/Warsaw",
+      "identifier_offset": 18486,
+      "primary_offset": 17353,
+      "offset": 456049,
+      "length": 2654,
+      "sha256": "4e22c33db79517472480b54491a49e0da299f3072d7490ce97f1c4fd6779acab"
+    },
+    {
+      "identifier": "Portugal",
+      "primary": "Europe/Lisbon",
+      "identifier_offset": 18493,
+      "primary_offset": 16833,
+      "offset": 402014,
+      "length": 3527,
+      "sha256": "92b07cb24689226bf934308d1f1bd33c306aa4da610c52cd5bce25077960502c"
+    },
+    {
+      "identifier": "ROC",
+      "primary": "Asia/Taipei",
+      "identifier_offset": 18502,
+      "primary_offset": 14918,
+      "offset": 295263,
+      "length": 761,
+      "sha256": "0cc990c0ea4faa5db9b9edcd7fcbc028a4f87a6d3a0f567dac76cb222b718b19"
+    },
+    {
+      "identifier": "ROK",
+      "primary": "Asia/Seoul",
+      "identifier_offset": 18506,
+      "primary_offset": 14859,
+      "offset": 293051,
+      "length": 617,
+      "sha256": "2c8f4bb15dd77090b497e2a841ff3323ecbbae4f9dbb9edead2f8dd8fb5d8bb4"
+    },
+    {
+      "identifier": "Singapore",
+      "primary": "Asia/Singapore",
+      "identifier_offset": 18510,
+      "primary_offset": 14884,
+      "offset": 293668,
+      "length": 401,
+      "sha256": "5e67952267aa709f212739bb4e302d8b59d6240c5ac0eaaaee32330e71d7da12"
+    },
+    {
+      "identifier": "Turkey",
+      "primary": "Europe/Istanbul",
+      "identifier_offset": 18520,
+      "primary_offset": 16747,
+      "offset": 267535,
+      "length": 1933,
+      "sha256": "264e308e7743b5afee2d673c5b57567636dabc925bb0be513939996e856718a5"
+    },
+    {
+      "identifier": "UCT",
+      "primary": "UTC",
+      "identifier_offset": 18527,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "US/Alaska",
+      "primary": "America/Anchorage",
+      "identifier_offset": 18531,
+      "primary_offset": 10444,
+      "offset": 41174,
+      "length": 2371,
+      "sha256": "385fe1232365859f607e890bbc1b37bcac6c2d13932ecf8cee82ed76ee156043"
+    },
+    {
+      "identifier": "US/Aleutian",
+      "primary": "America/Adak",
+      "identifier_offset": 18541,
+      "primary_offset": 10431,
+      "offset": 38818,
+      "length": 2356,
+      "sha256": "9d767d4f8dfffee4fdf29e594a8552a41aa77d41cdb4a2e5f7687c94b5699e54"
+    },
+    {
+      "identifier": "US/Arizona",
+      "primary": "America/Phoenix",
+      "identifier_offset": 18553,
+      "primary_offset": 12876,
+      "offset": 186627,
+      "length": 360,
+      "sha256": "8a5973d2c62e2cbf2520f2b44e4a2ee9d2f455c93f0f45bfdeb4533af1584664"
+    },
+    {
+      "identifier": "US/Central",
+      "primary": "America/Chicago",
+      "identifier_offset": 18564,
+      "primary_offset": 11225,
+      "offset": 73125,
+      "length": 3592,
+      "sha256": "feba326ebe88eac20017a718748c46c68469a1e7f5e7716dcb8f1d43a6e6f686"
+    },
+    {
+      "identifier": "US/East-Indiana",
+      "primary": "America/Indiana/Indianapolis",
+      "identifier_offset": 18575,
+      "primary_offset": 11843,
+      "offset": 99837,
+      "length": 1682,
+      "sha256": "90d2b2f4a8fd202b226187c209b020833300edec5ff86a463ccc685e8707532c"
+    },
+    {
+      "identifier": "US/Eastern",
+      "primary": "America/New_York",
+      "identifier_offset": 18591,
+      "primary_offset": 12644,
+      "offset": 170864,
+      "length": 3552,
+      "sha256": "e9ed07d7bee0c76a9d442d091ef1f01668fee7c4f26014c0a868b19fe6c18a95"
+    },
+    {
+      "identifier": "US/Hawaii",
+      "primary": "Pacific/Honolulu",
+      "identifier_offset": 18602,
+      "primary_offset": 18030,
+      "offset": 460739,
+      "length": 329,
+      "sha256": "7f03d1bf5264e7ab023a2ef9b997ddfc8cb6936692407c770762b9c549523f33"
+    },
+    {
+      "identifier": "US/Indiana-Starke",
+      "primary": "America/Indiana/Knox",
+      "identifier_offset": 18612,
+      "primary_offset": 11872,
+      "offset": 118630,
+      "length": 2444,
+      "sha256": "0acbd9e412b0daa55abf7c7f17c094f6d68974393b8d7e3509fb2a9acea35d5f"
+    },
+    {
+      "identifier": "US/Michigan",
+      "primary": "America/Detroit",
+      "identifier_offset": 18630,
+      "primary_offset": 11475,
+      "offset": 89417,
+      "length": 2230,
+      "sha256": "85e733f32a98d828f907ad46de02d9740559bd180af65d0ff7473f80dfae0f98"
+    },
+    {
+      "identifier": "US/Mountain",
+      "primary": "America/Denver",
+      "identifier_offset": 18642,
+      "primary_offset": 11460,
+      "offset": 86957,
+      "length": 2460,
+      "sha256": "32e819c00a43b3c348f539d700d425504f20b8d068c16418d26fa9b693e775c9"
+    },
+    {
+      "identifier": "US/Pacific",
+      "primary": "America/Los_Angeles",
+      "identifier_offset": 18654,
+      "primary_offset": 12258,
+      "offset": 144183,
+      "length": 2852,
+      "sha256": "68977bb9ad6d186fefc6c7abd36010a66e30008dcb2d376087a41c49861e7268"
+    },
+    {
+      "identifier": "US/Samoa",
+      "primary": "Pacific/Pago_Pago",
+      "identifier_offset": 18665,
+      "primary_offset": 18237,
+      "offset": 478824,
+      "length": 175,
+      "sha256": "7c262b62985863aad47f13b0ef5db2e5cc917b5d38002de9a2ea83ddb0883458"
+    },
+    {
+      "identifier": "UTC",
+      "primary": "UTC",
+      "identifier_offset": 18674,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "Universal",
+      "primary": "UTC",
+      "identifier_offset": 18678,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    },
+    {
+      "identifier": "W-SU",
+      "primary": "Europe/Moscow",
+      "identifier_offset": 18688,
+      "primary_offset": 16967,
+      "offset": 419892,
+      "length": 1535,
+      "sha256": "2a69287d1723e93f0f876f0f242866f09569d77b91bde7fa4d9d06b8fcd4883c"
+    },
+    {
+      "identifier": "WET",
+      "primary": "Europe/Lisbon",
+      "identifier_offset": 18693,
+      "primary_offset": 16833,
+      "offset": 402014,
+      "length": 3527,
+      "sha256": "92b07cb24689226bf934308d1f1bd33c306aa4da610c52cd5bce25077960502c"
+    },
+    {
+      "identifier": "Zulu",
+      "primary": "UTC",
+      "identifier_offset": 18697,
+      "primary_offset": 18674,
+      "offset": 353274,
+      "length": 114,
+      "sha256": "8b85846791ab2c8a5463c83a5be3c043e2570d7448434d41398969ed47e3e6f2"
+    }
+  ]
+}

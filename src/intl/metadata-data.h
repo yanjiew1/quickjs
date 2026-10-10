@@ -101,12 +101,12 @@ typedef enum QJSIntlDataSectionId {
 
 /* Optional collation sections90..95 form one atomic schema1.3 group;
  * absence is valid, partial presence invalid. Presence requires actual
- * header Unicode18/CLDR49/UCA18. Runtime global service coverage stays0.
+ * header Unicode18 and a supported CLDR/UCA pair. Runtime global service coverage stays0.
  * NODE(20): cp:u32@0, children:span@4, ces:span@12. Node0 cpFFFFFFFF/noCE;
  * BFS order with contiguous scalar-sorted children, every non-root node
  * owned once; empty spans0/0; nonempty CE spans reference91; leaf has CE.
  * CE(16): p:u32@0,s:u32@4,t:u32@8,flags:u32@12. Weights fit16bits;
- * flags bit0 variable (p nonzero), bit1 upper per CLDR49 Case_Untailored
+ * flags bit0 variable (p nonzero), bit1 upper per the pinned CLDR Case_Untailored
  * t in{08..0C,0E,11,12,1D}; all other bits0. Complete CE spans interned.
  * IMPLICIT(16): first:u32@0,last:u32@4,base:u32@8,origin:u32@12.
  * Ascending disjoint scalar ranges; base bit31 selects Han formula:
@@ -124,7 +124,7 @@ typedef enum QJSIntlDataSectionId {
  * (sensitivity,numeric,caseFirst,shifted,normalization); sensitivity3
  * variant; ignore0; only root/en/en-US. co=[null] in both LocaleData records.
  * CONFIG(16): revision2:u32@0,numericPrimary:u32@4,maxDepth:u32@8,
- * UCA18packed:u32@12; exactly1 row, depth1..64 matching actual trie.
+ * UCApacked:u32@12; exactly1 row, depth1..64 matching actual trie.
  * Ordinary primary<<16 leaves a numeric prefix gap before digit zero.
  */
 /* A string reference is two u32 values: pool byte offset, byte length.
@@ -200,8 +200,8 @@ typedef enum QJSIntlDataSectionId {
  * self replacement and locale/component-parent cycles; runtime canonicalize
  * bounds substitution passes by alias_count+1, then reports a data error.
  * Generic reader requires nonzero Unicode/CLDR major; UCA0 is allowed before
- * collation sections. Metadata-only generator emits18/49/0; collation emits
- * UCA18 after consuming pinned UCA18 source. Provider checks Unicode
+ * collation sections. Metadata-only generation records core Unicode18/selected CLDR/0; collation
+ * records the actual pinned CLDR-bundled UCA version (release48.2/UCA17). Provider checks Unicode
  * against libunicode18 and collation compatibility before activation.
  * Invalid scalars/enums/UTF8 and inconsistent duplicate records are rejected.
  * Header/data versions and input digest are actual binary bytes.
@@ -273,7 +273,7 @@ typedef enum QJSIntlDataSectionId {
  *   and no surrogate intersections. Adjacent ranges coalesce during
  *   generation. Nonempty section required when any context3 row exists.
  *   Generated from verified Unicode18 Scripts.txt Script=Hebrew; header
- *   Unicode version must be18.0.0 when40/41 is present. CLDR must be49.0.0
+ *   Unicode version must be18.0.0 when40/41 is present. CLDR must be a supported selected version
  *   when40 is present. Reader checks structure; digest/provider activation
  *   proves exact pinned source coverage rather than trusting generic ranges.
  *   Context predicates are pinned ICU78.3 reference behavior, evaluated on
@@ -284,7 +284,7 @@ typedef enum QJSIntlDataSectionId {
 /* Additive1.3 LocaleInfo records, reviewed ECMA4027ae78cf on2026-10-09:
  * SCRIPT_DIRECTION(12): script:string@0, direction:u32@8.
  *   Sorted unique canonical ISO15924 titlecase script. Direction0 unknown,
- *   1 LTR,2 RTL, generated from verified CLDR49 scriptMetadata.txt field6
+ *   1 LTR,2 RTL, generated from verified selected CLDR scriptMetadata.txt field6
  *   UNKNOWN/NO/YES respectively. No inferred horizontal locale orientation.
  *   Missing script in this complete source inventory means undefined.
  * AVAILABLE_CALENDAR(8): id:string@0; sorted unique canonical ca type.
@@ -304,7 +304,7 @@ typedef enum QJSIntlDataSectionId {
  *   No root identity row is permitted; no defaultContent assumption.
  *   Missing25/26 is UNSUPPORTED, not a proved empty inventory.
  * All new IDs require minor>=3; minor0..2 keep previous widths/behavior.
- * Presence24 requires exact18.0.0/49.0.0 header versions. Optional section
+ * Presence24 requires Unicode18.0.0 and supported CLDR header versions. Optional section
  * completeness and source provenance are verified by provider activation.
  */
 enum { QJS_INTL_LOCALE_INFO_COLLATOR = 0, QJS_INTL_LOCALE_INFO_NUMBER = 1 };
@@ -314,7 +314,7 @@ enum { QJS_INTL_LOCALE_INFO_COLLATOR = 0, QJS_INTL_LOCALE_INFO_NUMBER = 1 };
  * range-pair keys are strictly unique/ordered; rules/ranges are shared spans.
  * All categories/types/reserved bytes and span/pool boundaries are checked.
  * Other rules are empty; named rules use the adopted exact scalar decimal
- * relation grammar. CLDR49 required. No service coverage inferred. Generic
+ * relation grammar. Supported CLDR version required. No service coverage inferred. Generic
  * reader invokes plural-data-validation.c, linked with adopted pure plural.c.
  */
 
@@ -338,7 +338,7 @@ enum { QJS_INTL_LOCALE_INFO_COLLATOR = 0, QJS_INTL_LOCALE_INFO_NUMBER = 1 };
  *   algorithm_version:u32@12=1, ep_source:u32@16=1 or2,
  *   reserved_zero:u32@20=0. Every row uses identical ep_source.
  * Any60..65 requires60,61,62,63,65; ep_source1 requires64, ep_source2
- * forbids64. Header Unicode18.0.0 and CLDR49.0.0 required for the group.
+ * forbids64. Header Unicode18.0.0 and a supported CLDR version required for the group.
  * Exact UCD completeness and external EP backend validation remain provider
  * responsibilities; no locale rules, dictionaries or availability inferred.
  * There is no fixed section-count cap: directory bounds plus recognized
@@ -349,7 +349,7 @@ enum { QJS_INTL_LOCALE_INFO_COLLATOR = 0, QJS_INTL_LOCALE_INFO_NUMBER = 1 };
  * Generic pool/ref checks precede unchanged owner group/grammar gates. Relative
  * requires both70/71 and valid complete30..32 cardinal bindings for all16 rows.
  * Number80/81 are atomic,82/88 require87, and81/84/86/88 bind matching80 keys.
- * All present groups pin Unicode18/CLDR49. Coverage/provider activation remains
+ * All present groups pin core Unicode18 and the selected supported CLDR. Coverage/provider activation remains
  * external; accepting these sections never adds availability or capabilities.
  * No reviewed layout exists here for reserved72..79/89 or future90..110 IDs.
  */

@@ -1,7 +1,7 @@
-/* Initial native development provider. Copyright (c) 2026 Yan-Jie Wang.
+/* Native Intl provider. Copyright (c) 2026 Yan-Jie Wang.
  * Compile this source only for CONFIG_INTL_NATIVE. ICU is selected separately.
- * This profile exposes Locale operations and ListFormat for en/en-US only.
- * It makes no complete Intl or wire service_coverage claim. */
+ * Service AvailableLocales are the installed en/en-US rows. The selected
+ * released bundle supplies each registered service and Locale inventories. */
 #ifdef CONFIG_ICU
 #error "Native Intl provider data requires CONFIG_ICU to be disabled"
 #endif
@@ -58,7 +58,7 @@ static QJSIntlStatus require_metadata(const QJSIntlDataView *view)
     size_t i;
     /* Reader acceptance alone does not establish this profile's metadata. */
     if (header_word(view, QJS_INTL_H_UNICODE_VERSION) != (18u << 16) ||
-        header_word(view, QJS_INTL_H_CLDR_VERSION) != (49u << 16))
+        header_word(view, QJS_INTL_H_CLDR_VERSION) != QJS_INTL_CLDR_RELEASE_48_2)
         return QJS_INTL_UNSUPPORTED;
     for (i = 0; i < sizeof(required) / sizeof(required[0]); i++) {
         status = qjs_intl_data_section(view, required[i], &section);
@@ -120,7 +120,7 @@ QJSIntlStatus qjs_intl_provider_new(const QJSIntlProviderConfig *config,
         config->default_locale.data ? config->default_locale : bytes("en-US"),
         &canonical);
     if (status != QJS_INTL_OK) goto fail;
-    /* Explicit development default policy. Unknown host locales are never
+    /* Installed default locale policy. Unknown host locales are never
      * reported as discovered/supported; ICU retains its host-default policy.
      * Restriction guarantees DefaultLocale and its fallback en both exist. */
     if (strcmp(canonical, "en-US") && strcmp(canonical, "en")) {
@@ -136,11 +136,14 @@ QJSIntlStatus qjs_intl_provider_new(const QJSIntlProviderConfig *config,
     p->default_locale = canonical;
     p->default_time_zone = canonical_zone;
     canonical = NULL;
-    p->versions.provider = bytes("native-development");
+    p->versions.provider = bytes("native");
     p->versions.unicode = bytes("18.0.0");
-    p->versions.cldr = bytes("49.0.0");
-    /* The reader validated these bytes. Record the actual schema version;
-     * omitted manifest/collation/tzdata values make no provenance claim. */
+    p->versions.cldr = bytes("48.2.0");
+    p->versions.collation = bytes("17.0.0");
+    p->versions.tzdata = bytes("2026e");
+    p->versions.input_manifest_sha256 = bytes("8b9c06ad8183237e11bbb9145ffa988a452a88ef2d5cea9b3478fad2cbe48cf2");
+    /* The sole released embedding and its input manifest digest (section2)
+     * are pinned by the source stage. Record the validated schema version. */
     p->versions.schema_version =
         ((uint32_t)p->view.data[8] | (uint32_t)p->view.data[9] << 8) << 16 |
         (uint32_t)p->view.data[10] | (uint32_t)p->view.data[11] << 8;

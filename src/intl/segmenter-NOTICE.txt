@@ -1,10 +1,9 @@
-This packet contains original native default segmentation and host generator
+This module contains original native default segmentation and host generator
 source. New source: Copyright (c) 2026 Yan-Jie Wang, MIT license (LICENSE).
 
 Algorithms follow Unicode Standard Annex29, Unicode18.0.0, revision49,
 September1,2026: https://www.unicode.org/reports/tr29/tr29-49.html
-Owned reference is pinned in SOURCE-REFERENCES.json. No Unicode prose is
-copied into these implementation modules. Unicode18 changes GB9c to
+No Unicode prose is copied into these implementation modules. Unicode18 changes GB9c to
 InCB=Linker InCB=Extend* x InCB=Consonant; older CLDR root expressions are
 not treated as the Unicode18 normative rule source.
 
@@ -13,13 +12,13 @@ Properties and generated fixture data derive from Unicode Character Database
 DerivedCoreProperties/InCB, emoji-data/Extended_Pictographic, and the three
 Unicode18 BreakTest files. Copyright (c) 2026 Unicode, Inc. Unicode and the
 Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and
-other countries. Unicode License V3 is included in evidence/UNICODE-LICENSE.
+other countries. Unicode License V3 is included in data/unicode-data-LICENSE.txt.
 The original data files retain their Unicode terms-of-use notices.
 
-CLDR49 segment files are consumed only to produce an explicit tailoring gap
-inventory. CLDR commit11f1f63d9390d1644c66a6b0704571de3cca4cbf. Unicode
-license is included in evidence/CLDR-LICENSE. No CLDR suppression dictionary
-or locale tailoring is activated by the default engine.
+The selected released CLDR48.2 data has source provenance in
+data/locale-metadata-provenance.json. Its Unicode license is included in
+data/unicode-data-LICENSE.txt. No CLDR suppression dictionary or locale
+tailoring is activated by the default segmentation engine.
 
 segmenter-unicode.c calls the existing MIT libunicode CharRange/unicode_prop
 API, Copyright(c)2017-2018 Fabrice Bellard, for its already-owned pictographic
@@ -30,6 +29,7 @@ No code or tests were ported from QuickJS-NG.
 
 The byte assembler is an additive derivative of the separate metadata1.2
 owner contract and imports frozen metadata/preferences/ListFormat modules.
-Source pins and exact dependency paths are in DEPENDENCIES.json. The full
+Actual generated inputs are recorded in data/locale-metadata-provenance.json.
+The full
 bundle still imports ListFormat's ICU reference for its own context rules;
 Segmenter itself does not port ICU algorithms or depend on ICU at runtime.

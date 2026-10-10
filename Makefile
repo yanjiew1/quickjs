@@ -1734,6 +1734,7 @@ tests/test_intl_native_date_frontend_oom$(EXE): $(OBJDIR)/tests/test_intl_native
 test-intl-native-date: qjs$(EXE) tests/test_intl_native_date_bank_data$(EXE) tests/test_intl_native_date_frontend_oom$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_frontend.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_all_calendars.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_timezone_names.js
 	$(WINE) ./tests/test_intl_native_date_bank_data$(EXE)
 	$(WINE) ./tests/test_intl_native_date_frontend_oom$(EXE)
 ifeq ($(CONFIG_TEMPORAL),y)

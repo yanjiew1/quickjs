@@ -84,7 +84,7 @@ QJSIntlStatus qjs_intl_native_segmenter_data_open(const QJSIntlAllocator *a,
     if (!out || !a || !a->malloc || !a->realloc || !a->free || !view || !view->data)
         return QJS_INTL_INVALID_ARGUMENT;
     if (view->length < 64 || little_u32(view->data + 36) != QJS_INTL_SEGMENT_UNICODE_VERSION ||
-        little_u32(view->data + 40) != (49u << 16) || view->data[8] != 1 ||
+        !QJS_INTL_CLDR_VERSION_SUPPORTED(little_u32(view->data + 40)) || view->data[8] != 1 ||
         view->data[9] != 0 || view->data[10] != 3 || view->data[11] != 0)
         return QJS_INTL_UNSUPPORTED;
     memset(&value, 0, sizeof(value));
