@@ -82,7 +82,7 @@ static void close_operation(OperationFixture *fixture)
     assert(!fixture->probe.live);
 }
 
-/* Count only the call, including any error cleanup performed by the engine.
+/* Count raw host allocation attempts during the call, including error cleanup.
    Disable injection before releasing the result or consuming its exception. */
 static size_t call_operation(OperationFixture *fixture, size_t failure)
 {
@@ -156,21 +156,27 @@ static void check_caches(JSContext *ctx, const CacheSnapshot *snapshots)
 static void check_cold_failures(const char *source, size_t operation)
 {
     OperationFixture fixture;
-    size_t count, i;
+    size_t count, i, failure_count = 1;
     size_t failures[4];
 
     open_operation(&fixture, source);
     count = call_operation(&fixture, SIZE_MAX);
-    assert(count && count < SIZE_MAX - 1 && !fixture.probe.failed);
+    assert(count < SIZE_MAX - 1 && !fixture.probe.failed);
     close_operation(&fixture);
     failures[0] = 1;
-    failures[1] = count / 2 + count % 2;
-    failures[2] = count;
-    failures[3] = count + 1;
-    printf("Intl OOM operation %zu cold allocations=%zu boundaries=1,%zu,%zu,%zu\n",
-           operation, count, failures[1], failures[2], failures[3]);
+    if (count) {
+        failures[1] = count / 2 + count % 2;
+        failures[2] = count;
+        failures[3] = count + 1;
+        failure_count = sizeof(failures) / sizeof(*failures);
+        printf("Intl OOM operation %zu cold allocations=%zu boundaries=1,%zu,%zu,%zu\n",
+               operation, count, failures[1], failures[2], failures[3]);
+    } else {
+        /* Existing engine pools can satisfy a cold call without host allocation. */
+        printf("Intl OOM operation %zu cold allocations=0 sentinel=1\n", operation);
+    }
     fflush(stdout);
-    for (i = 0; i < sizeof(failures) / sizeof(*failures); i++) {
+    for (i = 0; i < failure_count; i++) {
         if (i && failures[i] == failures[i - 1])
             continue;
         open_operation(&fixture, source);
