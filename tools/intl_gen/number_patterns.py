@@ -1,4 +1,4 @@
-"""Original CLDR49 NumberFormat host generator; runtime consumes bytes only.
+"""Original CLDR48.2 NumberFormat host generator; runtime consumes bytes only.
 
 Python3.6+; candidate data never enables metadata service coverage. Explicit
 gaps omit unsupported rows. CLDR/UCD attribution is in NOTICE.txt.

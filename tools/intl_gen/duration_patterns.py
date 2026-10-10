@@ -1,4 +1,4 @@
-"""Original CLDR49 DurationFormat host extractor. No runtime XML/JSON.
+"""Original CLDR48.2 DurationFormat host extractor. No runtime XML/JSON.
 
 Reuses shared NumberFormat exact LDML resolver, metadata parent graph, numeric
 numbering enumeration and scalar pool. Emits only optional clock section110;

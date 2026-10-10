@@ -1,0 +1,17 @@
+{
+  "collation.py": "ef026bf8770bb3e454586aa8f1986f2ed0e6da0a8faa8a87b377072a83d79873",
+  "date_patterns.py": "b63a1ade59c2923878b943a20ea55cdb1a29bc24097c82bea8a94f1824c953d6",
+  "display_names.py": "a797207358630eca7e4999a6a588ed01f5f1bae70f2eddb09676b86ffb2018ed",
+  "duration_patterns.py": "a7c57dba223887e1fd42850c45ab5bfa9fbaa190d94561047d93619cee0493c2",
+  "list_bundle.py": "ed3ceddc6a44cead9a8c94ff1cbacc9e9c51d7b4ffe70f503e45ca267e119f8c",
+  "list_patterns.py": "5b3a197516e5d6c13f5b87ce6a7515d7ebb518f0e8abd755765520841350300c",
+  "locale_info_records.py": "bca1311df4e34c6840e63ccb790a282d018e2e1017fee234f463ed5566224164",
+  "locale_subset.py": "4a40fa9872f9e942a09fb3ba265c1ae8a7e94af1016a619d117b899461923eb8",
+  "metadata.py": "b3b11f17afdf0ec16d569125542ff0fbf90170ea1c2128f18339da4804a0429b",
+  "number_extensions.py": "1e55d73a1918b9a6842c8107f742ebb6d8f6f2c62e13bc42c338161c5af93648",
+  "number_patterns.py": "7413add9e26d4a193afa31d1cdbb670566c8d0fcd09f2f96a80f50eb812fbbca",
+  "plural_rules.py": "3bb12777917fc971ba2fe6b35fe35b445768921058b674f17539be9c88688bea",
+  "preferences.py": "a4f1af20000451adab141ddc0d88504b419332c4672ea8f0d2e52415a44d253c",
+  "relative_patterns.py": "182b810d4a3439a3cc5bd7483da23678fcca33208021705b412e95b3f68f2e1f",
+  "segmenter_properties.py": "c2c368bce02ae035f3c2bb7a0703b8ead821e2424216f6e8f7647e59c97c71e4"
+}

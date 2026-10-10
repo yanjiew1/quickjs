@@ -1,4 +1,4 @@
-"""Pinned CLDR49 sixteen-calendar DateTimeFormat extraction; host-only Python.
+"""Pinned CLDR48.2 sixteen-calendar DateTimeFormat extraction; host-only Python.
 
 Runtime uses packed wire1.3 records100..107. Imports the frozen metadata and
 PREFv2 modules; no formatter, ICU, JSON/XML runtime, zlib, or system timezone.
@@ -9,7 +9,7 @@ import struct
 import metadata as m
 import locale_subset
 
-WIDTHS = {100: 32, 101: 28, 102: 48, 103: 16, 104: 72, 105: 32, 106: 16, 107: 20}
+WIDTHS = {100: 32, 101: 28, 102: 48, 103: 16, 104: 72, 105: 32, 106: 16, 107: 20, 108: 36}
 STYLES = ('full', 'long', 'medium', 'short')
 PERIODS = ('am', 'pm', 'midnight', 'noon', 'morning1', 'morning2',
            'afternoon1', 'afternoon2', 'evening1', 'evening2', 'night1', 'night2')
@@ -105,8 +105,9 @@ def alias_path(base, expression):
 
 def flatten(data, source='<input>'):
     """Retain standard (no-alt) LDML paths, including every distinguishing
-    attribute in dates/numbers. Distinct unconsumed records cannot collide or
-    replace a consumed record; genuine duplicate standard leaves still fail.
+    attribute in dates/numbers and standard territory display names used by
+    timezone composition. Distinct unconsumed records cannot collide or replace
+    a consumed record; genuine duplicate standard leaves still fail.
     """
     root = m.parse_xml(data, 'ldml')
     values, aliases = {}, {}
@@ -135,6 +136,12 @@ def flatten(data, source='<input>'):
     for child in root:
         if child.tag in ('dates', 'numbers', 'alias'):
             walk(child, ())
+        elif child.tag == 'localeDisplayNames':
+            # Date zone composition needs the standard country name when no
+            # short name exists and for preferred-zone country qualifiers.
+            for group in child:
+                if group.tag == 'territories':
+                    walk(group, (segment('localeDisplayNames'),))
     return values, aliases
 
 
@@ -189,7 +196,12 @@ class Resolver:
                 current, redirected = original, True
                 break
             if not redirected:
-                current = self.component_parents.get(('dates', current), self.parents[current])
+                if wanted and wanted[0][0] == 'localeDisplayNames':
+                    # Territory display names inherit through general parents,
+                    # rather than the component-specific dates parent graph.
+                    current = self.parents[current]
+                else:
+                    current = self.component_parents.get(('dates', current), self.parents[current])
         else:
             raise m.DataError('date alias substitution bound exceeded')
         self.last_origin = (self.sources.get(current, str(current)), wanted)
@@ -202,7 +214,7 @@ class Resolver:
 
 def pattern_fields(value, source='<input>', unsupported=None):
     """Independent host validation of the same documented LDML subset.
-    Legal CLDR49 ordinal ddd and other unimplemented fields return None.
+    Legal CLDR48.2 ordinal ddd and other unimplemented fields return None.
     Complete lexical validation still runs after unsupported fields. Malformed
     supported fields/quotation fail with exact source, value and token location.
     a is implicit and never resolves dayPeriod; ddd never becomes numeric d.
@@ -252,7 +264,7 @@ def pattern_fields(value, source='<input>', unsupported=None):
             require(n <= 5, 'invalid month pattern width')
             f, width = 3, {1: 1, 2: 0, 3: 3, 4: 4, 5: 2}[n]
         elif ch == 'd':
-            # CLDR49 has abbreviated ordinal day names (ddd) and their
+            # CLDR48.2 has abbreviated ordinal day names (ddd) and their
             # dayOfMonths labels. Native records implement numeric/2-digit d
             # only; preserving an unsupported gap avoids ordinal corruption.
             require(n <= 3, 'invalid day pattern width')
@@ -377,7 +389,7 @@ def epoch_ms(value, fallback):
     if value is None:
         return fallback
     import datetime
-    # CLDR49 has minute boundaries and Africa/Monrovia's 00:44:30 boundary.
+    # CLDR48.2 has minute boundaries and Africa/Monrovia's 00:44:30 boundary.
     m.require(re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(?::[0-9]{2})?', value),
               'invalid metazone boundary: {!r}'.format(value))
     fields = [int(x) for x in re.split('[- :]', value)]
@@ -536,7 +548,112 @@ def collect_calendar(resolver, index, tag, canonical, ldml, available_ids,
         names.append((index, canonical, NAME_LEAP_TEMPLATE, 0, 0, 0, value))
 
 
-def collect(inputs, metadata, period_xml, meta_xml, timezone_xml):
+def zone_format_records(inputs, metadata, resolver, meta_xml, timezone_xml,
+                        likely_xml, meta, aliases):
+    """Compile CLDR generic-location and preferred-zone name composition.
+
+    No IANA offset/DST inference: these records contain only immutable CLDR
+    strings and zone/metazone identities. The runtime selects active periods.
+    """
+    if likely_xml is None:
+        # Legacy synthetic collector fixtures have no new auxiliary input.
+        return ()
+    alias = dict(aliases)
+    canonical = lambda name: alias.get(name, name)
+    countries, by_country = {}, {}
+    root = m.parse_xml(timezone_xml, 'ldmlBCP47')
+    for element in root.findall('./keyword/key[@name="tz"]/type'):
+        names = m.words(element.get('alias', ''))
+        if not names or element.get('preferred'):
+            continue
+        name = canonical(names[0])
+        short = element.get('name', '')
+        # TR35 Time_Zone_Identifiers: length5 prefix region, overridden by
+        # explicit region; other lengths have no inferred region.
+        region = element.get('region', short[:2].upper() if len(short) == 5 else '')
+        if region and region not in ('001', 'ZZ'):
+            m.require(name not in countries or countries[name] == region, 'conflicting Date zone countries')
+            countries[name] = region
+            by_country.setdefault(region, set()).add(name)
+    doc = m.parse_xml(meta_xml, 'supplementalData')
+    preferred = {}
+    for element in doc.findall('./metaZones/mapTimezones/mapZone'):
+        names = m.words(element.get('type', ''))
+        m.require(len(names) == 1, 'metazone preferred mapping must name one zone')
+        m.insert_unique(preferred, (element.get('other', ''), element.get('territory', '')),
+                        canonical(names[0]), 'Date metazone preferred zone')
+    primary = {canonical(e.text or '') for e in doc.findall('./primaryZones/primaryZone')}
+    likely = dict(m.parse_likely(likely_xml))
+    short_countries = {}
+    for logical, content in inputs:
+        tag = locale_subset.tag(logical.rsplit('/', 1)[-1][:-4])
+        doc = m.parse_xml(content, 'ldml')
+        values = {}
+        for node in doc.findall('./localeDisplayNames/territories/territory[@alt="short"]'):
+            value = node.text or ''
+            if value not in ('', INHERIT, MISSING):
+                m.insert_unique(values, node.get('type', ''), scalar_text(value), 'short country name')
+        short_countries[tag] = values
+    def locale_region(tag):
+        if tag == 'root':
+            return '001'
+        fields = tag.split('-')
+        for value in fields[1:]:
+            if re.fullmatch(r'[A-Z]{2}|[0-9]{3}', value):
+                return value
+        expanded = likely.get(tag, likely.get(fields[0], ''))
+        return expanded.rsplit('-', 1)[-1] if expanded else '001'
+    def country_label(tag, region, short):
+        if short:
+            current = tag
+            while current is not None:
+                value = short_countries.get(current, {}).get(region, '')
+                if value:
+                    return value
+                current = metadata['parents'][current]
+        return resolver.text(tag, path('localeDisplayNames', 'territories',
+            segment('territory', type=region))) or region
+    def composed(template, value):
+        placeholders(template, 1)
+        return template.replace('{0}', value)
+    pairs = {(canonical(zone), name) for zone, name, unused_from, unused_before in meta}
+    by_zone = {}
+    for zone, name in sorted(pairs):
+        by_zone.setdefault(zone, []).append(name)
+    zones = {canonical(zone) for zone in countries} | {zone for zone, unused in pairs}
+    result = []
+    for index, tag in enumerate(sorted(metadata['parents'])):
+        locale_country = locale_region(tag)
+        region_format = resolver.text(tag, TZ + path('regionFormat'))
+        fallback = resolver.text(tag, TZ + path('fallbackFormat'))
+        placeholders(region_format, 1)
+        placeholders(fallback, 2)
+        for zone in sorted(zones):
+            country = countries.get(zone, '')
+            city = resolver.text(tag, TZ + path(segment('zone', type=zone), 'exemplarCity'))
+            if not city:
+                city = zone.rsplit('/', 1)[-1].replace('_', ' ')
+            location = ''
+            if country:
+                value = country_label(tag, country, True) if len(by_country[country]) == 1 or zone in primary else city
+                location = composed(region_format, value)
+            result.append((index, zone, '', location, ''))
+            for metazone in by_zone.get(zone, ()):
+                best = preferred.get((metazone, locale_country), preferred.get((metazone, '001'), ''))
+                pattern = ''
+                if best != zone:
+                    value = country_label(tag, country, False) if country and preferred.get((metazone, country)) == zone else city
+                    # Keep one argument for the runtime-selected metazone label.
+                    # Replace literal tokens in one pass so argument text cannot
+                    # become a template token during a second substitution.
+                    pattern = re.sub(r'\{[01]\}', lambda match: value if match.group() == '{0}' else '{0}', fallback)
+                    placeholders(pattern, 1)
+                result.append((index, zone, metazone, location, pattern))
+    return tuple(sorted(result))
+
+
+def collect(inputs, metadata, period_xml, meta_xml, timezone_xml, likely_xml=None):
+    inputs = tuple(inputs)
     resolver = Resolver(inputs, metadata['parents'], metadata.get('component_parents'))
     period_data, meta = day_periods(period_xml), metazones(meta_xml)
     available_ids, era_ids, zone_keys = set(), set(), set()
@@ -565,7 +682,7 @@ def collect(inputs, metadata, period_xml, meta_xml, timezone_xml):
         gmt = placeholders(resolve(TZ + path('gmtFormat')), 1)
         zero = resolve(TZ + path('gmtZeroFormat'))
         if not zero:
-            # CLDR49 removed many explicit gmtZeroFormat records. Derive the
+            # CLDR48.2 removed many explicit gmtZeroFormat records. Derive the
             # zero form from the exact localized GMT template, preserving
             # prefix/suffix characters; do not substitute an ASCII constant.
             zero = gmt.replace('{0}', '')
@@ -593,10 +710,12 @@ def collect(inputs, metadata, period_xml, meta_xml, timezone_xml):
             if any(labels) or exemplar:
                 zone_names.append((index, int(kind == 'metazone'), key) + labels + (exemplar,))
     aliases = zone_aliases(timezone_xml, {item[0] for item in meta} | {key for kind, key in zone_keys if kind == 'zone'})
+    formats = zone_format_records(inputs, metadata, resolver, meta_xml, timezone_xml,
+                                  likely_xml, meta, aliases)
     return {'patterns': tuple(sorted(patterns)), 'names': tuple(sorted(names)),
             'symbols': tuple(sorted(symbols)), 'rules': tuple(sorted(rules)),
             'zones': tuple(sorted(zone_names)), 'meta': meta, 'aliases': aliases,
-            'range_fallbacks': tuple(sorted(fallbacks)),
+            'range_fallbacks': tuple(sorted(fallbacks)), 'zone_formats': formats,
             'evidence': {'calendars': tuple(canonical for canonical, unused in CALENDARS),
                          'calendar_policy': 'each canonical calendar resolves actual CLDR calendar subtree and aliases; ISO8601 has its own source patterns',
                          'record_origins': tuple(sorted(origins)),
@@ -620,7 +739,8 @@ def load_pinned(args, metadata, consumed, context=None):
 
     inputs = ((logical, read(logical)) for logical in locale_subset.main_paths(manifest, metadata))
     return collect(inputs, metadata, read('common/supplemental/dayPeriods.xml'),
-                   read('common/supplemental/metaZones.xml'), read('common/bcp47/timezone.xml'))
+                   read('common/supplemental/metaZones.xml'), read('common/bcp47/timezone.xml'),
+                   read('common/supplemental/likelySubtags.xml'))
 
 
 def strings(data):
@@ -638,6 +758,8 @@ def strings(data):
     for row in data['aliases']:
         values.extend(row)
     for row in data['range_fallbacks']:
+        values.extend(row[1:])
+    for row in data['zone_formats']:
         values.extend(row[1:])
     return tuple(values)
 
@@ -661,6 +783,8 @@ def encode(data, pool):
     sections[106] = b''.join(pool.ref(row[0]) + pool.ref(row[1]) for row in data['aliases'])
     sections[107] = b''.join(m.u32(row[0]) + pool.ref(row[1]) + pool.ref(row[2])
         for row in data['range_fallbacks'])
+    sections[108] = b''.join(m.u32(row[0]) + b''.join(pool.ref(value) for value in row[1:])
+        for row in data['zone_formats'])
     for section_id, value in sections.items():
         m.require(len(value) % WIDTHS[section_id] == 0, 'DateTimeFormat record width drift')
     return sections

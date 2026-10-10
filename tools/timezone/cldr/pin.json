@@ -1,9 +1,12 @@
 {
-  "repository": "https://github.com/unicode-org/cldr",
-  "commit": "11f1f63d9390d1644c66a6b0704571de3cca4cbf",
-  "date": "2026-10-07T02:57:03Z",
-  "xml_path": "common/supplemental/windowsZones.xml",
-  "xml_sha256": "9cf3db6a31fb382fee21b70be6feba1e82766b0fcd06e6261fb7936a73e537ff",
+  "commit": "11299982335beb974c1c63c45265184e759c0f41",
+  "date": "2026-03-17",
+  "date_kind": "official release date; commit timestamp not asserted",
   "license": "UNICODE LICENSE V3",
-  "license_file": "LICENSE"
+  "license_file": "LICENSE",
+  "release": "48.2",
+  "repository": "https://github.com/unicode-org/cldr",
+  "tag": "release-48-2",
+  "xml_path": "common/supplemental/windowsZones.xml",
+  "xml_sha256": "9cf3db6a31fb382fee21b70be6feba1e82766b0fcd06e6261fb7936a73e537ff"
 }

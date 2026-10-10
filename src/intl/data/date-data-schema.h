@@ -12,9 +12,10 @@ enum {
     QJS_INTL_DATA_DATE_ZONE_NAME = 104,
     QJS_INTL_DATA_DATE_META_PERIOD = 105,
     QJS_INTL_DATA_DATE_ZONE_ALIAS = 106,
-    QJS_INTL_DATA_DATE_RANGE_FALLBACK = 107
+    QJS_INTL_DATA_DATE_RANGE_FALLBACK = 107,
+    QJS_INTL_DATA_DATE_ZONE_FORMAT = 108
 };
-/* 108..109 are reserved, unused. Exact layouts in WIRE-SCHEMA.json.
+/* 109 is reserved, unused. Exact layouts in WIRE-SCHEMA.json.
  * 100+101+102 form an atomic group;103..107 optional, require the group.
  * Group presence confers no service coverage or calendar capability.
  * UTF8 strings are shared pool1 references; digits are shared section17.
@@ -27,6 +28,12 @@ enum {
 #define QJS_INTL_DATE_META_PERIOD_WIDTH 32u
 #define QJS_INTL_DATE_ZONE_ALIAS_WIDTH 16u
 #define QJS_INTL_DATE_RANGE_FALLBACK_WIDTH 20u
+#define QJS_INTL_DATE_ZONE_FORMAT_WIDTH 36u
+/* 108: locale u32; zone, metazone, location, name_pattern pool refs at4/12/20/28.
+ * Sorted by(locale,zone,metazone). Metazone may be empty for fallback rows.
+ * Pattern may be empty, otherwise exactly one literal {0}. Optional108
+ * requires the100..102 group; old blobs without108 remain readable.
+ */
 /* Additive section101 semantics; record widths/IDs and wire1.3 unchanged.
  * field4: cyclic year1..60, format context0, width0..2.
  * field5: exact leap-month template, one literal {0}; named index1 with

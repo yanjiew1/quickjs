@@ -45,7 +45,7 @@ def load_modules():
     return result, pins
 
 
-def encode_blob(sections, widths, required, m):
+def encode_blob(sections, widths, required, m, uca_data_version):
     m.require(set(required) <= set(sections) <= set(widths), 'combined section inventory mismatch')
     cursor = m.HEADER_SIZE + m.DIRECTORY_SIZE * len(sections)
     directory, payload, inventory = [], bytearray(), []
@@ -62,7 +62,7 @@ def encode_blob(sections, widths, required, m):
         payload.extend(data); cursor += len(data); m.u32(cursor)
     header = b'QJSINTL\0' + struct.pack('<HH', 1, 3)
     header += b''.join(m.u32(value) for value in (64, cursor, len(sections), 64, 24, 0,
-                                                18 << 16, 49 << 16, 18 << 16)) + b'\0' * 16
+                                                18 << 16, m.CLDR_VERSION_WORD, int(uca_data_version.split('.')[0]) << 16)) + b'\0' * 16
     m.require(len(header) == 64, 'combined header layout drift')
     blob = header + b''.join(directory) + bytes(payload)
     m.require(len(blob) == cursor, 'combined payload layout drift')
@@ -132,12 +132,14 @@ def generated_outputs(args):
     cldr = m.load_pin_manifest(args.cldr_manifest, m.CLDR_MANIFEST_SHA256, context)
     license_data = m.verified_input(args.cldr_dir, cldr, 'LICENSE', consumed, 'cldr', context)
     identity['inputs'] = {path: item['sha256'] for path, item in sorted(consumed.items())}
-    identity['uca_version'] = '18.0.0'
+    identity['uca_version'] = args.uca_data_version
+    identity['uca_algorithm_reference_version'] = '18.0.0'
+    identity['unicode_core_version'] = '18.0.0'
     identity['locale_selection'] = policy
     identity['generator_dependencies'] = dependencies
     identity['generator_entrypoint_sha256'] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     identity['list_context_reference'] = {'commit': base.ICU_COMMIT, 'sha256': base.ICU_SOURCE_SHA256}
-    identity['wire_schema'] = {'version': [1, 3], 'reader_recognized_sections': 61,
+    identity['wire_schema'] = {'version': [1, 3], 'reader_recognized_sections': 62,
         'absent_capabilities': [20, 25, 26],
         'segmenter_ep': 'packed64' if segmenter['standalone_ep'] else 'sole existing libunicode18 owner',
         'collation': 'atomic90..95; paired sort/search shared root; optional96..98 excluded'}
@@ -174,7 +176,7 @@ def generated_outputs(args):
         widths.update(extra)
     required = set(widths) - {25, 26}
     if not segmenter['standalone_ep']: required.remove(64)
-    blob, inventory = encode_blob(sections, widths, required, m)
+    blob, inventory = encode_blob(sections, widths, required, m, args.uca_data_version)
     outputs = {'intl-data.bin': blob, 'unicode-data-LICENSE.txt': license_data}
     if args.embed_c:
         header, source = m.embedding(blob)
@@ -211,6 +213,8 @@ def main(argv=None):
                    'icu-listformatter-reference', 'uax29-reference', 'uca-reference',
                    'cldr-collation-reference', 'default-locale', 'output-dir'):
         parser.add_argument('--' + option, required=True)
+    parser.add_argument('--uca-data-version', choices=['17.0.0'], required=True,
+                        help='Exact release48.2 collation table version, independent of core Unicode18')
     parser.add_argument('--available-locales', nargs='+', required=True)
     parser.add_argument('--standalone-extended-pictographic', action='store_true')
     parser.add_argument('--embed-c', action='store_true')

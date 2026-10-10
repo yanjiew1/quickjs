@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE.
-"""Pinned CLDR49 root / UCA18 host compiler. Runtime uses only packed bytes.
+"""Pinned CLDR48.2 root / UCA18 host compiler. Runtime uses only packed bytes.
 
 No Python unicodedata: canonical decomposition and properties come from the
 sealed Unicode18 files, independent of the host Python Unicode version.
@@ -18,7 +18,7 @@ import metadata as m
 
 WIDTHS = {90: 20, 91: 16, 92: 16, 93: 4, 94: 20, 95: 16}
 UCA_REFERENCE_SHA256 = 'e5ec6a9933495e327d9dd3e981f0f89bbf8acc40eeb2f12a52e7249c8a3a34db'
-CLDR_REFERENCE_SHA256 = '10372dcca7981154d0ead78aedfef1ed4cfef9808a8568a7b640df861c1c32b2'
+CLDR_REFERENCE_SHA256 = '3c9c4deb78464ab8eca9d5a1852e9ab69999daa87872f2bf0700120c32ce0822'
 CE_RE = re.compile(r'\[([.*])([0-9A-Fa-f]{4})\.([0-9A-Fa-f]{4})\.([0-9A-Fa-f]{4})\]')
 KEY_RE = re.compile(r'[0-9A-Fa-f]{4,6}(?:\s+[0-9A-Fa-f]{4,6})*')
 SINIFORM = {
@@ -39,7 +39,7 @@ def scalar(cp):
 
 
 def upper_tertiary(t):
-    # Pinned CLDR49 Case_Untailored, not General_Category guessing.
+    # Pinned CLDR48.2 Case_Untailored, not General_Category guessing.
     return t in (8, 9, 10, 11, 12, 14, 17, 18, 29)
 
 
@@ -50,19 +50,20 @@ def text(data, label):
         raise m.DataError(label + ': invalid UTF8: ' + str(exc))
 
 
-def parse_allkeys(data):
+def parse_allkeys(data, expected_version):
     result, version = {}, None
     source = text(data, 'allkeys')
-    m.require('# UCA Version: 18.0.0' in source and '# UCD Version: 18.0.0' in source,
-              'allkeys UCA/UCD source headers must declare18.0.0')
+    m.require(('# UCA Version: ' + expected_version) in source and
+              ('# UCD Version: ' + expected_version) in source,
+              'allkeys UCA/UCD source headers disagree with explicit pinned data version')
     for line_number, line in enumerate(source.splitlines(), 1):
         body = line.split('#', 1)[0].strip()
         if not body:
             continue
         if body.startswith('@version'):
-            m.require(version is None and body == '@version 18.0.0',
+            m.require(version is None and body == '@version ' + expected_version,
                       'wrong/repeated allkeys version')
-            version = '18.0.0'
+            version = expected_version
             continue
         m.require(not body.startswith('@'), 'unknown allkeys directive at ' + str(line_number))
         pieces = body.split(';')
@@ -264,9 +265,11 @@ def load_pinned(args, metadata, consumed, context=None):
     read_ucd = lambda path: m.verified_input(args.ucd_dir, ucd_manifest, path, consumed, 'ucd', context)
     reference(args.uca_reference, UCA_REFERENCE_SHA256, 'references/uts10-revision55.html', consumed)
     reference(args.cldr_collation_reference, CLDR_REFERENCE_SHA256,
-              'references/cldr49-tr35-collation.md', consumed)
-    root = parse_allkeys(read_cldr('common/uca/allkeys_CLDR.txt'))
-    ducet = parse_allkeys(read_cldr('common/uca/allkeys_DUCET.txt'))
+              'references/cldr48.2-tr35-collation.md', consumed)
+    m.require(args.uca_data_version == m.UCA_DATA_VERSION,
+              'unsupported CLDR release/UCA data pair')
+    root = parse_allkeys(read_cldr('common/uca/allkeys_CLDR.txt'), args.uca_data_version)
+    ducet = parse_allkeys(read_cldr('common/uca/allkeys_DUCET.txt'), args.uca_data_version)
     ucd = parse_ucd(read_ucd('UnicodeData.txt'))
     implicit = implicit_ranges(ucd, read_ucd('Blocks.txt'), read_ucd('PropList.txt'))
     # S1 normalizes input. Keeping composed-only mappings in a normalized-key
@@ -305,8 +308,11 @@ def load_pinned(args, metadata, consumed, context=None):
         read_cldr('common/uca/CollationTest_CLDR_' + name + '.txt')
     return {'nodes': nodes, 'ces': ces, 'implicit': implicit,
             'digits': ucd['digit_zeros'], 'capabilities': tuple(capabilities),
-            'config': (2, numeric_primary, depth, 18 << 16),
-            'evidence': {'root_table': 'allkeys_CLDR18.0.0',
+            'config': (2, numeric_primary, depth, int(args.uca_data_version.split('.')[0]) << 16),
+            'evidence': {'root_table': 'allkeys_CLDR' + args.uca_data_version,
+                         'root_data_version': args.uca_data_version,
+                         'normalization_and_implicit_property_version': '18.0.0',
+                         'algorithm_reference_version': '18.0.0',
                          'ducet_mappings': len(ducet), 'root_mappings': len(root),
                          'root_ducet_differences': sum(root.get(key) != ducet.get(key)
                                                        for key in set(root) | set(ducet)),

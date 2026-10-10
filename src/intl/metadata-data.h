@@ -11,6 +11,15 @@
 #include "data/relative-data-schema.h"
 #include "data/number-data-schema.h"
 
+/* Data versions are independent of the project's core Unicode18 algorithms. */
+#define QJS_INTL_CLDR_RELEASE_48_2 ((48u << 16) | (2u << 8))
+#define QJS_INTL_CLDR_PREVIEW_49 (49u << 16)
+#define QJS_INTL_CLDR_VERSION_SUPPORTED(v) \
+    ((v) == QJS_INTL_CLDR_RELEASE_48_2 || (v) == QJS_INTL_CLDR_PREVIEW_49)
+#define QJS_INTL_COLLATION_VERSIONS_SUPPORTED(cldr, uca) \
+    (((cldr) == QJS_INTL_CLDR_RELEASE_48_2 && (uca) == (17u << 16)) || \
+     ((cldr) == QJS_INTL_CLDR_PREVIEW_49 && (uca) == (18u << 16)))
+
 #define QJS_INTL_DATA_SCHEMA_MAJOR 1u
 #define QJS_INTL_DATA_SCHEMA_MINOR 3u
 #define QJS_INTL_DATA_HEADER_SIZE 64u

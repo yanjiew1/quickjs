@@ -53,7 +53,7 @@ def encode_blob(sections):
     header = b'QJSINTL\0' + struct.pack('<HH', m.SCHEMA_MAJOR, lists.SCHEMA_MINOR)
     header += b''.join(m.u32(value) for value in
                       (m.HEADER_SIZE, cursor, count, m.HEADER_SIZE, m.DIRECTORY_SIZE,
-                       0, 18 << 16, 49 << 16, 0))
+                       0, 18 << 16, m.CLDR_VERSION_WORD, 0))
     header += b'\0' * 16
     m.require(len(header) == m.HEADER_SIZE, 'header layout drift')
     blob = header + b''.join(directories) + bytes(payload)

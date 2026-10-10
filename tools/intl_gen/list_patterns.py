@@ -1,7 +1,7 @@
-"""CLDR49 ListFormat section40 extension; host Python3.6+, no runtime XML.
+"""CLDR48.2 ListFormat section40 extension; host Python3.6+, no runtime XML.
 
 Original generator; source-only packet, caller owns verified inputs and blob
-assembly. Data derived from Unicode CLDR49, see evidence/CLDR-LICENSE.
+assembly. Data derived from Unicode CLDR48.2, see evidence/CLDR-LICENSE.
 Context alternate templates follow ICU78.3 listformatter.cpp at commit
 21d1eb0f306e1141c10931e914dfc038c06121da; see evidence/ICU-LICENSE.
 """

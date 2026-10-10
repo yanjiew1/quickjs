@@ -53,7 +53,7 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
     const QJSIntlDateOptions *o, const QJSIntlDateEnvironment *e, QJSIntlNativeDate **out,
     const QJSIntlDateBankOptions *bank_options, QJSIntlNativeDateBank **bank_out)
 {
-    QJSIntlDataSection s[8], locales, digits;
+    QJSIntlDataSection s[9], locales, digits;
     QJSIntlDataSlice row;
     QJSIntlDateData d;
     QJSIntlDatePattern *patterns = NULL;
@@ -61,12 +61,13 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
     QJSIntlDatePeriodRule *periods = NULL;
     QJSIntlDateZoneName *zones = NULL;
     QJSIntlDateMetaPeriod *meta = NULL;
+    QJSIntlDateZoneFormat *formats = NULL;
     QJSIntlStatus result;
     QJSIntlBytes calendar, key;
     QJSCalendarId calendar_id;
     const char *canonical;
     uint32_t begin[5], end[5], i, j;
-    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20 };
+    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20, 36 };
     if (bank_options) {
         if (!bank_out) return QJS_INTL_INVALID_ARGUMENT;
         *bank_out = NULL;
@@ -77,7 +78,7 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
     if (!a || !a->malloc || !a->free || !v || !o || !o->calendar.data ||
         !o->calendar.length || !o->time_zone.data || !o->time_zone.length) return QJS_INTL_INVALID_ARGUMENT;
     memset(&d, 0, sizeof(d));
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 9; i++) {
         result = section(v, 100 + i, widths[i], i < 3, &s[i]);
         if (result) return result;
     }
@@ -141,14 +142,21 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
             break;
         }
     }
+    {
+        uint32_t first, before;
+        if (!span(&s[8], locale, &first, &before)) return QJS_INTL_DATA_ERROR;
+        d.zone_format_count = before - first;
+    }
+    if (d.zone_format_count > SIZE_MAX / sizeof(*formats)) return QJS_INTL_OVERFLOW;
     if (d.pattern_count > SIZE_MAX / sizeof(*patterns) || d.name_count > SIZE_MAX / sizeof(*names) ||
         d.period_count > SIZE_MAX / sizeof(*periods) || d.zone_name_count > SIZE_MAX / sizeof(*zones) ||
         d.meta_period_count > SIZE_MAX / sizeof(*meta)) return QJS_INTL_OVERFLOW;
     patterns = allocate(a, d.pattern_count, sizeof(*patterns));
     names = allocate(a, d.name_count, sizeof(*names)); periods = allocate(a, d.period_count, sizeof(*periods));
     zones = allocate(a, d.zone_name_count, sizeof(*zones)); meta = allocate(a, d.meta_period_count, sizeof(*meta));
+    formats = allocate(a, d.zone_format_count, sizeof(*formats));
     result = QJS_INTL_NO_MEMORY;
-    if (!patterns || (d.name_count && !names) || (d.period_count && !periods) ||
+    if ((d.zone_format_count && !formats) || !patterns || (d.name_count && !names) || (d.period_count && !periods) ||
         (d.zone_name_count && !zones) || (d.meta_period_count && !meta)) goto done;
     result = QJS_INTL_DATA_ERROR;
     j = 0;
@@ -192,7 +200,17 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
         if (!text(v, &s[5], i, 0, &meta[i].zone) || !text(v, &s[5], i, 8, &meta[i].metazone) ||
             qjs_intl_date_data_i64(&s[5], i, 16, &meta[i].from_ms) ||
             qjs_intl_date_data_i64(&s[5], i, 24, &meta[i].before_ms)) goto done;
+    {
+        uint32_t first, before;
+        if (!span(&s[8], locale, &first, &before)) goto done;
+        for (i = first, j = 0; i < before; i++, j++)
+            if (!text(v, &s[8], i, 4, &formats[j].zone) ||
+                !text(v, &s[8], i, 12, &formats[j].metazone) ||
+                !text(v, &s[8], i, 20, &formats[j].location) ||
+                !text(v, &s[8], i, 28, &formats[j].name_pattern)) goto done;
+    }
     d.patterns = patterns; d.names = names; d.periods = periods; d.zone_names = zones; d.meta_periods = meta;
+    d.zone_formats = formats;
     /* All seven handles copy the same decoded snapshot before release. */
     if (bank_options)
         result = qjs_intl_native_date_bank_open(a, &d, bank_options, e, bank_out);
@@ -200,7 +218,7 @@ static QJSIntlStatus decode_open(const QJSIntlAllocator *a,
         result = qjs_intl_native_date_open(a, &d, o, e, out);
 done:
     a->free(a->opaque, patterns); a->free(a->opaque, names); a->free(a->opaque, periods);
-    a->free(a->opaque, zones); a->free(a->opaque, meta);
+    a->free(a->opaque, zones); a->free(a->opaque, meta); a->free(a->opaque, formats);
     return result;
 }
 

@@ -297,15 +297,36 @@ static int range_fallbacks(const QJSIntlDataView *v, const QJSIntlDataSection *s
     }
     return 1;
 }
+static int zone_formats(const QJSIntlDataView *v, const QJSIntlDataSection *s,
+                         uint32_t locales)
+{
+    uint32_t i, locale, previous_locale = 0;
+    QJSIntlDataSlice row, zone, meta, location, pattern;
+    QJSIntlDataSlice previous_zone = { NULL, 0 }, previous_meta = { NULL, 0 };
+    for (i = 0; i < s->record_count; i++) {
+        int c;
+        if (!common(s, i, locales, &locale, &row) || row.length != 36 ||
+            !string(v, s, i, 4, &zone) || !identifier(zone, 0) ||
+            !string(v, s, i, 12, &meta) || (meta.length && !identifier(meta, 0)) ||
+            !string(v, s, i, 20, &location) ||
+            !string(v, s, i, 28, &pattern) ||
+            (pattern.length && (!meta.length || !template_valid(pattern, 1, 0)))) return 0;
+        c = locale < previous_locale ? -1 : locale > previous_locale ? 1 : compare(zone, previous_zone);
+        if (!c) c = compare(meta, previous_meta);
+        if (i && c <= 0) return 0;
+        previous_locale = locale; previous_zone = zone; previous_meta = meta;
+    }
+    return 1;
+}
 QJSIntlDataStatus qjs_intl_date_data_validate(const QJSIntlDataView *v)
 {
-    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20 };
-    QJSIntlDataSection s[8], locales, numbering;
+    static const uint32_t widths[] = { 32, 28, 48, 16, 72, 32, 16, 20, 36 };
+    QJSIntlDataSection s[9], locales, numbering;
     QJSIntlDataStatus r;
     unsigned int i, mask = 0;
     if (!v) return QJS_INTL_DATA_INVALID_ARGUMENT;
     memset(s, 0, sizeof(s));
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 9; i++) {
         r = qjs_intl_data_section(v, 100 + i, &s[i]);
         if (r == QJS_INTL_DATA_NOT_FOUND) continue;
         if (r || s[i].record_width != widths[i]) return QJS_INTL_DATA_INVALID;
@@ -319,6 +340,7 @@ QJSIntlDataStatus qjs_intl_date_data_validate(const QJSIntlDataView *v)
         ((mask & 8) && !rules(&s[3], locales.record_count)) ||
         ((mask & 16) && !zones(v, &s[4], locales.record_count)) ||
         ((mask & 32) && !metazones(v, &s[5])) || ((mask & 64) && !aliases(v, &s[6])) ||
-        ((mask & 128) && !range_fallbacks(v, &s[7], locales.record_count))) return QJS_INTL_DATA_INVALID;
+        ((mask & 128) && !range_fallbacks(v, &s[7], locales.record_count)) ||
+        ((mask & 256) && !zone_formats(v, &s[8], locales.record_count))) return QJS_INTL_DATA_INVALID;
     return QJS_INTL_DATA_OK;
 }

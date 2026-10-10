@@ -115,7 +115,8 @@ QJSIntlDataStatus qjs_intl_number_extra_data_validate(const QJSIntlDataView *v)
     }
     if (!any) return QJS_INTL_DATA_OK;
     if (v->length < 64 || v->data[10] < 3 || v->data[11] ||
-        le32(v->data + 36) != (18u << 16) || le32(v->data + 40) != (49u << 16) ||
+        le32(v->data + 36) != (18u << 16) ||
+        !QJS_INTL_CLDR_VERSION_SUPPORTED(le32(v->data + 40)) ||
         present[1] != present[2] ||
         qjs_intl_data_section(v, QJS_INTL_DATA_LOCALE, &locales) != QJS_INTL_DATA_OK ||
         qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_SYMBOL, &symbols) != QJS_INTL_DATA_OK ||

@@ -1,4 +1,4 @@
-"""CLDR49 exact plural rule/range sections for optional wire1.3.
+"""CLDR48.2 exact plural rule/range sections for optional wire1.3.
 
 Host generator source; no execution in this packet. Consumes manifest-verified
 CLDR XML. Runtime reads packed bytes only. Unicode-3.0 attribution: NOTICE.txt.

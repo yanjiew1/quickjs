@@ -49,6 +49,14 @@ typedef struct QJSIntlDateMetaPeriod {
     QJSIntlBytes zone, metazone;
     int64_t from_ms, before_ms;  /* half-open UTC interval, INT64 extrema unbounded */
 } QJSIntlDateMetaPeriod;
+/* Localized CLDR generic-location and metazone qualifier snapshot.
+ * Empty metazone is the zone's location-only fallback row. A nonempty
+ * name_pattern contains exactly one {0}, replaced with the metazone label.
+ * An empty pattern means this is the locale's preferred zone.
+ */
+typedef struct QJSIntlDateZoneFormat {
+    QJSIntlBytes zone, metazone, location, name_pattern;
+} QJSIntlDateZoneFormat;
 typedef struct QJSIntlDateData {
     const QJSIntlDatePattern *patterns;
     size_t pattern_count;
@@ -64,6 +72,8 @@ typedef struct QJSIntlDateData {
     QJSIntlBytes decimal, gmt_format, gmt_zero, hour_positive, hour_negative;
     QJSIntlBytes data_zone;      /* CLDR zone key; explicit alias resolution */
     QJSIntlBytes range_fallback; /* decoded exact CLDR intervalFormatFallback */
+    const QJSIntlDateZoneFormat *zone_formats;
+    size_t zone_format_count;   /* additive optional section108; copied by open */
 } QJSIntlDateData;
 typedef struct QJSIntlDateFields {
     int64_t year;               /* positive year in the supplied era */

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host-only CLDR 49 / Unicode 18 locale binary generator (Python >= 3.6).
+"""Host-only CLDR 48.2 / Unicode 18 locale binary generator (Python >= 3.6).
 
 Runtime consumers read intl-data.bin or its optional single C definition.
 XML and JSON are build inputs/reports only. This M01-M04 baseline contains
@@ -17,8 +17,11 @@ import struct
 import sys
 import xml.etree.ElementTree as ET
 
-CLDR_COMMIT = '11f1f63d9390d1644c66a6b0704571de3cca4cbf'
-CLDR_MANIFEST_SHA256 = '2111ca38d60cb01e7032d4bee5f5401239bd538bea85a9e3d071744a2daa429a'
+CLDR_COMMIT = '11299982335beb974c1c63c45265184e759c0f41'
+CLDR_VERSION = '48.2.0'
+CLDR_VERSION_WORD = (48 << 16) | (2 << 8)
+UCA_DATA_VERSION = '17.0.0'
+CLDR_MANIFEST_SHA256 = '11364723cce0c7c7a7cf9b11fb4c60e98bd17bfddd3bf622e0df31e92a78909f'
 UCD_MANIFEST_SHA256 = '7fd0614fa280b42a15cfdcc2251557090ed752bb2ba48ca1c8959904de1dd192'
 U32_LIMIT = 0xffffffff
 HEADER_SIZE = 64
@@ -433,8 +436,8 @@ def load_sources(cldr_dir, ucd_dir, cldr_manifest_path, ucd_manifest_path, conte
         return verified_input(cldr_dir, cldr, relative, consumed, 'cldr', context)
 
     dtd = read_cldr('common/dtd/ldml.dtd')
-    require(re.search(br'cldrVersion\s+CDATA\s+#FIXED\s+"49"', dtd),
-            'CLDR DTD does not declare version 49')
+    require(re.search(br'cldrVersion\s+CDATA\s+#FIXED\s+"48"', dtd),
+            'CLDR release48.2 DTD does not declare major48')
     read_cldr('common/dtd/ldmlBCP47.dtd')
     read_cldr('common/dtd/ldmlSupplemental.dtd')
     license_data = read_cldr('LICENSE')
@@ -448,7 +451,7 @@ def load_sources(cldr_dir, ucd_dir, cldr_manifest_path, ucd_manifest_path, conte
                    if path.startswith('common/bcp47/') and path.endswith('.xml'))
     # Discovery depends exclusively on the sealed manifest, never glob order.
     bcp = parse_bcp47((path, read_cldr(path)) for path in paths)
-    identity = {'cldr_commit': CLDR_COMMIT, 'cldr_version': '49.0.0',
+    identity = {'cldr_commit': CLDR_COMMIT, 'cldr_version': CLDR_VERSION,
                 'unicode_version': '18.0.0', 'uca_version': None,
                 'license': {'source': 'cldr/LICENSE',
                             'sha256': consumed['cldr/LICENSE']['sha256']},
@@ -564,7 +567,7 @@ def encode_blob(sections, minor=0):
     header = b'QJSINTL\0' + struct.pack('<HH', SCHEMA_MAJOR, minor)
     header += b''.join(u32(value) for value in
                       (HEADER_SIZE, cursor, count, HEADER_SIZE, DIRECTORY_SIZE,
-                       0, 18 << 16, 49 << 16, 0))
+                       0, 18 << 16, CLDR_VERSION_WORD, 0))
     header += b'\0' * 16
     require(len(header) == HEADER_SIZE, 'header layout drift')
     blob = header + b''.join(directories) + bytes(payload)

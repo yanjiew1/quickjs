@@ -1,4 +1,4 @@
-"""Original CLDR49 RelativeTimeFormat section70/71 host extension.
+"""Original CLDR48.2 RelativeTimeFormat section70/71 host extension.
 
 Runtime never parses XML/JSON. Unicode data attribution: evidence/CLDR-LICENSE.
 Standard alt-free records of every draft level; exact scalar UTF8 and bidi.
@@ -130,7 +130,7 @@ def collect(inputs, metadata):
                     if value is not MISSING:
                         literals.append((index, unit, style, offset, value))
     return {'patterns': tuple(numeric), 'literals': tuple(literals), 'evidence': {
-        'policy': 'exact CLDR49 scalar UTF8; standard alt-free all draft levels; requesting-locale field aliases; metadata general parents',
+        'policy': 'exact CLDR48.2 scalar UTF8; standard alt-free all draft levels; requesting-locale field aliases; metadata general parents',
         'fallback': 'resolve category through parents, then selected field other; missing literal stays absent',
         'signed_number': 'pinned ECMA402 7ae78cf §18.5.2 retains signed Number for number insertion',
         'coverage': 'candidate data; provider/service coverage bits remain0'}}

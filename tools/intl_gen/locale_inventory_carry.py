@@ -16,7 +16,7 @@ import struct
 import sys
 import xml.etree.ElementTree as ET
 
-CLDR_COMMIT = '11f1f63d9390d1644c66a6b0704571de3cca4cbf'
+CLDR_COMMIT = '11299982335beb974c1c63c45265184e759c0f41'
 TZ_COMMIT = '039ef27cc5f062a2055cb67435d6d71adbefd27d'
 CALENDARS = ('buddhist', 'chinese', 'coptic', 'dangi', 'ethioaa', 'ethiopic',
              'gregory', 'hebrew', 'indian', 'islamic-civil', 'islamic-tbla',
@@ -250,7 +250,7 @@ def main():
         pool_owners=1, binary_owners=1, c_embedding_owners=1)
     report['locale_info_evidence'] = dict(report['locale_info_evidence'])
     report['locale_info_evidence']['installed_calendar_and_service_sections_absent'] = [26]
-    report['locale_info_evidence']['territory_source'] = 'tzdata2026e zone.tab + verified CLDR49 geographic aliases + actual accepted QJTZ primaries'
+    report['locale_info_evidence']['territory_source'] = 'tzdata2026e zone.tab + verified CLDR48.2 geographic aliases + actual accepted QJTZ primaries'
     # Retain other reported limitations. Their metadata-only inventory wording
     # is superseded explicitly; this standalone carry proves no JS activation.
     report['capability_missing'] = [value for value in report['capability_missing']

@@ -48,6 +48,21 @@ static int text_size(size_t *size, QJSIntlBytes s)
         if (qjs_intl_date_utf8_next(s, &at, &cp) || !cp) return 0;
     return 1;
 }
+/* Compiled qualifier patterns contain exactly one literal argument. */
+static int zone_pattern_valid(QJSIntlBytes pattern)
+{
+    size_t i;
+    int seen = 0;
+    for (i = 0; i < pattern.length; i++) {
+        if (pattern.data[i] == '{') {
+            if (seen || i + 2 >= pattern.length || pattern.data[i + 1] != '0' ||
+                pattern.data[i + 2] != '}') return 0;
+            seen = 1; i += 2;
+        } else if (pattern.data[i] == '}') return 0;
+    }
+    return !pattern.length || seen;
+}
+
 static void *array_new(const QJSIntlAllocator *a, size_t count, size_t width)
 {
     if (!count) return NULL;
@@ -72,6 +87,7 @@ void qjs_intl_native_date_close(QJSIntlNativeDate *p)
     a.free(a.opaque, (void *)p->data.periods);
     a.free(a.opaque, (void *)p->data.zone_names);
     a.free(a.opaque, (void *)p->data.meta_periods);
+    a.free(a.opaque, (void *)p->data.zone_formats);
     a.free(a.opaque, p->strings);
     a.free(a.opaque, p->selected);
     a.free(a.opaque, p);
@@ -306,7 +322,8 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
     if (!a || !a->malloc || !a->free || !d || !options_valid(o) ||
         (!d->patterns && d->pattern_count) || (!d->names && d->name_count) ||
         (!d->periods && d->period_count) || (!d->zone_names && d->zone_name_count) ||
-        (!d->meta_periods && d->meta_period_count)) return QJS_INTL_INVALID_ARGUMENT;
+        (!d->meta_periods && d->meta_period_count) ||
+        (!d->zone_formats && d->zone_format_count)) return QJS_INTL_INVALID_ARGUMENT;
     if (!word(o->calendar, "gregory") && !word(o->calendar, "iso8601") &&
         (!e || !e->calendar || !e->calendar_supported ||
          !e->calendar_supported(e->opaque, o->calendar))) return QJS_INTL_UNSUPPORTED;
@@ -334,11 +351,20 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
     for (i = 0; i < d->meta_period_count; i++)
         if (!text_size(&bytes, d->meta_periods[i].zone) || !text_size(&bytes, d->meta_periods[i].metazone) ||
             d->meta_periods[i].from_ms >= d->meta_periods[i].before_ms) return QJS_INTL_DATA_ERROR;
+    for (i = 0; i < d->zone_format_count; i++) {
+        const QJSIntlDateZoneFormat *row = &d->zone_formats[i];
+        if (!row->zone.length || !text_size(&bytes, row->zone) ||
+            !text_size(&bytes, row->metazone) || !text_size(&bytes, row->location) ||
+            !text_size(&bytes, row->name_pattern) || !zone_pattern_valid(row->name_pattern) ||
+            (row->name_pattern.length && !row->metazone.length))
+            return QJS_INTL_DATA_ERROR;
+    }
     if (d->pattern_count > SIZE_MAX / sizeof(PatternRow) ||
         d->name_count > SIZE_MAX / sizeof(QJSIntlDateName) ||
         d->period_count > SIZE_MAX / sizeof(QJSIntlDatePeriodRule) ||
         d->zone_name_count > SIZE_MAX / sizeof(QJSIntlDateZoneName) ||
-        d->meta_period_count > SIZE_MAX / sizeof(QJSIntlDateMetaPeriod)) return QJS_INTL_OVERFLOW;
+        d->meta_period_count > SIZE_MAX / sizeof(QJSIntlDateMetaPeriod) ||
+        d->zone_format_count > SIZE_MAX / sizeof(QJSIntlDateZoneFormat)) return QJS_INTL_OVERFLOW;
     p = a->malloc(a->opaque, sizeof(*p));
     if (!p) return QJS_INTL_NO_MEMORY;
     memset(p, 0, sizeof(*p)); p->allocator = *a; p->options = *o;
@@ -346,15 +372,18 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
     p->data = *d;
     p->data.names = NULL; p->data.periods = NULL;
     p->data.zone_names = NULL; p->data.meta_periods = NULL;
+    p->data.zone_formats = NULL;
     p->patterns = array_new(a, d->pattern_count, sizeof(*p->patterns));
     p->data.names = array_new(a, d->name_count, sizeof(*d->names));
     p->data.periods = array_new(a, d->period_count, sizeof(*d->periods));
     p->data.zone_names = array_new(a, d->zone_name_count, sizeof(*d->zone_names));
     p->data.meta_periods = array_new(a, d->meta_period_count, sizeof(*d->meta_periods));
+    p->data.zone_formats = array_new(a, d->zone_format_count, sizeof(*d->zone_formats));
     p->strings = a->malloc(a->opaque, bytes ? bytes : 1);
     if (!p->patterns || (d->name_count && !p->data.names) ||
         (d->period_count && !p->data.periods) || (d->zone_name_count && !p->data.zone_names) ||
-        (d->meta_period_count && !p->data.meta_periods) || !p->strings) {
+        (d->meta_period_count && !p->data.meta_periods) ||
+        (d->zone_format_count && !p->data.zone_formats) || !p->strings) {
         qjs_intl_native_date_close(p); return QJS_INTL_NO_MEMORY;
     }
     cursor = p->strings;
@@ -427,6 +456,14 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
         QJSIntlDateMetaPeriod *row = (QJSIntlDateMetaPeriod *)p->data.meta_periods + i;
         *row = d->meta_periods[i]; row->zone = copy_text(&cursor, row->zone);
         row->metazone = copy_text(&cursor, row->metazone);
+    }
+    for (i = 0; i < d->zone_format_count; i++) {
+        QJSIntlDateZoneFormat *row = (QJSIntlDateZoneFormat *)p->data.zone_formats + i;
+        *row = d->zone_formats[i];
+        row->zone = copy_text(&cursor, row->zone);
+        row->metazone = copy_text(&cursor, row->metazone);
+        row->location = copy_text(&cursor, row->location);
+        row->name_pattern = copy_text(&cursor, row->name_pattern);
     }
     p->data.patterns = NULL; /* private PatternRow owns the snapshot */
     r = select_pattern(p);
@@ -682,40 +719,95 @@ static QJSIntlStatus offset_name(Builder *b, int long_form)
         return utf8(b, suffix);
     }
 }
+/* CLDR Type Fallback rule1 is data-driven: when a daylight label is
+ * absent, generic then standard can serve all three requested types.
+ * The conditional184-day rule needs an independent environment proof and
+ * remains a separate extension; this helper never infers DST from an offset.
+ */
+static QJSIntlBytes zone_label(const QJSIntlDateZoneName *row,
+                               unsigned int base, int requested, int enhanced)
+{
+    QJSIntlBytes empty = { NULL, 0 };
+    if (requested >= 0 && row->names[base + (unsigned int)requested].length)
+        return row->names[base + (unsigned int)requested];
+    if (enhanced && !row->names[1].length && !row->names[4].length) {
+        if (row->names[base + 2].length) return row->names[base + 2];
+        if (row->names[base].length) return row->names[base];
+    }
+    return empty;
+}
+static const QJSIntlDateZoneFormat *zone_format(const QJSIntlNativeDate *p,
+                                                QJSIntlBytes meta)
+{
+    size_t i;
+    for (i = 0; i < p->data.zone_format_count; i++) {
+        const QJSIntlDateZoneFormat *row = &p->data.zone_formats[i];
+        if (equal(row->zone, p->data.data_zone) && equal(row->metazone, meta))
+            return row;
+    }
+    return NULL;
+}
+static QJSIntlStatus qualified_zone(Builder *b, QJSIntlBytes label,
+                                    const QJSIntlDateZoneFormat *format)
+{
+    QJSIntlBytes pattern;
+    size_t i, start = 0;
+    QJSIntlStatus r;
+    if (!format || !format->name_pattern.length) return utf8(b, label);
+    pattern = format->name_pattern;
+    for (i = 0; i < pattern.length; i++) {
+        if (pattern.data[i] != '{') continue;
+        {
+            QJSIntlBytes prefix = { pattern.data + start, i - start };
+            if ((r = utf8(b, prefix)) || (r = utf8(b, label))) return r;
+        }
+        i += 2; start = i + 1;
+    }
+    {
+        QJSIntlBytes suffix = { pattern.data + start, pattern.length - start };
+        return utf8(b, suffix);
+    }
+}
 static QJSIntlStatus zone_name(Builder *b, int style)
 {
     QJSIntlNativeDate *p = b->owner;
-    QJSIntlBytes meta = { NULL, 0 };
+    QJSIntlBytes meta = { NULL, 0 }, label;
+    const QJSIntlDateZoneFormat *format;
     size_t i;
-    unsigned int column;
+    unsigned int base = style == 1 || style == 5 ? 3 : 0;
+    int requested = style >= 4 ? 2 : b->zone.daylight;
     if (b->utc_view) return offset_name(b, style == 1 || style == 3 || style == 5);
     if (style == 2 || style == 3) return offset_name(b, style == 3);
-    column = style == 4 || style == 5 ? 2 : (unsigned int)(b->zone.daylight == 1);
-    if (style == 1 || style == 5) column += 3;
-    if (style >= 4 || b->zone.daylight >= 0) {
-        for (i = 0; i < p->data.zone_name_count; i++) {
-            const QJSIntlDateZoneName *row = &p->data.zone_names[i];
-            if (!row->metazone && equal(row->key, p->data.data_zone) && row->names[column].length)
-                return utf8(b, row->names[column]);
-        }
-        for (i = 0; i < p->data.meta_period_count; i++) {
-            const QJSIntlDateMetaPeriod *row = &p->data.meta_periods[i];
-            if (equal(row->zone, p->data.data_zone) && b->epoch_ms >= row->from_ms && b->epoch_ms < row->before_ms) {
-                meta = row->metazone; break;
-            }
-        }
-        if (meta.length) for (i = 0; i < p->data.zone_name_count; i++) {
-            const QJSIntlDateZoneName *row = &p->data.zone_names[i];
-            if (row->metazone && equal(row->key, meta) && row->names[column].length)
-                return utf8(b, row->names[column]);
+    for (i = 0; i < p->data.zone_name_count; i++) {
+        const QJSIntlDateZoneName *row = &p->data.zone_names[i];
+        if (!row->metazone && equal(row->key, p->data.data_zone)) {
+            label = zone_label(row, base, requested, p->data.zone_format_count != 0);
+            if (label.length) return utf8(b, label); /* explicit TZID translation */
         }
     }
-    /* Missing name/daylight metadata uses the allowed localized offset
-     * fallback. No tzcode abbreviation or guessed standard/DST distinction.
-     * Region-location generic fallback/reference-zone disambiguation deferred.
-     */
+    for (i = 0; i < p->data.meta_period_count; i++) {
+        const QJSIntlDateMetaPeriod *row = &p->data.meta_periods[i];
+        if (equal(row->zone, p->data.data_zone) &&
+            b->epoch_ms >= row->from_ms && b->epoch_ms < row->before_ms) {
+            meta = row->metazone; break;
+        }
+    }
+    format = zone_format(p, meta);
+    if (meta.length) for (i = 0; i < p->data.zone_name_count; i++) {
+        const QJSIntlDateZoneName *row = &p->data.zone_names[i];
+        if (row->metazone && equal(row->key, meta)) {
+            label = zone_label(row, base, requested, p->data.zone_format_count != 0);
+            if (label.length) return qualified_zone(b, label, format);
+        }
+    }
+    if (style >= 4) {
+        QJSIntlBytes empty = { NULL, 0 };
+        if (!format) format = zone_format(p, empty);
+        if (format && format->location.length) return utf8(b, format->location);
+    }
     return offset_name(b, style == 1 || style == 5);
 }
+
 static QJSIntlStatus render(void *opaque, QJSIntlBytes literal,
                             unsigned int ch, unsigned int count)
 {

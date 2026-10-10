@@ -1,4 +1,4 @@
-"""Original CLDR49 compact and per-unit preparation. Host only; no runtime XML.
+"""Original CLDR48.2 compact and per-unit preparation. Host only; no runtime XML.
 
 Magnitude/divisor data follows source zero-placeholder counts. Compound
 grammar is resolved from pinned grammaticalFeatures.xml before encoding.

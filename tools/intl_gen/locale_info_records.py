@@ -1,6 +1,6 @@
 """Optional wire1.3 LocaleInfo metadata; never fabricates service coverage.
 
-Copyright Unicode, Inc. CLDR49 / Unicode18 input attribution is retained in
+Copyright Unicode, Inc. CLDR48.2 / Unicode18 input attribution is retained in
 the consumed manifest and bundled LICENSE. Prepared source only, not run.
 """
 import re

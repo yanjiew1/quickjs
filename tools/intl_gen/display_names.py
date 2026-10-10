@@ -1,4 +1,4 @@
-"""Original CLDR49 DisplayNames extension; Python3.6+, source-only packet.
+"""Original CLDR48.2 DisplayNames extension; Python3.6+, source-only packet.
 
 Exact XML Unicode text; general locale parents from validated metadata.
 No XML access on the native runtime path. Unicode-3.0 data attribution.
@@ -14,7 +14,7 @@ FIELDS = (('era', 'era'), ('year', 'year'), ('quarter', 'quarter'),
           ('minute', 'minute'), ('second', 'second'), ('timeZoneName', 'zone'))
 BRACKETS = ('(', ')', '\uff08', '\uff09')
 TOKEN = re.compile(r"([A-Za-z][A-Za-z0-9]*)(?:\[@([A-Za-z][A-Za-z0-9]*)=['\"]([^'\"]*)['\"]\])?")
-# CLDR49 LDML language@menu distinguishes core/extension menu labels from
+# CLDR48.2 LDML language@menu distinguishes core/extension menu labels from
 # the unqualified DisplayNames label. draft/references are metadata, not
 # path selectors. Retain menu alternatives even though collect does not
 # select them for standard DisplayNames output.

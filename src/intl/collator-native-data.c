@@ -52,7 +52,12 @@ QJSIntlStatus qjs_intl_collation_data_init(const QJSIntlDataView *view,
     for (i = 0; i < 4; i++)
         if (!field(&d.config, 0, 4 * i, &v[i])) return QJS_INTL_DATA_ERROR;
     if (v[0] != 2 || !v[1] || v[1] >= UINT32_C(0xfb000000) ||
-        !v[2] || v[2] > 64 || v[3] != (18u << 16))
+        !v[2] || v[2] > 64 ||
+        !QJS_INTL_COLLATION_VERSIONS_SUPPORTED(
+            (uint32_t)view->data[40] | ((uint32_t)view->data[41] << 8) |
+            ((uint32_t)view->data[42] << 16) | ((uint32_t)view->data[43] << 24), v[3]) ||
+        v[3] != ((uint32_t)view->data[44] | ((uint32_t)view->data[45] << 8) |
+                 ((uint32_t)view->data[46] << 16) | ((uint32_t)view->data[47] << 24)))
         return QJS_INTL_DATA_ERROR;
     d.numeric_primary = v[1]; d.max_depth = v[2];
     /* BFS layout proves a single parent per node, no cycle, no unused nodes.

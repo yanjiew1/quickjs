@@ -1,10 +1,12 @@
 {
-  "repository": "https://github.com/unicode-org/cldr",
-  "commit": "11f1f63d9390d1644c66a6b0704571de3cca4cbf",
-  "commit_date": "2026-10-07T02:57:03Z",
-  "source_path": "common/bcp47/timezone.xml",
-  "url": "https://raw.githubusercontent.com/unicode-org/cldr/11f1f63d9390d1644c66a6b0704571de3cca4cbf/common/bcp47/timezone.xml",
-  "sha256": "1f63924aba623465ad487bc3452bdc269f01fa787477610f8f526e9ad25efcae",
+  "commit": "11299982335beb974c1c63c45265184e759c0f41",
   "license": "tools/timezone/cldr/LICENSE",
-  "reviewed": "2026-10-09"
+  "release": "48.2",
+  "release_date": "2026-03-17",
+  "repository": "https://github.com/unicode-org/cldr",
+  "reviewed": "2026-10-09",
+  "sha256": "54ce7d9f1d385101e24356df7d48ae62cf2acc4421378da60a4007d2488c1aad",
+  "source_path": "common/bcp47/timezone.xml",
+  "tag": "release-48-2",
+  "url": "https://raw.githubusercontent.com/unicode-org/cldr/11299982335beb974c1c63c45265184e759c0f41/common/bcp47/timezone.xml"
 }

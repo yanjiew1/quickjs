@@ -43,7 +43,7 @@ QJSIntlDataStatus qjs_intl_data_validate_plural_extension(const QJSIntlDataView 
         view->length < QJS_INTL_DATA_HEADER_SIZE ||
         view->data[QJS_INTL_H_SCHEMA_MINOR] != 3 ||
         view->data[QJS_INTL_H_SCHEMA_MINOR + 1] != 0 ||
-        wire_u32(view->data + QJS_INTL_H_CLDR_VERSION) != (49u << 16) ||
+        !QJS_INTL_CLDR_VERSION_SUPPORTED(wire_u32(view->data + QJS_INTL_H_CLDR_VERSION)) ||
         bindings.record_width != QJS_INTL_DATA_PLURAL_LOCALE_WIDTH ||
         rules.record_width != QJS_INTL_DATA_PLURAL_RULE_WIDTH ||
         ranges.record_width != QJS_INTL_DATA_PLURAL_RANGE_WIDTH ||

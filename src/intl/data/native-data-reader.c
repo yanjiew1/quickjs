@@ -336,6 +336,7 @@ static uint32_t section_width(uint32_t id)
     case QJS_INTL_DATA_DATE_META_PERIOD: return 32;
     case QJS_INTL_DATA_DATE_ZONE_ALIAS: return 16;
     case QJS_INTL_DATA_DATE_RANGE_FALLBACK: return 20;
+    case QJS_INTL_DATA_DATE_ZONE_FORMAT: return 36;
     case QJS_INTL_DATA_DURATION_CLOCK: return 32;
     case QJS_INTL_DATA_NUMBER_COMPACT: return 76;
     case QJS_INTL_DATA_NUMBER_DENOMINATOR: return 32;
@@ -382,7 +383,7 @@ static int validate_layout(const QJSIntlDataView *view)
             return 0;
         if (id >= QJS_INTL_DATA_DATE_PATTERN &&
             (read_u32(p + QJS_INTL_H_UNICODE_VERSION) != (18u << 16) ||
-             read_u32(p + QJS_INTL_H_CLDR_VERSION) != (49u << 16)))
+             !QJS_INTL_CLDR_VERSION_SUPPORTED(read_u32(p + QJS_INTL_H_CLDR_VERSION))))
             return 0;
         previous_id = id;
         switch (id) {
@@ -406,19 +407,20 @@ static int validate_layout(const QJSIntlDataView *view)
         case QJS_INTL_DATA_COLLATION_CONFIG:
             if (read_u16(p + QJS_INTL_H_SCHEMA_MINOR) != 3 ||
                 read_u32(p + QJS_INTL_H_UNICODE_VERSION) != (18u << 16) ||
-                read_u32(p + QJS_INTL_H_CLDR_VERSION) != (49u << 16) ||
-                read_u32(p + QJS_INTL_H_UCA_VERSION) != (18u << 16))
+                !QJS_INTL_COLLATION_VERSIONS_SUPPORTED(
+                    read_u32(p + QJS_INTL_H_CLDR_VERSION),
+                    read_u32(p + QJS_INTL_H_UCA_VERSION)))
                 return 0;
             break;
         case QJS_INTL_DATA_SCRIPT_DIRECTION:
             if (read_u32(p + QJS_INTL_H_UNICODE_VERSION) != (18u << 16) ||
-                read_u32(p + QJS_INTL_H_CLDR_VERSION) != (49u << 16))
+                !QJS_INTL_CLDR_VERSION_SUPPORTED(read_u32(p + QJS_INTL_H_CLDR_VERSION)))
                 return 0;
             break;
         case QJS_INTL_DATA_LIST_PATTERN: {
             QJSIntlDataSection locales;
             if (read_u32(p + QJS_INTL_H_UNICODE_VERSION) != (18u << 16) ||
-                read_u32(p + QJS_INTL_H_CLDR_VERSION) != (49u << 16) ||
+                !QJS_INTL_CLDR_VERSION_SUPPORTED(read_u32(p + QJS_INTL_H_CLDR_VERSION)) ||
                 qjs_intl_data_section(view, QJS_INTL_DATA_LOCALE, &locales) !=
                 QJS_INTL_DATA_OK)
                 return 0;
@@ -929,6 +931,7 @@ static int validate_records(const QJSIntlDataView *view, QJSIntlDataSlice pool,
         case QJS_INTL_DATA_DATE_META_PERIOD:
         case QJS_INTL_DATA_DATE_ZONE_ALIAS:
         case QJS_INTL_DATA_DATE_RANGE_FALLBACK:
+        case QJS_INTL_DATA_DATE_ZONE_FORMAT:
         case QJS_INTL_DATA_DURATION_CLOCK:
         case QJS_INTL_DATA_NUMBER_COMPACT:
         case QJS_INTL_DATA_NUMBER_DENOMINATOR:
@@ -950,6 +953,9 @@ static int validate_records(const QJSIntlDataView *view, QJSIntlDataSlice pool,
                 offsets[refs++] = 0; offsets[refs++] = 8; break;
             case QJS_INTL_DATA_DATE_RANGE_FALLBACK:
                 offsets[refs++] = 4; offsets[refs++] = 12; break;
+            case QJS_INTL_DATA_DATE_ZONE_FORMAT:
+                for (ref = 0; ref < 4; ref++) offsets[refs++] = 4 + ref * 8;
+                break;
             case QJS_INTL_DATA_DURATION_CLOCK:
                 offsets[refs++] = 16; offsets[refs++] = 24; break;
             case QJS_INTL_DATA_NUMBER_COMPACT:
@@ -1395,7 +1401,7 @@ static int validate_segment_group(const QJSIntlDataView *view)
     if (!present) return 1;
     if ((present & 47u) != 47u ||
         read_u32(view->data + QJS_INTL_H_UNICODE_VERSION) != (18u << 16) ||
-        read_u32(view->data + QJS_INTL_H_CLDR_VERSION) != (49u << 16) ||
+        !QJS_INTL_CLDR_VERSION_SUPPORTED(read_u32(view->data + QJS_INTL_H_CLDR_VERSION)) ||
         sections[5].record_count != 3)
         return 0;
     for (i = 0; i < 4; i++)
