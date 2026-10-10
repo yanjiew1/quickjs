@@ -829,3 +829,21 @@ done:
     else qjs_intl_native_number_result_clear(n, &b.value);
     return s;
 }
+
+/* PluralRules reads only c/e from notation metadata after raw rounding.
+ * CLDR n/i/v/w/f/t still describe the unscaled unsigned raw string. */
+QJSIntlStatus qjs_intl_native_number_notation_exponent(const QJSIntlNativeNumber *n,
+    const QJSIntlDecimalResult *raw,int32_t *out)
+{
+    int64_t magnitude,exponent;
+    if(!out)return QJS_INTL_INVALID_ARGUMENT;
+    *out=0;
+    if(!n || !raw_valid(raw))return QJS_INTL_INVALID_ARGUMENT;
+    if(n->options.style!=QJS_INTL_NUMBER_DECIMAL)return QJS_INTL_UNSUPPORTED;
+    if(zero(&raw->rounded))return QJS_INTL_OK;
+    if(raw->rounded.length>INT32_MAX)return QJS_INTL_OVERFLOW;
+    magnitude=(int64_t)raw->rounded.length-1+raw->rounded.exponent;
+    exponent=exponent_for_magnitude(n,magnitude);
+    if(exponent<INT32_MIN || exponent>INT32_MAX)return QJS_INTL_OVERFLOW;
+    *out=(int32_t)exponent;return QJS_INTL_OK;
+}

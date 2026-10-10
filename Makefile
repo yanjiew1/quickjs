@@ -484,6 +484,8 @@ INTL_BACKEND_SRCS= \
     src/intl/plural-native.c \
     src/intl/plural-native-data.c \
     src/quickjs/builtins/intl/native-number-common.c \
+    src/intl/provider-native-plural.c \
+    src/quickjs/builtins/intl/native-plural-rules.c \
     src/quickjs/builtins/intl/native-number-format.c \
     src/intl/duration-native.c \
     src/intl/duration-native-data.c \
@@ -874,6 +876,8 @@ ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_collator_oom$(EXE)
 C_TESTS+=tests/test_intl_native_segmenter_oom$(EXE)
 C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
+C_TESTS+=tests/test_intl_native_plural_provider$(EXE)
+C_TESTS+=tests/test_intl_native_plural_oom$(EXE)
 C_TESTS+=tests/test_intl_native_number_oom$(EXE)
 C_TESTS+=tests/test_intl_native_number_provider$(EXE)
 C_TESTS+=tests/test_intl_native_number_engine$(EXE)
@@ -1153,6 +1157,8 @@ endif
 	$(WINE) ./tests/test_intl_text$(EXE)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_native_frontend_oom$(EXE)
+	$(WINE) ./tests/test_intl_native_plural_provider$(EXE)
+	$(WINE) ./tests/test_intl_native_plural_oom$(EXE)
 	$(WINE) ./tests/test_intl_native_number_oom$(EXE)
 	$(WINE) ./tests/test_intl_native_number_provider$(EXE)
 	$(WINE) ./tests/test_intl_native_number_engine$(EXE)
@@ -1239,6 +1245,7 @@ endif
 ifeq ($(CONFIG_INTL),y)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_plural.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_number.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_duration.js
 else
@@ -1485,6 +1492,13 @@ test-intl-native-segmenter: qjs$(EXE) tests/test_intl_native_segmenter_oom$(EXE)
 	$(WINE) ./tests/test_intl_native_segmenter_oom$(EXE)
 test: test-intl-native-segmenter
 endif
+
+tests/test_intl_native_plural_oom$(EXE): $(OBJDIR)/tests/test_intl_native_plural_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+
+tests/test_intl_native_plural_provider$(EXE): $(OBJDIR)/tests/test_intl_native_plural_provider.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Exercise qjsc's own compiler invocation for every native feature profile.
 ifeq ($(CROSS_PREFIX),)

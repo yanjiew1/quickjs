@@ -141,4 +141,8 @@ int qjs_intl_number_template_validate(QJSIntlBytes, unsigned int unit_mode);
 /* Allocation-free compact grammar gate: optional {number}, no other tokens;
  * nonzero exponent requires nonempty affix text. */
 int qjs_intl_number_compact_template_validate(QJSIntlBytes, int32_t exponent);
+/* Private PluralRules notation metadata bridge; no second rounding.
+ * Inputs are already rounded. n/i/v/w/f/t use the unscaled raw text. */
+QJSIntlStatus qjs_intl_native_number_notation_exponent(const QJSIntlNativeNumber *,
+    const QJSIntlDecimalResult *,int32_t *);
 #endif
