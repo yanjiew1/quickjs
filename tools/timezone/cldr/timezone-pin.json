@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/unicode-org/cldr",
+  "commit": "11f1f63d9390d1644c66a6b0704571de3cca4cbf",
+  "commit_date": "2026-10-07T02:57:03Z",
+  "source_path": "common/bcp47/timezone.xml",
+  "url": "https://raw.githubusercontent.com/unicode-org/cldr/11f1f63d9390d1644c66a6b0704571de3cca4cbf/common/bcp47/timezone.xml",
+  "sha256": "1f63924aba623465ad487bc3452bdc269f01fa787477610f8f526e9ad25efcae",
+  "license": "tools/timezone/cldr/LICENSE",
+  "reviewed": "2026-10-09"
+}

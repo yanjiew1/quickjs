@@ -2,6 +2,9 @@
  * Compile this source only for CONFIG_INTL_NATIVE. ICU is selected separately.
  * This profile exposes Locale operations and ListFormat for en/en-US only.
  * It makes no complete Intl or wire service_coverage claim. */
+#ifdef CONFIG_ICU
+#error "Native Intl provider data requires CONFIG_ICU to be disabled"
+#endif
 #include "provider-native.h"
 #include "provider-native-display.h"
 #include "provider-native-relative.h"
@@ -12,6 +15,7 @@
 #include "provider-native-number.h"
 #include "native-locale-info.h"
 #include "data/locale-metadata.h" /* externs; generated .c has the only owner */
+#include "../timezone/timezone.h"
 #include <string.h>
 
 struct QJSIntlProvider {
@@ -19,6 +23,8 @@ struct QJSIntlProvider {
     QJSIntlDataView view;
     uint32_t list_locale;
     char *default_locale;
+    /* qjs_tz_resolve returns a string inside immutable compiled data. */
+    const char *default_time_zone;
     QJSIntlLocaleInfoCapabilities capabilities;
     QJSIntlDataVersions versions;
 };
@@ -86,6 +92,7 @@ QJSIntlStatus qjs_intl_provider_new(const QJSIntlProviderConfig *config,
     QJSIntlStatus status;
     QJSIntlNativeList *list = NULL;
     char *canonical = NULL;
+    const char *canonical_zone = "UTC";
     unsigned int type, style;
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     *out = NULL;
@@ -119,11 +126,13 @@ QJSIntlStatus qjs_intl_provider_new(const QJSIntlProviderConfig *config,
         goto fail;
     }
     if (config->default_time_zone.data &&
-        !same(config->default_time_zone, "UTC")) {
+        qjs_tz_resolve(config->default_time_zone.data,
+                       config->default_time_zone.length, &canonical_zone, NULL)) {
         status = QJS_INTL_UNSUPPORTED;
         goto fail;
     }
     p->default_locale = canonical;
+    p->default_time_zone = canonical_zone;
     canonical = NULL;
     p->versions.provider = bytes("native-development");
     p->versions.unicode = bytes("18.0.0");
@@ -327,7 +336,7 @@ QJSIntlBytes qjs_intl_provider_default_locale(const QJSIntlProvider *p)
 }
 QJSIntlBytes qjs_intl_provider_default_time_zone(const QJSIntlProvider *p)
 {
-    return bytes(p ? "UTC" : NULL);
+    return bytes(p ? p->default_time_zone : NULL);
 }
 const QJSIntlDataVersions *qjs_intl_provider_versions(const QJSIntlProvider *p)
 {

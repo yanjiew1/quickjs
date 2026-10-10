@@ -2,16 +2,21 @@
 #ifndef QUICKJS_TEMPORAL_TIME_ZONE_H
 #define QUICKJS_TEMPORAL_TIME_ZONE_H
 #include "calendar.h"
+#include "../timezone/timezone.h"
 typedef enum QJSTemporalDisambiguation {
     QJS_TEMPORAL_COMPATIBLE, QJS_TEMPORAL_EARLIER,
     QJS_TEMPORAL_LATER, QJS_TEMPORAL_DISAMBIGUATION_REJECT
 } QJSTemporalDisambiguation;
 /* Offset zones carry whole minutes. Named IDs preserve canonical alias
    spelling, not merely the primary zone (Temporal.timeZoneId requires it). */
+struct QJSTzProvider;
 typedef struct QJSTemporalZone {
     char identifier[256];
     int64_t offset_nanoseconds;
     int is_offset;
+    /* Non-owning immutable named-zone cache, bound by the engine runtime.
+       NULL keeps pure native calls deterministic with embedded data only. */
+    struct QJSTzProvider *provider;
 } QJSTemporalZone;
 int qjs_temporal_zone_parse(QJSTemporalZone *result,
                            const char *identifier, size_t length);

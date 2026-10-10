@@ -30,6 +30,10 @@
 
 #include "allocator-types.h"
 
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
+struct QJSTzProvider;
+#endif
+
 #define JS_MODULE_LOADER_HAS_ATTR (1 << 0)
 #define JS_MODULE_NORMALIZE_HAS_ATTR (1 << 1)
 
@@ -116,6 +120,10 @@ struct JSRuntime {
     int shape_hash_count; /* number of hashed shapes */
     JSShape **shape_hash;
     void *user_opaque;
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
+    /* Native consumers share immutable snapshots until runtime cleanup. */
+    struct QJSTzProvider *temporal_tz_provider;
+#endif
 #ifdef CONFIG_ATOMICS
     struct JSNativeJobOwner *native_jobs;
 #endif

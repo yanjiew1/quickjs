@@ -33,7 +33,7 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "date.h"
-#ifdef CONFIG_ICU
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
 #include "../../temporal/time-zone.h"
 #endif
 #ifdef CONFIG_TEMPORAL
@@ -45,10 +45,19 @@
 
 /* Date */
 
-#ifdef CONFIG_ICU
-/* Date and Temporal copy the same configured host/embedding zone for one
-   operation. ICU's cached default is not automatically rediscovered; the
-   embedder configures it before creating runtimes, never concurrently. */
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
+/* Local Date operations use the same zone mechanism as Temporal. ICU builds
+   keep the ICU host default and algorithms. Native named data comes from the
+   runtime's immutable system-first provider snapshots. */
+static int date_system_zone(JSContext *ctx, QJSTemporalZone *result)
+{
+#ifdef CONFIG_TEMPORAL
+    return js_temporal_get_system_zone(ctx, result);
+#else
+    (void)ctx;
+    return qjs_temporal_system_zone(result);
+#endif
+}
 static __exception int date_backend_error(JSContext *ctx, int error)
 {
     if (!error)
@@ -68,7 +77,7 @@ static __exception int date_local_offset(JSContext *ctx, int64_t milliseconds,
     QJSTemporalEpochNs epoch;
     int64_t offset;
     int error;
-    if (date_backend_error(ctx, qjs_temporal_system_zone(&zone)))
+    if (date_backend_error(ctx, date_system_zone(ctx, &zone)))
         return -1;
     error = qjs_temporal_epoch_ns_from_milliseconds(&epoch, (double)milliseconds);
     if (date_backend_error(ctx, error ? QJS_TEMPORAL_ERROR_RANGE :
@@ -92,7 +101,7 @@ static __exception int date_utc(JSContext *ctx, double milliseconds,
         *result = NAN;
         return 0;
     }
-    if (date_backend_error(ctx, qjs_temporal_system_zone(&zone)))
+    if (date_backend_error(ctx, date_system_zone(ctx, &zone)))
         return -1;
     wall = qjs_temporal_epoch_ns_from_int64((int64_t)trunc(milliseconds));
     if (qjs_temporal_epoch_ns_multiply(&wall, wall, 1000000) ||
@@ -321,16 +330,13 @@ static __exception int get_date_fields_from_time(JSContext *ctx, double dval,
     } else {
         d = dval;     /* assuming -8.64e15 <= dval <= -8.64e15 */
         if (is_local) {
-#ifdef CONFIG_ICU
-            int64_t offset;
-            if (date_local_offset(ctx, d, &offset))
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
+            if (date_local_offset(ctx, d, &tz))
                 return -1;
-            d += offset;
-            tz = offset / 60000; /* Date string output uses whole minutes. */
 #else
-            tz = -getTimezoneOffset(d);
-            d += tz * 60000;
+            tz = -(int64_t)getTimezoneOffset(d) * 60000;
 #endif
+            d += tz;
         }
     }
 
@@ -362,7 +368,7 @@ static __exception int get_date_fields_from_time(JSContext *ctx, double dval,
     fields[5] = s;
     fields[6] = ms;
     fields[7] = wd;
-    fields[8] = tz;
+    fields[8] = tz; /* Exact offset in milliseconds, used by string output. */
     return TRUE;
 }
 
@@ -443,7 +449,7 @@ static __exception int make_date_fields(JSContext *ctx,
 
     /* adjust for local time and clip */
     if (is_local) {
-#ifdef CONFIG_ICU
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
         if (date_utc(ctx, tv, &tv))
             return -1;
 #else
@@ -571,6 +577,8 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
     double fields[9];
     int res, fmt, part, pos;
     int y, mon, d, h, m, s, ms, wd, tz;
+    int64_t offset;
+    char offset_sign, tz_sign;
 
     fmt = (magic >> 4) & 0x0F;
     part = magic & 0x0F;
@@ -593,7 +601,17 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
     s = fields[5];
     ms = fields[6];
     wd = fields[7];
-    tz = fields[8];
+    offset = fields[8];
+    offset_sign = offset < 0 ? '-' : '+';
+#ifdef CONFIG_TEMPORAL
+    /* Stage 4 TimeZoneString formats the signed truncated minute offset. */
+    tz_sign = offset / 60000 < 0 ? '-' : '+';
+#else
+    tz_sign = offset_sign;
+#endif
+    if (offset < 0)
+        offset = -offset;
+    tz = offset / 60000;
 
     pos = 0;
 
@@ -644,16 +662,19 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
         case 1:
             pos += snprintf(buf + pos, sizeof(buf) - pos,
                             "%02d:%02d:%02d GMT", h, m, s);
-            if (tz < 0) {
-                buf[pos++] = '-';
-                tz = -tz;
-            } else {
-                buf[pos++] = '+';
-            }
+            buf[pos++] = tz_sign;
             /* tz is >= 0, can use % */
             pos += snprintf(buf + pos, sizeof(buf) - pos,
                             "%02d%02d", tz / 60, tz % 60);
-            /* XXX: tack the time zone code? */
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
+            /* Keep the required GMT+HHMM form. An exact offset name lets
+               Date.parse recover seconds omitted from that form. */
+            if (offset % 60000) {
+                pos += snprintf(buf + pos, sizeof(buf) - pos,
+                                " (UTC%c%02d:%02d:%02d)", offset_sign,
+                                tz / 60, tz % 60, (int)(offset / 1000 % 60));
+            }
+#endif
             break;
         case 2:
             pos += snprintf(buf + pos, sizeof(buf) - pos,
@@ -669,12 +690,24 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
     return JS_NewStringLen(ctx, buf, pos);
 }
 
+#ifdef CONFIG_TEMPORAL
+/* SystemUTCEpochMilliseconds floors the shared nanosecond host clock. */
+static __exception int date_now(JSContext *ctx, int64_t *result)
+{
+    QJSTemporalEpochNs epoch;
+    int error = js_temporal_get_system_epoch(&epoch);
+    if (!error && qjs_temporal_epoch_ns_to_milliseconds(result, epoch))
+        error = QJS_TEMPORAL_ERROR_RANGE;
+    return date_backend_error(ctx, error);
+}
+#else
 /* OS dependent: return the UTC time in ms since 1970. */
 static int64_t date_now(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (int64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
 }
+#endif
 
 static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
                                    int argc, JSValueConst *argv)
@@ -690,7 +723,14 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
     }
     n = argc;
     if (n == 0) {
+#ifdef CONFIG_TEMPORAL
+        int64_t milliseconds;
+        if (date_now(ctx, &milliseconds))
+            return JS_EXCEPTION;
+        val = (double)milliseconds;
+#else
         val = date_now();
+#endif
     } else if (n == 1) {
         JSValue v, dv;
         if (JS_VALUE_GET_TAG(argv[0]) == JS_TAG_OBJECT) {
@@ -1186,6 +1226,81 @@ static BOOL js_date_parse_otherstring(const uint8_t *sp,
     return TRUE;
 }
 
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
+/* Recognize only our complete toString layout and matching exact offset name.
+   Return the signed seconds omitted from GMT+HHMM; other comments stay ignored. */
+static int js_date_parse_second_offset(const uint8_t *sp, JSString *original)
+{
+    int p, n, val, year_start, sign, name_sign, hh, mm, h, m, s, i, c;
+    int len = original->len;
+
+    if (len < 48 || len > 51)
+        return 0;
+    n = find_abbrev(sp, 0, day_names, 7);
+    if (n < 0 || strncmp((const char *)sp, day_names + n * 3, 3) ||
+        sp[3] != ' ')
+        return 0;
+    n = find_abbrev(sp, 4, month_names, 12);
+    if (n < 0 || strncmp((const char *)sp + 4, month_names + n * 3, 3) ||
+        sp[7] != ' ')
+        return 0;
+    p = 8;
+    if (!string_get_digits(sp, &p, &val, 2, 2) ||
+        !string_skip_char(sp, &p, ' '))
+        return 0;
+    c = sp[p];
+    if (c == '-')
+        p++;
+    year_start = p;
+    if (!string_get_digits(sp, &p, &val, 4, 6) ||
+        (p - year_start > 4 && sp[year_start] == '0') || (c == '-' && val == 0) ||
+        !string_skip_char(sp, &p, ' '))
+        return 0;
+    for (i = 0; i < 8; i++) {
+        c = sp[p + i];
+        if (i == 2 || i == 5) {
+            if (c != ':')
+                return 0;
+        } else if (c < '0' || c > '9') {
+            return 0;
+        }
+    }
+    p += 8;
+    if (strncmp((const char *)sp + p, " GMT", 4))
+        return 0;
+    p += 4;
+    sign = sp[p++];
+    if ((sign != '+' && sign != '-') ||
+        !string_get_digits(sp, &p, &hh, 2, 2) ||
+        !string_get_digits(sp, &p, &mm, 2, 2) ||
+        strncmp((const char *)sp + p, " (UTC", 5))
+        return 0;
+    p += 5;
+    name_sign = sp[p++];
+    if ((name_sign != '+' && name_sign != '-') ||
+        !string_get_digits(sp, &p, &h, 2, 2) ||
+        !string_skip_char(sp, &p, ':') || !string_get_digits(sp, &p, &m, 2, 2) ||
+        !string_skip_char(sp, &p, ':') || !string_get_digits(sp, &p, &s, 2, 2) ||
+        !string_skip_char(sp, &p, ')') || p != len || sp[p] ||
+        h != hh || m != mm ||
+        h > 23 || m > 59 || s < 1 || s > 59)
+        return 0;
+#ifdef CONFIG_TEMPORAL
+    if (sign != (name_sign == '-' && (h || m) ? '-' : '+'))
+        return 0;
+#else
+    if (sign != name_sign)
+        return 0;
+#endif
+    /* The legacy parser normalizes Unicode minus; our emitted format is ASCII. */
+    for (i = 0; i < len; i++) {
+        if (string_get(original, i) > 127)
+            return 0;
+    }
+    return name_sign == '-' ? -s : s;
+}
+#endif
+
 static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
@@ -1231,6 +1346,9 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
             if (make_date_fields(ctx, fields1, is_local, &d)) {
                 rv = JS_EXCEPTION;
             } else {
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
+                d -= js_date_parse_second_offset(buf, sp) * 1000;
+#endif
                 d = time_clip(d - fields[8] * 60000);
                 rv = JS_NewFloat64(ctx, d);
             }
@@ -1244,7 +1362,14 @@ static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv)
 {
     // now()
+#ifdef CONFIG_TEMPORAL
+    int64_t milliseconds;
+    if (date_now(ctx, &milliseconds))
+        return JS_EXCEPTION;
+    return JS_NewInt64(ctx, milliseconds);
+#else
     return JS_NewInt64(ctx, date_now());
+#endif
 }
 
 static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,
@@ -1289,7 +1414,7 @@ static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (isnan(v))
         return JS_NAN;
-#ifdef CONFIG_ICU
+#if defined(CONFIG_ICU) || defined(CONFIG_TEMPORAL)
     else {
         int64_t offset;
         if (date_local_offset(ctx, (int64_t)trunc(v), &offset))

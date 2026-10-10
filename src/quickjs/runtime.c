@@ -48,6 +48,9 @@
 #include "builtins/array.h"
 #include "builtins/iterator.h"
 #include "builtins/regexp.h"
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
+#include "../timezone/timezone.h"
+#endif
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
@@ -460,6 +463,12 @@ void JS_FreeRuntime(JSRuntime *rt)
 #endif
     assert(list_empty(&rt->gc_obj_list));
     assert(list_empty(&rt->weakref_list));
+
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
+    /* All native consumers finalized; allocator and runtime still live. */
+    qjs_tz_provider_free(rt->temporal_tz_provider);
+    rt->temporal_tz_provider = NULL;
+#endif
 
     /* free the classes */
     for(i = 0; i < rt->class_count; i++) {

@@ -27,6 +27,111 @@
 #include "temporal-internal.h"
 #include "../../internal/atom.h"
 #include "../../internal/object.h"
+#ifndef CONFIG_ICU
+#include "../../../timezone/timezone.h"
+
+/* Match callback signatures explicitly. Runtime allocations neither throw
+   JavaScript exceptions nor run GC while provider state is being prepared. */
+static void *js_temporal_tz_allocate(void *opaque, size_t size)
+{
+    return js_malloc_rt(opaque, size);
+}
+
+static void js_temporal_tz_deallocate(void *opaque, void *pointer)
+{
+    js_free_rt(opaque, pointer);
+}
+
+static int js_temporal_tz_error(int error)
+{
+    return error == QJS_TZ_OK ? 0 :
+        error == QJS_TZ_MEMORY ? QJS_TEMPORAL_ERROR_MEMORY :
+        error == QJS_TZ_RANGE ? QJS_TEMPORAL_ERROR_RANGE :
+        QJS_TEMPORAL_ERROR_BACKEND;
+}
+#endif
+
+int js_temporal_bind_time_zone(JSContext *ctx, QJSTemporalZone *zone)
+{
+#ifndef CONFIG_ICU
+    JSRuntime *rt = ctx->rt;
+    const QJSTimeZone *snapshot;
+    int error;
+
+    if (zone->is_offset || !strcmp(zone->identifier, "UTC")) {
+        zone->provider = NULL;
+        return 0;
+    }
+    if (zone->provider)
+        return 0;
+    if (!rt->temporal_tz_provider) {
+        QJSTzProvider *provider;
+        QJSTzAllocator allocator = {
+            rt, js_temporal_tz_allocate, js_temporal_tz_deallocate
+        };
+        error = qjs_tz_provider_create(&provider, NULL, &allocator);
+        if (error)
+            return js_temporal_tz_error(error);
+        rt->temporal_tz_provider = provider;
+    }
+    error = qjs_tz_provider_open(rt->temporal_tz_provider,
+                zone->identifier, strlen(zone->identifier), &snapshot);
+    if (error)
+        return js_temporal_tz_error(error);
+    zone->provider = rt->temporal_tz_provider;
+#else
+    /* Intl, Date and Temporal continue to use ICU's configured provider. */
+    (void)ctx;
+    zone->provider = NULL;
+#endif
+    return 0;
+}
+
+int js_temporal_parse_time_zone(JSContext *ctx, QJSTemporalZone *result,
+                                const char *identifier, size_t length)
+{
+    QJSTemporalZone zone;
+    int error = qjs_temporal_zone_parse(&zone, identifier, length);
+
+    if (!error)
+        error = js_temporal_bind_time_zone(ctx, &zone);
+    if (!error)
+        *result = zone;
+    return error;
+}
+
+int js_temporal_get_system_zone(JSContext *ctx, QJSTemporalZone *result)
+{
+    QJSTemporalZone zone;
+    int error = qjs_temporal_system_zone(&zone);
+
+    if (!error)
+        error = js_temporal_bind_time_zone(ctx, &zone);
+    if (!error)
+        *result = zone;
+    return error;
+}
+
+int js_temporal_get_system_epoch(QJSTemporalEpochNs *result)
+{
+    QJSTemporalEpochNs epoch, limit;
+    int error = qjs_temporal_system_epoch(&epoch);
+
+    if (error)
+        return error;
+    /* HostSystemUTCEpochNanoseconds clamps to the Instant interval. Date
+       floors this same integer to milliseconds; Temporal retains all bits. */
+    if (!qjs_temporal_epoch_ns_is_valid(epoch)) {
+        double milliseconds = qjs_temporal_epoch_ns_compare(epoch,
+            qjs_temporal_epoch_ns_from_int64(0)) < 0 ?
+            -8640000000000000.0 : 8640000000000000.0;
+        if (qjs_temporal_epoch_ns_from_milliseconds(&limit, milliseconds))
+            return QJS_TEMPORAL_ERROR_BACKEND;
+        epoch = limit;
+    }
+    *result = epoch;
+    return 0;
+}
 
 size_t js_temporal_memory_usage(JSValueConst object, JSValue *owned_value)
 {

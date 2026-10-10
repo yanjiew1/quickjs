@@ -75,6 +75,24 @@ static void native_free(void *opaque, void *ptr)
 {
     js_free_rt(opaque, ptr);
 }
+
+QJSTzProvider *js_intl_native_time_zone_provider(JSContext *ctx)
+{
+    JSRuntime *rt = ctx->rt;
+    if (!rt->temporal_tz_provider) {
+        QJSTzProvider *provider;
+        QJSTzAllocator allocator = {rt, native_malloc, native_free};
+        int error = qjs_tz_provider_create(&provider, NULL, &allocator);
+        if (error) {
+            if (error == QJS_TZ_MEMORY) JS_ThrowOutOfMemory(ctx);
+            else JS_ThrowInternalError(ctx, "native time-zone provider failed");
+            return NULL;
+        }
+        rt->temporal_tz_provider = provider;
+    }
+    return rt->temporal_tz_provider;
+}
+
 #else
 /* Snapshot host defaults per realm; locale data and process globals are owned
    by ICU. The engine never mutates ICU defaults or calls u_cleanup. */
@@ -176,8 +194,17 @@ int js_intl_ensure_context(JSContext *ctx)
     /* Explicit initial development policy, snapshotted once per realm.
      * This does not infer a host locale that the limited provider cannot use. */
     config.default_locale = (QJSIntlBytes){ "en-US", 5 };
-    config.default_time_zone = (QJSIntlBytes){ "UTC", 3 };
-    status = qjs_intl_provider_new(&config, &state->provider);
+    {
+        char identifier[256];
+        if (qjs_tz_system_identifier(identifier, sizeof identifier)) {
+            JS_ThrowInternalError(ctx, "native default time-zone discovery failed");
+            goto fail;
+        }
+        /* Configuration is consumed synchronously and canonicalized to
+           a string in the immutable compiled timezone bundle. */
+        config.default_time_zone = (QJSIntlBytes){identifier, strlen(identifier)};
+        status = qjs_intl_provider_new(&config, &state->provider);
+    }
     if (js_intl_native_error(ctx, status, "data initialization")) goto fail;
     state->default_locale = js_intl_strdup(ctx,
         qjs_intl_provider_default_locale(state->provider).data);
@@ -187,7 +214,8 @@ int js_intl_ensure_context(JSContext *ctx)
     if (!state->default_locale)
         goto fail;
 #ifdef CONFIG_INTL_NATIVE
-    state->default_time_zone = js_intl_strdup(ctx, "UTC");
+    state->default_time_zone = js_intl_strdup(ctx,
+        qjs_intl_provider_default_time_zone(state->provider).data);
 #else
     state->default_time_zone = intl_default_time_zone_snapshot(ctx);
 #endif

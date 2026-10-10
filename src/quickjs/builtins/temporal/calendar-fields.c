@@ -288,6 +288,7 @@ void js_temporal_free_time_zone(JSContext *ctx, JSTemporalTimeZone *zone)
     zone->identifier = JS_UNDEFINED;
     zone->offset_nanoseconds = 0;
     zone->is_offset = FALSE;
+    zone->provider = NULL;
 }
 int js_temporal_to_time_zone(JSContext *ctx, JSValueConst value,
                              JSTemporalTimeZone *result)
@@ -324,10 +325,13 @@ int js_temporal_to_time_zone(JSContext *ctx, JSValueConst value,
     }
     JS_FreeCString(ctx, text);
     if (js_temporal_calendar_error(ctx, error)) return -1;
+    if (js_temporal_calendar_error(ctx, js_temporal_bind_time_zone(ctx, &zone)))
+        return -1;
     result->identifier = JS_NewString(ctx, zone.identifier);
     if (JS_IsException(result->identifier)) { result->identifier = JS_UNDEFINED; return -1; }
     result->is_offset = zone.is_offset;
     result->offset_nanoseconds = zone.offset_nanoseconds;
+    result->provider = zone.provider;
     return 0;
 }
 int js_temporal_time_zone_to_native(JSContext *ctx, const JSTemporalTimeZone *source,
@@ -345,7 +349,8 @@ int js_temporal_time_zone_to_native(JSContext *ctx, const JSTemporalTimeZone *so
     JS_FreeCString(ctx, text);
     result->is_offset = source->is_offset;
     result->offset_nanoseconds = source->offset_nanoseconds;
-    return 0;
+    result->provider = source->provider;
+    return js_temporal_calendar_error(ctx, js_temporal_bind_time_zone(ctx, result));
 }
 int js_temporal_time_zone_offset(JSContext *ctx,
     const JSTemporalTimeZone *zone, QJSTemporalEpochNs epoch, int64_t *result)

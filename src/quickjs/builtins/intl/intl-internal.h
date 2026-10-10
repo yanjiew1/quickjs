@@ -39,7 +39,11 @@
 
 #ifdef CONFIG_INTL
 #ifdef CONFIG_INTL_NATIVE
+#ifdef CONFIG_ICU
+#error "CONFIG_INTL_NATIVE requires CONFIG_ICU to be disabled"
+#endif
 #include "../../../intl/provider-native.h"
+#include "../../../timezone/timezone.h"
 #include "intl-text.h"
 #else
 #include "../../../intl/icu-config.h"
@@ -58,6 +62,11 @@ typedef enum JSIntlService {
     JS_INTL_DISPLAY_NAMES, JS_INTL_SEGMENTER, JS_INTL_DURATION_FORMAT,
     JS_INTL_SERVICE_COUNT
 } JSIntlService;
+
+#ifdef CONFIG_INTL_NATIVE
+/* Borrowed runtime owner. A NULL result always carries a JS exception. */
+QJSTzProvider *js_intl_native_time_zone_provider(JSContext *ctx);
+#endif
 
 #define JS_INTL_MAX_RESOLUTION_KEYS 4
 typedef struct JSIntlResolutionKey {

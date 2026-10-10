@@ -254,13 +254,13 @@ typedef struct QJSIntlDataVersions {
     uint32_t schema_version;
 } QJSIntlDataVersions;
 
-typedef struct QJSTzProvider QJSTzProvider;
+struct QJSTzProvider;
 typedef struct QJSIntlProviderConfig {
     QJSIntlBackend backend;
     QJSIntlAllocator allocator;
     QJSIntlBytes default_locale;
     QJSIntlBytes default_time_zone;
-    QJSTzProvider *native_time_zones; /* borrowed runtime snapshot */
+    struct QJSTzProvider *native_time_zones; /* borrowed runtime snapshot */
 } QJSIntlProviderConfig;
 /* Runtime copies/canonicalizes defaults on construction and owns the shared
  * timezone snapshot even with CONFIG_INTL_NATIVE and CONFIG_TEMPORAL=n.

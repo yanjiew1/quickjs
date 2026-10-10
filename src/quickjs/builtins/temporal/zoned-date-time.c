@@ -96,7 +96,7 @@ static int zdt_zone_identifier(JSContext *ctx, const char *text, size_t length,
 
     memset(result, 0, sizeof(*result));
     result->identifier = JS_UNDEFINED;
-    error = qjs_temporal_zone_parse(&native, text, length);
+    error = js_temporal_parse_time_zone(ctx, &native, text, length);
     if (js_temporal_calendar_error(ctx, error))
         return -1;
     result->identifier = JS_NewString(ctx, native.identifier);
@@ -106,6 +106,7 @@ static int zdt_zone_identifier(JSContext *ctx, const char *text, size_t length,
     }
     result->is_offset = native.is_offset;
     result->offset_nanoseconds = native.offset_nanoseconds;
+    result->provider = native.provider;
     return 0;
 }
 

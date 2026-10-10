@@ -34,6 +34,7 @@
 #include "../../../temporal/duration.h"
 #include "../../../temporal/options.h"
 #include "../../../temporal/parse.h"
+#include "../../../temporal/time-zone.h"
 
 typedef QJSTemporalEpochNs JSTemporalInstantData;
 typedef QJSTemporalDuration JSTemporalDurationData;
@@ -59,6 +60,8 @@ typedef struct JSTemporalTimeZone {
     JSValue identifier;
     int64_t offset_nanoseconds;
     BOOL is_offset;
+    /* Borrowed from this object's runtime; never freed by a context or value. */
+    QJSTzProvider *provider;
 } JSTemporalTimeZone;
 
 typedef struct JSTemporalZonedDateTimeData {
@@ -155,6 +158,16 @@ int js_temporal_to_calendar(JSContext *ctx, JSValueConst value,
 int js_temporal_get_calendar(JSContext *ctx, JSValueConst object,
                              QJSTemporalCalendar *result);
 const char *qjs_temporal_calendar_identifier(QJSTemporalCalendar calendar);
+
+/* These engine helpers return native Temporal error codes. Binding opens a
+   named snapshot once and commits the non-owning runtime edge only on success.
+   Metadata-only native helpers remain context-free and embedded-only. */
+int js_temporal_bind_time_zone(JSContext *ctx, QJSTemporalZone *zone);
+int js_temporal_parse_time_zone(JSContext *ctx, QJSTemporalZone *result,
+                                const char *identifier, size_t length);
+int js_temporal_get_system_zone(JSContext *ctx, QJSTemporalZone *result);
+/* One host clock source; clamp before either nanosecond or Date conversion. */
+int js_temporal_get_system_epoch(QJSTemporalEpochNs *result);
 
 /* A converted zone owns identifier. Every successful conversion must be
    matched by js_temporal_free_time_zone, including abrupt completions. */

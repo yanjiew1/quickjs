@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/unicode-org/cldr",
+  "commit": "11f1f63d9390d1644c66a6b0704571de3cca4cbf",
+  "date": "2026-10-07T02:57:03Z",
+  "xml_path": "common/supplemental/windowsZones.xml",
+  "xml_sha256": "9cf3db6a31fb382fee21b70be6feba1e82766b0fcd06e6261fb7936a73e537ff",
+  "license": "UNICODE LICENSE V3",
+  "license_file": "LICENSE"
+}
