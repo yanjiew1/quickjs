@@ -14,6 +14,9 @@ int qjs_calendar_lunisolar_from_epoch_day(QJSCalendarId calendar,
 int qjs_calendar_lunisolar_from_epoch_day_for_intl(QJSCalendarId calendar,
                                                    int64_t epoch_day,
                                                    QJSCalendarDate *result);
+int qjs_calendar_lunisolar_from_epoch_day_unbounded(QJSCalendarId calendar,
+                                                   int64_t epoch_day,
+                                                   QJSCalendarDate *result);
 int qjs_calendar_lunisolar_to_epoch_day(QJSCalendarId calendar, int32_t year,
                                       int month, int day, int64_t *result);
 /* Internal metadata/Temporal bracketing primitive. Validated calendar fields

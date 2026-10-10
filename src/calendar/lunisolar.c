@@ -690,9 +690,19 @@ static int from_epoch_day(QJSCalendarId calendar, int64_t epoch_day,
     int month, error;
     if (!valid_calendar(calendar))
         return QJS_CAL_UNSUPPORTED;
-    if (!result ||
-        epoch_day < (for_intl ? QJS_CAL_INTL_MIN_EPOCH_DAY : QJS_CAL_MIN_EPOCH_DAY) ||
-        epoch_day > (for_intl ? QJS_CAL_INTL_MAX_EPOCH_DAY : QJS_CAL_MAX_EPOCH_DAY))
+    if (!result)
+        return QJS_CAL_RANGE;
+    if (for_intl == 2) {
+        /* Lunar arithmetic years follow Gregorian year numbering. Bound the
+         * inverse before its integer Gregorian-year conversion, allowing the
+         * complete edge years required by Temporal reference-date handling. */
+        if (epoch_day < qjs_calendar_gregorian_to_epoch_day_unchecked(
+                            QJS_CAL_MIN_YEAR, 1, 1) ||
+            epoch_day >= qjs_calendar_gregorian_to_epoch_day_unchecked(
+                            QJS_CAL_MAX_YEAR + 2, 1, 1))
+            return QJS_CAL_RANGE;
+    } else if (epoch_day < (for_intl ? QJS_CAL_INTL_MIN_EPOCH_DAY : QJS_CAL_MIN_EPOCH_DAY) ||
+               epoch_day > (for_intl ? QJS_CAL_INTL_MAX_EPOCH_DAY : QJS_CAL_MAX_EPOCH_DAY))
         return QJS_CAL_RANGE;
     context.calendar = calendar;
     error = year_containing_day(&context, epoch_day, &arithmetic_year);
@@ -732,6 +742,13 @@ int qjs_calendar_lunisolar_from_epoch_day_for_intl(QJSCalendarId calendar,
                                                 QJSCalendarDate *result)
 {
     return from_epoch_day(calendar, epoch_day, result, 1);
+}
+
+int qjs_calendar_lunisolar_from_epoch_day_unbounded(QJSCalendarId calendar,
+                                                   int64_t epoch_day,
+                                                   QJSCalendarDate *result)
+{
+    return from_epoch_day(calendar, epoch_day, result, 2);
 }
 
 static int to_epoch_day(QJSCalendarId calendar, int32_t year,

@@ -165,6 +165,11 @@ int qjs_cal_to_epoch_day_unbounded(QJSCalendarId calendar, int32_t year,
     *result = epoch;
     return QJS_CAL_OK;
 }
+int qjs_calendar_to_epoch_day_unbounded(QJSCalendarId calendar, int32_t year,
+                                       int month, int day, int64_t *result)
+{
+    return qjs_cal_to_epoch_day_unbounded(calendar, year, month, day, result);
+}
 int qjs_calendar_to_epoch_day(QJSCalendarId calendar, int32_t year,
                              int month, int day, int64_t *result)
 {
@@ -233,10 +238,13 @@ static int from_epoch_day(QJSCalendarId calendar, int64_t epoch,
     int count, month, days, sum = 0;
     int64_t minimum = for_intl ? QJS_CAL_INTL_MIN_EPOCH_DAY : QJS_CAL_MIN_EPOCH_DAY;
     int64_t maximum = for_intl ? QJS_CAL_INTL_MAX_EPOCH_DAY : QJS_CAL_MAX_EPOCH_DAY;
-    if (!valid_calendar(calendar) || !result || epoch < minimum ||
-        epoch > maximum) return QJS_CAL_RANGE;
+    if (!valid_calendar(calendar) || !result ||
+        (for_intl != 2 && (epoch < minimum || epoch > maximum)))
+        return QJS_CAL_RANGE;
     if (lunisolar_calendar(calendar)) {
 #ifdef QJS_CAL_ENABLE_LUNISOLAR_CANDIDATE
+        if (for_intl == 2)
+            return qjs_calendar_lunisolar_from_epoch_day_unbounded(calendar, epoch, result);
         return for_intl ? qjs_calendar_lunisolar_from_epoch_day_for_intl(calendar, epoch, result) :
                           qjs_calendar_lunisolar_from_epoch_day(calendar, epoch, result);
 #else
@@ -246,7 +254,7 @@ static int from_epoch_day(QJSCalendarId calendar, int64_t epoch,
     /* Find the largest arithmetic year whose first day is <= epoch. The
      * bounded search avoids floating inverse guesses and unbounded repairs. */
     if (year_start(calendar, low) > epoch || year_start(calendar, high) <= epoch)
-        return QJS_CAL_BACKEND;
+        return for_intl == 2 ? QJS_CAL_RANGE : QJS_CAL_BACKEND;
     while (high - low > 1) {
         int32_t mid = low + (high - low) / 2;
         if (year_start(calendar, mid) <= epoch) low = mid;
@@ -288,6 +296,80 @@ int qjs_calendar_from_epoch_day_for_intl(QJSCalendarId calendar, int64_t epoch,
                                          QJSCalendarDate *result)
 {
     return from_epoch_day(calendar, epoch, result, 1);
+}
+int qjs_calendar_year_has_supported_date(QJSCalendarId calendar, int32_t year,
+                                          int *result)
+{
+    int64_t first, next;
+    int error;
+    if (!valid_calendar(calendar) || !result ||
+        year < QJS_CAL_MIN_YEAR || year >= QJS_CAL_MAX_YEAR) return QJS_CAL_RANGE;
+    if (lunisolar_calendar(calendar)) {
+        /* M01 begins within the Gregorian year bearing the arithmetic year
+         * number. Exclude remote years before asking the astronomy provider
+         * for either year start. This does not assume a fixed lunar epoch. */
+        if (qjs_calendar_gregorian_to_epoch_day_unchecked(year, 1, 1) >
+                QJS_CAL_MAX_EPOCH_DAY ||
+            qjs_calendar_gregorian_to_epoch_day_unchecked(year + 2, 1, 1) <=
+                QJS_CAL_MIN_EPOCH_DAY) {
+            *result = 0;
+            return QJS_CAL_OK;
+        }
+    }
+    error = qjs_cal_to_epoch_day_unbounded(calendar, year, 1, 1, &first);
+    if (error) return error;
+    error = qjs_cal_to_epoch_day_unbounded(calendar, year + 1, 1, 1, &next);
+    if (error) return error;
+    *result = first <= QJS_CAL_MAX_EPOCH_DAY && next > QJS_CAL_MIN_EPOCH_DAY;
+    return QJS_CAL_OK;
+}
+int qjs_calendar_from_epoch_day_unbounded(QJSCalendarId calendar,
+                                         int64_t epoch, QJSCalendarDate *result)
+{
+    return from_epoch_day(calendar, epoch, result, 2);
+}
+int qjs_calendar_year_from_era(QJSCalendarId calendar, const char *era,
+                               int32_t era_year, int32_t *result)
+{
+    int64_t year = era_year;
+    if (!valid_calendar(calendar) || !era || !result) return QJS_CAL_RANGE;
+    switch (calendar) {
+    case QJS_CAL_BUDDHIST: if (strcmp(era, "be")) return QJS_CAL_RANGE; break;
+    case QJS_CAL_COPTIC: case QJS_CAL_HEBREW:
+        if (strcmp(era, "am")) return QJS_CAL_RANGE;
+        break;
+    case QJS_CAL_ETHIOAA: if (strcmp(era, "aa")) return QJS_CAL_RANGE; break;
+    case QJS_CAL_ETHIOPIC:
+        if (!strcmp(era, "aa")) year -= 5500;
+        else if (strcmp(era, "am")) return QJS_CAL_RANGE;
+        break;
+    case QJS_CAL_INDIAN: if (strcmp(era, "shaka")) return QJS_CAL_RANGE; break;
+    case QJS_CAL_ISLAMIC_CIVIL: case QJS_CAL_ISLAMIC_TBLA: case QJS_CAL_ISLAMIC_UMALQURA:
+        if (!strcmp(era, "bh")) year = 1 - year;
+        else if (strcmp(era, "ah")) return QJS_CAL_RANGE;
+        break;
+    case QJS_CAL_PERSIAN: if (strcmp(era, "ap")) return QJS_CAL_RANGE; break;
+    case QJS_CAL_ROC:
+        if (!strcmp(era, "broc")) year = 1 - year;
+        else if (strcmp(era, "roc")) return QJS_CAL_RANGE;
+        break;
+    case QJS_CAL_JAPANESE:
+        if (!strcmp(era, "reiwa")) { year += 2018; break; }
+        if (!strcmp(era, "heisei")) { year += 1988; break; }
+        if (!strcmp(era, "showa")) { year += 1925; break; }
+        if (!strcmp(era, "taisho")) { year += 1911; break; }
+        if (!strcmp(era, "meiji")) { year += 1867; break; }
+        /* Japanese dates before 1873 use the Gregorian epoch eras. */
+        /* fall through */
+    case QJS_CAL_GREGORY:
+        if (!strcmp(era, "bce") || !strcmp(era, "bc")) year = 1 - year;
+        else if (strcmp(era, "ce") && strcmp(era, "ad")) return QJS_CAL_RANGE;
+        break;
+    default: return QJS_CAL_RANGE;
+    }
+    if (year < QJS_CAL_MIN_YEAR || year > QJS_CAL_MAX_YEAR) return QJS_CAL_RANGE;
+    *result = (int32_t)year;
+    return QJS_CAL_OK;
 }
 int qjs_calendar_month_ordinal(QJSCalendarId calendar, int32_t year,
                               const char *month_code, int constrain, int *result)

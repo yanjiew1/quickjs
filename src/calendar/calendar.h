@@ -58,6 +58,24 @@ int qjs_calendar_from_epoch_day_for_intl(QJSCalendarId calendar,
                                          QJSCalendarDate *result);
 int qjs_calendar_to_epoch_day(QJSCalendarId calendar, int32_t year,
                              int month, int day, int64_t *result);
+/* Reference-date conversion validates calendar fields and arithmetic years,
+ * but omits the public epoch-day range. Temporal must check the final value
+ * after its reference-date or arithmetic operation. No new provider is used.
+ */
+int qjs_calendar_to_epoch_day_unbounded(QJSCalendarId calendar, int32_t year,
+                                       int month, int day, int64_t *result);
+int qjs_calendar_from_epoch_day_unbounded(QJSCalendarId calendar,
+                                         int64_t epoch_day,
+                                         QJSCalendarDate *result);
+/* Era resolution accepts the canonical proposal eras and their aliases.
+ * Era ranges intentionally do not restrict the lenient arithmetic year.
+ */
+int qjs_calendar_year_from_era(QJSCalendarId calendar, const char *era,
+                               int32_t era_year, int32_t *result);
+/* Whether any date in this arithmetic year intersects Temporal's domain.
+ * This precedes resolving a MonthDay's user supplied month and day. */
+int qjs_calendar_year_has_supported_date(QJSCalendarId calendar, int32_t year,
+                                          int *result);
 int qjs_calendar_month_info(QJSCalendarId calendar, int32_t year, int month,
                            int *months, int *days, char month_code[5]);
 /* constrain is 0 for reject, 1 to map a missing leap month to its proposal
