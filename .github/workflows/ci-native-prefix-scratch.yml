@@ -1,0 +1,78 @@
+name: native-prefix-scratch
+on:
+  push:
+    branches: ['scratch/native-prefix/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prefix:
+    if: startsWith(github.ref, 'refs/heads/scratch/native-prefix/')
+    name: prefix ${{ matrix.backend }} ${{ matrix.compiler }} ${{ matrix.sanitizer }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [native, icu]
+        compiler: [gcc, clang]
+        sanitizer: [normal, ASan, UBSan]
+    env:
+      MAKEFLAGS: ''
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      PREFIX_BACKEND: ${{ matrix.backend }}
+      PREFIX_COMPILER: ${{ matrix.compiler }}
+      PREFIX_SANITIZER: ${{ matrix.sanitizer }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          submodules: recursive
+          fetch-depth: 2
+      - name: Bind source and record environment
+        id: binding
+        run: |
+          export PREFIX_ICU="$RUNNER_TEMP/native-prefix-icu"
+          printf 'PREFIX_ICU=%s\n' "$PREFIX_ICU" >> "$GITHUB_ENV"
+          python3 tools/ci/native-prefix/run.py initialize
+      - name: Restore pinned ICU install
+        if: matrix.backend == 'icu'
+        id: icu-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PREFIX_ICU }}/install
+          key: prefix-icu78.3-ubuntu24-${{ steps.binding.outputs.compiler_key }}-${{ hashFiles('tools/ci/native-prefix/icu-overlay.json', 'tools/ci/native-prefix/run.py') }}
+      - name: Build pinned ICU release plus exact reviewed overlay
+        if: matrix.backend == 'icu' && steps.icu-cache.outputs.cache-hit != 'true'
+        run: python3 tools/ci/native-prefix/run.py setup-icu
+      - name: Inspect pinned ICU install
+        if: matrix.backend == 'icu'
+        run: python3 tools/ci/native-prefix/run.py inspect-icu
+      - name: Materialize pinned timezone source inputs
+        run: python3 tools/ci/native-prefix/run.py timezone-inputs
+      - name: Build candidate
+        run: python3 tools/ci/native-prefix/run.py build
+      - name: Run repository tests
+        run: python3 tools/ci/native-prefix/run.py repository-tests
+      - name: Run direct native C library units
+        if: matrix.backend == 'native'
+        run: python3 tools/ci/native-prefix/run.py native-units
+      - name: Install and verify reviewed latest Test262 fixture
+        run: python3 tools/ci/native-prefix/run.py bootstrap-test262
+      - name: Run complete configured Test262 suite
+        run: python3 tools/ci/native-prefix/run.py test262
+      - name: Run normal microbench
+        if: matrix.sanitizer == 'normal'
+        run: python3 tools/ci/native-prefix/run.py microbench
+      - name: Preserve reports and exact execution scope
+        if: always()
+        run: python3 tools/ci/native-prefix/run.py preserve
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-prefix-${{ github.sha }}-${{ matrix.backend }}-${{ matrix.compiler }}-${{ matrix.sanitizer }}
+          path: ci-native-prefix-diagnostics/
+          if-no-files-found: error
+          retention-days: 14
