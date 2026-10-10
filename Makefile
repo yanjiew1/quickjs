@@ -491,6 +491,9 @@ INTL_BACKEND_SRCS= \
     src/intl/relative-native-data.c \
     src/intl/number-decimal.c \
     src/quickjs/builtins/intl/native-relative-time-format.c \
+    src/intl/provider-native-display.c \
+    src/intl/display-names-native.c \
+    src/quickjs/builtins/intl/native-display-names.c \
     src/quickjs/builtins/intl/native-number-format.c \
     src/intl/duration-native.c \
     src/intl/duration-native-data.c \
@@ -881,6 +884,7 @@ ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_collator_oom$(EXE)
 C_TESTS+=tests/test_intl_native_segmenter_oom$(EXE)
 C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
+C_TESTS+=tests/test_intl_native_display_oom$(EXE)
 C_TESTS+=tests/test_intl_native_relative_oom$(EXE)
 C_TESTS+=tests/test_intl_native_relative_decimal$(EXE)
 C_TESTS+=tests/test_intl_native_plural_provider$(EXE)
@@ -1164,6 +1168,7 @@ endif
 	$(WINE) ./tests/test_intl_text$(EXE)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_native_frontend_oom$(EXE)
+	$(WINE) ./tests/test_intl_native_display_oom$(EXE)
 	$(WINE) ./tests/test_intl_native_relative_oom$(EXE)
 	$(WINE) ./tests/test_intl_native_relative_decimal$(EXE)
 	$(WINE) ./tests/test_intl_native_plural_provider$(EXE)
@@ -1254,6 +1259,7 @@ endif
 ifeq ($(CONFIG_INTL),y)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_display.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_relative.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_plural.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_number.js
@@ -1514,6 +1520,10 @@ tests/test_intl_native_relative_oom$(EXE): $(OBJDIR)/tests/test_intl_native_rela
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_native_relative_decimal$(EXE): $(OBJDIR)/tests/test_intl_native_relative_decimal.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+
+tests/test_intl_native_display_oom$(EXE): $(OBJDIR)/tests/test_intl_native_display_oom.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 
