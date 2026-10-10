@@ -4,10 +4,7 @@
 #include <stddef.h>
 #include "icu-config.h"
 
-/* ECMA402 Unicode BCP47 grammar, including duplicate variants/singletons.
- * These validators allocate no memory and accept explicit byte lengths. */
-int intl_unicode_locale_well_formed(const char *tag, size_t length);
-int intl_unicode_type_well_formed(const char *type, size_t length);
+#include "locale-grammar.h"
 
 /* Read-only generated IANA2026a and pinned ECMA402 Table 2 data. */
 const char *intl_iana_zone_name(const char *identifier, size_t length);

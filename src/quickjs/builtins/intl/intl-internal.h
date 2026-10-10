@@ -38,7 +38,12 @@
 #include "../../value/conversion.h"
 
 #ifdef CONFIG_INTL
+#ifdef CONFIG_INTL_NATIVE
+#include "../../../intl/provider-native.h"
+#include "intl-text.h"
+#else
 #include "../../../intl/icu-config.h"
+#endif
 
 /* Lists own their engine-allocated NUL-terminated strings and array. */
 typedef struct JSIntlLocaleList {
@@ -64,7 +69,9 @@ typedef struct JSIntlResolutionKey {
 typedef struct JSIntlResolvedLocale {
     char *locale;                   /* Public resolved BCP47 tag. */
     char *data_locale;              /* Matched base BCP47 tag. */
-    char *icu_locale;               /* ICU ID including resolved keys. */
+#ifndef CONFIG_INTL_NATIVE
+    char *icu_locale;               /* ICU adapter ID including resolved keys. */
+#endif
     char *values[JS_INTL_MAX_RESOLUTION_KEYS]; /* In key argument order. */
     int key_count;
 } JSIntlResolvedLocale;
@@ -85,19 +92,25 @@ int js_intl_get_number_option(JSContext *ctx, JSValueConst options,
 int js_intl_default_number_option(JSContext *ctx, JSValueConst value,
                                  double minimum, double maximum,
                                  int fallback, int *result);
-/* ToString preserving UTF16, embedded NUL, and unpaired surrogates. */
-int js_intl_to_uchar(JSContext *ctx, JSValueConst value,
-                   UChar **result, int32_t *length);
-JSValue js_intl_from_uchar(JSContext *ctx, const UChar *value, int32_t length);
 char *js_intl_strdup(JSContext *ctx, const char *value);
-int js_intl_icu_error(JSContext *ctx, UErrorCode status, const char *operation);
+#ifdef CONFIG_INTL_NATIVE
+QJSIntlProvider *js_intl_native_provider(JSContext *ctx);
+int js_intl_native_error(JSContext *ctx, QJSIntlStatus, const char *operation);
+#else
+/* ICU migration declarations remain private to the ICU selection. */
+int js_intl_to_uchar(JSContext *, JSValueConst, UChar **, int32_t *);
+JSValue js_intl_from_uchar(JSContext *, const UChar *, int32_t);
+int js_intl_icu_error(JSContext *, UErrorCode, const char *);
+#endif
 /* Part helper borrows value/extra; defines own enumerable data properties. */
 int js_intl_add_part(JSContext *ctx, JSValueConst parts, uint32_t index,
                      const char *type, JSValueConst value,
                      const char *extra_name, JSValueConst extra);
+#ifndef CONFIG_INTL_NATIVE
 int js_intl_add_part_uchar(JSContext *ctx, JSValueConst parts, uint32_t index,
                           const char *type, const UChar *value, int32_t length,
                           const char *extra_name, JSValueConst extra);
+#endif
 int js_intl_define_string(JSContext *ctx, JSValueConst object,
                           const char *property, const char *value);
 int js_intl_define_int(JSContext *ctx, JSValueConst object,
@@ -108,8 +121,9 @@ void js_intl_locale_list_free(JSContext *ctx, JSIntlLocaleList *list);
 int js_intl_locale_list_append(JSContext *ctx, JSIntlLocaleList *list,
                                const char *value);
 void js_intl_resolved_locale_free(JSContext *ctx, JSIntlResolvedLocale *locale);
-/* Allocate ICU result buffers; required excludes terminator. */
+#ifndef CONFIG_INTL_NATIVE
 UChar *js_intl_alloc_uchar(JSContext *ctx, int32_t required);
+#endif
 char *js_intl_alloc_char(JSContext *ctx, int32_t required);
 
 /* Class helper: IDs are appended after existing private IDs, CONFIG_INTL only.
@@ -161,8 +175,10 @@ char *js_intl_canonicalize_time_zone(JSContext *ctx, const char *identifier, siz
 int js_intl_primary_time_zones(JSContext *ctx, const char *region, JSIntlLocaleList *result);
 int js_intl_canonicalize_locale_list(JSContext *ctx, JSValueConst locales,
                                     JSIntlLocaleList *result);
+#ifndef CONFIG_INTL_NATIVE
 char *js_intl_locale_to_icu(JSContext *ctx, const char *canonical_tag);
 char *js_intl_locale_from_icu(JSContext *ctx, const char *icu_locale);
+#endif
 int js_intl_resolve_locale(JSContext *ctx, JSIntlService service,
                            const JSIntlLocaleList *requested,
                            const char *matcher,

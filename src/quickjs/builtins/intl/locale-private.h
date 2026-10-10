@@ -3,9 +3,12 @@
 #define QUICKJS_INTL_LOCALE_PRIVATE_H
 #include "intl-internal.h"
 #ifdef CONFIG_INTL
+#include "../../../intl/locale-grammar.h"
+#ifndef CONFIG_INTL_NATIVE
 #include "../../../intl/locale-data.h"
 #include <unicode/uloc.h>
 #include <unicode/ures.h>
+#endif
 typedef struct IntlLanguageId {
     char *language, *script, *region;
     JSIntlLocaleList variants;

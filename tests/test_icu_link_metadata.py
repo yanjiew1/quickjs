@@ -156,7 +156,8 @@ class PrivateLibraryMetadata(unittest.TestCase):
         env = os.environ.copy()
         # This is an independent synthetic Make profile, not a recursive
         # jobserver client. subprocess closes the parent jobserver descriptors.
-        for name in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES"):
+        for name in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES",
+                     "CONFIG_INTL_BACKEND"):
             env.pop(name, None)
         env.pop("MSYSTEM", None)
         if hasattr(self, "coarse_bin"):
@@ -167,6 +168,7 @@ class PrivateLibraryMetadata(unittest.TestCase):
                    "CONFIG_LTO=", "CONFIG_M32=", "CONFIG_PROFILE=",
                    "CONFIG_ASAN=", "CONFIG_UBSAN=", "CONFIG_MSAN=",
                    "CONFIG_TSAN=", "CONFIG_TEMPORAL=n", "CONFIG_INTL=" + ("y" if self.intl_enabled else "n"),
+                   "CONFIG_INTL_BACKEND=icu",
                    "CONFIG_WIN32=" + ("y" if windows else ""),
                    "CROSS_PREFIX=" + ("fixture-target-" if windows else ""),
                    "CC=" + str(self.compiler), "HOST_CC=" + str(self.compiler),
@@ -236,9 +238,17 @@ class PrivateLibraryMetadata(unittest.TestCase):
         self.assertEqual(actual, self.expected(True, extra))
         self.assertNotIn("-ldl", actual)
 
-    def test_posix_retains_platform_and_extra_dependencies(self):
+    def test_posix_retains_dependencies_with_inherited_native_backend(self):
         extra = ["/fixture/private library.a", "-lextra"]
-        self.assertEqual(self.metadata(False, extra), self.expected(False, extra))
+        # A parent native profile exports both the selector and Make overrides.
+        # This fixture still exercises ICU metadata and private dependencies.
+        with mock.patch.dict(os.environ, {
+                "CONFIG_INTL_BACKEND": "native",
+                "MAKEFLAGS": "-- CONFIG_INTL_BACKEND=native",
+                "MFLAGS": "-s",
+                "MAKEOVERRIDES": "CONFIG_INTL_BACKEND=native"}):
+            self.assertEqual(self.metadata(False, extra),
+                             self.expected(False, extra))
 
     def test_profile_and_extra_changes_regenerate_the_same_output(self):
         self.assertEqual(self.metadata(True, ["-lfirst"]),

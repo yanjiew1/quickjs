@@ -23,10 +23,7 @@
  * THE SOFTWARE.
  */
 #include "intl-internal.h"
-#include "intl-text.h"
-#ifdef CONFIG_INTL
-_Static_assert(_Generic((UChar *)0, uint16_t *: 1, default: 0),
-               "Intl ICU text bridge requires UChar to be uint16_t");
+#if defined(CONFIG_INTL) && defined(CONFIG_INTL_NATIVE)
 
 char *js_intl_strdup(JSContext *ctx, const char *value)
 {
@@ -35,11 +32,6 @@ char *js_intl_strdup(JSContext *ctx, const char *value)
     if (copy)
         memcpy(copy, value, length + 1);
     return copy;
-}
-
-UChar *js_intl_alloc_uchar(JSContext *ctx, int32_t required)
-{
-    return js_intl_alloc_utf16(ctx, required);
 }
 
 char *js_intl_alloc_char(JSContext *ctx, int32_t required)
@@ -51,26 +43,18 @@ char *js_intl_alloc_char(JSContext *ctx, int32_t required)
     return js_malloc(ctx, (size_t)required + 1);
 }
 
-int js_intl_to_uchar(JSContext *ctx, JSValueConst value,
-                   UChar **result, int32_t *length)
+int js_intl_native_error(JSContext *ctx, QJSIntlStatus status,
+                         const char *operation)
 {
-    return js_intl_to_utf16(ctx, value, result, length);
-}
-
-JSValue js_intl_from_uchar(JSContext *ctx, const UChar *value, int32_t length)
-{
-    return js_intl_from_utf16(ctx, value, length);
-}
-
-int js_intl_icu_error(JSContext *ctx, UErrorCode status, const char *operation)
-{
-    if (U_SUCCESS(status))
-        return 0;
-    if (status == U_MEMORY_ALLOCATION_ERROR)
+    if (status == QJS_INTL_OK) return 0;
+    if (status == QJS_INTL_NO_MEMORY || status == QJS_INTL_OVERFLOW)
         JS_ThrowOutOfMemory(ctx);
+    else if (status == QJS_INTL_INVALID_ARGUMENT)
+        JS_ThrowRangeError(ctx, "invalid native Intl %s input", operation);
+    else if (status == QJS_INTL_UNSUPPORTED)
+        JS_ThrowInternalError(ctx, "native Intl %s is unsupported", operation);
     else
-        JS_ThrowInternalError(ctx, "ICU %s failed: %s", operation,
-                              u_errorName(status));
+        JS_ThrowInternalError(ctx, "native Intl %s data is invalid", operation);
     return -1;
 }
 
@@ -120,20 +104,6 @@ int js_intl_add_part(JSContext *ctx, JSValueConst parts, uint32_t index,
             < 0 ? -1 : 0;
 }
 
-int js_intl_add_part_uchar(JSContext *ctx, JSValueConst parts, uint32_t index,
-                          const char *type, const UChar *value, int32_t length,
-                          const char *extra_name, JSValueConst extra)
-{
-    JSValue string = js_intl_from_uchar(ctx, value, length);
-    int status;
-    if (JS_IsException(string))
-        return -1;
-    status = js_intl_add_part(ctx, parts, index, type, string,
-                              extra_name, extra);
-    JS_FreeValue(ctx, string);
-    return status;
-}
-
 void js_intl_locale_list_free(JSContext *ctx, JSIntlLocaleList *list)
 {
     size_t i;
@@ -175,7 +145,6 @@ void js_intl_resolved_locale_free(JSContext *ctx, JSIntlResolvedLocale *locale)
     int i;
     js_free(ctx, locale->locale);
     js_free(ctx, locale->data_locale);
-    js_free(ctx, locale->icu_locale);
     for (i = 0; i < JS_INTL_MAX_RESOLUTION_KEYS; i++)
         js_free(ctx, locale->values[i]);
     memset(locale, 0, sizeof(*locale));

@@ -42,17 +42,36 @@ endif
 # cosmopolitan build (see https://github.com/jart/cosmopolitan)
 #CONFIG_COSMO=y
 
-# Temporal defaults on; CONFIG_TEMPORAL=n CONFIG_INTL=n needs no ICU.
-# JavaScript Intl remains optional; ICU is the shared native backend.
+# Temporal defaults on. Native Intl is an incomplete development profile.
 CONFIG_INTL?=n
 CONFIG_TEMPORAL?=y
-# Derived backend switch; callers select the two JavaScript features above.
+CONFIG_INTL_BACKEND?=icu
+ifeq ($(filter icu native,$(CONFIG_INTL_BACKEND)),)
+$(error CONFIG_INTL_BACKEND must be exactly icu or native)
+endif
+ifneq ($(words $(CONFIG_INTL_BACKEND)),1)
+$(error CONFIG_INTL_BACKEND must be exactly icu or native)
+endif
+# Native libraries precede the separate complete frontend activation.
+ifeq ($(CONFIG_INTL_BACKEND),native)
+ifneq ($(filter y,$(CONFIG_INTL) $(CONFIG_TEMPORAL)),)
+$(error native Intl/Temporal frontends require the separate activation commit; use CONFIG_INTL=n CONFIG_TEMPORAL=n for the native library prefix)
+endif
+endif
+override CONFIG_INTL_NATIVE:=n
 override CONFIG_ICU:=n
-ifeq ($(CONFIG_TEMPORAL),y)
+ifeq ($(CONFIG_INTL_BACKEND),native)
+ifeq ($(CONFIG_INTL),y)
+override CONFIG_INTL_NATIVE:=y
+endif
+else
+ifneq ($(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL)),)
 override CONFIG_ICU:=y
 endif
-ifeq ($(CONFIG_INTL),y)
-override CONFIG_ICU:=y
+endif
+override CONFIG_TEMPORAL_ICU:=n
+ifeq ($(CONFIG_TEMPORAL),y)
+override CONFIG_TEMPORAL_ICU:=$(CONFIG_ICU)
 endif
 # ECMA-402 legacy constructor chaining is normative optional.
 CONFIG_INTL_LEGACY?=y
@@ -216,6 +235,10 @@ DEFINES+=-DCONFIG_TEMPORAL
 endif
 ifeq ($(CONFIG_INTL),y)
 DEFINES+=-DCONFIG_INTL
+ifeq ($(CONFIG_INTL_NATIVE),y)
+DEFINES+=-DCONFIG_INTL_NATIVE
+CFLAGS+=-Isrc -Isrc/intl
+endif
 ifeq ($(CONFIG_INTL_LEGACY),y)
 DEFINES+=-DCONFIG_INTL_LEGACY
 endif
@@ -413,6 +436,7 @@ endif
 ifeq ($(CONFIG_ICU),y)
 ICU_BACKEND_SRCS= \
     src/intl/locale-data.c \
+    src/intl/locale-grammar.c \
     src/temporal/format.c \
     src/temporal/iso.c \
     src/temporal/parse.c \
@@ -421,17 +445,46 @@ QUICKJS_SRCS+=$(ICU_BACKEND_SRCS)
 endif
 ifeq ($(CONFIG_INTL),y)
 # Source components join libquickjs.a; no additional archive is produced.
-INTL_SRCS= \
+INTL_COMMON_SRCS= \
+    src/quickjs/builtins/intl/options.c \
+    src/quickjs/builtins/intl/intl-text.c \
+    src/quickjs/builtins/intl/locale-syntax.c \
+    src/quickjs/builtins/intl/bound-function.c
+ifeq ($(CONFIG_INTL_NATIVE),y)
+INTL_BACKEND_SRCS= \
+    src/intl/provider-native.c \
+    src/intl/locale-grammar.c \
+    src/intl/native-locale-id.c \
+    src/intl/native-locale-info.c \
+    src/intl/list-native.c \
+    src/intl/list-native-data.c \
+    src/intl/data/native-data-reader.c \
+    src/intl/data/plural-data-validation.c \
+    src/intl/plural.c \
+    src/intl/data/relative-data-validation.c \
+    src/intl/data/number-data-validation.c \
+    src/intl/data/number-extra-validation.c \
+    src/intl/data/number-template-validation.c \
+    src/intl/number-range.c \
+    src/intl/data/duration-data-validation.c \
+    src/intl/data/date-data-validation.c \
+    src/intl/date-pattern.c \
+    src/intl/collator-native-data.c \
+    src/intl/data/locale-metadata.c \
+    src/quickjs/builtins/intl/native-values.c \
+    src/quickjs/builtins/intl/native-locale-resolution.c \
+    src/quickjs/builtins/intl/native-unsupported.c \
+    src/quickjs/builtins/intl/native-locale.c \
+    src/quickjs/builtins/intl/native-list-format.c
+else
+INTL_BACKEND_SRCS= \
     src/intl/libintl.c \
     src/intl/plural.c \
     src/intl/plural-icu.c \
-    src/quickjs/builtins/intl/options.c \
     src/quickjs/builtins/intl/values.c \
-    src/quickjs/builtins/intl/locale-syntax.c \
     src/quickjs/builtins/intl/locale-resolution.c \
     src/quickjs/builtins/intl/intl-values.c \
     src/quickjs/builtins/intl/locale.c \
-    src/quickjs/builtins/intl/bound-function.c \
     src/quickjs/builtins/intl/collator.c \
     src/quickjs/builtins/intl/segmenter.c \
     src/quickjs/builtins/intl/date-time-format.c \
@@ -443,6 +496,8 @@ INTL_SRCS= \
     src/quickjs/builtins/intl/relative-time-format.c \
     src/quickjs/builtins/intl/duration-format.c \
     src/quickjs/builtins/intl/case-conversion.c
+endif
+INTL_SRCS=$(INTL_COMMON_SRCS) $(INTL_BACKEND_SRCS)
 QUICKJS_SRCS+=$(INTL_SRCS)
 endif
 
@@ -488,7 +543,7 @@ endif
 # Archives/executables share output names in both profiles. A common stamp
 # rebuilds their object inputs when either feature or ICU flags change.
 intl_shell_quote = '$(subst ','"'"',$(1))'
-intl_build_config_args = $(call intl_shell_quote,$(CONFIG_TEMPORAL)) $(call intl_shell_quote,$(CONFIG_ICU)) $(call intl_shell_quote,$(CONFIG_INTL)) $(call intl_shell_quote,$(CONFIG_INTL_LEGACY)) $(call intl_shell_quote,$(ICU_CFLAGS)) $(call intl_shell_quote,$(ICU_LIBS)) $(call intl_shell_quote,$(HOST_ICU_CFLAGS)) $(call intl_shell_quote,$(HOST_ICU_LIBS)) $(call intl_shell_quote,$(LIBS))
+intl_build_config_args = $(call intl_shell_quote,$(CONFIG_TEMPORAL)) $(call intl_shell_quote,$(CONFIG_ICU)) $(call intl_shell_quote,$(CONFIG_INTL)) $(call intl_shell_quote,$(CONFIG_INTL_LEGACY)) $(call intl_shell_quote,$(CONFIG_INTL_BACKEND)) $(call intl_shell_quote,$(CONFIG_INTL_NATIVE)) $(call intl_shell_quote,$(ICU_CFLAGS)) $(call intl_shell_quote,$(ICU_LIBS)) $(call intl_shell_quote,$(HOST_ICU_CFLAGS)) $(call intl_shell_quote,$(HOST_ICU_LIBS)) $(call intl_shell_quote,$(LIBS))
 # A changed configuration must invalidate consumers even when Make or
 # the filesystem cannot distinguish the stamp and output timestamps.
 ifneq ($(shell printf '%s\n' $(intl_build_config_args) | cmp -s - .obj/intl-build-config || printf changed),)
@@ -555,6 +610,12 @@ $(OBJDIR)/tools/qjsc.host.o: $(OBJDIR)/qjsc-intl-host-link.h
 $(OBJDIR)/quickjs.pc: tools/intl-link-config.py .obj/intl-build-config
 	python3 $< pkgconfig $@ $(call intl_shell_quote,$(PREFIX)) $(call intl_shell_quote,$(shell cat VERSION)) -- $(LIBS)
 install: $(OBJDIR)/quickjs.pc
+else
+ifeq ($(CONFIG_INTL_NATIVE),y)
+$(OBJDIR)/quickjs.pc: tools/intl-link-config.py .obj/intl-build-config
+	python3 $< pkgconfig $@ $(call intl_shell_quote,$(PREFIX)) $(call intl_shell_quote,$(shell cat VERSION)) -- $(LIBS)
+install: $(OBJDIR)/quickjs.pc
+endif
 endif
 
 $(OBJDIR)/tools/qjsc.o: CFLAGS+=$(QJSC_DEFINES)
@@ -675,7 +736,7 @@ ifdef CONFIG_LTO
 endif
 	mkdir -p "$(DESTDIR)$(PREFIX)/include/quickjs"
 	install -m644 include/quickjs.h include/quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
-ifeq ($(CONFIG_ICU),y)
+ifneq ($(filter y,$(CONFIG_ICU) $(CONFIG_INTL_NATIVE)),)
 	mkdir -p "$(DESTDIR)$(PREFIX)/lib/pkgconfig"
 	install -m644 $(OBJDIR)/quickjs.pc "$(DESTDIR)$(PREFIX)/lib/pkgconfig/quickjs.pc"
 endif
@@ -766,14 +827,32 @@ endif
 ifeq ($(CONFIG_ICU),y)
 C_TESTS+=tests/test_date_zone_order$(EXE)
 endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_duration_format_embed$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_services_api$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_plural$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_number_format_embed$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_native_data_realms$(EXE)
+endif
 ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_locale_lookup$(EXE)
+endif
+C_TESTS+=tests/test_intl_text$(EXE)
+ifeq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
+endif
 endif
 
 C_TESTS+=tests/test_fuzz_json$(EXE)
@@ -789,8 +868,12 @@ C_TESTS+=tests/test_wait_async$(EXE)
 C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_worker_context_failure$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_embedder$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_oom$(EXE)
+endif
 $(patsubst tests/%$(EXE),$(OBJDIR)/tests/%.o,$(C_TESTS)): .obj/intl-build-config
 
 tests/test_intl_embedder$(EXE): $(OBJDIR)/tests/test_intl_embedder.o libquickjs$(LTOEXT).a
@@ -814,6 +897,12 @@ tests/test_intl_receiver_api$(EXE): $(OBJDIR)/tests/test_intl_receiver_api.o lib
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_locale_lookup$(EXE): $(OBJDIR)/tests/test_intl_locale_lookup.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_text$(EXE): $(OBJDIR)/tests/test_intl_text.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_frontend_oom$(EXE): $(OBJDIR)/tests/test_intl_native_frontend_oom.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_atomics_wait$(EXE): $(OBJDIR)/tests/test_atomics_wait.o libquickjs$(LTOEXT).a
@@ -970,8 +1059,12 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_worker_context_failure$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_embedder$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_oom$(EXE)
+endif
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
@@ -989,15 +1082,33 @@ endif
 ifeq ($(CONFIG_ICU),y)
 	$(WINE) ./tests/test_date_zone_order$(EXE)
 endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_duration_format_embed$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_services_api$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_plural$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
+endif
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_native_data_realms$(EXE)
+endif
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
 ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_locale_lookup$(EXE)
+endif
+	$(WINE) ./tests/test_intl_text$(EXE)
+ifeq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_native_frontend_oom$(EXE)
+endif
 endif
 
 .PHONY: test-regexp
@@ -1075,9 +1186,13 @@ ifdef CONFIG_SHARED_LIBS
 endif
 
 ifeq ($(CONFIG_INTL),y)
+ifeq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
+else
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_text.js
 	$(WINE) ./run-test262$(EXE) -N tests/test_intl_bound_function_realms.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_locale_integration.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_duration_format.js
@@ -1102,6 +1217,7 @@ ifeq ($(CONFIG_INTL_LEGACY),y)
 endif
 	$(WINE) ./qjs$(EXE) tests/test_intl_segmenter.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_collator.js
+endif
 endif
 
 ifeq ($(CONFIG_TEMPORAL),y)
@@ -1288,6 +1404,13 @@ test-date-temporal-time-zone: qjs$(EXE)
 test-qjsc-temporal: qjsc$(EXE)
 	sh tests/test_qjsc_temporal.sh "./qjsc$(EXE)"
 endif
+endif
+
+ifeq ($(CONFIG_INTL_NATIVE),y)
+.PHONY: test-intl-native-selector
+test-intl-native-selector:
+	QJS_TEST_MAKE="$(MAKE)" $(PYTHON) tests/test_intl_native_selector.py
+test: test-intl-native-selector
 endif
 
 # Exercise qjsc's own compiler invocation for every native feature profile.

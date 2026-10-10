@@ -3,6 +3,14 @@
 #define QUICKJS_INTL_NUMBER_H
 #include "intl-internal.h"
 #ifdef CONFIG_INTL
+#ifdef CONFIG_INTL_NATIVE
+JSValue js_intl_number_to_locale_string(JSContext *, JSValueConst,
+                                       JSValueConst, JSValueConst);
+#ifdef CONFIG_TEMPORAL
+JSValue js_intl_temporal_duration_to_locale_string(JSContext *, JSValueConst,
+                                                   JSValueConst, JSValueConst);
+#endif
+#else
 #include <unicode/unumberformatter.h>
 #include <unicode/unumberrangeformatter.h>
 enum JSIntlRoundingMode { JS_INTL_CEIL, JS_INTL_FLOOR, JS_INTL_EXPAND,
@@ -51,5 +59,6 @@ JSValue js_intl_temporal_duration_to_locale_string(JSContext *, JSValueConst,
 #endif
 int js_intl_init_number_format(JSContext *, JSValueConst);
 int js_intl_init_duration_format(JSContext *, JSValueConst);
+#endif /* provider selection */
 #endif /* CONFIG_INTL */
 #endif

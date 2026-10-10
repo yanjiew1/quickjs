@@ -32,11 +32,16 @@ int JS_AddIntrinsicIntl(JSContext *ctx)
     return 0;
 }
 #else
+#ifndef CONFIG_INTL_NATIVE
 #include "../../../intl/libintl.h"
+#endif
 
 #define JS_INTL_CLASS_COUNT (JS_CLASS_INTL_END - JS_CLASS_INTL_LOCALE)
 
 struct JSIntlContext {
+#ifdef CONFIG_INTL_NATIVE
+    QJSIntlProvider *provider;
+#endif
     char *default_locale;
     char *default_time_zone;
     JSValue fallback_symbol;
@@ -45,6 +50,20 @@ struct JSIntlContext {
     BOOL installed;
 };
 
+#ifdef CONFIG_INTL_NATIVE
+static void *native_malloc(void *opaque, size_t size)
+{
+    return js_malloc_rt(opaque, size);
+}
+static void *native_realloc(void *opaque, void *ptr, size_t size)
+{
+    return js_realloc_rt(opaque, ptr, size);
+}
+static void native_free(void *opaque, void *ptr)
+{
+    js_free_rt(opaque, ptr);
+}
+#else
 /* Snapshot host defaults per realm; locale data and process globals are owned
    by ICU. The engine never mutates ICU defaults or calls u_cleanup. */
 static char *intl_default_locale_snapshot(JSContext *ctx)
@@ -110,27 +129,56 @@ static char *intl_default_time_zone_snapshot(JSContext *ctx)
     return result;
 }
 
+#endif /* default snapshot provider */
+
 int js_intl_ensure_context(JSContext *ctx)
 {
     struct JSIntlContext *state;
+#ifndef CONFIG_INTL_NATIVE
     UErrorCode status = U_ZERO_ERROR;
+#else
+    QJSIntlProviderConfig config = { 0 };
+    QJSIntlStatus status;
+#endif
     int i;
 
     if (ctx->intl)
         return 0;
+#ifndef CONFIG_INTL_NATIVE
     intl_backend_initialize(&status);
     if (js_intl_icu_error(ctx, status, "data initialization"))
         return -1;
+#endif
     state = js_mallocz(ctx, sizeof(*state));
     if (!state)
         return -1;
     state->fallback_symbol = JS_UNDEFINED;
     for (i = 0; i < JS_INTL_CLASS_COUNT; i++)
         state->constructors[i] = JS_UNDEFINED;
+#ifdef CONFIG_INTL_NATIVE
+    config.backend = QJS_INTL_BACKEND_NATIVE;
+    config.allocator.opaque = ctx->rt;
+    config.allocator.malloc = native_malloc;
+    config.allocator.realloc = native_realloc;
+    config.allocator.free = native_free;
+    /* Explicit initial development policy, snapshotted once per realm.
+     * This does not infer a host locale that the limited provider cannot use. */
+    config.default_locale = (QJSIntlBytes){ "en-US", 5 };
+    config.default_time_zone = (QJSIntlBytes){ "UTC", 3 };
+    status = qjs_intl_provider_new(&config, &state->provider);
+    if (js_intl_native_error(ctx, status, "data initialization")) goto fail;
+    state->default_locale = js_intl_strdup(ctx,
+        qjs_intl_provider_default_locale(state->provider).data);
+#else
     state->default_locale = intl_default_locale_snapshot(ctx);
+#endif
     if (!state->default_locale)
         goto fail;
+#ifdef CONFIG_INTL_NATIVE
+    state->default_time_zone = js_intl_strdup(ctx, "UTC");
+#else
     state->default_time_zone = intl_default_time_zone_snapshot(ctx);
+#endif
     if (!state->default_time_zone)
         goto fail;
     state->fallback_symbol = JS_NewSymbol(ctx, "IntlLegacyConstructedSymbol", FALSE);
@@ -139,12 +187,23 @@ int js_intl_ensure_context(JSContext *ctx)
     ctx->intl = state;
     return 0;
 fail:
+#ifdef CONFIG_INTL_NATIVE
+    qjs_intl_provider_free(state->provider);
+#endif
     js_free(ctx, state->default_locale);
     js_free(ctx, state->default_time_zone);
     JS_FreeValue(ctx, state->fallback_symbol);
     js_free(ctx, state);
     return -1;
 }
+
+#ifdef CONFIG_INTL_NATIVE
+QJSIntlProvider *js_intl_native_provider(JSContext *ctx)
+{
+    if (js_intl_ensure_context(ctx)) return NULL;
+    return ctx->intl->provider;
+}
+#endif
 
 JSIntlLocaleList *js_intl_available_locale_cache(JSContext *ctx,
                                                  JSIntlService service)
@@ -207,6 +266,9 @@ void js_intl_context_free(JSContext *ctx)
         JS_FreeValue(ctx, state->constructors[i]);
     for (i = 0; i < JS_INTL_SERVICE_COUNT; i++)
         js_intl_locale_list_free(ctx, &state->available_locales[i]);
+#ifdef CONFIG_INTL_NATIVE
+    qjs_intl_provider_free(state->provider);
+#endif
     js_free(ctx, state->default_locale);
     js_free(ctx, state->default_time_zone);
     js_free(ctx, state);
@@ -217,6 +279,14 @@ void js_intl_context_memory_usage(JSContext *ctx, JSMemoryUsage *usage)
     struct JSIntlContext *state = ctx->intl;
     if (!state)
         return;
+#ifdef CONFIG_INTL_NATIVE
+    {
+        size_t count, bytes;
+        qjs_intl_native_provider_memory_usage(state->provider, &count, &bytes);
+        usage->memory_used_count += count;
+        usage->memory_used_size += bytes;
+    }
+#endif
     usage->memory_used_count += 3;
     usage->memory_used_size += sizeof(*state) + strlen(state->default_locale) +
         strlen(state->default_time_zone) + 2;

@@ -5,7 +5,9 @@
 #ifdef CONFIG_INTL
 #include <limits.h>
 #include <stdlib.h>
+#ifndef CONFIG_INTL_NATIVE
 #include <unicode/ustring.h>
+#endif
 
 typedef struct IntlBuffer { char *data; size_t size, capacity; } IntlBuffer;
 static int ascii_alpha(int c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
@@ -35,7 +37,23 @@ static int variant_subtag(const char *s)
 }
 int js_intl_is_unicode_type(const char *s)
 {
+#ifdef CONFIG_INTL_NATIVE
+    size_t n = 0;
+    if (!s || !*s) return 0;
+    for (;;) {
+        unsigned char c = (unsigned char)*s++;
+        if (!c || c == '-') {
+            if (n < 3 || n > 8) return 0;
+            if (!c) return 1;
+            n = 0;
+        } else {
+            if (!ascii_alnum(c)) return 0;
+            n++;
+        }
+    }
+#else
     return s && intl_unicode_type_well_formed(s, strlen(s));
+#endif
 }
 static char *copy_n(JSContext *ctx, const char *s, size_t n)
 {
@@ -256,6 +274,7 @@ char *intl_language_string(JSContext *ctx, const IntlLanguageId *id)
     if (emit_language(ctx, &b, id, FALSE) < 0) { js_free(ctx, b.data); return NULL; }
     return b.data;
 }
+#ifndef CONFIG_INTL_NATIVE
 static int extension_compare(const void *a, const void *b)
 {
     return ((const IntlExtension *)a)->singleton - ((const IntlExtension *)b)->singleton;
@@ -264,6 +283,7 @@ static int keyword_compare(const void *a, const void *b)
 {
     return strcmp(((const IntlKeyword *)a)->key, ((const IntlKeyword *)b)->key);
 }
+#endif
 char *intl_tag_string(JSContext *ctx, const IntlTag *tag)
 {
     IntlBuffer b = { 0 }; size_t i, j;
@@ -299,6 +319,31 @@ int intl_tag_set_keyword(JSContext *ctx, IntlTag *tag, const char *key, const ch
     if (!e && !(e = extension_add(ctx, tag, 'u'))) return -1;
     return keyword_set(ctx, e, key, value, TRUE);
 }
+#ifdef CONFIG_INTL_NATIVE
+char *intl_canonicalize_uvalue(JSContext *ctx, const char *key, const char *value)
+{
+    QJSIntlProvider *provider = js_intl_native_provider(ctx);
+    char *result = NULL;
+    QJSIntlStatus status;
+    if (!provider) return NULL;
+    status = qjs_intl_locale_canonicalize_uvalue(provider,
+        (QJSIntlBytes){ key, strlen(key) },
+        (QJSIntlBytes){ value, strlen(value) }, &result);
+    if (js_intl_native_error(ctx, status, "Unicode locale value")) return NULL;
+    return result;
+}
+char *js_intl_canonicalize_tag(JSContext *ctx, const char *input, size_t length)
+{
+    QJSIntlProvider *provider = js_intl_native_provider(ctx);
+    char *result = NULL;
+    QJSIntlStatus status;
+    if (!provider) return NULL;
+    status = qjs_intl_locale_canonicalize(provider,
+        (QJSIntlBytes){ input, length }, &result);
+    if (js_intl_native_error(ctx, status, "locale identifier")) return NULL;
+    return result;
+}
+#else
 static char *resource_ascii(JSContext *ctx, const UChar *s, int32_t n)
 {
     char *r = js_intl_alloc_char(ctx, n); int32_t i;
@@ -538,6 +583,7 @@ char *js_intl_canonicalize_tag(JSContext *ctx, const char *input, size_t length)
 done:
     ures_close(subdivisions); ures_close(alias); ures_close(metadata); intl_tag_free(ctx, &tag); return result;
 }
+#endif /* canonicalization provider */
 JSValue intl_array_from_list(JSContext *ctx, const JSIntlLocaleList *list)
 {
     JSValue array = JS_NewArray(ctx); size_t i;
