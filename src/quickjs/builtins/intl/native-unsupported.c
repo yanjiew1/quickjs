@@ -31,8 +31,6 @@ int js_intl_init_##module(JSContext *ctx, JSValueConst intl) \
 }
 NATIVE_UNSUPPORTED(date_time_format, JS_CLASS_INTL_DATE_TIME_FORMAT, "DateTimeFormat", 0,
                    JS_CFUNC_constructor_or_func)
-NATIVE_UNSUPPORTED(relative_time_format, JS_CLASS_INTL_RELATIVE_TIME_FORMAT, "RelativeTimeFormat", 0,
-                   JS_CFUNC_constructor)
 NATIVE_UNSUPPORTED(display_names, JS_CLASS_INTL_DISPLAY_NAMES, "DisplayNames", 2,
                    JS_CFUNC_constructor)
 #undef NATIVE_UNSUPPORTED
