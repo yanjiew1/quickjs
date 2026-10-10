@@ -13,6 +13,7 @@
 #include "provider-native-segmenter.h"
 #include "provider-native-collator.h"
 #include "provider-native-number.h"
+#include "provider-native-date.h"
 #include "native-locale-info.h"
 #include "data/locale-metadata.h" /* externs; generated .c has the only owner */
 #include "../timezone/timezone.h"
@@ -258,6 +259,8 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
     memset(out, 0, sizeof(*out));
     if (!p || (unsigned int)service >= QJS_INTL_SERVICE_COUNT)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (service == QJS_INTL_DATE_TIME_FORMAT)
+        return qjs_intl_native_provider_date_available(p, out);
     if (service == QJS_INTL_NUMBER_FORMAT) {
         QJSIntlStatus status = qjs_intl_native_provider_number_available(p);
         if (status != QJS_INTL_OK) return status;
@@ -299,6 +302,8 @@ QJSIntlStatus qjs_intl_locale_key_values(QJSIntlProvider *p, QJSIntlService serv
         return qjs_intl_native_provider_number_key_values(p, locale, key, out);
     if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH)
         return qjs_intl_native_provider_collator_key_values(p, service, locale, key, out);
+    if (service == QJS_INTL_DATE_TIME_FORMAT)
+        return qjs_intl_native_provider_date_key_values(p, locale, key, out);
     if (service == QJS_INTL_DURATION_FORMAT)
         return qjs_intl_native_provider_duration_key_values(p, locale, key, out);
     (void)p; (void)service; (void)locale; (void)key;

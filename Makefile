@@ -483,6 +483,8 @@ INTL_BACKEND_SRCS= \
     src/intl/date-pattern.c \
     src/intl/collator-native-data.c \
     src/intl/data/locale-metadata.c \
+    src/intl/provider-native-date.c \
+    src/quickjs/builtins/intl/native-date-time-format.c \
     src/quickjs/builtins/intl/native-values.c \
     src/quickjs/builtins/intl/native-locale-resolution.c \
     src/quickjs/builtins/intl/native-unsupported.c \
@@ -944,6 +946,7 @@ C_TESTS+=tests/test_intl_native_collator_oom$(EXE)
 C_TESTS+=tests/test_intl_native_timezone$(EXE) tests/test_intl_native_timezone_runtime$(EXE)
 C_TESTS+=tests/test_intl_native_segmenter_oom$(EXE)
 C_TESTS+=tests/test_intl_native_frontend_oom$(EXE)
+C_TESTS+=tests/test_intl_native_date_bank_data$(EXE) tests/test_intl_native_date_frontend_oom$(EXE)
 C_TESTS+=tests/test_intl_calendar_portable$(EXE) tests/test_intl_calendar_persian_authority$(EXE) tests/test_intl_calendar_integrated_authority$(EXE) tests/test_intl_calendar_domain$(EXE)
 C_TESTS+=tests/test_intl_native_display_oom$(EXE)
 C_TESTS+=tests/test_intl_native_relative_oom$(EXE)
@@ -1703,6 +1706,23 @@ tests/test_intl_calendar_integrated_authority$(EXE): $(OBJDIR)/tests/test_intl_c
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 tests/test_intl_calendar_domain$(EXE): $(OBJDIR)/tests/test_intl_calendar_domain.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+endif
+
+ifeq ($(CONFIG_INTL_NATIVE),y)
+tests/test_intl_native_date_bank_data$(EXE): $(OBJDIR)/tests/test_intl_native_date_bank_data.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_intl_native_date_frontend_oom$(EXE): $(OBJDIR)/tests/test_intl_native_date_frontend_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+.PHONY: test-intl-native-date
+test-intl-native-date: qjs$(EXE) tests/test_intl_native_date_bank_data$(EXE) tests/test_intl_native_date_frontend_oom$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_frontend.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_all_calendars.js
+	$(WINE) ./tests/test_intl_native_date_bank_data$(EXE)
+	$(WINE) ./tests/test_intl_native_date_frontend_oom$(EXE)
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_temporal_bank.js
+endif
+test: test-intl-native-date
 endif
 
 # Exercise qjsc's own compiler invocation for every native feature profile.

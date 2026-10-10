@@ -8,30 +8,6 @@ static JSValue unsupported(JSContext *ctx, const char *service)
     js_intl_native_error(ctx, QJS_INTL_UNSUPPORTED, service);
     return JS_EXCEPTION;
 }
-static JSValue unsupported_locales(JSContext *ctx, JSValueConst receiver,
-                                    int argc, JSValueConst *argv)
-{
-    return unsupported(ctx, "AvailableLocales for this service");
-}
-static const JSCFunctionListEntry unsupported_static[] = {
-    JS_CFUNC_DEF("supportedLocalesOf", 1, unsupported_locales),
-};
-#define NATIVE_UNSUPPORTED(module, class_id, name, length, proto) \
-static JSValue module##_constructor(JSContext *ctx, JSValueConst target, \
-                                    int argc, JSValueConst *argv) \
-{ \
-    return unsupported(ctx, name); \
-} \
-static const JSClassDef module##_class = { "Intl." name }; \
-int js_intl_init_##module(JSContext *ctx, JSValueConst intl) \
-{ \
-    return js_intl_init_constructor(ctx, intl, class_id, &module##_class, \
-        name, module##_constructor, length, proto, unsupported_static, \
-        countof(unsupported_static), NULL, 0); \
-}
-NATIVE_UNSUPPORTED(date_time_format, JS_CLASS_INTL_DATE_TIME_FORMAT, "DateTimeFormat", 0,
-                   JS_CFUNC_constructor_or_func)
-#undef NATIVE_UNSUPPORTED
 
 JSValue js_intl_supported_values_of(JSContext *ctx, JSValueConst receiver,
                                    int argc, JSValueConst *argv)
@@ -59,17 +35,4 @@ JSValue js_intl_string_locale_case(JSContext *ctx, JSValueConst value,
     JS_FreeValue(ctx, string);
     return unsupported(ctx, "locale case conversion");
 }
-JSValue js_intl_date_format(JSContext *ctx, double time,
-                            JSValueConst locales, JSValueConst options,
-                            int required, int defaults)
-{
-    return unsupported(ctx, "DateTimeFormat");
-}
-#ifdef CONFIG_TEMPORAL
-JSValue js_intl_temporal_to_locale_string(JSContext *ctx, JSValueConst value,
-    JSValueConst locales, JSValueConst options)
-{
-    return unsupported(ctx, "Temporal DateTimeFormat");
-}
-#endif
 #endif
