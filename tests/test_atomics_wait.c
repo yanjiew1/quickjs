@@ -9,6 +9,19 @@
 #include "quickjs-libc.h"
 
 #ifdef CONFIG_ATOMICS
+static int test_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
+static int test_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
+                              const struct timespec *deadline);
+
+/* Compile the actual owner with its condition waits intercepted. */
+#define pthread_cond_wait test_cond_wait
+#define pthread_cond_timedwait test_cond_timedwait
+#include "../src/quickjs/builtins/atomics.c"
+#undef pthread_cond_wait
+#undef pthread_cond_timedwait
+#endif
+
+#ifdef CONFIG_ATOMICS
 #include <sched.h>
 
 typedef struct {
@@ -77,6 +90,99 @@ static void test_concurrent_expected_value(JSContext *ctx)
     assert(atomic_load(&writer.writes) > 0);
     JS_FreeValue(ctx, buffer);
 }
+typedef enum {
+    TEST_WAIT_NORMAL,
+    TEST_WAIT_SPURIOUS_TIMEOUT,
+    TEST_WAIT_NOTIFY_TIMEOUT_RACE,
+    TEST_WAIT_SPURIOUS_NOTIFY,
+} TestWaitMode;
+
+static TestWaitMode test_wait_mode;
+static JSContext *test_wait_context;
+static int test_wait_calls;
+static struct timespec test_wait_deadline;
+
+static void test_notify_while_unlocked(pthread_mutex_t *mutex)
+{
+    JSValue result;
+    int notified;
+
+    assert(pthread_mutex_unlock(mutex) == 0);
+    result = test_eval(test_wait_context, "Atomics.notify(testWords, 0, 1)");
+    assert(JS_ToInt32(test_wait_context, &notified, result) == 0);
+    assert(notified == 1);
+    JS_FreeValue(test_wait_context, result);
+    assert(pthread_mutex_lock(mutex) == 0);
+}
+
+static int test_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
+{
+    if (test_wait_mode == TEST_WAIT_NORMAL)
+        return pthread_cond_wait(cond, mutex);
+    assert(test_wait_mode == TEST_WAIT_SPURIOUS_NOTIFY);
+    assert(++test_wait_calls <= 3);
+    if (test_wait_calls < 3)
+        return 0;
+    test_notify_while_unlocked(mutex);
+    return 0;
+}
+
+static int test_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
+                              const struct timespec *deadline)
+{
+    if (test_wait_mode == TEST_WAIT_NORMAL)
+        return pthread_cond_timedwait(cond, mutex, deadline);
+    assert(++test_wait_calls <= 4);
+    if (test_wait_mode == TEST_WAIT_NOTIFY_TIMEOUT_RACE) {
+        assert(test_wait_calls == 1);
+        test_notify_while_unlocked(mutex);
+        return ETIMEDOUT;
+    }
+    assert(test_wait_mode == TEST_WAIT_SPURIOUS_TIMEOUT);
+    if (test_wait_calls == 1) {
+        test_wait_deadline = *deadline;
+    } else {
+        assert(deadline->tv_sec == test_wait_deadline.tv_sec);
+        assert(deadline->tv_nsec == test_wait_deadline.tv_nsec);
+    }
+    if (test_wait_calls < 4)
+        return 0;
+    return pthread_cond_timedwait(cond, mutex, deadline);
+}
+
+static void test_wait_result(JSContext *ctx, TestWaitMode mode,
+                             const char *source, const char *expected,
+                             int expected_calls)
+{
+    JSValue result;
+    const char *string;
+
+    result = test_eval(ctx, "Atomics.store(testWords, 0, 0)");
+    JS_FreeValue(ctx, result);
+    test_wait_context = ctx;
+    test_wait_mode = mode;
+    test_wait_calls = 0;
+    result = test_eval(ctx, source);
+    test_wait_mode = TEST_WAIT_NORMAL;
+    string = JS_ToCString(ctx, result);
+    assert(string && !strcmp(string, expected));
+    assert(test_wait_calls == expected_calls);
+    assert(list_empty(&js_atomics_waiter_list));
+    JS_FreeCString(ctx, string);
+    JS_FreeValue(ctx, result);
+    test_wait_context = NULL;
+}
+
+static void test_wait_notification_predicate(JSContext *ctx)
+{
+    test_wait_result(ctx, TEST_WAIT_SPURIOUS_TIMEOUT,
+        "Atomics.wait(testWords, 0, 0, 0)", "timed-out", 4);
+    test_wait_result(ctx, TEST_WAIT_NOTIFY_TIMEOUT_RACE,
+        "Atomics.wait(testWords, 0, 0, 0)", "ok", 1);
+    test_wait_result(ctx, TEST_WAIT_SPURIOUS_NOTIFY,
+        "Atomics.wait(testWords, 0, 0)", "ok", 3);
+}
+
 #endif
 
 #ifdef CONFIG_ATOMICS
@@ -112,6 +218,7 @@ int main(void)
     assert(ctx);
     test_javascript_wait_cases(ctx);
     test_concurrent_expected_value(ctx);
+    test_wait_notification_predicate(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 #endif
