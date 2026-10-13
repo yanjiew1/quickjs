@@ -1437,3 +1437,6 @@ test test-binaries: $(OBJDIR)/src/intl/date-native-bank.o $(OBJDIR)/src/intl/dat
 
 # Native number-plural adapters precede aggregate-provider construction.
 test test-binaries: $(OBJDIR)/src/intl/provider-native-number.o $(OBJDIR)/src/intl/provider-native-plural.o
+
+# Native relative adapters precede aggregate-provider construction.
+test test-binaries: $(OBJDIR)/src/intl/provider-native-relative.o
