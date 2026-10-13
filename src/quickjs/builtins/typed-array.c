@@ -90,7 +90,24 @@ static JSObject *get_typed_array(JSContext *ctx, JSValueConst this_val)
         JS_ThrowTypeError(ctx, "not a TypedArray");
         return NULL;
     }
+    js_typed_array_update_length(p);
     return p;
+}
+
+/* Only this runtime owns its view cache. Shared backing lengths may change
+   without any local grow call, so refresh tracking views at observation points. */
+uint32_t js_typed_array_update_length(JSObject *p)
+{
+    JSTypedArray *ta = p->u.typed_array;
+    JSArrayBuffer *abuf = ta->buffer->u.array_buffer;
+    if (ta->track_rab && abuf->shared) {
+        uint32_t len = js_array_buffer_byte_length(abuf);
+        unsigned shift = typed_array_size_log2(p->class_id);
+        assert(ta->offset <= len);
+        p->u.array.count = (len - ta->offset) >> shift;
+        ta->length = p->u.array.count << shift;
+    }
+    return p->u.array.count;
 }
 
 // is the typed array detached or out of bounds relative to its RAB?
@@ -109,7 +126,8 @@ BOOL typed_array_is_oob(JSObject *p)
     abuf = ta->buffer->u.array_buffer;
     if (abuf->detached)
         return TRUE;
-    len = abuf->byte_length;
+    js_typed_array_update_length(p);
+    len = js_array_buffer_byte_length(abuf);
     if (ta->offset > len)
         return TRUE;
     if (ta->track_rab)
@@ -1986,7 +2004,7 @@ static JSValue js_typed_array_constructor_ta(JSContext *ctx,
     src_buffer = ta->buffer;
     src_abuf = src_buffer->u.array_buffer;
     if (p->class_id == classid &&
-        (int64_t)ta->offset + (int64_t)abuf->byte_length <= src_abuf->byte_length) {
+        (int64_t)ta->offset + (int64_t)abuf->byte_length <= js_array_buffer_byte_length(src_abuf)) {
         /* same type and no overflow: copy the content */
         memcpy(abuf->data, src_abuf->data + ta->offset, abuf->byte_length);
     } else {
@@ -2046,17 +2064,17 @@ JSValue js_typed_array_constructor(JSContext *ctx,
                     JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
                     goto fail;
                 }
-                if (offset > abuf->byte_length) {
+                if (offset > js_array_buffer_byte_length(abuf)) {
                 invalid_offset:
                     JS_ThrowRangeError(ctx, "invalid offset");
                     goto fail;
                 }
                 track_rab = array_buffer_is_resizable(abuf);
                 if (!track_rab) {
-                    if ((abuf->byte_length & ((1 << size_log2) - 1)) != 0)
+                    if ((js_array_buffer_byte_length(abuf) & ((1 << size_log2) - 1)) != 0)
                         goto invalid_length;
                 }
-                len = (abuf->byte_length - offset) >> size_log2;
+                len = (js_array_buffer_byte_length(abuf) - offset) >> size_log2;
             } else {
                 if (JS_ToIndex(ctx, &len, argv[2]))
                     goto fail;
@@ -2064,7 +2082,7 @@ JSValue js_typed_array_constructor(JSContext *ctx,
                     JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
                     goto fail;
                 }
-                if ((offset + (len << size_log2)) > abuf->byte_length) {
+                if ((offset + (len << size_log2)) > js_array_buffer_byte_length(abuf)) {
                 invalid_length:
                     JS_ThrowRangeError(ctx, "invalid length");
                     goto fail;
