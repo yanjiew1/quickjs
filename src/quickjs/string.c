@@ -1,8 +1,10 @@
 /*
  * QuickJS string storage, buffers, and ropes
  *
- * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -313,6 +315,16 @@ JSValue JS_NewStringLen(JSContext *ctx, const char *buf, size_t buf_len)
     return JS_EXCEPTION;
 }
 
+/* NG a6b82a35 UTF16 API, adapted to local string/refcount storage. */
+JSValue JS_NewStringUTF16(JSContext *ctx, const uint16_t *buf, size_t len)
+{
+    if (len > JS_STRING_LEN_MAX)
+        return JS_ThrowRangeError(ctx, "invalid string length");
+    if (!len)
+        return JS_AtomToString(ctx, JS_ATOM_empty_string);
+    return js_new_string16_len(ctx, buf, (int)len);
+}
+
 JSValue JS_ConcatString3(JSContext *ctx, const char *str1,
                          JSValue str2, const char *str3)
 {
@@ -461,6 +473,61 @@ void JS_FreeCString(JSContext *ctx, const char *ptr)
     /* purposely removing constness */
     p = container_of(ptr, JSString, u);
     JS_FreeValue(ctx, JS_MKPTR(JS_TAG_STRING, p));
+}
+
+/* JS_ToString also linearizes local rope values. A wide flat string can
+   retain its own storage; widening a byte string creates a separate owner. */
+const uint16_t *JS_ToCStringLenUTF16(JSContext *ctx, size_t *plen,
+                                    JSValueConst val)
+{
+    JSValue string = JS_ToString(ctx, val);
+    JSString *p, *wide;
+    int i;
+
+    if (JS_IsException(string))
+        goto fail;
+    p = JS_VALUE_GET_STRING(string);
+    if (!p->is_wide_char) {
+        wide = js_alloc_string(ctx, p->len, 1);
+        if (!wide) {
+            JS_FreeValue(ctx, string);
+            goto fail;
+        }
+        for (i = 0; i < p->len; i++)
+            wide->u.str16[i] = p->u.str8[i];
+        JS_FreeValue(ctx, string);
+        p = wide;
+    }
+    if (plen)
+        *plen = p->len;
+    return p->u.str16;
+fail:
+    if (plen)
+        *plen = 0;
+    return NULL;
+}
+
+void JS_FreeCStringRT(JSRuntime *rt, const char *ptr)
+{
+    JSString *p;
+    if (!ptr)
+        return;
+    p = container_of(ptr, JSString, u);
+    JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_STRING, p));
+}
+
+void JS_FreeCStringRT_UTF16(JSRuntime *rt, const uint16_t *ptr)
+{
+    JSString *p;
+    if (!ptr)
+        return;
+    p = container_of(ptr, JSString, u);
+    JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_STRING, p));
+}
+
+void JS_FreeCStringUTF16(JSContext *ctx, const uint16_t *ptr)
+{
+    JS_FreeCStringRT_UTF16(ctx->rt, ptr);
 }
 
 static int memcmp16_8(const uint16_t *src1, const uint8_t *src2, int len)
