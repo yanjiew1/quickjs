@@ -1,0 +1,208 @@
+{
+  "release": "QuickJS extras 2026-06-04",
+  "official_page": "https://bellard.org/quickjs/",
+  "archive_url": "https://bellard.org/quickjs/quickjs-extras-2026-06-04.tar.xz",
+  "archive_bytes": 5812880,
+  "archive_sha256": "11549a45b25b055946eeac2a0064399297dcf80062c6c07b644e0bc5eb329817",
+  "downloaded_on": "2026-10-07",
+  "archive_root": "quickjs-2026-06-04",
+  "unmodified_files": [
+    {
+      "path": "tests/octane/gbemu-part1.js",
+      "bytes": 51345,
+      "sha256": "67ae8c639b7acc5ebbcf0995c8b68821251a629f72c604e74cae8526c8e85965"
+    },
+    {
+      "path": "tests/octane/raytrace.js",
+      "bytes": 28016,
+      "sha256": "64b8ff90969966dd69659100e28754976dfc3e9a4f8ee55b9232f974c66ed08c"
+    },
+    {
+      "path": "tests/octane/run.js",
+      "bytes": 3218,
+      "sha256": "355d1863730e6a15fdc7cfbdb64b5d8574bebf9633c07ddf9b5dca274c0e59a3"
+    },
+    {
+      "path": "tests/octane/base.js",
+      "bytes": 13004,
+      "sha256": "328229af0ec5b9c0bd02d85975c09922c897aa7332f81d3011f593684e50a829"
+    },
+    {
+      "path": "tests/octane/zlib.js",
+      "bytes": 3693,
+      "sha256": "d8c4bca32e84b38f573d3ee50a38b194afc9fb4e2f79754d952524bff01a898c"
+    },
+    {
+      "path": "tests/octane/zlib-data.js",
+      "bytes": 192056,
+      "sha256": "b8d093321289574f36116e933e2b3b211bb98df9fe3e761ffb1be550d0e82aed"
+    },
+    {
+      "path": "tests/octane/typescript.js",
+      "bytes": 6441,
+      "sha256": "fbc5ec16d9c60b1bdcca7e7b9f66fba2fe46c0e04da64088203052e47922ff21"
+    },
+    {
+      "path": "tests/octane/typescript-input.js",
+      "bytes": 1275283,
+      "sha256": "e23d2fe7b3df9dc069c720ab3fb112006c235d0eb416556ecde7c3a2766a0396"
+    },
+    {
+      "path": "tests/octane/typescript-compiler.js",
+      "bytes": 1232383,
+      "sha256": "9e99fe0ddfe48a2462eca622ade1e1ddd13bf49f8e461a6c53463bbbc1d5363a"
+    },
+    {
+      "path": "tests/octane/splay.js",
+      "bytes": 11557,
+      "sha256": "f9a6a60d8f205908f5542ad1180abc1902dcdab3dcb4278017c5ce179ee123f7"
+    },
+    {
+      "path": "tests/octane/richards.js",
+      "bytes": 15797,
+      "sha256": "1246a64a24b931158bf01c24640343259fa74b0226e73bad630bd1f686aa0fa7"
+    },
+    {
+      "path": "tests/octane/regexp.js",
+      "bytes": 126705,
+      "sha256": "a292d6047900c5296ea9e2628453832cc3bfe397e49fddade8aff7b5876c8263"
+    },
+    {
+      "path": "tests/octane/pdfjs.js",
+      "bytes": 1466204,
+      "sha256": "ced89e66a178a4b63a69ea33fc6f47d405bf9bd379817be25f060a4b2dcce351"
+    },
+    {
+      "path": "tests/octane/navier-stokes.js",
+      "bytes": 13431,
+      "sha256": "27926de809451c60b0c49a4185c08f97081310d0db166a30c1d202fb656556a2"
+    },
+    {
+      "path": "tests/octane/mandreel.js",
+      "bytes": 5000408,
+      "sha256": "fc4a9516e8899bb33df63a69db30797959a138d33233e9fb1ccc57cb91dcd164"
+    },
+    {
+      "path": "tests/octane/gbemu-part2.js",
+      "bytes": 464771,
+      "sha256": "acd923e085cf70fce8a15b1420d1fa489bd8315e4a8c066775aeaa7104e609d3"
+    },
+    {
+      "path": "tests/octane/earley-boyer.js",
+      "bytes": 195234,
+      "sha256": "8dd28a505f7e705642f86816232b012fd3c770ec8afc9f719ce89ce772dab347"
+    },
+    {
+      "path": "tests/octane/deltablue.js",
+      "bytes": 25726,
+      "sha256": "6c4784e82f3e8f5c18306d289653d08b17b38838f1bac16b38611d7318fa5a36"
+    },
+    {
+      "path": "tests/octane/crypto.js",
+      "bytes": 48052,
+      "sha256": "b01b6b3fe534327fdef05131162927bc5508f100a3208e185d0c5a4efb200a39"
+    },
+    {
+      "path": "tests/octane/code-load.js",
+      "bytes": 115891,
+      "sha256": "32fd38d49bb8794b40e947c70c0c51276bfc2588833a8451a25b1b2bfccad96c"
+    },
+    {
+      "path": "tests/octane/box2d.js",
+      "bytes": 228894,
+      "sha256": "83b10c280f004e7b156a9e04d09ce4109892ea92788f7c6c963f7fadf29c7bd4"
+    },
+    {
+      "path": "tests/bench-v8/Makefile",
+      "bytes": 333,
+      "sha256": "9dddef59960b9aae716f9d2a5fa06152cb2cf2f3f68daf2715d61f8820adbdc2"
+    },
+    {
+      "path": "tests/bench-v8/base.js",
+      "bytes": 9387,
+      "sha256": "74c49b06d43d014bf392fed549d4d9acce89e76c901117617816254df1e6d1fd"
+    },
+    {
+      "path": "tests/bench-v8/navier-stokes.js",
+      "bytes": 12691,
+      "sha256": "6fc5c381ab937d7e3b11a8eff5331cfa2d5fdaac123782e80e66e420af18c6ff"
+    },
+    {
+      "path": "tests/bench-v8/raytrace.js",
+      "bytes": 27996,
+      "sha256": "bd08c1937d770339eff9ac52a6b83b74cfc075ed6272cb19392a75267982fad9"
+    },
+    {
+      "path": "tests/bench-v8/regexp.js",
+      "bytes": 111298,
+      "sha256": "f04a1b4817e5d687363e99d941cc78de9b29b722b46cc034d877f59a269bdfdf"
+    },
+    {
+      "path": "tests/bench-v8/revisions.html",
+      "bytes": 4142,
+      "sha256": "267099a035356b8e2ff9c87c7216814b08e9e58c98ab90080e7a3c853ee3b6c3"
+    },
+    {
+      "path": "tests/bench-v8/splay.js",
+      "bytes": 10745,
+      "sha256": "aa216ea624701452740aed66b0843bd468be4ba7b7112c0bdbc3cf76fa0314dd"
+    },
+    {
+      "path": "tests/bench-v8/run_harness.js",
+      "bytes": 888,
+      "sha256": "6aa7ba4d5eca27aa7af1a03ef8115294faba8ad9e9c1b8895e31ad4dedd727ae"
+    },
+    {
+      "path": "tests/bench-v8/deltablue.js",
+      "bytes": 25708,
+      "sha256": "eeb7f58bfa42cfd8b9de41c2156d290e8e017ffa25974fac72087ce9e1d6d138"
+    },
+    {
+      "path": "tests/bench-v8/README.txt",
+      "bytes": 3411,
+      "sha256": "ff5a6e2387c61e0b8a2addfd9ea20e8ce7277197425ec4ab82576f1b1ac2c486"
+    },
+    {
+      "path": "tests/bench-v8/crypto.js",
+      "bytes": 48048,
+      "sha256": "6843ad4d776a0c59be23e1e1eecc8d2c0e8c46f43ef6b14f7f6b6abec07acb67"
+    },
+    {
+      "path": "tests/bench-v8/earley-boyer.js",
+      "bytes": 195251,
+      "sha256": "26af0253193be5af26c5a86fcd3de9f7b05ddc84aec9f85d1fbdddb6be90629b"
+    },
+    {
+      "path": "tests/bench-v8/richards.js",
+      "bytes": 15778,
+      "sha256": "31a3529271b02287b478bf595f1b9cf3c0200b32ef98b14267ba1b3e5a36fe6f"
+    },
+    {
+      "path": "tests/bench-v8/combined.js",
+      "bytes": 457777,
+      "sha256": "d12d5dec5c8ebab8b58c17d2ff2072e76e7892e5c056f54f50f8a5f663d0600e"
+    }
+  ],
+  "additional_license_texts": [
+    {
+      "path": "tests/octane/LICENSE-GPL-2.0.txt",
+      "source_url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt",
+      "downloaded_on": "2026-10-07",
+      "bytes": 17984,
+      "sha256": "edaef632cbb643e4e7a221717a6c441a4c1a7c918e6e4d56debc3d8739b233f6"
+    },
+    {
+      "path": "tests/octane/LICENSE-APACHE-2.0.txt",
+      "source_url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "downloaded_on": "2026-10-07",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  ],
+  "optional_unvendored_cli": {
+    "archive_member": "quickjs-2026-06-04/tests/cli/cli.js",
+    "bytes": 32702851,
+    "sha256": "a7a227840538deb2d44dcadbf3da6b12187b29961f2e134db2269b785f7d9931",
+    "role": "Generated Web Tooling Benchmark 0.5.3 bundle; optional external workload, not a QuickJS CLI unit test."
+  }
+}
