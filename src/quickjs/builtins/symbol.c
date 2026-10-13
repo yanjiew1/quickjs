@@ -152,5 +152,7 @@ const JSCFunctionListEntry js_symbol_funcs[] = {
     JS_PROP_ATOM_DEF("species", JS_ATOM_Symbol_species, 0),
     JS_PROP_ATOM_DEF("unscopables", JS_ATOM_Symbol_unscopables, 0),
     JS_PROP_ATOM_DEF("asyncIterator", JS_ATOM_Symbol_asyncIterator, 0),
+    JS_PROP_ATOM_DEF("dispose", JS_ATOM_Symbol_dispose, 0),
+    JS_PROP_ATOM_DEF("asyncDispose", JS_ATOM_Symbol_asyncDispose, 0),
 };
 
