@@ -376,6 +376,8 @@ static const char main_c_template1[] =
     "  JSRuntime *rt;\n"
     "  JSContext *ctx;\n"
     "  rt = JS_NewRuntime();\n"
+    "  if (!rt)\n"
+    "    return 1;\n"
     "  js_std_set_worker_new_context_func(JS_NewCustomContext);\n"
     "  js_std_init_handlers(rt);\n"
     ;
@@ -799,11 +801,15 @@ int main(int argc, char **argv)
                 "  if (!ctx)\n"
                 "    return NULL;\n");
         /* add the basic objects */
-        fprintf(fo, "  JS_AddIntrinsicBaseObjects(ctx);\n");
+        fprintf(fo, "  if (JS_AddIntrinsicBaseObjects(ctx) < 0)\n"
+                    "    goto fail;\n");
         for(i = 0; i < countof(feature_list); i++) {
             if ((feature_bitmap & ((uint64_t)1 << i)) &&
                 feature_list[i].init_name) {
-                fprintf(fo, "  JS_AddIntrinsic%s(ctx);\n",
+                /* Every named feature entry is an int-returning initializer.
+                   RegExpCompiler is void and is not an entry in this table. */
+                fprintf(fo, "  if (JS_AddIntrinsic%s(ctx) < 0)\n"
+                            "    goto fail;\n",
                         feature_list[i].init_name);
             }
         }
@@ -832,6 +838,9 @@ int main(int argc, char **argv)
         }
         fprintf(fo,
                 "  return ctx;\n"
+                "fail:\n"
+                "  JS_FreeContext(ctx);\n"
+                "  return NULL;\n"
                 "}\n\n");
 
         fputs(main_c_template1, fo);
@@ -848,6 +857,11 @@ int main(int argc, char **argv)
 
         fprintf(fo,
                 "  ctx = JS_NewCustomContext(rt);\n"
+                "  if (!ctx) {\n"
+                "    js_std_free_handlers(rt);\n"
+                "    JS_FreeRuntime(rt);\n"
+                "    return 1;\n"
+                "  }\n"
                 "  js_std_add_helpers(ctx, argc, argv);\n");
 
         for(i = 0; i < cname_list.count; i++) {
