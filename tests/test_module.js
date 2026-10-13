@@ -258,6 +258,10 @@ module_reference_let += 2;
 assert(module_reference_let, 3);
 
 
+import { awaitUsingModuleEvents, awaitUsingModuleResource } from "./fixture_await_using_module.js";
+assert(awaitUsingModuleEvents.join(","), "evaluated,async start,async end,sync");
+assert(typeof awaitUsingModuleResource[Symbol.asyncDispose], "function");
+
 async function test_module_reserved_bindings()
 {
     const invalid = [
