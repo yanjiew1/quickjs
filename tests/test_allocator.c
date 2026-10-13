@@ -31,6 +31,7 @@
 /* Inspect the actual pool owner without adding an engine test API. */
 #include "../src/quickjs/allocator.c"
 #include "../src/quickjs/internal/runtime.h"
+#include "../src/quickjs/internal/atom.h"
 #include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
@@ -623,6 +624,7 @@ typedef struct AllocationFailure {
     unsigned failures;
     JSRuntime *rt;
     BOOL context_registered_at_failure;
+    BOOL fail_table_realloc;
 } AllocationFailure;
 
 static BOOL allocation_should_fail(AllocationFailure *failure)
@@ -668,6 +670,11 @@ static void *allocation_failure_realloc(JSMallocState *s, void *ptr,
     BOOL had_ptr = ptr != NULL;
     void *result;
 
+    if (size != 0 && ptr && failure->fail_table_realloc) {
+        failure->fail_table_realloc = FALSE;
+        failure->failures++;
+        return NULL;
+    }
     if (size != 0 && allocation_should_fail(failure))
         return NULL;
     result = def_malloc_funcs.js_realloc(s, ptr, size);
@@ -973,8 +980,44 @@ static void test_autoinit_allocation_failure(int kind, BOOL retry)
     assert(failure.live_allocations == 0);
 }
 
+static void test_int64_atom_table_allocation_failure(void)
+{
+    AllocationFailure failure = { 0 };
+    JSRuntime *rt = new_allocation_failure_runtime(&failure);
+    JSContext *ctx = JS_NewContext(rt);
+    JSAtom *atoms, atom;
+    JSValue exception;
+    size_t count = 0, capacity;
+
+    assert(ctx);
+    capacity = rt->atom_size;
+    atoms = malloc(capacity * sizeof(*atoms));
+    assert(atoms);
+    while (rt->atom_free_index != 0) {
+        assert(count < capacity);
+        atoms[count] = JS_NewAtomInt64(ctx, INT64_MIN + (int64_t)count);
+        assert(atoms[count] != JS_ATOM_NULL && !JS_HasException(ctx));
+        count++;
+    }
+    failure.fail_table_realloc = TRUE;
+    atom = JS_NewAtomInt64(ctx, INT64_MAX);
+    assert(atom == JS_ATOM_NULL);
+    assert(!failure.fail_table_realloc && failure.failures == 1);
+    assert(JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    assert(rt->atom_free_index == 0);
+    while (count)
+        JS_FreeAtom(ctx, atoms[--count]);
+    free(atoms);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
 int main(void)
 {
+    test_int64_atom_table_allocation_failure();
     int kind;
 
     test_payload_alignment();
