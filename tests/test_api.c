@@ -399,12 +399,48 @@ static void test_buffer_transfer_without_free_callback(void)
     }
 }
 
+static void test_typed_array_external_overlap(void)
+{
+    uint16_t storage[3];
+    uint8_t *data = (uint8_t *)storage;
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue global, source, target, result;
+    size_t i;
+    static const char script[] =
+        "const target = new Uint16Array(targetBuffer);"
+        "target.set(new Uint8Array(sourceBuffer));"
+        "if (target[0] !== 2 || target[1] !== 3)"
+        "    throw Error('external buffer overlap');";
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    for (i = 0; i < sizeof(storage); i++)
+        data[i] = i + 1;
+    source = JS_NewArrayBuffer(ctx, data + 1, 2, NULL, NULL, FALSE);
+    target = JS_NewArrayBuffer(ctx, data + 2, 4, NULL, NULL, FALSE);
+    assert(!JS_IsException(source));
+    assert(!JS_IsException(target));
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "sourceBuffer", source) >= 0);
+    assert(JS_SetPropertyStr(ctx, global, "targetBuffer", target) >= 0);
+    JS_FreeValue(ctx, global);
+    result = JS_Eval(ctx, script, sizeof(script) - 1,
+                     "<typed-array-overlap>", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "typed-array-overlap", test_typed_array_external_overlap },
         { "buffer-allocation", test_empty_buffer_allocation },
         { "shared-buffer-allocation", test_shared_buffer_allocation },
         { "typed-array-arguments", test_typed_array_arguments },
