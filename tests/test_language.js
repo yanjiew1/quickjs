@@ -54,6 +54,31 @@ function test_arrow_for_in_grammar()
     assert(value(), false);
 }
 
+function test_eval_call_receiver()
+{
+    function parameter(value = eval(`
+        function method() { "use strict"; return this; }
+        with ({}) { method(); }
+    `)) {
+        return value;
+    }
+    assert(parameter(), undefined);
+    function body(value = eval(`
+        function method() { "use strict"; return this; }
+    `)) {
+        return eval("method()");
+    }
+    assert(body(), undefined);
+    const object = { method() { "use strict"; return this; } };
+    let result;
+    with (object) { result = method(); }
+    assert(result === object);
+    function method() { "use strict"; return this; }
+    object[Symbol.unscopables] = { method: true };
+    with (object) { result = method(); }
+    assert(result, undefined);
+}
+
 function test_op1()
 {
     var r, a;
@@ -694,6 +719,7 @@ function test_number_literals()
 
 test_op1();
 test_arrow_for_in_grammar();
+test_eval_call_receiver();
 test_cvt();
 test_eq();
 test_inc_dec();
