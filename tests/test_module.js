@@ -1,4 +1,5 @@
 import { assert, assertThrows } from "./assert.js";
+import * as keyNamespace from "./fixture_module_namespace_keys.js";
 import { mutable as imported, update } from "./fixture_module.js";
 import * as namespace from "./fixture_module.js";
 import * as selfNamespace from "./test_module.js";
@@ -6,8 +7,55 @@ import { module_const_write_tdz as uninitializedImport } from "./test_module.js"
 
 import "./test_module_bindings_review.js";
 
+import "./test_module_namespace_review.js";
+
 assert(Reflect.set(namespace, "mutable", 9), false);
 assertThrows(TypeError, () => { namespace.mutable = 9; });
+
+function test_module_namespace_keys()
+{
+    const expected = ["", "0", "01", "10", "2", "4294967294", "4294967295",
+                      "9007199254740991", "a", "\u{10000}", "\ue000"];
+    function check(ns) {
+        const lists = [Object.keys(ns), Object.getOwnPropertyNames(ns),
+                       Reflect.ownKeys(ns).filter(key => typeof key === "string")];
+        const enumerated = [];
+        for (const key in ns)
+            enumerated.push(key);
+        lists.push(enumerated.sort());
+        for (const keys of lists) {
+            assert(keys.length, expected.length);
+            for (let i = 0; i < keys.length; i++)
+                assert(keys[i], expected[i], "namespace key " + i);
+        }
+        const all = Reflect.ownKeys(ns);
+        assert(all.length, expected.length + 1);
+        assert(all[expected.length], Symbol.toStringTag);
+        const entries = Object.entries(ns);
+        assert(entries.length, expected.length);
+        for (let i = 0; i < entries.length; i++) {
+            assert(entries[i][0], expected[i]);
+            assert(entries[i][1], 42);
+        }
+    }
+
+    check(keyNamespace);
+    check(new Proxy(keyNamespace, {}));
+    assert(Reflect.deleteProperty(keyNamespace, "10"), false);
+    assert(Reflect.deleteProperty(keyNamespace, "missing"), true);
+    assert(Reflect.defineProperty(keyNamespace, "10", { value: 42 }), true);
+    assert(Reflect.defineProperty(keyNamespace, "10", { value: 43 }), false);
+    assert(Reflect.deleteProperty(keyNamespace, Symbol.toStringTag), false);
+    check(keyNamespace);
+    check(new Proxy(keyNamespace, {}));
+
+    const ordinary = { "2": 2, "10": 10, "01": 1, "0": 0 };
+    assert(Object.keys(ordinary).join(","), "0,2,10,01");
+    assert(Object.getOwnPropertyNames(ordinary).join(","), "0,2,10,01");
+    assert(Reflect.ownKeys(new Proxy(ordinary, {})).join(","), "0,2,10,01");
+}
+
+test_module_namespace_keys();
 
 function test_import_reference_timing()
 {
