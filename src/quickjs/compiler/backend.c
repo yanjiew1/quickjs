@@ -512,7 +512,9 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         }
         idx = vd->scope_next;
     }
-    is_arg_scope = (idx == ARG_SCOPE_END);
+    is_arg_scope = (idx == ARG_SCOPE_END ||
+                    (var_idx >= 0 && s->has_parameter_expressions &&
+                     s->vars[var_idx].scope_level == ARG_SCOPE_INDEX));
     if (var_idx < 0) {
         /* argument scope: variables are not visible but pseudo
            variables are visible */
@@ -534,6 +536,15 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         }
     }
     if (var_idx >= 0) {
+        if (var_idx == s->arguments_arg_idx) {
+            if (add_arguments_var(ctx, s) < 0)
+                return -1;
+            if (!is_arg_scope && s->var_object_idx >= 0) {
+                dbuf_putc(bc, OP_get_loc);
+                dbuf_put_u16(bc, s->var_object_idx);
+                var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+            }
+        }
         if ((op == OP_scope_put_var || op == OP_scope_make_ref) &&
             !(var_idx & ARGUMENT_VAR_OFFSET) &&
             s->vars[var_idx].is_const) {
@@ -686,7 +697,9 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             }
             idx = vd->scope_next;
         }
-        is_arg_scope = (idx == ARG_SCOPE_END);
+        is_arg_scope = (idx == ARG_SCOPE_END ||
+                        (var_idx >= 0 && fd->has_parameter_expressions &&
+                         fd->vars[var_idx].scope_level == ARG_SCOPE_INDEX));
         if (var_idx >= 0)
             break;
 
@@ -702,6 +715,17 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         }
         if (var_name == JS_ATOM_arguments && fd->has_arguments_binding) {
             var_idx = add_arguments_var(ctx, fd);
+            if (var_idx == fd->arguments_arg_idx && !is_arg_scope &&
+                fd->var_object_idx >= 0) {
+                vd = &fd->vars[fd->var_object_idx];
+                capture_var(fd, vd);
+                idx = get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL,
+                                      fd->var_object_idx, vd->var_name,
+                                      FALSE, FALSE, JS_VAR_NORMAL);
+                dbuf_putc(bc, OP_get_var_ref);
+                dbuf_put_u16(bc, idx);
+                var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+            }
             break;
         }
         if (fd->is_func_expr && fd->func_name == var_name) {
@@ -737,6 +761,10 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         if (fd->is_eval)
             break; /* it it necessarily the top level function */
     }
+
+    if (var_idx >= 0 && var_idx == fd->arguments_arg_idx &&
+        add_arguments_var(ctx, fd) < 0)
+        return -1;
 
     /* check direct eval scope (in the closure of the eval function
        which is necessarily at the top level) */
@@ -1174,17 +1202,6 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
     int i, scope_level, scope_idx;
     BOOL has_arguments_binding, has_this_binding, is_arg_scope;
 
-    /* in non strict mode, variables are created in the caller's
-       environment object */
-    if (!s->is_eval && !(s->js_mode & JS_MODE_STRICT)) {
-        s->var_object_idx = add_var(ctx, s, JS_ATOM__var_);
-        if (s->has_parameter_expressions) {
-            /* an additional variable object is needed for the
-               argument scope */
-            s->arg_var_object_idx = add_var(ctx, s, JS_ATOM__arg_var_);
-        }
-    }
-
     /* eval can potentially use 'arguments' so we must define it */
     has_this_binding = s->has_this_binding;
     if (has_this_binding) {
@@ -1200,12 +1217,25 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
     has_arguments_binding = s->has_arguments_binding;
     if (has_arguments_binding) {
         add_arguments_var(ctx, s);
+        if (s->arguments_arg_idx >= 0)
+            capture_var(s, &s->vars[s->arguments_arg_idx]);
         /* also add an arguments binding in the argument scope to
            raise an error if a direct eval in the argument scope tries
            to redefine it */
         if (s->has_parameter_expressions && !(s->js_mode & JS_MODE_STRICT))
             add_arguments_arg(ctx, s);
     }
+    /* in non strict mode, variables are created in the caller's
+       environment object */
+    if (!s->is_eval && !(s->js_mode & JS_MODE_STRICT)) {
+        s->var_object_idx = add_var(ctx, s, JS_ATOM__var_);
+        if (s->has_parameter_expressions) {
+            /* an additional variable object is needed for the
+               argument scope */
+            s->arg_var_object_idx = add_var(ctx, s, JS_ATOM__arg_var_);
+        }
+    }
+
     if (s->is_func_expr && s->func_name != JS_ATOM_NULL)
         add_func_var(ctx, s, s->func_name);
 
@@ -1290,6 +1320,13 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
                                     JS_CLOSURE_LOCAL, i, vd->var_name, FALSE,
                                     vd->is_lexical, JS_VAR_NORMAL);
                 }
+            }
+            if (fd->arguments_arg_idx >= 0) {
+                i = fd->arguments_arg_idx;
+                vd = &fd->vars[i];
+                capture_var(fd, vd);
+                get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL, i,
+                                vd->var_name, FALSE, TRUE, vd->var_kind);
             }
         } else {
             for(i = 0; i < fd->var_count; i++) {
@@ -1379,6 +1416,19 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
         for(i = 0; i < b->var_count; i++) {
             vd = &b->vardefs[b->arg_count + i];
             if (!vd->has_scope && vd->var_name != JS_ATOM__ret_) {
+                JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
+                set_closure_from_var(ctx, cv, vd, i);
+            }
+        }
+        /* Parameter bindings are outside the body variable environment. */
+        for(i = 0; i < b->var_count; i++) {
+            int end = i;
+            vd = &b->vardefs[b->arg_count + i];
+            if (!vd->has_scope || vd->var_name != JS_ATOM_arguments)
+                continue;
+            while (end >= 0)
+                end = b->vardefs[b->arg_count + end].scope_next;
+            if (end == ARG_SCOPE_END) {
                 JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
                 set_closure_from_var(ctx, cv, vd, i);
             }
@@ -1996,6 +2046,9 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             {
                 int scope_idx, scope = get_u16(bc_buf + pos + 1);
 
+                /* Parameter bindings remain live throughout the body. */
+                if (s->has_parameter_expressions && scope == ARG_SCOPE_INDEX)
+                    break;
                 for(scope_idx = s->scopes[scope].first; scope_idx >= 0;) {
                     JSVarDef *vd = &s->vars[scope_idx];
                     if (vd->scope_level == scope) {
@@ -2436,7 +2489,8 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             for(i = 0; i < s->arg_count; i++)
                 capture_var(s, &s->args[i]);
         }
-        if (s->arguments_arg_idx >= 0)
+        if (s->arguments_arg_idx >= 0 &&
+            s->arguments_arg_idx != s->arguments_var_idx)
             put_short_code(&bc_out, OP_set_loc, s->arguments_arg_idx);
         put_short_code(&bc_out, OP_put_loc, s->arguments_var_idx);
     }
@@ -3374,6 +3428,10 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     int closure_var_offset, vardefs_offset;
     BOOL strip_var_debug;
     
+    if (fd->has_parameter_expressions && fd->has_arguments_binding &&
+        add_arguments_arg(ctx, fd) < 0)
+        goto fail;
+
     /* recompute scope linkage */
     for (scope = 0; scope < fd->scope_count; scope++) {
         fd->scopes[scope].first = -1;
