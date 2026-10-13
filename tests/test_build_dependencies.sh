@@ -59,7 +59,7 @@ check_recipes() {
 }
 check_recipes gcc yes
 check_recipes clang yes CONFIG_CLANG=y
-check_recipes cosmo no CONFIG_COSMO=y
+check_recipes cosmo yes CONFIG_COSMO=y
 check_recipes clang-cosmo yes CONFIG_CLANG=y CONFIG_COSMO=y
 
 check_core_coverage() {
