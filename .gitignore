@@ -94,3 +94,17 @@ libwinpthread*.dll
 
 /tests/test_qjsc_json_preload
 /tests/test_qjsc_json_preload.exe
+/tests/test_qjsc_json_probe
+/tests/test_qjsc_json_probe.exe
+/tests/test_qjsc_json_exec
+/tests/test_qjsc_json_exec.exe
+/tests/test_qjsc_native_std_exec
+/tests/test_qjsc_native_std_exec.exe
+/tests/test_qjsc_json_collision_attributes-first
+/tests/test_qjsc_json_collision_attributes-first.exe
+/tests/test_qjsc_json_collision_attributes-last
+/tests/test_qjsc_json_collision_attributes-last.exe
+/tests/test_qjsc_json_collision_size-first
+/tests/test_qjsc_json_collision_size-first.exe
+/tests/test_qjsc_json_collision_size-last
+/tests/test_qjsc_json_collision_size-last.exe
