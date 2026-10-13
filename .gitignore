@@ -196,3 +196,6 @@ __pycache__/
 
 /tests/test_intl_native_number_engine
 /tests/test_intl_native_number_engine.exe
+
+/tests/test_intl_native_duration_engine
+/tests/test_intl_native_duration_engine.exe

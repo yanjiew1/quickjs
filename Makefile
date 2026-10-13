@@ -828,6 +828,8 @@ C_TESTS+=tests/test_intl_native_list_data$(EXE)
 
 C_TESTS+=tests/test_intl_native_number_engine$(EXE)
 
+C_TESTS+=tests/test_intl_native_duration_engine$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -837,6 +839,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_native_duration_engine$(EXE)
 	$(WINE) ./tests/test_intl_native_number_engine$(EXE)
 	$(WINE) ./tests/test_intl_native_list_data$(EXE)
 	$(WINE) ./tests/test_intl_native_list_engine$(EXE)
@@ -1400,4 +1403,7 @@ tests/test_intl_native_list_data$(EXE): $(INTL_DATA_READER_OBJS) $(OBJDIR)/tests
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_native_number_engine$(EXE): $(OBJDIR)/tests/test_intl_native_number_engine.o $(OBJDIR)/src/intl/number-native.o $(OBJDIR)/src/intl/decimal.o $(OBJDIR)/src/intl/plural-native.o $(OBJDIR)/src/intl/plural.o $(OBJDIR)/src/intl/number-range.o $(OBJDIR)/src/intl/number-compact.o $(OBJDIR)/src/intl/number-unit.o $(OBJDIR)/src/intl/data/number-template-validation.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_duration_engine$(EXE): $(OBJDIR)/tests/test_intl_native_duration_engine.o $(OBJDIR)/src/intl/number-native.o $(OBJDIR)/src/intl/decimal.o $(OBJDIR)/src/intl/plural-native.o $(OBJDIR)/src/intl/plural.o $(OBJDIR)/src/intl/number-range.o $(OBJDIR)/src/intl/number-compact.o $(OBJDIR)/src/intl/number-unit.o $(OBJDIR)/src/intl/data/number-template-validation.o $(OBJDIR)/src/intl/duration-native.o $(OBJDIR)/src/intl/list-native.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
