@@ -274,7 +274,7 @@ static double time_clip(double t) {
 
 /* The spec mandates the use of 'double' and it specifies the order
    of the operations */
-static double set_date_fields(double fields[minimum_length(7)], int is_local) {
+static double make_date_fields(double fields[minimum_length(7)], int is_local) {
     double y, m, dt, ym, mn, day, h, s, milli, time, tv;
     int yi, mi, i;
     int64_t days;
@@ -323,12 +323,17 @@ static double set_date_fields(double fields[minimum_length(7)], int is_local) {
     if (!isfinite(tv))
         return NAN;
 
-    /* adjust for local time and clip */
+    /* adjust for local time */
     if (is_local) {
         int64_t ti = tv < INT64_MIN ? INT64_MIN : tv >= 0x1p63 ? INT64_MAX : (int64_t)tv;
         tv += getTimezoneOffset(ti) * 60000;
     }
-    return time_clip(tv);
+    return tv;
+}
+
+static double set_date_fields(double fields[minimum_length(7)], int is_local)
+{
+    return time_clip(make_date_fields(fields, is_local));
 }
 
 static double set_date_fields_checked(double fields[minimum_length(7)], int is_local)
@@ -1071,7 +1076,7 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
         if (valid) {
             for(i = 0; i < 7; i++)
                 fields1[i] = fields[i];
-            d = set_date_fields(fields1, is_local) - fields[8] * 60000;
+            d = time_clip(make_date_fields(fields1, is_local) - fields[8] * 60000);
             rv = JS_NewFloat64(ctx, d);
         }
     }
