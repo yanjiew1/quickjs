@@ -1440,3 +1440,6 @@ test test-binaries: $(OBJDIR)/src/intl/provider-native-number.o $(OBJDIR)/src/in
 
 # Native relative adapters precede aggregate-provider construction.
 test test-binaries: $(OBJDIR)/src/intl/provider-native-relative.o
+
+# Native duration adapters precede aggregate-provider construction.
+test test-binaries: $(OBJDIR)/src/intl/provider-native-duration.o
