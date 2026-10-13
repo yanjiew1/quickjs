@@ -50,8 +50,13 @@ void test_one_input_init(JSRuntime *rt, JSContext *ctx) {
                 "globalThis.os = os;\n";
     JSValue std_val = JS_Eval(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
     if (!JS_IsException(std_val)) {
-        js_module_set_import_meta(ctx, std_val, 1, 1);
-        std_val = JS_EvalFunction(ctx, std_val);
+        /* The bootstrap source has a virtual filename, not a file path. */
+        if (js_module_set_import_meta(ctx, std_val, 0, 1) < 0) {
+            JS_FreeValue(ctx, std_val);
+            std_val = JS_EXCEPTION;
+        } else {
+            std_val = JS_EvalFunction(ctx, std_val);
+        }
     } else {
         js_std_dump_error(ctx);
     }
