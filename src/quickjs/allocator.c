@@ -31,9 +31,15 @@
 #define JS_MALLOC_ARENA_SIZE 4096
 #define JS_MALLOC_MIN_SMALL_SIZE 16
 #define JS_MALLOC_MAX_SMALL_SIZE 512
+/* Use the host malloc() for all allocations under AddressSanitizer. */
 #if defined(__SANITIZE_ADDRESS__)
-/* use the host malloc() for all allocations */
 #define JS_MALLOC_LARGE_BLOCKS_ONLY 1
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define JS_MALLOC_LARGE_BLOCKS_ONLY 1
+#else
+#define JS_MALLOC_LARGE_BLOCKS_ONLY 0
+#endif
 #else
 #define JS_MALLOC_LARGE_BLOCKS_ONLY 0
 #endif
