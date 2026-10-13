@@ -753,7 +753,8 @@ static JSValue js_array_buffer_slice(JSContext *ctx,
     new_abuf = JS_GetOpaque2(ctx, new_obj, class_id);
     if (!new_abuf)
         goto fail;
-    if (js_same_value(ctx, new_obj, this_val)) {
+    if (abuf->shared ? new_abuf->data == abuf->data :
+        js_same_value(ctx, new_obj, this_val)) {
         JS_ThrowTypeError(ctx, "cannot use identical ArrayBuffer");
         goto fail;
     }
