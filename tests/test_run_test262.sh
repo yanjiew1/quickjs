@@ -327,3 +327,11 @@ invoke_runner no -q -c "$test262_tmp/owned-config" \
 [ "$test262_status" -eq 0 ]
 [ -f "$test262_tmp/owned-report" ]
 grep -Fqx 'Result: 0/3 errors' "$test262_tmp/err"
+
+# An empty initial directory must not pass a NULL list to qsort. Adding a
+# real suite afterward still selects all cases and produces its summary.
+mkdir "$test262_tmp/empty"
+invoke_runner no -q -c "$test262_tmp/config" -d "$test262_tmp/empty" \
+    -d "$test262_tmp/suite" -T 2
+[ "$test262_status" -eq 0 ]
+grep -Fqx 'Result: 0/3 errors' "$test262_tmp/err"
