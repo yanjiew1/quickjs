@@ -525,9 +525,9 @@ static JSValue js_atomics_wait(JSContext *ctx,
     /* XXX: use Linux futexes when available ? */
     pthread_mutex_lock(&js_atomics_mutex);
     if (size_log2 == 3) {
-        res = *(int64_t *)ptr != v;
+        res = atomic_load((_Atomic(int64_t) *)ptr) != v;
     } else {
-        res = *(int32_t *)ptr != v;
+        res = atomic_load((_Atomic(int32_t) *)ptr) != v;
     }
     if (res) {
         pthread_mutex_unlock(&js_atomics_mutex);
