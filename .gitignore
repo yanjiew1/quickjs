@@ -91,3 +91,6 @@ libwinpthread*.dll
 /tests/test_native_jobs
 
 /tests/test_wait_async
+
+/tests/test_qjsc_json_preload
+/tests/test_qjsc_json_preload.exe
