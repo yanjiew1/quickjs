@@ -103,6 +103,8 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
 int unicode_script(CharRange *cr, const char *script_name, int is_ext);
 int unicode_general_category(CharRange *cr, const char *gc_name);
 int unicode_prop(CharRange *cr, const char *prop_name);
+/* Strict ECMAScript property names, independent of private UCD helpers. */
+int lre_unicode_property_allowed(const char *name);
 
 typedef void UnicodeSequencePropCB(void *opaque, const uint32_t *buf, int len);
 int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void *opaque,
