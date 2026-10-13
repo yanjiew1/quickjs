@@ -1,3 +1,4 @@
+import "./test_module_bindings_review.js";
 import { assert, assertThrows } from "./assert.js";
 import { mutable as imported, update } from "./fixture_module.js";
 import * as namespace from "./fixture_module.js";
@@ -225,3 +226,31 @@ function test_module_local_const_reference()
 }
 
 test_module_local_const_reference();
+
+async function test_module_reserved_bindings()
+{
+    const invalid = [
+        "named_await", "named_class", "named_yield", "named_static",
+        "escaped_await", "escaped_class", "namespace_let",
+        "namespace_escaped_let", "shorthand_let", "shorthand_escaped_await",
+        "default_escaped_await", "export_await", "export_escaped_await",
+        "export_let", "export_class"
+    ];
+    for (const name of invalid) {
+        let error;
+        try {
+            await import("./fixture_module_reserved_invalid_" + name + ".js");
+        } catch (e) {
+            error = e;
+        }
+        assert(error instanceof SyntaxError, true, name);
+    }
+
+    const valid = await import("./fixture_module_reserved_valid.js");
+    for (const name of ["awaited", "klass", "letValue", "from", "await",
+                        "class", "let", "default"])
+        assert(valid[name], 42, name);
+    assert(valid.namespace.value, 42);
+}
+
+await test_module_reserved_bindings();
