@@ -38,6 +38,7 @@ typedef struct JSReqModuleEntry {
 typedef enum JSExportTypeEnum {
     JS_EXPORT_TYPE_LOCAL,
     JS_EXPORT_TYPE_INDIRECT,
+    JS_EXPORT_TYPE_NAMESPACE,
 } JSExportTypeEnum;
 
 typedef struct JSExportEntry {
@@ -49,8 +50,8 @@ typedef struct JSExportEntry {
         int req_module_idx; /* module for indirect export */
     } u;
     JSExportTypeEnum export_type;
-    JSAtom local_name; /* '*' if export ns from. not used for local
-                          export after compilation */
+    JSAtom local_name; /* binding name, unused for namespace exports and
+                          local exports after compilation */
     JSAtom export_name; /* exported variable name */
 } JSExportEntry;
 
