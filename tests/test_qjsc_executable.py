@@ -30,6 +30,10 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
                       ' throw Error("qjsc Temporal Instant initialization failed");\n'
                       'if (Temporal.PlainDate.from("2024-02-29").daysInMonth !== 29)'
                       ' throw Error("qjsc Temporal calendar initialization failed");\n')
+    if intl_enabled:
+        with source.open("a") as out:
+            out.write('if (new Intl.NumberFormat("en", {useGrouping:false}).format(42) !== "42")'
+                      ' throw Error("qjsc Intl provider initialization failed");\n')
     compiled = subprocess.run(prefix + [qjsc] + (["-flto"] if lto_flag else []) +
                               ["-v", "-o", str(executable),
                                        str(source)], stdout=subprocess.PIPE,

@@ -42,24 +42,65 @@ endif
 # cosmopolitan build (see https://github.com/jart/cosmopolitan)
 #CONFIG_COSMO=y
 
-# Temporal and optional Intl use the native backend by default.
+# Temporal defaults on. Native Intl is an incomplete development profile.
+# ICU is an explicit backend selection on this branch.
 CONFIG_INTL?=n
-CONFIG_INTL_BACKEND?=native
-CONFIG_INTL_LEGACY?=y
-override CONFIG_INTL_NATIVE:=$(CONFIG_INTL)
-ifeq ($(filter y n,$(CONFIG_INTL)),)
-$(error CONFIG_INTL must be y or n)
-endif
-ifneq ($(CONFIG_INTL_BACKEND),native)
-$(error only the native Intl backend is enabled in this preparation)
-endif
 CONFIG_TEMPORAL?=y
-ifeq ($(filter y n,$(CONFIG_TEMPORAL)),)
-$(error CONFIG_TEMPORAL must be y or n)
+CONFIG_INTL_BACKEND?=native
+ifeq ($(filter icu native,$(CONFIG_INTL_BACKEND)),)
+$(error CONFIG_INTL_BACKEND must be exactly icu or native)
 endif
+ifneq ($(words $(CONFIG_INTL_BACKEND)),1)
+$(error CONFIG_INTL_BACKEND must be exactly icu or native)
+endif
+override CONFIG_INTL_NATIVE:=n
+# Core Unicode ICU selection is explicit even with both frontends disabled.
+CONFIG_ICU?=$(if $(filter native,$(CONFIG_INTL_BACKEND)),n,$(if $(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL)),y,n))
+ifeq ($(filter y n,$(CONFIG_ICU)),)
+$(error CONFIG_ICU must be exactly y or n)
+endif
+ifneq ($(words $(CONFIG_ICU)),1)
+$(error CONFIG_ICU must be exactly y or n)
+endif
+ifeq ($(CONFIG_INTL_BACKEND),native)
+ifeq ($(CONFIG_ICU),y)
+$(error CONFIG_INTL_BACKEND=native requires CONFIG_ICU=n)
+endif
+ifeq ($(CONFIG_INTL),y)
+override CONFIG_INTL_NATIVE:=y
+endif
+else
+ifneq ($(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL)),)
+ifneq ($(CONFIG_ICU),y)
+$(error enabled ICU frontends require CONFIG_ICU=y)
+endif
+endif
+endif
+override CONFIG_TEMPORAL_ICU:=n
+ifeq ($(CONFIG_TEMPORAL),y)
+override CONFIG_TEMPORAL_ICU:=$(CONFIG_ICU)
+endif
+# ECMA-402 legacy constructor chaining is normative optional.
+CONFIG_INTL_LEGACY?=y
 
-# ICU SDK selection is optional; runtime integration follows its source owners.
-CONFIG_ICU?=n
+ifeq ($(filter y n,$(CONFIG_INTL)),)
+$(error CONFIG_INTL must be exactly y or n)
+endif
+ifneq ($(words $(CONFIG_INTL)),1)
+$(error CONFIG_INTL must be exactly y or n)
+endif
+ifeq ($(filter y n,$(CONFIG_TEMPORAL)),)
+$(error CONFIG_TEMPORAL must be exactly y or n)
+endif
+ifneq ($(words $(CONFIG_TEMPORAL)),1)
+$(error CONFIG_TEMPORAL must be exactly y or n)
+endif
+ifeq ($(filter y n,$(CONFIG_INTL_LEGACY)),)
+$(error CONFIG_INTL_LEGACY must be exactly y or n)
+endif
+ifneq ($(words $(CONFIG_INTL_LEGACY)),1)
+$(error CONFIG_INTL_LEGACY must be exactly y or n)
+endif
 
 # installation directory
 PREFIX?=/usr/local
@@ -182,13 +223,18 @@ DEFINES:=-D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
 ifeq ($(CONFIG_TEMPORAL),y)
 DEFINES+=-DCONFIG_TEMPORAL
 endif
+ifeq ($(CONFIG_ICU),y)
+DEFINES+=-DCONFIG_ICU
+endif
 ifeq ($(CONFIG_INTL),y)
-DEFINES+=-DCONFIG_INTL -DCONFIG_INTL_NATIVE
+DEFINES+=-DCONFIG_INTL
+ifeq ($(CONFIG_INTL_NATIVE),y)
+DEFINES+=-DCONFIG_INTL_NATIVE
+endif
 ifeq ($(CONFIG_INTL_LEGACY),y)
 DEFINES+=-DCONFIG_INTL_LEGACY
 endif
 endif
-
 ifdef CONFIG_WIN32
 DEFINES+=-D__USE_MINGW_ANSI_STDIO # for standard snprintf behavior
 endif
@@ -465,7 +511,7 @@ endif
 TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TIMEZONE_SRCS))
 
 
-ifeq ($(CONFIG_INTL),y)
+ifeq ($(CONFIG_INTL_NATIVE),y)
 INTL_NATIVE_FRONTEND_SRCS= \
     src/quickjs/builtins/intl/native-collator.c \
     src/quickjs/builtins/intl/native-date-time-format.c \
@@ -488,6 +534,35 @@ INTL_NATIVE_FRONTEND_SRCS= \
 QUICKJS_SRCS:=$(strip $(QUICKJS_SRCS) $(filter-out $(QUICKJS_SRCS),$(TEMPORAL_LIBRARY_SRCS) $(INTL_NATIVE_LIBRARY_SRCS) $(INTL_NATIVE_FRONTEND_SRCS)))
 endif
 
+ifeq ($(CONFIG_ICU),y)
+ICU_SHARED_SRCS=src/intl/locale-data.c src/intl/locale-grammar.c
+QUICKJS_SRCS:=$(strip $(QUICKJS_SRCS) $(filter-out $(QUICKJS_SRCS),$(TEMPORAL_LIBRARY_SRCS) $(ICU_SHARED_SRCS)))
+ifeq ($(CONFIG_INTL),y)
+INTL_ICU_FRONTEND_SRCS= \
+    src/quickjs/builtins/intl/bound-function.c \
+    src/quickjs/builtins/intl/case-conversion.c \
+    src/quickjs/builtins/intl/collator.c \
+    src/quickjs/builtins/intl/date-time-format.c \
+    src/quickjs/builtins/intl/display-names.c \
+    src/quickjs/builtins/intl/duration-format.c \
+    src/quickjs/builtins/intl/intl-text.c \
+    src/quickjs/builtins/intl/intl-values.c \
+    src/quickjs/builtins/intl/list-format.c \
+    src/quickjs/builtins/intl/locale-resolution.c \
+    src/quickjs/builtins/intl/locale-syntax.c \
+    src/quickjs/builtins/intl/locale.c \
+    src/quickjs/builtins/intl/number-common.c \
+    src/quickjs/builtins/intl/number-format.c \
+    src/quickjs/builtins/intl/options.c \
+    src/quickjs/builtins/intl/plural-rules.c \
+    src/quickjs/builtins/intl/relative-time-format.c \
+    src/quickjs/builtins/intl/segmenter.c \
+    src/quickjs/builtins/intl/values.c
+INTL_ICU_LIBRARY_SRCS=src/intl/libintl.c src/intl/plural.c src/intl/plural-icu.c
+QUICKJS_SRCS+=$(INTL_ICU_FRONTEND_SRCS) $(INTL_ICU_LIBRARY_SRCS)
+endif
+endif
+
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
 all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
@@ -507,7 +582,7 @@ QUICKJS_LIBC_SRCS= \
     src/quickjs-libc/std.c \
     src/quickjs-libc/worker.c
 QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
-QJS_LIB_OBJS=$(QUICKJS_OBJS) $(if $(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL_NATIVE)),$(TIMEZONE_OBJS)) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
+QJS_LIB_OBJS=$(QUICKJS_OBJS) $(if $(filter n,$(CONFIG_ICU)),$(if $(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL_NATIVE)),$(TIMEZONE_OBJS))) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -517,6 +592,15 @@ ifndef CONFIG_WIN32
 LIBS+=-ldl
 endif
 LIBS+=$(EXTRA_LIBS)
+ifeq ($(CONFIG_ICU),y)
+LIBS+=$(ICU_LIBS)
+HOST_LIBS+=$(HOST_ICU_LIBS)
+ICU_HEADER_SRCS=$(QUICKJS_SRCS) $(wildcard tests/*.c) src/unicode/libunicode.c src/quickjs-libc/host.c tools/qjs.c tools/qjsc.c tools/run-test262.c
+ICU_TARGET_OBJECTS=$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(ICU_HEADER_SRCS)))
+$(ICU_TARGET_OBJECTS): ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
+$(patsubst %.c,$(OBJDIR)/%.host.o,$(ICU_HEADER_SRCS)): ICU_COMPILE_CFLAGS=$(HOST_ICU_CFLAGS)
+endif
+
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests
@@ -531,13 +615,13 @@ qjsc$(EXE): $(OBJDIR)/tools/qjsc.o $(QJS_LIB_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 fuzz_eval: $(OBJDIR)/fuzz/fuzz_eval.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fuzz.a
-	$(CC) $(CFLAGS_OPT) $^ -o fuzz_eval $(LIB_FUZZING_ENGINE)
+	$(CC) $(CFLAGS_OPT) $^ -o fuzz_eval $(LIB_FUZZING_ENGINE) $(LIBS)
 
 fuzz_compile: $(OBJDIR)/fuzz/fuzz_compile.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs.fuzz.a
-	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
+	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE) $(LIBS)
 
 fuzz_regexp: $(OBJDIR)/fuzz/fuzz_regexp.o $(patsubst %.o,%.fuzz.o,$(REGEXP_OBJS)) $(OBJDIR)/src/cutils/cutils.fuzz.o $(OBJDIR)/src/unicode/libunicode.fuzz.o
-	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
+	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE) $(LIBS)
 
 libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
 
@@ -562,6 +646,26 @@ QJSC_HOST_DEFINES:=-DCONFIG_CC=\"$(HOST_CC)\" -DCONFIG_PREFIX=\"$(PREFIX)\"
 QJSC_SANITIZER_DEFINES=$(foreach config,ASAN MSAN UBSAN TSAN,$(if $(CONFIG_$(config)),-DCONFIG_$(config)))
 QJSC_DEFINES+=$(QJSC_SANITIZER_DEFINES)
 QJSC_HOST_DEFINES+=$(QJSC_SANITIZER_DEFINES)
+
+ifeq ($(CONFIG_ICU),y)
+QJSC_DEFINES+=-I$(OBJDIR)
+QJSC_HOST_DEFINES+=-I$(OBJDIR) -DQJSC_INTL_LINK_HEADER=\"qjsc-intl-host-link.h\"
+$(OBJDIR)/qjsc-intl-link.h: tools/intl-link-config.py $(OBJDIR)/temporal-build-config
+	$(PYTHON) $< header $@ -- $(ICU_LIBS)
+$(OBJDIR)/qjsc-intl-host-link.h: tools/intl-link-config.py $(OBJDIR)/temporal-build-config
+	$(PYTHON) $< header $@ -- $(HOST_ICU_LIBS)
+$(OBJDIR)/tools/qjsc.o: $(OBJDIR)/qjsc-intl-link.h
+$(OBJDIR)/tools/qjsc.host.o: $(OBJDIR)/qjsc-intl-host-link.h
+$(OBJDIR)/quickjs.pc: tools/intl-link-config.py $(OBJDIR)/temporal-build-config
+	$(PYTHON) $< pkgconfig $@ $(call intl_shell_quote,$(PREFIX)) $(call intl_shell_quote,$(shell cat VERSION)) -- $(LIBS)
+install: $(OBJDIR)/quickjs.pc
+else
+ifeq ($(CONFIG_INTL_NATIVE),y)
+$(OBJDIR)/quickjs.pc: tools/intl-link-config.py $(OBJDIR)/temporal-build-config
+	$(PYTHON) $< pkgconfig $@ $(call intl_shell_quote,$(PREFIX)) $(call intl_shell_quote,$(shell cat VERSION)) -- $(LIBS)
+install: $(OBJDIR)/quickjs.pc
+endif
+endif
 
 $(OBJDIR)/tools/qjsc.o: CFLAGS+=$(QJSC_DEFINES)
 $(OBJDIR)/tools/qjsc.host.o: CFLAGS+=$(QJSC_HOST_DEFINES)
@@ -614,49 +718,49 @@ endif
 
 $(OBJDIR)/%.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/fuzz/%.o: fuzz/%.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
 
 $(OBJDIR)/%.host.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.pic.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
 $(OBJDIR)/%.nolto.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_NOLTO) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_NOLTO) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.debug.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_DEBUG) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_DEBUG) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.fuzz.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
 
 $(OBJDIR)/%.check.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
+	$(CC) $(CFLAGS) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
 regexp_test$(EXE): tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) $(if $(filter y,$(CONFIG_ICU)),$(ICU_CFLAGS)) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
 
 unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o
 
 $(OBJDIR)/tools/unicode_gen.test.host.o: tools/unicode_gen.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_UNICODE_NATIVE -DUSE_TEST -c -o $@ $<
 
 $(OBJDIR)/src/unicode/libunicode.test.host.o: src/unicode/libunicode.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_UNICODE_NATIVE -DUSE_TEST -c -o $@ $<
 
 unicode_gen_test: $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o
@@ -681,6 +785,10 @@ ifdef CONFIG_LTO
 endif
 	mkdir -p "$(DESTDIR)$(PREFIX)/include/quickjs"
 	install -m644 include/quickjs.h include/quickjs-libc.h "$(DESTDIR)$(PREFIX)/include/quickjs"
+ifneq ($(filter y,$(CONFIG_ICU) $(CONFIG_INTL_NATIVE)),)
+	mkdir -p "$(DESTDIR)$(PREFIX)/lib/pkgconfig"
+	install -m644 $(OBJDIR)/quickjs.pc "$(DESTDIR)$(PREFIX)/lib/pkgconfig"
+endif
 
 ###############################################################################
 # examples
@@ -798,14 +906,16 @@ C_TESTS+=tests/test_intl_decimal$(EXE) tests/test_intl_native_relative_decimal$(
 C_TESTS+=tests/test_temporal_civil$(EXE)
 C_TESTS+=tests/test_temporal_zones$(EXE)
 C_TESTS+=tests/test_temporal_calendars$(EXE)
+ifeq ($(CONFIG_ICU),n)
 C_TESTS+=tests/test_temporal_native_calendars$(EXE)
+endif
 CALENDAR_TEST_SRCS=tests/test_calendar_portable.c tests/test_calendar_persian_authority.c tests/test_calendar_integrated_authority.c
 C_TESTS+=$(patsubst %.c,%$(EXE),$(CALENDAR_TEST_SRCS))
 
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
 
 tests/test_bytecode_trace$(EXE): $(OBJDIR)/tests/test_bytecode.o $(OBJDIR)/src/quickjs/serialization/reader.trace.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -854,7 +964,7 @@ tests/test_qjsc_json_preload$(EXE): $(OBJDIR)/tests/test_qjsc_json_preload.o lib
 # Use the actual compiler loader for deterministic attribute-probe errors.
 $(OBJDIR)/tools/qjsc.json-probe.o: tools/qjsc.c $(OBJDIR)/tools/qjsc.o | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(QJSC_DEFINES) $(DEPFLAGS) -Dmain=qjsc_json_probe_tool_main -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(QJSC_DEFINES) $(DEPFLAGS) -Dmain=qjsc_json_probe_tool_main -c -o $@ $<
 
 tests/test_qjsc_json_probe$(EXE): $(OBJDIR)/tests/test_qjsc_json_probe.o $(OBJDIR)/tools/qjsc.json-probe.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -865,7 +975,7 @@ $(OBJDIR)/tests/qjsc-json-attributes.c: $(QJSC) tests/prepare_qjsc_json_attribut
 
 $(OBJDIR)/tests/qjsc-json-attributes.o: $(OBJDIR)/tests/qjsc-json-attributes.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_json_exec$(EXE): $(OBJDIR)/tests/qjsc-json-attributes.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -876,7 +986,7 @@ $(OBJDIR)/tests/qjsc-native-std.c: $(QJSC) tests/qjsc-json-attributes/native-std
 
 $(OBJDIR)/tests/qjsc-native-std.o: $(OBJDIR)/tests/qjsc-native-std.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_native_std_exec$(EXE): $(OBJDIR)/tests/qjsc-native-std.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -889,7 +999,7 @@ $(QJSC_JSON_COLLISION_SRCS): $(OBJDIR)/tests/qjsc-json-collision-%.c: $(QJSC) te
 
 $(OBJDIR)/tests/qjsc-json-collision-%.o: $(OBJDIR)/tests/qjsc-json-collision-%.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_json_collision_%$(EXE): $(OBJDIR)/tests/qjsc-json-collision-%.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -1006,7 +1116,9 @@ endif
 	$(WINE) ./tests/test_temporal_civil$(EXE)
 	$(WINE) ./tests/test_temporal_zones$(EXE)
 	$(WINE) ./tests/test_temporal_calendars$(EXE)
+ifeq ($(CONFIG_ICU),n)
 	$(WINE) ./tests/test_temporal_native_calendars$(EXE)
+endif
 	$(WINE) ./tests/test_calendar_portable$(EXE)
 	$(WINE) ./tests/test_calendar_persian_authority$(EXE)
 	$(WINE) ./tests/test_calendar_integrated_authority$(EXE)
@@ -1066,10 +1178,20 @@ test: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) -m tests/test_realm.js
 	$(WINE) ./qjs$(EXE) -m tests/test_iterator_realms.js
 	$(WINE) ./qjs$(EXE) -m tests/test_disposal_realms.js
+ifeq ($(CONFIG_ICU),y)
+	unicode_args=$$($(WINE) ./tests/test_unicode_version$(EXE) --test-args) && \
+	$(WINE) ./qjs$(EXE) tests/test_language.js "$$unicode_args"
+else
 	$(WINE) ./qjs$(EXE) tests/test_language.js
+endif
 	$(WINE) ./qjs$(EXE) -m tests/test_module.js
 	$(WINE) ./qjs$(EXE) -m tests/test_module_names.js
+ifeq ($(CONFIG_ICU),y)
+	unicode_args=$$($(WINE) ./tests/test_unicode_version$(EXE) --test-args) && \
+	$(WINE) ./qjs$(EXE) --std tests/test_builtin.js "$$unicode_args"
+else
 	$(WINE) ./qjs$(EXE) --std tests/test_builtin.js
+endif
 	$(WINE) ./qjs$(EXE) tests/test_unicode_property_grammar.js
 	$(WINE) ./qjs$(EXE) tests/test_date_parse_boundaries.js
 	$(WINE) ./qjs$(EXE) tests/test_date_setter_snapshot.js
@@ -1208,11 +1330,11 @@ qjsc$(EXE) $(QJSC): | quickjs.h quickjs-libc.h
 ifneq ($(wildcard fuzz/fuzz_common.c),)
 $(OBJDIR)/fuzz/fuzz_common.o: fuzz/fuzz_common.c fuzz/fuzz_common.h | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
 
 $(OBJDIR)/tests/test_fuzz_support.o: tests/test_fuzz_support.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
 
 tests/test_fuzz_support$(EXE): $(OBJDIR)/tests/test_fuzz_support.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -1250,7 +1372,7 @@ tests/test_fuzz_exception_ownership$(EXE): $(OBJDIR)/tests/test_fuzz_exception_o
 
 $(OBJDIR)/tests/test_fuzz_allocations.o: tests/test_fuzz_allocations.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -I. -c -o $@ $<
 
 tests/test_fuzz_allocations$(EXE): $(OBJDIR)/tests/test_fuzz_allocations.o $(OBJDIR)/fuzz/fuzz_common.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -1371,7 +1493,7 @@ tests/test_timezone_system_reader$(EXE): $(OBJDIR)/tests/test_timezone_system_re
 
 TEMPORAL_TIMEZONE_SRCS=src/temporal/time-zone.c
 TEMPORAL_TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_TIMEZONE_SRCS))
-tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS) $(TEMPORAL_FORMAT_OBJS) $(TEMPORAL_TIMEZONE_OBJS) libqjstimezone.a
+tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS) $(TEMPORAL_FORMAT_OBJS) $(TEMPORAL_TIMEZONE_OBJS) libqjstimezone.a $(if $(filter y,$(CONFIG_ICU)),libquickjs$(LTOEXT).a)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 TEMPORAL_RELATIVE_SRCS=src/temporal/relative.c
@@ -1385,12 +1507,32 @@ tests/test_default_time_zone_api$(EXE): $(OBJDIR)/tests/test_default_time_zone_a
 tests/test_temporal_api$(EXE): $(OBJDIR)/tests/test_temporal_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+intl_shell_quote = '$(subst ','"'"',$(1))'
+intl_build_config_args = \
+    $(call intl_shell_quote,$(CONFIG_TEMPORAL)) \
+    $(call intl_shell_quote,$(CONFIG_ICU)) \
+    $(call intl_shell_quote,$(CONFIG_INTL)) \
+    $(call intl_shell_quote,$(CONFIG_INTL_LEGACY)) \
+    $(call intl_shell_quote,$(CONFIG_INTL_BACKEND)) \
+    $(call intl_shell_quote,$(CONFIG_INTL_NATIVE)) \
+    $(call intl_shell_quote,$(ICU_CFLAGS)) \
+    $(call intl_shell_quote,$(ICU_LIBS)) \
+    $(call intl_shell_quote,$(HOST_ICU_CFLAGS)) \
+    $(call intl_shell_quote,$(HOST_ICU_LIBS)) \
+    $(call intl_shell_quote,$(LIBS)) \
+    $(call intl_shell_quote,$(PREFIX)) \
+    $(call intl_shell_quote,$(shell cat VERSION)) \
+    $(call intl_shell_quote,$(DEFINES))
+# A changed configuration must invalidate consumers even when Make or
+# the filesystem cannot distinguish the stamp and output timestamps.
+ifneq ($(shell printf '%s\n' $(intl_build_config_args) | cmp -s - $(OBJDIR)/temporal-build-config || printf changed),)
+.PHONY: $(OBJDIR)/temporal-build-config
+endif
 .PHONY: FORCE_TEMPORAL_BUILD_CONFIG
 $(OBJDIR)/temporal-build-config: FORCE_TEMPORAL_BUILD_CONFIG
 	@mkdir -p $(@D)
-	@printf '%s\n' '$(CONFIG_TEMPORAL) $(CONFIG_INTL) $(CONFIG_INTL_LEGACY) $(CONFIG_INTL_BACKEND) $(DEFINES)' > $@.tmp
-	@cmp -s $@.tmp $@ || mv $@.tmp $@
-	@rm -f $@.tmp
+	@printf '%s\n' $(intl_build_config_args) > $@.tmp
+	@if ! cmp -s $@.tmp $@; then mv $@.tmp $@; else rm $@.tmp; fi
 
 .PHONY: test-temporal-config
 test-temporal-config:
@@ -1398,11 +1540,14 @@ test-temporal-config:
 test: test-temporal-config
 
 ifeq ($(CONFIG_TEMPORAL),y)
+ifneq ($(CONFIG_ICU),y)
 # Exact release-data transition boundaries belong to the native zone provider.
 .PHONY: test-temporal-native-zone-boundaries
 test-temporal-native-zone-boundaries: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_native_zones.js
 test: test-temporal-native-zone-boundaries
+
+endif
 
 .PHONY: test-temporal-js
 test-temporal-js: qjs$(EXE) tests/run_temporal_zone_test$(EXE)
@@ -1420,7 +1565,9 @@ test-temporal-js: qjs$(EXE) tests/run_temporal_zone_test$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_zero_zoned_duration_boundaries.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_offset_wall_date_boundaries.js
 	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_zones.js
+ifeq ($(CONFIG_ICU),n)
 	$(WINE) ./qjs$(EXE) tests/test_temporal_native_calendars.js
+endif
 	$(WINE) ./qjs$(EXE) -m tests/test_temporal_realm.js
 	$(WINE) ./qjs$(EXE) tests/test_date_temporal_bridge.js
 	$(WINE) ./tests/run_temporal_zone_test$(EXE) UTC ./qjs$(EXE) tests/test_temporal_date_provider.js
@@ -1432,10 +1579,10 @@ endif
 ifeq ($(CONFIG_TEMPORAL),y)
 $(OBJDIR)/tests/time-zone-provider-backend.o: src/temporal/time-zone.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -Dqjs_temporal_system_zone=qjs_temporal_system_zone_test_backend -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -Dqjs_temporal_system_zone=qjs_temporal_system_zone_test_backend -c -o $@ $<
 $(OBJDIR)/tests/time-zone-clock-backend.o: src/temporal/time-zone.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -Dqjs_temporal_system_epoch=qjs_temporal_system_epoch_test_backend -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -Dqjs_temporal_system_epoch=qjs_temporal_system_epoch_test_backend -c -o $@ $<
 tests/test_temporal_runtime_zone_provider$(EXE): $(OBJDIR)/tests/test_temporal_runtime_zone_provider.o $(OBJDIR)/tests/time-zone-provider-backend.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 tests/test_temporal_system_clock$(EXE): $(OBJDIR)/tests/test_temporal_system_clock.o $(OBJDIR)/tests/time-zone-clock-backend.o libquickjs$(LTOEXT).a
@@ -1581,7 +1728,13 @@ INTL_NATIVE_DATE_SHARED_OBJS= \
     $(OBJDIR)/src/temporal/iso.o \
     $(OBJDIR)/src/temporal/civil.o
 
+NATIVE_INTL_TEST_UNICODE=$(OBJDIR)/src/unicode/libunicode.native-test.o
+$(NATIVE_INTL_TEST_UNICODE): src/unicode/libunicode.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_UNICODE_NATIVE -c -o $@ $<
+
 tests/test_intl_native_timezone$(EXE): $(OBJDIR)/tests/test_intl_native_timezone.o \
+    $(NATIVE_INTL_TEST_UNICODE) \
     $(INTL_NATIVE_LIBRARY_OBJS) $(INTL_NATIVE_DATE_SHARED_OBJS) \
     libquickjs$(LTOEXT).a libqjstimezone.a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -1624,7 +1777,7 @@ test: test-icu-build-config
 
 
 
-ifeq ($(CONFIG_INTL),y)
+ifeq ($(CONFIG_INTL_NATIVE),y)
 .PHONY: test-intl-native-js
 test-intl-native-js: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
@@ -1641,4 +1794,31 @@ test-intl-native-js: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_timezone_names.js
 	$(WINE) ./run-test262$(EXE) -N tests/test_intl_bound_function_realms.js
 test: test-intl-native-js
+endif
+
+.PHONY: test-intl-native-selector test-icu-link-metadata
+test-intl-native-selector:
+	QJS_TEST_MAKE="$(MAKE)" $(PYTHON) tests/test_intl_native_selector.py
+test-icu-link-metadata:
+	QJS_TEST_MAKE="$(MAKE)" $(PYTHON) tests/test_icu_link_metadata.py
+test: test-intl-native-selector test-icu-link-metadata
+
+tests/test_unicode_version$(EXE): $(OBJDIR)/tests/test_unicode_version.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+ifeq ($(CONFIG_ICU),y)
+test: tests/test_unicode_version$(EXE)
+endif
+
+ifeq ($(CONFIG_ICU),y)
+$(OBJDIR)/tests/time-zone-provider-backend.o $(OBJDIR)/tests/time-zone-clock-backend.o: ICU_COMPILE_CFLAGS=$(ICU_CFLAGS)
+endif
+
+# The standalone native-provider unit never instantiates the ICU engine.
+# Its private data owner and native Unicode owner form a separate test image.
+ifeq ($(CONFIG_ICU),y)
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS+=-UCONFIG_ICU
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_OPT+=-UCONFIG_ICU
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_NOLTO+=-UCONFIG_ICU
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_DEBUG+=-UCONFIG_ICU
 endif

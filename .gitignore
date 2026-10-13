@@ -211,3 +211,6 @@ __pycache__/
 
 /tests/test_intl_default_locale_api
 /tests/test_intl_default_locale_api.exe
+
+/tests/test_unicode_version
+/tests/test_unicode_version.exe

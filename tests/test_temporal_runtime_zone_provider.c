@@ -10,7 +10,7 @@ int qjs_temporal_system_zone(QJSTemporalZone *result)
     return qjs_temporal_zone_parse(result, "America/New_York", 16);
 }
 
-#if defined(CONFIG_TEMPORAL) && !0
+#if defined(CONFIG_TEMPORAL) && !defined(CONFIG_ICU)
 #include "timezone_alignment_allocator.h"
 typedef struct Fixture {
     unsigned char bytes[110];
@@ -318,7 +318,7 @@ static void test_fallback_snapshot(void)
 
 int main(void)
 {
-#if defined(CONFIG_TEMPORAL) && !0
+#if defined(CONFIG_TEMPORAL) && !defined(CONFIG_ICU)
     test_eight_byte_aligned_provider();
     test_lazy_creation_retry();
     test_runtime_snapshot_and_realm();

@@ -70,6 +70,17 @@ function assert_throws(expected_error, func)
     }
 }
 
+/* Native/direct runs retain the exact bundled Unicode 18 expectations.
+   ICU Makefile runs explicitly pass the active provider's actual data version. */
+var unicode_data_major = 18;
+if (typeof scriptArgs !== "undefined" && scriptArgs.length > 1) {
+    assert(scriptArgs.length, 2);
+    const match = /^--icu-unicode-major=([0-9]+)$/.exec(scriptArgs[1]);
+    assert(match !== null);
+    unicode_data_major = Number(match[1]);
+    assert(Number.isSafeInteger(unicode_data_major) && unicode_data_major >= 15);
+}
+
 // load more elaborate version of assert if available
 try { __loadScript("test_assert.js"); } catch(e) {}
 
@@ -689,10 +700,12 @@ function test_string_normalize()
         for (const form of ["NFC", "NFD"])
             assert(source.normalize(form), source);
         for (const form of ["NFKC", "NFKD"])
-            assert(source.normalize(form), target);
+            assert(source.normalize(form), unicode_data_major >= 18 ? target : source);
     }
-    const reordered = "a\u05ae\u0300\u{10ecb}\u0315b";
-    const composed = "\u00e0\u05ae\u{10ecb}\u0315b";
+    const reordered = unicode_data_major >= 18 ?
+        "a\u05ae\u0300\u{10ecb}\u0315b" : "a\u05ae\u0300\u0315\u{10ecb}b";
+    const composed = unicode_data_major >= 18 ?
+        "\u00e0\u05ae\u{10ecb}\u0315b" : "\u00e0\u05ae\u0315\u{10ecb}b";
     const input = "a\u0315\u0300\u05ae\u{10ecb}b";
     for (const form of ["NFD", "NFKD"])
         assert(input.normalize(form), reordered);
@@ -714,16 +727,16 @@ function test_string_unicode_18()
     for (const [upperCode, lowerCode] of pairs) {
         const upper = String.fromCodePoint(upperCode);
         const lower = String.fromCodePoint(lowerCode);
-        assert(upper.toLowerCase(), lower);
-        assert(lower.toUpperCase(), upper);
+        assert(upper.toLowerCase(), unicode_data_major >= 18 ? lower : upper);
+        assert(lower.toUpperCase(), unicode_data_major >= 18 ? upper : lower);
         for (const flags of ["iu", "iv"]) {
-            assert(new RegExp("^" + upper + "$", flags).test(lower), true);
-            assert(new RegExp("^[" + upper + "-" + upper + "]$", flags).test(lower), true);
-            assert(new RegExp("^(" + lower + ")\\1$", flags).test(lower + upper), true);
+            assert(new RegExp("^" + upper + "$", flags).test(lower), unicode_data_major >= 18);
+            assert(new RegExp("^[" + upper + "-" + upper + "]$", flags).test(lower), unicode_data_major >= 18);
+            assert(new RegExp("^(" + lower + ")\\1$", flags).test(lower + upper), unicode_data_major >= 18);
             assert(new RegExp("^" + lower + "$", flags).test("A"), false);
         }
     }
-    assert("\u{1df95}".toUpperCase(), "SS");
+    assert("\u{1df95}".toUpperCase(), unicode_data_major >= 18 ? "SS" : "\u{1df95}");
     assert("\u{1df95}".toLowerCase(), "\u{1df95}");
 }
 
@@ -740,26 +753,43 @@ function test_regexp_unicode_18()
             for (const property of ["Script", "sc", "Script_Extensions", "scx"]) {
                 for (const name of [script, alias]) {
                     const expression = property + "=" + name;
-                    assert(new RegExp("^\\p{" + expression + "}+$", flags).test(text), true);
-                    assert(new RegExp("^\\p{" + expression + "}+$", flags).test("A"), false);
-                    assert(new RegExp("^\\P{" + expression + "}+$", flags).test("A"), true);
+                    if (unicode_data_major >= 18) {
+                        assert(new RegExp("^\\p{" + expression + "}+$", flags).test(text), true);
+                        assert(new RegExp("^\\p{" + expression + "}+$", flags).test("A"), false);
+                        assert(new RegExp("^\\P{" + expression + "}+$", flags).test("A"), true);
+                    } else if (name === "Jurc") {
+                        /* ICU reserves this ISO 15924 alias before Unicode 18,
+                           with an empty set of assigned code points. */
+                        assert(new RegExp("^\\p{" + expression + "}+$", flags).test(text), false);
+                        assert(new RegExp("^\\P{" + expression + "}+$", flags).test(text), true);
+                    } else {
+                        assert_throws(SyntaxError, () => new RegExp("\\p{" + expression + "}", flags));
+                        assert_throws(SyntaxError, () => new RegExp("\\P{" + expression + "}", flags));
+                    }
                 }
             }
-            assert(new RegExp("^\\p{" + category + "}+$", flags).test(text), true);
-            assert(new RegExp("^\\p{ID_Start}+$", flags).test(text), true);
-            assert(new RegExp("^\\p{ID_Continue}+$", flags).test(text), true);
+            assert(new RegExp("^\\p{" + category + "}+$", flags).test(text), unicode_data_major >= 18);
+            assert(new RegExp("^\\p{ID_Start}+$", flags).test(text), unicode_data_major >= 18);
+            assert(new RegExp("^\\p{ID_Continue}+$", flags).test(text), unicode_data_major >= 18);
+            assert(new RegExp("^\\p{Cn}+$", flags).test(text), unicode_data_major < 18);
         }
-        assert(new RegExp("^[\\p{sc=" + script + "}&&\\p{" + category + "}]+$", "v").test(text), true);
+        const intersection = "^[\\p{sc=" + script + "}&&\\p{" + category + "}]+$";
+        if (unicode_data_major >= 18)
+            assert(new RegExp(intersection, "v").test(text), true);
+        else
+            assert_throws(SyntaxError, () => new RegExp(intersection, "v"));
     }
-    assert(/^[\p{sc=Han}&&\p{Lo}]$/v.test("\u{2b81e}"), true);
-    assert(/^\p{Sc}+$/u.test("\u20c2\u20c3\u20c4"), true);
+    assert(/^[\p{sc=Han}&&\p{Lo}]$/v.test("\u{2b81e}"), unicode_data_major >= 18);
+    assert(/^\p{Sc}+$/u.test("\u20c2\u20c3\u20c4"), unicode_data_major >= 18);
     assert(/^\p{ID_Start}$/u.test("\u20c2"), false);
+    assert(/^\p{Cn}$/u.test("\u{2b81e}"), unicode_data_major < 18);
+    assert(/^\p{Cn}+$/u.test("\u20c2\u20c3\u20c4"), unicode_data_major < 18);
 
     for (const flags of ["iu", "iv"]) {
         for (const target of ["\u00df", "\u1e9e", "\u{1df95}"]) {
-            assert(new RegExp("^\\u{1df95}$", flags).test(target), true);
-            assert(new RegExp("^[\\u{1df95}]$", flags).test(target), true);
-            assert(new RegExp("^(\\u{1df95})\\1$", flags).test("\u{1df95}" + target), true);
+            assert(new RegExp("^\\u{1df95}$", flags).test(target), unicode_data_major >= 18 || target === "\u{1df95}");
+            assert(new RegExp("^[\\u{1df95}]$", flags).test(target), unicode_data_major >= 18 || target === "\u{1df95}");
+            assert(new RegExp("^(\\u{1df95})\\1$", flags).test("\u{1df95}" + target), unicode_data_major >= 18 || target === "\u{1df95}");
         }
         assert(new RegExp("^\\u{1df95}$", flags).test("ss"), false);
         for (const [source, target] of [["\u1fd3", "\u0390"], ["\u1fe3", "\u03b0"],
@@ -769,10 +799,11 @@ function test_regexp_unicode_18()
         }
     }
     assert(new RegExp("^" + "\u{1df95}" + "$", "i").test("\u00df"), false);
-    assert(/^\p{Emoji}+$/u.test("\u{1f6d9}\u{1fadd}"), true);
-    assert(/^\p{Basic_Emoji}+$/v.test("\u{1f6d9}\u{1fadd}"), true);
-    assert(/^\p{RGI_Emoji_Modifier_Sequence}$/v.test("\u{1faf9}\u{1f3fb}"), true);
+    assert(/^\p{Emoji}+$/u.test("\u{1f6d9}\u{1fadd}"), unicode_data_major >= 18);
+    assert(/^\p{Basic_Emoji}+$/v.test("\u{1f6d9}\u{1fadd}"), unicode_data_major >= 18);
+    assert(/^\p{RGI_Emoji_Modifier_Sequence}$/v.test("\u{1faf9}\u{1f3fb}"), unicode_data_major >= 18);
     assert(/^\p{RGI_Emoji_Modifier_Sequence}$/v.test("\u{1faf9}A"), false);
+    assert(/^\p{Cn}+$/u.test("\u{1f6d9}\u{1fadd}\u{1faf9}"), unicode_data_major < 18);
 }
 
 function test_math()

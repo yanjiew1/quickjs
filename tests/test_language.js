@@ -31,6 +31,17 @@ function assert_throws(expected_error, func)
     }
 }
 
+/* Native/direct runs retain the exact bundled Unicode 18 expectations.
+   ICU Makefile runs explicitly pass the active provider's actual data version. */
+var unicode_data_major = 18;
+if (typeof scriptArgs !== "undefined" && scriptArgs.length > 1) {
+    assert(scriptArgs.length, 2);
+    const match = /^--icu-unicode-major=([0-9]+)$/.exec(scriptArgs[1]);
+    assert(match !== null);
+    unicode_data_major = Number(match[1]);
+    assert(Number.isSafeInteger(unicode_data_major) && unicode_data_major >= 15);
+}
+
 // load more elaborate version of assert if available
 try { __loadScript("test_assert.js"); } catch(e) {}
 
@@ -1680,16 +1691,26 @@ function test_unicode_ident()
         0x125a8, 0x1264b, 0x18e00, 0x19191, 0x191a0, 0x191d2,
         0x2b81e, 0x3d000, 0x3fc3f,
     ];
-    for (const code of starts) {
+    const stable_starts = [0x03b1, 0x10400, 0x20000];
+    for (const code of stable_starts.concat(starts)) {
+        const accepted = stable_starts.includes(code) || unicode_data_major >= 18;
         const character = String.fromCodePoint(code);
         const escaped = "\\u{" + code.toString(16) + "}";
         for (const prefix of ["", "a"]) {
             for (const name of [prefix + character, prefix + escaped]) {
-                assert(Function("let " + name + " = 42; return " + name + ";")(), 42);
+                if (accepted)
+                    assert(Function("let " + name + " = 42; return " + name + ";")(), 42);
+                else
+                    assert_throws(SyntaxError, () => Function("let " + name + " = 42;"));
             }
         }
-        const match = new RegExp("(?<" + character + ">.)\\k<" + character + ">", "u").exec("xx");
-        assert(match.groups[character], "x");
+        const expression = "(?<" + character + ">.)\\k<" + character + ">";
+        if (accepted) {
+            const match = new RegExp(expression, "u").exec("xx");
+            assert(match.groups[character], "x");
+        } else {
+            assert_throws(SyntaxError, () => new RegExp(expression, "u"));
+        }
     }
     for (const code of [0x20c2, 0x20c3, 0x20c4, 0x19192, 0x191d3,
                         0x2b81f, 0x3fc40]) {
