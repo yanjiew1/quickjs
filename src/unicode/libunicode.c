@@ -697,7 +697,8 @@ int cr_regexp_canonicalize(CharRange *cr, BOOL is_unicode)
             } else if (d_end == d) {
                 d_end++;
             } else {
-                cr_add_interval(&cr_result, d_start, d_end);
+                if (cr_add_interval(&cr_result, d_start, d_end))
+                    goto fail;
                 d_start = d;
                 d_end = d + 1;
             }
@@ -1156,6 +1157,7 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
     to_nfd_rec(dbuf, (const int *)src, src_len, is_compat);
     if (dbuf_error(dbuf)) {
     fail:
+        dbuf_free(dbuf);
         *pdst = NULL;
         return -1;
     }
