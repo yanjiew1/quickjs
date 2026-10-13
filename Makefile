@@ -469,35 +469,35 @@ endif
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/fuzz/%.o: fuzz/%.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
 
 $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
 $(OBJDIR)/%.nolto.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_NOLTO) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_NOLTO) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.debug.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_DEBUG) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_DEBUG) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
 
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
+	$(CC) $(CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
 regexp_test$(EXE): tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
@@ -629,6 +629,7 @@ C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 C_TESTS+=tests/test_wait_async$(EXE)
 C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
+C_TESTS+=tests/test_timezone$(EXE) tests/test_timezone_system_reader$(EXE)
 C_TESTS+=tests/test_tzif_decoder$(EXE)
 C_TESTS+=tests/test_windows_zones$(EXE)
 ifdef CONFIG_WIN32
@@ -707,7 +708,7 @@ $(OBJDIR)/tests/qjsc-json-attributes.c: $(QJSC) tests/prepare_qjsc_json_attribut
 
 $(OBJDIR)/tests/qjsc-json-attributes.o: $(OBJDIR)/tests/qjsc-json-attributes.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_json_exec$(EXE): $(OBJDIR)/tests/qjsc-json-attributes.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -718,7 +719,7 @@ $(OBJDIR)/tests/qjsc-native-std.c: $(QJSC) tests/qjsc-json-attributes/native-std
 
 $(OBJDIR)/tests/qjsc-native-std.o: $(OBJDIR)/tests/qjsc-native-std.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_native_std_exec$(EXE): $(OBJDIR)/tests/qjsc-native-std.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -731,7 +732,7 @@ $(QJSC_JSON_COLLISION_SRCS): $(OBJDIR)/tests/qjsc-json-collision-%.c: $(QJSC) te
 
 $(OBJDIR)/tests/qjsc-json-collision-%.o: $(OBJDIR)/tests/qjsc-json-collision-%.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_json_collision_%$(EXE): $(OBJDIR)/tests/qjsc-json-collision-%.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -784,6 +785,8 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_wait_async$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
+	$(WINE) ./tests/test_timezone$(EXE)
+	$(WINE) ./tests/test_timezone_system_reader$(EXE)
 	$(WINE) ./tests/test_tzif_decoder$(EXE)
 	$(WINE) ./tests/test_windows_zones$(EXE)
 ifdef CONFIG_WIN32
@@ -1131,3 +1134,27 @@ test-windows-zones-generator:
 	$(PYTHON) tests/test_windows_zones_generator.py --tz-source $(TZ_SOURCE_DIR) --tz-pin tools/timezone/pin.json
 
 test: test-windows-zones-generator
+
+TIMEZONE_SRCS=src/timezone/timezone.c src/timezone/tzif.c src/timezone/embedded.c
+ifdef CONFIG_WIN32
+TIMEZONE_SRCS+=src/timezone/windows-zone.c
+endif
+TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TIMEZONE_SRCS))
+TIMEZONE_ALL_OBJECTS=$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o host.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(TIMEZONE_SRCS)))
+$(TIMEZONE_ALL_OBJECTS): TIMEZONE_COMPILE_CFLAGS=-I$(TZ_GENERATED_DIR)
+TIMEZONE_EMBEDDED_OBJECTS=$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o host.o,$(OBJDIR)/src/timezone/embedded.$(suffix))
+$(TIMEZONE_EMBEDDED_OBJECTS): $(TZ_GENERATED_DIR)/timezone-data.inc
+ifdef CONFIG_WIN32
+$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o host.o,$(OBJDIR)/src/timezone/windows-zone.$(suffix)): src/timezone/windows-zone.h src/timezone/windows-zone-data.inc
+endif
+
+libqjstimezone.a: $(TIMEZONE_OBJS)
+	rm -f $@
+	$(AR) rcs $@ $^
+
+tests/test_timezone$(EXE): $(OBJDIR)/tests/test_timezone.o libqjstimezone.a
+	$(CC) $(LDFLAGS) -o $@ $^ -lm
+
+$(OBJDIR)/tests/test_timezone_system_reader.o: src/timezone/timezone.c src/timezone/private.h src/timezone/timezone.h
+tests/test_timezone_system_reader$(EXE): $(OBJDIR)/tests/test_timezone_system_reader.o $(OBJDIR)/src/timezone/tzif.o $(OBJDIR)/src/timezone/embedded.o $(filter %/windows-zone.o,$(TIMEZONE_OBJS))
+	$(CC) $(LDFLAGS) -o $@ $^ -lm

@@ -26,3 +26,22 @@ is an audit sidecar; runtime uses no XML, JSON or installed zoneinfo tree.
 `make test-timezone-generator` runs metadata, container-validation and exact
 embedding fixtures without executing zic or the JS engine. The build rules
 for generating the binary are introduced before provider activation.
+
+## Immutable native provider
+
+`make libqjstimezone.a` builds the decoder and provider without QuickJS or
+ICU. System files are preferred per primary name; absent, malformed,
+leap-aware or coverage-limited data selects the compiled fallback. Accepted
+system bytes are copied with the caller's allocator. Embedded snapshots
+borrow compiled bytes. Every successful source read has exactly one release,
+and allocation errors propagate rather than becoming cached fallback success.
+
+One serialized embedding agent owns a `QJSTzProvider`. Its lazy cache keeps
+the first accepted immutable primary snapshot; aliases share that snapshot.
+Provider-open results are borrowed until provider destruction. Standalone
+`qjs_tz_open` results are owned and closed explicitly. No global `TZ` mutation,
+libc calendar calculation or tzcode runtime symbols are emitted.
+
+Unix discovery recognizes compiled identifiers from `TZ`, `/etc/localtime`
+or `/etc/timezone`; Windows uses the compiled CLDR key/region table. Runtime
+Date and Temporal policy integration is introduced separately.
