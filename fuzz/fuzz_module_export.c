@@ -52,14 +52,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (!JS_IsException(result)) {
         JS_FreeValue(ctx, result);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     JSValue result2 = JS_Eval(ctx, input, size, "<input>", JS_EVAL_FLAG_COMPILE_ONLY);
     if (!JS_IsException(result2)) {
         JS_FreeValue(ctx, result2);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     const char* import_patterns[] = {
@@ -91,7 +91,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         if (!JS_IsException(import_result)) {
             JS_FreeValue(ctx, import_result);
         } else {
-            JS_GetException(ctx);
+            JS_FreeValue(ctx, JS_GetException(ctx));
         }
         
         free(sanitized);
