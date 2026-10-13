@@ -256,6 +256,9 @@ DEF(             or, 1, 2, 1, none)
 DEF(is_undefined_or_null, 1, 1, 1, none)
 DEF(     private_in, 1, 2, 1, none)
 DEF(push_bigint_i32, 5, 0, 1, i32)
+/* Dynamic strictness for class evaluation in a sloppy frame. */
+DEF(     set_strict, 2, 0, 0, u8)
+
 /* must be the last non short and non temporary opcode */
 DEF(            nop, 1, 0, 0, none)
 
@@ -263,6 +266,11 @@ DEF(            nop, 1, 0, 0, none)
 
 def(    enter_scope, 3, 0, 0, u16)  /* emitted in phase 1, removed in phase 2 */
 def(    leave_scope, 3, 0, 0, u16)  /* emitted in phase 1, removed in phase 2 */
+
+/* Class strict boundary: cleanup-subroutine label and normal-exit label.
+   Expanded in phase 3 after binding resolution. */
+def(   enter_strict, 5, 0, 0, label)
+def(   leave_strict, 5, 0, 0, label)
 
 def(          label, 5, 0, 0, label) /* emitted in phase 1, removed in phase 3 */
 
