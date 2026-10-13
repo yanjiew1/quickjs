@@ -62,6 +62,8 @@ libwinpthread*.dll
 
 /tests/test_atomics_wait
 /tests/test_atomics_wait.exe
+/tests/test_fuzz_json
+/tests/test_fuzz_json.exe
 
 /tests/test_qjsc_context_failures
 /tests/test_qjsc_context_failures.exe
