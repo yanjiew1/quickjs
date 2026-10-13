@@ -25,6 +25,7 @@
 #include "../internal/vm.h"
 #include "../internal/base.h"
 #include "../internal/runtime.h"
+#include "../internal/allocator.h"
 #include "../internal/atom.h"
 #include "../internal/function.h"
 #include "../internal/object.h"
@@ -74,9 +75,10 @@ JSValue JS_EvalFunction(JSContext *ctx, JSValue fun_obj)
 }
 
 /* 'input' must be zero terminated i.e. input[input_len] = '\0'. */
-JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
-                          const char *input, size_t input_len,
-                          const char *filename, int flags, int scope_idx)
+static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
+                                const char *input, size_t input_len,
+                                const char *filename, int flags, int scope_idx,
+                                const JSFunctionConstructorParse *ctor)
 {
     JSParseState s1, *s = &s1;
     int err, js_mode, eval_type;
@@ -154,7 +156,10 @@ JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     push_scope(s); /* body scope */
     fd->body_scope = fd->scope_level;
 
-    err = js_parse_program(s);
+    if (ctor)
+        err = js_parse_function_constructor(s, ctor);
+    else
+        err = js_parse_program(s);
     if (err) {
     fail:
         free_token(s, &s->token);
@@ -187,6 +192,63 @@ JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     if (m)
         JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
     return JS_EXCEPTION;
+}
+
+JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
+                          const char *input, size_t input_len,
+                          const char *filename, int flags, int scope_idx)
+{
+    return JS_EvalInternal2(ctx, this_obj, input, input_len, filename,
+                            flags, scope_idx, NULL);
+}
+
+JSValue JS_EvalFunctionConstructor(JSContext *ctx, JSValueConst parameters,
+                                    JSValueConst body, int func_kind)
+{
+    JSFunctionConstructorParse ctor;
+    DynBuf buf;
+    const char *parameters_str, *body_str;
+    size_t parameters_len, body_len, parameters_end, body_end;
+    JSValue result;
+
+    if (!ctx->eval_internal)
+        return JS_ThrowTypeError(ctx, "eval is not supported");
+    parameters_str = JS_ToCStringLen(ctx, &parameters_len, parameters);
+    if (!parameters_str)
+        return JS_EXCEPTION;
+    body_str = JS_ToCStringLen(ctx, &body_len, body);
+    if (!body_str) {
+        JS_FreeCString(ctx, parameters_str);
+        return JS_EXCEPTION;
+    }
+    js_dbuf_init(ctx, &buf);
+    dbuf_putc(&buf, '(');
+    if (func_kind == JS_FUNC_ASYNC || func_kind == JS_FUNC_ASYNC_GENERATOR)
+        dbuf_putstr(&buf, "async ");
+    dbuf_putstr(&buf, "function");
+    if (func_kind == JS_FUNC_GENERATOR || func_kind == JS_FUNC_ASYNC_GENERATOR)
+        dbuf_putc(&buf, '*');
+    dbuf_putstr(&buf, " anonymous(");
+    dbuf_put(&buf, (const uint8_t *)parameters_str, parameters_len);
+    parameters_end = buf.size + 1;
+    dbuf_putstr(&buf, "\n) {\n");
+    dbuf_put(&buf, (const uint8_t *)body_str, body_len);
+    body_end = buf.size + 1;
+    dbuf_putstr(&buf, "\n})");
+    dbuf_putc(&buf, '\0');
+    JS_FreeCString(ctx, body_str);
+    JS_FreeCString(ctx, parameters_str);
+    if (dbuf_error(&buf)) {
+        result = JS_ThrowOutOfMemory(ctx);
+    } else {
+        ctor.parameters_end = buf.buf + parameters_end;
+        ctor.body_end = buf.buf + body_end;
+        result = JS_EvalInternal2(ctx, ctx->global_obj,
+                                  (const char *)buf.buf, buf.size - 1,
+                                  "<input>", JS_EVAL_TYPE_INDIRECT, -1, &ctor);
+    }
+    dbuf_free(&buf);
+    return result;
 }
 
 /* the indirection is needed to make 'eval' optional */
