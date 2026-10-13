@@ -1596,3 +1596,6 @@ test: test-icu-build-config
 
 # ICU resolution owners compile only when that frontend backend is selected.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/locale-resolution.o $(OBJDIR)/src/quickjs/builtins/intl/number-common.o
+
+# ICU general owners compile only when that frontend backend is selected.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/intl-values.o $(OBJDIR)/src/quickjs/builtins/intl/case-conversion.o
