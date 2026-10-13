@@ -158,5 +158,11 @@ __pycache__/
 /tests/test_temporal_system_clock
 /tests/test_temporal_system_clock.exe
 
+/tests/test_intl_native_relative_decimal
+/tests/test_intl_native_relative_decimal.exe
+
+/tests/test_intl_decimal
+/tests/test_intl_decimal.exe
+
 /tests/run_temporal_zone_test
 /tests/run_temporal_zone_test.exe

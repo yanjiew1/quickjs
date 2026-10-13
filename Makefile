@@ -693,6 +693,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 C_TESTS+=tests/test_temporal_runtime_zone_provider$(EXE) tests/test_temporal_system_clock$(EXE)
 endif
 C_TESTS+=tests/test_default_time_zone_api$(EXE)
+C_TESTS+=tests/test_intl_decimal$(EXE) tests/test_intl_native_relative_decimal$(EXE)
 C_TESTS+=tests/test_temporal_civil$(EXE)
 C_TESTS+=tests/test_temporal_zones$(EXE)
 C_TESTS+=tests/test_temporal_calendars$(EXE)
@@ -858,6 +859,8 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./tests/test_temporal_system_clock$(EXE)
 endif
 	$(WINE) ./tests/test_default_time_zone_api$(EXE)
+	$(WINE) ./tests/test_intl_decimal$(EXE)
+	$(WINE) ./tests/test_intl_native_relative_decimal$(EXE)
 	$(WINE) ./tests/test_temporal_civil$(EXE)
 	$(WINE) ./tests/test_temporal_zones$(EXE)
 	$(WINE) ./tests/test_temporal_calendars$(EXE)
@@ -1296,6 +1299,14 @@ tests/test_temporal_runtime_zone_provider$(EXE): $(OBJDIR)/tests/test_temporal_r
 tests/test_temporal_system_clock$(EXE): $(OBJDIR)/tests/test_temporal_system_clock.o $(OBJDIR)/tests/time-zone-clock-backend.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 endif
+
+# Exact-number preparation is independent of the installed Intl backend.
+INTL_DECIMAL_OBJS=$(OBJDIR)/src/intl/decimal.o $(OBJDIR)/src/intl/number-decimal.o
+tests/test_intl_native_relative_decimal$(EXE): $(OBJDIR)/tests/test_intl_native_relative_decimal.o $(INTL_DECIMAL_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_decimal$(EXE): $(OBJDIR)/tests/test_intl_decimal.o $(OBJDIR)/src/intl/decimal.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Set IANA TZ inside a native process; MSYS2 strips it from child environments.
 tests/run_temporal_zone_test$(EXE): $(OBJDIR)/tests/run_temporal_zone_test.o
