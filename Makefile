@@ -1434,3 +1434,6 @@ test test-binaries: $(OBJDIR)/src/intl/date-native.o
 
 # Native date data sources precede aggregate-provider activation.
 test test-binaries: $(OBJDIR)/src/intl/date-native-bank.o $(OBJDIR)/src/intl/date-native-data.o $(OBJDIR)/src/intl/date-native-calendar.o $(OBJDIR)/src/intl/date-native-calendar-data.o $(OBJDIR)/src/intl/date-native-zone.o
+
+# Native number-plural adapters precede aggregate-provider construction.
+test test-binaries: $(OBJDIR)/src/intl/provider-native-number.o $(OBJDIR)/src/intl/provider-native-plural.o
