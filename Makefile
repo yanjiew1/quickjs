@@ -662,6 +662,12 @@ test-run-test262: run-test262$(EXE)
 
 test: test-c test-regexp test-build-dependencies test-run-test262
 
+.PHONY: test-qjs-cli
+test-qjs-cli: qjs$(EXE)
+	sh tests/test_qjs_cli.sh "$(WINE)" "./qjs$(EXE)"
+
+test: test-qjs-cli
+
 .PHONY: test-build-dependencies
 test-build-dependencies:
 	sh tests/test_build_dependencies.sh "$(MAKE)"
