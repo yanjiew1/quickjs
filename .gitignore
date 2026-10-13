@@ -85,3 +85,5 @@ libwinpthread*.dll
 
 /tests/test_iterator
 /tests/test_iterator.exe
+
+/tests/test_wait_queue
