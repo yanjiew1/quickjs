@@ -467,6 +467,43 @@ function test_annex_function_identity()
     assert(outer === saved);
 }
 
+function test_annex_duplicate_binding()
+{
+    function outer() {
+        let saved;
+        const read = () => local;
+        const write = value => { local = value; };
+        {
+            function local() { return 1; }
+            assert(local(), 2);
+            write(() => 99);
+            assert(read()(), 99);
+            function local() { return 2; }
+            saved = local;
+            assert(read() === saved);
+        }
+        assert(read() === saved);
+    }
+    outer();
+    function blocked() {
+        let local = "outer";
+        {
+            function local() { return 1; }
+            function local() { return 2; }
+            assert(local(), 2);
+        }
+        return local;
+    }
+    assert(blocked(), "outer");
+    for (const body of [
+        "'use strict'; { function f() {} function f() {} }",
+        "{ let f; function f() {} }",
+        "{ function f() {} const f = 1; }",
+        "{ function* f() {} function f() {} }",
+    ])
+        assert_throws(SyntaxError, () => Function(body));
+}
+
 function test_eval_catch_var_declaration()
 {
     globalThis.evalCatchGlobal = "global";
@@ -654,6 +691,136 @@ function test_parameter_arguments_binding()
         assert(arguments, 19);
     }
     bodyEval();
+}
+
+function test_annex_deferred_applicability()
+{
+    function later() {
+        let saved;
+        { function target() { return 1; } saved = target; }
+        { { function target() { return 2; } } let target; }
+        { let target; { function target() { return 3; } } }
+        assert(target === saved);
+    }
+    later();
+    function absent() {
+        { { function onlyBlocked() {} } const onlyBlocked = 42; }
+        assert(typeof onlyBlocked, "undefined");
+        assert_throws(ReferenceError, () => onlyBlocked);
+    }
+    absent();
+    function explicit() {
+        var target = 42;
+        { { function target() {} } let target; }
+        assert(target, 42);
+    }
+    explicit();
+    function formal({target}) {
+        { function target() {} }
+        assert(target, 42);
+    }
+    formal({ target: 42 });
+    function evalConst() {
+        eval("{ function target() {} }");
+        const target = 42;
+        assert(target, 42);
+    }
+    evalConst();
+    function evalLet() {
+        eval("{ function target() {} }");
+        let target = 42;
+        assert(target, 42);
+    }
+    evalLet();
+    function evalBlocked() {
+        let target = 42;
+        eval("{ function target() {} }");
+        assert(target, 42);
+    }
+    evalBlocked();
+    function catchAllowed() {
+        try { throw 42; } catch (target) {
+            { function target() { return 7; } }
+        }
+        assert(target(), 7);
+    }
+    catchAllowed();
+    function evalExplicit() {
+        eval("assert(target(), 42); { function target() {} } function target() { return 42; }");
+        assert(target(), undefined);
+    }
+    evalExplicit();
+    assert_throws(SyntaxError, () => Function("{ var target; } let target;"));
+}
+
+function test_annex_arguments_binding()
+{
+    function simple() {
+        assert(typeof arguments, "object");
+        let saved;
+        { saved = arguments; function arguments() { return 42; } }
+        assert(arguments === saved);
+        assert(arguments(), 42);
+    }
+    simple();
+    function evaluated() {
+        eval("42");
+        { function arguments() { return 42; } }
+        assert(arguments(), 42);
+    }
+    evaluated();
+    function formal(arguments) {
+        { function arguments() {} }
+        assert(arguments, 7);
+    }
+    formal(7);
+    function defaultFormal(arguments = 7) {
+        { function arguments() {} }
+        assert(arguments, 7);
+    }
+    defaultFormal();
+    function separate(read = () => arguments) {
+        arguments = 1;
+        assert(read(), 1);
+        const bodyRead = () => arguments;
+        let saved;
+        { saved = arguments; function arguments() { return 42; } }
+        assert(arguments === saved);
+        assert(bodyRead() === saved);
+        assert(read(), 1);
+        assert(arguments(), 42);
+    }
+    separate();
+    function skipped(read = () => arguments) {
+        arguments = 3;
+        if (false) { function arguments() {} }
+        assert(arguments, 3);
+        assert(read(), 3);
+    }
+    skipped();
+    function explicit(read = () => arguments) {
+        var arguments;
+        const initial = arguments;
+        { function arguments() { return 42; } }
+        assert(arguments(), 42);
+        assert(read() === initial);
+    }
+    explicit();
+    function nestedEval(read = () => arguments) {
+        arguments = 5;
+        eval("{ function arguments() { return 42; } }");
+        assert(arguments(), 42);
+        assert(read(), 5);
+    }
+    nestedEval();
+    assert_throws(SyntaxError, () => Function("'use strict'; { function arguments() {} }"));
+    const strictFunction = Function(`"use strict"; return function(read = () => arguments) {
+        const before = arguments;
+        { function local() {} }
+        assert(arguments === before);
+        assert(read() === before);
+    };`)();
+    strictFunction();
 }
 
 function test_class()
@@ -1068,9 +1235,12 @@ test_super_base_order();
 test_super_null_key_coercion();
 test_annex_if_function_scopes();
 test_annex_function_identity();
+test_annex_duplicate_binding();
 test_eval_catch_var_declaration();
 test_annex_eval_variable_target();
 test_parameter_arguments_binding();
+test_annex_deferred_applicability();
+test_annex_arguments_binding();
 test_template();
 test_template_skip();
 test_object_literal();

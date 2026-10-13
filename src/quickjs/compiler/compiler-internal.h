@@ -67,6 +67,7 @@ int add_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
 int add_func_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
 int add_arguments_var(JSContext *ctx, JSFunctionDef *fd);
 int add_arguments_arg(JSContext *ctx, JSFunctionDef *fd);
+int resolve_annex_function_declarations(JSContext *ctx, JSFunctionDef *fd);
 JSAtom get_private_setter_name(JSContext *ctx, JSAtom name);
 
 JSFunctionDef *js_new_function_def(JSContext *ctx, JSFunctionDef *parent,
