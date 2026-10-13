@@ -476,6 +476,8 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     JSFunctionDef *fd;
     JSVarDef *vd;
     BOOL is_pseudo_var, is_arg_scope, is_decl;
+    BOOL is_strict = s->scopes[scope_level].is_strict;
+    BOOL is_strict_binding = is_strict || (s->js_mode & JS_MODE_STRICT);
 
     is_decl = (op == OP_scope_put_var_decl);
     if (is_decl) {
@@ -558,7 +560,9 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         }
         if ((op == OP_scope_put_var || op == OP_scope_make_ref) &&
             !(var_idx & ARGUMENT_VAR_OFFSET) &&
-            s->vars[var_idx].is_const) {
+            (s->vars[var_idx].is_const ||
+             (is_strict_binding && op == OP_scope_put_var &&
+              s->vars[var_idx].var_kind == JS_VAR_FUNCTION_NAME))) {
             /* only happens when assigning a function expression name
                in strict mode */
             dbuf_putc(bc, OP_throw_error);
@@ -582,7 +586,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 dbuf_putc(bc, OP_push_atom_value);
                 dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
             } else
-            if (label_done == -1 && can_opt_put_ref_value(bc_buf, ls->pos)) {
+            if (!is_strict && label_done == -1 && can_opt_put_ref_value(bc_buf, ls->pos)) {
                 int get_op;
                 if (var_idx & ARGUMENT_VAR_OFFSET) {
                     get_op = OP_get_arg;
@@ -849,7 +853,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         /* global variable access */
         switch (op) {
         case OP_scope_make_ref:
-            if (label_done == -1 && can_opt_put_global_ref_value(bc_buf, ls->pos)) {
+            if (!is_strict && label_done == -1 && can_opt_put_global_ref_value(bc_buf, ls->pos)) {
                 pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
                                                    pos_next,
                                                    OP_get_var, idx);
@@ -899,7 +903,9 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         if (idx >= 0) {
         has_idx:
             if ((op == OP_scope_put_var || op == OP_scope_make_ref) &&
-                s->closure_var[idx].is_const) {
+                (s->closure_var[idx].is_const ||
+                 (is_strict_binding && op == OP_scope_put_var &&
+                  s->closure_var[idx].var_kind == JS_VAR_FUNCTION_NAME))) {
                 dbuf_putc(bc, OP_throw_error);
                 dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
                 dbuf_putc(bc, JS_THROW_VAR_RO);
@@ -917,7 +923,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                     dbuf_putc(bc, OP_push_atom_value);
                     dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
                 } else
-                if (label_done == -1 &&
+                if (!is_strict && label_done == -1 &&
                     can_opt_put_ref_value(bc_buf, ls->pos)) {
                     int get_op;
                     if (s->closure_var[idx].is_lexical)
@@ -2021,6 +2027,11 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             }
             goto no_change;
 
+        case OP_enter_strict:
+        case OP_leave_strict:
+            s->jump_size++;
+            goto no_change;
+
         case OP_enter_scope:
             {
                 int scope_idx, scope = get_u16(bc_buf + pos + 1);
@@ -2531,6 +2542,21 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         len = opcode_info[op].size;
         pos_next = pos + len;
         switch(op) {
+        case OP_enter_strict:
+            /* The operand names the generator-return cleanup subroutine. */
+            update_label(s, get_u32(bc_buf + pos + 1), -1);
+            dbuf_putc(&bc_out, OP_set_strict);
+            dbuf_putc(&bc_out, 1);
+            break;
+
+        case OP_leave_strict:
+            label = get_u32(bc_buf + pos + 1);
+            dbuf_putc(&bc_out, OP_nip);
+            dbuf_putc(&bc_out, OP_set_strict);
+            dbuf_putc(&bc_out, 0);
+            op = OP_goto;
+            goto has_goto;
+
         case OP_line_num:
             /* line number info (for debug). We put it in a separate
                compressed table to reduce memory usage and get better
