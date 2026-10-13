@@ -303,3 +303,8 @@ async function test_module_reserved_bindings()
 }
 
 await test_module_reserved_bindings();
+
+
+import { usingModuleEvents, usingModuleResource } from "./fixture_using_module.js";
+assert(usingModuleEvents.join(","), "evaluated,disposed");
+assert(typeof usingModuleResource[Symbol.dispose], "function");
