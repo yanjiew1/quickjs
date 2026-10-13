@@ -640,6 +640,7 @@ C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_format$(EXE)
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
+C_TESTS+=tests/test_temporal_civil$(EXE)
 C_TESTS+=tests/test_temporal_zones$(EXE)
 C_TESTS+=tests/test_temporal_calendars$(EXE)
 C_TESTS+=tests/test_temporal_native_calendars$(EXE)
@@ -798,6 +799,7 @@ endif
 	$(WINE) ./tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal_format$(EXE)
 	$(WINE) ./tests/test_temporal_duration_math$(EXE)
+	$(WINE) ./tests/test_temporal_civil$(EXE)
 	$(WINE) ./tests/test_temporal_zones$(EXE)
 	$(WINE) ./tests/test_temporal_calendars$(EXE)
 	$(WINE) ./tests/test_temporal_native_calendars$(EXE)
@@ -1164,4 +1166,9 @@ tests/test_timezone_system_reader$(EXE): $(OBJDIR)/tests/test_timezone_system_re
 TEMPORAL_TIMEZONE_SRCS=src/temporal/time-zone.c
 TEMPORAL_TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_TIMEZONE_SRCS))
 tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS) $(TEMPORAL_FORMAT_OBJS) $(TEMPORAL_TIMEZONE_OBJS) libqjstimezone.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+TEMPORAL_RELATIVE_SRCS=src/temporal/relative.c
+TEMPORAL_RELATIVE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_RELATIVE_SRCS))
+tests/test_temporal_civil$(EXE): $(OBJDIR)/tests/test_temporal_civil.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS) $(TEMPORAL_FORMAT_OBJS) $(TEMPORAL_DURATION_OBJS) $(TEMPORAL_CALENDAR_OBJS) $(TEMPORAL_TIMEZONE_OBJS) $(TEMPORAL_RELATIVE_OBJS) libquickjs$(LTOEXT).a libqjstimezone.a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
