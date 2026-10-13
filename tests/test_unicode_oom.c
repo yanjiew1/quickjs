@@ -2,6 +2,8 @@
  * Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
+#include "libregexp.h"
 #include "cutils.h"
 #include "libunicode.h"
 
@@ -74,9 +76,54 @@ static void test_canonicalization_oom(void)
     }
 }
 
+void *lre_realloc(void *opaque, void *ptr, size_t size)
+{
+    return alloc(opaque, ptr, size);
+}
+
+int lre_check_stack_overflow(void *opaque, size_t size)
+{
+    return 0;
+}
+
+int lre_check_timeout(void *opaque)
+{
+    return 0;
+}
+
+static void test_compile_failures(const char *pattern, int flags)
+{
+    Allocator a = { 0, 0, 0 };
+    uint8_t *bytecode;
+    char error[128];
+    int allocations, length, fail;
+
+    bytecode = lre_compile(&length, error, sizeof(error), pattern,
+                           strlen(pattern), flags, &a);
+    assert(bytecode && length > 0);
+    allocations = a.calls;
+    alloc(&a, bytecode, 0);
+    assert(a.live == 0);
+    for (fail = 1; fail <= allocations; fail++) {
+        a.calls = 0;
+        a.fail_at = fail;
+        bytecode = lre_compile(&length, error, sizeof(error), pattern,
+                               strlen(pattern), flags, &a);
+        assert(bytecode == NULL && length == 0);
+        assert(strcmp(error, "out of memory") == 0);
+        assert(a.live == 0);
+    }
+}
+
 int main(void)
 {
     test_normalization_oom();
     test_canonicalization_oom();
+    test_compile_failures("a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p", 0);
+    test_compile_failures("(?<=ab|cd)(?:ef|gh){2,4}", 0);
+    test_compile_failures(
+        "(?<abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_first>a)|"
+        "(?<abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_second>b)", 0);
+    test_compile_failures("[\\q{abcdefghijklmnop|abcdefghijklmnoq|abcdefghijklmnor}]", LRE_FLAG_UNICODE_SETS);
     return 0;
 }
