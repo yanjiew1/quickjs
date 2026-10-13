@@ -693,6 +693,66 @@ function test_parameter_arguments_binding()
     bodyEval();
 }
 
+function test_annex_deferred_applicability()
+{
+    function later() {
+        let saved;
+        { function target() { return 1; } saved = target; }
+        { { function target() { return 2; } } let target; }
+        { let target; { function target() { return 3; } } }
+        assert(target === saved);
+    }
+    later();
+    function absent() {
+        { { function onlyBlocked() {} } const onlyBlocked = 42; }
+        assert(typeof onlyBlocked, "undefined");
+        assert_throws(ReferenceError, () => onlyBlocked);
+    }
+    absent();
+    function explicit() {
+        var target = 42;
+        { { function target() {} } let target; }
+        assert(target, 42);
+    }
+    explicit();
+    function formal({target}) {
+        { function target() {} }
+        assert(target, 42);
+    }
+    formal({ target: 42 });
+    function evalConst() {
+        eval("{ function target() {} }");
+        const target = 42;
+        assert(target, 42);
+    }
+    evalConst();
+    function evalLet() {
+        eval("{ function target() {} }");
+        let target = 42;
+        assert(target, 42);
+    }
+    evalLet();
+    function evalBlocked() {
+        let target = 42;
+        eval("{ function target() {} }");
+        assert(target, 42);
+    }
+    evalBlocked();
+    function catchAllowed() {
+        try { throw 42; } catch (target) {
+            { function target() { return 7; } }
+        }
+        assert(target(), 7);
+    }
+    catchAllowed();
+    function evalExplicit() {
+        eval("assert(target(), 42); { function target() {} } function target() { return 42; }");
+        assert(target(), undefined);
+    }
+    evalExplicit();
+    assert_throws(SyntaxError, () => Function("{ var target; } let target;"));
+}
+
 function test_class()
 {
     var o;
@@ -1109,6 +1169,7 @@ test_annex_duplicate_binding();
 test_eval_catch_var_declaration();
 test_annex_eval_variable_target();
 test_parameter_arguments_binding();
+test_annex_deferred_applicability();
 test_template();
 test_template_skip();
 test_object_literal();

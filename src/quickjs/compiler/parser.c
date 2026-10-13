@@ -564,6 +564,80 @@ static JSGlobalVar *add_global_var(JSContext *ctx, JSFunctionDef *s,
     return hf;
 }
 
+/* Annex B eligibility depends on declarations in the complete function.
+   Keep declaration scopes in temporary bytecode until they can be checked. */
+int resolve_annex_function_declarations(JSContext *ctx, JSFunctionDef *fd)
+{
+    int pos, next, i, scope;
+
+    if (!fd->has_annex_b_declarations)
+        return 0;
+    for (pos = 0; pos < fd->byte_code.size; pos = next) {
+        uint8_t *buf = fd->byte_code.buf;
+        int op = buf[pos];
+        JSAtom name;
+        BOOL applicable = TRUE;
+        JSGlobalVar *hf;
+
+        next = pos + opcode_info[op].size;
+        if (op != OP_scope_put_var_decl)
+            continue;
+        name = get_u32(buf + pos + 1);
+        scope = get_u16(buf + pos + 5);
+        /* Ignore the declaration's own block binding. */
+        scope = fd->scopes[scope].parent;
+        while (scope >= 0) {
+            for (i = 0; i < fd->var_count; i++) {
+                JSVarDef *vd = &fd->vars[i];
+                if (vd->scope_level == scope && vd->var_name == name &&
+                    vd->is_lexical)
+                    applicable = FALSE;
+            }
+            scope = fd->scopes[scope].parent;
+        }
+        /* Destructuring parameters also contribute formal bound names. */
+        for (i = 0; i < fd->var_count; i++) {
+            if (i < fd->parameter_var_count &&
+                fd->vars[i].scope_level <= ARG_SCOPE_INDEX &&
+                fd->vars[i].var_name == name)
+                applicable = FALSE;
+        }
+        if (fd->is_eval) {
+            for (i = 0; i < fd->closure_var_count; i++) {
+                JSClosureVar *cv = &fd->closure_var[i];
+                if (cv->var_name == JS_ATOM__var_ ||
+                    cv->var_name == JS_ATOM__arg_var_)
+                    break;
+                if (cv->var_name == name && cv->is_lexical &&
+                    cv->var_kind != JS_VAR_CATCH)
+                    applicable = FALSE;
+            }
+        }
+        hf = find_lexical_global_var(fd, name);
+        if (hf)
+            applicable = FALSE;
+        if (!applicable) {
+            assert(pos > 0 && buf[pos - 1] == OP_dup);
+            JS_FreeAtom(ctx, name);
+            memset(buf + pos - 1, OP_nop, next - pos + 1);
+            continue;
+        }
+        if (fd->is_global_var) {
+            hf = find_global_var(fd, name);
+            if (!hf) {
+                hf = add_global_var(ctx, fd, name);
+                if (!hf)
+                    return -1;
+                hf->scope_level = 0;
+            }
+        } else if (find_var(ctx, fd, name) < 0) {
+            if (add_var(ctx, fd, name) < 0)
+                return -1;
+        }
+    }
+    return 0;
+}
+
 typedef enum {
     JS_VAR_DEF_WITH,
     JS_VAR_DEF_LET,
@@ -6690,13 +6764,8 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     }
 
     if (func_type == JS_PARSE_FUNC_VAR) {
-        int outer_scope = fd->scope_first;
-        while (outer_scope >= 0 &&
-               fd->vars[outer_scope].scope_level == fd->scope_level)
-            outer_scope = fd->vars[outer_scope].scope_next;
         if (!(fd->js_mode & JS_MODE_STRICT)
         && func_kind == JS_FUNC_NORMAL
-        &&  find_lexical_decl(ctx, fd, func_name, outer_scope, FALSE) < 0
         &&  !((func_idx = find_var(ctx, fd, func_name)) >= 0 && (func_idx & ARGUMENT_VAR_OFFSET))
         &&  !(func_name == JS_ATOM_arguments && fd->has_arguments_binding)) {
             create_func_var = TRUE;
@@ -6994,6 +7063,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         fd->scope_first = fd->scopes[fd->scope_level].first;
     }
 
+    fd->parameter_var_count = fd->var_count;
     if (ctor && s->token.ptr != ctor->parameters_end) {
         js_parse_error(s, "invalid function constructor parameters");
         goto fail;
@@ -7120,37 +7190,11 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                 emit_u32(s, idx);
             }
             if (create_func_var) {
-                if (s->cur_func->is_global_var) {
-                    JSGlobalVar *hf;
-                    /* the global variable must be defined at the start of the
-                       function */
-                    hf = add_global_var(ctx, s->cur_func, func_name);
-                    if (!hf)
-                        goto fail;
-                    /* it is considered as defined at the top level
-                       (needed for annex B.3.3.4 and B.3.3.5
-                       checks) */
-                    hf->scope_level = 0;
-                    hf->force_init = ((s->cur_func->js_mode & JS_MODE_STRICT) != 0);
-                    /* store directly into global var, bypass lexical scope */
-                    emit_op(s, OP_dup);
-                    emit_op(s, OP_scope_put_var_decl);
-                    emit_atom(s, func_name);
-                    emit_u16(s, 0);
-                } else {
-                    /* do not call define_var to bypass lexical scope check */
-                    func_idx = find_var(ctx, s->cur_func, func_name);
-                    if (func_idx < 0) {
-                        func_idx = add_var(ctx, s->cur_func, func_name);
-                        if (func_idx < 0)
-                            goto fail;
-                    }
-                    /* store directly into local var, bypass lexical catch scope */
-                    emit_op(s, OP_dup);
-                    emit_op(s, OP_scope_put_var_decl);
-                    emit_atom(s, func_name);
-                    emit_u16(s, 0);
-                }
+                s->cur_func->has_annex_b_declarations = TRUE;
+                emit_op(s, OP_dup);
+                emit_op(s, OP_scope_put_var_decl);
+                emit_atom(s, func_name);
+                emit_u16(s, s->cur_func->scope_level);
             }
             if (lexical_func_idx >= 0) {
                 /* lexical variable was initialized upon entering scope */
