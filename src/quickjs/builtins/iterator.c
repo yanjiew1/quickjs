@@ -410,13 +410,15 @@ typedef enum JSIteratorHelperKindEnum {
     JS_ITERATOR_HELPER_KIND_TAKE,
 } JSIteratorHelperKindEnum;
 
+#define JS_ITERATOR_LIMIT_INFINITY (-1)
+
 typedef struct JSIteratorHelperData {
     JSValue obj;
     JSValue next;
-    JSValue func; // predicate (filter) or mapper (flatMap, map)
+    JSValue argument; // callback
     JSValue inner; // innerValue (flatMap)
     JSValue inner_next; // innerValue next method (flatMap)
-    int64_t count; // limit (drop, take) or counter (filter, map, flatMap)
+    int64_t count; // limit (drop, take; -1 means infinity) or callback counter
     JSIteratorHelperKindEnum kind : 8;
     uint8_t executing : 1;
     uint8_t done : 1;
@@ -440,19 +442,16 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_DROP:
     case JS_ITERATOR_HELPER_KIND_TAKE:
         {
-            int ret;
-            ret = JS_ToInt64SatF(ctx, &count, argv[0]);
-            if (ret < 0)
+            double d;
+
+            if (JS_ToFloat64(ctx, &d, argv[0]))
                 goto fail;
-            if (ret == JS_TO_INT64_SAT_NAN || count < 0)
+            if (isnan(d) || (isfinite(d) && d > MAX_SAFE_INTEGER))
                 goto range_error;
-            if (count > MAX_SAFE_INTEGER) {
-                /* XXX: not strictly compliant e.g. for 2**31-1 + 0.5 */
-                if (ret != JS_TO_INT64_SAT_INF)
-                    goto range_error;
-                else
-                    count = MAX_SAFE_INTEGER;
-            }
+            d = trunc(d);
+            if (d < 0)
+                goto range_error;
+            count = isinf(d) ? JS_ITERATOR_LIMIT_INFINITY : (int64_t)d;
         }
         break;
     case JS_ITERATOR_HELPER_KIND_FILTER:
@@ -485,7 +484,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
     }
     it->kind = magic;
     it->obj = JS_DupValue(ctx, this_val);
-    it->func = JS_DupValue(ctx, func);
+    it->argument = JS_DupValue(ctx, func);
     it->next = method;
     it->inner = JS_UNDEFINED;
     it->inner_next = JS_UNDEFINED;
@@ -783,7 +782,7 @@ void js_iterator_helper_finalizer(JSRuntime *rt, JSValue val)
     JSIteratorHelperData *it = p->u.iterator_helper_data;
     if (it) {
         JS_FreeValueRT(rt, it->obj);
-        JS_FreeValueRT(rt, it->func);
+        JS_FreeValueRT(rt, it->argument);
         JS_FreeValueRT(rt, it->next);
         JS_FreeValueRT(rt, it->inner);
         JS_FreeValueRT(rt, it->inner_next);
@@ -798,7 +797,7 @@ void js_iterator_helper_mark(JSRuntime *rt, JSValueConst val,
     JSIteratorHelperData *it = p->u.iterator_helper_data;
     if (it) {
         JS_MarkValue(rt, it->obj, mark_func);
-        JS_MarkValue(rt, it->func, mark_func);
+        JS_MarkValue(rt, it->argument, mark_func);
         JS_MarkValue(rt, it->next, mark_func);
         JS_MarkValue(rt, it->inner, mark_func);
         JS_MarkValue(rt, it->inner_next, mark_func);
@@ -855,8 +854,9 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_DROP:
         {
             JSValue item;
-            while (it->count > 0) {
-                it->count--;
+            while (it->count != 0) {
+                if (it->count > 0)
+                    it->count--;
                 item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
                 if (JS_IsException(item))
                     goto fail_no_close;
@@ -888,7 +888,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 index_val = JS_NewInt64(ctx, it->count++);
                 args[0] = item;
                 args[1] = index_val;
-                selected = JS_Call(ctx, it->func, JS_UNDEFINED, countof(args), args);
+                selected = JS_Call(ctx, it->argument, JS_UNDEFINED, countof(args), args);
                 JS_FreeValue(ctx, index_val);
                 if (JS_IsException(selected)) {
                     JS_FreeValue(ctx, item);
@@ -918,7 +918,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     index_val = JS_NewInt64(ctx, it->count++);
                     args[0] = item;
                     args[1] = index_val;
-                    ret = JS_Call(ctx, it->func, JS_UNDEFINED, countof(args), args);
+                    ret = JS_Call(ctx, it->argument, JS_UNDEFINED, countof(args), args);
                     JS_FreeValue(ctx, item);
                     JS_FreeValue(ctx, index_val);
                     if (JS_IsException(ret))
@@ -986,7 +986,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             index_val = JS_NewInt64(ctx, it->count++);
             args[0] = item;
             args[1] = index_val;
-            ret = JS_Call(ctx, it->func, JS_UNDEFINED, countof(args), args);
+            ret = JS_Call(ctx, it->argument, JS_UNDEFINED, countof(args), args);
             JS_FreeValue(ctx, index_val);
             JS_FreeValue(ctx, item);
             if (JS_IsException(ret))
@@ -996,8 +996,9 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_TAKE:
         {
             JSValue item;
-            if (it->count > 0) {
-                it->count--;
+            if (it->count != 0) {
+                if (it->count > 0)
+                    it->count--;
                 item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
                 if (JS_IsException(item))
                     goto fail_no_close;
