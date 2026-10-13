@@ -475,8 +475,11 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     int label_done;
     JSFunctionDef *fd;
     JSVarDef *vd;
-    BOOL is_pseudo_var, is_arg_scope;
+    BOOL is_pseudo_var, is_arg_scope, is_decl;
 
+    is_decl = (op == OP_scope_put_var_decl);
+    if (is_decl)
+        op = OP_scope_put_var;
     label_done = -1;
 
     /* XXX: could be simpler to use a specific function to
@@ -502,7 +505,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             var_idx = idx;
             break;
         } else
-        if (vd->var_name == JS_ATOM__with_ && !is_pseudo_var) {
+        if (vd->var_name == JS_ATOM__with_ && !is_pseudo_var && !is_decl) {
             dbuf_putc(bc, OP_get_loc);
             dbuf_put_u16(bc, idx);
             var_object_test(ctx, s, var_name, op, bc, &label_done, 1);
@@ -672,7 +675,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 }
                 var_idx = idx;
                 break;
-            } else if (vd->var_name == JS_ATOM__with_ && !is_pseudo_var) {
+            } else if (vd->var_name == JS_ATOM__with_ && !is_pseudo_var && !is_decl) {
                 capture_var(fd, vd);
                 idx = get_closure_var(ctx, s, fd, JS_CLOSURE_LOCAL, idx, vd->var_name, FALSE, FALSE, JS_VAR_NORMAL);
                 if (idx >= 0) {
@@ -744,6 +747,8 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         for (idx1 = 0; idx1 < fd->closure_var_count; idx1++) {
             JSClosureVar *cv = &fd->closure_var[idx1];
             if (var_name == cv->var_name) {
+                if (is_decl && cv->var_kind == JS_VAR_CATCH)
+                    continue;
                 if (fd != s) {
                     JSClosureTypeEnum closure_type;
                     if (cv->closure_type == JS_CLOSURE_GLOBAL ||
@@ -770,6 +775,8 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                         cv->var_name == JS_ATOM__arg_var_ ||
                         cv->var_name == JS_ATOM__with_) && !is_pseudo_var) {
                 int is_with = (cv->var_name == JS_ATOM__with_);
+                if (is_decl && is_with)
+                    continue;
                 if (fd != s) {
                     idx = get_closure_var(ctx, s, fd,
                                           JS_CLOSURE_REF,
@@ -1819,6 +1826,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
         case OP_scope_get_var_undef:
         case OP_scope_get_var:
         case OP_scope_put_var:
+        case OP_scope_put_var_decl:
         case OP_scope_delete_var:
         case OP_scope_get_ref:
         case OP_scope_put_var_init:
