@@ -1,1 +1,2 @@
-
+test262/test/staging/sm/JSON/parse-with-source.js:25: Test262Error: Actual [null, null] and expected [4, null] should have the same contents. 
+test262/test/staging/sm/regress/regress-699682.js:12: Test262Error: Expected SameValue(«false», «true») to be true
