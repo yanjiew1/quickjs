@@ -419,12 +419,123 @@ function test_iterator_buffer_creation_realm()
     std.gc();
 }
 
+function test_iterator_zip_realm()
+{
+    const result = run_in_realms(function () {
+        const other = typeof foreign !== "undefined" ? foreign : $262.createRealm().global;
+        const realms = [globalThis, other];
+
+        function check(value, expected, message) {
+            if (value !== expected) throw Error(message);
+        }
+
+        function resultRealm(result, realm, message) {
+            check(Object.getPrototypeOf(result), realm.Object.prototype, message);
+        }
+
+        function thrownRealm(callback, realm, message) {
+            let caught = false;
+            try { callback(); } catch (error) {
+                caught = true;
+                check(Object.getPrototypeOf(error), realm.TypeError.prototype, message);
+            }
+            check(caught, true, message + ": expected an exception");
+        }
+
+        for (let i = 0; i < 2; i++) {
+            const creator = realms[i], caller = realms[1 - i];
+            const borrowed = Object.getPrototypeOf(caller.Iterator.zip([]));
+            const next = borrowed.next, close = borrowed.return;
+            const makers = [
+                (sources, options) => creator.Iterator.zip(sources, options),
+            ];
+            if (typeof creator.Iterator.zipKeyed === "function")
+                makers.push((sources, options) => creator.Iterator.zipKeyed(
+                    { first: sources[0], second: sources[1] }, options));
+
+            for (let kind = 0; kind < makers.length; kind++) {
+                const make = makers[kind];
+                let helper = make([[1], [2]]);
+                let result = next.call(helper);
+                resultRealm(result, creator, "yielded result uses the generator realm");
+                check(result.done, false, "first result yields");
+                if (kind === 0)
+                    check(Object.getPrototypeOf(result.value), creator.Array.prototype,
+                          "zip row uses the generator realm");
+                else
+                    check(Object.getPrototypeOf(result.value), null,
+                          "zipKeyed row has a null prototype");
+                result = next.call(helper);
+                resultRealm(result, creator, "first completion uses the generator realm");
+                check(result.done, true, "second result completes");
+                resultRealm(next.call(helper), caller,
+                            "already-completed next uses the invoked method realm");
+                resultRealm(close.call(helper), caller,
+                            "already-completed return uses the invoked method realm");
+
+                helper = make([[3], [4]]);
+                resultRealm(close.call(helper), caller,
+                            "suspended-start return uses the invoked method realm");
+                resultRealm(next.call(helper), caller,
+                            "next after suspended-start return uses the method realm");
+
+                helper = make([[5], [6]]);
+                next.call(helper);
+                resultRealm(close.call(helper), creator,
+                            "suspended-yield return resumes the generator realm");
+                resultRealm(close.call(helper), caller,
+                            "return after generator completion uses the method realm");
+
+                helper = make([[], [7]], { mode: "strict" });
+                thrownRealm(() => next.call(helper), creator,
+                            "strict mismatch is thrown by the resumed generator");
+                resultRealm(next.call(helper), caller,
+                            "next after strict failure uses the method realm");
+
+                helper = make([{ next: null }, [8]]);
+                thrownRealm(() => next.call(helper), creator,
+                            "uncallable cached next fails in the generator realm");
+
+                const badClose = () => ({ next() { return { value: 9 }; },
+                                         return() { return 0; } });
+                helper = make([badClose(), [10]]);
+                thrownRealm(() => close.call(helper), caller,
+                            "suspended-start close validation uses the method realm");
+                helper = make([badClose(), [11]]);
+                next.call(helper);
+                thrownRealm(() => close.call(helper), creator,
+                            "suspended-yield close validation uses the generator realm");
+
+                const source = { next() {
+                    thrownRealm(() => next.call(helper), caller,
+                                "running generator validation uses the method realm");
+                    thrownRealm(() => close.call(helper), caller,
+                                "running generator return validation uses the method realm");
+                    return { value: 12 };
+                } };
+                helper = make([source, [13]]);
+                resultRealm(next.call(helper), creator,
+                            "outer resume keeps its generator realm after reentry");
+                close.call(helper);
+            }
+            thrownRealm(() => next.call({}), caller,
+                        "invalid receiver validation uses the invoked method realm");
+            thrownRealm(() => close.call({}), caller,
+                        "invalid return receiver uses the invoked method realm");
+        }
+        return true;
+    });
+    check(result, true, "iterator_zip_realm");
+    std.gc();
+}
+
 export function test_iterator_realms()
 {
     test_native_iterator_next_realm();
     test_iterator_helper_creation_realm();
     test_iterator_concat_creation_realm();
     test_iterator_buffer_creation_realm();
+    test_iterator_zip_realm();
     test_iterator_constructor_realm();
 }
 
