@@ -66,33 +66,29 @@ void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
 }
 
 static JSValue js_iterator_wrap_next(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv,
-                                     int *pdone, int magic)
+                                     int argc, JSValueConst *argv, int magic)
 {
     JSIteratorWrapData *it;
-    JSValue method, ret;
+    JSValue method;
+
     it = JS_GetOpaque2(ctx, this_val, JS_CLASS_ITERATOR_WRAP);
     if (!it)
         return JS_EXCEPTION;
-    if (magic == GEN_MAGIC_NEXT) {
-        return JS_IteratorNext(ctx, it->wrapped_iter, it->wrapped_next, 0, NULL, pdone);
-    } else {
-        method = JS_GetProperty(ctx, it->wrapped_iter, JS_ATOM_return);
-        if (JS_IsException(method))
-            return JS_EXCEPTION;
-        if (JS_IsNull(method) || JS_IsUndefined(method)) {
-            *pdone = TRUE;
-            return JS_UNDEFINED;
-        }
-        ret = JS_IteratorNext2(ctx, it->wrapped_iter, method, 0, NULL, pdone);
+    if (magic == GEN_MAGIC_NEXT)
+        return JS_Call(ctx, it->wrapped_next, it->wrapped_iter, 0, NULL);
+    method = JS_GetProperty(ctx, it->wrapped_iter, JS_ATOM_return);
+    if (JS_IsException(method))
+        return JS_EXCEPTION;
+    if (JS_IsNull(method) || JS_IsUndefined(method)) {
         JS_FreeValue(ctx, method);
-        return ret;
+        return js_create_iterator_result(ctx, JS_UNDEFINED, TRUE);
     }
+    return JS_CallFree(ctx, method, it->wrapped_iter, 0, NULL);
 }
 
 const JSCFunctionListEntry js_iterator_wrap_proto_funcs[] = {
-    JS_ITERATOR_NEXT_DEF("next", 0, js_iterator_wrap_next, GEN_MAGIC_NEXT ),
-    JS_ITERATOR_NEXT_DEF("return", 0, js_iterator_wrap_next, GEN_MAGIC_RETURN ),
+    JS_CFUNC_MAGIC_DEF("next", 0, js_iterator_wrap_next, GEN_MAGIC_NEXT ),
+    JS_CFUNC_MAGIC_DEF("return", 0, js_iterator_wrap_next, GEN_MAGIC_RETURN ),
 };
 
 /* Iterator */
@@ -347,6 +343,10 @@ static JSValue js_iterator_from(JSContext *ctx, JSValueConst this_val,
             return JS_EXCEPTION;
     }
 
+    if (!JS_IsObject(iter)) {
+        JS_FreeValue(ctx, iter);
+        return JS_ThrowTypeErrorNotAnObject(ctx);
+    }
     wrapper = JS_UNDEFINED;
     method = JS_GetProperty(ctx, iter, JS_ATOM_next);
     if (JS_IsException(method))
