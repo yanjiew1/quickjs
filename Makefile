@@ -582,6 +582,8 @@ C_TESTS+=tests/test_unicode_oom$(EXE)
 C_TESTS+=tests/test_atomics_wait$(EXE)
 C_TESTS+=tests/test_worker_context_failure$(EXE)
 
+C_TESTS+=tests/test_fuzz_json$(EXE)
+
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
@@ -646,6 +648,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_iterator$(EXE)
 	$(WINE) ./tests/test_allocator_policy$(EXE)
@@ -844,3 +847,6 @@ test-qjsc-executable: $(QJSC) libquickjs$(LTOEXT).a
 	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "n" "n"
 endif
 endif
+
+tests/test_fuzz_json$(EXE): $(OBJDIR)/tests/test_fuzz_json.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
