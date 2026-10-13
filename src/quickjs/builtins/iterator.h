@@ -27,7 +27,7 @@
 
 #include "../internal/base.h"
 
-extern const JSCFunctionListEntry js_iterator_funcs[3];
+extern const JSCFunctionListEntry js_iterator_funcs[4];
 extern const JSCFunctionListEntry js_iterator_constructor_proto_funcs[1];
 extern const JSCFunctionListEntry js_iterator_proto_funcs[17];
 extern const JSCFunctionListEntry js_iterator_helper_proto_funcs[3];
