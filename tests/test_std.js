@@ -380,3 +380,67 @@ test_ext_json();
 test_async_gc();
 test_async_promise_rejection();
 
+function test_eval_script_cached_global_tdz()
+{
+    const names = [];
+
+    function check_reference_error(read)
+    {
+        let error;
+        try { read(); } catch (e) { error = e; }
+        assert(error instanceof ReferenceError);
+    }
+
+    try {
+        for (const strict of [false, true]) {
+            const prefix = strict ? '"use strict";' : "";
+            for (const declaration of ["let", "const"]) {
+                const suffix = declaration + "_" + strict;
+                const initialized = "global_tdz_cache_initialized_" + suffix;
+                names.push(initialized);
+                globalThis[initialized] = 1;
+                const initialized_read = std.evalScript(`${prefix}
+                    (function() { return ${initialized}; })`);
+                assert(initialized_read(), 1);
+                std.evalScript(`${declaration} ${initialized} = 2`);
+                assert(initialized_read(), 2);
+                assert(globalThis[initialized], 1);
+
+                for (const present of [false, true]) {
+                    const name = "global_tdz_cache_" + suffix + "_" + present;
+                    names.push(name);
+                    if (present)
+                        globalThis[name] = 1;
+                    else
+                        delete globalThis[name];
+                    const read = std.evalScript(`${prefix}
+                        (function() { return ${name}; })`);
+                    const read_type = std.evalScript(`${prefix}
+                        (function() { return typeof ${name}; })`);
+                    if (present)
+                        assert(read(), 1);
+                    else
+                        check_reference_error(read);
+                    assert(read_type(), present ? "number" : "undefined");
+
+                    let error;
+                    try { std.evalScript(`throw 0; ${declaration} ${name} = 2`); }
+                    catch (e) { error = e; }
+                    assert(error, 0);
+                    check_reference_error(read);
+                    check_reference_error(read_type);
+                    check_reference_error(() => std.evalScript(prefix + name));
+                    check_reference_error(() => std.evalScript(prefix + " typeof " + name));
+                    assert(Object.hasOwn(globalThis, name), present);
+                    if (present)
+                        assert(globalThis[name], 1);
+                }
+            }
+        }
+    } finally {
+        for (const name of names)
+            delete globalThis[name];
+    }
+}
+
+test_eval_script_cached_global_tdz();
