@@ -1410,3 +1410,6 @@ tests/test_intl_native_duration_engine$(EXE): $(OBJDIR)/tests/test_intl_native_d
 
 # Complete native collator sources precede aggregate-provider activation.
 test test-binaries: $(OBJDIR)/src/intl/collator-native.o
+
+# Complete native segmenter sources precede aggregate-provider activation.
+test test-binaries: $(OBJDIR)/src/intl/segmenter-native.o $(OBJDIR)/src/intl/segmenter-native-data.o $(OBJDIR)/src/intl/segmenter-unicode.o
