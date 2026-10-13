@@ -1428,3 +1428,6 @@ test test-binaries: $(OBJDIR)/src/intl/number-native-data.o $(OBJDIR)/src/intl/d
 
 tests/test_intl_calendar_domain$(EXE): $(OBJDIR)/tests/test_intl_calendar_domain.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# Native date engine sources precede aggregate-provider activation.
+test test-binaries: $(OBJDIR)/src/intl/date-native.o
