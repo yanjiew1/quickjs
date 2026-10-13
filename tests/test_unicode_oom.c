@@ -46,8 +46,37 @@ static void test_normalization_oom(void)
     }
 }
 
+static void test_canonicalization_oom(void)
+{
+    Allocator a = { 0, 0, 0 };
+    CharRange cr;
+    int calls, fail;
+    a.calls = a.fail_at = 0;
+    cr_init(&cr, &a, alloc);
+    assert(cr_add_interval(&cr, 'A', 'A' + 1) == 0);
+    assert(cr_add_interval(&cr, 'C', 'C' + 1) == 0);
+    a.calls = 0;
+    assert(cr_regexp_canonicalize(&cr, 1) == 0);
+    calls = a.calls;
+    assert(calls > 0);
+    cr_free(&cr);
+    assert(!a.live);
+    for (fail = 1; fail <= calls; fail++) {
+        a.calls = a.fail_at = 0;
+        cr_init(&cr, &a, alloc);
+        assert(cr_add_interval(&cr, 'A', 'A' + 1) == 0);
+        assert(cr_add_interval(&cr, 'C', 'C' + 1) == 0);
+        a.calls = 0;
+        a.fail_at = fail;
+        assert(cr_regexp_canonicalize(&cr, 1) == -1);
+        cr_free(&cr);
+        assert(!a.live);
+    }
+}
+
 int main(void)
 {
     test_normalization_oom();
+    test_canonicalization_oom();
     return 0;
 }
