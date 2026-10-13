@@ -59,8 +59,18 @@ int JS_ToInt64SatF(JSContext *ctx, int64_t *pres, JSValueConst val);
 
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 
-__exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
-                                JSValue val);
+__exception int __JS_ToLengthFree(JSContext *ctx, int64_t *plen,
+                                  JSValue val);
+
+static inline __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen, JSValue val)
+{
+    if (JS_VALUE_GET_TAG(val) == JS_TAG_INT) {
+        int32_t len = JS_VALUE_GET_INT(val);
+        *plen = len < 0 ? 0 : len;
+        return 0;
+    }
+    return __JS_ToLengthFree(ctx, plen, val);
+}
 
 /* accept Oo and Ob prefixes in addition to 0x prefix if radix = 0 */
 #define ATOD_ACCEPT_BIN_OCT  (1 << 2)
