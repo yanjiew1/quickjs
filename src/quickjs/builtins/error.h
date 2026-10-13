@@ -1,5 +1,5 @@
 /*
- * QuickJS Error and AggregateError builtin interfaces
+ * QuickJS Error builtin interfaces
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -30,6 +30,8 @@
 JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
                              int argc, JSValueConst *argv, int magic);
 JSValue js_aggregate_error_constructor(JSContext *ctx, JSValueConst errors);
+JSValue js_new_suppressed_error(JSContext *ctx, JSValueConst error,
+                                JSValueConst suppressed);
 extern const JSCFunctionListEntry js_error_proto_funcs[3];
 extern const JSCFunctionListEntry js_native_error_proto_funcs[];
 extern const JSCFunctionListEntry js_error_funcs[1];
