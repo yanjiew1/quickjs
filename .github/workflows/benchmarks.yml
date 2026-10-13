@@ -1,0 +1,125 @@
+name: benchmarks
+
+on:
+  push:
+    branches: [main, main-new, temporal, intl, 'scratch/benchmarks/**']
+  workflow_dispatch:
+    inputs:
+      candidate_revision:
+        description: Exact candidate commit SHA (blank uses the selected workflow revision)
+        type: string
+        default: ''
+      suite:
+        description: Workloads (Zoo excludes zlib)
+        type: choice
+        options: [core, zoo, all]
+        default: core
+      rounds:
+        description: Paired rounds for V8 v7, microbenchmarks, or optional services
+        type: choice
+        options: ['1', '3', '4', '5', '6']
+        default: '3'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  select:
+    name: Select immediate parent and benchmark cadence
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.policy.outputs.run }}
+      parent_revision: ${{ steps.policy.outputs.parent_revision }}
+    env:
+      CANDIDATE_SHA: ${{ inputs.candidate_revision || github.sha }}
+      EVENT_NAME: ${{ github.event_name }}
+      BEFORE_SHA: ${{ github.event.before }}
+    steps:
+      - name: Check out exact benchmark tooling
+        uses: actions/checkout@v7
+        with:
+          path: tooling
+          ref: ${{ github.sha }}
+      - name: Check out candidate with first-parent history
+        uses: actions/checkout@v7
+        with:
+          path: candidate
+          ref: ${{ inputs.candidate_revision || github.sha }}
+          fetch-depth: 0
+      - name: Derive actual parent and select every 25 commits or likely impact
+        id: policy
+        run: |
+          python3 tooling/tools/benchmarks/select_benchmark.py \
+            --candidate candidate --candidate-revision "$CANDIDATE_SHA" \
+            --before-revision "$BEFORE_SHA" --event "$EVENT_NAME" \
+            --github-output "$GITHUB_OUTPUT"
+
+  compare:
+    needs: select
+    if: needs.select.outputs.run == 'true'
+    name: Informational ${{ matrix.compiler }} benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    env:
+      SUITE: ${{ inputs.suite || 'core' }}
+      ROUNDS: ${{ inputs.rounds || '1' }}
+      COMPILER: ${{ matrix.compiler }}
+      CANDIDATE_SHA: ${{ inputs.candidate_revision || github.sha }}
+      PARENT_SHA: ${{ needs.select.outputs.parent_revision }}
+      TOOLING_SHA: ${{ github.sha }}
+    steps:
+      - name: Select report directory
+        run: |
+          echo "REPORT=$RUNNER_TEMP/quickjs-benchmarks-$COMPILER" >> "$GITHUB_ENV"
+      - name: Check out exact benchmark tooling
+        uses: actions/checkout@v7
+        with:
+          path: tooling
+          ref: ${{ github.sha }}
+      - name: Check out exact candidate and its parent history
+        uses: actions/checkout@v7
+        with:
+          path: candidate
+          ref: ${{ inputs.candidate_revision || github.sha }}
+          fetch-depth: 2
+      - name: Check out actual immediate parent
+        uses: actions/checkout@v7
+        with:
+          path: parent
+          ref: ${{ needs.select.outputs.parent_revision }}
+      - name: Verify benchmark tool contracts
+        run: |
+          python3 -m unittest discover -s tooling/tools/benchmarks -p 'test_*.py'
+      - name: Build and compare fresh JavaScript processes
+        run: |
+          python3 tooling/tools/benchmarks/run.py \
+            --candidate candidate --candidate-revision "$CANDIDATE_SHA" \
+            --parent parent --parent-revision "$PARENT_SHA" \
+            --tooling-revision "$TOOLING_SHA" --compiler "$COMPILER" \
+            --suite "$SUITE" --rounds "$ROUNDS" --build-jobs 2 \
+            --cpu auto --output "$REPORT"
+      - name: Publish measurements and observed environment
+        if: always()
+        run: |
+          if test -f "$REPORT/summary.md"; then
+            cat "$REPORT/summary.md" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Benchmark setup failed before a report was created.' \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve raw measurements, environment, and build logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmarks-${{ matrix.compiler }}-${{ inputs.candidate_revision || github.sha }}
+          path: ${{ env.REPORT }}
+          if-no-files-found: warn
+          retention-days: 30
