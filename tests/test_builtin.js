@@ -3760,3 +3760,39 @@ test_finalization_registry();
 test_generator();
 test_rope();
 test_line_column_numbers();
+
+function test_iterator_callback_counters()
+{
+    for (const method of ["map", "filter", "flatMap"]) {
+        const indices = [];
+        const helper = [10, 20, 30].values()[method]((value, index) => {
+            indices.push(index);
+            if (method === "map") return value;
+            if (method === "filter") return index > 0;
+            return index === 0 ? [] : [value, value];
+        });
+        assert(helper.toArray().join(","), method === "map" ? "10,20,30" :
+               method === "filter" ? "20,30" : "20,20,30,30");
+        assert(indices.join(","), "0,1,2");
+    }
+    for (const method of ["every", "some", "find", "forEach"]) {
+        const indices = [];
+        [10, 20, 30].values()[method]((value, index) => {
+            indices.push(index);
+            return method === "every";
+        });
+        assert(indices.join(","), "0,1,2");
+    }
+    for (const initial of [false, true]) {
+        const indices = [];
+        const source = [10, 20, 30].values();
+        const reducer = (acc, value, index) => {
+            indices.push(index);
+            return acc + value;
+        };
+        assert(initial ? source.reduce(reducer, 0) : source.reduce(reducer), 60);
+        assert(indices.join(","), initial ? "0,1,2" : "1,2");
+    }
+}
+
+test_iterator_callback_counters();

@@ -530,6 +530,12 @@ fail:
     return JS_EXCEPTION;
 }
 
+/* counter is in [0, 2^53]; Number addition saturates at 2^53. */
+static inline int64_t js_iterator_increment_counter(int64_t counter)
+{
+    return counter + 1 - (int64_t)((uint64_t)counter >> 53);
+}
+
 static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv, int magic)
 {
@@ -556,7 +562,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_EVERY:
         {
             r = JS_TRUE;
-            for (idx = 0; /*empty*/; idx++) {
+            for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
                 item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
@@ -585,7 +591,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
         break;
     case JS_ITERATOR_HELPER_KIND_FIND:
         {
-            for (idx = 0; /*empty*/; idx++) {
+            for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
                 item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
@@ -618,7 +624,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
         break;
     case JS_ITERATOR_HELPER_KIND_FOR_EACH:
         {
-            for (idx = 0; /*empty*/; idx++) {
+            for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
                 item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
@@ -642,7 +648,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_SOME:
         {
             r = JS_FALSE;
-            for (idx = 0; /*empty*/; idx++) {
+            for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
                 item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
@@ -717,7 +723,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
         }
         idx = 1;
     }
-    for (/* empty */; /*empty*/; idx++) {
+    for (/* empty */; /*empty*/; idx = js_iterator_increment_counter(idx)) {
         item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
         if (JS_IsException(item))
             goto exception_no_close;
@@ -929,7 +935,8 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     ret = item;
                     break;
                 }
-                index_val = JS_NewInt64(ctx, it->count++);
+                index_val = JS_NewInt64(ctx, it->count);
+                it->count = js_iterator_increment_counter(it->count);
                 args[0] = item;
                 args[1] = index_val;
                 selected = JS_Call(ctx, it->argument, JS_UNDEFINED, countof(args), args);
@@ -959,7 +966,8 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                         ret = item;
                         break;
                     }
-                    index_val = JS_NewInt64(ctx, it->count++);
+                    index_val = JS_NewInt64(ctx, it->count);
+                    it->count = js_iterator_increment_counter(it->count);
                     args[0] = item;
                     args[1] = index_val;
                     ret = JS_Call(ctx, it->argument, JS_UNDEFINED, countof(args), args);
@@ -1027,7 +1035,8 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 ret = item;
                 goto done;
             }
-            index_val = JS_NewInt64(ctx, it->count++);
+            index_val = JS_NewInt64(ctx, it->count);
+            it->count = js_iterator_increment_counter(it->count);
             args[0] = item;
             args[1] = index_val;
             ret = JS_Call(ctx, it->argument, JS_UNDEFINED, countof(args), args);
