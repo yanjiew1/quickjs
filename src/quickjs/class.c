@@ -37,7 +37,7 @@ static JSClassID js_class_id_alloc = JS_CLASS_INIT_COUNT;
 static pthread_mutex_t js_class_id_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
-/* a new class ID is allocated if *pclass_id != 0 */
+/* a new class ID is allocated if *pclass_id == 0 */
 JSClassID JS_NewClassID(JSClassID *pclass_id)
 {
     JSClassID class_id;
