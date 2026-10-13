@@ -1608,3 +1608,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/list-format.o
 
 # ICU collator owners compile only when that frontend backend is selected.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/collator.o
+
+# ICU segmenter owners compile only when that frontend backend is selected.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/segmenter.o
