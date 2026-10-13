@@ -1565,3 +1565,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-collator.o
 
 # segmenter frontend sources remain disabled until coherent Intl activation.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-segmenter.o
+
+# number frontend sources remain disabled until coherent Intl activation.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-number-format.o
