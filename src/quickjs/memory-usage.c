@@ -249,6 +249,9 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
             break;
         case JS_CLASS_C_FUNCTION:        /* u.cfunc */
             s->c_func_count++;
+#ifndef JS_PTR64
+            s->obj_size += sizeof(JSAtom);
+#endif
             break;
         case JS_CLASS_BYTECODE_FUNCTION: /* u.func */
             {

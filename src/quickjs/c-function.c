@@ -31,6 +31,30 @@
 #include "internal/error.h"
 #include "internal/iterator.h"
 
+static BOOL js_c_function_name_valid(const char *name)
+{
+    const char *p;
+    BOOL symbol = FALSE;
+
+    if (*name == '\0')
+        return TRUE;
+    if (!strncmp(name, "get ", 4) || !strncmp(name, "set ", 4))
+        name += 4;
+    if (!strncmp(name, "[Symbol.", 8)) {
+        name += 8;
+        symbol = TRUE;
+    }
+    p = name;
+    if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') ||
+          *p == '_' || *p == '$'))
+        return FALSE;
+    p++;
+    while ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') ||
+           (*p >= '0' && *p <= '9') || *p == '_' || *p == '$')
+        p++;
+    return symbol ? p[0] == ']' && p[1] == '\0' : *p == '\0';
+}
+
 /* Note: at least 'length' arguments will be readable in 'argv' */
 JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
                          const char *name,
@@ -65,6 +89,8 @@ JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
         JS_FreeValue(ctx, func_obj);
         return JS_EXCEPTION;
     }
+    if (js_c_function_name_valid(name))
+        *js_c_function_initial_name(p) = JS_DupAtom(ctx, name_atom);
     js_function_set_properties(ctx, func_obj, name_atom, length);
     JS_FreeAtom(ctx, name_atom);
     return func_obj;
@@ -212,6 +238,7 @@ void js_c_function_finalizer(JSRuntime *rt, JSValue val)
 {
     JSObject *p = JS_VALUE_GET_OBJ(val);
 
+    JS_FreeAtomRT(rt, *js_c_function_initial_name(p));
     if (p->u.cfunc.realm)
         JS_FreeContext(p->u.cfunc.realm);
 }
