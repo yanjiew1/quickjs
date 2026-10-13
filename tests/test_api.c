@@ -247,6 +247,57 @@ static void test_shared_buffer_allocation(void)
     assert(data.ptr == NULL);
 }
 
+static void check_typed_array_arguments(JSContext *ctx, int argc,
+                                       JSValueConst *argv, size_t expected_length)
+{
+    JSValue array, buffer;
+    size_t offset, length, element_size;
+
+    array = JS_NewTypedArray(ctx, argc, argv, JS_TYPED_ARRAY_UINT8);
+    assert(!JS_IsException(array));
+    buffer = JS_GetTypedArrayBuffer(ctx, array, &offset, &length, &element_size);
+    assert(!JS_IsException(buffer));
+    assert(offset == 0 && length == expected_length && element_size == 1);
+    JS_FreeValue(ctx, buffer);
+    JS_FreeValue(ctx, array);
+}
+
+static void test_typed_array_arguments(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue value, buffer, array;
+    JSValueConst two_args[2], three_args[3];
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    check_typed_array_arguments(ctx, 0, NULL, 0);
+    value = JS_NewInt32(ctx, 0);
+    check_typed_array_arguments(ctx, 1, &value, 0);
+    value = JS_NewInt32(ctx, 2);
+    check_typed_array_arguments(ctx, 1, &value, 2);
+    buffer = JS_Eval(ctx, "new ArrayBuffer(2)", strlen("new ArrayBuffer(2)"),
+                     "typed-array-arguments", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(buffer));
+    check_typed_array_arguments(ctx, 1, &buffer, 2);
+    two_args[0] = buffer;
+    two_args[1] = JS_UNDEFINED;
+    check_typed_array_arguments(ctx, 2, two_args, 2);
+    three_args[0] = buffer;
+    three_args[1] = JS_NewInt32(ctx, 0);
+    three_args[2] = JS_NewInt32(ctx, 1);
+    check_typed_array_arguments(ctx, 3, three_args, 1);
+    JS_FreeValue(ctx, buffer);
+    array = JS_NewTypedArray(ctx, 0, NULL,
+                             (JSTypedArrayEnum)(JS_TYPED_ARRAY_FLOAT64 + 1));
+    assert(JS_IsException(array) && JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void test_empty_atom(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -308,6 +359,7 @@ int main(int argc, char **argv)
     } tests[] = {
         { "buffer-allocation", test_empty_buffer_allocation },
         { "shared-buffer-allocation", test_shared_buffer_allocation },
+        { "typed-array-arguments", test_typed_array_arguments },
         { "atom", test_empty_atom },
         { "buffer-transfer", test_empty_buffer_transfer },
     };
