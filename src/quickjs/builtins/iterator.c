@@ -471,7 +471,7 @@ static JSValue js_create_iterator_helper(JSContext *ctx, JSValueConst this_val,
 
     method = JS_GetProperty(ctx, this_val, JS_ATOM_next);
     if (JS_IsException(method))
-        goto fail;
+        return JS_EXCEPTION;
     obj = JS_NewObjectClass(ctx, JS_CLASS_ITERATOR_HELPER);
     if (JS_IsException(obj)) {
         JS_FreeValue(ctx, method);
