@@ -177,6 +177,8 @@ static no_inline JSMallocArena *js_malloc_new_arena(JSMallocContext *s, int bloc
 static no_inline void *js_malloc_large(JSMallocContext *s, size_t size)
 {
     JSMallocLargeBlockHeader *b;
+    if (unlikely(size > SIZE_MAX - sizeof(*b)))
+        return NULL;
     b = s->mf.js_malloc(&s->malloc_state, sizeof(JSMallocLargeBlockHeader) + size);
     if (!b)
         return NULL;
@@ -195,16 +197,16 @@ static void *__js_malloc(JSMallocContext *s, size_t size)
         JSMallocBlockHeader *b = get_zero_size_block(s);
         return b->user_data;
     } else {
-        total_size = ((size + JS_MALLOC_ALIGN - 1) & ~(JS_MALLOC_ALIGN - 1)) +
-            sizeof(JSMallocBlockHeader);
         if (!JS_MALLOC_LARGE_BLOCKS_ONLY &&
-            total_size <= JS_MALLOC_MAX_SMALL_SIZE) {
+            size <= JS_MALLOC_MAX_SMALL_SIZE - sizeof(JSMallocBlockHeader)) {
             int block_size_idx;
             unsigned int block_idx, block_size;
             JSMallocBlockHeader *b;
             JSMallocArena *ar;
             struct list_head *el, *head;
             
+            total_size = ((size + JS_MALLOC_ALIGN - 1) & ~(JS_MALLOC_ALIGN - 1)) +
+                sizeof(JSMallocBlockHeader);
             block_size_idx = get_block_size_index(total_size);
             block_size = js_malloc_block_sizes[block_size_idx];
             head = &s->free_arena_list[block_size_idx];
@@ -290,6 +292,8 @@ static void *__js_realloc(JSMallocContext *s, void *ptr, size_t size)
             return __js_malloc(s, size);
         } else {
             JSMallocLargeBlockHeader *lb, *new_lb;
+            if (unlikely(size > SIZE_MAX - sizeof(*lb)))
+                return NULL;
             lb = container_of(ptr, JSMallocLargeBlockHeader, header.user_data);
 #ifdef JS_MALLOC_USE_ITER
             list_del(&lb->link);
@@ -312,13 +316,11 @@ static void *__js_realloc(JSMallocContext *s, void *ptr, size_t size)
     } else {
         unsigned int block_size_idx = b->block_size_idx;
         size_t block_size = js_malloc_block_sizes[block_size_idx];
-        size_t total_size, old_size;
+        size_t old_size;
         void *new_ptr;
         JSMallocBlockHeader *new_b;
 
-        total_size = ((size + JS_MALLOC_ALIGN - 1) & ~(JS_MALLOC_ALIGN - 1)) +
-            sizeof(JSMallocBlockHeader);
-        if (total_size <= block_size)
+        if (size <= block_size - sizeof(JSMallocBlockHeader))
             return ptr;
         new_ptr = __js_malloc(s, size);
         if (!new_ptr)
