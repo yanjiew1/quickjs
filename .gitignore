@@ -59,3 +59,6 @@ libwinpthread*.dll
 
 /tests/test_allocator
 /tests/test_allocator.exe
+
+/tests/test_atomics_wait
+/tests/test_atomics_wait.exe
