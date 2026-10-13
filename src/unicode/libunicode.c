@@ -2083,3 +2083,29 @@ int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void
 }
 
 #include "libunicode-es-property-grammar.inc"
+
+typedef struct {
+    UnicodeSequencePropCheckedCB *cb;
+    void *opaque;
+    int failed;
+} UnicodeNativeSequenceContext;
+
+static void unicode_native_sequence_checked(void *opaque,
+                                           const uint32_t *buf, int len)
+{
+    UnicodeNativeSequenceContext *s = opaque;
+    if (!s->failed && s->cb(s->opaque, buf, len))
+        s->failed = 1;
+}
+
+int unicode_sequence_prop_checked(const char *name,
+                                 UnicodeSequencePropCheckedCB *cb, void *opaque,
+                                 CharRange *cr)
+{
+    UnicodeNativeSequenceContext s = { cb, opaque, 0 };
+    int ret;
+    if (!cb)
+        return -1;
+    ret = unicode_sequence_prop(name, unicode_native_sequence_checked, &s, cr);
+    return s.failed ? -1 : ret;
+}
