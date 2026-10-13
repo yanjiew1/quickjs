@@ -47,7 +47,7 @@ typedef enum BCTagEnum {
     BC_TAG_OBJECT_REFERENCE,
 } BCTagEnum;
 
-#define BC_VERSION 42
+#define BC_VERSION 43
 
 
 #endif
