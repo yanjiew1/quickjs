@@ -306,6 +306,7 @@ QUICKJS_SRCS= \
     src/quickjs/generator.c \
     src/quickjs/global-environment.c \
     src/quickjs/disposal.c \
+    src/quickjs/default-time-zone.c \
     src/quickjs/iterator-protocol.c \
     src/quickjs/memory-usage.c \
     src/quickjs/module-evaluation.c \
@@ -640,6 +641,7 @@ C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_format$(EXE)
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
+C_TESTS+=tests/test_default_time_zone_api$(EXE)
 C_TESTS+=tests/test_temporal_civil$(EXE)
 C_TESTS+=tests/test_temporal_zones$(EXE)
 C_TESTS+=tests/test_temporal_calendars$(EXE)
@@ -799,6 +801,7 @@ endif
 	$(WINE) ./tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal_format$(EXE)
 	$(WINE) ./tests/test_temporal_duration_math$(EXE)
+	$(WINE) ./tests/test_default_time_zone_api$(EXE)
 	$(WINE) ./tests/test_temporal_civil$(EXE)
 	$(WINE) ./tests/test_temporal_zones$(EXE)
 	$(WINE) ./tests/test_temporal_calendars$(EXE)
@@ -1171,4 +1174,7 @@ tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o $(TEMPORA
 TEMPORAL_RELATIVE_SRCS=src/temporal/relative.c
 TEMPORAL_RELATIVE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_RELATIVE_SRCS))
 tests/test_temporal_civil$(EXE): $(OBJDIR)/tests/test_temporal_civil.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS) $(TEMPORAL_FORMAT_OBJS) $(TEMPORAL_DURATION_OBJS) $(TEMPORAL_CALENDAR_OBJS) $(TEMPORAL_TIMEZONE_OBJS) $(TEMPORAL_RELATIVE_OBJS) libquickjs$(LTOEXT).a libqjstimezone.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_default_time_zone_api$(EXE): $(OBJDIR)/tests/test_default_time_zone_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

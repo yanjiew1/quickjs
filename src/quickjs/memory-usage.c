@@ -123,6 +123,12 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
 
     s->memory_used_count = 2; /* rt + rt->class_array */
     s->memory_used_size = sizeof(JSRuntime) + sizeof(JSValue) * rt->class_count;
+#ifdef CONFIG_TEMPORAL
+    if (rt->default_time_zone) {
+        s->memory_used_count++;
+        s->memory_used_size += strlen(rt->default_time_zone) + 1;
+    }
+#endif
 
     list_for_each(el, &rt->context_list) {
         JSContext *ctx = list_entry(el, JSContext, link);

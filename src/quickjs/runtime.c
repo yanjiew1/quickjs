@@ -45,6 +45,9 @@
 #include "builtins/array.h"
 #include "builtins/iterator.h"
 #include "builtins/regexp.h"
+#ifdef CONFIG_TEMPORAL
+#include "../timezone/timezone.h"
+#endif
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
@@ -457,6 +460,13 @@ void JS_FreeRuntime(JSRuntime *rt)
 #endif
     assert(list_empty(&rt->gc_obj_list));
     assert(list_empty(&rt->weakref_list));
+#ifdef CONFIG_TEMPORAL
+    js_free_rt(rt, rt->default_time_zone);
+    rt->default_time_zone = NULL;
+    /* All native consumers finalized; allocator and runtime still live. */
+    qjs_tz_provider_free(rt->temporal_tz_provider);
+    rt->temporal_tz_provider = NULL;
+#endif
 
     /* free the classes */
     for(i = 0; i < rt->class_count; i++) {

@@ -146,3 +146,6 @@ __pycache__/
 
 /tests/test_temporal_civil
 /tests/test_temporal_civil.exe
+
+/tests/test_default_time_zone_api
+/tests/test_default_time_zone_api.exe

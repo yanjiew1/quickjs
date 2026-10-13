@@ -30,6 +30,10 @@
 
 #include "allocator-types.h"
 
+#ifdef CONFIG_TEMPORAL
+struct QJSTzProvider;
+#endif
+
 #define JS_MODULE_LOADER_HAS_ATTR (1 << 0)
 #define JS_MODULE_NORMALIZE_HAS_ATTR (1 << 1)
 
@@ -116,6 +120,11 @@ struct JSRuntime {
     int shape_hash_count; /* number of hashed shapes */
     JSShape **shape_hash;
     void *user_opaque;
+#ifdef CONFIG_TEMPORAL
+    /* One owned host policy and immutable provider for this runtime/agent. */
+    char *default_time_zone;
+    struct QJSTzProvider *temporal_tz_provider;
+#endif
 #ifdef CONFIG_ATOMICS
     struct JSNativeJobOwner *native_jobs;
 #endif
