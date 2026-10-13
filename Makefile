@@ -1353,3 +1353,8 @@ test test-binaries: $(INTL_DATA_VALIDATION_OBJS)
 
 tests/test_intl_data_reader$(EXE): $(OBJDIR)/tests/test_intl_data_reader.o $(OBJDIR)/src/intl/data/native-data-reader.o $(INTL_DATA_VALIDATION_OBJS) $(OBJDIR)/src/intl/plural.o $(OBJDIR)/src/intl/date-pattern.o $(OBJDIR)/src/intl/number-range.o $(OBJDIR)/src/intl/number-unit.o $(OBJDIR)/src/intl/data/number-template-validation.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: test-intl-generator
+test-intl-generator:
+	$(PYTHON) tests/test_intl_generator.py
+test: test-intl-generator
