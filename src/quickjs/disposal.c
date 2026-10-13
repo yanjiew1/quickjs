@@ -265,6 +265,22 @@ int js_add_disposable_resource(JSContext *ctx,
                                       JS_DISPOSABLE_USE, kind);
 }
 
+/* The insertion operations consume method, including on failure. */
+int js_adopt_disposable_resource(JSContext *ctx, JSValueConst resources,
+                                 JSValueConst value, JSValue method,
+                                 JSDisposalKind kind)
+{
+    return js_disposable_resource_add(ctx, resources, value, method,
+                                      JS_DISPOSABLE_ADOPT, kind);
+}
+
+int js_defer_disposable_resource(JSContext *ctx, JSValueConst resources,
+                                 JSValue method, JSDisposalKind kind)
+{
+    return js_disposable_resource_add(ctx, resources, JS_UNDEFINED, method,
+                                      JS_DISPOSABLE_DEFER, kind);
+}
+
 static JSValue js_disposable_resource_call(JSContext *ctx,
                                            const JSDisposableResource *resource)
 {
