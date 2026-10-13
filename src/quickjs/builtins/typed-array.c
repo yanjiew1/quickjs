@@ -560,6 +560,9 @@ static JSValue js_typed_array_from(JSContext *ctx, JSValueConst this_val,
     int64_t k, len;
     int mapping;
 
+    if (!JS_IsConstructor(ctx, this_val))
+        return JS_ThrowTypeError(ctx, "not a constructor");
+
     mapping = FALSE;
     mapfn = JS_UNDEFINED;
     this_arg = JS_UNDEFINED;
