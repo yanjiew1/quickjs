@@ -1620,3 +1620,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/plural-rules.o
 
 # ICU relative owners compile only when that frontend backend is selected.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/relative-time-format.o
+
+# ICU display owners compile only when that frontend backend is selected.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/display-names.o
