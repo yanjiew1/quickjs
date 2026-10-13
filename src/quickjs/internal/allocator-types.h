@@ -25,18 +25,21 @@
 #ifndef QUICKJS_ALLOCATOR_TYPES_H
 #define QUICKJS_ALLOCATOR_TYPES_H
 
+#include <stddef.h>
+
 #include "base.h"
 
 /* JS malloc */
 
-#define JS_MALLOC_ALIGN 8
+/* The host malloc supplies fundamental alignment; preserve it for payloads. */
+#define JS_MALLOC_ALIGN (_Alignof(max_align_t) > 8 ? _Alignof(max_align_t) : 8)
 #define JS_MALLOC_BLOCK_SIZE_COUNT 31
 
 /* allow iteration among the allocated blocks. Currently not used. May
    be used to suppress the memory overhead of JSGCObjectHeader */
 //#define JS_MALLOC_USE_ITER
 
-/* 8 byte header */
+/* Keep ref_count immediately before the payload for public inline helpers. */
 /* Notes:
    - the header is necessary at least to recover a pointer to
      JSMallocArena because we don't want to enforce a page
@@ -47,12 +50,17 @@
 */
 typedef struct JSMallocBlockHeader {
     union {
-        uint16_t block_idx; /* FREE_NIL if large block */
-        uint16_t free_next; /* FREE_NIL if none */
-    } u;
-    uint8_t block_size_idx;
-    uint8_t gc_obj_type : 7;
-    uint8_t mark : 1;
+        struct {
+            union {
+                uint16_t block_idx; /* FREE_NIL if large block */
+                uint16_t free_next; /* FREE_NIL if none */
+            } u;
+            uint8_t block_size_idx;
+            uint8_t gc_obj_type : 7;
+            uint8_t mark : 1;
+        };
+        uint8_t alignment_padding[JS_MALLOC_ALIGN - sizeof(int)];
+    };
     int ref_count;
     __attribute__((aligned(JS_MALLOC_ALIGN))) uint8_t user_data[];
 } JSMallocBlockHeader;
