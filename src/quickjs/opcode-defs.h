@@ -261,6 +261,8 @@ DEF(     set_strict, 2, 0, 0, u8)
 
 DEF(define_field_ro, 5, 2, 1, atom) /* immutable binding reference */
 
+DEF(resource_management, 2, 3, 2, u8)
+
 /* must be the last non short and non temporary opcode */
 DEF(            nop, 1, 0, 0, none)
 
