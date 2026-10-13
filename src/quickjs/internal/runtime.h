@@ -152,8 +152,8 @@ typedef struct {
 typedef struct JSVarRef {
     JSGCObjectHeader header; /* must come first */
     uint8_t is_detached;
-    uint8_t is_lexical; /* only used with global variables */
-    uint8_t is_const; /* only used with global variables */
+    uint8_t is_lexical;
+    uint8_t is_const;
     JSValue *pvalue; /* pointer to the value, either on the stack or
                         to 'value' */
     union {
