@@ -242,7 +242,10 @@ JSModuleDef *js_module_loader(JSContext *ctx,
     JSModuleDef *m;
     int res;
 
-    if (has_suffix(module_name, ".so")) {
+    res = js_module_test_json(ctx, attributes);
+    if (JS_HasException(ctx))
+        return NULL;
+    if (has_suffix(module_name, ".so") && res == 0) {
         m = js_module_loader_so(ctx, module_name);
     } else {
         size_t buf_len;
@@ -254,7 +257,6 @@ JSModuleDef *js_module_loader(JSContext *ctx,
                                    module_name);
             return NULL;
         }
-        res = js_module_test_json(ctx, attributes);
         if (has_suffix(module_name, ".json") || res > 0) {
             /* compile as JSON or JSON5 depending on "type" */
             JSValue val;
