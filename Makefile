@@ -1072,6 +1072,18 @@ C_TESTS+=tests/test_intl_text$(EXE)
 endif
 endif
 
+ifeq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_native_number_provider$(EXE)
+endif
+
+ifeq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_native_plural_provider$(EXE)
+endif
+
+ifeq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_native_duration_provider$(EXE)
+endif
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1081,6 +1093,15 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+ifeq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_native_duration_provider$(EXE)
+endif
+ifeq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_native_plural_provider$(EXE)
+endif
+ifeq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_native_number_provider$(EXE)
+endif
 ifeq ($(CONFIG_INTL),y)
 ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_text$(EXE)
@@ -1955,3 +1976,12 @@ endif
 test: test-intl-icu-date
 endif
 endif
+
+tests/test_intl_native_number_provider$(EXE): $(OBJDIR)/tests/test_intl_native_number_provider.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_plural_provider$(EXE): $(OBJDIR)/tests/test_intl_native_plural_provider.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_duration_provider$(EXE): $(OBJDIR)/tests/test_intl_native_duration_provider.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

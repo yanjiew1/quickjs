@@ -223,3 +223,12 @@ __pycache__/
 
 /tests/test_intl_text
 /tests/test_intl_text.exe
+
+/tests/test_intl_native_number_provider
+/tests/test_intl_native_number_provider.exe
+
+/tests/test_intl_native_plural_provider
+/tests/test_intl_native_plural_provider.exe
+
+/tests/test_intl_native_duration_provider
+/tests/test_intl_native_duration_provider.exe
