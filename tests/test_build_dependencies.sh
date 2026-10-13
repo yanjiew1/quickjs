@@ -46,6 +46,7 @@ check_recipes() {
         "$build_obj/src/cutils/cutils.check.o" \
         "$build_obj/tools/unicode_gen.test.host.o" \
         "$build_obj/src/unicode/libunicode.test.host.o" \
+        "$build_obj/src/quickjs/serialization/reader.trace.o" \
         "$build_obj/src/quickjs/number.o" \
         "$build_obj/src/quickjs/builtins/number.o"
     # Upstream source releases omit the optional fuzz sources.
