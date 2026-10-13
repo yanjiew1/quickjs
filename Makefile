@@ -1879,3 +1879,19 @@ test-intl-icu-locale: qjs$(EXE)
 test: test-intl-icu-locale
 endif
 endif
+
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+.PHONY: test-intl-icu-number
+test-intl-icu-number: qjs$(EXE)
+ifeq ($(CONFIG_INTL_LEGACY),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_number_format.js
+else
+	$(WINE) ./qjs$(EXE) --std -e "globalThis.intlLegacyExpected = false; std.loadScript('tests/test_intl_number_format.js');"
+endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_number_locale_methods.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_plural_rules.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_relative_time_format.js
+test: test-intl-icu-number
+endif
+endif
