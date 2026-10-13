@@ -812,6 +812,8 @@ tests/test_unicode_oom$(EXE): $(OBJDIR)/tests/test_unicode_oom.o $(REGEXP_OBJS) 
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+C_TESTS+=tests/test_intl_number_grammar$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -821,6 +823,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_number_grammar$(EXE)
 	$(WINE) ./tests/test_fuzz_regexp_timeout$(EXE)
 	$(WINE) ./tests/test_fuzz_allocations$(EXE)
 	$(WINE) ./tests/test_fuzz_exception_ownership$(EXE)
@@ -1322,4 +1325,7 @@ test-binaries: tests/run_temporal_zone_test$(EXE)
 endif
 
 tests/test_intl_native_plural$(EXE): $(OBJDIR)/tests/test_intl_native_plural.o $(OBJDIR)/src/intl/plural-native.o $(OBJDIR)/src/intl/plural.o $(OBJDIR)/src/intl/decimal.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_number_grammar$(EXE): $(OBJDIR)/tests/test_intl_number_grammar.o $(OBJDIR)/src/intl/number-range.o $(OBJDIR)/src/intl/number-compact.o $(OBJDIR)/src/intl/number-unit.o $(OBJDIR)/src/intl/data/number-template-validation.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

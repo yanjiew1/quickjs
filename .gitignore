@@ -172,3 +172,6 @@ __pycache__/
 
 /tests/test_intl_native_plural
 /tests/test_intl_native_plural.exe
+
+/tests/test_intl_number_grammar
+/tests/test_intl_number_grammar.exe
