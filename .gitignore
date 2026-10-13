@@ -112,3 +112,10 @@ libwinpthread*.dll
 
 /tests/test_temporal_duration_math
 /tests/test_temporal_duration_math.exe
+
+/tests/test_calendar_portable
+/tests/test_calendar_portable.exe
+/tests/test_calendar_persian_authority
+/tests/test_calendar_persian_authority.exe
+/tests/test_calendar_integrated_authority
+/tests/test_calendar_integrated_authority.exe

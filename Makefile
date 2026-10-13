@@ -323,6 +323,26 @@ QUICKJS_SRCS= \
     src/quickjs/value/conversion.c \
     src/quickjs/value/print.c \
     src/quickjs/vm.c
+# The pure C calendar library owns its authority and publication flags.
+CALENDAR_SRCS= \
+    src/calendar/calendar.c \
+    src/calendar/solar.c \
+    src/calendar/hebrew.c \
+    src/calendar/islamic.c \
+    src/calendar/astronomy.c \
+    src/calendar/lunisolar.c \
+    src/calendar/provider.c
+CALENDAR_AUTHORITY_CFLAGS= \
+    -DQJS_CAL_USE_PERSIAN_AUTHORITY_TABLE \
+    -DQJS_CAL_ENABLE_LUNISOLAR_CANDIDATE \
+    -DQJS_CAL_HAVE_PUBLISHED_LUNISOLAR_DATA \
+    -DQJS_CAL_PERSIAN_AUTHORITY_VERIFIED \
+    -DQJS_CAL_CHINESE_AUTHORITY_VERIFIED \
+    -DQJS_CAL_DANGI_AUTHORITY_VERIFIED
+CALENDAR_CONFIG_OBJECTS=$(foreach suffix,o host.o pic.o nolto.o debug.o fuzz.o check.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(CALENDAR_SRCS)))
+$(CALENDAR_CONFIG_OBJECTS): CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
+QUICKJS_SRCS+=$(CALENDAR_SRCS)
+
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
 all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
@@ -449,35 +469,35 @@ endif
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/fuzz/%.o: fuzz/%.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -I. -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
 
 $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+	$(HOST_CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
 $(OBJDIR)/%.nolto.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_NOLTO) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_NOLTO) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.debug.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_DEBUG) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_DEBUG) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
 
 $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
+	$(CC) $(CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
 regexp_test$(EXE): tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c
 	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c src/unicode/libunicode.c src/cutils/cutils.c $(LIBS)
@@ -614,6 +634,8 @@ C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_format$(EXE)
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
+CALENDAR_TEST_SRCS=tests/test_calendar_portable.c tests/test_calendar_persian_authority.c tests/test_calendar_integrated_authority.c
+C_TESTS+=$(patsubst %.c,%$(EXE),$(CALENDAR_TEST_SRCS))
 
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
@@ -678,7 +700,7 @@ $(OBJDIR)/tests/qjsc-json-attributes.c: $(QJSC) tests/prepare_qjsc_json_attribut
 
 $(OBJDIR)/tests/qjsc-json-attributes.o: $(OBJDIR)/tests/qjsc-json-attributes.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_json_exec$(EXE): $(OBJDIR)/tests/qjsc-json-attributes.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -689,7 +711,7 @@ $(OBJDIR)/tests/qjsc-native-std.c: $(QJSC) tests/qjsc-json-attributes/native-std
 
 $(OBJDIR)/tests/qjsc-native-std.o: $(OBJDIR)/tests/qjsc-native-std.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_native_std_exec$(EXE): $(OBJDIR)/tests/qjsc-native-std.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -702,7 +724,7 @@ $(QJSC_JSON_COLLISION_SRCS): $(OBJDIR)/tests/qjsc-json-collision-%.c: $(QJSC) te
 
 $(OBJDIR)/tests/qjsc-json-collision-%.o: $(OBJDIR)/tests/qjsc-json-collision-%.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 tests/test_qjsc_json_collision_%$(EXE): $(OBJDIR)/tests/qjsc-json-collision-%.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -760,6 +782,9 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal_format$(EXE)
 	$(WINE) ./tests/test_temporal_duration_math$(EXE)
+	$(WINE) ./tests/test_calendar_portable$(EXE)
+	$(WINE) ./tests/test_calendar_persian_authority$(EXE)
+	$(WINE) ./tests/test_calendar_integrated_authority$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
@@ -1030,4 +1055,14 @@ TEMPORAL_DURATION_SRCS=src/temporal/duration.c src/temporal/time.c
 TEMPORAL_DURATION_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_DURATION_SRCS))
 
 tests/test_temporal_duration_math$(EXE): $(OBJDIR)/tests/test_temporal_duration_math.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS) $(TEMPORAL_DURATION_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# Native calendar tests consume the same linked library provider.
+CALENDAR_TEST_OBJECTS=$(patsubst %.c,$(OBJDIR)/%.o,$(CALENDAR_TEST_SRCS))
+$(CALENDAR_TEST_OBJECTS): CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
+tests/test_calendar_portable$(EXE): $(OBJDIR)/tests/test_calendar_portable.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_calendar_persian_authority$(EXE): $(OBJDIR)/tests/test_calendar_persian_authority.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_calendar_integrated_authority$(EXE): $(OBJDIR)/tests/test_calendar_integrated_authority.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
