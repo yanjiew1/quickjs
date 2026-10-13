@@ -483,6 +483,15 @@ function test_string_normalize()
     assert("\u00c5".repeat(128).normalize("NFD"), "A\u030a".repeat(128));
     assert("\ufb03".repeat(128).normalize("NFKC"), "ffi".repeat(128));
     assert("\ufb03".repeat(128).normalize("NFKD"), "ffi".repeat(128));
+    for (const form of ["NFC", "NFKC"]) {
+        assert("\uac00\u11a7".normalize(form), "\uac00\u11a7");
+        assert("\u1100\u1161\u11a7".normalize(form), "\uac00\u11a7");
+        assert("\uac00\u11a8".normalize(form), "\uac01");
+        assert("\uac00\u11c2".normalize(form), "\uac1b");
+        assert("\uac00\u11c3".normalize(form), "\uac00\u11c3");
+    }
+    for (const form of ["NFD", "NFKD"])
+        assert("\uac00\u11a7".normalize(form), "\u1100\u1161\u11a7");
 }
 
 function test_math()
