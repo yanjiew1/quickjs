@@ -36,6 +36,21 @@ typedef struct JSTypedArray {
     BOOL track_rab; /* auto-track length of backing array buffer */
 } JSTypedArray;
 
+/* ArrayBuffers supplied by the C API need not have aligned backing storage. */
+static inline float js_typed_array_get_float32(const uint8_t *ptr)
+{
+    float val;
+    memcpy(&val, ptr, sizeof(val));
+    return val;
+}
+
+static inline double js_typed_array_get_float64(const uint8_t *ptr)
+{
+    double val;
+    memcpy(&val, ptr, sizeof(val));
+    return val;
+}
+
 extern uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
 #define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
 

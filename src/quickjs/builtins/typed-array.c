@@ -766,17 +766,17 @@ static JSValue js_typed_array_fill(JSContext *ctx, JSValueConst this_val,
         break;
     case 1:
         for(; k < final; k++) {
-            p->u.array.u.uint16_ptr[k] = v64;
+            put_u16(p->u.array.u.uint8_ptr + (size_t)k * 2, v64);
         }
         break;
     case 2:
         for(; k < final; k++) {
-            p->u.array.u.uint32_ptr[k] = v64;
+            put_u32(p->u.array.u.uint8_ptr + (size_t)k * 4, v64);
         }
         break;
     case 3:
         for(; k < final; k++) {
-            p->u.array.u.uint64_ptr[k] = v64;
+            put_u64(p->u.array.u.uint8_ptr + (size_t)k * 8, v64);
         }
         break;
     default:
@@ -993,13 +993,13 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
         break;
     case JS_CLASS_UINT16_ARRAY:
         if (is_int && (uint16_t)v64 == v64) {
-            const uint16_t *pv;
+            const uint8_t *pv;
             uint16_t v;
         scan16:
-            pv = p->u.array.u.uint16_ptr;
+            pv = p->u.array.u.uint8_ptr;
             v = v64;
             for (; k != stop; k += inc) {
-                if (pv[k] == v) {
+                if (get_u16(pv + (size_t)k * 2) == v) {
                     res = k;
                     break;
                 }
@@ -1012,13 +1012,13 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
         break;
     case JS_CLASS_UINT32_ARRAY:
         if (is_int && (uint32_t)v64 == v64) {
-            const uint32_t *pv;
+            const uint8_t *pv;
             uint32_t v;
         scan32:
-            pv = p->u.array.u.uint32_ptr;
+            pv = p->u.array.u.uint8_ptr;
             v = v64;
             for (; k != stop; k += inc) {
-                if (pv[k] == v) {
+                if (get_u32(pv + (size_t)k * 4) == v) {
                     res = k;
                     break;
                 }
@@ -1029,29 +1029,29 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
         if (is_bigint)
             break;
         if (isnan(d)) {
-            const uint16_t *pv = p->u.array.u.fp16_ptr;
+            const uint8_t *pv = p->u.array.u.uint8_ptr;
             /* special case: indexOf returns -1, includes finds NaN */
             if (special != special_includes)
                 goto done;
             for (; k != stop; k += inc) {
-                if (isfp16nan(pv[k])) {
+                if (isfp16nan(get_u16(pv + (size_t)k * 2))) {
                     res = k;
                     break;
                 }
             }
         } else if (d == 0) {
             // special case: includes also finds negative zero
-            const uint16_t *pv = p->u.array.u.fp16_ptr;
+            const uint8_t *pv = p->u.array.u.uint8_ptr;
             for (; k != stop; k += inc) {
-                if (isfp16zero(pv[k])) {
+                if (isfp16zero(get_u16(pv + (size_t)k * 2))) {
                     res = k;
                     break;
                 }
             }
         } else if (hf = tofp16(d), d == fromfp16(hf)) {
-            const uint16_t *pv = p->u.array.u.fp16_ptr;
+            const uint8_t *pv = p->u.array.u.uint8_ptr;
             for (; k != stop; k += inc) {
-                if (pv[k] == hf) {
+                if (get_u16(pv + (size_t)k * 2) == hf) {
                     res = k;
                     break;
                 }
@@ -1062,20 +1062,20 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
         if (is_bigint)
             break;
         if (isnan(d)) {
-            const float *pv = p->u.array.u.float_ptr;
+            const uint8_t *pv = p->u.array.u.uint8_ptr;
             /* special case: indexOf returns -1, includes finds NaN */
             if (special != special_includes)
                 goto done;
             for (; k != stop; k += inc) {
-                if (isnan(pv[k])) {
+                if (isnan(js_typed_array_get_float32(pv + (size_t)k * 4))) {
                     res = k;
                     break;
                 }
             }
         } else if ((f = (float)d) == d) {
-            const float *pv = p->u.array.u.float_ptr;
+            const uint8_t *pv = p->u.array.u.uint8_ptr;
             for (; k != stop; k += inc) {
-                if (pv[k] == f) {
+                if (js_typed_array_get_float32(pv + (size_t)k * 4) == f) {
                     res = k;
                     break;
                 }
@@ -1086,20 +1086,20 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
         if (is_bigint)
             break;
         if (isnan(d)) {
-            const double *pv = p->u.array.u.double_ptr;
+            const uint8_t *pv = p->u.array.u.uint8_ptr;
             /* special case: indexOf returns -1, includes finds NaN */
             if (special != special_includes)
                 goto done;
             for (; k != stop; k += inc) {
-                if (isnan(pv[k])) {
+                if (isnan(js_typed_array_get_float64(pv + (size_t)k * 8))) {
                     res = k;
                     break;
                 }
             }
         } else {
-            const double *pv = p->u.array.u.double_ptr;
+            const uint8_t *pv = p->u.array.u.uint8_ptr;
             for (; k != stop; k += inc) {
-                if (pv[k] == d) {
+                if (js_typed_array_get_float64(pv + (size_t)k * 8) == d) {
                     res = k;
                     break;
                 }
@@ -1113,13 +1113,13 @@ static JSValue js_typed_array_indexOf(JSContext *ctx, JSValueConst this_val,
         break;
     case JS_CLASS_BIG_UINT64_ARRAY:
         if (is_bigint) {
-            const uint64_t *pv;
+            const uint8_t *pv;
             uint64_t v;
         scan64:
-            pv = p->u.array.u.uint64_ptr;
+            pv = p->u.array.u.uint8_ptr;
             v = v64;
             for (; k != stop; k += inc) {
-                if (pv[k] == v) {
+                if (get_u64(pv + (size_t)k * 8) == v) {
                     res = k;
                     break;
                 }
@@ -1242,34 +1242,40 @@ static JSValue js_typed_array_reverse(JSContext *ctx, JSValueConst this_val,
             break;
         case 1:
             {
-                uint16_t *p1 = p->u.array.u.uint16_ptr;
-                uint16_t *p2 = p1 + len - 1;
+                uint8_t *p1 = p->u.array.u.uint8_ptr;
+                uint8_t *p2 = p1 + (size_t)(len - 1) * 2;
                 while (p1 < p2) {
-                    uint16_t v = *p1;
-                    *p1++ = *p2;
-                    *p2-- = v;
+                    uint16_t v = get_u16(p1);
+                    put_u16(p1, get_u16(p2));
+                    put_u16(p2, v);
+                    p1 += 2;
+                    p2 -= 2;
                 }
             }
             break;
         case 2:
             {
-                uint32_t *p1 = p->u.array.u.uint32_ptr;
-                uint32_t *p2 = p1 + len - 1;
+                uint8_t *p1 = p->u.array.u.uint8_ptr;
+                uint8_t *p2 = p1 + (size_t)(len - 1) * 4;
                 while (p1 < p2) {
-                    uint32_t v = *p1;
-                    *p1++ = *p2;
-                    *p2-- = v;
+                    uint32_t v = get_u32(p1);
+                    put_u32(p1, get_u32(p2));
+                    put_u32(p2, v);
+                    p1 += 4;
+                    p2 -= 4;
                 }
             }
             break;
         case 3:
             {
-                uint64_t *p1 = p->u.array.u.uint64_ptr;
-                uint64_t *p2 = p1 + len - 1;
+                uint8_t *p1 = p->u.array.u.uint8_ptr;
+                uint8_t *p2 = p1 + (size_t)(len - 1) * 8;
                 while (p1 < p2) {
-                    uint64_t v = *p1;
-                    *p1++ = *p2;
-                    *p2-- = v;
+                    uint64_t v = get_u64(p1);
+                    put_u64(p1, get_u64(p2));
+                    put_u64(p2, v);
+                    p1 += 8;
+                    p2 -= 8;
                 }
             }
             break;
@@ -1441,48 +1447,50 @@ static int js_TA_cmp_uint8(const void *a, const void *b, void *opaque) {
 }
 
 static int js_TA_cmp_int16(const void *a, const void *b, void *opaque) {
-    return *(const int16_t *)a - *(const int16_t *)b;
+    return get_i16(a) - get_i16(b);
 }
 
 static int js_TA_cmp_uint16(const void *a, const void *b, void *opaque) {
-    return *(const uint16_t *)a - *(const uint16_t *)b;
+    return (int)get_u16(a) - (int)get_u16(b);
 }
 
 static int js_TA_cmp_int32(const void *a, const void *b, void *opaque) {
-    int32_t x = *(const int32_t *)a;
-    int32_t y = *(const int32_t *)b;
+    int32_t x = (int32_t)get_u32(a);
+    int32_t y = (int32_t)get_u32(b);
     return (y < x) - (y > x);
 }
 
 static int js_TA_cmp_uint32(const void *a, const void *b, void *opaque) {
-    uint32_t x = *(const uint32_t *)a;
-    uint32_t y = *(const uint32_t *)b;
+    uint32_t x = get_u32(a);
+    uint32_t y = get_u32(b);
     return (y < x) - (y > x);
 }
 
 static int js_TA_cmp_int64(const void *a, const void *b, void *opaque) {
-    int64_t x = *(const int64_t *)a;
-    int64_t y = *(const int64_t *)b;
+    int64_t x = (int64_t)get_u64(a);
+    int64_t y = (int64_t)get_u64(b);
     return (y < x) - (y > x);
 }
 
 static int js_TA_cmp_uint64(const void *a, const void *b, void *opaque) {
-    uint64_t x = *(const uint64_t *)a;
-    uint64_t y = *(const uint64_t *)b;
+    uint64_t x = get_u64(a);
+    uint64_t y = get_u64(b);
     return (y < x) - (y > x);
 }
 
 static int js_TA_cmp_float16(const void *a, const void *b, void *opaque) {
-    return js_cmp_doubles(fromfp16(*(const uint16_t *)a),
-                          fromfp16(*(const uint16_t *)b));
+    return js_cmp_doubles(fromfp16(get_u16(a)),
+                          fromfp16(get_u16(b)));
 }
 
 static int js_TA_cmp_float32(const void *a, const void *b, void *opaque) {
-    return js_cmp_doubles(*(const float *)a, *(const float *)b);
+    return js_cmp_doubles(js_typed_array_get_float32(a),
+                          js_typed_array_get_float32(b));
 }
 
 static int js_TA_cmp_float64(const void *a, const void *b, void *opaque) {
-    return js_cmp_doubles(*(const double *)a, *(const double *)b);
+    return js_cmp_doubles(js_typed_array_get_float64(a),
+                          js_typed_array_get_float64(b));
 }
 
 static JSValue js_TA_get_int8(JSContext *ctx, const void *a) {
@@ -1494,39 +1502,39 @@ static JSValue js_TA_get_uint8(JSContext *ctx, const void *a) {
 }
 
 static JSValue js_TA_get_int16(JSContext *ctx, const void *a) {
-    return JS_NewInt32(ctx, *(const int16_t *)a);
+    return JS_NewInt32(ctx, get_i16(a));
 }
 
 static JSValue js_TA_get_uint16(JSContext *ctx, const void *a) {
-    return JS_NewInt32(ctx, *(const uint16_t *)a);
+    return JS_NewInt32(ctx, get_u16(a));
 }
 
 static JSValue js_TA_get_int32(JSContext *ctx, const void *a) {
-    return JS_NewInt32(ctx, *(const int32_t *)a);
+    return JS_NewInt32(ctx, (int32_t)get_u32(a));
 }
 
 static JSValue js_TA_get_uint32(JSContext *ctx, const void *a) {
-    return JS_NewUint32(ctx, *(const uint32_t *)a);
+    return JS_NewUint32(ctx, get_u32(a));
 }
 
 static JSValue js_TA_get_int64(JSContext *ctx, const void *a) {
-    return JS_NewBigInt64(ctx, *(int64_t *)a);
+    return JS_NewBigInt64(ctx, (int64_t)get_u64(a));
 }
 
 static JSValue js_TA_get_uint64(JSContext *ctx, const void *a) {
-    return JS_NewBigUint64(ctx, *(uint64_t *)a);
+    return JS_NewBigUint64(ctx, get_u64(a));
 }
 
 static JSValue js_TA_get_float16(JSContext *ctx, const void *a) {
-    return __JS_NewFloat64(ctx, fromfp16(*(const uint16_t *)a));
+    return __JS_NewFloat64(ctx, fromfp16(get_u16(a)));
 }
 
 static JSValue js_TA_get_float32(JSContext *ctx, const void *a) {
-    return __JS_NewFloat64(ctx, *(const float *)a);
+    return __JS_NewFloat64(ctx, js_typed_array_get_float32(a));
 }
 
 static JSValue js_TA_get_float64(JSContext *ctx, const void *a) {
-    return __JS_NewFloat64(ctx, *(const double *)a);
+    return __JS_NewFloat64(ctx, js_typed_array_get_float64(a));
 }
 
 struct TA_sort_context {
@@ -1657,7 +1665,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
         elt_size = 1 << typed_array_size_log2(p->class_id);
         if (!JS_IsUndefined(tsc.cmp)) {
             uint32_t *array_idx;
-            void *array;
+            uint8_t *array;
             size_t i, j;
 
             /* the array must be copied because the comparison
@@ -1687,31 +1695,31 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
                 }
                 /* detached typed array during the sort: no error */
             } else {
-                void *array_ptr = p->u.array.u.ptr;
+                uint8_t *array_ptr = p->u.array.u.uint8_ptr;
                 len = min_int(len, p->u.array.count);
                 switch(elt_size) {
                 case 1:
                     for(i = 0; i < len; i++) {
                         j = array_idx[i];
-                        ((uint8_t *)array_ptr)[i] = ((uint8_t *)array)[j];
+                        array_ptr[i] = array[j];
                     }
                     break;
                 case 2:
                     for(i = 0; i < len; i++) {
                         j = array_idx[i];
-                        ((uint16_t *)array_ptr)[i] = ((uint16_t *)array)[j];
+                        put_u16(array_ptr + i * 2, get_u16(array + j * 2));
                     }
                     break;
                 case 4:
                     for(i = 0; i < len; i++) {
                         j = array_idx[i];
-                        ((uint32_t *)array_ptr)[i] = ((uint32_t *)array)[j];
+                        put_u32(array_ptr + i * 4, get_u32(array + j * 4));
                     }
                     break;
                 case 8:
                     for(i = 0; i < len; i++) {
                         j = array_idx[i];
-                        ((uint64_t *)array_ptr)[i] = ((uint64_t *)array)[j];
+                        put_u64(array_ptr + i * 8, get_u64(array + j * 8));
                     }
                     break;
                 default:
