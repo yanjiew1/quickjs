@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-version="17.0.0"
-url="ftp://ftp.unicode.org/Public"
+version="18.0.0"
+url="https://www.unicode.org/Public"
 
 files="CaseFolding.txt DerivedNormalizationProps.txt PropList.txt \
 SpecialCasing.txt CompositionExclusions.txt ScriptExtensions.txt \
