@@ -917,6 +917,14 @@ typedef enum JSTypedArrayEnum {
 
 JSValue JS_NewTypedArray(JSContext *ctx, int argc, JSValueConst *argv,
                          JSTypedArrayEnum array_type);
+/* Returns a JSTypedArrayEnum value, or -1 for other values. Does not
+   invoke user code or throw; detached and out-of-bounds views retain
+   their type. Proxies and DataView objects are not TypedArrays. */
+int JS_GetTypedArrayType(JSValueConst obj);
+/* Copy len input bytes into a new Uint8Array. buf may be NULL when
+   len is zero. Returns an owned value or JS_EXCEPTION. For standard
+   prototypes in raw contexts, initialize TypedArrays first. */
+JSValue JS_NewUint8ArrayCopy(JSContext *ctx, const uint8_t *buf, size_t len);
 JSValue JS_GetTypedArrayBuffer(JSContext *ctx, JSValueConst obj,
                                size_t *pbyte_offset,
                                size_t *pbyte_length,
