@@ -100,3 +100,6 @@ libwinpthread*.dll
 
 /tests/test_temporal_epoch
 /tests/test_temporal_epoch.exe
+
+/tests/test_temporal_date_math
+/tests/test_temporal_date_math.exe
