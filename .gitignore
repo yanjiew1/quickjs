@@ -74,3 +74,6 @@ libwinpthread*.dll
 
 /tests/test_allocator_policy
 /tests/test_allocator_policy.exe
+
+/tests/test_iterator
+/tests/test_iterator.exe
