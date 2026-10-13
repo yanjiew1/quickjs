@@ -109,8 +109,6 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
         b = NULL;
         var_refs = NULL;
         js_mode = 0;
-        if (flags & JS_EVAL_FLAG_STRICT)
-            js_mode |= JS_MODE_STRICT;
         if (eval_type == JS_EVAL_TYPE_MODULE) {
             JSAtom module_name = JS_NewAtom(ctx, filename);
             if (module_name == JS_ATOM_NULL)
@@ -121,6 +119,8 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
             js_mode |= JS_MODE_STRICT;
         }
     }
+    if (flags & JS_EVAL_FLAG_STRICT)
+        js_mode |= JS_MODE_STRICT;
     fd = js_new_function_def(ctx, NULL, TRUE, FALSE, filename,
                              s->buf_start, &s->get_line_col_cache);
     if (!fd)

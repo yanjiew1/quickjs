@@ -151,6 +151,19 @@ static void emit_op(JSParseState *s, uint8_t val)
     JSFunctionDef *fd = s->cur_func;
     DynBuf *bc = &fd->byte_code;
 
+    if (fd->class_strict) {
+        switch (val) {
+        case OP_put_field: val = OP_put_field_strict; break;
+        case OP_put_array_el: val = OP_put_array_el_strict; break;
+        case OP_put_ref_value: val = OP_put_ref_value_strict; break;
+        case OP_get_ref_value: val = OP_get_ref_value_strict; break;
+        case OP_put_super_value: val = OP_put_super_value_strict; break;
+        case OP_delete: val = OP_delete_strict; break;
+        case OP_eval: val = OP_eval_strict; break;
+        case OP_apply_eval: val = OP_apply_eval_strict; break;
+        default: break;
+        }
+    }
     fd->last_opcode_pos = bc->size;
     dbuf_putc(bc, val);
 }
@@ -405,6 +418,7 @@ int push_scope(JSParseState *s) {
         fd->scope_count++;
         fd->scopes[scope].parent = fd->scope_level;
         fd->scopes[scope].first = fd->scope_first;
+        fd->scopes[scope].is_strict = fd->class_strict;
         emit_op(s, OP_enter_scope);
         emit_u16(s, scope);
         return fd->scope_level = scope;
@@ -1632,13 +1646,15 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     JSFunctionDef *method_fd, *ctor_fd;
     int saved_js_mode, class_name_var_idx, prop_type, ctor_cpool_offset;
     int class_flags = 0, i, define_class_offset;
-    BOOL is_static, is_private;
+    BOOL is_static, is_private, saved_class_strict;
     const uint8_t *class_start_ptr = s->token.ptr;
     const uint8_t *start_ptr;
     ClassFieldsDef class_fields[2];
 
     /* classes are parsed and executed in strict mode */
     saved_js_mode = fd->js_mode;
+    saved_class_strict = fd->class_strict;
+    fd->class_strict |= !(saved_js_mode & JS_MODE_STRICT);
     fd->js_mode |= JS_MODE_STRICT;
     if (next_token(s))
         goto fail;
@@ -2125,12 +2141,14 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     JS_FreeAtom(ctx, class_name);
     JS_FreeAtom(ctx, class_var_name);
     fd->js_mode = saved_js_mode;
+    fd->class_strict = saved_class_strict;
     return 0;
  fail:
     JS_FreeAtom(ctx, name);
     JS_FreeAtom(ctx, class_name);
     JS_FreeAtom(ctx, class_var_name);
     fd->js_mode = saved_js_mode;
+    fd->class_strict = saved_class_strict;
     return -1;
 }
 
@@ -2264,8 +2282,7 @@ done:
 static BOOL has_with_scope(JSFunctionDef *s, int scope_level)
 {
     while (s) {
-        /* no with in strict mode */
-        if (!(s->js_mode & JS_MODE_STRICT)) {
+        {
             int scope_idx = s->scopes[scope_level].first;
             while (scope_idx >= 0) {
                 JSVarDef *vd = &s->vars[scope_idx];
@@ -3589,7 +3606,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
                                 fd->byte_code.buf[fd->last_opcode_pos] = opcode;
                             }
                         }
-                        drop_count = 1;
+                        drop_count = opcode == OP_scope_get_ref ? 2 : 1;
                     }
                     break;
                 case OP_get_super_value:

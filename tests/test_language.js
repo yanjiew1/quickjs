@@ -823,6 +823,107 @@ function test_annex_arguments_binding()
     strictFunction();
 }
 
+function test_class_lexical_strictness()
+{
+    const readonly = Object.defineProperty({}, "value", { value: 0 });
+    const accessor = { get value() { return 0; } };
+    const frozen = Object.preventExtensions({});
+    const proxy = new Proxy({}, { set() { return false; } });
+    for (const object of [readonly, accessor, frozen, proxy]) {
+        assert_throws(TypeError, () => { class C { [object.value = 1]() {} } });
+        assert_throws(TypeError, () => { const C = class extends (object.value = 1, Object) {}; });
+        assert_throws(TypeError, () => { class C { [object["value"] = 1]() {} } });
+    }
+    const noDelete = Object.defineProperty({}, "value", { value: 0 });
+    assert_throws(TypeError, () => { class C { [delete noDelete.value]() {} } });
+    assert_throws(TypeError, () => { class C { [delete noDelete?.value]() {} } });
+    delete globalThis.classStrictMissing;
+    assert_throws(ReferenceError, () => { class C { [classStrictMissing = 1]() {} } });
+    assert(!Object.hasOwn(globalThis, "classStrictMissing"));
+    function direct() {
+        class C { [eval("var classEvalLocal = 42; 'method'")]() {} }
+        assert(typeof classEvalLocal, "undefined");
+        class D { [eval(...["var classSpreadLocal = 42; 'method'"])]() {} }
+        assert(typeof classSpreadLocal, "undefined");
+    }
+    direct();
+    function indirect() {
+        class C { [(0, eval)("classIndirectGlobal = 42; 'method'")]() {} }
+        assert(globalThis.classIndirectGlobal, 42);
+    }
+    indirect();
+    delete globalThis.classIndirectGlobal;
+    function sloppy() { readonly.value = 1; return "method"; }
+    class C { [sloppy()]() {} }
+    assert(readonly.value, 0);
+    assert_throws(TypeError, () => (function self() {
+        class C extends (self = 1, Object) {}
+    })());
+    const object = Object.defineProperty({}, "value", { value: 0, writable: false });
+    with (object) {
+        assert_throws(TypeError, () => { class C { [value = 1]() {} } });
+    }
+    assert(object.value, 0);
+    function afterException() {
+        try { class C { [readonly.value = 1]() {} } } catch (error) {}
+        readonly.value = 1;
+        return 42;
+    }
+    assert(afterException(), 42);
+    (function self() {
+        with ({}) {
+            class C { [self ||= "unused"]() {} }
+            let effects = 0;
+            assert_throws(TypeError, () => {
+                class D { [self = (++effects, "method")]() {} }
+            });
+            assert(effects, 1);
+            assert_throws(TypeError, () => {
+                class D { [self &&= (++effects, "method")]() {} }
+            });
+            assert(effects, 2);
+        }
+    })();
+    let probes = 0;
+    const scope = new Proxy({}, {
+        has(target, key) {
+            return key === "classStrictFunction" && ++probes === 1;
+        }
+    });
+    assert_throws(ReferenceError, () => {
+        with (scope) {
+            class C { [classStrictFunction()]() {} }
+        }
+    });
+    assert(probes, 2);
+    let effects = 0;
+    assert_throws(TypeError, () => (function self() {
+        class C { [eval("self = (++effects, 1)")]() {} }
+    })());
+    assert(effects, 1);
+    assert_throws(TypeError, () => (function self() {
+        class C { [(() => { self = (++effects, 1); })()]() {} }
+    })());
+    assert(effects, 2);
+    assert_throws(TypeError, () => (function self() {
+        eval("'use strict'; self = (++effects, 1)");
+    })());
+    assert(effects, 3);
+    let calls = 0;
+    const environment = {
+        fn() { assert(this === environment); calls++; return "method"; },
+        missing: null
+    };
+    with (environment) {
+        class C { [fn?.()]() {} }
+        class D { [fn?.(...[])]() {} }
+        class E { [missing?.()]() {} }
+        fn?.();
+        missing?.(...[]);
+    }
+    assert(calls, 3);
+}
+
 function test_class()
 {
     var o;
@@ -1241,6 +1342,7 @@ test_annex_eval_variable_target();
 test_parameter_arguments_binding();
 test_annex_deferred_applicability();
 test_annex_arguments_binding();
+test_class_lexical_strictness();
 test_template();
 test_template_skip();
 test_object_literal();
