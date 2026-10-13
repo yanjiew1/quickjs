@@ -1443,3 +1443,6 @@ test test-binaries: $(OBJDIR)/src/intl/provider-native-relative.o
 
 # Native duration adapters precede aggregate-provider construction.
 test test-binaries: $(OBJDIR)/src/intl/provider-native-duration.o
+
+# Native collator adapters precede aggregate-provider construction.
+test test-binaries: $(OBJDIR)/src/intl/provider-native-collator.o
