@@ -53,10 +53,53 @@ function test_iterator_disposal_realm()
     check(calls, 1);
 }
 
-export function test_disposal_realms()
+async function test_async_iterator_disposal_realm()
 {
-    test_iterator_disposal_realm();
+    let realm = std.createRealm();
+    const foreignAsyncDispose = realm.evalScript(
+        "Object.getPrototypeOf(Object.getPrototypeOf((async function*(){}).prototype))[Symbol.asyncDispose]");
+    const ForeignPromise = realm.global.Promise;
+    const ForeignTypeError = realm.global.TypeError;
+    realm = null;
+    std.gc();
+
+    const input = Promise.resolve(7);
+    let constructorReads = 0, thenReads = 0;
+    Object.defineProperty(input, "constructor", {
+        get() { constructorReads++; return Promise; },
+    });
+    Object.defineProperty(input, "then", {
+        get() { thenReads++; return Promise.prototype.then; },
+    });
+    const pending = foreignAsyncDispose.call({ return() { return input; } });
+    const absent = foreignAsyncDispose.call({});
+    const rejected = foreignAsyncDispose.call(null);
+    for (const promise of [pending, absent, rejected]) {
+        check(Object.getPrototypeOf(promise), ForeignPromise.prototype);
+        check(promise instanceof Promise, false);
+    }
+    check(pending === input, false);
+    const reason = rejected.then(
+        () => { throw Error("expected rejection"); },
+        error => {
+            check(error instanceof ForeignTypeError, true);
+            check(error instanceof TypeError, false);
+        });
+    const completion = Promise.all([pending, absent, reason]);
+    std.gc();
+    const values = await completion;
+    check(values[0], undefined);
+    check(values[1], undefined);
+    check(constructorReads, 2);
+    check(thenReads, 1);
     std.gc();
 }
 
-test_disposal_realms();
+export async function test_disposal_realms()
+{
+    test_iterator_disposal_realm();
+    await test_async_iterator_disposal_realm();
+    std.gc();
+}
+
+await test_disposal_realms();
