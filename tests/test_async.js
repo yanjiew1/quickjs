@@ -106,6 +106,39 @@ async function test_function_constructor_binding()
 
 await test_function_constructor_binding();
 
+async function test_async_generator_sync_iterator_return()
+{
+    {
+        const events = [], closeError = {};
+        let thenReads = 0;
+        const iterable = {
+            [Symbol.iterator]() {
+                return {
+                    next() { return { value: 1, done: false }; },
+                    return() {
+                        events.push("close");
+                        return { get then() {
+                            thenReads++;
+                            throw closeError;
+                        } };
+                    }
+                };
+            }
+        };
+        async function* plain() {
+            for (const value of iterable)
+                return 42;
+        }
+        const result = await plain().next();
+        assert(result.done, true);
+        assert(result.value, 42);
+        assert(thenReads, 0);
+        assert(events.join(","), "close");
+    }
+}
+
+await test_async_generator_sync_iterator_return();
+
 async function test_catch_binding_finally()
 {
     const events = [];
