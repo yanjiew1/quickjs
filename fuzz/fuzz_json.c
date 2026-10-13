@@ -37,7 +37,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
                                     "<json-fuzz>", 0);
     
     if (JS_IsException(parse_result)) {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     } else {
         JS_FreeValue(ctx, parse_result);
     }
@@ -60,7 +60,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     JSValue direct_result = JS_Eval(ctx, direct_parse, strlen(direct_parse), 
                                      "<json-direct>", 0);
     if (JS_IsException(direct_result)) {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     } else {
         JS_FreeValue(ctx, direct_result);
     }
@@ -74,7 +74,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     JSValue stringify_result = JS_Eval(ctx, stringify_script, 
                                         strlen(stringify_script), "<json-stringify>", 0);
     if (JS_IsException(stringify_result)) {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     } else {
         const char* str = JS_ToCString(ctx, stringify_result);
         if (str) {
@@ -101,7 +101,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         if (!JS_IsException(r)) {
             JS_FreeValue(ctx, r);
         } else {
-            JS_GetException(ctx);
+            JS_FreeValue(ctx, JS_GetException(ctx));
         }
     }
     
@@ -111,7 +111,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (!JS_IsException(reviver_result)) {
         JS_FreeValue(ctx, reviver_result);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     const char* replacer_test = "JSON.stringify({a:1,b:2}, function(k,v) { return v; })";
@@ -120,7 +120,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (!JS_IsException(replacer_result)) {
         JS_FreeValue(ctx, replacer_result);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     free(input);
