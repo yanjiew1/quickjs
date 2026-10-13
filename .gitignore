@@ -175,3 +175,6 @@ __pycache__/
 
 /tests/test_intl_number_grammar
 /tests/test_intl_number_grammar.exe
+
+/tests/test_intl_date_pattern
+/tests/test_intl_date_pattern.exe

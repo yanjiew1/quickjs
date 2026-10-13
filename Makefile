@@ -814,6 +814,8 @@ tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/l
 
 C_TESTS+=tests/test_intl_number_grammar$(EXE)
 
+C_TESTS+=tests/test_intl_date_pattern$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -823,6 +825,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_date_pattern$(EXE)
 	$(WINE) ./tests/test_intl_number_grammar$(EXE)
 	$(WINE) ./tests/test_fuzz_regexp_timeout$(EXE)
 	$(WINE) ./tests/test_fuzz_allocations$(EXE)
@@ -1328,4 +1331,7 @@ tests/test_intl_native_plural$(EXE): $(OBJDIR)/tests/test_intl_native_plural.o $
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_number_grammar$(EXE): $(OBJDIR)/tests/test_intl_number_grammar.o $(OBJDIR)/src/intl/number-range.o $(OBJDIR)/src/intl/number-compact.o $(OBJDIR)/src/intl/number-unit.o $(OBJDIR)/src/intl/data/number-template-validation.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_date_pattern$(EXE): $(OBJDIR)/tests/test_intl_date_pattern.o $(OBJDIR)/src/intl/date-pattern.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
