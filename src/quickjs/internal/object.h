@@ -258,14 +258,11 @@ no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
 JSObject *get_proto_obj(JSValueConst proto_val);
 int add_shape_property(JSContext *ctx, JSShape **psh,
                        JSObject *p, JSAtom atom, int prop_flags);
-JSValue JS_GetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx);
 JSValue JS_SpeciesConstructor(JSContext *ctx, JSValueConst obj,
                               JSValueConst defaultConstructor);
 __exception int js_get_length64(JSContext *ctx, int64_t *pres,
                                 JSValueConst obj);
 
-int JS_DefinePropertyValueInt64(JSContext *ctx, JSValueConst this_obj,
-                                 int64_t idx, JSValue val, int flags);
 
 int js_update_property_flags(JSContext *ctx, JSObject *p,
                              JSShapeProperty **pprs, int flags);
@@ -289,7 +286,6 @@ BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
                        JSValue **arrpp, uint32_t *countp);
 JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
 
-int JS_DeletePropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, int flags);
 
 
 /* return true if an element can be added to a fast array without further tests */
