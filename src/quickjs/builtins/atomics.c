@@ -83,7 +83,7 @@ static JSObject *js_atomics_get_buf(JSContext *ctx,
             return NULL;
         }
     }
-    old_len = p->u.array.count;
+    old_len = js_typed_array_update_length(p);
     
     if (JS_ToIndex(ctx, &idx, idx_val)) {
         return NULL;

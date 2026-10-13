@@ -56,9 +56,9 @@ JSValue js_dataview_constructor(JSContext *ctx,
     }
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
-    if (offset > abuf->byte_length)
+    if (offset > js_array_buffer_byte_length(abuf))
         return JS_ThrowRangeError(ctx, "invalid byteOffset");
-    len = abuf->byte_length - offset;
+    len = js_array_buffer_byte_length(abuf) - offset;
     if (argc > 2 && !JS_IsUndefined(argv[2])) {
         uint64_t l;
         if (JS_ToIndex(ctx, &l, argv[2]))
@@ -80,11 +80,11 @@ JSValue js_dataview_constructor(JSContext *ctx,
         goto fail;
     }
     // RAB could have been resized in js_create_from_ctor()
-    if (offset > abuf->byte_length) {
+    if (offset > js_array_buffer_byte_length(abuf)) {
         goto out_of_bound;
     } else if (recompute_len) {
-        len = abuf->byte_length - offset;
-    } else if (offset + len > abuf->byte_length) {
+        len = js_array_buffer_byte_length(abuf) - offset;
+    } else if (offset + len > js_array_buffer_byte_length(abuf)) {
     out_of_bound:
         JS_ThrowRangeError(ctx, "invalid byteOffset or byteLength");
         goto fail;
@@ -117,11 +117,11 @@ static BOOL dataview_is_oob(JSObject *p)
     abuf = ta->buffer->u.array_buffer;
     if (abuf->detached)
         return TRUE;
-    if (ta->offset > abuf->byte_length)
+    if (ta->offset > js_array_buffer_byte_length(abuf))
         return TRUE;
     if (ta->track_rab)
         return FALSE;
-    return (int64_t)ta->offset + ta->length > abuf->byte_length;
+    return (int64_t)ta->offset + ta->length > js_array_buffer_byte_length(abuf);
 }
 
 static JSObject *get_dataview(JSContext *ctx, JSValueConst this_val)
@@ -163,7 +163,7 @@ static JSValue js_dataview_get_byteLength(JSContext *ctx, JSValueConst this_val)
     ta = p->u.typed_array;
     if (ta->track_rab) {
         abuf = ta->buffer->u.array_buffer;
-        return JS_NewUint32(ctx, abuf->byte_length - ta->offset);
+        return JS_NewUint32(ctx, js_array_buffer_byte_length(abuf) - ta->offset);
     }
     return JS_NewUint32(ctx, ta->length);
 }
@@ -190,6 +190,7 @@ static JSValue js_dataview_getValue(JSContext *ctx,
     JSArrayBuffer *abuf;
     BOOL littleEndian, is_swap;
     int size;
+    uint32_t view_length, buffer_length;
     uint8_t *ptr;
     uint32_t v;
     uint64_t pos;
@@ -205,13 +206,16 @@ static JSValue js_dataview_getValue(JSContext *ctx,
     abuf = ta->buffer->u.array_buffer;
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
+    buffer_length = js_array_buffer_byte_length(abuf);
+    view_length = ta->track_rab && abuf->shared ?
+        buffer_length - ta->offset : ta->length;
     // order matters: this check should come before the next one
-    if ((pos + size) > ta->length)
+    if ((pos + size) > view_length)
         return JS_ThrowRangeError(ctx, "out of bound");
     // test262 expects a TypeError for this and V8, in its infinite wisdom,
     // throws a "detached array buffer" exception, but IMO that doesn't make
     // sense because the buffer is not in fact detached, it's still there
-    if ((int64_t)ta->offset + ta->length > abuf->byte_length)
+    if ((int64_t)ta->offset + view_length > buffer_length)
         return JS_ThrowTypeError(ctx, "out of bound");
     ptr = abuf->data + ta->offset + pos;
 
@@ -302,6 +306,7 @@ static JSValue js_dataview_setValue(JSContext *ctx,
     JSArrayBuffer *abuf;
     BOOL littleEndian, is_swap;
     int size;
+    uint32_t view_length, buffer_length;
     uint8_t *ptr;
     uint64_t v64;
     uint32_t v;
@@ -347,13 +352,16 @@ static JSValue js_dataview_setValue(JSContext *ctx,
     abuf = ta->buffer->u.array_buffer;
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
+    buffer_length = js_array_buffer_byte_length(abuf);
+    view_length = ta->track_rab && abuf->shared ?
+        buffer_length - ta->offset : ta->length;
     // order matters: this check should come before the next one
-    if ((pos + size) > ta->length)
+    if ((pos + size) > view_length)
         return JS_ThrowRangeError(ctx, "out of bound");
     // test262 expects a TypeError for this and V8, in its infinite wisdom,
     // throws a "detached array buffer" exception, but IMO that doesn't make
     // sense because the buffer is not in fact detached, it's still there
-    if ((int64_t)ta->offset + ta->length > abuf->byte_length)
+    if ((int64_t)ta->offset + view_length > buffer_length)
         return JS_ThrowTypeError(ctx, "out of bound");
     ptr = abuf->data + ta->offset + pos;
 
