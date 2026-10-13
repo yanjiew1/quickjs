@@ -1431,3 +1431,6 @@ tests/test_intl_calendar_domain$(EXE): $(OBJDIR)/tests/test_intl_calendar_domain
 
 # Native date engine sources precede aggregate-provider activation.
 test test-binaries: $(OBJDIR)/src/intl/date-native.o
+
+# Native date data sources precede aggregate-provider activation.
+test test-binaries: $(OBJDIR)/src/intl/date-native-bank.o $(OBJDIR)/src/intl/date-native-data.o $(OBJDIR)/src/intl/date-native-calendar.o $(OBJDIR)/src/intl/date-native-calendar-data.o $(OBJDIR)/src/intl/date-native-zone.o
