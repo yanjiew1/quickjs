@@ -1380,3 +1380,6 @@ tests/test_intl_data_bundle$(EXE): $(OBJDIR)/tests/test_intl_data_bundle.o $(OBJ
 
 tests/test_intl_native_locale_id$(EXE): $(INTL_DATA_READER_OBJS) $(OBJDIR)/tests/test_intl_native_locale_id.o $(OBJDIR)/src/intl/native-locale-id.o $(OBJDIR)/src/intl/locale-grammar.o $(OBJDIR)/src/intl/data/locale-metadata.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# LocaleInfo preparation shares native ID/reader contracts without providers.
+test test-binaries: $(OBJDIR)/src/intl/native-locale-info.o
