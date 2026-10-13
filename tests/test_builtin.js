@@ -2177,6 +2177,90 @@ function test_iterator_flatmap_close()
     assert(events.join(","), "inner,outer");
 }
 
+function test_iterator_helper_acquisition()
+{
+    const marker = {};
+    for (const [method, argument] of [["drop", 0], ["take", 1],
+                                     ["map", value => value], ["filter", () => true],
+                                     ["flatMap", value => [value]]]) {
+        let closes = 0;
+        const source = Object.create(Iterator.prototype);
+        Object.defineProperties(source, {
+            next: { get() { throw marker; } },
+            return: { get() { closes++; throw {}; } }
+        });
+        let caught;
+        try { source[method](argument); } catch (error) { caught = error; }
+        assert(caught === marker, true);
+        assert(closes, 0);
+    }
+
+    for (const method of ["map", "filter", "flatMap", "take", "drop"]) {
+        let closes = 0, reads = 0;
+        const source = Object.create(Iterator.prototype);
+        Object.defineProperties(source, {
+            next: { get() { reads++; throw marker; } },
+            return: { value() { closes++; throw {}; } }
+        });
+        if (method === "take" || method === "drop") {
+            let caught;
+            try { source[method]({ valueOf() { throw marker; } }); }
+            catch (error) { caught = error; }
+            assert(caught === marker, true);
+        } else {
+            assert_throws(TypeError, () => source[method](undefined));
+        }
+        assert(closes, 1);
+        assert(reads, 0);
+    }
+}
+
+function test_iterator_reduce_close()
+{
+    const marker = {};
+    let closes = 0;
+    const source = Object.create(Iterator.prototype);
+    Object.defineProperties(source, {
+        next: { get() { throw marker; } },
+        return: { get() { closes++; throw {}; } }
+    });
+    let caught;
+    try { source.reduce((a, b) => a + b); } catch (error) { caught = error; }
+    assert(caught === marker, true);
+    assert(closes, 0);
+
+    let nexts = 0;
+    const empty = Object.assign(Object.create(Iterator.prototype), {
+        next() { nexts++; return { done: true }; },
+        return() { closes++; throw {}; }
+    });
+    assert_throws(TypeError, () => empty.reduce((a, b) => a + b));
+    assert(empty.reduce((a, b) => a + b, 42), 42);
+    assert(nexts, 2);
+    assert(closes, 0);
+
+    const abrupt = Object.assign(Object.create(Iterator.prototype), {
+        next() { throw marker; },
+        return() { closes++; throw {}; }
+    });
+    caught = undefined;
+    try { abrupt.reduce((a, b) => a + b, 0); } catch (error) { caught = error; }
+    assert(caught === marker, true);
+    assert(closes, 0);
+
+    const callback = Object.assign(Object.create(Iterator.prototype), {
+        next() { return { done: false, value: 1 }; },
+        return() { closes++; throw {}; }
+    });
+    caught = undefined;
+    try { callback.reduce(() => { throw marker; }, 0); }
+    catch (error) { caught = error; }
+    assert(caught === marker, true);
+    assert(closes, 1);
+    assert_throws(TypeError, () => callback.reduce(undefined));
+    assert(closes, 2);
+}
+
 function test_weak_map()
 {
     var a, i, n, tab, o, v, n2;
@@ -2486,6 +2570,8 @@ test_iterator_accessors();
 test_iterator_helper_completion();
 test_iterator_helper_start_return();
 test_iterator_flatmap_close();
+test_iterator_helper_acquisition();
+test_iterator_reduce_close();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
