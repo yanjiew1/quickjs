@@ -634,6 +634,8 @@ C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_format$(EXE)
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
+C_TESTS+=tests/test_temporal_calendars$(EXE)
+C_TESTS+=tests/test_temporal_native_calendars$(EXE)
 CALENDAR_TEST_SRCS=tests/test_calendar_portable.c tests/test_calendar_persian_authority.c tests/test_calendar_integrated_authority.c
 C_TESTS+=$(patsubst %.c,%$(EXE),$(CALENDAR_TEST_SRCS))
 
@@ -782,6 +784,8 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal_format$(EXE)
 	$(WINE) ./tests/test_temporal_duration_math$(EXE)
+	$(WINE) ./tests/test_temporal_calendars$(EXE)
+	$(WINE) ./tests/test_temporal_native_calendars$(EXE)
 	$(WINE) ./tests/test_calendar_portable$(EXE)
 	$(WINE) ./tests/test_calendar_persian_authority$(EXE)
 	$(WINE) ./tests/test_calendar_integrated_authority$(EXE)
@@ -1065,4 +1069,11 @@ tests/test_calendar_portable$(EXE): $(OBJDIR)/tests/test_calendar_portable.o lib
 tests/test_calendar_persian_authority$(EXE): $(OBJDIR)/tests/test_calendar_persian_authority.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 tests/test_calendar_integrated_authority$(EXE): $(OBJDIR)/tests/test_calendar_integrated_authority.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+TEMPORAL_CALENDAR_SRCS=src/temporal/calendar.c
+TEMPORAL_CALENDAR_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_CALENDAR_SRCS))
+tests/test_temporal_calendars$(EXE): $(OBJDIR)/tests/test_temporal_calendars.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_CALENDAR_OBJS) libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_temporal_native_calendars$(EXE): $(OBJDIR)/tests/test_temporal_native_calendars.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_CALENDAR_OBJS) libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

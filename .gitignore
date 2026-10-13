@@ -119,3 +119,8 @@ libwinpthread*.dll
 /tests/test_calendar_persian_authority.exe
 /tests/test_calendar_integrated_authority
 /tests/test_calendar_integrated_authority.exe
+
+/tests/test_temporal_calendars
+/tests/test_temporal_calendars.exe
+/tests/test_temporal_native_calendars
+/tests/test_temporal_native_calendars.exe
