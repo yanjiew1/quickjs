@@ -561,6 +561,7 @@ C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
 C_TESTS+=tests/test_qjsc_context_failures$(EXE)
 
 C_TESTS+=tests/test_atomics_wait$(EXE)
+C_TESTS+=tests/test_worker_context_failure$(EXE)
 
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
 	mkdir -p $(@D)
@@ -574,6 +575,12 @@ tests/test_allocator$(EXE): $(OBJDIR)/tests/test_allocator.o libquickjs$(LTOEXT)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_atomics_wait$(EXE): $(OBJDIR)/tests/test_atomics_wait.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# The native unit includes the actual Worker caller with test call redirection.
+$(OBJDIR)/tests/test_worker_context_failure.o: src/quickjs-libc/worker.c
+
+tests/test_worker_context_failure$(EXE): $(OBJDIR)/tests/test_worker_context_failure.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Compile the actual qjsc-generated context/main into the native fault unit.
@@ -614,6 +621,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_qjsc_context_failures$(EXE)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
+	$(WINE) ./tests/test_worker_context_failure$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)

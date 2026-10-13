@@ -65,3 +65,6 @@ libwinpthread*.dll
 
 /tests/test_qjsc_context_failures
 /tests/test_qjsc_context_failures.exe
+
+/tests/test_worker_context_failure
+/tests/test_worker_context_failure.exe
