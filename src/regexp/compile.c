@@ -841,11 +841,10 @@ static BOOL is_unicode_char(int c)
             (c == '_'));
 }
 
-/* XXX: memory error test */
-static void seq_prop_cb(void *opaque, const uint32_t *seq, int seq_len)
+static int seq_prop_cb(void *opaque, const uint32_t *seq, int seq_len)
 {
     REStringList *sl = opaque;
-    re_string_add(sl, seq_len, seq);
+    return re_string_add(sl, seq_len, seq);
 }
 
 static int parse_unicode_property(REParseState *s, REStringList *cr,

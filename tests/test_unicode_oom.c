@@ -115,6 +115,52 @@ static void test_compile_failures(const char *pattern, int flags)
     }
 }
 
+static int failing_sequence(void *opaque, const uint32_t *sequence, int length)
+{
+    int *calls = opaque;
+
+    assert(length > 0);
+    (*calls)++;
+    return -1;
+}
+
+static void test_sequence_failures(void)
+{
+    static const char pattern[] = "\\p{Emoji_Keycap_Sequence}";
+    Allocator a = { 0, 0, 0 };
+    CharRange cr;
+    uint8_t *bytecode;
+    char error[128];
+    int calls = 0, allocations, length, fail;
+
+    cr_init(&cr, &a, alloc);
+    assert(unicode_sequence_prop("unknown", failing_sequence, &calls, &cr) == -2);
+    assert(unicode_sequence_prop("RGI_Emoji", NULL, &calls, &cr) == -1);
+    assert(calls == 0 && a.live == 0);
+    assert(unicode_sequence_prop("RGI_Emoji", failing_sequence,
+                                 &calls, &cr) == -1);
+    assert(calls == 1);
+    cr_free(&cr);
+    assert(a.live == 0);
+
+    a.calls = 0;
+    bytecode = lre_compile(&length, error, sizeof(error), pattern,
+                           strlen(pattern), LRE_FLAG_UNICODE_SETS, &a);
+    assert(bytecode);
+    allocations = a.calls;
+    alloc(&a, bytecode, 0);
+    assert(a.live == 0);
+    for (fail = 1; fail <= allocations; fail++) {
+        a.calls = 0;
+        a.fail_at = fail;
+        bytecode = lre_compile(&length, error, sizeof(error), pattern,
+                               strlen(pattern), LRE_FLAG_UNICODE_SETS, &a);
+        assert(bytecode == NULL);
+        assert(strcmp(error, "out of memory") == 0);
+        assert(a.live == 0);
+    }
+}
+
 int main(void)
 {
     test_normalization_oom();
@@ -125,5 +171,6 @@ int main(void)
         "(?<abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_first>a)|"
         "(?<abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_second>b)", 0);
     test_compile_failures("[\\q{abcdefghijklmnop|abcdefghijklmnoq|abcdefghijklmnor}]", LRE_FLAG_UNICODE_SETS);
+    test_sequence_failures();
     return 0;
 }

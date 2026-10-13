@@ -106,7 +106,8 @@ int unicode_prop(CharRange *cr, const char *prop_name);
 /* Strict ECMAScript property names, independent of private UCD helpers. */
 int lre_unicode_property_allowed(const char *name);
 
-typedef void UnicodeSequencePropCB(void *opaque, const uint32_t *buf, int len);
+/* A nonzero callback result stops enumeration and reports failure. */
+typedef int UnicodeSequencePropCB(void *opaque, const uint32_t *buf, int len);
 int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void *opaque,
                           CharRange *cr);
 
