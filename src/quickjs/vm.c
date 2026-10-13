@@ -1266,7 +1266,7 @@ static __exception int js_operator_typeof(JSContext *ctx, JSValueConst op1)
     return atom;
 }
 
-static __exception int js_operator_delete(JSContext *ctx, JSValue *sp)
+static __exception int js_operator_delete(JSContext *ctx, JSValue *sp, int flags)
 {
     JSValue op1, op2;
     JSAtom atom;
@@ -1277,7 +1277,7 @@ static __exception int js_operator_delete(JSContext *ctx, JSValue *sp)
     atom = JS_ValueToAtom(ctx, op2);
     if (unlikely(atom == JS_ATOM_NULL))
         return -1;
-    ret = JS_DeleteProperty(ctx, op1, atom, JS_PROP_THROW_STRICT);
+    ret = JS_DeleteProperty(ctx, op1, atom, flags);
     JS_FreeAtom(ctx, atom);
     if (unlikely(ret < 0))
         return -1;
@@ -2237,7 +2237,10 @@ static int js_op_define_class(JSContext *ctx, JSValue *sp,
                            JS_PROP_CONFIGURABLE);
 
     if (is_computed_name) {
-        if (JS_DefineObjectNameComputed(ctx, ctor, sp[-3],
+        /* The class-mode catch, when present, separates the computed
+           name from the parent and constructor operands. */
+        int offset = 3 + !!(class_flags & JS_DEFINE_CLASS_HAS_STRICT_CATCH);
+        if (JS_DefineObjectNameComputed(ctx, ctor, sp[-offset],
                                         JS_PROP_CONFIGURABLE) < 0)
             goto fail;
     } else {
@@ -3096,7 +3099,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         ret = JS_HasProperty(ctx, ctx->global_obj, cv->var_name);
                         if (ret < 0)
                             goto exception;
-                        if (ret == 0 && is_strict_mode(ctx)) {
+                        if (ret == 0 && (is_strict_mode(ctx))) {
                             JS_ThrowReferenceErrorNotDefined(ctx, cv->var_name);
                             goto exception;
                         }
@@ -3504,6 +3507,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 #endif
+        CASE(OP_set_strict):
+            sf->js_mode = (sf->js_mode & ~JS_MODE_STRICT) |
+                          (*pc++ ? JS_MODE_STRICT : 0);
+            BREAK;
         CASE(OP_catch):
             {
                 int32_t diff;
@@ -5017,7 +5024,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             BREAK;
         CASE(OP_delete):
             sf->cur_pc = pc;
-            if (js_operator_delete(ctx, sp))
+            if (js_operator_delete(ctx, sp, JS_PROP_THROW_STRICT))
                 goto exception;
             sp--;
             BREAK;
@@ -5159,6 +5166,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         if (unlikely(ret < 0))
                             goto exception;
                         if (!ret) {
+                            if (is_strict_mode(ctx)) {
+                                JS_ThrowReferenceErrorNotDefined(ctx, atom);
+                                goto exception;
+                            }
                             val = JS_UNDEFINED;
                         } else {
                             val = JS_GetProperty(ctx, obj, atom);
@@ -5263,7 +5274,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             JSValue val = *--sp;
             JS_FreeValue(ctx, val);
             if (JS_VALUE_GET_TAG(val) == JS_TAG_CATCH_OFFSET) {
-                int pos = JS_VALUE_GET_INT(val);
+                uint32_t pos = JS_VALUE_GET_INT(val);
                 if (pos == 0) {
                     /* enumerator: close it with a throw */
                     JS_FreeValue(ctx, sp[-1]); /* drop the next method */
