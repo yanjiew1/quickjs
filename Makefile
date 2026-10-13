@@ -282,6 +282,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/proxy.c \
     src/quickjs/builtins/reflect.c \
     src/quickjs/builtins/regexp.c \
+    src/quickjs/builtins/resource-management.c \
     src/quickjs/builtins/string.c \
     src/quickjs/builtins/symbol.c \
     src/quickjs/builtins/typed-array.c \
