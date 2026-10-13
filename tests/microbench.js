@@ -1419,6 +1419,117 @@ function string_to_float(n)
     return n;
 }
 
+/* Iterator helper operations count input callbacks, including rejected
+   filter items and empty flatMap results. */
+function iterator_bench_values()
+{
+    var values = [];
+    for (var i = 0; i < 1000; i++)
+        values[i] = i;
+    return values;
+}
+
+function iterator_map(n)
+{
+    var values = iterator_bench_values();
+    var j, sum = 0;
+    function mapper(value, index) { return value + index; }
+    for (j = 0; j < n; j++) {
+        sum = 0;
+        for (var value of values.values().map(mapper))
+            sum += value;
+    }
+    global_res = sum;
+    return n * values.length;
+}
+
+function iterator_filter(n)
+{
+    var values = iterator_bench_values();
+    var j, sum = 0;
+    function predicate(value, index) { return (index & 1) == 0; }
+    for (j = 0; j < n; j++) {
+        sum = 0;
+        for (var value of values.values().filter(predicate))
+            sum += value;
+    }
+    global_res = sum;
+    return n * values.length;
+}
+
+function iterator_flat_map(n)
+{
+    var values = iterator_bench_values();
+    var j, sum = 0;
+    function mapper(value, index) {
+        return (index & 1) ? [] : [value, index];
+    }
+    for (j = 0; j < n; j++) {
+        sum = 0;
+        for (var value of values.values().flatMap(mapper))
+            sum += value;
+    }
+    global_res = sum;
+    return n * values.length;
+}
+
+function iterator_every(n)
+{
+    var values = iterator_bench_values();
+    var j, result;
+    function predicate(value, index) { return value == index; }
+    for (j = 0; j < n; j++)
+        result = values.values().every(predicate);
+    global_res = result;
+    return n * values.length;
+}
+
+function iterator_some(n)
+{
+    var values = iterator_bench_values();
+    var j, result;
+    function predicate(value, index) { return value != index; }
+    for (j = 0; j < n; j++)
+        result = values.values().some(predicate);
+    global_res = result;
+    return n * values.length;
+}
+
+function iterator_find(n)
+{
+    var values = iterator_bench_values();
+    var j, result;
+    function predicate(value, index) { return value != index; }
+    for (j = 0; j < n; j++)
+        result = values.values().find(predicate);
+    global_res = result;
+    return n * values.length;
+}
+
+function iterator_for_each(n)
+{
+    var values = iterator_bench_values();
+    var j, sum = 0;
+    function procedure(value, index) { sum += value + index; }
+    for (j = 0; j < n; j++) {
+        sum = 0;
+        values.values().forEach(procedure);
+    }
+    global_res = sum;
+    return n * values.length;
+}
+
+function iterator_reduce(n)
+{
+    var values = iterator_bench_values();
+    var j, sum = 0;
+    function reducer(acc, value, index) { return acc + value + index; }
+    for (j = 0; j < n; j++)
+        sum = values.values().reduce(reducer, 0);
+    global_res = sum;
+    return n * values.length;
+}
+
 function load_result(filename)
 {
     var has_filename = filename;
@@ -1578,6 +1689,26 @@ function main(argc, argv, g)
         }
     }
     test_list.push(sort_bench);
+
+    /* Additional feature cases do not change the frozen comparison suite. */
+    if (typeof Iterator === "function") {
+        if (typeof Iterator.prototype.map === "function")
+            test_list.push(iterator_map);
+        if (typeof Iterator.prototype.filter === "function")
+            test_list.push(iterator_filter);
+        if (typeof Iterator.prototype.flatMap === "function")
+            test_list.push(iterator_flat_map);
+        if (typeof Iterator.prototype.every === "function")
+            test_list.push(iterator_every);
+        if (typeof Iterator.prototype.some === "function")
+            test_list.push(iterator_some);
+        if (typeof Iterator.prototype.find === "function")
+            test_list.push(iterator_find);
+        if (typeof Iterator.prototype.forEach === "function")
+            test_list.push(iterator_for_each);
+        if (typeof Iterator.prototype.reduce === "function")
+            test_list.push(iterator_reduce);
+    }
 
     for (i = 1; i < argc;) {
         name = argv[i++];
