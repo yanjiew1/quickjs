@@ -1186,6 +1186,7 @@ void load_config(const char *filename, const char *ignore)
                 continue;
             }
             if (str_equal(p, "harnessdir")) {
+                free(harness_dir);
                 harness_dir = compose_path(base_name, q);
                 continue;
             }
@@ -1239,6 +1240,7 @@ void load_config(const char *filename, const char *ignore)
                 continue;
             }
             if (str_equal(p, "errorfile")) {
+                free(error_filename);
                 error_filename = compose_path(base_name, q);
                 continue;
             }
@@ -1249,6 +1251,7 @@ void load_config(const char *filename, const char *ignore)
                 continue;
             }
             if (str_equal(p, "reportfile")) {
+                free(report_filename);
                 report_filename = compose_path(base_name, q);
                 continue;
             }
@@ -2353,13 +2356,15 @@ int main(int argc, char **argv)
         } else if (str_equal(arg, "-d")) {
             enumerate_tests(get_opt_arg(arg, argv[optind++]));
         } else if (str_equal(arg, "-e")) {
-            error_filename = get_opt_arg(arg, argv[optind++]);
+            free(error_filename);
+            error_filename = strdup(get_opt_arg(arg, argv[optind++]));
         } else if (str_equal(arg, "-x")) {
             namelist_load(&exclude_list, get_opt_arg(arg, argv[optind++]));
         } else if (str_equal(arg, "-f")) {
             is_dir_list = FALSE;
         } else if (str_equal(arg, "-r")) {
-            report_filename = get_opt_arg(arg, argv[optind++]);
+            free(report_filename);
+            report_filename = strdup(get_opt_arg(arg, argv[optind++]));
         } else if (str_equal(arg, "-E")) {
             only_check_errors = TRUE;
         } else if (str_equal(arg, "-D")) {
@@ -2604,6 +2609,8 @@ int main(int argc, char **argv)
     free(harness_features);
     free(harness_exclude);
     free(error_file);
+    free(error_filename);
+    free(report_filename);
 
     /* Signal that the error file is out of date. */
     if (update_errors) {

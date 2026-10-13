@@ -301,3 +301,29 @@ invoke_runner no -q -c "$test262_tmp/config" -T 2 \
 [ ! -s "$test262_tmp/out" ]
 printf '%s\n' 'Result: 0/3 errors' > "$test262_tmp/expected-empty-features"
 diff -u "$test262_tmp/expected-empty-features" "$test262_tmp/err"
+
+# Configured filenames are owned even when a later config or CLI overrides
+# them. These successful exits also exercise their cleanup under LSan.
+cat > "$test262_tmp/owned-config" <<'CONFIG'
+[config]
+style=new
+harnessdir=harness
+async=yes
+errorfile=owned-errors
+reportfile=owned-report
+CONFIG
+: > "$test262_tmp/owned-errors"
+invoke_runner no -q -c "$test262_tmp/owned-config" -T 1 \
+    -d "$test262_tmp/suite"
+[ "$test262_status" -eq 0 ]
+[ -f "$test262_tmp/owned-report" ]
+grep -Fqx 'Result: 0/3 errors' "$test262_tmp/err"
+
+rm -f "$test262_tmp/owned-report"
+invoke_runner no -q -c "$test262_tmp/owned-config" \
+    -c "$test262_tmp/owned-config" -e "$test262_tmp/owned-errors" \
+    -e "$test262_tmp/owned-errors" -r "$test262_tmp/owned-report" \
+    -r "$test262_tmp/owned-report" -T 1 -d "$test262_tmp/suite"
+[ "$test262_status" -eq 0 ]
+[ -f "$test262_tmp/owned-report" ]
+grep -Fqx 'Result: 0/3 errors' "$test262_tmp/err"
