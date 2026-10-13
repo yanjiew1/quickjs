@@ -48,6 +48,33 @@ static void check_result(JSContext *ctx, JSValue result)
     JS_FreeValue(ctx, result);
 }
 
+static void check_virtual_import_meta(JSContext *ctx)
+{
+    static const char filename[] = "<fuzz-import-meta>";
+    JSValue module, meta, url, main_value;
+    JSModuleDef *m;
+    const char *text;
+
+    module = JS_Eval(ctx, "", 0, filename,
+                     JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(module));
+    assert(js_module_set_import_meta(ctx, module, 0, 1) == 0);
+    m = JS_VALUE_GET_PTR(module);
+    meta = JS_GetImportMeta(ctx, m);
+    assert(!JS_IsException(meta));
+    url = JS_GetPropertyStr(ctx, meta, "url");
+    text = JS_ToCString(ctx, url);
+    assert(text && strcmp(text, "file://<fuzz-import-meta>") == 0);
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, url);
+    main_value = JS_GetPropertyStr(ctx, meta, "main");
+    assert(JS_ToBool(ctx, main_value) == 1);
+    JS_FreeValue(ctx, main_value);
+    JS_FreeValue(ctx, meta);
+    JS_FreeValue(ctx, module);
+    assert(!JS_HasException(ctx));
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -58,6 +85,8 @@ int main(void)
     ctx = JS_NewContext(rt);
     assert(ctx);
     test_one_input_init(rt, ctx);
+    assert(!JS_HasException(ctx));
+    check_virtual_import_meta(ctx);
     result = eval_source(ctx,
                          "typeof std.sprintf === 'function' &&"
                          "typeof os.open === 'function'",
@@ -81,6 +110,7 @@ int main(void)
     ctx = JS_NewContext(rt);
     assert(ctx);
     test_one_input_init(rt, ctx);
+    assert(!JS_HasException(ctx));
 
     result = eval_source(ctx,
                          "import data from '../examples/message.json'"
