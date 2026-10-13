@@ -48,6 +48,9 @@ ifeq ($(filter y n,$(CONFIG_TEMPORAL)),)
 $(error CONFIG_TEMPORAL must be y or n)
 endif
 
+# ICU SDK selection is optional; runtime integration follows its source owners.
+CONFIG_ICU?=n
+
 # installation directory
 PREFIX?=/usr/local
 
@@ -150,6 +153,8 @@ else
     AR=$(CROSS_PREFIX)ar
   endif
 endif
+
+include tools/icu-build-config.mk
 
 STRIP?=$(CROSS_PREFIX)strip
 ifdef CONFIG_M32
@@ -1583,3 +1588,8 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-duration-format.o
 
 # date frontend sources remain disabled until coherent Intl activation.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-date-time-format.o
+
+.PHONY: test-icu-build-config
+test-icu-build-config:
+	QJS_TEST_MAKE="$(MAKE)" $(PYTHON) tests/test_icu_build_config.py
+test: test-icu-build-config

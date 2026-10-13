@@ -54,6 +54,7 @@ check_recipes() {
         set -- "$@" "$build_obj/fuzz/fuzz_eval.o"
     fi
     "$build_make" --no-print-directory -s CONFIG_CLANG= CONFIG_COSMO= \
+        CONFIG_INTL=n CONFIG_ICU=n CONFIG_INTL_BACKEND=native \
         OBJDIR="$build_obj" CC="$build_tmp/compiler" \
         HOST_CC="$build_tmp/compiler" "$@"
 }
@@ -70,10 +71,11 @@ check_core_coverage() {
     BUILD_EXPECT_CHECK=yes
     export BUILD_EXPECT_DEPS BUILD_EXPECT_CHECK
     "$build_make" --no-print-directory -s CONFIG_CLANG= CONFIG_COSMO= \
+        CONFIG_INTL=n CONFIG_ICU=n CONFIG_INTL_BACKEND=native \
         CONFIG_ASAN= CONFIG_UBSAN= CONFIG_TEMPORAL=n CONFIG_INTL=n CONFIG_ICU=n CONFIG_INTL_BACKEND=native PROGS= OBJDIR="$build_obj" \
         CC="$build_tmp/compiler" HOST_CC="$build_tmp/compiler" "$@" all
     # Compare source paths, not only counts: equal basenames have distinct owners.
-    # Complete optional Temporal implementations are gated separately by the
+    # Complete optional Temporal/Intl implementations are gated separately by the
     # real compiler; the fake compiler checks always-linked engine coverage.
     find src/quickjs -name '*.c' \
         \( ! -path 'src/quickjs/builtins/temporal/*' \
