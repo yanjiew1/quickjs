@@ -163,6 +163,12 @@ static const uint16_t case_conv_ext[58] = {
     0x006b, 0x00e5,
 };
 
+static const uint32_t case_conv_simple_folding[][2] = {
+    { 0x01fd3, 0x00390 },
+    { 0x01fe3, 0x003b0 },
+    { 0x0fb05, 0x0fb06 },
+};
+
 static const uint8_t unicode_prop_Cased1_table[190] = {
     0x40, 0xa9, 0x80, 0x8e, 0x80, 0xfc, 0x80, 0xd3,
     0x80, 0x9b, 0x81, 0x8d, 0x02, 0x80, 0xe1, 0x80,
@@ -5203,4 +5209,4 @@ static const uint8_t unicode_rgi_emoji_zwj_sequence[2392] = {
 };
 
 #endif /* CONFIG_ALL_UNICODE */
-/* 71 tables / 36659 bytes, 5 index / 357 bytes */
+/* 72 tables / 36683 bytes, 5 index / 357 bytes */
