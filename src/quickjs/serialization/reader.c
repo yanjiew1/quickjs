@@ -628,7 +628,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
         if (bc_get_leb128_int(s, &b->debug.source_len))
             goto fail;
         if (b->debug.source_len) {
-            bc_read_trace(s, "source: %d bytes\n", b->source_len);
+            bc_read_trace(s, "source: %d bytes\n", b->debug.source_len);
             b->debug.source = js_mallocz(ctx, b->debug.source_len);
             if (!b->debug.source)
                 goto fail;
