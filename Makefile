@@ -834,6 +834,8 @@ C_TESTS+=tests/test_intl_calendar_domain$(EXE)
 
 C_TESTS+=tests/test_intl_native_timezone$(EXE)
 
+C_TESTS+=tests/test_intl_receiver_api$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -843,6 +845,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_receiver_api$(EXE)
 	$(WINE) ./tests/test_intl_native_timezone$(EXE)
 	$(WINE) ./tests/test_intl_calendar_domain$(EXE)
 	$(WINE) ./tests/test_intl_native_duration_engine$(EXE)
@@ -1530,4 +1533,7 @@ INTL_NATIVE_DATE_SHARED_OBJS= \
 tests/test_intl_native_timezone$(EXE): $(OBJDIR)/tests/test_intl_native_timezone.o \
     $(INTL_NATIVE_LIBRARY_OBJS) $(INTL_NATIVE_DATE_SHARED_OBJS) \
     libquickjs$(LTOEXT).a libqjstimezone.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_receiver_api$(EXE): $(OBJDIR)/tests/test_intl_receiver_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

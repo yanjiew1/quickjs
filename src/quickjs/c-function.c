@@ -82,7 +82,9 @@ JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
                          cproto == JS_CFUNC_constructor_magic ||
                          cproto == JS_CFUNC_constructor_or_func ||
                          cproto == JS_CFUNC_constructor_or_func_magic ||
-                         cproto == JS_CFUNC_constructor_or_func_flags);
+                         cproto == JS_CFUNC_constructor_or_func_flags ||
+
+                         cproto == JS_CFUNC_constructor_or_func_receiver);
     if (!name)
         name = "";
     name_atom = JS_NewAtom(ctx, name);
@@ -153,6 +155,12 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
 
     func = p->u.cfunc.c_function;
     switch(cproto) {
+    case JS_CFUNC_constructor_or_func_receiver:
+        ret_val = func.constructor_or_func_receiver(
+            ctx, (flags & JS_CALL_FLAG_CONSTRUCTOR) ? JS_UNDEFINED : this_obj,
+            (flags & JS_CALL_FLAG_CONSTRUCTOR) ? this_obj : JS_UNDEFINED,
+            argc, arg_buf);
+        break;
     case JS_CFUNC_constructor:
     case JS_CFUNC_constructor_or_func:
         if (!(flags & JS_CALL_FLAG_CONSTRUCTOR)) {

@@ -205,3 +205,6 @@ __pycache__/
 
 /tests/test_intl_native_timezone
 /tests/test_intl_native_timezone.exe
+
+/tests/test_intl_receiver_api
+/tests/test_intl_receiver_api.exe
