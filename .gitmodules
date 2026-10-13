@@ -1,0 +1,3 @@
+[submodule "third_party/tz"]
+	path = third_party/tz
+	url = https://github.com/eggert/tz.git

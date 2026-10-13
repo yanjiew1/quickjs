@@ -24,9 +24,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Build
         run: |
           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
@@ -70,9 +73,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Build
         run: |
           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y LTO_FLAG=-flto=auto all test-binaries
@@ -89,9 +95,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Install gcc-multilib
         run: |
           sudo apt update
@@ -133,7 +142,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Build
         run: |
           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
@@ -177,9 +191,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Install MinGW and Wine
         run: |
           sudo apt update
@@ -214,7 +231,12 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64

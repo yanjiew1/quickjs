@@ -1,0 +1,26 @@
+{
+  "commit": "039ef27cc5f062a2055cb67435d6d71adbefd27d",
+  "date": "2026-09-29T17:15:52-07:00",
+  "url": "https://github.com/eggert/tz",
+  "files": {
+    "africa": "f2851d4be4a4925cbdc9d56e10d780bccadb89d6ffb9aed78c3e35f97c200aed",
+    "antarctica": "e410ad71c9450828c592d21419301d41ac79ce50159fd0ac2d6c5031cb6bdfe6",
+    "asia": "02b69728085f6b0c999da70de2f1f9a2d8952b533a450d53bb41e03eb7d0e92e",
+    "australasia": "846ba455578e3e0f9eb850f05be3cc06d02ff51bbe4b726f755be9dc765f16c9",
+    "europe": "fec11bf6c6bd0619a8777bbdaa2ecd184fde291cb4b97efa87d334c7145ba3c2",
+    "northamerica": "c0c5da0dc337444d80709cf9f8d8011719b789df160ce107a5c38c90e73dc54c",
+    "southamerica": "13be56a242da3c1a4a6d12050e5fd48b1753c8c1dc237cbc2edb40eac636be7f",
+    "etcetera": "7281f095b42c13c4ae36b8bcba884e81dbb38127221fc1d9805c4dbf852487db",
+    "factory": "ae2ec1d36dabf79a69cb7dd4fb6fd9168d05fc8cfd31aee2dd19e4f18beb9885",
+    "backward": "b8296b9ef1ece72d813878132c0f17e2c52b26af6004eeb9c37d049b64cd9401",
+    "backzone": "9c965661692c07d241c758c41c6f1e9c082d0f77a193d9240228b995e2f1666f",
+    "zone.tab": "e2e8e31c4e10f44576c79345e76060591dbb3eef6ce14e006afc8a373caa9593",
+    "ziguard.awk": "d01a09ded697379bc6df555fa6ce9b976dfb502df01c3741fca69fbd07f27569",
+    "zic.c": "1e6c712d271b8da7c62c358fdc5c2d978b176cb258951b6da599e6b1a503e0ed",
+    "private.h": "dcf3a0041cebf13bebdf4c8e4d1163b7fb4751a16b9f9ebde2cbf79e63b3b4ff",
+    "tzfile.h": "449eceb0318327d7e885c9ab537a88084c98f03735758e4cf3e9ad1ebae79a1c"
+  },
+  "release": "2026e",
+  "tag": "2026e",
+  "released": "2026-09-29"
+}

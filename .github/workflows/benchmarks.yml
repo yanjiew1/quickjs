@@ -39,14 +39,22 @@ jobs:
       EVENT_NAME: ${{ github.event_name }}
       BEFORE_SHA: ${{ github.event.before }}
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - name: Check out exact benchmark tooling
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           path: tooling
           ref: ${{ github.sha }}
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - name: Check out candidate with first-parent history
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           path: candidate
           ref: ${{ inputs.candidate_revision || github.sha }}
           fetch-depth: 0
@@ -79,20 +87,32 @@ jobs:
       - name: Select report directory
         run: |
           echo "REPORT=$RUNNER_TEMP/quickjs-benchmarks-$COMPILER" >> "$GITHUB_ENV"
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - name: Check out exact benchmark tooling
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           path: tooling
           ref: ${{ github.sha }}
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - name: Check out exact candidate and its parent history
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           path: candidate
           ref: ${{ inputs.candidate_revision || github.sha }}
           fetch-depth: 2
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - name: Check out actual immediate parent
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           path: parent
           ref: ${{ needs.select.outputs.parent_revision }}
       - name: Verify benchmark tool contracts

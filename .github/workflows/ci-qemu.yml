@@ -22,7 +22,12 @@ jobs:
   freebsd:
     runs-on: ubuntu-latest
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Build + test
         uses: vmactions/freebsd-vm@v1
         with:
@@ -53,6 +58,9 @@ jobs:
           - linux/ppc64le
 
     steps:
+      - name: Preserve pinned source line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
         with:
             submodules: recursive

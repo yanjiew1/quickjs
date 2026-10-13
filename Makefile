@@ -1082,3 +1082,31 @@ tests/test_temporal_native_calendars$(EXE): $(OBJDIR)/tests/test_temporal_native
 
 tests/test_tzif_decoder$(EXE): $(OBJDIR)/tests/test_tzif_decoder.o $(OBJDIR)/src/timezone/tzif.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# Host-zic creates temporary per-zone files and packs one final native binary.
+HOST_ZIC?=$(OBJDIR)/host-zic$(HOST_EXE)
+HOST_ZIC_CFLAGS?=-O2
+TZ_SOURCE_DIR=third_party/tz
+TZ_GENERATED_DIR=$(OBJDIR)/src/timezone
+TZ_PIN_INPUTS=$(addprefix $(TZ_SOURCE_DIR)/,africa antarctica asia australasia europe northamerica southamerica etcetera factory backward backzone zone.tab ziguard.awk zic.c private.h tzfile.h)
+
+$(TZ_GENERATED_DIR)/tzdir.h: tools/timezone/headers.py
+	$(PYTHON) $< $(TZ_GENERATED_DIR) --header tzdir.h
+$(TZ_GENERATED_DIR)/version.h: tools/timezone/headers.py
+	$(PYTHON) $< $(TZ_GENERATED_DIR) --header version.h
+
+$(HOST_ZIC): tools/timezone/host-zic.c $(TZ_SOURCE_DIR)/zic.c $(TZ_SOURCE_DIR)/private.h $(TZ_SOURCE_DIR)/tzfile.h $(TZ_GENERATED_DIR)/tzdir.h $(TZ_GENERATED_DIR)/version.h
+	$(HOST_CC) $(HOST_ZIC_CFLAGS) -I$(TZ_GENERATED_DIR) -o $@ $<
+
+$(TZ_GENERATED_DIR)/timezone-data.bin: tools/timezone/generate.py tools/timezone/bundle.py tools/timezone/primary.py tools/timezone/pin.json tools/timezone/cldr/timezone.xml tools/timezone/cldr/timezone-pin.json $(TZ_PIN_INPUTS) $(HOST_ZIC)
+	$(PYTHON) $< --tz $(TZ_SOURCE_DIR) --zic $(HOST_ZIC) --output $@ --manifest $(TZ_GENERATED_DIR)/timezone-data.json
+
+$(TZ_GENERATED_DIR)/timezone-data.inc: tools/timezone/embed.py tools/timezone/bundle.py $(TZ_GENERATED_DIR)/timezone-data.bin
+	$(PYTHON) $< --input $(TZ_GENERATED_DIR)/timezone-data.bin --output $@
+
+
+.PHONY: test-timezone-generator
+test-timezone-generator:
+	$(PYTHON) tests/test_timezone_generator.py --tz-source $(TZ_SOURCE_DIR)
+
+test: test-timezone-generator

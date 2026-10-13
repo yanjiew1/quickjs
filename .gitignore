@@ -127,3 +127,6 @@ libwinpthread*.dll
 
 /tests/test_tzif_decoder
 /tests/test_tzif_decoder.exe
+
+# Python host-tool caches are generated build artifacts.
+__pycache__/
