@@ -18,3 +18,5 @@
 
 void reset_nbinterrupts();
 void test_one_input_init(JSRuntime *rt, JSContext *ctx);
+/* Drain at most 1000 ready jobs, without waiting for host events. */
+void test_one_input_jobs(JSContext *ctx);
