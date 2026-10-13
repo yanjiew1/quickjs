@@ -630,6 +630,10 @@ C_TESTS+=tests/test_wait_async$(EXE)
 C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
 C_TESTS+=tests/test_tzif_decoder$(EXE)
+C_TESTS+=tests/test_windows_zones$(EXE)
+ifdef CONFIG_WIN32
+C_TESTS+=tests/test_windows_zones_system$(EXE)
+endif
 C_TESTS+=tests/test_temporal_epoch$(EXE)
 C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
@@ -781,6 +785,10 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
 	$(WINE) ./tests/test_tzif_decoder$(EXE)
+	$(WINE) ./tests/test_windows_zones$(EXE)
+ifdef CONFIG_WIN32
+	$(WINE) ./tests/test_windows_zones_system$(EXE)
+endif
 	$(WINE) ./tests/test_temporal_epoch$(EXE)
 	$(WINE) ./tests/test_temporal_date_math$(EXE)
 	$(WINE) ./tests/test_temporal$(EXE)
@@ -1110,3 +1118,16 @@ test-timezone-generator:
 	$(PYTHON) tests/test_timezone_generator.py --tz-source $(TZ_SOURCE_DIR)
 
 test: test-timezone-generator
+
+$(OBJDIR)/tests/test_windows_zones.o: tests/test_windows_zones.c src/timezone/windows-zone.c src/timezone/windows-zone.h src/timezone/windows-zone-data.inc
+tests/test_windows_zones$(EXE): $(OBJDIR)/tests/test_windows_zones.o
+	$(CC) $(LDFLAGS) -o $@ $^
+ifdef CONFIG_WIN32
+tests/test_windows_zones_system$(EXE): $(OBJDIR)/tests/test_windows_zones_system.o $(OBJDIR)/src/timezone/windows-zone.o
+	$(CC) $(LDFLAGS) -o $@ $^
+endif
+.PHONY: test-windows-zones-generator
+test-windows-zones-generator:
+	$(PYTHON) tests/test_windows_zones_generator.py --tz-source $(TZ_SOURCE_DIR) --tz-pin tools/timezone/pin.json
+
+test: test-windows-zones-generator

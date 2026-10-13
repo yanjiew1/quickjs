@@ -130,3 +130,8 @@ libwinpthread*.dll
 
 # Python host-tool caches are generated build artifacts.
 __pycache__/
+
+/tests/test_windows_zones
+/tests/test_windows_zones.exe
+/tests/test_windows_zones_system
+/tests/test_windows_zones_system.exe
