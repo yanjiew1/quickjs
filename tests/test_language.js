@@ -321,6 +321,76 @@ function test_arguments()
     f2(1, 3);
 }
 
+function test_super_base_order()
+{
+    const first = { value: "first", call() { return "first"; } };
+    const second = { value: "second", call() { return "second"; } };
+    const home = {
+        __proto__: first,
+        read(key) { return super[key()]; },
+        call(key, arg) { return super[key()](arg()); },
+        put(key, rhs) { return super[key()] = rhs(); },
+    };
+    assert(home.read(() => { Object.setPrototypeOf(home, second); return "value"; }),
+           "second");
+    Object.setPrototypeOf(home, first);
+    assert(home.read(() => ({ toString() {
+        Object.setPrototypeOf(home, second); return "value";
+    }})), "first");
+    Object.setPrototypeOf(home, first);
+    assert(home.call(() => "call", () => Object.setPrototypeOf(home, second)),
+           "first");
+    const order = [];
+    Object.defineProperty(first, "target", { set(v) { order.push("first:" + v); } });
+    Object.defineProperty(second, "target", { set(v) { order.push("second:" + v); } });
+    Object.setPrototypeOf(home, first);
+    home.put(() => {
+        order.push("key");
+        return { toString() { order.push("coerce"); return "target"; } };
+    }, () => {
+        order.push("rhs"); Object.setPrototypeOf(home, second); return 42;
+    });
+    assert(JSON.stringify(order), '["key","rhs","coerce","first:42"]');
+    Object.setPrototypeOf(home, first);
+    assert_throws(TypeError, () => home.read(() => {
+        Object.setPrototypeOf(home, null); return "value";
+    }));
+    let evaluated = false;
+    class Uninitialized extends Object {
+        constructor() { super[(evaluated = true, "value")]; }
+    }
+    assert_throws(ReferenceError, () => new Uninitialized());
+    assert(evaluated, false);
+}
+
+function test_super_null_key_coercion()
+{
+    let coerces = 0, rhs = 0;
+    const key = { toString() { coerces++; throw Error("unexpected key coercion"); } };
+    const home = {
+        __proto__: null,
+        read() { return super[key]; },
+        prefix() { return ++super[key]; },
+        postfix() { return super[key]++; },
+        compound() { return super[key] += 1; },
+        assign() { super[key] = (++rhs); },
+    };
+    for (const method of [home.read, home.prefix, home.postfix, home.compound]) {
+        assert_throws(TypeError, () => method.call(home));
+        assert(coerces, 0);
+    }
+    assert_throws(TypeError, () => home.assign());
+    assert(rhs, 1);
+    assert(coerces, 0);
+    const error = Error("key conversion");
+    Object.setPrototypeOf(home, {});
+    const throwing = { toString() { throw error; } };
+    const ordinary = { read(k) { return super[k]; } };
+    let actual;
+    try { ordinary.read(throwing); } catch (e) { actual = e; }
+    assert(actual === error);
+}
+
 function test_class()
 {
     var o;
@@ -729,6 +799,8 @@ test_delete();
 test_prototype();
 test_arguments();
 test_class();
+test_super_base_order();
+test_super_null_key_coercion();
 test_template();
 test_template_skip();
 test_object_literal();
