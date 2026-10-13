@@ -1075,7 +1075,8 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
             found = (NULL != map_find_record(ctx, s, item));
             JS_FreeValue(ctx, item);
             if (found) {
-                JS_IteratorClose(ctx, iter, FALSE);
+                if (JS_IteratorClose(ctx, iter, FALSE) < 0)
+                    goto exception;
                 break;
             }
         }
@@ -1173,7 +1174,8 @@ static JSValue js_set_isSupersetOf(JSContext *ctx, JSValueConst this_val,
         found = (NULL != map_find_record(ctx, s, item));
         JS_FreeValue(ctx, item);
         if (!found) {
-            JS_IteratorClose(ctx, iter, FALSE);
+            if (JS_IteratorClose(ctx, iter, FALSE) < 0)
+                goto exception;
             break;
         }
     }
