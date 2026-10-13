@@ -82,7 +82,6 @@ JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len, int atom_type);
 JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
 JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v);
 JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len, int atom_type);
-JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
 JSValue JS_NewSymbolInternal(JSContext *ctx, JSString *p, int atom_type);
 JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr, int atom_type);
 const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size, JSAtom atom);
