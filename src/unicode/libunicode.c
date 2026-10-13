@@ -1156,6 +1156,7 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
     to_nfd_rec(dbuf, (const int *)src, src_len, is_compat);
     if (dbuf_error(dbuf)) {
     fail:
+        dbuf_free(dbuf);
         *pdst = NULL;
         return -1;
     }

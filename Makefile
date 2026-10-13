@@ -560,6 +560,7 @@ C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
         tests/test_typed_array$(EXE) tests/test_allocator$(EXE)
 C_TESTS+=tests/test_qjsc_context_failures$(EXE)
 
+C_TESTS+=tests/test_unicode_oom$(EXE)
 C_TESTS+=tests/test_atomics_wait$(EXE)
 C_TESTS+=tests/test_worker_context_failure$(EXE)
 
@@ -606,6 +607,9 @@ tests/test_cutils$(EXE): $(OBJDIR)/tests/test_cutils.o $(OBJDIR)/src/cutils/cuti
 tests/test_typed_array$(EXE): $(OBJDIR)/tests/test_typed_array.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_unicode_oom$(EXE): $(OBJDIR)/tests/test_unicode_oom.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -627,6 +631,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_bytecode$(EXE)
 	$(WINE) ./tests/test_cutils$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
+	$(WINE) ./tests/test_unicode_oom$(EXE)
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
 
 .PHONY: test-regexp
