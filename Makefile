@@ -257,6 +257,7 @@ QUICKJS_SRCS= \
     src/quickjs/atom.c \
     src/quickjs/bigint.c \
     src/quickjs/builtins/array-buffer.c \
+    src/quickjs/builtins/array-from-async.c \
     src/quickjs/builtins/array.c \
     src/quickjs/builtins/async-from-sync-iterator.c \
     src/quickjs/builtins/async.c \
