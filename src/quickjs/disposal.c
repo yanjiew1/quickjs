@@ -123,7 +123,7 @@ JSValue js_new_disposable_resource_list(JSContext *ctx)
     return value;
 }
 
-static void js_async_dispose_settle(JSContext *ctx, JSValueConst *funcs,
+void js_async_dispose_settle(JSContext *ctx, JSValueConst *funcs,
                              JSValueConst value, BOOL reject)
 {
     JSValue result = JS_Call(ctx, funcs[reject], JS_UNDEFINED, 1, &value);

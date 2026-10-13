@@ -260,6 +260,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/array-from-async.c \
     src/quickjs/builtins/array.c \
     src/quickjs/builtins/async-from-sync-iterator.c \
+    src/quickjs/builtins/async-resource-management.c \
     src/quickjs/builtins/async.c \
     src/quickjs/builtins/atomics.c \
     src/quickjs/builtins/bigint.c \
