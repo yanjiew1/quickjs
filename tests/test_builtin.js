@@ -567,6 +567,129 @@ function test_typed_array_slice_resize()
     }
 }
 
+function test_empty_array_buffer()
+{
+    for (const resizable of [false, true]) {
+        const empty = resizable ? new ArrayBuffer(0, { maxByteLength: 8 }) :
+                                  new ArrayBuffer(0);
+        assert(empty.slice(0).byteLength, 0);
+        assert(empty.detached, false);
+        for (const method of ["transfer", "transferToFixedLength"]) {
+            for (const length of [0, 1, 8]) {
+                const source = resizable ? new ArrayBuffer(0, { maxByteLength: 8 }) :
+                                           new ArrayBuffer(0);
+                const moved = source[method](length);
+                assert(source.detached, true);
+                assert(moved.byteLength, length);
+                assert([...new Uint8Array(moved)].every(x => x === 0));
+            }
+        }
+    }
+    const view = new DataView(new ArrayBuffer(0));
+    assert(view.byteLength, 0);
+    assert_throws(RangeError, () => view.getUint8(0));
+    assert_throws(RangeError, () => view.setUint8(0, 1));
+}
+
+function test_empty_typed_array()
+{
+    const constructors = [
+        Uint8ClampedArray, Int8Array, Uint8Array, Int16Array, Uint16Array,
+        Int32Array, Uint32Array, BigInt64Array, BigUint64Array,
+        Float16Array, Float32Array, Float64Array,
+    ];
+    for (const C of constructors) {
+        const buffer = new ArrayBuffer(0);
+        const a = new C(buffer);
+        assert(a.length, 0);
+        assert(a.buffer, buffer);
+        a.set(a);
+        a.set(new C(0));
+        a.set(new C(new ArrayBuffer(0, { maxByteLength: 8 })));
+        const copy = new C(a);
+        assert(copy.length, 0);
+        assert(copy.buffer !== buffer);
+        assert(a.slice(0).length, 0);
+        assert(buffer.detached, false);
+        assert(new C([]).length, 0);
+        assert(new C({ length: 0 }).length, 0);
+        assert(C.from([]).length, 0);
+        assert(C.of().length, 0);
+        assert(a.copyWithin(0, 0), a);
+        assert(a.fill(C === BigInt64Array || C === BigUint64Array ? 0n : 0), a);
+        assert(a.sort(), a);
+        assert(a.sort(() => { throw Error(); }), a);
+        assert(a.toSorted().length, 0);
+        assert(a.toString(), "");
+    }
+}
+
+function test_typed_array_resize_bounds()
+{
+    const constructors = [
+        Uint8ClampedArray, Int8Array, Uint8Array, Int16Array, Uint16Array,
+        Int32Array, Uint32Array, BigInt64Array, BigUint64Array,
+        Float16Array, Float32Array, Float64Array,
+    ];
+    for (const C of constructors) {
+        const size = C.BYTES_PER_ELEMENT;
+        const one = C === BigInt64Array || C === BigUint64Array ? 1n : 1;
+        const buffer = new ArrayBuffer(4 * size, { maxByteLength: 4 * size });
+        const tracking = new C(buffer);
+        const offsetTracking = new C(buffer, size);
+        const fixedEmpty = new C(buffer, 0, 0);
+        const endEmpty = new C(buffer, 4 * size, 0);
+        const fixedOne = new C(buffer, size, 1);
+
+        buffer.resize(size);
+        assert(offsetTracking.length, 0);
+        assert(offsetTracking.byteOffset, size);
+        offsetTracking.set(new C(0));
+        assert(offsetTracking.fill(one), offsetTracking);
+        assert(offsetTracking.slice().length, 0);
+        assert_throws(TypeError, () => endEmpty.fill(one));
+        assert_throws(TypeError, () => fixedOne.fill(one));
+
+        buffer.resize(size - 1);
+        assert(tracking.length, 0);
+        assert(offsetTracking.byteOffset, 0);
+        assert_throws(TypeError, () => offsetTracking.fill(one));
+        for (const view of [tracking, fixedEmpty]) {
+            view.set(new C(0));
+            assert(view.copyWithin(0, 0), view);
+            assert(view.fill(one), view);
+            assert(view.sort(), view);
+            assert(view.slice().length, 0);
+        }
+        buffer.resize(0);
+        buffer.resize(0);
+        assert(tracking.fill(one), tracking);
+        assert(fixedEmpty.fill(one), fixedEmpty);
+
+        buffer.resize(4 * size);
+        assert(tracking.length, 4);
+        assert(offsetTracking.length, 3);
+        assert(fixedOne.length, 1);
+        tracking.fill(one);
+        assert(fixedOne[0], one);
+        assert(endEmpty.byteOffset, 4 * size);
+        assert(endEmpty.fill(one), endEmpty);
+        buffer.transfer();
+        for (const view of [tracking, offsetTracking, fixedEmpty, endEmpty, fixedOne])
+            assert_throws(TypeError, () => view.fill(one));
+
+        const shared = new SharedArrayBuffer(0, { maxByteLength: 4 * size });
+        const sharedTracking = new C(shared);
+        shared.grow(size - 1);
+        assert(sharedTracking.length, 0);
+        assert(sharedTracking.fill(one), sharedTracking);
+        shared.grow(4 * size);
+        assert(sharedTracking.length, 4);
+        sharedTracking.fill(one);
+        assert(sharedTracking[3], one);
+    }
+}
+
 function test_empty_typed_array_transfer()
 {
     const constructors = [
@@ -663,63 +786,6 @@ function assert_json_error(str, line_num, col_num)
     }
     if (!err) {
         throw_error("expected exception");
-    }
-}
-
-function test_empty_array_buffer()
-{
-    for (const resizable of [false, true]) {
-        const empty = resizable ? new ArrayBuffer(0, { maxByteLength: 8 }) :
-                                  new ArrayBuffer(0);
-        assert(empty.slice(0).byteLength, 0);
-        assert(empty.detached, false);
-        for (const method of ["transfer", "transferToFixedLength"]) {
-            for (const length of [0, 1, 8]) {
-                const source = resizable ? new ArrayBuffer(0, { maxByteLength: 8 }) :
-                                           new ArrayBuffer(0);
-                const moved = source[method](length);
-                assert(source.detached, true);
-                assert(moved.byteLength, length);
-                assert([...new Uint8Array(moved)].every(x => x === 0));
-            }
-        }
-    }
-    const view = new DataView(new ArrayBuffer(0));
-    assert(view.byteLength, 0);
-    assert_throws(RangeError, () => view.getUint8(0));
-    assert_throws(RangeError, () => view.setUint8(0, 1));
-}
-
-function test_empty_typed_array()
-{
-    const constructors = [
-        Uint8ClampedArray, Int8Array, Uint8Array, Int16Array, Uint16Array,
-        Int32Array, Uint32Array, BigInt64Array, BigUint64Array,
-        Float16Array, Float32Array, Float64Array,
-    ];
-    for (const C of constructors) {
-        const buffer = new ArrayBuffer(0);
-        const a = new C(buffer);
-        assert(a.length, 0);
-        assert(a.buffer, buffer);
-        a.set(a);
-        a.set(new C(0));
-        a.set(new C(new ArrayBuffer(0, { maxByteLength: 8 })));
-        const copy = new C(a);
-        assert(copy.length, 0);
-        assert(copy.buffer !== buffer);
-        assert(a.slice(0).length, 0);
-        assert(buffer.detached, false);
-        assert(new C([]).length, 0);
-        assert(new C({ length: 0 }).length, 0);
-        assert(C.from([]).length, 0);
-        assert(C.of().length, 0);
-        assert(a.copyWithin(0, 0), a);
-        assert(a.fill(C === BigInt64Array || C === BigUint64Array ? 0n : 0), a);
-        assert(a.sort(), a);
-        assert(a.sort(() => { throw Error(); }), a);
-        assert(a.toSorted().length, 0);
-        assert(a.toString(), "");
     }
 }
 
@@ -1345,6 +1411,7 @@ test_typed_array();
 test_typed_array_slice_resize();
 test_empty_array_buffer();
 test_empty_typed_array();
+test_typed_array_resize_bounds();
 test_empty_typed_array_transfer();
 test_error_stack();
 test_json();

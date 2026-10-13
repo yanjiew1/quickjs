@@ -322,7 +322,7 @@ static JSValue js_array_buffer_get_resizable(JSContext *ctx,
 
 static void js_array_buffer_update_typed_arrays(JSArrayBuffer *abuf)
 {
-    uint32_t size_log2, size_elem;
+    uint32_t size_log2;
     struct list_head *el;
     JSTypedArray *ta;
     JSObject *p;
@@ -345,17 +345,19 @@ static void js_array_buffer_update_typed_arrays(JSArrayBuffer *abuf)
         } else {
             p->u.array.count = 0;
             p->u.array.u.ptr = NULL;
+            if (abuf->detached)
+                continue;
             size_log2 = typed_array_size_log2(p->class_id);
-            size_elem = 1 << size_log2;
+            /* Attached, in-bounds views keep a pointer even when empty. */
             if (ta->track_rab) {
-                if (len >= (int64_t)ta->offset + size_elem) {
+                if (len >= ta->offset) {
                     p->u.array.count = (len - ta->offset) >> size_log2;
                     p->u.array.u.ptr = &data[ta->offset];
                 }
             } else {
                 if (len >= (int64_t)ta->offset + ta->length) {
                     p->u.array.count = ta->length >> size_log2;
-                    p->u.array.u.ptr = data ? &data[ta->offset] : NULL;
+                    p->u.array.u.ptr = &data[ta->offset];
                 }
             }
         }
