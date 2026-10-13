@@ -54,6 +54,13 @@ void js_std_eval_binary(JSContext *ctx, const uint8_t *buf, size_t buf_len,
 void js_std_eval_binary_json_module(JSContext *ctx,
                                     const uint8_t *buf, size_t buf_len,
                                     const char *module_name);
+/* Both buffers contain JS_WriteObject output without bytecode flags.
+   attributes_buf preserves the complete original normalized request. */
+void js_std_eval_binary_json_module2(JSContext *ctx,
+                                     const uint8_t *buf, size_t buf_len,
+                                     const char *module_name,
+                                     const uint8_t *attributes_buf,
+                                     size_t attributes_buf_len);
 void js_std_promise_rejection_tracker(JSContext *ctx, JSValueConst promise,
                                       JSValueConst reason,
                                       JS_BOOL is_handled, void *opaque);

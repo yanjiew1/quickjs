@@ -432,3 +432,30 @@ void js_std_eval_binary_json_module(JSContext *ctx,
         exit(1);
     }
 }
+
+void js_std_eval_binary_json_module2(JSContext *ctx,
+                                     const uint8_t *buf, size_t buf_len,
+                                     const char *module_name,
+                                     const uint8_t *attributes_buf,
+                                     size_t attributes_buf_len)
+{
+    JSValue obj, attributes;
+    JSModuleDef *m;
+
+    obj = JS_ReadObject(ctx, buf, buf_len, 0);
+    if (JS_IsException(obj))
+        goto exception;
+    attributes = JS_ReadObject(ctx, attributes_buf, attributes_buf_len, 0);
+    if (JS_IsException(attributes)) {
+        JS_FreeValue(ctx, obj);
+        goto exception;
+    }
+    m = create_json_module2(ctx, module_name, obj, attributes);
+    JS_FreeValue(ctx, attributes);
+    if (!m)
+        goto exception;
+    return;
+ exception:
+    js_std_dump_error(ctx);
+    exit(1);
+}
