@@ -1,8 +1,10 @@
 /*
  * QuickJS module lifecycle
  *
- * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -75,6 +77,10 @@ JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name)
     m->resolving_funcs[0] = JS_UNDEFINED;
     m->resolving_funcs[1] = JS_UNDEFINED;
     m->private_value = JS_UNDEFINED;
+    m->attributes = JS_UNDEFINED;
+    if (ctx->module_load_request &&
+        ctx->module_load_request->module_name == name)
+        m->attributes = JS_DupValue(ctx, ctx->module_load_request->attributes);
     list_add_tail(&m->link, &ctx->loaded_modules);
     return m;
 }
@@ -105,6 +111,7 @@ void js_mark_module_def(JSRuntime *rt, JSModuleDef *m,
     JS_MarkValue(rt, m->resolving_funcs[0], mark_func);
     JS_MarkValue(rt, m->resolving_funcs[1], mark_func);
     JS_MarkValue(rt, m->private_value, mark_func);
+    JS_MarkValue(rt, m->attributes, mark_func);
 }
 
 void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
@@ -146,6 +153,7 @@ void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
     JS_FreeValueRT(rt, m->resolving_funcs[0]);
     JS_FreeValueRT(rt, m->resolving_funcs[1]);
     JS_FreeValueRT(rt, m->private_value);
+    JS_FreeValueRT(rt, m->attributes);
     /* during the GC the finalizers are called in an arbitrary
        order so the module may no longer be referenced by the JSContext list */
     if (m->link.next) {
@@ -159,11 +167,105 @@ void js_free_module_def(JSRuntime *rt, JSModuleDef *m)
     }
 }
 
+/* Import attribute identity adapted from QuickJS-NG quickjs.c,
+   a6b82a358a3c4c9bb375d1b5cae44a3b73db6222, reviewed 2026-10-08.
+   The MIT copyright and permission notice above also apply to this code.
+   Equal sets have the same string key/value pairs, regardless of key
+   order; absent attributes and an empty set are equal.
+   Return 1 if equal, 0 otherwise, or -1 with an exception. */
+static int js_module_attributes_equal(JSContext *ctx, JSValueConst attr1,
+                                      JSValueConst attr2)
+{
+    JSPropertyEnum *tab = NULL, *tab2 = NULL;
+    uint32_t len = 0, len2 = 0, i, j;
+    JSValue v1, v2;
+    JSAtom a1, a2;
+    int res, pair_equal;
+
+    if (JS_IsObject(attr1)) {
+        if (JS_GetOwnPropertyNames(ctx, &tab, &len, attr1,
+                                   JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0)
+            return -1;
+    }
+    if (JS_IsObject(attr2)) {
+        if (JS_GetOwnPropertyNames(ctx, &tab2, &len2, attr2,
+                                   JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0) {
+            res = -1;
+            goto done;
+        }
+    }
+    res = 0;
+    if (len != len2)
+        goto done;
+    for (i = 0; i < len; i++) {
+        /* Bytecode readers can restore objects with a prototype. Match
+           own keys so inherited properties cannot supply an attribute. */
+        for (j = 0; j < len2; j++) {
+            if (tab2[j].atom == tab[i].atom)
+                break;
+        }
+        if (j == len2)
+            goto done;
+        v1 = JS_GetProperty(ctx, attr1, tab[i].atom);
+        if (JS_IsException(v1)) {
+            res = -1;
+            goto done;
+        }
+        v2 = JS_GetProperty(ctx, attr2, tab[i].atom);
+        if (JS_IsException(v2)) {
+            JS_FreeValue(ctx, v1);
+            res = -1;
+            goto done;
+        }
+        if (JS_IsUndefined(v2)) {
+            /* Attribute values are strings, so this key is absent. */
+            JS_FreeValue(ctx, v1);
+            goto done;
+        }
+        a1 = JS_ValueToAtom(ctx, v1);
+        if (a1 == JS_ATOM_NULL) {
+            JS_FreeValue(ctx, v1);
+            JS_FreeValue(ctx, v2);
+            res = -1;
+            goto done;
+        }
+        a2 = JS_ValueToAtom(ctx, v2);
+        JS_FreeValue(ctx, v1);
+        JS_FreeValue(ctx, v2);
+        if (a2 == JS_ATOM_NULL) {
+            JS_FreeAtom(ctx, a1);
+            res = -1;
+            goto done;
+        }
+        pair_equal = (a1 == a2);
+        JS_FreeAtom(ctx, a1);
+        JS_FreeAtom(ctx, a2);
+        if (!pair_equal)
+            goto done;
+    }
+    res = 1;
+done:
+    JS_FreePropertyEnum(ctx, tab, len);
+    JS_FreePropertyEnum(ctx, tab2, len2);
+    return res;
+}
+
 int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
-                         JSAtom module_name)
+                         JSAtom module_name, JSValueConst attributes)
 {
     JSReqModuleEntry *rme;
+    int i, eq;
 
+    for (i = 0; i < m->req_module_entries_count; i++) {
+        rme = &m->req_module_entries[i];
+        if (rme->module_name == module_name) {
+            eq = js_module_attributes_equal(ctx, rme->attributes, attributes);
+            if (eq < 0)
+                return -1;
+            if (eq)
+                return i;
+        }
+    }
     if (js_resize_array(ctx, (void **)&m->req_module_entries,
                         sizeof(JSReqModuleEntry),
                         &m->req_module_entries_size,
@@ -172,8 +274,8 @@ int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
     rme = &m->req_module_entries[m->req_module_entries_count++];
     rme->module_name = JS_DupAtom(ctx, module_name);
     rme->module = NULL;
-    rme->attributes = JS_UNDEFINED;
-    return m->req_module_entries_count - 1;
+    rme->attributes = JS_DupValue(ctx, attributes);
+    return i;
 }
 
 static JSExportEntry *find_export_entry(JSContext *ctx, JSModuleDef *m,
@@ -389,7 +491,31 @@ static char *js_default_module_normalize_name(JSContext *ctx,
     return filename;
 }
 
-static JSModuleDef *js_find_loaded_module(JSContext *ctx, JSAtom name)
+/* Return -1 on comparison failure, or 0 with a match or NULL. */
+static int js_find_loaded_module(JSContext *ctx, JSAtom name,
+                                  JSValueConst attributes, JSModuleDef **pm)
+{
+    struct list_head *el;
+    JSModuleDef *m;
+    int eq;
+
+    *pm = NULL;
+    list_for_each(el, &ctx->loaded_modules) {
+        m = list_entry(el, JSModuleDef, link);
+        if (m->module_name == name) {
+            eq = js_module_attributes_equal(ctx, m->attributes, attributes);
+            if (eq < 0)
+                return -1;
+            if (eq) {
+                *pm = m;
+                return 0;
+            }
+        }
+    }
+    return 0;
+}
+
+static JSModuleDef *js_find_loaded_module_by_name(JSContext *ctx, JSAtom name)
 {
     struct list_head *el;
     JSModuleDef *m;
@@ -411,6 +537,7 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
 {
     JSRuntime *rt = ctx->rt;
     JSModuleDef *m;
+    JSModuleLoadRequest request;
     char *cname;
     JSAtom module_name;
 
@@ -430,28 +557,43 @@ static JSModuleDef *js_host_resolve_imported_module(JSContext *ctx,
     }
 
     /* first look at the loaded modules */
-    m = js_find_loaded_module(ctx, module_name);
+    if (js_find_loaded_module(ctx, module_name, attributes, &m) < 0) {
+        js_free(ctx, cname);
+        JS_FreeAtom(ctx, module_name);
+        return NULL;
+    }
     if (m) {
         js_free(ctx, cname);
         JS_FreeAtom(ctx, module_name);
         return m;
     }
 
-    JS_FreeAtom(ctx, module_name);
-
     /* load the module */
     if (!rt->u.module_loader_func) {
         /* XXX: use a syntax error ? */
         JS_ThrowReferenceError(ctx, "could not load module '%s'",
                                cname);
+        JS_FreeAtom(ctx, module_name);
         js_free(ctx, cname);
         return NULL;
     }
+    request.previous = ctx->module_load_request;
+    request.module_name = JS_DupAtom(ctx, module_name);
+    request.attributes = JS_DupValue(ctx, attributes);
+    JS_FreeAtom(ctx, module_name);
+    ctx->module_load_request = &request;
     if (rt->module_loader_has_attr) {
         m = rt->u.module_loader_func2(ctx, cname, rt->module_loader_opaque, attributes);
     } else {
         m = rt->u.module_loader_func(ctx, cname, rt->module_loader_opaque);
     }
+    ctx->module_load_request = request.previous;
+    /* A host may return one module for unequal requests. Retain the first
+       attributed request without requiring a fresh module from the host. */
+    if (m && JS_IsObject(attributes) && JS_IsUndefined(m->attributes))
+        m->attributes = JS_DupValue(ctx, attributes);
+    JS_FreeValue(ctx, request.attributes);
+    JS_FreeAtom(ctx, request.module_name);
     js_free(ctx, cname);
     return m;
 }
@@ -1320,7 +1462,7 @@ JSValue js_import_meta(JSContext *ctx)
 
     /* XXX: inefficient, need to add a module or script pointer in
        JSFunctionBytecode */
-    m = js_find_loaded_module(ctx, filename);
+    m = js_find_loaded_module_by_name(ctx, filename);
     JS_FreeAtom(ctx, filename);
     if (!m) {
     fail:
