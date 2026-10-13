@@ -521,8 +521,10 @@ static void enumerate_tests(const char *path)
     namelist_t *lp = &test_list;
     int start = lp->count;
     ftw(path, add_test_file, 100);
-    qsort(lp->array + start, lp->count - start, sizeof(*lp->array),
-          namelist_cmp_indirect);
+    if (lp->count - start > 1) {
+        qsort(lp->array + start, lp->count - start, sizeof(*lp->array),
+              namelist_cmp_indirect);
+    }
 }
 
 static void js_print_value_write(void *opaque, const char *buf, size_t len)
