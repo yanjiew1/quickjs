@@ -44,7 +44,9 @@ typedef struct JSThreadState {
     int next_timer_id; /* for setTimeout() */
     /* not used in the main thread */
     JSWorkerMessagePipe *recv_pipe, *send_pipe;
-#if !defined(_WIN32)
+#if defined(_WIN32)
+    size_t poll_worker_offset; /* next overflow wait window */
+#else
     struct pollfd *poll_fds;
     int poll_fds_size;
 #endif
