@@ -91,9 +91,140 @@ function test_iterator_constructor_realm()
     std.gc();
 }
 
+function test_iterator_helper_creation_realm()
+{
+    const result = run_in_realms(function () {
+        const realms = [globalThis, foreign];
+        function check(actual, expected, message) {
+            if (actual !== expected) throw Error(message);
+        }
+        function resultRealm(result, realm, message) {
+            check(Object.getPrototypeOf(result), realm.Object.prototype, message);
+        }
+        function thrownRealm(callback, realm, message) {
+            let caught = false;
+            try { callback(); } catch (error) {
+                caught = true;
+                check(Object.getPrototypeOf(error), realm.TypeError.prototype, message);
+            }
+            check(caught, true, message + ": expected an exception");
+        }
+        function finiteSource(value) {
+            let used = false;
+            return { next() {
+                if (used) return { done: true };
+                used = true;
+                return { value };
+            } };
+        }
+        for (let i = 0; i < 2; i++) {
+            const creator = realms[i], caller = realms[1 - i];
+            const borrowed = Object.getPrototypeOf(caller.Iterator.from([]).map(x => x));
+            const next = borrowed.next, close = borrowed.return;
+            const makers = [
+                input => creator.Iterator.prototype.map.call(input, x => x),
+                input => creator.Iterator.prototype.filter.call(input, x => true),
+                input => creator.Iterator.prototype.flatMap.call(input, x => [x]),
+                input => creator.Iterator.prototype.drop.call(input, 0),
+                input => creator.Iterator.prototype.take.call(input, 1),
+            ];
+            for (const make of makers) {
+                let helper = make(finiteSource(1));
+                Object.setPrototypeOf(helper, null);
+                let result = next.call(helper);
+                resultRealm(result, creator, "yielded result uses the saved creation realm");
+                check(result.value, 1, "borrowed next yields the input value");
+                check(result.done, false, "first resume yields");
+                result = next.call(helper);
+                resultRealm(result, creator, "first completion uses the creation realm");
+                check(result.done, true, "second resume completes");
+                resultRealm(next.call(helper), caller,
+                            "already-completed next uses the invoked method realm");
+                resultRealm(close.call(helper), caller,
+                            "already-completed return uses the invoked method realm");
+
+                helper = make(finiteSource(2));
+                resultRealm(close.call(helper), caller,
+                            "suspended-start return uses the invoked method realm");
+                resultRealm(next.call(helper), caller,
+                            "next after suspended-start return stays in the method realm");
+
+                helper = make(finiteSource(3));
+                next.call(helper);
+                resultRealm(close.call(helper), creator,
+                            "suspended-yield return resumes the saved creation realm");
+                resultRealm(close.call(helper), caller,
+                            "return after completion uses the method realm");
+
+                helper = make({ next: null });
+                thrownRealm(() => next.call(helper), creator,
+                            "uncallable cached next is validated in the generator realm");
+                resultRealm(next.call(helper), caller,
+                            "next after failure uses the method realm");
+
+                const badClose = () => ({ next() { return { value: 4 }; },
+                                         return() { return 0; } });
+                helper = make(badClose());
+                thrownRealm(() => close.call(helper), caller,
+                            "suspended-start close validation uses the method realm");
+                helper = make(badClose());
+                next.call(helper);
+                thrownRealm(() => close.call(helper), creator,
+                            "suspended-yield close validation uses the generator realm");
+
+                const source = { next() {
+                    thrownRealm(() => next.call(helper), caller,
+                                "running next validation uses the method realm");
+                    thrownRealm(() => close.call(helper), caller,
+                                "running return validation uses the method realm");
+                    return { value: 5 };
+                }, return() {
+                    thrownRealm(() => next.call(helper), caller,
+                                "active close keeps generator execution guarded");
+                    return {};
+                } };
+                helper = make(source);
+                resultRealm(next.call(helper), creator,
+                            "reentry does not change the outer generator realm");
+                close.call(helper);
+
+                const startClose = { next() { throw 42; }, return() {
+                    resultRealm(next.call(helper), caller,
+                                "suspended-start return completes before callbacks");
+                    resultRealm(close.call(helper), caller,
+                                "completed return reentry uses the method realm");
+                    return {};
+                } };
+                helper = make(startClose);
+                close.call(helper);
+            }
+            const source = { next() { return { value: 6 }; } };
+            const flat = creator.Iterator.prototype.flatMap.call(source, () => 0);
+            thrownRealm(() => next.call(flat), creator,
+                        "flatMap primitive-result error is created by the saved realm");
+            thrownRealm(() => next.call({}), caller,
+                        "invalid helper receiver is validated in the method realm");
+            thrownRealm(() => close.call({}), caller,
+                        "invalid return receiver is validated in the method realm");
+
+            // The JS harness releases both realm roots and runs GC after this
+            // script. This unreachable global/helper/context cycle requires
+            // the retained context to be marked and freed by the helper owner.
+            const cycle = creator.Iterator.prototype.map.call(finiteSource(17), x => x);
+            Object.setPrototypeOf(cycle, null);
+            cycle.contextGlobal = creator;
+            creator.__helperRealmCycle = cycle;
+        }
+        return true;
+    });
+    check(result, true, "iterator_helper_creation_realm");
+    std.gc();
+}
+
 export function test_iterator_realms()
 {
     test_native_iterator_next_realm();
+    test_iterator_helper_creation_realm();
     test_iterator_constructor_realm();
 }
 
