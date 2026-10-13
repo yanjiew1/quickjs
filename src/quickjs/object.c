@@ -1533,6 +1533,8 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                         return JS_GetPropertyUint32(ctx, JS_MKPTR(JS_TAG_OBJECT, p), idx);
                     } else if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
                                p->class_id <= JS_CLASS_FLOAT64_ARRAY) {
+                        if (idx < js_typed_array_update_length(p))
+                            return JS_GetPropertyUint32(ctx, JS_MKPTR(JS_TAG_OBJECT, p), idx);
                         return JS_UNDEFINED;
                     }
                 } else if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
@@ -1821,6 +1823,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
     JSPropertyEnum *tab_atom, *tab_exotic;
     JSAtom atom;
     uint32_t num_keys_count, str_keys_count, sym_keys_count, atom_count;
+    uint32_t array_count = 0;
     uint32_t num_index, str_index, sym_index, exotic_count, exotic_keys_count;
     BOOL is_enumerable, num_sorted;
     uint32_t num_key;
@@ -1869,7 +1872,10 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
     if (p->is_exotic) {
         if (p->fast_array) {
             if (flags & JS_GPN_STRING_MASK) {
-                num_keys_count += p->u.array.count;
+                array_count = p->class_id >= JS_CLASS_UINT8C_ARRAY &&
+                    p->class_id <= JS_CLASS_FLOAT64_ARRAY ?
+                    js_typed_array_update_length(p) : p->u.array.count;
+                num_keys_count += array_count;
             }
         } else if (p->class_id == JS_CLASS_STRING) {
             if (flags & JS_GPN_STRING_MASK) {
@@ -1966,7 +1972,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
         int len;
         if (p->fast_array) {
             if (flags & JS_GPN_STRING_MASK) {
-                len = p->u.array.count;
+                len = array_count;
                 goto add_array_keys;
             }
         } else if (p->class_id == JS_CLASS_STRING) {
@@ -2165,7 +2171,10 @@ retry:
             if (__JS_AtomIsTaggedInt(prop)) {
                 uint32_t idx;
                 idx = __JS_AtomToUInt32(prop);
-                if (idx < p->u.array.count) {
+                if (idx < p->u.array.count ||
+                    (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
+                     p->class_id <= JS_CLASS_FLOAT64_ARRAY &&
+                     idx < js_typed_array_update_length(p))) {
                     if (desc) {
                         desc->flags = JS_PROP_WRITABLE | JS_PROP_ENUMERABLE |
                             JS_PROP_CONFIGURABLE;
@@ -2613,7 +2622,10 @@ int delete_property(JSContext *ctx, JSObject *p, JSAtom atom)
         if (p->fast_array) {
             uint32_t idx;
             if (JS_AtomIsArrayIndex(ctx, &idx, atom) &&
-                idx < p->u.array.count) {
+                (idx < p->u.array.count ||
+                 (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
+                  p->class_id <= JS_CLASS_FLOAT64_ARRAY &&
+                  idx < js_typed_array_update_length(p)))) {
                 if (p->class_id == JS_CLASS_ARRAY ||
                     p->class_id == JS_CLASS_ARGUMENTS ||
                     p->class_id == JS_CLASS_MAPPED_ARGUMENTS) {
@@ -3000,6 +3012,16 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                             break;
                     } else if (p1->class_id >= JS_CLASS_UINT8C_ARRAY &&
                                p1->class_id <= JS_CLASS_FLOAT64_ARRAY) {
+                        if (idx < js_typed_array_update_length(p1)) {
+                            if (p == p1)
+                                return JS_SetPropertyValue(ctx, this_obj,
+                                    JS_NewInt32(ctx, idx), val, flags);
+                            break;
+                        }
+                        if (p == p1 && p1->u.typed_array->track_rab &&
+                            p1->u.typed_array->buffer->u.array_buffer->shared)
+                            return JS_SetPropertyValue(ctx, this_obj,
+                                JS_NewInt32(ctx, idx), val, flags);
                         goto typed_array_oob;
                     }
                 } else if (p1->class_id >= JS_CLASS_UINT8C_ARRAY &&
@@ -3234,7 +3256,8 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                 return -1;
             /* Note: the conversion can detach the typed array, so the
                array bound check must be done after */
-            if (unlikely(idx >= (uint32_t)p->u.array.count))
+            if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
             p->u.array.u.uint8_ptr[idx] = v;
             break;
@@ -3242,7 +3265,8 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
         case JS_CLASS_UINT8_ARRAY:
             if (JS_ToInt32Free(ctx, &v, val))
                 return -1;
-            if (unlikely(idx >= (uint32_t)p->u.array.count))
+            if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
             p->u.array.u.uint8_ptr[idx] = v;
             break;
@@ -3250,7 +3274,8 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
         case JS_CLASS_UINT16_ARRAY:
             if (JS_ToInt32Free(ctx, &v, val))
                 return -1;
-            if (unlikely(idx >= (uint32_t)p->u.array.count))
+            if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
             p->u.array.u.uint16_ptr[idx] = v;
             break;
@@ -3258,7 +3283,8 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
         case JS_CLASS_UINT32_ARRAY:
             if (JS_ToInt32Free(ctx, &v, val))
                 return -1;
-            if (unlikely(idx >= (uint32_t)p->u.array.count))
+            if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
             p->u.array.u.uint32_ptr[idx] = v;
             break;
@@ -3269,7 +3295,8 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                 int64_t v;
                 if (JS_ToBigInt64Free(ctx, &v, val))
                     return -1;
-                if (unlikely(idx >= (uint32_t)p->u.array.count))
+                if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                    idx >= js_typed_array_update_length(p))
                     goto ta_out_of_bound;
                 p->u.array.u.uint64_ptr[idx] = v;
             }
@@ -3277,21 +3304,24 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
         case JS_CLASS_FLOAT16_ARRAY:
             if (JS_ToFloat64Free(ctx, &d, val))
                 return -1;
-            if (unlikely(idx >= (uint32_t)p->u.array.count))
+            if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
             p->u.array.u.fp16_ptr[idx] = tofp16(d);
             break;
         case JS_CLASS_FLOAT32_ARRAY:
             if (JS_ToFloat64Free(ctx, &d, val))
                 return -1;
-            if (unlikely(idx >= (uint32_t)p->u.array.count))
+            if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                idx >= js_typed_array_update_length(p))
                 goto ta_out_of_bound;
             p->u.array.u.float_ptr[idx] = d;
             break;
         case JS_CLASS_FLOAT64_ARRAY:
             if (JS_ToFloat64Free(ctx, &d, val))
                 return -1;
-            if (unlikely(idx >= (uint32_t)p->u.array.count)) {
+            if (unlikely(idx >= (uint32_t)p->u.array.count) &&
+                idx >= js_typed_array_update_length(p)) {
             ta_out_of_bound:
                 return TRUE;
             }
@@ -3873,7 +3903,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
             }
             idx = __JS_AtomToUInt32(prop);
             /* if the typed array is detached, p->u.array.count = 0 */
-            if (idx >= p->u.array.count) {
+            if (idx >= p->u.array.count && idx >= js_typed_array_update_length(p)) {
             typed_array_oob:
                 return JS_ThrowTypeErrorOrFalse(ctx, flags, "out-of-bound index in typed array");
             }
