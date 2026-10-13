@@ -1452,3 +1452,6 @@ test test-binaries: $(OBJDIR)/src/intl/provider-native-segmenter.o
 
 # Native display adapters precede aggregate-provider construction.
 test test-binaries: $(OBJDIR)/src/intl/provider-native-display.o
+
+# Native date-general adapters precede aggregate-provider construction.
+test test-binaries: $(OBJDIR)/src/intl/provider-native-date.o $(OBJDIR)/src/intl/provider-native-general.o
