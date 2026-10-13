@@ -840,11 +840,10 @@ static BOOL is_unicode_char(int c)
             (c == '_'));
 }
 
-/* XXX: memory error test */
-static void seq_prop_cb(void *opaque, const uint32_t *seq, int seq_len)
+static int seq_prop_cb(void *opaque, const uint32_t *seq, int seq_len)
 {
     REStringList *sl = opaque;
-    re_string_add(sl, seq_len, seq);
+    return re_string_add(sl, seq_len, seq);
 }
 
 static int parse_unicode_property(REParseState *s, REStringList *cr,
@@ -925,7 +924,7 @@ static int parse_unicode_property(REParseState *s, REStringList *cr,
         if (ret < 0 && !is_inv && allow_sequence_prop) {
             CharRange cr_tmp;
             cr_init(&cr_tmp, s->opaque, lre_realloc);
-            ret = unicode_sequence_prop(name, seq_prop_cb, cr, &cr_tmp);
+            ret = unicode_sequence_prop_checked(name, seq_prop_cb, cr, &cr_tmp);
             cr_free(&cr_tmp);
             if (ret == -1) {
                 re_string_list_free(cr);
@@ -1301,6 +1300,8 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
             }
             if (!is_last) {
                 last_match_pos = re_emit_op_u32(s, REOP_goto, last_match_pos);
+                if (dbuf_error(&s->byte_code))
+                    goto out_of_memory;
                 put_u32(s->byte_code.buf + split_pos, s->byte_code.size - (split_pos + 4));
             }
         }
@@ -1316,9 +1317,14 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
                 lre_realloc(s->opaque, tab, 0);
                 return -1;
             }
+            if (dbuf_error(&s->byte_code))
+                goto out_of_memory;
             if (!is_last)
                 put_u32(s->byte_code.buf + split_pos, s->byte_code.size - (split_pos + 4));
         }
+
+        if (dbuf_error(&s->byte_code))
+            goto out_of_memory;
 
         /* patch the 'goto match' */
         while (last_match_pos != -1) {
@@ -1330,6 +1336,9 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
         lre_realloc(s->opaque, tab, 0);
     }
     return 0;
+ out_of_memory:
+    lre_realloc(s->opaque, tab, 0);
+    return re_parse_out_of_memory(s);
 }
 
 static int re_parse_nested_class(REParseState *s, REStringList *cr, const uint8_t **pp);
