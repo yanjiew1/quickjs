@@ -108,13 +108,15 @@ await test_function_constructor_binding();
 
 async function test_async_generator_sync_iterator_return()
 {
-    {
+    for (const resourceHead of [false, true]) {
         const events = [], closeError = {};
         let thenReads = 0;
         const iterable = {
             [Symbol.iterator]() {
                 return {
-                    next() { return { value: 1, done: false }; },
+                    next() { return { value: { [Symbol.dispose]() {
+                        events.push("dispose");
+                    } }, done: false }; },
                     return() {
                         events.push("close");
                         return { get then() {
@@ -129,11 +131,15 @@ async function test_async_generator_sync_iterator_return()
             for (const value of iterable)
                 return 42;
         }
-        const result = await plain().next();
+        async function* usingHead() {
+            for (using value of iterable)
+                return 42;
+        }
+        const result = await (resourceHead ? usingHead() : plain()).next();
         assert(result.done, true);
         assert(result.value, 42);
         assert(thenReads, 0);
-        assert(events.join(","), "close");
+        assert(events.join(","), resourceHead ? "dispose,close" : "close");
     }
 }
 
