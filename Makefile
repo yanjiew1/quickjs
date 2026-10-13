@@ -1632,3 +1632,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/date-time-format.o
 
 # Shared options frontend helpers activate with the complete Intl closure.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/options.o
+
+# Shared bound frontend helpers activate with the complete Intl closure.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/bound-function.o
