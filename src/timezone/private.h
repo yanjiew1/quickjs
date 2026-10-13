@@ -3,14 +3,6 @@
 #define QUICKJS_TIMEZONE_PRIVATE_H
 #include "timezone.h"
 
-/* TZif daylight classification is independent of the signed daylight
-   adjustment. Historical TZif types omit STDOFF/SAVE: their adjustment
-   is unknown for either flag value. POSIX tails prove both. */
-typedef struct QJSTzInfo {
-    int32_t offset_seconds, daylight_offset_seconds;
-    int daylight, daylight_offset_known;
-} QJSTzInfo;
-
 #define QJS_TZ_MAX_FILE_SIZE 65536
 #define QJS_TZ_INSTANT_LIMIT INT64_C(8640000000000)
 #define QJS_TZ_OFFSET_LIMIT (QJS_TZ_INSTANT_LIMIT + 172800)
@@ -47,6 +39,8 @@ int qjs_tzif_parse(QJSTzifState *, const unsigned char *, size_t);
 int qjs_tzif_system_complete(const QJSTzifState *, const QJSTzifState *);
 int qjs_tzif_is_utc(const QJSTzifState *);
 int qjs_tzif_offset(const QJSTzifState *, int64_t, int32_t *);
+int qjs_tzif_info(const QJSTzifState *, int64_t, QJSTzInfo *);
+int qjs_tzif_name_stable(const QJSTzifState *, int64_t, int64_t, int *);
 int qjs_tzif_transition(const QJSTzifState *, int64_t, int, int, int64_t *, int *);
 int qjs_tzif_local_offsets(const QJSTzifState *, int64_t, int32_t [2]);
 #endif

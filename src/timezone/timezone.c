@@ -278,3 +278,8 @@ int qjs_tz_system_identifier(char *output, size_t capacity)
     memcpy(output, name, strlen(name) + 1);
     return QJS_TZ_OK;
 }
+
+int qjs_tz_info(const QJSTimeZone *zone, int64_t seconds, QJSTzInfo *out)
+{ return zone ? qjs_tzif_info(&zone->state, seconds, out) : QJS_TZ_INVALID; }
+int qjs_tz_name_stable(const QJSTimeZone *zone, int64_t from, int64_t through, int *out)
+{ return zone ? qjs_tzif_name_stable(&zone->state, from, through, out) : QJS_TZ_INVALID; }

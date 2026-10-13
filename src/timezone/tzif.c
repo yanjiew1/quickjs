@@ -441,3 +441,79 @@ int qjs_tzif_local_offsets(const QJSTzifState *s, int64_t wall, int32_t offsets[
     }
     return QJS_TZ_INVALID;
 }
+
+/* Internal lookup also serves bounded CLDR windows extending beyond the
+   Instant endpoint. No historical SAVE inference from either DST flag value. */
+static QJSTzInfo state_info(const QJSTzifState *s, int64_t seconds)
+{
+    uint32_t lo = 0, hi = s->time_count, type;
+    QJSTzInfo info;
+    if (s->future && (!hi || seconds > transition_at(s, hi - 1)))
+        return future_info(s, seconds);
+    while (lo < hi) {
+        uint32_t middle = lo + (hi - lo) / 2;
+        if (transition_at(s, middle) <= seconds) lo = middle + 1; else hi = middle;
+    }
+    type = lo ? s->indices[lo - 1] : 0;
+    info.offset_seconds = type_offset(s, type);
+    info.daylight = s->types[(size_t)type * 6 + 4];
+    info.daylight_offset_seconds = 0;
+    info.daylight_offset_known = 0; /* TZif omits historical STDOFF/SAVE, even for isdst=0. */
+    return info;
+}
+int qjs_tzif_info(const QJSTzifState *s, int64_t seconds, QJSTzInfo *out)
+{
+    /* Intl range comparison queries named zones for plain reference dates.
+       PlainYearMonth can use any day in its boundary month, beyond Instant's
+       limits. Cover the date provider's extra 32 epoch days and their time of
+       day; offset and transition queries retain their Instant policy. */
+    const int64_t limit = QJS_TZ_INSTANT_LIMIT + INT64_C(33) * 86400;
+    if (!s || !out) return QJS_TZ_INVALID;
+    if (seconds < -limit || seconds > limit) return QJS_TZ_RANGE;
+    *out = state_info(s, seconds); return QJS_TZ_OK;
+}
+static int name_state_equal(QJSTzInfo a, QJSTzInfo b)
+{
+    return a.daylight_offset_known && b.daylight_offset_known &&
+        a.offset_seconds == b.offset_seconds && a.daylight == b.daylight &&
+        a.daylight_offset_seconds == b.daylight_offset_seconds;
+}
+int qjs_tzif_name_stable(const QJSTzifState *s, int64_t from, int64_t through, int *out)
+{
+    const int64_t limit = QJS_TZ_INSTANT_LIMIT + INT64_C(184) * 86400 + 172800;
+    QJSTzInfo first;
+    uint32_t lo = 0, hi, i;
+    int64_t last;
+    if (!s || !out || from > through) return QJS_TZ_INVALID;
+    if (from < -limit || through > limit) return QJS_TZ_RANGE;
+    if (through - from > INT64_C(368) * 86400) return QJS_TZ_INVALID;
+    first = state_info(s, from);
+    if (!name_state_equal(first, state_info(s, through))) { *out = 0; return QJS_TZ_OK; }
+    hi = s->time_count;
+    while (lo < hi) {
+        uint32_t middle = lo + (hi - lo) / 2;
+        if (transition_at(s, middle) <= from) lo = middle + 1; else hi = middle;
+    }
+    /* Every raw type change matters, including equal-total-offset policy
+       changes. Checking only both endpoints would miss a full season. */
+    for (i = lo; i < s->time_count; i++) {
+        int64_t at = transition_at(s, i);
+        if (at > through) break;
+        if (!name_state_equal(first, state_info(s, at))) { *out = 0; return QJS_TZ_OK; }
+    }
+    last = s->time_count ? transition_at(s, s->time_count - 1) : INT64_MIN;
+    /* Existing offset semantics use the last explicit type at exactly last,
+       then POSIX at last+1. Their DST policy need not agree. */
+    if (s->future && s->time_count && last != INT64_MAX && last >= from && last < through &&
+        !name_state_equal(first, state_info(s, last + 1))) { *out = 0; return QJS_TZ_OK; }
+    if (s->future == 2 && through > last) {
+        int64_t year, first_year = epoch_year(from) - 1, final_year = epoch_year(through) + 1;
+        for (year = first_year; year <= final_year; year++) {
+            int64_t events[2]; int j;
+            if (!year_events(s, year, events)) continue;
+            for (j = 0; j < 2; j++) if (events[j] > last && events[j] > from && events[j] <= through &&
+                !name_state_equal(first, state_info(s, events[j]))) { *out = 0; return QJS_TZ_OK; }
+        }
+    }
+    *out = 1; return QJS_TZ_OK;
+}

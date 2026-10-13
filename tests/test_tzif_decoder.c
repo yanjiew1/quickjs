@@ -173,5 +173,30 @@ static void history_and_limits(void)
     assert(qjs_tzif_offset(&s, QJS_TZ_OFFSET_LIMIT + 1, &actual) == QJS_TZ_RANGE);
     assert(qjs_tzif_offset(&s, -QJS_TZ_OFFSET_LIMIT - 1, &actual) == QJS_TZ_RANGE);
 }
+static void daylight_name_metadata(void)
+{
+    Fixture fixture_data;
+    QJSTzifState state;
+    QJSTzInfo info;
+    int stable;
+    /* A POSIX tail proves signed SAVE; a DST flag alone does not. */
+    fixture(&fixture_data, '2', NULL, NULL, 0, 3600, 0,
+            "IST-1GMT0,M10.5.0,M3.5.0/1");
+    state = parse(&fixture_data);
+    assert(!qjs_tzif_info(&state, INT64_C(1704067200), &info));
+    assert(info.offset_seconds == 0 && info.daylight);
+    assert(info.daylight_offset_known && info.daylight_offset_seconds == -3600);
+    assert(!qjs_tzif_name_stable(&state, INT64_C(1704067200),
+                                INT64_C(1704153600), &stable) && stable);
+    assert(!qjs_tzif_name_stable(&state, INT64_C(1704067200),
+                                INT64_C(1720051200), &stable) && !stable);
+    fixture(&fixture_data, '2', NULL, NULL, 0, 0, 3600, "");
+    state = parse(&fixture_data);
+    assert(!qjs_tzif_info(&state, 0, &info));
+    assert(!info.daylight && !info.daylight_offset_known);
+    assert(!qjs_tzif_name_stable(&state, 0, 1, &stable) && !stable);
+}
+
 int main(void)
-{ framing(); future(); history_and_limits(); return 0; }
+{
+    daylight_name_metadata(); framing(); future(); history_and_limits(); return 0; }
