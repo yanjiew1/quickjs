@@ -800,6 +800,7 @@ test: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_closure.js
 	$(WINE) ./qjs$(EXE) -m tests/test_realm.js
 	$(WINE) ./qjs$(EXE) -m tests/test_iterator_realms.js
+	$(WINE) ./qjs$(EXE) -m tests/test_disposal_realms.js
 	$(WINE) ./qjs$(EXE) tests/test_language.js
 	$(WINE) ./qjs$(EXE) -m tests/test_module.js
 	$(WINE) ./qjs$(EXE) -m tests/test_module_names.js
