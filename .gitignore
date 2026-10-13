@@ -149,3 +149,14 @@ __pycache__/
 
 /tests/test_default_time_zone_api
 /tests/test_default_time_zone_api.exe
+
+/tests/test_temporal_api
+/tests/test_temporal_api.exe
+
+/tests/test_temporal_runtime_zone_provider
+/tests/test_temporal_runtime_zone_provider.exe
+/tests/test_temporal_system_clock
+/tests/test_temporal_system_clock.exe
+
+/tests/run_temporal_zone_test
+/tests/run_temporal_zone_test.exe

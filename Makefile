@@ -42,6 +42,12 @@ endif
 # cosmopolitan build (see https://github.com/jart/cosmopolitan)
 #CONFIG_COSMO=y
 
+# Temporal uses the native backend on this branch; Intl/ICU is separate.
+CONFIG_TEMPORAL?=y
+ifeq ($(filter y n,$(CONFIG_TEMPORAL)),)
+$(error CONFIG_TEMPORAL must be y or n)
+endif
+
 # installation directory
 PREFIX?=/usr/local
 
@@ -158,6 +164,10 @@ ifdef CONFIG_WERROR
 CFLAGS+=-Werror
 endif
 DEFINES:=-D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
+ifeq ($(CONFIG_TEMPORAL),y)
+DEFINES+=-DCONFIG_TEMPORAL
+endif
+
 ifdef CONFIG_WIN32
 DEFINES+=-D__USE_MINGW_ANSI_STDIO # for standard snprintf behavior
 endif
@@ -344,6 +354,40 @@ CALENDAR_CONFIG_OBJECTS=$(foreach suffix,o host.o pic.o nolto.o debug.o fuzz.o c
 $(CALENDAR_CONFIG_OBJECTS): CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
 QUICKJS_SRCS+=$(CALENDAR_SRCS)
 
+# Complete frontend closure: no partial constructors or global namespace.
+QUICKJS_SRCS+=src/quickjs/builtins/temporal/common.c
+ifeq ($(CONFIG_TEMPORAL),y)
+TEMPORAL_ENGINE_SRCS= \
+    src/quickjs/builtins/temporal/calendar-fields.c \
+    src/quickjs/builtins/temporal/duration.c \
+    src/quickjs/builtins/temporal/instant.c \
+    src/quickjs/builtins/temporal/now.c \
+    src/quickjs/builtins/temporal/options.c \
+    src/quickjs/builtins/temporal/plain-time.c \
+    src/quickjs/builtins/temporal/plain.c \
+    src/quickjs/builtins/temporal/zoned-arithmetic.c \
+    src/quickjs/builtins/temporal/zoned-date-time.c
+TEMPORAL_LIBRARY_SRCS= \
+    src/temporal/epoch.c \
+    src/temporal/options.c \
+    src/temporal/iso.c \
+    src/temporal/civil.c \
+    src/temporal/parse.c \
+    src/temporal/format.c \
+    src/temporal/duration.c \
+    src/temporal/time.c \
+    src/temporal/calendar.c \
+    src/temporal/time-zone.c \
+    src/temporal/relative.c
+QUICKJS_SRCS+=$(TEMPORAL_ENGINE_SRCS) $(TEMPORAL_LIBRARY_SRCS)
+endif
+
+TIMEZONE_SRCS=src/timezone/timezone.c src/timezone/tzif.c src/timezone/embedded.c
+ifdef CONFIG_WIN32
+TIMEZONE_SRCS+=src/timezone/windows-zone.c
+endif
+TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TIMEZONE_SRCS))
+
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
 all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
@@ -363,7 +407,7 @@ QUICKJS_LIBC_SRCS= \
     src/quickjs-libc/std.c \
     src/quickjs-libc/worker.c
 QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
-QJS_LIB_OBJS=$(QUICKJS_OBJS) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
+QJS_LIB_OBJS=$(QUICKJS_OBJS) $(if $(filter y,$(CONFIG_TEMPORAL)),$(TIMEZONE_OBJS)) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -468,35 +512,35 @@ $(OBJDIR)/src/quickjs/vm.o $(OBJDIR)/src/quickjs/vm.pic.o $(OBJDIR)/src/quickjs/
 $(OBJDIR)/src/quickjs/vm.nolto.o: CFLAGS_NOLTO+=$(CLANG_VM_CFLAGS)
 endif
 
-$(OBJDIR)/%.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
-$(OBJDIR)/fuzz/%.o: fuzz/%.c | $(OBJDIR)
+$(OBJDIR)/fuzz/%.o: fuzz/%.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -I. -o $@ $<
 
-$(OBJDIR)/%.host.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.host.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(HOST_CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.pic.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
 
-$(OBJDIR)/%.nolto.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.nolto.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_NOLTO) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.debug.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.debug.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_DEBUG) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.fuzz.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -fsanitize=fuzzer-no-link -c -o $@ $<
 
-$(OBJDIR)/%.check.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.check.o: %.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
 
@@ -506,11 +550,11 @@ regexp_test$(EXE): tests/regexp_test.c src/regexp/compile.c src/regexp/exec.c sr
 unicode_gen: $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o tools/unicode_gen_def.h
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.host.o $(OBJDIR)/src/cutils/cutils.host.o
 
-$(OBJDIR)/tools/unicode_gen.test.host.o: tools/unicode_gen.c | $(OBJDIR)
+$(OBJDIR)/tools/unicode_gen.test.host.o: tools/unicode_gen.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
 
-$(OBJDIR)/src/unicode/libunicode.test.host.o: src/unicode/libunicode.c | $(OBJDIR)
+$(OBJDIR)/src/unicode/libunicode.test.host.o: src/unicode/libunicode.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(HOST_CC) $(CFLAGS_OPT) $(DEPFLAGS) -DUSE_TEST -c -o $@ $<
 
@@ -521,7 +565,7 @@ clean:
 	rm -f repl.c out.c quickjs.h quickjs-libc.h
 	rm -f *.a *.o *.d *~ unicode_gen unicode_gen_test regexp_test$(EXE) fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
 	rm -f hello.c test_fib.c
-	rm -f examples/*.so tests/*.so $(C_TESTS)
+	rm -f examples/*.so tests/*.so $(C_TESTS) tests/run_temporal_zone_test$(EXE)
 	rm -rf $(OBJDIR)/ *.dSYM/ qjs-debug$(EXE)
 	rm -rf run-test262-debug$(EXE)
 	rm -f run_octane run_sunspider_like
@@ -555,9 +599,12 @@ examples/hello: $(OBJDIR)/hello.o $(QJS_LIB_OBJS)
 
 # example of static JS compilation with modules
 HELLO_MODULE_SRCS=examples/hello_module.js
+HELLO_OPTS+=$(if $(filter y,$(CONFIG_TEMPORAL)),-fno-temporal)
+
 HELLO_MODULE_OPTS=-fno-string-normalize -fno-map -fno-typedarray \
            -fno-typedarray -fno-regexp -fno-json -fno-eval -fno-proxy \
            -fno-date -m
+HELLO_MODULE_OPTS+=$(if $(filter y,$(CONFIG_TEMPORAL)),-fno-temporal)
 examples/hello_module: $(QJSC) libquickjs$(LTOEXT).a $(HELLO_MODULE_SRCS)
 	$(QJSC) $(HELLO_MODULE_OPTS) -o $@ $(HELLO_MODULE_SRCS)
 
@@ -641,6 +688,10 @@ C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_format$(EXE)
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
+C_TESTS+=tests/test_temporal_api$(EXE)
+ifeq ($(CONFIG_TEMPORAL),y)
+C_TESTS+=tests/test_temporal_runtime_zone_provider$(EXE) tests/test_temporal_system_clock$(EXE)
+endif
 C_TESTS+=tests/test_default_time_zone_api$(EXE)
 C_TESTS+=tests/test_temporal_civil$(EXE)
 C_TESTS+=tests/test_temporal_zones$(EXE)
@@ -650,7 +701,7 @@ CALENDAR_TEST_SRCS=tests/test_calendar_portable.c tests/test_calendar_persian_au
 C_TESTS+=$(patsubst %.c,%$(EXE),$(CALENDAR_TEST_SRCS))
 
 # Link the tracing reader before the archive so it replaces the normal reader.
-$(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
+$(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
 
@@ -801,6 +852,11 @@ endif
 	$(WINE) ./tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal_format$(EXE)
 	$(WINE) ./tests/test_temporal_duration_math$(EXE)
+	$(WINE) ./tests/test_temporal_api$(EXE)
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./tests/test_temporal_runtime_zone_provider$(EXE)
+	$(WINE) ./tests/test_temporal_system_clock$(EXE)
+endif
 	$(WINE) ./tests/test_default_time_zone_api$(EXE)
 	$(WINE) ./tests/test_temporal_civil$(EXE)
 	$(WINE) ./tests/test_temporal_zones$(EXE)
@@ -928,22 +984,29 @@ test2o-update: run-test262
 	./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -u -c test262o.conf
 endif
 
+TEST262_CONFIG?=test262.conf
+TEST262_FEATURE_CONFIG=$(basename $(TEST262_CONFIG))_intl-n_temporal-$(if $(filter y,$(CONFIG_TEMPORAL)),y,n).txt
+$(TEST262_FEATURE_CONFIG): $(TEST262_CONFIG) tools/ci/test262-config.py
+	$(PYTHON) tools/ci/test262-config.py --intl n --temporal "$(if $(filter y,$(CONFIG_TEMPORAL)),y,n)" --source "$<" --output "$@" --preserve-reportfile
+.PHONY: test2-config
+test2-config: $(TEST262_FEATURE_CONFIG)
+
 ifeq ($(wildcard test262/features.txt),)
 test2 test2-update test2-default test2-check:
 	@echo test262 tests not installed
 else
 # Test262 tests
-test2-default: run-test262
-	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c test262.conf
+test2-default: run-test262 $(TEST262_FEATURE_CONFIG)
+	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c "$(TEST262_FEATURE_CONFIG)"
 
-test2: run-test262
-	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c test262.conf -a
+test2: run-test262 $(TEST262_FEATURE_CONFIG)
+	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c "$(TEST262_FEATURE_CONFIG)" -a
 
-test2-update: run-test262
-	./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -u -c test262.conf -a
+test2-update: run-test262 $(TEST262_FEATURE_CONFIG)
+	./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -u -c "$(TEST262_FEATURE_CONFIG)" -a
 
-test2-check: run-test262
-	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c test262.conf -E -a
+test2-check: run-test262 $(TEST262_FEATURE_CONFIG)
+	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c "$(TEST262_FEATURE_CONFIG)" -E -a
 endif
 
 testall: all test microbench test2o test2
@@ -1002,7 +1065,7 @@ $(OBJDIR)/fuzz/fuzz_common.o: fuzz/fuzz_common.c fuzz/fuzz_common.h | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
 
-$(OBJDIR)/tests/test_fuzz_support.o: tests/test_fuzz_support.c | $(OBJDIR)
+$(OBJDIR)/tests/test_fuzz_support.o: tests/test_fuzz_support.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
 
@@ -1030,7 +1093,7 @@ ifneq ($(CONFIG_WIN32),y)
 test: test-qjsc-executable
 
 test-qjsc-executable: $(QJSC) libquickjs$(LTOEXT).a
-	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "n" "n" "$(if $(CONFIG_LTO),$(LTO_FLAG))"
+	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "n" "$(CONFIG_TEMPORAL)" "$(if $(CONFIG_LTO),$(LTO_FLAG))"
 endif
 endif
 
@@ -1040,7 +1103,7 @@ tests/test_fuzz_json$(EXE): $(OBJDIR)/tests/test_fuzz_json.o libquickjs$(LTOEXT)
 tests/test_fuzz_exception_ownership$(EXE): $(OBJDIR)/tests/test_fuzz_exception_ownership.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-$(OBJDIR)/tests/test_fuzz_allocations.o: tests/test_fuzz_allocations.c | $(OBJDIR)
+$(OBJDIR)/tests/test_fuzz_allocations.o: tests/test_fuzz_allocations.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -I. -c -o $@ $<
 
@@ -1142,11 +1205,6 @@ test-windows-zones-generator:
 
 test: test-windows-zones-generator
 
-TIMEZONE_SRCS=src/timezone/timezone.c src/timezone/tzif.c src/timezone/embedded.c
-ifdef CONFIG_WIN32
-TIMEZONE_SRCS+=src/timezone/windows-zone.c
-endif
-TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TIMEZONE_SRCS))
 TIMEZONE_ALL_OBJECTS=$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o host.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(TIMEZONE_SRCS)))
 $(TIMEZONE_ALL_OBJECTS): TIMEZONE_COMPILE_CFLAGS=-I$(TZ_GENERATED_DIR)
 TIMEZONE_EMBEDDED_OBJECTS=$(foreach suffix,o pic.o nolto.o debug.o fuzz.o check.o host.o,$(OBJDIR)/src/timezone/embedded.$(suffix))
@@ -1178,3 +1236,70 @@ tests/test_temporal_civil$(EXE): $(OBJDIR)/tests/test_temporal_civil.o $(TEMPORA
 
 tests/test_default_time_zone_api$(EXE): $(OBJDIR)/tests/test_default_time_zone_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_temporal_api$(EXE): $(OBJDIR)/tests/test_temporal_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: FORCE_TEMPORAL_BUILD_CONFIG
+$(OBJDIR)/temporal-build-config: FORCE_TEMPORAL_BUILD_CONFIG
+	@mkdir -p $(@D)
+	@printf '%s\n' '$(CONFIG_TEMPORAL) $(DEFINES)' > $@.tmp
+	@cmp -s $@.tmp $@ || mv $@.tmp $@
+	@rm -f $@.tmp
+
+.PHONY: test-temporal-config
+test-temporal-config:
+	$(PYTHON) tests/test_temporal_config.py
+test: test-temporal-config
+
+ifeq ($(CONFIG_TEMPORAL),y)
+# Exact release-data transition boundaries belong to the native zone provider.
+.PHONY: test-temporal-native-zone-boundaries
+test-temporal-native-zone-boundaries: qjs$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_native_zones.js
+test: test-temporal-native-zone-boundaries
+
+.PHONY: test-temporal-js
+test-temporal-js: qjs$(EXE) tests/run_temporal_zone_test$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_instant.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_duration.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_plain_time.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_plain.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned_native.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_now.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_plain_date_duration_balance.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_year_month_date_boundaries.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_identifier_boundaries.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned_repeated_day.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_zero_zoned_duration_boundaries.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_offset_wall_date_boundaries.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_calendar_zones.js
+	$(WINE) ./qjs$(EXE) tests/test_temporal_native_calendars.js
+	$(WINE) ./qjs$(EXE) -m tests/test_temporal_realm.js
+	$(WINE) ./qjs$(EXE) tests/test_date_temporal_bridge.js
+	$(WINE) ./tests/run_temporal_zone_test$(EXE) UTC ./qjs$(EXE) tests/test_temporal_date_provider.js
+	$(WINE) ./tests/run_temporal_zone_test$(EXE) America/New_York ./qjs$(EXE) tests/test_date_temporal_time_zone.js
+	$(WINE) ./tests/run_temporal_zone_test$(EXE) US/Eastern ./qjs$(EXE) tests/test_date_temporal_time_zone.js
+test: test-temporal-js
+endif
+
+ifeq ($(CONFIG_TEMPORAL),y)
+$(OBJDIR)/tests/time-zone-provider-backend.o: src/temporal/time-zone.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -Dqjs_temporal_system_zone=qjs_temporal_system_zone_test_backend -c -o $@ $<
+$(OBJDIR)/tests/time-zone-clock-backend.o: src/temporal/time-zone.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -Dqjs_temporal_system_epoch=qjs_temporal_system_epoch_test_backend -c -o $@ $<
+tests/test_temporal_runtime_zone_provider$(EXE): $(OBJDIR)/tests/test_temporal_runtime_zone_provider.o $(OBJDIR)/tests/time-zone-provider-backend.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+tests/test_temporal_system_clock$(EXE): $(OBJDIR)/tests/test_temporal_system_clock.o $(OBJDIR)/tests/time-zone-clock-backend.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+endif
+
+# Set IANA TZ inside a native process; MSYS2 strips it from child environments.
+tests/run_temporal_zone_test$(EXE): $(OBJDIR)/tests/run_temporal_zone_test.o
+	$(CC) $(LDFLAGS) -o $@ $^
+ifeq ($(CONFIG_TEMPORAL),y)
+test-binaries: tests/run_temporal_zone_test$(EXE)
+endif

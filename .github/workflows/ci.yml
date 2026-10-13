@@ -15,7 +15,7 @@ on:
       - '*'
 
 env:
-  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
+  MAKEFLAGS: 'CONFIG_TEMPORAL=y CONFIG_INTL=n'
 
 jobs:
   linux:

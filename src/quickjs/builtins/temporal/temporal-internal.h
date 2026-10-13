@@ -61,7 +61,7 @@ typedef struct JSTemporalTimeZone {
     int64_t offset_nanoseconds;
     BOOL is_offset;
     /* Borrowed from this object's runtime; never freed by a context or value. */
-    QJSTzProvider *provider;
+    struct QJSTzProvider *provider;
 } JSTemporalTimeZone;
 
 typedef struct JSTemporalZonedDateTimeData {

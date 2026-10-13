@@ -24,6 +24,12 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
         'if ((typeof Temporal === "object") !== ' + str(temporal_enabled).lower() +
         ') throw Error("qjsc Temporal configuration mismatch");\n'
         'print("qjsc-executable-ok");\n')
+    if temporal_enabled:
+        with source.open("a") as out:
+            out.write('if (Temporal.Instant.from("1970-01-01T00:00:00Z").epochNanoseconds !== 0n)'
+                      ' throw Error("qjsc Temporal Instant initialization failed");\n'
+                      'if (Temporal.PlainDate.from("2024-02-29").daysInMonth !== 29)'
+                      ' throw Error("qjsc Temporal calendar initialization failed");\n')
     compiled = subprocess.run(prefix + [qjsc] + (["-flto"] if lto_flag else []) +
                               ["-v", "-o", str(executable),
                                        str(source)], stdout=subprocess.PIPE,

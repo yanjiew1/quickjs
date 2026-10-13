@@ -240,6 +240,11 @@ struct JSContext {
                              const char *input, size_t input_len,
                              const char *filename, int flags, int scope_idx);
     void *user_opaque;
+#ifdef CONFIG_TEMPORAL
+    /* Owned intrinsic namespace, independent of the global binding. */
+    JSValue temporal_intrinsics;
+    BOOL temporal_published;
+#endif
 };
 
 

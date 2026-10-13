@@ -122,7 +122,7 @@ static void failed_setting_preserves(JSContext *ctx, AllocationProbe *probe,
 {
     char *old_policy = ctx->rt->default_time_zone;
     ReservedAllocation *reserved = NULL;
-    QJSTzProvider *old_provider = ctx->rt->temporal_tz_provider;
+    struct QJSTzProvider *old_provider = ctx->rt->temporal_tz_provider;
     if (oom)
         reserved = arm_allocation_failure(ctx->rt, probe, strlen(input) + 1);
     assert(JS_SetDefaultTimeZone(ctx, input) == -1);

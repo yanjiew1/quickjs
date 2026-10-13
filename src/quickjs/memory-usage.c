@@ -24,6 +24,9 @@
  */
 #include "internal/class.h"
 #include "internal/base.h"
+#ifdef CONFIG_TEMPORAL
+#include "builtins/temporal.h"
+#endif
 #include "internal/c-function.h"
 #include "internal/runtime.h"
 #include "internal/atom.h"
@@ -253,6 +256,27 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
         case JS_CLASS_BIG_INT:           /* u.object_data */
             compute_value_size(p->u.object_data, hp);
             break;
+#ifdef CONFIG_TEMPORAL
+        case JS_CLASS_TEMPORAL_INSTANT:
+        case JS_CLASS_TEMPORAL_DURATION:
+        case JS_CLASS_TEMPORAL_PLAIN_DATE:
+        case JS_CLASS_TEMPORAL_PLAIN_TIME:
+        case JS_CLASS_TEMPORAL_PLAIN_DATE_TIME:
+        case JS_CLASS_TEMPORAL_PLAIN_YEAR_MONTH:
+        case JS_CLASS_TEMPORAL_PLAIN_MONTH_DAY:
+        case JS_CLASS_TEMPORAL_ZONED_DATE_TIME:
+            {
+                JSValue owned_value;
+                size_t payload_size = js_temporal_memory_usage(
+                    JS_MKPTR(JS_TAG_OBJECT, p), &owned_value);
+                if (payload_size) {
+                    s->memory_used_count++;
+                    s->memory_used_size += payload_size;
+                    compute_value_size(owned_value, hp);
+                }
+            }
+            break;
+#endif
         case JS_CLASS_C_FUNCTION:        /* u.cfunc */
             s->c_func_count++;
 #ifndef JS_PTR64

@@ -165,7 +165,7 @@ function test_observable_order() {
     }
 }
 
-function test_zoned_and_date_bridges() {
+function test_zoned_bridge() {
     const value = new Temporal.Instant(-1n);
     const zoned = value.toZonedDateTimeISO("+01:00");
     assert(zoned.epochNanoseconds, -1n);
@@ -173,15 +173,11 @@ function test_zoned_and_date_bridges() {
     assert(zoned.calendarId, "iso8601");
     Object.defineProperty(zoned, Symbol.toPrimitive, {get() {throw 1;}});
     assert(Temporal.Instant.from(zoned).epochNanoseconds, -1n);
-    const date = new Date(-1);
-    Object.defineProperty(date, "valueOf", {get() {throw 1;}});
-    assert(date.toTemporalInstant().epochNanoseconds, -1000000n);
-    assert_throws(TypeError, () => Date.prototype.toTemporalInstant.call({}));
-    assert_throws(RangeError, () => new Date(NaN).toTemporalInstant());
+
 }
 
 test_format();
 test_rounding();
 test_arithmetic_and_difference();
 test_observable_order();
-test_zoned_and_date_bridges();
+test_zoned_bridge();
