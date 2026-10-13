@@ -41,11 +41,16 @@
 #include "internal/module.h"
 #include "internal/atom.h"
 #include "builtins/intrinsics.h"
+#include <stdio.h>
+#include "libunicode.h"
+#ifdef CONFIG_INTL
+#include "builtins/intl.h"
+#endif
 #include "builtins/collections.h"
 #include "builtins/array.h"
 #include "builtins/iterator.h"
 #include "builtins/regexp.h"
-#ifdef CONFIG_TEMPORAL
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
 #include "../timezone/timezone.h"
 #endif
 #include "builtins/typed-array.h"
@@ -121,6 +126,15 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
 {
     JSRuntime *rt;
     JSMallocState ms;
+    const char *unicode_error;
+
+    /* ICU owns process-global resources and is initialized before core parser
+       predicates. Do not associate its cleanup with any runtime lifetime. */
+    if (lre_unicode_initialize(&unicode_error)) {
+        fprintf(stderr, "QuickJS Unicode provider initialization failed: %s\n",
+                unicode_error ? unicode_error : "unknown error");
+        return NULL;
+    }
 
     memset(&ms, 0, sizeof(ms));
     ms.opaque = opaque;
@@ -460,9 +474,12 @@ void JS_FreeRuntime(JSRuntime *rt)
 #endif
     assert(list_empty(&rt->gc_obj_list));
     assert(list_empty(&rt->weakref_list));
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
     js_free_rt(rt, rt->default_time_zone);
     rt->default_time_zone = NULL;
+#endif
+
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
     /* All native consumers finalized; allocator and runtime still live. */
     qjs_tz_provider_free(rt->temporal_tz_provider);
     rt->temporal_tz_provider = NULL;
@@ -653,6 +670,9 @@ JSContext *JS_NewContext(JSRuntime *rt)
         JS_AddIntrinsicTypedArrays(ctx) ||
         JS_AddIntrinsicPromise(ctx) ||
         JS_AddIntrinsicWeakRef(ctx)
+#ifdef CONFIG_INTL
+        || JS_AddIntrinsicIntl(ctx)
+#endif
 #ifdef CONFIG_TEMPORAL
         || JS_AddIntrinsicTemporal(ctx)
 #endif
@@ -717,6 +737,9 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
     JS_MarkValue(rt, ctx->regexp_ctor, mark_func);
     JS_MarkValue(rt, ctx->function_ctor, mark_func);
     JS_MarkValue(rt, ctx->function_proto, mark_func);
+#ifdef CONFIG_INTL
+    js_intl_context_mark(rt, ctx, mark_func);
+#endif
 
     if (ctx->array_shape)
         mark_func(rt, &ctx->array_shape->header);
@@ -771,6 +794,9 @@ void JS_FreeContext(JSContext *ctx)
 #endif
 
     js_free_modules(ctx, JS_FREE_MODULE_ALL);
+#ifdef CONFIG_INTL
+    js_intl_context_free(ctx);
+#endif
 
     JS_FreeValue(ctx, ctx->global_obj);
     JS_FreeValue(ctx, ctx->global_var_obj);

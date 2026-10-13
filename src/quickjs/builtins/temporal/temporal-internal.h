@@ -205,4 +205,13 @@ int js_temporal_init_zoned_date_time(JSContext *ctx,
 int js_temporal_init_now(JSContext *ctx, JSValueConst namespace_object);
 
 
+#ifdef CONFIG_INTL
+/* Intl owner defines the formatter without exposing private slots through
+   JavaScript getters. this_val is borrowed and already brand-checked. */
+JSValue js_intl_temporal_to_locale_string(JSContext *ctx,
+                                        JSValueConst this_val,
+                                        JSValueConst locales,
+                                        JSValueConst options);
+#endif
+
 #endif /* QUICKJS_BUILTINS_TEMPORAL_INTERNAL_H */

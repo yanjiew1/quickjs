@@ -6,6 +6,7 @@
 
 export {};
 import * as std from "std";
+import { test_intl_service_realms } from "./test_intl_service_realms.js";
 
 function assert(actual, expected)
 {
@@ -1972,3 +1973,5 @@ async function test_async_iterator_dispose()
 }
 
 await test_async_iterator_dispose();
+
+test_intl_service_realms();

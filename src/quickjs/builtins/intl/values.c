@@ -24,7 +24,7 @@
  */
 #include "intl-internal.h"
 #include "intl-text.h"
-#ifdef CONFIG_INTL
+#if defined(CONFIG_INTL) && !defined(CONFIG_INTL_NATIVE)
 _Static_assert(_Generic((UChar *)0, uint16_t *: 1, default: 0),
                "Intl ICU text bridge requires UChar to be uint16_t");
 

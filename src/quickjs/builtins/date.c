@@ -33,23 +33,32 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "date.h"
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
 #include "../../temporal/time-zone.h"
 #endif
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
 #include "../internal/default-time-zone.h"
 #endif
 #ifdef CONFIG_TEMPORAL
 #include "temporal/temporal-internal.h"
 #endif
+#ifdef CONFIG_INTL
+#include "intl/locale-integration.h"
+#endif
 
 /* Date */
 
-#ifdef CONFIG_TEMPORAL
-/* Date and Temporal share the runtime host clock and time-zone policy. */
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
+/* Enabled frontends share the runtime policy. ICU core-only Date retains
+   the ICU host default and algorithms without runtime policy storage. */
 static int date_system_zone(JSContext *ctx, QJSTemporalZone *result)
 {
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
     return js_default_time_zone_get(ctx, result);
+#else
+    (void)ctx;
+    return qjs_temporal_system_zone(result);
+#endif
 }
 static __exception int date_backend_error(JSContext *ctx, int error)
 {
@@ -173,6 +182,8 @@ static int getTimezoneOffset(int64_t time)
     return res;
 }
 
+#endif
+
 #if 0
 static JSValue js___date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
                                            int argc, JSValueConst *argv)
@@ -216,8 +227,6 @@ static JSValue js___date_create(JSContext *ctx, JSValueConst this_val,
     return obj;
 }
 #endif
-#endif
-
 
 /* Date */
 
@@ -323,7 +332,7 @@ static __exception int get_date_fields_from_time(JSContext *ctx, double dval,
     } else {
         d = dval;     /* assuming -8.64e15 <= dval <= -8.64e15 */
         if (is_local) {
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
             if (date_local_offset(ctx, d, &tz))
                 return -1;
 #else
@@ -443,7 +452,7 @@ static __exception int make_date_fields(JSContext *ctx,
 
     /* adjust for local time and clip */
     if (is_local) {
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
         if (date_utc(ctx, tv, &tv))
             return -1;
 #else
@@ -660,7 +669,7 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
             /* tz is >= 0, can use % */
             pos += snprintf(buf + pos, sizeof(buf) - pos,
                             "%02d%02d", tz / 60, tz % 60);
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
             /* Keep the required GMT+HHMM form. An exact offset name lets
                Date.parse recover seconds omitted from that form. */
             if (offset % 60000) {
@@ -1212,7 +1221,7 @@ static BOOL js_date_parse_otherstring(const uint8_t *sp,
     return TRUE;
 }
 
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
 /* Recognize only our complete toString layout and matching exact offset name.
    Return the signed seconds omitted from GMT+HHMM; other comments stay ignored. */
 static int js_date_parse_second_offset(const uint8_t *sp, JSString *original)
@@ -1332,7 +1341,7 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
             if (make_date_fields(ctx, fields1, is_local, &d)) {
                 rv = JS_EXCEPTION;
             } else {
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
                 d -= js_date_parse_second_offset(buf, sp) * 1000;
 #endif
                 d = time_clip(d - fields[8] * 60000);
@@ -1400,7 +1409,7 @@ static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (isnan(v))
         return JS_NAN;
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_ICU) || defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
     else {
         int64_t offset;
         if (date_local_offset(ctx, (int64_t)trunc(v), &offset))
@@ -1495,6 +1504,22 @@ done:
     return rv;
 }
 
+#ifdef CONFIG_INTL
+static JSValue js_date_toLocaleString(JSContext *ctx, JSValueConst this_val,
+                                      int argc, JSValueConst *argv, int magic)
+{
+    double time;
+    if (JS_ThisDateValue(ctx, &time, this_val))
+        return JS_EXCEPTION;
+    if (isnan(time))
+        return JS_NewString(ctx, "Invalid Date");
+    return js_intl_date_format(ctx, time,
+        argc > 0 ? argv[0] : JS_UNDEFINED,
+        argc > 1 ? argv[1] : JS_UNDEFINED,
+        magic == 3 ? JS_INTL_DTF_ANY : magic,
+        magic == 3 ? JS_INTL_DTF_ALL : magic);
+}
+#endif
 
 static const JSCFunctionListEntry js_date_funcs[] = {
     JS_CFUNC_DEF("now", 0, js_Date_now ),
@@ -1514,9 +1539,15 @@ static const JSCFunctionListEntry js_date_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("toISOString", 0, get_date_string, 0x23 ),
     JS_CFUNC_MAGIC_DEF("toDateString", 0, get_date_string, 0x11 ),
     JS_CFUNC_MAGIC_DEF("toTimeString", 0, get_date_string, 0x12 ),
+#ifdef CONFIG_INTL
+    JS_CFUNC_MAGIC_DEF("toLocaleString", 0, js_date_toLocaleString, 3 ),
+    JS_CFUNC_MAGIC_DEF("toLocaleDateString", 0, js_date_toLocaleString, JS_INTL_DTF_DATE ),
+    JS_CFUNC_MAGIC_DEF("toLocaleTimeString", 0, js_date_toLocaleString, JS_INTL_DTF_TIME ),
+#else
     JS_CFUNC_MAGIC_DEF("toLocaleString", 0, get_date_string, 0x33 ),
     JS_CFUNC_MAGIC_DEF("toLocaleDateString", 0, get_date_string, 0x31 ),
     JS_CFUNC_MAGIC_DEF("toLocaleTimeString", 0, get_date_string, 0x32 ),
+#endif
     JS_CFUNC_DEF("getTimezoneOffset", 0, js_date_getTimezoneOffset ),
     JS_CFUNC_DEF("getTime", 0, js_date_getTime ),
     JS_CFUNC_MAGIC_DEF("getYear", 0, get_date_field, 0x101 ),

@@ -30,7 +30,7 @@
 
 #include "allocator-types.h"
 
-#ifdef CONFIG_TEMPORAL
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
 struct QJSTzProvider;
 #endif
 
@@ -120,9 +120,12 @@ struct JSRuntime {
     int shape_hash_count; /* number of hashed shapes */
     JSShape **shape_hash;
     void *user_opaque;
-#ifdef CONFIG_TEMPORAL
-    /* One owned host policy and immutable provider for this runtime/agent. */
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
+    /* One owned host policy for all contexts in this runtime/agent. */
     char *default_time_zone;
+#endif
+#if !defined(CONFIG_ICU) && (defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL_NATIVE))
+    /* Native consumers share immutable snapshots until runtime cleanup. */
     struct QJSTzProvider *temporal_tz_provider;
 #endif
 #ifdef CONFIG_ATOMICS
@@ -240,6 +243,9 @@ struct JSContext {
                              const char *input, size_t input_len,
                              const char *filename, int flags, int scope_idx);
     void *user_opaque;
+#ifdef CONFIG_INTL
+    struct JSIntlContext *intl;
+#endif
 #ifdef CONFIG_TEMPORAL
     /* Owned intrinsic namespace, independent of the global binding. */
     JSValue temporal_intrinsics;

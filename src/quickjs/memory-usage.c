@@ -24,11 +24,14 @@
  */
 #include "internal/class.h"
 #include "internal/base.h"
+#include "internal/c-function.h"
+#include "internal/runtime.h"
 #ifdef CONFIG_TEMPORAL
 #include "builtins/temporal.h"
 #endif
-#include "internal/c-function.h"
-#include "internal/runtime.h"
+#ifdef CONFIG_INTL
+#include "builtins/intl.h"
+#endif
 #include "internal/atom.h"
 #include "internal/string.h"
 #include "internal/object.h"
@@ -36,6 +39,9 @@
 #include "internal/vm.h"
 #include "internal/module.h"
 #include "builtins/array-buffer.h"
+#ifdef CONFIG_INTL
+#include "builtins/intl/bound-function.h"
+#endif
 
 /* Compute memory used by various object types */
 /* XXX: poor man's approach to handling multiply referenced objects */
@@ -126,7 +132,7 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
 
     s->memory_used_count = 2; /* rt + rt->class_array */
     s->memory_used_size = sizeof(JSRuntime) + sizeof(JSValue) * rt->class_count;
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
     if (rt->default_time_zone) {
         s->memory_used_count++;
         s->memory_used_size += strlen(rt->default_time_zone) + 1;
@@ -141,6 +147,9 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
             sizeof(JSValue) * rt->class_count;
         s->binary_object_count += ctx->binary_object_count;
         s->binary_object_size += ctx->binary_object_size;
+#ifdef CONFIG_INTL
+        js_intl_context_memory_usage(ctx, s);
+#endif
 
         /* the hashed shapes are counted separately */
         if (sh && !sh->is_hashed) {
@@ -329,6 +338,22 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
                 }
             }
             break;
+#ifdef CONFIG_INTL
+        case JS_CLASS_INTL_BOUND_FUNCTION:
+            {
+                JSIntlBoundFunctionData *fd = p->u.opaque;
+                if (fd) {
+                    for (i = 0; i < fd->data_len; i++)
+                        compute_value_size(fd->data[i], hp);
+                    s->c_func_count++;
+                    s->memory_used_count++;
+                    s->memory_used_size += sizeof(*fd) +
+                        fd->data_len * sizeof(*fd->data);
+                    /* Retained contexts are counted by context_list above. */
+                }
+            }
+            break;
+#endif
         case JS_CLASS_REGEXP:            /* u.regexp */
             compute_jsstring_size(p->u.regexp.pattern, hp);
             compute_jsstring_size(p->u.regexp.bytecode, hp);

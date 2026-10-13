@@ -457,6 +457,12 @@ static JSValue js_temporal_plain_time_to_string(JSContext *ctx,
     time = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_PLAIN_TIME);
     if (!time)
         return JS_EXCEPTION;
+#ifdef CONFIG_INTL
+    if (kind == 2)
+        return js_intl_temporal_to_locale_string(ctx, this_val,
+            argc > 0 ? argv[0] : JS_UNDEFINED,
+            argc > 1 ? argv[1] : JS_UNDEFINED);
+#endif
     result = *time;
     precision.precision = -1;
     if (kind == 0) {

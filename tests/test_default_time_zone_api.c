@@ -8,10 +8,13 @@
 #include <string.h>
 #include "quickjs.h"
 #include "allocation-probe.h"
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
 #include "../src/quickjs/internal/runtime.h"
 #include "../src/quickjs/internal/default-time-zone.h"
 #include "../src/quickjs/internal/string.h"
+#endif
+#ifdef CONFIG_INTL
+#include "../src/quickjs/builtins/intl/intl-internal.h"
 #endif
 
 static void eval_ok(JSContext *ctx, const char *source)
@@ -51,7 +54,7 @@ static void clear_error(JSContext *ctx, const char *name)
     JS_FreeValue(ctx, error);
     assert(!JS_HasException(ctx));
 }
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
 /* Host allocation callbacks do not see allocations from existing arenas.
  * Retain this size class's free slots before arming the callback failure. */
 typedef struct ReservedAllocation {
@@ -113,16 +116,42 @@ static void check_policy(JSContext *ctx, const char *zone, int offset)
         "if (new Date('2024-01-01T00:00:00Z').getTimezoneOffset() !== %d)"
         " throw Error('Date default zone');"
         "if (typeof Temporal === 'object' && Temporal.Now.timeZoneId() !== '%s')"
-        " throw Error('Temporal.Now default zone');", offset, zone);
+        " throw Error('Temporal.Now default zone');"
+        "if (typeof Intl === 'object' &&"
+        " new Intl.DateTimeFormat().resolvedOptions().timeZone !== '%s')"
+        " throw Error('DateTimeFormat default zone');", offset, zone, zone);
     zone_is(ctx, zone);
     eval_ok(ctx, script);
 }
+#ifdef CONFIG_INTL
+static uint64_t cache_hash(const JSIntlLocaleList *cache)
+{
+    uint64_t hash = UINT64_C(14695981039346656037);
+    for (size_t i = 0; i < cache->count; i++) {
+        const unsigned char *p = (const unsigned char *)cache->items[i];
+        do { hash ^= *p; hash *= UINT64_C(1099511628211); } while (*p++);
+    }
+    return hash;
+}
+#endif
 static void failed_setting_preserves(JSContext *ctx, AllocationProbe *probe,
                                      const char *input, int oom)
 {
     char *old_policy = ctx->rt->default_time_zone;
     ReservedAllocation *reserved = NULL;
-    struct QJSTzProvider *old_provider = ctx->rt->temporal_tz_provider;
+#if !defined(CONFIG_ICU)
+    QJSTzProvider *old_provider = ctx->rt->temporal_tz_provider;
+#endif
+#ifdef CONFIG_INTL
+    JSIntlLocaleList caches[JS_INTL_SERVICE_COUNT];
+    uint64_t hashes[JS_INTL_SERVICE_COUNT];
+    for (int i = 0; i < JS_INTL_SERVICE_COUNT; i++) {
+        JSIntlLocaleList *cache = js_intl_available_locale_cache(ctx, i);
+        assert(cache);
+        caches[i] = *cache;
+        hashes[i] = cache_hash(cache);
+    }
+#endif
     if (oom)
         reserved = arm_allocation_failure(ctx->rt, probe, strlen(input) + 1);
     assert(JS_SetDefaultTimeZone(ctx, input) == -1);
@@ -133,7 +162,16 @@ static void failed_setting_preserves(JSContext *ctx, AllocationProbe *probe,
     }
     clear_error(ctx, oom ? NULL : "RangeError");
     assert(ctx->rt->default_time_zone == old_policy);
+#if !defined(CONFIG_ICU)
     assert(ctx->rt->temporal_tz_provider == old_provider);
+#endif
+#ifdef CONFIG_INTL
+    for (int i = 0; i < JS_INTL_SERVICE_COUNT; i++) {
+        JSIntlLocaleList *cache = js_intl_available_locale_cache(ctx, i);
+        assert(cache->items == caches[i].items && cache->count == caches[i].count &&
+               cache->capacity == caches[i].capacity && cache_hash(cache) == hashes[i]);
+    }
+#endif
     check_policy(ctx, "America/New_York", 300);
 }
 static void test_enabled(JSRuntime *rt, AllocationProbe *probe)
@@ -165,6 +203,9 @@ static void test_enabled(JSRuntime *rt, AllocationProbe *probe)
     zone_is(raw, "+05:45");
     /* Configuration before Date/Intl/Temporal initialization must be retained. */
     assert(JS_AddIntrinsicDate(raw) == 0 && JS_AddIntrinsicEval(raw) == 0);
+#ifdef CONFIG_INTL
+    assert(JS_AddIntrinsicIntl(raw) == 0);
+#endif
 #ifdef CONFIG_TEMPORAL
     assert(JS_AddIntrinsicTemporal(raw) == 0);
 #endif
@@ -194,6 +235,24 @@ static void test_enabled(JSRuntime *rt, AllocationProbe *probe)
         " let plain = Temporal.Now.plainDateTimeISO();"
         " if (!(plain instanceof Temporal.PlainDateTime)) throw Error('Now plain');"
         "}");
+#ifdef CONFIG_INTL
+    eval_ok(b,
+        "var oldDtfB = new Intl.DateTimeFormat('en-US', {hour:'numeric'});"
+        "var oldBoundB = oldDtfB.format, oldTextB = oldBoundB(0);");
+    eval_ok(a,
+        "var oldDtf = new Intl.DateTimeFormat('en-US',"
+        " {year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric'});"
+        "var oldBound = oldDtf.format, oldText = oldBound(0);"
+        "var oldParts = JSON.stringify(oldDtf.formatToParts(0));"
+        "var oldTemporal, oldTemporalText;"
+        "if (typeof Temporal === 'object') {"
+        " oldTemporal = new Temporal.PlainDateTime(2024,1,1,12);"
+        " oldTemporalText = oldDtf.format(oldTemporal);"
+        "}"
+        "for (const name of ['Collator','Segmenter','NumberFormat','DateTimeFormat',"
+        "'PluralRules','ListFormat','RelativeTimeFormat','DisplayNames','DurationFormat'])"
+        " Intl[name].supportedLocalesOf(['en','en-US']);");
+#endif
     failed_setting_preserves(a, probe, NULL, 0);
     failed_setting_preserves(a, probe, "Mars/Phobos", 0);
     failed_setting_preserves(a, probe, "+05:45:01", 0);
@@ -212,6 +271,19 @@ static void test_enabled(JSRuntime *rt, AllocationProbe *probe)
     check_policy(a, "Asia/Kathmandu", -345);
     check_policy(b, "Asia/Kathmandu", -345);
     check_policy(other, "UTC", 0);
+#ifdef CONFIG_INTL
+    eval_ok(b,
+        "if (oldDtfB.resolvedOptions().timeZone !== 'America/New_York' ||"
+        " oldDtfB.format !== oldBoundB || oldBoundB(0) !== oldTextB)"
+        " throw Error('other context formatter snapshot');");
+    eval_ok(a,
+        "if (oldDtf.resolvedOptions().timeZone !== 'America/New_York' ||"
+        " oldDtf.format !== oldBound || oldBound(0) !== oldText ||"
+        " JSON.stringify(oldDtf.formatToParts(0)) !== oldParts)"
+        " throw Error('existing formatter snapshot');"
+        "if (oldTemporal && oldDtf.format(oldTemporal) !== oldTemporalText)"
+        " throw Error('existing Temporal formatter bank');");
+#endif
     /* Preserve seconds from named-zone data; fixed-offset input stays minutes. */
     assert(JS_SetDefaultTimeZone(a, "Europe/Paris") == 0);
     eval_ok(a,
@@ -254,7 +326,7 @@ int main(void)
     AllocationProbe probe = {0};
     JSRuntime *rt = JS_NewRuntime2(&probe_functions, &probe);
     assert(rt);
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
     test_enabled(rt, &probe);
 #else
     test_disabled(rt);

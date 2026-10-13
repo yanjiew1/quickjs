@@ -42,7 +42,17 @@ endif
 # cosmopolitan build (see https://github.com/jart/cosmopolitan)
 #CONFIG_COSMO=y
 
-# Temporal uses the native backend on this branch; Intl/ICU is separate.
+# Temporal and optional Intl use the native backend by default.
+CONFIG_INTL?=n
+CONFIG_INTL_BACKEND?=native
+CONFIG_INTL_LEGACY?=y
+override CONFIG_INTL_NATIVE:=$(CONFIG_INTL)
+ifeq ($(filter y n,$(CONFIG_INTL)),)
+$(error CONFIG_INTL must be y or n)
+endif
+ifneq ($(CONFIG_INTL_BACKEND),native)
+$(error only the native Intl backend is enabled in this preparation)
+endif
 CONFIG_TEMPORAL?=y
 ifeq ($(filter y n,$(CONFIG_TEMPORAL)),)
 $(error CONFIG_TEMPORAL must be y or n)
@@ -171,6 +181,12 @@ endif
 DEFINES:=-D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
 ifeq ($(CONFIG_TEMPORAL),y)
 DEFINES+=-DCONFIG_TEMPORAL
+endif
+ifeq ($(CONFIG_INTL),y)
+DEFINES+=-DCONFIG_INTL -DCONFIG_INTL_NATIVE
+ifeq ($(CONFIG_INTL_LEGACY),y)
+DEFINES+=-DCONFIG_INTL_LEGACY
+endif
 endif
 
 ifdef CONFIG_WIN32
@@ -360,6 +376,72 @@ $(CALENDAR_CONFIG_OBJECTS): CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
 QUICKJS_SRCS+=src/quickjs/builtins/intl/core.c
 QUICKJS_SRCS+=$(CALENDAR_SRCS)
 
+TEMPORAL_LIBRARY_SRCS= \
+    src/temporal/epoch.c \
+    src/temporal/options.c \
+    src/temporal/iso.c \
+    src/temporal/civil.c \
+    src/temporal/parse.c \
+    src/temporal/format.c \
+    src/temporal/duration.c \
+    src/temporal/time.c \
+    src/temporal/calendar.c \
+    src/temporal/time-zone.c \
+    src/temporal/relative.c
+
+INTL_NATIVE_LIBRARY_SRCS= \
+    src/intl/collator-native-data.c \
+    src/intl/collator-native.c \
+    src/intl/data/date-data-validation.c \
+    src/intl/data/duration-data-validation.c \
+    src/intl/data/locale-metadata.c \
+    src/intl/data/native-data-reader.c \
+    src/intl/data/number-data-validation.c \
+    src/intl/data/number-extra-validation.c \
+    src/intl/data/number-template-validation.c \
+    src/intl/data/plural-data-validation.c \
+    src/intl/data/relative-data-validation.c \
+    src/intl/date-native-bank.c \
+    src/intl/date-native-calendar-data.c \
+    src/intl/date-native-calendar.c \
+    src/intl/date-native-data.c \
+    src/intl/date-native-zone.c \
+    src/intl/date-native.c \
+    src/intl/date-pattern.c \
+    src/intl/decimal.c \
+    src/intl/display-names-native.c \
+    src/intl/duration-native-data.c \
+    src/intl/duration-native.c \
+    src/intl/list-native-data.c \
+    src/intl/list-native.c \
+    src/intl/locale-grammar.c \
+    src/intl/native-locale-id.c \
+    src/intl/native-locale-info.c \
+    src/intl/number-compact.c \
+    src/intl/number-decimal.c \
+    src/intl/number-native-data.c \
+    src/intl/number-native.c \
+    src/intl/number-range.c \
+    src/intl/number-unit.c \
+    src/intl/plural-native-data.c \
+    src/intl/plural-native.c \
+    src/intl/plural.c \
+    src/intl/provider-native-collator.c \
+    src/intl/provider-native-date.c \
+    src/intl/provider-native-display.c \
+    src/intl/provider-native-duration.c \
+    src/intl/provider-native-general.c \
+    src/intl/provider-native-number.c \
+    src/intl/provider-native-plural.c \
+    src/intl/provider-native-relative.c \
+    src/intl/provider-native-segmenter.c \
+    src/intl/provider-native.c \
+    src/intl/relative-native-data.c \
+    src/intl/relative-native.c \
+    src/intl/segmenter-native-data.c \
+    src/intl/segmenter-native.c \
+    src/intl/segmenter-unicode.c
+
 # Complete frontend closure: no partial constructors or global namespace.
 QUICKJS_SRCS+=src/quickjs/builtins/temporal/common.c
 ifeq ($(CONFIG_TEMPORAL),y)
@@ -373,18 +455,6 @@ TEMPORAL_ENGINE_SRCS= \
     src/quickjs/builtins/temporal/plain.c \
     src/quickjs/builtins/temporal/zoned-arithmetic.c \
     src/quickjs/builtins/temporal/zoned-date-time.c
-TEMPORAL_LIBRARY_SRCS= \
-    src/temporal/epoch.c \
-    src/temporal/options.c \
-    src/temporal/iso.c \
-    src/temporal/civil.c \
-    src/temporal/parse.c \
-    src/temporal/format.c \
-    src/temporal/duration.c \
-    src/temporal/time.c \
-    src/temporal/calendar.c \
-    src/temporal/time-zone.c \
-    src/temporal/relative.c
 QUICKJS_SRCS+=$(TEMPORAL_ENGINE_SRCS) $(TEMPORAL_LIBRARY_SRCS)
 endif
 
@@ -393,6 +463,30 @@ ifdef CONFIG_WIN32
 TIMEZONE_SRCS+=src/timezone/windows-zone.c
 endif
 TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TIMEZONE_SRCS))
+
+
+ifeq ($(CONFIG_INTL),y)
+INTL_NATIVE_FRONTEND_SRCS= \
+    src/quickjs/builtins/intl/native-collator.c \
+    src/quickjs/builtins/intl/native-date-time-format.c \
+    src/quickjs/builtins/intl/native-display-names.c \
+    src/quickjs/builtins/intl/native-duration-format.c \
+    src/quickjs/builtins/intl/native-general.c \
+    src/quickjs/builtins/intl/native-list-format.c \
+    src/quickjs/builtins/intl/native-locale-resolution.c \
+    src/quickjs/builtins/intl/native-locale.c \
+    src/quickjs/builtins/intl/native-number-common.c \
+    src/quickjs/builtins/intl/native-number-format.c \
+    src/quickjs/builtins/intl/native-plural-rules.c \
+    src/quickjs/builtins/intl/native-relative-time-format.c \
+    src/quickjs/builtins/intl/native-segmenter.c \
+    src/quickjs/builtins/intl/native-values.c \
+    src/quickjs/builtins/intl/options.c \
+    src/quickjs/builtins/intl/intl-text.c \
+    src/quickjs/builtins/intl/locale-syntax.c \
+    src/quickjs/builtins/intl/bound-function.c
+QUICKJS_SRCS:=$(strip $(QUICKJS_SRCS) $(filter-out $(QUICKJS_SRCS),$(TEMPORAL_LIBRARY_SRCS) $(INTL_NATIVE_LIBRARY_SRCS) $(INTL_NATIVE_FRONTEND_SRCS)))
+endif
 
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
@@ -413,7 +507,7 @@ QUICKJS_LIBC_SRCS= \
     src/quickjs-libc/std.c \
     src/quickjs-libc/worker.c
 QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
-QJS_LIB_OBJS=$(QUICKJS_OBJS) $(if $(filter y,$(CONFIG_TEMPORAL)),$(TIMEZONE_OBJS)) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
+QJS_LIB_OBJS=$(QUICKJS_OBJS) $(if $(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL_NATIVE)),$(TIMEZONE_OBJS)) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -1144,7 +1238,7 @@ ifneq ($(CONFIG_WIN32),y)
 test: test-qjsc-executable
 
 test-qjsc-executable: $(QJSC) libquickjs$(LTOEXT).a
-	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "n" "$(CONFIG_TEMPORAL)" "$(if $(CONFIG_LTO),$(LTO_FLAG))"
+	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "$(CONFIG_INTL)" "$(CONFIG_TEMPORAL)" "$(if $(CONFIG_LTO),$(LTO_FLAG))"
 endif
 endif
 
@@ -1294,7 +1388,7 @@ tests/test_temporal_api$(EXE): $(OBJDIR)/tests/test_temporal_api.o libquickjs$(L
 .PHONY: FORCE_TEMPORAL_BUILD_CONFIG
 $(OBJDIR)/temporal-build-config: FORCE_TEMPORAL_BUILD_CONFIG
 	@mkdir -p $(@D)
-	@printf '%s\n' '$(CONFIG_TEMPORAL) $(DEFINES)' > $@.tmp
+	@printf '%s\n' '$(CONFIG_TEMPORAL) $(CONFIG_INTL) $(CONFIG_INTL_LEGACY) $(CONFIG_INTL_BACKEND) $(DEFINES)' > $@.tmp
 	@cmp -s $@.tmp $@ || mv $@.tmp $@
 	@rm -f $@.tmp
 
@@ -1481,58 +1575,6 @@ $(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_NOLTO+=-std=c11
 $(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_DEBUG+=-std=c11
 
 
-INTL_NATIVE_LIBRARY_SRCS= \
-    src/intl/collator-native-data.c \
-    src/intl/collator-native.c \
-    src/intl/data/date-data-validation.c \
-    src/intl/data/duration-data-validation.c \
-    src/intl/data/locale-metadata.c \
-    src/intl/data/native-data-reader.c \
-    src/intl/data/number-data-validation.c \
-    src/intl/data/number-extra-validation.c \
-    src/intl/data/number-template-validation.c \
-    src/intl/data/plural-data-validation.c \
-    src/intl/data/relative-data-validation.c \
-    src/intl/date-native-bank.c \
-    src/intl/date-native-calendar-data.c \
-    src/intl/date-native-calendar.c \
-    src/intl/date-native-data.c \
-    src/intl/date-native-zone.c \
-    src/intl/date-native.c \
-    src/intl/date-pattern.c \
-    src/intl/decimal.c \
-    src/intl/display-names-native.c \
-    src/intl/duration-native-data.c \
-    src/intl/duration-native.c \
-    src/intl/list-native-data.c \
-    src/intl/list-native.c \
-    src/intl/locale-grammar.c \
-    src/intl/native-locale-id.c \
-    src/intl/native-locale-info.c \
-    src/intl/number-compact.c \
-    src/intl/number-decimal.c \
-    src/intl/number-native-data.c \
-    src/intl/number-native.c \
-    src/intl/number-range.c \
-    src/intl/number-unit.c \
-    src/intl/plural-native-data.c \
-    src/intl/plural-native.c \
-    src/intl/plural.c \
-    src/intl/provider-native-collator.c \
-    src/intl/provider-native-date.c \
-    src/intl/provider-native-display.c \
-    src/intl/provider-native-duration.c \
-    src/intl/provider-native-general.c \
-    src/intl/provider-native-number.c \
-    src/intl/provider-native-plural.c \
-    src/intl/provider-native-relative.c \
-    src/intl/provider-native-segmenter.c \
-    src/intl/provider-native.c \
-    src/intl/relative-native-data.c \
-    src/intl/relative-native.c \
-    src/intl/segmenter-native-data.c \
-    src/intl/segmenter-native.c \
-    src/intl/segmenter-unicode.c
 INTL_NATIVE_LIBRARY_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(INTL_NATIVE_LIBRARY_SRCS))
 INTL_NATIVE_DATE_SHARED_OBJS= \
     $(OBJDIR)/src/temporal/epoch.o \
@@ -1550,88 +1592,53 @@ tests/test_intl_receiver_api$(EXE): $(OBJDIR)/tests/test_intl_receiver_api.o lib
 tests/test_intl_default_locale_api$(EXE): $(OBJDIR)/tests/test_intl_default_locale_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-# shared frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/values.o $(OBJDIR)/src/quickjs/builtins/intl/locale-syntax.o $(OBJDIR)/src/quickjs/builtins/intl/intl-text.o
 
-# resolution frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-locale-resolution.o $(OBJDIR)/src/quickjs/builtins/intl/native-number-common.o
 
-# locale frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-locale.o
 
-# general frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-general.o $(OBJDIR)/src/quickjs/builtins/intl/native-values.o
 
-# list frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-list-format.o
 
-# collator frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-collator.o
 
-# segmenter frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-segmenter.o
 
-# number frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-number-format.o
 
-# plural frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-plural-rules.o
 
-# relative frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-relative-time-format.o
 
-# display frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-display-names.o
 
-# duration frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-duration-format.o
 
-# date frontend sources remain disabled until coherent Intl activation.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-date-time-format.o
 
 .PHONY: test-icu-build-config
 test-icu-build-config:
 	QJS_TEST_MAKE="$(MAKE)" $(PYTHON) tests/test_icu_build_config.py
 test: test-icu-build-config
 
-# ICU resolution owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/locale-resolution.o $(OBJDIR)/src/quickjs/builtins/intl/number-common.o
 
-# ICU general owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/intl-values.o $(OBJDIR)/src/quickjs/builtins/intl/case-conversion.o
 
-# ICU locale owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/locale.o
 
-# ICU list owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/list-format.o
 
-# ICU collator owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/collator.o
 
-# ICU segmenter owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/segmenter.o
 
-# ICU number owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/number-format.o
 
-# ICU plural owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/plural-rules.o
 
-# ICU relative owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/relative-time-format.o
 
-# ICU display owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/display-names.o
 
-# ICU duration owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/duration-format.o
 
-# ICU date owners compile only when that frontend backend is selected.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/date-time-format.o
 
-# Shared options frontend helpers activate with the complete Intl closure.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/options.o
 
-# Shared bound frontend helpers activate with the complete Intl closure.
-test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/bound-function.o
+
+ifeq ($(CONFIG_INTL),y)
+.PHONY: test-intl-native-js
+test-intl-native-js: qjs$(EXE) run-test262$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_general.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_collator.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_segmenter.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_number.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_plural.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_relative.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_display.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_duration.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_frontend.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_all_calendars.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_timezone_names.js
+	$(WINE) ./run-test262$(EXE) -N tests/test_intl_bound_function_realms.js
+test: test-intl-native-js
+endif

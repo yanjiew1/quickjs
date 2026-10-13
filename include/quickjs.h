@@ -425,7 +425,8 @@ int JS_SetIntlDefaultLocale(JSContext *ctx, const char *locale);
 JSValue JS_GetIntlDefaultLocale(JSContext *ctx);
 
 /* Configure this runtime's default time zone for Date local operations,
-   and Temporal.Now. ctx selects the runtime and the
+   Temporal.Now, and future Intl.DateTimeFormat constructions. Existing
+   formatters retain their captured zones. ctx selects the runtime and the
    exception realm; all its contexts share the policy. Raw contexts require base
    intrinsics.
    time_zone must be a non-NULL NUL-terminated named identifier or UTC offset
@@ -433,15 +434,15 @@ JSValue JS_GetIntlDefaultLocale(JSContext *ctx);
    offsets to +HH:MM/-HH:MM (both zero signs become +00:00). The engine copies
    the identifier. Return 0 on success or -1 with a pending exception: invalid
    input throws RangeError, allocation failure throws an out-of-memory error.
-   Failure preserves the current policy and provider caches. This never
-   changes TZ, tzset, or process defaults. Enabled when Temporal is
-   enabled; disabled builds throw TypeError and return -1. */
+   Failure preserves the current policy and provider/locale caches. This never
+   changes TZ, tzset, or ICU process defaults. Enabled when Intl or Temporal is
+   enabled; both-disabled builds throw TypeError and return -1. */
 int JS_SetDefaultTimeZone(JSContext *ctx, const char *time_zone);
 /* Return an owned JS string snapshot, or JS_EXCEPTION with a pending exception.
    Before the first explicit setting, snapshot the host zone on first use in
    any context of the runtime. Free with JS_FreeValue, or JS_FreeValueRT while
    the runtime is alive after context destruction. Raw contexts require base
-   intrinsics. This does not install Temporal. Disabled builds
+   intrinsics. This does not install Intl or Temporal. Both-disabled builds
    throw TypeError. */
 JSValue JS_GetDefaultTimeZone(JSContext *ctx);
 

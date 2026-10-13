@@ -471,7 +471,13 @@ static JSValue js_temporal_instant_to_locale_string(JSContext *ctx,
     instant = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_INSTANT);
     if (!instant)
         return JS_EXCEPTION;
+#ifdef CONFIG_INTL
+    return js_intl_temporal_to_locale_string(ctx, this_val,
+                argc > 0 ? argv[0] : JS_UNDEFINED,
+                argc > 1 ? argv[1] : JS_UNDEFINED);
+#else
     return js_temporal_instant_format(ctx, *instant, NULL, -1);
+#endif
 }
 
 static JSValue js_temporal_instant_to_zoned(JSContext *ctx,

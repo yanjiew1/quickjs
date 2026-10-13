@@ -33,6 +33,10 @@
 #include "../internal/string.h"
 #include "../internal/object.h"
 #include "../internal/error.h"
+#ifdef CONFIG_INTL
+#include "intl/locale-integration.h"
+#include "intl/intl-internal.h"
+#endif
 #include "libunicode.h"
 #include "string.h"
 #include "array.h"
@@ -1298,6 +1302,7 @@ static JSValue js_string_trim(JSContext *ctx, JSValueConst this_val,
     return ret;
 }
 
+#ifndef CONFIG_UNICODE_ICU
 /* return 0 if before the first char */
 static int string_prevc(JSString *p, int *pidx)
 {
@@ -1350,10 +1355,49 @@ static BOOL test_final_sigma(JSString *p, int sigma_pos)
     }
     return !lre_is_cased(c1);
 }
+#endif
 
 static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv, int to_lower)
 {
+#ifdef CONFIG_UNICODE_ICU
+    JSValue val, ret;
+    JSString *p;
+    uint16_t *input = NULL, *output = NULL;
+    const uint16_t *src;
+    int i, out_len;
+
+    val = JS_ToStringCheckObject(ctx, this_val);
+    if (JS_IsException(val))
+        return val;
+    p = JS_VALUE_GET_STRING(val);
+    if (!p->len)
+        return val;
+    if (p->is_wide_char) {
+        src = p->u.str16;
+    } else {
+        input = js_malloc(ctx, (size_t)p->len * sizeof(*input));
+        if (!input) {
+            JS_FreeValue(ctx, val);
+            return JS_EXCEPTION;
+        }
+        for (i = 0; i < p->len; i++)
+            input[i] = p->u.str8[i];
+        src = input;
+    }
+    out_len = unicode_case_convert_utf16(&output, src, p->len, to_lower,
+                                         ctx->rt, js_dbuf_realloc);
+    js_free(ctx, input);
+    JS_FreeValue(ctx, val);
+    if (out_len < 0) {
+        if (out_len == -1)
+            return JS_ThrowOutOfMemory(ctx);
+        return JS_ThrowInternalError(ctx, "ICU Unicode case conversion failed");
+    }
+    ret = js_new_string16_len(ctx, output, out_len);
+    js_free(ctx, output);
+    return ret;
+#else
     JSValue val;
     StringBuffer b_s, *b = &b_s;
     JSString *p;
@@ -1387,6 +1431,7 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
     JS_FreeValue(ctx, val);
     string_buffer_free(b);
     return JS_EXCEPTION;
+#endif
 }
 
 #ifdef CONFIG_ALL_UNICODE
@@ -1420,8 +1465,15 @@ static int js_string_normalize1(JSContext *ctx, uint32_t **pout_buf,
     out_len = unicode_normalize(&out_buf, buf, buf_len, n_type,
                                 ctx->rt, js_dbuf_realloc);
     js_free(ctx, buf);
-    if (out_len < 0)
+    if (out_len < 0) {
+#ifdef CONFIG_UNICODE_ICU
+        if (out_len == -3)
+            JS_ThrowInternalError(ctx, "ICU Unicode normalization failed");
+        else
+            JS_ThrowOutOfMemory(ctx);
+#endif
         return -1;
+    }
     *pout_buf = out_buf;
     return out_len;
 }
@@ -1479,6 +1531,7 @@ static JSValue js_string_normalize(JSContext *ctx, JSValueConst this_val,
     return val;
 }
 
+#ifndef CONFIG_INTL
 /* return < 0, 0 or > 0 */
 static int js_UTF32_compare(const uint32_t *buf1, int buf1_len,
                             const uint32_t *buf2, int buf2_len)
@@ -1533,7 +1586,8 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
     js_free(ctx, b_buf);
     return JS_NewInt32(ctx, cmp);
 }
-#else /* CONFIG_ALL_UNICODE */
+#endif /* !CONFIG_INTL */
+#elif !defined(CONFIG_INTL)
 static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
                                        int argc, JSValueConst *argv)
 {
@@ -1712,8 +1766,13 @@ const JSCFunctionListEntry js_string_proto_funcs[] = {
     JS_CFUNC_DEF("valueOf", 0, js_string_toString ),
     JS_CFUNC_MAGIC_DEF("toLowerCase", 0, js_string_toLowerCase, 1 ),
     JS_CFUNC_MAGIC_DEF("toUpperCase", 0, js_string_toLowerCase, 0 ),
+#ifdef CONFIG_INTL
+    JS_CFUNC_MAGIC_DEF("toLocaleLowerCase", 0, js_intl_string_locale_case, 1 ),
+    JS_CFUNC_MAGIC_DEF("toLocaleUpperCase", 0, js_intl_string_locale_case, 0 ),
+#else
     JS_CFUNC_MAGIC_DEF("toLocaleLowerCase", 0, js_string_toLowerCase, 1 ),
     JS_CFUNC_MAGIC_DEF("toLocaleUpperCase", 0, js_string_toLowerCase, 0 ),
+#endif
     JS_CFUNC_MAGIC_DEF("[Symbol.iterator]", 0, js_create_array_iterator, JS_ITERATOR_KIND_VALUE | 4 ),
     /* ES6 Annex B 2.3.2 etc. */
     JS_CFUNC_MAGIC_DEF("anchor", 1, js_string_CreateHTML, magic_string_anchor ),
@@ -1740,7 +1799,11 @@ static const JSCFunctionListEntry js_string_proto_normalize[] = {
 #ifdef CONFIG_ALL_UNICODE
     JS_CFUNC_DEF("normalize", 0, js_string_normalize ),
 #endif
+#ifdef CONFIG_INTL
+    JS_CFUNC_DEF("localeCompare", 1, js_intl_string_locale_compare ),
+#else
     JS_CFUNC_DEF("localeCompare", 1, js_string_localeCompare ),
+#endif
 };
 
 int JS_AddIntrinsicStringNormalize(JSContext *ctx)

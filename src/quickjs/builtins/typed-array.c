@@ -1205,7 +1205,13 @@ static JSValue js_typed_array_join(JSContext *ctx, JSValueConst this_val,
             if (JS_IsException(el))
                 goto fail;
             if (toLocaleString) {
+#ifdef CONFIG_INTL
+                el = JS_ToLocaleStringArgsFree(ctx, el,
+                    argc > 0 ? argv[0] : JS_UNDEFINED,
+                    argc > 1 ? argv[1] : JS_UNDEFINED);
+#else
                 el = JS_ToLocaleStringFree(ctx, el);
+#endif
             }
             if (string_buffer_concat_value_free(b, el))
                 goto fail;

@@ -33,6 +33,9 @@
 #include "dtoa.h"
 #include "number.h"
 #include "global.h"
+#ifdef CONFIG_INTL
+#include "intl/intl-number.h"
+#endif
 
 /* Number */
 
@@ -181,6 +184,15 @@ static JSValue js_number_toString(JSContext *ctx, JSValueConst this_val,
     val = js_thisNumberValue(ctx, this_val);
     if (JS_IsException(val))
         return val;
+#ifdef CONFIG_INTL
+    if (magic) {
+        JSValue result = js_intl_number_to_locale_string(ctx, val,
+                            argc > 0 ? argv[0] : JS_UNDEFINED,
+                            argc > 1 ? argv[1] : JS_UNDEFINED);
+        JS_FreeValue(ctx, val);
+        return result;
+    }
+#endif
     if (magic || JS_IsUndefined(argv[0])) {
         base = 10;
     } else {

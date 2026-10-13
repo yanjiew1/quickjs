@@ -36,6 +36,10 @@ JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
 int JS_ToBoolFree(JSContext *ctx, JSValue val);
 JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
 JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
+#ifdef CONFIG_INTL
+JSValue JS_ToLocaleStringArgsFree(JSContext *ctx, JSValue val,
+                                   JSValueConst locales, JSValueConst options);
+#endif
 JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);
 
 #endif
