@@ -363,6 +363,34 @@ function test_super_base_order()
     assert(evaluated, false);
 }
 
+function test_super_null_key_coercion()
+{
+    let coerces = 0, rhs = 0;
+    const key = { toString() { coerces++; throw Error("unexpected key coercion"); } };
+    const home = {
+        __proto__: null,
+        read() { return super[key]; },
+        prefix() { return ++super[key]; },
+        postfix() { return super[key]++; },
+        compound() { return super[key] += 1; },
+        assign() { super[key] = (++rhs); },
+    };
+    for (const method of [home.read, home.prefix, home.postfix, home.compound]) {
+        assert_throws(TypeError, () => method.call(home));
+        assert(coerces, 0);
+    }
+    assert_throws(TypeError, () => home.assign());
+    assert(rhs, 1);
+    assert(coerces, 0);
+    const error = Error("key conversion");
+    Object.setPrototypeOf(home, {});
+    const throwing = { toString() { throw error; } };
+    const ordinary = { read(k) { return super[k]; } };
+    let actual;
+    try { ordinary.read(throwing); } catch (e) { actual = e; }
+    assert(actual === error);
+}
+
 function test_class()
 {
     var o;
@@ -772,6 +800,7 @@ test_prototype();
 test_arguments();
 test_class();
 test_super_base_order();
+test_super_null_key_coercion();
 test_template();
 test_template_skip();
 test_object_literal();
