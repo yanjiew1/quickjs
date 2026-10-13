@@ -586,6 +586,7 @@ JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n)
     if ((uint64_t)n <= JS_ATOM_MAX_INT) {
         return __JS_AtomFromUInt32((uint32_t)n);
     } else {
+        JSAtom atom;
         char buf[24];
         JSValue val;
         size_t len;
@@ -593,8 +594,11 @@ JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n)
         val = js_new_string8_len(ctx, buf, len);
         if (JS_IsException(val))
             return JS_ATOM_NULL;
-        return __JS_NewAtom(ctx->rt, JS_VALUE_GET_STRING(val),
-                            JS_ATOM_TYPE_STRING);
+        atom = __JS_NewAtom(ctx->rt, JS_VALUE_GET_STRING(val),
+                             JS_ATOM_TYPE_STRING);
+        if (atom == JS_ATOM_NULL)
+            JS_ThrowOutOfMemory(ctx);
+        return atom;
     }
 }
 
