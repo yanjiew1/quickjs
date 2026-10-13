@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 import * as std from "std";
+import { run_in_realms } from "./realm-harness.js";
 
 function check(actual, expected, message)
 {
@@ -108,9 +109,39 @@ async function test_create_realm()
     }
 }
 
+function test_bigint_locale_realm()
+{
+    const result = run_in_realms(function () {
+        const realms = [globalThis, foreign];
+        function check(condition, message) {
+            if (!condition) throw Error(message);
+        }
+        for (let index = 0; index < realms.length; index++) {
+            const owner = realms[index], receiverRealm = realms[1 - index];
+            const method = owner.BigInt.prototype.toLocaleString;
+            const boxed = receiverRealm.Object(-42n);
+            boxed.toString = () => { throw Error("dynamic toString"); };
+            check(method.call(boxed) === "-42", "foreign boxed BigInt works");
+            for (const invalid of [{}, new receiverRealm.Proxy(boxed, {})]) {
+                let caught = false;
+                try { method.call(invalid); } catch (error) {
+                    caught = true;
+                    check(Object.getPrototypeOf(error) === owner.TypeError.prototype,
+                          "BigInt receiver TypeError uses the native function realm");
+                }
+                check(caught, "invalid foreign receiver throws");
+            }
+        }
+        return true;
+    });
+    check(result, true, "bigint_locale_realm");
+    std.gc();
+}
+
 export async function test_realms()
 {
     await test_create_realm();
+    test_bigint_locale_realm();
 }
 
 await test_realms();
