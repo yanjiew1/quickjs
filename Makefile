@@ -1449,3 +1449,6 @@ test test-binaries: $(OBJDIR)/src/intl/provider-native-collator.o
 
 # Native segmenter adapters precede aggregate-provider construction.
 test test-binaries: $(OBJDIR)/src/intl/provider-native-segmenter.o
+
+# Native display adapters precede aggregate-provider construction.
+test test-binaries: $(OBJDIR)/src/intl/provider-native-display.o
