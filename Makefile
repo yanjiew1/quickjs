@@ -1550,3 +1550,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/values.o $(OBJDIR)/src/q
 
 # resolution frontend sources remain disabled until coherent Intl activation.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-locale-resolution.o $(OBJDIR)/src/quickjs/builtins/intl/native-number-common.o
+
+# locale frontend sources remain disabled until coherent Intl activation.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-locale.o
