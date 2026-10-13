@@ -1048,6 +1048,24 @@ C_TESTS+=tests/test_intl_receiver_api$(EXE)
 
 C_TESTS+=tests/test_intl_default_locale_api$(EXE)
 
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_locale_lookup$(EXE)
+endif
+endif
+
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_embedder$(EXE)
+endif
+endif
+
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_text$(EXE)
+endif
+endif
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1057,6 +1075,21 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_text$(EXE)
+endif
+endif
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_embedder$(EXE)
+endif
+endif
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_locale_lookup$(EXE)
+endif
+endif
 	$(WINE) ./tests/test_intl_default_locale_api$(EXE)
 	$(WINE) ./tests/test_intl_receiver_api$(EXE)
 	$(WINE) ./tests/test_intl_native_timezone$(EXE)
@@ -1792,7 +1825,6 @@ test-intl-native-js: qjs$(EXE) run-test262$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_frontend.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_all_calendars.js
 	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_timezone_names.js
-	$(WINE) ./run-test262$(EXE) -N tests/test_intl_bound_function_realms.js
 test: test-intl-native-js
 endif
 
@@ -1821,4 +1853,29 @@ $(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS+=-UCONFIG_ICU
 $(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_OPT+=-UCONFIG_ICU
 $(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_NOLTO+=-UCONFIG_ICU
 $(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_DEBUG+=-UCONFIG_ICU
+endif
+
+tests/test_intl_locale_lookup$(EXE): $(OBJDIR)/tests/test_intl_locale_lookup.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_embedder$(EXE): $(OBJDIR)/tests/test_intl_embedder.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_text$(EXE): $(OBJDIR)/tests/test_intl_text.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+ifeq ($(CONFIG_INTL),y)
+.PHONY: test-intl-bound-realms
+test-intl-bound-realms: run-test262$(EXE)
+	$(WINE) ./run-test262$(EXE) -N tests/test_intl_bound_function_realms.js
+test: test-intl-bound-realms
+ifneq ($(CONFIG_INTL_NATIVE),y)
+.PHONY: test-intl-icu-locale
+test-intl-icu-locale: qjs$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_locale.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_locale_resolution.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_text.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_locale_integration.js
+test: test-intl-icu-locale
+endif
 endif

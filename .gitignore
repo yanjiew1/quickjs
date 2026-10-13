@@ -214,3 +214,12 @@ __pycache__/
 
 /tests/test_unicode_version
 /tests/test_unicode_version.exe
+
+/tests/test_intl_locale_lookup
+/tests/test_intl_locale_lookup.exe
+
+/tests/test_intl_embedder
+/tests/test_intl_embedder.exe
+
+/tests/test_intl_text
+/tests/test_intl_text.exe
