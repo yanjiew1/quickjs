@@ -26,6 +26,17 @@
 #define QUICKJS_C_FUNCTION_H
 
 #include "base.h"
+#include "object.h"
+
+/* Native function names use LP64 padding or a native-only ILP32 tail. */
+static inline JSAtom *js_c_function_initial_name(JSObject *p)
+{
+#ifdef JS_PTR64
+    return &p->u.cfunc.initial_name;
+#else
+    return (JSAtom *)(p + 1);
+#endif
+}
 
 typedef struct JSCFunctionDataRecord {
     JSCFunctionData *func;
