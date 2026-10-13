@@ -1,0 +1,140 @@
+Optional ICU 78.3 reference SDK modifications
+Prepared and reviewed: 2026-10-09
+
+ICU upstream: https://github.com/unicode-org/icu
+Revision: 21d1eb0f306e1141c10931e914dfc038c06121da
+Release 78.3; release date 2026-03-17.
+The ICU source and stock data are copyright Unicode, Inc. and other
+contributors. Their notices remain in the source; the complete upstream
+Unicode-3.0 license is supplied as LICENSE.
+
+Local private exact-plural helper, calendar corrections, and capability
+witnesses: Copyright (c) 2026 Yan-Jie Wang; Unicode-3.0.
+The private helper retains its original copyright and SPDX text in the patch.
+These local patches are not represented as accepted upstream ICU commits.
+
+exact-plural.patch changes private number_decimalquantity.h and plurrule.cpp
+and adds the private number_pluraloperand.h. It reads exact decimal plural
+operands within ICU's selected rule algorithm, retaining the public interface,
+normal library RTTI, and stock data. It changes no public headers or layouts.
+
+calendar-integer.patch contains exactly the following accepted local changes:
+
+Normalize Hebrew lunar parts and weekdays before the epoch
+
+Hebrew startOfYear floors the month count but truncates negative lunar
+parts and leaves a negative weekday remainder. This changes the year
+zero postponements and the lengths of Cheshvan and Kislev.
+Floor the whole days and normalize both remainders so the existing
+postponement rules apply to years before the epoch as well.
+
+ICU source:
+https://github.com/unicode-org/icu
+Commit: 21d1eb0f306e1141c10931e914dfc038c06121da
+Release: 78.3
+Release date: 2026-03-17
+Reviewed: 2026-10-09
+Source: icu4c/source/i18n/hebrwcal.cpp
+Functions: startOfYear, daysInYear, yearType
+Upstream bug: https://unicode-org.atlassian.net/browse/ICU-23007
+
+Temporal merge source:
+https://github.com/tc39/ecma262/pull/3966
+Commit: 3d4a6e7124a6878cb5af3132af7e01e01a88317f
+Commit date: 2026-09-09
+Reviewed: 2026-10-09
+temporal/abstractops.emu SHA-256:
+5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6
+Stable anchor: sec-calendarisotodate
+
+Supplementary Stage 4 proposal:
+https://github.com/tc39/proposal-temporal
+Commit: e8cc03fc970a65a3359e8870e3b35e687ac94e55
+Commit date: 2026-07-27
+
+Era/MonthCode Stage 4:
+https://github.com/tc39/proposal-intl-era-monthcode
+Commit: 5833eae6c9079ffbb06a9ab7cc5128ebbf6e9ac7
+Commit date: 2026-03-19
+Reviewed: 2026-10-09
+Stable anchors:
+sec-temporal-calendardaysinmonth
+sec-temporal-calendarintegerstoiso
+
+Related Test262 selector under test/intl402/Temporal:
+PlainDate/from/calc-epoch-year-hebrew.js
+
+Signed-off-by: Yan-Jie Wang <yanjiewtw@gmail.com>
+
+Floor Indian calendar half-integer Julian dates
+
+Indian handleComputeMonthStart converts a half-integer Julian date to
+an integer by truncation. Negative dates move forward one day, breaking
+calendar field round trips near Temporal's lower supported date.
+Floor the Julian date before conversion so the returned integer is the
+day before the month begins for dates on either side of the Julian epoch.
+
+ICU source:
+https://github.com/unicode-org/icu
+Commit: 21d1eb0f306e1141c10931e914dfc038c06121da
+Release: 78.3
+Release date: 2026-03-17
+Reviewed: 2026-10-09
+Source: icu4c/source/i18n/indiancal.cpp
+Functions: IndianToJD, IndianCalendar::handleComputeMonthStart
+No upstream issue number is asserted for this source defect.
+
+Temporal merge source:
+https://github.com/tc39/ecma262/pull/3966
+Commit: 3d4a6e7124a6878cb5af3132af7e01e01a88317f
+Commit date: 2026-09-09
+Reviewed: 2026-10-09
+temporal/abstractops.emu SHA-256:
+5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6
+Stable anchor: sec-calendarisotodate
+
+Supplementary Stage 4 proposal:
+https://github.com/tc39/proposal-temporal
+Commit: e8cc03fc970a65a3359e8870e3b35e687ac94e55
+Commit date: 2026-07-27
+
+Era/MonthCode Stage 4:
+https://github.com/tc39/proposal-intl-era-monthcode
+Commit: 5833eae6c9079ffbb06a9ab7cc5128ebbf6e9ac7
+Commit date: 2026-03-19
+Reviewed: 2026-10-09
+Stable anchors:
+sec-temporal-calendarintegerstoiso
+sup-temporal-nonisocalendardatetoiso
+
+Related Test262 selectors under test/intl402/Temporal:
+PlainDate/from/extreme-dates.js
+PlainDateTime/from/extreme-dates.js
+PlainYearMonth/from/extreme-dates.js
+ZonedDateTime/from/extreme-dates.js
+
+Signed-off-by: Yan-Jie Wang <yanjiewtw@gmail.com>
+
+The calendar witnesses are packaged byte-for-byte from the source packet
+identified in PROVENANCE.json. They exercise public ICU C APIs. The archive,
+patch inputs, and resulting ten changed file hashes are recorded there.
+Neither the SDK capability witness nor dependency acceptance substitutes for
+the separate QuickJS frontend, API, metadata, and full engine gates.
+
+chinese-pmo.patch is a local ICU-owned finite published-data integration,
+including coherence and cross-range month arithmetic repairs. It changes
+chnsecal.cpp, astro.cpp and the private astro.h; it adds Chinese PMO facts
+and their unchanged attribution notice. The exact final five PMO hashes and
+the three-patch ten-file source delta are recorded in PROVENANCE.json.
+The private astro.h change adds no object data members or vtable entry.
+Public Unicode headers are byte-identical to the pinned release archive;
+exported symbol and binary ABI equality require root runtime qualification.
+
+The original Chinese PMO notice is included verbatim as chinese_pmo_notice.txt
+and in the patched ICU source. PMO-PROVENANCE.json preserves original factual
+lineage, attribution, known HKO differences, approximation boundaries and
+license distinctions. The numerical facts do not license or incorporate the
+retrieved JavaScript implementation. No upstream merge or final SDK acceptance
+is asserted. Local integration source follows the existing Unicode-3.0
+attribution above. Final accepted SDK receipts and publication approval remain
+unbound until root supplies actual immutable runtime evidence.

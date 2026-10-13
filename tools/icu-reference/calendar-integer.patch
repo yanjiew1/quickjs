@@ -1,0 +1,37 @@
+--- a/source/i18n/hebrwcal.cpp
++++ b/source/i18n/hebrwcal.cpp
+@@ -437,15 +437,16 @@
+             (235LL * static_cast<int64_t>(year) - 234LL), 19LL);
+ 
+         int64_t frac = months * MONTH_FRACT + BAHARAD;  // Fractional part of day #
+-        day  = months * 29LL + frac / DAY_PARTS;        // Whole # part of calculation
+-        frac = frac % DAY_PARTS;                        // Time of day
+-
+-        int32_t wd = (day % 7);                        // Day of week (0 == Monday)
++        int64_t wholeDays = ClockMath::floorDivideInt64(frac, DAY_PARTS);
++        day = months * 29LL + wholeDays;              // Whole # part of calculation
++        frac -= wholeDays * DAY_PARTS;               // Nonnegative time of day
++
++        int32_t wd = static_cast<int32_t>((day % 7 + 7) % 7); // 0 == Monday
+ 
+         if (wd == 2 || wd == 4 || wd == 6) {
+             // If the 1st is on Sun, Wed, or Fri, postpone to the next day
+             day += 1;
+-            wd = (day % 7);
++            wd = static_cast<int32_t>((day % 7 + 7) % 7);
+         } else if (wd == 1 && frac > 15*HOUR_PARTS+204 && !HebrewCalendar::isLeapYear(year) ) {
+             // If the new moon falls after 3:11:20am (15h204p from the previous noon)
+             // on a Tuesday and it is not a leap year, postpone by 2 days.
+--- a/source/i18n/indiancal.cpp
++++ b/source/i18n/indiancal.cpp
+@@ -213,7 +213,9 @@
+        imonth = month + 1; 
+    }
+    
+-   int64_t jd = IndianToJD(eyear ,imonth, 1);
++   // The Julian date is a half-integer. Month starts require the preceding
++   // integer day for negative dates as well as positive dates.
++   int64_t jd = static_cast<int64_t>(uprv_floor(IndianToJD(eyear, imonth, 1)));
+ 
+    return jd;
+ }

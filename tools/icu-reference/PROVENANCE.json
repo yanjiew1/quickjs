@@ -1,0 +1,149 @@
+{
+  "abi_scope": "seven modified private source/header files and three added private helper/data/notice files; public headers byte-identical; exported symbol and binary ABI equality pending root runtime receipts",
+  "archive_sha256": "3a2e7a47604ba702f345878308e6fefeca612ee895cf4a5f222e7955fabfe0c0",
+  "archive_url": "https://github.com/unicode-org/icu/releases/download/release-78.3/icu4c-78.3-sources.tgz",
+  "calendar_corrections": [
+    {
+      "path": "source/i18n/hebrwcal.cpp",
+      "postimage_sha256": "765052dcb2359043e7f23e6c9c229faf700680692df031edafeeb2bcae2d1697",
+      "preimage_sha256": "747bfc92f68e2a7b88c01b781772aac995c8a1a4a8f69efee4e13cc84046f0e8",
+      "upstream_bug": "https://unicode-org.atlassian.net/browse/ICU-23007",
+      "witness": "icu-hebrew-epoch.c",
+      "witness_sha256": "1c3de5782701c74df8cc701a04099a3cd34d673ccd7d52c0aed04167965931c3"
+    },
+    {
+      "path": "source/i18n/indiancal.cpp",
+      "postimage_sha256": "759a37d49be5301b84ae89729aecf4ba7896ecf4cd981ca40deb5e880c3b725d",
+      "preimage_sha256": "1dea12c23e3d48cf4c44eef985e7336e591c29549281e7bcb2dc462cd7b4ed4d",
+      "upstream_bug": null,
+      "witness": "icu-indian-negative-julian.c",
+      "witness_sha256": "bfbc735f6b07d49f6d16ae3696d5dcce699779da1e500d5f72306a0786d398c1"
+    }
+  ],
+  "calendar_patch_source_manifest_sha256": "354e19febe729b65e13ddcd4dd855b5d55e7ba09bc9a9835a0075f295c7c0c14",
+  "chinese_pmo": {
+    "accepted_sdk_receipts": {},
+    "approval": {
+      "approved": false,
+      "descriptor_path": "",
+      "descriptor_sha256": ""
+    },
+    "data_notice_unchanged": true,
+    "ephemeris_accuracy_claim": false,
+    "final_changed_files": {
+      "source/i18n/astro.cpp": "5988d86638109cccf1452ac2c23b851a0ddc263eed4ce8c987d4149a0d05c890",
+      "source/i18n/astro.h": "542094389d48443ecd0017e82cfa2d4a5b709f5a062ed7dee05e92c820842e07",
+      "source/i18n/chinese_pmo_data.inc": "9b44194e1b9370771934f7ace6e8131fbe5edcb470da1782b61bad1932490c82",
+      "source/i18n/chinese_pmo_notice.txt": "d019673110105139ddd9428d1d180b53cb18d9af0cdfcdff2752940575e4d076",
+      "source/i18n/chnsecal.cpp": "9409aa27b04005c091f8cd2574ba8a339a796282a3fa7a0131f3378d17f973fa"
+    },
+    "native_quickjs_implementation_copied_or_called": false,
+    "private_header": "source/i18n/astro.h",
+    "private_header_layout_vtable_change": false,
+    "public_abi_runtime_accepted": false,
+    "source_packets": {
+      "/srv/data/work/quickjs-tmp/quickjs-icu-chinese-pmo-coherence-source-repair-20261009-v1/packet-sha256.json": "a856edbc64c70cc921e1a3bc834d52214e85f113cd099a373cf024da9a0adab8",
+      "/srv/data/work/quickjs-tmp/quickjs-icu-chinese-pmo-cross-range-source-repair-20261009-v1/packet-sha256.json": "bc568eb3c6fba763871cc584ffde38b52749f989022a80c6bf3253299243196a",
+      "/srv/data/work/quickjs-tmp/quickjs-icu-chinese-pmo-owned-source-candidate-20261009-v1/packet-sha256.json": "695140a80d0d906f60432a0dee4e11eb298347c25eceac9aeee710e46d3db4b2",
+      "/srv/data/work/quickjs-tmp/quickjs-icu-pinned-sdk-packaging-review-fix-source-20261009-v1/SEAL.json": "01133fe2fd69dc15359adc3f4c475f8c1b86034c1f43e5c0fd59051a369f5f8e"
+    },
+    "source_range_limits": "See unchanged chinese_pmo_notice.txt and PMO-PROVENANCE.json; 1899 private approximation and derived 2101 closing boundary remain explicit",
+    "upstream_merge_claim": false
+  },
+  "data": {
+    "CLDR": "48.0",
+    "ICU": "78.3",
+    "UCD": "17.0",
+    "tzdata": "2026a"
+  },
+  "original_assessor_patch_sha256": "1c1cb933fad30183646aff7f2b35c62215e0700617ebb0a3be1cb50c5283580b",
+  "original_files": {
+    "source/i18n/astro.cpp": "cab130a5c3f9bd4708744f2c8b23439969c340a4076ba9fc5199fe97f25d2b1d",
+    "source/i18n/astro.h": "bdd35a31c405d711bfe7dd8263d721404fb1234edd5b1e66335c163aa3efb298",
+    "source/i18n/chnsecal.cpp": "625e63321f41d106b77134c177fe5907baf1507a646427066751c29509b25140",
+    "source/i18n/hebrwcal.cpp": "747bfc92f68e2a7b88c01b781772aac995c8a1a4a8f69efee4e13cc84046f0e8",
+    "source/i18n/indiancal.cpp": "1dea12c23e3d48cf4c44eef985e7336e591c29549281e7bcb2dc462cd7b4ed4d",
+    "source/i18n/number_decimalquantity.h": "424f58f7c860ab7ffe2e3105a2a904018e581388a24b93fbf13b1cf6117c1939",
+    "source/i18n/plurrule.cpp": "5375109a0f061656ef8b0f314cc9674d0ce915f30f1d356ba1499557a6feeb31"
+  },
+  "original_private_header_sha256": "e2d8bf62ad2d4a9f0347e7c3e4caf546db399d0e0f1e8a3e6e71d4be585c9493",
+  "packaged_inputs": {
+    "LICENSE": "e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af",
+    "NOTICE.txt": "877dcc3a67f9763734f1232d0d341d651155cb962d1bd0321ccfdcdc6497100e",
+    "PMO-PROVENANCE.json": "5971658cd42fa70c919a1f91d0a388308cff44cfeb440a2c5359b7ed1c80edb1",
+    "calendar-integer.patch": "1018ff5046d2f7410e341a41fc49f4ade35bdb6a8285cf77b2211c213c0ff68a",
+    "capability.c": "0eaba3e746479e561d3bd54d2b1e3d9fb4f0661463594143a7b637b6e2ed8a08",
+    "chinese-pmo.patch": "5e67e9287d23e9ad72871f4d76217125a0f21159599e667fa6374c88104e51ed",
+    "chinese_pmo_notice.txt": "d019673110105139ddd9428d1d180b53cb18d9af0cdfcdff2752940575e4d076",
+    "exact-plural.patch": "2be2363e68d02b7629991b4747b7a1f239f75e9fbc3f953924e7546c21e036a4",
+    "icu-hebrew-epoch.c": "1c3de5782701c74df8cc701a04099a3cd34d673ccd7d52c0aed04167965931c3",
+    "icu-indian-negative-julian.c": "bfbc735f6b07d49f6d16ae3696d5dcce699779da1e500d5f72306a0786d398c1",
+    "icu-post-source-sha256.json": "df3e2f2303eba277918af157b7b6fdc573888c77d0a17adfd7707de47e789fa5",
+    "icu-public-headers-sha256.json": "3631590aba6584a8c96505466da8f0504e41b79c2e594f86de2edf98701e74c4"
+  },
+  "patch_author": "Yan-Jie Wang",
+  "patch_license": "Unicode-3.0",
+  "patch_upstream_status": "local modifications; no upstream merge asserted",
+  "patched_files": {
+    "source/i18n/astro.cpp": "5988d86638109cccf1452ac2c23b851a0ddc263eed4ce8c987d4149a0d05c890",
+    "source/i18n/astro.h": "542094389d48443ecd0017e82cfa2d4a5b709f5a062ed7dee05e92c820842e07",
+    "source/i18n/chinese_pmo_data.inc": "9b44194e1b9370771934f7ace6e8131fbe5edcb470da1782b61bad1932490c82",
+    "source/i18n/chinese_pmo_notice.txt": "d019673110105139ddd9428d1d180b53cb18d9af0cdfcdff2752940575e4d076",
+    "source/i18n/chnsecal.cpp": "9409aa27b04005c091f8cd2574ba8a339a796282a3fa7a0131f3378d17f973fa",
+    "source/i18n/hebrwcal.cpp": "765052dcb2359043e7f23e6c9c229faf700680692df031edafeeb2bcae2d1697",
+    "source/i18n/indiancal.cpp": "759a37d49be5301b84ae89729aecf4ba7896ecf4cd981ca40deb5e880c3b725d",
+    "source/i18n/number_decimalquantity.h": "c16bb7fb3ede1e6926629b54b7f1425ea102476fdb3cd908444023645afbe06c",
+    "source/i18n/number_pluraloperand.h": "e2d8bf62ad2d4a9f0347e7c3e4caf546db399d0e0f1e8a3e6e71d4be585c9493",
+    "source/i18n/plurrule.cpp": "8797cd0c1a60fb5fa7230e09172680c54a3dc5c05171aa09ba3c6a64dd41be2b"
+  },
+  "patches": [
+    {
+      "name": "exact-plural.patch",
+      "scope": [
+        "source/i18n/number_decimalquantity.h",
+        "source/i18n/number_pluraloperand.h",
+        "source/i18n/plurrule.cpp"
+      ],
+      "sha256": "2be2363e68d02b7629991b4747b7a1f239f75e9fbc3f953924e7546c21e036a4"
+    },
+    {
+      "name": "calendar-integer.patch",
+      "scope": [
+        "source/i18n/hebrwcal.cpp",
+        "source/i18n/indiancal.cpp"
+      ],
+      "sha256": "1018ff5046d2f7410e341a41fc49f4ade35bdb6a8285cf77b2211c213c0ff68a"
+    },
+    {
+      "name": "chinese-pmo.patch",
+      "scope": [
+        "source/i18n/astro.cpp",
+        "source/i18n/astro.h",
+        "source/i18n/chinese_pmo_data.inc",
+        "source/i18n/chinese_pmo_notice.txt",
+        "source/i18n/chnsecal.cpp"
+      ],
+      "sha256": "5e67e9287d23e9ad72871f4d76217125a0f21159599e667fa6374c88104e51ed"
+    }
+  ],
+  "prepared_date": "2026-10-09",
+  "provider_identity": "ICU 78.3 + local private exact plural + Hebrew/Indian integer corrections + ICU-owned Chinese PMO + coherence + cross-range repair",
+  "release": "ICU 78.3",
+  "release_archive_provenance_receipt_sha256": "dd58e038b11691b0e64311dfb37bf3cda6230e7fbfa26e2f1a2acdc879d9e631",
+  "release_date": "2026-03-17",
+  "release_tag_revision_receipt_sha256": "22aa69ba5b9fde2b844d6937a16252aa3cd03a569c4938d31aaa6bd7ef3b780c",
+  "revision": "21d1eb0f306e1141c10931e914dfc038c06121da",
+  "source_identity_kind": "pinned release archive plus three exact local patches",
+  "source_revision_provenance": "Existing release archive/tag receipts bind the release revision; no Git revision is inferred from tar contents",
+  "temporal_specification": {
+    "commit_date": "2026-09-09",
+    "file": "temporal/abstractops.emu",
+    "reviewed_date": "2026-10-09",
+    "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+    "sha256": "5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6",
+    "source": "https://github.com/tc39/ecma262/pull/3966",
+    "stable_anchor": "sec-calendarisotodate"
+  },
+  "upstream_license": "Unicode-3.0",
+  "upstream_license_sha256": "e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af"
+}
