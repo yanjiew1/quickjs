@@ -219,3 +219,24 @@ test_arrow_function();
 test_with();
 test_eval_closure();
 test_eval_const();
+
+function test_optional_call_cleanup()
+{
+    for (var spread of [false, true]) {
+        var events = [];
+        var make = Function("events",
+            "return function*() { try { with({ f(x) { return x; } }) { " +
+            "return f?.(" + (spread ? "...[yield 1]" : "yield 1") +
+            "); } } finally { events.push(1); } };");
+        var iter = make(events)();
+        var step = iter.next();
+        assert(step.value, 1);
+        assert(step.done, false);
+        step = iter.return(7);
+        assert(step.value, 7);
+        assert(step.done, true);
+        assert(events.join(), "1");
+    }
+}
+
+test_optional_call_cleanup();
