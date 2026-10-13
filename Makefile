@@ -580,6 +580,7 @@ C_TESTS=tests/test_api$(EXE) tests/test_bytecode$(EXE) tests/test_cutils$(EXE) \
         tests/test_unicode$(EXE) tests/test_bytecode_trace$(EXE) \
         tests/test_typed_array$(EXE) tests/test_allocator$(EXE)
 C_TESTS+=tests/test_qjsc_context_failures$(EXE)
+C_TESTS+=tests/test_qjsc_json_preload$(EXE)
 
 C_TESTS+=tests/test_iterator$(EXE)
 C_TESTS+=tests/test_allocator_policy$(EXE)
@@ -645,6 +646,9 @@ tests/test_native_jobs$(EXE): $(OBJDIR)/tests/test_native_jobs.o libquickjs$(LTO
 tests/test_wait_async$(EXE): $(OBJDIR)/tests/test_wait_async.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_qjsc_json_preload$(EXE): $(OBJDIR)/tests/test_qjsc_json_preload.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -679,6 +683,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_iterator$(EXE)
 	$(WINE) ./tests/test_allocator_policy$(EXE)
+	$(WINE) ./tests/test_qjsc_json_preload$(EXE)
 	$(WINE) ./tests/test_qjsc_context_failures$(EXE)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
 	$(WINE) ./tests/test_worker_context_failure$(EXE)
@@ -702,6 +707,10 @@ test-run-test262: run-test262$(EXE)
 	sh tests/test_run_test262.sh "$(WINE)" "./run-test262$(EXE)"
 
 test: test-c test-regexp test-build-dependencies test-run-test262
+
+.PHONY: test-qjsc-json-preloads
+test-qjsc-json-preloads: tests/test_qjsc_json_preload$(EXE)
+	$(WINE) ./tests/test_qjsc_json_preload$(EXE)
 
 .PHONY: test-qjs-cli
 test-qjs-cli: qjs$(EXE)
