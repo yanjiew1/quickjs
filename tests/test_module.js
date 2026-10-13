@@ -303,3 +303,7 @@ function test_module_local_const_reference()
 }
 
 test_module_local_const_reference();
+
+import { usingModuleEvents, usingModuleResource } from "./fixture_using_module.js";
+assert(usingModuleEvents.join(","), "evaluated,disposed");
+assert(typeof usingModuleResource[Symbol.dispose], "function");
