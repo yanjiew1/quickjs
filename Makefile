@@ -1574,3 +1574,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-plural-rules.o
 
 # relative frontend sources remain disabled until coherent Intl activation.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-relative-time-format.o
+
+# display frontend sources remain disabled until coherent Intl activation.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-display-names.o
