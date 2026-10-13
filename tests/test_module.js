@@ -74,7 +74,61 @@ function test_module_const_write_tdz()
     assertThrows(ReferenceError, () => uninitializedImport);
 }
 
+function test_imported_write_references()
+{
+    let effects = 0;
+    assertThrows(TypeError, () => { uninitializedImport = ++effects; });
+    assert(effects, 1);
+    assertThrows(TypeError, () => { [uninitializedImport] = [++effects]; });
+    assert(effects, 2);
+    assertThrows(TypeError, () => {
+        class C { [uninitializedImport = ++effects]() {} }
+    });
+    assert(effects, 3);
+    assertThrows(ReferenceError, () => { uninitializedImport += ++effects; });
+    assertThrows(ReferenceError, () => { uninitializedImport ||= ++effects; });
+    assertThrows(ReferenceError, () => { uninitializedImport &&= ++effects; });
+    assertThrows(ReferenceError, () => { uninitializedImport ??= ++effects; });
+    assert(effects, 3);
+
+    update(1);
+    effects = 0;
+    assert(imported ||= ++effects, 1);
+    assert(imported ??= ++effects, 1);
+    assert(effects, 0);
+    assertThrows(TypeError, () => { imported &&= ++effects; });
+    assert(effects, 1);
+    assert(imported, 1);
+    assertThrows(TypeError, () => { imported = ++effects; });
+    assert(effects, 2);
+    assert(imported, 1);
+    assertThrows(TypeError, () => { imported += ++effects; });
+    assert(effects, 3);
+    assert(imported, 1);
+    assertThrows(TypeError, () => { [imported] = [7]; });
+    assertThrows(TypeError, () => { ({ value: imported } = { value: 7 }); });
+    assert(imported, 1);
+    assertThrows(TypeError, () => {
+        ({ value: imported = ++effects } = {});
+    });
+    assert(effects, 4);
+    assertThrows(TypeError, () => {
+        class C { [imported = ++effects]() {} }
+    });
+    assert(effects, 5);
+    assert(imported, 1);
+
+    const order = [];
+    const original = { valueOf() { order.push("convert"); return 1; } };
+    update(original);
+    assertThrows(TypeError, () => { imported += (order.push("rhs"), 2); });
+    assert(order.join(","), "rhs,convert");
+    assert(imported, original);
+    update(0);
+}
+
 test_module_const_write_tdz();
+test_imported_write_references();
 export const module_const_write_tdz = 1;
 
 function test_namespace_set(ns, export_name, initialized)

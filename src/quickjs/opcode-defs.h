@@ -268,7 +268,7 @@ DEF(  delete_strict, 1, 2, 1, none)
 DEF(    eval_strict, 5, 1, 1, npop_u16)
 DEF(apply_eval_strict, 3, 2, 1, u16)
 
-DEF(define_field_ro, 5, 2, 1, atom) /* immutable function name reference */
+DEF(define_field_ro, 5, 2, 1, atom) /* immutable binding reference */
 
 DEF(            nop, 1, 0, 0, none)
 
