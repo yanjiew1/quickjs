@@ -140,3 +140,6 @@ __pycache__/
 /tests/test_timezone.exe
 /tests/test_timezone_system_reader
 /tests/test_timezone_system_reader.exe
+
+/tests/test_temporal_zones
+/tests/test_temporal_zones.exe

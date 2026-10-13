@@ -640,6 +640,7 @@ C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
 C_TESTS+=tests/test_temporal_format$(EXE)
 C_TESTS+=tests/test_temporal_duration_math$(EXE)
+C_TESTS+=tests/test_temporal_zones$(EXE)
 C_TESTS+=tests/test_temporal_calendars$(EXE)
 C_TESTS+=tests/test_temporal_native_calendars$(EXE)
 CALENDAR_TEST_SRCS=tests/test_calendar_portable.c tests/test_calendar_persian_authority.c tests/test_calendar_integrated_authority.c
@@ -797,6 +798,7 @@ endif
 	$(WINE) ./tests/test_temporal$(EXE)
 	$(WINE) ./tests/test_temporal_format$(EXE)
 	$(WINE) ./tests/test_temporal_duration_math$(EXE)
+	$(WINE) ./tests/test_temporal_zones$(EXE)
 	$(WINE) ./tests/test_temporal_calendars$(EXE)
 	$(WINE) ./tests/test_temporal_native_calendars$(EXE)
 	$(WINE) ./tests/test_calendar_portable$(EXE)
@@ -1158,3 +1160,8 @@ tests/test_timezone$(EXE): $(OBJDIR)/tests/test_timezone.o libqjstimezone.a
 $(OBJDIR)/tests/test_timezone_system_reader.o: src/timezone/timezone.c src/timezone/private.h src/timezone/timezone.h
 tests/test_timezone_system_reader$(EXE): $(OBJDIR)/tests/test_timezone_system_reader.o $(OBJDIR)/src/timezone/tzif.o $(OBJDIR)/src/timezone/embedded.o $(filter %/windows-zone.o,$(TIMEZONE_OBJS))
 	$(CC) $(LDFLAGS) -o $@ $^ -lm
+
+TEMPORAL_TIMEZONE_SRCS=src/temporal/time-zone.c
+TEMPORAL_TIMEZONE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_TIMEZONE_SRCS))
+tests/test_temporal_zones$(EXE): $(OBJDIR)/tests/test_temporal_zones.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS) $(TEMPORAL_FORMAT_OBJS) $(TEMPORAL_TIMEZONE_OBJS) libqjstimezone.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
