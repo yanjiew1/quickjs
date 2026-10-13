@@ -50,3 +50,9 @@ libwinpthread*.dll
 
 /tests/test_cutils
 /tests/test_cutils.exe
+
+/tests/test_bytecode
+/tests/test_bytecode.exe
+
+/tests/test_bytecode_trace
+/tests/test_bytecode_trace.exe
