@@ -202,6 +202,29 @@ function bjson_test_reference()
     }
 }
 
+function bjson_test_tracking_typed_array()
+{
+    const buffer = new ArrayBuffer(4, { maxByteLength: 8 });
+    const tracking = new Uint8Array(buffer);
+    const offsetTracking = new Uint8Array(buffer, 2);
+    const fixed = new Uint8Array(buffer, 1, 1);
+    tracking.set([1, 2, 3, 4]);
+    const encoded = bjson.write({ buffer, tracking, offsetTracking, fixed }, true);
+    const copy = bjson.read(encoded, 0, encoded.byteLength, true);
+    assert(copy.tracking.buffer === copy.buffer);
+    assert(copy.offsetTracking.buffer === copy.buffer);
+    assert(copy.fixed.buffer === copy.buffer);
+    copy.buffer.resize(8);
+    assert(copy.tracking.length, 8);
+    assert(copy.offsetTracking.length, 6);
+    assert(copy.offsetTracking.byteOffset, 2);
+    assert(copy.fixed.length, 1);
+    assert(copy.fixed.byteOffset, 1);
+    assert(copy.tracking[7], 0);
+    assert(buffer.byteLength, 4);
+    assert(tracking.length, 4);
+}
+
 function bjson_test_all()
 {
     var obj;
@@ -243,6 +266,7 @@ function bjson_test_all()
     bjson_test_empty_input();
     bjson_test_arraybuffer();
     bjson_test_reference();
+    bjson_test_tracking_typed_array();
 }
 
 bjson_test_all();
