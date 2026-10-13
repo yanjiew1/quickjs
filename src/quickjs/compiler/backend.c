@@ -1610,6 +1610,8 @@ static void instantiate_hoisted_definitions(JSContext *ctx, JSFunctionDef *s, Dy
         for(idx = 0; idx < s->closure_var_count; idx++) {
             JSClosureVar *cv = &s->closure_var[idx];
             if (cv->var_name == hf->var_name) {
+                if (!hf->is_lexical && cv->var_kind == JS_VAR_CATCH)
+                    continue;
                 force_init = FALSE;
                 goto closure_found;
             }
