@@ -2261,6 +2261,18 @@ function test_iterator_reduce_close()
     assert(closes, 2);
 }
 
+function test_iterator_constructor_identity()
+{
+    assert_throws(TypeError, () => Iterator());
+    assert_throws(TypeError, () => new Iterator());
+    assert_throws(TypeError, () => Reflect.construct(Iterator, [], Iterator));
+    class Derived extends Iterator {}
+    assert(Object.getPrototypeOf(new Derived()), Derived.prototype);
+    const target = new Proxy(Iterator, {});
+    const value = Reflect.construct(Iterator, [], target);
+    assert(Object.getPrototypeOf(value), Iterator.prototype);
+}
+
 function test_iterator_limits()
 {
     for (const limit of [Number.MAX_SAFE_INTEGER, Infinity]) {
@@ -2682,6 +2694,7 @@ test_iterator_flatmap_close();
 test_iterator_helper_acquisition();
 test_iterator_reduce_close();
 test_iterator_limits();
+test_iterator_constructor_identity();
 test_weak_map();
 test_weak_map_cycles();
 test_weak_ref();
