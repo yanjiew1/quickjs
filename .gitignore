@@ -244,3 +244,15 @@ __pycache__/
 
 /tests/test_intl_native_segmenter_oom
 /tests/test_intl_native_segmenter_oom.exe
+
+/tests/test_intl_native_number_oom
+/tests/test_intl_native_number_oom.exe
+
+/tests/test_intl_native_plural_oom
+/tests/test_intl_native_plural_oom.exe
+
+/tests/test_intl_native_relative_oom
+/tests/test_intl_native_relative_oom.exe
+
+/tests/test_intl_native_duration_oom
+/tests/test_intl_native_duration_oom.exe
