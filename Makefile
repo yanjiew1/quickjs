@@ -1120,6 +1120,10 @@ ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_display_oom$(EXE)
 endif
 
+ifeq ($(CONFIG_INTL_NATIVE),y)
+C_TESTS+=tests/test_intl_native_timezone_runtime$(EXE)
+endif
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1129,6 +1133,9 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+ifeq ($(CONFIG_INTL_NATIVE),y)
+	$(WINE) ./tests/test_intl_native_timezone_runtime$(EXE)
+endif
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_native_display_oom$(EXE)
 endif
@@ -2074,4 +2081,7 @@ tests/test_intl_native_duration_oom$(EXE): $(OBJDIR)/tests/test_intl_native_dura
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_native_display_oom$(EXE): $(OBJDIR)/tests/test_intl_native_display_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_timezone_runtime$(EXE): $(OBJDIR)/tests/test_intl_native_timezone_runtime.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

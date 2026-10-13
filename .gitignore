@@ -259,3 +259,6 @@ __pycache__/
 
 /tests/test_intl_native_display_oom
 /tests/test_intl_native_display_oom.exe
+
+/tests/test_intl_native_timezone_runtime
+/tests/test_intl_native_timezone_runtime.exe
