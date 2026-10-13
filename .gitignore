@@ -164,5 +164,8 @@ __pycache__/
 /tests/test_intl_decimal
 /tests/test_intl_decimal.exe
 
+/tests/test_intl_plural
+/tests/test_intl_plural.exe
+
 /tests/run_temporal_zone_test
 /tests/run_temporal_zone_test.exe

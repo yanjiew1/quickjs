@@ -693,6 +693,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 C_TESTS+=tests/test_temporal_runtime_zone_provider$(EXE) tests/test_temporal_system_clock$(EXE)
 endif
 C_TESTS+=tests/test_default_time_zone_api$(EXE)
+C_TESTS+=tests/test_intl_plural$(EXE)
 C_TESTS+=tests/test_intl_decimal$(EXE) tests/test_intl_native_relative_decimal$(EXE)
 C_TESTS+=tests/test_temporal_civil$(EXE)
 C_TESTS+=tests/test_temporal_zones$(EXE)
@@ -859,6 +860,7 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./tests/test_temporal_system_clock$(EXE)
 endif
 	$(WINE) ./tests/test_default_time_zone_api$(EXE)
+	$(WINE) ./tests/test_intl_plural$(EXE)
 	$(WINE) ./tests/test_intl_decimal$(EXE)
 	$(WINE) ./tests/test_intl_native_relative_decimal$(EXE)
 	$(WINE) ./tests/test_temporal_civil$(EXE)
@@ -1306,6 +1308,9 @@ tests/test_intl_native_relative_decimal$(EXE): $(OBJDIR)/tests/test_intl_native_
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_decimal$(EXE): $(OBJDIR)/tests/test_intl_decimal.o $(OBJDIR)/src/intl/decimal.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_plural$(EXE): $(OBJDIR)/tests/test_intl_plural.o $(OBJDIR)/src/intl/plural.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Set IANA TZ inside a native process; MSYS2 strips it from child environments.
