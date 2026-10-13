@@ -263,6 +263,7 @@ DEF(TypeError, "TypeError")
 DEF(URIError, "URIError")
 DEF(InternalError, "InternalError")
 DEF(AggregateError, "AggregateError")
+DEF(SuppressedError, "SuppressedError")
 /* private symbols */
 DEF(Private_brand, "<brand>")
 /* symbols */

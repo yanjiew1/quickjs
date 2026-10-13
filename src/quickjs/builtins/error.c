@@ -1,5 +1,5 @@
 /*
- * QuickJS Error and AggregateError builtins
+ * QuickJS Error builtins
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
@@ -103,18 +103,20 @@ JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
     JS_FreeValue(ctx, proto);
     if (JS_IsException(obj))
         return obj;
-    arg_index = (magic == JS_AGGREGATE_ERROR);
+    arg_index = magic == JS_SUPPRESSED_ERROR ? 2 :
+        (magic == JS_AGGREGATE_ERROR);
 
     message = argv[arg_index++];
     if (!JS_IsUndefined(message)) {
         msg = JS_ToString(ctx, message);
         if (unlikely(JS_IsException(msg)))
             goto exception;
-        JS_DefinePropertyValue(ctx, obj, JS_ATOM_message, msg,
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_message, msg,
+                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+            goto exception;
     }
 
-    if (arg_index < argc) {
+    if (magic != JS_SUPPRESSED_ERROR && arg_index < argc) {
         options = argv[arg_index];
         if (JS_IsObject(options)) {
             int present = JS_HasProperty(ctx, options, JS_ATOM_cause);
@@ -136,6 +138,16 @@ JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
             goto exception;
         JS_DefinePropertyValue(ctx, obj, JS_ATOM_errors, error_list,
                                JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    }
+
+    if (magic == JS_SUPPRESSED_ERROR) {
+        if (JS_DefinePropertyValueStr(ctx, obj, "error",
+                                     JS_DupValue(ctx, argv[0]),
+                                     JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
+            JS_DefinePropertyValueStr(ctx, obj, "suppressed",
+                                     JS_DupValue(ctx, argv[1]),
+                                     JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+            goto exception;
     }
 
     /* skip the Error() function in the backtrace */
@@ -197,6 +209,7 @@ const JSCFunctionListEntry js_native_error_proto_funcs[] = {
     DEF(JS_ATOM_URIError)
     DEF(JS_ATOM_InternalError)
     DEF(JS_ATOM_AggregateError)
+    DEF(JS_ATOM_SuppressedError)
 #undef DEF
 };
 
@@ -228,3 +241,25 @@ JSValue js_aggregate_error_constructor(JSContext *ctx,
     return obj;
 }
 
+
+/* DisposeResources uses the intrinsic error prototype directly. */
+JSValue js_new_suppressed_error(JSContext *ctx, JSValueConst error,
+                                JSValueConst suppressed)
+{
+    JSValue obj;
+
+    obj = JS_NewObjectProtoClass(ctx,
+                                ctx->native_error_proto[JS_SUPPRESSED_ERROR],
+                                JS_CLASS_ERROR);
+    if (JS_IsException(obj))
+        return obj;
+    if (JS_DefinePropertyValueStr(ctx, obj, "error", JS_DupValue(ctx, error),
+                                 JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
+        JS_DefinePropertyValueStr(ctx, obj, "suppressed",
+                                 JS_DupValue(ctx, suppressed),
+                                 JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0) {
+        JS_FreeValue(ctx, obj);
+        return JS_EXCEPTION;
+    }
+    return obj;
+}
