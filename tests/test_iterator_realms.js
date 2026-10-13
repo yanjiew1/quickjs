@@ -334,11 +334,96 @@ function test_iterator_concat_creation_realm()
     std.gc();
 }
 
+function test_iterator_buffer_creation_realm()
+{
+    const result = run_in_realms(function () {
+        const realms = [globalThis, foreign];
+        function check(actual, expected, message) {
+            if (actual !== expected) throw Error(message);
+        }
+        for (let index = 0; index < realms.length; index++) {
+            const creator = realms[index], caller = realms[1 - index];
+            const borrowed = Object.getPrototypeOf(caller.Iterator.from([]).map(x => x));
+            const next = borrowed.next, close = borrowed.return;
+            const makers = [
+                source => creator.Iterator.prototype.chunks.call(source, 2),
+            ];
+            for (const make of makers) {
+                let advances = 0, closes = 0;
+                function source(length) {
+                    let position = 0;
+                    return {
+                        next() {
+                            advances++;
+                            return position < length ? { value: ++position } : { done: true };
+                        },
+                        return() { closes++; return {}; },
+                    };
+                }
+                let helper = make(source(3));
+                Object.setPrototypeOf(helper, null);
+                let result = next.call(helper);
+                check(Object.getPrototypeOf(result), creator.Object.prototype,
+                      "buffer result uses creator realm");
+                check(Object.getPrototypeOf(result.value), creator.Array.prototype,
+                      "buffer row uses creator realm");
+                check(result.value.join(), "1,2", "buffer has first two values");
+                const second = next.call(helper);
+                check(Object.getPrototypeOf(second), creator.Object.prototype,
+                      "resumed buffer result uses creator realm");
+                check(Object.getPrototypeOf(second.value), creator.Array.prototype,
+                      "resumed buffer row uses creator realm");
+                check(next.call(helper).done, true, "buffer completes");
+                check(Object.getPrototypeOf(next.call(helper)), caller.Object.prototype,
+                      "completed buffer next uses method realm");
+                check(Object.getPrototypeOf(close.call(helper)), caller.Object.prototype,
+                      "completed buffer return uses method realm");
+                check(closes, 0, "natural exhaustion does not close");
+
+                helper = make(source(4));
+                const before = advances;
+                check(Object.getPrototypeOf(close.call(helper)), caller.Object.prototype,
+                      "buffer return before start uses method realm");
+                check(advances, before, "early return does not advance source");
+                check(closes, 1, "early return closes source once");
+
+                helper = make(source(4));
+                next.call(helper);
+                check(Object.getPrototypeOf(close.call(helper)), creator.Object.prototype,
+                      "buffer active return uses creator realm");
+                check(closes, 2, "active return closes source once");
+                check(Object.getPrototypeOf(close.call(helper)), caller.Object.prototype,
+                      "buffer completed return uses method realm");
+
+                helper = make({ next: null });
+                let caught = false;
+                try { next.call(helper); } catch (error) {
+                    caught = true;
+                    check(Object.getPrototypeOf(error), creator.TypeError.prototype,
+                          "buffer protocol TypeError uses creator realm");
+                }
+                check(caught, true, "bad cached next throws");
+                check(Object.getPrototypeOf(next.call(helper)), caller.Object.prototype,
+                      "buffer completion after failure uses method realm");
+
+                helper = make(source(3));
+                helper.contextGlobal = creator;
+                creator.__bufferRealmCycle = helper;
+                next.call(helper);
+            }
+        }
+        return true;
+    });
+    check(result, true, "iterator_buffer_creation_realm");
+    std.gc();
+}
+
 export function test_iterator_realms()
 {
     test_native_iterator_next_realm();
     test_iterator_helper_creation_realm();
     test_iterator_concat_creation_realm();
+    test_iterator_buffer_creation_realm();
     test_iterator_constructor_realm();
 }
 
