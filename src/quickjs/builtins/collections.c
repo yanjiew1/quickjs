@@ -628,6 +628,7 @@ JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
     JSValue res, iter, next, groups, key, v, prop;
     JSAtom key_atom = JS_ATOM_NULL;
     int64_t idx;
+    uint32_t len;
     BOOL done;
 
     // "is function?" check must be observed before argv[0] is accessed
@@ -706,10 +707,15 @@ JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
                 }
             }
         }
-        res = js_array_push(ctx, prop, 1, (JSValueConst *)&v, /*unshift*/0);
-        if (JS_IsException(res))
+        if (js_get_length32(ctx, &len, prop))
             goto exception;
-        // res is an int64
+        if (len == UINT32_MAX) {
+            JS_ThrowRangeError(ctx, "invalid array length");
+            goto exception;
+        }
+        if (JS_DefinePropertyValueUint32(ctx, prop, len, JS_DupValue(ctx, v),
+                                         JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto exception;
 
         JS_FreeValue(ctx, prop);
         JS_FreeValue(ctx, key);
