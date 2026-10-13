@@ -550,7 +550,7 @@ static JSResolveResultEnum js_resolve_export1(JSContext *ctx,
             /* indirect export */
             JSModuleDef *m1;
             m1 = m->req_module_entries[me->u.req_module_idx].module;
-            if (me->local_name == JS_ATOM__star_) {
+            if (me->export_type == JS_EXPORT_TYPE_NAMESPACE) {
                 /* export ns from */
                 *pmodule = m;
                 *pme = me;
@@ -579,15 +579,17 @@ static JSResolveResultEnum js_resolve_export1(JSContext *ctx,
                     return ret;
                 } else if (ret == JS_RESOLVE_RES_FOUND) {
                     if (*pme != NULL) {
-                        if (res_me->local_name != (*pme)->local_name)
+                        if ((res_me->export_type == JS_EXPORT_TYPE_NAMESPACE) !=
+                            ((*pme)->export_type == JS_EXPORT_TYPE_NAMESPACE))
                             goto ambiguous_result;
-                        if ((*pme)->local_name == JS_ATOM__star_) {
+                        if ((*pme)->export_type == JS_EXPORT_TYPE_NAMESPACE) {
                             /* namespace exports: compare target modules */
                             JSModuleDef *target_m1 = (*pmodule)->req_module_entries[(*pme)->u.req_module_idx].module;
                             JSModuleDef *target_m2 = res_m->req_module_entries[res_me->u.req_module_idx].module;
                             if (target_m1 != target_m2)
                                 goto ambiguous_result;
-                        } else if (*pmodule != res_m) {
+                        } else if (*pmodule != res_m ||
+                                   res_me->local_name != (*pme)->local_name) {
                         ambiguous_result:
                             *pmodule = NULL;
                             *pme = NULL;
@@ -793,7 +795,7 @@ JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
         js_resolve_export_throw_error(ctx, res, m, atom);
         return JS_EXCEPTION;
     }
-    if (res_me->local_name == JS_ATOM__star_) {
+    if (res_me->export_type == JS_EXPORT_TYPE_NAMESPACE) {
         return JS_GetModuleNamespace(ctx, res_m->req_module_entries[res_me->u.req_module_idx].module);
     } else {
         if (res_me->u.local.var_ref) {
@@ -848,7 +850,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
             }
             en->export_type = EXPORTED_NAME_AMBIGUOUS;
         } else {
-            if (res_me->local_name == JS_ATOM__star_) {
+            if (res_me->export_type == JS_EXPORT_TYPE_NAMESPACE) {
                 en->export_type = EXPORTED_NAME_DELAYED;
             } else {
                 if (res_me->u.local.var_ref) {
@@ -1085,8 +1087,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
     /* check the indirect exports */
     for(i = 0; i < m->export_entries_count; i++) {
         JSExportEntry *me = &m->export_entries[i];
-        if (me->export_type == JS_EXPORT_TYPE_INDIRECT &&
-            me->local_name != JS_ATOM__star_) {
+        if (me->export_type == JS_EXPORT_TYPE_INDIRECT) {
             JSResolveResultEnum ret;
             JSExportEntry *res_me;
             JSModuleDef *res_m, *m1;
@@ -1147,7 +1148,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                     js_resolve_export_throw_error(ctx, ret, m1, mi->import_name);
                     goto fail;
                 }
-                if (res_me->local_name == JS_ATOM__star_) {
+                if (res_me->export_type == JS_EXPORT_TYPE_NAMESPACE) {
                     JSValue val;
                     JSModuleDef *m2;
                     /* name space import from */
