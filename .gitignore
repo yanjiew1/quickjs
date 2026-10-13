@@ -57,3 +57,5 @@ libwinpthread*.dll
 
 /tests/test_allocator
 /tests/test_allocator.exe
+/tests/test_qjsc_context_failures
+/tests/test_qjsc_context_failures.exe
