@@ -36,6 +36,12 @@
 #include <ftw.h>
 #include <stdatomic.h>
 #include <pthread.h>
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+#define RUN_TEST262_MSAN
+#endif
+#endif
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -500,6 +506,10 @@ void namelist_free(namelist_t *lp)
 static int add_test_file(const char *filename, const struct stat *ptr, int flag)
 {
     namelist_t *lp = &test_list;
+#ifdef RUN_TEST262_MSAN
+    /* ftw initializes this string in libc without updating MSan shadow. */
+    __msan_unpoison_string(filename);
+#endif
     if (has_suffix(filename, ".js") && !has_suffix(filename, "_FIXTURE.js"))
         namelist_add(lp, NULL, filename);
     return 0;
