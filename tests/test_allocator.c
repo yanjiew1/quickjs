@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "../src/quickjs/internal/allocator.h"
+#include "../src/quickjs/internal/runtime.h"
 
 static void test_malloc_limit_overflow(void)
 {
@@ -66,9 +67,36 @@ static void test_realloc_limit_overflow(void)
     assert(state.malloc_size == 0 && state.malloc_count == 0);
 }
 
+static void test_gc_accounting_overflow(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    size_t allocated;
+
+    assert(rt);
+    allocated = rt->malloc_ctx.malloc_state.malloc_size;
+#ifndef FORCE_GC_AT_MALLOC
+    rt->malloc_gc_threshold = SIZE_MAX;
+    js_trigger_gc(rt, 1);
+    assert(rt->malloc_gc_threshold == SIZE_MAX);
+    rt->malloc_gc_threshold = allocated;
+    js_trigger_gc(rt, 0);
+    assert(rt->malloc_gc_threshold == allocated);
+#endif
+    rt->malloc_ctx.malloc_state.malloc_size = SIZE_MAX - 128;
+    rt->malloc_gc_threshold = SIZE_MAX - 64;
+    js_trigger_gc(rt, 256);
+    assert(rt->malloc_gc_threshold == SIZE_MAX);
+    rt->malloc_ctx.malloc_state.malloc_size = allocated;
+    rt->malloc_gc_threshold = 0;
+    js_trigger_gc(rt, 1);
+    assert(rt->malloc_gc_threshold == allocated + (allocated >> 1));
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     test_malloc_limit_overflow();
     test_realloc_limit_overflow();
+    test_gc_accounting_overflow();
     return 0;
 }
