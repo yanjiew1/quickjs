@@ -49,8 +49,7 @@ JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint)
         method = JS_GetProperty(ctx, val, JS_ATOM_Symbol_toPrimitive);
         if (JS_IsException(method))
             goto exception;
-        /* ECMA says *If exoticToPrim is not undefined* but tests in
-           test262 use null as a non callable converter */
+        /* GetMethod treats null and undefined as an absent method. */
         if (!JS_IsUndefined(method) && !JS_IsNull(method)) {
             JSAtom atom;
             JSValue arg;
