@@ -609,6 +609,7 @@ C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 C_TESTS+=tests/test_wait_async$(EXE)
 C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
+C_TESTS+=tests/test_temporal_epoch$(EXE)
 
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
@@ -750,6 +751,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_wait_async$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
+	$(WINE) ./tests/test_temporal_epoch$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
@@ -989,4 +991,11 @@ tests/test_fuzz_allocations$(EXE): $(OBJDIR)/tests/test_fuzz_allocations.o $(OBJ
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_fuzz_regexp_timeout$(EXE): $(OBJDIR)/tests/test_fuzz_regexp_timeout.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# Native Temporal arithmetic is tested before frontend activation.
+TEMPORAL_ARITHMETIC_SRCS=src/temporal/epoch.c src/temporal/options.c
+TEMPORAL_ARITHMETIC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_ARITHMETIC_SRCS))
+
+tests/test_temporal_epoch$(EXE): $(OBJDIR)/tests/test_temporal_epoch.o $(TEMPORAL_ARITHMETIC_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
