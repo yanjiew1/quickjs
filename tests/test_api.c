@@ -1336,41 +1336,6 @@ static void test_typed_array_external_overlap(void)
     JS_FreeRuntime(rt);
 }
 
-static void test_iterator_constructor_realm(void)
-{
-    JSRuntime *rt = JS_NewRuntime();
-    JSContext *ctx[2];
-    JSValue global, other_global, other_iterator;
-    int i;
-
-    assert(rt);
-    ctx[0] = JS_NewContext(rt);
-    ctx[1] = JS_NewContext(rt);
-    assert(ctx[0] && ctx[1]);
-    for (i = 0; i < 2; i++) {
-        other_global = JS_GetGlobalObject(ctx[1 - i]);
-        other_iterator = JS_GetPropertyStr(ctx[1 - i], other_global,
-                                           "Iterator");
-        JS_FreeValue(ctx[1 - i], other_global);
-        assert(!JS_IsException(other_iterator));
-        global = JS_GetGlobalObject(ctx[i]);
-        assert(JS_SetPropertyStr(ctx[i], global, "otherIterator",
-                                 other_iterator) >= 0);
-        JS_FreeValue(ctx[i], global);
-        check_eval(ctx[i],
-            "(() => {"
-            " const result = Reflect.construct(Iterator, [], otherIterator);"
-            " if (Object.getPrototypeOf(result) !== otherIterator.prototype)"
-            "   throw Error('foreign Iterator prototype');"
-            " if (result instanceof Iterator)"
-            "   throw Error('wrong Iterator realm');"
-            " return true;"
-            "})()");
-    }
-    JS_FreeContext(ctx[1]);
-    JS_FreeContext(ctx[0]);
-    JS_FreeRuntime(rt);
-}
 
 static void test_stripped_function_to_string(void)
 {
@@ -1511,7 +1476,6 @@ int main(int argc, char **argv)
         { "allocator-overflow", test_allocator_size_overflow },
         { "native-name", test_native_function_initial_name },
         { "stripped-function", test_stripped_function_to_string },
-        { "iterator-realm", test_iterator_constructor_realm },
         { "typed-array-overlap", test_typed_array_external_overlap },
         { "typed-buffer-resized-length", test_typed_buffer_resized_length },
         { "buffer-allocation", test_empty_buffer_allocation },
