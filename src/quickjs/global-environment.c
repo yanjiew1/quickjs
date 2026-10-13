@@ -24,6 +24,7 @@
  */
 #include "internal/global-environment.h"
 #include "internal/atom.h"
+#include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
 #include "internal/gc.h"
@@ -98,7 +99,8 @@ int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags)
     return 0;
 }
 
-/* construct a reference to a global variable */
+/* The private lexical object also identifies the Global Environment
+   Record. Select its current subrecord when the reference is used. */
 int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
 {
     JSObject *p;
@@ -112,16 +114,30 @@ int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
         sp[0] = JS_DupValue(ctx, ctx->global_var_obj);
     } else {
         int ret;
-        ret = JS_HasProperty(ctx, ctx->global_obj, prop);
-        if (ret < 0)
-            return -1;
+        p = JS_VALUE_GET_OBJ(ctx->global_obj);
+        prs = find_own_property(&pr, p, prop);
+        if (!p->is_exotic && prs &&
+            ((prs->flags & JS_PROP_TMASK) != JS_PROP_VARREF ||
+             !JS_IsUninitialized(*pr->u.var_ref->pvalue))) {
+            ret = TRUE;
+        } else {
+            ret = JS_HasProperty(ctx, ctx->global_obj, prop);
+            if (ret < 0)
+                return -1;
+        }
         if (ret) {
-            sp[0] = JS_DupValue(ctx, ctx->global_obj);
+            sp[0] = JS_DupValue(ctx, ctx->global_var_obj);
         } else {
             sp[0] = JS_UNDEFINED;
         }
     }
-    sp[1] = JS_AtomToValue(ctx, prop);
+    if (!__JS_AtomIsTaggedInt(prop) &&
+        ctx->rt->atom_array[prop]->atom_type == JS_ATOM_TYPE_STRING) {
+        sp[1] = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING,
+                                        ctx->rt->atom_array[prop]));
+    } else {
+        sp[1] = JS_AtomToValue(ctx, prop);
+    }
     return 0;
 }
 

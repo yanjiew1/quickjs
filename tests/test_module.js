@@ -240,6 +240,24 @@ assertThrows(TypeError, () => { selfNamespace.namespace_set_reexport = 7; });
 export * as namespace_set_reexport from "./fixture_module.js";
 assert(selfNamespace.namespace_set_reexport, namespace);
 
+function test_module_assignment_references()
+{
+    let effects = 0;
+    assertThrows(ReferenceError, () => { module_reference_const = ++effects; });
+    assert(effects, 1);
+    assertThrows(ReferenceError, () => { module_reference_let = ++effects; });
+    assert(effects, 2);
+}
+
+test_module_assignment_references();
+export const module_reference_const = 1;
+export let module_reference_let = 1;
+assertThrows(TypeError, () => { module_reference_const = 2; });
+assert(module_reference_const, 1);
+module_reference_let += 2;
+assert(module_reference_let, 3);
+
+
 async function test_module_reserved_bindings()
 {
     const invalid = [
@@ -267,3 +285,21 @@ async function test_module_reserved_bindings()
 }
 
 await test_module_reserved_bindings();
+
+const module_local_reference_const = 23;
+function test_module_local_const_reference()
+{
+    let effects = 0;
+    assertThrows(TypeError, () => {
+        module_local_reference_const = (effects++, 24);
+    });
+    assert(effects, 1);
+    assert(module_local_reference_const, 23);
+    assertThrows(TypeError, () => {
+        module_local_reference_const += (effects++, 1);
+    });
+    assert(effects, 2);
+    assert(module_local_reference_const, 23);
+}
+
+test_module_local_const_reference();

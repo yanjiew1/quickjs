@@ -53,6 +53,98 @@
 #endif
 
 
+/* Keep the private global environment marker on the stack. Choose its
+   current subrecord once, before Object Record operations can reenter JS. */
+static inline JSValueConst js_get_reference_base(JSContext *ctx,
+                                                 JSValueConst base, JSAtom atom)
+{
+    if (JS_IsObject(base) &&
+        JS_VALUE_GET_OBJ(base) == JS_VALUE_GET_OBJ(ctx->global_var_obj) &&
+        !find_own_property1(JS_VALUE_GET_OBJ(base), atom))
+        return ctx->global_obj;
+    return base;
+}
+
+/* A reference keeps its base across the RHS. Recheck that base's
+   current own property before using an ordinary value slot. */
+static inline JSValue *js_get_reference_value_slot(JSValueConst base,
+                                                   JSAtom atom, BOOL is_put)
+{
+    JSObject *p;
+    JSShapeProperty *prs;
+    JSProperty *pr;
+    JSVarRef *var_ref;
+
+    if (!JS_IsObject(base))
+        return NULL;
+    p = JS_VALUE_GET_OBJ(base);
+    if (p->is_exotic)
+        return NULL;
+    prs = find_own_property(&pr, p, atom);
+    if (!prs)
+        return NULL;
+    if ((prs->flags & JS_PROP_TMASK) == 0) {
+        if (is_put &&
+            (prs->flags & (JS_PROP_WRITABLE | JS_PROP_LENGTH)) !=
+            JS_PROP_WRITABLE)
+            return NULL;
+        return &pr->u.value;
+    }
+    if ((prs->flags & JS_PROP_TMASK) != JS_PROP_VARREF)
+        return NULL;
+    var_ref = pr->u.var_ref;
+    if (JS_IsUninitialized(*var_ref->pvalue) ||
+        (is_put && var_ref->is_const))
+        return NULL;
+    return var_ref->pvalue;
+}
+
+/* The saved atom string remains owned by the reference on the VM
+   stack until this handler finishes. Avoid creating another atom owner. */
+static inline JSAtom js_get_reference_atom(JSContext *ctx, JSValueConst name,
+                                           BOOL *is_owned)
+{
+    if (JS_VALUE_GET_TAG(name) == JS_TAG_STRING) {
+        JSAtomStruct *p = JS_VALUE_GET_STRING(name);
+        if (p->atom_type == JS_ATOM_TYPE_STRING) {
+            *is_owned = FALSE;
+            return js_get_atom_index(ctx->rt, p);
+        }
+    }
+    *is_owned = TRUE;
+    return JS_ValueToAtom(ctx, name);
+}
+
+/* HasProperty failures leave the value on the caller's VM stack.
+   SetPropertyInternal consumes it even on failure; report that distinction
+   so the existing exception cleanup and reference release stay exact. */
+static no_inline __attribute__((cold)) __exception int
+js_put_reference_slow(JSContext *ctx, JSValueConst base, JSAtom atom,
+                      JSValue value, BOOL is_unresolvable, BOOL strict_opcode,
+                      BOOL *value_consumed)
+{
+    int ret;
+
+    *value_consumed = FALSE;
+    if (!is_unresolvable) {
+        /* An unresolved sloppy reference sets the
+           global object without HasProperty. */
+        ret = JS_HasProperty(ctx, base, atom);
+        if (unlikely(ret <= 0)) {
+            if (unlikely(ret < 0))
+                return -1;
+            if (strict_opcode || is_strict_mode(ctx)) {
+                JS_ThrowReferenceErrorNotDefined(ctx, atom);
+                return -1;
+            }
+        }
+    }
+    *value_consumed = TRUE;
+    return JS_SetPropertyInternal(ctx, base, atom, value, base,
+                                 strict_opcode ? JS_PROP_THROW :
+                                                 JS_PROP_THROW_STRICT);
+}
+
 static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
 {
     JSObject *p;
@@ -2093,6 +2185,10 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                 continue;
             case JS_CLOSURE_MODULE_DECL:
                 var_ref = js_create_var_ref(ctx, cv->is_lexical);
+                if (var_ref) {
+                    var_ref->is_lexical = cv->is_lexical;
+                    var_ref->is_const = cv->is_const;
+                }
                 break;
             case JS_CLOSURE_GLOBAL_DECL:
                 var_ref = js_closure_define_global_var(ctx, cv, b->is_direct_or_indirect_eval);
@@ -3409,6 +3505,38 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
                 sf->cur_pc = pc;
 
+#if SHORT_OPCODES
+                /* Fuse a pure one-byte RHS and discarded store only when
+                   resolving the current own binding cannot call user code.
+                   All other references retain their early capture. */
+                {
+                    int rhs_op = pc[0];
+                    if (((rhs_op >= OP_push_minus1 && rhs_op <= OP_push_7) ||
+                         (rhs_op >= OP_get_loc0 && rhs_op <= OP_get_loc3) ||
+                         (rhs_op >= OP_get_arg0 && rhs_op <= OP_get_arg3)) &&
+                        (pc[1] == OP_put_ref_value ||
+                         pc[1] == OP_put_ref_value_strict)) {
+                        JSValueConst base;
+                        JSValue *pval;
+                        base = js_get_reference_base(ctx, ctx->global_var_obj,
+                                                     atom);
+                        pval = js_get_reference_value_slot(base, atom, TRUE);
+                        if (pval) {
+                            JSValue val;
+                            if (rhs_op >= OP_push_minus1 && rhs_op <= OP_push_7)
+                                val = JS_NewInt32(ctx, rhs_op - OP_push_0);
+                            else if (rhs_op >= OP_get_loc0 && rhs_op <= OP_get_loc3)
+                                val = JS_DupValue(ctx, var_buf[rhs_op - OP_get_loc0]);
+                            else
+                                val = JS_DupValue(ctx, arg_buf[rhs_op - OP_get_arg0]);
+                            pc += 2;
+                            sf->cur_pc = pc;
+                            set_value(ctx, pval, val);
+                            BREAK;
+                        }
+                    }
+                }
+#endif
                 if (JS_GetGlobalVarRef(ctx, atom, sp))
                     goto exception;
                 sp += 2;
@@ -4089,34 +4217,48 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         CASE(OP_get_ref_value):
             {
                 JSValue val;
+                JSValueConst base;
+                JSValue *pval;
                 JSAtom atom;
+                BOOL atom_owned;
                 int ret;
                 
                 sf->cur_pc = pc;
-                atom = JS_ValueToAtom(ctx, sp[-1]);
+                atom = js_get_reference_atom(ctx, sp[-1], &atom_owned);
                 if (atom == JS_ATOM_NULL)
                     goto exception;
                 if (unlikely(JS_IsUndefined(sp[-2]))) {
                     JS_ThrowReferenceErrorNotDefined(ctx, atom);
-                    JS_FreeAtom(ctx, atom);
+                    if (atom_owned)
+                        JS_FreeAtom(ctx, atom);
                     goto exception;
                 }
-                ret = JS_HasProperty(ctx, sp[-2], atom);
+                base = js_get_reference_base(ctx, sp[-2], atom);
+                pval = js_get_reference_value_slot(base, atom, FALSE);
+                if (pval) {
+                    val = JS_DupValue(ctx, *pval);
+                    goto get_ref_value_done;
+                }
+                ret = JS_HasProperty(ctx, base, atom);
                 if (unlikely(ret <= 0)) {
                     if (ret < 0) {
-                        JS_FreeAtom(ctx, atom);
+                        if (atom_owned)
+                            JS_FreeAtom(ctx, atom);
                         goto exception;
                     }
                     if ((opcode == OP_get_ref_value_strict || is_strict_mode(ctx))) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
-                        JS_FreeAtom(ctx, atom);
+                        if (atom_owned)
+                            JS_FreeAtom(ctx, atom);
                         goto exception;
                     } 
                     val = JS_UNDEFINED;
                 } else {
-                    val = JS_GetProperty(ctx, sp[-2], atom);
+                    val = JS_GetProperty(ctx, base, atom);
                 }
-                JS_FreeAtom(ctx, atom);
+            get_ref_value_done:
+                if (atom_owned)
+                    JS_FreeAtom(ctx, atom);
                 if (unlikely(JS_IsException(val)))
                     goto exception;
                 sp[0] = val;
@@ -4205,34 +4347,46 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 int ret;
                 JSAtom atom;
+                BOOL atom_owned, is_unresolvable;
+                JSValue *pval;
+                JSValueConst base;
                 sf->cur_pc = pc;
-                atom = JS_ValueToAtom(ctx, sp[-2]);
+                atom = js_get_reference_atom(ctx, sp[-2], &atom_owned);
                 if (unlikely(atom == JS_ATOM_NULL))
                     goto exception;
-                if (unlikely(JS_IsUndefined(sp[-3]))) {
+                is_unresolvable = JS_IsUndefined(sp[-3]);
+                if (unlikely(is_unresolvable)) {
                     if ((opcode == OP_put_ref_value_strict || is_strict_mode(ctx))) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
-                        JS_FreeAtom(ctx, atom);
+                        if (atom_owned)
+                            JS_FreeAtom(ctx, atom);
                         goto exception;
                     } else {
                         sp[-3] = JS_DupValue(ctx, ctx->global_obj);
                     }
                 }
-                ret = JS_HasProperty(ctx, sp[-3], atom);
-                if (unlikely(ret <= 0)) {
-                    if (unlikely(ret < 0)) {
-                        JS_FreeAtom(ctx, atom);
-                        goto exception;
-                    }
-                    if ((opcode == OP_put_ref_value_strict || is_strict_mode(ctx))) {
-                        JS_ThrowReferenceErrorNotDefined(ctx, atom);
-                        JS_FreeAtom(ctx, atom);
+                base = js_get_reference_base(ctx, sp[-3], atom);
+                pval = js_get_reference_value_slot(base, atom, TRUE);
+                if (pval) {
+                    set_value(ctx, pval, sp[-1]);
+                    ret = TRUE;
+                    goto put_ref_value_done;
+                }
+                {
+                    BOOL value_consumed;
+                    ret = js_put_reference_slow(ctx, base, atom, sp[-1],
+                                                is_unresolvable,
+                                                opcode == OP_put_ref_value_strict,
+                                                &value_consumed);
+                    if (unlikely(!value_consumed)) {
+                        if (atom_owned)
+                            JS_FreeAtom(ctx, atom);
                         goto exception;
                     }
                 }
-                ret = JS_SetPropertyInternal(ctx, sp[-3], atom, sp[-1], sp[-3], (opcode == OP_put_ref_value_strict ?
-                                             JS_PROP_THROW : JS_PROP_THROW_STRICT));
-                JS_FreeAtom(ctx, atom);
+            put_ref_value_done:
+                if (atom_owned)
+                    JS_FreeAtom(ctx, atom);
                 JS_FreeValue(ctx, sp[-2]);
                 JS_FreeValue(ctx, sp[-3]);
                 sp -= 3;
