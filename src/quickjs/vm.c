@@ -2367,7 +2367,9 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 #define DEFAULT         default
 #define BREAK           break
 #else
-    static const void * const dispatch_table[256] = {
+    /* Keep an unreachable fallback slot when all byte values are used,
+       so the range initializer below is never empty. */
+    static const void * const dispatch_table[256 + (OP_COUNT == 256)] = {
 #define DEF(id, size, n_pop, n_push, f) && case_OP_ ## id,
 #if SHORT_OPCODES
 #define def(id, size, n_pop, n_push, f)
@@ -2375,7 +2377,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 #define def(id, size, n_pop, n_push, f) && case_default,
 #endif
 #include "opcode-defs.h"
-        [ OP_COUNT ... 255 ] = &&case_default
+        [ OP_COUNT ... 255 + (OP_COUNT == 256) ] = &&case_default
     };
 #define SWITCH(pc)      goto *dispatch_table[opcode = *pc++];
 #ifdef OPCODE_ASM_LABEL
