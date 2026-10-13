@@ -478,9 +478,20 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     BOOL is_pseudo_var, is_arg_scope, is_decl;
 
     is_decl = (op == OP_scope_put_var_decl);
-    if (is_decl)
+    if (is_decl) {
         op = OP_scope_put_var;
+        scope_level = 0;
+    }
     label_done = -1;
+    if (is_decl && var_name == JS_ATOM_arguments && s->has_annex_arguments) {
+        dbuf_putc(bc, OP_get_loc);
+        dbuf_put_u16(bc, s->var_object_idx);
+        dbuf_putc(bc, OP_swap);
+        dbuf_putc(bc, OP_define_field);
+        dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
+        dbuf_putc(bc, OP_drop);
+        return pos_next;
+    }
 
     /* XXX: could be simpler to use a specific function to
        resolve the pseudo variables */
@@ -1228,7 +1239,8 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
     /* in non strict mode, variables are created in the caller's
        environment object */
     if (!s->is_eval && !(s->js_mode & JS_MODE_STRICT)) {
-        s->var_object_idx = add_var(ctx, s, JS_ATOM__var_);
+        if (s->var_object_idx < 0)
+            s->var_object_idx = add_var(ctx, s, JS_ATOM__var_);
         if (s->has_parameter_expressions) {
             /* an additional variable object is needed for the
                argument scope */
@@ -3430,6 +3442,8 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     
     if (fd->has_parameter_expressions && fd->has_arguments_binding &&
         add_arguments_arg(ctx, fd) < 0)
+        goto fail;
+    if (resolve_annex_function_declarations(ctx, fd) < 0)
         goto fail;
 
     /* recompute scope linkage */

@@ -70,3 +70,48 @@ index b397be0..c197ddc 100644
    }
    return result;
  }
+diff --git a/test/annexB/language/function-code/block-decl-func-skip-arguments.js b/test/annexB/language/function-code/block-decl-func-skip-arguments.js
+--- a/test/annexB/language/function-code/block-decl-func-skip-arguments.js
++++ b/test/annexB/language/function-code/block-decl-func-skip-arguments.js
+@@ -11,8 +11,8 @@
+     [...]
+     7. Let _parameterNames_ be the BoundNames of _formals_.
+     [...]
+-    22. If argumentsObjectNeeded is true, then
+-      f. Append "arguments" to parameterNames.
++    The current algorithm appends the implicit arguments binding to
++    parameterBindings without modifying the formal parameterNames.
+
+     Changes to FunctionDeclarationInstantiation
+
+@@ -31,7 +31,7 @@
+     function arguments() {}
+     assert.sameValue(arguments(), undefined);
+   }
+-  assert.sameValue(arguments.toString(), "[object Arguments]");
++  assert.sameValue(typeof arguments, "function");
+ }());
+
+ // Single named parameter
+@@ -42,7 +42,7 @@
+     function arguments() {}
+     assert.sameValue(arguments(), undefined);
+   }
+-  assert.sameValue(arguments.toString(), "[object Arguments]");
++  assert.sameValue(typeof arguments, "function");
+ }());
+
+ // Non-simple parameters
+@@ -53,5 +53,11 @@
+     function arguments() {}
+     assert.sameValue(arguments(), undefined);
+   }
+-  assert.sameValue(arguments.toString(), "[object Arguments]");
++  assert.sameValue(typeof arguments, "function");
+ }());
++
++// An explicit formal parameter remains excluded from the legacy update.
++(function(arguments) {
++  { function arguments() {} }
++  assert.sameValue(arguments, 42);
++}(42));
