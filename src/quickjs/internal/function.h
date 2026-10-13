@@ -67,6 +67,7 @@ typedef enum {
     JS_VAR_PRIVATE_SETTER, /* must come after JS_VAR_PRIVATE_GETTER */
     JS_VAR_PRIVATE_GETTER_SETTER, /* must come after JS_VAR_PRIVATE_SETTER */
     JS_VAR_GLOBAL_FUNCTION_DECL, /* global function definition, only in JSVarDef */
+    JS_VAR_PARAMETER_COPY, /* storage slot without a body environment binding */
 } JSVarKindEnum;
 
 typedef struct JSBytecodeVarDef {
