@@ -749,18 +749,17 @@ static JSValue js_object_fromEntries(JSContext *ctx, JSValueConst this_val,
                                         JS_PROP_C_W_E | JS_PROP_THROW) < 0) {
         fail1:
             JS_FreeValue(ctx, item);
-            goto fail;
+            goto fail_close;
         }
         JS_FreeValue(ctx, item);
     }
     JS_FreeValue(ctx, next_method);
     JS_FreeValue(ctx, iter);
     return obj;
+ fail_close:
+    /* close only for an abrupt completion while processing an entry */
+    JS_IteratorClose(ctx, iter, TRUE);
  fail:
-    if (JS_IsObject(iter)) {
-        /* close the iterator object, preserving pending exception */
-        JS_IteratorClose(ctx, iter, TRUE);
-    }
     JS_FreeValue(ctx, next_method);
     JS_FreeValue(ctx, iter);
     JS_FreeValue(ctx, obj);
