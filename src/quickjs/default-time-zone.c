@@ -1,11 +1,17 @@
-/* Shared runtime time-zone policy.
- * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE. */
+/* Shared runtime time-zone policy. Copyright (c) 2026 Yan-Jie Wang. MIT.
+ * Source anchors: ECMA262 6db9135b3d77fd38a81a5a1f1bb6ed77fcca9066
+ * (2026-10-03), sec-systemtimezoneidentifier; ECMA402
+ * 7ae78cfdf8255468ffc8ebda33dafaea952808dd (2026-10-06),
+ * sup-availablenamedtimezoneidentifiers, sec-getavailablenamedtimezoneidentifier.
+ * Reviewed against captured sources on 2026-10-09; no live HEAD assertion. */
 #include "internal/base.h"
 #include "internal/runtime.h"
 #include "internal/default-time-zone.h"
-#include "../timezone/timezone.h"
 
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_INTL) || defined(CONFIG_TEMPORAL)
+#ifdef CONFIG_ICU
+#include "../intl/locale-data.h"
+#else
 static void *default_zone_allocate(void *opaque, size_t size)
 {
     return js_malloc_rt(opaque, size);
@@ -21,9 +27,11 @@ static int default_zone_native_error(int error)
         error == QJS_TZ_RANGE ? QJS_TEMPORAL_ERROR_RANGE :
         QJS_TEMPORAL_ERROR_BACKEND;
 }
+#endif
 
 int js_default_time_zone_bind(JSContext *ctx, QJSTemporalZone *zone)
 {
+#ifndef CONFIG_ICU
     JSRuntime *rt = ctx->rt;
     const QJSTimeZone *snapshot;
     int error;
@@ -49,6 +57,11 @@ int js_default_time_zone_bind(JSContext *ctx, QJSTemporalZone *zone)
     if (error)
         return default_zone_native_error(error);
     zone->provider = rt->temporal_tz_provider;
+#else
+    /* Intl, Date and Temporal continue to use ICU's configured provider. */
+    (void)ctx;
+    zone->provider = NULL;
+#endif
     return 0;
 }
 
@@ -61,6 +74,24 @@ static int default_zone_primary(QJSTemporalZone *zone)
             return QJS_TEMPORAL_ERROR_RANGE;
         return 0;
     }
+#ifdef CONFIG_ICU
+    {
+        UChar primary[256];
+        UErrorCode status = U_ZERO_ERROR;
+        int32_t length = intl_iana_zone_primary(zone->identifier, primary, 256, &status);
+        if (U_FAILURE(status))
+            return status == U_MEMORY_ALLOCATION_ERROR ? QJS_TEMPORAL_ERROR_MEMORY :
+                                                        QJS_TEMPORAL_ERROR_BACKEND;
+        if (length <= 0 || (size_t)length >= sizeof(zone->identifier))
+            return QJS_TEMPORAL_ERROR_BACKEND;
+        for (int32_t i = 0; i < length; i++) {
+            if (!primary[i] || primary[i] > 127)
+                return QJS_TEMPORAL_ERROR_BACKEND;
+            zone->identifier[i] = (char)primary[i];
+        }
+        zone->identifier[length] = 0;
+    }
+#else
     {
         const char *primary;
         int error = qjs_tz_resolve(zone->identifier, strlen(zone->identifier), NULL, &primary);
@@ -70,6 +101,7 @@ static int default_zone_primary(QJSTemporalZone *zone)
             return QJS_TEMPORAL_ERROR_BACKEND;
         strcpy(zone->identifier, primary);
     }
+#endif
     return 0;
 }
 
@@ -158,11 +190,11 @@ JSValue JS_GetDefaultTimeZone(JSContext *ctx)
 int JS_SetDefaultTimeZone(JSContext *ctx, const char *time_zone)
 {
     (void)time_zone;
-    JS_ThrowTypeError(ctx, "default time-zone configuration requires Temporal");
+    JS_ThrowTypeError(ctx, "default time-zone configuration requires Intl or Temporal");
     return -1;
 }
 JSValue JS_GetDefaultTimeZone(JSContext *ctx)
 {
-    return JS_ThrowTypeError(ctx, "default time-zone configuration requires Temporal");
+    return JS_ThrowTypeError(ctx, "default time-zone configuration requires Intl or Temporal");
 }
 #endif
