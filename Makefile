@@ -379,7 +379,15 @@ QJSC_DEFINES:=-DCONFIG_CC=\"$(QJSC_CC)\" -DCONFIG_PREFIX=\"$(PREFIX)\"
 ifdef CONFIG_LTO
 QJSC_DEFINES+=-DCONFIG_LTO
 endif
+ifdef CONFIG_M32
+QJSC_DEFINES+=-DCONFIG_M32
+endif
 QJSC_HOST_DEFINES:=-DCONFIG_CC=\"$(HOST_CC)\" -DCONFIG_PREFIX=\"$(PREFIX)\"
+
+# Executable output must link with the instrumented target archive.
+QJSC_SANITIZER_DEFINES=$(foreach config,ASAN MSAN UBSAN TSAN,$(if $(CONFIG_$(config)),-DCONFIG_$(config)))
+QJSC_DEFINES+=$(QJSC_SANITIZER_DEFINES)
+QJSC_HOST_DEFINES+=$(QJSC_SANITIZER_DEFINES)
 
 $(OBJDIR)/tools/qjsc.o: CFLAGS+=$(QJSC_DEFINES)
 $(OBJDIR)/tools/qjsc.host.o: CFLAGS+=$(QJSC_HOST_DEFINES)
@@ -810,3 +818,15 @@ clean-fuzz-test:
 
 .PHONY: clean-fuzz-test
 clean: clean-fuzz-test
+
+# Exercise qjsc's own compiler invocation for native targets.
+PYTHON ?= python3
+ifeq ($(CROSS_PREFIX),)
+ifneq ($(CONFIG_WIN32),y)
+.PHONY: test-qjsc-executable
+test: test-qjsc-executable
+
+test-qjsc-executable: $(QJSC) libquickjs$(LTOEXT).a
+	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "n" "n"
+endif
+endif
