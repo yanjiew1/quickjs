@@ -1419,3 +1419,6 @@ test test-binaries: $(OBJDIR)/src/intl/relative-native.o $(OBJDIR)/src/intl/rela
 
 # Complete native display sources precede aggregate-provider activation.
 test test-binaries: $(OBJDIR)/src/intl/display-names-native.o
+
+# Complete native number-data sources precede aggregate-provider activation.
+test test-binaries: $(OBJDIR)/src/intl/number-native-data.o $(OBJDIR)/src/intl/duration-native-data.o
