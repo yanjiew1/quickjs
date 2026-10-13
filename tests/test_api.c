@@ -3152,12 +3152,103 @@ static void test_async_disposable_stack_realms(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue disposal_return_primitive(JSContext *ctx, JSValueConst this_val,
+                                         int argc, JSValueConst *argv)
+{
+    assert(argc == 0);
+    return JS_NewInt32(ctx, 42);
+}
+
+static void test_async_iterator_disposal_raw_context(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue iterator, prototype, next_prototype, dispose = JS_UNDEFINED;
+    JSValue function, name, receiver, promise, result;
+    JSPropertyEnum *properties;
+    uint32_t count, i;
+    JSContext *job_ctx;
+    int status;
+    const char *string;
+    const char *source = "(async function*() {})()";
+
+    assert(rt);
+    ctx = JS_NewContextRaw(rt);
+    assert(ctx);
+    /* Exercise Promise initialization without base or Symbol intrinsics. */
+    assert(JS_AddIntrinsicPromise(ctx) == 0);
+    assert(JS_AddIntrinsicEval(ctx) == 0);
+    iterator = JS_Eval(ctx, source, strlen(source), "raw-context.js",
+                       JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(iterator));
+    prototype = JS_DupValue(ctx, iterator);
+    for (i = 0; i < 3; i++) {
+        next_prototype = JS_GetPrototype(ctx, prototype);
+        JS_FreeValue(ctx, prototype);
+        prototype = next_prototype;
+        assert(JS_IsObject(prototype));
+    }
+    assert(JS_GetOwnPropertyNames(ctx, &properties, &count, prototype,
+                                  JS_GPN_SYMBOL_MASK) == 0);
+    for (i = 0; i < count; i++) {
+        function = JS_GetProperty(ctx, prototype, properties[i].atom);
+        assert(!JS_IsException(function));
+        name = JS_GetPropertyStr(ctx, function, "name");
+        assert(!JS_IsException(name));
+        string = JS_ToCString(ctx, name);
+        assert(string);
+        if (!strcmp(string, "[Symbol.asyncDispose]"))
+            dispose = JS_DupValue(ctx, function);
+        JS_FreeCString(ctx, string);
+        JS_FreeValue(ctx, name);
+        JS_FreeValue(ctx, function);
+        JS_FreeAtom(ctx, properties[i].atom);
+    }
+    js_free(ctx, properties);
+    assert(JS_IsFunction(ctx, dispose));
+    receiver = JS_NewObject(ctx);
+    assert(!JS_IsException(receiver));
+    promise = JS_Call(ctx, dispose, receiver, 0, NULL);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+    result = JS_PromiseResult(ctx, promise);
+    assert(JS_IsUndefined(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, promise);
+    promise = JS_Call(ctx, dispose, JS_NULL, 0, NULL);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_REJECTED);
+    assert(!JS_HasException(ctx));
+    JS_FreeValue(ctx, promise);
+    assert(JS_SetPropertyStr(ctx, receiver, "return",
+                             JS_NewCFunction(ctx, disposal_return_primitive, "return", 0)) == 1);
+    promise = JS_Call(ctx, dispose, receiver, 0, NULL);
+    assert(!JS_IsException(promise));
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+    while ((status = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        ;
+    assert(status == 0);
+    assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+    result = JS_PromiseResult(ctx, promise);
+    assert(JS_IsUndefined(result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, promise);
+    JS_FreeValue(ctx, receiver);
+    JS_FreeValue(ctx, dispose);
+    JS_FreeValue(ctx, prototype);
+    JS_FreeValue(ctx, iterator);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },
         { "async-disposable-stack-realms", test_async_disposable_stack_realms },
         { "array-from-async-realm", test_array_from_async_realm },
         { "array-from-async-raw-context", test_array_from_async_raw_context },
