@@ -1577,3 +1577,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-relative-time-for
 
 # display frontend sources remain disabled until coherent Intl activation.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-display-names.o
+
+# duration frontend sources remain disabled until coherent Intl activation.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-duration-format.o
