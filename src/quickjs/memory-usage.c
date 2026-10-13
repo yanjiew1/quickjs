@@ -323,7 +323,12 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
                     s->memory_used_size += sizeof(*abuf);
                     if (abuf->data) {
                         s->memory_used_count += 1;
-                        s->memory_used_size += abuf->byte_length;
+                        if (abuf->shared && abuf->max_byte_length >= 0) {
+                            s->memory_used_size +=
+                                js_shared_array_buffer_allocation_size(abuf->max_byte_length);
+                        } else {
+                            s->memory_used_size += abuf->byte_length;
+                        }
                     }
                 }
             }

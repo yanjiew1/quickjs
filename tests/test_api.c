@@ -155,6 +155,7 @@ static void test_empty_buffer_allocation(void)
 
 typedef struct SharedBufferData {
     void *ptr;
+    void *allocation;
     size_t size;
     int references;
     int allocations;
@@ -168,6 +169,21 @@ static void *alloc_shared(void *opaque, size_t size)
     assert(data->ptr == NULL && data->references == 0);
     data->ptr = calloc(1, size);
     assert(data->ptr != NULL);
+    data->allocation = data->ptr;
+    data->size = size;
+    data->references = 1;
+    data->allocations++;
+    return data->ptr;
+}
+
+static void *alloc_misaligned_shared(void *opaque, size_t size)
+{
+    SharedBufferData *data = opaque;
+    assert(data->ptr == NULL && data->references == 0);
+    assert(size < SIZE_MAX);
+    data->allocation = calloc(1, size + 1);
+    assert(data->allocation != NULL);
+    data->ptr = (uint8_t *)data->allocation + 1;
     data->size = size;
     data->references = 1;
     data->allocations++;
@@ -188,9 +204,353 @@ static void free_shared(void *opaque, void *ptr)
     assert(ptr == data->ptr && data->references > 0);
     data->releases++;
     if (--data->references == 0) {
-        free(ptr);
+        free(data->allocation);
         data->ptr = NULL;
+        data->allocation = NULL;
     }
+}
+
+static void test_misaligned_shared_buffer_length(void)
+{
+    static const unsigned int capacities[] = { 0, 1, 2, 3, 4, 5, 8, 31, 32 };
+    size_t capacity_index;
+    int first;
+
+    for (capacity_index = 0; capacity_index < countof(capacities); capacity_index++) {
+        for (first = 0; first < 2; first++) {
+            SharedBufferData data = { 0 };
+            JSSharedArrayBufferFunctions functions = {
+                alloc_misaligned_shared, free_shared, dup_shared, &data,
+            };
+            JSRuntime *runtimes[2] = { JS_NewRuntime(), JS_NewRuntime() };
+            JSContext *contexts[2];
+            JSValue buffer, clone, global;
+            uint8_t *encoded, **pointers;
+            size_t encoded_size, pointer_count, length;
+            char source[128];
+            int i;
+
+            for (i = 0; i < 2; i++) {
+                assert(runtimes[i]);
+                JS_SetSharedArrayBufferFunctions(runtimes[i], &functions);
+                contexts[i] = JS_NewContext(runtimes[i]);
+                assert(contexts[i]);
+            }
+            snprintf(source, sizeof(source),
+                     "new SharedArrayBuffer(0, { maxByteLength: %u })",
+                     capacities[capacity_index]);
+            buffer = JS_Eval(contexts[0], source, strlen(source),
+                             "misaligned-shared-length", JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(buffer));
+            assert(((uintptr_t)data.ptr & 3) == 1);
+            encoded = JS_WriteObject2(contexts[0], &encoded_size, buffer,
+                                      JS_WRITE_OBJ_SAB, &pointers, &pointer_count);
+            assert(encoded && pointer_count == 1 && pointers[0] == data.ptr);
+            clone = JS_ReadObject(contexts[1], encoded, encoded_size, JS_READ_OBJ_SAB);
+            assert(!JS_IsException(clone));
+            assert(JS_GetArrayBuffer(contexts[1], &length, clone) == data.ptr && length == 0);
+            js_free(contexts[0], encoded);
+            js_free(contexts[0], pointers);
+            global = JS_GetGlobalObject(contexts[0]);
+            assert(JS_SetPropertyStr(contexts[0], global, "shared", buffer) >= 0);
+            JS_FreeValue(contexts[0], global);
+            global = JS_GetGlobalObject(contexts[1]);
+            assert(JS_SetPropertyStr(contexts[1], global, "shared", clone) >= 0);
+            JS_FreeValue(contexts[1], global);
+            check_eval(contexts[0], "shared.grow(shared.maxByteLength) === undefined");
+            check_eval(contexts[1], "shared.byteLength === shared.maxByteLength");
+            global = JS_GetGlobalObject(contexts[1]);
+            clone = JS_GetPropertyStr(contexts[1], global, "shared");
+            JS_FreeValue(contexts[1], global);
+            assert(JS_GetArrayBuffer(contexts[1], &length, clone) == data.ptr);
+            assert(length == capacities[capacity_index]);
+            JS_FreeValue(contexts[1], clone);
+            JS_FreeContext(contexts[first]);
+            JS_FreeRuntime(runtimes[first]);
+            assert(data.references == 1);
+            check_eval(contexts[1 - first],
+                       "shared.grow(shared.maxByteLength) === undefined &&"
+                       " shared.byteLength === shared.maxByteLength");
+            JS_FreeContext(contexts[1 - first]);
+            JS_FreeRuntime(runtimes[1 - first]);
+            assert(data.references == 0 && data.ptr == NULL && data.allocation == NULL);
+            assert(data.allocations == 1 && data.duplications == 1 && data.releases == 2);
+        }
+    }
+}
+
+static void check_shared_serialization_rejection(JSContext *ctx, JSValueConst buffer)
+{
+    JSValue exception, name;
+    const char *text;
+    uint8_t *encoded, **pointers = (uint8_t **)(uintptr_t)1;
+    size_t encoded_size = 1, pointer_count = 1;
+
+    encoded = JS_WriteObject2(ctx, &encoded_size, buffer,
+                              JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE,
+                              &pointers, &pointer_count);
+    assert(!encoded && encoded_size == 0 && pointers == NULL && pointer_count == 0);
+    exception = JS_GetException(ctx);
+    name = JS_GetPropertyStr(ctx, exception, "name");
+    text = JS_ToCString(ctx, name);
+    assert(text && !strcmp(text, "TypeError"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, name);
+    JS_FreeValue(ctx, exception);
+    encoded_size = 1;
+    encoded = JS_WriteObject(ctx, &encoded_size, buffer, JS_WRITE_OBJ_SAB);
+    assert(!encoded && encoded_size == 0);
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+}
+
+static void test_shared_serialization_lifetime(void)
+{
+    static const char *sources[] = {
+        "new SharedArrayBuffer(0)",
+        "new SharedArrayBuffer(8)",
+        "new SharedArrayBuffer(0, { maxByteLength: 0 })",
+        "new SharedArrayBuffer(1, { maxByteLength: 32 })",
+    };
+    size_t source_index;
+    int first, mode, missing;
+
+    for (source_index = 0; source_index < countof(sources); source_index++) {
+        for (mode = 0; mode < 3; mode++) {
+            for (first = 0; first < 2; first++) {
+                SharedBufferData data = { 0 };
+                JSSharedArrayBufferFunctions functions = {
+                    alloc_shared, free_shared, dup_shared, &data,
+                };
+                JSSharedArrayBufferFunctions no_allocator = functions;
+                JSRuntime *runtimes[2] = { JS_NewRuntime(), JS_NewRuntime() };
+                JSContext *contexts[2];
+                JSValue buffer, global;
+                int i;
+
+                assert(runtimes[0] && runtimes[1]);
+                JS_SetSharedArrayBufferFunctions(runtimes[1], &functions);
+                no_allocator.sab_alloc = NULL;
+                if (mode == 1)
+                    JS_SetSharedArrayBufferFunctions(runtimes[0], &no_allocator);
+                for (i = 0; i < 2; i++) {
+                    contexts[i] = JS_NewContext(runtimes[i]);
+                    assert(contexts[i]);
+                }
+                buffer = JS_Eval(contexts[0], sources[source_index],
+                                 strlen(sources[source_index]),
+                                 "shared-serialization-default-owner", JS_EVAL_TYPE_GLOBAL);
+                assert(!JS_IsException(buffer));
+                if (mode == 2)
+                    JS_SetSharedArrayBufferFunctions(runtimes[0], &functions);
+                check_shared_serialization_rejection(contexts[0], buffer);
+                assert(data.allocations == 0 && data.duplications == 0 &&
+                       data.releases == 0 && data.references == 0);
+                global = JS_GetGlobalObject(contexts[0]);
+                assert(JS_SetPropertyStr(contexts[0], global, "shared", buffer) >= 0);
+                JS_FreeValue(contexts[0], global);
+                JS_FreeContext(contexts[first]);
+                JS_FreeRuntime(runtimes[first]);
+                JS_FreeContext(contexts[1 - first]);
+                JS_FreeRuntime(runtimes[1 - first]);
+                assert(data.allocations == 0 && data.duplications == 0 &&
+                       data.releases == 0 && data.references == 0);
+            }
+        }
+        for (missing = 0; missing < 2; missing++) {
+            SharedBufferData data = { 0 };
+            JSSharedArrayBufferFunctions functions = {
+                alloc_shared, free_shared, dup_shared, &data,
+            };
+            JSSharedArrayBufferFunctions incomplete = functions;
+            JSRuntime *rt = JS_NewRuntime();
+            JSContext *ctx;
+            JSValue buffer;
+
+            assert(rt);
+            JS_SetSharedArrayBufferFunctions(rt, &functions);
+            ctx = JS_NewContext(rt);
+            assert(ctx);
+            buffer = JS_Eval(ctx, sources[source_index], strlen(sources[source_index]),
+                             "shared-serialization-incomplete-owner", JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(buffer));
+            if (missing == 0)
+                incomplete.sab_dup = NULL;
+            else
+                incomplete.sab_free = NULL;
+            JS_SetSharedArrayBufferFunctions(rt, &incomplete);
+            check_shared_serialization_rejection(ctx, buffer);
+            assert(data.allocations == 1 && data.references == 1 &&
+                   data.duplications == 0 && data.releases == 0);
+            JS_FreeValue(ctx, buffer);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(data.allocations == 1 && data.duplications == 0 &&
+                   data.releases == 1 && data.references == 0 && data.ptr == NULL);
+        }
+        {
+            SharedBufferData data = { 0 };
+            JSSharedArrayBufferFunctions functions = {
+                alloc_shared, NULL, dup_shared, &data,
+            };
+            JSRuntime *rt = JS_NewRuntime();
+            JSContext *ctx;
+            char script[256];
+
+            assert(rt);
+            JS_SetSharedArrayBufferFunctions(rt, &functions);
+            ctx = JS_NewContext(rt);
+            assert(ctx);
+            snprintf(script, sizeof(script),
+                     "(() => { try { (%s); return false; }"
+                     " catch (e) { return e instanceof TypeError; } })()",
+                     sources[source_index]);
+            check_eval(ctx, script);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(data.allocations == 0 && data.references == 0 &&
+                   data.duplications == 0 && data.releases == 0);
+        }
+    }
+}
+
+static void test_external_shared_buffer_owner(void)
+{
+    static const size_t lengths[] = { 0, 8 };
+    size_t length_index;
+    int first;
+
+    for (length_index = 0; length_index < countof(lengths); length_index++) {
+        for (first = 0; first < 2; first++) {
+            SharedBufferData data = { 0 };
+            JSSharedArrayBufferFunctions functions = {
+                NULL, free_shared, dup_shared, &data,
+            };
+            JSSharedArrayBufferFunctions none = { 0 };
+            JSRuntime *runtimes[2] = { JS_NewRuntime(), JS_NewRuntime() };
+            JSContext *contexts[2];
+            JSValue buffer, clone, global;
+            uint8_t *ptr, *encoded, **pointers;
+            size_t encoded_size, pointer_count, length;
+            int i;
+
+            ptr = alloc_shared(&data, lengths[length_index] ? lengths[length_index] : 1);
+            for (i = 0; i < 2; i++) {
+                assert(runtimes[i]);
+                JS_SetSharedArrayBufferFunctions(runtimes[i], &functions);
+                contexts[i] = JS_NewContext(runtimes[i]);
+                assert(contexts[i]);
+            }
+            buffer = JS_NewArrayBuffer(contexts[0], ptr, lengths[length_index],
+                                       NULL, NULL, TRUE);
+            assert(!JS_IsException(buffer));
+            assert(data.references == 2 && data.duplications == 1);
+            free_shared(&data, ptr);
+            encoded = JS_WriteObject2(contexts[0], &encoded_size, buffer,
+                                      JS_WRITE_OBJ_SAB, &pointers, &pointer_count);
+            assert(encoded && pointer_count == 1 && pointers[0] == ptr);
+            clone = JS_ReadObject(contexts[1], encoded, encoded_size, JS_READ_OBJ_SAB);
+            assert(!JS_IsException(clone));
+            assert(JS_GetArrayBuffer(contexts[1], &length, clone) == ptr);
+            assert(length == lengths[length_index]);
+            assert(data.references == 2 && data.duplications == 2 && data.releases == 1);
+            js_free(contexts[0], encoded);
+            js_free(contexts[0], pointers);
+            global = JS_GetGlobalObject(contexts[0]);
+            assert(JS_SetPropertyStr(contexts[0], global, "shared", buffer) >= 0);
+            JS_FreeValue(contexts[0], global);
+            global = JS_GetGlobalObject(contexts[1]);
+            assert(JS_SetPropertyStr(contexts[1], global, "shared", clone) >= 0);
+            JS_FreeValue(contexts[1], global);
+            for (i = 0; i < 2; i++)
+                JS_SetSharedArrayBufferFunctions(runtimes[i], &none);
+            JS_FreeContext(contexts[first]);
+            JS_FreeRuntime(runtimes[first]);
+            assert(data.references == 1);
+            check_eval(contexts[1 - first],
+                       "shared.byteLength === new Uint8Array(shared).length");
+            JS_FreeContext(contexts[1 - first]);
+            JS_FreeRuntime(runtimes[1 - first]);
+            assert(data.allocations == 1 && data.duplications == 2 &&
+                   data.releases == 3 && data.references == 0 && data.ptr == NULL);
+        }
+        {
+            SharedBufferData data = { 0 };
+            JSSharedArrayBufferFunctions functions = {
+                NULL, NULL, dup_shared, &data,
+            };
+            JSRuntime *rt = JS_NewRuntime();
+            JSContext *ctx;
+            JSValue buffer, exception;
+            uint8_t *ptr = alloc_shared(&data, lengths[length_index] ? lengths[length_index] : 1);
+
+            assert(rt);
+            JS_SetSharedArrayBufferFunctions(rt, &functions);
+            ctx = JS_NewContext(rt);
+            assert(ctx);
+            buffer = JS_NewArrayBuffer(ctx, ptr, lengths[length_index], NULL, NULL, TRUE);
+            assert(JS_IsException(buffer));
+            exception = JS_GetException(ctx);
+            JS_FreeValue(ctx, exception);
+            assert(data.references == 1 && data.duplications == 0 && data.releases == 0);
+            free_shared(&data, ptr);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(data.references == 0 && data.releases == 1);
+        }
+    }
+}
+
+static void test_shared_clone_release_callback(void)
+{
+    SharedBufferData data = { 0 };
+    JSSharedArrayBufferFunctions functions = {
+        alloc_shared, free_shared, dup_shared, &data,
+    };
+    JSRuntime *runtimes[2] = { JS_NewRuntime(), JS_NewRuntime() };
+    JSContext *contexts[2];
+    JSValue buffer, clone, exception;
+    uint8_t *encoded, **pointers;
+    size_t encoded_size, pointer_count;
+    int i;
+    const char *source = "new SharedArrayBuffer(8, { maxByteLength: 32 })";
+
+    for (i = 0; i < 2; i++) {
+        assert(runtimes[i]);
+        contexts[i] = JS_NewContext(runtimes[i]);
+        assert(contexts[i]);
+    }
+    JS_SetSharedArrayBufferFunctions(runtimes[0], &functions);
+    buffer = JS_Eval(contexts[0], source, strlen(source),
+                     "shared-clone-missing-release", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(buffer));
+    encoded = JS_WriteObject2(contexts[0], &encoded_size, buffer,
+                              JS_WRITE_OBJ_SAB, &pointers, &pointer_count);
+    assert(encoded && pointer_count == 1);
+    for (i = 0; i < 2; i++) {
+        JSSharedArrayBufferFunctions incomplete = functions;
+        incomplete.sab_alloc = NULL;
+        if (i == 0)
+            incomplete.sab_free = NULL;
+        else
+            incomplete.sab_dup = NULL;
+        JS_SetSharedArrayBufferFunctions(runtimes[1], &incomplete);
+        clone = JS_ReadObject(contexts[1], encoded, encoded_size, JS_READ_OBJ_SAB);
+        assert(JS_IsException(clone));
+        exception = JS_GetException(contexts[1]);
+        JS_FreeValue(contexts[1], exception);
+        assert(data.allocations == 1 && data.references == 1 &&
+               data.duplications == 0 && data.releases == 0);
+    }
+    js_free(contexts[0], encoded);
+    js_free(contexts[0], pointers);
+    JS_FreeValue(contexts[0], buffer);
+    for (i = 0; i < 2; i++) {
+        JS_FreeContext(contexts[i]);
+        JS_FreeRuntime(runtimes[i]);
+    }
+    assert(data.allocations == 1 && data.references == 0 &&
+           data.duplications == 0 && data.releases == 1);
 }
 
 static void test_default_shared_buffer_growth(void)
@@ -228,6 +588,170 @@ static void test_default_shared_buffer_growth(void)
     assert(ptr[4095] == 42);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+}
+
+static void test_shared_buffer_clone_views(void)
+{
+    SharedBufferData data = { 0 };
+    JSSharedArrayBufferFunctions functions = {
+        alloc_shared, free_shared, dup_shared, &data,
+    };
+    JSRuntime *runtimes[2] = { JS_NewRuntime(), JS_NewRuntime() };
+    JSContext *contexts[2];
+    JSValue buffer, clone, global;
+    uint8_t *encoded, **pointers;
+    size_t encoded_size, pointer_count, length;
+    int i;
+    const char *source = "new SharedArrayBuffer(8, { maxByteLength: 32 })";
+
+    for (i = 0; i < 2; i++) {
+        assert(runtimes[i]);
+        JS_SetSharedArrayBufferFunctions(runtimes[i], &functions);
+        contexts[i] = JS_NewContext(runtimes[i]);
+        assert(contexts[i]);
+    }
+    buffer = JS_Eval(contexts[0], source, strlen(source),
+                     "shared-clone", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(buffer));
+    encoded = JS_WriteObject2(contexts[0], &encoded_size, buffer,
+                              JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE,
+                              &pointers, &pointer_count);
+    assert(encoded && pointer_count == 1 && pointers[0] == data.ptr);
+    clone = JS_ReadObject(contexts[1], encoded, encoded_size,
+                           JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE);
+    assert(!JS_IsException(clone));
+    assert(data.allocations == 1 && data.references == 2);
+    assert(JS_GetArrayBuffer(contexts[1], &length, clone) == data.ptr);
+    assert(length == 8);
+    js_free(contexts[0], encoded);
+    js_free(contexts[0], pointers);
+    global = JS_GetGlobalObject(contexts[0]);
+    assert(JS_SetPropertyStr(contexts[0], global, "shared", buffer) >= 0);
+    JS_FreeValue(contexts[0], global);
+    global = JS_GetGlobalObject(contexts[1]);
+    assert(JS_SetPropertyStr(contexts[1], global, "shared", clone) >= 0);
+    JS_FreeValue(contexts[1], global);
+    check_eval(contexts[1],
+        "globalThis.views = {};"
+        "for (const name of ['read', 'write', 'stringWrite', 'keys', 'has',"
+        " 'descriptor', 'define', 'delete', 'forin', 'iterator', 'length'])"
+        " views[name] = new Uint8Array(shared);"
+        "globalThis.fixed = new Uint8Array(shared, 0, 8);"
+        "globalThis.atomic = new Int32Array(shared);"
+        "globalThis.dataView = new DataView(shared);"
+        "globalThis.fixedDataView = new DataView(shared, 0, 8); true");
+    check_eval(contexts[0], "shared.grow(24); shared.byteLength === 24");
+    check_eval(contexts[1],
+        "(() => {"
+        " if (shared.byteLength !== 24) throw Error('shared length');"
+        " if (views.read[20] !== 0) throw Error('indexed read');"
+        " views.write[20] = 42;"
+        " if (views.read[20] !== 42) throw Error('indexed write');"
+        " views.stringWrite['21'] = 43;"
+        " if (views.read[21] !== 43) throw Error('string indexed write');"
+        " if (Object.keys(views.keys).length !== 24) throw Error('keys');"
+        " if (!(20 in views.has)) throw Error('has');"
+        " if (!Object.getOwnPropertyDescriptor(views.descriptor, '20'))"
+        "   throw Error('descriptor');"
+        " Object.defineProperty(views.define, '22', { value: 44 });"
+        " if (views.read[22] !== 44) throw Error('define');"
+        " if (Reflect.deleteProperty(views.delete, '20')) throw Error('delete');"
+        " let count = 0; for (const key in views.forin) count++;"
+        " if (count !== 24) throw Error('for-in');"
+        " if ([...views.iterator].length !== 24) throw Error('iterator');"
+        " if (views.length.length !== 24 || views.length.byteLength !== 24)"
+        "   throw Error('view length');"
+        " if (fixed.length !== 8 || fixedDataView.byteLength !== 8)"
+        "   throw Error('fixed length');"
+        " dataView.setUint8(23, 45);"
+        " if (dataView.byteLength !== 24 || dataView.getUint8(23) !== 45)"
+        "   throw Error('DataView');"
+        " Atomics.store(atomic, 4, 46);"
+        " if (Atomics.load(atomic, 4) !== 46) throw Error('Atomics');"
+        " try { shared.grow(16); throw Error('grow shrank'); }"
+        " catch (e) { if (!(e instanceof RangeError)) throw e; }"
+        " shared.grow(32); return shared.byteLength === 32;"
+        "})()");
+    check_eval(contexts[0], "shared.byteLength === 32");
+    JS_FreeContext(contexts[0]);
+    JS_FreeRuntime(runtimes[0]);
+    assert(data.references == 1);
+    check_eval(contexts[1],
+        "views.length.length === 32 && dataView.byteLength === 32 &&"
+        " views.read[31] === 0 && shared.grow(32) === undefined");
+    JS_FreeContext(contexts[1]);
+    JS_FreeRuntime(runtimes[1]);
+    assert(data.references == 0 && data.ptr == NULL);
+    assert(data.allocations == 1 && data.duplications == 1 && data.releases == 2);
+}
+
+static void test_shared_buffer_queued_clone(void)
+{
+    static const char *sources[] = {
+        "new SharedArrayBuffer(0, { maxByteLength: 0 })",
+        "new SharedArrayBuffer(0, { maxByteLength: 8 })",
+        "new SharedArrayBuffer(0)",
+    };
+    size_t i;
+    for (i = 0; i < countof(sources); i++) {
+        SharedBufferData data = { 0 };
+        JSSharedArrayBufferFunctions functions = {
+            alloc_shared, free_shared, dup_shared, &data,
+        };
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx;
+        JSValue buffer, clone, global;
+        uint8_t *encoded, *queued, **pointers;
+        size_t encoded_size, pointer_count, length;
+        assert(rt);
+        JS_SetSharedArrayBufferFunctions(rt, &functions);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        buffer = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                         "shared-queued-clone", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(buffer));
+        encoded = JS_WriteObject2(ctx, &encoded_size, buffer,
+                                  JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE,
+                                  &pointers, &pointer_count);
+        assert(encoded && pointer_count == 1 && pointers[0] == data.ptr);
+        queued = malloc(encoded_size);
+        assert(queued);
+        memcpy(queued, encoded, encoded_size);
+        dup_shared(&data, pointers[0]);
+        js_free(ctx, encoded);
+        js_free(ctx, pointers);
+        JS_FreeValue(ctx, buffer);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(data.references == 1);
+        rt = JS_NewRuntime();
+        assert(rt);
+        JS_SetSharedArrayBufferFunctions(rt, &functions);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        clone = JS_ReadObject(ctx, queued, encoded_size,
+                              JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE);
+        free(queued);
+        assert(!JS_IsException(clone));
+        free_shared(&data, data.ptr);
+        assert(data.references == 1);
+        assert(JS_GetArrayBuffer(ctx, &length, clone) == data.ptr && length == 0);
+        global = JS_GetGlobalObject(ctx);
+        assert(JS_SetPropertyStr(ctx, global, "shared", clone) >= 0);
+        JS_FreeValue(ctx, global);
+        if (i == 0) {
+            check_eval(ctx, "shared.grow(0) === undefined && shared.byteLength === 0");
+        } else if (i == 1) {
+            check_eval(ctx, "shared.grow(8) === undefined && shared.byteLength === 8 &&"
+                           " [...new Uint8Array(shared)].every(x => x === 0)");
+        } else {
+            check_eval(ctx, "shared.growable === false && shared.byteLength === 0");
+        }
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(data.references == 0 && data.ptr == NULL);
+        assert(data.allocations == 1 && data.duplications == 2 && data.releases == 3);
+    }
 }
 
 static void test_shared_buffer_allocation(void)
@@ -276,7 +800,7 @@ static void test_shared_buffer_allocation(void)
                      "shared-buffer-allocation", JS_EVAL_TYPE_GLOBAL);
     check_empty_buffer(ctx, buffer);
     assert(data.allocations == 3 && data.duplications == 1);
-    assert(data.size == 8 && data.references == 1);
+    assert(data.size > 8 && data.references == 1);
     JS_FreeValue(ctx, buffer);
     assert(data.releases == 4 && data.references == 0);
     JS_FreeContext(ctx);
@@ -651,6 +1175,12 @@ int main(int argc, char **argv)
         { "buffer-allocation", test_empty_buffer_allocation },
         { "shared-buffer-allocation", test_shared_buffer_allocation },
         { "shared-buffer-growth", test_default_shared_buffer_growth },
+        { "shared-buffer-clone", test_shared_buffer_clone_views },
+        { "shared-buffer-queued-clone", test_shared_buffer_queued_clone },
+        { "shared-buffer-misaligned-length", test_misaligned_shared_buffer_length },
+        { "shared-buffer-serialization-lifetime", test_shared_serialization_lifetime },
+        { "shared-buffer-external-owner", test_external_shared_buffer_owner },
+        { "shared-buffer-clone-release", test_shared_clone_release_callback },
         { "typed-array-arguments", test_typed_array_arguments },
         { "atom", test_empty_atom },
         { "buffer-transfer", test_empty_buffer_transfer },
