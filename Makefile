@@ -1416,3 +1416,6 @@ test test-binaries: $(OBJDIR)/src/intl/segmenter-native.o $(OBJDIR)/src/intl/seg
 
 # Complete native relative sources precede aggregate-provider activation.
 test test-binaries: $(OBJDIR)/src/intl/relative-native.o $(OBJDIR)/src/intl/relative-native-data.o $(OBJDIR)/src/intl/plural-native-data.o
+
+# Complete native display sources precede aggregate-provider activation.
+test test-binaries: $(OBJDIR)/src/intl/display-names-native.o
