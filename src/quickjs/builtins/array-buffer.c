@@ -88,7 +88,9 @@ JSValue js_array_buffer_constructor3(JSContext *ctx,
             memset(abuf->data, 0, sab_alloc_len);
         } else {
             /* the allocation must be done after the object creation */
-            abuf->data = js_mallocz(ctx, max_int(len, 1));
+            sab_alloc_len = class_id == JS_CLASS_SHARED_ARRAY_BUFFER && max_len ?
+                *max_len : len;
+            abuf->data = js_mallocz(ctx, max_int(sab_alloc_len, 1));
             if (!abuf->data)
                 goto fail;
         }
