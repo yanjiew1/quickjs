@@ -1,0 +1,299 @@
+{
+  "format": 1,
+  "upstream_revision": "535a7c250ff4a577ec36c3e103daab6dadeea650",
+  "v8_cases": [
+    [
+      "Richards",
+      "Richards"
+    ],
+    [
+      "DeltaBlue",
+      "DeltaBlue"
+    ],
+    [
+      "Crypto",
+      "Encrypt"
+    ],
+    [
+      "Crypto",
+      "Decrypt"
+    ],
+    [
+      "RayTrace",
+      "RayTrace"
+    ],
+    [
+      "EarleyBoyer",
+      "Earley"
+    ],
+    [
+      "EarleyBoyer",
+      "Boyer"
+    ],
+    [
+      "RegExp",
+      "RegExp"
+    ],
+    [
+      "Splay",
+      "Splay"
+    ],
+    [
+      "NavierStokes",
+      "NavierStokes"
+    ]
+  ],
+  "micro_cases": [
+    "empty_loop",
+    "empty_down_loop",
+    "empty_down_loop2",
+    "empty_do_loop",
+    "date_now",
+    "date_parse",
+    "prop_read",
+    "prop_write",
+    "prop_update",
+    "prop_create",
+    "prop_clone",
+    "prop_delete",
+    "array_read",
+    "array_write",
+    "array_update",
+    "array_prop_create",
+    "array_slice",
+    "array_length_read",
+    "array_length_decr",
+    "array_hole_length_decr",
+    "array_push",
+    "array_pop",
+    "typed_array_read",
+    "typed_array_write",
+    "arguments_read",
+    "arguments_strict_read",
+    "global_read",
+    "global_write",
+    "global_write_strict",
+    "local_destruct",
+    "global_destruct",
+    "global_destruct_strict",
+    "global_func_call",
+    "func_call",
+    "func_closure_call",
+    "int_arith",
+    "float_arith",
+    "map_set_string",
+    "map_set_int",
+    "map_set_bigint",
+    "map_delete",
+    "weak_map_set",
+    "weak_map_delete",
+    "array_for",
+    "array_for_in",
+    "array_for_of",
+    "math_min",
+    "regexp_ascii",
+    "regexp_utf16",
+    "regexp_replace",
+    "string_length",
+    "string_build1",
+    "string_build1x",
+    "string_build2c",
+    "string_build2",
+    "string_build3",
+    "string_build4",
+    "string_build_large1",
+    "string_build_large2",
+    "int_to_string",
+    "int_toString",
+    "float_to_string",
+    "float_toString",
+    "float_toFixed",
+    "float_toPrecision",
+    "float_toExponential",
+    "string_to_int",
+    "string_to_float",
+    "bigint32_arith",
+    "bigint64_arith",
+    "bigint256_arith",
+    "sort_bench"
+  ],
+  "bundled_sha256": {
+    "fresh-microbench.js": "9e6f7eda99cd0fa680d4d5d085bd21785c805956254aaaa417965b47b862f552",
+    "ZOO-LICENSE.txt": "f66ac2ec2f36ff1d8a3ed5c8616f15efc702632802c22a90a9e55b9c2421c5f1",
+    "v8-runner.js": "69522a8b4ea63971a94a3e8fa2ed8446ed643cfdf3c670d700f4e53a71ca2477"
+  },
+  "v8_provenance": {
+    "archive_url": "https://bellard.org/quickjs/quickjs-extras-2026-06-04.tar.xz",
+    "archive_sha256": "11549a45b25b055946eeac2a0064399297dcf80062c6c07b644e0bc5eb329817",
+    "original_files_sha256": {
+      "Makefile": "9dddef59960b9aae716f9d2a5fa06152cb2cf2f3f68daf2715d61f8820adbdc2",
+      "base.js": "74c49b06d43d014bf392fed549d4d9acce89e76c901117617816254df1e6d1fd",
+      "navier-stokes.js": "6fc5c381ab937d7e3b11a8eff5331cfa2d5fdaac123782e80e66e420af18c6ff",
+      "raytrace.js": "bd08c1937d770339eff9ac52a6b83b74cfc075ed6272cb19392a75267982fad9",
+      "regexp.js": "f04a1b4817e5d687363e99d941cc78de9b29b722b46cc034d877f59a269bdfdf",
+      "revisions.html": "267099a035356b8e2ff9c87c7216814b08e9e58c98ab90080e7a3c853ee3b6c3",
+      "splay.js": "aa216ea624701452740aed66b0843bd468be4ba7b7112c0bdbc3cf76fa0314dd",
+      "run_harness.js": "6aa7ba4d5eca27aa7af1a03ef8115294faba8ad9e9c1b8895e31ad4dedd727ae",
+      "deltablue.js": "eeb7f58bfa42cfd8b9de41c2156d290e8e017ffa25974fac72087ce9e1d6d138",
+      "README.txt": "ff5a6e2387c61e0b8a2addfd9ea20e8ce7277197425ec4ab82576f1b1ac2c486",
+      "crypto.js": "6843ad4d776a0c59be23e1e1eecc8d2c0e8c46f43ef6b14f7f6b6abec07acb67",
+      "earley-boyer.js": "26af0253193be5af26c5a86fcd3de9f7b05ddc84aec9f85d1fbdddb6be90629b",
+      "richards.js": "31a3529271b02287b478bf595f1b9cf3c0200b32ef98b14267ba1b3e5a36fe6f",
+      "combined.js": "d12d5dec5c8ebab8b58c17d2ff2072e76e7892e5c056f54f50f8a5f663d0600e"
+    },
+    "assembly_order": [
+      "base.js",
+      "richards.js",
+      "deltablue.js",
+      "crypto.js",
+      "raytrace.js",
+      "earley-boyer.js",
+      "regexp.js",
+      "splay.js",
+      "navier-stokes.js",
+      "run_harness.js"
+    ],
+    "changes": [
+      "Select exactly one original suite/benchmark in each fresh process.",
+      "Prepare Crypto Decrypt ciphertext before measurement.",
+      "Emit exact microseconds per iteration and reference as V8_DETAILS JSON."
+    ],
+    "licenses": "Original copyright and license notices remain embedded in every source.",
+    "source_directory": "tests/bench-v8",
+    "assembled_sha256": "3e77ee612447529ac9bfc67ec3aa192038268bc6ccd77fb808d07b5a835e8446",
+    "runner": "fixtures/v8-runner.js",
+    "runner_sha256": "69522a8b4ea63971a94a3e8fa2ed8446ed643cfdf3c670d700f4e53a71ca2477",
+    "import_dependency": "Verbatim upstream extras tests import must precede this benchmark commit."
+  },
+  "micro_provenance": {
+    "repository": "https://github.com/yanjiew1/quickjs",
+    "description": "Frozen 72-case QuickJS repository microbench plus RegExp workloads used by the existing local recovery harness.",
+    "original_copyright": "Fabrice Bellard and Charlie Gordon, MIT",
+    "changes": [
+      "Select the exact requested function name instead of a prefix.",
+      "Save results for the selected one-case run."
+    ],
+    "sort_inputs": "Native Math.random; inputs vary between processes.",
+    "clock": "os.now, supplied by qjs --std",
+    "original_revision": "92a3d4d5ea04c98c462161fb881ee00b78176d73",
+    "original_path": "tests/microbench.js",
+    "original_sha256": "4abf0c34fd83cef925fd2f36009a1043f5009e98fdf6efe55e183a31dddd75f3"
+  },
+  "zoo": {
+    "repository": "https://github.com/ivankra/javascript-zoo",
+    "revision": "a17d4e0aabe52719fab1074f4b566d16d08a563c",
+    "median": "sorted(samples)[len(samples)//2], matching pinned harness/compare.py -m",
+    "excluded": [
+      "zlib.js"
+    ],
+    "files": {
+      "richards.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/richards.js",
+        "sha256": "98872e3ef6a399a7e783e90b6e8ba9ec39ee8be2af330142d2c83396881cbc80",
+        "scores": [
+          "Richards"
+        ]
+      },
+      "deltablue.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/deltablue.js",
+        "sha256": "c56b4042b3ce16073483333ae3e0432bd4ef94089f357dd71e8cc8a50c76ca73",
+        "scores": [
+          "DeltaBlue"
+        ]
+      },
+      "crypto.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/crypto.js",
+        "sha256": "f54860a994aa6a8664b97938d5f592b048e7fbcf37f7811f734c0473bcf9b090",
+        "scores": [
+          "Crypto"
+        ]
+      },
+      "raytrace.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/raytrace.js",
+        "sha256": "5a6110dddc78de04c9782ceb5047d3a23178fab23e7e50d38c4b8767128ace7d",
+        "scores": [
+          "RayTrace"
+        ]
+      },
+      "earley-boyer.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/earley-boyer.js",
+        "sha256": "5af40115948d48fdc30d404708bcfabe41437af1a66c9714cedc8b017ca56272",
+        "scores": [
+          "EarleyBoyer"
+        ]
+      },
+      "regexp.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/regexp.js",
+        "sha256": "e369ccb1bc95519c847c32b0cf0a66ccd82a055280dfed2b48678e1c1f8cff2f",
+        "scores": [
+          "RegExp"
+        ]
+      },
+      "splay.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/splay.js",
+        "sha256": "339edcfb34d7eecbe2d8c84d9263df7dd003955e33e726bbe3ac18f5fe0ceb74",
+        "scores": [
+          "Splay",
+          "SplayLatency"
+        ]
+      },
+      "navier-stokes.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/navier-stokes.js",
+        "sha256": "f6788c96f00aa61f9dbdca113e1e57b08572a643b281d3a7b940f8f974179d47",
+        "scores": [
+          "NavierStokes"
+        ]
+      },
+      "pdfjs.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/pdfjs.js",
+        "sha256": "f8a4ad16ccd53959b4fc807991afe2d3c5c190cc38d5f3a2725d4ba9bd478807",
+        "scores": [
+          "PdfJS"
+        ]
+      },
+      "mandreel.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/mandreel.js",
+        "sha256": "e44d4c50d11448f4d8a0ec624e8915a93b8449f094fd9da9ce7b319ba7aa465a",
+        "scores": [
+          "Mandreel",
+          "MandreelLatency"
+        ]
+      },
+      "gbemu.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/gbemu.js",
+        "sha256": "2aa896e17ae5ae324bdf65d0bf5077f5322f2f32a0cd5314191a7544c3476f86",
+        "scores": [
+          "Gameboy"
+        ]
+      },
+      "code-load.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/code-load.js",
+        "sha256": "e9a0668fd13eb20d9303587f92f6d7d350125726f323a936ba2e0953a29ff430",
+        "scores": [
+          "CodeLoad"
+        ]
+      },
+      "box2d.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/box2d.js",
+        "sha256": "5861c95848d670f97d4c4e32e71c43f8abf8a5b9bca29f9b6854166b25fa6211",
+        "scores": [
+          "Box2D"
+        ]
+      },
+      "typescript.js": {
+        "url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/bench/typescript.js",
+        "sha256": "63828b58ce93751cf9ce4d49d0ccebb8c3310228f81b08a8c1b667d875033918",
+        "scores": [
+          "Typescript"
+        ]
+      }
+    },
+    "license_url": "https://raw.githubusercontent.com/ivankra/javascript-zoo/a17d4e0aabe52719fab1074f4b566d16d08a563c/LICENSE",
+    "license_sha256": "f66ac2ec2f36ff1d8a3ed5c8616f15efc702632802c22a90a9e55b9c2421c5f1",
+    "parser_reference": {
+      "path": "harness/bench.py",
+      "sha256": "ab16c9360d77b6f43f356035918310f2dc6a8ef0bd3239fa7646a0b1dd0de192"
+    },
+    "changes": "No workload changes: run self-contained pinned sources directly with qjs; parse their original named score lines."
+  }
+}
