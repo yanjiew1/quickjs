@@ -103,3 +103,6 @@ libwinpthread*.dll
 
 /tests/test_temporal_date_math
 /tests/test_temporal_date_math.exe
+
+/tests/test_temporal
+/tests/test_temporal.exe
