@@ -68,3 +68,6 @@ libwinpthread*.dll
 
 /tests/test_worker_context_failure
 /tests/test_worker_context_failure.exe
+
+/tests/test_unicode_oom
+/tests/test_unicode_oom.exe
