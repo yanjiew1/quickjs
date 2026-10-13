@@ -212,14 +212,11 @@ static int const month_days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 static char const month_names[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
 static char const day_names[] = "SunMonTueWedThuFriSat";
 
-static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
-                                       double fields[minimum_length(9)], int is_local, int force)
+static int get_date_fields_from_time(double dval,
+                                     double fields[minimum_length(9)],
+                                     int is_local, int force)
 {
-    double dval;
     int64_t d, days, wd, y, i, md, h, m, s, ms, tz = 0;
-
-    if (JS_ThisTimeValue(ctx, &dval, obj))
-        return -1;
 
     if (isnan(dval)) {
         if (!force)
@@ -263,6 +260,17 @@ static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
     fields[7] = wd;
     fields[8] = tz;
     return TRUE;
+}
+
+static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
+                                      double fields[minimum_length(9)],
+                                      int is_local, int force)
+{
+    double value;
+
+    if (JS_ThisTimeValue(ctx, &value, obj))
+        return -1;
+    return get_date_fields_from_time(value, fields, is_local, force);
 }
 
 static double time_clip(double t) {
@@ -378,27 +386,40 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
     // _field(obj, first_field, end_field, args, is_local)
     double fields[9];
     int res, first_field, end_field, is_local, i, n, res1;
-    double d, a;
+    double d, a, values[7];
+    int converted;
 
     d = NAN;
     first_field = (magic >> 8) & 0x0F;
     end_field = (magic >> 4) & 0x0F;
     is_local = magic & 0x0F;
 
-    res = get_date_fields(ctx, this_val, fields, is_local, first_field == 0);
+    /* Keep the slot captured before coercion. setFullYear performs LocalTime
+       after its first ToNumber; the other setters convert all arguments first. */
+    if (JS_ThisTimeValue(ctx, &d, this_val))
+        return JS_EXCEPTION;
+    n = min_int(argc, end_field - first_field);
+    converted = first_field == 0 ? 1 : max_int(n, 1);
+    for(i = 0; i < converted; i++) {
+        if (JS_ToFloat64(ctx, &values[i], i < argc ? argv[i] : JS_UNDEFINED))
+            return JS_EXCEPTION;
+    }
+    res = get_date_fields_from_time(d, fields, is_local, first_field == 0);
     if (res < 0)
         return JS_EXCEPTION;
     res1 = res;
-    
-    // Argument coercion is observable and must be done unconditionally.
-    n = min_int(argc, end_field - first_field);
-    for(i = 0; i < n; i++) {
-        if (JS_ToFloat64(ctx, &a, argv[i]))
+    // Optional setFullYear arguments are converted after LocalTime.
+    for(i = converted; i < n; i++) {
+        if (JS_ToFloat64(ctx, &values[i], argv[i]))
             return JS_EXCEPTION;
+    }
+    for(i = 0; i < max_int(n, 1); i++) {
+        a = values[i];
         if (!isfinite(a))
             res = FALSE;
         fields[first_field + i] = trunc(a);
     }
+    d = NAN;
 
     if (!res1)
         return JS_NAN; /* thisTimeValue is NaN */
