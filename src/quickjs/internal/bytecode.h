@@ -69,6 +69,7 @@ typedef enum {
 } OPSpecialObjectEnum;
 
 #define JS_DEFINE_CLASS_HAS_HERITAGE     (1 << 0)
+#define JS_DEFINE_CLASS_HAS_STRICT_CATCH (1 << 1)
 #define JS_THROW_VAR_RO             0
 #define JS_THROW_VAR_REDECL         1
 #define JS_THROW_VAR_UNINITIALIZED  2
