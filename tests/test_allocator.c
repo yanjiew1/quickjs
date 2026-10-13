@@ -31,7 +31,6 @@
 /* Inspect the actual pool owner without adding an engine test API. */
 #include "../src/quickjs/allocator.c"
 #include "../src/quickjs/internal/runtime.h"
-#include "../src/quickjs/internal/atom.h"
 #include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
@@ -986,10 +985,14 @@ static void test_int64_atom_table_allocation_failure(void)
     JSRuntime *rt = new_allocation_failure_runtime(&failure);
     JSContext *ctx = JS_NewContext(rt);
     JSAtom *atoms, atom;
-    JSValue exception;
+    JSValue object, value, result, exception;
     size_t count = 0, capacity;
+    int operation, ret;
 
     assert(ctx);
+    object = JS_NewObject(ctx);
+    value = JS_NewObject(ctx);
+    assert(!JS_IsException(object) && !JS_IsException(value));
     capacity = rt->atom_size;
     atoms = malloc(capacity * sizeof(*atoms));
     assert(atoms);
@@ -999,17 +1002,47 @@ static void test_int64_atom_table_allocation_failure(void)
         assert(atoms[count] != JS_ATOM_NULL && !JS_HasException(ctx));
         count++;
     }
-    failure.fail_table_realloc = TRUE;
-    atom = JS_NewAtomInt64(ctx, INT64_MAX);
-    assert(atom == JS_ATOM_NULL);
-    assert(!failure.fail_table_realloc && failure.failures == 1);
-    assert(JS_HasException(ctx));
-    exception = JS_GetException(ctx);
-    JS_FreeValue(ctx, exception);
-    assert(rt->atom_free_index == 0);
+    for (operation = 0; operation < 5; operation++) {
+        failure.fail_table_realloc = TRUE;
+        switch (operation) {
+        case 0:
+            atom = JS_NewAtomInt64(ctx, INT64_MAX);
+            assert(atom == JS_ATOM_NULL);
+            break;
+        case 1:
+            result = JS_GetPropertyInt64(ctx, object, INT64_MAX);
+            assert(JS_IsException(result));
+            break;
+        case 2:
+            ret = JS_SetPropertyInt64(ctx, object, INT64_MAX,
+                                      JS_DupValue(ctx, value));
+            assert(ret == -1);
+            break;
+        case 3:
+            ret = JS_DefinePropertyValueInt64(ctx, object, INT64_MAX,
+                                              JS_DupValue(ctx, value),
+                                              JS_PROP_C_W_E);
+            assert(ret == -1);
+            break;
+        default:
+            ret = JS_DeletePropertyInt64(ctx, object, INT64_MAX,
+                                         JS_PROP_THROW);
+            assert(ret == -1);
+            break;
+        }
+        assert(!failure.fail_table_realloc);
+        assert(failure.failures == operation + 1);
+        assert(JS_HasException(ctx));
+        exception = JS_GetException(ctx);
+        JS_FreeValue(ctx, exception);
+        assert(js_rc(JS_VALUE_GET_OBJ(value))->ref_count == 1);
+        assert(rt->atom_free_index == 0);
+    }
     while (count)
         JS_FreeAtom(ctx, atoms[--count]);
     free(atoms);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, object);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     assert(failure.live_allocations == 0);
