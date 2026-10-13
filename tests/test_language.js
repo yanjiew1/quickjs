@@ -823,6 +823,100 @@ function test_annex_arguments_binding()
     strictFunction();
 }
 
+function test_class_lexical_strictness()
+{
+    const readonly = Object.defineProperty({}, "value", { value: 0 });
+    const accessor = { get value() { return 0; } };
+    const frozen = Object.preventExtensions({});
+    const proxy = new Proxy({}, { set() { return false; } });
+    for (const object of [readonly, accessor, frozen, proxy]) {
+        assert_throws(TypeError, () => { class C { [object.value = 1]() {} } });
+        assert_throws(TypeError, () => { const C = class extends (object.value = 1, Object) {}; });
+        assert_throws(TypeError, () => { class C { [object["value"] = 1]() {} } });
+    }
+    const noDelete = Object.defineProperty({}, "value", { value: 0 });
+    assert_throws(TypeError, () => { class C { [delete noDelete.value]() {} } });
+    assert_throws(TypeError, () => { class C { [delete noDelete?.value]() {} } });
+    delete globalThis.classStrictMissing;
+    assert_throws(ReferenceError, () => { class C { [classStrictMissing = 1]() {} } });
+    assert(!Object.hasOwn(globalThis, "classStrictMissing"));
+    function direct() {
+        class C { [eval("var classEvalLocal = 42; 'method'")]() {} }
+        assert(typeof classEvalLocal, "undefined");
+        class D { [eval(...["var classSpreadLocal = 42; 'method'"])]() {} }
+        assert(typeof classSpreadLocal, "undefined");
+    }
+    direct();
+    function indirect() {
+        class C { [(0, eval)("classIndirectGlobal = 42; 'method'")]() {} }
+        assert(globalThis.classIndirectGlobal, 42);
+    }
+    indirect();
+    delete globalThis.classIndirectGlobal;
+    function sloppy() { readonly.value = 1; return "method"; }
+    class C { [sloppy()]() {} }
+    assert(readonly.value, 0);
+    assert_throws(TypeError, () => (function self() {
+        class C extends (self = 1, Object) {}
+    })());
+    const object = Object.defineProperty({}, "value", { value: 0, writable: false });
+    with (object) {
+        assert_throws(TypeError, () => { class C { [value = 1]() {} } });
+    }
+    assert(object.value, 0);
+    function afterException() {
+        try { class C { [readonly.value = 1]() {} } } catch (error) {}
+        readonly.value = 1;
+        return 42;
+    }
+    assert(afterException(), 42);
+    let probes = 0;
+    const scope = new Proxy({}, {
+        has(target, key) {
+            return key === "classStrictFunction" && ++probes === 1;
+        }
+    });
+    assert_throws(ReferenceError, () => {
+        with (scope) {
+            class C { [classStrictFunction()]() {} }
+        }
+    });
+    assert(probes, 2);
+    probes = 0;
+    assert_throws(ReferenceError, () => {
+        with (scope) {
+            class C { [classStrictFunction]() {} }
+        }
+    });
+    assert(probes, 2);
+    let effects = 0;
+    assert_throws(TypeError, () => (function self() {
+        class C { [eval("self = (++effects, 1)")]() {} }
+    })());
+    assert(effects, 1);
+    assert_throws(TypeError, () => (function self() {
+        class C { [(() => { self = (++effects, 1); })()]() {} }
+    })());
+    assert(effects, 2);
+    assert_throws(TypeError, () => (function self() {
+        eval("'use strict'; self = (++effects, 1)");
+    })());
+    assert(effects, 3);
+    let calls = 0;
+    const environment = {
+        fn() { assert(this === environment); calls++; return "method"; },
+        missing: null
+    };
+    with (environment) {
+        class C { [fn?.()]() {} }
+        class D { [fn?.(...[])]() {} }
+        class E { [missing?.()]() {} }
+        fn?.();
+        missing?.(...[]);
+    }
+    assert(calls, 3);
+}
+
 function test_class()
 {
     var o;
@@ -897,6 +991,113 @@ function test_class()
     assert(new P().get() === "123");
     assert(new P().static() === 42);
 };
+
+function test_class_strict_region_control_flow()
+{
+    const frozen = Object.freeze({});
+    let caught = 0;
+    try {
+        class Outer { [(class Inner {}, frozen.x = 1)]() {} }
+    } catch (e) {
+        assert(e instanceof TypeError);
+        frozen.x = 2;
+        eval("var after_catch = 3");
+        caught++;
+    }
+    assert(caught, 1);
+    assert(after_catch, 3);
+    assert(frozen.x, undefined);
+
+    const Named = class {};
+    const object = { Named: class {} };
+    assert(Named.name, "Named");
+    assert(object.Named.name, "Named");
+    const key = Symbol("computed");
+    const computed = {
+        [key]: class { [eval("'method'")]() {} },
+        plain: { [key]: class {} },
+        nested: class { ["inner"] = { [key]: class {} }; },
+    };
+    assert(computed[key].name, "[computed]");
+    assert(computed.plain[key].name, "[computed]");
+    assert(new computed.nested().inner[key].name, "[computed]");
+    class Plain { method() { "use strict"; frozen.x = 1; } }
+    assert_throws(TypeError, () => new Plain().method());
+    frozen.x = 2;
+
+    /* A strict enclosing function must retain its mode after the catch. */
+    (function() {
+        "use strict";
+        try {
+            class C extends (frozen.x = 1) {}
+        } catch (e) {
+            assert(e instanceof TypeError);
+            assert_throws(TypeError, () => { frozen.x = 2; });
+            eval("var strict_catch_only = 1");
+            assert(typeof strict_catch_only, "undefined");
+        }
+    })();
+
+    /* Class cleanup must not consume an outer catch marker when the
+       generator is returned from, or replace its finally. */
+    for (const source of [
+        "class C { [(yield 1)]() {} }",
+        "class C extends (yield 1) {}",
+        "class C { [(yield 1, eval('0'))]() {} }",
+    ]) {
+        const iterator = Function("frozen", `
+            return (function* () {
+                try { ${source} }
+                finally {
+                    frozen.x = 2;
+                    eval("var restored = 3");
+                    yield restored;
+                }
+            })();
+        `)(frozen);
+        assert(iterator.next().value, 1);
+        assert(iterator.return(4).value, 3);
+        assert(iterator.next().value, 4);
+    }
+
+    for (const completion of ["next", "return", "throw"]) {
+        let closed = 0, finalized = 0;
+        const sentinel = {};
+        const iterable = {
+            [Symbol.iterator]() { return this; },
+            next() { return { value: 1, done: false }; },
+            return() { closed++; return {}; }
+        };
+        function* suspended() {
+            try {
+                for (const value of iterable) {
+                    class C {
+                        [(yield 1, eval("var class_only = 1"), "key")]() {}
+                    }
+                    assert(typeof class_only, "undefined");
+                    frozen.x = 3;
+                    break;
+                }
+            } finally {
+                frozen.x = 4;
+                eval("var after_finally = 5");
+                assert(after_finally, 5);
+                finalized++;
+            }
+        }
+        const iterator = suspended();
+        assert(iterator.next().value, 1);
+        if (completion === "throw") {
+            let error;
+            try { iterator.throw(sentinel); } catch (e) { error = e; }
+            assert(error, sentinel);
+        } else {
+            assert(iterator[completion](2).done, true);
+        }
+        assert(closed, 1);
+        assert(finalized, 1);
+    }
+}
 
 function test_template()
 {
@@ -1241,6 +1442,8 @@ test_annex_eval_variable_target();
 test_parameter_arguments_binding();
 test_annex_deferred_applicability();
 test_annex_arguments_binding();
+test_class_lexical_strictness();
+test_class_strict_region_control_flow();
 test_template();
 test_template_skip();
 test_object_literal();

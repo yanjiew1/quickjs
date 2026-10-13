@@ -405,6 +405,7 @@ int push_scope(JSParseState *s) {
         fd->scope_count++;
         fd->scopes[scope].parent = fd->scope_level;
         fd->scopes[scope].first = fd->scope_first;
+        fd->scopes[scope].is_strict = fd->class_strict;
         emit_op(s, OP_enter_scope);
         emit_u16(s, scope);
         return fd->scope_level = scope;
@@ -1642,14 +1643,37 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     JSFunctionDef *method_fd, *ctor_fd;
     int saved_js_mode, class_name_var_idx, prop_type, ctor_cpool_offset;
     int class_flags = 0, i, define_class_offset;
-    BOOL is_static, is_private;
+    BOOL is_static, is_private, saved_class_strict;
+    BlockEnv strict_block;
+    BlockEnv *saved_top_break = fd->top_break;
+    int label_strict_catch = -1, label_strict_end = -1;
+    int strict_scope = -1;
     const uint8_t *class_start_ptr = s->token.ptr;
     const uint8_t *start_ptr;
     ClassFieldsDef class_fields[2];
 
     /* classes are parsed and executed in strict mode */
     saved_js_mode = fd->js_mode;
+    saved_class_strict = fd->class_strict;
+    fd->class_strict |= !(saved_js_mode & JS_MODE_STRICT);
     fd->js_mode |= JS_MODE_STRICT;
+    if (!(saved_js_mode & JS_MODE_STRICT)) {
+        label_strict_catch = new_label(s);
+        label_strict_end = new_label(s);
+        if (label_strict_catch < 0 || label_strict_end < 0)
+            goto fail;
+        push_break_entry(fd, &strict_block, JS_ATOM_NULL, -1, -1, 1);
+        strict_block.label_finally = new_label(s);
+        if (strict_block.label_finally < 0)
+            goto fail;
+        /* Native exotic hooks can observe the active frame's strictness.
+           Keep it until class evaluation and its abrupt cleanup finish. */
+        strict_scope = push_scope(s);
+        if (strict_scope < 0)
+            goto fail;
+        emit_goto(s, OP_catch, label_strict_catch);
+        class_flags |= JS_DEFINE_CLASS_HAS_STRICT_CATCH;
+    }
     if (next_token(s))
         goto fail;
     if (s->token.val == TOK_IDENT) {
@@ -1675,7 +1699,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     push_scope(s);
 
     if (s->token.val == TOK_EXTENDS) {
-        class_flags = JS_DEFINE_CLASS_HAS_HERITAGE;
+        class_flags |= JS_DEFINE_CLASS_HAS_HERITAGE;
         if (next_token(s))
             goto fail;
         if (js_parse_left_hand_side_expr(s))
@@ -2107,6 +2131,24 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     pop_scope(s);
     pop_scope(s);
 
+    /* Restore the enclosing mode before the final name-inference marker. */
+    if (!(saved_js_mode & JS_MODE_STRICT)) {
+        pop_break_entry(fd);
+        /* Preserve the class value while removing its catch marker. */
+        pop_scope(s);
+        emit_op(s, OP_nip);
+        emit_goto(s, OP_goto, label_strict_end);
+        emit_label(s, label_strict_catch);
+        emit_goto(s, OP_gosub, strict_block.label_finally);
+        emit_op(s, OP_throw);
+        /* Also reached by generator.return() before outer cleanup. */
+        emit_label(s, strict_block.label_finally);
+        emit_op(s, OP_leave_scope);
+        emit_u16(s, strict_scope);
+        emit_op(s, OP_ret);
+        emit_label(s, label_strict_end);
+    }
+
     /* the class statements have a block level scope */
     if (class_var_name != JS_ATOM_NULL) {
         if (define_var(s, fd, class_var_name, JS_VAR_DEF_LET) < 0)
@@ -2135,12 +2177,15 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     JS_FreeAtom(ctx, class_name);
     JS_FreeAtom(ctx, class_var_name);
     fd->js_mode = saved_js_mode;
+    fd->class_strict = saved_class_strict;
     return 0;
  fail:
     JS_FreeAtom(ctx, name);
     JS_FreeAtom(ctx, class_name);
     JS_FreeAtom(ctx, class_var_name);
+    fd->top_break = saved_top_break;
     fd->js_mode = saved_js_mode;
+    fd->class_strict = saved_class_strict;
     return -1;
 }
 
@@ -2274,8 +2319,7 @@ done:
 static BOOL has_with_scope(JSFunctionDef *s, int scope_level)
 {
     while (s) {
-        /* no with in strict mode */
-        if (!(s->js_mode & JS_MODE_STRICT)) {
+        {
             int scope_idx = s->scopes[scope_level].first;
             while (scope_idx >= 0) {
                 JSVarDef *vd = &s->vars[scope_idx];
