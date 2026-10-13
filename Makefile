@@ -1547,3 +1547,6 @@ tests/test_intl_default_locale_api$(EXE): $(OBJDIR)/tests/test_intl_default_loca
 
 # shared frontend sources remain disabled until coherent Intl activation.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/values.o $(OBJDIR)/src/quickjs/builtins/intl/locale-syntax.o $(OBJDIR)/src/quickjs/builtins/intl/intl-text.o
+
+# resolution frontend sources remain disabled until coherent Intl activation.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-locale-resolution.o $(OBJDIR)/src/quickjs/builtins/intl/native-number-common.o
