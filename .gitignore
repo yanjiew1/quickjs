@@ -65,6 +65,8 @@ libwinpthread*.dll
 
 /tests/test_wait_queue
 
+/tests/test_native_jobs
+
 /tests/test_allocator
 /tests/test_allocator.exe
 /tests/test_allocator_policy
