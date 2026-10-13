@@ -306,6 +306,7 @@ QUICKJS_SRCS= \
     src/quickjs/memory-usage.c \
     src/quickjs/module-evaluation.c \
     src/quickjs/module.c \
+    src/quickjs/native-jobs.c \
     src/quickjs/number.c \
     src/quickjs/object.c \
     src/quickjs/parse-state.c \
@@ -594,6 +595,7 @@ C_TESTS+=tests/test_fuzz_allocations$(EXE)
 
 C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 
+C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
 
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
@@ -636,6 +638,9 @@ tests/test_qjsc_context_failures$(EXE): $(OBJDIR)/tests/test_qjsc_context_failur
 tests/test_wait_queue$(EXE): $(OBJDIR)/tests/test_wait_queue.o $(WAIT_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_native_jobs$(EXE): $(OBJDIR)/tests/test_native_jobs.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -673,6 +678,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_qjsc_context_failures$(EXE)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
 	$(WINE) ./tests/test_worker_context_failure$(EXE)
+	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
