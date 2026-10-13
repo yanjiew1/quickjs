@@ -9,14 +9,17 @@
 #include "quickjs-libc.h"
 
 #ifdef CONFIG_ATOMICS
+static int test_clock_gettime(clockid_t id, struct timespec *time);
 static int test_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 static int test_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
                               const struct timespec *deadline);
 
 /* Compile the actual owner with its condition waits intercepted. */
+#define clock_gettime test_clock_gettime
 #define pthread_cond_wait test_cond_wait
 #define pthread_cond_timedwait test_cond_timedwait
 #include "../src/quickjs/builtins/atomics.c"
+#undef clock_gettime
 #undef pthread_cond_wait
 #undef pthread_cond_timedwait
 #endif
@@ -95,12 +98,24 @@ typedef enum {
     TEST_WAIT_SPURIOUS_TIMEOUT,
     TEST_WAIT_NOTIFY_TIMEOUT_RACE,
     TEST_WAIT_SPURIOUS_NOTIFY,
+    TEST_WAIT_FRACTIONAL_TIMEOUT,
 } TestWaitMode;
 
 static TestWaitMode test_wait_mode;
 static JSContext *test_wait_context;
 static int test_wait_calls;
 static struct timespec test_wait_deadline;
+
+static int test_clock_gettime(clockid_t id, struct timespec *time)
+{
+    if (test_wait_mode == TEST_WAIT_FRACTIONAL_TIMEOUT) {
+        assert(id == CLOCK_REALTIME);
+        time->tv_sec = 1234;
+        time->tv_nsec = 999500000;
+        return 0;
+    }
+    return clock_gettime(id, time);
+}
 
 static void test_notify_while_unlocked(pthread_mutex_t *mutex)
 {
@@ -130,6 +145,11 @@ static int test_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 static int test_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
                               const struct timespec *deadline)
 {
+    if (test_wait_mode == TEST_WAIT_FRACTIONAL_TIMEOUT) {
+        assert(++test_wait_calls == 1);
+        test_wait_deadline = *deadline;
+        return ETIMEDOUT;
+    }
     if (test_wait_mode == TEST_WAIT_NORMAL)
         return pthread_cond_timedwait(cond, mutex, deadline);
     assert(++test_wait_calls <= 4);
@@ -171,6 +191,26 @@ static void test_wait_result(JSContext *ctx, TestWaitMode mode,
     JS_FreeCString(ctx, string);
     JS_FreeValue(ctx, result);
     test_wait_context = NULL;
+}
+
+static void test_wait_fractional_deadline(JSContext *ctx)
+{
+    test_wait_result(ctx, TEST_WAIT_FRACTIONAL_TIMEOUT,
+        "Atomics.wait(testWords, 0, 0, 1.75)", "timed-out", 1);
+    assert(test_wait_deadline.tv_sec == 1235);
+    assert(test_wait_deadline.tv_nsec == 1500000);
+    test_wait_result(ctx, TEST_WAIT_FRACTIONAL_TIMEOUT,
+        "Atomics.wait(testWords, 0, 0, 0.25)", "timed-out", 1);
+    assert(test_wait_deadline.tv_sec == 1235);
+    assert(test_wait_deadline.tv_nsec == 500000);
+    test_wait_result(ctx, TEST_WAIT_FRACTIONAL_TIMEOUT,
+        "Atomics.wait(testWords, 0, 0, 0)", "timed-out", 1);
+    assert(test_wait_deadline.tv_sec == 1234);
+    assert(test_wait_deadline.tv_nsec == 999500000);
+    test_wait_result(ctx, TEST_WAIT_FRACTIONAL_TIMEOUT,
+        "Atomics.wait(testWords, 0, 0, -0.5)", "timed-out", 1);
+    assert(test_wait_deadline.tv_sec == 1234);
+    assert(test_wait_deadline.tv_nsec == 999500000);
 }
 
 static void test_wait_notification_predicate(JSContext *ctx)
@@ -219,6 +259,7 @@ int main(void)
     test_javascript_wait_cases(ctx);
     test_concurrent_expected_value(ctx);
     test_wait_notification_predicate(ctx);
+    test_wait_fractional_deadline(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 #endif
