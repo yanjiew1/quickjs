@@ -247,18 +247,14 @@ int JS_AddIntrinsicBaseObjects(JSContext *ctx)
     }
     ctx->iterator_ctor = obj2;
     
-    ctx->class_proto[JS_CLASS_ITERATOR_CONCAT] =
-        JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
-                              js_iterator_concat_proto_funcs,
-                              countof(js_iterator_concat_proto_funcs));
-    if (JS_IsException(ctx->class_proto[JS_CLASS_ITERATOR_CONCAT]))
-        return -1;
     ctx->class_proto[JS_CLASS_ITERATOR_HELPER] =
         JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
                               js_iterator_helper_proto_funcs,
                               countof(js_iterator_helper_proto_funcs));
     if (JS_IsException(ctx->class_proto[JS_CLASS_ITERATOR_HELPER]))
         return -1;
+    ctx->class_proto[JS_CLASS_ITERATOR_CONCAT] =
+        JS_DupValue(ctx, ctx->class_proto[JS_CLASS_ITERATOR_HELPER]);
                        
     ctx->class_proto[JS_CLASS_ITERATOR_WRAP] =
         JS_NewObjectProtoList(ctx, ctx->class_proto[JS_CLASS_ITERATOR], 
