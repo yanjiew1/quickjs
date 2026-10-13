@@ -2430,8 +2430,10 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
         case OP_scope_get_var:
             if (depth != 0) {
                 label = new_label(s);
-                if (label < 0)
+                if (label < 0) {
+                    JS_FreeAtom(s->ctx, name);
                     return -1;
+                }
                 emit_op(s, OP_scope_make_ref);
                 emit_atom(s, name);
                 emit_u32(s, label);
@@ -2475,8 +2477,10 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
         case OP_scope_get_var:
             if (depth != 0) {
                 label = new_label(s);
-                if (label < 0)
+                if (label < 0) {
+                    JS_FreeAtom(s->ctx, name);
                     return -1;
+                }
                 emit_op(s, OP_scope_make_ref);
                 emit_atom(s, name);
                 emit_u32(s, label);
