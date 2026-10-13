@@ -103,6 +103,9 @@ pthread_cond_t progress_cond;
 pthread_mutex_t progress_mutex;
 
 FILE *outfile;
+static FILE *execution_progress;
+static const char *execution_progress_filename;
+static pthread_mutex_t execution_progress_mutex = PTHREAD_MUTEX_INITIALIZER;
 enum test_mode_t {
     TEST_DEFAULT_NOSTRICT, /* run tests as nostrict unless test is flagged as strictonly */
     TEST_DEFAULT_STRICT,   /* run tests as strict unless test is flagged as nostrict */
@@ -2216,6 +2219,32 @@ int include_exclude_or_skip(int i) // naming is hard...
     return INCLUDE;
 }
 
+/* Optional execution telemetry has its own stream, separate from test results. */
+static void write_execution_progress(const char *phase, int thread, int index,
+                                     const char *filename)
+{
+    const unsigned char *p;
+
+    if (!execution_progress)
+        return;
+    pthread_mutex_lock(&execution_progress_mutex);
+    fprintf(execution_progress,
+            "{\"phase\":\"%s\",\"thread\":%d,\"index\":%d,\"file\":\"",
+            phase, thread, index);
+    for (p = (const unsigned char *)filename; *p; p++) {
+        if (*p == '"' || *p == '\\')
+            fprintf(execution_progress, "\\%c", *p);
+        else if (*p < 0x20)
+            fprintf(execution_progress, "\\u%04x", *p);
+        else
+            fputc(*p, execution_progress);
+    }
+    fputs("\"}\n", execution_progress);
+    if (fflush(execution_progress) != 0)
+        perror_exit(1, execution_progress_filename);
+    pthread_mutex_unlock(&execution_progress_mutex);
+}
+
 typedef struct {
     pthread_t tid;
     int thread_index;
@@ -2241,7 +2270,9 @@ void *run_test_dir_list(void *opaque)
         } else {
             ti = 0;
         }
+        write_execution_progress("start", th->thread_index, i, p);
         run_test(tls, p, i);
+        write_execution_progress("finish", th->thread_index, i, p);
         if (slow_test_threshold != 0) {
             ti = get_clock_ms() - ti;
             if (ti >= slow_test_threshold)
@@ -2269,6 +2300,7 @@ void help(void)
            "-v             verbose: output error messages\n"
            "-D duration    display tests taking more than 'duration' ms\n"
            "-T threads     number of parallel threads\n"
+           "--progress-log file  write flushed execution records separately\n"
            "-c file        read configuration from 'file'\n"
            "-d dir         run all test files in directory tree 'dir'\n"
            "-e file        load the known errors from 'file'\n"
@@ -2371,6 +2403,8 @@ int main(int argc, char **argv)
             only_check_errors = TRUE;
         } else if (str_equal(arg, "-D")) {
             slow_test_threshold = atoi(get_opt_arg(arg, argv[optind++]));
+        } else if (str_equal(arg, "--progress-log")) {
+            execution_progress_filename = get_opt_arg(arg, argv[optind++]);
         } else if (str_equal(arg, "-T")) {
             nthreads = atoi(get_opt_arg(arg, argv[optind++]));
         } else if (str_equal(arg, "-N")) {
@@ -2425,6 +2459,12 @@ int main(int argc, char **argv)
 #endif
     }
     
+    if (execution_progress_filename) {
+        execution_progress = fopen(execution_progress_filename, "w");
+        if (!execution_progress)
+            perror_exit(1, execution_progress_filename);
+    }
+
     clocks = clock();
 
     if (count_skipped_features && harness_skip_features && *harness_skip_features) {
@@ -2523,9 +2563,19 @@ int main(int argc, char **argv)
     } else {
         outfile = stdout;
         while (optind < argc) {
-            run_test(tls, argv[optind++], -1);
+            const char *filename = argv[optind++];
+            write_execution_progress("start", 0, -1, filename);
+            run_test(tls, filename, -1);
+            write_execution_progress("finish", 0, -1, filename);
         }
     }
+
+    if (execution_progress) {
+        if (fclose(execution_progress) != 0)
+            perror_exit(1, execution_progress_filename);
+        execution_progress = NULL;
+    }
+    pthread_mutex_destroy(&execution_progress_mutex);
 
     clocks = clock() - clocks;
 
