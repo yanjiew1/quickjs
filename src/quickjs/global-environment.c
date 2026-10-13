@@ -109,15 +109,6 @@ int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
     p = JS_VALUE_GET_OBJ(ctx->global_var_obj);
     prs = find_own_property(&pr, p, prop);
     if (prs) {
-        /* XXX: conformance: do these tests in
-           OP_put_var_ref/OP_get_var_ref ? */
-        if (unlikely(JS_IsUninitialized(*pr->u.var_ref->pvalue))) {
-            JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
-            return -1;
-        }
-        if (unlikely(!(prs->flags & JS_PROP_WRITABLE))) {
-            return JS_ThrowTypeErrorReadOnly(ctx, JS_PROP_THROW, prop);
-        }
         sp[0] = JS_DupValue(ctx, ctx->global_var_obj);
     } else {
         int ret;

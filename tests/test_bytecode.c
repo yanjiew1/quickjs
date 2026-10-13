@@ -29,9 +29,8 @@
 #include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/function.h"
 
-static void test_bytecode_roundtrip(void)
+static void test_bytecode_roundtrip(const char *source)
 {
-    static const char source[] = "function saved() { return 42; } saved();";
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx;
     JSValue compiled, loaded, result;
@@ -42,7 +41,7 @@ static void test_bytecode_roundtrip(void)
     JS_SetStripInfo(rt, 0);
     ctx = JS_NewContext(rt);
     assert(ctx);
-    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "roundtrip.js",
+    compiled = JS_Eval(ctx, source, strlen(source), "roundtrip.js",
                        JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
     assert(!JS_IsException(compiled));
     buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
@@ -196,6 +195,13 @@ int main(void)
     test_class_strict_region_bytecode(
         "'use strict'; class Plain { [eval('0')]() {} }", 0);
     test_class_strict_exotics();
-    test_bytecode_roundtrip();
+    test_bytecode_roundtrip("function saved() { return 42; } saved();");
+    test_bytecode_roundtrip(
+        "(function() { let effects = 0; const binding = 1;"
+        " function saved() { with ({}) { binding ||= ++effects;"
+        " try { binding = ++effects; } catch (e) {"
+        " if (!(e instanceof TypeError)) return 0; } }"
+        " return effects === 1 && binding === 1 ? 42 : 0; }"
+        " return saved(); })();");
     return 0;
 }
