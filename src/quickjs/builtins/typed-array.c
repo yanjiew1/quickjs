@@ -247,8 +247,8 @@ JSValue JS_NewTypedArray(JSContext *ctx, int argc, JSValueConst *argv,
 }
 
 /* Return the buffer associated to the typed array or an exception if
-   it is not a typed array or if the buffer is detached. pbyte_offset,
-   pbyte_length or pbytes_per_element can be NULL. */
+   it is not a typed array or if the view is detached or out of bounds.
+   pbyte_offset, pbyte_length or pbytes_per_element can be NULL. */
 JSValue JS_GetTypedArrayBuffer(JSContext *ctx, JSValueConst obj,
                                size_t *pbyte_offset,
                                size_t *pbyte_length,
@@ -265,7 +265,8 @@ JSValue JS_GetTypedArrayBuffer(JSContext *ctx, JSValueConst obj,
     if (pbyte_offset)
         *pbyte_offset = ta->offset;
     if (pbyte_length)
-        *pbyte_length = ta->length;
+        *pbyte_length = (size_t)p->u.array.count <<
+            typed_array_size_log2(p->class_id);
     if (pbytes_per_element) {
         *pbytes_per_element = 1 << typed_array_size_log2(p->class_id);
     }
