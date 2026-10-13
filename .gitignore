@@ -71,3 +71,6 @@ libwinpthread*.dll
 
 /tests/test_unicode_oom
 /tests/test_unicode_oom.exe
+
+/tests/test_allocator_policy
+/tests/test_allocator_policy.exe
