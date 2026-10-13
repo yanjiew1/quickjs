@@ -2045,60 +2045,74 @@ JSValue js_array_iterator_next(JSContext *ctx, JSValueConst this_val,
                                BOOL *pdone, int magic)
 {
     JSArrayIteratorData *it;
-    uint32_t len, idx;
-    JSValue val, obj;
+    int64_t len, idx;
+    JSIteratorKindEnum kind;
+    JSValue array = JS_UNDEFINED, val, obj;
     JSObject *p;
+    BOOL free_array = FALSE;
 
     it = JS_GetOpaque2(ctx, this_val, JS_CLASS_ARRAY_ITERATOR);
     if (!it)
-        goto fail1;
-    if (JS_IsUndefined(it->obj))
+        goto fail;
+    array = it->obj;
+    if (JS_IsUndefined(array))
         goto done;
-    p = JS_VALUE_GET_OBJ(it->obj);
+    idx = it->idx;
+    kind = it->kind;
+    p = JS_VALUE_GET_OBJ(array);
     if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
         p->class_id <= JS_CLASS_FLOAT64_ARRAY) {
         if (typed_array_is_oob(p)) {
             JS_ThrowTypeErrorArrayBufferOOB(ctx);
-            goto fail1;
+            goto fail;
         }
         len = p->u.array.count;
     } else {
-        if (js_get_length32(ctx, &len, it->obj)) {
-        fail1:
-            *pdone = FALSE;
-            return JS_EXCEPTION;
+        if (p->class_id != JS_CLASS_ARRAY) {
+            /* A length getter may exhaust the iterator and release its object. */
+            array = JS_DupValue(ctx, array);
+            free_array = TRUE;
         }
+        if (js_get_length64(ctx, &len, array))
+            goto fail;
     }
-    idx = it->idx;
     if (idx >= len) {
         JS_FreeValue(ctx, it->obj);
         it->obj = JS_UNDEFINED;
-    done:
-        *pdone = TRUE;
-        return JS_UNDEFINED;
+        goto done;
     }
     it->idx = idx + 1;
     *pdone = FALSE;
-    if (it->kind == JS_ITERATOR_KIND_KEY) {
-        return JS_NewUint32(ctx, idx);
+    if (kind == JS_ITERATOR_KIND_KEY) {
+        val = JS_NewInt64(ctx, idx);
     } else {
-        val = JS_GetPropertyUint32(ctx, it->obj, idx);
+        val = JS_GetPropertyInt64(ctx, array, idx);
         if (JS_IsException(val))
-            return JS_EXCEPTION;
-        if (it->kind == JS_ITERATOR_KIND_VALUE) {
-            return val;
-        } else {
+            goto out;
+        if (kind == JS_ITERATOR_KIND_KEY_AND_VALUE) {
             JSValueConst args[2];
             JSValue num;
-            num = JS_NewUint32(ctx, idx);
+            num = JS_NewInt64(ctx, idx);
             args[0] = num;
             args[1] = val;
             obj = js_create_array(ctx, 2, args);
             JS_FreeValue(ctx, val);
             JS_FreeValue(ctx, num);
-            return obj;
+            val = obj;
         }
     }
+ out:
+    if (free_array)
+        JS_FreeValue(ctx, array);
+    return val;
+ done:
+    *pdone = TRUE;
+    val = JS_UNDEFINED;
+    goto out;
+ fail:
+    *pdone = FALSE;
+    val = JS_EXCEPTION;
+    goto out;
 }
 
 static const JSCFunctionListEntry js_array_unscopables_funcs[] = {
