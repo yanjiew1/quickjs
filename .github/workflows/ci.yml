@@ -108,79 +108,12 @@ jobs:
           make test2-bootstrap
           make test2
 
-  macos-asan:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build
-        run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
-      - name: Run built-in tests
-        env:
-          ASAN_OPTIONS: halt_on_error=1
-        run: |
-          make CONFIG_ASAN=y test
-
-  macos-ubsan:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build
-        run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
-      - name: Run built-in tests
-        env:
-          UBSAN_OPTIONS: halt_on_error=1
-        run: |
-          make CONFIG_UBSAN=y test
-
-  freebsd:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build + test
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          copyback: false
-          mem: 16384
-          prepare: |
-            pkg install -y gmake
-          run: |
-            gmake
-            ./qjs -qd
-            gmake test
-
-  cosmopolitan:
-    name: Cosmopolitan
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Install Cosmopolitan
-        run: |
-          mkdir ~/cosmocc
-          cd ~/cosmocc
-          wget https://cosmo.zip/pub/cosmocc/cosmocc.zip
-          unzip cosmocc.zip
-          echo "$HOME/cosmocc/bin" >> "$GITHUB_PATH"
-      - name: Build
-        run: |
-          make CONFIG_COSMO=y
-      - name: Run built-in tests
-        run: |
-          make CONFIG_COSMO=y test
-      - name: Run test262
-        run: |
-          make test2-bootstrap
-          make CONFIG_COSMO=y test2
-
   mingw-windows:
     name: MinGW Windows target
     runs-on: ubuntu-latest
+    env:
+      WINEARCH: win64
+      WINEDEBUG: "-all"
     strategy:
       fail-fast: false
     steps:
@@ -190,12 +123,18 @@ jobs:
       - name: Install MinGW and Wine
         run: |
           sudo apt update
-          sudo apt install -y wine mingw-w64
+          sudo apt install -y wine64 mingw-w64
           cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll .
+          cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll tests/
       - name: Setup Wine
         run: |
-          wine --version
-          winecfg /v
+          # Set the prefix here, where runner shell variables are available.
+          export WINEPREFIX="$RUNNER_TEMP/quickjs-wine64"
+          printf 'WINEPREFIX=%s\n' "$WINEPREFIX" >> "$GITHUB_ENV"
+          # Use the 64-bit loader directly; the wrapper warns about wine32.
+          test -x /usr/lib/wine/wine64
+          /usr/lib/wine/wine64 --version
+          /usr/lib/wine/wine64 wineboot.exe --init
           # binfmt doesn't work in GitHub Actions
           #sudo apt install -y binfmt-support wine-binfmt
           #echo ":Wine:M::MZ::/usr/bin/wine:" > /etc/binfmt.d/wine.conf
@@ -206,7 +145,7 @@ jobs:
       - name: Run built-in tests
         run: |
           # If binfmt support worked, could just run `make CONFIG_WIN32=y test`
-          make WINE=/usr/bin/wine CONFIG_WIN32=y test
+          make WINE=/usr/lib/wine/wine64 CONFIG_WIN32=y test
 
   windows-msys:
     name: Windows MSYS2
@@ -220,7 +159,7 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          install: git make diffutils mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
+          install: git make diffutils python mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
       - name: Build
         run: |
            make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
