@@ -4249,10 +4249,15 @@ __exception int JS_CopyDataProperties(JSContext *ctx,
             js_free_desc(ctx, &desc);
             continue;
         }
-        js_free_desc(ctx, &desc);
-        val = JS_GetProperty(ctx, source, tab_atom[i].atom);
-        if (JS_IsException(val))
-            goto exception;
+        if (!p->is_exotic && !(desc.flags & JS_PROP_GETSET)) {
+            /* An ordinary data descriptor already owns the value of Get. */
+            val = desc.value;
+        } else {
+            js_free_desc(ctx, &desc);
+            val = JS_GetProperty(ctx, source, tab_atom[i].atom);
+            if (JS_IsException(val))
+                goto exception;
+        }
         if (setprop)
             ret = JS_SetProperty(ctx, target, tab_atom[i].atom, val);
         else
