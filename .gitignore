@@ -109,3 +109,6 @@ libwinpthread*.dll
 
 /tests/test_temporal_format
 /tests/test_temporal_format.exe
+
+/tests/test_temporal_duration_math
+/tests/test_temporal_duration_math.exe
