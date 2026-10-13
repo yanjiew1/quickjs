@@ -924,6 +924,104 @@ function test_class_lexical_strictness()
     assert(calls, 3);
 }
 
+const global_const_reference = 1;
+
+function test_const_reference_timing()
+{
+    let effects = 0;
+    const truthy = 1;
+    const falsy = 0;
+    const absent = null;
+    with ({}) {
+        assert(truthy ||= ++effects, 1);
+        assert(truthy ??= ++effects, 1);
+        assert(falsy &&= ++effects, 0);
+        assert(effects, 0);
+        assert_throws(TypeError, () => { truthy &&= ++effects; });
+        assert(effects, 1);
+        assert_throws(TypeError, () => { falsy ||= ++effects; });
+        assert(effects, 2);
+        assert_throws(TypeError, () => { absent ??= ++effects; });
+        assert(effects, 3);
+        assert_throws(TypeError, () => { truthy = ++effects; });
+        assert(effects, 4);
+        assert(truthy, 1);
+    }
+    /* The lexical binding can precede the with object in the scope chain. */
+    with ({}) {
+        const local = 1;
+        assert(local ||= ++effects, 1);
+        assert_throws(TypeError, () => { local = ++effects; });
+        assert(effects, 5);
+        assert(local, 1);
+    }
+    function captured() {
+        const binding = 1;
+        return function() {
+            with ({}) {
+                assert(binding ||= ++effects, 1);
+                assert_throws(TypeError, () => { binding = ++effects; });
+                assert(binding, 1);
+            }
+        };
+    }
+    captured()();
+    assert(effects, 6);
+    eval("with ({}) { truthy ||= ++effects; }");
+    assert(effects, 6);
+    assert_throws(TypeError, () => {
+        eval("with ({}) { truthy = ++effects; }");
+    });
+    assert(effects, 7);
+    with ({}) {
+        assert(global_const_reference ||= ++effects, 1);
+        assert_throws(TypeError, () => { global_const_reference = ++effects; });
+        assert(effects, 8);
+    }
+    Object.defineProperty(globalThis, "readonly_global_reference", {
+        value: 1, configurable: true
+    });
+    (0, eval)("var readonly_global_reference;" +
+              " with ({}) { readonly_global_reference = 2; }");
+    assert(globalThis.readonly_global_reference, 1);
+    delete globalThis.readonly_global_reference;
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        with ({}) { binding = ++effects; }
+        const binding = 1;
+    });
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, function() {
+        with ({}) { binding ||= ++effects; }
+        const binding = 1;
+    });
+    assert(effects, 0);
+    assert_throws(ReferenceError, function() {
+        with ({}) { binding = ++effects; }
+        let binding;
+    });
+    assert(effects, 1);
+    function capturedTDZ(write) {
+        const run = function() {
+            with ({}) {
+                if (write)
+                    binding = ++effects;
+                else
+                    binding ||= ++effects;
+            }
+        };
+        run();
+        const binding = 1;
+    }
+    effects = 0;
+    assert_throws(ReferenceError, () => capturedTDZ(true));
+    assert(effects, 1);
+    effects = 0;
+    assert_throws(ReferenceError, () => capturedTDZ(false));
+    assert(effects, 0);
+}
+
 function test_parameter_environment_bindings()
 {
     function shared(a = 1, read = () => a) {
@@ -1411,6 +1509,7 @@ test_parameter_arguments_binding();
 test_annex_deferred_applicability();
 test_annex_arguments_binding();
 test_class_lexical_strictness();
+test_const_reference_timing();
 test_parameter_environment_bindings();
 test_template();
 test_template_skip();
