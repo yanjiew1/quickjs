@@ -1593,3 +1593,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-date-time-format.
 test-icu-build-config:
 	QJS_TEST_MAKE="$(MAKE)" $(PYTHON) tests/test_icu_build_config.py
 test: test-icu-build-config
+
+# ICU resolution owners compile only when that frontend backend is selected.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/locale-resolution.o $(OBJDIR)/src/quickjs/builtins/intl/number-common.o
