@@ -41,3 +41,6 @@ libwinpthread*.dll
 
 /tests/test_fuzz_support
 /tests/test_fuzz_support.exe
+
+/tests/test_api
+/tests/test_api.exe
