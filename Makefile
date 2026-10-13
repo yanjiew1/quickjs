@@ -627,6 +627,7 @@ test: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) -m tests/test_async.js
 	$(WINE) ./qjs$(EXE) tests/test_cyclic_import.js
 	$(WINE) ./qjs$(EXE) tests/test_worker.js
+	$(WINE) ./qjs$(EXE) tests/test_gsab_worker.js
 ifndef CONFIG_WIN32
 	$(WINE) ./qjs$(EXE) tests/test_std.js
 	$(WINE) ./qjs$(EXE) tests/test_rw_handler.js
