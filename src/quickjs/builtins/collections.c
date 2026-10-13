@@ -923,36 +923,33 @@ static JSValue js_map_iterator_next(JSContext *ctx, JSValueConst this_val,
 static int get_set_record(JSContext *ctx, JSValueConst obj,
                           int64_t *psize, JSValue *phas, JSValue *pkeys)
 {
-    JSMapState *s;
     int64_t size;
     JSValue has = JS_UNDEFINED, keys = JS_UNDEFINED;
-    
-    s = JS_GetOpaque(obj, JS_CLASS_SET);
-    if (s) {
-        size = s->record_count;
-    } else {
-        JSValue v;
-        double d;
+    JSValue v;
+    double d;
 
-        v = JS_GetProperty(ctx, obj, JS_ATOM_size);
-        if (JS_IsException(v))
-            goto exception;
-        if (JS_ToFloat64Free(ctx, &d, v) < 0)
-            goto exception;
-        if (isnan(d)) {
-            JS_ThrowTypeError(ctx, ".size is not a number");
-            goto exception;
-        }
-        if (d < INT64_MIN)
-            size = INT64_MIN;
-        else if (d >= 0x1p63) /* must use INT64_MAX + 1 because INT64_MAX cannot be exactly represented as a double */
-            size = INT64_MAX;
-        else
-            size = (int64_t)d;
-        if (size < 0) {
-            JS_ThrowRangeError(ctx, ".size must be positive");
-            goto exception;
-        }
+    if (!JS_IsObject(obj)) {
+        JS_ThrowTypeError(ctx, "not an object");
+        goto exception;
+    }
+    v = JS_GetProperty(ctx, obj, JS_ATOM_size);
+    if (JS_IsException(v))
+        goto exception;
+    if (JS_ToFloat64Free(ctx, &d, v) < 0)
+        goto exception;
+    if (isnan(d)) {
+        JS_ThrowTypeError(ctx, ".size is not a number");
+        goto exception;
+    }
+    if (d < INT64_MIN)
+        size = INT64_MIN;
+    else if (d >= 0x1p63) /* must use INT64_MAX + 1 because INT64_MAX cannot be exactly represented as a double */
+        size = INT64_MAX;
+    else
+        size = (int64_t)d;
+    if (size < 0) {
+        JS_ThrowRangeError(ctx, ".size must be positive");
+        goto exception;
     }
 
     has = JS_GetProperty(ctx, obj, JS_ATOM_has);
