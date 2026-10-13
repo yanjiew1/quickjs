@@ -891,6 +891,8 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
     *psize = s->dbuf.size;
     if (psab_tab)
         *psab_tab = s->sab_tab;
+    else
+        js_free(ctx, s->sab_tab);
     if (psab_tab_len)
         *psab_tab_len = s->sab_tab_len;
     return s->dbuf.buf;
@@ -899,6 +901,7 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
     js_free(ctx, s->atom_to_idx);
     js_free(ctx, s->idx_to_atom);
     dbuf_free(&s->dbuf);
+    js_free(ctx, s->sab_tab);
     *psize = 0;
     if (psab_tab)
         *psab_tab = NULL;
