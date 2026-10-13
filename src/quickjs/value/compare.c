@@ -22,11 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#define JS_STRING_EQ_INLINE
 #include "../internal/base.h"
 #include "../internal/runtime.h"
 #include "../internal/number.h"
 #include "../internal/bigint.h"
 #include "../internal/string.h"
+#undef JS_STRING_EQ_INLINE
 #include "../internal/object.h"
 #include "compare.h"
 
