@@ -629,6 +629,7 @@ C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 C_TESTS+=tests/test_wait_async$(EXE)
 C_TESTS+=tests/test_native_jobs$(EXE)
 C_TESTS+=tests/test_wait_queue$(EXE)
+C_TESTS+=tests/test_tzif_decoder$(EXE)
 C_TESTS+=tests/test_temporal_epoch$(EXE)
 C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
@@ -779,6 +780,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_wait_async$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
+	$(WINE) ./tests/test_tzif_decoder$(EXE)
 	$(WINE) ./tests/test_temporal_epoch$(EXE)
 	$(WINE) ./tests/test_temporal_date_math$(EXE)
 	$(WINE) ./tests/test_temporal$(EXE)
@@ -1076,4 +1078,7 @@ TEMPORAL_CALENDAR_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_CALENDAR_SRCS))
 tests/test_temporal_calendars$(EXE): $(OBJDIR)/tests/test_temporal_calendars.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_CALENDAR_OBJS) libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 tests/test_temporal_native_calendars$(EXE): $(OBJDIR)/tests/test_temporal_native_calendars.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_CALENDAR_OBJS) libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_tzif_decoder$(EXE): $(OBJDIR)/tests/test_tzif_decoder.o $(OBJDIR)/src/timezone/tzif.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
