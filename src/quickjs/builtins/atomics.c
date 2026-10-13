@@ -142,12 +142,12 @@ static JSObject *js_atomics_get_buf(JSContext *ctx,
     ta = p->u.typed_array;
     abuf = ta->buffer->u.array_buffer;
     if (!abuf->shared) {
-        if (is_waitable == 2) {
-            JS_ThrowTypeError(ctx, "not a SharedArrayBuffer TypedArray");
+        if (typed_array_is_oob(p)) {
+            JS_ThrowTypeErrorArrayBufferOOB(ctx);
             return NULL;
         }
-        if (abuf->detached) {
-            JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
+        if (is_waitable == 2) {
+            JS_ThrowTypeError(ctx, "not a SharedArrayBuffer TypedArray");
             return NULL;
         }
     }
