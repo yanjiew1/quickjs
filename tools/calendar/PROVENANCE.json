@@ -1,0 +1,30 @@
+{
+  "normative_source": "/srv/data/work/quickjs-tmp/quickjs-current-stage4-living-feature-gap-inventory-20261008/era-spec.emu",
+  "normative_sha256": "e68f6d071f9df155d0117d913ef6e14bc3535b80e31425fb8b92054fd89c8031",
+  "normative_line": 60,
+  "interpretation": "PMO is the named publication authority; annual PDF files are not required by this clause. The active PMO table qualifies under the literal publication requirement.",
+  "publication_limitations": "The table is used in the common page header and has third-party attribution. No separate PMO authorship or GB/T certification is established.",
+  "source_base": "/srv/data/work/quickjs-tmp/quickjs-calendar-primary-integrated-provider-source-preparation-20261009-v1",
+  "source_base_root_result": "99 commands PASS as recorded by root; original partial Chinese proof retained separately",
+  "preparation": "isolated copies, original source edits, Python AST parse and source hashing only; no generators/tests/build/compiler/network/Git/main edits",
+  "unchanged_source_sha256": {
+    "src/calendar/solar.c": "448e680bae1d2479f3ff870567cedbaffd105c1ec1974ef9814f0b1464252aea",
+    "src/calendar/persian-years.inc": "134b50b1f67b725852bce98779848cf33e1bac8b4c077c314b49d99cc0269f7b",
+    "src/calendar/calendar.h": "36e37e18b027ac2ad08d4c936730feeac75fd5a410c55a97652fc656b6c67ffe",
+    "src/calendar/published-lunisolar.h": "39aa527f71aa2b7a41a779818ebab4bc7bd76562176351c909373c321ffe431d",
+    "src/calendar/astronomy.c": "5f1994f032d92ad22085f3e66bb5bffc5901fe4317f2d839394841a118c641ea",
+    "src/calendar/astronomy.h": "c68486b02be16d5e2797795a51d435585c58b88294ae0f51a72d6a3a5d5c5064",
+    "src/calendar/LICENSE-ICU": "e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af",
+    "inputs/persian-source-provenance.json": "64699becc0c5107e571d0671cae54437e160e58279e036957e05129d49fb4656",
+    "inputs/persian-generated-provenance.json": "181765f6a1b2bcbaffe89ca5c6b5e314f8192057d7c74c2c501c0a38dce899f5"
+  },
+  "primary_plan": "PMO PDF1899M12 initial January1900 plus published numerical1900..2100 table and exact zero-length2101M01 endpoint. Private1899M01..M11 remain approximate.",
+  "hko_diagnostic": "Original comparison FAIL retained. Exactly30 differences2057-09-28..2057-10-27, 73018/73048matches. No2069-12-30repair.",
+  "calendar_discovery": "QJS_CAL_CHINESE_AUTHORITY_VERIFIED is opt-in after root acceptance; both candidate/provider required; approximation review forbidden.",
+  "native_frontend_activation": false,
+  "all16_support_claimed": false,
+  "lunisolar_contract_change": {
+    "prior_sha256": "c231865bc21e94df5017936a3459b83c23cdaf6bdfc7487e6d09ac5d31de8607",
+    "change": "NextM01 requires valid29/30day month inside proven bounds or final zero-length point at proven_end_day"
+  }
+}

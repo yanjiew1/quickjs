@@ -1,0 +1,22 @@
+The numerical lunarInfo records are extracted as calendar facts from the
+PMO-hosted file https://pmo.cas.cn/images/calendar.js, which is actively used
+by the exact PMO page referenced by the Era/MonthCode proposal.
+
+The cached upstream header credits Jea Yang (JJonline@JJonline.Cn), version
+1.0.3, with dates 2014-07-21, 2016-08-13, 2016-09-25 and 2017-07-24. Preserve
+this attribution with generated factual records. No retrieved JavaScript
+implementation is evaluated, translated or copied into the native provider.
+The cached script contains no explicit license grant; this packet does not
+claim a license for its JavaScript implementation, PMO authorship, separate
+GB/T certification or a public-domain status for the full script.
+
+The original Python extraction and C integration code follows the project MIT
+license. Existing ICU/Unicode notices and LICENSE-ICU remain in src/calendar.
+Persian input provenance and its mirrored CC0 factual transcription remain
+unchanged. PMO PDF facts and widget facts retain separate source roles.
+
+The original full PMO/HKO comparison failed because 30 dates in 2057 differ.
+That failed report and receipt remain immutable pinned evidence. PMO table
+results are used under the proposal's expressly named publication authority;
+HKO is independent corroboration whose differences remain reported. No date
+is patched to force agreement, and the missing HKO 2069-12-30 is not repaired.
