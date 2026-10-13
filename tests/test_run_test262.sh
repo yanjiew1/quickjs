@@ -335,3 +335,26 @@ invoke_runner no -q -c "$test262_tmp/config" -d "$test262_tmp/empty" \
     -d "$test262_tmp/suite" -T 2
 [ "$test262_status" -eq 0 ]
 grep -Fqx 'Result: 0/3 errors' "$test262_tmp/err"
+# Flushed execution records remain separate from the exact result streams.
+invoke_runner no -q -c "$test262_tmp/config" -T 2 \
+    --progress-log "$test262_tmp/execution.jsonl" -d "$test262_tmp/suite"
+[ "$test262_status" -eq 0 ]
+[ ! -s "$test262_tmp/out" ]
+diff -u "$test262_tmp/expected-empty-features" "$test262_tmp/err"
+python3 - "$test262_tmp/execution.jsonl" <<'PY'
+import json, sys
+with open(sys.argv[1]) as stream:
+    records = [json.loads(line) for line in stream]
+assert len(records) == 6
+by_index = {}
+for item in records:
+    assert set(item) == {'phase', 'thread', 'index', 'file'}
+    assert item['thread'] in (0, 1)
+    assert item['file'].endswith('.js')
+    by_index.setdefault(item['index'], []).append(item)
+assert set(by_index) == {0, 1, 2}
+for pair in by_index.values():
+    assert [item['phase'] for item in pair] == ['start', 'finish']
+    assert pair[0]['file'] == pair[1]['file']
+    assert pair[0]['thread'] == pair[1]['thread']
+PY
