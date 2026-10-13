@@ -822,6 +822,10 @@ C_TESTS+=tests/test_intl_data_bundle$(EXE)
 
 C_TESTS+=tests/test_intl_native_locale_id$(EXE)
 
+C_TESTS+=tests/test_intl_native_list_engine$(EXE)
+
+C_TESTS+=tests/test_intl_native_list_data$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -831,6 +835,8 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_native_list_data$(EXE)
+	$(WINE) ./tests/test_intl_native_list_engine$(EXE)
 	$(WINE) ./tests/test_intl_native_locale_id$(EXE)
 	$(WINE) ./tests/test_intl_data_bundle$(EXE)
 	$(WINE) ./tests/test_intl_data_reader$(EXE)
@@ -1383,3 +1389,9 @@ tests/test_intl_native_locale_id$(EXE): $(INTL_DATA_READER_OBJS) $(OBJDIR)/tests
 
 # LocaleInfo preparation shares native ID/reader contracts without providers.
 test test-binaries: $(OBJDIR)/src/intl/native-locale-info.o
+
+tests/test_intl_native_list_engine$(EXE): $(OBJDIR)/tests/test_intl_native_list_engine.o $(OBJDIR)/src/intl/list-native.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_list_data$(EXE): $(INTL_DATA_READER_OBJS) $(OBJDIR)/tests/test_intl_native_list_data.o $(OBJDIR)/src/intl/list-native.o $(OBJDIR)/src/intl/list-native-data.o $(OBJDIR)/src/intl/data/locale-metadata.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
