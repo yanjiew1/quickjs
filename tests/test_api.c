@@ -247,6 +247,27 @@ static void test_shared_buffer_allocation(void)
     assert(data.ptr == NULL);
 }
 
+static void test_empty_atom(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSAtom a, b;
+    const char *text;
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    a = JS_NewAtomLen(ctx, NULL, 0);
+    b = JS_NewAtomLen(ctx, NULL, 0);
+    assert(a != JS_ATOM_NULL && a == b);
+    text = JS_AtomToCString(ctx, a);
+    assert(text && text[0] == '\0');
+    JS_FreeCString(ctx, text);
+    JS_FreeAtom(ctx, a);
+    JS_FreeAtom(ctx, b);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 static void run_external_buffer(const char *source, int freed_during_eval)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -287,6 +308,7 @@ int main(int argc, char **argv)
     } tests[] = {
         { "buffer-allocation", test_empty_buffer_allocation },
         { "shared-buffer-allocation", test_shared_buffer_allocation },
+        { "atom", test_empty_atom },
         { "buffer-transfer", test_empty_buffer_transfer },
     };
     size_t i;
