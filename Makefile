@@ -584,6 +584,8 @@ C_TESTS+=tests/test_worker_context_failure$(EXE)
 
 C_TESTS+=tests/test_fuzz_json$(EXE)
 
+C_TESTS+=tests/test_fuzz_exception_ownership$(EXE)
+
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
@@ -648,6 +650,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_fuzz_exception_ownership$(EXE)
 	$(WINE) ./tests/test_fuzz_json$(EXE)
 	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_iterator$(EXE)
@@ -849,4 +852,7 @@ endif
 endif
 
 tests/test_fuzz_json$(EXE): $(OBJDIR)/tests/test_fuzz_json.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_fuzz_exception_ownership$(EXE): $(OBJDIR)/tests/test_fuzz_exception_ownership.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

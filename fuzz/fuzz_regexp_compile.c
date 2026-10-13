@@ -46,7 +46,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     memcpy(flags, data + pattern_len, flags_len);
     flags[flags_len] = '\0';
     
-    char valid_flags[16];
+    char valid_flags[16] = { 0 };
     size_t valid_idx = 0;
     const char* valid = "gimsuy";
     for (size_t i = 0; i < flags_len && valid_idx < sizeof(valid_flags) - 1; i++) {
@@ -93,7 +93,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             if (!JS_IsException(match_result)) {
                 JS_FreeValue(ctx, match_result);
             } else {
-                JS_GetException(ctx);
+                JS_FreeValue(ctx, JS_GetException(ctx));
             }
         }
         
@@ -103,7 +103,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         if (!JS_IsException(split_result)) {
             JS_FreeValue(ctx, split_result);
         } else {
-            JS_GetException(ctx);
+            JS_FreeValue(ctx, JS_GetException(ctx));
         }
         
         const char* replace_test = "'hello world'.replace(/world/, 'universe')";
@@ -112,7 +112,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         if (!JS_IsException(replace_result)) {
             JS_FreeValue(ctx, replace_result);
         } else {
-            JS_GetException(ctx);
+            JS_FreeValue(ctx, JS_GetException(ctx));
         }
         
         const char* search_test = "'abc123def'.search(/[0-9]+/)";
@@ -121,12 +121,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         if (!JS_IsException(search_result)) {
             JS_FreeValue(ctx, search_result);
         } else {
-            JS_GetException(ctx);
+            JS_FreeValue(ctx, JS_GetException(ctx));
         }
         
         JS_FreeValue(ctx, regexp_result);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     char literal_script[4096];
@@ -147,7 +147,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (!JS_IsException(literal_result)) {
         JS_FreeValue(ctx, literal_result);
     } else {
-        JS_GetException(ctx);
+        JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
     const char* builtin_tests[] = {
@@ -164,7 +164,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         if (!JS_IsException(r)) {
             JS_FreeValue(ctx, r);
         } else {
-            JS_GetException(ctx);
+            JS_FreeValue(ctx, JS_GetException(ctx));
         }
     }
     
