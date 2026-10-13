@@ -35,6 +35,16 @@
 /* Atomics */
 #ifdef CONFIG_ATOMICS
 
+/* The native backend accesses one TypedArray element per atomic object. */
+#define CHECK_ATOMIC_WIDTH(type)                                      \
+    _Static_assert(sizeof(_Atomic(type)) == sizeof(type),             \
+                   "unsupported atomic integer representation")
+CHECK_ATOMIC_WIDTH(uint8_t);
+CHECK_ATOMIC_WIDTH(uint16_t);
+CHECK_ATOMIC_WIDTH(uint32_t);
+CHECK_ATOMIC_WIDTH(uint64_t);
+#undef CHECK_ATOMIC_WIDTH
+
 typedef enum AtomicsOpEnum {
     ATOMICS_OP_ADD,
     ATOMICS_OP_AND,
@@ -45,6 +55,64 @@ typedef enum AtomicsOpEnum {
     ATOMICS_OP_COMPARE_EXCHANGE,
     ATOMICS_OP_LOAD,
 } AtomicsOpEnum;
+
+static uint64_t js_atomics_load_unaligned(const uint8_t *ptr, int size_log2)
+{
+    switch(size_log2) {
+    case 0: return *ptr;
+    case 1: return get_u16(ptr);
+    case 2: return get_u32(ptr);
+    case 3: return get_u64(ptr);
+    default: abort();
+    }
+}
+
+static void js_atomics_store_unaligned(uint8_t *ptr, int size_log2, uint64_t value)
+{
+    switch(size_log2) {
+    case 0: *ptr = value; break;
+    case 1: put_u16(ptr, value); break;
+    case 2: put_u32(ptr, value); break;
+    case 3: put_u64(ptr, value); break;
+    default: abort();
+    }
+}
+
+/* Only nonshared external buffers use this path. Their embedding owner must
+   not access the same storage concurrently without its own synchronization. */
+static uint64_t js_atomics_op_unaligned(uint8_t *ptr, int size_log2, int op,
+                                       uint64_t value, uint64_t replacement)
+{
+    uint64_t old = js_atomics_load_unaligned(ptr, size_log2);
+    uint64_t mask = UINT64_MAX >> (64 - (8 << size_log2));
+    uint64_t result;
+
+    value &= mask;
+    switch(op) {
+    case ATOMICS_OP_ADD: result = old + value; break;
+    case ATOMICS_OP_AND: result = old & value; break;
+    case ATOMICS_OP_OR: result = old | value; break;
+    case ATOMICS_OP_SUB: result = old - value; break;
+    case ATOMICS_OP_XOR: result = old ^ value; break;
+    case ATOMICS_OP_EXCHANGE: result = value; break;
+    case ATOMICS_OP_COMPARE_EXCHANGE:
+        if (old != value)
+            return old;
+        result = replacement;
+        break;
+    case ATOMICS_OP_LOAD:
+        return old;
+    default:
+        abort();
+    }
+    js_atomics_store_unaligned(ptr, size_log2, result);
+    return old;
+}
+
+/* Backing alignment is classified once at construction. Reuse the existing
+   dispatch rather than checking host address alignment on every operation. */
+#define ATOMICS_UNALIGNED_OP (1 << 5)
+#define ATOMICS_UNALIGNED_STORE (1 << 2)
 
 static JSObject *js_atomics_get_buf(JSContext *ctx, 
                                     JSValueConst obj, JSValueConst idx_val,
@@ -155,7 +223,8 @@ static JSValue js_atomics_op(JSContext *ctx,
     }
     ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
     
-    switch(op | (size_log2 << 3)) {
+    switch(op | (size_log2 << 3) |
+           (p->u.typed_array->buffer->u.array_buffer->atomic_unaligned << 5)) {
 
 #define OP(op_name, func_name)                          \
     case ATOMICS_OP_ ## op_name | (0 << 3):             \
@@ -220,6 +289,22 @@ static JSValue js_atomics_op(JSContext *ctx,
             a = v1;
         }
         break;
+#define UNALIGNED_OP(op_name)                                         \
+    case ATOMICS_UNALIGNED_OP | ATOMICS_OP_ ## op_name | (0 << 3):      \
+    case ATOMICS_UNALIGNED_OP | ATOMICS_OP_ ## op_name | (1 << 3):      \
+    case ATOMICS_UNALIGNED_OP | ATOMICS_OP_ ## op_name | (2 << 3):      \
+    case ATOMICS_UNALIGNED_OP | ATOMICS_OP_ ## op_name | (3 << 3):
+        UNALIGNED_OP(ADD)
+        UNALIGNED_OP(AND)
+        UNALIGNED_OP(OR)
+        UNALIGNED_OP(SUB)
+        UNALIGNED_OP(XOR)
+        UNALIGNED_OP(EXCHANGE)
+        UNALIGNED_OP(COMPARE_EXCHANGE)
+        UNALIGNED_OP(LOAD)
+            a = js_atomics_op_unaligned(ptr, size_log2, op, v, rep_val);
+            break;
+#undef UNALIGNED_OP
     default:
         abort();
     }
@@ -302,7 +387,8 @@ static JSValue js_atomics_store(JSContext *ctx,
 
     ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
     
-    switch(size_log2) {
+    switch(size_log2 |
+           (p->u.typed_array->buffer->u.array_buffer->atomic_unaligned << 2)) {
     case 0:
         atomic_store((_Atomic(uint8_t) *)ptr, v);
         break;
@@ -314,6 +400,12 @@ static JSValue js_atomics_store(JSContext *ctx,
         break;
     case 3:
         atomic_store((_Atomic(uint64_t) *)ptr, v);
+        break;
+    case ATOMICS_UNALIGNED_STORE | 0:
+    case ATOMICS_UNALIGNED_STORE | 1:
+    case ATOMICS_UNALIGNED_STORE | 2:
+    case ATOMICS_UNALIGNED_STORE | 3:
+        js_atomics_store_unaligned(ptr, size_log2, v);
         break;
     default:
         abort();
