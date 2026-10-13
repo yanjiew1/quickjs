@@ -55,6 +55,59 @@ static void test_bytecode_roundtrip(const char *source)
     JS_FreeRuntime(rt);
 }
 
+static void test_import_bytecode_roundtrip(void)
+{
+    static const char source[] =
+        "import { value as imported } from './roundtrip-module.js';"
+        "function check(error, code) { try { eval(code); } catch (e) {"
+        " if (e instanceof error) return; throw e; }"
+        " throw new Error('exception expected'); }"
+        "check(ReferenceError, 'value = 1');"
+        "check(TypeError, 'imported = 1');"
+        "export const value = 1;"
+        "globalThis.roundtrip_result = 42;";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *compile_ctx, *ctx, *job_ctx;
+    JSValue compiled, loaded, result, global, value;
+    uint8_t *buf;
+    size_t len;
+    int ret;
+    int32_t number;
+
+    assert(rt);
+    JS_SetStripInfo(rt, 0);
+    compile_ctx = JS_NewContext(rt);
+    assert(compile_ctx);
+    compiled = JS_Eval(compile_ctx, source, sizeof(source) - 1,
+                       "roundtrip-module.js",
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    buf = JS_WriteObject(compile_ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(buf && len > 0);
+    JS_FreeValue(compile_ctx, compiled);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE);
+    js_free(compile_ctx, buf);
+    assert(!JS_IsException(loaded));
+    assert(JS_ResolveModule(ctx, loaded) == 0);
+    result = JS_EvalFunction(ctx, loaded);
+    assert(!JS_IsException(result));
+    while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        continue;
+    assert(ret == 0);
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+    global = JS_GetGlobalObject(ctx);
+    value = JS_GetPropertyStr(ctx, global, "roundtrip_result");
+    assert(JS_ToInt32(ctx, &number, value) == 0 && number == 42);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, global);
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeContext(compile_ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     test_bytecode_roundtrip("function saved() { return 42; } saved();");
@@ -65,5 +118,6 @@ int main(void)
         " if (!(e instanceof TypeError)) return 0; } }"
         " return effects === 1 && binding === 1 ? 42 : 0; }"
         " return saved(); })();");
+    test_import_bytecode_roundtrip();
     return 0;
 }

@@ -6382,7 +6382,7 @@ static int add_import(JSParseState *s, JSModuleDef *m,
     var_idx = add_closure_var(ctx, s->cur_func,
                               is_star ? JS_CLOSURE_MODULE_DECL : JS_CLOSURE_MODULE_IMPORT,
                               m->import_entries_count,
-                              local_name, TRUE, TRUE, JS_VAR_NORMAL);
+                              local_name, TRUE, TRUE, JS_VAR_IMPORT);
     if (var_idx < 0)
         return -1;
     if (js_resize_array(ctx, (void **)&m->import_entries,
