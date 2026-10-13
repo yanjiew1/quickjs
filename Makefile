@@ -585,6 +585,13 @@ tests/test_typed_array$(EXE): $(OBJDIR)/tests/test_typed_array.o libquickjs$(LTO
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+# Compile test binaries in parallel before CI runs the sequential recipes.
+.PHONY: test-binaries
+test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
+ifdef CONFIG_SHARED_LIBS
+test-binaries: tests/bjson.so examples/point.so
+endif
+
 .PHONY: test-c
 test-c: $(C_TESTS)
 	$(WINE) ./tests/test_allocator$(EXE)
@@ -644,16 +651,19 @@ test2-bootstrap:
 	(cd test262 && git fetch && git reset --hard $(TEST262_COMMIT) && patch -p1 < ../tests/test262.patch && cd ..)
 endif
 
+# Use every available processor; callers can choose a smaller worker count.
+TEST262_THREADS ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+
 ifeq ($(wildcard test262o/tests.txt),)
 test2o test2o-update:
 	@echo test262o tests not installed
 else
 # ES5 tests (obsolete)
 test2o: run-test262
-	time ./run-test262 -t -m -c test262o.conf
+	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262o.conf
 
 test2o-update: run-test262
-	./run-test262 -t -u -c test262o.conf
+	./run-test262 -T $(TEST262_THREADS) -t -u -c test262o.conf
 endif
 
 ifeq ($(wildcard test262/features.txt),)
@@ -662,16 +672,16 @@ test2 test2-update test2-default test2-check:
 else
 # Test262 tests
 test2-default: run-test262
-	time ./run-test262 -t -m -c test262.conf
+	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262.conf
 
 test2: run-test262
-	time ./run-test262 -t -m -c test262.conf -a
+	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262.conf -a
 
 test2-update: run-test262
-	./run-test262 -t -u -c test262.conf -a
+	./run-test262 -T $(TEST262_THREADS) -t -u -c test262.conf -a
 
 test2-check: run-test262
-	time ./run-test262 -t -m -c test262.conf -E -a
+	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262.conf -E -a
 endif
 
 testall: all test microbench test2o test2
