@@ -193,3 +193,6 @@ __pycache__/
 
 /tests/test_intl_native_list_data
 /tests/test_intl_native_list_data.exe
+
+/tests/test_intl_native_number_engine
+/tests/test_intl_native_number_engine.exe
