@@ -47,7 +47,7 @@ extern const uint8_t qjsc_repl[];
 extern const uint32_t qjsc_repl_size;
 
 static int eval_buf(JSContext *ctx, const void *buf, int buf_len,
-                    const char *filename, int eval_flags)
+                    const char *filename, int eval_flags, JS_BOOL use_realpath)
 {
     JSValue val;
     int ret;
@@ -58,8 +58,13 @@ static int eval_buf(JSContext *ctx, const void *buf, int buf_len,
         val = JS_Eval(ctx, buf, buf_len, filename,
                       eval_flags | JS_EVAL_FLAG_COMPILE_ONLY);
         if (!JS_IsException(val)) {
-            js_module_set_import_meta(ctx, val, TRUE, TRUE);
-            val = JS_EvalFunction(ctx, val);
+            if (js_module_set_import_meta(ctx, val, use_realpath, TRUE) < 0 ||
+                JS_HasException(ctx)) {
+                JS_FreeValue(ctx, val);
+                val = JS_EXCEPTION;
+            } else {
+                val = JS_EvalFunction(ctx, val);
+            }
         }
         val = js_std_await(ctx, val);
     } else {
@@ -98,7 +103,7 @@ static int eval_file(JSContext *ctx, const char *filename, int module, int stric
         if (strict)
             eval_flags |= JS_EVAL_FLAG_STRICT;
     }
-    ret = eval_buf(ctx, buf, buf_len, filename, eval_flags);
+    ret = eval_buf(ctx, buf, buf_len, filename, eval_flags, TRUE);
     js_free(ctx, buf);
     return ret;
 }
@@ -490,7 +495,9 @@ int main(int argc, char **argv)
                 "import * as os from 'os';\n"
                 "globalThis.std = std;\n"
                 "globalThis.os = os;\n";
-            eval_buf(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
+            if (eval_buf(ctx, str, strlen(str), "<input>",
+                         JS_EVAL_TYPE_MODULE, FALSE))
+                goto fail;
         }
 
         for(i = 0; i < include_count; i++) {
@@ -507,7 +514,8 @@ int main(int argc, char **argv)
                 if (strict)
                     eval_flags |= JS_EVAL_FLAG_STRICT;
             }
-            if (eval_buf(ctx, expr, strlen(expr), "<cmdline>", eval_flags))
+            if (eval_buf(ctx, expr, strlen(expr), "<cmdline>",
+                         eval_flags, FALSE))
                 goto fail;
         } else
         if (optind >= argc) {
