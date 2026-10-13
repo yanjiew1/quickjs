@@ -623,7 +623,7 @@ tests/test_cutils$(EXE): $(OBJDIR)/tests/test_cutils.o $(OBJDIR)/src/cutils/cuti
 tests/test_typed_array$(EXE): $(OBJDIR)/tests/test_typed_array.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-tests/test_unicode_oom$(EXE): $(OBJDIR)/tests/test_unicode_oom.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
+tests/test_unicode_oom$(EXE): $(OBJDIR)/tests/test_unicode_oom.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
