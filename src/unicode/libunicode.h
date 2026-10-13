@@ -94,6 +94,8 @@ typedef enum {
     UNICODE_NFKD,
 } UnicodeNormalizationEnum;
 
+/* Shared canonical combining-class lookup, using the existing table owner. */
+int unicode_get_combining_class(uint32_t c);
 int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
                       UnicodeNormalizationEnum n_type,
                       void *opaque, void *(*realloc_func)(void *opaque, void *ptr, size_t size));

@@ -1407,3 +1407,6 @@ tests/test_intl_native_number_engine$(EXE): $(OBJDIR)/tests/test_intl_native_num
 
 tests/test_intl_native_duration_engine$(EXE): $(OBJDIR)/tests/test_intl_native_duration_engine.o $(OBJDIR)/src/intl/number-native.o $(OBJDIR)/src/intl/decimal.o $(OBJDIR)/src/intl/plural-native.o $(OBJDIR)/src/intl/plural.o $(OBJDIR)/src/intl/number-range.o $(OBJDIR)/src/intl/number-compact.o $(OBJDIR)/src/intl/number-unit.o $(OBJDIR)/src/intl/data/number-template-validation.o $(OBJDIR)/src/intl/duration-native.o $(OBJDIR)/src/intl/list-native.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# Complete native collator sources precede aggregate-provider activation.
+test test-binaries: $(OBJDIR)/src/intl/collator-native.o
