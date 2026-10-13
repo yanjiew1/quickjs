@@ -1895,3 +1895,15 @@ endif
 test: test-intl-icu-number
 endif
 endif
+
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+.PHONY: test-intl-icu-text
+test-intl-icu-text: qjs$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_collator.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_segmenter.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_list_format.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_display_names.js
+test: test-intl-icu-text
+endif
+endif
