@@ -1907,3 +1907,15 @@ test-intl-icu-text: qjs$(EXE)
 test: test-intl-icu-text
 endif
 endif
+
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+.PHONY: test-intl-icu-duration
+test-intl-icu-duration: qjs$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_duration_format.js
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_temporal_duration.js
+endif
+test: test-intl-icu-duration
+endif
+endif
