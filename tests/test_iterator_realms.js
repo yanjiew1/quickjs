@@ -221,10 +221,124 @@ function test_iterator_helper_creation_realm()
     std.gc();
 }
 
+function test_iterator_concat_creation_realm()
+{
+    const result = run_in_realms(function () {
+        const realms = [globalThis, foreign];
+        function check(actual, expected, message) {
+            if (actual !== expected) throw Error(message);
+        }
+        function resultRealm(result, realm, message) {
+            check(Object.getPrototypeOf(result), realm.Object.prototype, message);
+        }
+        function thrownRealm(callback, realm, message) {
+            let caught = false;
+            try { callback(); } catch (error) {
+                caught = true;
+                check(Object.getPrototypeOf(error), realm.TypeError.prototype, message);
+            }
+            check(caught, true, message + ": expected an exception");
+        }
+        for (let i = 0; i < 2; i++) {
+            const creator = realms[i], caller = realms[1 - i];
+            const borrowed = Object.getPrototypeOf(caller.Iterator.from([]).map(x => x));
+            const next = borrowed.next, close = borrowed.return;
+            let helper = creator.Iterator.concat([1]);
+            Object.setPrototypeOf(helper, null);
+            let result = next.call(helper);
+            resultRealm(result, creator, "concat yield uses the saved creation realm");
+            check(result.value, 1, "concat yields its input");
+            result = next.call(helper);
+            resultRealm(result, creator, "concat first completion uses the creation realm");
+            check(result.done, true, "concat completes");
+            resultRealm(next.call(helper), caller,
+                        "concat completed next uses the invoked method realm");
+            resultRealm(close.call(helper), caller,
+                        "concat completed return uses the invoked method realm");
+
+            helper = creator.Iterator.concat();
+            resultRealm(next.call(helper), creator,
+                        "empty concat first resume still uses its creation realm");
+            resultRealm(next.call(helper), caller,
+                        "empty concat next after completion uses the method realm");
+            helper = creator.Iterator.concat();
+            resultRealm(close.call(helper), caller,
+                        "empty concat return before starting uses the method realm");
+
+            let opens = 0, closes = 0;
+            const input = { [Symbol.iterator]() {
+                opens++;
+                return { next() { return { value: 2 }; }, return() {
+                    closes++;
+                    return {};
+                } };
+            } };
+            helper = creator.Iterator.concat(input);
+            resultRealm(close.call(helper), caller,
+                        "concat suspended-start return uses the method realm");
+            check(opens, 0, "return before starting does not open an input");
+            check(closes, 0, "return before starting does not close an unopened input");
+            helper = creator.Iterator.concat(input);
+            next.call(helper);
+            resultRealm(close.call(helper), creator,
+                        "concat suspended-yield return uses the generator realm");
+            check(opens, 1, "concat opens once");
+            check(closes, 1, "active return closes once");
+            resultRealm(close.call(helper), caller,
+                        "concat return after completion uses the method realm");
+
+            for (const input of [
+                { [Symbol.iterator]() { return 0; } },
+                { [Symbol.iterator]() { return { next: null }; } },
+            ]) {
+                helper = creator.Iterator.concat(input);
+                thrownRealm(() => next.call(helper), creator,
+                            "concat protocol validation uses the saved creation realm");
+                resultRealm(next.call(helper), caller,
+                            "concat next after protocol failure uses the method realm");
+            }
+            helper = creator.Iterator.concat({ [Symbol.iterator]() {
+                return { next() { return { value: 3 }; }, return() { return 0; } };
+            } });
+            next.call(helper);
+            thrownRealm(() => close.call(helper), creator,
+                        "active concat close validation uses the generator realm");
+
+            helper = creator.Iterator.concat({ [Symbol.iterator]() {
+                return { next() {
+                    thrownRealm(() => next.call(helper), caller,
+                                "concat running next validation uses the method realm");
+                    thrownRealm(() => close.call(helper), caller,
+                                "concat running return validation uses the method realm");
+                    return { value: 4 };
+                }, return() {
+                    thrownRealm(() => next.call(helper), caller,
+                                "concat active close keeps execution guarded");
+                    return {};
+                } };
+            } });
+            resultRealm(next.call(helper), creator,
+                        "concat outer resume keeps its realm after reentry");
+            close.call(helper);
+
+            // Both context roots are released by the bootstrap before its final
+            // GC. Keep a deliberate global/concat/context cycle until then.
+            const cycle = creator.Iterator.concat([18]);
+            Object.setPrototypeOf(cycle, null);
+            cycle.contextGlobal = creator;
+            creator.__concatRealmCycle = cycle;
+        }
+        return true;
+    });
+    check(result, true, "iterator_concat_creation_realm");
+    std.gc();
+}
+
 export function test_iterator_realms()
 {
     test_native_iterator_next_realm();
     test_iterator_helper_creation_realm();
+    test_iterator_concat_creation_realm();
     test_iterator_constructor_realm();
 }
 
