@@ -494,23 +494,23 @@ int add_func_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
 int add_arguments_var(JSContext *ctx, JSFunctionDef *fd)
 {
     int idx = fd->arguments_var_idx;
-    if (idx < 0 && (idx = add_var(ctx, fd, JS_ATOM_arguments)) >= 0) {
+    if (idx < 0 && fd->arguments_arg_idx >= 0)
+        idx = fd->arguments_arg_idx;
+    if (idx >= 0 || (idx = add_var(ctx, fd, JS_ATOM_arguments)) >= 0) {
         fd->arguments_var_idx = idx;
     }
     return idx;
 }
 
-/* add an argument definition in the argument scope. Only needed when
-   "eval()" may be called in the argument scope. Return 0 if OK. */
+/* Add the implicit arguments binding before parameter scope links are
+   finalized. Explicit parameters named arguments keep their own binding.
+   Return 0 if OK. */
 int add_arguments_arg(JSContext *ctx, JSFunctionDef *fd)
 {
     int idx;
     if (fd->arguments_arg_idx < 0) {
         idx = find_var_in_scope(ctx, fd, JS_ATOM_arguments, ARG_SCOPE_INDEX);
         if (idx < 0) {
-            /* XXX: the scope links are not fully updated. May be an
-               issue if there are child scopes of the argument
-               scope */
             idx = add_var(ctx, fd, JS_ATOM_arguments);
             if (idx < 0)
                 return -1;
@@ -6953,6 +6953,11 @@ static __exception int js_parse_function_decl2(JSParseState *s,
             goto fail;
         }
     }
+
+    if (find_var(ctx, fd, JS_ATOM_arguments) >= 0 ||
+        (fd->has_parameter_expressions &&
+         find_var_in_scope(ctx, fd, JS_ATOM_arguments, ARG_SCOPE_INDEX) >= 0))
+        fd->has_arguments_binding = FALSE;
 
     if (fd->has_parameter_expressions) {
         int idx;

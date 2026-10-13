@@ -601,6 +601,98 @@ function test_annex_eval_variable_target()
     lexical();
 }
 
+function test_parameter_arguments_binding()
+{
+    function assigned(read = () => arguments) {
+        var arguments = 0;
+        assert(arguments, 0);
+        assert(typeof read(), "object");
+        assert(read() !== arguments);
+        return read;
+    }
+    function shared(read = () => arguments) {
+        arguments = 23;
+        assert(read(), 23);
+        (() => { arguments = 29; })();
+        assert(read(), 29);
+    }
+    shared();
+    function evalShared(read = () => arguments) {
+        eval("arguments = 31;");
+        assert(read(), 31);
+        (() => eval("arguments = 37;"))();
+        assert(read(), 37);
+    }
+    evalShared();
+    const first = assigned(), second = assigned();
+    assert(first() !== second());
+    function uninitialized(read = () => arguments) {
+        var arguments;
+        assert(read() === arguments);
+        arguments = 0;
+        assert(typeof read(), "object");
+        assert(arguments, 0);
+    }
+    uninitialized();
+    function hoisted(read = () => arguments) {
+        function arguments() { return 42; }
+        assert(arguments(), 42);
+        assert(typeof read(), "object");
+    }
+    hoisted();
+    function nested(factory = () => () => arguments) {
+        var arguments = 7;
+        assert(typeof factory()(), "object");
+        assert(arguments, 7);
+    }
+    nested();
+    function strict(read = () => arguments) {
+        const original = arguments;
+        assert(read() === original);
+        return read;
+    }
+    const strictRead = Function(`"use strict";
+        return function (read = () => arguments) {
+            const original = arguments;
+            assert(read() === original);
+            return read;
+        };`)()();
+    assert(typeof strictRead(), "object");
+    strict();
+    function formal(read = () => arguments, arguments = 7) {
+        assert(read(), 7);
+        var arguments = 9;
+        assert(read(), 7);
+        assert(arguments, 9);
+        eval("var arguments = 15;");
+        assert(arguments, 15);
+        assert(read(), 7);
+    }
+    formal();
+    function destructured(read = () => arguments, { arguments } = { arguments: 11 }) {
+        assert(read(), 11);
+        var arguments = 13;
+        assert(read(), 11);
+        assert(arguments, 13);
+        eval("var arguments = 17;");
+        assert(arguments, 17);
+        assert(read(), 11);
+    }
+    destructured();
+    function evaluated(read = eval("() => arguments")) {
+        var arguments = 17;
+        assert(typeof read(), "object");
+        assert(arguments, 17);
+    }
+    evaluated();
+    function bodyEval(read = () => arguments) {
+        eval("var arguments = 19;");
+        assert(typeof read(), "object");
+        assert(arguments, 19);
+    }
+    bodyEval();
+}
+
 function test_class()
 {
     var o;
@@ -1016,6 +1108,7 @@ test_annex_function_identity();
 test_annex_duplicate_binding();
 test_eval_catch_var_declaration();
 test_annex_eval_variable_target();
+test_parameter_arguments_binding();
 test_template();
 test_template_skip();
 test_object_literal();
