@@ -954,7 +954,6 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 item = JS_IteratorNext(ctx, it->inner, it->inner_next, 0, NULL, pdone);
                 if (JS_IsException(item)) {
                 inner_fail:
-                    JS_IteratorClose(ctx, it->inner, FALSE);
                     JS_FreeValue(ctx, it->inner);
                     JS_FreeValue(ctx, it->inner_next);
                     it->inner = JS_UNDEFINED;
@@ -966,7 +965,6 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     break;
                 }
                 *pdone = FALSE; // The outer iterator must continue.
-                JS_IteratorClose(ctx, it->inner, FALSE);
                 JS_FreeValue(ctx, it->inner);
                 JS_FreeValue(ctx, it->inner_next);
                 it->inner = JS_UNDEFINED;
