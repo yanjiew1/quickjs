@@ -56,3 +56,6 @@ libwinpthread*.dll
 
 /tests/test_bytecode_trace
 /tests/test_bytecode_trace.exe
+
+/tests/test_allocator
+/tests/test_allocator.exe
