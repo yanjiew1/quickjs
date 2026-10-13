@@ -110,6 +110,12 @@ typedef void UnicodeSequencePropCB(void *opaque, const uint32_t *buf, int len);
 int unicode_sequence_prop(const char *prop_name, UnicodeSequencePropCB *cb, void *opaque,
                           CharRange *cr);
 
+/* Preserve the original callback API while propagating callback failure. */
+typedef int UnicodeSequencePropCheckedCB(void *opaque, const uint32_t *buf, int len);
+int unicode_sequence_prop_checked(const char *prop_name,
+                                 UnicodeSequencePropCheckedCB *cb, void *opaque,
+                                 CharRange *cr);
+
 int lre_case_conv(uint32_t *res, uint32_t c, int conv_type);
 int lre_canonicalize(uint32_t c, int is_unicode);
 
