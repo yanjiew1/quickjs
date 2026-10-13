@@ -301,6 +301,7 @@ QUICKJS_SRCS= \
     src/quickjs/gc.c \
     src/quickjs/generator.c \
     src/quickjs/global-environment.c \
+    src/quickjs/disposal.c \
     src/quickjs/iterator-protocol.c \
     src/quickjs/memory-usage.c \
     src/quickjs/module-evaluation.c \
