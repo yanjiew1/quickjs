@@ -347,6 +347,7 @@ function test_iterator_buffer_creation_realm()
             const next = borrowed.next, close = borrowed.return;
             const makers = [
                 source => creator.Iterator.prototype.chunks.call(source, 2),
+                source => creator.Iterator.prototype.windows.call(source, 2),
             ];
             for (const make of makers) {
                 let advances = 0, closes = 0;
