@@ -4,15 +4,30 @@
  */
 #include "calendar.h"
 #include "civil.h"
+#ifndef CONFIG_ICU
 #include "../calendar/calendar.h"
+#endif
 #include <math.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef CONFIG_ICU
+#include "../intl/icu-config.h"
+#include <unicode/ucal.h>
+#include <unicode/uloc.h>
+#endif
 
 #define HAS(f, name) ((f)->present & QJS_TEMPORAL_FIELD_##name)
 #define RANGE QJS_TEMPORAL_ERROR_RANGE
 #define MISSING QJS_TEMPORAL_ERROR_MISSING
+#ifdef CONFIG_ICU
+static const char *const identifiers[] = {
+    "iso8601", "buddhist", "chinese", "coptic", "dangi", "ethioaa",
+    "ethiopic", "gregory", "hebrew", "indian", "islamic-civil",
+    "islamic-tbla", "islamic-umalqura", "japanese", "persian",
+    "roc"
+};
+#endif
 static int has_era(QJSTemporalCalendar calendar)
 {
     return calendar != QJS_TEMPORAL_CAL_ISO8601 &&
@@ -20,15 +35,50 @@ static int has_era(QJSTemporalCalendar calendar)
 }
 const char *qjs_temporal_calendar_identifier(QJSTemporalCalendar calendar)
 {
+#ifdef CONFIG_ICU
+    return (unsigned)calendar < QJS_TEMPORAL_CAL_COUNT ? identifiers[calendar] : NULL;
+#else
     return qjs_calendar_identifier((QJSCalendarId)calendar);
+#endif
 }
 int qjs_temporal_calendar_from_identifier(QJSTemporalCalendar *result,
                                          const char *text, size_t length)
 {
+#ifndef CONFIG_ICU
     QJSCalendarId id;
     int error = qjs_calendar_from_identifier(&id, text, length);
     if (!error) *result = (QJSTemporalCalendar)id;
     return error;
+#else
+    size_t i, j;
+    static const struct { const char *alias, *canonical; } aliases[] = {
+        {"ethiopic-amete-alem", "ethioaa"}, {"islamicc", "islamic-civil"}
+    };
+    for (i = 0; i < sizeof(aliases) / sizeof(aliases[0]); i++) {
+        if (strlen(aliases[i].alias) != length) continue;
+        for (j = 0; j < length; j++) {
+            unsigned char c = (unsigned char)text[j];
+            if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
+            if (c != (unsigned char)aliases[i].alias[j]) break;
+        }
+        if (j == length) {
+            text = aliases[i].canonical; length = strlen(text); break;
+        }
+    }
+    for (i = 0; i < QJS_TEMPORAL_CAL_COUNT; i++) {
+        if (strlen(identifiers[i]) != length) continue;
+        for (j = 0; j < length; j++) {
+            unsigned char c = (unsigned char)text[j];
+            if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
+            if (c != (unsigned char)identifiers[i][j]) break;
+        }
+        if (j == length) {
+            *result = (QJSTemporalCalendar)i;
+            return 0;
+        }
+    }
+    return RANGE;
+#endif
 }
 unsigned qjs_temporal_calendar_extra_fields(QJSTemporalCalendar calendar,
                                              unsigned requested)
@@ -86,9 +136,64 @@ static void make_month_code(char result[5], int month, int is_leap)
     result[2] = (char)('0' + month % 10); result[3] = is_leap ? 'L' : 0;
     result[4] = 0;
 }
+#ifdef CONFIG_ICU
+typedef struct Era {
+    QJSTemporalCalendar calendar;
+    const char *name, *alias;
+    int32_t offset;
+    int negative;
+} Era;
+static const Era eras[] = {
+    {QJS_TEMPORAL_CAL_BUDDHIST,"be",NULL,1,0},
+    {QJS_TEMPORAL_CAL_COPTIC,"am",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ETHIOAA,"aa",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ETHIOPIC,"am",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ETHIOPIC,"aa",NULL,-5499,0},
+    {QJS_TEMPORAL_CAL_GREGORY,"ce","ad",1,0},
+    {QJS_TEMPORAL_CAL_GREGORY,"bce","bc",1,1},
+    {QJS_TEMPORAL_CAL_HEBREW,"am",NULL,1,0},
+    {QJS_TEMPORAL_CAL_INDIAN,"shaka",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ISLAMIC_CIVIL,"ah",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ISLAMIC_CIVIL,"bh",NULL,1,1},
+    {QJS_TEMPORAL_CAL_ISLAMIC_TBLA,"ah",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ISLAMIC_TBLA,"bh",NULL,1,1},
+    {QJS_TEMPORAL_CAL_ISLAMIC_UMALQURA,"ah",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ISLAMIC_UMALQURA,"bh",NULL,1,1},
+    {QJS_TEMPORAL_CAL_JAPANESE,"reiwa",NULL,2019,0},
+    {QJS_TEMPORAL_CAL_JAPANESE,"heisei",NULL,1989,0},
+    {QJS_TEMPORAL_CAL_JAPANESE,"showa",NULL,1926,0},
+    {QJS_TEMPORAL_CAL_JAPANESE,"taisho",NULL,1912,0},
+    {QJS_TEMPORAL_CAL_JAPANESE,"meiji",NULL,1868,0},
+    {QJS_TEMPORAL_CAL_JAPANESE,"ce","ad",1,0},
+    {QJS_TEMPORAL_CAL_JAPANESE,"bce","bc",1,1},
+    {QJS_TEMPORAL_CAL_PERSIAN,"ap",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ROC,"roc",NULL,1,0},
+    {QJS_TEMPORAL_CAL_ROC,"broc",NULL,1,1},
+};
+#endif
 static int resolve_era(QJSTemporalCalendar calendar,
                        QJSTemporalCalendarFields *fields)
 {
+#ifdef CONFIG_ICU
+    size_t i;
+    double year;
+    if (!has_era(calendar)) return 0;
+    if (!!HAS(fields, ERA) != !!HAS(fields, ERA_YEAR)) return MISSING;
+    if (!HAS(fields, ERA_YEAR)) return 0;
+    for (i = 0; i < sizeof(eras) / sizeof(eras[0]); i++) {
+        const Era *era = &eras[i];
+        if (era->calendar != calendar || (strcmp(fields->era, era->name) &&
+            (!era->alias || strcmp(fields->era, era->alias)))) continue;
+        year = era->negative ? 1 - fields->era_year :
+            fields->era_year + era->offset - 1;
+        if (HAS(fields, YEAR) && fields->year != year) return RANGE;
+        fields->year = year;
+        fields->present |= QJS_TEMPORAL_FIELD_YEAR;
+        fields->present &= ~(QJS_TEMPORAL_FIELD_ERA | QJS_TEMPORAL_FIELD_ERA_YEAR);
+        return 0;
+    }
+    return RANGE;
+#else
     int32_t era_year, year;
     int error;
     if (!has_era(calendar)) return 0;
@@ -103,7 +208,191 @@ static int resolve_era(QJSTemporalCalendar calendar,
     fields->present |= QJS_TEMPORAL_FIELD_YEAR;
     fields->present &= ~(QJS_TEMPORAL_FIELD_ERA | QJS_TEMPORAL_FIELD_ERA_YEAR);
     return 0;
+#endif
 }
+#ifdef CONFIG_ICU
+static void set_era(QJSTemporalCalendar calendar, QJSTemporalISODate iso,
+                     QJSTemporalCalendarDate *result)
+{
+    const char *name = NULL;
+    int32_t year = result->year, era_year = year;
+    switch (calendar) {
+    case QJS_TEMPORAL_CAL_BUDDHIST: name = "be"; break;
+    case QJS_TEMPORAL_CAL_COPTIC: name = "am"; break;
+    case QJS_TEMPORAL_CAL_ETHIOAA: name = "aa"; break;
+    case QJS_TEMPORAL_CAL_ETHIOPIC:
+        name = year > 0 ? "am" : "aa";
+        if (year <= 0) era_year = year + 5500;
+        break;
+    case QJS_TEMPORAL_CAL_GREGORY:
+        name = year > 0 ? "ce" : "bce";
+        if (year <= 0) era_year = 1 - year;
+        break;
+    case QJS_TEMPORAL_CAL_HEBREW: name = "am"; break;
+    case QJS_TEMPORAL_CAL_INDIAN: name = "shaka"; break;
+    case QJS_TEMPORAL_CAL_ISLAMIC_CIVIL:
+    case QJS_TEMPORAL_CAL_ISLAMIC_TBLA:
+    case QJS_TEMPORAL_CAL_ISLAMIC_UMALQURA:
+        name = year > 0 ? "ah" : "bh";
+        if (year <= 0) era_year = 1 - year;
+        break;
+    case QJS_TEMPORAL_CAL_PERSIAN: name = "ap"; break;
+    case QJS_TEMPORAL_CAL_ROC:
+        name = year > 0 ? "roc" : "broc";
+        if (year <= 0) era_year = 1 - year;
+        break;
+    case QJS_TEMPORAL_CAL_JAPANESE:
+        if (year < 1873) {
+            name = year > 0 ? "ce" : "bce";
+            if (year <= 0) era_year = 1 - year;
+        } else if (year > 2019 || (year == 2019 && iso.month >= 5)) {
+            name = "reiwa"; era_year = year - 2018;
+        } else if (year > 1989 || (year == 1989 &&
+                   (iso.month > 1 || iso.day >= 8))) {
+            name = "heisei"; era_year = year - 1988;
+        } else if (year > 1926 || (year == 1926 &&
+                   (iso.month == 12 && iso.day >= 25))) {
+            name = "showa"; era_year = year - 1925;
+        } else if (year > 1912 || (year == 1912 &&
+                   (iso.month > 7 || (iso.month == 7 && iso.day >= 30)))) {
+            name = "taisho"; era_year = year - 1911;
+        } else { name = "meiji"; era_year = year - 1867; }
+        break;
+    default: break;
+    }
+    result->has_era = name != NULL;
+    if (name) { strcpy(result->era, name); result->era_year = era_year; }
+}
+static int backend_error(UErrorCode status)
+{
+    return U_SUCCESS(status) ? 0 : status == U_MEMORY_ALLOCATION_ERROR ?
+        QJS_TEMPORAL_ERROR_MEMORY : QJS_TEMPORAL_ERROR_BACKEND;
+}
+static int32_t year_delta(QJSTemporalCalendar calendar)
+{
+#if U_ICU_VERSION_MAJOR_NUM < 78
+    /* ICU 74-77 count Chinese and Dangi extended years from their traditional
+       epochs. Temporal arithmetic years use the related Gregorian year. */
+    if (calendar == QJS_TEMPORAL_CAL_CHINESE)
+        return -2637;
+    if (calendar == QJS_TEMPORAL_CAL_DANGI)
+        return -2333;
+    /* Older ICU aligns Amete Alem extended years with Amete Mihret,
+       while Temporal uses the Amete Alem arithmetic year. */
+    if (calendar == QJS_TEMPORAL_CAL_ETHIOAA)
+        return 5500;
+#endif
+    return calendar == QJS_TEMPORAL_CAL_BUDDHIST ? 543 :
+        calendar == QJS_TEMPORAL_CAL_ROC ? -1911 : 0;
+}
+static UCalendar *calendar_open(QJSTemporalCalendar calendar, UErrorCode *status)
+{
+    static const UChar utc[] = {'U','T','C',0};
+    int gregorian = calendar == QJS_TEMPORAL_CAL_GREGORY ||
+        calendar == QJS_TEMPORAL_CAL_JAPANESE || calendar == QJS_TEMPORAL_CAL_BUDDHIST ||
+        calendar == QJS_TEMPORAL_CAL_ROC;
+    /* These four calendars have exactly ISO month/day arithmetic. Using
+       a Gregorian handle permits its proleptic setter, which ICU rejects
+       on Japanese/Buddhist/ROC subclasses; era metadata is applied below. */
+    const char *legacy = gregorian ? "gregorian" :
+        uloc_toLegacyType("calendar", identifiers[calendar]);
+    char locale[80];
+    UCalendar *result;
+    if (!legacy) { *status = U_UNSUPPORTED_ERROR; return NULL; }
+    snprintf(locale, sizeof(locale), "en_US@calendar=%s", legacy);
+    result = ucal_open(utc, 3, locale, UCAL_DEFAULT, status);
+    if (result && U_SUCCESS(*status) && strcmp(ucal_getType(result, status), legacy))
+        *status = U_UNSUPPORTED_ERROR;
+    if (result && gregorian)
+        ucal_setGregorianChange(result, -1.0e16, status);
+    if (U_FAILURE(*status)) { if (result) ucal_close(result); return NULL; }
+    return result;
+}
+static void calendar_set(UCalendar *handle, QJSTemporalCalendar calendar,
+                          int32_t year, int month, int day)
+{
+    ucal_clear(handle);
+    ucal_set(handle, UCAL_EXTENDED_YEAR, year - year_delta(calendar));
+    ucal_set(handle, UCAL_ORDINAL_MONTH, month - 1);
+    ucal_set(handle, UCAL_DATE, day);
+}
+static int backend_month_code(UCalendar *handle, QJSTemporalCalendar calendar,
+                               char result[5], UErrorCode *status)
+{
+    int month = ucal_get(handle, UCAL_MONTH, status);
+    int is_leap = ucal_get(handle, UCAL_IS_LEAP_MONTH, status);
+    if (calendar == QJS_TEMPORAL_CAL_HEBREW) {
+        is_leap = month == 5;
+        month = month <= 5 ? month + 1 : month;
+        if (is_leap) month = 5;
+    } else month++;
+    if (month < 1 || month > 13) return QJS_TEMPORAL_ERROR_BACKEND;
+    make_month_code(result, month, is_leap);
+    return backend_error(*status);
+}
+static int month_info(QJSTemporalCalendar calendar, int32_t year, int month,
+                       int *months, int *days, char code[5])
+{
+    UErrorCode status = U_ZERO_ERROR;
+    UCalendar *handle = calendar_open(calendar, &status);
+    int error;
+    if (!handle) return U_SUCCESS(status) ? QJS_TEMPORAL_ERROR_MEMORY : backend_error(status);
+    calendar_set(handle, calendar, year, 1, 1);
+    (void)ucal_get(handle, UCAL_DATE, &status);
+    *months = ucal_getLimit(handle, UCAL_ORDINAL_MONTH, UCAL_ACTUAL_MAXIMUM, &status) + 1;
+    if (month < 1 || month > *months) error = RANGE;
+    else {
+        calendar_set(handle, calendar, year, month, 1);
+        /* Complete ordinal-month fields before actual-limit lookup clones
+           the calendar and rewrites its day-of-month fields. */
+        (void)ucal_get(handle, UCAL_DATE, &status);
+        *days = ucal_getLimit(handle, UCAL_DATE, UCAL_ACTUAL_MAXIMUM, &status);
+        error = backend_month_code(handle, calendar, code, &status);
+    }
+    if (U_FAILURE(status)) error = backend_error(status);
+    ucal_close(handle);
+    return error;
+}
+static int month_ordinal(QJSTemporalCalendar calendar, int32_t year,
+                          const char *code, QJSTemporalOverflow overflow,
+                          int *result)
+{
+    int month, months, days, error;
+    char actual[5], common[5];
+    const char *target = code;
+    for (month = 1; month <= 13; month++) {
+        error = month_info(calendar, year, month, &months, &days, actual);
+        if (error) { if (error == RANGE && month > months) break; return error; }
+        if (!strcmp(code, actual)) { *result = month; return 0; }
+        if (month == months) break;
+    }
+    if (overflow == QJS_TEMPORAL_OVERFLOW_REJECT) return RANGE;
+    if (calendar == QJS_TEMPORAL_CAL_HEBREW && !strcmp(code, "M05L"))
+        target = "M06";
+    else if ((calendar == QJS_TEMPORAL_CAL_CHINESE || calendar == QJS_TEMPORAL_CAL_DANGI) &&
+             strlen(code) == 4) {
+        memcpy(common, code, 3); common[3] = 0; target = common;
+    } else return RANGE;
+    return month_ordinal(calendar, year, target, QJS_TEMPORAL_OVERFLOW_REJECT, result);
+}
+static int calendar_integers_to_iso(QJSTemporalCalendar calendar, int32_t year,
+                                     int month, int day, QJSTemporalISODate *result)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    UCalendar *handle = calendar_open(calendar, &status);
+    UDate milliseconds;
+    int error;
+    if (!handle) return U_SUCCESS(status) ? QJS_TEMPORAL_ERROR_MEMORY : backend_error(status);
+    calendar_set(handle, calendar, year, month, day);
+    milliseconds = ucal_getMillis(handle, &status);
+    error = backend_error(status);
+    if (!error && !isfinite(milliseconds)) error = RANGE;
+    if (!error && qjs_temporal_iso_date_from_days(result,
+                    (int64_t)floor(milliseconds / 86400000.0))) error = RANGE;
+    ucal_close(handle);
+    return error;
+}
+#else
 static int month_info(QJSTemporalCalendar calendar, int32_t year, int month,
                        int *months, int *days, char code[5])
 {
@@ -126,6 +415,7 @@ static int calendar_integers_to_iso(QJSTemporalCalendar calendar, int32_t year,
     if (error) return error;
     return qjs_temporal_iso_date_from_days(result, days) ? RANGE : 0;
 }
+#endif
 static int resolve(QJSTemporalCalendar calendar,
                     const QJSTemporalCalendarFields *input, int type,
                     QJSTemporalOverflow overflow, QJSTemporalISODate *result)
@@ -255,6 +545,30 @@ int qjs_temporal_calendar_fields(QJSTemporalCalendar calendar,
         fields.week_of_year = qjs_temporal_iso_week_of_year(date, &fields.year_of_week);
         fields.has_week = 1;
     } else {
+#ifdef CONFIG_ICU
+        UErrorCode status = U_ZERO_ERROR;
+        UCalendar *handle = calendar_open(calendar, &status);
+        int error;
+        if (!handle) return U_SUCCESS(status) ? QJS_TEMPORAL_ERROR_MEMORY : backend_error(status);
+        ucal_setMillis(handle, (UDate)days * 86400000.0, &status);
+        fields.year = ucal_get(handle, UCAL_EXTENDED_YEAR, &status) + year_delta(calendar);
+        fields.month = ucal_get(handle, UCAL_ORDINAL_MONTH, &status) + 1;
+        fields.day = ucal_get(handle, UCAL_DATE, &status);
+        fields.day_of_year = ucal_get(handle, UCAL_DAY_OF_YEAR, &status);
+        fields.days_in_month = ucal_getLimit(handle, UCAL_DATE, UCAL_ACTUAL_MAXIMUM, &status);
+        fields.days_in_year = ucal_getLimit(handle, UCAL_DAY_OF_YEAR, UCAL_ACTUAL_MAXIMUM, &status);
+        fields.months_in_year = ucal_getLimit(handle, UCAL_ORDINAL_MONTH, UCAL_ACTUAL_MAXIMUM, &status) + 1;
+        if (calendar == QJS_TEMPORAL_CAL_HEBREW || calendar == QJS_TEMPORAL_CAL_CHINESE ||
+            calendar == QJS_TEMPORAL_CAL_DANGI) fields.in_leap_year = fields.months_in_year == 13;
+        else if (calendar >= QJS_TEMPORAL_CAL_ISLAMIC_CIVIL &&
+                 calendar <= QJS_TEMPORAL_CAL_ISLAMIC_UMALQURA)
+            fields.in_leap_year = fields.days_in_year > 354;
+        else fields.in_leap_year = fields.days_in_year > 365;
+        error = backend_month_code(handle, calendar, fields.month_code, &status);
+        ucal_close(handle);
+        if (error) return error;
+        set_era(calendar, date, &fields);
+#else
         QJSCalendarDate native;
         int error = qjs_calendar_from_epoch_day_unbounded((QJSCalendarId)calendar,
                                                            days, &native);
@@ -268,6 +582,7 @@ int qjs_temporal_calendar_fields(QJSTemporalCalendar calendar,
         fields.days_in_year = native.days_in_year;
         fields.months_in_year = native.months_in_year;
         fields.has_era = native.has_era; fields.in_leap_year = native.in_leap_year;
+#endif
     }
     *result = fields;
     return 0;
@@ -294,11 +609,12 @@ int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
             int32_t arithmetic_year;
             if (checked_i32(fields.year, &arithmetic_year)) return RANGE;
             /* Chinese/Dangi arithmetic years are Gregorian years. Reject
-               an impossible year before asking the calendar backend to calculate its months. */
+               an impossible year before asking ICU to calculate its moons. */
             if ((calendar == QJS_TEMPORAL_CAL_CHINESE ||
                  calendar == QJS_TEMPORAL_CAL_DANGI) &&
                 (arithmetic_year < -271821 || arithmetic_year > 275760))
                 return RANGE;
+#ifndef CONFIG_ICU
             int supported;
             /* Guard the supplied year before lunar month lookup, as the
              * reference-date operation requires. An edge year may include
@@ -307,8 +623,23 @@ int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
                                                           arithmetic_year, &supported);
             if (error) return error;
             if (!supported) return RANGE;
+#endif
             error = resolve(calendar, &fields, 0, overflow, &source);
             if (error) return error;
+#ifdef CONFIG_ICU
+            {
+                QJSTemporalISODate first, next;
+                int64_t first_days, next_days;
+                error = calendar_integers_to_iso(calendar, arithmetic_year, 1, 1, &first);
+                if (error) return error;
+                error = calendar_integers_to_iso(calendar, arithmetic_year + 1, 1, 1, &next);
+                if (error) return error;
+                if (qjs_temporal_iso_date_to_days(&first_days, first) ||
+                    qjs_temporal_iso_date_to_days(&next_days, next) ||
+                    first_days > INT64_C(100000000) || next_days <= -INT64_C(100000001))
+                    return RANGE;
+            }
+#endif
             error = qjs_temporal_calendar_fields(calendar, source, &record);
             if (error) return error;
             strcpy(code, record.month_code); desired_day = record.day;
@@ -417,6 +748,34 @@ static int calendar_year_month(QJSTemporalCalendar calendar,
         *maximum_day = qjs_temporal_iso_days_in_month((int32_t)year, month);
         return 0;
     }
+#ifdef CONFIG_ICU
+    {
+        int error, count;
+        UErrorCode status = U_ZERO_ERROR;
+        UCalendar *handle;
+        UDate milliseconds;
+        error = month_ordinal(calendar, (int32_t)year, record.month_code, overflow, &month);
+        if (error) return error;
+        if (months < INT32_MIN || months > INT32_MAX) return RANGE;
+        handle = calendar_open(calendar, &status);
+        if (!handle) return U_SUCCESS(status) ? QJS_TEMPORAL_ERROR_MEMORY : backend_error(status);
+        calendar_set(handle, calendar, (int32_t)year, month, 1);
+        ucal_add(handle, UCAL_MONTH, (int32_t)months, &status);
+        /* ICU month addition can leave a newer Julian day together with
+           stale month fields. Complete the target before getActualMaximum
+           clones the handle and writes a new day-of-month field. */
+        (void)ucal_get(handle, UCAL_DATE, &status);
+        count = ucal_getLimit(handle, UCAL_DATE, UCAL_ACTUAL_MAXIMUM, &status);
+        milliseconds = ucal_getMillis(handle, &status);
+        error = backend_error(status);
+        if (!error && !isfinite(milliseconds)) error = RANGE;
+        if (!error && qjs_temporal_iso_date_from_days(first,
+                        (int64_t)floor(milliseconds / 86400000.0))) error = RANGE;
+        if (!error) *maximum_day = count;
+        ucal_close(handle);
+        return error;
+    }
+#else
     {
         int32_t target_year;
         int target_month, count, error;
@@ -432,6 +791,7 @@ static int calendar_year_month(QJSTemporalCalendar calendar,
         if (error) return error;
         return calendar_integers_to_iso(calendar, target_year, target_month, 1, first);
     }
+#endif
 }
 int qjs_temporal_calendar_date_add(QJSTemporalCalendar calendar,
                     QJSTemporalISODate date, QJSTemporalDateDuration duration,

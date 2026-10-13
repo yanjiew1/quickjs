@@ -2,6 +2,7 @@
 #ifndef QUICKJS_TEMPORAL_TIME_ZONE_H
 #define QUICKJS_TEMPORAL_TIME_ZONE_H
 #include "calendar.h"
+#include "../timezone/timezone.h"
 typedef enum QJSTemporalDisambiguation {
     QJS_TEMPORAL_COMPATIBLE, QJS_TEMPORAL_EARLIER,
     QJS_TEMPORAL_LATER, QJS_TEMPORAL_DISAMBIGUATION_REJECT
