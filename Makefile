@@ -790,6 +790,12 @@ ifneq ($(filter y,$(CONFIG_ICU) $(CONFIG_INTL_NATIVE)),)
 	install -m644 $(OBJDIR)/quickjs.pc "$(DESTDIR)$(PREFIX)/lib/pkgconfig"
 endif
 
+ifeq ($(CONFIG_INTL_NATIVE),y)
+.PHONY: test-intl-native-date-exhaustive
+test-intl-native-date-exhaustive: qjs$(EXE)
+	$(WINE) ./qjs$(EXE) --std -e "globalThis.intlDateExhaustive = true; std.loadScript('tests/test_intl_native_date_all_calendars.js');"
+endif
+
 ###############################################################################
 # examples
 
@@ -1917,5 +1923,35 @@ ifeq ($(CONFIG_TEMPORAL),y)
 	$(WINE) ./qjs$(EXE) tests/test_intl_temporal_duration.js
 endif
 test: test-intl-icu-duration
+endif
+endif
+
+ifeq ($(CONFIG_INTL),y)
+ifneq ($(CONFIG_INTL_NATIVE),y)
+.PHONY: test-intl-icu-date
+test-intl-icu-date: qjs$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time_hour_cycle.js
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time_numbering_parts.js
+ifeq ($(CONFIG_INTL_LEGACY),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_date_time_legacy.js
+endif
+	$(WINE) ./qjs$(EXE) tests/test_intl_era_monthcode_calendars.js
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_icu_calendar_target.js
+endif
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_icu_monthday_year.js
+endif
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_intl_temporal_style_preservation.js
+endif
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_intl.js
+endif
+ifeq ($(CONFIG_TEMPORAL),y)
+	$(WINE) ./qjs$(EXE) tests/test_temporal_zoned_intl.js
+endif
+test: test-intl-icu-date
 endif
 endif

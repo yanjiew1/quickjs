@@ -1,7 +1,9 @@
 /* Native frontend closure over accepted CLDR48.2 Date banks and the sole
  * acquired primary calendar provider. Copyright 2026 Yan-Jie Wang, MIT.
  * Expected lunar names and style strings are independently pinned in
- * test-date-calendar-data.c; this fixture exercises JS callbacks and banks.
+ * the date-bank C fixtures; this test exercises JS callbacks and banks.
+ * The default matrix covers every calendar, style and required subset;
+ * intlDateExhaustive retains all locale/matcher/width combinations.
  */
 (function () {
     function check(value, label) { if (!value) throw Error(label || "assertion"); }
@@ -11,8 +13,22 @@
     const calendars = ["buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic",
         "gregory", "hebrew", "indian", "islamic-civil", "islamic-tbla", "islamic-umalqura",
         "iso8601", "japanese", "persian", "roc"];
+    const exhaustive = globalThis.intlDateExhaustive === true;
+    const locales = ["en", "en-US"];
+    const matchers = ["basic", "best fit"];
+    const focused = ["gregory", "chinese", "hebrew", "japanese"];
+    function index(calendar) { return calendars.indexOf(calendar); }
+    function selected(calendar, locale, matcher, ordinal = 0) {
+        return exhaustive || (locale === locales[(index(calendar) + ordinal) % 2] &&
+            matcher === matchers[(index(calendar) + Math.floor(ordinal / 2)) % 2]);
+    }
+    function widths(calendar, ordinal = 0) {
+        return exhaustive || focused.includes(calendar) ? [1, 2, 3] :
+            [1 + (index(calendar) + ordinal) % 3];
+    }
     const epoch = 1707523200000; // independently acquired 2024-02-10 UTC lunar M01 day1
     for (const locale of ["en", "en-US"]) for (const calendar of calendars) {
+        if (!exhaustive && locale !== locales[index(calendar) % 2]) continue;
         for (const dateStyle of ["full", "long", "medium", "short"]) {
             const f = new Intl.DateTimeFormat(locale, {calendar, dateStyle, timeZone: "UTC"});
             same(f.resolvedOptions().calendar, calendar, locale + " " + calendar);
@@ -62,7 +78,7 @@
             same(noFraction.resolvedOptions().fractionalSecondDigits, undefined);
             same(field(noFraction.formatToParts(fractionEpoch), "fractionalSecond"), undefined);
             same(text(noFraction.formatToParts(fractionEpoch)), noFraction.format(fractionEpoch));
-            for (const digits of [1, 2, 3]) {
+            for (const digits of widths(calendar, fractionSubsets.indexOf(components))) {
                 const f = new Intl.DateTimeFormat("en", {...options, fractionalSecondDigits: digits});
                 const label = calendar + "/" + formatMatcher + "/" + digits;
                 const ro = f.resolvedOptions(), parts = f.formatToParts(fractionEpoch);
@@ -82,7 +98,7 @@
             }
         }
         /* Fraction-only is accepted without Number-slot date defaults. */
-        for (const digits of [1, 2, 3]) {
+        for (const digits of widths(calendar)) {
             const f = new Intl.DateTimeFormat("en", {
                 calendar, formatMatcher, fractionalSecondDigits: digits, timeZone: "UTC"
             });
@@ -130,6 +146,13 @@
     for (const formatMatcher of ["basic", "best fit"]) {
         for (const subset of requiredSubsets)
         for (const digits of subset.fractionalSecondDigits ? [1, 2, 3] : [undefined]) {
+            // Cover every calendar/subset, with complete focused fractional
+            // interactions. The optional exhaustive mode keeps the full matrix.
+            const ordinal = requiredSubsets.indexOf(subset);
+            const fullFraction = focused.includes(calendar) && subset.fractionalSecondDigits;
+            if (!fullFraction && !selected(calendar, locale, formatMatcher, ordinal)) continue;
+            if (!exhaustive && !fullFraction && digits !== undefined &&
+                digits !== 1 + (index(calendar) + ordinal) % 3) continue;
             const request = {...subset};
             if (digits !== undefined) request.fractionalSecondDigits = digits;
             const f = new Intl.DateTimeFormat(locale, {...request, calendar, formatMatcher,
@@ -161,6 +184,8 @@
     for (const locale of ["en", "en-US"]) for (const calendar of eraCalendars)
     for (const formatMatcher of ["basic", "best fit"]) {
         for (const era of ["narrow", "short", "long"]) {
+            if (calendar !== "japanese" && !selected(calendar, locale, formatMatcher,
+                    ["narrow", "short", "long"].indexOf(era))) continue;
             const f = new Intl.DateTimeFormat(locale, {calendar, formatMatcher, era,
                 year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC"});
             check(f.resolvedOptions().era !== undefined, calendar + " requested era");
@@ -168,6 +193,8 @@
             same(text(f.formatToParts(fractionEpoch)), f.format(fractionEpoch));
         }
         for (const dateStyle of ["full", "long", "medium", "short"]) {
+            if (calendar !== "japanese" && !selected(calendar, locale, formatMatcher,
+                    ["full", "long", "medium", "short"].indexOf(dateStyle))) continue;
             const options = {calendar, dateStyle, timeZone: "UTC"};
             const f = new Intl.DateTimeFormat(locale, {...options, formatMatcher});
             const control = new Intl.DateTimeFormat(locale, options);
