@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -342,7 +343,9 @@ int js_os_poll(JSContext *ctx)
 {
     JSRuntime *rt = JS_GetRuntime(ctx);
     JSThreadState *ts = JS_GetRuntimeOpaque(rt);
-    int min_delay, count;
+    int min_delay, count, worker_base, native_delay, native_index = -1;
+    size_t worker_count = 0;
+    intptr_t native_wake;
     int64_t cur_time, delay;
     JSOSRWHandler *rh;
     struct list_head *el;
@@ -350,8 +353,15 @@ int js_os_poll(JSContext *ctx)
 
     /* XXX: handle signals if useful */
 
+    native_delay = JS_PollNativeJobs(rt, 0);
+    if (native_delay < 0) {
+        JS_ThrowInternalError(ctx, "native job polling failed");
+        return -2;
+    }
+    if (native_delay > 0)
+        return 0;
     if (list_empty(&ts->os_rw_handlers) && list_empty(&ts->os_timers) &&
-        list_empty(&ts->port_list)) {
+        list_empty(&ts->port_list) && !JS_IsNativeJobPending(rt)) {
         return -1; /* no more events */
     }
 
@@ -378,7 +388,16 @@ int js_os_poll(JSContext *ctx)
         min_delay = -1;
     }
 
+    native_delay = JS_GetNativeJobTimeout(rt);
+    if (native_delay >= 0 && (min_delay < 0 || native_delay < min_delay))
+        min_delay = native_delay;
+    native_wake = JS_IsNativeJobPending(rt) ?
+                  JS_GetNativeJobWakeHandle(rt) : -1;
     count = 0;
+    if (native_wake != -1) {
+        native_index = count;
+        handles[count++] = (HANDLE)native_wake;
+    }
     list_for_each(el, &ts->os_rw_handlers) {
         rh = list_entry(el, JSOSRWHandler, link);
         if (rh->fd == 0 && !JS_IsNull(rh->rw_func[0])) {
@@ -388,13 +407,37 @@ int js_os_poll(JSContext *ctx)
         }
     }
 
+    worker_base = count;
     list_for_each(el, &ts->port_list) {
         JSWorkerMessageHandler *port = list_entry(el, JSWorkerMessageHandler, link);
         if (JS_IsNull(port->on_message_func))
             continue;
-        handles[count++] = port->recv_pipe->waker.handle;
-        if (count == (int)countof(handles))
-            break;
+        worker_count++;
+        if (count < (int)countof(handles))
+            handles[count++] = port->recv_pipe->waker.handle;
+    }
+
+    if (worker_count > countof(handles) - worker_base) {
+        size_t first = ts->poll_worker_offset % worker_count;
+        size_t index = 0, slots = countof(handles) - worker_base;
+
+        /* Keep native wake and stdin in every wait. Rotate the Worker window
+           so every port can be selected, even while earlier ports stay ready.
+           Bound an idle window's wait because an omitted port cannot wake it. */
+        list_for_each(el, &ts->port_list) {
+            JSWorkerMessageHandler *port = list_entry(el, JSWorkerMessageHandler, link);
+            size_t distance;
+            if (JS_IsNull(port->on_message_func))
+                continue;
+            distance = index >= first ? index - first :
+                       worker_count - (first - index);
+            if (distance < slots)
+                handles[worker_base + distance] = port->recv_pipe->waker.handle;
+            index++;
+        }
+        ts->poll_worker_offset = first + 1 == worker_count ? 0 : first + 1;
+        if (min_delay < 0 || min_delay > 10)
+            min_delay = 10;
     }
 
     if (count > 0) {
@@ -402,6 +445,14 @@ int js_os_poll(JSContext *ctx)
         if (min_delay != -1)
             timeout = min_delay;
         ret = WaitForMultipleObjects(count, handles, FALSE, timeout);
+        native_delay = JS_PollNativeJobs(rt, 0);
+        if (native_delay < 0) {
+            JS_ThrowInternalError(ctx, "native job polling failed");
+            return -2;
+        }
+        if ((native_index >= 0 && ret == (DWORD)native_index) ||
+            native_delay > 0)
+            goto done;
 
         if (ret < count) {
             list_for_each(el, &ts->os_rw_handlers) {
@@ -467,7 +518,8 @@ int js_os_poll(JSContext *ctx)
 {
     JSRuntime *rt = JS_GetRuntime(ctx);
     JSThreadState *ts = JS_GetRuntimeOpaque(rt);
-    int min_delay, nfds;
+    int min_delay, nfds, native_delay, native_index = -1;
+    intptr_t native_wake;
     int64_t cur_time, delay;
     JSOSRWHandler *rh;
     struct list_head *el;
@@ -489,8 +541,15 @@ int js_os_poll(JSContext *ctx)
         }
     }
 
+    native_delay = JS_PollNativeJobs(rt, 0);
+    if (native_delay < 0) {
+        JS_ThrowInternalError(ctx, "native job polling failed");
+        return -2;
+    }
+    if (native_delay > 0)
+        return 0;
     if (list_empty(&ts->os_rw_handlers) && list_empty(&ts->os_timers) &&
-        list_empty(&ts->port_list))
+        list_empty(&ts->port_list) && !JS_IsNativeJobPending(rt))
         return -1; /* no more events */
 
     if (!list_empty(&ts->os_timers)) {
@@ -516,7 +575,17 @@ int js_os_poll(JSContext *ctx)
         min_delay = -1; /* infinite */
     }
 
+    native_delay = JS_GetNativeJobTimeout(rt);
+    if (native_delay >= 0 && (min_delay < 0 || native_delay < min_delay))
+        min_delay = native_delay;
+    native_wake = JS_IsNativeJobPending(rt) ?
+                  JS_GetNativeJobWakeHandle(rt) : -1;
     nfds = 0;
+    if (native_wake != -1) {
+        native_index = nfds;
+        if (js_poll_add_poll_fd(ts, &nfds, (int)native_wake, POLLIN))
+            return -1;
+    }
     list_for_each(el, &ts->os_rw_handlers) {
         int events;
 
@@ -544,6 +613,14 @@ int js_os_poll(JSContext *ctx)
     }
 
     nfds = poll(ts->poll_fds, nfds, min_delay);
+    native_delay = JS_PollNativeJobs(rt, 0);
+    if (native_delay < 0) {
+        JS_ThrowInternalError(ctx, "native job polling failed");
+        return -2;
+    }
+    if ((native_index >= 0 &&
+         ts->poll_fds[native_index].revents != 0) || native_delay > 0)
+        goto done;
     if (nfds > 0) {
         list_for_each(el, &ts->os_rw_handlers) {
             rh = list_entry(el, JSOSRWHandler, link);

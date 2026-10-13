@@ -92,7 +92,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (JS_IsException(val)) {
         js_std_dump_error(ctx);
     } else {
-        js_std_loop(ctx);
+        test_one_input_jobs(ctx);
     }
     JS_FreeValue(ctx, val);
     js_std_free_handlers(rt);
