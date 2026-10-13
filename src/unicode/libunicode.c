@@ -186,14 +186,14 @@ static int lre_case_folding_entry(uint32_t c, uint32_t idx, uint32_t v, BOOL is_
         if (len == 1) {
             c = res[0];
         } else {
-            /* handle the few specific multi-character cases (see
-               unicode_gen.c:dump_case_folding_special_cases()) */
-            if (c == 0xfb06) {
-                c = 0xfb05;
-            } else if (c == 0x01fd3) {
-                c = 0x390;
-            } else if (c == 0x01fe3) {
-                c = 0x3b0;
+            size_t i;
+            /* The conversion table keeps the full fold for some entries.
+               Their distinct simple folds are generated from CaseFolding.txt. */
+            for(i = 0; i < countof(case_conv_simple_folding); i++) {
+                if (c == case_conv_simple_folding[i][0]) {
+                    c = case_conv_simple_folding[i][1];
+                    break;
+                }
             }
         }
     } else {
