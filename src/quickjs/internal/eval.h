@@ -29,6 +29,8 @@
 
 JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
                       JSValueConst val, int flags, int scope_idx);
+JSValue JS_EvalFunctionConstructor(JSContext *ctx, JSValueConst parameters,
+                                    JSValueConst body, int func_kind);
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
                           const char *input, size_t input_len,
                           const char *filename, int flags, int scope_idx);
