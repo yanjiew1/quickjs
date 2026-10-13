@@ -380,6 +380,13 @@ static void *worker_func(void *opaque)
     ctx = js_worker_new_context_func(rt);
     if (ctx == NULL) {
         fprintf(stderr, "JS_NewContext failure");
+        free(args->filename);
+        free(args->basename);
+        free(args);
+        /* The handlers own the transferred pipe references. */
+        js_std_free_handlers(rt);
+        JS_FreeRuntime(rt);
+        return NULL;
     }
 
     JS_SetCanBlock(rt, TRUE);
