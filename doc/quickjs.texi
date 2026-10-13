@@ -329,6 +329,28 @@ optional properties:
   script.
   @end table
 
+@item createRealm()
+Create a new realm in the current runtime with fresh standard intrinsics and
+an independent global environment. Return an object with these properties:
+
+  @table @code
+  @item global
+  The new realm's global object. Its @code{globalThis} property refers to itself.
+  @item evalScript(str, options = undefined)
+  Evaluate a global script in the new realm, with the same options as
+  @code{std.evalScript()}. Return its completion value, or propagate its
+  exception without changing the exception's realm or identity. Extracting
+  this method does not change which realm it evaluates in.
+  @item createRealm()
+  Create another fresh realm in the same runtime.
+  @end table
+
+Objects and functions may be passed between these realms, and their reachable
+intrinsics and pending jobs keep the owning realm alive. The new global does
+not inherit the caller's properties or install the @code{std} and @code{os}
+modules as global objects. Realm creation shares runtime resources, including
+the job queue and embedder configuration; it is not a security sandbox.
+
 @item loadScript(filename)
 Evaluate the file @code{filename} as a script (global eval).
 

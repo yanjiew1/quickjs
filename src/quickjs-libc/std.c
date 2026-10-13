@@ -584,6 +584,54 @@ static JSValue js_evalScript(JSContext *ctx, JSValueConst this_val,
     return ret;
 }
 
+/* Native functions retain their creation context, including when a method is
+   extracted from the realm object and the host's context reference is gone. */
+static JSValue js_std_createRealm(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv)
+{
+    JSContext *realm;
+    JSValue obj, value;
+
+    realm = JS_NewContext(JS_GetRuntime(ctx));
+    if (!realm) {
+        if (JS_HasException(ctx))
+            return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
+    }
+    obj = JS_EXCEPTION;
+    if (JS_HasException(realm))
+        goto done;
+    obj = JS_NewObject(realm);
+    if (JS_IsException(obj))
+        goto done;
+    value = JS_GetGlobalObject(realm);
+    if (JS_IsException(value))
+        goto fail;
+    if (JS_SetPropertyStr(realm, obj, "global", value) < 0)
+        goto fail;
+    value = JS_NewCFunction(realm, js_evalScript, "evalScript", 1);
+    if (JS_IsException(value) || JS_HasException(realm)) {
+        JS_FreeValue(realm, value);
+        goto fail;
+    }
+    if (JS_SetPropertyStr(realm, obj, "evalScript", value) < 0)
+        goto fail;
+    value = JS_NewCFunction(realm, js_std_createRealm, "createRealm", 0);
+    if (JS_IsException(value) || JS_HasException(realm)) {
+        JS_FreeValue(realm, value);
+        goto fail;
+    }
+    if (JS_SetPropertyStr(realm, obj, "createRealm", value) < 0)
+        goto fail;
+ done:
+    JS_FreeContext(realm);
+    return obj;
+ fail:
+    JS_FreeValue(realm, obj);
+    obj = JS_EXCEPTION;
+    goto done;
+}
+
 static JSClassID js_std_file_class_id;
 
 typedef struct {
@@ -1299,6 +1347,7 @@ static const JSCFunctionListEntry js_std_funcs[] = {
     JS_CFUNC_DEF("exit", 1, js_std_exit ),
     JS_CFUNC_DEF("gc", 0, js_std_gc ),
     JS_CFUNC_DEF("evalScript", 1, js_evalScript ),
+    JS_CFUNC_DEF("createRealm", 0, js_std_createRealm ),
     JS_CFUNC_DEF("loadScript", 1, js_loadScript ),
     JS_CFUNC_DEF("getenv", 1, js_std_getenv ),
     JS_CFUNC_DEF("setenv", 1, js_std_setenv ),
