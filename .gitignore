@@ -106,3 +106,6 @@ libwinpthread*.dll
 
 /tests/test_temporal
 /tests/test_temporal.exe
+
+/tests/test_temporal_format
+/tests/test_temporal_format.exe

@@ -612,6 +612,7 @@ C_TESTS+=tests/test_wait_queue$(EXE)
 C_TESTS+=tests/test_temporal_epoch$(EXE)
 C_TESTS+=tests/test_temporal_date_math$(EXE)
 C_TESTS+=tests/test_temporal$(EXE)
+C_TESTS+=tests/test_temporal_format$(EXE)
 
 # Link the tracing reader before the archive so it replaces the normal reader.
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
@@ -756,6 +757,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_temporal_epoch$(EXE)
 	$(WINE) ./tests/test_temporal_date_math$(EXE)
 	$(WINE) ./tests/test_temporal$(EXE)
+	$(WINE) ./tests/test_temporal_format$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
@@ -1014,4 +1016,10 @@ TEMPORAL_PARSE_SRCS=src/temporal/parse.c
 TEMPORAL_PARSE_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_PARSE_SRCS))
 
 tests/test_temporal$(EXE): $(OBJDIR)/tests/test_temporal.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_PARSE_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+TEMPORAL_FORMAT_SRCS=src/temporal/format.c
+TEMPORAL_FORMAT_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(TEMPORAL_FORMAT_SRCS))
+
+tests/test_temporal_format$(EXE): $(OBJDIR)/tests/test_temporal_format.o $(TEMPORAL_ARITHMETIC_OBJS) $(TEMPORAL_CIVIL_OBJS) $(TEMPORAL_FORMAT_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
