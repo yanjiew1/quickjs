@@ -184,3 +184,6 @@ __pycache__/
 
 /tests/test_intl_data_bundle
 /tests/test_intl_data_bundle.exe
+
+/tests/test_intl_native_locale_id
+/tests/test_intl_native_locale_id.exe

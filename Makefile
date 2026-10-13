@@ -820,6 +820,8 @@ C_TESTS+=tests/test_intl_data_reader$(EXE)
 
 C_TESTS+=tests/test_intl_data_bundle$(EXE)
 
+C_TESTS+=tests/test_intl_native_locale_id$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -829,6 +831,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_native_locale_id$(EXE)
 	$(WINE) ./tests/test_intl_data_bundle$(EXE)
 	$(WINE) ./tests/test_intl_data_reader$(EXE)
 	$(WINE) ./tests/test_intl_date_pattern$(EXE)
@@ -1373,4 +1376,7 @@ test-intl-generator:
 test: test-intl-generator
 
 tests/test_intl_data_bundle$(EXE): $(OBJDIR)/tests/test_intl_data_bundle.o $(OBJDIR)/src/intl/data/locale-metadata.o $(INTL_DATA_READER_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_native_locale_id$(EXE): $(INTL_DATA_READER_OBJS) $(OBJDIR)/tests/test_intl_native_locale_id.o $(OBJDIR)/src/intl/native-locale-id.o $(OBJDIR)/src/intl/locale-grammar.o $(OBJDIR)/src/intl/data/locale-metadata.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
