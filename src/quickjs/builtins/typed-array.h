@@ -49,6 +49,7 @@ int js_typed_array_get_length_unsafe(JSContext *ctx, JSValueConst obj);
 JSValue js_typed_array___speciesCreate(JSContext *ctx,
                                        JSValueConst this_val,
                                        int argc, JSValueConst *argv);
+uint32_t js_typed_array_update_length(JSObject *p);
 BOOL typed_array_is_oob(JSObject *p);
 JSValue JS_NewUint8ArrayCopy(JSContext *ctx, const uint8_t *buf, size_t len);
 

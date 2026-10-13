@@ -34,20 +34,34 @@
 #include "typed-array.h"
 #include "array-buffer.h"
 
-JSValue js_array_buffer_constructor3(JSContext *ctx,
-                                     JSValueConst new_target,
-                                     uint64_t len, uint64_t *max_len,
-                                     JSClassID class_id,
-                                     uint8_t *buf,
-                                     JSFreeArrayBufferDataFunc *free_func,
-                                     void *opaque, BOOL alloc_flag)
+static size_t js_shared_array_buffer_length_offset(uint8_t *data, size_t maximum)
+{
+    size_t alignment = _Alignof(JSSharedArrayBufferLength);
+    size_t offset = maximum ? maximum : 1;
+    size_t remainder = (uintptr_t)(data + offset) % alignment;
+    if (remainder)
+        offset += alignment - remainder;
+    return offset;
+}
+
+static JSValue js_array_buffer_constructor4(JSContext *ctx,
+                                            JSValueConst new_target,
+                                            uint64_t len, uint64_t *max_len,
+                                            JSClassID class_id,
+                                            uint8_t *buf,
+                                            JSFreeArrayBufferDataFunc *free_func,
+                                            void *opaque, BOOL alloc_flag, BOOL shared_clone)
 {
     JSRuntime *rt = ctx->rt;
+    JSSharedArrayBufferFunctions shared_functions;
     JSValue obj;
     JSArrayBuffer *abuf = NULL;
-    uint64_t sab_alloc_len;
+    size_t alloc_len;
+    BOOL growable_shared = class_id == JS_CLASS_SHARED_ARRAY_BUFFER && max_len;
+    BOOL uses_shared_callbacks = FALSE;
 
-    if (!alloc_flag && buf && max_len && free_func != js_array_buffer_free) {
+    if (!alloc_flag && buf && max_len &&
+        free_func != js_array_buffer_free && !shared_clone) {
         // not observable from JS land, only through C API misuse;
         // JS code cannot create externally managed buffers directly
         return JS_ThrowInternalError(ctx,
@@ -66,6 +80,18 @@ JSValue js_array_buffer_constructor3(JSContext *ctx,
         JS_ThrowRangeError(ctx, "invalid max array buffer length");
         goto fail;
     }
+    alloc_len = class_id == JS_CLASS_SHARED_ARRAY_BUFFER && max_len ?
+        *max_len : len;
+    alloc_len = max_int(alloc_len, 1);
+    if (growable_shared) {
+        size_t overhead = _Alignof(JSSharedArrayBufferLength) - 1 +
+            sizeof(JSSharedArrayBufferLength);
+        if (alloc_len > SIZE_MAX - overhead) {
+            JS_ThrowRangeError(ctx, "shared array buffer capacity overflow");
+            goto fail;
+        }
+        alloc_len = js_shared_array_buffer_allocation_size(*max_len);
+    }
     abuf = js_malloc(ctx, sizeof(*abuf));
     if (!abuf)
         goto fail;
@@ -75,37 +101,65 @@ JSValue js_array_buffer_constructor3(JSContext *ctx,
         alloc_flag = TRUE;
         free_func = js_array_buffer_free;
     }
+    if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER)
+        shared_functions = rt->sab_funcs;
     if (alloc_flag) {
         if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
-            rt->sab_funcs.sab_alloc) {
-            // TOOD(bnoordhuis) resizing backing memory for SABs atomically
-            // is hard so we cheat and allocate |maxByteLength| bytes upfront
-            sab_alloc_len = max_len ? *max_len : len;
-            abuf->data = rt->sab_funcs.sab_alloc(rt->sab_funcs.sab_opaque,
-                                                 max_int(sab_alloc_len, 1));
+            shared_functions.sab_alloc) {
+            if (!shared_functions.sab_free) {
+                JS_ThrowTypeError(ctx,
+                                  "SharedArrayBuffer allocator has no free callback");
+                goto fail;
+            }
+            abuf->data = shared_functions.sab_alloc(shared_functions.sab_opaque,
+                                                    alloc_len);
             if (!abuf->data)
                 goto fail;
-            memset(abuf->data, 0, sab_alloc_len);
+            uses_shared_callbacks = TRUE;
+            memset(abuf->data, 0, alloc_len);
         } else {
             /* the allocation must be done after the object creation */
-            sab_alloc_len = class_id == JS_CLASS_SHARED_ARRAY_BUFFER && max_len ?
-                *max_len : len;
-            abuf->data = js_mallocz(ctx, max_int(sab_alloc_len, 1));
+            abuf->data = js_mallocz(ctx, alloc_len);
             if (!abuf->data)
                 goto fail;
         }
     } else {
         if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
-            rt->sab_funcs.sab_dup) {
-            rt->sab_funcs.sab_dup(rt->sab_funcs.sab_opaque, buf);
+            shared_functions.sab_dup) {
+            if (!shared_functions.sab_free) {
+                JS_ThrowTypeError(ctx,
+                                  "SharedArrayBuffer duplicate has no free callback");
+                goto fail;
+            }
+            shared_functions.sab_dup(shared_functions.sab_opaque, buf);
         }
         abuf->data = buf;
+        uses_shared_callbacks =
+            class_id == JS_CLASS_SHARED_ARRAY_BUFFER && shared_functions.sab_free;
+    }
+    if (growable_shared) {
+        size_t length_offset = js_shared_array_buffer_length_offset(abuf->data,
+                                                                    *max_len);
+        abuf->shared_length = (JSSharedArrayBufferLength *)(abuf->data + length_offset);
+        if (alloc_flag) {
+#ifdef CONFIG_ATOMICS
+            atomic_init(abuf->shared_length, len);
+#else
+            *abuf->shared_length = len;
+#endif
+        }
     }
     init_list_head(&abuf->array_list);
     abuf->detached = FALSE;
     abuf->shared = (class_id == JS_CLASS_SHARED_ARRAY_BUFFER);
-    abuf->opaque = opaque;
-    abuf->free_func = free_func;
+    abuf->uses_shared_callbacks = uses_shared_callbacks;
+    if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER && uses_shared_callbacks) {
+        abuf->opaque = shared_functions.sab_opaque;
+        abuf->shared_free_func = shared_functions.sab_free;
+    } else {
+        abuf->opaque = opaque;
+        abuf->free_func = free_func;
+    }
     if (alloc_flag && buf)
         memcpy(abuf->data, buf, len);
     JS_SetOpaque(obj, abuf);
@@ -114,6 +168,39 @@ JSValue js_array_buffer_constructor3(JSContext *ctx,
     JS_FreeValue(ctx, obj);
     js_free(ctx, abuf);
     return JS_EXCEPTION;
+}
+
+JSValue js_array_buffer_constructor3(JSContext *ctx, JSValueConst new_target,
+                                     uint64_t len, uint64_t *max_len,
+                                     JSClassID class_id, uint8_t *buf,
+                                     JSFreeArrayBufferDataFunc *free_func,
+                                     void *opaque, BOOL alloc_flag)
+{
+    return js_array_buffer_constructor4(ctx, new_target, len, max_len, class_id,
+                                        buf, free_func, opaque, alloc_flag, FALSE);
+}
+
+JSValue js_clone_shared_array_buffer(JSContext *ctx, uint32_t len,
+                                     uint64_t *max_len, uint8_t *data)
+{
+    if (max_len) {
+        JSSharedArrayBufferLength *shared_length;
+        uint32_t current_length;
+        if (*max_len > INT32_MAX || len > *max_len || !data)
+            return JS_ThrowTypeError(ctx, "invalid growable shared array buffer");
+        shared_length = (JSSharedArrayBufferLength *)(data +
+            js_shared_array_buffer_length_offset(data, *max_len));
+#ifdef CONFIG_ATOMICS
+        current_length = atomic_load_explicit(shared_length, memory_order_seq_cst);
+#else
+        current_length = *shared_length;
+#endif
+        if (current_length < len || current_length > *max_len)
+            return JS_ThrowTypeError(ctx, "invalid shared array buffer length");
+    }
+    return js_array_buffer_constructor4(ctx, JS_UNDEFINED, len, max_len,
+                                        JS_CLASS_SHARED_ARRAY_BUFFER, data,
+                                        NULL, NULL, FALSE, TRUE);
 }
 
 void js_array_buffer_free(JSRuntime *rt, void *opaque, void *ptr)
@@ -235,8 +322,8 @@ void js_array_buffer_finalizer(JSRuntime *rt, JSValue val)
                 p1->u.array.u.ptr = NULL;
             }
         }
-        if (abuf->shared && rt->sab_funcs.sab_free) {
-            rt->sab_funcs.sab_free(rt->sab_funcs.sab_opaque, abuf->data);
+        if (abuf->uses_shared_callbacks) {
+            abuf->shared_free_func(abuf->opaque, abuf->data);
         } else {
             if (abuf->free_func)
                 abuf->free_func(rt, abuf->opaque, abuf->data);
@@ -297,7 +384,7 @@ static JSValue js_array_buffer_get_byteLength(JSContext *ctx,
     if (!abuf)
         return JS_EXCEPTION;
     /* return 0 if detached */
-    return JS_NewUint32(ctx, abuf->byte_length);
+    return JS_NewUint32(ctx, js_array_buffer_byte_length(abuf));
 }
 
 static JSValue js_array_buffer_get_maxByteLength(JSContext *ctx,
@@ -309,7 +396,7 @@ static JSValue js_array_buffer_get_maxByteLength(JSContext *ctx,
         return JS_EXCEPTION;
     if (array_buffer_is_resizable(abuf))
         return JS_NewUint32(ctx, abuf->max_byte_length);
-    return JS_NewUint32(ctx, abuf->byte_length);
+    return JS_NewUint32(ctx, js_array_buffer_byte_length(abuf));
 }
 
 static JSValue js_array_buffer_get_resizable(JSContext *ctx,
@@ -331,7 +418,7 @@ static void js_array_buffer_update_typed_arrays(JSArrayBuffer *abuf)
     uint8_t *data;
     int64_t len;
 
-    len = abuf->byte_length;
+    len = js_array_buffer_byte_length(abuf);
     data = abuf->data;
     // update lengths of all typed arrays backed by this array buffer
     list_for_each(el, &abuf->array_list) {
@@ -408,7 +495,7 @@ uint8_t *JS_GetArrayBuffer(JSContext *ctx, size_t *psize, JSValueConst obj)
         JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
         goto fail;
     }
-    *psize = abuf->byte_length;
+    *psize = js_array_buffer_byte_length(abuf);
     return abuf->data;
  fail:
     *psize = 0;
@@ -436,7 +523,7 @@ static JSValue js_array_buffer_transfer(JSContext *ctx,
     if (abuf->shared)
         return JS_ThrowTypeError(ctx, "cannot transfer a SharedArrayBuffer");
     if (argc < 1 || JS_IsUndefined(argv[0]))
-        new_len = abuf->byte_length;
+        new_len = js_array_buffer_byte_length(abuf);
     else if (JS_ToIndex(ctx, &new_len, argv[0]))
         return JS_EXCEPTION;
     if (abuf->detached)
@@ -462,7 +549,7 @@ static JSValue js_array_buffer_transfer(JSContext *ctx,
     } else {
         uint64_t old_len;
         
-        old_len = abuf->byte_length;
+        old_len = js_array_buffer_byte_length(abuf);
 
         /* if length mismatch, realloc. Otherwise, use the same backing buffer. */
         if (new_len != old_len) {
@@ -537,7 +624,7 @@ static JSValue js_array_buffer_resize(JSContext *ctx, JSValueConst this_val,
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
     // TODO(bnoordhuis) support externally managed RABs
-    if (abuf->free_func != js_array_buffer_free)
+    if (!abuf->shared && abuf->free_func != js_array_buffer_free)
         return JS_ThrowTypeError(ctx, "external array buffer is not resizable");
     if (len > abuf->max_byte_length) {
     bad_length:
@@ -547,16 +634,22 @@ static JSValue js_array_buffer_resize(JSContext *ctx, JSValueConst this_val,
     // js_array_buffer_constructor3 commits all memory upfront;
     // regular RABs are resizable both ways and realloc
     if (abuf->shared) {
-        if (len < abuf->byte_length)
-            goto bad_length;
-        // Note this is off-spec; there's supposed to be a single atomic
-        // |byteLength| property that's shared across SABs but we store
-        // it per SAB instead. That means when thread A calls sab.grow(2)
-        // at time t0, and thread B calls sab.grow(1) at time t1, we don't
-        // throw a TypeError in thread B as the spec says we should,
-        // instead both threads get their own view of the backing memory,
-        // 2 bytes big in A, and 1 byte big in B
-        abuf->byte_length = len;
+        uint32_t current_length = js_array_buffer_byte_length(abuf);
+        for (;;) {
+            if (len < current_length)
+                goto bad_length;
+            if (len == current_length)
+                break;
+#ifdef CONFIG_ATOMICS
+            if (atomic_compare_exchange_strong_explicit(abuf->shared_length,
+                    &current_length, len, memory_order_seq_cst,
+                    memory_order_seq_cst))
+                break;
+#else
+            *abuf->shared_length = len;
+            break;
+#endif
+        }
     } else {
         data = js_realloc(ctx, abuf->data, max_int(len, 1));
         if (!data)
@@ -583,7 +676,7 @@ static JSValue js_array_buffer_slice(JSContext *ctx,
         return JS_EXCEPTION;
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
-    len = abuf->byte_length;
+    len = js_array_buffer_byte_length(abuf);
 
     if (JS_ToInt64Clamp(ctx, &start, argv[0], 0, len, len))
         return JS_EXCEPTION;
@@ -620,7 +713,7 @@ static JSValue js_array_buffer_slice(JSContext *ctx,
         JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
         goto fail;
     }
-    if (new_abuf->byte_length < new_len) {
+    if (js_array_buffer_byte_length(new_abuf) < new_len) {
         JS_ThrowTypeError(ctx, "new ArrayBuffer is too small");
         goto fail;
     }
@@ -629,7 +722,7 @@ static JSValue js_array_buffer_slice(JSContext *ctx,
         JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
         goto fail;
     }
-    new_len = min_int64(new_len, max_int64(abuf->byte_length - start, 0));
+    new_len = min_int64(new_len, max_int64((int64_t)js_array_buffer_byte_length(abuf) - start, 0));
     if (new_len > 0)
         memcpy(new_abuf->data, abuf->data + start, new_len);
     return new_obj;
