@@ -1556,3 +1556,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-locale.o
 
 # general frontend sources remain disabled until coherent Intl activation.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-general.o $(OBJDIR)/src/quickjs/builtins/intl/native-values.o
+
+# list frontend sources remain disabled until coherent Intl activation.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/native-list-format.o
