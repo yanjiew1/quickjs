@@ -131,7 +131,7 @@ else ifdef CONFIG_COSMO
   # cosmocc does not correct support -MF
   DEPFLAGS=
   CFLAGS=-g -Wall #
-  CFLAGS += -Wno-array-bounds -Wno-format-truncation
+  CFLAGS += -Wno-array-bounds -Wno-format-truncation -Wno-infinite-recursion
   AR=cosmoar
 else
   HOST_CC=gcc
