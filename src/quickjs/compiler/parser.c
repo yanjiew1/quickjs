@@ -7129,7 +7129,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                     hf->force_init = ((s->cur_func->js_mode & JS_MODE_STRICT) != 0);
                     /* store directly into global var, bypass lexical scope */
                     emit_op(s, OP_dup);
-                    emit_op(s, OP_scope_put_var);
+                    emit_op(s, OP_scope_put_var_decl);
                     emit_atom(s, func_name);
                     emit_u16(s, 0);
                 } else {
@@ -7142,7 +7142,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
                     }
                     /* store directly into local var, bypass lexical catch scope */
                     emit_op(s, OP_dup);
-                    emit_op(s, OP_scope_put_var);
+                    emit_op(s, OP_scope_put_var_decl);
                     emit_atom(s, func_name);
                     emit_u16(s, 0);
                 }
