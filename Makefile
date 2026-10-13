@@ -1599,3 +1599,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/locale-resolution.o $(OB
 
 # ICU general owners compile only when that frontend backend is selected.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/intl-values.o $(OBJDIR)/src/quickjs/builtins/intl/case-conversion.o
+
+# ICU locale owners compile only when that frontend backend is selected.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/locale.o
