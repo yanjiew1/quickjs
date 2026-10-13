@@ -916,7 +916,7 @@ static int parse_unicode_property(REParseState *s, REStringList *cr,
             goto out_of_memory;
         }
         if (ret < 0) {
-            ret = unicode_prop(&cr->cr, name);
+            ret = lre_unicode_property_allowed(name) ? unicode_prop(&cr->cr, name) : -2;
             if (ret == -1) {
                 re_string_list_free(cr);
                 goto out_of_memory;
