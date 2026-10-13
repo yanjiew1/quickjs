@@ -702,6 +702,7 @@ test: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) -m tests/test_iterator_realms.js
 	$(WINE) ./qjs$(EXE) tests/test_language.js
 	$(WINE) ./qjs$(EXE) -m tests/test_module.js
+	$(WINE) ./qjs$(EXE) -m tests/test_module_names.js
 	$(WINE) ./qjs$(EXE) --std tests/test_builtin.js
 	$(WINE) ./qjs$(EXE) tests/test_unicode_property_grammar.js
 	$(WINE) ./qjs$(EXE) tests/test_date_parse_boundaries.js
