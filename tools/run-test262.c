@@ -126,7 +126,7 @@ char *harness_dir;
 char *harness_exclude;
 char *harness_features;
 char *harness_skip_features;
-int *harness_skip_features_count;
+_Atomic int *harness_skip_features_count;
 char *error_filename;
 char *error_file;
 char *report_filename;
@@ -1905,7 +1905,7 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index)
                     } else if ((p1 = find_word(harness_skip_features, option)) != NULL) {
                         /* skip disabled feature */
                         if (harness_skip_features_count)
-                            harness_skip_features_count[p1 - harness_skip_features]++;
+                            atomic_inc(&harness_skip_features_count[p1 - harness_skip_features]);
                         skip |= 1;
                     } else {
                         /* feature is not listed: skip and warn */
@@ -2420,12 +2420,14 @@ int main(int argc, char **argv)
     
     clocks = clock();
 
-    if (count_skipped_features) {
+    if (count_skipped_features && harness_skip_features && *harness_skip_features) {
         /* not storage efficient but it is simple */
-        size_t size;
-        size = sizeof(harness_skip_features_count[0]) * strlen(harness_skip_features);
-        harness_skip_features_count = malloc(size);
-        memset(harness_skip_features_count, 0, size);
+        size_t i, len = strlen(harness_skip_features);
+        harness_skip_features_count = malloc(sizeof(harness_skip_features_count[0]) * len);
+        if (!harness_skip_features_count && len != 0)
+            fatal(1, "allocation failure");
+        for (i = 0; i < len; i++)
+            atomic_init(&harness_skip_features_count[i], 0);
     }
     
     if (is_dir_list) {
@@ -2532,12 +2534,13 @@ int main(int argc, char **argv)
         printf("\n");
     }
 
-    if (count_skipped_features) {
+    if (count_skipped_features && harness_skip_features) {
         size_t i, n, len = strlen(harness_skip_features);
         BOOL disp = FALSE;
-        int c;
+        int c, count;
         for(i = 0; i < len; i++) {
-            if (harness_skip_features_count[i] != 0) {
+            count = atomic_load(&harness_skip_features_count[i]);
+            if (count != 0) {
                 if (!disp) {
                     disp = TRUE;
                     printf("%-30s %7s\n", "SKIPPED FEATURE", "COUNT");
@@ -2550,7 +2553,7 @@ int main(int argc, char **argv)
                 }
                 for(; n < 30; n++)
                     putchar(' ');
-                printf(" %7d\n", harness_skip_features_count[i]);
+                printf(" %7d\n", count);
             }
         }
         printf("\n");
