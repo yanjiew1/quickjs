@@ -34,6 +34,17 @@
 #include "typed-array.h"
 #include "array-buffer.h"
 
+#ifdef CONFIG_ATOMICS
+static BOOL js_array_buffer_atomic_is_aligned(const uint8_t *data)
+{
+    size_t alignment = max_int(_Alignof(_Atomic(uint8_t)),
+                               _Alignof(_Atomic(uint16_t)));
+    alignment = max_int(alignment, _Alignof(_Atomic(uint32_t)));
+    alignment = max_int(alignment, _Alignof(_Atomic(uint64_t)));
+    return (uintptr_t)data % alignment == 0;
+}
+#endif
+
 static size_t js_shared_array_buffer_length_offset(uint8_t *data, size_t maximum)
 {
     size_t alignment = _Alignof(JSSharedArrayBufferLength);
@@ -68,6 +79,13 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
                                      "resizable ArrayBuffers not supported "
                                      "for externally managed buffers");
     }
+#ifdef CONFIG_ATOMICS
+    /* Imported storage stays with its caller if construction fails. */
+    if (!alloc_flag && buf && class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
+        !js_array_buffer_atomic_is_aligned(buf)) {
+        return JS_ThrowTypeError(ctx, "misaligned SharedArrayBuffer backing storage");
+    }
+#endif
     obj = js_create_from_ctor(ctx, new_target, class_id);
     if (JS_IsException(obj))
         return obj;
@@ -116,12 +134,29 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
             if (!abuf->data)
                 goto fail;
             uses_shared_callbacks = TRUE;
+#ifdef CONFIG_ATOMICS
+            if (!js_array_buffer_atomic_is_aligned(abuf->data)) {
+                shared_functions.sab_free(shared_functions.sab_opaque, abuf->data);
+                abuf->data = NULL;
+                JS_ThrowTypeError(ctx, "misaligned SharedArrayBuffer backing storage");
+                goto fail;
+            }
+#endif
             memset(abuf->data, 0, alloc_len);
         } else {
             /* the allocation must be done after the object creation */
             abuf->data = js_mallocz(ctx, alloc_len);
             if (!abuf->data)
                 goto fail;
+#ifdef CONFIG_ATOMICS
+            if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
+                !js_array_buffer_atomic_is_aligned(abuf->data)) {
+                js_free(ctx, abuf->data);
+                abuf->data = NULL;
+                JS_ThrowTypeError(ctx, "misaligned SharedArrayBuffer backing storage");
+                goto fail;
+            }
+#endif
         }
     } else {
         if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
@@ -153,6 +188,11 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
     abuf->detached = FALSE;
     abuf->shared = (class_id == JS_CLASS_SHARED_ARRAY_BUFFER);
     abuf->uses_shared_callbacks = uses_shared_callbacks;
+    abuf->atomic_unaligned = FALSE;
+#ifdef CONFIG_ATOMICS
+    if (!abuf->shared)
+        abuf->atomic_unaligned = !js_array_buffer_atomic_is_aligned(abuf->data);
+#endif
     if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER && uses_shared_callbacks) {
         abuf->opaque = shared_functions.sab_opaque;
         abuf->shared_free_func = shared_functions.sab_free;
@@ -463,6 +503,7 @@ void JS_DetachArrayBuffer(JSContext *ctx, JSValueConst obj)
     if (abuf->free_func)
         abuf->free_func(ctx->rt, abuf->opaque, abuf->data);
     abuf->data = NULL;
+    abuf->atomic_unaligned = FALSE;
     abuf->byte_length = 0;
     abuf->detached = TRUE;
     js_array_buffer_update_typed_arrays(abuf);
@@ -588,6 +629,9 @@ static JSValue js_array_buffer_transfer(JSContext *ctx,
                 js_free(ctx, new_abuf->data);
                 new_abuf->data = new_bs;
                 new_abuf->byte_length = new_len;
+#ifdef CONFIG_ATOMICS
+                new_abuf->atomic_unaligned = !js_array_buffer_atomic_is_aligned(new_bs);
+#endif
             }
         } else {
             /* can keep the custom free function */
@@ -600,6 +644,7 @@ static JSValue js_array_buffer_transfer(JSContext *ctx,
         }
         /* neuter the backing buffer */
         abuf->data = NULL;
+        abuf->atomic_unaligned = FALSE;
         abuf->byte_length = 0;
         abuf->detached = TRUE;
         js_array_buffer_update_typed_arrays(abuf);
@@ -658,6 +703,9 @@ static JSValue js_array_buffer_resize(JSContext *ctx, JSValueConst this_val,
             memset(&data[abuf->byte_length], 0, len - abuf->byte_length);
         abuf->byte_length = len;
         abuf->data = data;
+#ifdef CONFIG_ATOMICS
+        abuf->atomic_unaligned = !js_array_buffer_atomic_is_aligned(data);
+#endif
     }
     js_array_buffer_update_typed_arrays(abuf);
     return JS_UNDEFINED;

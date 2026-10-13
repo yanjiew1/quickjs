@@ -42,6 +42,7 @@ typedef struct JSArrayBuffer {
     uint8_t detached;
     uint8_t shared; /* if shared, the array buffer cannot be detached */
     uint8_t uses_shared_callbacks; /* backing owns one shared callback reference */
+    uint8_t atomic_unaligned; /* nonshared backing needs byte-based Atomics */
     uint8_t *data; /* NULL if detached */
     struct list_head array_list;
     void *opaque;

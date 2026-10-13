@@ -873,6 +873,11 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                          JSValueConst replacer, JSValueConst space0);
 
 typedef void JSFreeArrayBufferDataFunc(JSRuntime *rt, void *opaque, void *ptr);
+/* Nonshared external backing storage may be unaligned. With Atomics enabled,
+   shared storage must satisfy the alignment of all engine-supported atomic
+   integer types. A misaligned shared pointer throws TypeError without taking
+   ownership or calling free_func. Nonshared storage requires host-side
+   synchronization if the embedding accesses it from another thread. */
 JSValue JS_NewArrayBuffer(JSContext *ctx, uint8_t *buf, size_t len,
                           JSFreeArrayBufferDataFunc *free_func, void *opaque,
                           JS_BOOL is_shared);
@@ -901,6 +906,9 @@ JSValue JS_GetTypedArrayBuffer(JSContext *ctx, JSValueConst obj,
                                size_t *pbyte_offset,
                                size_t *pbyte_length,
                                size_t *pbytes_per_element);
+/* sab_alloc must return storage aligned for the engine's atomic integer types
+   when Atomics is enabled. A misaligned allocation is released through the
+   original sab_free callback and construction throws TypeError. */
 typedef struct {
     void *(*sab_alloc)(void *opaque, size_t size);
     void (*sab_free)(void *opaque, void *ptr);
