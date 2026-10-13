@@ -63,7 +63,7 @@ JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
 typedef struct JSArrayIteratorData {
     JSValue obj;
     JSIteratorKindEnum kind;
-    uint32_t idx;
+    int64_t idx;
 } JSArrayIteratorData;
 
 extern const JSCFunctionListEntry js_array_funcs[4];
