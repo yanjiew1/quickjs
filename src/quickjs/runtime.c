@@ -127,6 +127,7 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     if (!rt)
         return NULL;
     memset(rt, 0, sizeof(*rt));
+    rt->normalize_u.module_normalize_func = NULL;
     js_malloc_init(&rt->malloc_ctx);
     rt->malloc_ctx.mf = *mf;
     rt->malloc_ctx.malloc_state = ms;
