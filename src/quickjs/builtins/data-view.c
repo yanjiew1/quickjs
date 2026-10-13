@@ -207,16 +207,12 @@ static JSValue js_dataview_getValue(JSContext *ctx,
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
     buffer_length = js_array_buffer_byte_length(abuf);
-    view_length = ta->track_rab && abuf->shared ?
-        buffer_length - ta->offset : ta->length;
-    // order matters: this check should come before the next one
+    if (ta->offset > buffer_length ||
+        (!ta->track_rab && (int64_t)ta->offset + ta->length > buffer_length))
+        return JS_ThrowTypeError(ctx, "out of bound");
+    view_length = ta->track_rab ? buffer_length - ta->offset : ta->length;
     if ((pos + size) > view_length)
         return JS_ThrowRangeError(ctx, "out of bound");
-    // test262 expects a TypeError for this and V8, in its infinite wisdom,
-    // throws a "detached array buffer" exception, but IMO that doesn't make
-    // sense because the buffer is not in fact detached, it's still there
-    if ((int64_t)ta->offset + view_length > buffer_length)
-        return JS_ThrowTypeError(ctx, "out of bound");
     ptr = abuf->data + ta->offset + pos;
 
     switch(class_id) {
@@ -353,16 +349,12 @@ static JSValue js_dataview_setValue(JSContext *ctx,
     if (abuf->detached)
         return JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
     buffer_length = js_array_buffer_byte_length(abuf);
-    view_length = ta->track_rab && abuf->shared ?
-        buffer_length - ta->offset : ta->length;
-    // order matters: this check should come before the next one
+    if (ta->offset > buffer_length ||
+        (!ta->track_rab && (int64_t)ta->offset + ta->length > buffer_length))
+        return JS_ThrowTypeError(ctx, "out of bound");
+    view_length = ta->track_rab ? buffer_length - ta->offset : ta->length;
     if ((pos + size) > view_length)
         return JS_ThrowRangeError(ctx, "out of bound");
-    // test262 expects a TypeError for this and V8, in its infinite wisdom,
-    // throws a "detached array buffer" exception, but IMO that doesn't make
-    // sense because the buffer is not in fact detached, it's still there
-    if ((int64_t)ta->offset + view_length > buffer_length)
-        return JS_ThrowTypeError(ctx, "out of bound");
     ptr = abuf->data + ta->offset + pos;
 
     switch(class_id) {
