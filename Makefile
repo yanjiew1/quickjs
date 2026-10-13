@@ -555,9 +555,12 @@ doc/%.html: doc/%.html.pre
 # tests
 
 
-C_TESTS=tests/test_api$(EXE) tests/test_unicode$(EXE)
+C_TESTS=tests/test_api$(EXE) tests/test_typed_array$(EXE) tests/test_unicode$(EXE)
 
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_typed_array$(EXE): $(OBJDIR)/tests/test_typed_array.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
@@ -566,6 +569,7 @@ tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/l
 .PHONY: test-c
 test-c: $(C_TESTS)
 	$(WINE) ./tests/test_api$(EXE)
+	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
 
 .PHONY: test-regexp

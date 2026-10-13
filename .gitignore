@@ -44,3 +44,6 @@ libwinpthread*.dll
 
 /tests/test_api
 /tests/test_api.exe
+
+/tests/test_typed_array
+/tests/test_typed_array.exe
