@@ -703,6 +703,10 @@ static JSValue JS_ReadModule(BCReaderState *s)
             JSExportEntry *me = &m->export_entries[i];
             if (bc_get_u8(s, &v8))
                 goto fail;
+            if (v8 > JS_EXPORT_TYPE_NAMESPACE) {
+                JS_ThrowSyntaxError(ctx, "invalid module export type");
+                goto fail;
+            }
             me->export_type = v8;
             if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
                 if (bc_get_leb128_int(s, &me->u.local.var_idx))
