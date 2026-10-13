@@ -33,6 +33,20 @@
 static int fail_runtime, fail_context, fail_buffer;
 static int runtime_calls, context_calls, buffer_calls, init_calls;
 static int runtime_frees, context_frees, buffer_frees;
+static int observe_jobs, completed_jobs;
+
+static JSValue report_fuzz_jobs(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
+{
+    int32_t count;
+
+    assert(argc == 2);
+    assert(JS_ToInt32(ctx, &count, argv[0]) == 0);
+    assert(JS_IsNativeJobPending(JS_GetRuntime(ctx)) ==
+           JS_ToBool(ctx, argv[1]));
+    completed_jobs += count;
+    return JS_UNDEFINED;
+}
 
 static JSRuntime *probe_new_runtime(void)
 {
@@ -79,6 +93,13 @@ static void probe_init(JSRuntime *rt, JSContext *ctx)
     assert(rt && ctx);
     init_calls++;
     test_one_input_init(rt, ctx);
+    if (observe_jobs) {
+        JSValue global = JS_GetGlobalObject(ctx);
+        assert(JS_SetPropertyStr(ctx, global, "reportFuzzJobs",
+                                 JS_NewCFunction(ctx, report_fuzz_jobs,
+                                                 "reportFuzzJobs", 2)) >= 0);
+        JS_FreeValue(ctx, global);
+    }
 }
 
 #define JS_NewRuntime probe_new_runtime
@@ -136,9 +157,87 @@ static void check_entry(FuzzInput *input)
     assert(runtime_calls == 0 && context_calls == 0 && buffer_calls == 0);
 }
 
+static void check_job_inputs(FuzzInput *input)
+{
+    static const char *sources[] = {
+        "Promise.resolve().then(() => reportFuzzJobs(1, false));",
+        "if (typeof Atomics === 'object') {"
+        "  Atomics.waitAsync(new Int32Array(new SharedArrayBuffer(4)), 0, 0);"
+        "  reportFuzzJobs(1, true);"
+        "} else reportFuzzJobs(1, false);",
+        "if (typeof Atomics === 'object') {"
+        "  Atomics.waitAsync(new Int32Array(new SharedArrayBuffer(4)),"
+        "                    0, 0, Number.MAX_VALUE);"
+        "  reportFuzzJobs(1, true);"
+        "} else reportFuzzJobs(1, false);",
+        "if (typeof Atomics === 'object') {"
+        "  const words = new Int32Array(new SharedArrayBuffer(4));"
+        "  Atomics.waitAsync(words, 0, 0).value.then(value => {"
+        "    if (value !== 'ok') throw Error('unexpected notification');"
+        "    reportFuzzJobs(1, false);"
+        "  });"
+        "  if (Atomics.notify(words, 0, 1) !== 1) throw Error('not notified');"
+        "} else reportFuzzJobs(1, false);",
+        "if (typeof Atomics === 'object') {"
+        "  const words = new Int32Array(new SharedArrayBuffer(4));"
+        "  Atomics.waitAsync(words, 0, 0, 0.5).value.then(value => {"
+        "    if (value !== 'timed-out') throw Error('unexpected timeout');"
+        "    reportFuzzJobs(1, false);"
+        "  });"
+        "  const end = performance.now() + 5;"
+        "  while (performance.now() < end) {}"
+        "} else reportFuzzJobs(1, false);",
+    };
+    size_t i;
+
+    fail_runtime = fail_context = fail_buffer = 0;
+    observe_jobs = 1;
+    for (i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        runtime_calls = context_calls = buffer_calls = init_calls = 0;
+        runtime_frees = context_frees = buffer_frees = 0;
+        completed_jobs = 0;
+        assert(input((const uint8_t *)sources[i], strlen(sources[i])) == 0);
+        assert(completed_jobs == 1);
+        assert(runtime_calls == 1 && context_calls == 1 && init_calls == 1);
+        assert(runtime_frees == 1 && context_frees == 1 && buffer_frees == 1);
+    }
+    observe_jobs = 0;
+}
+
+static int repeated_jobs;
+
+static JSValue repeat_job(JSContext *ctx, int argc, JSValueConst *argv)
+{
+    repeated_jobs++;
+    assert(JS_EnqueueJob(ctx, repeat_job, 0, NULL) == 0);
+    return JS_UNDEFINED;
+}
+
+static void check_job_budget(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    reset_nbinterrupts();
+    test_one_input_init(rt, ctx);
+    repeated_jobs = 0;
+    assert(JS_EnqueueJob(ctx, repeat_job, 0, NULL) == 0);
+    test_one_input_jobs(ctx);
+    assert(repeated_jobs == 1000 && JS_IsJobPending(rt));
+    js_std_free_handlers(rt);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
     check_entry(fuzz_eval_allocation_input);
     check_entry(fuzz_compile_allocation_input);
+    check_job_inputs(fuzz_eval_allocation_input);
+    check_job_inputs(fuzz_compile_allocation_input);
+    check_job_budget();
     return 0;
 }
