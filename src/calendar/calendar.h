@@ -21,6 +21,10 @@ enum {
 };
 #define QJS_CAL_MIN_EPOCH_DAY (-INT64_C(100000001))
 #define QJS_CAL_MAX_EPOCH_DAY INT64_C(100000000)
+/* Intl civil/reference values and their local timezone equality views.
+ * Checked rendering only; Temporal construction/arithmetic limits stay above. */
+#define QJS_CAL_INTL_MIN_EPOCH_DAY (-INT64_C(100000033))
+#define QJS_CAL_INTL_MAX_EPOCH_DAY INT64_C(100000033)
 #define QJS_CAL_MIN_YEAR (-1000000)
 #define QJS_CAL_MAX_YEAR 1000000
 
@@ -45,6 +49,13 @@ int qjs_calendar_from_identifier(QJSCalendarId *result,
 int qjs_calendar_is_supported(QJSCalendarId calendar);
 int qjs_calendar_from_epoch_day(QJSCalendarId calendar, int64_t epoch_day,
                                 QJSCalendarDate *result);
+/* The same checked conversion/arithmetic, with a bounded Intl rendering
+ * domain covering complete PlainYearMonth reference months and <24h zone
+ * adjustment. No calendar advertisement or Temporal range-policy change.
+ */
+int qjs_calendar_from_epoch_day_for_intl(QJSCalendarId calendar,
+                                         int64_t epoch_day,
+                                         QJSCalendarDate *result);
 int qjs_calendar_to_epoch_day(QJSCalendarId calendar, int32_t year,
                              int month, int day, int64_t *result);
 /* Reference-date conversion validates calendar fields and arithmetic years,

@@ -830,6 +830,8 @@ C_TESTS+=tests/test_intl_native_number_engine$(EXE)
 
 C_TESTS+=tests/test_intl_native_duration_engine$(EXE)
 
+C_TESTS+=tests/test_intl_calendar_domain$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -839,6 +841,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_calendar_domain$(EXE)
 	$(WINE) ./tests/test_intl_native_duration_engine$(EXE)
 	$(WINE) ./tests/test_intl_native_number_engine$(EXE)
 	$(WINE) ./tests/test_intl_native_list_data$(EXE)
@@ -1422,3 +1425,6 @@ test test-binaries: $(OBJDIR)/src/intl/display-names-native.o
 
 # Complete native number-data sources precede aggregate-provider activation.
 test test-binaries: $(OBJDIR)/src/intl/number-native-data.o $(OBJDIR)/src/intl/duration-native-data.o
+
+tests/test_intl_calendar_domain$(EXE): $(OBJDIR)/tests/test_intl_calendar_domain.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

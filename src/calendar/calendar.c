@@ -230,23 +230,24 @@ static void set_era(QJSCalendarId calendar, int64_t epoch, QJSCalendarDate *date
     if (name) { strcpy(date->era, name); date->era_year = era_year; }
 }
 static int from_epoch_day(QJSCalendarId calendar, int64_t epoch,
-                            QJSCalendarDate *result, int unbounded)
+                            QJSCalendarDate *result, int for_intl)
 {
     QJSCalendarDate date = {0};
     int32_t low = QJS_CAL_MIN_YEAR, high = QJS_CAL_MAX_YEAR + 1, year;
     int64_t first, next, remaining;
     int count, month, days, sum = 0;
     int month_lengths[13];
-    int64_t minimum = QJS_CAL_MIN_EPOCH_DAY;
-    int64_t maximum = QJS_CAL_MAX_EPOCH_DAY;
+    int64_t minimum = for_intl ? QJS_CAL_INTL_MIN_EPOCH_DAY : QJS_CAL_MIN_EPOCH_DAY;
+    int64_t maximum = for_intl ? QJS_CAL_INTL_MAX_EPOCH_DAY : QJS_CAL_MAX_EPOCH_DAY;
     if (!valid_calendar(calendar) || !result ||
-        (!unbounded && (epoch < minimum || epoch > maximum)))
+        (for_intl != 2 && (epoch < minimum || epoch > maximum)))
         return QJS_CAL_RANGE;
     if (lunisolar_calendar(calendar)) {
 #ifdef QJS_CAL_ENABLE_LUNISOLAR_CANDIDATE
-        if (unbounded)
+        if (for_intl == 2)
             return qjs_calendar_lunisolar_from_epoch_day_unbounded(calendar, epoch, result);
-        return qjs_calendar_lunisolar_from_epoch_day(calendar, epoch, result);
+        return for_intl ? qjs_calendar_lunisolar_from_epoch_day_for_intl(calendar, epoch, result) :
+                          qjs_calendar_lunisolar_from_epoch_day(calendar, epoch, result);
 #else
         return QJS_CAL_UNSUPPORTED;
 #endif
@@ -254,7 +255,7 @@ static int from_epoch_day(QJSCalendarId calendar, int64_t epoch,
     /* Find the largest arithmetic year whose first day is <= epoch. The
      * bounded search avoids floating inverse guesses and unbounded repairs. */
     if (year_start(calendar, low) > epoch || year_start(calendar, high) <= epoch)
-        return unbounded ? QJS_CAL_RANGE : QJS_CAL_BACKEND;
+        return for_intl == 2 ? QJS_CAL_RANGE : QJS_CAL_BACKEND;
     while (high - low > 1) {
         int32_t mid = low + (high - low) / 2;
         if (year_start(calendar, mid) <= epoch) low = mid;
@@ -294,6 +295,11 @@ int qjs_calendar_from_epoch_day(QJSCalendarId calendar, int64_t epoch,
 {
     return from_epoch_day(calendar, epoch, result, 0);
 }
+int qjs_calendar_from_epoch_day_for_intl(QJSCalendarId calendar, int64_t epoch,
+                                         QJSCalendarDate *result)
+{
+    return from_epoch_day(calendar, epoch, result, 1);
+}
 int qjs_calendar_year_has_supported_date(QJSCalendarId calendar, int32_t year,
                                           int *result)
 {
@@ -323,7 +329,7 @@ int qjs_calendar_year_has_supported_date(QJSCalendarId calendar, int32_t year,
 int qjs_calendar_from_epoch_day_unbounded(QJSCalendarId calendar,
                                          int64_t epoch, QJSCalendarDate *result)
 {
-    return from_epoch_day(calendar, epoch, result, 1);
+    return from_epoch_day(calendar, epoch, result, 2);
 }
 int qjs_calendar_year_from_era(QJSCalendarId calendar, const char *era,
                                int32_t era_year, int32_t *result)
