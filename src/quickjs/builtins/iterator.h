@@ -46,6 +46,7 @@ void js_iterator_wrap_mark(JSRuntime *rt, JSValueConst val,
                            JS_MarkFunc *mark_func);
 JSValue js_iterator_proto_iterator(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv);
+JSValue js_iterator_get_return_method(JSContext *ctx, JSValueConst obj);
 
 
 #endif
