@@ -71,6 +71,10 @@ JSValue js_array_buffer_constructor3(JSContext *ctx,
         goto fail;
     abuf->byte_length = len;
     abuf->max_byte_length = max_len ? *max_len : -1;
+    if (!buf) {
+        alloc_flag = TRUE;
+        free_func = js_array_buffer_free;
+    }
     if (alloc_flag) {
         if (class_id == JS_CLASS_SHARED_ARRAY_BUFFER &&
             rt->sab_funcs.sab_alloc) {
