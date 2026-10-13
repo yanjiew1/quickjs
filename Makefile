@@ -1614,3 +1614,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/segmenter.o
 
 # ICU number owners compile only when that frontend backend is selected.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/number-format.o
+
+# ICU plural owners compile only when that frontend backend is selected.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/plural-rules.o
