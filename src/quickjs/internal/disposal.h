@@ -31,4 +31,7 @@ int js_adopt_disposable_resource(JSContext *ctx, JSValueConst resources,
 int js_defer_disposable_resource(JSContext *ctx, JSValueConst resources,
                                  JSValue method, JSDisposalKind kind);
 
+void js_async_dispose_settle(JSContext *ctx, JSValueConst *funcs,
+                            JSValueConst value, BOOL reject);
+
 #endif
