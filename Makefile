@@ -1626,3 +1626,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/display-names.o
 
 # ICU duration owners compile only when that frontend backend is selected.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/duration-format.o
+
+# ICU date owners compile only when that frontend backend is selected.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/date-time-format.o
