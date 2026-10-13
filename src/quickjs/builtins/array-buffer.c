@@ -623,11 +623,13 @@ static JSValue js_array_buffer_slice(JSContext *ctx,
         goto fail;
     }
     /* must test again because of side effects */
-    if (abuf->detached || abuf->byte_length < start + new_len) {
+    if (abuf->detached) {
         JS_ThrowTypeErrorDetachedArrayBuffer(ctx);
         goto fail;
     }
-    memcpy(new_abuf->data, abuf->data + start, new_len);
+    new_len = min_int64(new_len, max_int64(abuf->byte_length - start, 0));
+    if (new_len > 0)
+        memcpy(new_abuf->data, abuf->data + start, new_len);
     return new_obj;
  fail:
     JS_FreeValue(ctx, new_obj);
