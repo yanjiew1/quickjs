@@ -1629,3 +1629,6 @@ test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/duration-format.o
 
 # ICU date owners compile only when that frontend backend is selected.
 test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/date-time-format.o
+
+# Shared options frontend helpers activate with the complete Intl closure.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/options.o
