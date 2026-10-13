@@ -1544,3 +1544,6 @@ tests/test_intl_receiver_api$(EXE): $(OBJDIR)/tests/test_intl_receiver_api.o lib
 
 tests/test_intl_default_locale_api$(EXE): $(OBJDIR)/tests/test_intl_default_locale_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# shared frontend sources remain disabled until coherent Intl activation.
+test test-binaries: $(OBJDIR)/src/quickjs/builtins/intl/values.o $(OBJDIR)/src/quickjs/builtins/intl/locale-syntax.o $(OBJDIR)/src/quickjs/builtins/intl/intl-text.o
