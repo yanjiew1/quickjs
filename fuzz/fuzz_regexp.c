@@ -39,6 +39,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     uint8_t *capture[255 * 2];
     size_t size1 = size;
 
+    nbinterrupts = 0;
+
     //Splits buffer into 2 sub buffers delimited by null character
     for (i = 0; i < size; i++) {
         if (data[i] == 0) {
