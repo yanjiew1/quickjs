@@ -504,6 +504,40 @@ function test_annex_duplicate_binding()
         assert_throws(SyntaxError, () => Function(body));
 }
 
+function test_eval_catch_var_declaration()
+{
+    globalThis.evalCatchGlobal = "global";
+    function created() {
+        let caught;
+        try { throw "caught"; } catch (evalCatchGlobal) {
+            eval("var evalCatchGlobal = 'initializer';");
+            caught = evalCatchGlobal;
+        }
+        assert(caught, "initializer");
+        evalCatchGlobal = "local";
+        return evalCatchGlobal;
+    }
+    assert(created(), "local");
+    assert(globalThis.evalCatchGlobal, "global");
+    function parameter(value) {
+        try { throw 99; } catch (value) {
+            eval("var value = 42;");
+            assert(value, 42);
+        }
+        return value;
+    }
+    assert(parameter(7), 7);
+    function uninitialized() {
+        try { throw 99; } catch (createdByEval) {
+            eval("var createdByEval;");
+            assert(createdByEval, 99);
+        }
+        return createdByEval;
+    }
+    assert(uninitialized(), undefined);
+    delete globalThis.evalCatchGlobal;
+}
+
 function test_class()
 {
     var o;
@@ -917,6 +951,7 @@ test_super_null_key_coercion();
 test_annex_if_function_scopes();
 test_annex_function_identity();
 test_annex_duplicate_binding();
+test_eval_catch_var_declaration();
 test_template();
 test_template_skip();
 test_object_literal();
