@@ -2,6 +2,7 @@
  * QuickJS runtime types
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2025 Charlie Gordon
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -99,6 +100,9 @@ struct JSRuntime {
     int shape_hash_count; /* number of hashed shapes */
     JSShape **shape_hash;
     void *user_opaque;
+#ifdef CONFIG_ATOMICS
+    struct JSNativeJobOwner *native_jobs;
+#endif
 };
 
 

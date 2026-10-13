@@ -87,3 +87,5 @@ libwinpthread*.dll
 /tests/test_iterator.exe
 
 /tests/test_wait_queue
+
+/tests/test_native_jobs
