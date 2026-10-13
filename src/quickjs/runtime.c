@@ -2,6 +2,7 @@
  * QuickJS runtime and context lifecycle
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2025 Charlie Gordon
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,6 +29,7 @@
 #include "internal/c-function.h"
 #include "value/print.h"
 #include "internal/runtime.h"
+#include "internal/native-jobs.h"
 #include "internal/allocator.h"
 #include "internal/gc.h"
 #include "internal/string.h"
@@ -228,17 +230,56 @@ int JS_GetStripInfo(JSRuntime *rt)
     return rt->strip_flags;
 }
 
+#ifdef CONFIG_ATOMICS
+_Static_assert(_Alignof(JSNativeWaitEvent) <= _Alignof(JSValue),
+               "native job tickets require JSValue alignment");
+
+int js_native_jobs_attach_existing(JSContext *ctx, JSNativeJobOwner *owner)
+{
+    JSRuntime *rt = ctx->rt;
+    struct list_head *el;
+    JSNativeWaitEvent *tickets;
+    size_t count = 0, i = 0;
+    list_for_each(el, &rt->job_list)
+        count++;
+    if (!count)
+        return 0;
+    if (count > SIZE_MAX / sizeof(*tickets)) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
+    /* rt allocation does not run GC or execute JS. Existing jobs retain their
+       normal rt->job_list roots; these tickets contain opaque cookies only. */
+    tickets = js_mallocz_rt(rt, count * sizeof(*tickets));
+    if (!tickets) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
+    owner->initial_tickets = tickets;
+    owner->initial_remaining = count;
+    list_for_each(el, &rt->job_list) {
+        JSJobEntry *e = list_entry(el, JSJobEntry, link);
+        js_native_wait_enqueue_generic(&owner->native, &tickets[i++], e, 1);
+    }
+    return 0;
+}
+#endif
+
 int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
                    int argc, JSValueConst *argv, BOOL no_exception)
 {
     JSRuntime *rt = ctx->rt;
     JSJobEntry *e;
     int i;
-
+    size_t size = sizeof(*e) + argc * sizeof(JSValue);
+#ifdef CONFIG_ATOMICS
+    if (rt->native_jobs)
+        size += sizeof(JSNativeWaitEvent);
+#endif
     if (no_exception)
-        e = js_malloc_rt(ctx->rt, sizeof(*e) + argc * sizeof(JSValue));
+        e = js_malloc_rt(ctx->rt, size);
     else
-        e = js_malloc(ctx, sizeof(*e) + argc * sizeof(JSValue));
+        e = js_malloc(ctx, size);
     if (!e)
         return -1;
     e->realm = JS_DupContext(ctx);
@@ -248,6 +289,12 @@ int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
         e->argv[i] = JS_DupValue(ctx, argv[i]);
     }
     list_add_tail(&e->link, &rt->job_list);
+#ifdef CONFIG_ATOMICS
+    if (rt->native_jobs) {
+        JSNativeWaitEvent *ticket = (void *)&e->argv[e->argc];
+        js_native_wait_enqueue_generic(&rt->native_jobs->native, ticket, e, 0);
+    }
+#endif
     return 0;
 }
 
@@ -260,6 +307,10 @@ int JS_EnqueueJob(JSContext *ctx, JSJobFunc *job_func,
 
 BOOL JS_IsJobPending(JSRuntime *rt)
 {
+#ifdef CONFIG_ATOMICS
+    if (rt->native_jobs)
+        return js_native_wait_has_events(&rt->native_jobs->native);
+#endif
     return !list_empty(&rt->job_list);
 }
 
@@ -275,14 +326,24 @@ int JS_ExecutePendingJob(JSRuntime *rt, JSContext **pctx)
     JSValue res;
     int i, ret;
 
-    if (list_empty(&rt->job_list)) {
-        if (pctx)
-            *pctx = NULL;
-        return 0;
+#ifdef CONFIG_ATOMICS
+    if (rt->native_jobs) {
+        void *job;
+        ret = js_native_jobs_next(rt, &job, pctx);
+        if (ret != 2)
+            return ret;
+        e = job;
+    } else
+#endif
+    {
+        if (list_empty(&rt->job_list)) {
+            if (pctx)
+                *pctx = NULL;
+            return 0;
+        }
+        e = list_entry(rt->job_list.next, JSJobEntry, link);
     }
-
-    /* get the first pending job and execute it */
-    e = list_entry(rt->job_list.next, JSJobEntry, link);
+    /* An ordinary job remains rooted in rt->job_list until this point. */
     list_del(&e->link);
     ctx = e->realm;
     res = e->job_func(ctx, e->argc, (JSValueConst *)e->argv);
@@ -336,6 +397,9 @@ void JS_FreeRuntime(JSRuntime *rt)
     struct list_head *el, *el1;
     int i;
 
+#ifdef CONFIG_ATOMICS
+    js_native_jobs_free(rt);
+#endif
     JS_FreeValueRT(rt, rt->current_exception);
 
     list_for_each_safe(el, el1, &rt->job_list) {
