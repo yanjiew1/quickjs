@@ -174,6 +174,21 @@ JSModuleDef *create_json_module(JSContext *ctx, const char *module_name, JSValue
     return m;
 }
 
+/* Consume val; borrow attributes for explicit preload identity. */
+JSModuleDef *create_json_module2(JSContext *ctx, const char *module_name,
+                                 JSValue val, JSValueConst attributes)
+{
+    JSModuleDef *m;
+
+    m = JS_NewCModule2(ctx, module_name, json_module_init, attributes);
+    if (!m || JS_AddModuleExport(ctx, m, "default") < 0) {
+        JS_FreeValue(ctx, val);
+        return NULL;
+    }
+    JS_SetModulePrivateValue(ctx, m, val);
+    return m;
+}
+
 /* in order to conform with the specification, only the keys should be
    tested and not the associated values. */
 int js_module_check_attributes(JSContext *ctx, void *opaque,
