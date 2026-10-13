@@ -1335,3 +1335,15 @@ tests/test_intl_number_grammar$(EXE): $(OBJDIR)/tests/test_intl_number_grammar.o
 
 tests/test_intl_date_pattern$(EXE): $(OBJDIR)/tests/test_intl_date_pattern.o $(OBJDIR)/src/intl/date-pattern.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# Prepare complete validators before linking the generic wire reader.
+INTL_DATA_VALIDATION_SRCS= \
+    src/intl/collator-native-data.c \
+    src/intl/data/date-data-validation.c \
+    src/intl/data/duration-data-validation.c \
+    src/intl/data/number-data-validation.c \
+    src/intl/data/number-extra-validation.c \
+    src/intl/data/plural-data-validation.c \
+    src/intl/data/relative-data-validation.c
+INTL_DATA_VALIDATION_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(INTL_DATA_VALIDATION_SRCS))
+test test-binaries: $(INTL_DATA_VALIDATION_OBJS)
