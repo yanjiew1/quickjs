@@ -24,4 +24,11 @@ int js_dispose_resources_step(JSContext *ctx, JSValueConst resources,
                               JSValueConst input, BOOL is_throw,
                               JSValue *await_value);
 
+/* Consume method even when inserting the resource fails. */
+int js_adopt_disposable_resource(JSContext *ctx, JSValueConst resources,
+                                 JSValueConst value, JSValue method,
+                                 JSDisposalKind kind);
+int js_defer_disposable_resource(JSContext *ctx, JSValueConst resources,
+                                 JSValue method, JSDisposalKind kind);
+
 #endif
