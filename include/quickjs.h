@@ -397,6 +397,33 @@ JSRuntime *JS_GetRuntime(JSContext *ctx);
 void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj);
 JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id);
 
+/* Add native Intl intrinsics to this realm. Enabled builds return 0 on success
+   or -1 with a pending exception. Initialization is idempotent; raw contexts
+   require JS_AddIntrinsicBaseObjects first. Disabled builds return 0 without
+   creating a global Intl object or loading an internationalization backend. */
+int JS_AddIntrinsicIntl(JSContext *ctx);
+
+/* Configure the embedding host's current locale for this context without
+   installing global Intl. Native contexts start with the explicit host language
+   policy en-US, independently of OS locale variables or user language settings;
+   the host can configure en or en-US. ICU contexts initially snapshot ICU's
+   host default and use its ordinary locale-data fallback.
+   Raw contexts require JS_AddIntrinsicBaseObjects first. locale must be a
+   non-NULL NUL-terminated Unicode locale identifier. The engine copies and
+   canonicalizes it, removing its Unicode 'u' extension.
+   Return 0 on success, or -1 with a pending exception (RangeError for NULL,
+   invalid or unsupported locale). Failure preserves an existing locale and
+   its caches. Future constructions use the new default; existing objects
+   retain their snapshots. This never changes a process-wide backend default.
+   Disabled Intl builds throw TypeError and return -1. */
+int JS_SetIntlDefaultLocale(JSContext *ctx, const char *locale);
+/* Return an owned JS string snapshot, or JS_EXCEPTION with a pending exception.
+   Free it with JS_FreeValue(ctx, value), or JS_FreeValueRT(rt, value) while rt
+   remains alive after ctx destruction. Raw contexts require base intrinsics.
+   Calling this may initialize context-local backend state but does not install
+   global Intl. Disabled Intl builds throw TypeError and return JS_EXCEPTION. */
+JSValue JS_GetIntlDefaultLocale(JSContext *ctx);
+
 /* Configure this runtime's default time zone for Date local operations,
    and Temporal.Now. ctx selects the runtime and the
    exception realm; all its contexts share the policy. Raw contexts require base

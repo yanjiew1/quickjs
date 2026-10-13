@@ -352,6 +352,7 @@ CALENDAR_AUTHORITY_CFLAGS= \
     -DQJS_CAL_DANGI_AUTHORITY_VERIFIED
 CALENDAR_CONFIG_OBJECTS=$(foreach suffix,o host.o pic.o nolto.o debug.o fuzz.o check.o,$(patsubst %.c,$(OBJDIR)/%.$(suffix),$(CALENDAR_SRCS)))
 $(CALENDAR_CONFIG_OBJECTS): CALENDAR_COMPILE_CFLAGS=$(CALENDAR_AUTHORITY_CFLAGS)
+QUICKJS_SRCS+=src/quickjs/builtins/intl/core.c
 QUICKJS_SRCS+=$(CALENDAR_SRCS)
 
 # Complete frontend closure: no partial constructors or global namespace.
@@ -836,6 +837,8 @@ C_TESTS+=tests/test_intl_native_timezone$(EXE)
 
 C_TESTS+=tests/test_intl_receiver_api$(EXE)
 
+C_TESTS+=tests/test_intl_default_locale_api$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -845,6 +848,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_default_locale_api$(EXE)
 	$(WINE) ./tests/test_intl_receiver_api$(EXE)
 	$(WINE) ./tests/test_intl_native_timezone$(EXE)
 	$(WINE) ./tests/test_intl_calendar_domain$(EXE)
@@ -1536,4 +1540,7 @@ tests/test_intl_native_timezone$(EXE): $(OBJDIR)/tests/test_intl_native_timezone
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_receiver_api$(EXE): $(OBJDIR)/tests/test_intl_receiver_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_default_locale_api$(EXE): $(OBJDIR)/tests/test_intl_default_locale_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
