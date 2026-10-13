@@ -322,6 +322,9 @@ QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
 all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
 
+WAIT_SRCS=src/libwait/wait-queue.c
+WAIT_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(WAIT_SRCS))
+
 REGEXP_SRCS= \
     src/regexp/compile.c \
     src/regexp/exec.c
@@ -334,7 +337,7 @@ QUICKJS_LIBC_SRCS= \
     src/quickjs-libc/std.c \
     src/quickjs-libc/worker.c
 QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
-QJS_LIB_OBJS=$(QUICKJS_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
+QJS_LIB_OBJS=$(QUICKJS_OBJS) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
 
@@ -591,6 +594,8 @@ C_TESTS+=tests/test_fuzz_allocations$(EXE)
 
 C_TESTS+=tests/test_fuzz_regexp_timeout$(EXE)
 
+C_TESTS+=tests/test_wait_queue$(EXE)
+
 $(OBJDIR)/src/quickjs/serialization/reader.trace.o: src/quickjs/serialization/reader.c | $(OBJDIR)
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS_OPT) $(DEPFLAGS) -DDUMP_READ_OBJECT -c -o $@ $<
@@ -626,6 +631,9 @@ $(OBJDIR)/tests/test_qjsc_context_failures.o: $(OBJDIR)/tests/qjsc-context-gener
 $(OBJDIR)/tests/test_qjsc_context_failures.o: CFLAGS+=-I$(OBJDIR)/tests
 
 tests/test_qjsc_context_failures$(EXE): $(OBJDIR)/tests/test_qjsc_context_failures.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_wait_queue$(EXE): $(OBJDIR)/tests/test_wait_queue.o $(WAIT_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
@@ -665,6 +673,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_qjsc_context_failures$(EXE)
 	$(WINE) ./tests/test_atomics_wait$(EXE)
 	$(WINE) ./tests/test_worker_context_failure$(EXE)
+	$(WINE) ./tests/test_wait_queue$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
