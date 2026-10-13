@@ -1015,6 +1015,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     /* close the iterator object, preserving pending exception */
     JS_IteratorClose(ctx, it->obj, TRUE);
  fail_no_close:
+    *pdone = TRUE;
     ret = JS_EXCEPTION;
     goto done;
 }
