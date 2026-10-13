@@ -2,6 +2,7 @@
  * QuickJS exception and backtrace support
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2026 Yan-Jie Wang
  * Copyright (c) 2017-2025 Charlie Gordon
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -118,7 +119,7 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
                      int backtrace_flags)
 {
     JSStackFrame *sf;
-    JSValue str;
+    JSValue str, error_ref;
     DynBuf dbuf;
     const char *func_name_str;
     const char *str1;
@@ -127,6 +128,8 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
     if (!JS_IsObject(error_obj))
         return; /* protection in the out of memory case */
     
+    /* Allocations can replace and release the pending exception. */
+    error_ref = JS_DupValue(ctx, error_obj);
     js_dbuf_init(ctx, &dbuf);
     if (filename) {
         dbuf_printf(&dbuf, "    at %s", filename);
@@ -134,20 +137,16 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
             dbuf_printf(&dbuf, ":%d:%d", line_num, col_num);
         dbuf_putc(&dbuf, '\n');
         str = JS_NewString(ctx, filename);
-        if (JS_IsException(str)) {
-            dbuf_free(&dbuf);
-            return;
-        }
+        if (JS_IsException(str))
+            goto fail;
         /* Note: SpiderMonkey does that, could update once there is a standard */
         if (JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_fileName, str,
                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
             JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num),
                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
             JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, col_num),
-                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0) {
-            dbuf_free(&dbuf);
-            return;
-        }
+                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+            goto fail;
     }
     for(sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
         if (sf->js_mode & JS_MODE_BACKTRACE_BARRIER)
@@ -193,8 +192,14 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
     else
         str = JS_NewString(ctx, (char *)dbuf.buf);
     dbuf_free(&dbuf);
-    JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str,
-                           JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    if (!JS_IsException(str))
+        JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str,
+                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    goto done;
+ fail:
+    dbuf_free(&dbuf);
+ done:
+    JS_FreeValue(ctx, error_ref);
 }
 
 /* Note: it is important that no exception is returned by this function */
