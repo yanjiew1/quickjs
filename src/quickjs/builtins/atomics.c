@@ -116,7 +116,8 @@ static uint64_t js_atomics_op_unaligned(uint8_t *ptr, int size_log2, int op,
 
 static JSObject *js_atomics_get_buf(JSContext *ctx, 
                                     JSValueConst obj, JSValueConst idx_val,
-                                    uint64_t *pidx, int is_waitable)
+                                    uint64_t *pidx, int is_waitable,
+                                    BOOL revalidate)
 {
     JSObject *p;
     JSTypedArray *ta;
@@ -160,7 +161,7 @@ static JSObject *js_atomics_get_buf(JSContext *ctx,
     if (idx >= old_len)
         goto oob;
 
-    if (is_waitable != 1) {
+    if (revalidate) {
         /* RevalidateAtomicAccess() */
         if (typed_array_is_oob(p)) {
             JS_ThrowTypeErrorArrayBufferOOB(ctx);
@@ -187,7 +188,8 @@ static JSValue js_atomics_op(JSContext *ctx,
     JSValue ret;
     JSObject *p;
     
-    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 0);
+    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 0,
+                           op == ATOMICS_OP_LOAD);
     if (!p)
         return JS_EXCEPTION;
     size_log2 = typed_array_size_log2(p->class_id);
@@ -352,7 +354,7 @@ static JSValue js_atomics_store(JSContext *ctx,
     uint64_t idx;
     int64_t v;
 
-    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 0);
+    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 0, FALSE);
     if (!p)
         return JS_EXCEPTION;
     size_log2 = typed_array_size_log2(p->class_id);
@@ -493,7 +495,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
     int ret, size_log2, res;
     double d;
 
-    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 2);
+    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 2, TRUE);
     if (!p)
         return JS_EXCEPTION;
     size_log2 = typed_array_size_log2(p->class_id);
@@ -586,7 +588,7 @@ static JSValue js_atomics_notify(JSContext *ctx,
     JSArrayBuffer *abuf;
     JSObject *p;
     
-    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 1);
+    p = js_atomics_get_buf(ctx, argv[0], argv[1], &idx, 1, FALSE);
     if (!p)
         return JS_EXCEPTION;
     size_log2 = typed_array_size_log2(p->class_id);
