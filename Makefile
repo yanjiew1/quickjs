@@ -818,6 +818,8 @@ C_TESTS+=tests/test_intl_date_pattern$(EXE)
 
 C_TESTS+=tests/test_intl_data_reader$(EXE)
 
+C_TESTS+=tests/test_intl_data_bundle$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -827,6 +829,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_data_bundle$(EXE)
 	$(WINE) ./tests/test_intl_data_reader$(EXE)
 	$(WINE) ./tests/test_intl_date_pattern$(EXE)
 	$(WINE) ./tests/test_intl_number_grammar$(EXE)
@@ -1351,10 +1354,23 @@ INTL_DATA_VALIDATION_SRCS= \
 INTL_DATA_VALIDATION_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(INTL_DATA_VALIDATION_SRCS))
 test test-binaries: $(INTL_DATA_VALIDATION_OBJS)
 
-tests/test_intl_data_reader$(EXE): $(OBJDIR)/tests/test_intl_data_reader.o $(OBJDIR)/src/intl/data/native-data-reader.o $(INTL_DATA_VALIDATION_OBJS) $(OBJDIR)/src/intl/plural.o $(OBJDIR)/src/intl/date-pattern.o $(OBJDIR)/src/intl/number-range.o $(OBJDIR)/src/intl/number-unit.o $(OBJDIR)/src/intl/data/number-template-validation.o
+
+INTL_DATA_READER_OBJS= \
+    $(OBJDIR)/src/intl/data/native-data-reader.o \
+    $(INTL_DATA_VALIDATION_OBJS) \
+    $(OBJDIR)/src/intl/plural.o \
+    $(OBJDIR)/src/intl/date-pattern.o \
+    $(OBJDIR)/src/intl/number-range.o \
+    $(OBJDIR)/src/intl/number-unit.o \
+    $(OBJDIR)/src/intl/data/number-template-validation.o
+
+tests/test_intl_data_reader$(EXE): $(OBJDIR)/tests/test_intl_data_reader.o $(INTL_DATA_READER_OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 .PHONY: test-intl-generator
 test-intl-generator:
 	$(PYTHON) tests/test_intl_generator.py
 test: test-intl-generator
+
+tests/test_intl_data_bundle$(EXE): $(OBJDIR)/tests/test_intl_data_bundle.o $(OBJDIR)/src/intl/data/locale-metadata.o $(INTL_DATA_READER_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

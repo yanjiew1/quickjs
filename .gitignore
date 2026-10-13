@@ -181,3 +181,6 @@ __pycache__/
 
 /tests/test_intl_data_reader
 /tests/test_intl_data_reader.exe
+
+/tests/test_intl_data_bundle
+/tests/test_intl_data_bundle.exe
