@@ -2,6 +2,7 @@
  * Regular Expression Compiler
  *
  * Copyright (c) 2017-2018 Fabrice Bellard
+ * Copyright (c) 2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1301,6 +1302,8 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
             }
             if (!is_last) {
                 last_match_pos = re_emit_op_u32(s, REOP_goto, last_match_pos);
+                if (dbuf_error(&s->byte_code))
+                    goto out_of_memory;
                 put_u32(s->byte_code.buf + split_pos, s->byte_code.size - (split_pos + 4));
             }
         }
@@ -1316,9 +1319,14 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
                 lre_realloc(s->opaque, tab, 0);
                 return -1;
             }
+            if (dbuf_error(&s->byte_code))
+                goto out_of_memory;
             if (!is_last)
                 put_u32(s->byte_code.buf + split_pos, s->byte_code.size - (split_pos + 4));
         }
+
+        if (dbuf_error(&s->byte_code))
+            goto out_of_memory;
 
         /* patch the 'goto match' */
         while (last_match_pos != -1) {
@@ -1330,6 +1338,9 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
         lre_realloc(s->opaque, tab, 0);
     }
     return 0;
+ out_of_memory:
+    lre_realloc(s->opaque, tab, 0);
+    return re_parse_out_of_memory(s);
 }
 
 static int re_parse_nested_class(REParseState *s, REStringList *cr, const uint8_t **pp);
@@ -1830,6 +1841,9 @@ static int re_parse_term(REParseState *s, BOOL is_backward_dir)
     BOOL greedy, is_neg, is_backward_lookahead;
     REStringList cr_s, *cr = &cr_s;
 
+    if (dbuf_error(&s->byte_code))
+        return re_parse_out_of_memory(s);
+
     last_atom_start = -1;
     last_capture_count = 0;
     p = s->buf_ptr;
@@ -1958,7 +1972,7 @@ static int re_parse_term(REParseState *s, BOOL is_backward_dir)
                 re_emit_op(s, REOP_lookahead_match + is_neg);
                 /* jump after the 'match' after the lookahead is successful */
                 if (dbuf_error(&s->byte_code))
-                    return -1;
+                    return re_parse_out_of_memory(s);
                 put_u32(s->byte_code.buf + pos, s->byte_code.size - (pos + 4));
             } else if (p[2] == '<') {
                 p += 3;
@@ -1988,6 +2002,8 @@ static int re_parse_term(REParseState *s, BOOL is_backward_dir)
             dbuf_putc(&s->group_names, 0);
             dbuf_putc(&s->group_names, 0);
         parse_capture:
+            if (dbuf_error(&s->group_names))
+                return re_parse_out_of_memory(s);
             if (s->capture_count >= CAPTURE_COUNT_MAX)
                 return re_parse_error(s, "too many captures");
             last_atom_start = s->byte_code.size;
@@ -2373,7 +2389,7 @@ static int re_parse_alternative(REParseState *s, BOOL is_backward_dir)
             end = s->byte_code.size;
             term_size = end - term_start;
             if (dbuf_claim(&s->byte_code, term_size))
-                return -1;
+                return re_parse_out_of_memory(s);
             memmove(s->byte_code.buf + start + term_size,
                     s->byte_code.buf + start,
                     end - start);
@@ -2414,6 +2430,8 @@ static int re_parse_disjunction(REParseState *s, BOOL is_backward_dir)
             return -1;
 
         /* patch the goto */
+        if (dbuf_error(&s->byte_code))
+            return re_parse_out_of_memory(s);
         len = s->byte_code.size - (pos + 4);
         put_u32(s->byte_code.buf + pos, len);
     }
@@ -2579,7 +2597,10 @@ uint8_t *lre_compile(int *plen, char *error_msg, int error_msg_size,
 
     /* add the named groups if needed */
     if (s->group_names.size > (s->capture_count - 1) * LRE_GROUP_NAME_TRAILER_LEN) {
-        dbuf_put(&s->byte_code, s->group_names.buf, s->group_names.size);
+        if (dbuf_put(&s->byte_code, s->group_names.buf, s->group_names.size)) {
+            re_parse_out_of_memory(s);
+            goto error;
+        }
         put_u16(s->byte_code.buf + RE_HEADER_FLAGS,
                 lre_get_flags(s->byte_code.buf) | LRE_FLAG_NAMED_GROUPS);
     }
