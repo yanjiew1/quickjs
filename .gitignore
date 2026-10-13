@@ -47,3 +47,6 @@ libwinpthread*.dll
 
 /tests/test_typed_array
 /tests/test_typed_array.exe
+
+/tests/test_cutils
+/tests/test_cutils.exe
