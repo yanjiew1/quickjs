@@ -1,5 +1,14 @@
 import * as bjson from "./bjson.so";
 
+/* A cached native module cannot satisfy a JSON module request. */
+let jsonModuleError;
+try {
+    await import("./bjson.so", { with: { type: "json" } });
+} catch (e) {
+    jsonModuleError = e;
+}
+assert(jsonModuleError instanceof SyntaxError, true);
+
 function assert(actual, expected, message) {
     if (arguments.length == 1)
         expected = true;
