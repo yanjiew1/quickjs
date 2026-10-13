@@ -256,3 +256,6 @@ __pycache__/
 
 /tests/test_intl_native_duration_oom
 /tests/test_intl_native_duration_oom.exe
+
+/tests/test_intl_native_display_oom
+/tests/test_intl_native_display_oom.exe
