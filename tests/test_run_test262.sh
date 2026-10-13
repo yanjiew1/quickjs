@@ -234,3 +234,70 @@ for test262_threads in 1 2; do
         [ ! -e "$test262_tmp/report" ]
     fi
 done
+
+# Every fixture has the primary disabled feature; half also have the
+# secondary feature. Each feature counts metadata occurrences, while the
+# aggregate counts skipped files only once. Leave a third counter at zero.
+mkdir "$test262_tmp/skipped"
+cat > "$test262_tmp/skip-config" <<'CONFIG'
+[config]
+style=new
+harnessdir=harness
+[features]
+runner-skip-primary=no
+runner-skip-secondary=no
+runner-skip-unused=no
+CONFIG
+test262_skip_cases=1024
+test262_case=0
+while [ "$test262_case" -lt "$test262_skip_cases" ]; do
+    test262_features=runner-skip-primary
+    if [ "$((test262_case % 2))" -eq 0 ]; then
+        test262_features="$test262_features, runner-skip-secondary"
+    fi
+    printf '%s\n' '/*---' 'flags: [noStrict]' \
+        "features: [$test262_features]" '---*/' \
+        'throw new Error("disabled feature test body must not run");' \
+        > "$test262_tmp/skipped/case-$test262_case.js"
+    test262_case=$((test262_case + 1))
+done
+{
+    printf '%-30s %7s\n' 'SKIPPED FEATURE' 'COUNT'
+    printf '%-30s %7d\n' 'runner-skip-primary' "$test262_skip_cases"
+    printf '%-30s %7d\n' 'runner-skip-secondary' "$((test262_skip_cases / 2))"
+    printf '\n'
+} > "$test262_tmp/expected-skipped-features"
+printf 'Result: 0/0 errors, %d skipped\n' "$test262_skip_cases" \
+    > "$test262_tmp/expected-skipped-result"
+
+check_skipped_feature_counts() {
+    invoke_runner no -q -c "$test262_tmp/skip-config" -T "$1" \
+        --count_skipped_features -d "$test262_tmp/skipped"
+    [ "$test262_status" -eq 0 ]
+    diff -u "$test262_tmp/expected-skipped-features" "$test262_tmp/out"
+    diff -u "$test262_tmp/expected-skipped-result" "$test262_tmp/err"
+}
+
+# Exact totals are required on every run. Repetition gives shared counters
+# useful contention; failure of the former race depends on thread scheduling.
+check_skipped_feature_counts 1
+for test262_round in 1 2; do
+    check_skipped_feature_counts 2
+    check_skipped_feature_counts 8
+done
+
+# Disabling optional telemetry still skips the same files without a report.
+invoke_runner no -q -c "$test262_tmp/skip-config" -T 8 \
+    -d "$test262_tmp/skipped"
+[ "$test262_status" -eq 0 ]
+[ ! -s "$test262_tmp/out" ]
+diff -u "$test262_tmp/expected-skipped-result" "$test262_tmp/err"
+
+# Optional telemetry also works when no disabled features were configured.
+# Reuse the ordinary suite and its feature-free config; no table is printed.
+invoke_runner no -q -c "$test262_tmp/config" -T 2 \
+    --count_skipped_features -d "$test262_tmp/suite"
+[ "$test262_status" -eq 0 ]
+[ ! -s "$test262_tmp/out" ]
+printf '%s\n' 'Result: 0/3 errors' > "$test262_tmp/expected-empty-features"
+diff -u "$test262_tmp/expected-empty-features" "$test262_tmp/err"
