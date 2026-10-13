@@ -202,3 +202,6 @@ __pycache__/
 
 /tests/test_intl_calendar_domain
 /tests/test_intl_calendar_domain.exe
+
+/tests/test_intl_native_timezone
+/tests/test_intl_native_timezone.exe

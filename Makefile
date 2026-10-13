@@ -832,6 +832,8 @@ C_TESTS+=tests/test_intl_native_duration_engine$(EXE)
 
 C_TESTS+=tests/test_intl_calendar_domain$(EXE)
 
+C_TESTS+=tests/test_intl_native_timezone$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -841,6 +843,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_native_timezone$(EXE)
 	$(WINE) ./tests/test_intl_calendar_domain$(EXE)
 	$(WINE) ./tests/test_intl_native_duration_engine$(EXE)
 	$(WINE) ./tests/test_intl_native_number_engine$(EXE)
@@ -1455,3 +1458,76 @@ test test-binaries: $(OBJDIR)/src/intl/provider-native-display.o
 
 # Native date-general adapters precede aggregate-provider construction.
 test test-binaries: $(OBJDIR)/src/intl/provider-native-date.o $(OBJDIR)/src/intl/provider-native-general.o
+
+# Host atomic cache operations are independent of JavaScript atomics.
+INTL_CACHE_PROVIDER_OBJECTS=$(foreach suffix,\
+    o host.o pic.o nolto.o debug.o fuzz.o check.o,\
+    $(OBJDIR)/src/intl/provider-native.$(suffix))
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS+=-std=c11
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_OPT+=-std=c11
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_NOLTO+=-std=c11
+$(INTL_CACHE_PROVIDER_OBJECTS): CFLAGS_DEBUG+=-std=c11
+
+
+INTL_NATIVE_LIBRARY_SRCS= \
+    src/intl/collator-native-data.c \
+    src/intl/collator-native.c \
+    src/intl/data/date-data-validation.c \
+    src/intl/data/duration-data-validation.c \
+    src/intl/data/locale-metadata.c \
+    src/intl/data/native-data-reader.c \
+    src/intl/data/number-data-validation.c \
+    src/intl/data/number-extra-validation.c \
+    src/intl/data/number-template-validation.c \
+    src/intl/data/plural-data-validation.c \
+    src/intl/data/relative-data-validation.c \
+    src/intl/date-native-bank.c \
+    src/intl/date-native-calendar-data.c \
+    src/intl/date-native-calendar.c \
+    src/intl/date-native-data.c \
+    src/intl/date-native-zone.c \
+    src/intl/date-native.c \
+    src/intl/date-pattern.c \
+    src/intl/decimal.c \
+    src/intl/display-names-native.c \
+    src/intl/duration-native-data.c \
+    src/intl/duration-native.c \
+    src/intl/list-native-data.c \
+    src/intl/list-native.c \
+    src/intl/locale-grammar.c \
+    src/intl/native-locale-id.c \
+    src/intl/native-locale-info.c \
+    src/intl/number-compact.c \
+    src/intl/number-decimal.c \
+    src/intl/number-native-data.c \
+    src/intl/number-native.c \
+    src/intl/number-range.c \
+    src/intl/number-unit.c \
+    src/intl/plural-native-data.c \
+    src/intl/plural-native.c \
+    src/intl/plural.c \
+    src/intl/provider-native-collator.c \
+    src/intl/provider-native-date.c \
+    src/intl/provider-native-display.c \
+    src/intl/provider-native-duration.c \
+    src/intl/provider-native-general.c \
+    src/intl/provider-native-number.c \
+    src/intl/provider-native-plural.c \
+    src/intl/provider-native-relative.c \
+    src/intl/provider-native-segmenter.c \
+    src/intl/provider-native.c \
+    src/intl/relative-native-data.c \
+    src/intl/relative-native.c \
+    src/intl/segmenter-native-data.c \
+    src/intl/segmenter-native.c \
+    src/intl/segmenter-unicode.c
+INTL_NATIVE_LIBRARY_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(INTL_NATIVE_LIBRARY_SRCS))
+INTL_NATIVE_DATE_SHARED_OBJS= \
+    $(OBJDIR)/src/temporal/epoch.o \
+    $(OBJDIR)/src/temporal/iso.o \
+    $(OBJDIR)/src/temporal/civil.o
+
+tests/test_intl_native_timezone$(EXE): $(OBJDIR)/tests/test_intl_native_timezone.o \
+    $(INTL_NATIVE_LIBRARY_OBJS) $(INTL_NATIVE_DATE_SHARED_OBJS) \
+    libquickjs$(LTOEXT).a libqjstimezone.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
