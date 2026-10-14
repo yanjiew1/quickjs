@@ -6,7 +6,7 @@ def tag(value):
     return 'root' if value == 'root' else m.canonical_tag(value)
 
 
-def select(metadata, default_locale, available_locales):
+def select(metadata, default_locale, available_locales, likely=()):
     requested = tuple(available_locales)
     m.require(requested and len(requested) == len(set(requested)),
               'empty/repeated explicit AvailableLocales')
@@ -14,12 +14,30 @@ def select(metadata, default_locale, available_locales):
               'AvailableLocales must contain canonical non-root tags')
     m.require(tag(default_locale) == default_locale and default_locale in requested,
               'actual DefaultLocale must be explicitly available')
-    # The sealed root collation owner proves precisely this public locale set.
-    # A larger service set cannot silently expand Collator availability.
-    m.require(set(requested) <= {'en', 'en-US'} and {'en', 'en-US'} <= set(requested),
-              'this initial combined policy requires explicit en and en-US')
+    metadata = dict(metadata)
+    metadata['parents'] = dict(metadata['parents'])
+    metadata['component_parents'] = dict(metadata['component_parents'])
     parents = metadata['parents']
-    m.require(set(requested) <= set(parents), 'available locale missing from CLDR metadata')
+    # CLDR file names may retain a default script (zh_Hant_TW), while a
+    # requested BCP47 id omits it (zh-TW). An exact pinned likely-subtag
+    # mapping establishes the data parent; no guessed English fallback.
+    likely = dict(likely)
+    for value in requested:
+        if value in parents:
+            continue
+        target = likely.get(value)
+        if target is None and value.count('-') == 1:
+            language, region = value.split('-')
+            language_target = likely.get(language, '').split('-')
+            if len(language_target) == 3:
+                candidate = '-'.join(language_target[:2] + [region])
+                if candidate in parents:
+                    target = candidate
+        m.require(target in parents, 'locale lacks exact released data parent: ' + value)
+        parents[value] = target
+        for component in {component for component, child in metadata['component_parents']}:
+            metadata['component_parents'][(component, value)] = target
+    m.require(set(requested) <= set(parents), 'available locale missing from CLDR metadata: ' + repr(sorted(set(requested) - set(parents))))
     closure = set(requested) | {'root'}
     # Required prefix fallback tags and both general/component parents use
     # the exact metadata graphs. No guessed data or default substitution.

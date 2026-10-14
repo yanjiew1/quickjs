@@ -11,6 +11,18 @@ CLDR 48.2 and its bundled UCA 17; core Unicode algorithms remain independent.
 The runtime initially installs en/en-US, and service capability checks remain
 separate from the presence of additional source-data rows.
 
+Candidate locale unions may include regional identities whose exact data parent
+is supplied by released likely-subtag metadata. Collecting those rows does not
+activate a service. The configured default must still have complete required
+service rows; English is also checked when present in the candidate union.
+
+For fresh installed-calendar and territory inventories, pass all three of
+`--timezone-tools-dir`, `--timezone-binary` and `--tz-dir`. The timezone tool
+directory supplies authenticated helpers, release pins and binary provenance;
+the binary must match that provenance. The generator verifies CLDR calendar and
+country metadata and appends inventories to the same pool and list owner.
+These source checks do not claim runtime acceptance.
+
 `RELEASE-SOURCE-ASSEMBLY.json` and the generated data provenance describe
 historical source preparation and acquisition. Their recorded paths, source
 hashes and `generators_executed` fields are archived evidence, not a claim
