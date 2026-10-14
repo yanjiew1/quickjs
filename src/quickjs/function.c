@@ -80,14 +80,20 @@ void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
     }
 }
 
-void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
-                                JSAtom name, int len)
+int js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
+                               JSAtom name, int len)
 {
+    JSValue name_val;
+
     /* ES6 feature non compatible with ES5.1: length is configurable */
-    JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_length, JS_NewInt32(ctx, len),
-                           JS_PROP_CONFIGURABLE);
-    JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_name,
-                           JS_AtomToString(ctx, name), JS_PROP_CONFIGURABLE);
+    if (JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_length,
+                               JS_NewInt32(ctx, len), JS_PROP_CONFIGURABLE) < 0)
+        return -1;
+    name_val = JS_AtomToString(ctx, name);
+    if (JS_IsException(name_val))
+        return -1;
+    return JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_name, name_val,
+                                  JS_PROP_CONFIGURABLE) < 0 ? -1 : 0;
 }
 
 BOOL js_class_has_bytecode(JSClassID class_id)
