@@ -20,6 +20,9 @@ static void audit_days(QJSCalendarId id, int64_t start, int64_t end)
     for (day = start; day < end; day++) {
         const QJSPublishedCalendarMonth *m;
         QJSCalendarDate ordinary = {0};
+#ifdef CONFIG_INTL
+        QJSCalendarDate intl = {0};
+#endif
         char code[5];
         int count = 0, length = 0, ordinal;
         while (index + 1 < t->count && t->months[index + 1].epoch_day <= day) ++index;
@@ -42,6 +45,18 @@ static void audit_days(QJSCalendarId id, int64_t start, int64_t end)
               ordinary.days_in_year == t->months[next_year].epoch_day - t->months[year_start].epoch_day &&
               ordinary.in_leap_year == (next_year - year_start == 13) &&
               !ordinary.has_era && !ordinary.era[0] && !ordinary.era_year);
+#ifdef CONFIG_INTL
+        CHECK(qjs_calendar_from_epoch_day_for_intl(id, day, &intl) == QJS_CAL_OK);
+        CHECK(intl.year == ordinary.year && intl.month == ordinary.month &&
+              intl.day == ordinary.day && !strcmp(intl.month_code, ordinary.month_code));
+        CHECK(intl.day_of_year == ordinary.day_of_year &&
+              intl.days_in_month == ordinary.days_in_month &&
+              intl.months_in_year == ordinary.months_in_year &&
+              intl.days_in_year == ordinary.days_in_year &&
+              intl.in_leap_year == ordinary.in_leap_year &&
+              intl.has_era == ordinary.has_era &&
+              !strcmp(intl.era, ordinary.era) && intl.era_year == ordinary.era_year);
+#endif
         CHECK(qjs_calendar_to_epoch_day(id, ordinary.year, ordinary.month, ordinary.day, &inverse) == QJS_CAL_OK && inverse == day);
         CHECK(qjs_calendar_month_info(id, ordinary.year, ordinary.month, &count, &length, code) == QJS_CAL_OK &&
               count == ordinary.months_in_year && length == ordinary.days_in_month && !strcmp(code, ordinary.month_code));
