@@ -169,7 +169,6 @@ struct JSObject {
     } u;
 };
 
-JSValue JS_ToObject(JSContext *ctx, JSValueConst val);
 
 int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val);
 
