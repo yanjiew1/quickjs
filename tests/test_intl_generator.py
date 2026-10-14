@@ -131,6 +131,62 @@ class GeneratorTests(unittest.TestCase):
                 inventory.authenticated(path, digest, rejected, 'input')
             self.assertEqual(rejected, {})
 
+    def test_embedding_preserves_every_byte_and_trailing_zero(self):
+        blob = bytes(range(256)) + b'\x00\xff\x00'
+        header, source = self.modules['metadata'].embedding(blob)
+        self.assertEqual(header.count(b'extern const unsigned char '), 1)
+        self.assertEqual(source.count(b'const unsigned char '), 1)
+        constants = source.split(b'{', 1)[1].split(b'}', 1)[0].split(b',')
+        decoded = bytes(int(value.strip(), 0) for value in constants if value.strip())
+        self.assertEqual(decoded, blob)
+
+    def test_currency_name_template_fallback(self):
+        number = self.modules['number_patterns']
+        root = b'''<ldml><numbers><defaultNumberingSystem>latn</defaultNumberingSystem>
+          <currencyFormats numberSystem="latn"><unitPattern count="other">{0} {1}</unitPattern></currencyFormats>
+          <currencyFormats numberSystem="arab"><currencyFormatLength><currencyFormat type="standard">
+            <pattern>#,##0.00X</pattern></currencyFormat></currencyFormatLength></currencyFormats>
+        </numbers></ldml>'''
+        local = b'''<ldml><numbers>
+          <currencyFormats numberSystem="latn"><unitPattern count="one">{1}: {0}</unitPattern></currencyFormats>
+        </numbers></ldml>'''
+        resolver = number.Resolver([('main/root.xml', root), ('main/xx.xml', local)],
+                                   {'root': None, 'xx': 'root'})
+        patterns = number.currency_name_patterns(resolver, 'xx', 'arab')
+        self.assertEqual(patterns[1], '{currency}: {number}')
+        self.assertEqual(patterns[-1], '{number} {currency}')
+        self.assertEqual(resolver.get('xx', number.numbered('currencyFormats', 'arab') +
+                         (number.segment('currencyFormatLength'),
+                          number.segment('currencyFormat', type='standard'), number.segment('pattern'))),
+                         '#,##0.00X')
+
+    def test_currency_name_non_latin_default_and_requested_bank(self):
+        number = self.modules['number_patterns']
+        root = b'''<ldml><numbers><defaultNumberingSystem>beng</defaultNumberingSystem>
+          <currencyFormats numberSystem="latn"><unitPattern count="other">LATN {0} {1}</unitPattern></currencyFormats>
+          <currencyFormats numberSystem="beng"><unitPattern count="other">{1} BENG {0}</unitPattern></currencyFormats>
+          <currencyFormats numberSystem="arabext"><unitPattern count="other">{0} EXPLICIT {1}</unitPattern></currencyFormats>
+          <currencyFormats numberSystem="fullwide"><alias source="locale" path="../currencyFormats[@numberSystem='beng']"/></currencyFormats>
+        </numbers></ldml>'''
+        resolver = number.Resolver([('main/root.xml', root)], {'root': None})
+        self.assertEqual(number.currency_name_patterns(resolver, 'root', 'arab')[-1],
+                         '{currency} BENG {number}')
+        self.assertEqual(number.currency_name_patterns(resolver, 'root', 'arabext')[-1],
+                         '{number} EXPLICIT {currency}')
+        self.assertEqual(number.currency_name_patterns(resolver, 'root', 'fullwide')[-1],
+                         '{currency} BENG {number}')
+
+    def test_currency_name_malformed_templates_do_not_fall_back(self):
+        number = self.modules['number_patterns']
+        for template in ['{0}', '{0} {1} {2}', '']:
+            xml = ('''<ldml><numbers><defaultNumberingSystem>latn</defaultNumberingSystem>
+              <currencyFormats numberSystem="latn"><unitPattern count="other">{0} {1}</unitPattern></currencyFormats>
+              <currencyFormats numberSystem="arab"><unitPattern count="other">''' + template +
+              '</unitPattern></currencyFormats></numbers></ldml>').encode()
+            resolver = number.Resolver([('main/root.xml', xml)], {'root': None})
+            with self.assertRaises(ValueError):
+                number.currency_name_patterns(resolver, 'root', 'arab')
+
     def test_non_english_default_has_controlled_missing_service_error(self):
         metadata = dict(parents={'root': None, 'fr': 'root'},
                         locales={'fr': {'numbering': 'latn'}}, component_parents={},

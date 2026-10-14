@@ -37,3 +37,14 @@ refreshing installed calendar/territory inventory and provenance. It does
 not perform fresh formatter collection or execute runtime qualification.
 Unicode data attribution is retained in
 `src/intl/data/unicode-data-LICENSE.txt` and the consumed input manifest.
+
+Currency-name unit templates fall back from a missing requested-numbering
+bank to the locale's inherited default numbering system. Requested digits,
+numeric affixes, symbols and localized currency names keep their own sources.
+Malformed templates remain errors. This narrow policy follows ICU's
+locale-global CurrencyUnitPatterns model; other number resources use their
+existing explicit CLDR inheritance and aliases.
+
+The C embedding writes decimal byte constants. It remains a plain unsigned
+byte array, with the same single owner and no runtime decoder or compressed
+representation. This keeps expanded source bundles within source-host limits.

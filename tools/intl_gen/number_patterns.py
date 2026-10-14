@@ -245,6 +245,22 @@ def plural_values(resolver, locale, base, leaf, **attrs):
                  for count in CATEGORIES)
 
 
+def currency_name_patterns(resolver, locale, system):
+    """Currency unit templates are independent of requested digits/affixes.
+
+    Like ICU's locale-global CurrencyUnitPatterns resource, use the locale's
+    inherited default-numbering templates when the requested bank is absent.
+    Never fall back on malformed data or replace other numeric resources.
+    """
+    base = numbered('currencyFormats', system)
+    if resolver.get(locale, base + (segment('unitPattern', count='other'),)) is None:
+        default = scalar_text(resolver.get(locale,
+            (segment('numbers'), segment('defaultNumberingSystem'))))
+        base = numbered('currencyFormats', default)
+    return tuple(placeholder(value, True) for value in
+                 plural_values(resolver, locale, base, 'unitPattern'))
+
+
 @lru_cache(maxsize=None)
 def placeholder(value, currency=False, number_required=True):
     scalar_text(value)
@@ -358,8 +374,8 @@ def collect(inputs, metadata, supplemental, unicode_data, grammatical):
                             result = attempt((locale, system, 'alpha', style), lambda: compile_pattern(alpha, style))
                             if result is not None:
                                 tables[81].append((locale_index, system_index, style, 1) + result)
-            names = attempt((locale, system, 'currency-name'), lambda: tuple(placeholder(v, True) for v in
-                plural_values(resolver, locale, numbered('currencyFormats', system), 'unitPattern')))
+            names = attempt((locale, system, 'currency-name'),
+                            lambda: currency_name_patterns(resolver, locale, system))
             if names is not None:
                 tables[84].append((locale_index, system_index, names))
             def spacing():

@@ -584,8 +584,10 @@ def embedding(blob):
     source = ('/* Generated single owning definition. Do not edit. */\n'
               '#include "locale-metadata.h"\n'
               'const unsigned char qjs_intl_locale_metadata_blob[] = {\n')
+    # Decimal constants keep expanded bundles below source-host file limits
+    # without compression, string-literal limits or a second runtime owner.
     for offset in range(0, len(blob), 12):
-        source += '    ' + ', '.join('0x{:02x}'.format(v) for v in blob[offset:offset + 12]) + ',\n'
+        source += '    ' + ', '.join(str(v) for v in blob[offset:offset + 12]) + ',\n'
     source += ('};\nconst size_t qjs_intl_locale_metadata_blob_size =\n'
                '    sizeof(qjs_intl_locale_metadata_blob);\n')
     return header.encode('ascii'), source.encode('ascii')
