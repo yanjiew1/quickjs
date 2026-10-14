@@ -26,6 +26,7 @@ import urllib.request
 
 HERE = Path(__file__).resolve().parent
 MANIFEST = HERE / "manifest.json"
+OPTIONAL_MANIFEST = HERE / "optional-intl-temporal-v1.json"
 
 
 class BenchmarkCancelled(Exception):
@@ -202,18 +203,41 @@ def checked_parent_revision(candidate, expected):
 
 
 def feature_config(suite):
+    if suite == "optional":
+        return {"CONFIG_INTL": "y", "CONFIG_TEMPORAL": "y",
+                "CONFIG_INTL_BACKEND": "native", "CONFIG_ICU": "n"}
     return {"CONFIG_INTL": "n", "CONFIG_TEMPORAL": "n",
-            "CONFIG_ICU": "n"}
+            "CONFIG_INTL_BACKEND": "native", "CONFIG_ICU": "n"}
 
 
+def optional_workload(output):
+    catalog = json.loads(OPTIONAL_MANIFEST.read_text())
+    names = [case["name"] for case in catalog["cases"]]
+    if (catalog["catalog"] != "optional-intl-temporal-v1" or
+            catalog["version"] != 1 or len(names) != 6 or
+            len(set(names)) != len(names) or
+            catalog["script"] != "tests/microbench.js" or
+            catalog["selection_flag"] != "--optional-v1"):
+        raise ValueError("Unexpected optional catalog contract")
+    source = HERE.parents[1] / catalog["script"]
+    script = output / "optional-microbench.js"
+    shutil.copyfile(source, script)
+    shutil.copyfile(OPTIONAL_MANIFEST, output / "optional-catalog.json")
+    return script, names, {"catalog": catalog["catalog"],
+                           "catalog_sha256": sha256(OPTIONAL_MANIFEST),
+                           "source_script": str(source),
+                           "script_sha256": sha256(script)}
 
 
-def workload_command(suite, binary, detail, case, v8=None, zoo=None):
+def workload_command(suite, binary, detail, case, v8=None, zoo=None, optional=None):
     if suite == "v8":
         return [binary, str(v8), *detail], "microseconds/iteration"
     if suite == "microbench":
         return [binary, "--std", str(HERE / "fixtures/fresh-microbench.js"),
                 "-s", "result.json", case], "ns/operation"
+    if suite == "optional":
+        return [binary, "--std", str(optional), "--optional-v1", case,
+                "-s", "result.json"], "ns/operation"
     if suite == "zoo":
         return [binary, "--no-unhandled-rejection", "--script", str(zoo / case)], "Zoo score"
     raise ValueError("Unknown suite")
@@ -286,6 +310,14 @@ def build(source, compiler, output, jobs, suite="core"):
     if any(re.search(r"(?:^|\s)-O(?:[013szg]|fast)(?:\s|$)", line)
            for line in compiler_lines):
         raise ValueError("Unexpected optimization level in runtime build")
+    if suite == "optional":
+        frontend = [line for line in compiler_lines if "src/quickjs/" in line]
+        if not frontend or any(
+                not all(re.search(r"(?:^|\s)-D" + name + r"(?:\s|$)", line)
+                        for name in ("CONFIG_INTL", "CONFIG_TEMPORAL", "CONFIG_INTL_NATIVE"))
+                or re.search(r"(?:^|\s)-DCONFIG_ICU(?:\s|$)", line)
+                for line in frontend):
+            raise ValueError("Optional benchmark requires enabled native Intl/Temporal without ICU")
     binary = source / "qjs"
     if not binary.is_file():
         raise ValueError("Build did not produce qjs")
@@ -363,6 +395,7 @@ def markdown(report, state, observed=None):
             f"Tooling: `{state.get('tooling_revision') or 'unprovided local checkout'}`. Runner SHA-256: `{state.get('runner_sha256', 'unprovided')}`.", "",
             "Both engines use identical frozen workloads, fresh processes per case, -O2, and no LTO.", "",
             "Build feature configuration: `" + json.dumps(state.get("feature_config", {}), sort_keys=True) + "`.", "",
+            ("Optional v1 has a separate aggregate; its era-free Gregorian UTC DateTimeFormat case is the focused format-bank workload." if state.get("suite") == "optional" else ""), "",
             "The environment JSON records CPU/topology, affinity, frequency/Turbo availability, virtualization, memory, OS/kernel, compilers/linker, and timing clocks.", ""]
     if observed:
         def one_line(value):
@@ -414,12 +447,12 @@ def main():
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--parent", type=Path, required=True)
     parser.add_argument("--parent-revision", required=True)
-    parser.add_argument("--tooling-revision", help="Exact tooling checkout revision (optional)")
+    parser.add_argument("--tooling-revision", help="Exact optional tooling checkout revision")
     parser.add_argument("--candidate-revision", required=True)
     parser.add_argument("--compiler", choices=("gcc", "clang"), required=True)
-    parser.add_argument("--suite", choices=("core", "zoo", "all"), default="core")
+    parser.add_argument("--suite", choices=("core", "zoo", "all", "optional"), default="core")
     parser.add_argument("--rounds", type=int, choices=(1, 3, 4, 5, 6), default=1,
-                        help="V8/micro paired rounds; Zoo always uses 10")
+                        help="V8/micro/optional paired rounds; Zoo always uses 10")
     parser.add_argument("--cpu", default="auto", help="An allowed CPU, auto, or none")
     parser.add_argument("--build-jobs", type=int, default=2)
     parser.add_argument("--output", type=Path, required=True)
@@ -441,7 +474,7 @@ def main():
              "comparison": "candidate versus actual immediate first parent",
              "tooling_revision": args.tooling_revision, "runner_sha256": sha256(__file__),
              "feature_config": feature_config(args.suite),
-             "suite": args.suite, "rounds": {"v8": args.rounds, "microbench": args.rounds, "zoo": 10},
+             "suite": args.suite, "rounds": {"v8": args.rounds, "microbench": args.rounds, "optional": args.rounds, "zoo": 10},
              "fresh_process_per_case": True, "manifest_sha256": sha256(MANIFEST)}
     rows = []
     analysis = {}
@@ -457,6 +490,11 @@ def main():
         checked_parent_revision(args.candidate, args.parent_revision)
         if args.tooling_revision:
             checked_revision(HERE.parents[1], args.tooling_revision)
+        optional = None
+        optional_cases = []
+        if args.suite == "optional":
+            optional, optional_cases, state["optional_workload"] = optional_workload(args.output)
+            write_json(args.output / "state.json", state)
         v8 = assemble_v8(manifest, args.candidate, args.output / "fresh-v8.js") \
             if args.suite in ("core", "all") else None
         # Capture and build before pinning measurements to one allowed CPU.
@@ -477,6 +515,7 @@ def main():
         if args.suite in ("core", "all"):
             cases.extend(("v8", "/".join(case), case) for case in manifest["v8_cases"])
             cases.extend(("microbench", case, case) for case in manifest["micro_cases"])
+        cases.extend(("optional", name, name) for name in optional_cases)
         if zoo:
             cases.extend(("zoo", name, value) for name, value in manifest["zoo"]["files"].items())
         affinity = select_affinity(args.cpu)
@@ -490,11 +529,11 @@ def main():
                     work.mkdir(parents=True)
                     binary = builds[variant]["binary"]
                     command, unit = workload_command(suite, binary, detail, case,
-                                                     v8, zoo)
+                                                     v8, zoo, optional)
                     write_json(work / "command.json", {"argv": command, "cwd": str(work)})
                     elapsed = checked_process(command, work, work / "output.log", 900)
                     text = (work / "output.log").read_text()
-                    values = parse_v8(text, *detail) if suite == "v8" else parse_micro(work / "result.json", case, text) if suite in ("microbench",) else parse_zoo(text, detail["scores"])
+                    values = parse_v8(text, *detail) if suite == "v8" else parse_micro(work / "result.json", case, text) if suite in ("microbench", "optional") else parse_zoo(text, detail["scores"])
                     for name, value in values.items():
                         rows.append({"suite": suite, "case": name, "variant": variant,
                                      "round": rep + 1, "value": value, "unit": unit,
@@ -508,6 +547,11 @@ def main():
         checked_parent_revision(args.candidate, args.parent_revision)
         for name, expected in manifest["bundled_sha256"].items():
             verify_fixture(HERE / "fixtures" / name, expected)
+        if optional:
+            verify_fixture(optional, state["optional_workload"]["script_sha256"])
+            verify_fixture(HERE.parents[1] / "tests/microbench.js",
+                           state["optional_workload"]["script_sha256"])
+            verify_fixture(OPTIONAL_MANIFEST, state["optional_workload"]["catalog_sha256"])
         if args.tooling_revision:
             checked_revision(HERE.parents[1], args.tooling_revision)
         if v8:

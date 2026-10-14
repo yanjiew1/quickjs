@@ -104,7 +104,65 @@ class BenchmarkToolTests(unittest.TestCase):
         self.assertEqual(commands, [["rev-parse", "HEAD"], ["rev-parse", "HEAD^1"],
                                     ["rev-list", "--first-parent", "--count", "HEAD"]])
 
+    def test_explicit_profiles_override_disabled_environment_for_optional(self):
+        disabled = run.feature_config("core")
+        native = run.feature_config("optional")
+        self.assertEqual(disabled["CONFIG_INTL"], "n")
+        self.assertEqual(disabled["CONFIG_TEMPORAL"], "n")
+        self.assertEqual(native, {"CONFIG_INTL": "y", "CONFIG_TEMPORAL": "y",
+                                  "CONFIG_INTL_BACKEND": "native", "CONFIG_ICU": "n"})
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "qjs").write_bytes(b"fake engine")
+            def pretend_build(command, cwd, log, timeout):
+                self.assertIn("CONFIG_INTL=y", command)
+                self.assertIn("CONFIG_TEMPORAL=y", command)
+                self.assertIn("CONFIG_INTL_BACKEND=native", command)
+                self.assertIn("CONFIG_ICU=n", command)
+                self.assertIn("CONFIG_LTO=", command)
+                log.write_text("gcc -O2 -DCONFIG_INTL -DCONFIG_TEMPORAL "
+                               "-DCONFIG_INTL_NATIVE -c src/quickjs/runtime.c\n")
+                return 1
+            with patch.dict(run.os.environ, {"MAKEFLAGS": "CONFIG_INTL=n CONFIG_TEMPORAL=n"}), \
+                 patch.object(run, "require_pristine_build"), \
+                 patch.object(run, "checked_process", side_effect=pretend_build):
+                result = run.build(root, "gcc", root, 2, "optional")
+                self.assertEqual(result["feature_config"], native)
+            (root / "build.log").unlink()
+            def disabled_build(command, cwd, log, timeout):
+                log.write_text("gcc -O2 -c src/quickjs/runtime.c\n")
+                return 1
+            with patch.object(run, "require_pristine_build"), \
+                 patch.object(run, "checked_process", side_effect=disabled_build):
+                with self.assertRaisesRegex(ValueError, "enabled native"):
+                    run.build(root, "gcc", root, 2, "optional")
 
+    def test_optional_identical_script_exact_case_and_separate_aggregate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            script, names, provenance = run.optional_workload(Path(directory))
+            self.assertEqual(script.read_bytes(),
+                             (run.HERE.parents[1] / "tests/microbench.js").read_bytes())
+            self.assertEqual(len(names), 6)
+            self.assertIn("intl_date_time_format", names)
+            self.assertEqual(run.sha256(script), provenance["script_sha256"])
+            command, unit = run.workload_command("optional", "/fake/qjs", None,
+                                                 "intl_date_time_format", optional=script)
+            self.assertEqual(command, ["/fake/qjs", "--std", str(script), "--optional-v1",
+                                       "intl_date_time_format", "-s", "result.json"])
+            self.assertEqual(unit, "ns/operation")
+        rows = [dict(suite="optional", case=name, variant=variant, round=1,
+                     value=value, unit="ns/operation") for name in names
+                for variant, value in (("parent", 100), ("candidate", 90))]
+        report = run.summarize(rows, {"optional": 1})
+        self.assertEqual(list(report), ["optional"])
+        self.assertEqual(report["optional"]["case_count"], 6)
+        summary = run.markdown(report, dict(status="completed", compiler="gcc", suite="optional",
+                                           candidate_revision="a" * 40, parent_revision="b" * 40,
+                                           feature_config=run.feature_config("optional")))
+        for name in names:
+            self.assertIn("| " + name + " | 100 | 90 |", summary)
+        self.assertIn("Immediate parent:", summary)
+        self.assertIn("era-free", summary)
 
     def test_v8_requires_one_exact_positive_case(self):
         result = [{"name": "Crypto", "reference": 266181,

@@ -18,7 +18,7 @@ run. This push range selects work; the measured baseline remains candidate
 `HEAD^1`. Other pushes create a lightweight selection job. Selected pushes run
 one paired round of all 10 V8 v7 cases and all 72 frozen QuickJS microbenchmarks.
 Manual dispatch always runs and offers 1 or 3 to 6 rounds, Zoo alone,
-all three historical suites. Zoo runs exactly
+all three historical suites, or the separate optional native suite. Zoo runs exactly
 10 paired rounds of 14 workloads producing 16 scores; zlib is excluded.
 This means 10 samples per engine per Zoo score, rather than 10 engine
 invocations total. The hosted default is intentionally a noisy reference.
@@ -127,6 +127,86 @@ contract without timing an engine:
 python3 -m unittest discover -s tools/benchmarks -p 'test_*.py'
 ```
 
-The fixture manifest upstream revision records historical provenance; it
-does not select the comparison baseline. The measured baseline is always
-the candidate's actual immediate first parent.
+## Optional Intl and Temporal catalog v1
+
+`optional-intl-temporal-v1.json` describes six service workloads in
+`tests/microbench.js`. Select them explicitly with `--optional-v1`; an
+invocation without this flag retains the legacy workload list. The optional
+mode runs available services only and fails if none are available. Explicit
+case names match exactly and fail if unavailable. Constructors and bound
+method getters run before timing. Segmenter reports nanoseconds per complete
+traversal of its fixed text; the other cases report nanoseconds per call.
+
+Run each service in a fresh JavaScript process and a separate working
+directory, for example with absolute paths:
+
+```sh
+/path/to/native/qjs --std /path/to/source/tests/microbench.js \
+  --optional-v1 intl_number_format -s /path/to/native-number.json
+/path/to/icu/qjs --std /path/to/source/tests/microbench.js \
+  --optional-v1 intl_number_format -s /path/to/icu-number.json
+```
+
+For a separate native-versus-ICU experiment, use matching compiler, inputs,
+rounds, and clock, and retain raw JSON and process logs. The hosted optional
+suite instead compares two exact revisions of the same enabled native profile.
+Optional mode reads reference scores only when `-r` is supplied and writes
+`microbench-optional-v1-new.txt` by default. A selected optional case can
+save its score with `-s`; JSON keys and table columns retain the existing
+harness format.
+These workloads are separate from the frozen 72-case manifest and its
+historical aggregate. Core, Zoo, and all modes continue to use the historical fixtures. The Intl backend does not imply a distinct
+implementation for every Temporal path; label Temporal results by the
+actual build configuration.
+
+## Hosted enabled native comparison
+
+Dispatch `benchmarks` with `suite=optional` and an optional exact 40-character
+`candidate_revision`. Blank selects the workflow commit. The workflow checks
+out its own tooling revision separately, so current tooling can measure an
+earlier correction commit against that correction's actual parent. The
+parent input is derived automatically and cannot be overridden. Pushing a
+branch under `scratch/benchmarks/native/` selects this suite automatically;
+other `scratch/benchmarks/` branches follow the core selection policy.
+
+The same runner builds both pristine checkouts with explicit
+`CONFIG_INTL=y CONFIG_TEMPORAL=y CONFIG_INTL_BACKEND=native CONFIG_ICU=n`,
+`-O2`, and no LTO. Ordinary historical modes explicitly set both frontends
+and ICU to `n`. Command-line make assignments override inherited MAKEFLAGS;
+there is no global disabled-feature workflow environment. Native profile
+checks reject frontend compilation without the expected enabled defines or
+with ICU enabled. No ICU dependency installation is needed for this scope.
+Builds use the checkouts' committed data; the tool does not invoke source-data
+generators or overwrite tracked data. The existing post-build tracked-tree
+check rejects unexpected modifications. Timezone build products remain under
+`.obj`; use fresh checkouts, never a source tree carrying earlier products.
+
+Both engines execute the same copied and hashed optional script from the
+exact tooling checkout. All six v1 cases are required; missing services or
+selected results fail instead of becoming a smaller aggregate. Each case and
+round has a fresh process and working directory, and pair order alternates.
+The era-free Gregorian, latn, UTC `intl_date_time_format` case measures format
+calls over four dates, with formatter setup outside timing; it is the existing
+focused format-bank workload. It does not cover all calendars, era requests,
+or constructor cost. The six cases retain a separate geometric mean and
+individual medians, raw JSON/CSV samples and logs, feature flags, exact parent,
+candidate and tooling identities, and the same observed hardware/software
+reports as the historical suites. Hosted noise still applies; no speed result
+is a correctness gate. Prepared source or an unrun workflow establishes no
+performance result.
+
+For root-owned execution from a complete source checkout:
+
+```sh
+python3 tools/benchmarks/run.py \
+  --candidate /path/to/correction --candidate-revision EXACT_CORRECTION_HASH \
+  --parent /path/to/immediate-parent --parent-revision EXACT_PARENT_HASH \
+  --compiler gcc --suite optional --rounds 3 \
+  --cpu auto --output /path/to/new-native-report
+```
+
+The manifest's `upstream_revision` remains historical fixture provenance and
+no longer selects a comparison engine. The mock unit suite checks actual-parent
+rejection, cadence/impact selection, explicit enabled profiles, missing compile
+defines, shared optional workload bytes, individual scores, and separate
+optional aggregates without timing an engine.

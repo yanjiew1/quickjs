@@ -821,32 +821,35 @@ function bigint_to_string_large(n)
     return n;
 }
 
+/* Pin locale and grouping so the decimal oracle works with or without Intl. */
 function bigint_to_locale_string(n)
 {
     var j, result, value = BigInt(255);
+    var options = { useGrouping: false };
     for(j = 0; j < n; j++) {
-        result = value.toLocaleString();
+        result = value.toLocaleString("en-US", options);
     }
     global_res = result;
     if (result !== "255")
-        throw Error("incorrect BigInt locale fallback");
+        throw Error("incorrect BigInt locale decimal formatting");
     return n;
 }
 
 function bigint_to_locale_string_large(n)
 {
     var j, result, value = bigint_to_locale_string_large.value;
+    var options = { useGrouping: false };
     if (value === undefined) {
         value = (BigInt(1) << BigInt(4096)) - BigInt(1);
         bigint_to_locale_string_large.value = value;
         bigint_to_locale_string_large.expected = String(value);
     }
     for(j = 0; j < n; j++) {
-        result = value.toLocaleString();
+        result = value.toLocaleString("en-US", options);
     }
     global_res = result;
     if (result !== bigint_to_locale_string_large.expected)
-        throw Error("incorrect large BigInt locale fallback");
+        throw Error("incorrect large BigInt locale decimal formatting");
     return n;
 }
 
@@ -1599,6 +1602,138 @@ function save_result(filename, obj)
         console.log("cannot save " + filename);
 }
 
+/* Optional Intl/Temporal catalog v1. Setup runs outside bench() timing.
+ * Select with --optional-v1; the default legacy workload list is unchanged.
+ * Each operation is one call, except Segmenter: one complete text traversal.
+ */
+function intl_number_format(n)
+{
+    var format = intl_number_format.format;
+    var values = intl_number_format.values;
+    var j, result;
+    for (j = 0; j < n; j++)
+        result = format(values[j & 3]);
+    global_res = result;
+    return n;
+}
+intl_number_format.setup = function() {
+    intl_number_format.format = new Intl.NumberFormat("en-US", {
+        numberingSystem: "latn", maximumFractionDigits: 2
+    }).format;
+    intl_number_format.values = [1234.5, -9876.25, 0, 123456789.75];
+};
+
+function intl_date_time_format(n)
+{
+    var format = intl_date_time_format.format;
+    var values = intl_date_time_format.values;
+    var j, result;
+    for (j = 0; j < n; j++)
+        result = format(values[j & 3]);
+    global_res = result;
+    return n;
+}
+intl_date_time_format.setup = function() {
+    intl_date_time_format.format = new Intl.DateTimeFormat("en-US", {
+        timeZone: "UTC", calendar: "gregory", numberingSystem: "latn",
+        year: "numeric", month: "2-digit", day: "2-digit"
+    }).format;
+    intl_date_time_format.values = [0, 946684800000, 1704067200000,
+                                    1735689600000];
+};
+
+function intl_collator_compare(n)
+{
+    var compare = intl_collator_compare.compare;
+    var left = intl_collator_compare.left;
+    var right = intl_collator_compare.right;
+    var j, result;
+    for (j = 0; j < n; j++)
+        result = compare(left[j & 3], right[j & 3]);
+    global_res = result;
+    return n;
+}
+intl_collator_compare.setup = function() {
+    intl_collator_compare.compare = new Intl.Collator("en", {
+        sensitivity: "variant", numeric: true
+    }).compare;
+    intl_collator_compare.left = ["file2", "resume", "a", "\u00e9"];
+    intl_collator_compare.right = ["file10", "r\u00e9sum\u00e9", "b", "e\u0301"];
+};
+
+function intl_segmenter_iterate(n)
+{
+    var segmenter = intl_segmenter_iterate.segmenter;
+    var text = intl_segmenter_iterate.text;
+    var j, part, length;
+    for (j = 0; j < n; j++) {
+        length = 0;
+        for (part of segmenter.segment(text))
+            length += part.segment.length;
+    }
+    global_res = length;
+    if (length !== text.length)
+        throw Error("incorrect Segmenter traversal");
+    return n;
+}
+intl_segmenter_iterate.setup = function() {
+    intl_segmenter_iterate.segmenter = new Intl.Segmenter("en", {
+        granularity: "grapheme"
+    });
+    intl_segmenter_iterate.text = "A\u0301 quick \ud83d\ude00 fox";
+};
+
+function temporal_instant_add(n)
+{
+    var instant = temporal_instant_add.instant;
+    var duration = temporal_instant_add.duration;
+    var j, result;
+    for (j = 0; j < n; j++)
+        result = instant.add(duration);
+    global_res = result;
+    return n;
+}
+temporal_instant_add.setup = function() {
+    temporal_instant_add.instant = new Temporal.Instant(0n);
+    temporal_instant_add.duration = {nanoseconds: 1};
+};
+
+function temporal_instant_get(n)
+{
+    var instant = temporal_instant_get.instant;
+    var j, result;
+    for (j = 0; j < n; j++)
+        result = instant.epochNanoseconds;
+    global_res = result;
+    return n;
+}
+temporal_instant_get.setup = function() {
+    temporal_instant_get.instant = new Temporal.Instant(1234567890123456789n);
+};
+
+function optional_microbench_v1()
+{
+    var tests = [];
+    if (typeof Intl !== "undefined") {
+        if (typeof Intl.NumberFormat === "function")
+            tests.push(intl_number_format);
+        if (typeof Intl.DateTimeFormat === "function")
+            tests.push(intl_date_time_format);
+        if (typeof Intl.Collator === "function")
+            tests.push(intl_collator_compare);
+        if (typeof Intl.Segmenter === "function")
+            tests.push(intl_segmenter_iterate);
+    }
+    if (typeof Temporal !== "undefined" &&
+        typeof Temporal.Instant === "function") {
+        tests.push(temporal_instant_add);
+        tests.push(temporal_instant_get);
+    }
+    if (tests.length === 0)
+        throw Error("optional microbench v1: Intl and Temporal unavailable");
+    return tests;
+}
+
 function main(argc, argv, g)
 {
     var test_list = [
@@ -1674,6 +1809,7 @@ function main(argc, argv, g)
     var tests = [];
     var i, j, n, f, name, found;
     var ref_file, new_ref_file = "microbench-new.txt";
+    var optional_v1 = false;
 
     if (typeof BigInt === "function") {
         /* BigInt test */
@@ -1710,8 +1846,24 @@ function main(argc, argv, g)
             test_list.push(iterator_reduce);
     }
 
+    /* An explicit mode replaces the selected catalog, keeping optional
+     * service results separate from the legacy aggregate and references. */
+    for (i = 1; i < argc; i++) {
+        if (argv[i] === "--optional-v1")
+            optional_v1 = true;
+        else if (argv[i] === "-t" || argv[i] === "-n" ||
+                 argv[i] === "-r" || argv[i] === "-s")
+            i++;
+    }
+    if (optional_v1) {
+        test_list = optional_microbench_v1();
+        new_ref_file = "microbench-optional-v1-new.txt";
+    }
+
     for (i = 1; i < argc;) {
         name = argv[i++];
+        if (name === "--optional-v1")
+            continue;
         if (name == "-a") {
             sort_bench.verbose = true;
             continue;
@@ -1739,12 +1891,14 @@ function main(argc, argv, g)
         }
         for (j = 0, found = false; j < test_list.length; j++) {
             f = test_list[j];
-            if (f.name.startsWith(name)) {
+            if (optional_v1 ? f.name === name : f.name.startsWith(name)) {
                 tests.push(f);
                 found = true;
             }
         }
         if (!found) {
+            if (optional_v1)
+                throw Error("unknown or unavailable optional benchmark: " + name);
             console.log("unknown benchmark: " + name);
             return 1;
         }
@@ -1752,13 +1906,15 @@ function main(argc, argv, g)
     if (tests.length == 0)
         tests = test_list;
 
-    ref_data = load_result(ref_file);
+    ref_data = optional_v1 && !ref_file ? null : load_result(ref_file);
     log_data = {};
     log_line.apply(null, heads);
     n = 0;
 
     for(i = 0; i < tests.length; i++) {
         f = tests[i];
+        if (optional_v1)
+            f.setup();
         bench(f, f.name, ref_data, log_data);
         if (ref_data && ref_data[f.name])
             n++;
@@ -1768,7 +1924,7 @@ function main(argc, argv, g)
     else
         log_line("total", "", total[2]);
 
-    if (tests == test_list && new_ref_file)
+    if ((tests == test_list || optional_v1) && new_ref_file)
         save_result(new_ref_file, log_data);
 }
 
