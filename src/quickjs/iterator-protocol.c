@@ -84,13 +84,12 @@ JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async)
 
 /* Note: always return JS_UNDEFINED when *pdone = TRUE. */
 JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                        JSValueConst method,
-                        int argc, JSValueConst *argv, BOOL *pdone)
+                        JSValueConst method, BOOL *pdone)
 {
     JSValue obj, value, done_val;
     int done;
 
-    obj = JS_IteratorNext2(ctx, enum_obj, method, argc, argv, &done);
+    obj = JS_IteratorNext2(ctx, enum_obj, method, 0, NULL, &done);
     if (JS_IsException(obj))
         goto fail;
     if (likely(done == 0)) {
