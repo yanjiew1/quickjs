@@ -1,0 +1,27 @@
+{
+  "conformance_accepted": false,
+  "direct_helper_sha256": {
+    "guard_binding.py": "1eda1f8b9986b103a23f5566caf365b76c428ce8d168f7c808cd5e82ef86ba29",
+    "premise_trace_proof.py": "d721f1e6d1214e43a7749de7635778e6373457376f90b72a9aa7ae2592f07d84",
+    "render_practical_witness.py": "d9284b1a3e4ad3f00eb2202810e5d450b605ad49b6b1abb0f070b9e7f77572c8",
+    "validate_practical_witness.py": "d511d9faeccae2b761a7c1d039ba86aeb562fc93d4dba61ac821b160c629813d"
+  },
+  "failure_waiver": false,
+  "guard_binding_exact_four_helper_contract_preserved": true,
+  "helpers_executed": false,
+  "helpers_imported": false,
+  "hosted_accepted": false,
+  "publication_authorized": false,
+  "qualification_accepted": false,
+  "runtime_accepted": false,
+  "schema": "native-original-assertion-transitive-source-authentication-v1",
+  "semantic_adjudication_complete": false,
+  "source_only": true,
+  "source_scope_review_complete": false,
+  "tests_executed_by_preparer": false,
+  "transitive_dependencies_sha256": {
+    "selected_timezone_orchestration.py": "f19a443695b15ca28194c9c10995e682145eb351108a56036ff8f139a371308c",
+    "selected_timezone_proof.py": "61573a57fd9d2f43662f9e1b67665cf5f5239990bb88f3170ef10b006814ba80",
+    "trace_stream.py": "7f216d7f39067297ffdefa0ae30e4fc3e41b2295586ae61714c6bbb22d920b9e"
+  }
+}

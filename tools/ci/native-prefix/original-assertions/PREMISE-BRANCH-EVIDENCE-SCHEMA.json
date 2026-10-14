@@ -1,0 +1,118 @@
+{
+  "schema": "native-premise-branch-evidence-source-schema-v2",
+  "branch_proof_schema": "native-premise-branch-proof-v2",
+  "kinds": {
+    "dayperiod-selected-hB": [
+      "base",
+      "original",
+      "proof"
+    ],
+    "relatedyear-selected-U": [
+      "actual_parts",
+      "calendar",
+      "expectedType",
+      "expectedValue",
+      "part",
+      "proof",
+      "selected",
+      "selected_U_without_r",
+      "source"
+    ],
+    "lunisolar-selected-U": [
+      "actual_parts",
+      "calendar",
+      "calendar_year",
+      "day",
+      "hebrew_in_leap_year",
+      "monthCode",
+      "numeric_year_part",
+      "proof",
+      "selected",
+      "selected_U_without_r",
+      "unavailable_read_event"
+    ],
+    "temporal-numeric-hour": [
+      "actual_numeric_hour",
+      "expected_numeric_hour",
+      "midnight_input",
+      "option",
+      "original_call_event",
+      "original_options",
+      "proof",
+      "result",
+      "selected"
+    ],
+    "arEG-fallback-latn": [
+      "actual_parts",
+      "day",
+      "iso_year",
+      "month",
+      "proof",
+      "result",
+      "selected"
+    ],
+    "collator-default-only": [
+      "collation",
+      "locale",
+      "original_resolved_event",
+      "proof",
+      "resolved",
+      "selected_co",
+      "supported"
+    ],
+    "locale-default-only": [
+      "collations",
+      "proof",
+      "selected_co",
+      "supported",
+      "tag"
+    ],
+    "tz-primary-identity": [
+      "actual",
+      "epochNs",
+      "link",
+      "link_primary",
+      "operation",
+      "proof",
+      "zone",
+      "zone_primary"
+    ],
+    "unmatched-locale-hc-default": [
+      "original_options",
+      "requested",
+      "requested_cycle",
+      "selected",
+      "resolved",
+      "supported",
+      "compared",
+      "proof"
+    ],
+    "unsupported-es-selected-unit-list": [
+      "selected",
+      "original_options",
+      "actual_parts",
+      "expected_parts",
+      "elements",
+      "index",
+      "supported",
+      "joined",
+      "proof"
+    ]
+  },
+  "proof_fields": [
+    "schema",
+    "guard_site",
+    "formatter_event",
+    "parts_event",
+    "original_result_event",
+    "auxiliary_events",
+    "original_arguments",
+    "join_text"
+  ],
+  "dayperiod_numeric_optional": true,
+  "source_bound_prior_completed_native_receipts_required": true,
+  "exact_fresh_auxiliary_receipts_required": true,
+  "original_dayperiod_helper_observed_and_numeric_outputs_required": true,
+  "cached_auxiliary_substitution": false,
+  "root_execution_performed": false
+}
