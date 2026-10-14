@@ -53,7 +53,17 @@ jobs:
       - name: Run Test262
         run: |
           set -o pipefail
-          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+      - name: Report Test262 timings
+        if: always()
+        run: |
+          if test -f test262_timings.jsonl; then
+            report_status=0
+            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
+            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+            exit "$report_status"
+          fi
       - name: Preserve Test262 diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -61,6 +71,10 @@ jobs:
           name: test262-${{ matrix.compiler }}-${{ matrix.sanitizer }}
           path: |
             test262_runtime.log
+            test262_progress.jsonl
+            test262_timings.jsonl
+            test262_timings.csv
+            test262_timings.md
 
   linux-msan:
     runs-on: ubuntu-latest
@@ -85,7 +99,17 @@ jobs:
           MSAN_OPTIONS: halt_on_error=1
         run: |
           set -o pipefail
-          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+      - name: Report Test262 timings
+        if: always()
+        run: |
+          if test -f test262_timings.jsonl; then
+            report_status=0
+            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
+            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+            exit "$report_status"
+          fi
       - name: Preserve Test262 diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -93,6 +117,10 @@ jobs:
           name: test262-clang-MSan
           path: |
             test262_runtime.log
+            test262_progress.jsonl
+            test262_timings.jsonl
+            test262_timings.csv
+            test262_timings.md
 
   macos-asan:
     runs-on: macos-latest
