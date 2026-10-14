@@ -152,7 +152,7 @@ static int64_t floor_div(int64_t a, int64_t b) {
 static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv);
 
-static __exception int JS_ThisTimeValue(JSContext *ctx, double *valp, JSValueConst this_val)
+__exception int JS_ThisDateValue(JSContext *ctx, double *valp, JSValueConst this_val)
 {
     if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(this_val);
@@ -163,7 +163,7 @@ static __exception int JS_ThisTimeValue(JSContext *ctx, double *valp, JSValueCon
     return -1;
 }
 
-static JSValue JS_SetThisTimeValue(JSContext *ctx, JSValueConst this_val, double v)
+static JSValue JS_SetThisDateValue(JSContext *ctx, JSValueConst this_val, double v)
 {
     if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(this_val);
@@ -268,7 +268,7 @@ static __exception int get_date_fields(JSContext *ctx, JSValueConst obj,
 {
     double value;
 
-    if (JS_ThisTimeValue(ctx, &value, obj))
+    if (JS_ThisDateValue(ctx, &value, obj))
         return -1;
     return get_date_fields_from_time(value, fields, is_local, force);
 }
@@ -396,7 +396,7 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
 
     /* Keep the slot captured before coercion. setFullYear performs LocalTime
        after its first ToNumber; the other setters convert all arguments first. */
-    if (JS_ThisTimeValue(ctx, &d, this_val))
+    if (JS_ThisDateValue(ctx, &d, this_val))
         return JS_EXCEPTION;
     n = min_int(argc, end_field - first_field);
     converted = first_field == 0 ? 1 : max_int(n, 1);
@@ -427,7 +427,7 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
     if (res && argc > 0)
         d = set_date_fields(fields, is_local);
 
-    return JS_SetThisTimeValue(ctx, this_val, d);
+    return JS_SetThisDateValue(ctx, this_val, d);
 }
 
 /* fmt:
@@ -1150,7 +1150,7 @@ static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
     // getTimezoneOffset()
     double v;
 
-    if (JS_ThisTimeValue(ctx, &v, this_val))
+    if (JS_ThisDateValue(ctx, &v, this_val))
         return JS_EXCEPTION;
     if (isnan(v))
         return JS_NAN;
@@ -1165,7 +1165,7 @@ static JSValue js_date_getTime(JSContext *ctx, JSValueConst this_val,
     // getTime()
     double v;
 
-    if (JS_ThisTimeValue(ctx, &v, this_val))
+    if (JS_ThisDateValue(ctx, &v, this_val))
         return JS_EXCEPTION;
     return JS_NewFloat64(ctx, v);
 }
@@ -1176,9 +1176,9 @@ static JSValue js_date_setTime(JSContext *ctx, JSValueConst this_val,
     // setTime(v)
     double v;
 
-    if (JS_ThisTimeValue(ctx, &v, this_val) || JS_ToFloat64(ctx, &v, argv[0]))
+    if (JS_ThisDateValue(ctx, &v, this_val) || JS_ToFloat64(ctx, &v, argv[0]))
         return JS_EXCEPTION;
-    return JS_SetThisTimeValue(ctx, this_val, time_clip(v));
+    return JS_SetThisDateValue(ctx, this_val, time_clip(v));
 }
 
 static JSValue js_date_setYear(JSContext *ctx, JSValueConst this_val,
@@ -1198,7 +1198,7 @@ static JSValue js_date_setYear(JSContext *ctx, JSValueConst this_val,
         fields[0] = y;
         d = set_date_fields(fields, TRUE);
     }
-    return JS_SetThisTimeValue(ctx, this_val, d);
+    return JS_SetThisDateValue(ctx, this_val, d);
 }
 
 static JSValue js_date_toJSON(JSContext *ctx, JSValueConst this_val,
