@@ -142,7 +142,7 @@ JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
     arg = argv[0];
     if (!js_weakref_is_target(arg))
         return JS_ThrowTypeError(ctx, "invalid target");
-    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_WEAK_REF);
+    obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_WEAK_REF);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     JSWeakRefData *wrd = js_mallocz(ctx, sizeof(*wrd));
