@@ -149,8 +149,7 @@ typedef struct JSBoundFunction {
     JSValue argv[0];
 } JSBoundFunction;
 
-JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
-                            int class_id);
+
 
 int check_function(JSContext *ctx, JSValueConst obj);
 

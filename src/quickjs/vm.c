@@ -5443,7 +5443,7 @@ static JSValue JS_CallConstructorInternal(JSContext *ctx,
     } else {
         JSValue obj, ret;
         /* legacy constructor behavior */
-        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_OBJECT);
+        obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_OBJECT);
         if (JS_IsException(obj))
             return JS_EXCEPTION;
         ret = JS_CallInternal(ctx, func_obj, obj, new_target, argc, argv, flags);
