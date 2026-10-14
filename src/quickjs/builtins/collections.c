@@ -96,7 +96,7 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
             goto fail;
 
         for(;;) {
-            item = JS_IteratorNext(ctx, iter, next_method, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next_method, &done);
             if (JS_IsException(item))
                 goto fail;
             if (done)
@@ -663,7 +663,7 @@ JSValue js_object_groupBy(JSContext *ctx, JSValueConst this_val,
             JS_ThrowTypeError(ctx, "too many elements");
             goto iterator_close_exception;
         }
-        v = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
+        v = JS_IteratorNext(ctx, iter, next, &done);
         if (JS_IsException(v))
             goto exception;
         if (done)
@@ -1072,7 +1072,7 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
             goto exception;
         found = FALSE;
         for(;;) {
-            item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next, &done);
             if (JS_IsException(item))
                 goto exception;
             if (done) // item is JS_UNDEFINED
@@ -1171,7 +1171,7 @@ static JSValue js_set_isSupersetOf(JSContext *ctx, JSValueConst this_val,
         goto exception;
     found = TRUE;
     for(;;) {
-        item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, iter, next, &done);
         if (JS_IsException(item))
             goto exception;
         if (done) // item is JS_UNDEFINED
@@ -1224,7 +1224,7 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
             goto exception;
         t = JS_GetOpaque(newset, JS_CLASS_SET);
         for (;;) {
-            item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next, &done);
             if (JS_IsException(item))
                 goto exception;
             if (done) // item is JS_UNDEFINED
@@ -1338,7 +1338,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
         if (JS_IsException(next))
             goto exception;
         for (;;) {
-            item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
+            item = JS_IteratorNext(ctx, iter, next, &done);
             if (JS_IsException(item))
                 goto exception;
             if (done) // item is JS_UNDEFINED
@@ -1389,7 +1389,7 @@ static JSValue js_set_symmetricDifference(JSContext *ctx, JSValueConst this_val,
         goto exception;
     t = JS_GetOpaque(newset, JS_CLASS_SET);
     for (;;) {
-        item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, iter, next, &done);
         if (JS_IsException(item))
             goto exception;
         if (done) // item is JS_UNDEFINED
@@ -1457,7 +1457,7 @@ static JSValue js_set_union(JSContext *ctx, JSValueConst this_val,
         goto exception;
 
     for (;;) {
-        item = JS_IteratorNext(ctx, iter, next, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, iter, next, &done);
         if (JS_IsException(item))
             goto exception;
         if (done) // item is JS_UNDEFINED
