@@ -1138,6 +1138,12 @@ endif
 
 C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
 
+C_TESTS+=tests/test_intl_number_format_embed$(EXE)
+
+C_TESTS+=tests/test_intl_duration_format_embed$(EXE)
+
+C_TESTS+=tests/test_intl_services_api$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1147,6 +1153,9 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_services_api$(EXE)
+	$(WINE) ./tests/test_intl_duration_format_embed$(EXE)
+	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_native_locale_info$(EXE)
@@ -2172,4 +2181,13 @@ tests/test_intl_native_locale_info$(EXE): $(OBJDIR)/tests/test_intl_native_local
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_collator_segmenter$(EXE): $(OBJDIR)/tests/test_intl_collator_segmenter.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_number_format_embed$(EXE): $(OBJDIR)/tests/test_intl_number_format_embed.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_duration_format_embed$(EXE): $(OBJDIR)/tests/test_intl_duration_format_embed.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_services_api$(EXE): $(OBJDIR)/tests/test_intl_services_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

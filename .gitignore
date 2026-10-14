@@ -277,3 +277,12 @@ __pycache__/
 
 /tests/test_intl_collator_segmenter
 /tests/test_intl_collator_segmenter.exe
+
+/tests/test_intl_number_format_embed
+/tests/test_intl_number_format_embed.exe
+
+/tests/test_intl_duration_format_embed
+/tests/test_intl_duration_format_embed.exe
+
+/tests/test_intl_services_api
+/tests/test_intl_services_api.exe
