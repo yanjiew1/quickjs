@@ -465,6 +465,49 @@ const char *JS_ToCStringLen2(JSContext *ctx, size_t *plen, JSValueConst val1, BO
     return NULL;
 }
 
+/* Return an exception if the string contains a NUL character. */
+const char *JS_ToCStringNZ(JSContext *ctx, JSValueConst val)
+{
+    size_t len;
+    const char *str = JS_ToCStringLen(ctx, &len, val);
+
+    if (str && strlen(str) != len) {
+        JS_FreeCString(ctx, str);
+        JS_ThrowRangeError(ctx, "string contains embedded null character");
+        return NULL;
+    }
+    return str;
+}
+
+/* return (-1, NULL) if exception, otherwise (len, buf) */
+int JS_ToUTF32String(JSContext *ctx, uint32_t **pbuf, JSValueConst val1)
+{
+    JSValue val;
+    JSString *p;
+    uint32_t *buf;
+    int i, j, len;
+
+    val = JS_ToString(ctx, val1);
+    if (JS_IsException(val))
+        goto fail;
+    p = JS_VALUE_GET_STRING(val);
+    len = p->len;
+    /* UTF32 buffer length is len minus the number of correct surrogates pairs */
+    buf = js_malloc(ctx, sizeof(buf[0]) * max_int(len, 1));
+    if (!buf) {
+        JS_FreeValue(ctx, val);
+        goto fail;
+    }
+    for(i = j = 0; i < len;)
+        buf[j++] = string_getc(p, &i);
+    JS_FreeValue(ctx, val);
+    *pbuf = buf;
+    return j;
+ fail:
+    *pbuf = NULL;
+    return -1;
+}
+
 void JS_FreeCString(JSContext *ctx, const char *ptr)
 {
     JSString *p;
