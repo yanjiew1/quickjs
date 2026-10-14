@@ -128,7 +128,7 @@ JSValue js_finrec_constructor(JSContext *ctx, JSValueConst new_target,
     if (!JS_IsFunction(ctx, cb))
         return JS_ThrowTypeError(ctx, "argument must be a function");
 
-    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_FINALIZATION_REGISTRY);
+    obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_FINALIZATION_REGISTRY);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     frd = js_mallocz(ctx, sizeof(*frd));

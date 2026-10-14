@@ -36,7 +36,7 @@ JSValue js_boolean_constructor(JSContext *ctx, JSValueConst new_target,
     JSValue val, obj;
     val = JS_NewBool(ctx, JS_ToBool(ctx, argv[0]));
     if (!JS_IsUndefined(new_target)) {
-        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_BOOLEAN);
+        obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_BOOLEAN);
         if (!JS_IsException(obj))
             JS_SetObjectData(ctx, obj, val);
         return obj;
