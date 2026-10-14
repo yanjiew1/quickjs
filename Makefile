@@ -1136,6 +1136,8 @@ ifeq ($(CONFIG_INTL_NATIVE),y)
 C_TESTS+=tests/test_intl_native_locale_info$(EXE)
 endif
 
+C_TESTS+=tests/test_intl_collator_segmenter$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1145,6 +1147,7 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
 ifeq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_native_locale_info$(EXE)
 endif
@@ -2166,4 +2169,7 @@ endif
 endif
 
 tests/test_intl_native_locale_info$(EXE): $(OBJDIR)/tests/test_intl_native_locale_info.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_collator_segmenter$(EXE): $(OBJDIR)/tests/test_intl_collator_segmenter.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

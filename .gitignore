@@ -274,3 +274,6 @@ __pycache__/
 
 /tests/test_intl_native_locale_info
 /tests/test_intl_native_locale_info.exe
+
+/tests/test_intl_collator_segmenter
+/tests/test_intl_collator_segmenter.exe
