@@ -163,7 +163,7 @@ JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
     if (!JS_IsUndefined(new_target)) {
         JSString *p1 = JS_VALUE_GET_STRING(val);
 
-        obj = js_create_from_ctor(ctx, new_target, JS_CLASS_STRING);
+        obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_STRING);
         if (JS_IsException(obj)) {
             JS_FreeValue(ctx, val);
         } else {

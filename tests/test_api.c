@@ -3368,6 +3368,67 @@ static void test_string_conversion_public_api(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_object_construction_public_api(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSClassID class_id = 0;
+    JSClassDef def = { .class_name = "EmbeddingObject" };
+    JSValue ctor, object, proto, expected, error;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_NewClassID(&class_id);
+    assert(JS_NewClass(rt, class_id, &def) == 0);
+    expected = JS_NewObject(ctx);
+    JS_SetClassProto(ctx, class_id, JS_DupValue(ctx, expected));
+    ctor = utf16_api_eval(ctx, "(function EmbeddingConstructor() {})");
+    object = JS_CreateFromConstructor(ctx, ctor, class_id);
+    assert(JS_IsObject(object) && JS_GetClassID(object) == class_id);
+    proto = JS_GetPrototype(ctx, object);
+    JS_FreeValue(ctx, expected);
+    expected = JS_GetPropertyStr(ctx, ctor, "prototype");
+    assert(JS_StrictEq(ctx, proto, expected));
+    JS_FreeValue(ctx, proto);
+    assert(JS_OrdinaryIsInstanceOf(ctx, object, ctor) == 1);
+    check_eval(ctx,
+        "globalThis.instanceOverride = function () {}; "
+        "Object.defineProperty(instanceOverride, Symbol.hasInstance, "
+        "{ value() { return true; } });");
+    proto = utf16_api_eval(ctx, "instanceOverride");
+    assert(JS_IsInstanceOf(ctx, object, proto) == 1);
+    assert(JS_OrdinaryIsInstanceOf(ctx, object, proto) == 0);
+    JS_FreeValue(ctx, proto);
+    JS_FreeValue(ctx, object);
+
+    object = JS_CreateFromConstructor(ctx, JS_UNDEFINED, class_id);
+    proto = JS_GetPrototype(ctx, object);
+    {
+        JSValue fallback = JS_GetClassProto(ctx, class_id);
+        assert(JS_StrictEq(ctx, proto, fallback));
+        JS_FreeValue(ctx, fallback);
+    }
+    JS_FreeValue(ctx, proto);
+    JS_FreeValue(ctx, object);
+    JS_FreeValue(ctx, expected);
+    JS_FreeValue(ctx, ctor);
+
+    ctor = utf16_api_eval(ctx,
+        "new Proxy(function () {}, { get(target, name) { "
+        "if (name === 'prototype') throw 29; return Reflect.get(target, name); } })");
+    object = JS_CreateFromConstructor(ctx, ctor, class_id);
+    assert(JS_IsException(object));
+    error = JS_GetException(ctx);
+    assert(JS_StrictEq(ctx, error, JS_NewInt32(ctx, 29)));
+    JS_FreeValue(ctx, error);
+    assert(JS_OrdinaryIsInstanceOf(ctx, JS_NULL, ctor) == 0);
+    JS_FreeValue(ctx, ctor);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3385,6 +3446,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "object-construction-public-api", test_object_construction_public_api },
         { "string-conversion-public-api", test_string_conversion_public_api },
         { "conversion-public-api", test_conversion_public_api },
         { "utf16-public-api", test_utf16_public_api },
