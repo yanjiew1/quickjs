@@ -36,6 +36,10 @@
 #include "cutils.h"
 #include "quickjs-libc.h"
 
+#ifndef CONFIG_LTO_FLAG
+#define CONFIG_LTO_FLAG "-flto"
+#endif
+
 typedef struct {
     char *name;
     char *short_name;
@@ -567,7 +571,7 @@ static int output_executable(const char *out_filename, const char *cfilename,
 #endif
 #ifdef CONFIG_LTO
     if (use_lto) {
-        *arg++ = "-flto";
+        *arg++ = CONFIG_LTO_FLAG;
         lto_suffix = ".lto";
     }
 #endif
