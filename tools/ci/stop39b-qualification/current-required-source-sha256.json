@@ -842,12 +842,12 @@
   "tools/ci/native-prefix/checkout_identity.py": "b2af2f21ea9a09a98edc33575a8aea36c6ca79272112d948bfadb465057fb68c",
   "tools/ci/native-prefix/execution_threads.py": "909cd8873721c4f188d48c5adebef8e25c04d7f63e78d9e7170f9bf66cca397f",
   "tools/ci/native-prefix/helper_source_derivation.py": "7dc116770c274f8e5dd3de834dc4b0604b6c174ff464e7a49a5f1599be6d8225",
-  "tools/ci/native-prefix/reconstructed-helper-bindings.json": "f970d7ec648e986a9cf4d66576a4101b4b6a406d2fb3b39c19e79cacc9622769",
+  "tools/ci/native-prefix/reconstructed-helper-bindings.json": "50b3946986d0ac7f693ce32803cf7b8082b0f3d29430131802d49aefbd161aac",
   "tools/ci/native-prefix/reconstruction_scope.py": "05a139a414c9fb92b6387eec106494f7d02d4c3e7a7c4b9359389eb881d6bf04",
-  "tools/ci/native-prefix/run.py": "0f54af7c55db2480330872c36710f33a8bdf56c2a0ad726fb61e65e64977a530",
+  "tools/ci/native-prefix/run.py": "90c5b8da6aebdc9381564f270fe03cb102d3d9df84674d5baae2ccf53a52de33",
   "tools/ci/native-prefix/selections.json": "4e5fa6fb2526b1992a4364df2bf0297378be4203cb8ab77271d5d3bd4615f274",
-  "tools/ci/native-prefix/slow_test_selection.py": "97e1e4617896a4d12c4d2c772cbeec31cee8e18a60fe20660f32bee6e2c40971",
-  "tools/ci/native-prefix/source-path-derivation.json": "e13c4ee7e5b5cd600581969fd114a966c7cf571385fd8400a51b9844d00db0a4",
+  "tools/ci/native-prefix/slow_test_selection.py": "03f6f9f5ee596931246325e42ba52ac7b6a165fd9fdf0531df1c0233d33eadf4",
+  "tools/ci/native-prefix/source-path-derivation.json": "e2a2994a25382532f872ddc3519cf4b763918656243194c277bf303a546fb03e",
   "tools/ci/native-prefix/test_checkout_identity.py": "fdbbda1447055f1cd128e9f39e64a79fe566679a2684c39390595530e2ddbf3c",
   "tools/ci/native-prefix/test_execution_threads.py": "a31e4077084e828022a1814a574e6aa6185a07c17ca0d7891ba440816c538138",
   "tools/ci/native-prefix/test_helper_source_derivation.py": "4c1d3284754389291fec7146fe79e1d652417aafd9e0b97df1d3a4ea8e44f58b",
@@ -918,5 +918,8 @@
   "tools/timezone/primary.py": "2547d9b8cd5e1596ae0eb807fc8711dbb6957026ee25f8a79ab9a5e3c3681e2e",
   "tools/unicode_download.sh": "c920c8359c59ec85c23023c30be79850a214008bbd4383376840e147b94ba6ee",
   "tools/unicode_gen.c": "e0afedf45bca49cfd96b4a836000caaab8708716b67babe874203dc89f9b487b",
-  "tools/unicode_gen_def.h": "8430255622e6c29ff02b6d0bdf5dca17a57a2623623d50bfaf3048a2d1d10b3e"
+  "tools/unicode_gen_def.h": "8430255622e6c29ff02b6d0bdf5dca17a57a2623623d50bfaf3048a2d1d10b3e",
+  "tools/ci/native-prefix/native_correction_transition.py": "fca819dee591865d268d8b45e74f5d0f6a1ee80d955600ab4b01141f75e92644",
+  "tools/ci/native-prefix/test_native_correction_transition.py": "038966d6ab2227b947f4782c292e9106a712bc0a19a575ad47445039fbde3643",
+  "tools/ci/native-prefix/stage_hour_width.py": "a9df39e74c79da05d61e266048c5858513461d316d220b28c92fb55ae675462a"
 }

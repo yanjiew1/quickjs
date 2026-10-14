@@ -143,7 +143,8 @@ def exact_current_capture(trace, context):
 
 
 
-def semantic_row_evidence(trace, review_binding, review, helper_derivation=None):
+def semantic_row_evidence(trace, review_binding, review, helper_derivation=None,
+                          correction=None):
     """Consume fingerprints recomputed by the authenticated current projector.
 
     validated_witness is a trusted output of the pinned projector invocation,
@@ -154,6 +155,13 @@ def semantic_row_evidence(trace, review_binding, review, helper_derivation=None)
         demand(type(helper_derivation) is HelperSourceDerivation,
                'Untrusted helper source derivation')
         review = helper_derivation.derive_review(review)
+    if correction is not None:
+        from native_correction_transition import NativeCorrectionTransition
+        demand(type(correction) is NativeCorrectionTransition,
+               'Untrusted semantic correction transition')
+        review = copy.deepcopy(review)
+        review['stable_observation_expectation'] = correction.derive_observation(
+            trace['fixture'], review['stable_observation_expectation'])
     actual = trace.get('stable_observation')
     demand(isinstance(actual, dict) and set(actual) == {
         'schema', 'capture_kind', 'source_bindings', 'observations'} and
@@ -193,6 +201,8 @@ def semantic_row_evidence(trace, review_binding, review, helper_derivation=None)
         current_capture_binding=copy.deepcopy(trace['current_capture_binding']))
     if helper_derivation is not None:
         result['helper_source_derivation'] = helper_derivation.receipt()
+    if correction is not None:
+        result['semantic_correction'] = correction.receipt()
     return result
 
 
@@ -253,7 +263,8 @@ def reviewed_entry(entry, context, fixture_hashes, witness, load_bytes):
     if stable:
         scopes = context.get('native_normative_scopes')
         expected = semantic_row_evidence(trace, entry['review_binding'], review,
-            scopes.helper_derivation() if scopes is not None else None)
+            scopes.helper_derivation() if scopes is not None else None,
+            scopes.correction() if scopes is not None else None)
         demand(trace.get('current_row_evidence') == expected,
                'Derived current row evidence differs from authenticated stable review and exact current capture')
     else:

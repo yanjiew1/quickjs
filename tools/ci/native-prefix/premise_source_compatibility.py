@@ -1,8 +1,8 @@
-"""Approved current runner transport view for an immutable premise packet.
+"""Authenticate current source views for an immutable premise packet.
 
-The raw packet and review remain historical. Only the explicitly approved reconstruction source pins and
-its two effective canonical hashes change in emitted premise data. Current
-source maps stay actual; ephemeral legacy inputs never become capture evidence.
+The raw packet and review remain historical. Reconstruction and separately
+approved algorithm corrections substitute exact source pins in emitted premise
+data. Current maps stay actual; ephemeral legacy inputs never become evidence.
 """
 import copy
 import hashlib
@@ -53,13 +53,21 @@ def authenticated_receipt(files, packet, review_sha):
             digest(HERE / 'premise-source-guard-review.json'),
             'Historical premise review or packet changed')
     pins = json.loads((packet / 'PREMISE-SOURCE-PINS.json').read_bytes())
-    subjects = approval.get('subjects')
+    subjects = copy.deepcopy(approval.get('subjects'))
     dependencies = approval.get('additional_dependencies')
     require(isinstance(subjects, dict) and subjects and SUBJECT in subjects and
             isinstance(dependencies, dict), 'Missing reconstruction source derivation')
     require(subjects[SUBJECT]['historical_sha256'] == approval['historical_sha256'] and
             subjects[SUBJECT]['current_sha256'] == approval['current_sha256'],
             'Runner compatibility summary differs from exact subject map')
+    from native_correction_transition import source_approval
+    correction = source_approval(files, root)
+    if correction is not None:
+        subject = correction['subject']
+        require(subject['path'] not in subjects,
+                'Algorithm correction overlaps source reconstruction')
+        subjects[subject['path']] = {key: subject[key] for key in
+                                   ('historical_sha256', 'current_sha256')}
     require(all(name in pins and pins[name] == row['historical_sha256'] and
                 files.get(name) == row['current_sha256'] == digest(root / name)
                 for name, row in subjects.items()),
@@ -72,13 +80,16 @@ def authenticated_receipt(files, packet, review_sha):
     sources = {name: digest(root / name) for name in (APPROVAL, ADAPTER, LAUNCHER, THREADS)}
     require(all(files.get(name) == pin for name, pin in sources.items()),
             'Current compatibility adapter is outside authenticated sources')
-    return dict(schema='native-premise-reconstructed-source-compatibility-receipt-v2',
+    receipt = dict(schema='native-premise-reconstructed-source-compatibility-receipt-v2',
         source_tree_sha256=source_map_digest(files), source_bindings=sources,
         historical_packet_seal_sha256=approval['packet_seal_sha256'],
         historical_source_review_sha256=review_sha, subject=SUBJECT,
         historical_sha256=approval['historical_sha256'], current_sha256=approval['current_sha256'],
         subjects=subjects, additional_dependencies=dependencies,
         conformance_accepted=False, semantic_adjudication_complete=False)
+    if correction is not None:
+        receipt['algorithm_correction'] = correction
+    return receipt
 
 
 def validate_bindings(bindings, packet):
@@ -144,7 +155,7 @@ def install(packet):
 
 
 def stable_effective_config(config, bindings):
-    """Inverse-normalize only an authenticated reconstruction source derivation."""
+    """Normalize authenticated source identities without changing semantic events."""
     if not any(site.get('premise_guard') for site in config.get('sites', {}).values()):
         return config
     # Existing mocked/historical callers without the subject retain their view.

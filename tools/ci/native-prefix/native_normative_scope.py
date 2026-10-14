@@ -98,7 +98,7 @@ class BoundNormativeScopes:
 
     def __init__(self, documents, roles, load_bytes, source_map, receipt,
                  transition=None, baseline_context=None, helper_derivation=None,
-                 witness_derivation=None):
+                 witness_derivation=None, correction=None):
         self._documents = copy.deepcopy(documents)
         self._roles = copy.deepcopy(roles)
         self._load_bytes = load_bytes
@@ -108,6 +108,7 @@ class BoundNormativeScopes:
         self._baseline_context = copy.deepcopy(baseline_context)
         self._helper_derivation = helper_derivation
         self._witness_derivation = copy.deepcopy(witness_derivation)
+        self._correction = correction
 
     def document(self, binding, role):
         check_binding(binding)
@@ -136,6 +137,8 @@ class BoundNormativeScopes:
         if self._transition is not None:
             document = self._transition.derive_document(
                 document, role, self._baseline_context)
+        if role == 'diagnostic-policy' and self._correction is not None:
+            document = self._correction.derive_policy(document)
         document['production_source_map_sha256'] = self._source_map
         return document
 
@@ -150,6 +153,9 @@ class BoundNormativeScopes:
 
     def baseline_transition(self):
         return self._transition
+
+    def correction(self):
+        return self._correction
 
     def receipt(self):
         return copy.deepcopy(self._receipt)
@@ -201,6 +207,8 @@ def bind_static_scopes(scope_binding, *, context, sources, fixture_hashes,
             'Missing exact complete current original assertion capture')
     from helper_source_derivation import authenticate_helper_derivation
     helper_derivation = authenticate_helper_derivation(sources, current_map, load_bytes)
+    from native_correction_transition import authenticate_correction
+    correction = authenticate_correction(sources, load_bytes, fixture_hashes)
     transition = authenticate_transition(sources, load_bytes, context)
     review_context = dict(context)
     if transition is not None:
@@ -253,7 +261,8 @@ def bind_static_scopes(scope_binding, *, context, sources, fixture_hashes,
         historical_capture(historical[path], capture['capture_kind'])
         review = dict(stable_observation_expectation=expectations[path],
                       current_capture_binding=historical[path])
-        evidence[path] = semantic_row_evidence(trace, scope_binding, review, helper_derivation)
+        evidence[path] = semantic_row_evidence(trace, scope_binding, review,
+                                             helper_derivation, correction)
         script_count += capture['capture_kind'] == 'script-variants'
         rtf_count += capture['capture_kind'] == 'rtf-variant-neutral'
     require((script_count, rtf_count) == (105, 13),
@@ -357,10 +366,14 @@ def bind_static_scopes(scope_binding, *, context, sources, fixture_hashes,
         receipt['helper_source_derivation'] = helper_derivation.receipt()
     if transition is not None:
         receipt['core_baseline_transition'] = transition.receipt()
+    if correction is not None:
+        receipt['semantic_correction'] = correction.receipt()
+        receipt['basis'] = ('Exact historical static semantics plus separately reviewed '
+                            'correction deltas and current identity derivation')
     return BoundNormativeScopes(documents, roles, load_bytes, current_map, receipt,
         transition, {name: context[name] for name in
             ('baseline_sha256', 'production_source_map_sha256')}, helper_derivation,
-        witness_derivation)
+        witness_derivation, correction)
 
 
 def current_mandatory_review(binding, context, load_bytes):

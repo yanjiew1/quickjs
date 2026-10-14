@@ -8,7 +8,7 @@
   "conformance_accepted": false,
   "current_compatibility_sources": {
     "tools/ci/native-prefix/premise-runner-compatibility.json": "92e1a766f21322e13a770dccd17ec8124fed5b7075d7d05b8c0f89c3a254bd09",
-    "tools/ci/native-prefix/premise_source_compatibility.py": "c5d23695fc6bafe410698c958a09670e3116de01f7c480f4bb7b6cf39ef13e49",
+    "tools/ci/native-prefix/premise_source_compatibility.py": "55f3ed44cdea2213bdb0ea3ea093a255e60e6427760765ea92e872173a0e907d",
     "tools/ci/native-prefix/launch_current_premise_witness.py": "0a5f35af0f3e735e9bf5f796b22152da001a99b2fca055c19f5b0a19e6e5d9a0",
     "tools/ci/native-prefix/execution_threads.py": "909cd8873721c4f188d48c5adebef8e25c04d7f63e78d9e7170f9bf66cca397f"
   },
@@ -26,5 +26,5 @@
   "status": "SOURCE_READY_GUARD_SCOPE_AND_NORMATIVE_REVIEW_REQUIRED",
   "validator": "tools/ci/native-prefix/project_original_assertions.py",
   "validator_contract": "Exact authenticated raw current checkout identity; independently rerender210 original script variants; full per-variant trace+guard checks; fresh whole-object RTF1008 observations; complete original118 scope. Normative per-file qualification remains separate.",
-  "validator_sha256": "094bea58549045c97ac25c21cb855a7c7910ce2511a61259018f8b44d28ce69b"
+  "validator_sha256": "0464a5d4aa896efbfdafa7531cce7cad9a35efd319c10ae46e5e1e79bd855afd"
 }

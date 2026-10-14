@@ -103,6 +103,9 @@
     "tools/ci/native-prefix/test_run_current_identity.py",
     "tools/ci/native-prefix/test_slow_test_selection.py",
     "tools/ci/report_test262_timings.py",
-    "tools/ci/stop39b-qualification/qualify.py"
+    "tools/ci/stop39b-qualification/qualify.py",
+    "tools/ci/native-prefix/native_correction_transition.py",
+    "tools/ci/native-prefix/test_native_correction_transition.py",
+    "tools/ci/native-prefix/stage_hour_width.py"
   ]
 }

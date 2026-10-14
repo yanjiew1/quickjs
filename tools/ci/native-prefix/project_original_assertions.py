@@ -217,12 +217,13 @@ def validated_semantic_observation(source, config, bindings, expected_trace_sha2
                 stable_configuration_sha256=stable_digest(stable_config))
 
 
-def current_row_evidence(trace, review_binding, load_bytes, helper_derivation=None):
+def current_row_evidence(trace, review_binding, load_bytes, helper_derivation=None,
+                         correction=None):
     """Derive a row receipt; never rewrite or manufacture an independent review."""
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from native_profile_gate import bound_json, semantic_row_evidence
     review = bound_json(review_binding, load_bytes)
-    return semantic_row_evidence(trace, review_binding, review, helper_derivation)
+    return semantic_row_evidence(trace, review_binding, review, helper_derivation, correction)
 
 
 def project_variants(variants, raw_identity):
@@ -297,6 +298,12 @@ def main():
     from helper_source_derivation import authenticate_helper_derivation
     helper_derivation = authenticate_helper_derivation(
         bindings.get('current_source_files', {}), bindings['source_tree_sha256'], review_bytes)
+    from native_correction_transition import pending_capture
+    correction_pending = pending_capture(bindings)
+    correction = None
+    if not correction_pending:
+        from native_correction_transition import authenticate_correction
+        correction = authenticate_correction(bindings.get('current_source_files', {}), review_bytes)
     parsed = read_json(args.raw_full_run)
     root = args.capture.resolve()
     packet = Path(config['packet_root']).resolve()
@@ -442,8 +449,9 @@ def main():
             source_bindings=dict(source_bindings),
             observations=(semantic_observations[path] if path in summaries else
                           dict(whole_parsed_rtf_sha256=complete_rtf_sha256)))
-        if path in review_bindings:
-            trace['current_row_evidence'] = current_row_evidence(trace, review_bindings[path], review_bytes, helper_derivation)
+        if path in review_bindings and not correction_pending:
+            trace['current_row_evidence'] = current_row_evidence(trace, review_bindings[path],
+                review_bytes, helper_derivation, correction)
         projected[path] = trace
     require(set(projected) == selected, 'Incomplete original scope projection')
     result = dict(schema='native-original-assertion-capture-summary-v2',
@@ -454,6 +462,8 @@ def main():
         profile_sha256=bindings['profile_sha256'], packet_seal_sha256=bindings['packet_seal_sha256'],
         raw_full_evidence_sha256=digest(args.raw_full_run.read_bytes()),
         semantic_adjudication_complete=False, conformance_accepted=False, failure_waiver=False)
+    if correction_pending:
+        result['correction_observation_review_pending'] = True
     args.summary.write_text(json.dumps(result, indent=2) + '\n')
 
 

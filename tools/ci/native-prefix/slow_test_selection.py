@@ -48,6 +48,16 @@ class SlowTestSelection:
                         failed_source_count=123, fixed=0, new=109, skipped=856)
         if self._baseline is not None:
             expected['failed_source_count'] -= self._baseline.receipt()['removed_source_count']
+        correction = context.get('native_correction_transition')
+        if correction is not None:
+            from native_correction_transition import NativeCorrectionTransition
+            require(type(correction) is NativeCorrectionTransition,
+                    'Untrusted semantic correction in slow selection')
+            correction.check_context(context)
+            require(policy.get('semantic_correction') == correction.receipt(),
+                    'Slow selection policy uses a different semantic correction')
+            expected['failed_source_count'] -= correction.removed_source_count()
+            expected['new'] -= correction.removed_source_count()
         require(policy.get('postfix_raw_counters') == expected and
                 policy.get('postfix_raw_returncode') == 1 and
                 policy.get('no_new_skips_exclusions_expected_errors') is True and

@@ -1073,6 +1073,19 @@ def exact_profile_gate():
     context['native_normative_scopes'] = scopes
     if scopes.baseline_transition() is not None:
         context['core_baseline_transition'] = scopes.baseline_transition()
+    if scopes.correction() is not None:
+        context['native_correction_transition'] = scopes.correction()
+        from stage_hour_width import validate_full
+        staging = json.loads((HERE / 'hour-width-staging.json').read_bytes())
+        correction = scopes.correction().receipt()
+        require(staging['repaired_sources'] == correction['repaired_sources'] and
+                staging['implementation_source'] == correction['subject'],
+                'Raw correction selection differs from semantic review')
+        counts = validate_full((OUT / 'test262.stdout.log').read_text(),
+            (OUT / 'test262.stderr.log').read_text(), parsed['raw_runner_returncode'],
+            [json.loads(line) for line in (OUT / 'test262-timings.jsonl').read_text().splitlines()],
+            json.loads((HERE / 'native-profile-diagnostic-policy.json').read_text()), staging)
+        require(counts == parsed['counters'], 'Raw correction parser views disagree')
     policy = scopes.document_for('diagnostic-policy')
     selection_transition = authenticate_slow_selection(
         sources, evidence_bytes, context,
