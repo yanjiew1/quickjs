@@ -170,8 +170,8 @@ void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
 int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
                              JSAtom name, int flags, JSValueConst home_obj);
 JSValue js_get_function_name(JSContext *ctx, JSAtom name);
-void js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
-                                JSAtom name, int len);
+int js_function_set_properties(JSContext *ctx, JSValueConst func_obj,
+                               JSAtom name, int len);
 
 void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
