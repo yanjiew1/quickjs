@@ -86,7 +86,7 @@ static JSValue js_array_buffer_constructor4(JSContext *ctx,
         return JS_ThrowTypeError(ctx, "misaligned SharedArrayBuffer backing storage");
     }
 #endif
-    obj = js_create_from_ctor(ctx, new_target, class_id);
+    obj = JS_CreateFromConstructor(ctx, new_target, class_id);
     if (JS_IsException(obj))
         return obj;
     /* XXX: we are currently limited to 2 GB */

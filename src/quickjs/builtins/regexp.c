@@ -260,7 +260,7 @@ static JSValue js_regexp_constructor(JSContext *ctx, JSValueConst new_target,
         pattern = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING, re->pattern));
         if (JS_IsUndefined(flags1)) {
             bc = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING, re->bytecode));
-            obj = js_create_from_ctor(ctx, new_target, JS_CLASS_REGEXP);
+            obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_REGEXP);
             if (JS_IsException(obj))
                 goto fail;
             goto no_compilation;
@@ -293,7 +293,7 @@ static JSValue js_regexp_constructor(JSContext *ctx, JSValueConst new_target,
                 goto fail;
         }
     }
-    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_REGEXP);
+    obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_REGEXP);
     if (JS_IsException(obj))
         goto fail;
     bc = js_compile_regexp(ctx, pattern, flags);

@@ -434,8 +434,8 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
     return realm;
 }
 
-JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
-                            int class_id)
+JSValue JS_CreateFromConstructor(JSContext *ctx, JSValueConst ctor,
+                                 int class_id)
 {
     JSValue proto, obj;
     JSContext *realm;
