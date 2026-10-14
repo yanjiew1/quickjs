@@ -53,7 +53,7 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
 
     is_set = magic & MAGIC_SET;
     is_weak = ((magic & MAGIC_WEAK) != 0);
-    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_MAP + magic);
+    obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_MAP + magic);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     s = js_mallocz(ctx, sizeof(*s));

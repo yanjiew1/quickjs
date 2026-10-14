@@ -398,7 +398,7 @@ static JSValue js_promise_constructor(JSContext *ctx, JSValueConst new_target,
     executor = argv[0];
     if (check_function(ctx, executor))
         return JS_EXCEPTION;
-    obj = js_create_from_ctor(ctx, new_target, JS_CLASS_PROMISE);
+    obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_PROMISE);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
     s = js_mallocz(ctx, sizeof(*s));
