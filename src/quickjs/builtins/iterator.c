@@ -145,7 +145,7 @@ JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
     if (js_same_value(ctx, new_target, ctx->iterator_ctor)) {
         return JS_ThrowTypeError(ctx, "abstract class not constructable");
     }
-    return js_create_from_ctor(ctx, new_target, JS_CLASS_ITERATOR);
+    return JS_CreateFromConstructor(ctx, new_target, JS_CLASS_ITERATOR);
 }
 
 // note: deliberately doesn't use space-saving bit fields for
