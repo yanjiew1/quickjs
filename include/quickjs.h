@@ -1272,6 +1272,23 @@ int JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj,
                                const JSCFunctionListEntry *tab,
                                int len);
 
+#define JS_NEW_CTOR_NO_GLOBAL   (1 << 0) /* do not create a global binding */
+#define JS_NEW_CTOR_PROTO_CLASS (1 << 1) /* use class_id for the prototype */
+#define JS_NEW_CTOR_PROTO_EXIST (1 << 2) /* use the existing class prototype */
+#define JS_NEW_CTOR_READONLY    (1 << 3) /* read-only constructor property */
+
+/* class_id must be registered, or -1 without class-specific prototype flags.
+   Inputs are borrowed and the returned constructor is owned. Field tables
+   follow JS_SetPropertyFunctionList's lifetime rules. A successful creation
+   replaces the class prototype and publishes the global after link setup.
+   Properties already defined on a reused prototype are not rolled back. */
+JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
+                           JSCFunction *func, int length, JSCFunctionEnum cproto,
+                           int magic, JSValueConst parent_ctor,
+                           const JSCFunctionListEntry *ctor_fields, int n_ctor_fields,
+                           const JSCFunctionListEntry *proto_fields, int n_proto_fields,
+                           int flags);
+
 /* Iterator protocol. Inputs are borrowed; returned values are owned.
    JS_IteratorNext returns undefined when done. With an exception pending,
    JS_IteratorClose preserves it and returns -1. */

@@ -31,7 +31,6 @@
 /* Inspect the actual pool owner without adding an engine test API. */
 #include "../src/quickjs/allocator.c"
 #include "../src/quickjs/internal/runtime.h"
-#include "../src/quickjs/internal/function-list.h"
 #include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
