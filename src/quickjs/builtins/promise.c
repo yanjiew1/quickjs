@@ -267,7 +267,10 @@ static int js_create_resolving_functions(JSContext *ctx,
         s->presolved = sr;
         s->promise = JS_DupValue(ctx, promise);
         JS_SetOpaque(obj, s);
-        js_function_set_properties(ctx, obj, JS_ATOM_empty_string, 1);
+        if (js_function_set_properties(ctx, obj, JS_ATOM_empty_string, 1) < 0) {
+            JS_FreeValue(ctx, obj);
+            goto fail;
+        }
         resolving_funcs[i] = obj;
     }
     js_promise_resolve_function_free_resolved(ctx->rt, sr);

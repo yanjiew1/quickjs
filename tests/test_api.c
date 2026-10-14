@@ -3599,6 +3599,178 @@ static void test_callback_flags_public_api(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue property_list_api_method(JSContext *ctx, JSValueConst this_val,
+                                        int argc, JSValueConst *argv)
+{
+    return JS_NewInt32(ctx, 41);
+}
+
+static void test_property_list_definitions(void)
+{
+    static const JSCFunctionListEntry fields[] = {
+        JS_CFUNC_DEF("method", 0, property_list_api_method),
+        JS_PROP_STRING_DEF("label", "new", JS_PROP_CONFIGURABLE),
+        JS_PROP_INT32_DEF("number", 42, JS_PROP_CONFIGURABLE),
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue obj, method, value, error;
+    int i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    obj = JS_NewObject(ctx);
+    for (i = 0; i < 2; i++) {
+        assert(JS_SetPropertyFunctionList(ctx, obj, fields, countof(fields)) == 0);
+        method = JS_GetPropertyStr(ctx, obj, "method");
+        value = JS_Call(ctx, method, obj, 0, NULL);
+        assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, 41)));
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, method);
+    }
+    JS_FreeValue(ctx, obj);
+    obj = utf16_api_eval(ctx, "Object.preventExtensions({})");
+    assert(JS_SetPropertyFunctionList(ctx, obj, fields, 1) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, obj);
+    obj = utf16_api_eval(ctx, "Object.freeze({ number: 1 })");
+    assert(JS_SetPropertyFunctionList(ctx, obj, fields + 2, 1) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, obj);
+    obj = utf16_api_eval(ctx,
+        "new Proxy({}, { defineProperty() { throw 43; } })");
+    assert(JS_SetPropertyFunctionList(ctx, obj, fields, 1) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_StrictEq(ctx, error, JS_NewInt32(ctx, 43)));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, obj);
+    assert(JS_SetPropertyFunctionList(ctx, JS_NULL, fields, 1) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    {
+        static const JSCFunctionListEntry index_field[] = {
+            JS_CFUNC_DEF("0", 0, property_list_api_method),
+        };
+        static const JSCFunctionListEntry length_field[] = {
+            JS_PROP_INT32_DEF("length", 0, JS_PROP_WRITABLE),
+        };
+        obj = JS_NewArray(ctx);
+        assert(JS_SetPropertyFunctionList(ctx, obj, index_field, 1) == 0);
+        value = JS_GetPropertyStr(ctx, obj, "length");
+        assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, 1)));
+        JS_FreeValue(ctx, value);
+        assert(JS_SetPropertyFunctionList(ctx, obj, length_field, 1) == 0);
+        value = JS_GetPropertyStr(ctx, obj, "0");
+        assert(JS_IsUndefined(value));
+        JS_FreeValue(ctx, value);
+        assert(JS_SetPropertyFunctionList(ctx, obj, fields, 1) == 0);
+        JS_FreeValue(ctx, obj);
+        obj = utf16_api_eval(ctx, "new String('a')");
+        assert(JS_SetPropertyFunctionList(ctx, obj, index_field, 1) < 0);
+        error = JS_GetException(ctx);
+        assert(JS_IsError(ctx, error));
+        JS_FreeValue(ctx, error);
+        value = JS_GetPropertyStr(ctx, obj, "0");
+        method = JS_NewString(ctx, "a");
+        assert(JS_StrictEq(ctx, value, method));
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, method);
+        assert(JS_SetPropertyFunctionList(ctx, obj, fields, 1) == 0);
+        JS_FreeValue(ctx, obj);
+    }
+    {
+        static const JSCFunctionListEntry global_field[] = {
+            JS_CFUNC_DEF("installedApiGlobal", 0, property_list_api_method),
+        };
+        check_eval(ctx, "globalThis.readApiGlobal = () => installedApiGlobal(); "
+                        "try { readApiGlobal(); } catch (e) {}; true;");
+        obj = JS_GetGlobalObject(ctx);
+        assert(JS_SetPropertyFunctionList(ctx, obj, global_field, 1) == 0);
+        value = utf16_api_eval(ctx, "readApiGlobal()");
+        assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, 41)));
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, obj);
+    }
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_function_property_oom(void)
+{
+    int operation;
+
+    for (operation = 0; operation < 3; operation++) {
+        size_t failure_at;
+        int failures = 0;
+
+        for (failure_at = 1; failure_at < 64; failure_at++) {
+            AllocationProbe probe = { 0 };
+            JSRuntime *rt = JS_NewRuntime2(&probe_functions, &probe);
+            JSContext *ctx;
+            JSValue functions[128], error, compiled = JS_UNDEFINED, expected;
+            size_t count = 0, i;
+
+            assert(rt);
+            ctx = JS_NewContext(rt);
+            assert(ctx);
+            if (operation != 0) {
+                const char *source = operation == 1 ?
+                    "(function named() {})" : "(function* named() {})";
+                compiled = JS_Eval(ctx, source, strlen(source), "function-oom.js",
+                                   JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+                assert(!JS_IsException(compiled));
+            }
+            expected = JS_NewString(ctx, operation == 0 ? "123" : "named");
+            assert(!JS_IsException(expected));
+            probe.attempts = 0;
+            probe.failure_at = failure_at;
+            /* Retain enough functions to exhaust pooled blocks too. */
+            for (i = 0; i < countof(functions); i++) {
+                JSValue function;
+                if (operation == 0)
+                    function = JS_NewCFunction(ctx, property_list_api_method, "123", 0);
+                else
+                    function = JS_EvalFunction(ctx, JS_DupValue(ctx, compiled));
+                if (JS_IsException(function)) {
+                    assert(probe.failed && JS_HasException(ctx));
+                    failures++;
+                    break;
+                }
+                assert(!JS_HasException(ctx));
+                functions[count++] = function;
+                if (probe.failed)
+                    break;
+            }
+            probe.failure_at = 0;
+            if (JS_HasException(ctx)) {
+                error = JS_GetException(ctx);
+                JS_FreeValue(ctx, error);
+            }
+            for (i = 0; i < count; i++) {
+                JSValue name = JS_GetPropertyStr(ctx, functions[i], "name");
+                assert(JS_StrictEq(ctx, name, expected));
+                JS_FreeValue(ctx, name);
+                JS_FreeValue(ctx, functions[i]);
+            }
+            JS_FreeValue(ctx, expected);
+            JS_FreeValue(ctx, compiled);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(probe.live == 0);
+            if (!probe.failed)
+                break;
+        }
+        assert(failures > 0);
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3616,6 +3788,8 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "function-property-oom", test_function_property_oom },
+        { "property-list-definitions", test_property_list_definitions },
         { "callback-flags-public-api", test_callback_flags_public_api },
         { "iterator-public-api", test_iterator_public_api },
         { "date-value-public-api", test_date_value_public_api },

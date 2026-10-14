@@ -30,6 +30,7 @@
 #include "internal/function.h"
 #include "internal/atom.h"
 #include "internal/function-list.h"
+#include "internal/error.h"
 
 static JSAtom find_atom(JSContext *ctx, const char *name)
 {
@@ -97,6 +98,38 @@ JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
     return val;
 }
 
+/* Keep fresh ordinary properties lazy; replacements and exotic objects
+   must use the normal property definition checks. */
+static int js_define_function_list_lazy(JSContext *ctx, JSValueConst obj,
+                                       JSAtom atom,
+                                       const JSCFunctionListEntry *e,
+                                       int prop_flags)
+{
+    JSObject *p = JS_VALUE_GET_OBJ(obj);
+    JSProperty *pr;
+    JSValue val;
+    uint32_t index;
+    BOOL ordinary_key;
+
+    ordinary_key = !p->is_exotic ||
+        ((p->class_id == JS_CLASS_ARRAY || p->class_id == JS_CLASS_STRING) &&
+         atom != JS_ATOM_length && !JS_AtomIsArrayIndex(ctx, &index, atom));
+    if (ordinary_key && p->class_id == JS_CLASS_GLOBAL_OBJECT) {
+        JSValue hidden = p->u.global_object.uninitialized_vars;
+        if (JS_IsObject(hidden) &&
+            find_own_property(&pr, JS_VALUE_GET_OBJ(hidden), atom))
+            ordinary_key = FALSE;
+    }
+    if (ordinary_key && p->extensible && !find_own_property(&pr, p, atom))
+        return JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
+                                         (void *)e, prop_flags) < 0 ? -1 : 0;
+    val = JS_InstantiateFunctionListItem2(ctx, p, atom, (void *)e);
+    if (JS_IsException(val))
+        return -1;
+    return JS_DefinePropertyValue(ctx, obj, atom, val,
+                                  prop_flags | JS_PROP_THROW) < 0 ? -1 : 0;
+}
+
 static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
                                           JSAtom atom,
                                           const JSCFunctionListEntry *e)
@@ -141,10 +174,7 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
             /* Function.prototype[Symbol.hasInstance] is not writable nor configurable */
             prop_flags = 0;
         }
-        if (JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
-                                      (void *)e, prop_flags) < 0)
-            return -1;
-        return 0;
+        return js_define_function_list_lazy(ctx, obj, atom, e, prop_flags);
     case JS_DEF_CGETSET: /* XXX: use autoinit again ? */
     case JS_DEF_CGETSET_MAGIC:
         {
@@ -171,7 +201,8 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
                     return -1;
                 }
             }
-            if (JS_DefinePropertyGetSet(ctx, obj, atom, getter, setter, prop_flags) < 0)
+            if (JS_DefinePropertyGetSet(ctx, obj, atom, getter, setter,
+                                        prop_flags | JS_PROP_THROW) < 0)
                 return -1;
             return 0;
         }
@@ -196,14 +227,12 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
         break;
     case JS_DEF_PROP_STRING:
     case JS_DEF_OBJECT:
-        if (JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
-                                      (void *)e, prop_flags) < 0)
-            return -1;
-        return 0;
+        return js_define_function_list_lazy(ctx, obj, atom, e, prop_flags);
     default:
         abort();
     }
-    if (JS_DefinePropertyValue(ctx, obj, atom, val, prop_flags) < 0)
+    if (JS_DefinePropertyValue(ctx, obj, atom, val,
+                                prop_flags | JS_PROP_THROW) < 0)
         return -1;
     return 0;
 }
@@ -213,6 +242,10 @@ int JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj,
 {
     int i, ret;
 
+    if (!JS_IsObject(obj)) {
+        JS_ThrowTypeErrorNotAnObject(ctx);
+        return -1;
+    }
     for (i = 0; i < len; i++) {
         const JSCFunctionListEntry *e = &tab[i];
         JSAtom atom = find_atom(ctx, e->name);
