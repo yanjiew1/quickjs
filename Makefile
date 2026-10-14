@@ -765,7 +765,11 @@ test-regexp: regexp_test$(EXE)
 test-run-test262: run-test262$(EXE)
 	sh tests/test_run_test262.sh "$(WINE)" "./run-test262$(EXE)"
 
-test: test-c test-regexp test-build-dependencies test-run-test262
+.PHONY: test-test262-timings
+test-test262-timings:
+	$(PYTHON) tests/test_test262_timings.py
+
+test: test-c test-regexp test-build-dependencies test-run-test262 test-test262-timings
 
 .PHONY: test-qjsc-json-preloads
 test-qjsc-json-preloads: tests/test_qjsc_json_preload$(EXE)
@@ -849,6 +853,8 @@ endif
 
 # Use every available processor; callers can choose a smaller worker count.
 TEST262_THREADS ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+TEST262_TIMING_LOG ?=
+TEST262_TIMING_OPTION = $(if $(TEST262_TIMING_LOG),--timing-log "$(TEST262_TIMING_LOG)")
 
 ifeq ($(wildcard test262o/tests.txt),)
 test2o test2o-update:
@@ -856,10 +862,10 @@ test2o test2o-update:
 else
 # ES5 tests (obsolete)
 test2o: run-test262
-	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262o.conf
+	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c test262o.conf
 
 test2o-update: run-test262
-	./run-test262 -T $(TEST262_THREADS) -t -u -c test262o.conf
+	./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -u -c test262o.conf
 endif
 
 ifeq ($(wildcard test262/features.txt),)
@@ -868,16 +874,16 @@ test2 test2-update test2-default test2-check:
 else
 # Test262 tests
 test2-default: run-test262
-	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262.conf
+	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c test262.conf
 
 test2: run-test262
-	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262.conf -a
+	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c test262.conf -a
 
 test2-update: run-test262
-	./run-test262 -T $(TEST262_THREADS) -t -u -c test262.conf -a
+	./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -u -c test262.conf -a
 
 test2-check: run-test262
-	time ./run-test262 -T $(TEST262_THREADS) -t -m -c test262.conf -E -a
+	time ./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -m -c test262.conf -E -a
 endif
 
 testall: all test microbench test2o test2
