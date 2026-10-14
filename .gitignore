@@ -268,3 +268,6 @@ __pycache__/
 
 /tests/test_intl_native_date_frontend_oom
 /tests/test_intl_native_date_frontend_oom.exe
+
+/tests/test_intl_native_compiled_cache
+/tests/test_intl_native_compiled_cache.exe

@@ -2107,3 +2107,53 @@ tests/test_intl_native_date_frontend_oom$(EXE): $(OBJDIR)/tests/test_intl_native
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 $(OBJDIR)/tests/test_intl_native_date_bank_data.o: CFLAGS_OPT+=-std=c11
+
+
+# Counted provider/data copies are confined to seven fresh test processes.
+ifeq ($(CONFIG_INTL),y)
+ifeq ($(CONFIG_INTL_NATIVE),y)
+INTL_CACHE_TEST=tests/test_intl_native_compiled_cache$(EXE)
+INTL_CACHE_TEST_OBJECT=$(OBJDIR)/tests/test_intl_native_compiled_cache.o
+INTL_CACHE_TEST_PROVIDER=$(OBJDIR)/src/intl/provider-native.cache-test.o
+INTL_CACHE_TEST_NUMBER=$(OBJDIR)/src/intl/number-native-data.cache-test.o
+$(INTL_CACHE_TEST_OBJECT): CFLAGS_OPT+=-std=c11
+
+# The counted provider replaces the archive's provider for this test.
+$(INTL_CACHE_TEST_PROVIDER): src/intl/provider-native.c \
+                            $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) \
+	  $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) \
+	  $(DEPFLAGS) -std=c11 \
+	  -Dqjs_intl_data_open=qjs_intl_counted_data_open -c -o $@ $<
+
+# Count only the generic adapter's whole-table scans. The real reader and
+# provider certificate continue to use their ordinary validation functions.
+$(INTL_CACHE_TEST_NUMBER): src/intl/number-native-data.c \
+                          $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) \
+	  $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) \
+	  $(DEPFLAGS) \
+	  -Dqjs_intl_number_extra_data_validate=qjs_intl_counted_number_validate \
+	  -c -o $@ $<
+
+$(INTL_CACHE_TEST): $(INTL_CACHE_TEST_OBJECT) \
+                   $(INTL_CACHE_TEST_PROVIDER) $(INTL_CACHE_TEST_NUMBER) \
+                   libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: test-intl-native-compiled-cache
+test-intl-native-compiled-cache: $(INTL_CACHE_TEST)
+	$(WINE) ./$(INTL_CACHE_TEST) retry
+	$(WINE) ./$(INTL_CACHE_TEST) provider-failure
+	$(WINE) ./$(INTL_CACHE_TEST) concurrent
+	$(WINE) ./$(INTL_CACHE_TEST) mutable
+	$(WINE) ./$(INTL_CACHE_TEST) number
+	$(WINE) ./$(INTL_CACHE_TEST) duration
+	$(WINE) ./$(INTL_CACHE_TEST) number-mutable
+
+test-c: test-intl-native-compiled-cache
+test-binaries: $(INTL_CACHE_TEST)
+endif
+endif
