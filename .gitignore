@@ -271,3 +271,6 @@ __pycache__/
 
 /tests/test_intl_native_compiled_cache
 /tests/test_intl_native_compiled_cache.exe
+
+/tests/test_intl_native_locale_info
+/tests/test_intl_native_locale_info.exe
