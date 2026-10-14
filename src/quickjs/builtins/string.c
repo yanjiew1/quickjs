@@ -1391,35 +1391,6 @@ static JSValue js_string_toLowerCase(JSContext *ctx, JSValueConst this_val,
 
 #ifdef CONFIG_ALL_UNICODE
 
-/* return (-1, NULL) if exception, otherwise (len, buf) */
-static int JS_ToUTF32String(JSContext *ctx, uint32_t **pbuf, JSValueConst val1)
-{
-    JSValue val;
-    JSString *p;
-    uint32_t *buf;
-    int i, j, len;
-
-    val = JS_ToString(ctx, val1);
-    if (JS_IsException(val))
-        return -1;
-    p = JS_VALUE_GET_STRING(val);
-    len = p->len;
-    /* UTF32 buffer length is len minus the number of correct surrogates pairs */
-    buf = js_malloc(ctx, sizeof(buf[0]) * max_int(len, 1));
-    if (!buf) {
-        JS_FreeValue(ctx, val);
-        goto fail;
-    }
-    for(i = j = 0; i < len;)
-        buf[j++] = string_getc(p, &i);
-    JS_FreeValue(ctx, val);
-    *pbuf = buf;
-    return j;
- fail:
-    *pbuf = NULL;
-    return -1;
-}
-
 static JSValue JS_NewUTF32String(JSContext *ctx, const uint32_t *buf, int len)
 {
     int i;
