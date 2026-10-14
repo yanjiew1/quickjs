@@ -295,3 +295,9 @@ __pycache__/
 
 /tests/test_unicode_initialization
 /tests/test_unicode_initialization.exe
+
+/tests/test_date_zone_order
+/tests/test_date_zone_order.exe
+
+/tests/test_date_icu_core_only
+/tests/test_date_icu_core_only.exe

@@ -1152,6 +1152,14 @@ C_TESTS+=tests/test_unicode_provider$(EXE)
 
 C_TESTS+=tests/test_unicode_initialization$(EXE)
 
+ifeq ($(CONFIG_ICU),y)
+C_TESTS+=tests/test_date_zone_order$(EXE)
+endif
+
+ifeq ($(CONFIG_ICU)$(CONFIG_INTL)$(CONFIG_TEMPORAL),ynn)
+C_TESTS+=tests/test_date_icu_core_only$(EXE)
+endif
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1159,8 +1167,18 @@ ifdef CONFIG_SHARED_LIBS
 test-binaries: tests/bjson.so examples/point.so
 endif
 
+ifeq ($(CONFIG_ICU)$(CONFIG_INTL)$(CONFIG_TEMPORAL),ynn)
+test-c test-binaries: tests/run_temporal_zone_test$(EXE)
+endif
+
 .PHONY: test-c
 test-c: $(C_TESTS)
+ifeq ($(CONFIG_ICU)$(CONFIG_INTL)$(CONFIG_TEMPORAL),ynn)
+	$(WINE) ./tests/run_temporal_zone_test$(EXE) UTC ./tests/test_date_icu_core_only$(EXE)
+endif
+ifeq ($(CONFIG_ICU),y)
+	$(WINE) ./tests/test_date_zone_order$(EXE)
+endif
 	$(WINE) ./tests/test_unicode_initialization$(EXE)
 	$(WINE) ./tests/test_unicode_provider$(EXE)
 ifeq ($(CONFIG_INTL)$(CONFIG_ICU),yy)
@@ -2222,3 +2240,23 @@ $(OBJDIR)/tests/test_unicode_provider.o: $(UNICODE_PROVIDER_INPUTS)
 test-unicode-provider-exhaustive: tests/test_unicode_provider$(EXE)
 	$(WINE) ./tests/test_unicode_provider$(EXE) --exhaustive
 	$(WINE) ./tests/test_unicode_provider$(EXE) --properties
+
+
+tests/test_date_zone_order$(EXE): $(OBJDIR)/tests/test_date_zone_order.o $(OBJDIR)/src/temporal/time-zone.date-test.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_date_icu_core_only$(EXE): $(OBJDIR)/tests/test_date_icu_core_only.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+ifeq ($(CONFIG_ICU),y)
+$(OBJDIR)/src/temporal/time-zone.date-test.o: src/temporal/time-zone.c $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_CFLAGS) $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) $(DEPFLAGS) -Dqjs_temporal_system_zone=qjs_temporal_system_zone_test_backend -c -o $@ $<
+endif
+ifneq ($(filter y,$(CONFIG_ICU) $(CONFIG_TEMPORAL)),)
+.PHONY: test-date-offset-seconds
+test-date-offset-seconds: qjs$(EXE) tests/run_temporal_zone_test$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_date_second_offset.js $(if $(filter y,$(CONFIG_ICU)),--icu-date-provider)
+	$(WINE) ./tests/run_temporal_zone_test$(EXE) America/New_York ./qjs$(EXE) tests/test_date_second_offset.js --expect-new-york-seconds $(if $(filter y,$(CONFIG_ICU)),--icu-date-provider)
+test: test-date-offset-seconds
+endif
