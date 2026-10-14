@@ -236,6 +236,7 @@ static int from_epoch_day(QJSCalendarId calendar, int64_t epoch,
     int32_t low = QJS_CAL_MIN_YEAR, high = QJS_CAL_MAX_YEAR + 1, year;
     int64_t first, next, remaining;
     int count, month, days, sum = 0;
+    int month_lengths[13];
     int64_t minimum = QJS_CAL_MIN_EPOCH_DAY;
     int64_t maximum = QJS_CAL_MAX_EPOCH_DAY;
     if (!valid_calendar(calendar) || !result ||
@@ -263,15 +264,17 @@ static int from_epoch_day(QJSCalendarId calendar, int64_t epoch,
     next = year_start(calendar, year + 1);
     if (next - first < 353 || next - first > 385) return QJS_CAL_BACKEND;
     count = months_in_year(calendar, year);
+    if (count < 1 || count > 13) return QJS_CAL_BACKEND;
     for (month = 1; month <= count; month++) {
         days = month_length(calendar, year, month);
         if (days < 5 || days > 31) return QJS_CAL_BACKEND;
+        month_lengths[month - 1] = days;
         sum += days;
     }
     if (sum != next - first) return QJS_CAL_BACKEND;
     remaining = epoch - first;
     for (month = 1; month <= count; month++) {
-        days = month_length(calendar, year, month);
+        days = month_lengths[month - 1];
         if (remaining < days) break;
         remaining -= days;
     }
