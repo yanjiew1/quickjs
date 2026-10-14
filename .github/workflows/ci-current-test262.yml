@@ -1,0 +1,53 @@
+name: current-test262
+on:
+  push:
+    branches: ['codex/all-test262-corrections', 'scratch/current-test262/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        sanitizer: [normal, asan, ubsan]
+    env:
+      MAKEFLAGS: ''
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Check raw collector regressions
+        run: python3 tests/test_current_test262.py
+      - name: Build and run repository tests
+        run: |
+          args='CONFIG_TEMPORAL=y CONFIG_INTL=y CONFIG_INTL_BACKEND=native CONFIG_ICU=n CONFIG_INTL_LEGACY=y CONFIG_WERROR=y'
+          if test '${{ matrix.compiler }}' = clang; then args="$args CONFIG_CLANG=y"; fi
+          if test '${{ matrix.sanitizer }}' = asan; then args="$args CONFIG_ASAN=y"; fi
+          if test '${{ matrix.sanitizer }}' = ubsan; then args="$args CONFIG_UBSAN=y"; fi
+          make -j$(getconf _NPROCESSORS_ONLN) CC=${{ matrix.compiler }} $args all test
+      - name: Prepare pinned original Test262 sources
+        run: make test2-bootstrap TEST262_COMMIT=c8c798898646638cd0c24879f8e0374e847e7d74 TEST262_UNICODE18_OVERLAY=y
+      - name: Run current raw Test262 with an empty error baseline
+        run: python3 tools/ci/current_test262.py
+      - name: Report individual variant timings and unresolved failures
+        if: always()
+        run: |
+          if test -f ci-current-test262/timings.jsonl; then
+            python3 tools/ci/report_test262_timings.py ci-current-test262/timings.jsonl \
+              --csv ci-current-test262/timings.csv --markdown ci-current-test262/timings.md
+            cat ci-current-test262/timings.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if test -f ci-current-test262/summary.json; then
+            python3 -c 'import json; d=json.load(open("ci-current-test262/summary.json")); print("Raw runner status:", d["raw_runner_returncode"]); print(json.dumps(d["counters"], indent=2)); print("Conforming configured suite:", d["conformance_accepted"])' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-test262-${{ github.sha }}-${{ matrix.compiler }}-${{ matrix.sanitizer }}
+          path: ci-current-test262/

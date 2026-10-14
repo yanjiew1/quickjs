@@ -2,7 +2,7 @@ name: native-enabled
 on:
   pull_request:
   push:
-    branches-ignore: ['scratch/native-prefix/**', 'history/**']
+    branches-ignore: ['scratch/native-prefix/**', 'scratch/current-test262/**', 'codex/all-test262-corrections', 'history/**']
   workflow_dispatch:
 permissions:
   contents: read
