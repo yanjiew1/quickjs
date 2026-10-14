@@ -1238,6 +1238,36 @@ function test_computed_parameter_environment()
     plainArray([1, { b: 2 }]);
 }
 
+function test_class_element_line_terminators()
+{
+    for (const separator of ["\n", "\r", "\r\n", "\u2028", "\u2029", "/*\n*/"]) {
+        const Getter = eval("(class { get" + separator + "x() { return 7; } })");
+        const getter = new Getter();
+        assert(getter.x, 7);
+        assert(Object.hasOwn(getter, "get"), false);
+
+        const Setter = eval("(class { set" + separator + "x(value) { this.y = value; } })");
+        const setter = new Setter();
+        setter.x = 42;
+        assert(setter.y, 42);
+        assert(Object.hasOwn(setter, "set"), false);
+
+        const StaticName = eval("(class { static" + separator + "() { return 3; } })");
+        assert(new StaticName().static(), 3);
+        const StaticField = eval("(class { static" + separator + "= 5; })");
+        assert(new StaticField().static, 5);
+
+        for (const name of ["get", "set"]) {
+            const Generator = eval("(class { " + name + separator + "*x() { yield 9; } })");
+            const generator = new Generator();
+            assert(Object.hasOwn(generator, name), true);
+            assert(generator.x().next().value, 9);
+            assert_throws(SyntaxError, () => eval("class C { " + name + separator + "x; }"));
+            assert_throws(SyntaxError, () => eval("class C { " + name + " *x() {} }"));
+        }
+    }
+}
+
 function test_class()
 {
     var o;
@@ -1836,6 +1866,7 @@ test_delete();
 test_prototype();
 test_arguments();
 test_class();
+test_class_element_line_terminators();
 test_super_base_order();
 test_super_null_key_coercion();
 test_annex_if_function_scopes();
