@@ -1,0 +1,271 @@
+{
+  "schema": "native-hour-width-semantic-correction-v1",
+  "source_review_complete": true,
+  "semantic_review_complete": true,
+  "engine_algorithms_changed": true,
+  "failure_waiver": false,
+  "conformance_accepted": false,
+  "implementation_source": {
+    "path": "src/intl/date-native.c",
+    "historical_sha256": "bfee68cd4628d04f7bc56e2eb6d993c20112fd686a1b0215d83b57bfa8a2d718",
+    "current_sha256": "b41dd2c7906ee4614619490688c595fc75a230944abcb29838aacf5946a67ade"
+  },
+  "historical_policy_sha256": "7dafe0c0ae112372b8b6cc19bc470c7498672526f839293039f5de6426393a4c",
+  "fixture_source_map_sha256": "808f46746cde3b35db59c83dc7ecb9b91df7970bcae65572ffd4ee126547896d",
+  "repaired_sources": [
+    {
+      "path": "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "8c63421a6e351aa6d85d70719ad3fe92e377e77d9541af234cd439da384f5b07"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "300a4c8f5324c01bfd441ce8c2a260cef5117157923f3ef7e326e50de7ec2acf"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/resolved-time-zone.js",
+      "fixture_sha256": "aacd2de0d876b4eb17b700fa78383098e3b31f61cc421f07dd9953a2598bd584"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/ZonedDateTime/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "4a4328952c543510eda0001586589825d5667163e8f2854055d61a1b39e4e85b"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "f84c95848cb23974d85e8e0fce2643692a177a7bd5d6a0ad9222d34739daff77"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/resolved-time-zone.js",
+      "fixture_sha256": "2bf82e5ec9aa34b7e74302d6a5c4ed1f7f10f38bc6c2995b21d241c1a806cebf"
+    }
+  ],
+  "reviewed_observation_changes": {
+    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 314,
+          "events_sha256": "d503620fb4debfdaeb62e26282c386e46399f5fd38b0e4e1f6686510f937a23c",
+          "stable_configuration_sha256": "5b204403976f69f5e6cf3a0b5ea6d20de850e32432b97108cd4586a9b3c4aa87"
+        },
+        "strict": {
+          "event_count": 314,
+          "events_sha256": "c821d807466be59a7a43d04ad97d42e8e8b4b6806c56f2a3b666d29640facc41",
+          "stable_configuration_sha256": "3439ae163718888f53872b4b1bab6c332c1a97140d42febccef2fcc2d495e9b7"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "fbaf1f98dffbe0a26ad772200c8152c32e9b3da9af54b27a252fe4e7c64fa6bd",
+          "event_count": 314,
+          "stable_configuration_sha256": "5b204403976f69f5e6cf3a0b5ea6d20de850e32432b97108cd4586a9b3c4aa87"
+        },
+        "strict": {
+          "events_sha256": "262f4bef6b41d35f662e327ff23bc63f25b8630407a35ca9c559f82e8bcedef9",
+          "event_count": 314,
+          "stable_configuration_sha256": "3439ae163718888f53872b4b1bab6c332c1a97140d42febccef2fcc2d495e9b7"
+        }
+      },
+      "review_basis": "Only the English resolved hour width changes from numeric to 2-digit; hourcycle values and all existing German fallback assertion failures remain unchanged."
+    },
+    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 256,
+          "events_sha256": "07ebe3a75ce78bd8bf8f6e24afc64c0fe68ee70106a5eb8aa66ddfe771ae91ff",
+          "stable_configuration_sha256": "690384368dd524b7aef91b059ce336a29c502c14cc21cd4937fed6637141dedc"
+        },
+        "strict": {
+          "event_count": 256,
+          "events_sha256": "548b15085ec1648f7c7008492dd29768d4c41f783c42dda0d3dd6132151ff089",
+          "stable_configuration_sha256": "ab28addcb5d503b01a9ed625dffac2614f48722a07b72c4c98c9974106c98ad5"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "250c098e67e6aa7f64659c4183cf6730940c470500ce9293dff0ceb5d5015bdb",
+          "event_count": 256,
+          "stable_configuration_sha256": "690384368dd524b7aef91b059ce336a29c502c14cc21cd4937fed6637141dedc"
+        },
+        "strict": {
+          "events_sha256": "97bf23b0a4e1bbdc92c747327275689c83e9cbe33eb360ee8e1297a2960ec2ad",
+          "event_count": 256,
+          "stable_configuration_sha256": "ab28addcb5d503b01a9ed625dffac2614f48722a07b72c4c98c9974106c98ad5"
+        }
+      },
+      "review_basis": "Only the English resolved hour width changes from numeric to 2-digit; hourcycle values and all existing German fallback assertion failures remain unchanged."
+    },
+    "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/hourcycle.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 131,
+          "events_sha256": "04f7e67f46d0defa9ffe8d4e2f55c2b8831d13e5bc99a8a740fe92484270c3dc",
+          "stable_configuration_sha256": "a16d311781620aecf6d76136c5a86a7290ce1414d9702d05c2b7723bbf7ac056"
+        },
+        "strict": {
+          "event_count": 131,
+          "events_sha256": "4f184966aef4bda64ebd6eeea3ca97d4a389d1bbcc8fb219c191dcdace2b9598",
+          "stable_configuration_sha256": "ce38e7707be27129e6943c1044f8944ecad9f1ef6f792d70b720aae7fd22f25f"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "ccc81c08162a3b44f493eadd04a54f67101f516a398823949cc22adb0c15f01e",
+          "event_count": 131,
+          "stable_configuration_sha256": "a16d311781620aecf6d76136c5a86a7290ce1414d9702d05c2b7723bbf7ac056"
+        },
+        "strict": {
+          "events_sha256": "f5f1539603a8d2798de4e9dd13da7d25187181d29d6e8ebdf1c55f09e10cdbda",
+          "event_count": 131,
+          "stable_configuration_sha256": "ce38e7707be27129e6943c1044f8944ecad9f1ef6f792d70b720aae7fd22f25f"
+        }
+      },
+      "review_basis": "Preserve selected HH padding for hour12:false/h23; h23/h24 resolved hour becomes 2-digit, duplicated evidence follows, and both formerly failing comparisons pass. All other values and event counts are unchanged."
+    },
+    "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/hourcycle.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 131,
+          "events_sha256": "550081dcc9ceff9912543d88980e8b2ce0b51d602049f057329b6d5d5a82e650",
+          "stable_configuration_sha256": "2a8a974290107eb368c726893a2cab8b05282805f40c656539273f77bdb1e164"
+        },
+        "strict": {
+          "event_count": 131,
+          "events_sha256": "5980dd93e5108ea139605bde974385f380e780e6161797fbf65aa19c45135c92",
+          "stable_configuration_sha256": "ce911dda5a4b04056184c01484b43a47fab2ddb5c6c130406976072ac7c9fb6b"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "9ca9436e88df269233fbce20b143d562517552eb503556d515498d17d37d3591",
+          "event_count": 131,
+          "stable_configuration_sha256": "2a8a974290107eb368c726893a2cab8b05282805f40c656539273f77bdb1e164"
+        },
+        "strict": {
+          "events_sha256": "913b24d43305c236a664866d6b47d7cdb895236160134aa63a94fdac2ecacebd",
+          "event_count": 131,
+          "stable_configuration_sha256": "ce911dda5a4b04056184c01484b43a47fab2ddb5c6c130406976072ac7c9fb6b"
+        }
+      },
+      "review_basis": "Preserve selected HH padding for hour12:false/h23; h23/h24 resolved hour becomes 2-digit, duplicated evidence follows, and both formerly failing comparisons pass. All other values and event counts are unchanged."
+    },
+    "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/resolved-time-zone.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 22,
+          "events_sha256": "091619d408ce8215d48e619334bf41274add0300fcf7da39bc472bf7a60e30ac",
+          "stable_configuration_sha256": "339ae4503fc578062ac35f48eccb364f7afbcc234c10d2e4952cf9ebc2c766e7"
+        },
+        "strict": {
+          "event_count": 22,
+          "events_sha256": "b76d9f3264c0638717939431885da14d6498962b48034494f6e7e9b8f53be4c7",
+          "stable_configuration_sha256": "19b6abfaf8bee65edd88a404fa2828392f65da5fa6c2b1416297a140e82afb83"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "bd516f0f16a3e388534bb758427aa0b1bc536f5af43be95772425b062198f37d",
+          "event_count": 22,
+          "stable_configuration_sha256": "339ae4503fc578062ac35f48eccb364f7afbcc234c10d2e4952cf9ebc2c766e7"
+        },
+        "strict": {
+          "events_sha256": "f61e1e3f136466a08accccaa6b9dd2d4ca6857199b8109f25257b5e62b3e34cd",
+          "event_count": 22,
+          "stable_configuration_sha256": "19b6abfaf8bee65edd88a404fa2828392f65da5fa6c2b1416297a140e82afb83"
+        }
+      },
+      "review_basis": "Only the 0:30:45 hour and its duplicated comparison argument gain a leading zero; the failed comparison passes and its mismatch counter decreases by one. Other timezone cases and event counts remain unchanged."
+    },
+    "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/hourcycle.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 131,
+          "events_sha256": "dd01450426a7d9502caacead26539755957abb5ce2dec77dde2f442a91ff0854",
+          "stable_configuration_sha256": "b6516ba9de4f48db2335ad51036925e7468ab08834aa00600e800fa73e2be72c"
+        },
+        "strict": {
+          "event_count": 131,
+          "events_sha256": "7d96a8aca4a89f6fa7671fa1b8e99ea76e6580f5ff0f2659a8170d963a5ff8bb",
+          "stable_configuration_sha256": "c41c5a18061bdc627bd7c256328bf71a9f0d5281c27c338ad0f13adbb37bc0b6"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "46fd9152da4f24a9b0d69fc1d3457f0f3c1971bfef596daaff05acadf6439ae5",
+          "event_count": 131,
+          "stable_configuration_sha256": "b6516ba9de4f48db2335ad51036925e7468ab08834aa00600e800fa73e2be72c"
+        },
+        "strict": {
+          "events_sha256": "a1925d1c105924e57e31815c521eb8d32ecd70c27f80d06d27f1282044b7fcde",
+          "event_count": 131,
+          "stable_configuration_sha256": "c41c5a18061bdc627bd7c256328bf71a9f0d5281c27c338ad0f13adbb37bc0b6"
+        }
+      },
+      "review_basis": "Preserve selected HH padding for hour12:false/h23; h23/h24 resolved hour becomes 2-digit, duplicated evidence follows, and both formerly failing comparisons pass. All other values and event counts are unchanged."
+    },
+    "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/resolved-time-zone.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 22,
+          "events_sha256": "bf61300f06e0d3d3024186dda5e85427ed7e5e66b5c5c51b6ddd14bb19eb1f6e",
+          "stable_configuration_sha256": "f790be5639c7fb1639dba4d4e015f421551399e14562b3018b953b03c595343d"
+        },
+        "strict": {
+          "event_count": 22,
+          "events_sha256": "d8ac314e621f26c996a82042b21ca8609e2178a0a0be4033b9098fad4b3c034e",
+          "stable_configuration_sha256": "277f9b339762db93fa35fe7beb0bd5635ccb02f6d71900b916274e1fe9d99bf1"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "0d68ce60bce2e3ac27237fb8229f13797dc3d2fe561d0c3d3d25731e016e1839",
+          "event_count": 22,
+          "stable_configuration_sha256": "f790be5639c7fb1639dba4d4e015f421551399e14562b3018b953b03c595343d"
+        },
+        "strict": {
+          "events_sha256": "a8b091ee26a8862efaf4ff3d4caa9bea156f9e14ab9a76da8193fdb18f4c4a0f",
+          "event_count": 22,
+          "stable_configuration_sha256": "277f9b339762db93fa35fe7beb0bd5635ccb02f6d71900b916274e1fe9d99bf1"
+        }
+      },
+      "review_basis": "Only the 0:30:45 hour and its duplicated comparison argument gain a leading zero; the failed comparison passes and its mismatch counter decreases by one. Other timezone cases and event counts remain unchanged."
+    },
+    "test262/test/intl402/Temporal/ZonedDateTime/prototype/toLocaleString/hourcycle.js": {
+      "historical": {
+        "nonstrict": {
+          "event_count": 131,
+          "events_sha256": "7fbe37b761fabd9e514cabb908ab3ed81fd6e48bff82c73b0a7ea7da9465e3e0",
+          "stable_configuration_sha256": "dd3a0af7a06d279d8532fe8a4732ce8fd0d87f7707d8461bac119d7c429cd857"
+        },
+        "strict": {
+          "event_count": 131,
+          "events_sha256": "6ccbffd56dcc3560c9a6ff6f0cbcfdea4fcecd3658dcf9d187acf04778b6b43e",
+          "stable_configuration_sha256": "488f56611754d3711b67e4f0a194d6b7460bd204a45b14cbd0d61d2e94da9fee"
+        }
+      },
+      "corrected": {
+        "nonstrict": {
+          "events_sha256": "c06e93ea9b1cc58eaf3e5aacfdc3519f146f3a2fd8161c8955412b07086b814a",
+          "event_count": 131,
+          "stable_configuration_sha256": "dd3a0af7a06d279d8532fe8a4732ce8fd0d87f7707d8461bac119d7c429cd857"
+        },
+        "strict": {
+          "events_sha256": "5be34fc35444c42834479f81ded8f7c243e738f4e4b37355436e7de748998222",
+          "event_count": 131,
+          "stable_configuration_sha256": "488f56611754d3711b67e4f0a194d6b7460bd204a45b14cbd0d61d2e94da9fee"
+        }
+      },
+      "review_basis": "Preserve selected HH padding for hour12:false/h23; h23/h24 resolved hour becomes 2-digit, duplicated evidence follows, and both formerly failing comparisons pass. All other values and event counts are unchanged."
+    }
+  },
+  "rationale": "Preserve contextual numeric hour widths selected from CLDR, consistently with numeric minute and second widths. Basic matching and explicit two-digit requests are unchanged.",
+  "spec_revision": "730ca2b88c305862db7be2f83c510dcca33ab48c",
+  "spec_review_date": "2026-10-15",
+  "spec_urls": [
+    "https://tc39.es/ecma402/#sec-bestfitformatmatcher",
+    "https://unicode.org/reports/tr35/tr35-dates.html#Matching_Skeletons"
+  ],
+  "historical_observations_sha256": "d4027ef1d4ed8ec240a8f91390930a8ef50125d0c77e1af1a70e22f26589b864",
+  "independent_review_binding": {
+    "path": "tools/ci/native-prefix/reviews/hour-width-correction-review.md",
+    "sha256": "4f5cf94205dfde3096845085defde1bac4013fc1369d71549b92333c037cb75c"
+  }
+}

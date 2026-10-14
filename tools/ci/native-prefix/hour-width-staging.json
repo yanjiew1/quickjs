@@ -1,0 +1,47 @@
+{
+  "schema": "native-hour-width-staging-v1",
+  "status": "raw-validation-only-not-profile-qualification",
+  "historical_policy_sha256": "7dafe0c0ae112372b8b6cc19bc470c7498672526f839293039f5de6426393a4c",
+  "test262_revision": "c8c798898646638cd0c24879f8e0374e847e7d74",
+  "fixture_source_map_sha256": "808f46746cde3b35db59c83dc7ecb9b91df7970bcae65572ffd4ee126547896d",
+  "config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+  "exclusions_sha256": "cd7a2475ce7bcdf06d46d27d035e7a9b12bbcb34f64a9aff3ec475e4497c8864",
+  "executed_sources_sha256": "19b64910ab21c43563365af896029eeeece56adac32e8b9ceac419b461ba00ac",
+  "executed_source_count": 52734,
+  "excluded": 27,
+  "skipped": 856,
+  "repaired_sources": [
+    {
+      "path": "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "8c63421a6e351aa6d85d70719ad3fe92e377e77d9541af234cd439da384f5b07"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "300a4c8f5324c01bfd441ce8c2a260cef5117157923f3ef7e326e50de7ec2acf"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/resolved-time-zone.js",
+      "fixture_sha256": "aacd2de0d876b4eb17b700fa78383098e3b31f61cc421f07dd9953a2598bd584"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/ZonedDateTime/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "4a4328952c543510eda0001586589825d5667163e8f2854055d61a1b39e4e85b"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/hourcycle.js",
+      "fixture_sha256": "f84c95848cb23974d85e8e0fce2643692a177a7bd5d6a0ad9222d34739daff77"
+    },
+    {
+      "path": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/resolved-time-zone.js",
+      "fixture_sha256": "2bf82e5ec9aa34b7e74302d6a5c4ed1f7f10f38bc6c2995b21d241c1a806cebf"
+    }
+  ],
+  "implementation_source": {
+    "path": "src/intl/date-native.c",
+    "historical_sha256": "bfee68cd4628d04f7bc56e2eb6d993c20112fd686a1b0215d83b57bfa8a2d718",
+    "current_sha256": "b41dd2c7906ee4614619490688c595fc75a230944abcb29838aacf5946a67ade"
+  },
+  "failure_waiver": false,
+  "conformance_accepted": false,
+  "skipped_sources_sha256": "202d81a872bf965c0629f20f160ce230600b0cd7563205a558c34e9655905736"
+}

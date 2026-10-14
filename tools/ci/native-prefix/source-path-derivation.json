@@ -105,7 +105,12 @@
     "tools/ci/report_test262_timings.py",
     "tools/ci/stop39b-qualification/qualify.py",
     "tools/ci/native-prefix/native_correction_transition.py",
+    "tools/ci/native-prefix/hour-width-correction.json",
     "tools/ci/native-prefix/test_native_correction_transition.py",
-    "tools/ci/native-prefix/stage_hour_width.py"
+    ".github/workflows/ci-native-corrections.yml",
+    "tools/ci/native-prefix/stage_hour_width.py",
+    "tools/ci/native-prefix/hour-width-staging.json",
+    "tests/test_native_hour_width_staging.py",
+    "tools/ci/native-prefix/reviews/hour-width-correction-review.md"
   ]
 }

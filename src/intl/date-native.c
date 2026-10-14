@@ -394,8 +394,9 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
         for (k = 0; k < QJS_DATE_FIELD_COUNT; k++) {
             int requested = p->options.fields[k];
             if (requested < 0) continue;
-            if ((k == QJS_DATE_MINUTE || k == QJS_DATE_SECOND) && requested == QJS_DATE_NUMERIC)
-                continue; /* retain contextual mm/ss from the locale pattern */
+            if ((k == QJS_DATE_HOUR || k == QJS_DATE_MINUTE ||
+                 k == QJS_DATE_SECOND) && requested == QJS_DATE_NUMERIC)
+                continue; /* retain contextual hour/minute/second widths */
             if (k == QJS_DATE_MONTH && requested < QJS_DATE_NARROW &&
                 word(p->options.calendar, "hebrew"))
                 continue; /* retain the calendar's named month representation */

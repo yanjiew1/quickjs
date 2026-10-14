@@ -57,6 +57,40 @@
     }).resolvedOptions();
     assert(hour12.hourCycle === "h11" || hour12.hourCycle === "h12");
     assert(!hour12.locale.includes("hc-h23"));
+    /* LDML matching preserves a locale's contextual time-field widths.
+       English Hms uses HH:mm:ss; hms uses h:mm:ss a. */
+    for (const formatMatcher of ["basic", "best fit"])
+    for (const hourCycle of ["h11", "h12", "h23", "h24"]) {
+        const padded = hourCycle === "h23" || hourCycle === "h24";
+        const contextual = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", hourCycle, formatMatcher,
+            hour: "numeric", minute: "numeric", second: "numeric"
+        });
+        same(contextual.resolvedOptions().hour, padded ? "2-digit" : "numeric");
+        same(contextual.resolvedOptions().minute, "2-digit");
+        same(contextual.resolvedOptions().second, "2-digit");
+        const zero = hourCycle === "h12" ? "12" : hourCycle === "h24" ? "24" : padded ? "00" : "0";
+        same(field(contextual.formatToParts(0), "hour"), zero);
+        same(field(contextual.formatToParts(0), "minute"), "00");
+        same(field(contextual.formatToParts(0), "second"), "00");
+        same(field(contextual.formatToParts(9 * 3600000), "hour"), padded ? "09" : "9");
+        const explicit = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", hourCycle, hour: "2-digit", formatMatcher: "best fit"
+        });
+        same(explicit.resolvedOptions().hour, "2-digit");
+        same(field(explicit.formatToParts(9 * 3600000), "hour"), "09");
+    }
+    if (typeof Temporal === "object") {
+        const midnight = [Temporal.Instant.from("1970-01-01T00:00Z"),
+            Temporal.PlainTime.from("00:00"),
+            Temporal.PlainDateTime.from("1970-01-01T00:00"),
+            Temporal.ZonedDateTime.from("1970-01-01T00:00Z[UTC]")];
+        for (const value of midnight) {
+            const options = {hour12: false};
+            if (!(value instanceof Temporal.ZonedDateTime)) options.timeZone = "UTC";
+            assert(value.toLocaleString("en", options).includes("00:00:00"));
+        }
+    }
     same(new Intl.DateTimeFormat("en-US", {timeZone:"-00"}).resolvedOptions().timeZone, "+00:00");
     throws(RangeError, () => new Intl.DateTimeFormat("en-US", {timeZone:"+24:00"}));
     same(Intl.DateTimeFormat.supportedLocalesOf(["en", "en-US", "fr"]).join(","), "en,en-US");

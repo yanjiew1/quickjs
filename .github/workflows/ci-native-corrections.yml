@@ -1,0 +1,83 @@
+name: native-correction-staging
+on:
+  push:
+    branches: ['scratch/native-prefix/corrections-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  witnesses:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PREFIX_BINDING_MODE: checkout
+      PREFIX_BACKEND: native
+      PREFIX_COMPILER: gcc
+      PREFIX_SANITIZER: normal
+      PREFIX_ICU: /tmp/native-correction-unused-icu
+      MAKEFLAGS: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 2
+      - name: Check correction capture authentication
+        run: python3 -I -B -m unittest discover -s tools/ci/native-prefix -p 'test_*.py'
+      - name: Capture complete original assertions for independent delta review
+        run: |
+          for phase in initialize timezone-inputs build repository-tests native-units \
+            public-api api-variants bootstrap-test262 oracle-diagnostics \
+            required-test262 test262 native-assertion-witness; do
+            python3 tools/ci/native-prefix/run.py "$phase"
+          done
+      - name: Qualify the independently reviewed correction
+        run: python3 tools/ci/native-prefix/run.py test262-profile-gate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-correction-original-witnesses-${{ github.sha }}
+          path: ci-native-prefix-diagnostics/
+  correction:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    env:
+      MAKEFLAGS: ''
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Check bounded correction evidence validation
+        run: python3 tests/test_native_hour_width_staging.py
+      - name: Build and test native correction with combined sanitizers
+        run: |
+          args='CONFIG_TEMPORAL=y CONFIG_INTL=y CONFIG_INTL_BACKEND=native CONFIG_ICU=n CONFIG_ASAN=y CONFIG_UBSAN=y CONFIG_WERROR=y'
+          if test '${{ matrix.compiler }}' = clang; then args="$args CONFIG_CLANG=y"; fi
+          make -j$(getconf _NPROCESSORS_ONLN) CC=${{ matrix.compiler }} $args all test
+      - name: Prepare the original reviewed Test262 fixture
+        run: |
+          make test2-bootstrap TEST262_COMMIT=c8c798898646638cd0c24879f8e0374e847e7d74 TEST262_UNICODE18_OVERLAY=y
+      - name: Require the six repairs and preserve the complete raw delta
+        run: python3 tools/ci/native-prefix/stage_hour_width.py
+      - name: Report individual variant timings
+        if: always()
+        run: |
+          for suite in focused full; do
+            file="ci-native-hour-width/$suite-timings.jsonl"
+            if test -f "$file"; then
+              python3 tools/ci/report_test262_timings.py "$file" \
+                --csv "ci-native-hour-width/$suite-timings.csv" \
+                --markdown "ci-native-hour-width/$suite-timings.md"
+              cat "ci-native-hour-width/$suite-timings.md" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-hour-width-${{ matrix.compiler }}-${{ github.sha }}
+          path: ci-native-hour-width/

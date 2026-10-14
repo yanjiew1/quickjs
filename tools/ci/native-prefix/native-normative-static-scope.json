@@ -2341,7 +2341,7 @@
     },
     {
       "path": "src/intl/date-native.c",
-      "sha256": "bfee68cd4628d04f7bc56e2eb6d993c20112fd686a1b0215d83b57bfa8a2d718"
+      "sha256": "b41dd2c7906ee4614619490688c595fc75a230944abcb29838aacf5946a67ade"
     },
     {
       "path": "src/intl/date-native.h",
@@ -4677,7 +4677,7 @@
     },
     {
       "path": "tests/test_intl_native_date_frontend.js",
-      "sha256": "a88bdc2296b77f743aeb7926364cabed989245b7f4fea1e805c0122f87e329fc"
+      "sha256": "b178e24d223ff43be8b189de46786d27323803c4935f06108535c3d3a90104fc"
     },
     {
       "path": "tests/test_intl_native_date_frontend_oom.c",
@@ -5449,7 +5449,7 @@
     },
     {
       "path": "tools/ci/native-prefix/source-path-derivation.json",
-      "sha256": "e2a2994a25382532f872ddc3519cf4b763918656243194c277bf303a546fb03e"
+      "sha256": "0a3d1800ea4e72dbe5f6137290e77aeb37cab6ce3906e9fd08d9d7ec6acb4980"
     },
     {
       "path": "tools/ci/native-prefix/test_checkout_identity.py",
@@ -5740,12 +5740,32 @@
       "sha256": "fca819dee591865d268d8b45e74f5d0f6a1ee80d955600ab4b01141f75e92644"
     },
     {
+      "path": "tools/ci/native-prefix/hour-width-correction.json",
+      "sha256": "82641493a9607c585f678b294335c858548ca19f5c5b516acbe94b225791c144"
+    },
+    {
       "path": "tools/ci/native-prefix/test_native_correction_transition.py",
       "sha256": "038966d6ab2227b947f4782c292e9106a712bc0a19a575ad47445039fbde3643"
     },
     {
+      "path": ".github/workflows/ci-native-corrections.yml",
+      "sha256": "38b992db14ee8dfe086dcfd6edcbca47ae7ead274510d5f368be4ebf70f6cb1c"
+    },
+    {
       "path": "tools/ci/native-prefix/stage_hour_width.py",
       "sha256": "a9df39e74c79da05d61e266048c5858513461d316d220b28c92fb55ae675462a"
+    },
+    {
+      "path": "tools/ci/native-prefix/hour-width-staging.json",
+      "sha256": "9076f160c89c335fba2153e1bd6d14225fdb347acad296467b9712fe3b12e252"
+    },
+    {
+      "path": "tests/test_native_hour_width_staging.py",
+      "sha256": "ff59d981234b76b30d53d357303312c5eb60651c114aa2a7baedf4807f5688e3"
+    },
+    {
+      "path": "tools/ci/native-prefix/reviews/hour-width-correction-review.md",
+      "sha256": "4f5cf94205dfde3096845085defde1bac4013fc1369d71549b92333c037cb75c"
     }
   ],
   "source_review_complete": true,
