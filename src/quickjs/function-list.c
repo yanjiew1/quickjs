@@ -348,6 +348,29 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
 {
     JSValue ctor = JS_UNDEFINED, proto = JS_UNDEFINED, parent_proto;
     int proto_class_id, proto_flags, ctor_flags;
+    size_t max_props;
+
+    /* Rounded hash capacity is at most twice the property capacity. */
+    max_props = (SIZE_MAX - sizeof(JSShape)) /
+        (sizeof(JSShapeProperty) + 2 * sizeof(uint32_t));
+    if (max_props > SIZE_MAX / sizeof(JSProperty))
+        max_props = SIZE_MAX / sizeof(JSProperty);
+    /* Shape collision links store property indices in 26 bits. */
+    if (max_props > (((size_t)1 << 26) - 1))
+        max_props = ((size_t)1 << 26) - 1;
+
+    if (class_id < -1 ||
+        (class_id >= 0 && !JS_IsRegisteredClass(ctx->rt, class_id)) ||
+        (class_id == -1 &&
+         (flags & (JS_NEW_CTOR_PROTO_CLASS | JS_NEW_CTOR_PROTO_EXIST))) ||
+        (flags & ~(JS_NEW_CTOR_NO_GLOBAL | JS_NEW_CTOR_PROTO_CLASS |
+                   JS_NEW_CTOR_PROTO_EXIST | JS_NEW_CTOR_READONLY)) ||
+        !name || !func || n_ctor_fields < 0 || n_proto_fields < 0 ||
+        (size_t)n_ctor_fields > max_props - 3 ||
+        (size_t)n_proto_fields > max_props - 1 ||
+        (n_ctor_fields && !ctor_fields) || (n_proto_fields && !proto_fields))
+        return JS_ThrowTypeError(ctx, "invalid native constructor arguments");
+
     proto_flags = 0;
     if (flags & JS_NEW_CTOR_READONLY) {
         ctor_flags = JS_PROP_CONFIGURABLE;
@@ -359,13 +382,23 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
         parent_proto = JS_DupValue(ctx, ctx->class_proto[JS_CLASS_OBJECT]);
         parent_ctor = ctx->function_proto;
     } else {
+        if (!JS_IsObject(parent_ctor))
+            return JS_ThrowTypeError(ctx, "parent constructor must be an object");
         parent_proto = JS_GetProperty(ctx, parent_ctor, JS_ATOM_prototype);
         if (JS_IsException(parent_proto))
             return JS_EXCEPTION;
+        if (!JS_IsObject(parent_proto) && !JS_IsNull(parent_proto)) {
+            JS_ThrowTypeError(ctx, "parent prototype must be an object or null");
+            goto fail;
+        }
     }
 
     if (flags & JS_NEW_CTOR_PROTO_EXIST) {
         proto = JS_DupValue(ctx, ctx->class_proto[class_id]);
+        if (!JS_IsObject(proto)) {
+            JS_ThrowTypeError(ctx, "existing class prototype must be an object");
+            goto fail;
+        }
     } else {
         if (flags & JS_NEW_CTOR_PROTO_CLASS)
             proto_class_id = class_id;
@@ -408,3 +441,4 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
     JS_FreeValue(ctx, ctor);
     return JS_EXCEPTION;
 }
+
