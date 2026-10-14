@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3429,6 +3430,44 @@ static void test_object_construction_public_api(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_date_value_public_api(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue date, value, error;
+    double milliseconds;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    date = utf16_api_eval(ctx,
+        "(() => { const date = new Date(37); "
+        "date.valueOf = date.getTime = () => { throw 31; }; return date; })()");
+    assert(JS_ThisDateValue(ctx, &milliseconds, date) == 0);
+    assert(milliseconds == 37);
+    JS_FreeValue(ctx, date);
+    date = JS_NewDate(ctx, NAN);
+    assert(!JS_IsException(date));
+    assert(JS_ThisDateValue(ctx, &milliseconds, date) == 0);
+    assert(isnan(milliseconds));
+    JS_FreeValue(ctx, date);
+    value = utf16_api_eval(ctx, "({ valueOf() { throw 31; } })");
+    assert(JS_ThisDateValue(ctx, &milliseconds, value) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, value);
+    value = utf16_api_eval(ctx, "new Proxy(new Date(37), {})");
+    assert(JS_ThisDateValue(ctx, &milliseconds, value) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, value);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3446,6 +3485,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "date-value-public-api", test_date_value_public_api },
         { "object-construction-public-api", test_object_construction_public_api },
         { "string-conversion-public-api", test_string_conversion_public_api },
         { "conversion-public-api", test_conversion_public_api },
