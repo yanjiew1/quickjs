@@ -1,5 +1,6 @@
 /* Private native PluralRules data adapter. Copyright (c) 2026 Yan-Jie Wang. */
 #include "provider-native-plural.h"
+#include "native-data-validation-internal.h"
 #include <string.h>
 static QJSIntlStatus english(QJSIntlProvider *p, QJSIntlBytes locale, uint32_t *out)
 {
@@ -28,8 +29,8 @@ QJSIntlStatus qjs_intl_native_provider_plural_open(QJSIntlProvider *p,
     *out=NULL;
     if(!o)return QJS_INTL_INVALID_ARGUMENT;
     status=english(p,locale,&index);if(status!=QJS_INTL_OK)return status;
-    return qjs_intl_native_plural_open_data(qjs_intl_native_provider_allocator(p),
-        qjs_intl_native_provider_view(p),index,o,out);
+    return qjs_intl_native_plural_open_data_with_validator(qjs_intl_native_provider_allocator(p),
+        qjs_intl_native_provider_view(p),index,o,qjs_intl_native_provider_validate_compiled_data,p,out);
 }
 QJSIntlStatus qjs_intl_native_provider_plural_available(QJSIntlProvider *p)
 {

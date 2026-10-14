@@ -19,6 +19,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../src/intl/provider-native-duration.h"
+#include "../src/intl/provider-native-plural.h"
+#include "../src/intl/provider-native-relative.h"
+#include "../src/intl/data/plural-data-validation.h"
+#include "../src/intl/data/relative-data-validation.h"
+#include "../src/intl/data/date-data-validation.h"
 #include "../src/intl/native-data-validation-internal.h"
 #include "../src/intl/data/number-extra-validation.h"
 #include "../src/intl/data/locale-metadata.h"
@@ -63,12 +68,32 @@ static void increment(TestAtomic *value)
 static TestAtomic reader_calls = 0;
 static TestAtomic injected_failure = 0;
 static TestAtomic number_scans = 0;
+static TestAtomic plural_scans = 0, relative_scans = 0, date_scans = 0;
 
 QJSIntlDataStatus qjs_intl_counted_number_validate(const QJSIntlDataView *);
 QJSIntlDataStatus qjs_intl_counted_number_validate(const QJSIntlDataView *view)
 {
     increment(&number_scans);
     return qjs_intl_number_extra_data_validate(view);
+}
+
+QJSIntlDataStatus qjs_intl_counted_plural_validate(const QJSIntlDataView *);
+QJSIntlDataStatus qjs_intl_counted_plural_validate(const QJSIntlDataView *view)
+{
+    increment(&plural_scans);
+    return qjs_intl_data_validate_plural_extension(view);
+}
+QJSIntlDataStatus qjs_intl_counted_relative_validate(const QJSIntlDataView *);
+QJSIntlDataStatus qjs_intl_counted_relative_validate(const QJSIntlDataView *view)
+{
+    increment(&relative_scans);
+    return qjs_intl_data_validate_relative_extension(view);
+}
+QJSIntlDataStatus qjs_intl_counted_date_validate(const QJSIntlDataView *);
+QJSIntlDataStatus qjs_intl_counted_date_validate(const QJSIntlDataView *view)
+{
+    increment(&date_scans);
+    return qjs_intl_date_data_validate(view);
 }
 
 QJSIntlDataStatus qjs_intl_counted_data_open(const void *data,
@@ -580,15 +605,15 @@ static void number(void)
     SnapshotCase subject = snapshot_case(provider, 0);
     QJSIntlDataView copy = *subject.view;
     unsigned int digits = 99, scans = load(&number_scans);
-    assert(qjs_intl_native_provider_validate_number(provider, subject.view) ==
+    assert(qjs_intl_native_provider_validate_compiled_data(provider, subject.view) ==
            QJS_INTL_DATA_OK);
-    assert(qjs_intl_native_provider_validate_number(provider, &copy) ==
+    assert(qjs_intl_native_provider_validate_compiled_data(provider, &copy) ==
            QJS_INTL_DATA_INVALID_ARGUMENT);
-    assert(qjs_intl_native_provider_validate_number(other, subject.view) ==
+    assert(qjs_intl_native_provider_validate_compiled_data(other, subject.view) ==
            QJS_INTL_DATA_INVALID_ARGUMENT);
-    assert(qjs_intl_native_provider_validate_number(NULL, subject.view) ==
+    assert(qjs_intl_native_provider_validate_compiled_data(NULL, subject.view) ==
            QJS_INTL_DATA_INVALID_ARGUMENT);
-    assert(qjs_intl_native_provider_validate_number(provider, NULL) ==
+    assert(qjs_intl_native_provider_validate_compiled_data(provider, NULL) ==
            QJS_INTL_DATA_INVALID_ARGUMENT);
     destroy(&other_heap, other);
     assert(qjs_intl_native_provider_number_currency_digits(provider,
@@ -666,7 +691,7 @@ static void number_mutable(void)
     number = (QJSIntlNativeNumber *)(uintptr_t)1;
     assert(qjs_intl_native_number_open_data_with_validator(allocator,
         &owner_copy, subject.locale, subject.system, &subject.number,
-        qjs_intl_native_provider_validate_number, provider, &number) ==
+        qjs_intl_native_provider_validate_compiled_data, provider, &number) ==
         QJS_INTL_DATA_ERROR && !number);
     assert(!heap.calls && heap.live == live && load(&number_scans) == scans);
     /* Private dispatch has exactly the existing options -> table validation
@@ -818,6 +843,114 @@ static void available(void)
     }
 }
 
+static QJSIntlStatus table_number(void *opaque, const QJSIntlDecimalResult *value,
+    QJSIntlFormatted *out)
+{
+    return qjs_intl_native_number_format_rounded(opaque, value, out);
+}
+static void table_number_clear(void *opaque, QJSIntlFormatted *out)
+{
+    qjs_intl_native_number_result_clear(opaque, out);
+}
+static void table_certificates(void)
+{
+    Heap heap = {0};
+    QJSIntlProvider *provider = create(&heap, "en-US", "UTC", QJS_INTL_OK);
+    const QJSIntlAllocator *allocator = qjs_intl_native_provider_allocator(provider);
+    const QJSIntlDataView *view = qjs_intl_native_provider_view(provider);
+    QJSIntlDataView copied = *view, mutable_view;
+    QJSIntlNumberOptions number_options_value = number_options();
+    QJSIntlPluralOptions plural_options = {0};
+    QJSIntlRelativeOptions relative_options = {0};
+    QJSIntlNativePlural *plain_plural = NULL, *certified_plural = NULL;
+    QJSIntlNativeRelative *plain_relative = NULL, *certified_relative = NULL;
+    QJSIntlNativeNumber *number = NULL;
+    QJSIntlRelativeNumberBridge bridge;
+    QJSIntlMathematicalValue value = {QJS_INTL_FINITE, {"-1", 2}};
+    QJSIntlPluralCategory first, second;
+    QJSIntlFormatted plain_result = {0}, certified_result = {0};
+    QJSIntlDataSection bindings, rules, names;
+    QJSIntlDataSlice row;
+    uint32_t locale = index_of(view, QJS_INTL_DATA_LOCALE, "en");
+    uint32_t i, key, rule, mask, certified_mask;
+    unsigned char *bytes_copy, saved;
+    size_t live = heap.live;
+    plural_options.digits = number_options_value.digits;
+    assert(qjs_intl_native_plural_open_data(allocator, view, locale, &plural_options,
+        &plain_plural) == QJS_INTL_OK && load(&plural_scans) == 1);
+    assert(qjs_intl_native_provider_plural_open(provider, bytes("en"), &plural_options,
+        &certified_plural) == QJS_INTL_OK && load(&plural_scans) == 1);
+    assert(qjs_intl_native_plural_select(plain_plural, &value, &first) == QJS_INTL_OK);
+    assert(qjs_intl_native_plural_select(certified_plural, &value, &second) == QJS_INTL_OK);
+    assert(first == second);
+    qjs_intl_native_plural_close(plain_plural); plain_plural = NULL;
+    qjs_intl_native_plural_close(certified_plural); certified_plural = NULL;
+    assert(qjs_intl_native_plural_open_data_with_validator(allocator, &copied, locale,
+        &plural_options, qjs_intl_native_provider_validate_compiled_data, provider,
+        &certified_plural) == QJS_INTL_DATA_ERROR && !certified_plural);
+    assert(heap.live == live && load(&plural_scans) == 1);
+    assert(qjs_intl_native_provider_number_open(provider, bytes("en"), bytes("latn"),
+        &number_options_value, &number) == QJS_INTL_OK);
+    bridge = (QJSIntlRelativeNumberBridge){number, table_number, table_number_clear};
+    relative_options.maximum_output_length = 4096;
+    assert(qjs_intl_native_relative_open_data(allocator, view, locale, &relative_options,
+        &bridge, &plain_relative) == QJS_INTL_OK && load(&relative_scans) == 1);
+    assert(qjs_intl_native_provider_relative_open(provider, bytes("en"), &relative_options,
+        &bridge, &certified_relative) == QJS_INTL_OK && load(&relative_scans) == 1);
+    assert(qjs_intl_native_relative_format(plain_relative, &value, QJS_INTL_RELATIVE_DAY,
+        &plain_result) == QJS_INTL_OK);
+    assert(qjs_intl_native_relative_format(certified_relative, &value, QJS_INTL_RELATIVE_DAY,
+        &certified_result) == QJS_INTL_OK);
+    equal_formatted(&plain_result, &certified_result);
+    qjs_intl_native_relative_result_clear(allocator, &plain_result);
+    qjs_intl_native_relative_result_clear(allocator, &certified_result);
+    qjs_intl_native_relative_close(plain_relative); plain_relative = NULL;
+    qjs_intl_native_relative_close(certified_relative); certified_relative = NULL;
+    assert(qjs_intl_native_relative_open_data_with_validator(allocator, &copied, locale,
+        &relative_options, &bridge, qjs_intl_native_provider_validate_compiled_data,
+        provider, &certified_relative) == QJS_INTL_DATA_ERROR && !certified_relative);
+    assert(load(&relative_scans) == 1);
+    assert(qjs_intl_native_date_data_calendar_mask(view, locale, &mask) == QJS_INTL_OK &&
+        load(&date_scans) == 1);
+    assert(qjs_intl_native_provider_date_calendar_mask(provider, &certified_mask) == QJS_INTL_OK &&
+        mask == certified_mask && load(&date_scans) == 1);
+    assert(qjs_intl_native_date_data_calendar_mask_with_validator(&copied, locale,
+        qjs_intl_native_provider_validate_compiled_data, provider, &certified_mask) ==
+        QJS_INTL_DATA_ERROR && !certified_mask && load(&date_scans) == 1);
+    bytes_copy = malloc(view->length); assert(bytes_copy);
+    memcpy(bytes_copy, view->data, view->length);
+    assert(qjs_intl_data_open(bytes_copy, view->length, &mutable_view) == QJS_INTL_DATA_OK);
+    assert(qjs_intl_data_section(&mutable_view, QJS_INTL_DATA_PLURAL_LOCALE, &bindings) == QJS_INTL_DATA_OK);
+    assert(qjs_intl_data_section(&mutable_view, QJS_INTL_DATA_PLURAL_RULE, &rules) == QJS_INTL_DATA_OK);
+    for (i = 0; i < bindings.record_count; i++) {
+        assert(qjs_intl_data_record_u32(&bindings, i, 0, &key) == QJS_INTL_DATA_OK);
+        assert(qjs_intl_data_record(&bindings, i, &row) == QJS_INTL_DATA_OK);
+        if (key == locale && row.data[4] == QJS_INTL_PLURAL_ORDINAL) break;
+    }
+    assert(i < bindings.record_count);
+    assert(qjs_intl_data_record_u32(&bindings, i, 8, &rule) == QJS_INTL_DATA_OK);
+    assert(qjs_intl_data_record(&rules, rule, &row) == QJS_INTL_DATA_OK);
+    saved = row.data[0]; bytes_copy[row.data - mutable_view.data] = 255;
+    /* Corrupt an unselected ordinal rule: cardinal/relative utilities must
+       still validate their entire caller-owned plural dependency. */
+    assert(qjs_intl_native_plural_open_data(allocator, &mutable_view, locale, &plural_options,
+        &plain_plural) == QJS_INTL_DATA_ERROR && !plain_plural && load(&plural_scans) == 2);
+    assert(qjs_intl_native_relative_open_data(allocator, &mutable_view, locale, &relative_options,
+        &bridge, &plain_relative) == QJS_INTL_DATA_ERROR && !plain_relative && load(&relative_scans) == 2);
+    bytes_copy[row.data - mutable_view.data] = saved;
+    qjs_intl_native_number_close(number); number = NULL;
+    bridge.opaque = NULL;
+    assert(qjs_intl_data_section(&mutable_view, 101, &names) == QJS_INTL_DATA_OK);
+    assert(qjs_intl_data_record(&names, 0, &row) == QJS_INTL_DATA_OK);
+    saved = row.data[15]; bytes_copy[row.data - mutable_view.data + 15] = 1;
+    assert(qjs_intl_native_date_data_calendar_mask(&mutable_view, locale, &certified_mask) ==
+        QJS_INTL_DATA_ERROR && !certified_mask && load(&date_scans) == 2);
+    bytes_copy[row.data - mutable_view.data + 15] = saved;
+    free(bytes_copy);
+    assert(heap.live == live && load(&reader_calls) == 1);
+    destroy(&heap, provider);
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 2) {
@@ -830,6 +963,7 @@ int main(int argc, char **argv)
     else if (!strcmp(argv[1], "mutable")) mutable();
     else if (!strcmp(argv[1], "number")) number();
     else if (!strcmp(argv[1], "duration")) duration();
+    else if (!strcmp(argv[1], "tables")) table_certificates();
     else if (!strcmp(argv[1], "available")) available();
     else if (!strcmp(argv[1], "number-mutable")) number_mutable();
     else return 2;

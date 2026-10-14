@@ -17,6 +17,7 @@
 #include <stdatomic.h>
 #endif
 #include "provider-native.h"
+#include "native-data-validation-internal.h"
 #include "provider-native-display.h"
 #include "provider-native-relative.h"
 #include "provider-native-plural.h"
@@ -370,7 +371,7 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
         return QJS_INTL_INVALID_ARGUMENT;
     if (service == QJS_INTL_DATE_TIME_FORMAT)
         return qjs_intl_native_provider_date_available(p, out);
-    if (qjs_intl_native_provider_validate_number(p, &p->view) != QJS_INTL_DATA_OK)
+    if (qjs_intl_native_provider_validate_compiled_data(p, &p->view) != QJS_INTL_DATA_OK)
         return QJS_INTL_DATA_ERROR;
     if (!compiled_service_is_valid(service)) {
         if (service == QJS_INTL_NUMBER_FORMAT) {
@@ -476,11 +477,12 @@ const QJSIntlDataView *qjs_intl_native_provider_view(const QJSIntlProvider *p)
     return p ? &p->view : NULL;
 }
 
-QJSIntlDataStatus qjs_intl_native_provider_validate_number(void *opaque,
+QJSIntlDataStatus qjs_intl_native_provider_validate_compiled_data(void *opaque,
     const QJSIntlDataView *view)
 {
     const QJSIntlProvider *p = opaque;
-    /* Reader success includes the exact base+extra Number validator. The
+    /* Reader success includes all installed service validators, including
+     * Number, Plural, Relative and Date. The
      * certificate describes only the compiled blob, never decoded snapshots.
      * Reject copied views even when their pointer/length happen to match. */
     if (!p || view != &p->view ||
@@ -504,8 +506,8 @@ QJSIntlStatus qjs_intl_native_provider_date_calendar_mask(QJSIntlProvider *p,
          * The provider opens only the immutable compiled blob and retains
          * that view for its whole lifetime. Caller-owned views still use the
          * uncached data utility and must be validated on every call. */
-        status = qjs_intl_native_date_data_calendar_mask(&p->view,
-            p->list_locale, &mask);
+        status = qjs_intl_native_date_data_calendar_mask_with_validator(&p->view,
+            p->list_locale, qjs_intl_native_provider_validate_compiled_data, p, &mask);
         if (status != QJS_INTL_OK) return status;
         p->date_calendar_mask = mask;
         p->date_calendar_mask_ready = 1;

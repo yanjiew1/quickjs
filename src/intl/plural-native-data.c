@@ -1,10 +1,12 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "plural-native-data.h"
+#include "native-data-validation-internal.h"
 #include <string.h>
 
-QJSIntlStatus qjs_intl_native_plural_open_data(const QJSIntlAllocator *a,
+static QJSIntlStatus open_data(const QJSIntlAllocator *a,
     const QJSIntlDataView *view, uint32_t locale_index,
-    const QJSIntlPluralOptions *options, QJSIntlNativePlural **out)
+    const QJSIntlPluralOptions *options, QJSIntlDataValidator validate,
+    void *opaque, QJSIntlNativePlural **out)
 {
     QJSIntlDataSection locales, bindings, rules, ranges;
     QJSIntlDataSlice row, text;
@@ -19,7 +21,7 @@ QJSIntlStatus qjs_intl_native_plural_open_data(const QJSIntlAllocator *a,
         (unsigned int)options->type > QJS_INTL_PLURAL_ORDINAL ||
         qjs_intl_decimal_options_validate(&options->digits) != QJS_INTL_OK)
         return QJS_INTL_INVALID_ARGUMENT;
-    status = qjs_intl_data_validate_plural_extension(view);
+    status = validate ? validate(opaque, view) : qjs_intl_data_validate_plural_extension(view);
     if (status != QJS_INTL_DATA_OK) return QJS_INTL_DATA_ERROR;
     status = qjs_intl_data_section(view, QJS_INTL_DATA_PLURAL_LOCALE, &bindings);
     if (status == QJS_INTL_DATA_NOT_FOUND) return QJS_INTL_UNSUPPORTED;
@@ -70,4 +72,17 @@ QJSIntlStatus qjs_intl_native_plural_open_data(const QJSIntlAllocator *a,
         selected_ranges[i].result = (QJSIntlPluralCategory)row.data[2];
     }
     return qjs_intl_native_plural_open(a, options, &data, out);
+}
+
+QJSIntlStatus qjs_intl_native_plural_open_data(const QJSIntlAllocator *a,
+    const QJSIntlDataView *view, uint32_t locale, const QJSIntlPluralOptions *options,
+    QJSIntlNativePlural **out)
+{
+    return open_data(a, view, locale, options, NULL, NULL, out);
+}
+QJSIntlStatus qjs_intl_native_plural_open_data_with_validator(const QJSIntlAllocator *a,
+    const QJSIntlDataView *view, uint32_t locale, const QJSIntlPluralOptions *options,
+    QJSIntlDataValidator validate, void *opaque, QJSIntlNativePlural **out)
+{
+    return open_data(a, view, locale, options, validate, opaque, out);
 }

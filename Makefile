@@ -2191,6 +2191,9 @@ INTL_CACHE_TEST=tests/test_intl_native_compiled_cache$(EXE)
 INTL_CACHE_TEST_OBJECT=$(OBJDIR)/tests/test_intl_native_compiled_cache.o
 INTL_CACHE_TEST_PROVIDER=$(OBJDIR)/src/intl/provider-native.cache-test.o
 INTL_CACHE_TEST_NUMBER=$(OBJDIR)/src/intl/number-native-data.cache-test.o
+INTL_CACHE_TEST_PLURAL=$(OBJDIR)/src/intl/plural-native-data.cache-test.o
+INTL_CACHE_TEST_RELATIVE=$(OBJDIR)/src/intl/relative-native-data.cache-test.o
+INTL_CACHE_TEST_DATE=$(OBJDIR)/src/intl/date-native-calendar-data.cache-test.o
 $(INTL_CACHE_TEST_OBJECT): CFLAGS_OPT+=-std=c11
 
 # The counted provider replaces the archive's provider for this test.
@@ -2213,8 +2216,31 @@ $(INTL_CACHE_TEST_NUMBER): src/intl/number-native-data.c \
 	  -Dqjs_intl_number_extra_data_validate=qjs_intl_counted_number_validate \
 	  -c -o $@ $<
 
+$(INTL_CACHE_TEST_PLURAL): src/intl/plural-native-data.c \
+                          $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) \
+	  $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) \
+	  $(DEPFLAGS) -Dqjs_intl_data_validate_plural_extension=qjs_intl_counted_plural_validate -c -o $@ $<
+
+$(INTL_CACHE_TEST_RELATIVE): src/intl/relative-native-data.c \
+                          $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) \
+	  $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) \
+	  $(DEPFLAGS) -Dqjs_intl_data_validate_relative_extension=qjs_intl_counted_relative_validate -c -o $@ $<
+
+$(INTL_CACHE_TEST_DATE): src/intl/date-native-calendar-data.c \
+                          $(OBJDIR)/temporal-build-config | $(OBJDIR)
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS_OPT) $(ICU_COMPILE_CFLAGS) \
+	  $(CALENDAR_COMPILE_CFLAGS) $(TIMEZONE_COMPILE_CFLAGS) \
+	  $(DEPFLAGS) -Dqjs_intl_date_data_validate=qjs_intl_counted_date_validate -c -o $@ $<
+
 $(INTL_CACHE_TEST): $(INTL_CACHE_TEST_OBJECT) \
                    $(INTL_CACHE_TEST_PROVIDER) $(INTL_CACHE_TEST_NUMBER) \
+                   $(INTL_CACHE_TEST_PLURAL) $(INTL_CACHE_TEST_RELATIVE) \
+                   $(INTL_CACHE_TEST_DATE) \
                    libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -2228,6 +2254,7 @@ test-intl-native-compiled-cache: $(INTL_CACHE_TEST)
 	$(WINE) ./$(INTL_CACHE_TEST) duration
 	$(WINE) ./$(INTL_CACHE_TEST) number-mutable
 	$(WINE) ./$(INTL_CACHE_TEST) available
+	$(WINE) ./$(INTL_CACHE_TEST) tables
 
 test-c: test-intl-native-compiled-cache
 test-binaries: $(INTL_CACHE_TEST)

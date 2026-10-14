@@ -20,7 +20,7 @@ void qjs_intl_native_provider_memory_usage(const QJSIntlProvider *,
 const QJSIntlDataView *qjs_intl_native_provider_view(const QJSIntlProvider *);
 /* Private callback: accepts only the exact live owner view over this module's
  * immutable compiled blob with a successful whole-reader certificate. */
-QJSIntlDataStatus qjs_intl_native_provider_validate_number(void *provider,
+QJSIntlDataStatus qjs_intl_native_provider_validate_compiled_data(void *provider,
     const QJSIntlDataView *);
 /* Date's installed en/en-US policy shares the internally mapped en row.
  * Cache only a successful proof over this provider's immutable compiled data. */

@@ -48,7 +48,7 @@ QJSIntlStatus qjs_intl_native_duration_clock_data(const QJSIntlDataView *v,
 typedef struct OpenContext {
     const QJSIntlDataView *view;
     uint32_t locale, system;
-    QJSIntlNumberDataValidator validate;
+    QJSIntlDataValidator validate;
     void *validation_opaque;
 } OpenContext;
 static QJSIntlStatus open_number(void *opaque, const QJSIntlAllocator *a,
@@ -94,7 +94,7 @@ static QJSIntlStatus decode(const QJSIntlAllocator *a, QJSIntlBytes s,
 }
 static QJSIntlStatus open_data(const QJSIntlAllocator *a,
     const QJSIntlDataView *v, uint32_t locale, uint32_t system,
-    const QJSIntlDurationOptions *o, QJSIntlNumberDataValidator validate,
+    const QJSIntlDurationOptions *o, QJSIntlDataValidator validate,
     void *opaque, QJSIntlNativeDuration **out)
 {
     OpenContext c;
@@ -137,7 +137,7 @@ QJSIntlStatus qjs_intl_native_duration_open_data(const QJSIntlAllocator *a,
 QJSIntlStatus qjs_intl_native_duration_open_data_with_validator(
     const QJSIntlAllocator *a, const QJSIntlDataView *v, uint32_t locale,
     uint32_t system, const QJSIntlDurationOptions *o,
-    QJSIntlNumberDataValidator validate, void *opaque,
+    QJSIntlDataValidator validate, void *opaque,
     QJSIntlNativeDuration **out)
 {
     return open_data(a, v, locale, system, o, validate, opaque, out);

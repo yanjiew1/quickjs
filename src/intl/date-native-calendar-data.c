@@ -3,6 +3,7 @@
  * retained data slices or second calendar/arithmetic owner.
  */
 #include "date-native-data.h"
+#include "native-data-validation-internal.h"
 #include "data/date-data-validation.h"
 #include <string.h>
 
@@ -29,8 +30,8 @@ static int era_slot(QJSCalendarId id, uint32_t index)
     if (id == QJS_CAL_COPTIC) return index == 1 ? 0 : -1;
     return index <= 1 ? (int)index : -1;
 }
-QJSIntlStatus qjs_intl_native_date_data_calendar_mask(const QJSIntlDataView *v,
-    uint32_t locale, uint32_t *out)
+static QJSIntlStatus calendar_mask(const QJSIntlDataView *v,
+    uint32_t locale, QJSIntlDataValidator validate, void *opaque, uint32_t *out)
 {
     QJSIntlDataSection patterns, names, fallbacks, locales;
     CalendarProof proof[QJS_CAL_COUNT];
@@ -41,7 +42,8 @@ QJSIntlStatus qjs_intl_native_date_data_calendar_mask(const QJSIntlDataView *v,
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     *out = 0;
     if (!v) return QJS_INTL_INVALID_ARGUMENT;
-    if (qjs_intl_date_data_validate(v) || qjs_intl_data_section(v, 16, &locales)) return QJS_INTL_DATA_ERROR;
+    if ((validate ? validate(opaque, v) : qjs_intl_date_data_validate(v)) ||
+        qjs_intl_data_section(v, 16, &locales)) return QJS_INTL_DATA_ERROR;
     if (locale >= locales.record_count) return QJS_INTL_INVALID_ARGUMENT;
     if (qjs_intl_data_section(v, 100, &patterns) || qjs_intl_data_section(v, 101, &names) ||
         qjs_intl_data_section(v, 107, &fallbacks)) return QJS_INTL_UNSUPPORTED;
@@ -114,4 +116,16 @@ QJSIntlStatus qjs_intl_native_date_data_calendar_mask(const QJSIntlDataView *v,
     if (!proof[QJS_CAL_ISO8601].present && (mask & (UINT32_C(1) << QJS_CAL_GREGORY)))
         mask |= UINT32_C(1) << QJS_CAL_ISO8601;
     *out = mask; return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_native_date_data_calendar_mask(const QJSIntlDataView *view,
+    uint32_t locale, uint32_t *out)
+{
+    return calendar_mask(view, locale, NULL, NULL, out);
+}
+QJSIntlStatus qjs_intl_native_date_data_calendar_mask_with_validator(
+    const QJSIntlDataView *view, uint32_t locale, QJSIntlDataValidator validate,
+    void *opaque, uint32_t *out)
+{
+    return calendar_mask(view, locale, validate, opaque, out);
 }

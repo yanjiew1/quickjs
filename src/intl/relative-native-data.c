@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "relative-native-data.h"
+#include "native-data-validation-internal.h"
 #include "data/plural-data-schema.h"
 #include <string.h>
 
@@ -7,10 +8,10 @@ static int32_t signed_u32(uint32_t n)
 {
     return n <= INT32_MAX ? (int32_t)n : -1 - (int32_t)(UINT32_MAX - n);
 }
-QJSIntlStatus qjs_intl_native_relative_open_data(const QJSIntlAllocator *a,
+static QJSIntlStatus open_data(const QJSIntlAllocator *a,
     const QJSIntlDataView *view, uint32_t locale_index,
     const QJSIntlRelativeOptions *options, const QJSIntlRelativeNumberBridge *bridge,
-    QJSIntlNativeRelative **out)
+    QJSIntlDataValidator validate, void *opaque, QJSIntlNativeRelative **out)
 {
     QJSIntlDataSection patterns, literals, bindings, rules, locales;
     QJSIntlDataSlice row, text;
@@ -18,7 +19,7 @@ QJSIntlStatus qjs_intl_native_relative_open_data(const QJSIntlAllocator *a,
     QJSIntlRelativeLiteral *selected = NULL;
     QJSIntlPluralRulesData plural_data;
     QJSIntlPluralRule selected_rules[6];
-    QJSIntlDataStatus validity;
+    QJSIntlDataStatus validity, pattern_status, literal_status;
     QJSIntlStatus status = QJS_INTL_DATA_ERROR;
     uint32_t i, index, bits, first = 0, count = 0;
     unsigned int u, t, c;
@@ -27,13 +28,15 @@ QJSIntlStatus qjs_intl_native_relative_open_data(const QJSIntlAllocator *a,
     *out = NULL;
     if (!a || !a->malloc || !a->free || !view || !options || !bridge ||
         (unsigned int)options->style > 2) return QJS_INTL_INVALID_ARGUMENT;
-    validity = qjs_intl_data_validate_relative_extension(view);
+    validity = validate ? validate(opaque, view) : qjs_intl_data_validate_relative_extension(view);
     if (validity == QJS_INTL_DATA_NOT_FOUND) return QJS_INTL_UNSUPPORTED;
-    if (validity != QJS_INTL_DATA_OK ||
-        qjs_intl_data_validate_plural_extension(view) != QJS_INTL_DATA_OK ||
+    if (validity != QJS_INTL_DATA_OK) return QJS_INTL_DATA_ERROR;
+    pattern_status = qjs_intl_data_section(view, QJS_INTL_DATA_RELATIVE_PATTERN, &patterns);
+    literal_status = qjs_intl_data_section(view, QJS_INTL_DATA_RELATIVE_LITERAL, &literals);
+    if (pattern_status == QJS_INTL_DATA_NOT_FOUND && literal_status == QJS_INTL_DATA_NOT_FOUND)
+        return QJS_INTL_UNSUPPORTED;
+    if (pattern_status != QJS_INTL_DATA_OK || literal_status != QJS_INTL_DATA_OK ||
         qjs_intl_data_section(view, QJS_INTL_DATA_LOCALE, &locales) != QJS_INTL_DATA_OK ||
-        qjs_intl_data_section(view, QJS_INTL_DATA_RELATIVE_PATTERN, &patterns) != QJS_INTL_DATA_OK ||
-        qjs_intl_data_section(view, QJS_INTL_DATA_RELATIVE_LITERAL, &literals) != QJS_INTL_DATA_OK ||
         qjs_intl_data_section(view, QJS_INTL_DATA_PLURAL_LOCALE, &bindings) != QJS_INTL_DATA_OK ||
         qjs_intl_data_section(view, QJS_INTL_DATA_PLURAL_RULE, &rules) != QJS_INTL_DATA_OK)
         return QJS_INTL_DATA_ERROR;
@@ -96,4 +99,18 @@ QJSIntlStatus qjs_intl_native_relative_open_data(const QJSIntlAllocator *a,
  done:
     if (selected) a->free(a->opaque, selected);
     return status;
+}
+
+QJSIntlStatus qjs_intl_native_relative_open_data(const QJSIntlAllocator *a,
+    const QJSIntlDataView *view, uint32_t locale, const QJSIntlRelativeOptions *options,
+    const QJSIntlRelativeNumberBridge *bridge, QJSIntlNativeRelative **out)
+{
+    return open_data(a, view, locale, options, bridge, NULL, NULL, out);
+}
+QJSIntlStatus qjs_intl_native_relative_open_data_with_validator(const QJSIntlAllocator *a,
+    const QJSIntlDataView *view, uint32_t locale, const QJSIntlRelativeOptions *options,
+    const QJSIntlRelativeNumberBridge *bridge, QJSIntlDataValidator validate,
+    void *opaque, QJSIntlNativeRelative **out)
+{
+    return open_data(a, view, locale, options, bridge, validate, opaque, out);
 }

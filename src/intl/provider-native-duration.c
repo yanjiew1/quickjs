@@ -69,7 +69,7 @@ QJSIntlStatus qjs_intl_native_provider_duration_open(QJSIntlProvider *p,
     if (status != QJS_INTL_OK) return status;
     return qjs_intl_native_duration_open_data_with_validator(
         qjs_intl_native_provider_allocator(p), qjs_intl_native_provider_view(p),
-        li, ni, o, qjs_intl_native_provider_validate_number, p, out);
+        li, ni, o, qjs_intl_native_provider_validate_compiled_data, p, out);
 }
 /* Validate all ten textual units and three list widths from reader-validated
  * records. This is an availability dependency gate, not a conformance receipt.

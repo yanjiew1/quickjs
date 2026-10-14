@@ -1,5 +1,6 @@
 /* Root-owned C/OOM/lifetime integration gate over the one real binary owner. */
 #include "../src/intl/date-native-data.h"
+#include "../src/intl/native-data-validation-internal.h"
 #include "../src/intl/data/date-data-validation.h"
 #include "../src/intl/data/locale-metadata.h"
 #include "../src/intl/metadata-data.h"
@@ -12,7 +13,7 @@ static size_t calendar_mask_calls;
 static QJSIntlStatus calendar_mask_status;
 static int calendar_mask_zero;
 static QJSIntlStatus counted_calendar_mask(const QJSIntlDataView *v,
-                                           uint32_t locale, uint32_t *out)
+    uint32_t locale, QJSIntlDataValidator validate, void *opaque, uint32_t *out)
 {
     calendar_mask_calls++;
     assert(v && v->data == qjs_intl_locale_metadata_blob);
@@ -21,15 +22,15 @@ static QJSIntlStatus counted_calendar_mask(const QJSIntlDataView *v,
         return calendar_mask_status;
     }
     if (calendar_mask_zero) { *out = 0; return QJS_INTL_OK; }
-    return qjs_intl_native_date_data_calendar_mask(v,locale,out);
+    return qjs_intl_native_date_data_calendar_mask_with_validator(v, locale, validate, opaque, out);
 }
 /* As in test_timezone_system_reader, include the exact production owner with
  * one test-owned boundary replacement after its declarations. This translation
  * unit defines all provider symbols, so the archive provider object is not
  * extracted. Other date modules and the real data utility remain linked. */
-#define qjs_intl_native_date_data_calendar_mask counted_calendar_mask
+#define qjs_intl_native_date_data_calendar_mask_with_validator counted_calendar_mask
 #include "../src/intl/provider-native.c"
-#undef qjs_intl_native_date_data_calendar_mask
+#undef qjs_intl_native_date_data_calendar_mask_with_validator
 
 typedef struct Probe { size_t live, attempts, fail; int failed; } Probe;
 static int fail(Probe *p) { p->attempts++; if (p->attempts == p->fail) { p->failed=1; return 1; } return 0; }

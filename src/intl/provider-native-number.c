@@ -46,7 +46,7 @@ QJSIntlStatus qjs_intl_native_provider_number_open(QJSIntlProvider *p,
     if (status != QJS_INTL_OK) return status;
     return qjs_intl_native_number_open_data_with_validator(
         qjs_intl_native_provider_allocator(p), v, li, ni, o,
-        qjs_intl_native_provider_validate_number, p, out);
+        qjs_intl_native_provider_validate_compiled_data, p, out);
 }
 QJSIntlStatus qjs_intl_native_provider_number_currency_digits(QJSIntlProvider *p,
     QJSIntlBytes currency, unsigned int *out)
@@ -54,7 +54,7 @@ QJSIntlStatus qjs_intl_native_provider_number_currency_digits(QJSIntlProvider *p
     if (!p) { if (out) *out = 0; return QJS_INTL_INVALID_ARGUMENT; }
     return qjs_intl_native_number_currency_digits_with_validator(
         qjs_intl_native_provider_view(p), currency,
-        qjs_intl_native_provider_validate_number, p, out);
+        qjs_intl_native_provider_validate_compiled_data, p, out);
 }
 static void default_options(QJSIntlNumberOptions *o)
 {

@@ -64,12 +64,12 @@ static int find_string(const QJSIntlDataView *v, const QJSIntlDataSection *s,
     return 0;
 }
 static QJSIntlDataStatus validate_number_data(const QJSIntlDataView *v,
-    QJSIntlNumberDataValidator validate, void *opaque)
+    QJSIntlDataValidator validate, void *opaque)
 {
     return validate ? validate(opaque, v) : qjs_intl_number_extra_data_validate(v);
 }
 static QJSIntlStatus currency_digits(const QJSIntlDataView *v,
-    QJSIntlBytes code, QJSIntlNumberDataValidator validate, void *opaque,
+    QJSIntlBytes code, QJSIntlDataValidator validate, void *opaque,
     unsigned int *out)
 {
     QJSIntlDataSection s;
@@ -173,7 +173,7 @@ static QJSIntlStatus compound_templates(const QJSIntlAllocator *a, const QJSIntl
 }
 static QJSIntlStatus open_data(const QJSIntlAllocator *a,
     const QJSIntlDataView *v, uint32_t locale, uint32_t numbering,
-    const QJSIntlNumberOptions *o, QJSIntlNumberDataValidator validate,
+    const QJSIntlNumberOptions *o, QJSIntlDataValidator validate,
     void *opaque, QJSIntlNativeNumber **out)
 {
     QJSIntlDataSection s, locales, systems;
@@ -360,7 +360,7 @@ QJSIntlStatus qjs_intl_native_number_open_data(const QJSIntlAllocator *a,
 QJSIntlStatus qjs_intl_native_number_open_data_with_validator(
     const QJSIntlAllocator *a, const QJSIntlDataView *v, uint32_t locale,
     uint32_t numbering, const QJSIntlNumberOptions *o,
-    QJSIntlNumberDataValidator validate, void *opaque, QJSIntlNativeNumber **out)
+    QJSIntlDataValidator validate, void *opaque, QJSIntlNativeNumber **out)
 {
     return open_data(a, v, locale, numbering, o, validate, opaque, out);
 }
@@ -371,7 +371,7 @@ QJSIntlStatus qjs_intl_native_number_currency_digits(const QJSIntlDataView *v,
 }
 QJSIntlStatus qjs_intl_native_number_currency_digits_with_validator(
     const QJSIntlDataView *v, QJSIntlBytes code,
-    QJSIntlNumberDataValidator validate, void *opaque, unsigned int *out)
+    QJSIntlDataValidator validate, void *opaque, unsigned int *out)
 {
     return currency_digits(v, code, validate, opaque, out);
 }
