@@ -31,6 +31,7 @@
 /* Inspect the actual pool owner without adding an engine test API. */
 #include "../src/quickjs/allocator.c"
 #include "../src/quickjs/internal/runtime.h"
+#include "../src/quickjs/internal/function-list.h"
 #include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
@@ -1048,9 +1049,101 @@ static void test_int64_atom_table_allocation_failure(void)
     assert(failure.live_allocations == 0);
 }
 
+static int factory_proto_finalized;
+
+static void factory_proto_finalizer(JSRuntime *rt, JSValue value)
+{
+    factory_proto_finalized++;
+}
+
+static JSValue constructor_setup_callback(JSContext *ctx, JSValueConst new_target,
+                                          int argc, JSValueConst *argv)
+{
+    return JS_NewObject(ctx);
+}
+
+static JSValue constructor_setup_create(JSContext *ctx, int class_id,
+                                        const char *name, int flags)
+{
+    return JS_NewCConstructor(ctx, class_id, name, constructor_setup_callback,
+                              0, JS_CFUNC_constructor, 0, JS_UNDEFINED,
+                              NULL, 0, NULL, 0, flags);
+}
+
+static void test_native_constructor_setup(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSClassID class_id = 0;
+    JSClassDef def = { .class_name = "FactoryPrototype",
+                       .finalizer = factory_proto_finalizer };
+    JSValue ctor, proto, old_proto, global, value, error;
+    int i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_NewClassID(&class_id);
+    assert(JS_NewClass(rt, class_id, &def) == 0);
+    factory_proto_finalized = 0;
+    proto = JS_NewObjectClass(ctx, class_id);
+    assert(!JS_IsException(proto));
+    JS_SetClassProto(ctx, class_id, proto);
+    for (i = 0; i < 2; i++) {
+        ctor = constructor_setup_create(ctx, class_id, "UnpublishedFactory",
+                  JS_NEW_CTOR_NO_GLOBAL | JS_NEW_CTOR_PROTO_CLASS);
+        assert(JS_IsConstructor(ctx, ctor));
+        JS_FreeValue(ctx, ctor);
+        JS_RunGC(rt);
+    }
+    assert(factory_proto_finalized == 2);
+
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_DefinePropertyValueStr(ctx, global, "BlockedFactory",
+                                    JS_NewInt32(ctx, 47), 0) == 1);
+    old_proto = JS_GetClassProto(ctx, class_id);
+    ctor = constructor_setup_create(ctx, class_id, "BlockedFactory", 0);
+    assert(JS_IsException(ctor));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    proto = JS_GetClassProto(ctx, class_id);
+    assert(JS_StrictEq(ctx, proto, old_proto));
+    JS_FreeValue(ctx, proto);
+    JS_FreeValue(ctx, old_proto);
+    value = JS_GetPropertyStr(ctx, global, "BlockedFactory");
+    assert(JS_VALUE_GET_TAG(value) == JS_TAG_INT && JS_VALUE_GET_INT(value) == 47);
+    JS_FreeValue(ctx, value);
+
+    for (i = 0; i < 2; i++) {
+        const char *source = i == 0 ? "Object.freeze({})" :
+            "new Proxy({}, { defineProperty() { throw 53; } })";
+        proto = JS_Eval(ctx, source, strlen(source), "constructor-setup",
+                        JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(proto));
+        JS_SetClassProto(ctx, class_id, JS_DupValue(ctx, proto));
+        ctor = constructor_setup_create(ctx, class_id, "UnpublishedFactory",
+                                         JS_NEW_CTOR_PROTO_EXIST);
+        assert(JS_IsException(ctor));
+        error = JS_GetException(ctx);
+        assert(i == 0 ? JS_IsError(ctx, error) :
+               JS_StrictEq(ctx, error, JS_NewInt32(ctx, 53)));
+        JS_FreeValue(ctx, error);
+        value = JS_GetPropertyStr(ctx, global, "UnpublishedFactory");
+        assert(JS_IsUndefined(value));
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, proto);
+    }
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(factory_proto_finalized == 3);
+}
+
 int main(void)
 {
     test_int64_atom_table_allocation_failure();
+    test_native_constructor_setup();
     int kind;
 
     test_payload_alignment();
