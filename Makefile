@@ -1160,6 +1160,10 @@ ifeq ($(CONFIG_ICU)$(CONFIG_INTL)$(CONFIG_TEMPORAL),ynn)
 C_TESTS+=tests/test_date_icu_core_only$(EXE)
 endif
 
+ifeq ($(CONFIG_ICU),y)
+C_TESTS+=tests/test_icu_version_contract$(EXE)
+endif
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1173,6 +1177,9 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+ifeq ($(CONFIG_ICU),y)
+	$(WINE) ./tests/test_icu_version_contract$(EXE)
+endif
 ifeq ($(CONFIG_ICU)$(CONFIG_INTL)$(CONFIG_TEMPORAL),ynn)
 	$(WINE) ./tests/run_temporal_zone_test$(EXE) UTC ./tests/test_date_icu_core_only$(EXE)
 endif
@@ -2260,3 +2267,11 @@ test-date-offset-seconds: qjs$(EXE) tests/run_temporal_zone_test$(EXE)
 	$(WINE) ./tests/run_temporal_zone_test$(EXE) America/New_York ./qjs$(EXE) tests/test_date_second_offset.js --expect-new-york-seconds $(if $(filter y,$(CONFIG_ICU)),--icu-date-provider)
 test: test-date-offset-seconds
 endif
+
+tests/test_icu_version_contract$(EXE): $(OBJDIR)/tests/test_icu_version_contract.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: test-unicode-backend-contract
+test-unicode-backend-contract: qjs$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_unicode_backend_contract.js
+test: test-unicode-backend-contract

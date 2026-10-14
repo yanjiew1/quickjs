@@ -301,3 +301,6 @@ __pycache__/
 
 /tests/test_date_icu_core_only
 /tests/test_date_icu_core_only.exe
+
+/tests/test_icu_version_contract
+/tests/test_icu_version_contract.exe
