@@ -304,3 +304,6 @@ __pycache__/
 
 /tests/test_icu_version_contract
 /tests/test_icu_version_contract.exe
+
+/test262-intl_intl-*_temporal-*.txt
+/test262-temporal_intl-*_temporal-*.txt

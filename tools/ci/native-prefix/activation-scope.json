@@ -1,0 +1,567 @@
+{
+  "feature_config_source_sha256": {
+    "tests/test_test262_config.py": "ad4d62555bb6e2bd0a138123c5513febe2b2c0e9dbb3a6e1338e8850d55bcef2",
+    "tools/ci/test262-config.py": "a19d4c8f7807304ccd96aa227601374e94f4a311fa41381a1a2b983a1eca2e67"
+  },
+  "host_default_locale_fixture_sha256": "59b1e8b0c9beacf3e82567fb2c1b957e10d99d007a552bab1fd5ffa2f37ca007",
+  "icu": {
+    "C_targets": [
+      "tests/test_allocator",
+      "tests/test_allocator_policy",
+      "tests/test_api",
+      "tests/test_atomics_wait",
+      "tests/test_bytecode",
+      "tests/test_bytecode_trace",
+      "tests/test_calendar_integrated_authority",
+      "tests/test_calendar_persian_authority",
+      "tests/test_calendar_portable",
+      "tests/test_cutils",
+      "tests/test_date_zone_order",
+      "tests/test_default_time_zone_api",
+      "tests/test_fuzz_allocations",
+      "tests/test_fuzz_exception_ownership",
+      "tests/test_fuzz_json",
+      "tests/test_fuzz_regexp_timeout",
+      "tests/test_fuzz_support",
+      "tests/test_icu_version_contract",
+      "tests/test_intl_calendar_domain",
+      "tests/test_intl_collator_segmenter",
+      "tests/test_intl_data_bundle",
+      "tests/test_intl_data_reader",
+      "tests/test_intl_date_pattern",
+      "tests/test_intl_decimal",
+      "tests/test_intl_default_locale_api",
+      "tests/test_intl_duration_format_embed",
+      "tests/test_intl_embedder",
+      "tests/test_intl_locale_lookup",
+      "tests/test_intl_native_duration_engine",
+      "tests/test_intl_native_list_data",
+      "tests/test_intl_native_list_engine",
+      "tests/test_intl_native_locale_id",
+      "tests/test_intl_native_number_engine",
+      "tests/test_intl_native_plural",
+      "tests/test_intl_native_relative_decimal",
+      "tests/test_intl_native_timezone",
+      "tests/test_intl_number_format_embed",
+      "tests/test_intl_number_grammar",
+      "tests/test_intl_oom",
+      "tests/test_intl_plural",
+      "tests/test_intl_receiver_api",
+      "tests/test_intl_services_api",
+      "tests/test_intl_text",
+      "tests/test_iterator",
+      "tests/test_native_jobs",
+      "tests/test_qjsc_context_failures",
+      "tests/test_qjsc_json_preload",
+      "tests/test_qjsc_json_probe",
+      "tests/test_temporal",
+      "tests/test_temporal_api",
+      "tests/test_temporal_calendars",
+      "tests/test_temporal_civil",
+      "tests/test_temporal_date_math",
+      "tests/test_temporal_duration_math",
+      "tests/test_temporal_epoch",
+      "tests/test_temporal_format",
+      "tests/test_temporal_runtime_zone_provider",
+      "tests/test_temporal_system_clock",
+      "tests/test_temporal_zones",
+      "tests/test_timezone",
+      "tests/test_timezone_system_reader",
+      "tests/test_typed_array",
+      "tests/test_tzif_decoder",
+      "tests/test_unicode",
+      "tests/test_unicode_initialization",
+      "tests/test_unicode_oom",
+      "tests/test_unicode_provider",
+      "tests/test_unicode_version",
+      "tests/test_wait_async",
+      "tests/test_wait_queue",
+      "tests/test_windows_zones",
+      "tests/test_worker_context_failure"
+    ],
+    "JS_files": [
+      "examples/test_point.js",
+      "tests/test_bigint.js",
+      "tests/test_bjson.js",
+      "tests/test_closure.js",
+      "tests/test_cyclic_import.js",
+      "tests/test_date_parse_boundaries.js",
+      "tests/test_date_setter_snapshot.js",
+      "tests/test_date_temporal_bridge.js",
+      "tests/test_gsab_worker.js",
+      "tests/test_intl_bound_function_realms.js",
+      "tests/test_intl_collator.js",
+      "tests/test_intl_date_time.js",
+      "tests/test_intl_date_time_hour_cycle.js",
+      "tests/test_intl_date_time_legacy.js",
+      "tests/test_intl_date_time_numbering_parts.js",
+      "tests/test_intl_display_names.js",
+      "tests/test_intl_duration_format.js",
+      "tests/test_intl_era_monthcode_calendars.js",
+      "tests/test_intl_list_format.js",
+      "tests/test_intl_locale.js",
+      "tests/test_intl_locale_integration.js",
+      "tests/test_intl_locale_resolution.js",
+      "tests/test_intl_number_format.js",
+      "tests/test_intl_number_locale_methods.js",
+      "tests/test_intl_plural_rules.js",
+      "tests/test_intl_relative_time_format.js",
+      "tests/test_intl_segmenter.js",
+      "tests/test_intl_temporal_duration.js",
+      "tests/test_intl_temporal_style_preservation.js",
+      "tests/test_intl_text.js",
+      "tests/test_loop.js",
+      "tests/test_rw_handler.js",
+      "tests/test_std.js",
+      "tests/test_temporal_calendar_identifier_boundaries.js",
+      "tests/test_temporal_calendar_zones.js",
+      "tests/test_temporal_duration.js",
+      "tests/test_temporal_icu_calendar_target.js",
+      "tests/test_temporal_icu_monthday_year.js",
+      "tests/test_temporal_instant.js",
+      "tests/test_temporal_intl.js",
+      "tests/test_temporal_now.js",
+      "tests/test_temporal_offset_wall_date_boundaries.js",
+      "tests/test_temporal_plain.js",
+      "tests/test_temporal_plain_date_duration_balance.js",
+      "tests/test_temporal_plain_time.js",
+      "tests/test_temporal_year_month_date_boundaries.js",
+      "tests/test_temporal_zero_zoned_duration_boundaries.js",
+      "tests/test_temporal_zoned.js",
+      "tests/test_temporal_zoned_intl.js",
+      "tests/test_temporal_zoned_native.js",
+      "tests/test_temporal_zoned_repeated_day.js",
+      "tests/test_unicode_backend_contract.js",
+      "tests/test_unicode_property_grammar.js",
+      "tests/test_worker.js"
+    ],
+    "extra_C_invocations": [
+      {
+        "argv": [
+          "./tests/test_unicode_provider",
+          "--exhaustive"
+        ],
+        "target": "tests/test_unicode_provider"
+      },
+      {
+        "argv": [
+          "./tests/test_unicode_provider",
+          "--properties"
+        ],
+        "target": "tests/test_unicode_provider"
+      }
+    ],
+    "special_C_units": [],
+    "C_source_paths": {
+      "tests/test_bytecode_trace": "tests/test_bytecode.c"
+    },
+    "special_JS_invocations": [
+      {
+        "source": "tests/test_temporal_realm.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_temporal_realm.js"
+        ]
+      },
+      {
+        "source": "tests/test_temporal_date_provider.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "UTC",
+          "./qjs",
+          "tests/test_temporal_date_provider.js"
+        ]
+      },
+      {
+        "source": "tests/test_date_temporal_time_zone.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "America/New_York",
+          "./qjs",
+          "tests/test_date_temporal_time_zone.js"
+        ]
+      },
+      {
+        "source": "tests/test_date_temporal_time_zone.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "US/Eastern",
+          "./qjs",
+          "tests/test_date_temporal_time_zone.js"
+        ]
+      },
+      {
+        "source": "tests/test_date_second_offset.js",
+        "argv": [
+          "./qjs",
+          "tests/test_date_second_offset.js",
+          "--icu-date-provider"
+        ]
+      },
+      {
+        "source": "tests/test_date_second_offset.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "America/New_York",
+          "./qjs",
+          "tests/test_date_second_offset.js",
+          "--expect-new-york-seconds",
+          "--icu-date-provider"
+        ]
+      },
+      {
+        "source": "tests/test_realm.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_realm.js"
+        ]
+      },
+      {
+        "source": "tests/test_iterator_realms.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_iterator_realms.js"
+        ]
+      },
+      {
+        "source": "tests/test_disposal_realms.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_disposal_realms.js"
+        ]
+      },
+      {
+        "source": "tests/test_module.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_module.js"
+        ]
+      },
+      {
+        "source": "tests/test_module_names.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_module_names.js"
+        ]
+      },
+      {
+        "source": "tests/test_async.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_async.js"
+        ]
+      },
+      {
+        "source": "tests/test_wait_async.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_wait_async.js"
+        ]
+      },
+      {
+        "source": "tests/test_wait_async_agents.js",
+        "argv": [
+          "./run-test262",
+          "-N",
+          "tests/test_wait_async_agents.js"
+        ]
+      }
+    ]
+  },
+  "inactive_zone_stable_callback_claim": false,
+  "make_source_sha256": "6f980d40cc86a2ca2d5b494b117aa845e58b6ea173bbf81c597828cb11877417",
+  "native": {
+    "C_targets": [
+      "tests/test_allocator",
+      "tests/test_allocator_policy",
+      "tests/test_api",
+      "tests/test_atomics_wait",
+      "tests/test_bytecode",
+      "tests/test_bytecode_trace",
+      "tests/test_calendar_integrated_authority",
+      "tests/test_calendar_persian_authority",
+      "tests/test_calendar_portable",
+      "tests/test_cutils",
+      "tests/test_default_time_zone_api",
+      "tests/test_fuzz_allocations",
+      "tests/test_fuzz_exception_ownership",
+      "tests/test_fuzz_json",
+      "tests/test_fuzz_regexp_timeout",
+      "tests/test_fuzz_support",
+      "tests/test_intl_calendar_domain",
+      "tests/test_intl_collator_segmenter",
+      "tests/test_intl_data_bundle",
+      "tests/test_intl_data_reader",
+      "tests/test_intl_date_pattern",
+      "tests/test_intl_decimal",
+      "tests/test_intl_default_locale_api",
+      "tests/test_intl_duration_format_embed",
+      "tests/test_intl_native_collator_oom",
+      "tests/test_intl_native_date_bank_data",
+      "tests/test_intl_native_date_frontend_oom",
+      "tests/test_intl_native_display_oom",
+      "tests/test_intl_native_duration_engine",
+      "tests/test_intl_native_duration_oom",
+      "tests/test_intl_native_duration_provider",
+      "tests/test_intl_native_frontend_oom",
+      "tests/test_intl_native_general_oom",
+      "tests/test_intl_native_list_data",
+      "tests/test_intl_native_list_engine",
+      "tests/test_intl_native_locale_id",
+      "tests/test_intl_native_locale_info",
+      "tests/test_intl_native_number_engine",
+      "tests/test_intl_native_number_oom",
+      "tests/test_intl_native_number_provider",
+      "tests/test_intl_native_plural",
+      "tests/test_intl_native_plural_oom",
+      "tests/test_intl_native_plural_provider",
+      "tests/test_intl_native_relative_decimal",
+      "tests/test_intl_native_relative_oom",
+      "tests/test_intl_native_segmenter_oom",
+      "tests/test_intl_native_timezone",
+      "tests/test_intl_native_timezone_runtime",
+      "tests/test_intl_number_format_embed",
+      "tests/test_intl_number_grammar",
+      "tests/test_intl_plural",
+      "tests/test_intl_receiver_api",
+      "tests/test_intl_services_api",
+      "tests/test_iterator",
+      "tests/test_native_jobs",
+      "tests/test_qjsc_context_failures",
+      "tests/test_qjsc_json_preload",
+      "tests/test_qjsc_json_probe",
+      "tests/test_temporal",
+      "tests/test_temporal_api",
+      "tests/test_temporal_calendars",
+      "tests/test_temporal_civil",
+      "tests/test_temporal_date_math",
+      "tests/test_temporal_duration_math",
+      "tests/test_temporal_epoch",
+      "tests/test_temporal_format",
+      "tests/test_temporal_native_calendars",
+      "tests/test_temporal_runtime_zone_provider",
+      "tests/test_temporal_system_clock",
+      "tests/test_temporal_zones",
+      "tests/test_timezone",
+      "tests/test_timezone_system_reader",
+      "tests/test_typed_array",
+      "tests/test_tzif_decoder",
+      "tests/test_unicode",
+      "tests/test_unicode_initialization",
+      "tests/test_unicode_oom",
+      "tests/test_unicode_provider",
+      "tests/test_unicode_version",
+      "tests/test_wait_async",
+      "tests/test_wait_queue",
+      "tests/test_windows_zones",
+      "tests/test_worker_context_failure"
+    ],
+    "JS_files": [
+      "examples/test_point.js",
+      "tests/test_bigint.js",
+      "tests/test_bjson.js",
+      "tests/test_closure.js",
+      "tests/test_cyclic_import.js",
+      "tests/test_date_parse_boundaries.js",
+      "tests/test_date_second_offset.js",
+      "tests/test_date_setter_snapshot.js",
+      "tests/test_date_temporal_bridge.js",
+      "tests/test_gsab_worker.js",
+      "tests/test_intl_bound_function_realms.js",
+      "tests/test_intl_native_collator.js",
+      "tests/test_intl_native_date_all_calendars.js",
+      "tests/test_intl_native_date_frontend.js",
+      "tests/test_intl_native_date_timezone_names.js",
+      "tests/test_intl_native_display.js",
+      "tests/test_intl_native_duration.js",
+      "tests/test_intl_native_frontend.js",
+      "tests/test_intl_native_general.js",
+      "tests/test_intl_native_number.js",
+      "tests/test_intl_native_plural.js",
+      "tests/test_intl_native_relative.js",
+      "tests/test_intl_native_segmenter.js",
+      "tests/test_language.js",
+      "tests/test_loop.js",
+      "tests/test_rw_handler.js",
+      "tests/test_std.js",
+      "tests/test_temporal_calendar_identifier_boundaries.js",
+      "tests/test_temporal_calendar_zones.js",
+      "tests/test_temporal_duration.js",
+      "tests/test_temporal_instant.js",
+      "tests/test_temporal_native_calendars.js",
+      "tests/test_temporal_native_zones.js",
+      "tests/test_temporal_now.js",
+      "tests/test_temporal_offset_wall_date_boundaries.js",
+      "tests/test_temporal_plain.js",
+      "tests/test_temporal_plain_date_duration_balance.js",
+      "tests/test_temporal_plain_time.js",
+      "tests/test_temporal_year_month_date_boundaries.js",
+      "tests/test_temporal_zero_zoned_duration_boundaries.js",
+      "tests/test_temporal_zoned.js",
+      "tests/test_temporal_zoned_native.js",
+      "tests/test_temporal_zoned_repeated_day.js",
+      "tests/test_unicode_backend_contract.js",
+      "tests/test_unicode_property_grammar.js",
+      "tests/test_worker.js"
+    ],
+    "extra_C_invocations": [],
+    "special_C_units": [
+      {
+        "category": "Make-owned special repository unit",
+        "make_target": "test-intl-native-compiled-cache",
+        "modes": [
+          "retry",
+          "provider-failure",
+          "concurrent",
+          "mutable",
+          "number",
+          "duration",
+          "number-mutable"
+        ],
+        "provider_object": "$(OBJDIR)/src/intl/provider-native.cache-test.o",
+        "reader_define": "-Dqjs_intl_data_open=qjs_intl_counted_data_open",
+        "source": "tests/test_intl_native_compiled_cache.c",
+        "source_sha256": "287676a4c5a9ff41fdb32a52209dbd5dfae3f853b814df2ac2f031f7d26a15c1",
+        "target": "tests/test_intl_native_compiled_cache"
+      }
+    ],
+    "C_source_paths": {
+      "tests/test_bytecode_trace": "tests/test_bytecode.c"
+    },
+    "special_JS_invocations": [
+      {
+        "source": "tests/test_date_second_offset.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "America/New_York",
+          "./qjs",
+          "tests/test_date_second_offset.js",
+          "--expect-new-york-seconds"
+        ]
+      },
+      {
+        "source": "tests/test_temporal_realm.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_temporal_realm.js"
+        ]
+      },
+      {
+        "source": "tests/test_temporal_date_provider.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "UTC",
+          "./qjs",
+          "tests/test_temporal_date_provider.js"
+        ]
+      },
+      {
+        "source": "tests/test_date_temporal_time_zone.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "America/New_York",
+          "./qjs",
+          "tests/test_date_temporal_time_zone.js"
+        ]
+      },
+      {
+        "source": "tests/test_date_temporal_time_zone.js",
+        "argv": [
+          "./tests/run_temporal_zone_test",
+          "US/Eastern",
+          "./qjs",
+          "tests/test_date_temporal_time_zone.js"
+        ]
+      },
+      {
+        "source": "tests/test_realm.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_realm.js"
+        ]
+      },
+      {
+        "source": "tests/test_iterator_realms.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_iterator_realms.js"
+        ]
+      },
+      {
+        "source": "tests/test_disposal_realms.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_disposal_realms.js"
+        ]
+      },
+      {
+        "source": "tests/test_module.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_module.js"
+        ]
+      },
+      {
+        "source": "tests/test_module_names.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_module_names.js"
+        ]
+      },
+      {
+        "source": "tests/test_builtin.js",
+        "argv": [
+          "./qjs",
+          "--std",
+          "tests/test_builtin.js"
+        ]
+      },
+      {
+        "source": "tests/test_async.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_async.js"
+        ]
+      },
+      {
+        "source": "tests/test_wait_async.js",
+        "argv": [
+          "./qjs",
+          "-m",
+          "tests/test_wait_async.js"
+        ]
+      },
+      {
+        "source": "tests/test_wait_async_agents.js",
+        "argv": [
+          "./run-test262",
+          "-N",
+          "tests/test_wait_async_agents.js"
+        ]
+      }
+    ]
+  },
+  "projected_final_production_map": "27ba5c792b315e94ca8ad3ea1ebac203a5c107f68425e036c98a792890dde047",
+  "projected_stage36_map": "94537239f81c2de85f4d80b6aad476ac962b20bea3902be0cd13277fa0108f72",
+  "runtime_executed": false,
+  "shared_timezone_snapshot_extension_adopted": true,
+  "shared_timezone_snapshot_source_sha256": "c6bcec2c4aa70b4080dce8bec9b9c9ca60e1f078609041151f5e3e5fb53eba5a",
+  "source_map": null,
+  "source_only": true,
+  "timezone_inventory_and_fallback_followon_pending": true
+}

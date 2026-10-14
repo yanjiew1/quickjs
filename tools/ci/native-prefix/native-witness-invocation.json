@@ -1,0 +1,30 @@
+{
+  "authorization_meaning": "Prepared exact relative source invocation only; root source review and actual execution approval required. Separate false source guard and normative policy templates remain blockers. No conformance or semantic authority.",
+  "authorized": true,
+  "capture_launcher": "tools/ci/native-prefix/launch_current_premise_witness.py",
+  "capture_launcher_sha256": "0a5f35af0f3e735e9bf5f796b22152da001a99b2fca055c19f5b0a19e6e5d9a0",
+  "configuration": "tools/ci/native-prefix/original-assertion-projection-config.json",
+  "configuration_sha256": "ade0cbb62df79741eb61d125809b0e8b7a55aeb1a74e98f1df20e61b6b94b2f7",
+  "conformance_accepted": false,
+  "current_compatibility_sources": {
+    "tools/ci/native-prefix/premise-runner-compatibility.json": "eb2abd831caca8b8c6412e03cc7de22cedcd406f25638a8bc982f60ce43474b9",
+    "tools/ci/native-prefix/premise_source_compatibility.py": "c5d23695fc6bafe410698c958a09670e3116de01f7c480f4bb7b6cf39ef13e49",
+    "tools/ci/native-prefix/launch_current_premise_witness.py": "0a5f35af0f3e735e9bf5f796b22152da001a99b2fca055c19f5b0a19e6e5d9a0",
+    "tools/ci/native-prefix/execution_threads.py": "909cd8873721c4f188d48c5adebef8e25c04d7f63e78d9e7170f9bf66cca397f"
+  },
+  "failure_waiver": false,
+  "historical_capture_launcher": "tools/ci/native-prefix/original-assertions/launch_practical_witness.py",
+  "historical_capture_launcher_sha256": "7d43cd5d531f5204fb80dd94bbf2ebb043d8a3e8c5381e175aafc5cf821f6b26",
+  "hosted_accepted": false,
+  "packet_root": "tools/ci/native-prefix/original-assertions",
+  "packet_seal_sha256": "cd3fcb13ce35edcd6905cde4edcbe70e0cae067e32f965e6505bd713abbb4d68",
+  "premise_source_guard_review": "tools/ci/native-prefix/premise-source-guard-review.json",
+  "premise_source_guard_review_sha256": "c9a7b52fba84783dbb3f7db9b53baa8cbcadc34b1b09c845d26373b8f542bc9b",
+  "runtime_accepted": false,
+  "schema": "native-original-assertion-witness-invocation-v2",
+  "semantic_adjudication_complete": false,
+  "status": "SOURCE_READY_GUARD_SCOPE_AND_NORMATIVE_REVIEW_REQUIRED",
+  "validator": "tools/ci/native-prefix/project_original_assertions.py",
+  "validator_contract": "Exact authenticated raw current checkout identity; independently rerender210 original script variants; full per-variant trace+guard checks; fresh whole-object RTF1008 observations; complete original118 scope. Normative per-file qualification remains separate.",
+  "validator_sha256": "0296c8d2b0fbfc50828d0b66d7bfcac29aad8786c4ebcff4b2b4264b42ecad4e"
+}

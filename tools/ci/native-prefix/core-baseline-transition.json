@@ -1,0 +1,24 @@
+{
+  "current_baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "historical_baseline_sha256": "7a2ca3c319006a81ffae6378bfe48d163d7e4d3322848f77f2007180dfeb5a70",
+  "historical_checkpoint_sha256": "0f1afeb1ce984a03bfdb331b755fa0985b888164112649d0136e83ac5c2a8e6d",
+  "mode": "assignment-reference-14",
+  "remaining_source_count": 0,
+  "removed_records": [
+    "test262/test/language/expressions/assignment/S11.13.1_A6_T1.js:23: Test262Error: #1: innerX === undefined. Actual: 1",
+    "test262/test/language/expressions/assignment/S11.13.1_A6_T2.js:23: Test262Error: #1: innerX === 2. Actual: 1",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.1_T1.js:24: Test262Error: #1: innerX === 2. Actual: 12",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.2_T1.js:24: Test262Error: #1: innerX === 2. Actual: 5",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.3_T1.js:24: Test262Error: #1: innerX === 2. Actual: 3",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.4_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.5_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.6_T1.js:24: Test262Error: #1: innerX === 2. Actual: 8",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.7_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.8_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.9_T1.js:24: Test262Error: #1: innerX === 2. Actual: 1",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.10_T1.js:24: Test262Error: #1: innerX === 2. Actual: 5",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.11_T1.js:24: Test262Error: #1: innerX === 2. Actual: 5",
+    "test262/test/language/identifier-resolution/assign-to-global-undefined.js:20: strict mode: expected error"
+  ],
+  "schema": "assignment-core-baseline-transition-v1"
+}

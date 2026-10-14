@@ -1,0 +1,65 @@
+{
+  "accepted_errorfile_entries": false,
+  "anchors": [
+    "sec-intl.datetimeformat-internal-slots",
+    "sec-createdatetimeformat",
+    "sec-formatdatetimepattern",
+    "sec-formatdatetimetoparts"
+  ],
+  "classification": "two normative data-oracle defects; not engine correctness, feature or performance skips",
+  "dependency": {
+    "CLDR49_relevant_XML_found": false,
+    "cldr_data_major": "48",
+    "cldr_foundation_pin": "48.2",
+    "icu": "78.3",
+    "icu_commit": "21d1eb0f306e1141c10931e914dfc038c06121da",
+    "note": "CLDR49 assumption rejected by foundation pin and actual ICU supplementalData. Bounded known packet/source caches contain ICU text resources; only known XML sibling is unrelated windowsZones.xml. No fetch or broad recursive B search was used."
+  },
+  "diagnostic_only": "Raw original fixtures must run separately with unchanged bytes, errorfile=/dev/null, and original result retained.",
+  "fixture_revision": "c8c798898646638cd0c24879f8e0374e847e7d74",
+  "fixture_sha256": {
+    "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js": "7e9691cc92ffd7dcdd014046ab5ebea4ecffd8da608cc239689ebd481e9decb9",
+    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js": "8667903fa2969dc801b45e2505d96c878b2c15e278bad0af3b2a25c64ee749a3"
+  },
+  "mandatory_gate_report_fields": [
+    "source_map",
+    "profile",
+    "fixture_sha256",
+    "raw_original_paths",
+    "raw_original_returncodes",
+    "raw_original_signatures",
+    "raw_original_logs_and_journals",
+    "witness_exact_output",
+    "normative_companion_results",
+    "normative_selection_actual_count",
+    "normative_selection_results",
+    "excluded_oracle_paths_and_reasons"
+  ],
+  "normative_companions": [
+    "tests/test_intl_date_time_hour_cycle.js",
+    "tests/test_intl_date_time_numbering_parts.js"
+  ],
+  "normative_companions_always_required_to_pass": true,
+  "normative_selection": "Remaining official cases run separately: observed stage16 892 minus two equals 890; derive each actual count, do not report official 0/892.",
+  "raw_conditional_outcome": "Each original oracle may PASS with valid backend data; otherwise ONLY the exact adjudicated data assertion is allowed. Any other failure requires re-review.",
+  "raw_original_observed": {
+    "failure_signatures": [
+      "Test262Error: Expected SameValue(\u00ab\"h12\"\u00bb, \u00ab\"h11\"\u00bb) to be true",
+      "Test262Error: en-US-u-nu-hanidec: display all time units in 2-digit Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true"
+    ],
+    "log_sha256": "9043c53457d11ee4031ee2564741deb42a1fcbfe4cbf92777c1bfc52d748dfba",
+    "result": "2/892 errors, 2 new"
+  },
+  "re_review_triggers": [
+    "changed official fixture bytes or specification pin",
+    "additional failure or changed assertion",
+    "incorrect numeric parts or padding",
+    "invalid hour-cycle family or explicit hc behavior",
+    "normative companion failure"
+  ],
+  "reviewed": "2026-10-09",
+  "schema": "datetime-format-normative-data-oracle-policy-v1",
+  "spec_commit_date": "2026-10-06",
+  "spec_revision": "7ae78cfdf8255468ffc8ebda33dafaea952808dd",
+  "witness_requirement": "Retain exact Japanese resolvedOptions and hanidec string, codepoints and parts; prove correct selected digits/padding and h12-family semantics. U+202F is the sole observed literal difference with pinned ICU78.3 / CLDR48.2."
+}

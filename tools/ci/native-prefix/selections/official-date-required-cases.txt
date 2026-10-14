@@ -1,0 +1,2 @@
+test/intl402/DateTimeFormat/canonicalize-calendar.js
+test/intl402/DateTimeFormat/prototype/resolvedOptions/calendar.js

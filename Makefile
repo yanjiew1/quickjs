@@ -220,6 +220,19 @@ ifdef CONFIG_WERROR
 CFLAGS+=-Werror
 endif
 DEFINES:=-D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
+# Private Linux capture transport for an isolated diagnostic engine.
+ifeq ($(CONFIG_TZ_CAPTURE_SNAPSHOT),y)
+ifdef CONFIG_WIN32
+$(error CONFIG_TZ_CAPTURE_SNAPSHOT is a Linux diagnostic configuration)
+endif
+ifneq ($(CONFIG_ICU),n)
+$(error CONFIG_TZ_CAPTURE_SNAPSHOT requires CONFIG_ICU=n)
+endif
+ifeq ($(filter y,$(CONFIG_TEMPORAL) $(CONFIG_INTL_NATIVE)),)
+$(error CONFIG_TZ_CAPTURE_SNAPSHOT requires the native timezone provider)
+endif
+DEFINES+=-DQJS_TZ_CAPTURE_SNAPSHOT
+endif
 ifeq ($(CONFIG_TEMPORAL),y)
 DEFINES+=-DCONFIG_TEMPORAL
 endif
@@ -505,6 +518,9 @@ QUICKJS_SRCS+=$(TEMPORAL_ENGINE_SRCS) $(TEMPORAL_LIBRARY_SRCS)
 endif
 
 TIMEZONE_SRCS=src/timezone/timezone.c src/timezone/tzif.c src/timezone/embedded.c
+ifeq ($(CONFIG_TZ_CAPTURE_SNAPSHOT),y)
+TIMEZONE_SRCS+=tools/ci/native-prefix/selected-timezone-snapshot.c
+endif
 ifdef CONFIG_WIN32
 TIMEZONE_SRCS+=src/timezone/windows-zone.c
 endif
@@ -766,6 +782,7 @@ unicode_gen_test: $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/
 	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/tools/unicode_gen.test.host.o $(OBJDIR)/src/unicode/libunicode.test.host.o $(OBJDIR)/src/cutils/cutils.host.o
 
 clean:
+	rm -f test262_intl-*_temporal-*.txt test262-intl_intl-*_temporal-*.txt test262-temporal_intl-*_temporal-*.txt
 	rm -f repl.c out.c quickjs.h quickjs-libc.h
 	rm -f *.a *.o *.d *~ unicode_gen unicode_gen_test regexp_test$(EXE) fuzz_eval fuzz_compile fuzz_regexp $(PROGS)
 	rm -f hello.c test_fib.c
@@ -1427,12 +1444,12 @@ test2-bootstrap:
 	git clone --single-branch --shallow-since=$(TEST262_SINCE) https://github.com/tc39/test262.git
 	(cd test262 && git checkout -q $(TEST262_COMMIT) && \
 	 patch -p1 < ../tests/test262.patch && \
-	 patch -p1 < ../tests/test262-unicode18.patch && cd ..)
+	 if test "$(TEST262_UNICODE18_OVERLAY)" = y; then patch -p1 < ../tests/test262-unicode18.patch; fi && cd ..)
 else
 test2-bootstrap:
 	(cd test262 && git fetch && git reset --hard $(TEST262_COMMIT) && \
 	 patch -p1 < ../tests/test262.patch && \
-	 patch -p1 < ../tests/test262-unicode18.patch && cd ..)
+	 if test "$(TEST262_UNICODE18_OVERLAY)" = y; then patch -p1 < ../tests/test262-unicode18.patch; fi && cd ..)
 endif
 
 # Use every available processor; callers can choose a smaller worker count.
@@ -1452,10 +1469,10 @@ test2o-update: run-test262
 	./run-test262 -T $(TEST262_THREADS) $(TEST262_TIMING_OPTION) -t -u -c test262o.conf
 endif
 
-TEST262_CONFIG?=test262.conf
-TEST262_FEATURE_CONFIG=$(basename $(TEST262_CONFIG))_intl-n_temporal-$(if $(filter y,$(CONFIG_TEMPORAL)),y,n).txt
+TEST262_CONFIG?=$(if $(filter y,$(CONFIG_INTL)),test262-intl.conf,test262.conf)
+TEST262_FEATURE_CONFIG=$(basename $(TEST262_CONFIG))_intl-$(if $(filter y,$(CONFIG_INTL)),y,n)_temporal-$(if $(filter y,$(CONFIG_TEMPORAL)),y,n).txt
 $(TEST262_FEATURE_CONFIG): $(TEST262_CONFIG) tools/ci/test262-config.py
-	$(PYTHON) tools/ci/test262-config.py --intl n --temporal "$(if $(filter y,$(CONFIG_TEMPORAL)),y,n)" --source "$<" --output "$@" --preserve-reportfile
+	$(PYTHON) tools/ci/test262-config.py --intl "$(if $(filter y,$(CONFIG_INTL)),y,n)" --temporal "$(if $(filter y,$(CONFIG_TEMPORAL)),y,n)" --source "$<" --output "$@" --preserve-reportfile
 .PHONY: test2-config
 test2-config: $(TEST262_FEATURE_CONFIG)
 
@@ -2237,8 +2254,16 @@ tests/test_unicode_provider$(EXE): $(OBJDIR)/tests/test_unicode_provider.o $(OBJ
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_unicode_initialization$(EXE): $(OBJDIR)/tests/test_unicode_initialization.o libquickjs$(LTOEXT).a
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS) $(if $(filter y,$(CONFIG_ICU)),-Wl$(comma)--wrap=$(ICU_INIT_WRAP_SYMBOL))
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS) $(ICU_INIT_WRAP_LDFLAGS)
 
+# The initialization fault fixture uses GNU linker wrapping only. Apple's
+# linker has no --wrap; retain the ordinary initialization checks there.
+ifeq ($(CONFIG_ICU),y)
+ifndef CONFIG_DARWIN
+ICU_INIT_WRAP_LDFLAGS=-Wl$(comma)--wrap=$(ICU_INIT_WRAP_SYMBOL)
+$(OBJDIR)/tests/test_unicode_initialization.o: CFLAGS+=-DQJS_TEST_ICU_INIT_WRAP
+endif
+endif
 comma:=,
 ICU_INIT_WRAP_SYMBOL?=u_init_$(shell $(CC) $(ICU_CFLAGS) -dM -E -include unicode/uvernum.h -x c /dev/null | sed -n 's/^\#define U_ICU_VERSION_MAJOR_NUM //p')
 $(OBJDIR)/tests/test_unicode_provider.o: $(UNICODE_PROVIDER_INPUTS)
@@ -2275,3 +2300,18 @@ tests/test_icu_version_contract$(EXE): $(OBJDIR)/tests/test_icu_version_contract
 test-unicode-backend-contract: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_unicode_backend_contract.js
 test: test-unicode-backend-contract
+
+# Kept out of all/test: only the owned witness launcher uses this preflight.
+ifeq ($(CONFIG_TZ_CAPTURE_SNAPSHOT),y)
+.PHONY: selected-timezone-probe
+selected-timezone-probe: $(OBJDIR)/tools/ci/native-prefix/probe-selected-timezones$(EXE)
+$(OBJDIR)/tools/ci/native-prefix/probe-selected-timezones$(EXE): $(OBJDIR)/tools/ci/native-prefix/probe-selected-timezones.o $(TIMEZONE_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+endif
+
+TEST262_UNICODE18_OVERLAY?=y
+
+.PHONY: test-test262-config
+test-test262-config:
+	QJS_TEST_MAKE="$(MAKE)" $(PYTHON) tests/test_test262_config.py
+test: test-test262-config

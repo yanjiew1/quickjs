@@ -1,0 +1,1807 @@
+{
+  "adjudicated_diagnostic_entries": [
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "90285ec092e99fa17c3c81762c595281ca07de286c47ba3e012a57ffb3e1e165",
+      "line": 11,
+      "path": "test262/test/intl402/Collator/prototype/resolvedOptions/resolved-collation-unicode-extensions-and-options.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/v9v3-170.json",
+        "sha256": "f48438a885e2d57daec9205b727c5cf557f719e0c21a8ad6695423f8ddbe440b"
+      },
+      "signature": "unexpected error: Test262Error: Resolved locale for locale=de-u-co-phonebk with collation=pinyin Expected SameValue(\u00ab\"en-US\"\u00bb, \u00ab\"de-u-co-phonebk\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "dd46e73e0473f74506641bdaccf9139afb8a1ffa09c28fa2487ec2b34d9cfbdc",
+      "line": 11,
+      "path": "test262/test/intl402/BigInt/prototype/toLocaleString/de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/000-029b91475f6b.json",
+        "sha256": "8558e0e8c1d367129da145562d29a9d0667d2da5ebf3255e4219c32cfbd0c258"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"88,780,000\"\u00bb, \u00ab\"88.780.000\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "947f030de210284f0b66395eac6a622cc48dd0e84b4fb7276093c284365c73b1",
+      "line": 13,
+      "path": "test262/test/intl402/Collator/prototype/resolvedOptions/ignorePunctuation-default.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/001-0ed93fbceca2.json",
+        "sha256": "39a53e2d6e03eef5ffb4575c3680e6d5e2c403a6ed0fbf1877011a1c9ffa6aab"
+      },
+      "signature": "unexpected error: Test262Error: Thai default ignorePunctuation to true Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "804f0251207d70f71615d9246c663449bdfb1b26ed72be2c0e948d90b75c95fe",
+      "line": 11,
+      "path": "test262/test/intl402/Collator/usage-de.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/002-e206f944f3b5.json",
+        "sha256": "873f9d1a573616a9d1f789c49fbce5d1163ade8a489f99599b83a4937f4668cb"
+      },
+      "signature": "unexpected error: Test262Error: Actual [\u00c4, AE] and expected [AE, \u00c4] should have the same contents. search",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "c9a5afc70387c3439ca0e3804a3670a01da4140b3892e6ec82f08102a74a1842",
+      "line": 29,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/004-c120c0e5877e.json",
+        "sha256": "75991c6a01baf4fc5d3d14f1798dac401aa6a3f7dcb0f637505af6a58e5d8430"
+      },
+      "signature": "unexpected error: Test262Error: Actual [12 midnight, 1 in the morning, 2 in the morning, 3 in the morning, 4 in the morning, 5 in the morning, 6 in the morning, 7 in the morning, 8 in the morning, 9 in the morning, 10 in the morning, 11 in the morning, 12 noon, 1 in the afternoon, 2 in the afternoon, 3 in the afternoon, 4 in the afternoon, 5 in the afternoon, 6 in the evening, 7 in the evening, 8 in the evening, 9 at night, 10 at night, 11 at night] and expected [] should have the same contents. unexpected dayPeriods: 12 midnight,1 in the morning,2 in the morning,3 in the morning,4 in the morning,5 in the morning,6 in the morning,7 in the morning,8 in the morning,9 in the morning,10 in the morning,11 in the morning,12 noon,1 in the afternoon,2 in the afternoon,3 in the afternoon,4 in the afternoon,5 in the afternoon,6 in the evening,7 in the evening,8 in the evening,9 at night,10 at night,11 at night",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "92ba1ef32042121fe6bfc78a1d31be373856081a1ccd17b328a08018cf2988f8",
+      "line": 29,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/006-fc34e1376e06.json",
+        "sha256": "6e2fcfb1d699bf6cba9b906bfd26cc6ae92b74aa1aaa66c2b8e3b2301165b508"
+      },
+      "signature": "unexpected error: Test262Error: Actual [12 midnight, 1 in the morning, 2 in the morning, 3 in the morning, 4 in the morning, 5 in the morning, 6 in the morning, 7 in the morning, 8 in the morning, 9 in the morning, 10 in the morning, 11 in the morning, 12 noon, 1 in the afternoon, 2 in the afternoon, 3 in the afternoon, 4 in the afternoon, 5 in the afternoon, 6 in the evening, 7 in the evening, 8 in the evening, 9 at night, 10 at night, 11 at night] and expected [] should have the same contents. unexpected dayPeriods: 12 midnight,1 in the morning,2 in the morning,3 in the morning,4 in the morning,5 in the morning,6 in the morning,7 in the morning,8 in the morning,9 in the morning,10 in the morning,11 in the morning,12 noon,1 in the afternoon,2 in the afternoon,3 in the afternoon,4 in the afternoon,5 in the afternoon,6 in the evening,7 in the evening,8 in the evening,9 at night,10 at night,11 at night",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "89bd02d69e043a2f55bac71e381a81f772da4c27e01e694116b0c4a246bc150a",
+      "line": 10,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/format/german-weekday-no-year.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/007-9d201268e6fc.json",
+        "sha256": "f7671d4a896122b5a7950756b00aa5a438ff7c554094db3e188958cddff5ca5d"
+      },
+      "signature": "unexpected error: Test262Error: German weekday without year Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "6872bc3b8dfcd352a38e71c086d068ea34cde487d448503038d37b9747f8aef9",
+      "line": 14,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/format/related-year-zh.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/009-4389c38bc48c.json",
+        "sha256": "c82b8db834755a0af3b7c0a0f113290162cd95f59e93d1965e775c8e412ca804"
+      },
+      "signature": "unexpected error: Test262Error: Expected true but got false",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0760eee3f3997a39aa583b709de9870d9159fd3369e7d8bd54512ce8abdde1cd",
+      "line": 29,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/005-c2be8e8a2349.json",
+        "sha256": "9445902440bf84569d2ba0d71abc655d6c711d9fba3f5adaa262c8677192396b"
+      },
+      "signature": "unexpected error: Test262Error: Actual [12 mi, 1 in the morning, 2 in the morning, 3 in the morning, 4 in the morning, 5 in the morning, 6 in the morning, 7 in the morning, 8 in the morning, 9 in the morning, 10 in the morning, 11 in the morning, 12 n, 1 in the afternoon, 2 in the afternoon, 3 in the afternoon, 4 in the afternoon, 5 in the afternoon, 6 in the evening, 7 in the evening, 8 in the evening, 9 at night, 10 at night, 11 at night] and expected [] should have the same contents. unexpected dayPeriods: 12 mi,1 in the morning,2 in the morning,3 in the morning,4 in the morning,5 in the morning,6 in the morning,7 in the morning,8 in the morning,9 in the morning,10 in the morning,11 in the morning,12 n,1 in the afternoon,2 in the afternoon,3 in the afternoon,4 in the afternoon,5 in the afternoon,6 in the evening,7 in the evening,8 in the evening,9 at night,10 at night,11 at night",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "62a5a45883efdc6137c85a0a6d4b6289f66c8376be371dac9980fcf033357d0b",
+      "line": 28,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/format/temporal-objects-no-time-clip-non-latin-numerals.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/v9v3-104.json",
+        "sha256": "539475f28f1857c045985e9fa1ab6bb4a7311860327403c1211cf31f175e9743"
+      },
+      "signature": "unexpected error: Test262Error: max date should include day 13 in Arabic-Indic digits, got: 275760 9 13",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "ea8d5bd6435707239f6478be33eb535f269568d11f8d6e0f4539e7f7516e56ad",
+      "line": 34,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRange/date-same-returns-single-date.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/010-e894e88185bb.json",
+        "sha256": "29eca09f73db54fe8b1e41ddeb0a451d446427c31cec14448635a58640caf96e"
+      },
+      "signature": "unexpected error: Test262Error: same output with date options Expected SameValue(\u00ab\"Aug 10, 2019\u2009\u2013\u2009Aug 10, 2019\"\u00bb, \u00ab\"Aug 10, 2019\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "3c30b523d52d30acfdda9351433965cd26b2331868da253a65f6394b2b5db587",
+      "line": 18,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRange/en-US.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/011-fe8d28efaeb3.json",
+        "sha256": "612e981d14f3a200f0e4e9aa5a2da107be97823606cc6d4cc18a2ccc48bda758"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"Jan 3, 2019\u2009\u2013\u2009Jan 5, 2019\"\u00bb, \u00ab\"Jan 3\u2009\u2013\u20095, 2019\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "e8a03699a09fa810410e1625eeb7afe49c4464f9d8f961aec9822dbc3b988305",
+      "line": 24,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-resolved-time-zone.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/015-c087696388d2.json",
+        "sha256": "e13e921cac39be71234f24821edc132d5c828278142704aeac78bf8e88a57b9e"
+      },
+      "signature": "unexpected error: Test262Error: plain datetimes Expected SameValue(\u00ab\"8/4/2021, 12:30:45\u202fAM\u2009\u2013\u20098/4/2021, 11:30:45\u202fPM\"\u00bb, \u00ab\"8/4/2021, 12:30:45\u202fAM\u2009\u2013\u200911:30:45\u202fPM\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "2a07ddcb87ba1e1eb60ca42f8fe281bd7475011184b98f5b6ad331d60f73c479",
+      "line": 14,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRange/fractionalSecondDigits.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/012-0b9f6397e177.json",
+        "sha256": "b04a851f2d38e21e6aa7ea69f12b45680cee7c1bdeffb33eddd32f68f36ead75"
+      },
+      "signature": "unexpected error: Test262Error: no fractionalSecondDigits Expected SameValue(\u00ab\"02:03\u2009\u2013\u200902:03\"\u00bb, \u00ab\"02:03\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "88bd9eb2a1879367b9ff9a3535e3b5690d57b14016e313c8186e3ca7cfcb723d",
+      "line": 15,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-format-with-era.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/013-9fd4695d3e56.json",
+        "sha256": "8820e31c3f7570d430aa0c60d049b9c0c1f29c61265a625cf045ffa12e4993fc"
+      },
+      "signature": "unexpected error: Test262Error: formatting an Instant should work",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "99dee450501de783ea816d5feea4869fdbca3a6c9b2212f0c4a927dbaea7ce3f",
+      "line": 13,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/chinese-calendar-dates.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/016-e2b214e40b3d.json",
+        "sha256": "d0aa68a0c6cbc234225f423ef53e0bf029b334f02c9ddc8e3d0a3dfe69ae4b9e"
+      },
+      "signature": "unexpected error: Test262Error: relatedYear component of 2000-01-01T00:00Z formatted in chinese is missing Expected SameValue(\u00abundefined\u00bb, \u00abundefined\u00bb) to be false",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "dd9d92758dc1526a27235ea24e8d0fede9421212fcf3dc2f7e45b755fae4471f",
+      "line": 49,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/018-0f0c09f9df99.json",
+        "sha256": "e45aa7cd6c29554aadfb9d25b6c2c827b9f8606f7570edd7a9d293deee769d77"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab11\u00bb, \u00ab5\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "9c125037bbf359376907384606c70e355726915da373df0623d0c556edd454ca",
+      "line": 13,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/dangi-calendar-dates.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/017-0caf4b1d1931.json",
+        "sha256": "529b2482d5c3741fa7baa3d3f7e11e563b5cd88aea2794e758195c422e299601"
+      },
+      "signature": "unexpected error: Test262Error: relatedYear component of 2000-01-01T00:00Z formatted in dangi is missing Expected SameValue(\u00abundefined\u00bb, \u00abundefined\u00bb) to be false",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "d481c01fbde47a95333c94d286c678ce6c412b9713afa777d393abc5fcb24f9e",
+      "line": 18,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/en-US.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/019-e8e3b88af038.json",
+        "sha256": "12a6fc6d339cb4c956d5ae17a0c7d8e65a68a96fcdd3c84e9f4a46d423de3167"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab11\u00bb, \u00ab7\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "13dd324665f7abb6708ae637bc3d327c3151d697e3f719b959c8ec364bcd2f89",
+      "line": 14,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/020-615fcbb86cbc.json",
+        "sha256": "2711b7b9013b963c5054e18947819ec560979f49f251f79c2fbd2d6432edd929"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab7\u00bb, \u00ab3\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "ffadc9d589be1252123a0851d5b1a200d21e4b956d0775d7b7be1503560aee08",
+      "line": 25,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-objects-resolved-time-zone.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/022-e5c1c46c0e82.json",
+        "sha256": "210e0b81a6b3e714d2f111923d3a8cfaea738a3c02ffd842cde0199b7cdc9bab"
+      },
+      "signature": "unexpected error: Test262Error: Expected [Object {type: \"month\", value: \"8\", source: \"startRange\"}, Object {type: \"literal\", value: \"/\", source: \"startRange\"}, Object {type: \"day\", value: \"4\", source: \"startRange\"}, Object {type: \"literal\", value: \"/\", source: \"startRange\"}, Object {type: \"year\", value: \"2021\", source: \"startRange\"}, Object {type: \"literal\", value: \", \", source: \"startRange\"}, Object {type: \"hour\", value: \"12\", source: \"startRange\"}, Object {type: \"literal\", value: \":\", source: \"startRange\"}, Object {type: \"minute\", value: \"30\", source: \"startRange\"}, Object {type: \"literal\", value: \":\", source: \"startRange\"}, Object {type: \"second\", value: \"45\", source: \"startRange\"}, Object {type: \"literal\", value: \"\u202f\", source: \"startRange\"}, Object {type: \"dayPeriod\", value: \"AM\", source: \"startRange\"}, Object {type: \"literal\", value: \"\u2009\u2013\u2009\", source: \"shared\"}, Object {type: \"month\", value: \"8\", source: \"endRange\"}, Object {type: \"literal\", value: \"/\", source: \"endRange\"}, Object {type: \"day\", value: \"4\", source: \"endRange\"}, Object {type: \"literal\", value: \"/\", source: \"endRange\"}, Object {type: \"year\", value: \"2021\", source: \"endRange\"}, Object {type: \"literal\", value: \", \", source: \"endRange\"}, Object {type: \"hour\", value: \"11\", source: \"endRange\"}, Object {type: \"literal\", value: \":\", source: \"endRange\"}, Object {type: \"minute\", value: \"30\", source: \"endRange\"}, Object {type: \"literal\", value: \":\", source: \"endRange\"}, Object {type: \"second\", value: \"45\", source: \"endRange\"}, Object {type: \"literal\", value: \"\u202f\", source: \"endRange\"}, Object {type: \"dayPeriod\", value: \"PM\", source: \"endRange\"}] to be structurally equal to [Object {type: \"month\", value: \"8\", source: \"shared\"}, Object {type: \"literal\", value: \"/\", source: \"shared\"}, Object {type: \"day\", value: \"4\", source: \"shared\"}, Object {type: \"literal\", value: \"/\", source: \"shared\"}, Object {type: \"year\", value: \"2021\", source: \"shared\"}, Object {type: \"literal\", value: \", \", source: \"shared\"}, Object {type: \"hour\", value: \"12\", source: \"startRange\"}, Object {type: \"literal\", value: \":\", source: \"startRange\"}, Object {type: \"minute\", value: \"30\", source: \"startRange\"}, Object {type: \"literal\", value: \":\", source: \"startRange\"}, Object {type: \"second\", value: \"45\", source: \"startRange\"}, Object {type: \"literal\", value: \"\u202f\", source: \"startRange\"}, Object {type: \"dayPeriod\", value: \"AM\", source: \"startRange\"}, Object {type: \"literal\", value: \"\u2009\u2013\u2009\", source: \"shared\"}, Object {type: \"hour\", value: \"11\", source: \"endRange\"}, Object {type: \"literal\", value: \":\", source: \"endRange\"}, Object {type: \"minute\", value: \"30\", source: \"endRange\"}, Object {type: \"literal\", value: \":\", source: \"endRange\"}, Object {type: \"second\", value: \"45\", source: \"endRange\"}, Object {type: \"literal\", value: \"\u202f\", source: \"endRange\"}, Object {type: \"dayPeriod\", value: \"PM\", source: \"endRange\"}]. plain datetimes",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "7df1d424b9907c7b042a4bd378af49e62e2218fc17c06fe777fcfbd0e134054c",
+      "line": 13,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/chinese-calendar-dates.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/023-ca73365111dd.json",
+        "sha256": "73439f39819108ff7d3973d053ba99e8cb58018ad51d11ec1658de75e1946062"
+      },
+      "signature": "unexpected error: Test262Error: relatedYear component of 2000-01-01T00:00Z formatted in chinese is missing Expected SameValue(\u00abundefined\u00bb, \u00abundefined\u00bb) to be false",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "a2aaeb68a67e1f4e95c81a7eec113474f4ee4e730b804e8df09a1387d446489e",
+      "line": 39,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/lunisolar-qualified.json",
+        "sha256": "79e930fc1aee59fe39e76fd9d30fe4668c2fd4a561e612dd2d86ae2986821d49"
+      },
+      "signature": "unexpected error: TypeError: cannot read property 'value' of undefined",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "18b0f313e9a7b012f37fa4a6de39498a66c0f8ab0736f195c8d24c860e133cbb",
+      "line": 14,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dangi-calendar-dates.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/024-06a92f6100ac.json",
+        "sha256": "7de402612ed50109842080bd5d9dfa9e8de9ce0be8e360c630a167a6ccf81355"
+      },
+      "signature": "unexpected error: Test262Error: relatedYear component of 2000-01-01T00:00Z formatted in dangi is missing Expected SameValue(\u00abundefined\u00bb, \u00abundefined\u00bb) to be false",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "715716900acf6e868d3e367defe8e8a19cf58db3f117c0a6ff610c0f3500462d",
+      "line": 27,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/025-7a6c5300c803.json",
+        "sha256": "e84d675e96672d7b606c4a432e2f858db677ccb384e929a0115adfbdc9d5fd08"
+      },
+      "signature": "unexpected error: Test262Error: length should be 1, dayPeriod-only formatting for Tue Dec 12 2017 00:00:00 GMT-0800 Expected SameValue(\u00ab3\u00bb, \u00ab1\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "fe08e26203324320096dc1dae0baf3f1acce0dd870e193bdf36de9aa25f2b514",
+      "line": 27,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/027-c4cefcd05743.json",
+        "sha256": "865a05b7ec57d53f3493d6159098fc48acec1256ab139e720ac5438772ef7ec8"
+      },
+      "signature": "unexpected error: Test262Error: length should be 1, dayPeriod-only formatting for Tue Dec 12 2017 00:00:00 GMT-0800 Expected SameValue(\u00ab3\u00bb, \u00ab1\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "e77267ff386e82fef9f2816b092bbfe86f8fae3238806c4ff5937966c4844f20",
+      "line": 27,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/026-5591f4fbdbd0.json",
+        "sha256": "5614da7b7a7d4d61271a0222deab420cb44c91ea621f20739cb3bfd37b50e041"
+      },
+      "signature": "unexpected error: Test262Error: length should be 1, dayPeriod-only formatting for Tue Dec 12 2017 00:00:00 GMT-0800 Expected SameValue(\u00ab3\u00bb, \u00ab1\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "f0aefb4043cbd351b5531bf8ba9f2e58f774eff59ddf934a0d364ffcda2a0cb3",
+      "line": 13,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year-zh.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/028-fdaad91e8736.json",
+        "sha256": "98742a86da73d900481b34123d5f9730c72970a6219becf2fdfa8f64ed30feed"
+      },
+      "signature": "unexpected error: Test262Error: actual[0].type should be yearName Expected SameValue(\u00ab\"year\"\u00bb, \u00ab\"yearName\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0c25a93a86d187656f311cb302022effddfeae807e51328ff09591429f8d5834",
+      "line": 24,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/031-72e6d086c8f5.json",
+        "sha256": "a7e33cc94aa92eb665d8daee521799296c448cc077a0c1404f07f5231e5a208e"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"h12\"\u00bb, \u00ab\"h11\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "49c540f9bd3bdf2fc410db1c49397eab657e0d343519d98790eb46bc80d30bc7",
+      "line": 18,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/030-e65936859346.json",
+        "sha256": "dc984f7faf6d1a86d401db4406ea7244b2b7608cc43e75d918d8ad6cb7a6b337"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"h12\"\u00bb, \u00ab\"h11\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "151f2de8fa1a4a18fc717874663650eda473d11bed4203b2c8867a9d2fa16c71",
+      "line": 14,
+      "path": "test262/test/intl402/DurationFormat/constructor-locales-valid.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/032-8a7f458aaff9.json",
+        "sha256": "669e9b443c74fea84b4978ee9adfd2c775f388b4a7410cd483caa20d415c8d21"
+      },
+      "signature": "unexpected error: Test262Error: Object with length Expected SameValue(\u00ab\"en-US\"\u00bb, \u00ab\"de\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0d0562a20c60442876d431e1ba590697fe761663d94a81e2ee18ba710cd5d2dd",
+      "line": 21,
+      "path": "test262/test/intl402/DurationFormat/supportedLocalesOf/locales-specific.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/033-379286d1fd6b.json",
+        "sha256": "e30d4db21c0db58b5ccdfba0bd5b5a5b7fb617bf68cf083052aed4739ba2e96d"
+      },
+      "signature": "unexpected error: Test262Error: Actual [] and expected [sr] should have the same contents. ",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "6613ce16996541126494067d4093c82bdc71e0ac82dbde9f77ca4f5ae374f263",
+      "line": 25,
+      "path": "test262/test/intl402/ListFormat/constructor/constructor/locales-valid.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/034-811a1bce898d.json",
+        "sha256": "2c1f138676b1728b355e37f20f6fe9ec4116e805d179828a3166357ffc528285"
+      },
+      "signature": "unexpected error: Test262Error: Object with length Expected SameValue(\u00ab\"en-US\"\u00bb, \u00ab\"de\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "1ffed6542be590248f9d24c45be42f7f25e8833f00edc8d49ae6908162ba6d2a",
+      "line": 12,
+      "path": "test262/test/intl402/ListFormat/prototype/format/es-es-long.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/035-2e42dfab3e73.json",
+        "sha256": "79db8ea4bc90a6f738528545c4541e193b62b6954bddbd211308b7103f9410a1"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"foo, bar\"\u00bb, \u00ab\"foo y bar\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "4211cb328429a60ea2f65bb7d5d7b6feddb25a09b076eb79881ee7b2ea2046e6",
+      "line": 12,
+      "path": "test262/test/intl402/ListFormat/prototype/format/es-es-short.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/036-2eae68006728.json",
+        "sha256": "47a617582a78684d2b823ca84fc721cfc12de07ac4b7cf6acfd4b9ab72067bdc"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"foo, bar\"\u00bb, \u00ab\"foo y bar\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "4ca76daf619bfd36fa031de5f078034104a48b693b6da2e026f26a95d2e035c2",
+      "line": 54,
+      "path": "test262/test/intl402/ListFormat/prototype/formatToParts/es-es-long.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/037-b4c073330a9f.json",
+        "sha256": "20e8cbebd93a0bcc419328a7dc66b0f661910e6b6bf764c3bb09d0b56fd2ac4b"
+      },
+      "signature": "unexpected error: Test262Error: undefined: parts[1].value Expected SameValue(\u00ab\", \"\u00bb, \u00ab\" y \"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "ec01ee768eb4a8566168b656c3180f23f472af05827ac94cd967f9263b24c263",
+      "line": 54,
+      "path": "test262/test/intl402/ListFormat/prototype/formatToParts/es-es-short.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/038-7e09758517cc.json",
+        "sha256": "779c484d0e44f97dd448435f9b9d58b25b3d376e9618545212a55c9bf22fdeec"
+      },
+      "signature": "unexpected error: Test262Error: undefined: parts[1].value Expected SameValue(\u00ab\", \"\u00bb, \u00ab\" y \"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "b8b2927b0c519222f3d6150318884567f0aa0f60dd37f902613147857fa9980a",
+      "line": 16,
+      "path": "test262/test/intl402/Locale/prototype/getCollations/output-array-values.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/041-60cfb336d2ce.json",
+        "sha256": "b5dcd5ba2935b865e4faaba544820b155233986bee7bbde74a1960cd95eaea26"
+      },
+      "signature": "unexpected error: Test262Error: getCollations() for en has at least one element Expected SameValue(\u00ab0\u00bb, \u00ab0\u00bb) to be false",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "f632823d6fa3c67a88c7a4f47d7ff9f159c0abd03ec810976ae90bb9d7abd90d",
+      "line": 35,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/046-f8743b8b32c4.json",
+        "sha256": "9ce8411387a69c0d8caa7fdf4e7d2f71d4910c129880d6b3167e3ace1c8e8c6c"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"988M\"\u00bb, \u00ab\"988\u00a0Mio.\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "48b0a706d74269ef2f16787f1a42bed41780e7db0c93e7d045d955da99a24c0f",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-ja-JP.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/047-37d232f834ef.json",
+        "sha256": "52d92911b15136a41ad22a37f9c272aca86c412662bc3961a65afa9479f9318d"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"988M\"\u00bb, \u00ab\"9.9\u5104\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "269eabebf6202042b26607e36eca92613389311089ed0f052c69e9aa3c435a12",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/049-8db2dea869cf.json",
+        "sha256": "d5749ce15f6bd19643c9d4d35b4954a94c075016ff13051695315df2b3f3d81a"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"988M\"\u00bb, \u00ab\"9.9\u5104\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "a1a261933dce831e9a8d872718858647e85e61d59141535af0cb34c65b55525a",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/050-1c449b25e61c.json",
+        "sha256": "2935ee068f1de27b2e541fde5838bd25d2c721a12221ffb780e05611834bfb66"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"($987.00)\"\u00bb, \u00ab\"-987,00\u00a0$\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "48033290f5cd3a5a6398b7cf272154b9bd457e5a91551ee286528fa4876b411b",
+      "line": 52,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/052-bf89b14dc659.json",
+        "sha256": "279e3ea4bfa10571704c0fd86560a7d1f6f40dbf1fbe208a83942a45aadd520f"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"($987.00)\"\u00bb, \u00ab\"(US$987.00)\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "19dfa16fae2d5c25bf64c0e37748b028ad9f4592376aa3b7d6b058b66c8ebc5b",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/054-b23246f3b8a1.json",
+        "sha256": "7236e0c0164c7343a26eb1a7409a9957ca7ab6a50e8b8c4bfddb20875a7ddda1"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"($987.00)\"\u00bb, \u00ab\"(US$987.00)\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "111ce2bbedbafedd2955f13a87a55e381f695e9638dbd251450504a07a2139b7",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/056-ad42b25d4937.json",
+        "sha256": "20bcdfd383463312860e2fc34760493aa76a478ab7b028e053da9d572743a2c4"
+      },
+      "signature": "unexpected error: Test262Error: NaN Expected SameValue(\u00ab\"NaN\"\u00bb, \u00ab\"\u975e\u6578\u503c\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "f209d186ba5cbf3b13ff9db52c4e67559320fb3b581324be4cd315be8e5db140",
+      "line": 64,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/057-56f00194c512.json",
+        "sha256": "5d30462a48c4a638e167887dce73089da15be16e6e483df559d2afd2528d0b91"
+      },
+      "signature": "unexpected error: Test262Error: NaN (auto) Expected SameValue(\u00ab\"NaN\"\u00bb, \u00ab\"\u975e\u6578\u503c\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "db18a49aacbd377ce2b40bf938de02fa42dfb8211892672f8c3d853b8d91b228",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/unit-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/058-9ea504261fb1.json",
+        "sha256": "24780c726a26bacc3b40067d4ac317e51778bad4874f35e51a4304808f1d8abc"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"-987km/h\"\u00bb, \u00ab\"-987 km/h\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "00285ee0448a213844a2d5a4c1fddaf6b45a9842d322f6e34dcdf84bf162873e",
+      "line": 15,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/unit-ja-JP.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/059-06d986ab9a92.json",
+        "sha256": "1f445206ff3251e8a948cf189299a8e04680df0bbd6be9c90e45d3253f5fe3fc"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"-987 kilometers per hour\"\u00bb, \u00ab\"\u6642\u901f-987 \u30ad\u30ed\u30e1\u30fc\u30c8\u30eb\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "7b2c896b396aaded56095e444f872b8a69d6d630692bdfaffa7d1a832ca860ea",
+      "line": 15,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/unit-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/061-e6cf421c89b9.json",
+        "sha256": "94fe810b080ff418c9ea4a43d4ab4c998661e99099de5ca74874a389e8c44385"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"-987 km/h\"\u00bb, \u00ab\"-987 \u516c\u91cc/\u5c0f\u6642\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "9d218bfa54f85a47925e55e84a49442bc9e85f04c611ba5ac2461786b6eed48b",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/044-c5478dfa0895.json",
+        "sha256": "4cac337ba813a9b6cd5abb9214f9cfcd8b771c536b19224ae983e02d97975857"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"3.45E-4\"\u00bb, \u00ab\"3,45E-4\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "71d21a1d44d0bb924fee984a25b92a334931f113408059cc4683135fd04e6a86",
+      "line": 71,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/045-bcf27c9f4790.json",
+        "sha256": "8758087c5d6a3f284b990e8be6804451285d7376703446b09a8d9d9344c06e2f"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"NaN\"\u00bb, \u00ab\"\u975e\u6578\u503c\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "de49eab6f8ec8a95a75eecdd7f5a0dd425eccc6f8c4620b411760b133b0d155d",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-en-IN.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/063-4979bfb4cc6c.json",
+        "sha256": "5434eae3da5e334988d081f468be0c95a549825c99390cda3875b21ca18f4c4e"
+      },
+      "signature": "unexpected error: Test262Error: (omitted) Expected SameValue(\u00ab\"100,000\"\u00bb, \u00ab\"1,00,000\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "8788f9195927a814112f17a4ca503f7610c807b4ba1702ea543c5774495c03fd",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-extended-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/064-afe185c01980.json",
+        "sha256": "f4de1fbd2d3375bca97dec4cc3cd2c1965cef095fe7d4e7d735e88df179cc602"
+      },
+      "signature": "unexpected error: Test262Error: \"always\" Expected SameValue(\u00ab\"1,000\"\u00bb, \u00ab\"1.000\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "9304d9b38b784196f6b380e5288e036d63897b63a329eed3e539dcd263eb2f53",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatRange/en-US.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/066-2e831892fbae.json",
+        "sha256": "aed52de3d8d62e955ee93b257253866b15bfbc17f8588a309290022b061b5ec8"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"$3\u2013$5\"\u00bb, \u00ab\"$3 \u2013 $5\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "1da83ee11a8a2b80f4796b0ce849c785671a2f3c08908d0da7bfae729cbd73f4",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatRange/pt-PT.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/067-798582e0b757.json",
+        "sha256": "0c30bad605cd426d21f0e79e88eb74e47b07a352e1f2f23e44220b7a28e16dff"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"\u20ac3\u2013\u20ac5\"\u00bb, \u00ab\"3 - 5\u00a0\u20ac\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "1da8cefa5b0796df4a3fa8c8ffed7942e9885e919424147574037fcbb628ab81",
+      "line": 82,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/engineering-scientific-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/069-641828279547.json",
+        "sha256": "a0a0d28d3c9fdf9c58a68c8a6da8dd0bc83af76cc2e8d79d76e4189628e64dae"
+      },
+      "signature": "unexpected error: Test262Error: 0.000345 - scientific: parts[1].value Expected SameValue(\u00ab\".\"\u00bb, \u00ab\",\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "6094663bece9c805eedc11691a9d24973108760c5a8e3763291daccdc7ed3a06",
+      "line": 81,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/engineering-scientific-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/070-0b18489da5ed.json",
+        "sha256": "d2717a257ef1a78464c14f5f43ff270c6aaeb292d38a2f8bdcbc6573ff2ddb6c"
+      },
+      "signature": "unexpected error: Test262Error: NaN - engineering: parts[0].value Expected SameValue(\u00ab\"NaN\"\u00bb, \u00ab\"\u975e\u6578\u503c\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0b6f0075a5818da76675c22121ffb221719acd63048aeaa90523b46a79baeaca",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/048-5d9b02d7d419.json",
+        "sha256": "1d1dc7f2b2c37d95c30956a9448b00fa84b3e99eb0858ac81245db59dc025649"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"988M\"\u00bb, \u00ab\"9.9\uc5b5\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0e107bd76dddf65120485aac127a991bbf7f6e461b5aa481c22eb6079d4bbe15",
+      "line": 35,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/071-a4ad404ab78e.json",
+        "sha256": "5ead64c90f4b5fa7f2e2905d12b777c8a9ef53642701721e4f10d1aa2216f6fd"
+      },
+      "signature": "unexpected error: Test262Error: Compact short: 987654321: length Expected SameValue(\u00ab2\u00bb, \u00ab3\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "b43ec792fdfb7dc57ba4f241c726f75a935226182ea3ffd8bf7ed6a17fb03e96",
+      "line": 81,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-ja-JP.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/072-bc0cbab49212.json",
+        "sha256": "0a9818a1390543c060272163b51a269b76e917ab3f4bdba0f6adfb0c1c7fc26a"
+      },
+      "signature": "unexpected error: Test262Error: Compact short: 987654321: length Expected SameValue(\u00ab2\u00bb, \u00ab4\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0947f94100319cb2d30b8459f37f0e7393295b50b771f05521f88820e969f5ca",
+      "line": 77,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/074-db9244866a9e.json",
+        "sha256": "2dede21eeaf3d0ac874ae5ebc9822b83f80a6a5fb945b9cc4cd1c6511d07ea29"
+      },
+      "signature": "unexpected error: Test262Error: Compact short: 987654321: length Expected SameValue(\u00ab2\u00bb, \u00ab4\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "fdc805666c158fb35e0b225b2679ba82e37f638bf63f1e5df2ed40d6efca63e7",
+      "line": 63,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/076-5ce985aa7794.json",
+        "sha256": "ddae4dba459b9788f1d10c7f191cb5a91db6d741142e83eea71bed474d448c31"
+      },
+      "signature": "unexpected error: Test262Error: negative: parts[1].value Expected SameValue(\u00ab\"$\"\u00bb, \u00ab\"US$\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "fe40a739053b93573fa9fc102263a3671d73ba97342fe37beac95293c65584eb",
+      "line": 25,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/078-2a3780b8407d.json",
+        "sha256": "f820ab3db4062080e43f5a3c884de7a94fc4db006b156e8075317e75d1159fb6"
+      },
+      "signature": "unexpected error: Test262Error: negative: parts[0].type Expected SameValue(\u00ab\"literal\"\u00bb, \u00ab\"minusSign\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "4599ae06403a7d780ff77199004cd9bd3a5a9cee9a31d2f0c561a327e55e2e07",
+      "line": 22,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/080-38216d958e32.json",
+        "sha256": "89a6d846759c5609ca85e7849ff2ba502489a27a6c87bd8c8da7726a7aba025d"
+      },
+      "signature": "unexpected error: Test262Error: negative: parts[1].value Expected SameValue(\u00ab\"$\"\u00bb, \u00ab\"US$\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "2a061608f0e88f1002c55e52b94e99dfcf8c37cdb2c3f7f6f2b916de6af600dc",
+      "line": 74,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/082-ffe43a9d6ac0.json",
+        "sha256": "aedea372d63152b99a5ba7444006317eaad71d77333692f89c781f6c15fa7db8"
+      },
+      "signature": "unexpected error: Test262Error: NaN (auto): parts[0].value Expected SameValue(\u00ab\"NaN\"\u00bb, \u00ab\"\u975e\u6578\u503c\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "544cef1d373ecbaefda4581cf250bec5280704ed16538ecc64e1099443557177",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/051-ef7251168d3a.json",
+        "sha256": "01d519174467333fee8f6de0eed19f0bee8e19f3764a0cd23db50d2e519acb67"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"($987.00)\"\u00bb, \u00ab\"(US$987.00)\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "676e6baeab7b32184724d107702dd31656b7624f8910742f9d004e55202815a6",
+      "line": 94,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/085-895d56f110ae.json",
+        "sha256": "0d3c19a84305047f0b1bcfd26e22713834423eda038375dcd43e08a2d214c8a7"
+      },
+      "signature": "unexpected error: Test262Error: undefined: length Expected SameValue(\u00ab4\u00bb, \u00ab3\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "8b07710014974b0177ad31dc143adbb58db7b21e5c64cf58bcc3dac929689a0e",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/053-a3a156c12ff2.json",
+        "sha256": "facf965bbd57d9aa1ed8202ed89ab2dbad322ade4c79c6ddc0bab26c074ca49a"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"($987.00)\"\u00bb, \u00ab\"-987,00\u00a0$\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "de4ff6f4a9a6685f0def68ece479d24cebbc4a0c550fdf057ee5ec78842d0fe2",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/055-3450d45e2766.json",
+        "sha256": "8b0e424aea61181ae2773a10558e8554ce53d2eeb0f0bcbcd87414cc89f19a72"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"($987.00)\"\u00bb, \u00ab\"(US$987.00)\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "05bddee200faef3bf36e009147abecc10acc6041a406c959eaad2ecc8cab388c",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/unit-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/060-d9db935a64ce.json",
+        "sha256": "fada71ff41be2cc0146413ad29cdda3a48925978d9e72f2fdfcecb7a5908264d"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"-987 km/h\"\u00bb, \u00ab\"-987km/h\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "aaff2cddf2d705e22b1a4e1b6bd2df6e705a51bd12cf96648e0499aa5733117a",
+      "line": 11,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/062-1572727804ab.json",
+        "sha256": "354748243a161ee88c7246feeab3672d1e7d51c8c8d73133c550a675f792d1da"
+      },
+      "signature": "unexpected error: Test262Error: (omitted) Expected SameValue(\u00ab\"1,000\"\u00bb, \u00ab\"1.000\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "f89dfca33798083219316744ef4c47114813d3a685612e41926fc8cbcff5c372",
+      "line": 12,
+      "path": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-extended-en-IN.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/065-62224ca66449.json",
+        "sha256": "73c66071aaf60f7e29b6168c831cdd7ea5e2a7a9c7b968eb68b54bf57fbf90e6"
+      },
+      "signature": "unexpected error: Test262Error: \"always\" Expected SameValue(\u00ab\"100,000\"\u00bb, \u00ab\"1,00,000\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "9d09322cec99cd31f8cf84c39100bee8d01b8aaabd9e5abb352d9eb4080c9ba0",
+      "line": 29,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/en-US.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/068-e0b67ea08a8e.json",
+        "sha256": "add7dddb3c60463d15ccc307c073c1a31c86f5140ec7d07f86542598ea8b2bd8"
+      },
+      "signature": "unexpected error: Test262Error: value for entry 2 Expected SameValue(\u00ab\"\u2013\"\u00bb, \u00ab\" \u2013 \"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "041d19f6c94d47194cff314bf91dc460c9b63658858157a1c29700826b3d95ce",
+      "line": 81,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/073-f56b2e647fa5.json",
+        "sha256": "b14fea9b20a64908a283085c53576284f9e2f17f8823125e1b2e2b7c632b5dd5"
+      },
+      "signature": "unexpected error: Test262Error: Compact short: 987654321: length Expected SameValue(\u00ab2\u00bb, \u00ab4\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "2f237ddf3c769610e2df6185bf237648cc8711b84651491ec008b9e768e4be55",
+      "line": 63,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/075-f2d87122f36e.json",
+        "sha256": "d9084e3b830827bb641340b0d94324b4eb07197b4de38c2f8a8dbd7534b590c0"
+      },
+      "signature": "unexpected error: Test262Error: negative: parts[0].type Expected SameValue(\u00ab\"literal\"\u00bb, \u00ab\"minusSign\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "d4e4f46e139e655233d169be1b3a0d8956e0f288ffdf59226dca115db3f54b93",
+      "line": 62,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/077-e154abd43391.json",
+        "sha256": "44136e2ca7a334c2d12f59c96b7f7b8a51534d8e8eca19eabdc449dcf4b5a165"
+      },
+      "signature": "unexpected error: Test262Error: negative: parts[1].value Expected SameValue(\u00ab\"$\"\u00bb, \u00ab\"US$\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "b72dd9e1790cd98f5136b7dc916b53c9e9754e5d3793fe5354b7496a1e6a9345",
+      "line": 25,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-ko-KR.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/079-852f9475bb3a.json",
+        "sha256": "2bc5159d15f56626885f7eff504598ffc203fd6cf06c68d43e197d1ac0583625"
+      },
+      "signature": "unexpected error: Test262Error: negative: parts[1].value Expected SameValue(\u00ab\"$\"\u00bb, \u00ab\"US$\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "6c7d3559a221f83b2d5ee4db19273b270559eac831e412ef91e610503487c047",
+      "line": 23,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/081-7574800d5264.json",
+        "sha256": "6c3414ef0a080a4e74d750cd91dd47cbd608f12fa016152608ea25fdab481d4d"
+      },
+      "signature": "unexpected error: Test262Error: NaN (negative): parts[0].value Expected SameValue(\u00ab\"NaN\"\u00bb, \u00ab\"\u975e\u6578\u503c\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "5fbf1e71cb79847c77935ae2180aa029c1138934394963566322a706385bcffe",
+      "line": 94,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-de-DE.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/083-c2520fb31ae8.json",
+        "sha256": "c57496581fef29b5a9a31f807b093d5ef22d9d8b030399ace748719b0cc21e0a"
+      },
+      "signature": "unexpected error: Test262Error: undefined: length Expected SameValue(\u00ab3\u00bb, \u00ab4\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "7735c8b81855eb0e5a82d0cfceea4c38fd4e5e95c0d5939406d3ec351e9b6a56",
+      "line": 27,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/084-63e67aac6666.json",
+        "sha256": "24f2418777bf87ed15af68ac5d9b71df0bf72d62204ed9611856097cf3122fe5"
+      },
+      "signature": "unexpected error: Test262Error: -987 long: length Expected SameValue(\u00ab4\u00bb, \u00ab5\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "3e8ee57449ca7ae48c021333e8b937cf76d02357e029ec691eddd499e0ab34f8",
+      "line": 27,
+      "path": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-zh-TW.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/086-7254c4eb0237.json",
+        "sha256": "d537ca86a91c4c8f6fc410598f1064b10a6b75ce6e71fc7a4f0834c411fec05b"
+      },
+      "signature": "unexpected error: Test262Error: -987 short: parts[3].value Expected SameValue(\u00ab\"km/h\"\u00bb, \u00ab\"\u516c\u91cc/\u5c0f\u6642\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "9b8ca051ca537a3b48f99378b2824f3b005b9f10a2397199cf0ad9d1af2134e3",
+      "line": 17,
+      "path": "test262/test/intl402/PluralRules/prototype/resolvedOptions/plural-categories-order.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/087-ec8b47004d18.json",
+        "sha256": "a1112a0930a22af42ff96c8269bfa9ba9038aacba6883c234a343f280e656302"
+      },
+      "signature": "unexpected error: Test262Error: Actual [one, other] and expected [zero, one, two, few, many, other] should have the same contents. pluralCategories order or contents incorrect for 'ar' locale",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "f4cf034c4af5d48ed19992643b08333e3e8fb9c3660245542e032d5ec0f11d92",
+      "line": 20,
+      "path": "test262/test/intl402/PluralRules/prototype/select/notation.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/088-3dbe2eb60982.json",
+        "sha256": "7256061248ee30af71b6952fb7b02fee974899b78083ee19d406de9eaabe63f3"
+      },
+      "signature": "unexpected error: Test262Error: standard notation: 1000000 Expected SameValue(\u00ab\"other\"\u00bb, \u00ab\"many\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "080300d6c3ee5aab6da717a9af019aec670af23ca5d84272a965a5dcb1db3900",
+      "line": 22,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/format/en-us-numeric-auto.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/091-636e9748fe04.json",
+        "sha256": "c75cab6bc3d1f43ac3a47a68e373292750a9fc0aeca80abbea6cf7261a3701b4"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"-1 second ago\"\u00bb, \u00ab\"1 second ago\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0cb5c158924c843c31ebf6585dd8f435cd1554b0dcb3ac36cce9f105858b46dc",
+      "line": 52,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/format/pl-pl-style-long.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/093-94bcbcf20b3f.json",
+        "sha256": "03eb25a0276e07a15fddd69df2c0ebbe464ade7a0aa8db5c2994d64fd295b6a0"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"in 1,000 seconds\"\u00bb, \u00ab\"za 1000 sekund\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "d41a6bdf9c4d7f2521c4681ad33d2e1ab5170d359dd9acdc2854029b2e3ca236",
+      "line": 43,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/format/pl-pl-style-short.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/095-955eba8614c8.json",
+        "sha256": "efb3186fa2037a2adba81135a3ec27753266495a53870b9bfaf2ce4935f43e97"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"in 1,000 sec.\"\u00bb, \u00ab\"za 1000 sek.\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "5272b651c3386b5680d5970fccdc59142a91709b3a6569a17d2f60698c1c1c0d",
+      "line": 32,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/en-us-numeric-always.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/096-aa93b6feb581.json",
+        "sha256": "03361ec34f65fdc95f7791b48954478361ba11597033d838d60f72dd46c267e3"
+      },
+      "signature": "unexpected error: Test262Error: formatToParts(-1, second): length Expected SameValue(\u00ab3\u00bb, \u00ab2\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "058a602273c9b9d6a41ba9ef6b3988b41879eef6d5fecdaddd75d9fb4c072372",
+      "line": 32,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/en-us-style-short.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/098-4b45e94686b4.json",
+        "sha256": "72d47487d6538dfc24f5c58dba169e8552a0a796edcb194b066cd783d2d5c2e8"
+      },
+      "signature": "unexpected error: Test262Error: formatToParts(-1, second): length Expected SameValue(\u00ab3\u00bb, \u00ab2\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "d323211b9db0368a48fa210bcbcb5321c84328b6f42e6f39c3182f9d4ba7c5c4",
+      "line": 57,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/pl-pl-style-narrow.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/100-8af00bd32455.json",
+        "sha256": "7fd465c560aaf90557ab1e68f60dce148b7b0e999810793042b4fade1e119725"
+      },
+      "signature": "unexpected error: Test262Error: formatToParts(1000, second): length Expected SameValue(\u00ab5\u00bb, \u00ab3\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "fc9e7fa86f86bf819ed5abe42f462cd1dfce8d6d03263bb81753bc34ad873e06",
+      "line": 25,
+      "path": "test262/test/intl402/RelativeTimeFormat/constructor/constructor/locales-valid.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/089-7e7205b46955.json",
+        "sha256": "71a387a148d0e071777dbffdf59e4689109cc84c15bb48b6c0cf491283c1bd45"
+      },
+      "signature": "unexpected error: Test262Error: Object with length Expected SameValue(\u00ab\"en-US\"\u00bb, \u00ab\"de\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "7537769bbb879e07f15779c7b19f594f0cb3c40b2a91f38c223e4d8d503c4f7f",
+      "line": 22,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/format/en-us-numeric-always.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/090-eab04151c627.json",
+        "sha256": "a93b6b1b8a81819d98877aba8d62af6ad6864cadb9c6f178b8293c9465b32b89"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"-1 second ago\"\u00bb, \u00ab\"1 second ago\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "d3268eeff6f92cb2fe438c9a3204f6d9bfaf2758410284d31011a9fb786effbc",
+      "line": 22,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/format/en-us-style-short.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/092-5f1bddbede28.json",
+        "sha256": "718fc5697c55f4ee57929762aa9132d26f0ae9929e0484c7c64ec5a1bdb0a8aa"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"-1 sec. ago\"\u00bb, \u00ab\"1 sec. ago\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "cfbfca69594912dae5a0807a367a0339f9580a788e4e3d1e2f7d0ed8ff11b219",
+      "line": 43,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/format/pl-pl-style-narrow.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/094-271ce3dffee8.json",
+        "sha256": "d9f345128fc09a12dbc0b9a40764a2868384dadd69c2580b8e98ab77d1e304f5"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"in 1,000s\"\u00bb, \u00ab\"za 1000 s\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "c79b78d7a9b59b0e705c8e994e8e9c72951728acec48a87e3e637810682c10f2",
+      "line": 81,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/en-us-numeric-auto.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/097-3f5c062d1c60.json",
+        "sha256": "353d4392a23ddb2ea05773999fadcb6bcde0af56e8990254885f9c068da61201"
+      },
+      "signature": "unexpected error: Test262Error: formatToParts(-1, second): length Expected SameValue(\u00ab3\u00bb, \u00ab2\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "5cc4003660d3e5319b7a79e041a6262f92b8630d7e9e1ed05c04e83772e818f5",
+      "line": 68,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/pl-pl-style-long.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/099-84b2e6d71ca3.json",
+        "sha256": "f2f11a3dab8083b9b2bb46e8552de7a288cf256babd4001b76a959e6c3891d60"
+      },
+      "signature": "unexpected error: Test262Error: formatToParts(1000, second): length Expected SameValue(\u00ab5\u00bb, \u00ab3\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "030b65eedd81208f61ca119e9b45e00a897fbf213b6e5b9be83a506bf23b8339",
+      "line": 57,
+      "path": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/pl-pl-style-short.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/101-06a0bb4fb761.json",
+        "sha256": "9528ca523593940ead74cbf9fec3d890ac6f923a80e77072c638504bf272784f"
+      },
+      "signature": "unexpected error: Test262Error: formatToParts(1000, second): length Expected SameValue(\u00ab5\u00bb, \u00ab3\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "b251beefe9f9ab299820090bede72f096ae1bbc89851575114d941c22bb4b2c3",
+      "line": 31,
+      "path": "test262/test/intl402/Segmenter/constructor/constructor/locales-valid.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/102-39c5a30f7699.json",
+        "sha256": "7dc4a7bcf8fe6b2de248fcfa731a2681d5bbd523b7764b34379a8e61947c72c1"
+      },
+      "signature": "unexpected error: Test262Error: Single-element array: expected one of sr, found en-US",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "c2b3455e9e0c7dffb8609c2e0314a37d21e1804563fa83b2fb14a371f79d544c",
+      "line": 21,
+      "path": "test262/test/intl402/Segmenter/constructor/supportedLocalesOf/locales-specific.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/103-24fcee8d2307.json",
+        "sha256": "f4069da6d339e32d4760e3b07d741c44e0b3139d15d512e539808b087a14f2e8"
+      },
+      "signature": "unexpected error: Test262Error: Actual [] and expected [sr] should have the same contents. ",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "0ebf43ec51984c2bd507b57544541345e644f7c095f5ad6c530f5faad09bb145",
+      "line": 39,
+      "path": "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/basic.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/104-aad35cc9c40e.json",
+        "sha256": "b7ff199a7ab7deaa83c8808d177a23ea2cffc3578fe87c0c4ee63272fe31dce4"
+      },
+      "signature": "unexpected error: Test262Error: de-AT locale has a 24-hour format",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "8c63421a6e351aa6d85d70719ad3fe92e377e77d9541af234cd439da384f5b07",
+      "line": 15,
+      "path": "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/hourcycle.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/105-37ef6f38c55b.json",
+        "sha256": "96b93057966c41b098cdb6d6616bb9387c3e8c8b7f37b4d4c88eb2755b84f13a"
+      },
+      "signature": "unexpected error: Test262Error: output for hour12: false should include 00:00:00 Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "355be9789cf2e15f86bdce99e1b4b618689f2b7016ae69d4f967b21c1384230b",
+      "line": 39,
+      "path": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/basic.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/109-99538e358f2f.json",
+        "sha256": "fe82a5a3a1fb42e3b52e4facf12d85f5e3c756cf873ec7681fa09c6157fcbb04"
+      },
+      "signature": "unexpected error: Test262Error: de-AT locale has a 24-hour format",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "300a4c8f5324c01bfd441ce8c2a260cef5117157923f3ef7e326e50de7ec2acf",
+      "line": 15,
+      "path": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/hourcycle.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/110-a98d38d1d123.json",
+        "sha256": "f5f9835c410b627c95a564e3f16c0b60afebb2c075bbcb5ba78ef4a4bca58684"
+      },
+      "signature": "unexpected error: Test262Error: output for hour12: false should include 00:00:00 Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "aacd2de0d876b4eb17b700fa78383098e3b31f61cc421f07dd9953a2598bd584",
+      "line": 21,
+      "path": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/resolved-time-zone.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/111-fc522ed5c5d5.json",
+        "sha256": "6b7e1572e82eca2bf1732158b8c92a971de08cf9a858d1787c41569914223538"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"0:30:45\"\u00bb, \u00ab\"00:30:45\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "73c126eff31f388c33b7a97aa47fb4ec74677ef25aca00e203b7c19485193ce3",
+      "line": 39,
+      "path": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/basic.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/106-560d21e25af5.json",
+        "sha256": "7fb0766004341d87299ecdf33797d28e257e2f6a2533f64b695f87f34a661f84"
+      },
+      "signature": "unexpected error: Test262Error: de-AT locale has a 24-hour format",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "4a4328952c543510eda0001586589825d5667163e8f2854055d61a1b39e4e85b",
+      "line": 15,
+      "path": "test262/test/intl402/Temporal/ZonedDateTime/prototype/toLocaleString/hourcycle.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/112-05e9ec4aae29.json",
+        "sha256": "666a296ceecf080fa53f212b244525b62d52405e9b088cd14607ce09bf04f1ea"
+      },
+      "signature": "unexpected error: Test262Error: output for hour12: false should include 00:00:00 Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "f84c95848cb23974d85e8e0fce2643692a177a7bd5d6a0ad9222d34739daff77",
+      "line": 15,
+      "path": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/hourcycle.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/107-0fde1e106f1b.json",
+        "sha256": "a0d5dcbea7529df0188b884b49f66c2490961ea7080ac68a22f18f65f839c7e9"
+      },
+      "signature": "unexpected error: Test262Error: output for hour12: false should include 00:00:00 Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "2bf82e5ec9aa34b7e74302d6a5c4ed1f7f10f38bc6c2995b21d241c1a806cebf",
+      "line": 24,
+      "path": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/resolved-time-zone.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/108-ea0e43179e1a.json",
+        "sha256": "1c16ce1e7a449973cf20f309eca079d29a5a5865c50ec44f63f93ed5abaf171c"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"8/4/2021, 0:30:45\"\u00bb, \u00ab\"8/4/2021, 00:30:45\"\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "79341d40e022b1c2d6320bdb9ac3edc7352235c913479b92c50a3fb7fde4b324",
+      "line": 10,
+      "path": "test262/test/intl402/Temporal/ZonedDateTime/links.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/v9v3-202.json",
+        "sha256": "133b4fba3299cf4554a80795619f5d11abf927b76c0dc9d9e4f6b472e6e27831"
+      },
+      "signature": "unexpected error: Test262Error: link=CST6CDT, zone=America/Chicago Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "6e135772186984badc224211e789b119ee62aa58306d39bae1ac07bdbc191dde",
+      "line": 16,
+      "path": "test262/test/staging/sm/String/internalUsage.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/113-d16a79aaf339.json",
+        "sha256": "cac65b0a0414fbb91c136197719363bf609be17daee1ce94b27c4627f1a62d60"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    }
+  ],
+  "baseline_sha256": "7a2ca3c319006a81ffae6378bfe48d163d7e4d3322848f77f2007180dfeb5a70",
+  "config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+  "conformance_accepted": false,
+  "effective_profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+  "failure_waiver": false,
+  "fixture_source_map_sha256": "808f46746cde3b35db59c83dc7ecb9b91df7970bcae65572ffd4ee126547896d",
+  "historical_baseline_production_source_map_sha256": "27ba5c792b315e94ca8ad3ea1ebac203a5c107f68425e036c98a792890dde047",
+  "mandatory_obligations": [
+    {
+      "id": "mandatory-repairs-L1-T1-F1-F2",
+      "proof_bindings": [
+        {
+          "path": "tools/ci/native-prefix/reviews/mandatory/mandatory-repairs.json",
+          "sha256": "7471c3b5a7fc5ac495bcda482af5a12982823a101a8050a5960c16cd3506e0fe"
+        }
+      ],
+      "status": "SATISFIED"
+    },
+    {
+      "id": "host-default-H1",
+      "proof_bindings": [
+        {
+          "path": "tools/ci/native-prefix/reviews/mandatory/host-default.json",
+          "sha256": "562eb22f1f70171d7342d3e42547379ebbbaf15d4fca352b14d149dab3eeffee"
+        }
+      ],
+      "status": "SATISFIED"
+    },
+    {
+      "id": "exact-equal-range-collapse",
+      "proof_bindings": [
+        {
+          "path": "tools/ci/native-prefix/reviews/mandatory/equal-date-range.json",
+          "sha256": "bef9ff278c2921c5130095135819ca5585c394e59c076d031b3fa24f1d06eb66"
+        }
+      ],
+      "status": "SATISFIED"
+    },
+    {
+      "id": "complete-original-assertions",
+      "proof_bindings": [
+        {
+          "path": "tools/ci/native-prefix/reviews/mandatory/complete-originals.json",
+          "sha256": "8d28f581dd1262ce17bc788e2297f6e8de44237ee2a82bc044b2eae88b6ee309"
+        }
+      ],
+      "status": "SATISFIED"
+    }
+  ],
+  "no_new_skips_exclusions_expected_errors": true,
+  "postfix_raw_counters": {
+    "changed": 0,
+    "excluded": 19,
+    "executed_source_count": 52742,
+    "failed_source_count": 123,
+    "fixed": 0,
+    "new": 109,
+    "skipped": 856
+  },
+  "postfix_raw_returncode": 1,
+  "production_source_map_sha256": null,
+  "profile_diagnostic_authorized": true,
+  "raw_original_failure_scores_always_visible": true,
+  "raw_policy_identity_scope": "Authenticated V5 observations; final H3 raw equality must be checked before root authorization.",
+  "required_selections": {
+    "official-calendar-required": {
+      "failure_identities": [],
+      "historical_V5_evidence_binding": {
+        "path": "/srv/data/work/quickjs-tmp/quickjs-final-v9-v5-hosted-artifact-root-20261012-v1/artifact/required-official-calendar-required-raw-evidence.json",
+        "sha256": "719e3f2327d547a60bfc7f79b23b8da9bccb206056562e0deaba1f417ed84f12"
+      },
+      "raw_counters": {
+        "changed": 0,
+        "excluded": 0,
+        "executed_source_count": 18,
+        "failed_source_count": 0,
+        "fixed": 0,
+        "new": 0,
+        "skipped": 0
+      },
+      "raw_returncode": 0
+    },
+    "official-date-required-cases": {
+      "failure_identities": [],
+      "historical_V5_evidence_binding": {
+        "path": "/srv/data/work/quickjs-tmp/quickjs-final-v9-v5-hosted-artifact-root-20261012-v1/artifact/required-official-date-required-cases-raw-evidence.json",
+        "sha256": "a642873ea95bda1efbd73bf9714148772264e7745c7912ca481ed9c17c1d1334"
+      },
+      "raw_counters": {
+        "changed": 0,
+        "excluded": 0,
+        "executed_source_count": 2,
+        "failed_source_count": 0,
+        "fixed": 0,
+        "new": 0,
+        "skipped": 0
+      },
+      "raw_returncode": 0
+    },
+    "official-general-current-required": {
+      "failure_identities": [
+        {
+          "line": 16,
+          "path": "test262/test/intl402/Locale/prototype/getCollations/output-array-values.js",
+          "signature": "unexpected error: Test262Error: getCollations() for en has at least one element Expected SameValue(\u00ab0\u00bb, \u00ab0\u00bb) to be false",
+          "strict": false
+        }
+      ],
+      "historical_V5_evidence_binding": {
+        "path": "/srv/data/work/quickjs-tmp/quickjs-final-v9-v5-hosted-artifact-root-20261012-v1/artifact/required-official-general-current-required-raw-evidence.json",
+        "sha256": "23e9b5d0e9e7959fd98eaafea3254240199ac9b9dc6838213bab15885e1518e6"
+      },
+      "raw_counters": {
+        "changed": 0,
+        "excluded": 0,
+        "executed_source_count": 114,
+        "failed_source_count": 1,
+        "fixed": 0,
+        "new": 1,
+        "skipped": 0
+      },
+      "raw_returncode": 1
+    }
+  },
+  "schema": "native-exact-profile-policy-v2",
+  "source_binding_mode": "required-actual-current-checkout-review",
+  "status": "ROOT_APPROVED_EXACT_BOUNDED_NATIVE_PROFILE",
+  "witness_source_bindings": [
+    {
+      "path": "doc/quickjs.texi",
+      "sha256": "10bf788f5dc24787d2c3fa958d79df43f50fb166bf549dd04e95074f9474ba26"
+    },
+    {
+      "path": "include/quickjs.h",
+      "sha256": "3c91ea0e85f6af90d3c338e659e6569312ddc714e49bb386ac17bff164a2754a"
+    },
+    {
+      "path": "src/intl/date-native-bank.c",
+      "sha256": "99c923f1aed42eb3b45c008792cc69653b092a4c059a132aee75c586b807274e"
+    },
+    {
+      "path": "src/intl/date-native.c",
+      "sha256": "bfee68cd4628d04f7bc56e2eb6d993c20112fd686a1b0215d83b57bfa8a2d718"
+    },
+    {
+      "path": "src/intl/native-locale-id.c",
+      "sha256": "3d3514ddfe3c93968503a17746b44d990422f0281bf60094d73e8cddb2880b78"
+    },
+    {
+      "path": "src/intl/provider-native-date.c",
+      "sha256": "ebaeeeb2e7ac4492409ddf6a7f7f1d08c30646ac639d52fd3fe7579286db6fc8"
+    },
+    {
+      "path": "src/intl/provider-native.c",
+      "sha256": "cf11033d2ed89b17412e09618d187b4332c3361d9d29378fcd92fccc960355db"
+    },
+    {
+      "path": "src/quickjs/builtins/intl/core.c",
+      "sha256": "60237df4196bec43d5c2d8bd7d1500bc9548f701116d5ebe30d6436f12ec24a2"
+    },
+    {
+      "path": "src/quickjs/builtins/intl/native-date-time-format.c",
+      "sha256": "a4ae26e599212d51f2e8dcdb6b02dbd98bb9ff92bb67ea28a1ffda93d0dbb231"
+    },
+    {
+      "path": "src/quickjs/builtins/intl/native-locale-resolution.c",
+      "sha256": "3a0aeccac9481706cf1f033b961f3a7d8c56676d128f43f9ce7f5bb0f4dbd54a"
+    },
+    {
+      "path": "src/timezone/tzif.c",
+      "sha256": "c60ec7d59ca4c9a0d3af0bdefae8ca751264028764e2435687f1c1ac4fe8433e"
+    },
+    {
+      "path": "tests/test_intl_default_locale_api.c",
+      "sha256": "1df7d6f7b86bddb2fa80d890f749a8e8df020473bedc1010fc669a4544f7798f"
+    },
+    {
+      "path": "tests/test_intl_locale.js",
+      "sha256": "796cdf914cc3a19e8f3f6b7ef697e7dc68e76bc7f693427e3f3f2c5f53bff3ec"
+    },
+    {
+      "path": "tests/test_intl_native_date_all_calendars.js",
+      "sha256": "254e9417a044666ec23f6e3a20199a9dc90903ff2f18c4872b8938b62e29f27d"
+    },
+    {
+      "path": "tests/test_intl_native_date_temporal_bank.js",
+      "sha256": "8de551df4b8f1bfe041fc18bbfc3b187c9f8aee5314352835c1ca038013f54dc"
+    },
+    {
+      "path": "tests/test_intl_native_general.js",
+      "sha256": "0b09a6b713e525aae20c1b9083f3d546e39f248467d2060aea2fe3f35d40eb1a"
+    },
+    {
+      "path": "tools/ci/native-prefix/diagnostic-witness.js",
+      "sha256": "1bccc5cbaed7114155aee1f46e7a69e15f55df74099cfd0bc6232b7ec9961e17"
+    },
+    {
+      "path": "tools/ci/native-prefix/native_normative_scope.py",
+      "sha256": "9d5ec7ef96c7ad3200e59a7bf8ff2872e35f1eedba0e39cec47a430915dc7f97"
+    },
+    {
+      "path": "tools/ci/native-prefix/native_profile_gate.py",
+      "sha256": "3c4661564e3f36a049ae6d1f84aca913d4f5aeccabdcca18690f8032dd495c29"
+    },
+    {
+      "path": "tools/ci/native-prefix/native_test262_diagnostic.py",
+      "sha256": "a9779db973c56e66521a110b8e1f59361d1a79c886993853c84d83e29111ca67"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/guard_binding.py",
+      "sha256": "1eda1f8b9986b103a23f5566caf365b76c428ce8d168f7c808cd5e82ef86ba29"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/launch_practical_witness.py",
+      "sha256": "7d43cd5d531f5204fb80dd94bbf2ebb043d8a3e8c5381e175aafc5cf821f6b26"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/premise_trace_proof.py",
+      "sha256": "d721f1e6d1214e43a7749de7635778e6373457376f90b72a9aa7ae2592f07d84"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/render_practical_witness.py",
+      "sha256": "d9284b1a3e4ad3f00eb2202810e5d450b605ad49b6b1abb0f070b9e7f77572c8"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/selected_timezone_orchestration.py",
+      "sha256": "f19a443695b15ca28194c9c10995e682145eb351108a56036ff8f139a371308c"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/selected_timezone_proof.py",
+      "sha256": "61573a57fd9d2f43662f9e1b67665cf5f5239990bb88f3170ef10b006814ba80"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/test_h2_lunisolar_guard_proof.py",
+      "sha256": "1953652f1d2b0c653ebffb3a427a193799c6e6bb45bde1fd5a94f8b285f463fd"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/test_h2_lunisolar_guard_runtime.js",
+      "sha256": "db2ab33d5792ced8d5ef0da97e155f9ad912664c4a2e6fb919e396c54262ef69"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/test_trace_stream.py",
+      "sha256": "c36fa149e878a56ccf455fda020ab8e0f6254bf8c0d28976a59bee81e2488087"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/trace_stream.py",
+      "sha256": "7f216d7f39067297ffdefa0ae30e4fc3e41b2295586ae61714c6bbb22d920b9e"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/trace_stream_test_fixtures.py",
+      "sha256": "0112b549bd8acd5cd69009d2c54683650aa57c56773f7322bf68a31c2a0b6446"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/validate_current_rtf.py",
+      "sha256": "c8e80c184c1962bf09736dc4fec96e01b8c4875cc20e5772e7ca7a75ca0a6c71"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/validate_practical_witness.py",
+      "sha256": "d511d9faeccae2b761a7c1d039ba86aeb562fc93d4dba61ac821b160c629813d"
+    },
+    {
+      "path": "tools/ci/native-prefix/original-assertions/witness-runtime.js",
+      "sha256": "deff4a586797d1406ede8b52ef70165d94e840a5e644045c8dc5d4127bcde338"
+    },
+    {
+      "path": "tools/ci/native-prefix/project_original_assertions.py",
+      "sha256": "7779091b2f5baf8a3f65b76f6c7478b7acc673677d7dde5dbc895c299b91f5f2"
+    },
+    {
+      "path": "tools/ci/native-prefix/run.py",
+      "sha256": "3d6deb82e6c421af0e9c506941924755e999c4a87ae2d327d1f64e0e277d9f42"
+    },
+    {
+      "path": "tools/intl_gen/RELEASE-SOURCE-ASSEMBLY.json",
+      "sha256": "5beee4116078269a581029287cff65adebc78dae2ecc4448c43667912e647c20"
+    }
+  ]
+}

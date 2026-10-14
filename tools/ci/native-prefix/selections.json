@@ -1,0 +1,23 @@
+[
+  {
+    "name": "official-calendar-required",
+    "path": "selections/official-calendar-required.txt",
+    "sha256": "669a01f0bc893fbc0089d4f5ac2f7397b263d197469ebb35849d59bc08890682",
+    "distinct_source_count": 18,
+    "required": true
+  },
+  {
+    "name": "official-date-required-cases",
+    "path": "selections/official-date-required-cases.txt",
+    "sha256": "be9b1a8e56123b0a41ddde8537bbc9e9e162f5ebedb95aa380b0cd5c54a67b31",
+    "distinct_source_count": 2,
+    "required": true
+  },
+  {
+    "name": "official-general-current-required",
+    "path": "selections/official-general-current-required.txt",
+    "sha256": "f2268927c6f0a47f44290830261cff61a063999b46d46c26881dbff06f516069",
+    "distinct_source_count": 114,
+    "required": true
+  }
+]

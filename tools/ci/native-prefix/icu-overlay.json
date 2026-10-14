@@ -1,0 +1,48 @@
+{
+  "version": "78.3",
+  "archive_url": "https://github.com/unicode-org/icu/releases/download/release-78.3/icu4c-78.3-sources.tgz",
+  "archive_sha256": "3a2e7a47604ba702f345878308e6fefeca612ee895cf4a5f222e7955fabfe0c0",
+  "files": {
+    "source/i18n/astro.cpp": {
+      "preimage_sha256": "cab130a5c3f9bd4708744f2c8b23439969c340a4076ba9fc5199fe97f25d2b1d",
+      "postimage_sha256": "5988d86638109cccf1452ac2c23b851a0ddc263eed4ce8c987d4149a0d05c890"
+    },
+    "source/i18n/astro.h": {
+      "preimage_sha256": "bdd35a31c405d711bfe7dd8263d721404fb1234edd5b1e66335c163aa3efb298",
+      "postimage_sha256": "542094389d48443ecd0017e82cfa2d4a5b709f5a062ed7dee05e92c820842e07"
+    },
+    "source/i18n/chinese_pmo_data.inc": {
+      "preimage_sha256": null,
+      "postimage_sha256": "9b44194e1b9370771934f7ace6e8131fbe5edcb470da1782b61bad1932490c82"
+    },
+    "source/i18n/chinese_pmo_notice.txt": {
+      "preimage_sha256": null,
+      "postimage_sha256": "d019673110105139ddd9428d1d180b53cb18d9af0cdfcdff2752940575e4d076"
+    },
+    "source/i18n/chnsecal.cpp": {
+      "preimage_sha256": "625e63321f41d106b77134c177fe5907baf1507a646427066751c29509b25140",
+      "postimage_sha256": "9409aa27b04005c091f8cd2574ba8a339a796282a3fa7a0131f3378d17f973fa"
+    },
+    "source/i18n/hebrwcal.cpp": {
+      "preimage_sha256": "747bfc92f68e2a7b88c01b781772aac995c8a1a4a8f69efee4e13cc84046f0e8",
+      "postimage_sha256": "765052dcb2359043e7f23e6c9c229faf700680692df031edafeeb2bcae2d1697"
+    },
+    "source/i18n/indiancal.cpp": {
+      "preimage_sha256": "1dea12c23e3d48cf4c44eef985e7336e591c29549281e7bcb2dc462cd7b4ed4d",
+      "postimage_sha256": "759a37d49be5301b84ae89729aecf4ba7896ecf4cd981ca40deb5e880c3b725d"
+    },
+    "source/i18n/number_decimalquantity.h": {
+      "preimage_sha256": "424f58f7c860ab7ffe2e3105a2a904018e581388a24b93fbf13b1cf6117c1939",
+      "postimage_sha256": "c16bb7fb3ede1e6926629b54b7f1425ea102476fdb3cd908444023645afbe06c"
+    },
+    "source/i18n/number_pluraloperand.h": {
+      "preimage_sha256": null,
+      "postimage_sha256": "e2d8bf62ad2d4a9f0347e7c3e4caf546db399d0e0f1e8a3e6e71d4be585c9493"
+    },
+    "source/i18n/plurrule.cpp": {
+      "preimage_sha256": "5375109a0f061656ef8b0f314cc9674d0ce915f30f1d356ba1499557a6feeb31",
+      "postimage_sha256": "8797cd0c1a60fb5fa7230e09172680c54a3dc5c05171aa09ba3c6a64dd41be2b"
+    }
+  },
+  "dependency_sanitizer_instrumented": false
+}

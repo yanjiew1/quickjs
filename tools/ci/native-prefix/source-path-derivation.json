@@ -1,0 +1,103 @@
+{
+  "schema": "quickjs-history-source-path-derivation-v1",
+  "historical_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+  "replacements": {
+    "tests/intl-allocation-probe.h": {
+      "path": "tests/allocation-probe.h",
+      "reason": "Use the existing common or renamed owner instead of a duplicate fixture"
+    },
+    "tests/test_intl_calendar_portable.c": {
+      "path": "tests/test_calendar_portable.c",
+      "reason": "Use the existing common or renamed owner instead of a duplicate fixture"
+    },
+    "tests/test_intl_calendar_persian_authority.c": {
+      "path": "tests/test_calendar_persian_authority.c",
+      "reason": "Use the existing common or renamed owner instead of a duplicate fixture"
+    },
+    "tests/test_intl_calendar_integrated_authority.c": {
+      "path": "tests/test_calendar_integrated_authority.c",
+      "reason": "Use the existing common or renamed owner instead of a duplicate fixture"
+    }
+  },
+  "omissions": {
+    "tests/intl-temporal-duration-stage-registration.json": {
+      "reason": "Unexecuted source preparation registration is not a maintained runtime test",
+      "covered_by": [
+        "tests/test_intl_temporal_duration.js"
+      ]
+    },
+    "tests/intl-temporal-duration-test262-groups.json": {
+      "reason": "The actual hosted required selections and full raw suite supersede the unexecuted scheduling proposal",
+      "covered_by": [
+        "tools/ci/native-prefix/selections.json"
+      ]
+    },
+    "tests/test_native_data_realms.c": {
+      "reason": "Ordinary service realm assertions moved to JS; controlled native ownership remains in C allocation and timezone fixtures",
+      "covered_by": [
+        "tests/test_intl_service_realms.js",
+        "tests/test_intl_native_display_oom.c",
+        "tests/test_intl_native_timezone_runtime.c"
+      ]
+    },
+    "tests/test_qjsc_temporal.js": {
+      "reason": "Actual Temporal API calls now extend the existing generated executable fixture",
+      "covered_by": [
+        "tests/test_qjsc_executable.py"
+      ]
+    },
+    "tests/test_qjsc_temporal.sh": {
+      "reason": "The existing cross-platform generated executable fixture replaces the duplicate shell wrapper",
+      "covered_by": [
+        "tests/test_qjsc_executable.py"
+      ]
+    },
+    "tests/test_unicode_provider_integration.c": {
+      "reason": "One provider fixture covers common integration contracts without including a second copy of its main",
+      "covered_by": [
+        "tests/test_unicode_provider.c"
+      ]
+    }
+  },
+  "additional_sources": [
+    "src/intl/data/number-template-validation.c",
+    "src/quickjs/disposal.c",
+    "src/quickjs/internal/disposal.h",
+    "tests/realm-harness.js",
+    "tests/run_temporal_zone_test.c",
+    "tests/test_async_realms.js",
+    "tests/test_disposal_realms.js",
+    "tests/test_intl_data_bundle.c",
+    "tests/test_intl_data_reader.c",
+    "tests/test_intl_date_pattern.c",
+    "tests/test_intl_decimal.c",
+    "tests/test_intl_generator.py",
+    "tests/test_intl_native_plural.c",
+    "tests/test_intl_number_grammar.c",
+    "tests/test_iterator.c",
+    "tests/test_iterator_realms.js",
+    "tests/test_realm.js",
+    "tests/test_temporal_config.py",
+    "tests/test_temporal_date_math.c",
+    "tests/test_temporal_epoch.c",
+    "tests/test_temporal_format.c",
+    "tests/test_temporal_realm.js",
+    "tests/test_temporal_zoned_native.js",
+    "tools/benchmarks/select_benchmark.py",
+    "tools/ci/native-prefix/checkout_identity.py",
+    "tools/ci/native-prefix/execution_threads.py",
+    "tools/ci/native-prefix/reconstruction_scope.py",
+    "tools/ci/native-prefix/run.py",
+    "tools/ci/native-prefix/source-path-derivation.json",
+    "tools/ci/native-prefix/test_checkout_identity.py",
+    "tools/ci/native-prefix/test_execution_threads.py",
+    "tools/ci/native-prefix/test_qualification_current_sources.py",
+    "tools/ci/native-prefix/test_reconstruction_scope.py",
+    "tools/ci/native-prefix/test_run_current_identity.py",
+    "tools/ci/stop39b-qualification/qualify.py",
+    "tools/ci/native-prefix/test_repository_invocation_census.py",
+    "tools/ci/native-prefix/helper_source_derivation.py",
+    "tools/ci/native-prefix/reconstructed-helper-bindings.json",
+    "tools/ci/native-prefix/test_helper_source_derivation.py"
+  ]
+}

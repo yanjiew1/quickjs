@@ -6,7 +6,7 @@
 #include "quickjs.h"
 #include "cutils.h"
 #include "libunicode.h"
-#ifdef CONFIG_UNICODE_ICU
+#if defined(CONFIG_UNICODE_ICU) && defined(QJS_TEST_ICU_INIT_WRAP)
 #include <unicode/uclean.h>
 static int fail_init;
 
@@ -42,7 +42,7 @@ int main(void)
 {
     const char *error = NULL;
     JSRuntime *rt;
-#ifdef CONFIG_UNICODE_ICU
+#if defined(CONFIG_UNICODE_ICU) && defined(QJS_TEST_ICU_INIT_WRAP)
     JSMallocFunctions mf = {count_malloc, count_free, count_realloc, count_usable_size};
     fail_init = 1;
     assert(lre_unicode_initialize(&error) == -1 && error != NULL);
@@ -53,6 +53,10 @@ int main(void)
     rt = JS_NewRuntime();
     assert(rt != NULL);
     JS_FreeRuntime(rt);
+#ifdef QJS_TEST_ICU_INIT_WRAP
     puts("Unicode provider initialization failure/recovery contract passed");
+#else
+    puts("Unicode provider initialization contract passed");
+#endif
     return 0;
 }

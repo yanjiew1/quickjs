@@ -1,0 +1,83 @@
+{
+  "changes": [
+    "Own and release configured and CLI output filenames",
+    "Avoid sorting an empty enumeration",
+    "Retain optional execution telemetry separately from result streams"
+  ],
+  "conformance_accepted": false,
+  "current_sha256": "c7f12d1a74b93b28bc025da97b31cec009c724279816de0eeae671e6afeac13e",
+  "engine_algorithms_changed": false,
+  "historical_sha256": "b7eea8dc2054e56f0033dba23655bbac8a9d642dad95695cea8ba63510c97a6b",
+  "packet_seal_sha256": "cd3fcb13ce35edcd6905cde4edcbe70e0cae067e32f965e6505bd713abbb4d68",
+  "root_source_review_sha256": "c9a7b52fba84783dbb3f7db9b53baa8cbcadc34b1b09c845d26373b8f542bc9b",
+  "schema": "native-premise-reconstructed-source-compatibility-v2",
+  "semantic_adjudication_complete": false,
+  "source_review_complete": true,
+  "subject": "tools/run-test262.c",
+  "subjects": {
+    "tools/run-test262.c": {
+      "historical_sha256": "b7eea8dc2054e56f0033dba23655bbac8a9d642dad95695cea8ba63510c97a6b",
+      "current_sha256": "c7f12d1a74b93b28bc025da97b31cec009c724279816de0eeae671e6afeac13e",
+      "changes": [
+        "Own and release configured and CLI output filenames",
+        "Avoid sorting an empty enumeration",
+        "Retain optional execution telemetry separately from result streams"
+      ]
+    },
+    "src/intl/date-native-bank.c": {
+      "historical_sha256": "99c923f1aed42eb3b45c008792cc69653b092a4c059a132aee75c586b807274e",
+      "current_sha256": "763e7cb62889350dc43763565b98801d50cf30e7a0a8ce4b015815542c2c9a4e",
+      "changes": [
+        "Normalize the timezone include relative to its owning source"
+      ]
+    },
+    "src/intl/metadata-data.h": {
+      "historical_sha256": "41d4ca7192eac59948097c3bdb131f0ebea3eb02449b13321e87797c99961bc7",
+      "current_sha256": "6e4002bd3a6c95f5769ed1bf9b3463e241a7975a2fc7ea3609b2298ee8019144",
+      "changes": [
+        "Describe the actual compiled released bundle in the ownership comment"
+      ]
+    },
+    "src/intl/native-locale-id.c": {
+      "historical_sha256": "3d3514ddfe3c93968503a17746b44d990422f0281bf60094d73e8cddb2880b78",
+      "current_sha256": "a16b6e1564d2b2b6aacaa4caeb1ac8bc879916d7e973841279db3599f96c3c56",
+      "changes": [
+        "Normalize the UTF-8 helper include relative to its owning source"
+      ]
+    },
+    "src/intl/native-locale-info.c": {
+      "historical_sha256": "1ada9e7ea540785dcad558c16f072a30429948ee3931ab13a0e2b1ccf04f63eb",
+      "current_sha256": "ac24339bc17f0132cd087c1f04266e53f5e89031634b4fbd6281cb1243243297",
+      "changes": [
+        "Normalize the locale-ID include relative to its owning source"
+      ]
+    },
+    "src/intl/number-native.c": {
+      "historical_sha256": "d2136154ec3152e0ac12f93171100cf00af84b76c9587e73c94cd9a1caf5f3b0",
+      "current_sha256": "a7f8dd5ab083a06a2b8fdd3184835bb6e93c9645611bc7f4965f3a8013d5af2d",
+      "changes": [
+        "Move the two shared template validators to their sole data owner without changing their bodies"
+      ]
+    },
+    "src/quickjs/builtins/intl/native-date-time-format.c": {
+      "historical_sha256": "a4ae26e599212d51f2e8dcdb6b02dbd98bb9ff92bb67ea28a1ffda93d0dbb231",
+      "current_sha256": "58caaaeaefb53072f7ee66a39c598ccacc647d29c42947edf82d99397716a0d2",
+      "changes": [
+        "Describe the actual registered frontend service bank in the ownership comment"
+      ]
+    },
+    "src/quickjs/builtins/intl/native-locale-resolution.c": {
+      "historical_sha256": "3a0aeccac9481706cf1f033b961f3a7d8c56676d128f43f9ce7f5bb0f4dbd54a",
+      "current_sha256": "8540e4f5be86d0c3a968b0345676f06def80d8cb163ca8619cb319ee2b918b4c",
+      "changes": [
+        "Describe the actual released data/service scope in ownership comments"
+      ]
+    }
+  },
+  "additional_dependencies": {
+    "src/intl/data/number-template-validation.c": {
+      "current_sha256": "c742daa56f80af87048bf4479b5e735decd1c83b555430357d945c55ae548f6e",
+      "reason": "Sole unchanged validator bodies and private UTF-8/token helpers extracted from number-native.c"
+    }
+  }
+}

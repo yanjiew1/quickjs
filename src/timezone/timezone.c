@@ -4,6 +4,9 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include "private.h"
+#ifdef QJS_TZ_CAPTURE_SNAPSHOT
+#include "capture.h"
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,6 +107,9 @@ int qjs_tz_open(QJSTimeZone **output, const char *text, size_t length,
     const unsigned char *bytes = NULL;
     size_t size = 0;
     int error;
+#ifdef QJS_TZ_CAPTURE_SNAPSHOT
+    int source_status;
+#endif
     if (!output || !record) return QJS_TZ_INVALID;
     if (!allocator) allocator = &defaults;
     if (!source) source = &system;
@@ -146,6 +152,9 @@ int qjs_tz_open(QJSTimeZone **output, const char *text, size_t length,
         }
         source->release(source->opaque, bytes, size);
     }
+#ifdef QJS_TZ_CAPTURE_SNAPSHOT
+    source_status = error;
+#endif
     /* Every alias uses its primary's system file and compiled fallback.
        Missing alias links in minimized packages cannot split equal zones. */
     if (error && error != QJS_TZ_MEMORY) {
@@ -159,6 +168,18 @@ int qjs_tz_open(QJSTimeZone **output, const char *text, size_t length,
         allocator->deallocate(allocator->opaque, zone);
         return error;
     }
+#ifdef QJS_TZ_CAPTURE_SNAPSHOT
+    /* Observe the accepted owned copy, not a reread of a mutable host path.
+       This hook and its transport do not exist in ordinary builds. */
+    if (qjs_tz_capture_selected(record->identifier, record->primary,
+            zone->origin, source_status, QJS_TZ_SYSTEM_DIR,
+            zone->origin == QJS_TZ_SYSTEM ? zone->owned_bytes :
+                qjs_tz_embedded_data + record->offset,
+            zone->origin == QJS_TZ_SYSTEM ? size : record->length)) {
+        qjs_tz_close(zone);
+        return QJS_TZ_INVALID;
+    }
+#endif
     *output = zone;
     return QJS_TZ_OK;
 }

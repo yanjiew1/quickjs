@@ -1,0 +1,169 @@
+{
+  "actual_original_outcomes": {
+    "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js": {
+      "fixture_sha256": "7e9691cc92ffd7dcdd014046ab5ebea4ecffd8da608cc239689ebd481e9decb9",
+      "outcome": "REVIEW_REQUIRED",
+      "returncode": 1,
+      "summary": {
+        "error_source_count": 1,
+        "excluded_source_count": 0,
+        "executed_source_count": 1,
+        "known_error_changes": {
+          "changed": 0,
+          "fixed": 0,
+          "new": 1
+        },
+        "runner_summary": [
+          "1",
+          "1",
+          ", 1 new"
+        ],
+        "skipped_source_count": 0,
+        "zero_error_conformance_claim": false
+      }
+    },
+    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js": {
+      "fixture_sha256": "8667903fa2969dc801b45e2505d96c878b2c15e278bad0af3b2a25c64ee749a3",
+      "outcome": "REVIEW_REQUIRED",
+      "returncode": 1,
+      "summary": {
+        "error_source_count": 1,
+        "excluded_source_count": 0,
+        "executed_source_count": 1,
+        "known_error_changes": {
+          "changed": 0,
+          "fixed": 0,
+          "new": 1
+        },
+        "runner_summary": [
+          "1",
+          "1",
+          ", 1 new"
+        ],
+        "skipped_source_count": 0,
+        "zero_error_conformance_claim": false
+      }
+    }
+  },
+  "adjudicated_diagnostic_entries": [
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "7e9691cc92ffd7dcdd014046ab5ebea4ecffd8da608cc239689ebd481e9decb9",
+      "line": 30,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/008-a8639da34689.json",
+        "sha256": "0ad441a48c339112c42aabe04208818f350b6f081f52711aee2a150dee98cfcf"
+      },
+      "signature": "unexpected error: Test262Error: en-US-u-nu-hanidec: display all time units in 2-digit Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+      "strict": false
+    },
+    {
+      "classification": "NORMATIVE_DATA_PROFILE_DIFFERENCE",
+      "disposition": "EXACT_PROFILE_DIAGNOSTIC_REVIEWED",
+      "fixture_sha256": "8667903fa2969dc801b45e2505d96c878b2c15e278bad0af3b2a25c64ee749a3",
+      "line": 30,
+      "path": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
+      "raw_outcome": "FAIL",
+      "review_binding": {
+        "path": "tools/ci/native-prefix/reviews/candidates/029-02e8b23e2985.json",
+        "sha256": "2ae5589e143bbd634b83694765dc2446ebee1bb67b0ce02a7413aaf937db4210"
+      },
+      "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"h12\"\u00bb, \u00ab\"h11\"\u00bb) to be true",
+      "strict": false
+    }
+  ],
+  "complete_original_assertion_review_bindings": [
+    {
+      "path": "tools/ci/native-prefix/reviews/candidates/008-a8639da34689.json",
+      "sha256": "0ad441a48c339112c42aabe04208818f350b6f081f52711aee2a150dee98cfcf"
+    },
+    {
+      "path": "tools/ci/native-prefix/reviews/candidates/029-02e8b23e2985.json",
+      "sha256": "2ae5589e143bbd634b83694765dc2446ebee1bb67b0ce02a7413aaf937db4210"
+    }
+  ],
+  "conformance_accepted": false,
+  "effective_profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+  "exact_witness": {
+    "hanidec": {
+      "codePoints": [
+        "U+3007",
+        "U+4E8C",
+        "U+003A",
+        "U+4E09",
+        "U+4E94",
+        "U+003A",
+        "U+3007",
+        "U+516D",
+        "U+202F",
+        "U+0041",
+        "U+004D"
+      ],
+      "formatted": "\u3007\u4e8c:\u4e09\u4e94:\u3007\u516d\u202fAM",
+      "officialAsciiSpaceIncludes": false,
+      "parts": [
+        {
+          "type": "hour",
+          "value": "\u3007\u4e8c"
+        },
+        {
+          "type": "literal",
+          "value": ":"
+        },
+        {
+          "type": "minute",
+          "value": "\u4e09\u4e94"
+        },
+        {
+          "type": "literal",
+          "value": ":"
+        },
+        {
+          "type": "second",
+          "value": "\u3007\u516d"
+        },
+        {
+          "type": "literal",
+          "value": "\u202f"
+        },
+        {
+          "type": "dayPeriod",
+          "value": "AM"
+        }
+      ],
+      "resolvedOptions": {
+        "calendar": "gregory",
+        "hour": "2-digit",
+        "hour12": true,
+        "hourCycle": "h12",
+        "locale": "en-US-u-nu-hanidec",
+        "minute": "2-digit",
+        "numberingSystem": "hanidec",
+        "second": "2-digit",
+        "timeZone": "UTC"
+      }
+    },
+    "japaneseHour12": {
+      "calendar": "gregory",
+      "hour": "numeric",
+      "hour12": true,
+      "hourCycle": "h12",
+      "locale": "en-US",
+      "numberingSystem": "latn",
+      "timeZone": "UTC"
+    }
+  },
+  "failure_waiver": false,
+  "production_source_map_sha256": null,
+  "profile_diagnostic_authorized": true,
+  "schema": "native-exact-oracle-profile-policy-v2",
+  "semantic_review_binding": {
+    "path": "tools/ci/native-prefix/reviews/oracle-semantic-review.json",
+    "sha256": "cae3c725c2e96b6ff4b8f1e58a00448f3faadc3a32a35434242fcaf60522b4de"
+  },
+  "source_binding_mode": "required-actual-current-checkout-review",
+  "status": "ROOT_APPROVED_EXACT_BOUNDED_NATIVE_PROFILE"
+}
