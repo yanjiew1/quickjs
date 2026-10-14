@@ -92,7 +92,11 @@ JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
     }
     if (js_c_function_name_valid(name))
         *js_c_function_initial_name(p) = JS_DupAtom(ctx, name_atom);
-    js_function_set_properties(ctx, func_obj, name_atom, length);
+    if (js_function_set_properties(ctx, func_obj, name_atom, length) < 0) {
+        JS_FreeAtom(ctx, name_atom);
+        JS_FreeValue(ctx, func_obj);
+        return JS_EXCEPTION;
+    }
     JS_FreeAtom(ctx, name_atom);
     return func_obj;
 }
@@ -281,8 +285,11 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
     for(i = 0; i < data_len; i++)
         s->data[i] = JS_DupValue(ctx, data[i]);
     JS_SetOpaque(func_obj, s);
-    js_function_set_properties(ctx, func_obj,
-                               JS_ATOM_empty_string, length);
+    if (js_function_set_properties(ctx, func_obj,
+                                   JS_ATOM_empty_string, length) < 0) {
+        JS_FreeValue(ctx, func_obj);
+        return JS_EXCEPTION;
+    }
     return func_obj;
 }
 

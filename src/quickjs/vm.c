@@ -2168,8 +2168,9 @@ JSValue js_closure(JSContext *ctx, JSValue bfunc,
     name_atom = b->func_name;
     if (name_atom == JS_ATOM_NULL)
         name_atom = JS_ATOM_empty_string;
-    js_function_set_properties(ctx, func_obj, name_atom,
-                               b->defined_arg_count);
+    if (js_function_set_properties(ctx, func_obj, name_atom,
+                                   b->defined_arg_count) < 0)
+        goto fail;
 
     if (b->func_kind & JS_FUNC_GENERATOR) {
         JSValue proto;
@@ -2183,16 +2184,18 @@ JSValue js_closure(JSContext *ctx, JSValue bfunc,
         proto = JS_NewObjectProto(ctx, ctx->class_proto[proto_class_id]);
         if (JS_IsException(proto))
             goto fail;
-        JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_prototype, proto,
-                               JS_PROP_WRITABLE);
+        if (JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_prototype, proto,
+                                   JS_PROP_WRITABLE) < 0)
+            goto fail;
     } else if (b->has_prototype) {
         /* add the 'prototype' property: delay instantiation to avoid
            creating cycles for every javascript function. The prototype
            object is created on the fly when first accessed */
         JS_SetConstructorBit(ctx, func_obj, TRUE);
-        JS_DefineAutoInitProperty(ctx, func_obj, JS_ATOM_prototype,
-                                  JS_AUTOINIT_ID_PROTOTYPE, NULL,
-                                  JS_PROP_WRITABLE);
+        if (JS_DefineAutoInitProperty(ctx, func_obj, JS_ATOM_prototype,
+                                     JS_AUTOINIT_ID_PROTOTYPE, NULL,
+                                     JS_PROP_WRITABLE) < 0)
+            goto fail;
     }
     return func_obj;
  fail:
