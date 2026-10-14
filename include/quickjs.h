@@ -776,7 +776,11 @@ static inline const char *JS_ToCString(JSContext *ctx, JSValueConst val1)
 {
     return JS_ToCStringLen2(ctx, NULL, val1, 0);
 }
+/* Reject embedded NUL; free a successful result with JS_FreeCString. */
+const char *JS_ToCStringNZ(JSContext *ctx, JSValueConst val);
 void JS_FreeCString(JSContext *ctx, const char *ptr);
+/* Return a code point count, or -1 with *pbuf = NULL; free with js_free. */
+int JS_ToUTF32String(JSContext *ctx, uint32_t **pbuf, JSValueConst val);
 /* Releases a JS_ToCString result after its originating context is freed.
    rt must remain alive and must be the runtime that owns ptr. */
 void JS_FreeCStringRT(JSRuntime *rt, const char *ptr);

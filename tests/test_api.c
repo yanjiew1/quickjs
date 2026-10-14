@@ -3310,6 +3310,64 @@ static void test_conversion_public_api(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_string_conversion_public_api(void)
+{
+    static const uint16_t units[] = { 'A', 0, 0xd83d, 0xde00, 0xd800 };
+    static const uint32_t expected[] = { 'A', 0, 0x1f600, 0xd800 };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue value, error;
+    uint32_t *buffer, sentinel;
+    const char *text;
+    int length, marker;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    value = JS_NewString(ctx, "plain");
+    text = JS_ToCStringNZ(ctx, value);
+    assert(text && !strcmp(text, "plain"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, value);
+
+    value = JS_NewStringUTF16(ctx, units, countof(units));
+    assert(JS_ToCStringNZ(ctx, value) == NULL);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    buffer = NULL;
+    length = JS_ToUTF32String(ctx, &buffer, value);
+    assert(length == countof(expected) && buffer);
+    assert(!memcmp(buffer, expected, sizeof(expected)));
+    js_free(ctx, buffer);
+    JS_FreeValue(ctx, value);
+
+    value = JS_NewString(ctx, "");
+    length = JS_ToUTF32String(ctx, &buffer, value);
+    assert(length == 0 && buffer);
+    js_free(ctx, buffer);
+    text = JS_ToCStringNZ(ctx, value);
+    assert(text && !*text);
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, value);
+
+    value = utf16_api_eval(ctx, "({ [Symbol.toPrimitive]() { throw 23; } })");
+    buffer = &sentinel;
+    assert(JS_ToUTF32String(ctx, &buffer, value) == -1);
+    assert(buffer == NULL);
+    error = JS_GetException(ctx);
+    assert(JS_ToInt32(ctx, &marker, error) == 0 && marker == 23);
+    JS_FreeValue(ctx, error);
+    assert(JS_ToCStringNZ(ctx, value) == NULL);
+    error = JS_GetException(ctx);
+    assert(JS_ToInt32(ctx, &marker, error) == 0 && marker == 23);
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, value);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3327,6 +3385,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "string-conversion-public-api", test_string_conversion_public_api },
         { "conversion-public-api", test_conversion_public_api },
         { "utf16-public-api", test_utf16_public_api },
         { "utf16-public-api-oom", test_utf16_public_api_oom },
