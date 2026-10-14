@@ -263,9 +263,11 @@ The following features are not supported yet:
 
 This branch includes the native Temporal implementation. It is enabled by
 @code{CONFIG_TEMPORAL=y}, the default; use @code{CONFIG_TEMPORAL=n} to omit
-it. Temporal uses the native calendar and timezone libraries and does not
-require ICU. The timezone provider tries system data first and uses the
-compiled release-pinned timezone database when system data is unavailable.
+it. With the native backend, Temporal uses the native calendar and timezone
+libraries without ICU. The native timezone provider tries system data first
+and uses the compiled release-pinned database when system data is unavailable.
+With the ICU backend, ICU supplies calendar, timezone and Unicode algorithms
+and data.
 Date and Temporal use the same runtime default-timezone provider.
 
 @code{JS_NewContext} installs Temporal when enabled. Embedders using a raw
@@ -279,7 +281,37 @@ publish a Temporal global.
 
 @subsection ECMA402
 
-ECMA402 (Internationalization API) is not supported.
+Intl is optional and defaults to disabled on this branch. Enable it with
+@code{make CONFIG_INTL=y CONFIG_INTL_BACKEND=native} or
+@code{make CONFIG_INTL=y CONFIG_INTL_BACKEND=icu}. The native backend does
+not link ICU. The ICU backend uses the selected ICU installation for Intl,
+Temporal calendar/timezone operations and core Unicode algorithms and data.
+The build records the selected ICU compiler and linker flags; a system ICU
+installation can supply them, or callers can set @code{ICU_CFLAGS} and
+@code{ICU_LIBS}. Older ICU releases can produce different data-dependent
+results. @code{CONFIG_INTL_LEGACY=n} disables optional legacy constructor
+chaining, which otherwise defaults to enabled.
+
+The native backend is a development data profile, not complete CLDR locale
+coverage. Its formatter services expose English @code{en}/@code{en-US},
+while Locale metadata can describe a broader inventory. Released data is
+converted into compiled binary tables. The last qualified native Test262 run
+retained 109 new diagnostic failures across 52,742 executed sources; these
+remain visible and do not constitute zero-error conformance. ICU and native
+results are qualified separately. Locale fallback, installed pattern banks
+and timezone release identities can differ from individual fixture assumptions.
+
+@code{JS_NewContext} installs Intl when enabled. Raw-context embedders can
+use @code{JS_AddIntrinsicIntl}; @code{JS_SetIntlDefaultLocale} and
+@code{JS_GetIntlDefaultLocale} manage the context's default locale.
+Default timezone policy is shared with Date and Temporal. Public header
+comments specify initialization, ownership and disabled-build failures.
+
+Embedders previously compiled against the experimental Intl branch must
+recompile: @code{JS_CFUNC_constructor_or_func_receiver} is now appended
+following main's @code{JS_CFUNC_constructor_or_func_flags}. Existing main
+callback enum values are preserved, but both historical callback kinds
+previously occupied the same number and have different signatures.
 
 @section Modules
 

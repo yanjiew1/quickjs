@@ -1,6 +1,6 @@
 """Pure MOCK filesystem tests of extracted input_identity; never import run.py.
 
-Root executes these. AST extraction excludes all runner top-level side effects,
+AST extraction excludes all runner top-level side effects,
 Git, processes, runtime commands and engine execution.
 """
 import ast
@@ -27,7 +27,7 @@ class CurrentCheckoutIdentityTests(unittest.TestCase):
         self.namespace = dict(hashlib=hashlib, json=json, Path=Path, os=os,
             HERE=self.root / 'helpers', OUT=self.root / 'out', FIXTURE_MAP=None,
             HISTORICAL_BASELINE_PRODUCTION_MAP='c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70')
-        # Root-owned MOCK execution of only the exact selected pure filesystem helpers.
+        # Extract only the selected filesystem helpers with mocked inputs.
         exec(compile(ast.Module(body=functions, type_ignores=[]), 'MOCK-input-identity', 'exec'), self.namespace)
         self.write('helpers/mock-helper.py', b'current helper')
         self.write('production.c', b'current production')

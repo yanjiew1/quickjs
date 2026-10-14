@@ -2,10 +2,11 @@
   "changes": [
     "Own and release configured and CLI output filenames",
     "Avoid sorting an empty enumeration",
-    "Retain optional execution telemetry separately from result streams"
+    "Retain optional execution telemetry separately from result streams",
+    "Add optional monotonic variant wall timings and recognize long telemetry operands during directory selection"
   ],
   "conformance_accepted": false,
-  "current_sha256": "c7f12d1a74b93b28bc025da97b31cec009c724279816de0eeae671e6afeac13e",
+  "current_sha256": "538b56d3d21692cc4f7734c288869854985b57d3b2c1d8acacd2141012a79a4e",
   "engine_algorithms_changed": false,
   "historical_sha256": "b7eea8dc2054e56f0033dba23655bbac8a9d642dad95695cea8ba63510c97a6b",
   "packet_seal_sha256": "cd3fcb13ce35edcd6905cde4edcbe70e0cae067e32f965e6505bd713abbb4d68",
@@ -17,11 +18,12 @@
   "subjects": {
     "tools/run-test262.c": {
       "historical_sha256": "b7eea8dc2054e56f0033dba23655bbac8a9d642dad95695cea8ba63510c97a6b",
-      "current_sha256": "c7f12d1a74b93b28bc025da97b31cec009c724279816de0eeae671e6afeac13e",
+      "current_sha256": "538b56d3d21692cc4f7734c288869854985b57d3b2c1d8acacd2141012a79a4e",
       "changes": [
         "Own and release configured and CLI output filenames",
         "Avoid sorting an empty enumeration",
-        "Retain optional execution telemetry separately from result streams"
+        "Retain optional execution telemetry separately from result streams",
+        "Add optional monotonic variant wall timings and recognize long telemetry operands during directory selection"
       ]
     },
     "src/intl/date-native-bank.c": {
@@ -72,6 +74,13 @@
       "changes": [
         "Describe the actual released data/service scope in ownership comments"
       ]
+    },
+    "src/quickjs/builtins/intl/native-list-format.c": {
+      "historical_sha256": "66ecb6875d9e2993190515abe16387022113d52b1ea87b7615f6d9a73b4fa57e",
+      "changes": [
+        "Use the four-argument public IteratorNext API with unchanged zero-argument iterator invocation"
+      ],
+      "current_sha256": "37a5fb9207aba55686d5f1f50741752fe95b865f922735f717521e537815c9d8"
     }
   },
   "additional_dependencies": {

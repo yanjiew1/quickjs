@@ -1,0 +1,69 @@
+name: stop39b-icu-scratch-qualification
+on:
+  push:
+    branches: ['scratch/native-prefix/qualification/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  icu:
+    runs-on: ubuntu-24.04
+    # Includes explicit 120 minute SDK --check owner and 30 minute commands.
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        row: [packaged-static, packaged-shared, system]
+    env:
+      MAKEFLAGS: ''
+      QUALIFICATION_ROW: ${{ matrix.row }}
+      PREFIX_BACKEND: icu
+      PREFIX_COMPILER: gcc
+      PREFIX_SANITIZER: normal
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          submodules: recursive
+          fetch-depth: 2
+      - name: Install system ICU development metadata
+        if: matrix.row == 'system'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libicu-dev pkg-config
+      - name: Bind exact current checkout and environment
+        id: binding
+        run: |
+          export PREFIX_ICU="$RUNNER_TEMP/unused-prefix-icu"
+          export QUALIFICATION_SDK="$RUNNER_TEMP/qualified-icu"
+          printf 'PREFIX_ICU=%s\nQUALIFICATION_SDK=%s\n' "$PREFIX_ICU" "$QUALIFICATION_SDK" >> "$GITHUB_ENV"
+          python3 tools/ci/stop39b-qualification/qualify.py initialize
+      - name: Build packaged SDK and ICU check with stock header C ABI client
+        if: matrix.row != 'system'
+        run: python3 tools/ci/stop39b-qualification/qualify.py sdk
+      - name: Run existing floor rejection and cross pkg-config contamination units
+        run: python3 tools/ci/stop39b-qualification/qualify.py selection-units
+      - name: Materialize pinned timezone inputs
+        run: python3 tools/ci/stop39b-qualification/qualify.py timezone-inputs
+      - name: Build exact selected backend and record linked libraries
+        id: candidate
+        run: python3 tools/ci/stop39b-qualification/qualify.py build
+      - name: Run repository tests with unchanged assertions
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
+        run: python3 tools/ci/stop39b-qualification/qualify.py repository-tests
+      - name: Run existing public API runtime and C/C++ contracts
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
+        run: python3 tools/ci/stop39b-qualification/qualify.py public-api
+      - name: Preserve exact source and pending acceptance scope
+        if: always() && steps.binding.outcome == 'success'
+        run: python3 tools/ci/stop39b-qualification/qualify.py preserve
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stop39b-icu-${{ github.sha }}-${{ matrix.row }}
+          path: |
+            ci-native-prefix-diagnostics/
+            ${{ runner.temp }}/qualified-icu/*.log
+            ${{ runner.temp }}/qualified-icu/*.json
+          if-no-files-found: error
+          retention-days: 14

@@ -10,9 +10,9 @@ on:
         type: string
         default: ''
       suite:
-        description: Workloads (Zoo excludes zlib)
+        description: Workloads (optional enables native Intl/Temporal; Zoo excludes zlib)
         type: choice
-        options: [core, zoo, all]
+        options: [core, zoo, all, optional]
         default: core
       rounds:
         description: Paired rounds for V8 v7, microbenchmarks, or optional services
@@ -77,7 +77,7 @@ jobs:
       matrix:
         compiler: [gcc, clang]
     env:
-      SUITE: ${{ inputs.suite || 'core' }}
+      SUITE: ${{ inputs.suite || (startsWith(github.ref_name, 'scratch/benchmarks/native/') && 'optional') || 'core' }}
       ROUNDS: ${{ inputs.rounds || '1' }}
       COMPILER: ${{ matrix.compiler }}
       CANDIDATE_SHA: ${{ inputs.candidate_revision || github.sha }}

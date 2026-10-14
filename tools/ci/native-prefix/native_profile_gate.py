@@ -10,6 +10,7 @@ import json
 import re
 from native_normative_scope import current_mandatory_review
 from core_baseline_transition import review_baseline_matches
+from slow_test_selection import SlowTestSelection
 
 IDENTITY_FIELDS = ("path", "strict", "line", "signature")
 BINDING_FIELDS = ("production_source_map_sha256", "fixture_source_map_sha256",
@@ -303,9 +304,18 @@ def qualify_native(parsed, policy, context, fixture_hashes, validated_witness,
     demand(policy.get("schema") == "native-exact-profile-policy-v2" and
            policy.get("profile_diagnostic_authorized") is True,
            "Native policy remains unreviewed REQUIRED draft")
-    demand(policy.get("failure_waiver") is False and policy.get("conformance_accepted") is False
-           and policy.get("no_new_skips_exclusions_expected_errors") is True,
-           "Failure waiver, conformance claim or changed skip policy")
+    demand(policy.get("failure_waiver") is False and policy.get("conformance_accepted") is False,
+           "Failure waiver or conformance claim")
+    slow_selection = context.get("slow_test_selection")
+    if slow_selection is None:
+        demand(policy.get("no_new_skips_exclusions_expected_errors") is True and
+               "authorized_slow_exclusions" not in policy,
+               "Changed skip policy without an authenticated transition")
+    else:
+        demand(type(slow_selection) is SlowTestSelection and
+               policy.get("no_new_skips_exclusions_expected_errors") is False,
+               "Untrusted slow selection transition")
+        slow_selection.check_policy(policy, context)
     same_bindings(policy, context)
     demand(context.get("mandatory_repository_gates_passed") is True,
            "Mandatory repository/API checks failed or missing")
@@ -356,7 +366,7 @@ def qualify_native(parsed, policy, context, fixture_hashes, validated_witness,
     demand(actual == expected_keys, "Missing/new/changed/unclassified failure identity")
     for key in actual:
         reviewed_entry(index[key], context, fixture_hashes, witness, load_bytes)
-    return dict(schema="native-exact-profile-qualification-v2",
+    result = dict(schema="native-exact-profile-qualification-v2",
                 profile_diagnostic_qualified=True, raw_runner_returncode=parsed["raw_runner_returncode"],
                 raw_counters=counters, raw_failures_preserved=True,
                 all_original_expressions_evaluated=all(witness[path].get("all_original_expressions_evaluated") is True
@@ -364,3 +374,7 @@ def qualify_native(parsed, policy, context, fixture_hashes, validated_witness,
                 exact_reviewed_failed_source_count=len(actual),
                 conformance_accepted=False, failure_waiver=False,
                 basis="Current exact observations, complete original assertions and per-file normative reviews")
+    if slow_selection is not None and selection is None:
+        result["authorized_slow_exclusions"] = slow_selection.receipt()
+    return result
+

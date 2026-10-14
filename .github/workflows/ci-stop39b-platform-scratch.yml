@@ -1,0 +1,100 @@
+name: stop39b-native-platform-scratch-qualification
+on:
+  push:
+    branches: ['scratch/native-prefix/qualification/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - row: m32
+            os: ubuntu-24.04
+            compiler: gcc
+            shell: bash
+          - row: macos
+            os: macos-14
+            compiler: clang
+            shell: bash
+          - row: mingw
+            os: ubuntu-24.04
+            compiler: gcc
+            shell: bash
+          - row: msys2
+            os: windows-2022
+            compiler: gcc
+            shell: 'msys2 {0}'
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    env:
+      MAKEFLAGS: ''
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: core.autocrlf
+      GIT_CONFIG_VALUE_0: 'false'
+      QUALIFICATION_ROW: ${{ matrix.row }}
+      PREFIX_BACKEND: native
+      PREFIX_COMPILER: ${{ matrix.compiler }}
+      PREFIX_SANITIZER: normal
+      WINEARCH: win64
+      WINEDEBUG: '-all'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          submodules: recursive
+          fetch-depth: 2
+      - uses: msys2/setup-msys2@v2
+        if: matrix.row == 'msys2'
+        with:
+          msystem: UCRT64
+          update: true
+          install: git make diffutils file python mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
+      - name: Install GNU Make on macOS
+        if: matrix.row == 'macos'
+        run: brew install make
+      - name: Install GCC 32 bit support
+        if: matrix.row == 'm32'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+      - name: Install MinGW and configure existing 64 bit Wine recipe
+        if: matrix.row == 'mingw'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wine64 mingw-w64
+          cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll .
+          cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll tests/
+          export WINEPREFIX="$RUNNER_TEMP/quickjs-wine64"
+          printf 'WINEPREFIX=%s\n' "$WINEPREFIX" >> "$GITHUB_ENV"
+          test -x /usr/lib/wine/wine64
+          /usr/lib/wine/wine64 wineboot.exe --init
+      - name: Bind exact current checkout and environment
+        id: binding
+        run: |
+          export PREFIX_ICU="$RUNNER_TEMP/unused-prefix-icu"
+          printf 'PREFIX_ICU=%s\n' "$PREFIX_ICU" >> "$GITHUB_ENV"
+          python3 tools/ci/stop39b-qualification/qualify.py initialize
+      - name: Materialize pinned timezone inputs
+        run: python3 tools/ci/stop39b-qualification/qualify.py timezone-inputs
+      - name: Build enabled native candidate and repository units
+        id: candidate
+        run: python3 tools/ci/stop39b-qualification/qualify.py build
+      - name: Run platform repository tests with explicit enabled features
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
+        run: python3 tools/ci/stop39b-qualification/qualify.py repository-tests
+      - name: Preserve exact source and pending acceptance scope
+        if: always() && steps.binding.outcome == 'success'
+        run: python3 tools/ci/stop39b-qualification/qualify.py preserve
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stop39b-platform-${{ github.sha }}-${{ matrix.row }}
+          path: ci-native-prefix-diagnostics/
+          if-no-files-found: error
+          retention-days: 14

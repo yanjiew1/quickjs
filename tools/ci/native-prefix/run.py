@@ -18,6 +18,8 @@ from native_normative_scope import bind_static_scopes, SCOPE_PATH
 from core_baseline_transition import authenticate_transition
 from checkout_identity import inspect_checkout
 from execution_threads import available_cpus, test262_workers
+from slow_test_selection import (EXCLUSION_PATH,
+                                 authenticate_slow_selection)
 
 HERE = Path(__file__).resolve().parent
 OUT = Path('ci-native-prefix-diagnostics').resolve()
@@ -639,6 +641,11 @@ def require_collection(parsed):
             parsed['sealed_inputs_unchanged'], 'Incomplete raw run or SAN/infra/unknown/unreconciled input')
 
 
+def test262_telemetry(name):
+    return ['--progress-log', str(OUT / (name + '-execution.jsonl')),
+            '--timing-log', str(OUT / (name + '-timings.jsonl'))]
+
+
 def full_test262():
     checkpoint = json.loads((HERE / 'integration-checkpoint.json').read_text())
     baseline = Path('test262_errors.txt')
@@ -659,7 +666,8 @@ def full_test262():
         shutil.copyfile(path, OUT / ('input-' + path))
     before = input_identity()
     save('test262-inputs-before.json', before)
-    log = run('test262', test262_workers(checkpoint['argv']) + ['--progress-log', str(OUT / 'test262-execution.jsonl')],
+    log = run('test262', test262_workers(checkpoint['argv']) + test262_telemetry('test262') +
+              ['-x', EXCLUSION_PATH],
               timeout=14400, check=False, raw_streams=True)
     result = summary('test262', log)
     receipt = json.loads((OUT / 'test262.command.json').read_text())
@@ -667,8 +675,14 @@ def full_test262():
     save('test262-inputs-after.json', after)
     parsed = parse_raw('test262', TEST262_PROFILE['runner_distinct_source_count'],
                        baseline_records(checkpoint), before, after)
+    selection_transition = authenticate_slow_selection(
+        json.loads((OUT / 'actual-production-source-sha256.json').read_bytes()),
+        evidence_bytes, after, (OUT / 'test262.command.json').read_bytes(),
+        parsed, (), OUT)
+    save('test262-slow-selection-receipt.json', selection_transition.receipt())
     result.update(backend=BACKEND, compiler=CC, sanitizer=SAN, data_profile=TEST262_PROFILE,
-                  selection='Full configured core, Intl and Temporal; production exclusions retained',
+                  selection='Full configured core, Intl and Temporal; eight slow DST sources additionally excluded',
+                  authorized_slow_exclusions=selection_transition.receipt(),
                   known_error_baseline_sha256=sha(baseline),
                   baseline_matching_signatures_are_inferred_not_fresh_observations=True,
                   baseline_unchanged=before == after, returncode=receipt['returncode'],
@@ -1060,6 +1074,13 @@ def exact_profile_gate():
     if scopes.baseline_transition() is not None:
         context['core_baseline_transition'] = scopes.baseline_transition()
     policy = scopes.document_for('diagnostic-policy')
+    selection_transition = authenticate_slow_selection(
+        sources, evidence_bytes, context,
+        (OUT / 'test262.command.json').read_bytes(), parsed,
+        validated['fixture_summaries'], OUT)
+    context['slow_test_selection'] = selection_transition
+    policy = selection_transition.derive_policy(policy, context)
+    save('native-current-slow-selection-receipt.json', selection_transition.receipt())
     save('native-current-normative-scope-envelope.json', scopes.receipt())
     native_oracle_gate(context, validated, fixture_hashes)
     result = qualify_native(parsed, policy, context, fixture_hashes, validated, evidence_bytes)
@@ -1127,7 +1148,8 @@ def required_test262():
         name = 'required-' + item['name']
         before = input_identity()
         log = run(name, ['./run-test262', '-T', str(available_cpus()), '-q', '-d', str(empty), '-c', str(config),
-                  '-a', '--count_skipped_features', '-e', '/dev/null', '-r', 'none', str(selected)],
+                  '-a', '--count_skipped_features', '-e', '/dev/null', '-r', 'none'] +
+                  test262_telemetry(name) + [str(selected)],
                   check=False, raw_streams=True)
         result = summary(name, log)
         result.update(selection_sha256=sha(source), actual_source_count=len(names),
@@ -1180,7 +1202,8 @@ def oracle_diagnostics():
         name = 'raw-original-' + Path(path).stem
         before = input_identity()
         log = run(name, ['./run-test262', '-T', str(available_cpus()), '-q', '-d', str(empty), '-c', str(config),
-                  '-a', '--count_skipped_features', '-e', '/dev/null', '-r', 'none', str(selected)], check=False, raw_streams=True)
+                  '-a', '--count_skipped_features', '-e', '/dev/null', '-r', 'none'] +
+                  test262_telemetry(name) + [str(selected)], check=False, raw_streams=True)
         result = summary(name, log)
         rc = json.loads((OUT / (name + '.command.json')).read_text())['returncode']
         parsed_oracles[path] = parse_raw(name, 1, [], before, input_identity())
