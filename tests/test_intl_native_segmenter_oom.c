@@ -152,6 +152,11 @@ static void check_cold_failures(const char *source, size_t operation)
 {
     OperationFixture fixture;
     size_t count, failure;
+    /* Prime only process-wide immutable proofs in a discarded realm.
+       The measured realm retains cold context caches and prototype methods. */
+    open_operation(&fixture, source);
+    call_operation(&fixture, 0);
+    close_operation(&fixture);
     open_operation(&fixture, source);
     count = call_operation(&fixture, SIZE_MAX);
     assert(count < SIZE_MAX - 1 && !fixture.probe.failed);

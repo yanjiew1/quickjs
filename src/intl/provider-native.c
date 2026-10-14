@@ -61,6 +61,7 @@ struct QJSIntlProvider {
  * subsequently fails its own admission or allocation. */
 #ifdef _WIN32
 static volatile LONG compiled_metadata_valid = 0;
+static volatile LONG compiled_service_valid = 0;
 static int compiled_metadata_is_valid(void)
 {
     return InterlockedCompareExchange(&compiled_metadata_valid, 0, 0);
@@ -71,6 +72,7 @@ static void compiled_metadata_mark_valid(void)
 }
 #else
 static _Atomic unsigned int compiled_metadata_valid = 0;
+static _Atomic unsigned int compiled_service_valid = 0;
 static int compiled_metadata_is_valid(void)
 {
     return atomic_load_explicit(&compiled_metadata_valid,
@@ -82,6 +84,34 @@ static void compiled_metadata_mark_valid(void)
                           memory_order_release);
 }
 #endif
+/* These probes certify the fixed English en/en-US service inventory.
+ * A broader inventory must bind proofs to its actual locale/service rows.
+ * A successful, option-independent service probe authenticates only this
+ * immutable compiled bundle. No handles, allocators or failures are cached.
+ * Concurrent cold probes may overlap; publishing a success never blocks. */
+_Static_assert(QJS_INTL_SERVICE_COUNT <= 32, "service proof mask capacity");
+static int compiled_service_is_valid(QJSIntlService service)
+{
+#ifdef _WIN32
+    unsigned int bits = (unsigned int)InterlockedCompareExchange(&compiled_service_valid, 0, 0);
+#else
+    unsigned int bits = atomic_load_explicit(&compiled_service_valid, memory_order_acquire);
+#endif
+    return (bits & (1u << (unsigned int)service)) != 0;
+}
+static void compiled_service_mark_valid(QJSIntlService service)
+{
+    unsigned int bit = 1u << (unsigned int)service;
+#ifdef _WIN32
+    LONG before, after;
+    do {
+        before = InterlockedCompareExchange(&compiled_service_valid, 0, 0);
+        after = (LONG)((unsigned int)before | bit);
+    } while (InterlockedCompareExchange(&compiled_service_valid, after, before) != before);
+#else
+    atomic_fetch_or_explicit(&compiled_service_valid, bit, memory_order_release);
+#endif
+}
 static QJSIntlDataStatus open_compiled_metadata(QJSIntlDataView *out)
 {
     QJSIntlDataView view;
@@ -340,28 +370,33 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
         return QJS_INTL_INVALID_ARGUMENT;
     if (service == QJS_INTL_DATE_TIME_FORMAT)
         return qjs_intl_native_provider_date_available(p, out);
-    if (service == QJS_INTL_NUMBER_FORMAT) {
-        QJSIntlStatus status = qjs_intl_native_provider_number_available(p);
-        if (status != QJS_INTL_OK) return status;
-    } else if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH) {
-        QJSIntlStatus status = qjs_intl_native_provider_collator_available(p);
-        if (status != QJS_INTL_OK) return status;
-    } else if (service == QJS_INTL_SEGMENTER) {
-        QJSIntlStatus status = qjs_intl_native_provider_segmenter_available(p);
-        if (status != QJS_INTL_OK) return status;
-    } else if (service == QJS_INTL_DURATION_FORMAT) {
-        QJSIntlStatus status = qjs_intl_native_provider_duration_available(p);
-        if (status != QJS_INTL_OK) return status;
-    } else if (service == QJS_INTL_PLURAL_RULES) {
-        QJSIntlStatus status = qjs_intl_native_provider_plural_available(p);
-        if (status != QJS_INTL_OK) return status;
-    } else if (service == QJS_INTL_RELATIVE_TIME_FORMAT) {
-        QJSIntlStatus status = qjs_intl_native_provider_relative_available(p);
-        if (status != QJS_INTL_OK) return status;
-    } else if (service == QJS_INTL_DISPLAY_NAMES) {
-        QJSIntlStatus status = qjs_intl_native_provider_display_available(p);
-        if (status != QJS_INTL_OK) return status;
-    } else if (service != QJS_INTL_LIST_FORMAT) return QJS_INTL_UNSUPPORTED;
+    if (qjs_intl_native_provider_validate_number(p, &p->view) != QJS_INTL_DATA_OK)
+        return QJS_INTL_DATA_ERROR;
+    if (!compiled_service_is_valid(service)) {
+        if (service == QJS_INTL_NUMBER_FORMAT) {
+            QJSIntlStatus status = qjs_intl_native_provider_number_available(p);
+            if (status != QJS_INTL_OK) return status;
+        } else if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH) {
+            QJSIntlStatus status = qjs_intl_native_provider_collator_available(p);
+            if (status != QJS_INTL_OK) return status;
+        } else if (service == QJS_INTL_SEGMENTER) {
+            QJSIntlStatus status = qjs_intl_native_provider_segmenter_available(p);
+            if (status != QJS_INTL_OK) return status;
+        } else if (service == QJS_INTL_DURATION_FORMAT) {
+            QJSIntlStatus status = qjs_intl_native_provider_duration_available(p);
+            if (status != QJS_INTL_OK) return status;
+        } else if (service == QJS_INTL_PLURAL_RULES) {
+            QJSIntlStatus status = qjs_intl_native_provider_plural_available(p);
+            if (status != QJS_INTL_OK) return status;
+        } else if (service == QJS_INTL_RELATIVE_TIME_FORMAT) {
+            QJSIntlStatus status = qjs_intl_native_provider_relative_available(p);
+            if (status != QJS_INTL_OK) return status;
+        } else if (service == QJS_INTL_DISPLAY_NAMES) {
+            QJSIntlStatus status = qjs_intl_native_provider_display_available(p);
+            if (status != QJS_INTL_OK) return status;
+        } else if (service != QJS_INTL_LIST_FORMAT) return QJS_INTL_UNSUPPORTED;
+        compiled_service_mark_valid(service);
+    }
     out->items = p->allocator.malloc(p->allocator.opaque, sizeof(*out->items) * 2);
     if (!out->items) return QJS_INTL_NO_MEMORY;
     memset(out->items, 0, sizeof(*out->items) * 2);

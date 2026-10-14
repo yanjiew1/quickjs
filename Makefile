@@ -2227,6 +2227,7 @@ test-intl-native-compiled-cache: $(INTL_CACHE_TEST)
 	$(WINE) ./$(INTL_CACHE_TEST) number
 	$(WINE) ./$(INTL_CACHE_TEST) duration
 	$(WINE) ./$(INTL_CACHE_TEST) number-mutable
+	$(WINE) ./$(INTL_CACHE_TEST) available
 
 test-c: test-intl-native-compiled-cache
 test-binaries: $(INTL_CACHE_TEST)

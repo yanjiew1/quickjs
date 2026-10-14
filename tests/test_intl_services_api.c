@@ -171,6 +171,11 @@ static void cold_failure_boundaries(const char *source, size_t operation)
     ServiceFixture fixture;
     size_t count, i, failures[4];
 
+    /* Prime immutable process-wide admission in a discarded realm. The
+       measured realm below still has cold context caches and methods. */
+    open_service(&fixture);
+    call_service(&fixture, source, SIZE_MAX, 0);
+    close_service(&fixture);
     open_service(&fixture);
     count = call_service(&fixture, source, SIZE_MAX, 0);
     assert(count < SIZE_MAX - 1);

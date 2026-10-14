@@ -125,6 +125,9 @@ int main(int argc, char **argv)
     }
     for (operation = 0; operation < sizeof(operations)/sizeof(operations[0]); operation++) {
         char *baseline = NULL;
+        /* Stabilize immutable process proofs in a discarded realm; the
+           measured realm below still has cold context caches and methods. */
+        open_fixture(&f, operations[operation]); call(&f, 0, &baseline); close_fixture(&f);
         open_fixture(&f, operations[operation]); allocations = call(&f, SIZE_MAX, &baseline);
         assert(allocations < SIZE_MAX - 1 && !f.probe.failed); close_fixture(&f);
         print_sweep("cold", operation + 1, allocations);

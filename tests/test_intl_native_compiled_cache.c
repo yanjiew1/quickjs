@@ -777,6 +777,47 @@ static void number_mutable(void)
     destroy(&heap, provider);
 }
 
+/* A success proof is independent of allocator and provider lifetime.
+ * Failed probes remain retryable; warm list construction still handles OOM. */
+static void available(void)
+{
+    static const QJSIntlService services[] = {
+        QJS_INTL_NUMBER_FORMAT, QJS_INTL_PLURAL_RULES, QJS_INTL_RELATIVE_TIME_FORMAT,
+        QJS_INTL_DISPLAY_NAMES, QJS_INTL_DURATION_FORMAT, QJS_INTL_SEGMENTER,
+        QJS_INTL_COLLATOR, QJS_INTL_COLLATOR_SEARCH
+    };
+    size_t i;
+    for (i = 0; i < sizeof(services) / sizeof(services[0]); i++) {
+        Heap cold = {0}, warm_heap = {0};
+        QJSIntlProvider *provider = create(&cold, "en-US", "UTC", QJS_INTL_OK);
+        QJSIntlTagList tags = {0};
+        size_t before, cold_calls;
+        cold.failure = cold.calls + 1;
+        assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_NO_MEMORY);
+        assert(!tags.count && !tags.items);
+        cold.failure = 0;
+        before = cold.calls;
+        assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_OK);
+        cold_calls = cold.calls - before;
+        assert(cold_calls > 3 && tags.count == 2);
+        equal(tags.items[0], "en"); equal(tags.items[1], "en-US");
+        qjs_intl_tag_list_clear(provider, &tags);
+        destroy(&cold, provider);
+        provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
+        warm_heap.failure = warm_heap.calls + 1;
+        assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_NO_MEMORY);
+        assert(!tags.count && !tags.items);
+        warm_heap.failure = 0;
+        before = warm_heap.calls;
+        assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_OK);
+        assert(warm_heap.calls - before == 3 && tags.count == 2);
+        printf("native service proof %u cold allocations=%zu warm allocations=3\n",
+               (unsigned int)services[i], cold_calls);
+        qjs_intl_tag_list_clear(provider, &tags);
+        destroy(&warm_heap, provider);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 2) {
@@ -789,6 +830,7 @@ int main(int argc, char **argv)
     else if (!strcmp(argv[1], "mutable")) mutable();
     else if (!strcmp(argv[1], "number")) number();
     else if (!strcmp(argv[1], "duration")) duration();
+    else if (!strcmp(argv[1], "available")) available();
     else if (!strcmp(argv[1], "number-mutable")) number_mutable();
     else return 2;
     return 0;

@@ -183,11 +183,12 @@ static void check_cold_failures(const char *source, size_t operation)
 
     open_operation(&fixture, source);
     count = call_operation(&fixture, SIZE_MAX);
-    assert(count && count < SIZE_MAX - 1 && !fixture.probe.failed);
+    assert(count < SIZE_MAX - 1 && !fixture.probe.failed);
     close_operation(&fixture);
     failures[0] = 1;
-    failures[1] = count / 2 + count % 2;
-    failures[2] = count;
+    /* Pool slots may satisfy every request without a host allocation. */
+    failures[1] = count ? count / 2 + count % 2 : 1;
+    failures[2] = count ? count : 1;
     failures[3] = count + 1;
     printf("Intl OOM operation %zu cold allocations=%zu boundaries=1,%zu,%zu,%zu\n",
            operation, count, failures[1], failures[2], failures[3]);
