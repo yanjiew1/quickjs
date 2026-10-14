@@ -27,13 +27,12 @@
 
 #include "../internal/base.h"
 
-#define HINT_STRING  0
-#define HINT_NUMBER  1
-#define HINT_NONE    2
+#define HINT_STRING  JS_HINT_STRING
+#define HINT_NUMBER  JS_HINT_NUMBER
+#define HINT_NONE    JS_HINT_NONE
 #define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 
 JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
-JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint);
 int JS_ToBoolFree(JSContext *ctx, JSValue val);
 JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
 JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
