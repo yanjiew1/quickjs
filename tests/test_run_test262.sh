@@ -358,3 +358,85 @@ for pair in by_index.values():
     assert pair[0]['file'] == pair[1]['file']
     assert pair[0]['thread'] == pair[1]['thread']
 PY
+
+# Every executed variant has an independent wall-time record, even in parallel.
+mkdir "$test262_tmp/timed"
+cat > "$test262_tmp/timed/both.js" <<'JS'
+/*---
+---*/
+if (1 + 1 !== 2) throw new Error('arithmetic');
+JS
+cat > "$test262_tmp/timed/strict.js" <<'JS'
+/*---
+flags: [onlyStrict]
+---*/
+if (function () { return this; }() !== undefined) throw new Error('strict');
+JS
+cat > "$test262_tmp/timed/module.js" <<'JS'
+/*---
+flags: [module]
+---*/
+export const value = 1;
+JS
+cat > "$test262_tmp/timed/negative.js" <<'JS'
+/*---
+negative:
+  phase: runtime
+  type: TypeError
+---*/
+throw new TypeError('expected');
+JS
+cat > "$test262_tmp/timed/failure.js" <<'JS'
+/*---
+---*/
+throw new Error('timed failure');
+JS
+cat > "$test262_tmp/timed/skipped.js" <<'JS'
+/*---
+features: [timing-unsupported]
+---*/
+throw new Error('skipped body ran');
+JS
+# Deliberately configure a different suite: long options precede -d.
+cat > "$test262_tmp/timing-config" <<'CONFIG'
+[config]
+style=new
+harnessdir=harness
+verbose=yes
+testdir=failure
+[features]
+timing-unsupported=skip
+CONFIG
+for test262_threads in 1 2; do
+    invoke_runner no --timing-log "$test262_tmp/timings-$test262_threads.jsonl" \
+        --progress-log "$test262_tmp/progress-$test262_threads.jsonl" \
+        -q -c "$test262_tmp/timing-config" -T "$test262_threads" -a \
+        -d "$test262_tmp/timed"
+    [ "$test262_status" -eq 1 ]
+    grep -Fqx 'Result: 1/5 errors, 1 skipped' "$test262_tmp/err"
+done
+python3 - "$test262_tmp" <<'PY'
+import json, math, os, sys
+expected = {
+    ('both.js', 'non-strict', 'pass'), ('both.js', 'strict', 'pass'),
+    ('strict.js', 'strict', 'pass'), ('module.js', 'module', 'pass'),
+    ('negative.js', 'non-strict', 'pass'), ('negative.js', 'strict', 'pass'),
+    ('failure.js', 'non-strict', 'fail'), ('skipped.js', 'none', 'skipped'),
+}
+for workers in (1, 2):
+    with open(os.path.join(sys.argv[1], 'timings-%d.jsonl' % workers)) as stream:
+        rows = [json.loads(line) for line in stream]
+    assert len(rows) == len(expected)
+    assert {(os.path.basename(r['file']), r['mode'], r['status']) for r in rows} == expected
+    for row in rows:
+        assert set(row) == {'file', 'thread', 'index', 'mode', 'status', 'duration_ms'}
+        assert 0 <= row['thread'] < workers
+        assert 0 <= row['index'] < 6
+        assert math.isfinite(row['duration_ms']) and row['duration_ms'] >= 0
+        if row['status'] == 'skipped':
+            assert row['duration_ms'] == 0
+    with open(os.path.join(sys.argv[1], 'progress-%d.jsonl' % workers)) as stream:
+        progress = [json.loads(line) for line in stream]
+    assert len(progress) == 12
+    assert {r['file'] for r in progress} == {r['file'] for r in rows}
+PY
