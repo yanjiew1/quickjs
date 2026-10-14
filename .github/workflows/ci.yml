@@ -75,13 +75,13 @@ jobs:
           submodules: true
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y all test-binaries
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y LTO_FLAG=-flto=auto all test-binaries
       - name: Run built-in tests
         run: |
-          make CONFIG_WERROR=y CONFIG_LTO=y test
+          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y LTO_FLAG=-flto=auto test
       - name: Run microbench
         run: |
-          make CONFIG_LTO=y microbench
+          make CONFIG_LTO=y LTO_FLAG=-flto=auto microbench
 
   linux-32bit:
     name: Linux 32bit
