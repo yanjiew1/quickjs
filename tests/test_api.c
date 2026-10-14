@@ -3468,6 +3468,70 @@ static void test_date_value_public_api(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_iterator_public_api(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue iterable, iter, next, value, error;
+    JS_BOOL done;
+    int i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    iterable = utf16_api_eval(ctx, "[1, 2]");
+    iter = JS_GetIterator(ctx, iterable, 0);
+    assert(!JS_IsException(iter));
+    next = JS_GetPropertyStr(ctx, iter, "next");
+    for (i = 1; i <= 3; i++) {
+        value = JS_IteratorNext(ctx, iter, next, &done);
+        assert(!JS_IsException(value));
+        assert(done == (i == 3));
+        if (done)
+            assert(JS_IsUndefined(value));
+        else
+            assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, i)));
+        JS_FreeValue(ctx, value);
+    }
+    JS_FreeValue(ctx, next);
+    JS_FreeValue(ctx, iter);
+    JS_FreeValue(ctx, iterable);
+    iter = utf16_api_eval(ctx,
+        "({ next() { if (arguments.length) throw 11; "
+        "return { done: true, get value() { throw 13; } }; } })");
+    next = JS_GetPropertyStr(ctx, iter, "next");
+    value = JS_IteratorNext(ctx, iter, next, &done);
+    assert(done && JS_IsUndefined(value));
+    JS_FreeValue(ctx, next);
+    JS_FreeValue(ctx, iter);
+    iterable = utf16_api_eval(ctx,
+        "({ [Symbol.asyncIterator]() { return { next() {} }; }, "
+        "get [Symbol.iterator]() { throw 17; } })");
+    iter = JS_GetIterator(ctx, iterable, 1);
+    assert(JS_IsObject(iter));
+    JS_FreeValue(ctx, iter);
+    JS_FreeValue(ctx, iterable);
+    iter = utf16_api_eval(ctx, "({ return() { throw 37; } })");
+    JS_Throw(ctx, JS_NewInt32(ctx, 19));
+    assert(JS_IteratorClose(ctx, iter, 1) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_StrictEq(ctx, error, JS_NewInt32(ctx, 19)));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, iter);
+    iter = utf16_api_eval(ctx, "({ return() { return 1; } })");
+    assert(JS_IteratorClose(ctx, iter, 0) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, iter);
+    iter = utf16_api_eval(ctx, "({ return: null })");
+    assert(JS_IteratorClose(ctx, iter, 0) == 0);
+    JS_FreeValue(ctx, iter);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3485,6 +3549,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "iterator-public-api", test_iterator_public_api },
         { "date-value-public-api", test_date_value_public_api },
         { "object-construction-public-api", test_object_construction_public_api },
         { "string-conversion-public-api", test_string_conversion_public_api },
