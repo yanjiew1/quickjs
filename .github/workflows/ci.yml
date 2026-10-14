@@ -42,7 +42,27 @@ jobs:
       - name: Run test262
         run: |
           make test2-bootstrap
-          make test2
+          make test2 TEST262_TIMING_LOG=test262_timings.jsonl
+
+      - name: Report Test262 timings
+        if: always()
+        run: |
+          if test -f test262_timings.jsonl; then
+            report_status=0
+            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
+            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+            exit "$report_status"
+          fi
+      - name: Preserve Test262 timings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test262-timings-linux
+          path: |
+            test262_timings.jsonl
+            test262_timings.csv
+            test262_timings.md
 
   linux-lto:
     name: Linux LTO
@@ -85,7 +105,27 @@ jobs:
       - name: Run test262
         run: |
           make test2-bootstrap
-          make CONFIG_M32=y test2
+          make CONFIG_M32=y test2 TEST262_TIMING_LOG=test262_timings.jsonl
+
+      - name: Report Test262 timings
+        if: always()
+        run: |
+          if test -f test262_timings.jsonl; then
+            report_status=0
+            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
+            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+            exit "$report_status"
+          fi
+      - name: Preserve Test262 timings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test262-timings-linux-32bit
+          path: |
+            test262_timings.jsonl
+            test262_timings.csv
+            test262_timings.md
 
   macos:
     name: macOS
@@ -106,7 +146,27 @@ jobs:
       - name: Run test262
         run: |
           make test2-bootstrap
-          make test2
+          make test2 TEST262_TIMING_LOG=test262_timings.jsonl
+
+      - name: Report Test262 timings
+        if: always()
+        run: |
+          if test -f test262_timings.jsonl; then
+            report_status=0
+            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
+            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+            exit "$report_status"
+          fi
+      - name: Preserve Test262 timings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test262-timings-macos
+          path: |
+            test262_timings.jsonl
+            test262_timings.csv
+            test262_timings.md
 
   mingw-windows:
     name: MinGW Windows target
