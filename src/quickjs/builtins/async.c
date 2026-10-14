@@ -141,7 +141,8 @@ int js_init_async_intrinsics(JSContext *ctx)
     ft.generic_magic = js_function_constructor;
     obj1 = JS_NewCConstructor(ctx, JS_CLASS_ASYNC_FUNCTION, "AsyncFunction",
                                      ft.generic, 1, JS_CFUNC_constructor_or_func_magic, JS_FUNC_ASYNC,
-                                     ctx->function_ctor,
+                                     JS_IsObject(ctx->function_ctor) ?
+                                         ctx->function_ctor : JS_UNDEFINED,
                                      NULL, 0,
                                      js_async_function_proto_funcs, countof(js_async_function_proto_funcs),
                                      JS_NEW_CTOR_NO_GLOBAL | JS_NEW_CTOR_READONLY);
@@ -177,7 +178,8 @@ int js_init_async_intrinsics(JSContext *ctx)
     ft.generic_magic = js_function_constructor;
     obj1 = JS_NewCConstructor(ctx, JS_CLASS_ASYNC_GENERATOR_FUNCTION, "AsyncGeneratorFunction",
                                      ft.generic, 1, JS_CFUNC_constructor_or_func_magic, JS_FUNC_ASYNC_GENERATOR,
-                                     ctx->function_ctor,
+                                     JS_IsObject(ctx->function_ctor) ?
+                                         ctx->function_ctor : JS_UNDEFINED,
                                      NULL, 0,
                                      js_async_generator_function_proto_funcs, countof(js_async_generator_function_proto_funcs),
                                      JS_NEW_CTOR_NO_GLOBAL | JS_NEW_CTOR_READONLY);
