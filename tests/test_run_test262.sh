@@ -440,3 +440,32 @@ for workers in (1, 2):
     assert len(progress) == 12
     assert {r['file'] for r in progress} == {r['file'] for r in rows}
 PY
+
+# Exclude the shared DST stress selection without executing expensive tests.
+tr -d '\r' < test262-slow.txt > "$test262_tmp/slow.txt"
+: > "$test262_tmp/harness/assert.js"
+: > "$test262_tmp/harness/sta.js"
+while IFS= read -r test262_slow_path; do
+    mkdir -p "$test262_tmp/$(dirname "$test262_slow_path")"
+    cat > "$test262_tmp/$test262_slow_path" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+throw new Error("excluded DST stand-in must never execute");
+JS
+done < "$test262_tmp/slow.txt"
+cat > "$test262_tmp/test262/test/pass.js" <<'JS'
+/*---
+flags: [noStrict]
+---*/
+true;
+JS
+cat > "$test262_tmp/dst-config" <<'CONFIG'
+[config]
+style=new
+harnessdir=harness
+excludefile=slow.txt
+CONFIG
+invoke_runner no -q -c "$test262_tmp/dst-config" -T 2 -a -d "$test262_tmp/test262/test"
+test "$test262_status" -eq 0
+grep -Fx 'Result: 0/1 error, 8 excluded' "$test262_tmp/err"
