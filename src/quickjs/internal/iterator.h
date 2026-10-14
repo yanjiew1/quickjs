@@ -34,7 +34,6 @@ typedef enum JSIteratorKindEnum {
 } JSIteratorKindEnum;
 
 JSValue JS_GetIterator2(JSContext *ctx, JSValueConst obj, JSValueConst method);
-JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, BOOL is_async);
 /* return *pdone = 2 if the iterator object is not parsed */
 static inline JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
                                      JSValueConst method,
@@ -76,11 +75,6 @@ static inline JSValue JS_IteratorNext2(JSContext *ctx, JSValueConst enum_obj,
     return JS_EXCEPTION;
 }
 
-JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
-                        JSValueConst method, int argc, JSValueConst *argv,
-                        BOOL *pdone);
-int JS_IteratorClose(JSContext *ctx, JSValueConst enum_obj,
-                     BOOL is_exception_pending);
 JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
                                     BOOL *pdone);
 JSValue js_create_iterator_result(JSContext *ctx, JSValue val, BOOL done);
