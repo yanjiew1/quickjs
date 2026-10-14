@@ -3702,6 +3702,75 @@ static void test_property_list_definitions(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_function_property_oom(void)
+{
+    int operation;
+
+    for (operation = 0; operation < 3; operation++) {
+        size_t failure_at;
+        int failures = 0;
+
+        for (failure_at = 1; failure_at < 64; failure_at++) {
+            AllocationProbe probe = { 0 };
+            JSRuntime *rt = JS_NewRuntime2(&probe_functions, &probe);
+            JSContext *ctx;
+            JSValue functions[128], error, compiled = JS_UNDEFINED, expected;
+            size_t count = 0, i;
+
+            assert(rt);
+            ctx = JS_NewContext(rt);
+            assert(ctx);
+            if (operation != 0) {
+                const char *source = operation == 1 ?
+                    "(function named() {})" : "(function* named() {})";
+                compiled = JS_Eval(ctx, source, strlen(source), "function-oom.js",
+                                   JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+                assert(!JS_IsException(compiled));
+            }
+            expected = JS_NewString(ctx, operation == 0 ? "123" : "named");
+            assert(!JS_IsException(expected));
+            probe.attempts = 0;
+            probe.failure_at = failure_at;
+            /* Retain enough functions to exhaust pooled blocks too. */
+            for (i = 0; i < countof(functions); i++) {
+                JSValue function;
+                if (operation == 0)
+                    function = JS_NewCFunction(ctx, property_list_api_method, "123", 0);
+                else
+                    function = JS_EvalFunction(ctx, JS_DupValue(ctx, compiled));
+                if (JS_IsException(function)) {
+                    assert(probe.failed && JS_HasException(ctx));
+                    failures++;
+                    break;
+                }
+                assert(!JS_HasException(ctx));
+                functions[count++] = function;
+                if (probe.failed)
+                    break;
+            }
+            probe.failure_at = 0;
+            if (JS_HasException(ctx)) {
+                error = JS_GetException(ctx);
+                JS_FreeValue(ctx, error);
+            }
+            for (i = 0; i < count; i++) {
+                JSValue name = JS_GetPropertyStr(ctx, functions[i], "name");
+                assert(JS_StrictEq(ctx, name, expected));
+                JS_FreeValue(ctx, name);
+                JS_FreeValue(ctx, functions[i]);
+            }
+            JS_FreeValue(ctx, expected);
+            JS_FreeValue(ctx, compiled);
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(probe.live == 0);
+            if (!probe.failed)
+                break;
+        }
+        assert(failures > 0);
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3719,6 +3788,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "function-property-oom", test_function_property_oom },
         { "property-list-definitions", test_property_list_definitions },
         { "callback-flags-public-api", test_callback_flags_public_api },
         { "iterator-public-api", test_iterator_public_api },
