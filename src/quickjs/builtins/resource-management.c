@@ -73,7 +73,7 @@ JSValue js_new_disposable_stack(JSContext *ctx, JSValueConst new_target,
         object = JS_NewObjectProtoClass(ctx, ctx->class_proto[class_id],
                                         class_id);
     } else {
-        object = js_create_from_ctor(ctx, new_target, class_id);
+        object = JS_CreateFromConstructor(ctx, new_target, class_id);
     }
     if (JS_IsException(object))
         return object;
