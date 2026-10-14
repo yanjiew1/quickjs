@@ -55,7 +55,7 @@ assert(f.resolvedOptions().locale, "en-US");
 assert(new Intl.ListFormat("en-GB").resolvedOptions().locale, "en");
 assert(new Intl.ListFormat("zz").resolvedOptions().locale, "en-US");
 assertArrayEquals(Intl.ListFormat.supportedLocalesOf(["en-US", "en-GB", "fr", "zz"]),
-                  ["en-US", "en-GB"]);
+                  ["en-US", "en-GB", "fr"]);
 assert(f.format(), ""); assertArrayEquals(f.formatToParts(), []);
 assert(f.format(["A", "B", "C"]), "A, B, and C");
 /* Direct witnesses from pinned CLDR48.2 en listPatterns, including the unit

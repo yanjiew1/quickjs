@@ -839,12 +839,55 @@ static void number_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *
     }
 }
 
+static void list_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *tags)
+{
+    size_t i;
+    unsigned int type, style;
+    for (i = 0; i < tags->count; i++) {
+        for (type = 0; type < 3; type++) {
+            for (style = 0; style < 3; style++) {
+                QJSIntlNativeList *list = NULL;
+                assert(qjs_intl_native_provider_list_open(provider, tags->items[i],
+                    (QJSIntlListType)type, (QJSIntlListStyle)style, &list) == QJS_INTL_OK);
+                assert(list);
+                qjs_intl_native_list_close(list);
+            }
+        }
+    }
+}
+
+/* Warm failures include partial result lists, not just the array allocation. */
+static void available_list_faults(QJSIntlProvider *provider, Heap *heap,
+    QJSIntlService service, size_t count, size_t requests)
+{
+    size_t failure, live = heap->live;
+    for (failure = 1; failure <= requests + 1; failure++) {
+        QJSIntlTagList tags = {0};
+        QJSIntlStatus status;
+        heap->failure = heap->calls + failure;
+        status = qjs_intl_locale_available(provider, service, &tags);
+        heap->failure = 0;
+        if (failure <= requests) {
+            assert(status == QJS_INTL_NO_MEMORY && !tags.items && !tags.count);
+        } else {
+            assert(status == QJS_INTL_OK && tags.count == count);
+        }
+        qjs_intl_tag_list_clear(provider, &tags);
+        assert(heap->live == live);
+        assert(qjs_intl_locale_available(provider, service, &tags) == QJS_INTL_OK);
+        assert(tags.count == count);
+        qjs_intl_tag_list_clear(provider, &tags);
+        assert(heap->live == live);
+    }
+}
+
 /* A success proof is independent of allocator and provider lifetime.
  * Failed probes remain retryable; warm list construction still handles OOM. */
 static void available(void)
 {
     static const QJSIntlService services[] = {
-        QJS_INTL_NUMBER_FORMAT, QJS_INTL_PLURAL_RULES, QJS_INTL_RELATIVE_TIME_FORMAT,
+        QJS_INTL_NUMBER_FORMAT, QJS_INTL_LIST_FORMAT, QJS_INTL_PLURAL_RULES,
+        QJS_INTL_RELATIVE_TIME_FORMAT,
         QJS_INTL_DISPLAY_NAMES, QJS_INTL_DURATION_FORMAT, QJS_INTL_SEGMENTER,
         QJS_INTL_COLLATOR, QJS_INTL_COLLATOR_SEARCH
     };
@@ -853,7 +896,7 @@ static void available(void)
         Heap cold = {0}, warm_heap = {0};
         QJSIntlProvider *provider = create(&cold, "en-US", "UTC", QJS_INTL_OK);
         QJSIntlTagList tags = {0};
-        size_t before, cold_calls, admitted_count, j;
+        size_t before, cold_calls, admitted_count, warm_calls, j;
         int english = 0, american = 0;
         cold.failure = cold.calls + 1;
         assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_NO_MEMORY);
@@ -870,6 +913,7 @@ static void available(void)
         }
         assert(english && american);
         if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&cold, provider);
         provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
@@ -879,11 +923,14 @@ static void available(void)
         warm_heap.failure = 0;
         before = warm_heap.calls;
         assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_OK);
-        assert(warm_heap.calls - before == admitted_count + 1 && tags.count == admitted_count);
+        warm_calls = warm_heap.calls - before;
+        assert(warm_calls == admitted_count + 1 && tags.count == admitted_count);
         printf("native service proof %u cold allocations=%zu warm allocations=%zu\n",
                (unsigned int)services[i], cold_calls, admitted_count + 1);
         if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
+        available_list_faults(provider, &warm_heap, services[i], admitted_count, warm_calls);
         destroy(&warm_heap, provider);
     }
 }

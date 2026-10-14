@@ -368,6 +368,22 @@ void qjs_intl_owned_tag_clear(QJSIntlProvider *p, char *tag)
 typedef QJSIntlStatus (*LocaleProbe)(QJSIntlProvider *, QJSIntlBytes, uint32_t);
 static QJSIntlStatus available_compiled_locales(QJSIntlProvider *, QJSIntlService,
     LocaleProbe, QJSIntlTagList *);
+static QJSIntlStatus list_locale_available(QJSIntlProvider *p,
+    QJSIntlBytes locale, uint32_t row)
+{
+    unsigned int type, style;
+    (void)row; /* list_open resolves the same authenticated tag to its row. */
+    for (type = 0; type < 3; type++) {
+        for (style = 0; style < 3; style++) {
+            QJSIntlNativeList *list = NULL;
+            QJSIntlStatus status = qjs_intl_native_provider_list_open(p, locale,
+                (QJSIntlListType)type, (QJSIntlListStyle)style, &list);
+            qjs_intl_native_list_close(list);
+            if (status != QJS_INTL_OK) return status;
+        }
+    }
+    return QJS_INTL_OK;
+}
 QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService service,
                                        QJSIntlTagList *out)
 {
@@ -380,6 +396,8 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
     if (service == QJS_INTL_NUMBER_FORMAT)
         return available_compiled_locales(p, service,
             qjs_intl_native_provider_number_locale_available, out);
+    if (service == QJS_INTL_LIST_FORMAT)
+        return available_compiled_locales(p, service, list_locale_available, out);
     if (service == QJS_INTL_DATE_TIME_FORMAT)
         return qjs_intl_native_provider_date_available(p, out);
     if (qjs_intl_native_provider_validate_compiled_data(p, &p->view) != QJS_INTL_DATA_OK)
@@ -403,7 +421,7 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
         } else if (service == QJS_INTL_DISPLAY_NAMES) {
             QJSIntlStatus status = qjs_intl_native_provider_display_available(p);
             if (status != QJS_INTL_OK) return status;
-        } else if (service != QJS_INTL_LIST_FORMAT) return QJS_INTL_UNSUPPORTED;
+        } else return QJS_INTL_UNSUPPORTED;
         compiled_service_mark_valid(service);
     }
     out->items = p->allocator.malloc(p->allocator.opaque, sizeof(*out->items) * 2);
@@ -456,10 +474,13 @@ QJSIntlStatus qjs_intl_native_provider_list_open(QJSIntlProvider *p,
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     *out = NULL;
     if (!p) return QJS_INTL_INVALID_ARGUMENT;
-    if (!same(locale, "en") && !same(locale, "en-US"))
-        return QJS_INTL_UNSUPPORTED;
-    return qjs_intl_native_list_open_data(&p->allocator, &p->view,
-                                         p->list_locale, type, style, out);
+    {
+        uint32_t row;
+        QJSIntlStatus status = qjs_intl_native_provider_locale_row(p, locale, &row);
+        if (status != QJS_INTL_OK) return status;
+        return qjs_intl_native_list_open_data(&p->allocator, &p->view,
+                                             row, type, style, out);
+    }
 }
 void qjs_intl_formatted_clear(QJSIntlProvider *p, QJSIntlFormatted *result)
 {

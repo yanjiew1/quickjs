@@ -112,3 +112,21 @@ same(new Intl.Locale("en").getTimeZones(), undefined);
 const us = new Intl.Locale("en-US").getTimeZones();
 assert(us.length > 0); array(us, [...us].sort()); same(new Set(us).size, us.length);
 assert(us.every(x => Intl.supportedValuesOf("timeZone").includes(x)));
+
+/* Each supported list locale must use its own released patterns. */
+for (const locale of ["de", "fr", "es", "ja", "sr"]) {
+    array(Intl.ListFormat.supportedLocalesOf([locale]), [locale]);
+    for (const type of ["conjunction", "disjunction", "unit"]) {
+        for (const style of ["long", "short", "narrow"]) {
+            const list = new Intl.ListFormat(locale, {type, style});
+            same(list.resolvedOptions().locale, locale);
+            const input = ["Ana", "Irene", "Zoe"];
+            const parts = list.formatToParts(input);
+            same(parts.map(part => part.value).join(""), list.format(input));
+            array(parts.filter(part => part.type === "element").map(part => part.value), input);
+        }
+    }
+}
+same(new Intl.ListFormat("fr").format(["A", "B"]), "A et B");
+same(new Intl.ListFormat("es").format(["Ana", "Irene"]), "Ana e Irene");
+same(new Intl.ListFormat("es", {type:"disjunction"}).format(["7", "8"]), "7 u 8");
