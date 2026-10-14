@@ -268,6 +268,32 @@ static int fraction_score(const QJSIntlNativeDate *p, const int *fields,
     complete[QJS_DATE_FRACTION] = fraction;
     return component_score(p, complete);
 }
+static QJSIntlStatus related_year_symbol(void *opaque, QJSIntlBytes literal,
+                                        unsigned int symbol, unsigned int count)
+{
+    int *related = opaque;
+    (void)literal; (void)count;
+    if (symbol == 'r') *related = 1;
+    return QJS_INTL_OK;
+}
+/* Public YEAR widths cannot distinguish a numeric related year (r) from a
+ * cyclic name (U). Prefer the numeric representation for a complete numeric
+ * date in best fit, without changing BasicFormatMatcher's source-order ties
+ * or the locale's year-only/name-bearing records. Inspect parsed fields so
+ * an r inside a quoted literal never counts as a related-year component. */
+static int numeric_related_year(const QJSIntlNativeDate *p, const PatternRow *row)
+{
+    int related = 0;
+    if (!row || p->options.format_matcher != QJS_DATE_BEST_FIT ||
+        p->options.fields[QJS_DATE_YEAR] != QJS_DATE_NUMERIC ||
+        p->options.fields[QJS_DATE_MONTH] < 0 ||
+        p->options.fields[QJS_DATE_MONTH] > QJS_DATE_NUMERIC ||
+        p->options.fields[QJS_DATE_DAY] < 0 ||
+        p->options.fields[QJS_DATE_DAY] > QJS_DATE_NUMERIC)
+        return 0;
+    (void)qjs_intl_date_pattern_visit(row->row.pattern, related_year_symbol, &related);
+    return related;
+}
 static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
 {
     const PatternRow *first = NULL, *second = NULL, *join = NULL;
@@ -309,7 +335,8 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
         join = style_row(p, QJS_DATE_JOIN, QJS_DATE_MEDIUM);
         /* Keep the entire original bank first: standalone rows, joins and
          * their fraction variants. Era-free siblings and their joins/fractions
-         * follow in source order. Strict > preserves every original tie.
+         * follow in source order. Basic retains every original tie; best fit
+         * also distinguishes numeric related years from cyclic year names.
          * An era request strictly prefers each sibling's era-bearing base.
          */
         for (bank = 0; bank < (p->options.fields[QJS_DATE_ERA] < 0 ? 2 : 1); bank++) {
@@ -323,7 +350,8 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
                     if (fraction && (candidate->fields[QJS_DATE_SECOND] < 0 ||
                         candidate->fields[QJS_DATE_FRACTION] >= 0)) continue;
                     score = fraction_score(p, candidate->fields, fraction);
-                    if (score > best) {
+                    if (score > best || (score == best &&
+                        numeric_related_year(p, candidate) > numeric_related_year(p, first))) {
                         best = score; first = candidate; second = NULL;
                         selected_fraction = fraction;
                     }
@@ -342,7 +370,8 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
                             for (k = 0; k < QJS_DATE_FIELD_COUNT; k++)
                                 combined[k] = date->fields[k] >= 0 ? date->fields[k] : time->fields[k];
                             score = fraction_score(p, combined, fraction);
-                            if (score > best) {
+                            if (score > best || (score == best &&
+                                numeric_related_year(p, date) > numeric_related_year(p, first))) {
                                 best = score; first = date; second = time;
                                 selected_fraction = fraction;
                             }

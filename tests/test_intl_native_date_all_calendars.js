@@ -51,6 +51,57 @@
         same(new Intl.DateTimeFormat("en", {calendar, dateStyle, timeZone: "UTC"}).format(at), value, calendar);
     }
     expected("chinese", "long", epoch, "First Month 1, 2024(jia-chen)");
+    /* Numeric complete dates select the related-year skeleton, rather than
+       the tied cyclic-year-name skeleton. Year-only and Basic matching keep
+       their own locale records. Exercise historical dates and New Year. */
+    for (const calendar of ["chinese", "dangi"]) {
+        const numeric = new Intl.DateTimeFormat("en-US", {
+            calendar, timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric"
+        });
+        const basic = new Intl.DateTimeFormat("en-US", {
+            calendar, timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric",
+            formatMatcher: "basic"
+        });
+        const named = new Intl.DateTimeFormat("en-US", {
+            calendar, timeZone: "UTC", year: "numeric"
+        });
+        const timed = new Intl.DateTimeFormat("en-US", {
+            calendar, timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric",
+            hour: "numeric", minute: "numeric", hourCycle: "h23"
+        });
+        for (const [iso, year, month, day] of [
+            ["1900-01-01", "1899", "12", "1"],
+            ["2000-01-01", "1999", "11", "25"],
+            ["2100-01-01", "2099", "11", "21"],
+            ["2024-02-09", "2023", "12", "30"],
+            ["2024-02-10", "2024", "1", "1"]
+        ]) {
+            const date = Date.parse(iso + "T00:00:00Z");
+            const parts = numeric.formatToParts(date);
+            same(field(parts, "relatedYear"), year, calendar + " numeric related year");
+            same(field(parts, "month"), month);
+            same(field(parts, "day"), day);
+            same(field(parts, "yearName"), undefined);
+            same(text(parts), numeric.format(date));
+            const joined = timed.formatToParts(date + (9 * 60 + 8) * 60000);
+            same(field(joined, "relatedYear"), year, "joined numeric related year");
+            same(field(joined, "yearName"), undefined);
+            same(field(joined, "hour"), "09");
+            same(field(joined, "minute"), "08");
+            same(text(joined), timed.format(date + (9 * 60 + 8) * 60000));
+            check(field(named.formatToParts(date), "yearName") !== undefined, "year-only cyclic name");
+            check(field(basic.formatToParts(date), "yearName") !== undefined, "basic source-order tie");
+            const range = numeric.formatRangeToParts(date, date + 86400000);
+            check(range.some(p => p.type === "relatedYear" && p.value === year));
+            same(text(range), numeric.formatRange(date, date + 86400000));
+        }
+        const leap = Date.parse("2023-03-22T00:00:00Z");
+        const parts = numeric.formatToParts(leap);
+        same(field(parts, "relatedYear"), "2023");
+        same(field(parts, "month"), "2bis", "localized leap-month marker");
+        same(field(parts, "day"), "1");
+        same(text(parts), numeric.format(leap));
+    }
     expected("dangi", "long", epoch, "First Month 1, 2024(jia-chen)");
     expected("buddhist", "long", 1556668800000, "May 1, 2562 BE");
     expected("roc", "long", 1556668800000, "May 1, 108 Minguo");
