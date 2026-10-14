@@ -3771,6 +3771,28 @@ static void test_function_property_oom(void)
     }
 }
 
+static void test_constructor_link_failure(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue ctor, proto, error;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    proto = utf16_api_eval(ctx, "Object.freeze({})");
+    ctor = JS_NewCFunction(ctx, property_list_api_method, "FrozenPrototype", 0);
+    assert(!JS_IsException(ctor));
+    assert(JS_SetConstructor(ctx, ctor, proto) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, proto);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3788,6 +3810,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "constructor-link-failure", test_constructor_link_failure },
         { "function-property-oom", test_function_property_oom },
         { "property-list-definitions", test_property_list_definitions },
         { "callback-flags-public-api", test_callback_flags_public_api },
