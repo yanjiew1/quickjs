@@ -176,44 +176,15 @@ const collapsed = dateOnly.formatRangeToParts(0, 0);
 same(join(collapsed), dateOnly.format(0));
 same(dateOnly.formatRange(0, 0), dateOnly.format(0));
 same(collapsed.every(p => p.source === "shared"), true);
-/* Optional range records determine whether invisible field differences matter.
-   The native profile supplies every record; ICU can omit the seconds record. */
+/* Date-only range precision omits sub-day comparison records. */
 const sameDateRange = dateOnly.formatRangeToParts(0, 1000);
 same(join(sameDateRange), dateOnly.formatRange(0, 1000));
+same(sameDateRange.every(p => p.source === "shared"), true);
 for (const part of sameDateRange) {
     same(["shared", "startRange", "endRange"].includes(part.source), true);
     same(Object.keys(part).join(","), "type,value,source");
 }
-if (sameDateRange.every(p => p.source === "shared")) {
-    same(join(sameDateRange), dateOnly.format(0));
-} else {
-    const start = sameDateRange.filter(p => p.source === "startRange");
-    const end = sameDateRange.filter(p => p.source === "endRange");
-    const shared = sameDateRange.filter(p => p.source === "shared");
-    same(start.length > 0, true);
-    same(shared.length > 0, true);
-    same(end.length > 0, true);
-    for (let i = 0; i < sameDateRange.length; i++) {
-        const source = i < start.length ? "startRange" :
-            i < start.length + shared.length ? "shared" : "endRange";
-        same(sameDateRange[i].source, source, "fallback source group order");
-    }
-    for (const [actual, expected] of [
-        [start, dateOnly.formatToParts(0)],
-        [end, dateOnly.formatToParts(1000)]
-    ]) {
-        same(actual.length, expected.length, "fallback endpoint part count");
-        for (let i = 0; i < expected.length; i++) {
-            same(actual[i].type, expected[i].type, "fallback endpoint part type");
-            same(actual[i].value, expected[i].value, "fallback endpoint part value");
-        }
-    }
-    same(join(start), dateOnly.format(0));
-    same(join(end), dateOnly.format(1000));
-    same(join(shared).length > 0, true, "nonempty fallback separator");
-    same(shared.every(p => p.type === "literal"), true);
-    same(join(sameDateRange), join(start) + join(shared) + join(end));
-}
+same(join(sameDateRange), dateOnly.format(0));
 for (const calendar of ["gregory", "buddhist", "hebrew", "japanese", "chinese"]) {
     const f = new DTF("en", { ...basic, calendar, year: "numeric", month: "long", day: "numeric" });
     same(f.resolvedOptions().calendar, calendar);

@@ -79,6 +79,53 @@
     Array.prototype.join = function () { throw Error("user join consulted"); };
     try { same(f.formatRange(0, 1000), text); } finally { Array.prototype.join = join; }
     for (const p of f.formatRangeToParts(0, 0)) same(p.source, "shared");
+    /* The last resolved component determines the optional range-record
+       prefix. Invisible finer differences must not force two endpoints. */
+    const epoch = Date.UTC(2024, 0, 1, 9, 8, 7, 123);
+    function rangePrecision(options, start, equalEnd, differentEnd) {
+        const format = new Intl.DateTimeFormat("en", {timeZone: "UTC", ...options});
+        const shared = format.formatRangeToParts(start, equalEnd);
+        assert(shared.every(p => p.source === "shared"));
+        same(shared.map(p => p.value).join(""), format.format(start));
+        same(format.formatRange(start, equalEnd), format.format(start));
+        for (const [a, b] of [[start, differentEnd], [differentEnd, start]]) {
+            const parts = format.formatRangeToParts(a, b);
+            assert(parts.some(p => p.source === "startRange"));
+            assert(parts.some(p => p.source === "endRange"));
+            same(parts.map(p => p.value).join(""), format.formatRange(a, b));
+        }
+    }
+    for (const formatMatcher of ["basic", "best fit"]) {
+        const bce = Date.parse("0000-01-01T00:00:00Z");
+        const ce = Date.parse("0001-01-01T00:00:00Z");
+        rangePrecision({year: "numeric", formatMatcher}, bce, bce + 1000, ce);
+        rangePrecision({calendar: "chinese", month: "long", formatMatcher},
+                       Date.UTC(2023, 1, 22), Date.UTC(2023, 1, 23),
+                       Date.UTC(2023, 2, 22));
+        rangePrecision({year: "numeric", formatMatcher}, epoch,
+                       Date.UTC(2024, 11, 31), Date.UTC(2025, 0, 1));
+        rangePrecision({month: "long", formatMatcher}, epoch,
+                       Date.UTC(2024, 0, 31), Date.UTC(2024, 1, 1));
+        rangePrecision({weekday: "long", formatMatcher}, epoch,
+                       epoch + 1000, epoch + 86400000);
+        rangePrecision({dateStyle: "short", formatMatcher}, epoch,
+                       epoch + 1000, epoch + 86400000);
+        rangePrecision({timeStyle: "short", formatMatcher}, epoch,
+                       epoch + 1000, epoch + 60000);
+        for (const hourCycle of ["h11", "h12", "h23", "h24"])
+            rangePrecision({hour: "numeric", hourCycle, formatMatcher}, epoch,
+                           epoch + 1000, epoch + 3600000);
+        for (let fractionalSecondDigits = 1; fractionalSecondDigits <= 3;
+             fractionalSecondDigits++) {
+            const step = 10 ** (3 - fractionalSecondDigits);
+            const start = epoch - 123 + step;
+            rangePrecision({second: "numeric", fractionalSecondDigits, formatMatcher},
+                           start, start + step - 1, start + step);
+        }
+        rangePrecision({dayPeriod: "long", formatMatcher},
+                       Date.UTC(2024, 0, 1, 9), Date.UTC(2024, 0, 1, 10),
+                       Date.UTC(2024, 0, 1, 18));
+    }
     const reversed = f.formatRangeToParts(1000, 0);
     assert(reversed.some(p => p.source === "startRange"));
     assert(reversed.some(p => p.source === "endRange"));

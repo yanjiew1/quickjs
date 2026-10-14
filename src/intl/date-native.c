@@ -7,6 +7,12 @@ typedef struct PatternRow {
     QJSIntlDatePattern row;
     int fields[QJS_DATE_FIELD_COUNT];
 } PatternRow;
+/* Optional range records form a prefix of the specification's comparison
+ * order. Every present record uses the complete endpoint fallback pattern. */
+enum {
+    RANGE_ERA, RANGE_YEAR, RANGE_MONTH, RANGE_DAY, RANGE_AM_PM,
+    RANGE_DAY_PERIOD, RANGE_HOUR, RANGE_MINUTE, RANGE_SECOND, RANGE_FRACTION
+};
 struct QJSIntlNativeDate {
     QJSIntlAllocator allocator;
     QJSIntlDateOptions options;
@@ -17,6 +23,7 @@ struct QJSIntlNativeDate {
     size_t selected_length, pattern_count, base_pattern_count;
     int resolved[QJS_DATE_FIELD_COUNT];
     int add_fraction;
+    int range_last_field;
     unsigned int period_width_mask;
 };
 
@@ -700,6 +707,17 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
     }
     r = select_pattern(p);
     if (r) { qjs_intl_native_date_close(p); return r; }
+    p->range_last_field = RANGE_ERA;
+    {
+        static const int order[QJS_DATE_FIELD_COUNT] = {
+            RANGE_DAY, RANGE_ERA, RANGE_YEAR, RANGE_MONTH, RANGE_DAY,
+            RANGE_DAY_PERIOD, RANGE_HOUR, RANGE_MINUTE, RANGE_SECOND,
+            RANGE_FRACTION, -1
+        };
+        for (i = 0; i < QJS_DATE_FIELD_COUNT; i++)
+            if (p->resolved[i] >= 0 && order[i] > p->range_last_field)
+                p->range_last_field = order[i];
+    }
     *out = p; return QJS_INTL_OK;
 }
 
@@ -1305,8 +1323,8 @@ void qjs_intl_native_date_resolved_fields(const QJSIntlNativeDate *p, int *out)
     if (!out) return;
     for (i = 0; i < QJS_DATE_FIELD_COUNT; i++) out[i] = p ? p->resolved[i] : -1;
 }
-/* All optional Table 6 records are present and select the same complete
- * pattern pair as Default. Consequently every local field is relevant.
+/* Optional Table 6 records end at the selected format's precision. Fields
+ * below that record are absent and do not prevent a shared single value.
  * The locale's flexible-rule period identity is our ILD comparison String
  * representation (the stable token represented by its index); with no
  * flexible rule at that time, the AM/PM identity is used. Labels/widths do
@@ -1317,19 +1335,33 @@ static int relevant_equal(const Builder *a, const Builder *b)
 {
     const QJSIntlDateFields *x = &a->fields, *y = &b->fields;
     unsigned int px, py, divisor = 1;
+    int last = a->owner->range_last_field;
     int precision = a->owner->resolved[QJS_DATE_FRACTION];
     int64_t year1 = x->has_calendar_year ? x->calendar_year : x->year;
     int64_t year2 = y->has_calendar_year ? y->calendar_year : y->year;
-    if (x->era != y->era || year1 != year2 || x->month != y->month ||
-        x->month_name_index != y->month_name_index || x->leap_month != y->leap_month ||
-        x->has_related_year != y->has_related_year ||
+    if (x->era != y->era) return 0;
+    if (last < RANGE_YEAR) return 1;
+    if (year1 != year2 || x->has_related_year != y->has_related_year ||
         (x->has_related_year && x->related_year != y->related_year) ||
-        x->year_name_index != y->year_name_index ||
-        x->day != y->day || (x->hour < 12) != (y->hour < 12)) return 0;
+        x->year_name_index != y->year_name_index) return 0;
+    if (last < RANGE_MONTH) return 1;
+    if (x->month != y->month || x->month_name_index != y->month_name_index ||
+        x->leap_month != y->leap_month) return 0;
+    if (last < RANGE_DAY) return 1;
+    if (x->day != y->day) return 0;
+    if (last < RANGE_AM_PM) return 1;
+    if ((x->hour < 12) != (y->hour < 12)) return 0;
+    if (last < RANGE_DAY_PERIOD) return 1;
     if (period_index(a, 'B', &px)) px = x->hour < 12 ? QJS_DATE_AM : QJS_DATE_PM;
     if (period_index(b, 'B', &py)) py = y->hour < 12 ? QJS_DATE_AM : QJS_DATE_PM;
-    if (px != py || x->hour != y->hour || x->minute != y->minute ||
-        x->second != y->second) return 0;
+    if (px != py) return 0;
+    if (last < RANGE_HOUR) return 1;
+    if (x->hour != y->hour) return 0;
+    if (last < RANGE_MINUTE) return 1;
+    if (x->minute != y->minute) return 0;
+    if (last < RANGE_SECOND) return 1;
+    if (x->second != y->second) return 0;
+    if (last < RANGE_FRACTION) return 1;
     if (precision == 1) divisor = 100;
     else if (precision == 2) divisor = 10;
     return x->millisecond / divisor == y->millisecond / divisor;

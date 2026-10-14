@@ -147,10 +147,11 @@ QJSIntlStatus qjs_intl_native_date_range_ns(QJSIntlNativeDate *,
 QJSIntlBytes qjs_intl_native_date_calendar(const QJSIntlNativeDate *);
 void qjs_intl_native_date_clear(const QJSIntlAllocator *, QJSIntlFormatted *);
 void qjs_intl_native_date_resolved_fields(const QJSIntlNativeDate *, int *);
-/* Complete-pattern range policy: Default and every optional Table 6 range
- * record use the full selected endpoint pattern. The decoded locale fallback
- * joins those patterns in its exact placeholder order. Equality compares
- * complete local fields (fraction truncated at selected precision), never
+/* Complete-pattern range policy: optional Table 6 records form a prefix
+ * through the final selected component (weekday selects day precision).
+ * Default and every present record use the full endpoint pattern. The locale
+ * fallback joins those patterns in its exact placeholder order. Equality
+ * compares that prefix (fraction truncated at selected precision), never
  * rendered string equality. Reversed epochs retain argument identity; the
  * pinned specification has no start<=end check. Sources are shared for a
  * collapse and template literals, startRange/endRange for endpoint parts.
