@@ -1,74 +1,54 @@
-diff --git a/harness/atomicsHelper.js b/harness/atomicsHelper.js
-index 9828b15..9e24d64 100644
---- a/harness/atomicsHelper.js
-+++ b/harness/atomicsHelper.js
-@@ -272,10 +272,14 @@ $262.agent.waitUntil = function(typedArray, index, expected) {
-  *   }
-  */
- $262.agent.timeouts = {
--  yield: 100,
--  small: 200,
--  long: 1000,
--  huge: 10000,
-+//  yield: 100,
-+//  small: 200,
-+//  long: 1000,
-+//  huge: 10000,
-+  yield: 40,
-+  small: 40,
-+  long: 200,
-+  huge: 1000,
- };
- 
- /**
 diff --git a/harness/regExpUtils.js b/harness/regExpUtils.js
-index b397be0..c197ddc 100644
 --- a/harness/regExpUtils.js
 +++ b/harness/regExpUtils.js
-@@ -6,27 +6,30 @@ description: |
+@@ -1,40 +1,48 @@
+ // Copyright (C) 2017 Mathias Bynens.  All rights reserved.
+ // This code is governed by the BSD license found in the LICENSE file.
+ /*---
+ description: |
+     Collection of functions used to assert the correctness of RegExp objects.
  defines: [buildString, testPropertyEscapes, testPropertyOfStrings, testExtendedCharacterClass, matchValidator]
  ---*/
  
-+if ($262 && typeof $262.codePointRange === "function") {
-+    /* use C function to build the codePointRange (much faster with
-+       slow JS engines) */
-+    codePointRange = $262.codePointRange;
-+} else {
-+    codePointRange = function codePointRange(start, end) {
-+        const codePoints = [];
-+        let length = 0;
-+        for (codePoint = start; codePoint < end; codePoint++) {
-+            codePoints[length++] = codePoint;
-+        }
-+        return String.fromCodePoint.apply(null, codePoints);
-+    }
-+}
-+
  function buildString(args) {
    // Use member expressions rather than destructuring `args` for improved
    // compatibility with engines that only implement assignment patterns
    // partially or not at all.
    const loneCodePoints = args.loneCodePoints;
    const ranges = args.ranges;
--  const CHUNK_SIZE = 10000;
+   const CHUNK_SIZE = 10000;
    let result = String.fromCodePoint.apply(null, loneCodePoints);
--  for (let i = 0; i < ranges.length; i++) {
--    let range = ranges[i];
--    let start = range[0];
--    let end = range[1];
--    let codePoints = [];
--    for (let length = 0, codePoint = start; codePoint <= end; codePoint++) {
--      codePoints[length++] = codePoint;
--      if (length === CHUNK_SIZE) {
--        result += String.fromCodePoint.apply(null, codePoints);
--        codePoints.length = length = 0;
--      }
--    }
--    result += String.fromCodePoint.apply(null, codePoints);
-+  for (const [start, end] of ranges) {
-+    result += codePointRange(start, end + 1);
++  if (typeof $262 !== "undefined" && $262 &&
++      typeof $262.codePointRange === "function") {
++    for (let i = 0; i < ranges.length; i++) {
++      const range = ranges[i];
++      result += $262.codePointRange(range[0], range[1] + 1);
++    }
++    return result;
++  }
+   for (let i = 0; i < ranges.length; i++) {
+     let range = ranges[i];
+     let start = range[0];
+     let end = range[1];
+     let codePoints = [];
+     for (let length = 0, codePoint = start; codePoint <= end; codePoint++) {
+       codePoints[length++] = codePoint;
+       if (length === CHUNK_SIZE) {
+         result += String.fromCodePoint.apply(null, codePoints);
+         codePoints.length = length = 0;
+       }
+     }
+     result += String.fromCodePoint.apply(null, codePoints);
    }
    return result;
+ }
+ 
+ function printCodePoint(codePoint) {
+   const hex = codePoint
+     .toString(16)
+     .toUpperCase()
+     .padStart(6, "0");
+   return `U+${hex}`;
  }
 diff --git a/test/annexB/language/function-code/block-decl-func-skip-arguments.js b/test/annexB/language/function-code/block-decl-func-skip-arguments.js
 --- a/test/annexB/language/function-code/block-decl-func-skip-arguments.js
