@@ -178,10 +178,11 @@ LDFLAGS+=-s # better to strip by default
 else
 LDFLAGS+=-g
 endif
+LTO_FLAG ?= -flto
 ifdef CONFIG_LTO
-CFLAGS_SMALL+=-flto
-CFLAGS_OPT+=-flto
-LDFLAGS+=-flto
+CFLAGS_SMALL+=$(LTO_FLAG)
+CFLAGS_OPT+=$(LTO_FLAG)
+LDFLAGS+=$(LTO_FLAG)
 endif
 ifdef CONFIG_PROFILE
 CFLAGS+=-p
@@ -385,7 +386,7 @@ endif #CROSS_PREFIX
 
 QJSC_DEFINES:=-DCONFIG_CC=\"$(QJSC_CC)\" -DCONFIG_PREFIX=\"$(PREFIX)\"
 ifdef CONFIG_LTO
-QJSC_DEFINES+=-DCONFIG_LTO
+QJSC_DEFINES+=-DCONFIG_LTO -DCONFIG_LTO_FLAG=\"$(LTO_FLAG)\"
 endif
 ifdef CONFIG_M32
 QJSC_DEFINES+=-DCONFIG_M32
@@ -719,7 +720,7 @@ tests/test_unicode_oom$(EXE): $(OBJDIR)/tests/test_unicode_oom.o $(REGEXP_OBJS) 
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-# Compile test binaries in parallel before CI runs the sequential recipes.
+# Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
 ifdef CONFIG_SHARED_LIBS
@@ -970,7 +971,7 @@ ifneq ($(CONFIG_WIN32),y)
 test: test-qjsc-executable
 
 test-qjsc-executable: $(QJSC) libquickjs$(LTOEXT).a
-	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "n" "n"
+	$(PYTHON) tests/test_qjsc_executable.py "$(QJSC)" "" "$(filter -fsanitize=% -m32,$(CFLAGS))" "n" "n" "$(if $(CONFIG_LTO),$(LTO_FLAG))"
 endif
 endif
 
