@@ -1265,6 +1265,15 @@ int JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj,
                                const JSCFunctionListEntry *tab,
                                int len);
 
+/* Iterator protocol. Inputs are borrowed; returned values are owned.
+   JS_IteratorNext returns undefined when done. With an exception pending,
+   JS_IteratorClose preserves it and returns -1. */
+JSValue JS_GetIterator(JSContext *ctx, JSValueConst obj, JS_BOOL is_async);
+JSValue JS_IteratorNext(JSContext *ctx, JSValueConst iter,
+                       JSValueConst method, JS_BOOL *pdone);
+int JS_IteratorClose(JSContext *ctx, JSValueConst iter,
+                     JS_BOOL is_exception_pending);
+
 /* C module definition */
 
 typedef int JSModuleInitFunc(JSContext *ctx, JSModuleDef *m);
