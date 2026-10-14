@@ -286,3 +286,6 @@ __pycache__/
 
 /tests/test_intl_services_api
 /tests/test_intl_services_api.exe
+
+/tests/test_intl_oom
+/tests/test_intl_oom.exe

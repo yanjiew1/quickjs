@@ -1144,6 +1144,10 @@ C_TESTS+=tests/test_intl_duration_format_embed$(EXE)
 
 C_TESTS+=tests/test_intl_services_api$(EXE)
 
+ifeq ($(CONFIG_INTL)$(CONFIG_ICU),yy)
+C_TESTS+=tests/test_intl_oom$(EXE)
+endif
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1153,6 +1157,9 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+ifeq ($(CONFIG_INTL)$(CONFIG_ICU),yy)
+	$(WINE) ./tests/test_intl_oom$(EXE)
+endif
 	$(WINE) ./tests/test_intl_services_api$(EXE)
 	$(WINE) ./tests/test_intl_duration_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
@@ -2190,4 +2197,7 @@ tests/test_intl_duration_format_embed$(EXE): $(OBJDIR)/tests/test_intl_duration_
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 tests/test_intl_services_api$(EXE): $(OBJDIR)/tests/test_intl_services_api.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_intl_oom$(EXE): $(OBJDIR)/tests/test_intl_oom.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
