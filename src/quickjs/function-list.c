@@ -315,11 +315,11 @@ int JS_SetConstructor2(JSContext *ctx,
                        int proto_flags, int ctor_flags)
 {
     if (JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_prototype,
-                               JS_DupValue(ctx, proto), proto_flags) < 0)
+                               JS_DupValue(ctx, proto), proto_flags | JS_PROP_THROW) < 0)
         return -1;
     if (JS_DefinePropertyValue(ctx, proto, JS_ATOM_constructor,
                                JS_DupValue(ctx, func_obj),
-                               ctor_flags) < 0)
+                               ctor_flags | JS_PROP_THROW) < 0)
         return -1;
     set_cycle_flag(ctx, func_obj);
     set_cycle_flag(ctx, proto);
@@ -335,10 +335,10 @@ int JS_SetConstructor(JSContext *ctx, JSValueConst func_obj,
 }
 
 
-/* Return the constructor and. Define it as a global variable unless
+/* Return the constructor. Define it as a global variable unless
    JS_NEW_CTOR_NO_GLOBAL is set. The new class inherit from
    parent_ctor if it is not JS_UNDEFINED. if class_id is != -1,
-   class_proto[class_id] is set. */
+   class_proto[class_id] is replaced after successful setup. */
 JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
                            JSCFunction *func, int length, JSCFunctionEnum cproto, int magic,
                            JSValueConst parent_ctor,
@@ -346,8 +346,30 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
                            const JSCFunctionListEntry *proto_fields, int n_proto_fields,
                            int flags)
 {
-    JSValue ctor = JS_UNDEFINED, proto, parent_proto;
+    JSValue ctor = JS_UNDEFINED, proto = JS_UNDEFINED, parent_proto;
     int proto_class_id, proto_flags, ctor_flags;
+    size_t max_props;
+
+    /* Rounded hash capacity is at most twice the property capacity. */
+    max_props = (SIZE_MAX - sizeof(JSShape)) /
+        (sizeof(JSShapeProperty) + 2 * sizeof(uint32_t));
+    if (max_props > SIZE_MAX / sizeof(JSProperty))
+        max_props = SIZE_MAX / sizeof(JSProperty);
+    /* Shape collision links store property indices in 26 bits. */
+    if (max_props > (((size_t)1 << 26) - 1))
+        max_props = ((size_t)1 << 26) - 1;
+
+    if (class_id < -1 ||
+        (class_id >= 0 && !JS_IsRegisteredClass(ctx->rt, class_id)) ||
+        (class_id == -1 &&
+         (flags & (JS_NEW_CTOR_PROTO_CLASS | JS_NEW_CTOR_PROTO_EXIST))) ||
+        (flags & ~(JS_NEW_CTOR_NO_GLOBAL | JS_NEW_CTOR_PROTO_CLASS |
+                   JS_NEW_CTOR_PROTO_EXIST | JS_NEW_CTOR_READONLY)) ||
+        !name || !func || n_ctor_fields < 0 || n_proto_fields < 0 ||
+        (size_t)n_ctor_fields > max_props - 3 ||
+        (size_t)n_proto_fields > max_props - 1 ||
+        (n_ctor_fields && !ctor_fields) || (n_proto_fields && !proto_fields))
+        return JS_ThrowTypeError(ctx, "invalid native constructor arguments");
 
     proto_flags = 0;
     if (flags & JS_NEW_CTOR_READONLY) {
@@ -360,13 +382,23 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
         parent_proto = JS_DupValue(ctx, ctx->class_proto[JS_CLASS_OBJECT]);
         parent_ctor = ctx->function_proto;
     } else {
+        if (!JS_IsObject(parent_ctor))
+            return JS_ThrowTypeError(ctx, "parent constructor must be an object");
         parent_proto = JS_GetProperty(ctx, parent_ctor, JS_ATOM_prototype);
         if (JS_IsException(parent_proto))
             return JS_EXCEPTION;
+        if (!JS_IsObject(parent_proto) && !JS_IsNull(parent_proto)) {
+            JS_ThrowTypeError(ctx, "parent prototype must be an object or null");
+            goto fail;
+        }
     }
-    
+
     if (flags & JS_NEW_CTOR_PROTO_EXIST) {
         proto = JS_DupValue(ctx, ctx->class_proto[class_id]);
+        if (!JS_IsObject(proto)) {
+            JS_ThrowTypeError(ctx, "existing class prototype must be an object");
+            goto fail;
+        }
     } else {
         if (flags & JS_NEW_CTOR_PROTO_CLASS)
             proto_class_id = class_id;
@@ -377,8 +409,6 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
                                             n_proto_fields + 1);
         if (JS_IsException(proto))
             goto fail;
-        if (class_id >= 0)
-            ctx->class_proto[class_id] = JS_DupValue(ctx, proto);
     }
     if (JS_SetPropertyFunctionList(ctx, proto, proto_fields, n_proto_fields))
         goto fail;
@@ -390,13 +420,17 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
         goto fail;
     if (JS_SetPropertyFunctionList(ctx, ctor, ctor_fields, n_ctor_fields))
         goto fail;
+    if (JS_SetConstructor2(ctx, ctor, proto, proto_flags, ctor_flags) < 0)
+        goto fail;
     if (!(flags & JS_NEW_CTOR_NO_GLOBAL)) {
         if (JS_DefinePropertyValueStr(ctx, ctx->global_obj, name,
                                       JS_DupValue(ctx, ctor),
-                                      JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0)
+                                      JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE |
+                                      JS_PROP_THROW) < 0)
             goto fail;
     }
-    JS_SetConstructor2(ctx, ctor, proto, proto_flags, ctor_flags);
+    if (class_id >= 0)
+        JS_SetClassProto(ctx, class_id, JS_DupValue(ctx, proto));
 
     JS_FreeValue(ctx, proto);
     JS_FreeValue(ctx, parent_proto);

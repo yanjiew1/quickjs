@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -3771,6 +3772,188 @@ static void test_function_property_oom(void)
     }
 }
 
+static int factory_proto_finalized;
+
+static void factory_proto_finalizer(JSRuntime *rt, JSValue value)
+{
+    factory_proto_finalized++;
+}
+
+static JSValue factory_api_callback(JSContext *ctx, JSValueConst new_target,
+                                    int argc, JSValueConst *argv)
+{
+    return JS_NewObject(ctx);
+}
+
+static JSValue factory_api_create(JSContext *ctx, int class_id,
+                                  JSValueConst parent, int flags)
+{
+    static const JSCFunctionListEntry ctor_fields[] = {
+        JS_PROP_INT32_DEF("version", 5, JS_PROP_CONFIGURABLE),
+    };
+    static const JSCFunctionListEntry proto_fields[] = {
+        JS_CFUNC_DEF("method", 0, property_list_api_method),
+    };
+    return JS_NewCConstructor(ctx, class_id, "EmbeddingFactory",
+                              factory_api_callback, 0, JS_CFUNC_constructor, 0,
+                              parent, ctor_fields, countof(ctor_fields),
+                              proto_fields, countof(proto_fields), flags);
+}
+
+static void test_native_constructor_public_api(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSClassID class_id = 0;
+    JSClassDef def = { .class_name = "EmbeddingFactoryPrototype",
+                       .finalizer = factory_proto_finalizer };
+    JSValue ctor, proto, parent, value, old_proto, error, global;
+    JSPropertyDescriptor desc;
+    JSAtom atom;
+    int i;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_NewClassID(&class_id);
+    assert(JS_NewClass(rt, class_id, &def) == 0);
+    factory_proto_finalized = 0;
+    value = JS_NewObjectClass(ctx, class_id);
+    assert(JS_IsObject(value));
+    JS_SetClassProto(ctx, class_id, value);
+    for (i = 0; i < 2; i++) {
+        ctor = factory_api_create(ctx, class_id, JS_UNDEFINED,
+                                  JS_NEW_CTOR_NO_GLOBAL | JS_NEW_CTOR_PROTO_CLASS);
+        assert(JS_IsConstructor(ctx, ctor));
+        proto = JS_GetClassProto(ctx, class_id);
+        assert(JS_GetClassID(proto) == class_id);
+        value = JS_GetPropertyStr(ctx, ctor, "prototype");
+        assert(JS_StrictEq(ctx, proto, value));
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, proto);
+        JS_FreeValue(ctx, ctor);
+        JS_RunGC(rt);
+    }
+    assert(factory_proto_finalized == 2);
+
+    parent = utf16_api_eval(ctx, "(function ParentFactory() {})");
+    ctor = factory_api_create(ctx, class_id, parent, JS_NEW_CTOR_READONLY);
+    assert(JS_IsConstructor(ctx, ctor));
+    value = JS_GetPrototype(ctx, ctor);
+    assert(JS_StrictEq(ctx, value, parent));
+    JS_FreeValue(ctx, value);
+    proto = JS_GetClassProto(ctx, class_id);
+    value = JS_GetPrototype(ctx, proto);
+    old_proto = JS_GetPropertyStr(ctx, parent, "prototype");
+    assert(JS_StrictEq(ctx, value, old_proto));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, old_proto);
+    atom = JS_NewAtom(ctx, "constructor");
+    assert(JS_GetOwnProperty(ctx, &desc, proto, atom) == 1);
+    assert(!(desc.flags & JS_PROP_WRITABLE));
+    assert(JS_StrictEq(ctx, desc.value, ctor));
+    JS_FreeValue(ctx, desc.value);
+    JS_FreeValue(ctx, desc.getter);
+    JS_FreeValue(ctx, desc.setter);
+    JS_FreeAtom(ctx, atom);
+    global = JS_GetGlobalObject(ctx);
+    value = JS_GetPropertyStr(ctx, global, "EmbeddingFactory");
+    assert(JS_StrictEq(ctx, value, ctor));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, parent);
+    JS_FreeValue(ctx, proto);
+
+    check_eval(ctx, "Object.defineProperty(globalThis, 'EmbeddingFactory', "
+                    "{ value: 47, writable: false, configurable: false }); true;");
+    old_proto = JS_GetClassProto(ctx, class_id);
+    ctor = factory_api_create(ctx, class_id, JS_UNDEFINED, 0);
+    assert(JS_IsException(ctor));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    proto = JS_GetClassProto(ctx, class_id);
+    assert(JS_StrictEq(ctx, proto, old_proto));
+    JS_FreeValue(ctx, proto);
+    JS_FreeValue(ctx, old_proto);
+    value = JS_GetPropertyStr(ctx, global, "EmbeddingFactory");
+    assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, 47)));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, global);
+
+    for (i = 0; i < 2; i++) {
+        proto = utf16_api_eval(ctx, i == 0 ? "Object.freeze({})" :
+            "new Proxy({}, { defineProperty() { throw 53; } })");
+        JS_SetClassProto(ctx, class_id, JS_DupValue(ctx, proto));
+        ctor = JS_NewCConstructor(ctx, class_id, "UnpublishedFactory",
+                                  factory_api_callback, 0, JS_CFUNC_constructor, 0,
+                                  JS_UNDEFINED, NULL, 0, NULL, 0,
+                                  JS_NEW_CTOR_PROTO_EXIST);
+        assert(JS_IsException(ctor));
+        error = JS_GetException(ctx);
+        assert(i == 0 ? JS_IsError(ctx, error) :
+               JS_StrictEq(ctx, error, JS_NewInt32(ctx, 53)));
+        JS_FreeValue(ctx, error);
+        value = utf16_api_eval(ctx, "'UnpublishedFactory' in globalThis");
+        assert(JS_ToBool(ctx, value) == 0);
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, proto);
+    }
+    proto = utf16_api_eval(ctx, "Object.freeze({})");
+    ctor = JS_NewCFunction(ctx, factory_api_callback, "FrozenPrototype", 0);
+    assert(JS_SetConstructor(ctx, ctor, proto) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, proto);
+
+    ctor = factory_api_create(ctx, -1, JS_UNDEFINED, JS_NEW_CTOR_NO_GLOBAL);
+    assert(JS_IsObject(ctor));
+    JS_FreeValue(ctx, ctor);
+    ctor = factory_api_create(ctx, -1, JS_UNDEFINED, JS_NEW_CTOR_PROTO_EXIST);
+    assert(JS_IsException(ctor));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    ctor = factory_api_create(ctx, INT_MAX, JS_UNDEFINED, JS_NEW_CTOR_NO_GLOBAL);
+    assert(JS_IsException(ctor));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    {
+        static const JSCFunctionListEntry field[] = {
+            JS_PROP_INT32_DEF("value", 1, JS_PROP_CONFIGURABLE),
+        };
+        ctor = JS_NewCConstructor(ctx, -1, "OversizedFactory",
+                                  factory_api_callback, 0, JS_CFUNC_constructor, 0,
+                                  JS_UNDEFINED, NULL, 0, field, INT_MAX,
+                                  JS_NEW_CTOR_NO_GLOBAL);
+        assert(JS_IsException(ctor));
+        error = JS_GetException(ctx);
+        assert(JS_IsError(ctx, error));
+        JS_FreeValue(ctx, error);
+    }
+    parent = utf16_api_eval(ctx, "({ prototype: 1 })");
+    ctor = factory_api_create(ctx, -1, parent, JS_NEW_CTOR_NO_GLOBAL);
+    assert(JS_IsException(ctor));
+    error = JS_GetException(ctx);
+    assert(JS_IsError(ctx, error));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, parent);
+    parent = utf16_api_eval(ctx, "({ get prototype() { throw 59; } })");
+    ctor = factory_api_create(ctx, -1, parent, JS_NEW_CTOR_NO_GLOBAL);
+    assert(JS_IsException(ctor));
+    error = JS_GetException(ctx);
+    assert(JS_StrictEq(ctx, error, JS_NewInt32(ctx, 59)));
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, parent);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(factory_proto_finalized == 3);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3788,6 +3971,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "native-constructor-public-api", test_native_constructor_public_api },
         { "function-property-oom", test_function_property_oom },
         { "property-list-definitions", test_property_list_definitions },
         { "callback-flags-public-api", test_callback_flags_public_api },
