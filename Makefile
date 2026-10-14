@@ -1192,6 +1192,34 @@ ifeq ($(CONFIG_ICU)$(CONFIG_INTL)$(CONFIG_TEMPORAL),ynn)
 test-c test-binaries: tests/run_temporal_zone_test$(EXE)
 endif
 
+# Each native unit runs in an isolated process. Let Make schedule them
+# through the existing job limit while preserving the aggregate test target.
+ifeq ($(CONFIG_INTL_NATIVE),y)
+INTL_NATIVE_C_TESTS= \
+    locale_info \
+    date_frontend_oom \
+    date_bank_data \
+    timezone_runtime \
+    display_oom \
+    duration_oom \
+    relative_oom \
+    plural_oom \
+    number_oom \
+    segmenter_oom \
+    collator_oom \
+    general_oom \
+    frontend_oom \
+    duration_provider \
+    plural_provider \
+    number_provider
+
+INTL_NATIVE_C_TEST_TARGETS=$(addprefix test-intl-native-c-,$(INTL_NATIVE_C_TESTS))
+.PHONY: $(INTL_NATIVE_C_TEST_TARGETS)
+$(INTL_NATIVE_C_TEST_TARGETS): test-intl-native-c-%: tests/test_intl_native_%$(EXE)
+	$(WINE) ./$<
+test-c: $(INTL_NATIVE_C_TEST_TARGETS)
+endif
+
 .PHONY: test-c
 test-c: $(C_TESTS)
 ifeq ($(CONFIG_ICU),y)
@@ -1212,54 +1240,6 @@ endif
 	$(WINE) ./tests/test_intl_duration_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_number_format_embed$(EXE)
 	$(WINE) ./tests/test_intl_collator_segmenter$(EXE)
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_locale_info$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_date_frontend_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_date_bank_data$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_timezone_runtime$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_display_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_duration_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_relative_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_plural_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_number_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_segmenter_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_collator_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_general_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_frontend_oom$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_duration_provider$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_plural_provider$(EXE)
-endif
-ifeq ($(CONFIG_INTL_NATIVE),y)
-	$(WINE) ./tests/test_intl_native_number_provider$(EXE)
-endif
 ifeq ($(CONFIG_INTL),y)
 ifneq ($(CONFIG_INTL_NATIVE),y)
 	$(WINE) ./tests/test_intl_text$(EXE)
@@ -1998,20 +1978,25 @@ test: test-icu-build-config
 
 
 ifeq ($(CONFIG_INTL_NATIVE),y)
-.PHONY: test-intl-native-js
-test-intl-native-js: qjs$(EXE) run-test262$(EXE)
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_frontend.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_general.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_collator.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_segmenter.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_number.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_plural.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_relative.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_display.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_duration.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_frontend.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_all_calendars.js
-	$(WINE) ./qjs$(EXE) tests/test_intl_native_date_timezone_names.js
+INTL_NATIVE_JS_TESTS= \
+    frontend \
+    general \
+    collator \
+    segmenter \
+    number \
+    plural \
+    relative \
+    display \
+    duration \
+    date_frontend \
+    date_all_calendars \
+    date_timezone_names
+
+INTL_NATIVE_JS_TEST_TARGETS=$(addprefix test-intl-native-js-,$(INTL_NATIVE_JS_TESTS))
+.PHONY: test-intl-native-js $(INTL_NATIVE_JS_TEST_TARGETS)
+test-intl-native-js: $(INTL_NATIVE_JS_TEST_TARGETS)
+$(INTL_NATIVE_JS_TEST_TARGETS): test-intl-native-js-%: qjs$(EXE) run-test262$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_intl_native_$*.js
 test: test-intl-native-js
 endif
 
@@ -2245,17 +2230,13 @@ $(INTL_CACHE_TEST): $(INTL_CACHE_TEST_OBJECT) \
                    libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-.PHONY: test-intl-native-compiled-cache
-test-intl-native-compiled-cache: $(INTL_CACHE_TEST)
-	$(WINE) ./$(INTL_CACHE_TEST) retry
-	$(WINE) ./$(INTL_CACHE_TEST) provider-failure
-	$(WINE) ./$(INTL_CACHE_TEST) concurrent
-	$(WINE) ./$(INTL_CACHE_TEST) mutable
-	$(WINE) ./$(INTL_CACHE_TEST) number
-	$(WINE) ./$(INTL_CACHE_TEST) duration
-	$(WINE) ./$(INTL_CACHE_TEST) number-mutable
-	$(WINE) ./$(INTL_CACHE_TEST) available
-	$(WINE) ./$(INTL_CACHE_TEST) tables
+INTL_CACHE_TEST_MODES=retry provider-failure concurrent mutable number duration \
+    number-mutable available tables
+INTL_CACHE_TEST_TARGETS=$(addprefix test-intl-native-compiled-cache-,$(INTL_CACHE_TEST_MODES))
+.PHONY: test-intl-native-compiled-cache $(INTL_CACHE_TEST_TARGETS)
+test-intl-native-compiled-cache: $(INTL_CACHE_TEST_TARGETS)
+$(INTL_CACHE_TEST_TARGETS): test-intl-native-compiled-cache-%: $(INTL_CACHE_TEST)
+	$(WINE) ./$(INTL_CACHE_TEST) $*
 
 test-c: test-intl-native-compiled-cache
 test-binaries: $(INTL_CACHE_TEST)

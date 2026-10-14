@@ -30,7 +30,7 @@ jobs:
           if test '${{ matrix.compiler }}' = clang; then args="$args CONFIG_CLANG=y"; fi
           if test '${{ matrix.sanitizer }}' = asan; then args="$args CONFIG_ASAN=y"; fi
           if test '${{ matrix.sanitizer }}' = ubsan; then args="$args CONFIG_UBSAN=y"; fi
-          make -j$(getconf _NPROCESSORS_ONLN) CC=${{ matrix.compiler }} $args all test
+          make --output-sync=target -j$(getconf _NPROCESSORS_ONLN) CC=${{ matrix.compiler }} $args all test
       - name: Prepare pinned original Test262 sources
         run: make test2-bootstrap TEST262_COMMIT=c8c798898646638cd0c24879f8e0374e847e7d74 TEST262_UNICODE18_OVERLAY=y
       - name: Run current raw Test262 with an empty error baseline
