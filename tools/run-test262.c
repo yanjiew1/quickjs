@@ -120,6 +120,9 @@ pthread_cond_t progress_cond;
 pthread_mutex_t progress_mutex;
 
 FILE *outfile;
+static FILE *timing_log;
+static const char *timing_log_filename;
+static pthread_mutex_t timing_log_mutex = PTHREAD_MUTEX_INITIALIZER;
 static FILE *execution_progress;
 static const char *execution_progress_filename;
 static pthread_mutex_t execution_progress_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1029,6 +1032,53 @@ static int64_t get_clock_ms(void)
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000 + (ts.tv_nsec / 1000000);
+}
+
+static int64_t get_clock_ns(void)
+{
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+        perror_exit(1, "CLOCK_MONOTONIC");
+    return (uint64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+static void write_json_string(FILE *stream, const char *str)
+{
+    const unsigned char *p;
+
+    fputc('"', stream);
+    for (p = (const unsigned char *)str; *p; p++) {
+        if (*p == '"' || *p == '\\')
+            fprintf(stream, "\\%c", *p);
+        else if (*p < 0x20)
+            fprintf(stream, "\\u%04x", *p);
+        else
+            fputc(*p, stream);
+    }
+    fputc('"', stream);
+}
+
+/* Variant wall time includes realm, harness, pending jobs and cleanup. */
+static void write_test_timing(const char *filename, int thread, int index,
+                              const char *mode, const char *status,
+                              int64_t start)
+{
+    double elapsed_ms;
+
+    if (!timing_log)
+        return;
+    elapsed_ms = start ? (get_clock_ns() - start) / 1000000.0 : 0;
+    pthread_mutex_lock(&timing_log_mutex);
+    fputs("{\"file\":", timing_log);
+    write_json_string(timing_log, filename);
+    fprintf(timing_log,
+            ",\"thread\":%d,\"index\":%d,\"mode\":\"%s\","
+            "\"status\":\"%s\",\"duration_ms\":%.6f}\n",
+            thread, index, mode, status, elapsed_ms);
+    if (fflush(timing_log) != 0)
+        perror_exit(1, timing_log_filename);
+    pthread_mutex_unlock(&timing_log_mutex);
 }
 
 static JSValue js_agent_monotonicNow(JSContext *ctx, JSValue this_val,
@@ -2038,7 +2088,8 @@ int run_test_buf(ThreadLocalStorage *tls,
     return ret;
 }
 
-int run_test(ThreadLocalStorage *tls, const char *filename, int index)
+int run_test(ThreadLocalStorage *tls, const char *filename, int index,
+              int thread_index)
 {
     char harnessbuf[1024];
     char *harness;
@@ -2246,8 +2297,10 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index)
     if (skip || use_strict + use_nostrict == 0) {
         atomic_inc(&test_skipped);
         ret = -2;
+        write_test_timing(filename, thread_index, index, "none", "skipped", 0);
     } else {
         clock_t clocks;
+        int64_t start;
 
         if (is_module) {
             eval_flags = JS_EVAL_TYPE_MODULE;
@@ -2257,17 +2310,24 @@ int run_test(ThreadLocalStorage *tls, const char *filename, int index)
         clocks = clock();
         ret = 0;
         if (use_nostrict) {
+            start = timing_log ? get_clock_ns() : 0;
             ret = run_test_buf(tls, filename, harness, ip, buf, buf_len,
                                error_type, eval_flags, is_negative, is_async,
                                can_block);
+            write_test_timing(filename, thread_index, index,
+                              is_module ? "module" : "non-strict",
+                              ret ? "fail" : "pass", start);
         }
         /* we avoid running the strict mode test if there was an error
            in the nostrict case to have a single error report per
            test */
         if (use_strict && ret == 0) {
+            start = timing_log ? get_clock_ns() : 0;
             ret |= run_test_buf(tls, filename, harness, ip, buf, buf_len,
                                 error_type, eval_flags | JS_EVAL_FLAG_STRICT,
                                 is_negative, is_async, can_block);
+            write_test_timing(filename, thread_index, index, "strict",
+                              ret ? "fail" : "pass", start);
         }
         clocks = clock() - clocks;
 
@@ -2453,23 +2513,14 @@ int include_exclude_or_skip(int i) // naming is hard...
 static void write_execution_progress(const char *phase, int thread, int index,
                                      const char *filename)
 {
-    const unsigned char *p;
-
     if (!execution_progress)
         return;
     pthread_mutex_lock(&execution_progress_mutex);
     fprintf(execution_progress,
-            "{\"phase\":\"%s\",\"thread\":%d,\"index\":%d,\"file\":\"",
+            "{\"phase\":\"%s\",\"thread\":%d,\"index\":%d,\"file\":",
             phase, thread, index);
-    for (p = (const unsigned char *)filename; *p; p++) {
-        if (*p == '"' || *p == '\\')
-            fprintf(execution_progress, "\\%c", *p);
-        else if (*p < 0x20)
-            fprintf(execution_progress, "\\u%04x", *p);
-        else
-            fputc(*p, execution_progress);
-    }
-    fputs("\"}\n", execution_progress);
+    write_json_string(execution_progress, filename);
+    fputs("}\n", execution_progress);
     if (fflush(execution_progress) != 0)
         perror_exit(1, execution_progress_filename);
     pthread_mutex_unlock(&execution_progress_mutex);
@@ -2501,7 +2552,7 @@ void *run_test_dir_list(void *opaque)
             ti = 0;
         }
         write_execution_progress("start", th->thread_index, i, p);
-        run_test(tls, p, i);
+        run_test(tls, p, i, th->thread_index);
         write_execution_progress("finish", th->thread_index, i, p);
         if (slow_test_threshold != 0) {
             ti = get_clock_ms() - ti;
@@ -2530,6 +2581,7 @@ void help(void)
            "-v             verbose: output error messages\n"
            "-D duration    display tests taking more than 'duration' ms\n"
            "-T threads     number of parallel threads\n"
+           "--timing-log file  write per-variant wall times as JSONL\n"
            "--progress-log file  write flushed execution records separately\n"
            "-c file        read configuration from 'file'\n"
            "-d dir         run all test files in directory tree 'dir'\n"
@@ -2579,9 +2631,9 @@ int main(int argc, char **argv)
         if (*arg != '-')
             break;
         optind++;
-        if (strstr("-c -d -e -x -f -r -E -D -T", arg))
+        if (find_word("-c -d -e -x -f -r -D -T --progress-log --timing-log", arg))
             optind++;
-        if (strstr("-d -f", arg))
+        if (str_equal(arg, "-d") || str_equal(arg, "-f"))
             ignore = "testdir"; // run only the tests from -d or -f
     }
 
@@ -2633,6 +2685,8 @@ int main(int argc, char **argv)
             only_check_errors = TRUE;
         } else if (str_equal(arg, "-D")) {
             slow_test_threshold = atoi(get_opt_arg(arg, argv[optind++]));
+        } else if (str_equal(arg, "--timing-log")) {
+            timing_log_filename = get_opt_arg(arg, argv[optind++]);
         } else if (str_equal(arg, "--progress-log")) {
             execution_progress_filename = get_opt_arg(arg, argv[optind++]);
         } else if (str_equal(arg, "-T")) {
@@ -2689,6 +2743,11 @@ int main(int argc, char **argv)
 #endif
     }
     
+    if (timing_log_filename) {
+        timing_log = fopen(timing_log_filename, "w");
+        if (!timing_log)
+            perror_exit(1, timing_log_filename);
+    }
     if (execution_progress_filename) {
         execution_progress = fopen(execution_progress_filename, "w");
         if (!execution_progress)
@@ -2795,11 +2854,17 @@ int main(int argc, char **argv)
         while (optind < argc) {
             const char *filename = argv[optind++];
             write_execution_progress("start", 0, -1, filename);
-            run_test(tls, filename, -1);
+            run_test(tls, filename, -1, 0);
             write_execution_progress("finish", 0, -1, filename);
         }
     }
 
+    if (timing_log) {
+        if (fclose(timing_log) != 0)
+            perror_exit(1, timing_log_filename);
+        timing_log = NULL;
+    }
+    pthread_mutex_destroy(&timing_log_mutex);
     if (execution_progress) {
         if (fclose(execution_progress) != 0)
             perror_exit(1, execution_progress_filename);
