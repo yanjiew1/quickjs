@@ -219,7 +219,7 @@ static void check_native_initial_host_policy(void)
         "  const o = new Intl[n](request, options);"
         "  if (o.resolvedOptions().locale !== 'en-US') throw Error('host default: '+n);"
         " }"
-        " if (Intl[n].supportedLocalesOf(['en-US','en','fr-FR','qzz']).join() !== 'en-US,en')"
+        " if (Intl[n].supportedLocalesOf(['en-US','en','zz']).join() !== 'en-US,en')"
         "  throw Error('host admission: '+n);"
         "}");
     assert(!JS_SetIntlDefaultLocale(raw, "en"));

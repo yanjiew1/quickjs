@@ -14,4 +14,6 @@ QJSIntlStatus qjs_intl_native_provider_number_currency_digits(QJSIntlProvider *,
 QJSIntlStatus qjs_intl_native_provider_number_key_values(QJSIntlProvider *,
     QJSIntlBytes locale, QJSIntlBytes key, QJSIntlTagList *);
 QJSIntlStatus qjs_intl_native_provider_number_available(QJSIntlProvider *);
+QJSIntlStatus qjs_intl_native_provider_number_locale_available(QJSIntlProvider *,
+    QJSIntlBytes locale, uint32_t row);
 #endif

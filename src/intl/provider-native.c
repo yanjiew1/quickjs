@@ -1,7 +1,7 @@
 /* Native Intl provider. Copyright (c) 2026 Yan-Jie Wang.
  * Compile this source only for CONFIG_INTL_NATIVE. ICU is selected separately.
- * Service AvailableLocales are the installed en/en-US rows. The selected
- * released bundle supplies each registered service and Locale inventories. */
+ * Services independently admit compiled locale rows; most initially retain
+ * the English inventory. Metadata identity alone does not grant availability. */
 #ifdef CONFIG_ICU
 #error "Native Intl provider data requires CONFIG_ICU to be disabled"
 #endif
@@ -63,6 +63,7 @@ struct QJSIntlProvider {
 #ifdef _WIN32
 static volatile LONG compiled_metadata_valid = 0;
 static volatile LONG compiled_service_valid = 0;
+static volatile LONG compiled_locale_service_valid[256];
 static int compiled_metadata_is_valid(void)
 {
     return InterlockedCompareExchange(&compiled_metadata_valid, 0, 0);
@@ -74,6 +75,7 @@ static void compiled_metadata_mark_valid(void)
 #else
 static _Atomic unsigned int compiled_metadata_valid = 0;
 static _Atomic unsigned int compiled_service_valid = 0;
+static _Atomic unsigned int compiled_locale_service_valid[256];
 static int compiled_metadata_is_valid(void)
 {
     return atomic_load_explicit(&compiled_metadata_valid,
@@ -360,6 +362,12 @@ void qjs_intl_owned_tag_clear(QJSIntlProvider *p, char *tag)
 {
     if (p) p->allocator.free(p->allocator.opaque, tag);
 }
+/* The probe receives the exact tag stored at its authenticated locale row.
+ * It must establish an option-independent service proof, without retaining
+ * borrowed data or making the result depend on mutable provider defaults. */
+typedef QJSIntlStatus (*LocaleProbe)(QJSIntlProvider *, QJSIntlBytes, uint32_t);
+static QJSIntlStatus available_compiled_locales(QJSIntlProvider *, QJSIntlService,
+    LocaleProbe, QJSIntlTagList *);
 QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService service,
                                        QJSIntlTagList *out)
 {
@@ -369,15 +377,15 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
     memset(out, 0, sizeof(*out));
     if (!p || (unsigned int)service >= QJS_INTL_SERVICE_COUNT)
         return QJS_INTL_INVALID_ARGUMENT;
+    if (service == QJS_INTL_NUMBER_FORMAT)
+        return available_compiled_locales(p, service,
+            qjs_intl_native_provider_number_locale_available, out);
     if (service == QJS_INTL_DATE_TIME_FORMAT)
         return qjs_intl_native_provider_date_available(p, out);
     if (qjs_intl_native_provider_validate_compiled_data(p, &p->view) != QJS_INTL_DATA_OK)
         return QJS_INTL_DATA_ERROR;
     if (!compiled_service_is_valid(service)) {
-        if (service == QJS_INTL_NUMBER_FORMAT) {
-            QJSIntlStatus status = qjs_intl_native_provider_number_available(p);
-            if (status != QJS_INTL_OK) return status;
-        } else if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH) {
+        if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH) {
             QJSIntlStatus status = qjs_intl_native_provider_collator_available(p);
             if (status != QJS_INTL_OK) return status;
         } else if (service == QJS_INTL_SEGMENTER) {
@@ -413,6 +421,13 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
 QJSIntlStatus qjs_intl_locale_key_values(QJSIntlProvider *p, QJSIntlService service,
     QJSIntlBytes locale, QJSIntlBytes key, QJSIntlTagList *out)
 {
+    if (service == QJS_INTL_RELATIVE_TIME_FORMAT &&
+        !same(locale, "en") && !same(locale, "en-US")) {
+        /* Number's expanded inventory does not admit Relative locales. */
+        if (!out) return QJS_INTL_INVALID_ARGUMENT;
+        memset(out, 0, sizeof(*out));
+        return p ? QJS_INTL_UNSUPPORTED : QJS_INTL_INVALID_ARGUMENT;
+    }
     if (service == QJS_INTL_NUMBER_FORMAT || service == QJS_INTL_RELATIVE_TIME_FORMAT)
         return qjs_intl_native_provider_number_key_values(p, locale, key, out);
     if (service == QJS_INTL_COLLATOR || service == QJS_INTL_COLLATOR_SEARCH)
@@ -477,10 +492,9 @@ const QJSIntlDataView *qjs_intl_native_provider_view(const QJSIntlProvider *p)
     return p ? &p->view : NULL;
 }
 
-QJSIntlDataStatus qjs_intl_native_provider_validate_compiled_data(void *opaque,
+static QJSIntlDataStatus validate_compiled_view(const QJSIntlProvider *p,
     const QJSIntlDataView *view)
 {
-    const QJSIntlProvider *p = opaque;
     /* Reader success includes all installed service validators, including
      * Number, Plural, Relative and Date. The
      * certificate describes only the compiled blob, never decoded snapshots.
@@ -491,6 +505,12 @@ QJSIntlDataStatus qjs_intl_native_provider_validate_compiled_data(void *opaque,
         !compiled_metadata_is_valid())
         return QJS_INTL_DATA_INVALID_ARGUMENT;
     return QJS_INTL_DATA_OK;
+}
+
+QJSIntlDataStatus qjs_intl_native_provider_validate_compiled_data(void *opaque,
+    const QJSIntlDataView *view)
+{
+    return validate_compiled_view(opaque, view);
 }
 
 QJSIntlStatus qjs_intl_native_provider_date_calendar_mask(QJSIntlProvider *p,
@@ -547,4 +567,152 @@ QJSIntlStatus qjs_intl_native_provider_date_probe_success_store(QJSIntlProvider 
     p->date_probe_success = entry;
     p->date_probe_success_count++;
     return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_native_provider_locale_row(const QJSIntlProvider *p,
+    QJSIntlBytes locale, uint32_t *out)
+{
+    QJSIntlDataSection rows;
+    QJSIntlDataSlice tag;
+    uint32_t lo = 0, hi;
+    if (!out) return QJS_INTL_INVALID_ARGUMENT;
+    *out = QJS_INTL_DATA_INDEX_NONE;
+    if (!p || !locale.data || !locale.length) return QJS_INTL_INVALID_ARGUMENT;
+    if (same(locale, "root")) return QJS_INTL_UNSUPPORTED;
+    if (validate_compiled_view(p, &p->view) ||
+        qjs_intl_data_section(&p->view, QJS_INTL_DATA_LOCALE, &rows)) return QJS_INTL_DATA_ERROR;
+    hi = rows.record_count;
+    while (lo < hi) {
+        uint32_t mid = lo + (hi - lo) / 2;
+        size_t common;
+        int order;
+        if (qjs_intl_data_record_string(&p->view, &rows, mid, 0, &tag)) return QJS_INTL_DATA_ERROR;
+        common = locale.length < tag.length ? locale.length : tag.length;
+        order = memcmp(locale.data, tag.data, common);
+        if (!order) order = locale.length < tag.length ? -1 : locale.length > tag.length;
+        if (order > 0) lo = mid + 1; else hi = mid;
+    }
+    if (lo == rows.record_count) return QJS_INTL_UNSUPPORTED;
+    if (qjs_intl_data_record_string(&p->view, &rows, lo, 0, &tag)) return QJS_INTL_DATA_ERROR;
+    if (locale.length != tag.length || memcmp(locale.data, tag.data, locale.length))
+        return QJS_INTL_UNSUPPORTED;
+    *out = lo;
+    return QJS_INTL_OK;
+}
+QJSIntlStatus qjs_intl_native_provider_default_numbering(const QJSIntlProvider *p,
+    uint32_t row, QJSIntlBytes *out)
+{
+    QJSIntlDataSection rows;
+    QJSIntlDataSlice value;
+    uint32_t steps, parent;
+    if (!out) return QJS_INTL_INVALID_ARGUMENT;
+    *out = (QJSIntlBytes){NULL, 0};
+    if (!p) return QJS_INTL_INVALID_ARGUMENT;
+    if (validate_compiled_view(p, &p->view) ||
+        qjs_intl_data_section(&p->view, QJS_INTL_DATA_LOCALE, &rows)) return QJS_INTL_DATA_ERROR;
+    if (row >= rows.record_count) return QJS_INTL_INVALID_ARGUMENT;
+    for (steps = 0; steps < rows.record_count; steps++) {
+        if (qjs_intl_data_record_string(&p->view, &rows, row, 36, &value)) return QJS_INTL_DATA_ERROR;
+        if (value.length) {
+            *out = (QJSIntlBytes){(const char *)value.data, value.length};
+            return QJS_INTL_OK;
+        }
+        if (qjs_intl_data_record_u32(&rows, row, 8, &parent)) return QJS_INTL_DATA_ERROR;
+        if (parent == QJS_INTL_DATA_INDEX_NONE) return QJS_INTL_UNSUPPORTED;
+        row = parent;
+    }
+    return QJS_INTL_DATA_ERROR;
+}
+static int locale_service_is_valid(const QJSIntlProvider *p,
+    uint32_t row, QJSIntlService service)
+{
+    unsigned int bits;
+    QJSIntlDataSection locales;
+    if (!p || row >= 256 || (unsigned int)service >= QJS_INTL_SERVICE_COUNT ||
+        validate_compiled_view(p, &p->view) ||
+        qjs_intl_data_section(&p->view, QJS_INTL_DATA_LOCALE, &locales) ||
+        row >= locales.record_count) return 0;
+#ifdef _WIN32
+    bits = (unsigned int)InterlockedCompareExchange(&compiled_locale_service_valid[row], 0, 0);
+#else
+    bits = atomic_load_explicit(&compiled_locale_service_valid[row], memory_order_acquire);
+#endif
+    return (bits & (1u << (unsigned int)service)) != 0;
+}
+static void locale_service_mark_valid(QJSIntlProvider *p,
+    uint32_t row, QJSIntlService service)
+{
+    unsigned int bit;
+    QJSIntlDataSection locales;
+    if (!p || row >= 256 || (unsigned int)service >= QJS_INTL_SERVICE_COUNT ||
+        qjs_intl_native_provider_validate_compiled_data(p, &p->view) ||
+        qjs_intl_data_section(&p->view, QJS_INTL_DATA_LOCALE, &locales) ||
+        row >= locales.record_count) return;
+    bit = 1u << (unsigned int)service;
+#ifdef _WIN32
+    {
+        LONG before, after;
+        do {
+            before = InterlockedCompareExchange(&compiled_locale_service_valid[row], 0, 0);
+            after = (LONG)((unsigned int)before | bit);
+        } while (InterlockedCompareExchange(&compiled_locale_service_valid[row], after, before) != before);
+    }
+#else
+    atomic_fetch_or_explicit(&compiled_locale_service_valid[row], bit, memory_order_release);
+#endif
+}
+
+static QJSIntlStatus available_compiled_locales(QJSIntlProvider *p,
+    QJSIntlService service, LocaleProbe probe, QJSIntlTagList *out)
+{
+    const QJSIntlAllocator *allocator;
+    const QJSIntlDataView *view;
+    QJSIntlDataSection locales;
+    QJSIntlDataSlice tag;
+    QJSIntlStatus status;
+    uint32_t row;
+    size_t pass, count = 0;
+    if (!out) return QJS_INTL_INVALID_ARGUMENT;
+    memset(out, 0, sizeof(*out));
+    if (!p) return QJS_INTL_INVALID_ARGUMENT;
+    allocator = qjs_intl_native_provider_allocator(p);
+    view = qjs_intl_native_provider_view(p);
+    if (qjs_intl_native_provider_validate_compiled_data(p, view) ||
+        qjs_intl_data_section(view, QJS_INTL_DATA_LOCALE, &locales)) return QJS_INTL_DATA_ERROR;
+    /* Probe first, then allocate only the owned result. Warm passes reuse
+       exact positive row proofs. Rows beyond the bounded cache are rechecked. */
+    for (pass = 0; pass < 2; pass++) {
+        for (row = 0; row < locales.record_count; row++) {
+            QJSIntlBytes locale;
+            char *copy;
+            if (qjs_intl_data_record_string(view, &locales, row, 0, &tag)) {
+                status = QJS_INTL_DATA_ERROR; goto fail;
+            }
+            locale = (QJSIntlBytes){(const char *)tag.data, tag.length};
+            if (same(locale, "root")) continue;
+            if (locale_service_is_valid(p, row, service)) {
+                status = QJS_INTL_OK;
+            } else {
+                status = probe(p, locale, row);
+                if (status == QJS_INTL_OK) locale_service_mark_valid(p, row, service);
+            }
+            if (status == QJS_INTL_UNSUPPORTED) continue;
+            if (status != QJS_INTL_OK) goto fail;
+            if (!pass) { count++; continue; }
+            copy = allocator->malloc(allocator->opaque, tag.length + 1);
+            if (!copy) { status = QJS_INTL_NO_MEMORY; goto fail; }
+            memcpy(copy, tag.data, tag.length); copy[tag.length] = 0;
+            out->items[out->count++] = (QJSIntlBytes){copy, tag.length};
+        }
+        if (!pass) {
+            if (!count) return QJS_INTL_UNSUPPORTED;
+            if (count > SIZE_MAX / sizeof(*out->items)) return QJS_INTL_OVERFLOW;
+            out->items = allocator->malloc(allocator->opaque, count * sizeof(*out->items));
+            if (!out->items) return QJS_INTL_NO_MEMORY;
+        }
+    }
+    return QJS_INTL_OK;
+ fail:
+    qjs_intl_tag_list_clear(p, out);
+    return status;
 }

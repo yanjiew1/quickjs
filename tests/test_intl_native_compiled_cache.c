@@ -796,7 +796,7 @@ static void number_mutable(void)
     assert(qjs_intl_native_provider_number_open(provider, bytes("en-US"),
         bytes("latn"), &subject.number, &number) == QJS_INTL_INVALID_ARGUMENT &&
         !number);
-    assert(qjs_intl_native_provider_number_open(provider, bytes("fr"),
+    assert(qjs_intl_native_provider_number_open(provider, bytes("zz"),
         bytes("latn"), &subject.number, &number) == QJS_INTL_UNSUPPORTED && !number);
     assert(qjs_intl_native_provider_number_open(provider, bytes("en-US"),
         bytes("missing"), &subject.number, &number) == QJS_INTL_UNSUPPORTED && !number);
@@ -808,6 +808,35 @@ static void number_mutable(void)
     free(copy);
     assert(load(&reader_calls) == 1);
     destroy(&heap, provider);
+}
+
+/* Admission must agree with actual default-number formatter construction. */
+static void number_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *tags)
+{
+    QJSIntlNumberOptions options = number_options();
+    QJSIntlDataSection locales;
+    const QJSIntlDataView *view = qjs_intl_native_provider_view(provider);
+    size_t i;
+    assert(qjs_intl_data_section(view, QJS_INTL_DATA_LOCALE, &locales) == QJS_INTL_DATA_OK);
+    for (i = 0; i < tags->count; i++) {
+        QJSIntlNativeNumber *number = NULL;
+        QJSIntlBytes preferred;
+        QJSIntlDataSlice borrowed;
+        uint32_t row;
+        assert(qjs_intl_native_provider_locale_row(provider, tags->items[i], &row) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_default_numbering(provider, row, &preferred) == QJS_INTL_OK);
+        assert(qjs_intl_data_record_string(view, &locales, row, 0, &borrowed) == QJS_INTL_DATA_OK);
+        assert(tags->items[i].data != (const char *)borrowed.data);
+        assert(qjs_intl_native_provider_number_open(provider, tags->items[i], preferred,
+            &options, &number) == QJS_INTL_OK && number);
+        qjs_intl_native_number_close(number);
+    }
+    {
+        QJSIntlTagList other = {0};
+        assert(qjs_intl_locale_key_values(provider, QJS_INTL_RELATIVE_TIME_FORMAT,
+            bytes("de"), bytes("nu"), &other) == QJS_INTL_UNSUPPORTED);
+        assert(!other.count && !other.items);
+    }
 }
 
 /* A success proof is independent of allocator and provider lifetime.
@@ -824,7 +853,8 @@ static void available(void)
         Heap cold = {0}, warm_heap = {0};
         QJSIntlProvider *provider = create(&cold, "en-US", "UTC", QJS_INTL_OK);
         QJSIntlTagList tags = {0};
-        size_t before, cold_calls;
+        size_t before, cold_calls, admitted_count, j;
+        int english = 0, american = 0;
         cold.failure = cold.calls + 1;
         assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_NO_MEMORY);
         assert(!tags.count && !tags.items);
@@ -832,8 +862,14 @@ static void available(void)
         before = cold.calls;
         assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_OK);
         cold_calls = cold.calls - before;
-        assert(cold_calls > 3 && tags.count == 2);
-        equal(tags.items[0], "en"); equal(tags.items[1], "en-US");
+        admitted_count = tags.count;
+        assert(admitted_count >= 2 && cold_calls > admitted_count + 1);
+        for (j = 0; j < tags.count; j++) {
+            if (tags.items[j].length == 2 && !memcmp(tags.items[j].data, "en", 2)) english = 1;
+            if (tags.items[j].length == 5 && !memcmp(tags.items[j].data, "en-US", 5)) american = 1;
+        }
+        assert(english && american);
+        if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&cold, provider);
         provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
@@ -843,9 +879,10 @@ static void available(void)
         warm_heap.failure = 0;
         before = warm_heap.calls;
         assert(qjs_intl_locale_available(provider, services[i], &tags) == QJS_INTL_OK);
-        assert(warm_heap.calls - before == 3 && tags.count == 2);
-        printf("native service proof %u cold allocations=%zu warm allocations=3\n",
-               (unsigned int)services[i], cold_calls);
+        assert(warm_heap.calls - before == admitted_count + 1 && tags.count == admitted_count);
+        printf("native service proof %u cold allocations=%zu warm allocations=%zu\n",
+               (unsigned int)services[i], cold_calls, admitted_count + 1);
+        if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&warm_heap, provider);
     }

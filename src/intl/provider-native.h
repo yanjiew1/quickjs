@@ -37,4 +37,11 @@ int qjs_intl_native_provider_date_probe_success(const QJSIntlProvider *,
     uint32_t numbering, uint32_t calendar, int requested_cycle);
 QJSIntlStatus qjs_intl_native_provider_date_probe_success_store(QJSIntlProvider *,
     uint32_t numbering, uint32_t calendar, int requested_cycle);
+/* Exact candidate row lookup and inherited numeric default in the compiled
+ * metadata. Returned bytes are borrowed until provider destruction. Neither
+ * helper grants service admission from metadata identity alone. */
+QJSIntlStatus qjs_intl_native_provider_locale_row(const QJSIntlProvider *,
+    QJSIntlBytes, uint32_t *);
+QJSIntlStatus qjs_intl_native_provider_default_numbering(const QJSIntlProvider *,
+    uint32_t, QJSIntlBytes *);
 #endif

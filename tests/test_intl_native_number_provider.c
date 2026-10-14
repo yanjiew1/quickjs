@@ -135,7 +135,7 @@ static void allocation_sweep(const QJSIntlAllocator *a, Heap *h)
     }
     /* Repeated clearable zero output on failed locale/system/style admission. */
     n=(QJSIntlNativeNumber *)(uintptr_t)1;
-    assert(qjs_intl_native_provider_number_open(p,text("fr"),text("latn"),&o,&n)==QJS_INTL_UNSUPPORTED && !n);
+    assert(qjs_intl_native_provider_number_open(p,text("zz"),text("latn"),&o,&n)==QJS_INTL_UNSUPPORTED && !n);
     n=(QJSIntlNativeNumber *)(uintptr_t)1;
     assert(qjs_intl_native_provider_number_open(p,text("en"),text("unknown"),&o,&n)==QJS_INTL_UNSUPPORTED && !n);
     qjs_intl_provider_free(p);

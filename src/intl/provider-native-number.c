@@ -1,4 +1,4 @@
-/* NumberFormat data adapter, source-only development profile en/en-US.
+/* NumberFormat data adapter for individually admitted compiled locale rows.
  * Copyright (c) 2026 Yan-Jie Wang. No global state, ICU or second blob owner. */
 #include "provider-native-number.h"
 #include "native-data-validation-internal.h"
@@ -37,10 +37,9 @@ QJSIntlStatus qjs_intl_native_provider_number_open(QJSIntlProvider *p,
     *out = NULL;
     if (!p || !o || !numbering.data || !numbering.length)
         return QJS_INTL_INVALID_ARGUMENT;
-    if (!same(locale, "en") && !same(locale, "en-US")) return QJS_INTL_UNSUPPORTED;
     v = qjs_intl_native_provider_view(p);
     if (!v) return QJS_INTL_INVALID_ARGUMENT;
-    status = named_index(v, QJS_INTL_DATA_LOCALE, (QJSIntlBytes){"en",2}, &li);
+    status = qjs_intl_native_provider_locale_row(p, locale, &li);
     if (status != QJS_INTL_OK) return status;
     status = named_index(v, QJS_INTL_DATA_NUMBERING, numbering, &ni);
     if (status != QJS_INTL_OK) return status;
@@ -114,8 +113,8 @@ static int decimal_rows(const QJSIntlDataView *v, uint32_t locale, uint32_t numb
     return 1;
 }
 
-/* Admit only numbering systems whose actual en decimal rows are validated.
- * Default latn is explicit for this en profile, first in LocaleData. Numeric
+/* Admit only numbering systems with validated rows for this exact locale.
+ * Its inherited default comes first in LocaleData. Numeric
  * systems with missing source rows and algorithmic systems are excluded.
  * Results own separate NUL-terminated strings; no binary slices escape. */
 QJSIntlStatus qjs_intl_native_provider_number_key_values(QJSIntlProvider *p,
@@ -126,24 +125,27 @@ QJSIntlStatus qjs_intl_native_provider_number_key_values(QJSIntlProvider *p,
     QJSIntlDataSection s;
     QJSIntlDataSlice tag;
     QJSIntlStatus status;
-    uint32_t i, en;
+    uint32_t i, li;
+    QJSIntlBytes preferred;
     size_t pass, n;
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     memset(out, 0, sizeof(*out));
     if (!p) return QJS_INTL_INVALID_ARGUMENT;
-    if ((!same(locale,"en") && !same(locale,"en-US")) || !same(key,"nu"))
+    if (!same(key,"nu"))
         return QJS_INTL_UNSUPPORTED;
     v = qjs_intl_native_provider_view(p); a = qjs_intl_native_provider_allocator(p);
     if (qjs_intl_data_section(v, QJS_INTL_DATA_NUMBERING, &s) != QJS_INTL_DATA_OK)
         return QJS_INTL_DATA_ERROR;
+    status = qjs_intl_native_provider_locale_row(p, locale, &li);
+    if (status != QJS_INTL_OK) return status;
+    status = qjs_intl_native_provider_default_numbering(p, li, &preferred);
+    if (status != QJS_INTL_OK) return status;
     n = s.record_count;
     if (!n) return QJS_INTL_UNSUPPORTED;
     if (n > SIZE_MAX / sizeof(*out->items)) return QJS_INTL_OVERFLOW;
     out->items = a->malloc(a->opaque, n * sizeof(*out->items));
     if (!out->items) return QJS_INTL_NO_MEMORY;
     memset(out->items, 0, n * sizeof(*out->items));
-    status=named_index(v,QJS_INTL_DATA_LOCALE,(QJSIntlBytes){"en",2},&en);
-    if(status!=QJS_INTL_OK) goto fail;
     for (pass = 0; pass < 2; pass++) {
         for (i = 0; i < s.record_count; i++) {
             QJSIntlBytes candidate;
@@ -154,12 +156,13 @@ QJSIntlStatus qjs_intl_native_provider_number_key_values(QJSIntlProvider *p,
                 status = QJS_INTL_DATA_ERROR; goto fail;
             }
             candidate = (QJSIntlBytes){(const char *)tag.data, tag.length};
-            if (same(candidate,"latn") != (pass == 0)) continue;
+            if ((candidate.length == preferred.length &&
+                 !memcmp(candidate.data, preferred.data, candidate.length)) != (pass == 0)) continue;
             if(qjs_intl_data_record(&s,i,&system)!=QJS_INTL_DATA_OK) {
                 status=QJS_INTL_DATA_ERROR;goto fail;
             }
             if(system.data[8]!=10 || system.data[9]) continue;
-            admitted=decimal_rows(v,en,i);
+            admitted=decimal_rows(v,li,i);
             if(admitted<0) {status=QJS_INTL_DATA_ERROR;goto fail;}
             if(!admitted) continue;
             if (tag.length == SIZE_MAX) { status = QJS_INTL_OVERFLOW; goto fail; }
@@ -173,5 +176,19 @@ QJSIntlStatus qjs_intl_native_provider_number_key_values(QJSIntlProvider *p,
     return QJS_INTL_OK;
  fail:
     qjs_intl_tag_list_clear(p, out);
+    return status;
+}
+
+QJSIntlStatus qjs_intl_native_provider_number_locale_available(QJSIntlProvider *p, QJSIntlBytes locale, uint32_t row)
+{
+    QJSIntlNativeNumber *number = NULL;
+    QJSIntlNumberOptions options;
+    QJSIntlBytes numbering;
+    QJSIntlStatus status;
+    status = qjs_intl_native_provider_default_numbering(p, row, &numbering);
+    if (status != QJS_INTL_OK) return status;
+    default_options(&options);
+    status = qjs_intl_native_provider_number_open(p, locale, numbering, &options, &number);
+    qjs_intl_native_number_close(number);
     return status;
 }

@@ -42,7 +42,7 @@ eq(nf.format.name, '', 'bound format name');
 eq(nf.format.length, 1, 'bound format arity');
 eq(nf.format.call(null, 12), '12', 'bound receiver ignored');
 eq(Object.prototype.toString.call(nf), '[object Intl.NumberFormat]', 'tag');
-eq(Intl.NumberFormat.supportedLocalesOf(['fr','en-US','en-GB']).join(','), 'en-US,en-GB', 'supported locale matching');
+eq(Intl.NumberFormat.supportedLocalesOf(['zz','en-US','en-GB']).join(','), 'en-US,en-GB', 'supported locale matching');
 partsCheck(nf, -1234.5);
 let plain = new Intl.NumberFormat('en', {useGrouping:false, maximumFractionDigits:100});
 eq(plain.format(0.1), '0.1', 'Number shortest decimal');
@@ -187,3 +187,42 @@ eq((1234.5).toLocaleString('en'), '1,234.5', 'intrinsic Number method');
 eq((9007199254740993n).toLocaleString('en'), '9,007,199,254,740,993', 'intrinsic BigInt method');
 Intl.NumberFormat = saved;
 print('native NumberFormat integration checks passed');
+
+/* Released CLDR locale rows must remain distinct after service admission. */
+for (let locale of ['de-DE', 'fr', 'en-IN', 'ja', 'ko', 'zh-CN', 'zh-TW', 'fa']) {
+    eq(Intl.NumberFormat.supportedLocalesOf([locale])[0], locale, 'available ' + locale);
+}
+eq(new Intl.NumberFormat('de-DE').format(12345.5), '12.345,5', 'German separators');
+eq(new Intl.NumberFormat('en-IN').format(12345678.5), '1,23,45,678.5', 'Indian secondary grouping');
+eq(new Intl.NumberFormat('ja', {notation:'compact'}).format(12000), '1.2万', 'Japanese compact');
+eq(new Intl.NumberFormat('ko', {notation:'compact'}).format(12000), '1.2만', 'Korean compact');
+eq(new Intl.NumberFormat('zh-TW', {style:'unit',unit:'meter',unitDisplay:'long'}).format(2),
+   '2 公尺', 'Traditional Chinese source parent');
+eq(new Intl.NumberFormat('zh-CN', {style:'unit',unit:'meter',unitDisplay:'long'}).format(2),
+   '2米', 'Simplified Chinese source parent');
+let persian = new Intl.NumberFormat('fa', {useGrouping:false});
+eq(persian.resolvedOptions().numberingSystem, 'arabext', 'Persian default numbering');
+eq(persian.format(123), '۱۲۳', 'Persian digits');
+for (let locale of ['de', 'fa']) {
+    for (let currency of ['USD', 'ZZZ']) {
+        let arabic = new Intl.NumberFormat(locale + '-u-nu-arab', {
+            style:'currency',currency,currencyDisplay:'name',useGrouping:false,
+        });
+        let parts = partsCheck(arabic, 1);
+        eq(arabic.resolvedOptions().numberingSystem, 'arab', 'requested digits preserved');
+        eq(parts.find(p => p.type === 'integer').value, '١', 'Arabic currency-name integer');
+        ok(parts.some(p => p.type === 'currency'), 'localized or code currency name');
+        if (currency === 'ZZZ')
+            eq(parts.find(p => p.type === 'currency').value, 'ZZZ', 'unknown name falls back to code');
+    }
+}
+eq(new Intl.NumberFormat('de-u-nu-unknown').resolvedOptions().numberingSystem, 'latn',
+   'unsupported system retains actual locale default');
+eq(Intl.NumberFormat.supportedLocalesOf(['zz']).length, 0, 'unknown locale is not admitted');
+eq(new Intl.NumberFormat('zz').resolvedOptions().locale, new Intl.NumberFormat().resolvedOptions().locale,
+   'unknown locale uses configured default');
+for (let repeat = 0; repeat < 3; repeat++) {
+    for (let [locale, expected] of [['de','1.234,5'],['en','1,234.5'],['fr','1\u202f234,5']])
+        eq(partsCheck(new Intl.NumberFormat(locale), 1234.5).map(p => p.value).join(''), expected,
+           'alternate locale proof ' + locale);
+}

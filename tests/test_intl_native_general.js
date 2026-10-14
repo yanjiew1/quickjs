@@ -15,7 +15,7 @@ for (const name of ["Collator", "Segmenter", "NumberFormat", "DateTimeFormat",
         same(locale, "en-US");
         array(Intl.getCanonicalLocales(locale), [locale]);
     }
-    array(Intl[name].supportedLocalesOf(["en-US", "en", "fr-FR", "qzz"]),
+    array(Intl[name].supportedLocalesOf(["en-US", "en", "zz"]),
           ["en-US", "en"]);
 }
 same(new Intl.NumberFormat().resolvedOptions().numberingSystem, "latn");
