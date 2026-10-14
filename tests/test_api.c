@@ -3532,6 +3532,73 @@ static void test_iterator_public_api(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue flags_api_callback(JSContext *ctx, JSValueConst func_obj,
+                                  JSValueConst this_val, int argc,
+                                  JSValueConst *argv, int flags)
+{
+    JSValue result = JS_NewObject(ctx);
+
+    if (JS_IsException(result))
+        return result;
+    assert(JS_SetPropertyStr(ctx, result, "func", JS_DupValue(ctx, func_obj)) >= 0);
+    assert(JS_SetPropertyStr(ctx, result, "receiver", JS_DupValue(ctx, this_val)) >= 0);
+    assert(JS_SetPropertyStr(ctx, result, "construct",
+                            JS_NewBool(ctx, flags & JS_CALL_FLAG_CONSTRUCTOR)) >= 0);
+    assert(JS_SetPropertyStr(ctx, result, "argc", JS_NewInt32(ctx, argc)) >= 0);
+    assert(JS_SetPropertyStr(ctx, result, "arg", JS_DupValue(ctx, argv[0])) >= 0);
+    return result;
+}
+
+static void test_callback_flags_public_api(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSCFunctionType callback = { .constructor_or_func_flags = flags_api_callback };
+    JSValue func, alt, result, value, arg;
+    int i;
+
+    assert(JS_CFUNC_f_f == 6 && JS_CFUNC_iterator_next == 12);
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    func = JS_NewCFunction2(ctx, callback.generic, "EmbeddingCallback", 1,
+                           JS_CFUNC_constructor_or_func_flags, 0);
+    assert(JS_IsConstructor(ctx, func));
+    alt = utf16_api_eval(ctx, "(function AlternateTarget() {})");
+    arg = JS_NewInt32(ctx, 9);
+    for (i = 0; i < 3; i++) {
+        if (i == 0)
+            result = JS_Call(ctx, func, JS_NewInt32(ctx, 7), 0, NULL);
+        else if (i == 1)
+            result = JS_CallConstructor(ctx, func, 1, &arg);
+        else
+            result = JS_CallConstructor2(ctx, func, alt, 1, &arg);
+        assert(JS_IsObject(result));
+        value = JS_GetPropertyStr(ctx, result, "func");
+        assert(JS_StrictEq(ctx, value, func));
+        JS_FreeValue(ctx, value);
+        value = JS_GetPropertyStr(ctx, result, "receiver");
+        assert(JS_StrictEq(ctx, value, i == 0 ? JS_NewInt32(ctx, 7) :
+                          i == 1 ? func : alt));
+        JS_FreeValue(ctx, value);
+        value = JS_GetPropertyStr(ctx, result, "construct");
+        assert(JS_ToBool(ctx, value) == (i != 0));
+        JS_FreeValue(ctx, value);
+        value = JS_GetPropertyStr(ctx, result, "argc");
+        assert(JS_StrictEq(ctx, value, JS_NewInt32(ctx, i != 0)));
+        JS_FreeValue(ctx, value);
+        value = JS_GetPropertyStr(ctx, result, "arg");
+        assert(i == 0 ? JS_IsUndefined(value) : JS_StrictEq(ctx, value, arg));
+        JS_FreeValue(ctx, value);
+        JS_FreeValue(ctx, result);
+    }
+    JS_FreeValue(ctx, alt);
+    JS_FreeValue(ctx, func);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3549,6 +3616,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "callback-flags-public-api", test_callback_flags_public_api },
         { "iterator-public-api", test_iterator_public_api },
         { "date-value-public-api", test_date_value_public_api },
         { "object-construction-public-api", test_object_construction_public_api },
