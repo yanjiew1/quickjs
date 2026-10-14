@@ -121,6 +121,19 @@ for (let currencyDisplay of ['symbol','narrowSymbol','code','name']) {
         rangeCheck(n, 1, 2, false);
     }
 }
+/* Missing Arabic unit templates use English default-numbering templates,
+   while numeric digits and localized currency names keep their own data. */
+for (let currency of ['USD', 'ZZZ']) {
+    let arabicNames = new Intl.NumberFormat('en-u-nu-arab', {
+        style:'currency', currency, currencyDisplay:'name', useGrouping:false,
+    });
+    let parts = partsCheck(arabicNames, 1);
+    eq(arabicNames.resolvedOptions().numberingSystem, 'arab', 'currency-name requested digits');
+    eq(parts.find(p => p.type === 'integer').value, '١', 'currency-name Arabic integer');
+    eq(parts.find(p => p.type === 'currency').value,
+       currency === 'ZZZ' ? 'ZZZ' : 'US dollars', 'localized currency name or code');
+}
+
 let percent = new Intl.NumberFormat('en', {style:'percent'});
 eq(percent.format('0.12'), '12%', 'exact percent scaling');
 ok(partsCheck(percent, '0.12').some(p => p.type === 'percentSign'), 'percent part');

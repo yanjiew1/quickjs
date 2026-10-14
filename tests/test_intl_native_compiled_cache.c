@@ -548,10 +548,12 @@ static void snapshot_output(const SnapshotCase *subject)
     }
     assert(heap->live == live);
 }
-/* Number compares every constructor allocation boundary. Duration compares
- * bounded cold/middle/final boundaries; its existing integration sweeps still
- * exercise every allocation and retry. Repeating the entire generic Duration
- * sweep here would itself multiply whole-table scans by fourteen. */
+/* Both routes share the post-validation allocation/cleanup implementation.
+ * Compare their complete successful traces and output, then keep every Number
+ * fault/retry on that shared code. Whole validation is allocation-free; ordinary
+ * first/middle/final/sentinel probes cover the route without repeating the same
+ * full-table scan at every identical allocation boundary. Duration retains its
+ * bounded comparisons and existing independent integration sweeps. */
 static void snapshot_allocations(const SnapshotCase *subject)
 {
     Trial baseline = snapshot_trial(subject, 1, 0, NULL, 0), left, right;
@@ -574,23 +576,29 @@ static void snapshot_allocations(const SnapshotCase *subject)
     boundaries[3] = baseline.calls + 1;
     count = subject->is_duration ? 4 : baseline.calls + 1;
     for (i = 0; i < count; i++) {
+        int compare_ordinary;
         failure = subject->is_duration ? boundaries[i] : i + 1;
+        compare_ordinary = subject->is_duration || failure == boundaries[0] ||
+            failure == boundaries[1] || failure == boundaries[2] || failure == boundaries[3];
         left = snapshot_trial(subject, 1, failure, expected, baseline.calls);
-        right = snapshot_trial(subject, 0, failure, actual, baseline.calls);
         assert(left.status == (failure <= baseline.calls ?
             QJS_INTL_NO_MEMORY : QJS_INTL_OK));
-        assert(right.status == left.status && right.calls == left.calls);
-        assert(!memcmp(expected, actual, left.calls * sizeof(*expected)));
         assert(!memcmp(original, expected, left.calls * sizeof(*original)));
-        if (!subject->is_duration) assert(right.scans == 1);
-        /* Both fault routes must recover with the original complete request
-         * sequence. No failed snapshot changes the certificate or retry. */
+        if (compare_ordinary) {
+            right = snapshot_trial(subject, 0, failure, actual, baseline.calls);
+            assert(right.status == left.status && right.calls == left.calls);
+            assert(!memcmp(expected, actual, left.calls * sizeof(*expected)));
+            if (!subject->is_duration) assert(right.scans == 1);
+        }
+        /* Every fault still requires the original complete successful retry. */
         left = snapshot_trial(subject, 1, 0, expected, baseline.calls);
-        right = snapshot_trial(subject, 0, 0, actual, baseline.calls);
-        assert(left.status == QJS_INTL_OK && right.status == left.status);
-        assert(left.calls == baseline.calls && right.calls == left.calls);
-        assert(!memcmp(expected, actual, left.calls * sizeof(*expected)));
+        assert(left.status == QJS_INTL_OK && left.calls == baseline.calls);
         assert(!memcmp(original, expected, left.calls * sizeof(*original)));
+        if (compare_ordinary) {
+            right = snapshot_trial(subject, 0, 0, actual, baseline.calls);
+            assert(right.status == left.status && right.calls == left.calls);
+            assert(!memcmp(expected, actual, left.calls * sizeof(*expected)));
+        }
     }
     free(actual);
     free(expected);
