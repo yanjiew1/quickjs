@@ -1281,7 +1281,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
         {
             r = JS_TRUE;
             for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
-                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -1310,7 +1310,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_FIND:
         {
             for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
-                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -1343,7 +1343,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
     case JS_ITERATOR_HELPER_KIND_FOR_EACH:
         {
             for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
-                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -1367,7 +1367,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
         {
             r = JS_FALSE;
             for (idx = 0; /*empty*/; idx = js_iterator_increment_counter(idx)) {
-                item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+                item = JS_IteratorNext(ctx, this_val, method, &done);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (done)
@@ -1439,7 +1439,7 @@ static JSValue js_iterator_proto_includes(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(method))
         return JS_EXCEPTION;
     for (;;) {
-        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, this_val, method, &done);
         if (JS_IsException(item)) {
             result = JS_EXCEPTION;
             break;
@@ -1492,7 +1492,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
         acc = JS_DupValue(ctx, argv[1]);
         idx = 0;
     } else {
-        acc = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+        acc = JS_IteratorNext(ctx, this_val, method, &done);
         if (JS_IsException(acc))
             goto exception_no_close;
         if (done) {
@@ -1502,7 +1502,7 @@ static JSValue js_iterator_proto_reduce(JSContext *ctx, JSValueConst this_val,
         idx = 1;
     }
     for (/* empty */; /*empty*/; idx = js_iterator_increment_counter(idx)) {
-        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, this_val, method, &done);
         if (JS_IsException(item))
             goto exception_no_close;
         if (done)
@@ -1566,7 +1566,7 @@ static JSValue js_iterator_proto_join(JSContext *ctx, JSValueConst this_val,
     if (string_buffer_init(ctx, b, 0))
         goto fail;
     for (;;) {
-        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, this_val, method, &done);
         if (JS_IsException(item))
             goto fail;
         if (done)
@@ -1627,7 +1627,7 @@ static JSValue js_iterator_proto_toArray(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(result))
         goto exception;
     for (idx = 0; /*empty*/; idx++) {
-        item = JS_IteratorNext(ctx, this_val, method, 0, NULL, &done);
+        item = JS_IteratorNext(ctx, this_val, method, &done);
         if (JS_IsException(item))
             goto exception;
         if (done)
@@ -1826,7 +1826,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 break;
             }
             while (buffer->count < buffer->size) {
-                item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (*pdone) {
@@ -1861,7 +1861,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 break;
             }
             for (;;) {
-                item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (*pdone) {
@@ -1907,7 +1907,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             while (it->count != 0) {
                 if (it->count > 0)
                     it->count--;
-                item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 JS_FreeValue(ctx, item);
@@ -1917,7 +1917,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                 }
             }
 
-            item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+            item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
             if (JS_IsException(item))
                 goto fail_no_close;
             ret = item;
@@ -1928,7 +1928,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             JSValue item, selected, index_val;
             JSValueConst args[2];
             for(;;) {
-                item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 if (*pdone) {
@@ -1959,7 +1959,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             JSValueConst args[2];
             for(;;) {
                 if (JS_IsUndefined(it->inner)) {
-                    item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                    item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
                     if (JS_IsException(item))
                         goto fail_no_close;
                     if (*pdone) {
@@ -2003,7 +2003,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     it->inner_next = method;
                 }
 
-                item = JS_IteratorNext(ctx, it->inner, it->inner_next, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->inner, it->inner_next, pdone);
                 if (JS_IsException(item)) {
                 inner_fail:
                     JS_FreeValue(ctx, it->inner);
@@ -2028,7 +2028,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
         {
             JSValue item, index_val;
             JSValueConst args[2];
-            item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+            item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
             if (JS_IsException(item))
                 goto fail_no_close;
             if (*pdone) {
@@ -2052,7 +2052,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
             if (it->count != 0) {
                 if (it->count > 0)
                     it->count--;
-                item = JS_IteratorNext(ctx, it->obj, it->next, 0, NULL, pdone);
+                item = JS_IteratorNext(ctx, it->obj, it->next, pdone);
                 if (JS_IsException(item))
                     goto fail_no_close;
                 ret = item;
