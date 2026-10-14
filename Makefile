@@ -1148,6 +1148,10 @@ ifeq ($(CONFIG_INTL)$(CONFIG_ICU),yy)
 C_TESTS+=tests/test_intl_oom$(EXE)
 endif
 
+C_TESTS+=tests/test_unicode_provider$(EXE)
+
+C_TESTS+=tests/test_unicode_initialization$(EXE)
+
 # Compile test binaries before running the repository test groups.
 .PHONY: test-binaries
 test-binaries: $(C_TESTS) regexp_test$(EXE) qjs$(EXE) run-test262$(EXE)
@@ -1157,6 +1161,8 @@ endif
 
 .PHONY: test-c
 test-c: $(C_TESTS)
+	$(WINE) ./tests/test_unicode_initialization$(EXE)
+	$(WINE) ./tests/test_unicode_provider$(EXE)
 ifeq ($(CONFIG_INTL)$(CONFIG_ICU),yy)
 	$(WINE) ./tests/test_intl_oom$(EXE)
 endif
@@ -2201,3 +2207,18 @@ tests/test_intl_services_api$(EXE): $(OBJDIR)/tests/test_intl_services_api.o lib
 
 tests/test_intl_oom$(EXE): $(OBJDIR)/tests/test_intl_oom.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_unicode_provider$(EXE): $(OBJDIR)/tests/test_unicode_provider.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+tests/test_unicode_initialization$(EXE): $(OBJDIR)/tests/test_unicode_initialization.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS) $(if $(filter y,$(CONFIG_ICU)),-Wl$(comma)--wrap=$(ICU_INIT_WRAP_SYMBOL))
+
+comma:=,
+ICU_INIT_WRAP_SYMBOL?=u_init_$(shell $(CC) $(ICU_CFLAGS) -dM -E -include unicode/uvernum.h -x c /dev/null | sed -n 's/^\#define U_ICU_VERSION_MAJOR_NUM //p')
+$(OBJDIR)/tests/test_unicode_provider.o: $(UNICODE_PROVIDER_INPUTS)
+# Full scalar and binary-property ICU oracles are explicit optional modes.
+.PHONY: test-unicode-provider-exhaustive
+test-unicode-provider-exhaustive: tests/test_unicode_provider$(EXE)
+	$(WINE) ./tests/test_unicode_provider$(EXE) --exhaustive
+	$(WINE) ./tests/test_unicode_provider$(EXE) --properties

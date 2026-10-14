@@ -289,3 +289,9 @@ __pycache__/
 
 /tests/test_intl_oom
 /tests/test_intl_oom.exe
+
+/tests/test_unicode_provider
+/tests/test_unicode_provider.exe
+
+/tests/test_unicode_initialization
+/tests/test_unicode_initialization.exe
