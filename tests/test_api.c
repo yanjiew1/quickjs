@@ -3242,6 +3242,74 @@ static void test_async_iterator_disposal_raw_context(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_conversion_public_api(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue object, primitive, result, method, error;
+    const char *text;
+    int value;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    primitive = JS_NewInt32(ctx, 7);
+    object = JS_ToObject(ctx, primitive);
+    assert(JS_IsObject(object));
+    method = JS_GetPropertyStr(ctx, object, "valueOf");
+    result = JS_Call(ctx, method, object, 0, NULL);
+    assert(JS_StrictEq(ctx, result, primitive));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, method);
+    result = JS_ToObject(ctx, object);
+    assert(JS_StrictEq(ctx, result, object));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, object);
+    result = JS_ToObject(ctx, JS_NULL);
+    assert(JS_IsException(result));
+    error = JS_GetException(ctx);
+    JS_FreeValue(ctx, error);
+
+    object = utf16_api_eval(ctx,
+        "({ [Symbol.toPrimitive](hint) { "
+        "if (hint === 'string') return 'string-hint'; "
+        "if (hint === 'number') return 41; return 42; } })");
+    result = JS_ToPrimitive(ctx, object, JS_HINT_STRING);
+    text = JS_ToCString(ctx, result);
+    assert(text && !strcmp(text, "string-hint"));
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, result);
+    result = JS_ToPrimitive(ctx, object, JS_HINT_NUMBER);
+    assert(JS_ToInt32(ctx, &value, result) == 0 && value == 41);
+    JS_FreeValue(ctx, result);
+    result = JS_ToPrimitive(ctx, object, JS_HINT_NONE);
+    assert(JS_ToInt32(ctx, &value, result) == 0 && value == 42);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, object);
+    object = utf16_api_eval(ctx, "({ [Symbol.toPrimitive]() { throw 17; } })");
+    result = JS_ToPrimitive(ctx, object, JS_HINT_STRING);
+    assert(JS_IsException(result));
+    error = JS_GetException(ctx);
+    assert(JS_ToInt32(ctx, &value, error) == 0 && value == 17);
+    JS_FreeValue(ctx, error);
+    assert(JS_ToInt32Sat(ctx, &value, object) < 0);
+    error = JS_GetException(ctx);
+    assert(JS_ToInt32(ctx, &value, error) == 0 && value == 17);
+    JS_FreeValue(ctx, error);
+    JS_FreeValue(ctx, object);
+
+    assert(JS_ToInt32Sat(ctx, &value, JS_NewFloat64(ctx, 1e300)) == 0);
+    assert(value == INT32_MAX);
+    assert(JS_ToInt32Sat(ctx, &value, JS_NewFloat64(ctx, -1e300)) == 0);
+    assert(value == INT32_MIN);
+    assert(JS_ToInt32Sat(ctx, &value, JS_NAN) == 0 && value == 0);
+    assert(JS_ToInt32Sat(ctx, &value, JS_NewFloat64(ctx, -3.75)) == 0);
+    assert(value == -3);
+    assert(!JS_HasException(ctx));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
@@ -3259,6 +3327,7 @@ int main(int argc, char **argv)
         { "module-attribute-cycles", test_module_attribute_cycles },
         { "module-attribute-identity", test_module_attribute_identity },
         { "module-attribute-bytecode", test_module_attribute_bytecode },
+        { "conversion-public-api", test_conversion_public_api },
         { "utf16-public-api", test_utf16_public_api },
         { "utf16-public-api-oom", test_utf16_public_api_oom },
         { "well-known-symbol-api", test_well_known_symbol_api },

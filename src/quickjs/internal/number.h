@@ -169,7 +169,6 @@ int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val);
 
 __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
 
-int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 
 __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
                                      JSValue val, BOOL is_array_ctor);
