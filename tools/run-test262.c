@@ -395,16 +395,36 @@ int namelist_cmp(const char *a, const char *b)
         int ca = (unsigned char)*a++;
         int cb = (unsigned char)*b++;
         if (isdigit(ca) && isdigit(cb)) {
-            int na = ca - '0';
-            int nb = cb - '0';
-            while (isdigit(ca = (unsigned char)*a++))
-                na = na * 10 + ca - '0';
-            while (isdigit(cb = (unsigned char)*b++))
-                nb = nb * 10 + cb - '0';
+            const char *a0 = a - 1, *b0 = b - 1;
+            const char *ae = a, *be = b, *an = a0, *bn = b0;
+            size_t na, nb;
+            int cmp;
+            while (isdigit((unsigned char)*ae))
+                ae++;
+            while (isdigit((unsigned char)*be))
+                be++;
+            while (an < ae && *an == '0')
+                an++;
+            while (bn < be && *bn == '0')
+                bn++;
+            na = ae - an;
+            nb = be - bn;
             if (na < nb)
                 return -1;
             if (na > nb)
                 return +1;
+            cmp = memcmp(an, bn, na);
+            if (cmp)
+                return cmp;
+            /* Equal numerical values do not make distinct filenames equal.
+               Keep natural ordering without overflowing on long digit runs. */
+            if (ae - a0 < be - b0)
+                return -1;
+            if (ae - a0 > be - b0)
+                return +1;
+            a = ae;
+            b = be;
+            continue;
         }
         if (ca < cb)
             return -1;

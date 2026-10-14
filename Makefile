@@ -1355,6 +1355,7 @@ test-regexp: regexp_test$(EXE)
 .PHONY: test-run-test262
 test-run-test262: run-test262$(EXE)
 	sh tests/test_run_test262.sh "$(WINE)" "./run-test262$(EXE)"
+	$(PYTHON) tests/test_test262_selection.py "$(WINE)" "./run-test262$(EXE)"
 
 .PHONY: test-test262-timings
 test-test262-timings:
