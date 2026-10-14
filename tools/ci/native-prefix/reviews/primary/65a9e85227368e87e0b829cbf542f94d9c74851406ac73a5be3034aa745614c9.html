@@ -1,0 +1,107 @@
+<emu-clause id="sec-intl.pluralrules.prototype.resolvedoptions">
+      <h1>Intl.PluralRules.prototype.resolvedOptions ( )</h1>
+
+      <p>This function provides access to the locale and options computed during initialization of the object.</p>
+
+      <emu-alg>
+        1. Let _pr_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_pr_, [[InitializedPluralRules]]).
+        1. Let _options_ be OrdinaryObjectCreate(%Object.prototype%).
+        1. Let _pluralCategories_ be a List of Strings containing all possible results of <emu-xref href="#sec-pluralruleselect">PluralRuleSelect</emu-xref> for the selected locale _pr_.[[Locale]], sorted according to the following order: *"zero"*, *"one"*, *"two"*, *"few"*, *"many"*, *"other"*.
+        1. For each row of <emu-xref href="#table-pluralrules-resolvedoptions-properties"></emu-xref>, except the header row, in table order, do
+          1. Let _propertyKey_ be the Property value of the current row.
+          1. If _propertyKey_ is *"pluralCategories"*, then
+            1. Let _value_ be CreateArrayFromList(_pluralCategories_).
+          1. Else,
+            1. Let _value_ be the value of _pr_'s internal slot whose name is the Internal Slot value of the current row.
+          1. If _value_ is not *undefined*, then
+            1. If there is a Conversion value in the current row, then
+              1. Assert: The Conversion value of the current row is ~number~.
+              1. Set _value_ to 𝔽(_value_).
+            1. Perform ! CreateDataPropertyOrThrow(_options_, _propertyKey_, _value_).
+        1. Return _options_.
+      </emu-alg>
+
+      <emu-table id="table-pluralrules-resolvedoptions-properties">
+        <emu-caption>Resolved Options of PluralRules Instances</emu-caption>
+        <table class="real-table">
+          <thead>
+            <tr>
+              <th>Internal Slot</th>
+              <th>Property</th>
+              <th>Conversion</th>
+            </tr>
+          </thead>
+          <tr>
+            <td>[[Locale]]</td>
+            <td>*"locale"*</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>[[Type]]</td>
+            <td>*"type"*</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>[[Notation]]</td>
+            <td>*"notation"*</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>[[CompactDisplay]]</td>
+            <td>*"compactDisplay"*</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>[[MinimumIntegerDigits]]</td>
+            <td>*"minimumIntegerDigits"*</td>
+            <td>~number~</td>
+          </tr>
+          <tr>
+            <td>[[MinimumFractionDigits]]</td>
+            <td>*"minimumFractionDigits"*</td>
+            <td>~number~</td>
+          </tr>
+          <tr>
+            <td>[[MaximumFractionDigits]]</td>
+            <td>*"maximumFractionDigits"*</td>
+            <td>~number~</td>
+          </tr>
+          <tr>
+            <td>[[MinimumSignificantDigits]]</td>
+            <td>*"minimumSignificantDigits"*</td>
+            <td>~number~</td>
+          </tr>
+          <tr>
+            <td>[[MaximumSignificantDigits]]</td>
+            <td>*"maximumSignificantDigits"*</td>
+            <td>~number~</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>*"pluralCategories"*</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>[[RoundingIncrement]]</td>
+            <td>*"roundingIncrement"*</td>
+            <td>~number~</td>
+          </tr>
+          <tr>
+            <td>[[RoundingMode]]</td>
+            <td>*"roundingMode"*</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>[[ComputedRoundingPriority]]</td>
+            <td>*"roundingPriority"*</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>[[TrailingZeroDisplay]]</td>
+            <td>*"trailingZeroDisplay"*</td>
+            <td></td>
+          </tr>
+        </table>
+      </emu-table>
+    </emu-clause>

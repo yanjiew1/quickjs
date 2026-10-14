@@ -1,0 +1,18 @@
+    <emu-clause id="sec-getlocalescript" type="abstract operation">
+      <h1>
+        GetLocaleScript (
+          _locale_: a String,
+        ): a String or *undefined*
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. Let _baseName_ be GetLocaleBaseName(_locale_).
+        1. NOTE: A <code>unicode_script_subtag</code> subtag is only valid immediately after an initial <code>unicode_language_subtag</code> subtag. In that position, it cannot be confused with any other valid subtag because all their productions are disjoint.
+        1. Let _subtags_ be StringSplitToList(_baseName_, *"-"*).
+        1. Assert: _subtags_[0] is matched by the <code>unicode_language_subtag</code> Unicode locale nonterminal.
+        1. If _subtags_ has at least 2 elements and _subtags_[1] is matched by the <code>unicode_script_subtag</code> Unicode locale nonterminal, return _subtags_[1].
+        1. Return *undefined*.
+      </emu-alg>
+    </emu-clause>
+

@@ -1,0 +1,38 @@
+<emu-clause id="sec-calendarisotodate" type="abstract operation">
+      <h1>
+        CalendarISOToDate (
+          _calendar_: a known calendar type,
+          _isoDate_: an ISO Date Record,
+        ): a Calendar Date Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It finds the date corresponding to _isoDate_ in the context of the calendar identified by _calendar_ and returns a Calendar Date Record representing that calendar date, with its fields filled in according to their descriptions.</dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, then
+          1. If InLeapYear(TimeFromYear(_isoDate_.[[Year]])) = 1, then
+            1. Let _daysInYear_ be 366.
+            1. Let _inLeapYear_ be *true*.
+          1. Else,
+            1. Let _daysInYear_ be 365.
+            1. Let _inLeapYear_ be *false*.
+          1. Return the Calendar Date Record {
+              [[Era]]: ~empty~,
+              [[EraYear]]: ~empty~,
+              [[Year]]: _isoDate_.[[Year]],
+              [[Month]]: _isoDate_.[[Month]],
+              [[MonthCode]]: CreateMonthCode(_isoDate_.[[Month]], *false*),
+              [[Day]]: _isoDate_.[[Day]],
+              [[DayOfWeek]]: ISODayOfWeek(_isoDate_),
+              [[DayOfYear]]: ISODayOfYear(_isoDate_),
+              [[WeekOfYear]]: ISOWeekOfYear(_isoDate_),
+              [[DaysInWeek]]: 7,
+              [[DaysInMonth]]: ISODaysInMonth(_isoDate_.[[Year]], _isoDate_.[[Month]]),
+              [[DaysInYear]]: _daysInYear_,
+              [[MonthsInYear]]: 12,
+              [[InLeapYear]]: _inLeapYear_
+            }.
+        1. Return NonISOCalendarISOToDate(_calendar_, _isoDate_).
+      </emu-alg>
+    </emu-clause>

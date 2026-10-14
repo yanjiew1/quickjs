@@ -1,0 +1,24 @@
+<emu-clause id="sec-nonisocalendardatetoiso" type="implementation-defined abstract operation">
+      <h1>
+        NonISOCalendarDateToISO (
+          _calendar_: a known calendar type but not *"iso8601"*,
+          _fields_: a Calendar Fields Record,
+          _overflow_: *"constrain"* or *"reject"*,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs implementation-defined processing to return an ISO Date Record representing a date in the ISO 8601 calendar that, when converted to _calendar_, corresponds to the date of _fields_.
+          The _fields_ argument represents a date in the calendar identified by _calendar_, though it may include additional fields.
+          If an ISO Date Record cannot be created from _fields_ because its date does not exist, the values from _fields_ are clamped to their respective valid ranges if _overflow_ is *"constrain"*; if it is *"reject"*, an exception is thrown.
+        </dd>
+      </dl>
+      <p><emu-not-ref>Clamping</emu-not-ref> a nonexistent date to the correct range when _overflow_ is *"constrain"* is a behaviour specific to each calendar, but all calendars follow this guideline:</p>
+      <ul>
+        <li>Pick the closest day in the same month. If there are two equally-close dates in that month, pick the later one.</li>
+        <li>If the month is a leap month that doesn't exist in the year, pick another date according to the cultural conventions of that calendar's users. Usually this will result in the same day in the month before or after where that month would normally fall in a leap year.</li>
+        <li>Otherwise, pick the closest date that is still in the same year. If there are two equally-close dates in that year, pick the later one.</li>
+        <li>If the entire year doesn't exist, pick the closest date in a different year. If there are two equally-close dates, pick the later one.</li>
+      </ul>
+    </emu-clause>

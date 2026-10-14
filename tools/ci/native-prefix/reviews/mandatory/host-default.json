@@ -1,0 +1,74 @@
+{
+  "actual_H3_host_environment_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/oracle-exact-witness.command.json",
+    "sha256": "6e90658776970d632702378b52ea8cc46a890d4c5e267ddf2f79d08f442a0380"
+  },
+  "actual_H3_profile_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/effective-profile.json",
+    "sha256": "bdb1501fe5a869c47fe5d8b52134500c3b9909fe51fd3f153874e56496a9cf74"
+  },
+  "approval_created": true,
+  "baseline_sha256": "7a2ca3c319006a81ffae6378bfe48d163d7e4d3322848f77f2007180dfeb5a70",
+  "bounded_root_review_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-approved-assets-root-20261012-v1/ROOT-BOUNDED-REVIEW-APPROVAL.json",
+    "sha256": "5e53ff07bb5f9f9e5aba7202ca223f6bac9c70fbb987012ef169bd571a55fb08"
+  },
+  "conditional_source_duty_boundaries": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-reviews-actionable-assembly-source-preparation-20261012-v2/SOURCE-ONLY-DUTY-BOUNDARIES.json",
+    "sha256": "89ceef6d420bafb999daa19ca843e97cab47be6698b18f17f2d8a29308a8642a"
+  },
+  "config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+  "conformance_accepted": false,
+  "effective_profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+  "failure_waiver": false,
+  "final_current_capture_binding": {
+    "artifact_download_tool_closure": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/ROOT-TOOL-CLOSURE.json",
+      "sha256": "e10d6bdf9420beaad36185ccdb7a6a153b2be8b541b050cec21bf5db49e1e198"
+    },
+    "capture_summary": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/CAPTURE-SUMMARY.json",
+      "sha256": "40122f547214f2c5ca66fa44fff5b1cf9e353a384f28765aa7b210c253520ba8"
+    },
+    "complete_readback": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-h3-fresh-complete-capture-independent-source-readback-20261012-v2/REPORT.json",
+      "sha256": "f3ca1da65c4e8090bb0395be46ff10e7c7eb5e0d05aabd05895c7fdab5e842cf"
+    },
+    "execution_identity": {
+      "actual_production_source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+      "binding_sha256": "f4da692425276c2936eb1640efd4077ecf2506a8b675413498a80fbcc205ecf6",
+      "candidate_sha": "4beac5cf962eb4863cc9025293f65e323f955ad7",
+      "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+      "run_attempt": "1",
+      "run_id": "38178170735",
+      "source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d"
+    },
+    "manifest": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/GENERATED-MANIFEST.json",
+      "sha256": "1df17dac972c44e1a55dec43b465d27d1d300fc0f6364e6e61c093ec108474c3"
+    },
+    "root_capture_or_semantic_approval_created": false
+  },
+  "fixture_source_map_sha256": "808f46746cde3b35db59c83dc7ecb9b91df7970bcae65572ffd4ee126547896d",
+  "hosted_accepted": false,
+  "id": "host-default-H1",
+  "independently_reviewed_embedding_policy": {
+    "actual_effective_DefaultLocale": "en-US",
+    "ambient_LANG": "C.UTF-8",
+    "ambient_LC_ALL": "C.UTF-8",
+    "ambient_TZ": "UTC",
+    "default_locale_is_explicit_embedding_policy": true,
+    "japanese_fallback_h12_matches_this_policy": true,
+    "source_config_locale": "en-US"
+  },
+  "mandatory_semantics_satisfied": true,
+  "production_source_map_sha256": null,
+  "requires_root_approval": true,
+  "root_semantic_approval_created": true,
+  "runtime_accepted": false,
+  "schema": "native-static-mandatory-review-v1",
+  "source_evidence_binding": {
+    "path": "tools/ci/native-prefix/reviews/evidence/mandatory-published-readback.json",
+    "sha256": "a124fec1e1d72f15ebce3d37b7873f238fe76abaf88a6e08df09ccaf3c0f5d54"
+  }
+}

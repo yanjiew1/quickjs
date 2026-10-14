@@ -1,0 +1,245 @@
+{
+  "US_preferred_hour_record": {
+    "allowed": "h hb H hB",
+    "preferred": "h",
+    "regions": "AG AU BB BM BS CA DM FJ FM GD GM GU GY JM KI KN KY LC LR MH MP MW NZ SB SG SL SS SZ TC TT UM US VC VG VI ZM en_001 en_HK en_MY"
+  },
+  "actual_capture_identity": {
+    "actual_production_source_map_sha256": "c9b11fad8ad0636b054695c05ef3a737e458b2a6c65f425301381f247e360580",
+    "binding_sha256": "76df22d4baad9253d5c3de7c8a0c620df2f8cb3cc17798ccfaed6afa422ecd2c",
+    "candidate_sha": "a3c6b06fbc79efbe1f23e40ce17adf8d406dd230",
+    "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+    "run_attempt": "1",
+    "run_id": "38172911835",
+    "source_map_sha256": "c9b11fad8ad0636b054695c05ef3a737e458b2a6c65f425301381f247e360580"
+  },
+  "actual_receipt_matches_independent_expected": true,
+  "approved": false,
+  "command_receipt_path": "/srv/data/work/quickjs-tmp/quickjs-final-v9-v5-hosted-artifact-root-20261012-v1/artifact/oracle-exact-witness.command.json",
+  "conformance_accepted": false,
+  "expected_hanidec": {
+    "codePoints": [
+      "U+3007",
+      "U+4E8C",
+      "U+003A",
+      "U+4E09",
+      "U+4E94",
+      "U+003A",
+      "U+3007",
+      "U+516D",
+      "U+202F",
+      "U+0041",
+      "U+004D"
+    ],
+    "formatted": "\u3007\u4e8c:\u4e09\u4e94:\u3007\u516d\u202fAM",
+    "officialAsciiSpaceIncludes": false,
+    "parts": [
+      {
+        "type": "hour",
+        "value": "\u3007\u4e8c"
+      },
+      {
+        "type": "literal",
+        "value": ":"
+      },
+      {
+        "type": "minute",
+        "value": "\u4e09\u4e94"
+      },
+      {
+        "type": "literal",
+        "value": ":"
+      },
+      {
+        "type": "second",
+        "value": "\u3007\u516d"
+      },
+      {
+        "type": "literal",
+        "value": "\u202f"
+      },
+      {
+        "type": "dayPeriod",
+        "value": "AM"
+      }
+    ],
+    "resolvedOptions": {
+      "calendar": "gregory",
+      "hour": "2-digit",
+      "hour12": true,
+      "hourCycle": "h12",
+      "locale": "en-US-u-nu-hanidec",
+      "minute": "2-digit",
+      "numberingSystem": "hanidec",
+      "second": "2-digit",
+      "timeZone": "UTC"
+    }
+  },
+  "expected_japanese_request": {
+    "calendar": "gregory",
+    "hour": "numeric",
+    "hour12": true,
+    "hourCycle": "h12",
+    "locale": "en-US",
+    "numberingSystem": "latn",
+    "timeZone": "UTC"
+  },
+  "hanidec_digits_from_primary_CLDR": "\u3007\u4e00\u4e8c\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d",
+  "input_epoch_milliseconds": 1704076506789,
+  "normative_japanese_hour12_cycles": [
+    "h11",
+    "h12"
+  ],
+  "official_raw_failures": {
+    "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js": {
+      "baseline_matched_inferred_paths": [],
+      "baseline_references_are_fresh_runtime_observations": false,
+      "blocking_tool_records": [],
+      "command_sha256": "f1011f5b3b5496febf3e2387a7fc47bbc89ec0d36bed2ef3abe842b7882faacb",
+      "conformance_accepted": false,
+      "counters": {
+        "changed": 0,
+        "excluded": 0,
+        "executed_source_count": 1,
+        "failed_source_count": 1,
+        "fixed": 0,
+        "new": 1,
+        "skipped": 0
+      },
+      "expected_event_returncode": 1,
+      "failure_waiver": false,
+      "hosted_accepted": false,
+      "input_identity": {
+        "actual_full_tracked_source_map_sha256": "c9b11fad8ad0636b054695c05ef3a737e458b2a6c65f425301381f247e360580",
+        "actual_initialized_checkout_commit": "a3c6b06fbc79efbe1f23e40ce17adf8d406dd230",
+        "baseline_sha256": "7a2ca3c319006a81ffae6378bfe48d163d7e4d3322848f77f2007180dfeb5a70",
+        "config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+        "fixture_source_map_sha256": "808f46746cde3b35db59c83dc7ecb9b91df7970bcae65572ffd4ee126547896d",
+        "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+        "production_source_map_sha256": "c9b11fad8ad0636b054695c05ef3a737e458b2a6c65f425301381f247e360580",
+        "qjs_sha256": "6185d0c52eab3af4d49a76f2645aad245e05367157b0b94b06e1aff0dd193632",
+        "runner_sha256": "5be5e39fbec10719f7efa2b0c8d8a8792f088ea58944240d3f9f9f45d87bf1c0"
+      },
+      "observed_failure_paths": [
+        "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js"
+      ],
+      "parser_absolute_path_prefix_only": "/home/runner/work/quickjs/quickjs/",
+      "raw_collection_complete": true,
+      "raw_observations": [
+        {
+          "line": 30,
+          "literal": "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js:30: unexpected error: Test262Error: en-US-u-nu-hanidec: display all time units in 2-digit Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+          "path": "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js",
+          "raw_log_line": 2,
+          "signature": "unexpected error: Test262Error: en-US-u-nu-hanidec: display all time units in 2-digit Expected SameValue(\u00abfalse\u00bb, \u00abtrue\u00bb) to be true",
+          "status": "observed-failure",
+          "stream": "stdout",
+          "strict": false
+        }
+      ],
+      "raw_parser_complete": true,
+      "raw_runner_returncode": 1,
+      "reconciliation_errors": [],
+      "result_records": [
+        {
+          "literal": "Result: 1/1 error, 1 new",
+          "raw_log_line": 1,
+          "stream": "stderr"
+        }
+      ],
+      "runtime_accepted": false,
+      "sealed_inputs_unchanged": true,
+      "stderr_sha256": "d8a07587672579284add2fca3e99507f3fba246db24762d91b28e4c818294beb",
+      "stdout_sha256": "54a54da8da7779fe093cc620544770ef680ceff9715b91002f6221232a4263e6",
+      "unknown_feature_records": [],
+      "variant_observation_multisets": {
+        "failure": [
+          {
+            "occurrences": 1,
+            "path": "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js",
+            "strict": false
+          }
+        ],
+        "fixed": [],
+        "previous": []
+      }
+    },
+    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js": {
+      "baseline_matched_inferred_paths": [],
+      "baseline_references_are_fresh_runtime_observations": false,
+      "blocking_tool_records": [],
+      "command_sha256": "1457fabc1c3b2dcdce7efd3c32d38948d4b4f8118b2bf4503d6c294ef07ba600",
+      "conformance_accepted": false,
+      "counters": {
+        "changed": 0,
+        "excluded": 0,
+        "executed_source_count": 1,
+        "failed_source_count": 1,
+        "fixed": 0,
+        "new": 1,
+        "skipped": 0
+      },
+      "expected_event_returncode": 1,
+      "failure_waiver": false,
+      "hosted_accepted": false,
+      "input_identity": {
+        "actual_full_tracked_source_map_sha256": "c9b11fad8ad0636b054695c05ef3a737e458b2a6c65f425301381f247e360580",
+        "actual_initialized_checkout_commit": "a3c6b06fbc79efbe1f23e40ce17adf8d406dd230",
+        "baseline_sha256": "7a2ca3c319006a81ffae6378bfe48d163d7e4d3322848f77f2007180dfeb5a70",
+        "config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+        "fixture_source_map_sha256": "808f46746cde3b35db59c83dc7ecb9b91df7970bcae65572ffd4ee126547896d",
+        "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+        "production_source_map_sha256": "c9b11fad8ad0636b054695c05ef3a737e458b2a6c65f425301381f247e360580",
+        "qjs_sha256": "6185d0c52eab3af4d49a76f2645aad245e05367157b0b94b06e1aff0dd193632",
+        "runner_sha256": "5be5e39fbec10719f7efa2b0c8d8a8792f088ea58944240d3f9f9f45d87bf1c0"
+      },
+      "observed_failure_paths": [
+        "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js"
+      ],
+      "parser_absolute_path_prefix_only": "/home/runner/work/quickjs/quickjs/",
+      "raw_collection_complete": true,
+      "raw_observations": [
+        {
+          "line": 30,
+          "literal": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js:30: unexpected error: Test262Error: Expected SameValue(\u00ab\"h12\"\u00bb, \u00ab\"h11\"\u00bb) to be true",
+          "path": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
+          "raw_log_line": 2,
+          "signature": "unexpected error: Test262Error: Expected SameValue(\u00ab\"h12\"\u00bb, \u00ab\"h11\"\u00bb) to be true",
+          "status": "observed-failure",
+          "stream": "stdout",
+          "strict": false
+        }
+      ],
+      "raw_parser_complete": true,
+      "raw_runner_returncode": 1,
+      "reconciliation_errors": [],
+      "result_records": [
+        {
+          "literal": "Result: 1/1 error, 1 new",
+          "raw_log_line": 1,
+          "stream": "stderr"
+        }
+      ],
+      "runtime_accepted": false,
+      "sealed_inputs_unchanged": true,
+      "stderr_sha256": "d8a07587672579284add2fca3e99507f3fba246db24762d91b28e4c818294beb",
+      "stdout_sha256": "583d747c5042872c2c7f0de33e51a63f38fddef1301cb83088ee0a85d7db4e8e",
+      "unknown_feature_records": [],
+      "variant_observation_multisets": {
+        "failure": [
+          {
+            "occurrences": 1,
+            "path": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
+            "strict": false
+          }
+        ],
+        "fixed": [],
+        "previous": []
+      }
+    }
+  },
+  "pattern_from_primary_CLDR": "h:mm:ss\u202fa",
+  "qualification_current_full_capture_accepted": false,
+  "reason": "ja is unavailable in the admitted en/en-US profile; BestAvailableLocale fallback selects configured DefaultLocale en-US. Native date provider reads CLDR US preferred h. hour12 true therefore selects h12, a permitted cycle. Explicit hanidec is supported and mandatory; the complete ordered parts and join use the selected CLDR U+202F literal. The official tests prescribe ja h11 or ASCII U+0020, which is not required by the pinned normative text/effective fallback profile. Both original official failures remain failures.",
+  "schema": "unapproved-independent-oracle-finite-proof-v1"
+}

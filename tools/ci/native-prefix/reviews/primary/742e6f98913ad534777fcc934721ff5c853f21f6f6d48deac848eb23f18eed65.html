@@ -1,0 +1,15 @@
+<emu-clause id="sec-pluralruleselect" type="implementation-defined abstract operation">
+      <h1>
+        PluralRuleSelect (
+          _locale_: a language tag,
+          _type_: *"cardinal"* or *"ordinal"*,
+          _notation_: a String,
+          _compactDisplay_: *"short"* or *"long"*,
+          _decimalString_: a decimal String,
+        ): *"zero"*, *"one"*, *"two"*, *"few"*, *"many"*, or *"other"*
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned String characterizes the plural category of _decimalString_ according to _type_, _notation_, and _compactDisplay_ for the corresponding _locale_.</dd>
+      </dl>
+    </emu-clause>

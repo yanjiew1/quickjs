@@ -1,0 +1,2302 @@
+{
+  "adaptation_basis": "aggregate-array-source-adapter",
+  "approval_created": true,
+  "bounded_root_review_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-approved-assets-root-20261012-v1/ROOT-BOUNDED-REVIEW-APPROVAL.json",
+    "sha256": "5e53ff07bb5f9f9e5aba7202ca223f6bac9c70fbb987012ef169bd571a55fb08"
+  },
+  "conditional_source_duty_boundaries": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-reviews-actionable-assembly-source-preparation-20261012-v2/SOURCE-ONLY-DUTY-BOUNDARIES.json",
+    "sha256": "89ceef6d420bafb999daa19ca843e97cab47be6698b18f17f2d8a29308a8642a"
+  },
+  "final_current_capture_binding": {
+    "artifact_download_tool_closure": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/ROOT-TOOL-CLOSURE.json",
+      "sha256": "e10d6bdf9420beaad36185ccdb7a6a153b2be8b541b050cec21bf5db49e1e198"
+    },
+    "capture_summary": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/CAPTURE-SUMMARY.json",
+      "sha256": "40122f547214f2c5ca66fa44fff5b1cf9e353a384f28765aa7b210c253520ba8"
+    },
+    "complete_readback": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-h3-fresh-complete-capture-independent-source-readback-20261012-v2/REPORT.json",
+      "sha256": "f3ca1da65c4e8090bb0395be46ff10e7c7eb5e0d05aabd05895c7fdab5e842cf"
+    },
+    "execution_identity": {
+      "actual_production_source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+      "binding_sha256": "f4da692425276c2936eb1640efd4077ecf2506a8b675413498a80fbcc205ecf6",
+      "candidate_sha": "4beac5cf962eb4863cc9025293f65e323f955ad7",
+      "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+      "run_attempt": "1",
+      "run_id": "38178170735",
+      "source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d"
+    },
+    "manifest": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/GENERATED-MANIFEST.json",
+      "sha256": "1df17dac972c44e1a55dec43b465d27d1d300fc0f6364e6e61c093ec108474c3"
+    },
+    "root_capture_or_semantic_approval_created": false
+  },
+  "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+  "fixture_sha256": "dd9d92758dc1526a27235ea24e8d0fede9421212fcf3dc2f7e45b755fae4471f",
+  "missing_expressions_are_passing_originals": false,
+  "root_semantic_approval_created": true,
+  "schema": "unapproved-original-array-adapter-inventory-v1",
+  "semantic_approval_created": false,
+  "totalized_original_obligation_count": 120,
+  "totalized_original_obligation_site_ids": [
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434"
+  ],
+  "unavailable_original_obligation_site_ids": [],
+  "variants": {
+    "nonstrict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "29d3ec4678dd088a7e3c7db3f0a5298e6880e99c8e4fe3c2b84d3d8db67ceb69",
+        "aggregate_adapters": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434"
+              }
+            ],
+            "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237",
+            "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126",
+            "mode": "date-equality-invocation",
+            "original_helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+        "fixture_sha256": "dd9d92758dc1526a27235ea24e8d0fede9421212fcf3dc2f7e45b755fae4471f",
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 33,
+            "semantic_obligations": [
+              "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+            ],
+            "source": "assert.sameValue(a.length, b.length)",
+            "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+            "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+            "span": [
+              1126,
+              1142
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 41,
+            "semantic_obligations": [
+              "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+            ],
+            "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+            "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+            "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+            "span": [
+              1351,
+              1367
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 42,
+            "semantic_obligations": [
+              "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+            ],
+            "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+            "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+            "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+            "span": [
+              1434,
+              1450
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:47:1544": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 47,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+            "span": [
+              1540,
+              1576
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:49:1595": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 49,
+            "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+            "span": [
+              1591,
+              1673
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1685": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 50,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              1685,
+              1719
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1721": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 50,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              1721,
+              1744
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:52:1793": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 52,
+            "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+            "span": [
+              1789,
+              1860
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1872": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 53,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              1872,
+              1906
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1908": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 53,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              1908,
+              1931
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:55:1980": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 55,
+            "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+            "span": [
+              1976,
+              2060
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2072": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 56,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              2072,
+              2106
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2108": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 56,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              2108,
+              2131
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:58:2185": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 58,
+            "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+            "span": [
+              2181,
+              2253
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2265": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 59,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              2265,
+              2299
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2301": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 59,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              2301,
+              2324
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:62:2391": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 62,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+            "span": [
+              2387,
+              2423
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:63:2445": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 63,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 235)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "dcad69190e6bcf3197507bb7315ef9abe85b1d5858a7e127e26008c33a10df1d",
+            "span": [
+              2441,
+              2477
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:65:2496": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 65,
+            "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+            "span": [
+              2492,
+              2574
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2586": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 66,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              2586,
+              2622
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2624": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 66,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              2624,
+              2648
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:68:2697": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 68,
+            "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+            "span": [
+              2693,
+              2764
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2776": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 69,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              2776,
+              2812
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2814": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 69,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              2814,
+              2838
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:71:2887": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 71,
+            "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+            "span": [
+              2883,
+              2967
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:2979": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 72,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              2979,
+              3015
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:3017": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 72,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              3017,
+              3041
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:74:3095": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 74,
+            "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+            "span": [
+              3091,
+              3163
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3175": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 75,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              3175,
+              3211
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3213": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 75,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              3213,
+              3237
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+            "helper_name": "compare",
+            "kind": "helper",
+            "line": 39,
+            "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n  }\n}",
+            "source_sha256": "04121b4c6911513b338b4f1832e3619d6eee9507e8a2d6a0bc3ee79cdae2ac2d",
+            "span": [
+              1237,
+              1521
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "nonstrict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "329ed74a58acadc356bc662677513bfcba009afd04e978d1350dff4d2ae6590c",
+        "config_sha256": "29d3ec4678dd088a7e3c7db3f0a5298e6880e99c8e4fe3c2b84d3d8db67ceb69",
+        "data_mismatches": 64,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 1667,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 147,
+          "exit": 147,
+          "invariant": 1276,
+          "original-obligation": 60,
+          "start": 1,
+          "value": 35
+        },
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+        "generated_sha256": "e90a6b64dffc84d7207e1dd2c86ac4ec25e03228aca42fb4fec39a48e85117f8",
+        "manifest_index": 122,
+        "original_assertion_failures": 4,
+        "original_assertion_passes": 108,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 60,
+        "trace_sha256": "2837d82b6dcdab8941c4ab6e0c196946a5827f289988d3f2a759dad3a15ff0ef",
+        "variant": "nonstrict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434"
+            }
+          ],
+          "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237",
+          "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126",
+          "mode": "date-equality-invocation",
+          "original_helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "29d3ec4678dd088a7e3c7db3f0a5298e6880e99c8e4fe3c2b84d3d8db67ceb69",
+      "manifest_index": 122,
+      "original_source_site_inventory": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 33,
+          "semantic_obligations": [
+            "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+          ],
+          "source": "assert.sameValue(a.length, b.length)",
+          "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+          "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+          "span": [
+            1126,
+            1142
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 41,
+          "semantic_obligations": [
+            "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+          ],
+          "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+          "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+          "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+          "span": [
+            1351,
+            1367
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 42,
+          "semantic_obligations": [
+            "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+          ],
+          "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+          "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+          "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+          "span": [
+            1434,
+            1450
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:47:1544": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 47,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+          "span": [
+            1540,
+            1576
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:49:1595": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 49,
+          "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+          "span": [
+            1591,
+            1673
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1685": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 50,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            1685,
+            1719
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1721": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 50,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            1721,
+            1744
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:52:1793": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 52,
+          "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+          "span": [
+            1789,
+            1860
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1872": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 53,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            1872,
+            1906
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1908": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 53,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            1908,
+            1931
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:55:1980": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 55,
+          "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+          "span": [
+            1976,
+            2060
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2072": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 56,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            2072,
+            2106
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2108": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 56,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            2108,
+            2131
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:58:2185": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 58,
+          "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+          "span": [
+            2181,
+            2253
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2265": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 59,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            2265,
+            2299
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2301": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 59,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            2301,
+            2324
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:62:2391": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 62,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+          "span": [
+            2387,
+            2423
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:63:2445": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 63,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 235)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "dcad69190e6bcf3197507bb7315ef9abe85b1d5858a7e127e26008c33a10df1d",
+          "span": [
+            2441,
+            2477
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:65:2496": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 65,
+          "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+          "span": [
+            2492,
+            2574
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2586": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 66,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            2586,
+            2622
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2624": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 66,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            2624,
+            2648
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:68:2697": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 68,
+          "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+          "span": [
+            2693,
+            2764
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2776": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 69,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            2776,
+            2812
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2814": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 69,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            2814,
+            2838
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:71:2887": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 71,
+          "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+          "span": [
+            2883,
+            2967
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:2979": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 72,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            2979,
+            3015
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:3017": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 72,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            3017,
+            3041
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:74:3095": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 74,
+          "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+          "span": [
+            3091,
+            3163
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3175": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 75,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            3175,
+            3211
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3213": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 75,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            3213,
+            3237
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+          "helper_name": "compare",
+          "kind": "helper",
+          "line": 39,
+          "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n  }\n}",
+          "source_sha256": "04121b4c6911513b338b4f1832e3619d6eee9507e8a2d6a0bc3ee79cdae2ac2d",
+          "span": [
+            1237,
+            1521
+          ]
+        }
+      }
+    },
+    "strict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "fac88f8b6f5833bde46a21d073457e0e404e6ceaa4635b044e4b282a1dc3aac2",
+        "aggregate_adapters": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434"
+              }
+            ],
+            "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237",
+            "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126",
+            "mode": "date-equality-invocation",
+            "original_helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+        "fixture_sha256": "dd9d92758dc1526a27235ea24e8d0fede9421212fcf3dc2f7e45b755fae4471f",
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 33,
+            "semantic_obligations": [
+              "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+            ],
+            "source": "assert.sameValue(a.length, b.length)",
+            "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+            "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+            "span": [
+              1126,
+              1142
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 41,
+            "semantic_obligations": [
+              "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+            ],
+            "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+            "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+            "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+            "span": [
+              1351,
+              1367
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 42,
+            "semantic_obligations": [
+              "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+            ],
+            "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+            "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+            "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+            "span": [
+              1434,
+              1450
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:47:1544": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 47,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+            "span": [
+              1540,
+              1576
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:49:1595": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 49,
+            "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+            "span": [
+              1591,
+              1673
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1685": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 50,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              1685,
+              1719
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1721": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 50,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              1721,
+              1744
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:52:1793": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 52,
+            "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+            "span": [
+              1789,
+              1860
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1872": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 53,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              1872,
+              1906
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1908": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 53,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              1908,
+              1931
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:55:1980": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 55,
+            "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+            "span": [
+              1976,
+              2060
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2072": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 56,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              2072,
+              2106
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2108": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 56,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              2108,
+              2131
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:58:2185": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 58,
+            "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+            "span": [
+              2181,
+              2253
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2265": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 59,
+            "source": "dtf.formatRangeToParts(date, date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+            "span": [
+              2265,
+              2299
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2301": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 59,
+            "source": "dtf.formatToParts(date)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+            "span": [
+              2301,
+              2324
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:62:2391": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 62,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+            "span": [
+              2387,
+              2423
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:63:2445": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 63,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 235)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "dcad69190e6bcf3197507bb7315ef9abe85b1d5858a7e127e26008c33a10df1d",
+            "span": [
+              2441,
+              2477
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:65:2496": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 65,
+            "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+            "span": [
+              2492,
+              2574
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2586": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 66,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              2586,
+              2622
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2624": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 66,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              2624,
+              2648
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:68:2697": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 68,
+            "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+            "span": [
+              2693,
+              2764
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2776": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 69,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              2776,
+              2812
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2814": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 69,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              2814,
+              2838
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:71:2887": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 71,
+            "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+            "span": [
+              2883,
+              2967
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:2979": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 72,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              2979,
+              3015
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:3017": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 72,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              3017,
+              3041
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:74:3095": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 74,
+            "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+            "span": [
+              3091,
+              3163
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3175": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 75,
+            "source": "dtf.formatRangeToParts(date1, date2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+            "span": [
+              3175,
+              3211
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3213": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 75,
+            "source": "dtf.formatToParts(date1)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+            "span": [
+              3213,
+              3237
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+            "helper_name": "compare",
+            "kind": "helper",
+            "line": 39,
+            "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n  }\n}",
+            "source_sha256": "04121b4c6911513b338b4f1832e3619d6eee9507e8a2d6a0bc3ee79cdae2ac2d",
+            "span": [
+              1237,
+              1521
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "strict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "b1e35306213620de544338410eb16fe31cc73e77a038f70bb9a44e5613ade775",
+        "config_sha256": "fac88f8b6f5833bde46a21d073457e0e404e6ceaa4635b044e4b282a1dc3aac2",
+        "data_mismatches": 64,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 1667,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 147,
+          "exit": 147,
+          "invariant": 1276,
+          "original-obligation": 60,
+          "start": 1,
+          "value": 35
+        },
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+        "generated_sha256": "e5fe0850cc4b5488ffdf4c67a165dd89cd6fcda5dd2c84cb75bafd0143923e7b",
+        "manifest_index": 123,
+        "original_assertion_failures": 4,
+        "original_assertion_passes": 108,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 60,
+        "trace_sha256": "e9a280a61811fd47d959863a5802367c5c5038b76e1d280773f72a7615aa877b",
+        "variant": "strict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434"
+            }
+          ],
+          "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237",
+          "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126",
+          "mode": "date-equality-invocation",
+          "original_helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "fac88f8b6f5833bde46a21d073457e0e404e6ceaa4635b044e4b282a1dc3aac2",
+      "manifest_index": 123,
+      "original_source_site_inventory": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:33:1126": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 33,
+          "semantic_obligations": [
+            "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+          ],
+          "source": "assert.sameValue(a.length, b.length)",
+          "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+          "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+          "span": [
+            1126,
+            1142
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:41:1351": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 41,
+          "semantic_obligations": [
+            "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+          ],
+          "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+          "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+          "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+          "span": [
+            1351,
+            1367
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:42:1434": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 42,
+          "semantic_obligations": [
+            "This helper is shared by mandatory exactly identical dates and separate omitted millisecond cases; classify each invocation."
+          ],
+          "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+          "source_review_basis": "Equality disposition is bound to actual invocation inputs by reviewed aggregate adapter.",
+          "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+          "span": [
+            1434,
+            1450
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:47:1544": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 47,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+          "span": [
+            1540,
+            1576
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:49:1595": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 49,
+          "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+          "span": [
+            1591,
+            1673
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1685": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 50,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            1685,
+            1719
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:50:1721": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 50,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            1721,
+            1744
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:52:1793": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 52,
+          "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+          "span": [
+            1789,
+            1860
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1872": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 53,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            1872,
+            1906
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:53:1908": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 53,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            1908,
+            1931
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:55:1980": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 55,
+          "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+          "span": [
+            1976,
+            2060
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2072": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 56,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            2072,
+            2106
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:56:2108": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 56,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            2108,
+            2131
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:58:2185": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 58,
+          "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+          "span": [
+            2181,
+            2253
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2265": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 59,
+          "source": "dtf.formatRangeToParts(date, date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "a6d2bbe1e3fef861536bb18956d6b887194fdac0cbe2e6f77458c779d1101333",
+          "span": [
+            2265,
+            2299
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:59:2301": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 59,
+          "source": "dtf.formatToParts(date)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1eed398bcc7755452c273245be976c8a4473460eeaf38895b9ea09768ef65bc9",
+          "span": [
+            2301,
+            2324
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:62:2391": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 62,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+          "span": [
+            2387,
+            2423
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:63:2445": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 63,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 235)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "dcad69190e6bcf3197507bb7315ef9abe85b1d5858a7e127e26008c33a10df1d",
+          "span": [
+            2441,
+            2477
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:65:2496": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 65,
+          "source": "new Intl.DateTimeFormat(\"en\", { year: \"numeric\", month: \"short\", day: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fafa81d5a2408c20be5df3e480fbd8e782a823f6d61a9768d4b4c4dbd8d8c34c",
+          "span": [
+            2492,
+            2574
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2586": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 66,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            2586,
+            2622
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:66:2624": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 66,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            2624,
+            2648
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:68:2697": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 68,
+          "source": "new Intl.DateTimeFormat(\"en\", { minute: \"numeric\", second: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "04d61d60a7197ab1692c38c4942df0f48745ed366ea9525966aef9adb392e78c",
+          "span": [
+            2693,
+            2764
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2776": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 69,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            2776,
+            2812
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:69:2814": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 69,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            2814,
+            2838
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:71:2887": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 71,
+          "source": "new Intl.DateTimeFormat(\"en\", { month: \"short\", day: \"numeric\", minute: \"numeric\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "9f0c14912b546020b450c57693c1772a5482cbd2bbd32b9b6c1538616e162161",
+          "span": [
+            2883,
+            2967
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:2979": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 72,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            2979,
+            3015
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:72:3017": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 72,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            3017,
+            3041
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:74:3095": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 74,
+          "source": "new Intl.DateTimeFormat(\"en\", { dateStyle: \"long\", timeStyle: \"short\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "773a037c2e9e7e02c586088640d9b9dab45d6455016b6c667e468970466c613f",
+          "span": [
+            3091,
+            3163
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3175": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 75,
+          "source": "dtf.formatRangeToParts(date1, date2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "6f8a9fc305b22d14b022d4d0dc6a0d261131aa625ec192d894f70fe9cb86443b",
+          "span": [
+            3175,
+            3211
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:call:75:3213": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 75,
+          "source": "dtf.formatToParts(date1)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5be640f90b93326101e23287286c315785e35c0fe0ab34b498c743b7fc890640",
+          "span": [
+            3213,
+            3237
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js:helper:compare:1237": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "e814dbf9f554496ad8b319a06cd1a44ffa64bd83fd2e7d0be61e7829237f8c83",
+          "helper_name": "compare",
+          "kind": "helper",
+          "line": 39,
+          "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n  }\n}",
+          "source_sha256": "04121b4c6911513b338b4f1832e3619d6eee9507e8a2d6a0bc3ee79cdae2ac2d",
+          "span": [
+            1237,
+            1521
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2709 @@
+{
+  "conditions": [
+    "Every historical full event/config/site/adapters/RTF semantic record must be authenticated and reprojected using exact approved successor guard/helper envelopes.",
+    "Every fresh whole stable observation must match those independently reconstructed semantic expectations, including both original variants. Unknown/API/result/order/count differences require separate review.",
+    "Do not fabricate unobserved parts, own descriptor/prototype or implicit-formatter probes. Source-only proofs retain their exact successful fixed-input domain.",
+    "Mandatory numeric precision, sign/signed zero, options/coercion/throws, part type/order/source/join and calendar arithmetic remain checked even when optional locale data is unsupported.",
+    "Retain original comparator failures and each unavailable expression; diagnostics may evaluate substituted operands but cannot call them original passes.",
+    "Accounting observable-parentheses interpretation is accepted only with literal internal negativePattern minusSign constraint explicitly false.",
+    "Native finite profile qualification is distinct from raw Test262 results, core/general conformance and passing originals.",
+    "All 118 current fixture proofs, whole original inventory, selected-provider endpoint bytes/environment and actual final enabled rows are separate pending obligations."
+  ],
+  "conformance_accepted": false,
+  "current_capture_accepted": false,
+  "decisions_count": 114,
+  "full_profile_qualification": false,
+  "input_bindings": {
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/nonnumeric41/DERIVED-SEMANTIC-OBSERVATIONS.json": "92ab8bf1c88b7a8b30a597966ca54a01ee8fbd97e0bb1ea94b2e803d85d3e02f",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/nonnumeric41/MANDATORY-GUARDS-AND-LIMITS.json": "0b6cffb9d5f4436a55d0013c49aecc39b4f1e02da9ca4b2437e52d051ac9d623",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/numeric46/PER-FAMILY-NORMATIVE-PREMISES.json": "52d550776c6b8165ad4da23fab01e06f2d1572581e2e3b2fff57c38b6987be3c",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/syntax8/INDEPENDENT-ALL-API-DUTY-COMPARISONS.json": "bdb12ebb48fa942b8e445f28e305db587f2317772ecfc37a6ea2135c39f84141",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/syntax8/REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json": "a58e3115b2468109993afa52c0a7098e50701cf23a31d36f33ccc1af2a16e901",
+    "/srv/data/work/quickjs-tmp/quickjs-root-finite-source-duty-adjudication-20261012-v2/DECISIONS.json": "7b9d696e18e581089dd7150af6a06936b25b0cd4d961e2174cfa5c7025e56ad1"
+  },
+  "literal_internal_accounting_pattern_constraint_satisfied": false,
+  "proposal_domains": [
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/BigInt/prototype/toLocaleString/de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/000.json",
+        "sha256": "91f335b1677aa589ee58b3a98daa789b7594267dac26c84669f3fcb529a904a9"
+      },
+      "retained_duties": {
+        "fixture_sha256": "dd46e73e0473f74506641bdaccf9139afb8a1ffa09c28fa2487ec2b34d9cfbdc",
+        "normative_premise_id": "bigint",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Collator/prototype/resolvedOptions/ignorePunctuation-default.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/001.json",
+        "sha256": "c6c7fbec3ccc8c4c953940587946e99536cb25b67211600719d10e23a7d65773"
+      },
+      "retained_duties": {
+        "index": 14,
+        "mandatory_obligations_and_narrow_proposal": "ignorePunctuation must be Boolean and reflect effective locale sort data default. Returning false for en-US fallback is not a Thai default bug.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "947f030de210284f0b66395eac6a622cc48dd0e84b4fb7276093c284365c73b1"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Collator/usage-de.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/002.json",
+        "sha256": "397d2a1b80ebdc75db99b253ed67564000a766267b32031fc342ea0ca2f47f82"
+      },
+      "retained_duties": {
+        "index": 15,
+        "mandatory_obligations_and_narrow_proposal": "Keep requested usage, effective sensitivity and comparison Number/ordering obligations mandatory. German search equivalence of AE/\u00c4 is conditional on admitted German search data; effective en-US may use variant.",
+        "missing_or_external_guard_flags": [
+          "capture-does-not-observe-direct-comparison-law-and-sign-checks"
+        ],
+        "original_sha256": "804f0251207d70f71615d9246c663449bdfb1b26ed72be2c0e948d90b75c95fe"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/003.json",
+        "sha256": "0b9c4c8674861ddf9bd8a66776f18b580694d3c38da07b90864112a197c89def"
+      },
+      "retained_duties": {
+        "index": 0,
+        "mandatory_obligations_and_narrow_proposal": "GetNumberOption conversion/floor in 1..3 and ordinary resolvedOptions descriptor values. The repaired full format bank qualification remains the separately frozen pattern packet obligation.",
+        "missing_or_external_guard_flags": [
+          "format-bank-global-qualification-is-external-frozen-evidence"
+        ],
+        "original_sha256": "9130c81556bc17307f27aed24e0887b261c240c5a596215df4da2d221534402b"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/004.json",
+        "sha256": "d83103fc18f340545c1cb21ac52a1a758f3ad8c65708ddcfcd45aebd87cb05f4"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "DateTimeFormat [[formats]] is implementation-defined within required component-combination constraints; dayPeriod+hour is a required available combination, whereas standalone dayPeriod is not. BestFitFormatMatcher is implementation-defined, so adding the selected numeric hour to a dayPeriod-only request is not by itself a violation.",
+          "For the actual en/gregory/latn/UTC selected h12/numeric-hour/h B record, midnight is 12, noon is 12, and hour h displays h modulo 12 with zero mapped to 12. Requested long, short and narrow widths select the corresponding pinned CLDR label table.",
+          "The independently checked actual 24-hour rows preserve the source rule boundaries: midnight at 00:00, morning before 12:00, noon at 12:00, afternoon before 18:00, evening before 21:00, and night thereafter. All observed original format and formatToParts values match the source-bound labels, numeric hour and order.",
+          "Actual parts are hour/literal/dayPeriod with literal ASCII space; the format counterpart joins those parts. Original fixed field position/transition count/name snapshots may differ because the selected output includes hour. They are not mandatory vocabulary or pattern requirements."
+        ],
+        "original_fixture_sha256": "c9a5afc70387c3439ca0e3804a3670a01da4140b3892e6ec82f08102a74a1842",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "The finite CLDR producer proof and exact actual observations are reused; this does not certify arbitrary minute/second values or all best-fit choices."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/005.json",
+        "sha256": "b6a4b1810693d3d9f843e55a659a93739daad9f001644caf4ca9de02840df15b"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "DateTimeFormat [[formats]] is implementation-defined within required component-combination constraints; dayPeriod+hour is a required available combination, whereas standalone dayPeriod is not. BestFitFormatMatcher is implementation-defined, so adding the selected numeric hour to a dayPeriod-only request is not by itself a violation.",
+          "For the actual en/gregory/latn/UTC selected h12/numeric-hour/h B record, midnight is 12, noon is 12, and hour h displays h modulo 12 with zero mapped to 12. Requested long, short and narrow widths select the corresponding pinned CLDR label table.",
+          "The independently checked actual 24-hour rows preserve the source rule boundaries: midnight at 00:00, morning before 12:00, noon at 12:00, afternoon before 18:00, evening before 21:00, and night thereafter. All observed original format and formatToParts values match the source-bound labels, numeric hour and order.",
+          "Actual parts are hour/literal/dayPeriod with literal ASCII space; the format counterpart joins those parts. Original fixed field position/transition count/name snapshots may differ because the selected output includes hour. They are not mandatory vocabulary or pattern requirements."
+        ],
+        "original_fixture_sha256": "0760eee3f3997a39aa583b709de9870d9159fd3369e7d8bd54512ce8abdde1cd",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "The finite CLDR producer proof and exact actual observations are reused; this does not certify arbitrary minute/second values or all best-fit choices."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/006.json",
+        "sha256": "19b47ba4832daf127c880e64ee13b0d487a8f02ab64e8120bd512465ede052a9"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "DateTimeFormat [[formats]] is implementation-defined within required component-combination constraints; dayPeriod+hour is a required available combination, whereas standalone dayPeriod is not. BestFitFormatMatcher is implementation-defined, so adding the selected numeric hour to a dayPeriod-only request is not by itself a violation.",
+          "For the actual en/gregory/latn/UTC selected h12/numeric-hour/h B record, midnight is 12, noon is 12, and hour h displays h modulo 12 with zero mapped to 12. Requested long, short and narrow widths select the corresponding pinned CLDR label table.",
+          "The independently checked actual 24-hour rows preserve the source rule boundaries: midnight at 00:00, morning before 12:00, noon at 12:00, afternoon before 18:00, evening before 21:00, and night thereafter. All observed original format and formatToParts values match the source-bound labels, numeric hour and order.",
+          "Actual parts are hour/literal/dayPeriod with literal ASCII space; the format counterpart joins those parts. Original fixed field position/transition count/name snapshots may differ because the selected output includes hour. They are not mandatory vocabulary or pattern requirements."
+        ],
+        "original_fixture_sha256": "92ba1ef32042121fe6bfc78a1d31be373856081a1ccd17b328a08018cf2988f8",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "The finite CLDR producer proof and exact actual observations are reused; this does not certify arbitrary minute/second values or all best-fit choices."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/format/german-weekday-no-year.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/007.json",
+        "sha256": "5e911c4d604bd8a1f52d40ee62856852af62be7854dfb36be38a7aa810c8ff34"
+      },
+      "retained_duties": {
+        "index": 1,
+        "mandatory_obligations_and_narrow_proposal": "Keep short weekday, numeric day, long month and UTC date arithmetic mandatory; restrict data proposal to the exact German substring.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "89bd02d69e043a2f55bac71e381a81f772da4c27e01e694116b0c4a246bc150a"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/008.json",
+        "sha256": "8de5fcf1ae2fc0543166c9e327bef46952f7383705bc3b0ee388ffe70f555be7"
+      },
+      "retained_duties": {
+        "index": 26,
+        "mandatory_obligations_and_narrow_proposal": "Supported arab/deva/hanidec resolution, explicit digits, 2-digit truncation/padding, second6/minute35/hour2 and fractional789 remain mandatory. Narrow proposed data delta to separator in one iteration. Existing capture labels all four assertion sites broadly; do not carry that breadth into final semantic policy.",
+        "missing_or_external_guard_flags": [
+          "capture-lacks-all-numbering-system-parts-and-fractional-precision-join-guards"
+        ],
+        "original_sha256": "7e9691cc92ffd7dcdd014046ab5ebea4ecffd8da608cc239689ebd481e9decb9"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/format/related-year-zh.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/009.json",
+        "sha256": "b1a0e82876284836213b1d4b4238827959fd27b15a012f3ddc474c1c17c775fa"
+      },
+      "retained_duties": {
+        "index": 2,
+        "mandatory_obligations_and_narrow_proposal": "Require effective calendar/nu/key resolution and Gregorian year arithmetic. Chinese yearName and relatedYear expectations require admitted locale/calendar, never a blanket parts waiver.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "6872bc3b8dfcd352a38e71c086d068ea34cde487d448503038d37b9747f8aef9"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRange/date-same-returns-single-date.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/010.json",
+        "sha256": "70c30a9285e82cd5fe9583ac0ab9e810ee13b68fac0393f8ccde767633fcfa70"
+      },
+      "retained_duties": {
+        "index": 3,
+        "mandatory_obligations_and_narrow_proposal": "Exact equality stays mandatory. Supplied optional range records keep every comparison field relevant; absent requested fractional precision defaults to 3 in comparison, so 234 differs from 235. Literal patterns and source mapping must follow the actual bound source; equal rendered strings do not justify collapse.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "ea8d5bd6435707239f6478be33eb535f269568d11f8d6e0f4539e7f7516e56ad"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRange/en-US.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/011.json",
+        "sha256": "d19259f06035a6641eb70a33a75cad29bb45aea407bb6dfa16affbf0f23d795f"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "8bd6f4054b7f093db9223533ca792f2fd34b8aeee35b0d8712621b6e7176fbf8",
+            "continued_original_comparator_failures": 3,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "61b14a484828a58b97bc10d4a5f29097d00edc4e3cdb2c0ef2fdb59679bbdc59",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "d93ba95e55ce5c8b5ed5fee971629c60570e65eb1befaf9839ae1f5c572165ff",
+            "continued_original_comparator_failures": 3,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "4c98780e7b78785e28f35f668aefe71e88ae48e0fae7163a4731a627718e6395",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRange/fractionalSecondDigits.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/012.json",
+        "sha256": "09ec3358de9e705e8b32a6712786125978304a9a141fbf33e40379f9f61e9d1b"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "866ef979473b82027e919f0f1cf658a40b0857c1432df90eea2a700a6e0b75bd",
+            "continued_original_comparator_failures": 1,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "e3a402fd5daf17d13623d683c9af903068e5ff1a5bdaad856ab59a439b12e9f3",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "b1b839ae03f48e3cc665c250ecfaf1794717d97274820cf74f2376a37a57dcf0",
+            "continued_original_comparator_failures": 1,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "d927848d0bc23ec852cc6802877723a8c99410e909455a068fa72135527b36f5",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-format-with-era.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/013.json",
+        "sha256": "0889f9f8cb9d5fa7a4471cd1d50943e293a655ec8e06d3353db5744dda6cb31e"
+      },
+      "retained_duties": {
+        "index": 4,
+        "mandatory_obligations_and_narrow_proposal": "Keep type-specific defaults, Gregorian field arithmetic, era handling, plain wall time and source/join mandatory. Number Date format and Temporal Instant format use separate records; prefix inclusion of a complete Number Date range is incidental. The 1ms Date endpoint and 1s Instant endpoint also differ.",
+        "missing_or_external_guard_flags": [
+          "capture-lacks-parts-for-type-specific-era-and-numeric-field-crosscheck"
+        ],
+        "original_sha256": "88bd9eb2a1879367b9ff9a3535e3b5690d57b14016e313c8186e3ca7cfcb723d"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-no-time-clip.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/014.json",
+        "sha256": "cf3cf693cb9b9f7cf086a95dad4825e03bccea8ded1a6cb6cd71b4666b266cd6"
+      },
+      "retained_duties": {
+        "index": 5,
+        "mandatory_obligations_and_narrow_proposal": "No TimeClip for plain Temporal records. Preserve min/max year/month/day, exact nanoseconds input and type-specific calendars/defaults. String tests do not independently prove numeric parts; companion file 7 supplies field/source observations.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "d70a52f7376ef3bee2e88c5023149e6781d6b3c9df533fd4202775bd5387b72e"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-resolved-time-zone.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/015.json",
+        "sha256": "891a73d0584dcfe5a0fa8283701bb31287976a03e8bc5f2b7effa0c19c2408d5"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "dae5ec1279419ec360f835601d9d692efac3cb47fd5ebbb8e373ff895b1d976c",
+            "continued_original_comparator_failures": 1,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "ab2d50e32cb6cf1ad5cabf3de52fbba15805973f2d1de428d7f3a856219a8049",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "647c2271e688e8a1bc1b05ad32bf850df767e926622c36412b06a9f5237ade6b",
+            "continued_original_comparator_failures": 1,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "b9aa216b31ed7351b3ca30dd789fc4afe7a5298ee09a36d4310dbb49f97dcc02",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/chinese-calendar-dates.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/016.json",
+        "sha256": "08b4ef2df635f495b4c3a49f6d7ad227da2001217bb8c7ff17775b40392f91b2"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "The exact actual requested Chinese or Dangi calendar remains selected, with numeric year/month/day fields, latn and UTC. Available records and year field presence may derive from yearName; FormatDateTimePattern emits relatedYear only when the selected pattern contains its token. It has no unconditional instruction to append a relatedYear to every Chinese/Dangi result.",
+          "The pinned selected U pattern emits a cyclic yearName and no r token. Each actual yearName equals the source-bound sixty-year table at (original related Gregorian year - 4) modulo 60. Original numeric month/day and requested startRange/endRange selection remain mandatory and pass the finite checks.",
+          "All captured complete arrays contain string values and exact type/value[/source] fields. Original and auxiliary format/formatRange joins retain every literal and source label.",
+          "The original helper selects relatedYear then dereferences its missing value. The resulting TypeError is an unavailable original expression. There are 56 such receipts across these four files and both variants, plus preserved comparison mismatches; none has become a passed assertion."
+        ],
+        "original_fixture_sha256": "99dee450501de783ea816d5feea4869fdbca3a6c9b2212f0c4a927dbaea7ce3f",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "DateTime Format Record year-field description explicitly includes yearName and relatedYear; the pattern-column wording combines a general component placeholder rule with the special yearName/relatedYear allowance. This proposal uses the special year representation reading and does not claim a literal {year} token is simultaneously emitted.",
+          "Root must explicitly choose the selected-pattern interpretation and preserve unavailable obligations in policy/accounting. The unavailable assertion operand cannot be claimed as runtime evaluation or a passing original."
+        ],
+        "unavailable_totalized_original_obligations": 16
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/dangi-calendar-dates.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/017.json",
+        "sha256": "0f26fe9e8cb36280762119f1babca786526ae56b1291958d50c186e4a9f65cc3"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "The exact actual requested Chinese or Dangi calendar remains selected, with numeric year/month/day fields, latn and UTC. Available records and year field presence may derive from yearName; FormatDateTimePattern emits relatedYear only when the selected pattern contains its token. It has no unconditional instruction to append a relatedYear to every Chinese/Dangi result.",
+          "The pinned selected U pattern emits a cyclic yearName and no r token. Each actual yearName equals the source-bound sixty-year table at (original related Gregorian year - 4) modulo 60. Original numeric month/day and requested startRange/endRange selection remain mandatory and pass the finite checks.",
+          "All captured complete arrays contain string values and exact type/value[/source] fields. Original and auxiliary format/formatRange joins retain every literal and source label.",
+          "The original helper selects relatedYear then dereferences its missing value. The resulting TypeError is an unavailable original expression. There are 56 such receipts across these four files and both variants, plus preserved comparison mismatches; none has become a passed assertion."
+        ],
+        "original_fixture_sha256": "9c125037bbf359376907384606c70e355726915da373df0623d0c556edd454ca",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "DateTime Format Record year-field description explicitly includes yearName and relatedYear; the pattern-column wording combines a general component placeholder rule with the special yearName/relatedYear allowance. This proposal uses the special year representation reading and does not claim a literal {year} token is simultaneously emitted.",
+          "Root must explicitly choose the selected-pattern interpretation and preserve unavailable obligations in policy/accounting. The unavailable assertion operand cannot be claimed as runtime evaluation or a passing original."
+        ],
+        "unavailable_totalized_original_obligations": 16
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/018.json",
+        "sha256": "29c52ca62d8d669e499898e2724bd415f753f1b0a5704ea40baa794fe65c1713"
+      },
+      "retained_duties": {
+        "index": 6,
+        "mandatory_obligations_and_narrow_proposal": "For exact input, length/type/value equality is forced mandatory by adapter mode date-equality-invocation, plus shared source. Distinct-input full arrays use startRange, shared separator, endRange according to the supplied fallback patterns. Totalized missing dereferences are diagnostic obligations with original_evaluation_performed=false; do not call them original expression execution.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "dd9d92758dc1526a27235ea24e8d0fede9421212fcf3dc2f7e45b755fae4471f"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/en-US.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/019.json",
+        "sha256": "badbdb3677eebaacd0e745c56ee12a8427ade4671bfde01477d1eb539ed551d5"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": false,
+            "complete_trace": true,
+            "config_sha256": "f1d4442e6dda5957b0b46e7a6311ddcdea4c4d772ae5c3f1abceb2746709efbd",
+            "continued_original_comparator_failures": 42,
+            "totalized_missing_expected_fields": 24,
+            "trace_sha256": "3609a51ad73f9a539a8d577b2a519d77c93e43e668192378bba1a396c2c54511",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": false,
+            "complete_trace": true,
+            "config_sha256": "ca63c4bb0d46aa2a7797ca63ab2d14ff6a2d948b35d3c1f6af830d72ca2bcef3",
+            "continued_original_comparator_failures": 42,
+            "totalized_missing_expected_fields": 24,
+            "trace_sha256": "fc977117a6cfc7a164921a5b70587ca8a030f851bf401d72aa27ab697e1ed9c2",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/020.json",
+        "sha256": "bdc26b778ab14bd5a8e3341cadcf34463180d21b3f83d6a2b4f9128dea11f79e"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": false,
+            "complete_trace": true,
+            "config_sha256": "f23d986b3c34812b944d6adeeec1776530168c9f0b4b262721ecb3ba1ece6343",
+            "continued_original_comparator_failures": 4,
+            "totalized_missing_expected_fields": 12,
+            "trace_sha256": "f1603ad6fc1227ca151b32c341282043dcbe4e3b95782708225472db71f8a668",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": false,
+            "complete_trace": true,
+            "config_sha256": "3563f657331b5e9258eed24ff1ca53eaf0c5c206dd552b694c8c3a6d1789786b",
+            "continued_original_comparator_failures": 4,
+            "totalized_missing_expected_fields": 12,
+            "trace_sha256": "2b310a2efe608feb375c704edfd5511cdaefb47e4cdf0709fb7c061f75d2c5e3",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-objects-no-time-clip.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/021.json",
+        "sha256": "488c02e901605cbe0c58554331d7f8ccef0f8aed5b63e10a3cdd88ec35785be1"
+      },
+      "retained_duties": {
+        "index": 7,
+        "mandatory_obligations_and_narrow_proposal": "Keep exact year era conversion, month/day values, source attribution, part types/properties and range string join mandatory. Pure findPart dereferences run and no adapter is installed.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "e6fd51c6fd5ea3e2c67169480525f6634f13d1b5d8a14d3fa390cf1872c52e1a"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-objects-resolved-time-zone.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/022.json",
+        "sha256": "f624aa85eb5d9ebdbad5bf068221d8160b7aa3f595c6ac3761f63c00de194604"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "54d7959323c29f1d2d8b6fe08b361e71d39792f33e261f8fbb062ea0fbf0addf",
+            "continued_original_comparator_failures": 1,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "86f762b0ef0088c2dcf69d9d91dbedad87374d38bdfb6436eb785863642b0b54",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "5c9f265e80b803144b2ef183cadb0928acb313f70b59d29ad7b5ee1fab11f3aa",
+            "continued_original_comparator_failures": 1,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "688330e63957f8842be42edef2331b3431972f05401abd92a5c893daa2ef47ad",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/chinese-calendar-dates.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/023.json",
+        "sha256": "b9a6b4e7eac00d6b7d3ebd4085e1ff1b231e8490f733c6f73ea59816d90305d0"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "The exact actual requested Chinese or Dangi calendar remains selected, with numeric year/month/day fields, latn and UTC. Available records and year field presence may derive from yearName; FormatDateTimePattern emits relatedYear only when the selected pattern contains its token. It has no unconditional instruction to append a relatedYear to every Chinese/Dangi result.",
+          "The pinned selected U pattern emits a cyclic yearName and no r token. Each actual yearName equals the source-bound sixty-year table at (original related Gregorian year - 4) modulo 60. Original numeric month/day and requested startRange/endRange selection remain mandatory and pass the finite checks.",
+          "All captured complete arrays contain string values and exact type/value[/source] fields. Original and auxiliary format/formatRange joins retain every literal and source label.",
+          "The original helper selects relatedYear then dereferences its missing value. The resulting TypeError is an unavailable original expression. There are 56 such receipts across these four files and both variants, plus preserved comparison mismatches; none has become a passed assertion."
+        ],
+        "original_fixture_sha256": "7df1d424b9907c7b042a4bd378af49e62e2218fc17c06fe777fcfbd0e134054c",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "DateTime Format Record year-field description explicitly includes yearName and relatedYear; the pattern-column wording combines a general component placeholder rule with the special yearName/relatedYear allowance. This proposal uses the special year representation reading and does not claim a literal {year} token is simultaneously emitted.",
+          "Root must explicitly choose the selected-pattern interpretation and preserve unavailable obligations in policy/accounting. The unavailable assertion operand cannot be claimed as runtime evaluation or a passing original."
+        ],
+        "unavailable_totalized_original_obligations": 12
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dangi-calendar-dates.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/024.json",
+        "sha256": "3f1f1cb0834c70721eb1b942f45059ef1e8a17bc664f96159d2991f6918b7124"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "The exact actual requested Chinese or Dangi calendar remains selected, with numeric year/month/day fields, latn and UTC. Available records and year field presence may derive from yearName; FormatDateTimePattern emits relatedYear only when the selected pattern contains its token. It has no unconditional instruction to append a relatedYear to every Chinese/Dangi result.",
+          "The pinned selected U pattern emits a cyclic yearName and no r token. Each actual yearName equals the source-bound sixty-year table at (original related Gregorian year - 4) modulo 60. Original numeric month/day and requested startRange/endRange selection remain mandatory and pass the finite checks.",
+          "All captured complete arrays contain string values and exact type/value[/source] fields. Original and auxiliary format/formatRange joins retain every literal and source label.",
+          "The original helper selects relatedYear then dereferences its missing value. The resulting TypeError is an unavailable original expression. There are 56 such receipts across these four files and both variants, plus preserved comparison mismatches; none has become a passed assertion."
+        ],
+        "original_fixture_sha256": "18b0f313e9a7b012f37fa4a6de39498a66c0f8ab0736f195c8d24c860e133cbb",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "DateTime Format Record year-field description explicitly includes yearName and relatedYear; the pattern-column wording combines a general component placeholder rule with the special yearName/relatedYear allowance. This proposal uses the special year representation reading and does not claim a literal {year} token is simultaneously emitted.",
+          "Root must explicitly choose the selected-pattern interpretation and preserve unavailable obligations in policy/accounting. The unavailable assertion operand cannot be claimed as runtime evaluation or a passing original."
+        ],
+        "unavailable_totalized_original_obligations": 12
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/025.json",
+        "sha256": "d3fd8f05ee4bc6efc3ccabab8bb201632ab97e92c12e476c45e2e979cebba984"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "DateTimeFormat [[formats]] is implementation-defined within required component-combination constraints; dayPeriod+hour is a required available combination, whereas standalone dayPeriod is not. BestFitFormatMatcher is implementation-defined, so adding the selected numeric hour to a dayPeriod-only request is not by itself a violation.",
+          "For the actual en/gregory/latn/UTC selected h12/numeric-hour/h B record, midnight is 12, noon is 12, and hour h displays h modulo 12 with zero mapped to 12. Requested long, short and narrow widths select the corresponding pinned CLDR label table.",
+          "The independently checked actual 24-hour rows preserve the source rule boundaries: midnight at 00:00, morning before 12:00, noon at 12:00, afternoon before 18:00, evening before 21:00, and night thereafter. All observed original format and formatToParts values match the source-bound labels, numeric hour and order.",
+          "Actual parts are hour/literal/dayPeriod with literal ASCII space; the format counterpart joins those parts. Original fixed field position/transition count/name snapshots may differ because the selected output includes hour. They are not mandatory vocabulary or pattern requirements."
+        ],
+        "original_fixture_sha256": "715716900acf6e868d3e367defe8e8a19cf58db3f117c0a6ff610c0f3500462d",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "The finite CLDR producer proof and exact actual observations are reused; this does not certify arbitrary minute/second values or all best-fit choices."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/026.json",
+        "sha256": "120da3f3340aaf46a47973620028bf658515edb1d68322ff6e70d68fd9d6f0cc"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "DateTimeFormat [[formats]] is implementation-defined within required component-combination constraints; dayPeriod+hour is a required available combination, whereas standalone dayPeriod is not. BestFitFormatMatcher is implementation-defined, so adding the selected numeric hour to a dayPeriod-only request is not by itself a violation.",
+          "For the actual en/gregory/latn/UTC selected h12/numeric-hour/h B record, midnight is 12, noon is 12, and hour h displays h modulo 12 with zero mapped to 12. Requested long, short and narrow widths select the corresponding pinned CLDR label table.",
+          "The independently checked actual 24-hour rows preserve the source rule boundaries: midnight at 00:00, morning before 12:00, noon at 12:00, afternoon before 18:00, evening before 21:00, and night thereafter. All observed original format and formatToParts values match the source-bound labels, numeric hour and order.",
+          "Actual parts are hour/literal/dayPeriod with literal ASCII space; the format counterpart joins those parts. Original fixed field position/transition count/name snapshots may differ because the selected output includes hour. They are not mandatory vocabulary or pattern requirements."
+        ],
+        "original_fixture_sha256": "e77267ff386e82fef9f2816b092bbfe86f8fae3238806c4ff5937966c4844f20",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "The finite CLDR producer proof and exact actual observations are reused; this does not certify arbitrary minute/second values or all best-fit choices."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/027.json",
+        "sha256": "9b2d134d6e759efbb1f7925ab697117e9f0d68a7b97349c7f45db12735cbd1ce"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "DateTimeFormat [[formats]] is implementation-defined within required component-combination constraints; dayPeriod+hour is a required available combination, whereas standalone dayPeriod is not. BestFitFormatMatcher is implementation-defined, so adding the selected numeric hour to a dayPeriod-only request is not by itself a violation.",
+          "For the actual en/gregory/latn/UTC selected h12/numeric-hour/h B record, midnight is 12, noon is 12, and hour h displays h modulo 12 with zero mapped to 12. Requested long, short and narrow widths select the corresponding pinned CLDR label table.",
+          "The independently checked actual 24-hour rows preserve the source rule boundaries: midnight at 00:00, morning before 12:00, noon at 12:00, afternoon before 18:00, evening before 21:00, and night thereafter. All observed original format and formatToParts values match the source-bound labels, numeric hour and order.",
+          "Actual parts are hour/literal/dayPeriod with literal ASCII space; the format counterpart joins those parts. Original fixed field position/transition count/name snapshots may differ because the selected output includes hour. They are not mandatory vocabulary or pattern requirements."
+        ],
+        "original_fixture_sha256": "fe08e26203324320096dc1dae0baf3f1acce0dd870e193bdf36de9aa25f2b514",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "The finite CLDR producer proof and exact actual observations are reused; this does not certify arbitrary minute/second values or all best-fit choices."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year-zh.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/028.json",
+        "sha256": "39b49abb44d646b37a3479f7e2022fbee9ff4675304e5a07734efdd999e08e5b"
+      },
+      "retained_duties": {
+        "index": 8,
+        "mandatory_obligations_and_narrow_proposal": "The original actual-length loop and conditional expected.shift are preserved. Data proposal is limited to Chinese part expectation; ordinary object and own type/value fields, correct effective calendar year and ordinary format join stay mandatory.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "f0aefb4043cbd351b5531bf8ba9f2e58f774eff59ddf934a0d364ffcda2a0cb3"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/029.json",
+        "sha256": "d4d9f1c906a7a07b748cd90cccaed2700b2f2c9660a7070deb8d87d31151e9c5"
+      },
+      "retained_duties": {
+        "index": 27,
+        "mandatory_obligations_and_narrow_proposal": "h11/h12 domains for hour12 and h23/h24 domains for hour24 are mandatory, as is equality to effective default when appropriate. Only ja having h11 is conditional on locale admission/data; fixed h23 comparisons are retained as observed equal.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "8667903fa2969dc801b45e2505d96c878b2c15e278bad0af3b2a25c64ee749a3"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/030.json",
+        "sha256": "b69222615963966a686422631b26c74fcf2231296316df217c9715aabb29b423"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "ResolveLocale ignores Unicode extensions for matching. When there is no match, it creates a DefaultLocale record with an empty extension. The hc keyword from unmatched de-u-hc-* is consequently not carried to the fallback en-US record.",
+          "Both variants actually observe supportedLocalesOf(de-u-hc-*) as empty and the original formatter as en-US/gregory/latn/UTC/h12/hour12 true. These guarded original constructions have only hour:numeric or a timeStyle option, so there is no explicit hourCycle override to discard.",
+          "All four requested hc values and all four time styles are retained. The guarded original hc/hour12 comparisons compare the requested unmatched extension premise against the actual default. Other original explicit options and mandatory assertions reach the authenticated EOF."
+        ],
+        "original_fixture_sha256": "49c540f9bd3bdf2fc410db1c49397eab657e0d343519d98790eb46bc80d30bc7",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "If the requested locale later becomes supported or an explicit hourCycle/hour12 is supplied, this no-match disposition cannot be reused."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/031.json",
+        "sha256": "52f0cfe2d61ee873756b617926ee6962d1afab346056c24d6f9eecf39087bda2"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "ResolveLocale ignores Unicode extensions for matching. When there is no match, it creates a DefaultLocale record with an empty extension. The hc keyword from unmatched de-u-hc-* is consequently not carried to the fallback en-US record.",
+          "Both variants actually observe supportedLocalesOf(de-u-hc-*) as empty and the original formatter as en-US/gregory/latn/UTC/h12/hour12 true. These guarded original constructions have only hour:numeric or a timeStyle option, so there is no explicit hourCycle override to discard.",
+          "All four requested hc values and all four time styles are retained. The guarded original hc/hour12 comparisons compare the requested unmatched extension premise against the actual default. Other original explicit options and mandatory assertions reach the authenticated EOF."
+        ],
+        "original_fixture_sha256": "0c25a93a86d187656f311cb302022effddfeae807e51328ff09591429f8d5834",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "If the requested locale later becomes supported or an explicit hourCycle/hour12 is supplied, this no-match disposition cannot be reused."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DurationFormat/constructor-locales-valid.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/032.json",
+        "sha256": "98322cc8710ddc9129fc4e64c4e89f272ec2b2dd7101325fe1fec07eec10812f"
+      },
+      "retained_duties": {
+        "index": 16,
+        "mandatory_obligations_and_narrow_proposal": "Keep EN canonicalization, duplicates, undefined/empty/zero-length default, object length, both matcher choices and service option defaults mandatory. A well-formed DE request does not itself require German support.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "151f2de8fa1a4a18fc717874663650eda473d11bed4203b2c8867a9d2fa16c71"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/DurationFormat/supportedLocalesOf/locales-specific.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/033.json",
+        "sha256": "86aac0494779a2a0213874325b61113612684a7d0c6baca2a792efc1efcdee1d"
+      },
+      "retained_duties": {
+        "index": 17,
+        "mandatory_obligations_and_narrow_proposal": "Filtering preserves order and returns only matching requests; never infer support from tag validity. Keep function presence, array shape and filtering input/options mandatory.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "0d0562a20c60442876d431e1ba590697fe761663d94a81e2ee18ba710cd5d2dd"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/ListFormat/constructor/constructor/locales-valid.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/034.json",
+        "sha256": "b45944e904d7530c35187a96ac3677e3fe25bc074a52ac989d21045b5a692c5d"
+      },
+      "retained_duties": {
+        "index": 18,
+        "mandatory_obligations_and_narrow_proposal": "Keep original malformed en-GB-oed both matchers and x-private lookup throws blocking. Default/canonical/duplicate/arraylike semantics stay mandatory; de-only availability premise is conditional.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "6613ce16996541126494067d4093c82bdc71e0ac82dbde9f77ca4f5ae374f263"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/ListFormat/prototype/format/es-es-long.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/035.json",
+        "sha256": "d2c048fd623784220da51f151e25d8f4e616e8c9f4a9631e0e5d5a9c034a8c47"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "01302a3372453ecd84a316ad963676fd42d4073f47e07c2f867ecb62af2c0fff",
+            "continued_original_comparator_failures": 10,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "b7b6b4ab05402fc61b9f69af12c7db390008d568f3336bf24bfa25261e776a7f",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "552aea7c5815b2c0e635d7f2a325d216be9d4928478a1939aa923ececd36567d",
+            "continued_original_comparator_failures": 10,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "e75cbe77a4cab2035ac377dc9215a7a634720b5caf666f0f4f13b47841999b1f",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "syntax8",
+      "fixture": "test262/test/intl402/ListFormat/prototype/format/es-es-short.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/036.json",
+        "sha256": "d8f219417d54db8da9c9ca37fc3fcae863feb77ea82b586b2c69ab44635354a7"
+      },
+      "retained_duties": {
+        "conditional_duties_pointer": "REMAINING-OBLIGATIONS-AND-NORMATIVE-BOUNDARIES.json",
+        "variant_duties": [
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "f1b9c378acd83819b9a727bb2536beca1855af565c812421e21934a7a0edee9d",
+            "continued_original_comparator_failures": 3,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "2f3146d27f0e9ac40571bdb8d94a3f70aec9cc8827d3dd6818e0da6fae9e8e3b",
+            "variant": "nonstrict"
+          },
+          {
+            "all_original_expression_values_evaluated": true,
+            "complete_trace": true,
+            "config_sha256": "516300fb475e52bba67caa4b40b98c5a6cbfe8028772f8c50c562038c4d0bad2",
+            "continued_original_comparator_failures": 3,
+            "totalized_missing_expected_fields": 0,
+            "trace_sha256": "2fcc42d62973ec63a952ed3cfd406ea63d5a4f24e4acafe4081240b6644afc23",
+            "variant": "strict"
+          }
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/ListFormat/prototype/formatToParts/es-es-long.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/037.json",
+        "sha256": "d7b6811a9779ef74075f4c8620f937470d717a38ed8bfe5f17e9ff3776ce51dd"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "The actual original constructor requests es-ES and unit with long or short style; supportedLocalesOf is empty and resolvedOptions selects en-US with the original type/style. ResolveLocale supplies that supported default.",
+          "The selected pinned English unit list uses {0}, {1} in Pair/Start/Middle/End. Independently applying CreatePartsFromList and DeconstructPattern therefore yields the original strings separated by comma-space, without changing their order.",
+          "Every observed guarded original parts result exactly equals that derivation; all expected element types and values still match. Only expected literal values such as Spanish y differ. Auxiliary format on the same original receiver joins the original parts exactly.",
+          "The original empty/singleton/array/array-iterator/custom-iterator/string cases retain their original helper provenance and run to EOF. No missing expected part type or element is inferred."
+        ],
+        "original_fixture_sha256": "4ca76daf619bfd36fa031de5f078034104a48b693b6da2e026f26a95d2e035c2",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "Only the two original styles, unit list type and finite original element sequences are claimed. Other language templates or conjunction/disjunction modes are outside this evidence."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/ListFormat/prototype/formatToParts/es-es-short.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/038.json",
+        "sha256": "8cd3eab46bdefbacb67a20cde9c6f5054fc1658e7b26622b7a2eee723da277a8"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "The actual original constructor requests es-ES and unit with long or short style; supportedLocalesOf is empty and resolvedOptions selects en-US with the original type/style. ResolveLocale supplies that supported default.",
+          "The selected pinned English unit list uses {0}, {1} in Pair/Start/Middle/End. Independently applying CreatePartsFromList and DeconstructPattern therefore yields the original strings separated by comma-space, without changing their order.",
+          "Every observed guarded original parts result exactly equals that derivation; all expected element types and values still match. Only expected literal values such as Spanish y differ. Auxiliary format on the same original receiver joins the original parts exactly.",
+          "The original empty/singleton/array/array-iterator/custom-iterator/string cases retain their original helper provenance and run to EOF. No missing expected part type or element is inferred."
+        ],
+        "original_fixture_sha256": "ec01ee768eb4a8566168b656c3180f23f472af05827ac94cd967f9263b24c263",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "Only the two original styles, unit list type and finite original element sequences are claimed. Other language templates or conjunction/disjunction modes are outside this evidence."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Locale/constructor-non-iana-canon.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/039.json",
+        "sha256": "99efd0285ae7e4ee21f808c35c1e2cd8cae78d01ab9f1223180911ce537b7fca"
+      },
+      "retained_duties": {
+        "index": 19,
+        "mandatory_obligations_and_narrow_proposal": "No locale-service availability waiver applies to Intl.Locale transformations. Preserve every original exact tag/extension/alias/subtag obligation.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "79320d4f4c33a71c38ccbf79ddec0b00c7cb0e0a714391a9f313352990d887a5"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Locale/likely-subtags-grandfathered.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/040.json",
+        "sha256": "5549ecfa069608e2a62a41c0db4e0b67a2f8ac8dc602e7882020feedba42aef9"
+      },
+      "retained_duties": {
+        "index": 20,
+        "mandatory_obligations_and_narrow_proposal": "Keep validation before aliasing, variant ordering, extension/private-use preservation and full maximize/minimize compositions mandatory; no later assertion removed or relabeled.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "21fbdf44641fd89f6f883677851048e75ae361847a5c896de2bd8c9211c43b7e"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/Locale/prototype/getCollations/output-array-values.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/041.json",
+        "sha256": "bdf82899b01c38d4263582517f27b386335f93d96492647cf412406c08b5645c"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "CollationsOfLocale copies the matched SortLocaleData co list, whose first element is null, then removes that first entry. Actual admitted en has co=[null], therefore [] is the required result for this finite matched record; nonempty lists are not universally required.",
+          "For all original unmatched prefixes, the algorithm expressly returns emoji/eor sorted by code unit order; the actual result is exactly that array. It does not substitute DefaultLocale data for this branch.",
+          "Every actual list is a string array in strictly sorted order and excludes standard and search. SupportedLocalesOf and original Locale constructor/getCollations event linkage identify which branch applies."
+        ],
+        "original_fixture_sha256": "b8b2927b0c519222f3d6150318884567f0aa0f60dd37f902613147857fa9980a",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "Any explicit co extension uses the separate first branch and is not excused by default-only co data. Future additional supported locale data requires fresh branch binding."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Locale/prototype/getTextInfo/language-subtag-with-more-than-three-letters.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/042.json",
+        "sha256": "3d7609bfbd60ac775392f68588909d73552ab19ec0446b6867ff6d40543f6cf3"
+      },
+      "retained_duties": {
+        "index": 21,
+        "mandatory_obligations_and_narrow_proposal": "Retain well-formed long language and exact explicit-script metadata. Unknown language without inferable script yields undefined.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "3df1b858d1cdf181ceee703e9d080a67e24b3f6d405309cb481adfaa16412e40"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Locale/prototype/maximize/language-subtag-with-more-than-three-letters.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/043.json",
+        "sha256": "c1686fb8fc8d46dc752cbea216b6428e382e61efd5189af999fc06e4999806fb"
+      },
+      "retained_duties": {
+        "index": 22,
+        "mandatory_obligations_and_narrow_proposal": "Unknown language must remain representable; maximize fallback cannot invent an unsupported script.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "d4a3d6f14e7a5fa2721a2c1f0ec3ef15b182a45d64361216409ac70108b1d3f7"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/044.json",
+        "sha256": "ff00a5f9d173b19290a12f20b984857a1bd2bfb2e814fd8acdd3502a34dba452"
+      },
+      "retained_duties": {
+        "fixture_sha256": "9d218bfa54f85a47925e55e84a49442bc9e85f04c611ba5ac2461786b6eed48b",
+        "normative_premise_id": "engineering",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/045.json",
+        "sha256": "4b57c4977fd5b436c12652687387553ceb81fbfd51c6f074ca4a43d019d786f1"
+      },
+      "retained_duties": {
+        "fixture_sha256": "71d21a1d44d0bb924fee984a25b92a334931f113408059cc4683135fd04e6a86",
+        "normative_premise_id": "engineering",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/046.json",
+        "sha256": "218622d45ae0b29c76cc3588a451bc18f6f2f3aae40d59099d3f9790b2ea06ab"
+      },
+      "retained_duties": {
+        "fixture_sha256": "f632823d6fa3c67a88c7a4f47d7ff9f159c0abd03ec810976ae90bb9d7abd90d",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-ja-JP.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/047.json",
+        "sha256": "3b9b6ff287b185a1e618913be9f5aeb99336c83c3382cfabd5650041dc802216"
+      },
+      "retained_duties": {
+        "fixture_sha256": "48b0a706d74269ef2f16787f1a42bed41780e7db0c93e7d045d955da99a24c0f",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/048.json",
+        "sha256": "00283a3aa96ac88f75c43b78ffd4a74d1efb4f38b81bc6ff844927af45987516"
+      },
+      "retained_duties": {
+        "fixture_sha256": "0b6f0075a5818da76675c22121ffb221719acd63048aeaa90523b46a79baeaca",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/notation-compact-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/049.json",
+        "sha256": "1d901c2927725f559760e00e99c064f1722fece09b1c46a36452b5ca648ced4c"
+      },
+      "retained_duties": {
+        "fixture_sha256": "269eabebf6202042b26607e36eca92613389311089ed0f052c69e9aa3c435a12",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/050.json",
+        "sha256": "ac2a0e0309818e389f2395c59e249a4abb98c46f15260d5de994a84f061f832d"
+      },
+      "retained_duties": {
+        "fixture_sha256": "a1a261933dce831e9a8d872718858647e85e61d59141535af0cb34c65b55525a",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/051.json",
+        "sha256": "d424d69a775dfae7712bb509251c0388019ac98d2925499d605221286d4fd619"
+      },
+      "retained_duties": {
+        "fixture_sha256": "544cef1d373ecbaefda4581cf250bec5280704ed16538ecc64e1099443557177",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/052.json",
+        "sha256": "96befce97d5f3aa5c75a7e6ace56017f386bfb3c6e6ee72572f618a3fec13b5a"
+      },
+      "retained_duties": {
+        "fixture_sha256": "48033290f5cd3a5a6398b7cf272154b9bd457e5a91551ee286528fa4876b411b",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/053.json",
+        "sha256": "8f42d4a14169c7861aca99cb66327b1e9f9aa59c7538dcd330b22ec8634998b1"
+      },
+      "retained_duties": {
+        "fixture_sha256": "8b07710014974b0177ad31dc143adbb58db7b21e5c64cf58bcc3dac929689a0e",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/054.json",
+        "sha256": "6a1768a9e292c1f456fb477cf7db3293d23c6a00aa041c59763ce23c79a94b4d"
+      },
+      "retained_duties": {
+        "fixture_sha256": "19dfa16fae2d5c25bf64c0e37748b028ad9f4592376aa3b7d6b058b66c8ebc5b",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/055.json",
+        "sha256": "b859acf291d31a575c35ae9f1ef96fd7672f696957bcdcb03f18b14645e302e0"
+      },
+      "retained_duties": {
+        "fixture_sha256": "de4ff6f4a9a6685f0def68ece479d24cebbc4a0c550fdf057ee5ec78842d0fe2",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/056.json",
+        "sha256": "95d95bd39e7752035a40fbda37d9fe314fe18c2e98ccc5f95747354621a1f1d2"
+      },
+      "retained_duties": {
+        "fixture_sha256": "111ce2bbedbafedd2955f13a87a55e381f695e9638dbd251450504a07a2139b7",
+        "normative_premise_id": "sign",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/signDisplay-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/057.json",
+        "sha256": "352ced4ec3ae64f0c73e1832b7cf5591bb71d73a2eedcb16e894214a67987a5d"
+      },
+      "retained_duties": {
+        "fixture_sha256": "f209d186ba5cbf3b13ff9db52c4e67559320fb3b581324be4cd315be8e5db140",
+        "normative_premise_id": "sign",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/unit-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/058.json",
+        "sha256": "47b8252ff8d0b18290409690eda799d7d377ca31de4840730d0f61b28619b92b"
+      },
+      "retained_duties": {
+        "fixture_sha256": "db18a49aacbd377ce2b40bf938de02fa42dfb8211892672f8c3d853b8d91b228",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/unit-ja-JP.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/059.json",
+        "sha256": "abacd3b70862947cddbf4d4d22497a56e7ba67840d6226e6744e758698da1ab0"
+      },
+      "retained_duties": {
+        "fixture_sha256": "00285ee0448a213844a2d5a4c1fddaf6b45a9842d322f6e34dcdf84bf162873e",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/unit-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/060.json",
+        "sha256": "4fd7ca3beb593229114172426ef7b2e562e97737db30614d34a90aa4f2ba0ecb"
+      },
+      "retained_duties": {
+        "fixture_sha256": "05bddee200faef3bf36e009147abecc10acc6041a406c959eaad2ecc8cab388c",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/unit-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/061.json",
+        "sha256": "31988df1fcfee7052b142e9707ffe290dd260cf3fa5e68f619c0b24ad4474a2a"
+      },
+      "retained_duties": {
+        "fixture_sha256": "7b2c896b396aaded56095e444f872b8a69d6d630692bdfaffa7d1a832ca860ea",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/062.json",
+        "sha256": "799d71d64883200d7237655f3508e758364ffdaec2d4ba96024df17c6c6913e1"
+      },
+      "retained_duties": {
+        "fixture_sha256": "aaff2cddf2d705e22b1a4e1b6bd2df6e705a51bd12cf96648e0499aa5733117a",
+        "normative_premise_id": "grouping",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-en-IN.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/063.json",
+        "sha256": "5bc8188b61a298803c0f7434e527f3d131ba5c321aaaba23d43c67a8f92a2db0"
+      },
+      "retained_duties": {
+        "fixture_sha256": "de49eab6f8ec8a95a75eecdd7f5a0dd425eccc6f8c4620b411760b133b0d155d",
+        "normative_premise_id": "grouping",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-extended-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/064.json",
+        "sha256": "f1aa0bd4bd600873259eb2bfe0cf7b8511caa0b4cfdb9e8db3d48716399f6214"
+      },
+      "retained_duties": {
+        "fixture_sha256": "8788f9195927a814112f17a4ca503f7610c807b4ba1702ea543c5774495c03fd",
+        "normative_premise_id": "grouping",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/format/useGrouping-extended-en-IN.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/065.json",
+        "sha256": "25d88a332366c2fe49d5f2c2aedd0c16791a549d1335dc480d99537c301a2b72"
+      },
+      "retained_duties": {
+        "fixture_sha256": "f89dfca33798083219316744ef4c47114813d3a685612e41926fc8cbcff5c372",
+        "normative_premise_id": "grouping",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatRange/en-US.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/066.json",
+        "sha256": "ea33401ab1c8f61b966991d3d697036a69ca5885d228c374657780a5ac0b30f9"
+      },
+      "retained_duties": {
+        "fixture_sha256": "9304d9b38b784196f6b380e5288e036d63897b63a329eed3e539dcd263eb2f53",
+        "normative_premise_id": "range",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatRange/pt-PT.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/067.json",
+        "sha256": "a2e65eafbe6ee949c11d575d414238243521fc05cfb81b4c900f0c46b42b5e17"
+      },
+      "retained_duties": {
+        "fixture_sha256": "1da83ee11a8a2b80f4796b0ce849c785671a2f3c08908d0da7bfae729cbd73f4",
+        "normative_premise_id": "range",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/en-US.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/068.json",
+        "sha256": "4c8e3ccf481722014cc96ad6966e188158361329bb317758df36b49f7da72402"
+      },
+      "retained_duties": {
+        "fixture_sha256": "9d09322cec99cd31f8cf84c39100bee8d01b8aaabd9e5abb352d9eb4080c9ba0",
+        "normative_premise_id": "range",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/engineering-scientific-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/069.json",
+        "sha256": "9f0810dd8838462855b3820bafea45e4cd5c1eee3fcdd52acaf158e893f3047b"
+      },
+      "retained_duties": {
+        "fixture_sha256": "1da8cefa5b0796df4a3fa8c8ffed7942e9885e919424147574037fcbb628ab81",
+        "normative_premise_id": "engineering",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/engineering-scientific-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/070.json",
+        "sha256": "f05b7c0c829b046ce3bbc7065b10019b18a2797c9bf8b2f90f7f5c1658d55c25"
+      },
+      "retained_duties": {
+        "fixture_sha256": "6094663bece9c805eedc11691a9d24973108760c5a8e3763291daccdc7ed3a06",
+        "normative_premise_id": "engineering",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/071.json",
+        "sha256": "11e4e0716ef1788878b120f981a18c1d1e6617f2c78a2dde53ecc3d5bd32364d"
+      },
+      "retained_duties": {
+        "fixture_sha256": "0e107bd76dddf65120485aac127a991bbf7f6e461b5aa481c22eb6079d4bbe15",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-ja-JP.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/072.json",
+        "sha256": "1443a46fcdccd19335706005851db0f351e0ae874f9881407aad0167e3aa9be2"
+      },
+      "retained_duties": {
+        "fixture_sha256": "b43ec792fdfb7dc57ba4f241c726f75a935226182ea3ffd8bf7ed6a17fb03e96",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/073.json",
+        "sha256": "fbfd49439ccb1fd86ed3695594387955cae82a517b700dfed580abbbe88453a4"
+      },
+      "retained_duties": {
+        "fixture_sha256": "041d19f6c94d47194cff314bf91dc460c9b63658858157a1c29700826b3d95ce",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/074.json",
+        "sha256": "3e541a5b52f9b77494d52a6270018f99e02e5750e3f4f8fd34d719e797d50aaf"
+      },
+      "retained_duties": {
+        "fixture_sha256": "0947f94100319cb2d30b8459f37f0e7393295b50b771f05521f88820e969f5ca",
+        "normative_premise_id": "compact",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/075.json",
+        "sha256": "6b9f74883ceff237095fe3159112c536e9174defba14cfdeb4081659948233f1"
+      },
+      "retained_duties": {
+        "fixture_sha256": "2f237ddf3c769610e2df6185bf237648cc8711b84651491ec008b9e768e4be55",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/076.json",
+        "sha256": "7ae50bf3027e7af9ae50c961904f19e431c871b4be039aeedb27a527c03630a0"
+      },
+      "retained_duties": {
+        "fixture_sha256": "fdc805666c158fb35e0b225b2679ba82e37f638bf63f1e5df2ed40d6efca63e7",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/077.json",
+        "sha256": "e5855f89c44bca131dddf0b26e19faf69f22df2e52d5be7826a118f17cb907e6"
+      },
+      "retained_duties": {
+        "fixture_sha256": "d4e4f46e139e655233d169be1b3a0d8956e0f288ffdf59226dca115db3f54b93",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/078.json",
+        "sha256": "66e1ce5ee6ce54a00dbadb3bba4d784fad075c7ce5757b105f76aae3022ef8f8"
+      },
+      "retained_duties": {
+        "fixture_sha256": "fe40a739053b93573fa9fc102263a3671d73ba97342fe37beac95293c65584eb",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/079.json",
+        "sha256": "d06b4e1821c39a12d0f6402328601ff94e8309a68a53db7d84c8957591252cb3"
+      },
+      "retained_duties": {
+        "fixture_sha256": "b72dd9e1790cd98f5136b7dc916b53c9e9754e5d3793fe5354b7496a1e6a9345",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/080.json",
+        "sha256": "42a4f78f2c38240a4e90b2e9ec3b849c4e7d59938fa565bbe7dc88ac54a7e883"
+      },
+      "retained_duties": {
+        "fixture_sha256": "4599ae06403a7d780ff77199004cd9bd3a5a9cee9a31d2f0c561a327e55e2e07",
+        "normative_premise_id": "accounting",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification.",
+          "ACCOUNTING-PINNED-WORDING explicit interpretation required"
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/081.json",
+        "sha256": "fc33033dcfdbebb19784cc417e0285766048b322fed389623f6590d5a9498511"
+      },
+      "retained_duties": {
+        "fixture_sha256": "6c7d3559a221f83b2d5ee4db19273b270559eac831e412ef91e610503487c047",
+        "normative_premise_id": "sign",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/082.json",
+        "sha256": "b682d87054542ba2438807667f1f45525b4cfc7898f6c981abad98b7e3f5ab2f"
+      },
+      "retained_duties": {
+        "fixture_sha256": "2a061608f0e88f1002c55e52b94e99dfcf8c37cdb2c3f7f6f2b916de6af600dc",
+        "normative_premise_id": "sign",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-de-DE.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/083.json",
+        "sha256": "c51b806a501753a8b41e4f79f014b8d67dd8a31978f0fdd66b2bb553fdb1d77e"
+      },
+      "retained_duties": {
+        "fixture_sha256": "5fbf1e71cb79847c77935ae2180aa029c1138934394963566322a706385bcffe",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/084.json",
+        "sha256": "7f4561a72b8fd3e88c485ef6b67fe4aaa812954166824303efbc3aae309b3ec8"
+      },
+      "retained_duties": {
+        "fixture_sha256": "7735c8b81855eb0e5a82d0cfceea4c38fd4e5e95c0d5939406d3ec351e9b6a56",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ko-KR.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/085.json",
+        "sha256": "c95ff4bc067fe3fc6a568b28a52a36060dac528a2b4cd26b4a161cf2e898fe4e"
+      },
+      "retained_duties": {
+        "fixture_sha256": "676e6baeab7b32184724d107702dd31656b7624f8910742f9d004e55202815a6",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-zh-TW.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/086.json",
+        "sha256": "fd09304544aeb6a8255911c928e06345e2e6c7113a1a03e4ec48557f4425c1df"
+      },
+      "retained_duties": {
+        "fixture_sha256": "3e8ee57449ca7ae48c021333e8b937cf76d02357e029ec691eddd499e0ab34f8",
+        "normative_premise_id": "unit",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/PluralRules/prototype/resolvedOptions/plural-categories-order.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/087.json",
+        "sha256": "621137d4e48d1c737e547853276c46b7f83a418e48c77d0c0344701270f0054e"
+      },
+      "retained_duties": {
+        "fixture_sha256": "9b8ca051ca537a3b48f99378b2824f3b005b9f10a2397199cf0ad9d1af2134e3",
+        "normative_premise_id": "categories",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "numeric46",
+      "fixture": "test262/test/intl402/PluralRules/prototype/select/notation.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/088.json",
+        "sha256": "180bb8ace7de63a3f4affdac0939294787ef622e34f17464304d5decc4eb1053"
+      },
+      "retained_duties": {
+        "fixture_sha256": "f4cf034c4af5d48ed19992643b08333e3e8fb9c3660245542e032d5ec0f11d92",
+        "normative_premise_id": "pluralnotation",
+        "root_decision_conditions": [
+          "Authenticate actual completed record through currentsemanticv2 projector without helper substitution.",
+          "Preserve exact source_bindings and both stable observation variants; all changed input/output requires rereview.",
+          "Apply precise per-event classification and mandatory mathematical reconstruction, never no-failure-flags qualification."
+        ]
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/constructor/constructor/locales-valid.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/089.json",
+        "sha256": "6e85f7064201235a382204d48fa68e3b7dcd8215e2564cc92ca2b46c80b3335e"
+      },
+      "retained_duties": {
+        "index": 40,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies",
+          "14 valid constructor contexts and both matchers; 12 original locales equal, two DE length1 en-US fallbacks",
+          "three invalid RangeError contexts and all direct canonicalizer readbacks remain blocking"
+        ],
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "fc9e7fa86f86bf819ed5abe42f462cd1dfce8d6d03263bb81753bc34ad873e06"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/format/en-us-numeric-always.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/090.json",
+        "sha256": "b8bc7c2e4d310cbe9aad1e73aea698f392456cdb1967996997c9a93972069699"
+      },
+      "retained_duties": {
+        "index": 28,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "7537769bbb879e07f15779c7b19f594f0cb3c40b2a91f38c223e4d8d503c4f7f"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/format/en-us-numeric-auto.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/091.json",
+        "sha256": "ffb878447e5c357b3fb897b2a59c5a035f9ff72d3c1d5e02ef9872364b19aac2"
+      },
+      "retained_duties": {
+        "index": 30,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "080300d6c3ee5aab6da717a9af019aec670af23ca5d84272a965a5dcb1db3900"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/format/en-us-style-short.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/092.json",
+        "sha256": "ced826356920011cc1f8e3ab76a731c9fcf2370845d8d0f5d87202cec4e93fe4"
+      },
+      "retained_duties": {
+        "index": 32,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "d3268eeff6f92cb2fe438c9a3204f6d9bfaf2758410284d31011a9fb786effbc"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/format/pl-pl-style-long.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/093.json",
+        "sha256": "509a2bce61cb3c2016982df16e294ace50502916d08d788bb9b85ed193f6a4b7"
+      },
+      "retained_duties": {
+        "index": 34,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "0cb5c158924c843c31ebf6585dd8f435cd1554b0dcb3ac36cce9f105858b46dc"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/format/pl-pl-style-narrow.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/094.json",
+        "sha256": "42b9a428b3d4682b20fc793122d9e755fdd072f64ddd2c9f42e14f2aac200526"
+      },
+      "retained_duties": {
+        "index": 38,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "cfbfca69594912dae5a0807a367a0339f9580a788e4e3d1e2f7d0ed8ff11b219"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/format/pl-pl-style-short.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/095.json",
+        "sha256": "23bf5924a9ee43e044b5d9936a36d2590dacd23f1e22c535bee31cbc79573591"
+      },
+      "retained_duties": {
+        "index": 36,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "d41a6bdf9c4d7f2521c4681ad33d2e1ab5170d359dd9acdc2854029b2e3ca236"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/en-us-numeric-always.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/096.json",
+        "sha256": "799354d632e1ff3d8d300eab7c02b18c40e37777a8662711e0c46327d9090c3e"
+      },
+      "retained_duties": {
+        "index": 29,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "5272b651c3386b5680d5970fccdc59142a91709b3a6569a17d2f60698c1c1c0d"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/en-us-numeric-auto.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/097.json",
+        "sha256": "c34e75c76ceae8242f78855818a81ede65cabdf8a20041e35311c7a7f724222a"
+      },
+      "retained_duties": {
+        "index": 31,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "c79b78d7a9b59b0e705c8e994e8e9c72951728acec48a87e3e637810682c10f2"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/en-us-style-short.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/098.json",
+        "sha256": "e8cb8a4dee245e19bca6d82aae9dd703356b0245f22b0546a99180d13ef39449"
+      },
+      "retained_duties": {
+        "index": 33,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "058a602273c9b9d6a41ba9ef6b3988b41879eef6d5fecdaddd75d9fb4c072372"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/pl-pl-style-long.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/099.json",
+        "sha256": "acbad21a744c2017e17100d293407b230192877ab35fb0464edb3509b72b85f3"
+      },
+      "retained_duties": {
+        "index": 35,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "5cc4003660d3e5319b7a79e041a6262f92b8630d7e9e1ed05c04e83772e818f5"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/pl-pl-style-narrow.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/100.json",
+        "sha256": "4ed756ca0e98986809320601638ab40840b80f8119e5a3cfe018d7961178df6e"
+      },
+      "retained_duties": {
+        "index": 39,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "d323211b9db0368a48fa210bcbcb5321c84328b6f42e6f39c3182f9d4ba7c5c4"
+      }
+    },
+    {
+      "capture_kind": "rtf-variant-neutral",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/RelativeTimeFormat/prototype/formatToParts/pl-pl-style-short.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/101.json",
+        "sha256": "43787ee66b17f35407a3db844bd45c03ee20512d6209d4c770880c1a7405031f"
+      },
+      "retained_duties": {
+        "index": 37,
+        "mandatory_obligations": [
+          "signed mathematical Number input per literal draft; negative zero retains past tense but becomes mathematical zero for NumberFormat",
+          "numeric auto ToString-key literals including zero; numeric fallback signed negative values",
+          "effective locale and numbering/style/numeric options",
+          "all part types/order/unit ownership, numeric precision/grouping and format join",
+          "exact original field expectations remain reported even where draft discrepancy or locale premise applies"
+        ],
+        "missing_or_external_guard_flags": [
+          "RTF sampler does not observe part descriptors/prototypes; those are unproved beyond this bounded original-field scope"
+        ],
+        "original_sha256": "030b65eedd81208f61ca119e9b45e00a897fbf213b6e5b9be83a506bf23b8339"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Segmenter/constructor/constructor/locales-valid.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/102.json",
+        "sha256": "8ce64fb73186fde1ec22c1130facc015c63cefe8fc27c8c0327de7c7eddc07bc"
+      },
+      "retained_duties": {
+        "index": 23,
+        "mandatory_obligations_and_narrow_proposal": "Keep undefined/empty/EN/duplicate/arraylike length/no-length semantics and exact invalid throws mandatory. Apply availability premise only to eight exact foreign-locale rows.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "b251beefe9f9ab299820090bede72f096ae1bbc89851575114d941c22bb4b2c3"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Segmenter/constructor/supportedLocalesOf/locales-specific.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/103.json",
+        "sha256": "3b1dc3935a08a99379e63c5322422ecab59bc39b63fbea364bc24552b20a325c"
+      },
+      "retained_duties": {
+        "index": 24,
+        "mandatory_obligations_and_narrow_proposal": "Only requested locales with matches belong in FilterLocales result; arrays/order, matcher input and method shape remain mandatory.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "c2b3455e9e0c7dffb8609c2e0314a37d21e1804563fa83b2fb14a371f79d544c"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/basic.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/104.json",
+        "sha256": "9b323d116abb927b75c89c8d826d33496848418c449dbc80295ae9b947dd1004"
+      },
+      "retained_duties": {
+        "index": 9,
+        "mandatory_obligations_and_narrow_proposal": "Retain exact Instant epoch and NY/Vienna timezone arithmetic, type-specific defaults, all numeric parts, string join and equivalence. Only requested de-AT having a 24h default is a locale premise; actual dayPeriod in effective en-US is required by h12 pattern.",
+        "missing_or_external_guard_flags": [
+          "authoritative-1976-zone-offset-source-binding-needs-root-check"
+        ],
+        "original_sha256": "0ebf43ec51984c2bd507b57544541345e644f7c095f5ad6c530f5faad09bb145"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/hourcycle.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/105.json",
+        "sha256": "7f0c64583f607c89e33c0578e7b3245097782422158cc9d1896dd6947af5a824"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "All four original fixtures call toLocaleString(\"en\", original options). Instant and ZonedDateTime use epoch zero (ZonedDateTime explicitly UTC); PlainTime has all zero time fields; PlainDateTime is 2000-05-02 at zero time. The source path selects brand-appropriate DateTimeFormat defaults and keeps the original locale/options.",
+          "For admitted en, hour12:false selects the source h23 preference; hour12:true selects h12. Explicit h11/h12/h23/h24 stay selected. Midnight numerically becomes 0 for h11/h23, 12 for h12 and 24 for h24; minutes/seconds remain 00 and twelve-hour records retain AM.",
+          "The original output0 comparator requires 00:00:00. The actual selected numeric hour record renders 0:00:00. Numeric field width is selected-format data, so a missing leading zero in those two finite comparisons is not wrong numeric hour semantics.",
+          "The Plain paths use wall-time fields without timezone shifting; the Instant and ZonedDateTime paths use the captured UTC epoch and zone. The unchanged source/bank/epoch derivations are reused with the exact fresh output binding."
+        ],
+        "original_fixture_sha256": "8c63421a6e351aa6d85d70719ad3fe92e377e77d9541af234cd439da384f5b07",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "A resolvedOptions auxiliary DateTimeFormat probe is observed; it is not the hidden original toLocaleString formatter object. The original formatter selection is a source-derived claim bound to original options/brand and actual output, not an observed hidden object.",
+          "No Japanese matching witness is claimed. The older separate hourCycle-default.js Japanese premise remains outside these nineteen files.",
+          "Parts counterparts and descriptors/prototypes not captured for these original strings remain conditional source proofs."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/basic.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/106.json",
+        "sha256": "b4c770ccc3c3069881237eacd03edc5730f77d010f899993a40565612daa78a1"
+      },
+      "retained_duties": {
+        "index": 10,
+        "mandatory_obligations_and_narrow_proposal": "PlainDateTime must format its wall time using +00:00 regardless of resolved zone. Keep original equalities and numeric parts/join mandatory; requested de-AT 24h default alone is conditional.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "73c126eff31f388c33b7a97aa47fb4ec74677ef25aca00e203b7c19485193ce3"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/hourcycle.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/107.json",
+        "sha256": "793ef6b654013dc666b4a0695da98f3d628c5b6e708a14e71a0d2de2e5810f45"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "All four original fixtures call toLocaleString(\"en\", original options). Instant and ZonedDateTime use epoch zero (ZonedDateTime explicitly UTC); PlainTime has all zero time fields; PlainDateTime is 2000-05-02 at zero time. The source path selects brand-appropriate DateTimeFormat defaults and keeps the original locale/options.",
+          "For admitted en, hour12:false selects the source h23 preference; hour12:true selects h12. Explicit h11/h12/h23/h24 stay selected. Midnight numerically becomes 0 for h11/h23, 12 for h12 and 24 for h24; minutes/seconds remain 00 and twelve-hour records retain AM.",
+          "The original output0 comparator requires 00:00:00. The actual selected numeric hour record renders 0:00:00. Numeric field width is selected-format data, so a missing leading zero in those two finite comparisons is not wrong numeric hour semantics.",
+          "The Plain paths use wall-time fields without timezone shifting; the Instant and ZonedDateTime paths use the captured UTC epoch and zone. The unchanged source/bank/epoch derivations are reused with the exact fresh output binding."
+        ],
+        "original_fixture_sha256": "f84c95848cb23974d85e8e0fce2643692a177a7bd5d6a0ad9222d34739daff77",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "A resolvedOptions auxiliary DateTimeFormat probe is observed; it is not the hidden original toLocaleString formatter object. The original formatter selection is a source-derived claim bound to original options/brand and actual output, not an observed hidden object.",
+          "No Japanese matching witness is claimed. The older separate hourCycle-default.js Japanese premise remains outside these nineteen files.",
+          "Parts counterparts and descriptors/prototypes not captured for these original strings remain conditional source proofs."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/resolved-time-zone.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/108.json",
+        "sha256": "626bbbfbf39914fed916ab62f00a60f5f94d4f6472f141c85c319daf0652495e"
+      },
+      "retained_duties": {
+        "index": 11,
+        "mandatory_obligations_and_narrow_proposal": "Wall date/time 2021-08-04 at 00:30:45 and 23:30:45 must remain unchanged by Apia offset. Original asks numeric hour; a selected numeric-hour record uses 0, whereas 2-digit uses 00. Exact padding is the conditional comparison, not the wall-time arithmetic.",
+        "missing_or_external_guard_flags": [
+          "capture-lacks-toLocaleString-parts-and-effective-selected-hour-record"
+        ],
+        "original_sha256": "2bf82e5ec9aa34b7e74302d6a5c4ed1f7f10f38bc6c2995b21d241c1a806cebf"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/basic.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/109.json",
+        "sha256": "a3afd7d6cf32889696f42e8e6544741f89cee5990635d3a658f9a68bd567abd4"
+      },
+      "retained_duties": {
+        "index": 12,
+        "mandatory_obligations_and_narrow_proposal": "Keep PlainTime wall-hour15/minute23/second30, no date fields, +00:00 behavior, parts/join and original equivalence mandatory. Only de-AT 24h default is conditional.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "355be9789cf2e15f86bdce99e1b4b618689f2b7016ae69d4f967b21c1384230b"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/hourcycle.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/110.json",
+        "sha256": "b47e3c7e9aa1afe2dfb13b1f9029ae084f006b540d7134b6e584a381f0ba2d5e"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "All four original fixtures call toLocaleString(\"en\", original options). Instant and ZonedDateTime use epoch zero (ZonedDateTime explicitly UTC); PlainTime has all zero time fields; PlainDateTime is 2000-05-02 at zero time. The source path selects brand-appropriate DateTimeFormat defaults and keeps the original locale/options.",
+          "For admitted en, hour12:false selects the source h23 preference; hour12:true selects h12. Explicit h11/h12/h23/h24 stay selected. Midnight numerically becomes 0 for h11/h23, 12 for h12 and 24 for h24; minutes/seconds remain 00 and twelve-hour records retain AM.",
+          "The original output0 comparator requires 00:00:00. The actual selected numeric hour record renders 0:00:00. Numeric field width is selected-format data, so a missing leading zero in those two finite comparisons is not wrong numeric hour semantics.",
+          "The Plain paths use wall-time fields without timezone shifting; the Instant and ZonedDateTime paths use the captured UTC epoch and zone. The unchanged source/bank/epoch derivations are reused with the exact fresh output binding."
+        ],
+        "original_fixture_sha256": "300a4c8f5324c01bfd441ce8c2a260cef5117157923f3ef7e326e50de7ec2acf",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "A resolvedOptions auxiliary DateTimeFormat probe is observed; it is not the hidden original toLocaleString formatter object. The original formatter selection is a source-derived claim bound to original options/brand and actual output, not an observed hidden object.",
+          "No Japanese matching witness is claimed. The older separate hourCycle-default.js Japanese premise remains outside these nineteen files.",
+          "Parts counterparts and descriptors/prototypes not captured for these original strings remain conditional source proofs."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/resolved-time-zone.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/111.json",
+        "sha256": "162466f0ae1e1949d3f3c0afe7e21c8cecd279e2a9655f7330ccda69a5d76cbe"
+      },
+      "retained_duties": {
+        "index": 13,
+        "mandatory_obligations_and_narrow_proposal": "Keep wall-time at 00:30:45/23:30:45 mandatory; no offset application or rounding from fractional ns. Original numeric hour does not mandate 2-digit padding.",
+        "missing_or_external_guard_flags": [
+          "capture-lacks-toLocaleString-parts-and-effective-selected-hour-record"
+        ],
+        "original_sha256": "aacd2de0d876b4eb17b700fa78383098e3b31f61cc421f07dd9953a2598bd584"
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "fresh19",
+      "fixture": "test262/test/intl402/Temporal/ZonedDateTime/prototype/toLocaleString/hourcycle.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/112.json",
+        "sha256": "1bfa9d19599b932f37605cbb6700015ba3aab2cb18e9ad43b25fd0647df30139"
+      },
+      "retained_duties": {
+        "finite_mandatory_claims": [
+          "All four original fixtures call toLocaleString(\"en\", original options). Instant and ZonedDateTime use epoch zero (ZonedDateTime explicitly UTC); PlainTime has all zero time fields; PlainDateTime is 2000-05-02 at zero time. The source path selects brand-appropriate DateTimeFormat defaults and keeps the original locale/options.",
+          "For admitted en, hour12:false selects the source h23 preference; hour12:true selects h12. Explicit h11/h12/h23/h24 stay selected. Midnight numerically becomes 0 for h11/h23, 12 for h12 and 24 for h24; minutes/seconds remain 00 and twelve-hour records retain AM.",
+          "The original output0 comparator requires 00:00:00. The actual selected numeric hour record renders 0:00:00. Numeric field width is selected-format data, so a missing leading zero in those two finite comparisons is not wrong numeric hour semantics.",
+          "The Plain paths use wall-time fields without timezone shifting; the Instant and ZonedDateTime paths use the captured UTC epoch and zone. The unchanged source/bank/epoch derivations are reused with the exact fresh output binding."
+        ],
+        "original_fixture_sha256": "4a4328952c543510eda0001586589825d5667163e8f2854055d61a1b39e4e85b",
+        "residual_duties": [
+          "The raw Test262 comparison stays a recorded failure; no original fixture is skipped, modified, counted as passed, or globally waived.",
+          "Claims apply only to the exact captured original invocation sites, iteration inputs, actual source/engine/config hashes and finite selected data. Broader locale/calendar/option behavior is not certified.",
+          "A retained source proof of unobserved parts counterparts, own descriptors or prototypes remains conditional. Actual captured auxiliary parts/property invariant receipts support only the observed result instances.",
+          "Root must explicitly approve normative policy and bind the eventual production source and enabled hosted matrix. This packet grants no publication authorization.",
+          "A resolvedOptions auxiliary DateTimeFormat probe is observed; it is not the hidden original toLocaleString formatter object. The original formatter selection is a source-derived claim bound to original options/brand and actual output, not an observed hidden object.",
+          "No Japanese matching witness is claimed. The older separate hourCycle-default.js Japanese premise remains outside these nineteen files.",
+          "Parts counterparts and descriptors/prototypes not captured for these original strings remain conditional source proofs."
+        ],
+        "unavailable_totalized_original_obligations": 0
+      }
+    },
+    {
+      "capture_kind": "script-variants",
+      "current_capture_accepted": false,
+      "decision": "Accept bounded independently derived semantic proposal only within its stated input/options/selected-data/source domain; final binding and qualification pending.",
+      "family": "nonnumeric41",
+      "fixture": "test262/test/staging/sm/String/internalUsage.js",
+      "fresh_comparison_required": true,
+      "immutable_input_binding": {
+        "path": "assembly-inputs/per-file/113.json",
+        "sha256": "5725f992dffea48c97781ae6a5f6368b8373a20507a89771e19c5a950fa0395a"
+      },
+      "retained_duties": {
+        "index": 25,
+        "mandatory_obligations_and_narrow_proposal": "Keep every Symbol.split mutation and same-source/same-input baseline equivalence mandatory. Diagnostic data continuation covers only possibleAnswer spelling. The full global receiver snapshot differs by rendered script text across variants; all output and assertion events match.",
+        "missing_or_external_guard_flags": [],
+        "original_sha256": "6e135772186984badc224211e789b119ee62aa58306d39bae1ac07bdbc191dde"
+      }
+    }
+  ],
+  "raw_failure_waiver": false,
+  "reviewed_at_utc": "2026-10-11T21:03:20.384735+00:00",
+  "root_reviewer": "/root",
+  "schema": "root-finite-proposal-domain-decisions-v1",
+  "scope_excludes": [
+    "compare-to-temporal-lunisolar.js and three new fixture review proposals requiring separate current bindings",
+    "All unseen inputs, future locale inventories, or general language conformance"
+  ]
+}

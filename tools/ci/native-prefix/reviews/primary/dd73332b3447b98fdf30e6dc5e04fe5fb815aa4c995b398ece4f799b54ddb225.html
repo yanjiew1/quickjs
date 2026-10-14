@@ -1,0 +1,79 @@
+<emu-clause id="sup-availablenamedtimezoneidentifiers" oldids="sec-availabletimezones" type="implementation-defined abstract operation">
+      <h1>AvailableNamedTimeZoneIdentifiers ( ): a List of Time Zone Identifier Records</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          Its result describes all available named time zone identifiers in this implementation, as well as the primary time zone identifier corresponding to each available named time zone identifier.
+          The List is ordered according to the [[Identifier]] field of each Time Zone Identifier Record.
+        </dd>
+      </dl>
+      <p>This definition supersedes the definition provided in <emu-xref href="#sec-availablenamedtimezoneidentifiers"></emu-xref>.</p>
+      <emu-alg>
+        1. Let _identifiers_ be a List containing the String value of each Zone or Link name in the IANA Time Zone Database.
+        1. Assert: No element of _identifiers_ is an ASCII-case-insensitive match for any other element.
+        1. Sort _identifiers_ according to lexicographic code unit order.
+        1. Let _result_ be a new empty List.
+        1. For each element _identifier_ of _identifiers_, do
+          1. Let _primary_ be _identifier_.
+          1. If _identifier_ is a Link name in the IANA Time Zone Database and _identifier_ is not present in the “TZ” column of <code>zone.tab</code> of the IANA Time Zone Database, then
+            1. Let _zone_ be the Zone name that _identifier_ resolves to, according to the rules for resolving Link names in the IANA Time Zone Database.
+            1. If _zone_ starts with *"Etc/"*, then
+              1. Set _primary_ to _zone_.
+            1. Else,
+              1. Let _identifierCountryCode_ be the <a href="https://www.iso.org/glossary-for-iso-3166.html">ISO 3166-1 Alpha-2</a> country code whose territory contains the geographical area corresponding to _identifier_.
+              1. Let _zoneCountryCode_ be the ISO 3166-1 Alpha-2 country code whose territory contains the geographical area corresponding to _zone_.
+              1. If _identifierCountryCode_ is _zoneCountryCode_, then
+                1. Set _primary_ to _zone_.
+              1. Else,
+                1. Let _countryCodeLineCount_ be the number of lines in file <code>zone.tab</code> of the IANA Time Zone Database where the “country-code” column is _identifierCountryCode_.
+                1. If _countryCodeLineCount_ is 1, then
+                  1. Let _countryCodeLine_ be the line in file <code>zone.tab</code> of the IANA Time Zone Database where the “country-code” column is _identifierCountryCode_.
+                  1. Set _primary_ to the contents of the “TZ” column of _countryCodeLine_.
+                1. Else,
+                  1. Let _backzone_ be *undefined*.
+                  1. Let _backzoneLinkLines_ be the List of lines in the file <code>backzone</code> of the IANA Time Zone Database that start with either *"Link "* or *"#PACKRATLIST zone.tab Link "*.
+                  1. For each element _line_ of _backzoneLinkLines_, do
+                    1. Let _i_ be StringIndexOf(_line_, *"Link "*, 0).
+                    1. Set _line_ to the substring of _line_ from _i_ + 5.
+                    1. Let _backzoneAndLink_ be StringSplitToList(_line_, *" "*).
+                    1. Assert: _backzoneAndLink_ has at least two elements, and both _backzoneAndLink_[0] and _backzoneAndLink_[1] are available named time zone identifiers.
+                    1. If _backzoneAndLink_[1] is _identifier_, then
+                      1. Assert: _backzone_ is *undefined*.
+                      1. Set _backzone_ to _backzoneAndLink_[0].
+                  1. Assert: _backzone_ is not *undefined*.
+                  1. Set _primary_ to _backzone_.
+          1. If _primary_ is one of *"Etc/UTC"*, *"Etc/GMT"*, or *"GMT"*, set _primary_ to *"UTC"*.
+          1. If _primary_ is a replacement time zone identifier and its rename waiting period has not concluded, then
+            1. Let _renamedIdentifier_ be the renamed time zone identifier that _primary_ replaced.
+            1. Set _primary_ to _renamedIdentifier_.
+          1. Let _record_ be the Time Zone Identifier Record { [[Identifier]]: _identifier_, [[PrimaryIdentifier]]: _primary_ }.
+          1. Append _record_ to _result_.
+        1. Assert: _result_ contains a Time Zone Identifier Record _utcRecord_ such that _utcRecord_.[[Identifier]] is *"UTC"* and _utcRecord_.[[PrimaryIdentifier]] is *"UTC"*.
+        1. Return _result_.
+      </emu-alg>
+
+      <emu-note>
+        <p>The algorithm above for resolving Links to primary time zone identifiers is intended to correspond to the behaviour of <code>icu::TimeZone::getIanaID()</code> in the International Components for Unicode (<a href="https://icu.unicode.org/">ICU</a>) and the processes for maintaining time zone identifier data in the Unicode Common Locale Data Repository (<a href="https://cldr.unicode.org">CLDR</a>).</p>
+        <p>
+          This algorithm resolves Links to primary time zone identifiers without crossing the boundaries of ISO 3166-1 Alpha-2 country codes, using data from files <code>zone.tab</code> and <code>backzone</code> of the IANA Time Zone Database.
+          If the country code of a Link has only one line in <code>zone.tab</code>, then that line will determine the primary time zone identifier.
+          However, if that country code has multiple lines in <code>zone.tab</code>, then historical mappings in <code>backzone</code> must be used to identify the correct primary time zone identifier.
+        </p>
+        <p>
+          For example, to resolve "Pacific/Truk" (in country code "FM") if the default build options of the IANA Time Zone Database identify it as a Link to "Pacific/Port_Moresby" (in country code "PG"), then the “country-code” column of <code>zone.tab</code> must be checked for lines corresponding with "FM".
+          If there were only one such line, then the “TZ” column of that line would determine the primary time zone identifier associated with "Pacific/Truk".
+          But if there are multiple "FM" lines in <code>zone.tab</code>, then <code>backzone</code> must be inspected and a line such as "Link Pacific/Chuuk Pacific/Truk" would result in using "Pacific/Chuuk" as the primary time zone identifier.
+        </p>
+        <p>
+          Note that <code>zone.tab</code> is the preferred source of mapping data because <code>backzone</code> mappings may, in rare cases, cross the boundaries of ISO 3166-1 Alpha-2 country codes.
+          For example, "Atlantic/Jan_Mayen" (in country code "SJ") is mapped in <code>backzone</code> to "Europe/Oslo" (in country code "NO").
+          As of the 2024a release of the IANA Time Zone Database, "Atlantic/Jan_Mayen" is the only case where this happens.
+        </p>
+      </emu-note>
+
+      <emu-note>
+        Time zone identifiers in the IANA Time Zone Database can change over time.
+        At a minimum, it is recommended that implementations limit changes to the result of AvailableNamedTimeZoneIdentifiers to the changes allowed by GetAvailableNamedTimeZoneIdentifier, for the lifetime of the surrounding agent.
+        Due to the complexity of supporting these recommendations, it is recommended that the result of AvailableNamedTimeZoneIdentifiers remains the same for the lifetime of the surrounding agent.
+      </emu-note>
+    </emu-clause>

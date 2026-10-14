@@ -1,0 +1,45 @@
+    <emu-clause id="sec-lookupmatchinglocalebyprefix" type="abstract operation" oldids="sec-bestavailablelocale,sec-lookupmatcher">
+      <h1>
+        LookupMatchingLocaleByPrefix (
+          _availableLocales_: an Available Locales List,
+          _requestedLocales_: a Language Priority List,
+        ): a Record with fields [[locale]] (a Unicode canonicalized locale identifier) and [[extension]] (a Unicode locale extension sequence or ~empty~) or *undefined*
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It determines the best element of _availableLocales_ for satisfying _requestedLocales_ using the lookup algorithm defined in <a href="https://www.rfc-editor.org/info/bcp47">BCP 47</a> at <a href="https://www.rfc-editor.org/rfc/rfc4647.html#section-3.4">RFC 4647 section 3.4</a>, ignoring Unicode locale extension sequences. If a non-default match is found, it returns a Record with a [[locale]] field containing the matching language tag from _availableLocales_ and an [[extension]] field containing the Unicode locale extension sequence of the corresponding element of _requestedLocales_ (or ~empty~ if requested language tag has no such sequence).</dd>
+      </dl>
+      <emu-alg>
+        1. For each element _locale_ of _requestedLocales_, do
+          1. Let _extension_ be ~empty~.
+          1. If _locale_ contains a Unicode locale extension sequence, then
+            1. Set _extension_ to the Unicode locale extension sequence of _locale_.
+            1. Set _locale_ to the String value that is _locale_ with any Unicode locale extension sequences removed.
+          1. Let _prefix_ be _locale_.
+          1. Repeat, while _prefix_ is not the empty String,
+            1. If _availableLocales_ contains _prefix_, return the Record { [[locale]]: _prefix_, [[extension]]: _extension_ }.
+            1. If _prefix_ contains *"-"* (code unit 0x002D HYPHEN-MINUS), let _pos_ be the index into _prefix_ of the last occurrence of *"-"*; else let _pos_ be 0.
+            1. Repeat, while _pos_ ≥ 2 and the substring of _prefix_ from _pos_ - 2 to _pos_ - 1 is *"-"*,
+              1. Set _pos_ to _pos_ - 2.
+            1. Set _prefix_ to the substring of _prefix_ from 0 to _pos_.
+        1. Return *undefined*.
+      </emu-alg>
+
+      <emu-note>
+        When a requested locale includes a <a href="https://unicode.org/reports/tr35/#BCP47_T_Extension">Unicode Technical Standard #35 Part 1 Core BCP 47 T Extension</a> subtag sequence, the truncation in this algorithm may temporarily generate invalid language tags. However, none of them will be returned because _availableLocales_ contains only valid language tags.
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-lookupmatchinglocalebybestfit" type="implementation-defined abstract operation" oldids="sec-bestfitmatcher">
+      <h1>
+        LookupMatchingLocaleByBestFit (
+          _availableLocales_: an Available Locales List,
+          _requestedLocales_: a Language Priority List,
+        ): a Record with fields [[locale]] (a Unicode canonicalized locale identifier) and [[extension]] (a Unicode locale extension sequence or ~empty~), or *undefined*
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It determines the best element of _availableLocales_ for satisfying _requestedLocales_, ignoring Unicode locale extension sequences. The algorithm is implementation dependent, but should produce results that a typical user of the requested locales would consider at least as good as those produced by the LookupMatchingLocaleByPrefix algorithm. If a non-default match is found, it returns a Record with a [[locale]] field containing the matching language tag from _availableLocales_ and an [[extension]] field containing the Unicode locale extension sequence of the corresponding element of _requestedLocales_ (or ~empty~ if requested language tag has no such sequence).</dd>
+      </dl>
+    </emu-clause>
+

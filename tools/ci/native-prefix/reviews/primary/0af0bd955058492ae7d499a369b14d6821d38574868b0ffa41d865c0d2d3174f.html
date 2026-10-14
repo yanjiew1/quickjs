@@ -1,0 +1,18 @@
+<emu-clause id="sec-gettemporaloverflowoption" type="abstract operation">
+      <h1>
+        GetTemporalOverflowOption (
+          _options_: an Object,
+        ): either a normal completion containing either *"constrain"* or *"reject"*, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"overflow"* property of _options_, returning *"constrain"* if absent.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"overflow"*).
+        1. If _value_ is *undefined*, return *"constrain"*.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is not one of *"constrain"* or *"reject"*, throw a *RangeError* exception.
+        1. Return _stringValue_.
+      </emu-alg>
+    </emu-clause>

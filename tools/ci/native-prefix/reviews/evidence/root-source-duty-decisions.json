@@ -1,0 +1,231 @@
+{
+  "conformance_accepted": false,
+  "current_capture_accepted": false,
+  "decisions": [
+    {
+      "conclusion": "For each successful fixed date/range formatting input, the part values partition exactly the same UTF-16 result buffer as format/formatRange. Every JS part is an ordinary object with own C/W/E data properties in type,value[,source] creation order. Single-format parts have no own source; range parts own source.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-shared-date-result-join",
+      "missing_direct_runtime_witness_preserved": "No fresh witness was produced. A claim that this duty was directly observed on the pinned engine still requires the corresponding narrow capture below.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "The seven original index4 range calls select the source records listed in NARROW-SELECTED-RECORD-CERTIFICATES and have the exact source-derived part arrays in DERIVED-EXPECTED-PARTS. Era A is present for PlainDate, PlainYearMonth, PlainDateTime, Dates and Instants, and absent for PlainMonthDay and PlainTime. Endpoint parts have startRange/endRange; the fallback separator is shared.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-era-records",
+      "missing_direct_runtime_witness_preserved": "Seven matching formatRangeToParts calls for the seven original endpoint pairs; full descriptors/prototypes and join to their existing formatRange results. This is a witness-coverage gap, not an unresolved source record.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "For original PlainDateTime options in Pacific/Apia with hour:numeric/hourCycle:h23, the selected record has numeric hour and 2-digit minute/second. Its plain path preserves wall fields 0 or23,30,45 and, for PlainDateTime,2021-08-04. Exact source-derived parts contain hour0 or23, never an offset-adjusted hour; absent fractionalSecondDigits drops fractional fields without rounding second45.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-plain-selected-hour-11",
+      "missing_direct_runtime_witness_preserved": "Two same-options auxiliary DateTimeFormat resolvedOptions/formatToParts records and their joins to each original toLocaleString result. Observe resolved hour numeric/h23/Apia; record the source caveat that public resolvedOptions reads the Number slot while the source certificate establishes the plain slot.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "For original PlainTime options in Pacific/Apia with hour:numeric/hourCycle:h23, the selected record has numeric hour and 2-digit minute/second. Its plain path preserves wall fields 0 or23,30,45 and, for PlainDateTime,2021-08-04. Exact source-derived parts contain hour0 or23, never an offset-adjusted hour; absent fractionalSecondDigits drops fractional fields without rounding second45.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-plain-selected-hour-13",
+      "missing_direct_runtime_witness_preserved": "Two same-options auxiliary DateTimeFormat resolvedOptions/formatToParts records and their joins to each original toLocaleString result. Observe resolved hour numeric/h23/Apia; record the source caveat that public resolvedOptions reads the Number slot while the source certificate establishes the plain slot.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "For fixed successful primitive String calls, compare returns a Number in {-1,+0,+1}; deterministic independent per-string normalization and key extraction followed by lexicographic weight comparison establish consistency, diagonal +0, sign antisymmetry, transitivity and recognition of canonical equivalence.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-collator-number-and-laws",
+      "missing_direct_runtime_witness_preserved": "No fresh witness was produced. A claim that this duty was directly observed on the pinned engine still requires the corresponding narrow capture below.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "For both original de requests (sort and search), effective en-US/default/variant with numericfalse,ignorePunctuationfalse,caseFirstfalse compares \u00c4 before AE: compare(\u00c4,AE)=-1 and compare(AE,\u00c4)=+1. German search equivalence is not source-claimed for this fallback.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-collator-exact-original-sign",
+      "missing_direct_runtime_witness_preserved": "Use both original constructors, capture resolvedOptions, all9 ordered pairs of corpus[A,\u00c4,AE], then repeat original two opposite comparisons; Number/nonNaN, Object.is(diagonal,+0), antisymmetry, concrete transitivity and \u00c4==A+U0308. Do not assert de was admitted.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "All16 original time formatting calls retain explicit numbering system digits and selected field records. Full source-derived arrays preserve every literal, dayPeriod and numeric field; the hanidec two-digit original has only the U+202F versus ASCII-space discrepancy. The second-only requested options select a record also containing minute and 2-digit second.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-numbering-options-and-digits",
+      "missing_direct_runtime_witness_preserved": "Four original option records times four original numbering requests:16 formatToParts records paired to exact original Date value, resolvedOptions and original format. Preserve contextual second-only minute and all separators; no broad waiver over loop sites.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "For source milliseconds789, admitted precisions1/2/3 render exact fractionalSecond values7/78/789 in each original numbering system. Absence produces no fractionalSecond part. There is no rounding to8/79 or carry into second7.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G3-numbering-fractional-precision",
+      "missing_direct_runtime_witness_preserved": "For each of latn/arab/deva/hanidec, original HMS plus fractionalSecondDigits1/2/3:16 paired format/parts records, of which absence and3 are original variants and1/2 are explicit auxiliary guards. Capture descriptors and complete join.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "conclusion": "Every successful native RTF formatToParts result uses the built-in function realm Array prototype; every element is an ordinary object with that realm Object prototype. Each own type/value and optional unit is a C/W/E data property, created in that order. Every array index is C/W/E; length is writable, nonenumerable and nonconfigurable. Surrounding and auto-literal records have no own unit; numeric inserted parts own unit.",
+      "conditions": [
+        "Authenticate unchanged finite input/options/data source scope and exact fresh original observations.",
+        "Only Gregorian date conclusions here; H2 Hebrew branches do not execute in these Gregorian domains.",
+        "No claim of missing API/prototype/descriptor calls having actually executed."
+      ],
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "G5-RTF-part-prototype-descriptor",
+      "missing_direct_runtime_witness_preserved": "Augment all528 existing sampler tuples with Array/part getPrototypeOf equality, getOwnPropertyDescriptors for every present own key, and array index/length descriptors. No new format-data matrix is needed. Do not infer descriptor flags from ownProperties value snapshots.",
+      "proof_domain": "Successful calls through the authenticated native implementation and fixed compiled data; ordinary built-in initialization, unchanged built-in call inputs and fixed options. This source proof does not prove new engine execution, compiler correctness, arbitrary memory safety or success under exhausted resources.",
+      "runtime_observed": false
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "NUMBER-MATHEMATICS",
+      "remaining_condition": "Root must validate actual projector/capture bindings; runtime broad guards alone do not prove arithmetic.",
+      "source_conclusion": "Percent scales by exponent +2; notation computes exponent, handles rounding carry, then applies original signed rounding."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "DECIMAL-PRECISION",
+      "remaining_condition": "No new runtime for reviewed finite events if root accepts binding/source proof. No certification of unseen syntax, decimal limits or allocation paths.",
+      "source_conclusion": "BigInt serializes directly without binary64 conversion. Finite String retains exact decimal after classification; Number supplies shortest ToString decimal. Decimal coefficient/exponent parser and digit rounding preserve signed zero."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "SIGN-AND-NEGATIVE-ZERO",
+      "remaining_condition": "Retain nonaccounting minusSign duties; accounting wording decision separate.",
+      "source_conclusion": "Rounded negative flag persists at zero; renderer derives zero and negative separately; sign_pattern matches auto/always/never/exceptZero/negative."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "PARTS-TYPE-DOMAIN",
+      "remaining_condition": "Tag membership alone does not prove correct semantic assignment.",
+      "source_conclusion": "Final converter admits NumberFormat-specific tags and rejects unsupported tags; current witness broad type domain insufficient."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "PARTS-ORDER",
+      "remaining_condition": "Scalar join equality alone does not prove semantic roles/order; preserve exact lists.",
+      "source_conclusion": "Numeric renderer appends integer/group/decimal/fraction/exponent in order; template renderer walks selected pattern left to right and preserves inserted numeric parts."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "PARTS-JOIN",
+      "remaining_condition": "Same-receiver independent runtime comparison not captured; required only for that stronger evidence claim or changed bindings.",
+      "source_conclusion": "Contiguous nonempty slices exhaust shared UTF-16 buffer; same converter consumes full scalar or ordered slices. Native formatter invocation ignores parts flag."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "RANGE-SOURCE",
+      "remaining_condition": "Enum domain alone does not prove semantics; preserve exact lists and current approximation/range data.",
+      "source_conclusion": "Range builder sets endpoint and shared source explicitly; equal formatted endpoints select approximation and give all parts shared. Final converter validates source domain."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "PLURAL-RULE-OPERANDS",
+      "remaining_condition": "Retain exact rules/options/locale bindings; domain/sorting guards alone insufficient.",
+      "source_conclusion": "Public plural rounds unscaled input, computes notation exponent metadata only, and evaluates raw decimal operands."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept conditional source conclusion",
+      "id": "BIGINT-IMPLICIT-FORMATTER",
+      "remaining_condition": "Implicit resolvedOptions not captured; bounded source sufficient if root accepts. Do not infer locale from spelling.",
+      "source_conclusion": "Original BigInt forwards into shared formatter; provider en/en-US data and realm en-US default supply selected locale proof."
+    },
+    {
+      "current_capture_accepted": false,
+      "decision": "accept finite observable accounting interpretation; literal internal token constraint not satisfied",
+      "id": "ACCOUNTING-LEAF-TOKEN",
+      "remaining_condition": "Literal abstract negativePattern token conflict remains; runtime repetition cannot resolve prose.",
+      "source_conclusion": "currency_accounting selects accounting style 3. Negative leaf has literal parentheses and no minusSign token; signed rounded category preserved."
+    }
+  ],
+  "full_profile_qualification": false,
+  "input_bindings": {
+    "/srv/data/work/quickjs-tmp/quickjs-native-h2-helper-fingerprint-successor-source-preparation-20261012-v1/src-intl-date-native.c.patch": "8ca454141b4f424ac7a6382c0acbf82b44b3e965c8007817b756b9ba46507084",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/nonnumeric_conditional/PER-DUTY-SOURCE-PROOFS.json": "61df2bbd55252b63925c59b169748a132b4e74b992f2e368c72f34a665fe9f94",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/nonnumeric_conditional/SOURCE-PINS.json": "3298327f10a734f7de9944c91c442c1d93c958f5db432b47319a0cdf40d8f06f",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/numeric46/SEMANTIC-RECONSTRUCTION.json": "c27b5a53ba38228edd39b4cb6ea43c732233d2f62900176bcae166727ced4cd4",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/numeric_conditional/AUTHENTICATED-C-SOURCE.json": "59188a216b0567f0324c1f9bee860aac72f71773fee3515308ec6dd28c1d5f3a",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/numeric_conditional/DUTY-DECISIONS.json": "3840fbf2bdb7edfda3927423404f0d6f616036e7fda7d837a9081fad6dc874f8",
+    "/srv/data/work/quickjs-tmp/quickjs-native-static-normative-assets-inventory-source-preparation-20261012-v1/assembly-inputs/numeric_conditional/MISSING28-PARTS-SOURCE-PROOF.json": "248f46f56344f9e1be50904f9a6882db90cc96a03869bd7b309c5fc108552564"
+  },
+  "literal_internal_accounting_pattern_constraint_satisfied": false,
+  "main_head": "e02097e759913f1f6029bf704253074fa399e8ca",
+  "numeric_finite_rows": 2446,
+  "production_edit": false,
+  "reviewed_at_utc": "2026-10-11T20:57:03.505546+00:00",
+  "root_exact_data_readback_counts": {
+    "observed_parts_exact": 740,
+    "parts_not_runtime_observed": 844,
+    "resolved_dictionary_without_deviations": 848,
+    "scalar_or_join_exact": 1584,
+    "source_only_expected_parts": 812
+  },
+  "root_exact_numeric_source_segments": 19,
+  "root_reviewer": "/root",
+  "runtime_execution": false,
+  "schema": "root-finite-source-duty-adjudication-v1",
+  "scope": "Only the explicit finite source-proof domains and reconstructed historical operands. Final per-file/root profile acceptance requires actual fresh complete captures and reviewed successor identities.",
+  "unavailable_original_obligations_are_passes": false,
+  "unchanged_source_and_build_boundary": "All numeric implementation segments byte exact to authenticated historical source. Nonnumeric implementation pin deltas are Makefile (build/test wiring, outside source semantic conclusion) and H2 date-native.c (Hebrew-only branches). Main/source/build identity and hosted checks remain separate obligations."
+}

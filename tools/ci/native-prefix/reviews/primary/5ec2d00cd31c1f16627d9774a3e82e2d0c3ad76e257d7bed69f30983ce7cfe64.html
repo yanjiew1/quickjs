@@ -1,0 +1,423 @@
+<emu-clause id="sec-partitionnotationsubpattern" type="abstract operation">
+      <h1>
+        PartitionNotationSubPattern (
+          _numberFormat_: an Intl.NumberFormat,
+          _x_: an Intl mathematical value,
+          _formattedString_: a String,
+          _exponent_: an integer,
+        ): a List of Records with fields [[Type]] (a String) and [[Value]] (a String)
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          _x_ is an Intl mathematical value after rounding is applied and _formattedString_ is an intermediate formatted string.
+          It creates the corresponding parts for the number and notation according to the effective locale and the formatting options of _numberFormat_.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _result_ be a new empty List.
+        1. If _x_ is ~not-a-number~, then
+          1. Append the Record { [[Type]]: *"nan"*, [[Value]]: _formattedString_ } to _result_.
+        1. Else if _x_ is ~positive-infinity~ or ~negative-infinity~, then
+          1. Append the Record { [[Type]]: *"infinity"*, [[Value]]: _formattedString_ } to _result_.
+        1. Else,
+          1. Let _notationSubPattern_ be GetNotationSubPattern(_numberFormat_, _exponent_).
+          1. Let _patternParts_ be PartitionPattern(_notationSubPattern_).
+          1. For each Record { [[Type]], [[Value]] } _patternPart_ of _patternParts_, do
+            1. Let _partType_ be _patternPart_.[[Type]].
+            1. If _partType_ is *"literal"*, then
+              1. Append the Record { [[Type]]: *"literal"*, [[Value]]: _patternPart_.[[Value]] } to _result_.
+            1. Else if _partType_ is *"number"*, then
+              1. If the _numberFormat_.[[NumberingSystem]] matches one of the values in the Numbering System column of <emu-xref href="#table-numbering-system-digits"></emu-xref> below, then
+                1. Let _digits_ be a List whose elements are the code points specified in the Digits column of the matching row in <emu-xref href="#table-numbering-system-digits"></emu-xref>.
+                1. Assert: The length of _digits_ is 10.
+                1. Let _transliterated_ be the empty String.
+                1. Let _length_ be the length of _formattedString_.
+                1. Let _position_ be 0.
+                1. Repeat, while _position_ &lt; _length_,
+                  1. Let _c_ be the code unit at index _position_ within _formattedString_.
+                  1. If 0x0030 ≤ _c_ ≤ 0x0039, then
+                    1. NOTE: _c_ is an ASCII digit.
+                    1. Let _i_ be _c_ - 0x0030.
+                    1. Set _c_ to CodePointsToString(« _digits_[_i_] »).
+                  1. Set _transliterated_ to the string-concatenation of _transliterated_ and _c_.
+                  1. Set _position_ to _position_ + 1.
+                1. Set _formattedString_ to _transliterated_.
+              1. Else,
+                1. Use an implementation dependent algorithm to map _formattedString_ to the appropriate representation of _formattedString_ in the given numbering system.
+              1. Let _decimalSepIndex_ be StringIndexOf(_formattedString_, *"."*, 0).
+              1. If _decimalSepIndex_ is not ~not-found~ and _decimalSepIndex_ > 0, then
+                1. Let _intDigits_ be the substring of _formattedString_ from 0 to _decimalSepIndex_.
+                1. Let _fractionDigits_ be the substring of _formattedString_ from _decimalSepIndex_ + 1.
+              1. Else,
+                1. Let _intDigits_ be _formattedString_.
+                1. Let _fractionDigits_ be *undefined*.
+              1. If the _numberFormat_.[[UseGrouping]] is *false*, then
+                1. Append the Record { [[Type]]: *"integer"*, [[Value]]: _intDigits_ } to _result_.
+              1. Else,
+                1. Let _groupSepSymbol_ be the ILND String representing the grouping separator.
+                1. Let _groups_ be a List whose elements are, in left to right order, the substrings defined by ILND set of locations within _intDigits_, which may depend on the value of _numberFormat_.[[UseGrouping]].
+                1. Assert: The number of elements in _groups_ List is greater than 0.
+                1. Repeat, while _groups_ List is not empty,
+                  1. Remove the first element from _groups_ and let _intGroup_ be the value of that element.
+                  1. Append the Record { [[Type]]: *"integer"*, [[Value]]: _intGroup_ } to _result_.
+                  1. If _groups_ List is not empty, then
+                    1. Append the Record { [[Type]]: *"group"*, [[Value]]: _groupSepSymbol_ } to _result_.
+              1. If _fractionDigits_ is not *undefined*, then
+                1. Let _decimalSepSymbol_ be the ILND String representing the decimal separator.
+                1. Append the Record { [[Type]]: *"decimal"*, [[Value]]: _decimalSepSymbol_ } to _result_.
+                1. Append the Record { [[Type]]: *"fraction"*, [[Value]]: _fractionDigits_ } to _result_.
+            1. Else if _partType_ is *"compactSymbol"*, then
+              1. Let _compactSymbol_ be an ILD string representing _exponent_ in short form, which may depend on _x_ in languages having different plural forms. The implementation must be able to provide this string, or else the pattern would not have a *"{compactSymbol}"* placeholder.
+              1. Append the Record { [[Type]]: *"compact"*, [[Value]]: _compactSymbol_ } to _result_.
+            1. Else if _partType_ is *"compactName"*, then
+              1. Let _compactName_ be an ILD string representing _exponent_ in long form, which may depend on _x_ in languages having different plural forms. The implementation must be able to provide this string, or else the pattern would not have a *"{compactName}"* placeholder.
+              1. Append the Record { [[Type]]: *"compact"*, [[Value]]: _compactName_ } to _result_.
+            1. Else if _partType_ is *"scientificSeparator"*, then
+              1. Let _scientificSeparator_ be the ILND String representing the exponent separator.
+              1. Append the Record { [[Type]]: *"exponentSeparator"*, [[Value]]: _scientificSeparator_ } to _result_.
+            1. Else if _partType_ is *"scientificExponent"*, then
+              1. If _exponent_ &lt; 0, then
+                1. Let _minusSignSymbol_ be the ILND String representing the minus sign.
+                1. Append the Record { [[Type]]: *"exponentMinusSign"*, [[Value]]: _minusSignSymbol_ } to _result_.
+                1. Set _exponent_ to -_exponent_.
+              1. If _exponent_ = 0, let _exponentResult_ be *"0"*; else let _exponentResult_ be the String consisting of the digits of the decimal representation of _exponent_ (in order, with no leading zeroes).
+              1. Append the Record { [[Type]]: *"exponentInteger"*, [[Value]]: _exponentResult_ } to _result_.
+            1. Else,
+              1. Let _unknown_ be an ILND String based on _x_ and _partType_.
+              1. Append the Record { [[Type]]: *"unknown"*, [[Value]]: _unknown_ } to _result_.
+        1. Return _result_.
+      </emu-alg>
+
+      <emu-table id="table-numbering-system-digits">
+        <emu-caption>Numbering systems with simple digit mappings</emu-caption>
+        <table class="real-table">
+          <thead>
+            <tr>
+              <th>Numbering System</th>
+              <th>Digits</th>
+            </tr>
+          </thead>
+          <tr>
+            <td>adlm</td>
+            <td>U+1E950 to U+1E959</td>
+          </tr>
+          <tr>
+            <td>ahom</td>
+            <td>U+11730 to U+11739</td>
+          </tr>
+          <tr>
+            <td>arab</td>
+            <td>U+0660 to U+0669</td>
+          </tr>
+          <tr>
+            <td>arabext</td>
+            <td>U+06F0 to U+06F9</td>
+          </tr>
+          <tr>
+            <td>bali</td>
+            <td>U+1B50 to U+1B59</td>
+          </tr>
+          <tr>
+            <td>beng</td>
+            <td>U+09E6 to U+09EF</td>
+          </tr>
+          <tr>
+            <td>bhks</td>
+            <td>U+11C50 to U+11C59</td>
+          </tr>
+          <tr>
+            <td>brah</td>
+            <td>U+11066 to U+1106F</td>
+          </tr>
+          <tr>
+            <td>cakm</td>
+            <td>U+11136 to U+1113F</td>
+          </tr>
+          <tr>
+            <td>cham</td>
+            <td>U+AA50 to U+AA59</td>
+          </tr>
+          <tr>
+            <td>deva</td>
+            <td>U+0966 to U+096F</td>
+          </tr>
+          <tr>
+            <td>diak</td>
+            <td>U+11950 to U+11959</td>
+          </tr>
+          <tr>
+            <td>fullwide</td>
+            <td>U+FF10 to U+FF19</td>
+          </tr>
+          <tr>
+            <td>gara</td>
+            <td>U+10D40 to U+10D49</td>
+          </tr>
+          <tr>
+            <td>gong</td>
+            <td>U+11DA0 to U+11DA9</td>
+          </tr>
+          <tr>
+            <td>gonm</td>
+            <td>U+11D50 to U+11D59</td>
+          </tr>
+          <tr>
+            <td>gujr</td>
+            <td>U+0AE6 to U+0AEF</td>
+          </tr>
+          <tr>
+            <td>gukh</td>
+            <td>U+16130 to U+16139</td>
+          </tr>
+          <tr>
+            <td>guru</td>
+            <td>U+0A66 to U+0A6F</td>
+          </tr>
+          <tr>
+            <td>hanidec</td>
+            <td>U+3007, U+4E00, U+4E8C, U+4E09, U+56DB, U+4E94, U+516D, U+4E03, U+516B, U+4E5D</td>
+          </tr>
+          <tr>
+            <td>hmng</td>
+            <td>U+16B50 to U+16B59</td>
+          </tr>
+          <tr>
+            <td>hmnp</td>
+            <td>U+1E140 to U+1E149</td>
+          </tr>
+          <tr>
+            <td>java</td>
+            <td>U+A9D0 to U+A9D9</td>
+          </tr>
+          <tr>
+            <td>kali</td>
+            <td>U+A900 to U+A909</td>
+          </tr>
+          <tr>
+            <td>kawi</td>
+            <td>U+11F50 to U+11F59</td>
+          </tr>
+          <tr>
+            <td>khmr</td>
+            <td>U+17E0 to U+17E9</td>
+          </tr>
+          <tr>
+            <td>knda</td>
+            <td>U+0CE6 to U+0CEF</td>
+          </tr>
+          <tr>
+            <td>krai</td>
+            <td>U+16D70 to U+16D79</td>
+          </tr>
+          <tr>
+            <td>lana</td>
+            <td>U+1A80 to U+1A89</td>
+          </tr>
+          <tr>
+            <td>lanatham</td>
+            <td>U+1A90 to U+1A99</td>
+          </tr>
+          <tr>
+            <td>laoo</td>
+            <td>U+0ED0 to U+0ED9</td>
+          </tr>
+          <tr>
+            <td>latn</td>
+            <td>U+0030 to U+0039</td>
+          </tr>
+          <tr>
+            <td>lepc</td>
+            <td>U+1C40 to U+1C49</td>
+          </tr>
+          <tr>
+            <td>limb</td>
+            <td>U+1946 to U+194F</td>
+          </tr>
+          <tr>
+            <td>mathbold</td>
+            <td>U+1D7CE to U+1D7D7</td>
+          </tr>
+          <tr>
+            <td>mathdbl</td>
+            <td>U+1D7D8 to U+1D7E1</td>
+          </tr>
+          <tr>
+            <td>mathmono</td>
+            <td>U+1D7F6 to U+1D7FF</td>
+          </tr>
+          <tr>
+            <td>mathsanb</td>
+            <td>U+1D7EC to U+1D7F5</td>
+          </tr>
+          <tr>
+            <td>mathsans</td>
+            <td>U+1D7E2 to U+1D7EB</td>
+          </tr>
+          <tr>
+            <td>mlym</td>
+            <td>U+0D66 to U+0D6F</td>
+          </tr>
+          <tr>
+            <td>modi</td>
+            <td>U+11650 to U+11659</td>
+          </tr>
+          <tr>
+            <td>mong</td>
+            <td>U+1810 to U+1819</td>
+          </tr>
+          <tr>
+            <td>mroo</td>
+            <td>U+16A60 to U+16A69</td>
+          </tr>
+          <tr>
+            <td>mtei</td>
+            <td>U+ABF0 to U+ABF9</td>
+          </tr>
+          <tr>
+            <td>mymr</td>
+            <td>U+1040 to U+1049</td>
+          </tr>
+          <tr>
+            <td>mymrepka</td>
+            <td>U+116DA to U+116E3</td>
+          </tr>
+          <tr>
+            <td>mymrpao</td>
+            <td>U+116D0 to U+116D9</td>
+          </tr>
+          <tr>
+            <td>mymrshan</td>
+            <td>U+1090 to U+1099</td>
+          </tr>
+          <tr>
+            <td>mymrtlng</td>
+            <td>U+A9F0 to U+A9F9</td>
+          </tr>
+          <tr>
+            <td>nagm</td>
+            <td>U+1E4F0 to U+1E4F9</td>
+          </tr>
+          <tr>
+            <td>newa</td>
+            <td>U+11450 to U+11459</td>
+          </tr>
+          <tr>
+            <td>nkoo</td>
+            <td>U+07C0 to U+07C9</td>
+          </tr>
+          <tr>
+            <td>olck</td>
+            <td>U+1C50 to U+1C59</td>
+          </tr>
+          <tr>
+            <td>onao</td>
+            <td>U+1E5F1 to U+1E5FA</td>
+          </tr>
+          <tr>
+            <td>orya</td>
+            <td>U+0B66 to U+0B6F</td>
+          </tr>
+          <tr>
+            <td>osma</td>
+            <td>U+104A0 to U+104A9</td>
+          </tr>
+          <tr>
+            <td>outlined</td>
+            <td>U+1CCF0 to U+1CCF9</td>
+          </tr>
+          <tr>
+            <td>rohg</td>
+            <td>U+10D30 to U+10D39</td>
+          </tr>
+          <tr>
+            <td>saur</td>
+            <td>U+A8D0 to U+A8D9</td>
+          </tr>
+          <tr>
+            <td>segment</td>
+            <td>U+1FBF0 to U+1FBF9</td>
+          </tr>
+          <tr>
+            <td>shrd</td>
+            <td>U+111D0 to U+111D9</td>
+          </tr>
+          <tr>
+            <td>sind</td>
+            <td>U+112F0 to U+112F9</td>
+          </tr>
+          <tr>
+            <td>sinh</td>
+            <td>U+0DE6 to U+0DEF</td>
+          </tr>
+          <tr>
+            <td>sora</td>
+            <td>U+110F0 to U+110F9</td>
+          </tr>
+          <tr>
+            <td>sund</td>
+            <td>U+1BB0 to U+1BB9</td>
+          </tr>
+          <tr>
+            <td>sunu</td>
+            <td>U+11BF0 to U+11BF9</td>
+          </tr>
+          <tr>
+            <td>takr</td>
+            <td>U+116C0 to U+116C9</td>
+          </tr>
+          <tr>
+            <td>talu</td>
+            <td>U+19D0 to U+19D9</td>
+          </tr>
+          <tr>
+            <td>tamldec</td>
+            <td>U+0BE6 to U+0BEF</td>
+          </tr>
+          <tr>
+            <td>telu</td>
+            <td>U+0C66 to U+0C6F</td>
+          </tr>
+          <tr>
+            <td>thai</td>
+            <td>U+0E50 to U+0E59</td>
+          </tr>
+          <tr>
+            <td>tibt</td>
+            <td>U+0F20 to U+0F29</td>
+          </tr>
+          <tr>
+            <td>tirh</td>
+            <td>U+114D0 to U+114D9</td>
+          </tr>
+          <tr>
+            <td>tnsa</td>
+            <td>U+16AC0 to U+16AC9</td>
+          </tr>
+          <tr>
+            <td>tols</td>
+            <td>U+11DE0 to U+11DE9</td>
+          </tr>
+          <tr>
+            <td>vaii</td>
+            <td>U+A620 to U+A629</td>
+          </tr>
+          <tr>
+            <td>wara</td>
+            <td>U+118E0 to U+118E9</td>
+          </tr>
+          <tr>
+            <td>wcho</td>
+            <td>U+1E2F0 to U+1E2F9</td>
+          </tr>
+        </table>
+      </emu-table>
+
+      <emu-note>
+        The computations rely on ILD and ILND String values and locations within numeric strings that depend on the effective locale of _numberFormat_, or upon the effective locale and numbering system of _numberFormat_. The ILD and ILND String values mentioned, other than those for currency names, must not contain any code points in the General Category "Number, decimal digit" as specified by the Unicode Standard.
+      </emu-note>
+
+      <emu-note>
+        It is recommended that implementations use the locale provided by the Common Locale Data Repository (available at <a href="https://cldr.unicode.org/">https://cldr.unicode.org/</a>).
+      </emu-note>
+    </emu-clause>

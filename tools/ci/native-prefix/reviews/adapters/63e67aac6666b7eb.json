@@ -1,0 +1,1510 @@
+{
+  "adaptation_basis": "aggregate-array-source-adapter",
+  "approval_created": true,
+  "bounded_root_review_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-approved-assets-root-20261012-v1/ROOT-BOUNDED-REVIEW-APPROVAL.json",
+    "sha256": "5e53ff07bb5f9f9e5aba7202ca223f6bac9c70fbb987012ef169bd571a55fb08"
+  },
+  "conditional_source_duty_boundaries": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-reviews-actionable-assembly-source-preparation-20261012-v2/SOURCE-ONLY-DUTY-BOUNDARIES.json",
+    "sha256": "89ceef6d420bafb999daa19ca843e97cab47be6698b18f17f2d8a29308a8642a"
+  },
+  "final_current_capture_binding": {
+    "artifact_download_tool_closure": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/ROOT-TOOL-CLOSURE.json",
+      "sha256": "e10d6bdf9420beaad36185ccdb7a6a153b2be8b541b050cec21bf5db49e1e198"
+    },
+    "capture_summary": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/CAPTURE-SUMMARY.json",
+      "sha256": "40122f547214f2c5ca66fa44fff5b1cf9e353a384f28765aa7b210c253520ba8"
+    },
+    "complete_readback": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-h3-fresh-complete-capture-independent-source-readback-20261012-v2/REPORT.json",
+      "sha256": "f3ca1da65c4e8090bb0395be46ff10e7c7eb5e0d05aabd05895c7fdab5e842cf"
+    },
+    "execution_identity": {
+      "actual_production_source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+      "binding_sha256": "f4da692425276c2936eb1640efd4077ecf2506a8b675413498a80fbcc205ecf6",
+      "candidate_sha": "4beac5cf962eb4863cc9025293f65e323f955ad7",
+      "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+      "run_attempt": "1",
+      "run_id": "38178170735",
+      "source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d"
+    },
+    "manifest": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/GENERATED-MANIFEST.json",
+      "sha256": "1df17dac972c44e1a55dec43b465d27d1d300fc0f6364e6e61c093ec108474c3"
+    },
+    "root_capture_or_semantic_approval_created": false
+  },
+  "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js",
+  "fixture_sha256": "7735c8b81855eb0e5a82d0cfceea4c38fd4e5e95c0d5939406d3ec351e9b6a56",
+  "missing_expressions_are_passing_originals": false,
+  "root_semantic_approval_created": true,
+  "schema": "unapproved-original-array-adapter-inventory-v1",
+  "semantic_approval_created": false,
+  "totalized_original_obligation_count": 24,
+  "totalized_original_obligation_site_ids": [
+    "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5",
+    "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5"
+  ],
+  "unavailable_original_obligation_site_ids": [],
+  "variants": {
+    "nonstrict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "0cdab49088b89c30f4b7f550ec8f991207a0feea5226cd91473ccff546cfc458",
+        "aggregate_adapters": {
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5"
+              }
+            ],
+            "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327",
+            "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3",
+            "mode": "reviewed-data-array",
+            "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [
+              {
+                "argument": "expected",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3"
+              },
+              {
+                "argument": "actual",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3"
+              }
+            ],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js",
+        "fixture_sha256": "7735c8b81855eb0e5a82d0cfceea4c38fd4e5e95c0d5939406d3ec351e9b6a56",
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "harness/testIntlNumberFormat.js:720": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 19,
+            "source": "new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay })",
+            "source_sha256": "2d19f77d1bcb2eb64d110d934fd1f9ef2433915dbdca65c3927c3537eb903d49",
+            "span": [
+              720,
+              822
+            ]
+          },
+          "harness/testIntlNumberFormat.js:838": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 20,
+            "source": "nf.formatToParts(1)",
+            "source_sha256": "5e316f6c7853c2a9c73607ef40ba317eaff42b3eebced08f521a8729b7c8cd09",
+            "span": [
+              838,
+              857
+            ]
+          },
+          "harness/testIntlNumberFormat.js:helper:getUnitSeparators": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "helper",
+            "line": 18,
+            "source": "function getUnitSeparators(locale, unitDisplay) {\n  var nf = new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay });\n  var parts = nf.formatToParts(1);\n  var unitIndices = [];\n  for (var i = 0; i < parts.length; i++) {\n    if (parts[i].type === \"unit\") unitIndices.push(i);\n  }\n\n  var prefix = unitIndices[0] === 0 && parts[1] && parts[1].type === \"literal\"\n    ? parts[1].value\n    : \"\";\n\n  var lastUnitIndex = unitIndices[unitIndices.length - 1];\n  var suffix = lastUnitIndex === parts.length - 1 && parts[lastUnitIndex - 1] && parts[lastUnitIndex - 1].type === \"literal\"\n    ? parts[lastUnitIndex - 1].value\n    : \"\";\n\n  return { prefix: prefix, suffix: suffix };\n}",
+            "source_sha256": "7b0389dd4069436de43909f249dfb054badf974df56da63c32fea7f20cfcf267",
+            "span": [
+              659,
+              1375
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 13,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+            "span": [
+              385,
+              401
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 14,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+            "span": [
+              469,
+              485
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 15,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+            "span": [
+              549,
+              565
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 18,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+            "span": [
+              670,
+              686
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 19,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+            "span": [
+              758,
+              774
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:78:20": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 78,
+            "source": "new Intl.NumberFormat(\"ja-JP\", { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "bcd0c9178a97edc7bbff3342a36ec4fdd18acd75b8835f3a37ecc9ff7006df6d",
+            "span": [
+              2549,
+              2639
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:79:23": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 79,
+            "source": "nf.formatToParts(number)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "16d8126081539e43426c960ddb08761f26c4dd2830c84f4e1f3268a1c8b7d557",
+            "span": [
+              2663,
+              2687
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:addUnitParts:946": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "2ea0335dcee3fd12230f21a5e1438f84cc5a15665b995f4f0af94c60e36b536e",
+            "helper_name": "addUnitParts",
+            "kind": "helper",
+            "line": 27,
+            "source": "function addUnitParts(numberParts, separators, prefixText, suffixText) {\n  return [].concat(\n    makePart(\"unit\", prefixText),\n    makePart(\"literal\", separators.prefix),\n    numberParts,\n    makePart(\"literal\", separators.suffix),\n    makePart(\"unit\", suffixText)\n  );\n}",
+            "source_sha256": "a5a1e321291f8f20a148e3a663b97a140c710a01fe8a0e5157fe0d17882a500e",
+            "span": [
+              946,
+              1217
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:makePart:852": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "00b2ae0239272fd55607cbdbb494fc837870074368f5416125e674439c0b8d85",
+            "helper_name": "makePart",
+            "kind": "helper",
+            "line": 23,
+            "source": "function makePart(type, value) {\n  return value ? [{ \"type\": type, \"value\": value }] : [];\n}",
+            "source_sha256": "9872315fd4ad23a3de142cca16ac92084f75b8c52b9ce6bb698d49a000893fe2",
+            "span": [
+              852,
+              944
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "helper_name": "verifyFormatParts",
+            "kind": "helper",
+            "line": 12,
+            "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+            "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+            "span": [
+              327,
+              850
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "nonstrict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "67284ae6ac0236066f19b6f7aacc5d34d451028382e5a3f6d51a5765416e90f3",
+        "config_sha256": "0cdab49088b89c30f4b7f550ec8f991207a0feea5226cd91473ccff546cfc458",
+        "data_mismatches": 68,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 1507,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 345,
+          "exit": 345,
+          "invariant": 740,
+          "original-obligation": 12,
+          "start": 1,
+          "value": 63
+        },
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js",
+        "generated_sha256": "2aa87b66f83532f130d27d6d3f0a95b8a055d181c41f39471fbc59f84abcf51b",
+        "manifest_index": 82,
+        "original_assertion_failures": 56,
+        "original_assertion_passes": 136,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 12,
+        "trace_sha256": "e7880efa8f03b7b70acff2c680730577bb9f9f0d9fd647146660020f7fc89465",
+        "variant": "nonstrict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5"
+            }
+          ],
+          "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327",
+          "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3",
+          "mode": "reviewed-data-array",
+          "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [
+            {
+              "argument": "expected",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3"
+            },
+            {
+              "argument": "actual",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3"
+            }
+          ],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "0cdab49088b89c30f4b7f550ec8f991207a0feea5226cd91473ccff546cfc458",
+      "manifest_index": 82,
+      "original_source_site_inventory": {
+        "harness/testIntlNumberFormat.js:720": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 19,
+          "source": "new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay })",
+          "source_sha256": "2d19f77d1bcb2eb64d110d934fd1f9ef2433915dbdca65c3927c3537eb903d49",
+          "span": [
+            720,
+            822
+          ]
+        },
+        "harness/testIntlNumberFormat.js:838": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 20,
+          "source": "nf.formatToParts(1)",
+          "source_sha256": "5e316f6c7853c2a9c73607ef40ba317eaff42b3eebced08f521a8729b7c8cd09",
+          "span": [
+            838,
+            857
+          ]
+        },
+        "harness/testIntlNumberFormat.js:helper:getUnitSeparators": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "helper",
+          "line": 18,
+          "source": "function getUnitSeparators(locale, unitDisplay) {\n  var nf = new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay });\n  var parts = nf.formatToParts(1);\n  var unitIndices = [];\n  for (var i = 0; i < parts.length; i++) {\n    if (parts[i].type === \"unit\") unitIndices.push(i);\n  }\n\n  var prefix = unitIndices[0] === 0 && parts[1] && parts[1].type === \"literal\"\n    ? parts[1].value\n    : \"\";\n\n  var lastUnitIndex = unitIndices[unitIndices.length - 1];\n  var suffix = lastUnitIndex === parts.length - 1 && parts[lastUnitIndex - 1] && parts[lastUnitIndex - 1].type === \"literal\"\n    ? parts[lastUnitIndex - 1].value\n    : \"\";\n\n  return { prefix: prefix, suffix: suffix };\n}",
+          "source_sha256": "7b0389dd4069436de43909f249dfb054badf974df56da63c32fea7f20cfcf267",
+          "span": [
+            659,
+            1375
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 13,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+          "span": [
+            385,
+            401
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 14,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+          "span": [
+            469,
+            485
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 15,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+          "span": [
+            549,
+            565
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 18,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+          "span": [
+            670,
+            686
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 19,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+          "span": [
+            758,
+            774
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:78:20": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 78,
+          "source": "new Intl.NumberFormat(\"ja-JP\", { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "bcd0c9178a97edc7bbff3342a36ec4fdd18acd75b8835f3a37ecc9ff7006df6d",
+          "span": [
+            2549,
+            2639
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:79:23": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 79,
+          "source": "nf.formatToParts(number)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "16d8126081539e43426c960ddb08761f26c4dd2830c84f4e1f3268a1c8b7d557",
+          "span": [
+            2663,
+            2687
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:addUnitParts:946": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "2ea0335dcee3fd12230f21a5e1438f84cc5a15665b995f4f0af94c60e36b536e",
+          "helper_name": "addUnitParts",
+          "kind": "helper",
+          "line": 27,
+          "source": "function addUnitParts(numberParts, separators, prefixText, suffixText) {\n  return [].concat(\n    makePart(\"unit\", prefixText),\n    makePart(\"literal\", separators.prefix),\n    numberParts,\n    makePart(\"literal\", separators.suffix),\n    makePart(\"unit\", suffixText)\n  );\n}",
+          "source_sha256": "a5a1e321291f8f20a148e3a663b97a140c710a01fe8a0e5157fe0d17882a500e",
+          "span": [
+            946,
+            1217
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:makePart:852": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "00b2ae0239272fd55607cbdbb494fc837870074368f5416125e674439c0b8d85",
+          "helper_name": "makePart",
+          "kind": "helper",
+          "line": 23,
+          "source": "function makePart(type, value) {\n  return value ? [{ \"type\": type, \"value\": value }] : [];\n}",
+          "source_sha256": "9872315fd4ad23a3de142cca16ac92084f75b8c52b9ce6bb698d49a000893fe2",
+          "span": [
+            852,
+            944
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "helper_name": "verifyFormatParts",
+          "kind": "helper",
+          "line": 12,
+          "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+          "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+          "span": [
+            327,
+            850
+          ]
+        }
+      }
+    },
+    "strict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "d8f8a6add44d5bb15ee4de77831896a72be5974e4f83bfa1e9cc80b9bfb7df12",
+        "aggregate_adapters": {
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5"
+              }
+            ],
+            "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327",
+            "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3",
+            "mode": "reviewed-data-array",
+            "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [
+              {
+                "argument": "expected",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3"
+              },
+              {
+                "argument": "actual",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3"
+              }
+            ],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js",
+        "fixture_sha256": "7735c8b81855eb0e5a82d0cfceea4c38fd4e5e95c0d5939406d3ec351e9b6a56",
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "harness/testIntlNumberFormat.js:720": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 19,
+            "source": "new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay })",
+            "source_sha256": "2d19f77d1bcb2eb64d110d934fd1f9ef2433915dbdca65c3927c3537eb903d49",
+            "span": [
+              720,
+              822
+            ]
+          },
+          "harness/testIntlNumberFormat.js:838": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 20,
+            "source": "nf.formatToParts(1)",
+            "source_sha256": "5e316f6c7853c2a9c73607ef40ba317eaff42b3eebced08f521a8729b7c8cd09",
+            "span": [
+              838,
+              857
+            ]
+          },
+          "harness/testIntlNumberFormat.js:helper:getUnitSeparators": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "helper",
+            "line": 18,
+            "source": "function getUnitSeparators(locale, unitDisplay) {\n  var nf = new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay });\n  var parts = nf.formatToParts(1);\n  var unitIndices = [];\n  for (var i = 0; i < parts.length; i++) {\n    if (parts[i].type === \"unit\") unitIndices.push(i);\n  }\n\n  var prefix = unitIndices[0] === 0 && parts[1] && parts[1].type === \"literal\"\n    ? parts[1].value\n    : \"\";\n\n  var lastUnitIndex = unitIndices[unitIndices.length - 1];\n  var suffix = lastUnitIndex === parts.length - 1 && parts[lastUnitIndex - 1] && parts[lastUnitIndex - 1].type === \"literal\"\n    ? parts[lastUnitIndex - 1].value\n    : \"\";\n\n  return { prefix: prefix, suffix: suffix };\n}",
+            "source_sha256": "7b0389dd4069436de43909f249dfb054badf974df56da63c32fea7f20cfcf267",
+            "span": [
+              659,
+              1375
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 13,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+            "span": [
+              385,
+              401
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 14,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+            "span": [
+              469,
+              485
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 15,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+            "span": [
+              549,
+              565
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 18,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+            "span": [
+              670,
+              686
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 19,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+            ],
+            "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+            "span": [
+              758,
+              774
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:78:20": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 78,
+            "source": "new Intl.NumberFormat(\"ja-JP\", { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "bcd0c9178a97edc7bbff3342a36ec4fdd18acd75b8835f3a37ecc9ff7006df6d",
+            "span": [
+              2549,
+              2639
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:79:23": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 79,
+            "source": "nf.formatToParts(number)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "16d8126081539e43426c960ddb08761f26c4dd2830c84f4e1f3268a1c8b7d557",
+            "span": [
+              2663,
+              2687
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:addUnitParts:946": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "2ea0335dcee3fd12230f21a5e1438f84cc5a15665b995f4f0af94c60e36b536e",
+            "helper_name": "addUnitParts",
+            "kind": "helper",
+            "line": 27,
+            "source": "function addUnitParts(numberParts, separators, prefixText, suffixText) {\n  return [].concat(\n    makePart(\"unit\", prefixText),\n    makePart(\"literal\", separators.prefix),\n    numberParts,\n    makePart(\"literal\", separators.suffix),\n    makePart(\"unit\", suffixText)\n  );\n}",
+            "source_sha256": "a5a1e321291f8f20a148e3a663b97a140c710a01fe8a0e5157fe0d17882a500e",
+            "span": [
+              946,
+              1217
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:makePart:852": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "00b2ae0239272fd55607cbdbb494fc837870074368f5416125e674439c0b8d85",
+            "helper_name": "makePart",
+            "kind": "helper",
+            "line": 23,
+            "source": "function makePart(type, value) {\n  return value ? [{ \"type\": type, \"value\": value }] : [];\n}",
+            "source_sha256": "9872315fd4ad23a3de142cca16ac92084f75b8c52b9ce6bb698d49a000893fe2",
+            "span": [
+              852,
+              944
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "helper_name": "verifyFormatParts",
+            "kind": "helper",
+            "line": 12,
+            "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+            "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+            "span": [
+              327,
+              850
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "strict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "056ae6697d6ec6de290bdb9429a0d20668f50b03641ee7a3574f2e09108ef472",
+        "config_sha256": "d8f8a6add44d5bb15ee4de77831896a72be5974e4f83bfa1e9cc80b9bfb7df12",
+        "data_mismatches": 68,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 1507,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 345,
+          "exit": 345,
+          "invariant": 740,
+          "original-obligation": 12,
+          "start": 1,
+          "value": 63
+        },
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js",
+        "generated_sha256": "7fcf72d41d28777293ec1a6cda8f62238a4996d1de2e13824fd7dc5a6cbf282f",
+        "manifest_index": 83,
+        "original_assertion_failures": 56,
+        "original_assertion_passes": 136,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 12,
+        "trace_sha256": "3052230e9d520d587ce5efa93ec8f43d4f46f1a347db397a2d04f160a6bdc589",
+        "variant": "strict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5"
+            }
+          ],
+          "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327",
+          "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3",
+          "mode": "reviewed-data-array",
+          "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [
+            {
+              "argument": "expected",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3"
+            },
+            {
+              "argument": "actual",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3"
+            }
+          ],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "d8f8a6add44d5bb15ee4de77831896a72be5974e4f83bfa1e9cc80b9bfb7df12",
+      "manifest_index": 83,
+      "original_source_site_inventory": {
+        "harness/testIntlNumberFormat.js:720": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 19,
+          "source": "new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay })",
+          "source_sha256": "2d19f77d1bcb2eb64d110d934fd1f9ef2433915dbdca65c3927c3537eb903d49",
+          "span": [
+            720,
+            822
+          ]
+        },
+        "harness/testIntlNumberFormat.js:838": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 20,
+          "source": "nf.formatToParts(1)",
+          "source_sha256": "5e316f6c7853c2a9c73607ef40ba317eaff42b3eebced08f521a8729b7c8cd09",
+          "span": [
+            838,
+            857
+          ]
+        },
+        "harness/testIntlNumberFormat.js:helper:getUnitSeparators": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "helper",
+          "line": 18,
+          "source": "function getUnitSeparators(locale, unitDisplay) {\n  var nf = new Intl.NumberFormat(locale, { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay: unitDisplay });\n  var parts = nf.formatToParts(1);\n  var unitIndices = [];\n  for (var i = 0; i < parts.length; i++) {\n    if (parts[i].type === \"unit\") unitIndices.push(i);\n  }\n\n  var prefix = unitIndices[0] === 0 && parts[1] && parts[1].type === \"literal\"\n    ? parts[1].value\n    : \"\";\n\n  var lastUnitIndex = unitIndices[unitIndices.length - 1];\n  var suffix = lastUnitIndex === parts.length - 1 && parts[lastUnitIndex - 1] && parts[lastUnitIndex - 1].type === \"literal\"\n    ? parts[lastUnitIndex - 1].value\n    : \"\";\n\n  return { prefix: prefix, suffix: suffix };\n}",
+          "source_sha256": "7b0389dd4069436de43909f249dfb054badf974df56da63c32fea7f20cfcf267",
+          "span": [
+            659,
+            1375
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:13:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 13,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+          "span": [
+            385,
+            401
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:14:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 14,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+          "span": [
+            469,
+            485
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:15:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 15,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+          "span": [
+            549,
+            565
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:18:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 18,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+          "span": [
+            670,
+            686
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:19:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 19,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Verify unit and unitDisplay resolution, unit presence and numeric magnitude/sign/rounding independent of localized unit labels/separators. Capture helper-derived prefix/suffix separator data from the same selected profile."
+          ],
+          "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+          "span": [
+            758,
+            774
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:78:20": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 78,
+          "source": "new Intl.NumberFormat(\"ja-JP\", { style: \"unit\", unit: \"kilometer-per-hour\", unitDisplay })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "bcd0c9178a97edc7bbff3342a36ec4fdd18acd75b8835f3a37ecc9ff7006df6d",
+          "span": [
+            2549,
+            2639
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:79:23": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 79,
+          "source": "nf.formatToParts(number)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "16d8126081539e43426c960ddb08761f26c4dd2830c84f4e1f3268a1c8b7d557",
+          "span": [
+            2663,
+            2687
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:addUnitParts:946": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "2ea0335dcee3fd12230f21a5e1438f84cc5a15665b995f4f0af94c60e36b536e",
+          "helper_name": "addUnitParts",
+          "kind": "helper",
+          "line": 27,
+          "source": "function addUnitParts(numberParts, separators, prefixText, suffixText) {\n  return [].concat(\n    makePart(\"unit\", prefixText),\n    makePart(\"literal\", separators.prefix),\n    numberParts,\n    makePart(\"literal\", separators.suffix),\n    makePart(\"unit\", suffixText)\n  );\n}",
+          "source_sha256": "a5a1e321291f8f20a148e3a663b97a140c710a01fe8a0e5157fe0d17882a500e",
+          "span": [
+            946,
+            1217
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:makePart:852": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "00b2ae0239272fd55607cbdbb494fc837870074368f5416125e674439c0b8d85",
+          "helper_name": "makePart",
+          "kind": "helper",
+          "line": 23,
+          "source": "function makePart(type, value) {\n  return value ? [{ \"type\": type, \"value\": value }] : [];\n}",
+          "source_sha256": "9872315fd4ad23a3de142cca16ac92084f75b8c52b9ce6bb698d49a000893fe2",
+          "span": [
+            852,
+            944
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js:helper:verifyFormatParts:327": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "helper_name": "verifyFormatParts",
+          "kind": "helper",
+          "line": 12,
+          "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+          "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+          "span": [
+            327,
+            850
+          ]
+        }
+      }
+    }
+  }
+}

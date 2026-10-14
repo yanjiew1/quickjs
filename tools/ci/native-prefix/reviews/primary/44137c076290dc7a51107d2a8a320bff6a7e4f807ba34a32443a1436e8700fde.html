@@ -1,0 +1,12 @@
+<emu-clause id="sec-get-temporal.plaindate.prototype.inleapyear" type="built-in function">
+      <h1>get Temporal.PlainDate.prototype.inLeapYear</h1>
+      <p>
+        `Temporal.PlainDate.prototype.inLeapYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _plainDate_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_plainDate_, [[InitializedTemporalDate]]).
+        1. Return CalendarISOToDate(_plainDate_.[[Calendar]], _plainDate_.[[ISODate]]).[[InLeapYear]].
+      </emu-alg>
+    </emu-clause>

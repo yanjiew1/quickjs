@@ -1,0 +1,73 @@
+{
+  "actual_result_pending": true,
+  "argv": [
+    "./run-test262",
+    "-T",
+    "2",
+    "-q",
+    "-d",
+    "test262/test",
+    "-c",
+    "test262-intl.conf",
+    "-a",
+    "--count_skipped_features",
+    "-e",
+    "test262_errors.txt",
+    "-r",
+    "none"
+  ],
+  "directory_path_reason": "Relative test262/test enumeration preserves exact known-error filename matching; no positional list and no repeated config enumeration",
+  "enumerated_source_files_before_runner_name_equivalence": 53620,
+  "feature_scope": "Intl and complete native Temporal JavaScript enabled",
+  "known_assignment_reference_failures_pending": true,
+  "known_error_baseline_lines": [
+    "test262/test/language/expressions/assignment/S11.13.1_A6_T1.js:23: Test262Error: #1: innerX === undefined. Actual: 1",
+    "test262/test/language/expressions/assignment/S11.13.1_A6_T2.js:23: Test262Error: #1: innerX === 2. Actual: 1",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.1_T1.js:24: Test262Error: #1: innerX === 2. Actual: 12",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.2_T1.js:24: Test262Error: #1: innerX === 2. Actual: 5",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.3_T1.js:24: Test262Error: #1: innerX === 2. Actual: 3",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.4_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.5_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.6_T1.js:24: Test262Error: #1: innerX === 2. Actual: 8",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.7_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.8_T1.js:24: Test262Error: #1: innerX === 2. Actual: 4",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.9_T1.js:24: Test262Error: #1: innerX === 2. Actual: 1",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.10_T1.js:24: Test262Error: #1: innerX === 2. Actual: 5",
+    "test262/test/language/expressions/compound-assignment/S11.13.2_A6.11_T1.js:24: Test262Error: #1: innerX === 2. Actual: 5",
+    "test262/test/language/identifier-resolution/assign-to-global-undefined.js:20: strict mode: expected error"
+  ],
+  "known_error_baseline_sha256": "7a2ca3c319006a81ffae6378bfe48d163d7e4d3322848f77f2007180dfeb5a70",
+  "known_failing_source_count": 14,
+  "local_sanitizer_Test262": false,
+  "mandatory_for_all_native_icu_gcc_clang_normal_ASan_UBSan_rows": true,
+  "mandatory_for_gcc_and_clang_normal": true,
+  "mandatory_original_raw_diagnostics": true,
+  "mandatory_replacement_units": true,
+  "new_data_oracle_exclusions": [
+    "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js",
+    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js"
+  ],
+  "numeric_name_equivalence_groups": [
+    [
+      "test/language/comments/hashbang/escaped-bang-u0021.js",
+      "test/language/comments/hashbang/escaped-bang-u21.js"
+    ],
+    [
+      "test/language/comments/hashbang/escaped-hash-u0023.js",
+      "test/language/comments/hashbang/escaped-hash-u23.js"
+    ],
+    [
+      "test/language/literals/bigint/non-octal-like-invalid-0008n.js",
+      "test/language/literals/bigint/non-octal-like-invalid-08n.js"
+    ]
+  ],
+  "original14_error_baseline_preserved": true,
+  "original_data_oracles_never_accepted_errorfile_entries": true,
+  "required_observation": "Original raw full stdout/stderr/returncode/counters/failed paths visible; unchanged baseline; ICU independently14/0new/0changed/0fixed/EXIT0; native current exact signatures/profile/normative proof plus complete original assertion witness required.",
+  "runner_distinct_source_count": 53617,
+  "source_only_prepared": true,
+  "stage": "enabled-suffix",
+  "zero_error_conformance_claim": false,
+  "native_profile_qualification_pending": true,
+  "postfix_actual_native_counts": null
+}

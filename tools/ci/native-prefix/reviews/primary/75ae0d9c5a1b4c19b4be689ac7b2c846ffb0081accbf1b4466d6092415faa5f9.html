@@ -1,0 +1,44 @@
+<emu-clause id="sec-totemporaldate" type="abstract operation">
+      <h1>
+        ToTemporalDate (
+          _item_: an ECMAScript language value,
+          optional _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.PlainDate or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Converts _item_ to a new Temporal.PlainDate instance if possible, and throws otherwise.</dd>
+      </dl>
+      <emu-alg>
+        1. If _options_ is not present, set _options_ to *undefined*.
+        1. If _item_ is an Object, then
+          1. If _item_ has an [[InitializedTemporalDate]] internal slot, then
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalDate(_item_.[[ISODate]], _item_.[[Calendar]]).
+          1. If _item_ has an [[InitializedTemporalZonedDateTime]] internal slot, then
+            1. Let _isoDateTime_ be GetISODateTimeFor(_item_.[[TimeZone]], _item_.[[EpochNanoseconds]]).
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalDate(_isoDateTime_.[[ISODate]], _item_.[[Calendar]]).
+          1. If _item_ has an [[InitializedTemporalDateTime]] internal slot, then
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalDate(_item_.[[ISODateTime]].[[ISODate]], _item_.[[Calendar]]).
+          1. Let _calendar_ be ? GetTemporalCalendarIdentifierWithISODefault(_item_).
+          1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _item_, ~date-fields~, ~no-non-calendar-fields~, ~no-required-fields~).
+          1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+          1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+          1. Let _isoDate_ be ? CalendarDateFromFields(_calendar_, _fields_, _overflow_).
+          1. Return ! CreateTemporalDate(_isoDate_, _calendar_).
+        1. If _item_ is not a String, throw a *TypeError* exception.
+        1. Let _result_ be ? ParseISODateTime(_item_, ~plain-date-time~).
+        1. Let _calendar_ be _result_.[[Calendar]].
+        1. If _calendar_ is ~empty~, set _calendar_ to *"iso8601"*.
+        1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _isoDate_ be ! CreateISODateRecord(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]).
+        1. Return ? CreateTemporalDate(_isoDate_, _calendar_).
+      </emu-alg>
+    </emu-clause>

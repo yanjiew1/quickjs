@@ -1,0 +1,41 @@
+    <emu-clause id="sec-defaultnumberoption" type="abstract operation">
+      <h1>
+        DefaultNumberOption (
+          _value_: an ECMAScript language value,
+          _minimum_: an integer,
+          _maximum_: an integer,
+          _fallback_: an integer or *undefined*,
+        ): either a normal completion containing either an integer or *undefined*, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _value_ to an integer, checks whether it is in the allowed range, and fills in a _fallback_ value if necessary.</dd>
+      </dl>
+      <emu-alg>
+        1. If _value_ is *undefined*, return _fallback_.
+        1. Set _value_ to ? ToNumber(_value_).
+        1. If _value_ is not a finite Number or ℝ(_value_) &lt; _minimum_ or ℝ(_value_) > _maximum_, throw a *RangeError* exception.
+        1. Return floor(ℝ(_value_)).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-getnumberoption" type="abstract operation">
+      <h1>
+        GetNumberOption (
+          _options_: an Object,
+          _propertyKey_: a String,
+          _minimum_: an integer,
+          _maximum_: an integer,
+          _fallback_: an integer or *undefined*,
+        ): either a normal completion containing either an integer or *undefined*, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It extracts the value of the property named _propertyKey_ from the provided _options_ object, converts it to an integer, checks whether it is in the allowed range, and fills in a _fallback_ value if necessary.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, _propertyKey_).
+        1. Return ? DefaultNumberOption(_value_, _minimum_, _maximum_, _fallback_).
+      </emu-alg>
+    </emu-clause>
+

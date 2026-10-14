@@ -1,0 +1,17 @@
+<emu-clause id="sec-formatapproximately" type="abstract operation">
+      <h1>
+        FormatApproximately (
+          _numberFormat_: an Intl.NumberFormat,
+          _result_: a List of Records with fields [[Type]] (a String) and [[Value]] (a String),
+        ): a List of Records with fields [[Type]] (a String) and [[Value]] (a String)
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It modifies _result_, which must be a List of Record values as described in PartitionNumberPattern, by adding a new Record for the approximately sign, which may depend on _numberFormat_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _approximatelySign_ be an ILND String value used to signify that a number is approximate.
+        1. If _approximatelySign_ is not empty, insert the Record { [[Type]]: *"approximatelySign"*, [[Value]]: _approximatelySign_ } at an ILND index in _result_. For example, if _numberFormat_ has [[Locale]] *"en-US"* and [[NumberingSystem]] *"latn"* and [[Style]] *"decimal"*, the new Record might be inserted before the first element of _result_.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>

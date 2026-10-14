@@ -1,0 +1,218 @@
+{
+  "approval_created": true,
+  "bounded_root_review_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-approved-assets-root-20261012-v1/ROOT-BOUNDED-REVIEW-APPROVAL.json",
+    "sha256": "5e53ff07bb5f9f9e5aba7202ca223f6bac9c70fbb987012ef169bd571a55fb08"
+  },
+  "conditional_source_duty_boundaries": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-reviews-actionable-assembly-source-preparation-20261012-v2/SOURCE-ONLY-DUTY-BOUNDARIES.json",
+    "sha256": "89ceef6d420bafb999daa19ca843e97cab47be6698b18f17f2d8a29308a8642a"
+  },
+  "conformance_accepted": false,
+  "effective_profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+  "failure_waiver": false,
+  "final_actual_capture_equality": {
+    "actual_command": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/oracle-exact-witness.command.json",
+      "sha256": "6e90658776970d632702378b52ea8cc46a890d4c5e267ddf2f79d08f442a0380"
+    },
+    "actual_oracle_witness": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/native-oracle-actual.json",
+      "sha256": "ab8b741b986678d0d8326d942d3ea40f9489beb6ced6aec912b312faae5460b6"
+    },
+    "actual_root_report": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-oracle-and-equal-ranges-root-comparison-20261012-v1/REPORT.json",
+      "sha256": "39e1099d5b771d9cbbb1412db88f2ddb68c5262357428b5c5ad57c59ab4a9cd0"
+    },
+    "actual_root_tool_closure": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-oracle-and-equal-ranges-root-20261012-v1/ROOT-TOOL-CLOSURE.json",
+      "sha256": "1ccd4234ff5939b462951dbcb8af8ac7d14c53813d87e39e199e536d34989229"
+    },
+    "actual_stdout": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/oracle-exact-witness.stdout.log",
+      "sha256": "87b3bd96d4ad30224624dc66e32c7b49136e5fce38b3ea36f100ddd3597cfa2d"
+    },
+    "exact_primary_source_expected_value": {
+      "hanidec": {
+        "codePoints": [
+          "U+3007",
+          "U+4E8C",
+          "U+003A",
+          "U+4E09",
+          "U+4E94",
+          "U+003A",
+          "U+3007",
+          "U+516D",
+          "U+202F",
+          "U+0041",
+          "U+004D"
+        ],
+        "formatted": "〇二:三五:〇六 AM",
+        "officialAsciiSpaceIncludes": false,
+        "parts": [
+          {
+            "type": "hour",
+            "value": "〇二"
+          },
+          {
+            "type": "literal",
+            "value": ":"
+          },
+          {
+            "type": "minute",
+            "value": "三五"
+          },
+          {
+            "type": "literal",
+            "value": ":"
+          },
+          {
+            "type": "second",
+            "value": "〇六"
+          },
+          {
+            "type": "literal",
+            "value": " "
+          },
+          {
+            "type": "dayPeriod",
+            "value": "AM"
+          }
+        ],
+        "resolvedOptions": {
+          "calendar": "gregory",
+          "hour": "2-digit",
+          "hour12": true,
+          "hourCycle": "h12",
+          "locale": "en-US-u-nu-hanidec",
+          "minute": "2-digit",
+          "numberingSystem": "hanidec",
+          "second": "2-digit",
+          "timeZone": "UTC"
+        }
+      },
+      "japaneseHour12": {
+        "calendar": "gregory",
+        "hour": "numeric",
+        "hour12": true,
+        "hourCycle": "h12",
+        "locale": "en-US",
+        "numberingSystem": "latn",
+        "timeZone": "UTC"
+      }
+    },
+    "root_comparator_execution_pending": false,
+    "root_semantic_acceptance_created": true,
+    "source_only_data_readback_equal": true
+  },
+  "final_current_capture_binding": {
+    "artifact_download_tool_closure": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/ROOT-TOOL-CLOSURE.json",
+      "sha256": "e10d6bdf9420beaad36185ccdb7a6a153b2be8b541b050cec21bf5db49e1e198"
+    },
+    "capture_summary": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/CAPTURE-SUMMARY.json",
+      "sha256": "40122f547214f2c5ca66fa44fff5b1cf9e353a384f28765aa7b210c253520ba8"
+    },
+    "complete_readback": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-h3-fresh-complete-capture-independent-source-readback-20261012-v2/REPORT.json",
+      "sha256": "f3ca1da65c4e8090bb0395be46ff10e7c7eb5e0d05aabd05895c7fdab5e842cf"
+    },
+    "execution_identity": {
+      "actual_production_source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+      "binding_sha256": "f4da692425276c2936eb1640efd4077ecf2506a8b675413498a80fbcc205ecf6",
+      "candidate_sha": "4beac5cf962eb4863cc9025293f65e323f955ad7",
+      "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+      "run_attempt": "1",
+      "run_id": "38178170735",
+      "source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d"
+    },
+    "manifest": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/GENERATED-MANIFEST.json",
+      "sha256": "1df17dac972c44e1a55dec43b465d27d1d300fc0f6364e6e61c093ec108474c3"
+    },
+    "root_capture_or_semantic_approval_created": false
+  },
+  "historical_V5_exact_equality_verified_by_source_readback": true,
+  "hosted_accepted": false,
+  "independent_primary_source_derivation_binding": {
+    "path": "tools/ci/native-prefix/reviews/evidence/oracle-finite-reconstruction.json",
+    "sha256": "1daa74a37a86c99c4d7d82c6809979e54a59264c7ce6df3fd5e43a680f59deda"
+  },
+  "independently_derived_exact_witness": {
+    "hanidec": {
+      "codePoints": [
+        "U+3007",
+        "U+4E8C",
+        "U+003A",
+        "U+4E09",
+        "U+4E94",
+        "U+003A",
+        "U+3007",
+        "U+516D",
+        "U+202F",
+        "U+0041",
+        "U+004D"
+      ],
+      "formatted": "〇二:三五:〇六 AM",
+      "officialAsciiSpaceIncludes": false,
+      "parts": [
+        {
+          "type": "hour",
+          "value": "〇二"
+        },
+        {
+          "type": "literal",
+          "value": ":"
+        },
+        {
+          "type": "minute",
+          "value": "三五"
+        },
+        {
+          "type": "literal",
+          "value": ":"
+        },
+        {
+          "type": "second",
+          "value": "〇六"
+        },
+        {
+          "type": "literal",
+          "value": " "
+        },
+        {
+          "type": "dayPeriod",
+          "value": "AM"
+        }
+      ],
+      "resolvedOptions": {
+        "calendar": "gregory",
+        "hour": "2-digit",
+        "hour12": true,
+        "hourCycle": "h12",
+        "locale": "en-US-u-nu-hanidec",
+        "minute": "2-digit",
+        "numberingSystem": "hanidec",
+        "second": "2-digit",
+        "timeZone": "UTC"
+      }
+    },
+    "japaneseHour12": {
+      "calendar": "gregory",
+      "hour": "numeric",
+      "hour12": true,
+      "hourCycle": "h12",
+      "locale": "en-US",
+      "numberingSystem": "latn",
+      "timeZone": "UTC"
+    }
+  },
+  "mandatory_semantics_satisfied": true,
+  "original_failures_remain_failures": true,
+  "production_source_map_sha256": null,
+  "requires_root_approval": true,
+  "root_semantic_approval_created": true,
+  "runtime_accepted": false,
+  "schema": "native-static-oracle-semantic-review-v1"
+}

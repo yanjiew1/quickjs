@@ -1,0 +1,136 @@
+    <emu-clause id="sec-resolvelocale" type="abstract operation">
+      <h1>
+        ResolveLocale (
+          _availableLocales_: an Available Locales List,
+          _requestedLocales_: a Language Priority List,
+          _options_: a Record,
+          _relevantExtensionKeys_: a List of Strings,
+          optional _localeData_: a Record,
+        ): a Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It performs "lookup" as defined in <a href="https://www.rfc-editor.org/info/bcp47">BCP 47</a> at <a href="https://www.rfc-editor.org/rfc/rfc4647.html#section-3">RFC 4647 section 3</a>, determining the best element of _availableLocales_ for satisfying _requestedLocales_ using either the LookupMatchingLocaleByBestFit algorithm or LookupMatchingLocaleByPrefix algorithm as specified by _options_.[[localeMatcher]], ignoring Unicode locale extension sequences, and returns a representation of the match that also includes corresponding data from _localeData_ and a resolved value for each element of _relevantExtensionKeys_ (defaulting to data from the matched locale, superseded by data from the requested Unicode locale extension sequence if present and then by data from _options_ if present). If the matched element from _requestedLocales_ contains a Unicode locale extension sequence, it is copied onto the language tag in the [[Locale]] field of the returned Record, omitting any <code>keyword</code> Unicode locale nonterminal whose <code>key</code> value is not contained within _relevantExtensionKeys_ or <code>type</code> value is superseded by a different value from _options_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _matcher_ be _options_.[[localeMatcher]].
+        1. If _matcher_ is *"lookup"*, then
+          1. Let _match_ be LookupMatchingLocaleByPrefix(_availableLocales_, _requestedLocales_).
+        1. Else,
+          1. Let _match_ be LookupMatchingLocaleByBestFit(_availableLocales_, _requestedLocales_).
+        1. If _match_ is *undefined*, set _match_ to the Record { [[locale]]: DefaultLocale(), [[extension]]: ~empty~ }.
+        1. Let _foundLocale_ be _match_.[[locale]].
+        1. Let _result_ be a new Record.
+        1. If _localeData_ is not present, then
+          1. Assert: _relevantExtensionKeys_ is an empty List.
+          1. Set _result_.[[LocaleData]] to *undefined*.
+        1. Else,
+          1. Let _foundLocaleData_ be _localeData_.[[&lt;_foundLocale_>]].
+          1. Assert: _foundLocaleData_ is a Record.
+          1. Set _result_.[[LocaleData]] to _foundLocaleData_.
+        1. If _match_.[[extension]] is not ~empty~, then
+          1. Let _components_ be UnicodeExtensionComponents(_match_.[[extension]]).
+          1. Let _keywords_ be _components_.[[Keywords]].
+        1. Else,
+          1. Let _keywords_ be a new empty List.
+        1. Let _supportedKeywords_ be a new empty List.
+        1. For each element _key_ of _relevantExtensionKeys_, do
+          1. Let _keyLocaleData_ be _foundLocaleData_.[[&lt;_key_>]].
+          1. Assert: _keyLocaleData_ is a List.
+          1. Let _value_ be _keyLocaleData_[0].
+          1. Assert: _value_ is a String or _value_ is *null*.
+          1. Let _supportedKeyword_ be ~empty~.
+          1. If _keywords_ contains an element whose [[Key]] is _key_, then
+            1. Let _entry_ be the element of _keywords_ whose [[Key]] is _key_.
+            1. Let _requestedValue_ be _entry_.[[Value]].
+            1. If _requestedValue_ is not the empty String, then
+              1. If _keyLocaleData_ contains _requestedValue_, then
+                1. Set _value_ to _requestedValue_.
+                1. Set _supportedKeyword_ to the Record { [[Key]]: _key_, [[Value]]: _value_ }.
+            1. Else if _keyLocaleData_ contains *"true"*, then
+              1. Set _value_ to *"true"*.
+              1. Set _supportedKeyword_ to the Record { [[Key]]: _key_, [[Value]]: the empty String }.
+          1. Assert: _options_ has a field [[&lt;_key_>]].
+          1. Let _optionsValue_ be _options_.[[&lt;_key_>]].
+          1. Assert: _optionsValue_ is a String, or _optionsValue_ is either *undefined* or *null*.
+          1. If _optionsValue_ is a String, then
+            1. Let _ukey_ be the ASCII-lowercase of _key_.
+            1. Set _optionsValue_ to CanonicalizeUValue(_ukey_, _optionsValue_).
+            1. If _optionsValue_ is the empty String, then
+              1. Set _optionsValue_ to *"true"*.
+          1. If SameValue(_optionsValue_, _value_) is *false* and _keyLocaleData_ contains _optionsValue_, then
+            1. Set _value_ to _optionsValue_.
+            1. Set _supportedKeyword_ to ~empty~.
+          1. If _supportedKeyword_ is not ~empty~, append _supportedKeyword_ to _supportedKeywords_.
+          1. Set _result_.[[&lt;_key_>]] to _value_.
+        1. If _supportedKeywords_ is not empty, then
+          1. Let _supportedAttributes_ be a new empty List.
+          1. Set _foundLocale_ to InsertUnicodeExtensionAndCanonicalize(_foundLocale_, _supportedAttributes_, _supportedKeywords_).
+        1. Set _result_.[[Locale]] to _foundLocale_.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-resolveoptions" type="abstract operation">
+      <h1>
+        ResolveOptions (
+          _ctor_: a service constructor,
+          _localeData_: a Record,
+          _locales_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+          optional _specialBehaviours_: a List of enums,
+          optional _modifyResolutionOptions_: an Abstract Closure with one parameter,
+        ): either a normal completion containing a Record with fields [[Options]] (an Object), [[ResolvedLocale]] (a Record), and [[ResolutionOptions]] (a Record), or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It reads the inputs for _ctor_ and resolves them into a locale.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _requestedLocales_ be ? CanonicalizeLocaleList(_locales_).
+        1. If _specialBehaviours_ is present and contains ~require-options~ and _options_ is *undefined*, throw a *TypeError* exception.
+        1. If _specialBehaviours_ is present and contains ~coerce-options~, set _options_ to ? CoerceOptionsToObject(_options_). Otherwise, set _options_ to ? GetOptionsObject(_options_).
+        1. Let _matcher_ be ? GetOption(_options_, *"localeMatcher"*, ~string~, « *"lookup"*, *"best fit"* », *"best fit"*).
+        1. Let _opt_ be the Record { [[localeMatcher]]: _matcher_ }.
+        1. For each Resolution Option Descriptor _desc_ of _ctor_.[[ResolutionOptionDescriptors]], do
+          1. If _desc_ has a [[Type]] field, let _type_ be _desc_.[[Type]]. Otherwise, let _type_ be ~string~.
+          1. If _desc_ has a [[Values]] field, let _values_ be _desc_.[[Values]]. Otherwise, let _values_ be ~empty~.
+          1. Let _value_ be ? GetOption(_options_, _desc_.[[Property]], _type_, _values_, *undefined*).
+          1. If _value_ is not *undefined*, then
+            1. Set _value_ to ! ToString(_value_).
+            1. If _value_ cannot be matched by the <code>type</code> Unicode locale nonterminal, throw a *RangeError* exception.
+          1. Let _key_ be _desc_.[[Key]].
+          1. Set _opt_.[[&lt;_key_>]] to _value_.
+        1. If _modifyResolutionOptions_ is present, perform ! _modifyResolutionOptions_(_opt_).
+        1. Let _resolution_ be ResolveLocale(_ctor_.[[AvailableLocales]], _requestedLocales_, _opt_, _ctor_.[[RelevantExtensionKeys]], _localeData_).
+        1. Assert: _resolution_.[[LocaleData]] is a Record.
+        1. Return the Record { [[Options]]: _options_, [[ResolvedLocale]]: _resolution_, [[ResolutionOptions]]: _opt_ }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-filterlocales" type="abstract operation" oldids="sec-lookupsupportedlocales,sec-bestfitsupportedlocales,sec-supportedlocales">
+      <h1>
+        FilterLocales (
+          _availableLocales_: an Available Locales List,
+          _requestedLocales_: a Language Priority List,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a List of Unicode canonicalized locale identifiers or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It performs "filtering" as defined in <a href="https://www.rfc-editor.org/info/bcp47">BCP 47</a> at <a href="https://www.rfc-editor.org/rfc/rfc4647.html#section-3">RFC 4647 section 3</a>, returning the elements of _requestedLocales_ for which _availableLocales_ contains a matching locale when using either the LookupMatchingLocaleByBestFit algorithm or LookupMatchingLocaleByPrefix algorithm as specified in _options_, preserving their relative order.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _options_ to ? CoerceOptionsToObject(_options_).
+        1. Let _matcher_ be ? GetOption(_options_, *"localeMatcher"*, ~string~, « *"lookup"*, *"best fit"* », *"best fit"*).
+        1. Let _subset_ be a new empty List.
+        1. For each element _locale_ of _requestedLocales_, do
+          1. If _matcher_ is *"lookup"*, then
+            1. Let _match_ be LookupMatchingLocaleByPrefix(_availableLocales_, « _locale_ »).
+          1. Else,
+            1. Let _match_ be LookupMatchingLocaleByBestFit(_availableLocales_, « _locale_ »).
+          1. If _match_ is not *undefined*, append _locale_ to _subset_.
+        1. Return CreateArrayFromList(_subset_).
+      </emu-alg>
+    </emu-clause>
+

@@ -1,0 +1,118 @@
+    <emu-clause id="sec-createdatetimeformat" type="abstract operation" oldids="sec-initializedatetimeformat,sec-todatetimeoptions">
+      <h1>
+        CreateDateTimeFormat (
+          _newTarget_: a constructor,
+          _locales_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+          _required_: ~date~, ~time~, or ~any~,
+          _defaults_: ~date~, ~time~, or ~all~,
+          optional _toLocaleStringTimeZone_: a primary time zone identifier,
+        ): either a normal completion containing a DateTimeFormat object or a throw completion
+      </h1>
+
+      <dl class="header">
+        <dt>description</dt>
+        <dd>_toLocaleStringTimeZone_ supports the behaviour of %Temporal.ZonedDateTime.prototype.toLocaleString%.</dd>
+      </dl>
+
+      <emu-alg>
+        1. Let _dateTimeFormat_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Intl.DateTimeFormat.prototype%"*, « [[InitializedDateTimeFormat]], [[Locale]], [[Calendar]], [[NumberingSystem]], [[TimeZone]], [[HourCycle]], [[DateStyle]], [[TimeStyle]], [[DateTimeFormat]], [[TemporalPlainDateFormat]], [[TemporalPlainYearMonthFormat]], [[TemporalPlainMonthDayFormat]], [[TemporalPlainTimeFormat]], [[TemporalPlainDateTimeFormat]], [[TemporalInstantFormat]], [[BoundFormat]] »).
+        1. Let _hour12_ be *undefined*.
+        1. Let _modifyResolutionOptions_ be a new Abstract Closure with parameters (_options_) that captures _hour12_ and performs the following steps when called:
+          1. Set _hour12_ to _options_.[[hour12]].
+          1. Remove field [[hour12]] from _options_.
+          1. If _hour12_ is not *undefined*, set _options_.[[hc]] to *null*.
+        1. Let _optionsResolution_ be ? ResolveOptions(%Intl.DateTimeFormat%, %Intl.DateTimeFormat%.[[LocaleData]], _locales_, _options_, « ~coerce-options~ », _modifyResolutionOptions_).
+        1. Set _options_ to _optionsResolution_.[[Options]].
+        1. Let _r_ be _optionsResolution_.[[ResolvedLocale]].
+        1. Set _dateTimeFormat_.[[Locale]] to _r_.[[Locale]].
+        1. Let _resolvedCalendar_ be _r_.[[ca]].
+        1. [id="step-calendar-fallback"] If _resolvedCalendar_ is *"islamic"*, then
+          1. Set _resolvedCalendar_ to *"islamic-tbla"*.
+          1. If the ECMAScript implementation has a mechanism for reporting diagnostic warning messages, a warning should be issued.
+        1. Set _dateTimeFormat_.[[Calendar]] to _resolvedCalendar_.
+        1. Set _dateTimeFormat_.[[NumberingSystem]] to _r_.[[nu]].
+        1. Let _resolvedLocaleData_ be _r_.[[LocaleData]].
+        1. If _hour12_ is *true*, then
+          1. Let _hc_ be _resolvedLocaleData_.[[hourCycle12]].
+        1. Else if _hour12_ is *false*, then
+          1. Let _hc_ be _resolvedLocaleData_.[[hourCycle24]].
+        1. Else,
+          1. Assert: _hour12_ is *undefined*.
+          1. Let _hc_ be _r_.[[hc]].
+          1. If _hc_ is *null*, set _hc_ to _resolvedLocaleData_.[[hourCycle]].
+        1. Set _dateTimeFormat_.[[HourCycle]] to _hc_.
+        1. Let _timeZone_ be ? Get(_options_, *"timeZone"*).
+        1. If _toLocaleStringTimeZone_ is present, then
+          1. If _timeZone_ is not *undefined*, throw a *TypeError* exception.
+          1. Set _timeZone_ to _toLocaleStringTimeZone_.
+        1. Else,
+          1. If _timeZone_ is *undefined*, set _timeZone_ to SystemTimeZoneIdentifier(); else, set _timeZone_ to ? ToString(_timeZone_).
+        1. If IsOffsetTimeZoneIdentifier(_timeZone_) is *true*, then
+          1. Let _parseResult_ be ParseText(StringToCodePoints(_timeZone_), |UTCOffset[~SubMinutePrecision]|).
+          1. Assert: _parseResult_ is a Parse Node.
+          1. Let _offsetNanoseconds_ be ? ParseDateTimeUTCOffset(_timeZone_).
+          1. Let _offsetMinutes_ be _offsetNanoseconds_ / (6 × 10<sup>10</sup>).
+          1. Set _timeZone_ to FormatOffsetTimeZoneIdentifier(_offsetMinutes_).
+        1. Else,
+          1. Let _timeZoneIdentifierRecord_ be GetAvailableNamedTimeZoneIdentifier(_timeZone_).
+          1. If _timeZoneIdentifierRecord_ is ~empty~, throw a *RangeError* exception.
+          1. Set _timeZone_ to _timeZoneIdentifierRecord_.[[Identifier]].
+        1. Set _dateTimeFormat_.[[TimeZone]] to _timeZone_.
+        1. Let _formatOptions_ be a new Record.
+        1. Set _formatOptions_.[[hourCycle]] to _hc_.
+        1. Let _hasExplicitFormatComponents_ be *false*.
+        1. For each row of <emu-xref href="#table-datetimeformat-components"></emu-xref>, except the header row, in table order, do
+          1. Let _prop_ be the name given in the Property column of the current row.
+          1. If _prop_ is *"fractionalSecondDigits"*, then
+            1. Let _value_ be ? GetNumberOption(_options_, *"fractionalSecondDigits"*, 1, 3, *undefined*).
+          1. Else,
+            1. Let _values_ be a List whose elements are the strings given in the Values column of the current row.
+            1. Let _value_ be ? GetOption(_options_, _prop_, ~string~, _values_, *undefined*).
+          1. Set _formatOptions_.[[&lt;_prop_>]] to _value_.
+          1. If _value_ is not *undefined*, then
+            1. Set _hasExplicitFormatComponents_ to *true*.
+        1. Let _formatMatcher_ be ? GetOption(_options_, *"formatMatcher"*, ~string~, « *"basic"*, *"best fit"* », *"best fit"*).
+        1. Let _dateStyle_ be ? GetOption(_options_, *"dateStyle"*, ~string~, « *"full"*, *"long"*, *"medium"*, *"short"* », *undefined*).
+        1. Set _dateTimeFormat_.[[DateStyle]] to _dateStyle_.
+        1. Let _timeStyle_ be ? GetOption(_options_, *"timeStyle"*, ~string~, « *"full"*, *"long"*, *"medium"*, *"short"* », *undefined*).
+        1. Set _dateTimeFormat_.[[TimeStyle]] to _timeStyle_.
+        1. Let _formats_ be _resolvedLocaleData_.[[formats]].[[&lt;_resolvedCalendar_>]].
+        1. If _dateStyle_ is not *undefined* or _timeStyle_ is not *undefined*, then
+          1. If _hasExplicitFormatComponents_ is *true*, then
+            1. Throw a *TypeError* exception.
+          1. If _required_ is ~date~ and _timeStyle_ is not *undefined*, then
+            1. Throw a *TypeError* exception.
+          1. If _required_ is ~time~ and _dateStyle_ is not *undefined*, then
+            1. Throw a *TypeError* exception.
+          1. Let _styles_ be _resolvedLocaleData_.[[styles]].[[&lt;_resolvedCalendar_>]].
+          1. Let _bestFormat_ be DateTimeStyleFormat(_dateStyle_, _timeStyle_, _styles_).
+          1. If _dateStyle_ is not *undefined*, then
+            1. Set _dateTimeFormat_.[[TemporalPlainDateFormat]] to AdjustDateTimeStyleFormat(_formats_, _bestFormat_, _formatMatcher_, « *"weekday"*, *"era"*, *"year"*, *"month"*, *"day"* »).
+            1. Set _dateTimeFormat_.[[TemporalPlainYearMonthFormat]] to AdjustDateTimeStyleFormat(_formats_, _bestFormat_, _formatMatcher_, « *"era"*, *"year"*, *"month"* »).
+            1. Set _dateTimeFormat_.[[TemporalPlainMonthDayFormat]] to AdjustDateTimeStyleFormat(_formats_, _bestFormat_, _formatMatcher_, « *"month"*, *"day"* »).
+          1. Else,
+            1. Set _dateTimeFormat_.[[TemporalPlainDateFormat]] to *null*.
+            1. Set _dateTimeFormat_.[[TemporalPlainYearMonthFormat]] to *null*.
+            1. Set _dateTimeFormat_.[[TemporalPlainMonthDayFormat]] to *null*.
+          1. If _timeStyle_ is not *undefined*, then
+            1. Set _dateTimeFormat_.[[TemporalPlainTimeFormat]] to AdjustDateTimeStyleFormat(_formats_, _bestFormat_, _formatMatcher_, « *"dayPeriod"*, *"hour"*, *"minute"*, *"second"*, *"fractionalSecondDigits"* »).
+          1. Else,
+            1. Set _dateTimeFormat_.[[TemporalPlainTimeFormat]] to *null*.
+          1. Set _dateTimeFormat_.[[TemporalPlainDateTimeFormat]] to AdjustDateTimeStyleFormat(_formats_, _bestFormat_, _formatMatcher_, « *"weekday"*, *"era"*, *"year"*, *"month"*, *"day"*, *"dayPeriod"*, *"hour"*, *"minute"*, *"second"*, *"fractionalSecondDigits"* »).
+          1. Set _dateTimeFormat_.[[TemporalInstantFormat]] to _bestFormat_.
+        1. Else,
+          1. Let _bestFormat_ be GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, _required_, _defaults_, ~all~).
+          1. Set _dateTimeFormat_.[[TemporalPlainDateFormat]] to GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, ~date~, ~date~, ~relevant~).
+          1. Set _dateTimeFormat_.[[TemporalPlainYearMonthFormat]] to GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, ~year-month~, ~year-month~, ~relevant~).
+          1. Set _dateTimeFormat_.[[TemporalPlainMonthDayFormat]] to GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, ~month-day~, ~month-day~, ~relevant~).
+          1. Set _dateTimeFormat_.[[TemporalPlainTimeFormat]] to GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, ~time~, ~time~, ~relevant~).
+          1. Set _dateTimeFormat_.[[TemporalPlainDateTimeFormat]] to GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, ~any~, ~all~, ~relevant~).
+          1. If _toLocaleStringTimeZone_ is present, then
+            1. Set _dateTimeFormat_.[[TemporalInstantFormat]] to GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, ~any~, ~zoned-date-time~, ~all~).
+          1. Else,
+            1. Set _dateTimeFormat_.[[TemporalInstantFormat]] to GetDateTimeFormat(_formats_, _formatMatcher_, _formatOptions_, ~any~, ~all~, ~all~).
+        1. Set _dateTimeFormat_.[[DateTimeFormat]] to _bestFormat_.
+        1. Return _dateTimeFormat_.
+      </emu-alg>
+    </emu-clause>

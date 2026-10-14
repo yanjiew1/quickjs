@@ -1,0 +1,79 @@
+    <emu-clause id="sec-partitiondatetimerangepattern" type="abstract operation">
+      <h1>
+        PartitionDateTimeRangePattern (
+          _dateTimeFormat_: an Intl.DateTimeFormat,
+          _x_: a Number,
+          _y_: a Number,
+        ): either a normal completion containing a List of Records with fields [[Type]] (a String), [[Value]] (a String), and [[Source]] (a String), or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It interprets _x_ and _y_ as time values as specified in ECMA-262, <emu-xref href="#sec-time-values-and-time-range"></emu-xref>, and creates the corresponding parts according to the effective locale and the formatting options of _dateTimeFormat_.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _x_ to TimeClip(_x_).
+        1. If _x_ is *NaN*, throw a *RangeError* exception.
+        1. Set _y_ to TimeClip(_y_).
+        1. If _y_ is *NaN*, throw a *RangeError* exception.
+        1. Let _xEpochNanoseconds_ be ℤ(ℝ(_x_) × 10<sup>6</sup>).
+        1. Let _yEpochNanoseconds_ be ℤ(ℝ(_y_) × 10<sup>6</sup>).
+        1. Let _localTime1_ be ToLocalTime(_xEpochNanoseconds_, _dateTimeFormat_.[[Calendar]], _dateTimeFormat_.[[TimeZone]]).
+        1. Let _localTime2_ be ToLocalTime(_yEpochNanoseconds_, _dateTimeFormat_.[[Calendar]], _dateTimeFormat_.[[TimeZone]]).
+        1. Let _format_ be _dateTimeFormat_.[[DateTimeFormat]].
+        1. If _dateTimeFormat_.[[HourCycle]] is *"h11"* or *"h12"*, then
+          1. Let _pattern_ be _format_.[[pattern12]].
+          1. Let _rangePatterns_ be _format_.[[rangePatterns12]].
+        1. Else,
+          1. Let _pattern_ be _format_.[[pattern]].
+          1. Let _rangePatterns_ be _format_.[[rangePatterns]].
+        1. Let _selectedRangePattern_ be *undefined*.
+        1. Let _relevantFieldsEqual_ be *true*.
+        1. Let _checkMoreFields_ be *true*.
+        1. For each row of <emu-xref href="#table-datetimeformat-range-pattern-record"></emu-xref>, except the header row, in table order, do
+          1. Let _fieldName_ be the name given in the Field Name column of the row.
+          1. If _rangePatterns_ has a field whose name is _fieldName_, let _rangePattern_ be _rangePatterns_' field whose name is _fieldName_; else let _rangePattern_ be *undefined*.
+          1. If _selectedRangePattern_ is not *undefined* and _rangePattern_ is *undefined*, then
+            1. NOTE: Because there is no range pattern for differences at or below this field, no further checks will be performed.
+            1. Set _checkMoreFields_ to *false*.
+          1. If _fieldName_ is not equal to [[Default]] and _relevantFieldsEqual_ is *true* and _checkMoreFields_ is *true*, then
+            1. Set _selectedRangePattern_ to _rangePattern_.
+            1. If _fieldName_ is [[AmPm]], then
+              1. If _localTime1_.[[Hour]] is less than 12, let _v1_ be *"am"*; else let _v1_ be *"pm"*.
+              1. If _localTime2_.[[Hour]] is less than 12, let _v2_ be *"am"*; else let _v2_ be *"pm"*.
+            1. Else if _fieldName_ is [[DayPeriod]], then
+              1. Let _v1_ be an ILD String representing the day period of _localTime1_.
+              1. Let _v2_ be an ILD String representing the day period of _localTime2_.
+            1. Else if _fieldName_ is [[FractionalSecondDigits]], then
+              1. If _format_ has a [[fractionalSecondDigits]] field, then
+                1. Let _fractionalSecondDigits_ be _format_.[[fractionalSecondDigits]].
+              1. Else,
+                1. Let _fractionalSecondDigits_ be 3.
+              1. Let _exp_ be _fractionalSecondDigits_ - 3.
+              1. Let _v1_ be floor(_localTime1_.[[Millisecond]] × 10<sup>_exp_</sup>).
+              1. Let _v2_ be floor(_localTime2_.[[Millisecond]] × 10<sup>_exp_</sup>).
+            1. Else,
+              1. Let _v1_ be _localTime1_'s field whose name is _fieldName_.
+              1. Let _v2_ be _localTime2_'s field whose name is _fieldName_.
+            1. If _v1_ is not equal to _v2_, then
+              1. Set _relevantFieldsEqual_ to *false*.
+        1. If _relevantFieldsEqual_ is *true*, then
+          1. Let _collapsedResult_ be a new empty List.
+          1. Let _resultParts_ be FormatDateTimePattern(_dateTimeFormat_, _format_, _pattern_, _xEpochNanoseconds_).
+          1. For each Record { [[Type]], [[Value]] } _part_ of _resultParts_, do
+            1. Append the Record { [[Type]]: _part_.[[Type]], [[Value]]: _part_.[[Value]], [[Source]]: *"shared"* } to _collapsedResult_.
+          1. Return _collapsedResult_.
+        1. Let _rangeResult_ be a new empty List.
+        1. If _selectedRangePattern_ is *undefined*, then
+          1. Set _selectedRangePattern_ to _rangePatterns_.[[Default]].
+        1. For each Record { [[Pattern]], [[Source]] } _rangePatternPart_ of _selectedRangePattern_.[[PatternParts]], do
+          1. Let _pattern_ be _rangePatternPart_.[[Pattern]].
+          1. Let _source_ be _rangePatternPart_.[[Source]].
+          1. If _source_ is *"startRange"* or *"shared"*, then
+            1. Let _z_ be _xEpochNanoseconds_.
+          1. Else,
+            1. Let _z_ be _yEpochNanoseconds_.
+          1. Let _resultParts_ be FormatDateTimePattern(_dateTimeFormat_, _selectedRangePattern_, _pattern_, _z_).
+          1. For each Record { [[Type]], [[Value]] } _part_ of _resultParts_, do
+            1. Append the Record { [[Type]]: _part_.[[Type]], [[Value]]: _part_.[[Value]], [[Source]]: _source_ } to _rangeResult_.
+        1. Return _rangeResult_.
+      </emu-alg>

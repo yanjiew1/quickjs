@@ -1,0 +1,1358 @@
+{
+  "adaptation_basis": "aggregate-array-source-adapter",
+  "approval_created": true,
+  "bounded_root_review_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-approved-assets-root-20261012-v1/ROOT-BOUNDED-REVIEW-APPROVAL.json",
+    "sha256": "5e53ff07bb5f9f9e5aba7202ca223f6bac9c70fbb987012ef169bd571a55fb08"
+  },
+  "conditional_source_duty_boundaries": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-reviews-actionable-assembly-source-preparation-20261012-v2/SOURCE-ONLY-DUTY-BOUNDARIES.json",
+    "sha256": "89ceef6d420bafb999daa19ca843e97cab47be6698b18f17f2d8a29308a8642a"
+  },
+  "final_current_capture_binding": {
+    "artifact_download_tool_closure": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/ROOT-TOOL-CLOSURE.json",
+      "sha256": "e10d6bdf9420beaad36185ccdb7a6a153b2be8b541b050cec21bf5db49e1e198"
+    },
+    "capture_summary": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/CAPTURE-SUMMARY.json",
+      "sha256": "40122f547214f2c5ca66fa44fff5b1cf9e353a384f28765aa7b210c253520ba8"
+    },
+    "complete_readback": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-h3-fresh-complete-capture-independent-source-readback-20261012-v2/REPORT.json",
+      "sha256": "f3ca1da65c4e8090bb0395be46ff10e7c7eb5e0d05aabd05895c7fdab5e842cf"
+    },
+    "execution_identity": {
+      "actual_production_source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+      "binding_sha256": "f4da692425276c2936eb1640efd4077ecf2506a8b675413498a80fbcc205ecf6",
+      "candidate_sha": "4beac5cf962eb4863cc9025293f65e323f955ad7",
+      "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+      "run_attempt": "1",
+      "run_id": "38178170735",
+      "source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d"
+    },
+    "manifest": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/GENERATED-MANIFEST.json",
+      "sha256": "1df17dac972c44e1a55dec43b465d27d1d300fc0f6364e6e61c093ec108474c3"
+    },
+    "root_capture_or_semantic_approval_created": false
+  },
+  "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js",
+  "fixture_sha256": "0e107bd76dddf65120485aac127a991bbf7f6e461b5aa481c22eb6079d4bbe15",
+  "missing_expressions_are_passing_originals": false,
+  "root_semantic_approval_created": true,
+  "schema": "unapproved-original-array-adapter-inventory-v1",
+  "semantic_approval_created": false,
+  "totalized_original_obligation_count": 24,
+  "totalized_original_obligation_site_ids": [
+    "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5",
+    "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5"
+  ],
+  "unavailable_original_obligation_site_ids": [],
+  "variants": {
+    "nonstrict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "48e3dbf87ee6213e453dfa5eb12b618e7930ae38a80987d970fd6e27478985e0",
+        "aggregate_adapters": {
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5"
+              }
+            ],
+            "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334",
+            "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3",
+            "mode": "reviewed-data-array",
+            "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [
+              {
+                "argument": "expected",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3"
+              },
+              {
+                "argument": "actual",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3"
+              }
+            ],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js",
+        "fixture_sha256": "0e107bd76dddf65120485aac127a991bbf7f6e461b5aa481c22eb6079d4bbe15",
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 12,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+            "span": [
+              392,
+              408
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 13,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+            "span": [
+              476,
+              492
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 14,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+            "span": [
+              556,
+              572
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 17,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+            "span": [
+              677,
+              693
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 18,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+            "span": [
+              765,
+              781
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:81:23": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 81,
+            "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"short\",\n  })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "4e58bb75fe95fb34fa030d58b82c09b4693a4ca089f8d29cf0b7536b71374fc1",
+            "span": [
+              2711,
+              2802
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:85:21": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 85,
+            "source": "nfShort.formatToParts(number)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b91a571d6672907ebefc3d49d46119f93a89bfd2341c606ad1844cc8291fdeee",
+            "span": [
+              2824,
+              2853
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:87:22": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 87,
+            "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"long\",\n  })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "294b33e1bade5d629e4c0e4d1cd9ef26a77ee676ed19caa8d5035266dc20de32",
+            "span": [
+              2909,
+              2999
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:91:21": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 91,
+            "source": "nfLong.formatToParts(number)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "ac170907b9f3d7734ef520e49ffe16c4425c8efa04f9bdf1ea2d0a3d49519a09",
+            "span": [
+              3021,
+              3049
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "helper_name": "verifyFormatParts",
+            "kind": "helper",
+            "line": 11,
+            "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+            "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+            "span": [
+              334,
+              857
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "nonstrict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "31e7b4132c9f5b71f6158364c1aaf34a701a3629e607ad8ff0099038c0731d6c",
+        "config_sha256": "48e3dbf87ee6213e453dfa5eb12b618e7930ae38a80987d970fd6e27478985e0",
+        "data_mismatches": 37,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 1320,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 270,
+          "exit": 270,
+          "invariant": 688,
+          "original-obligation": 12,
+          "start": 1,
+          "value": 78
+        },
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js",
+        "generated_sha256": "e23ea756e98440e71fed5829fd9c8f56c7fca85d33c5b85cb3bf27660d7aa5c0",
+        "manifest_index": 56,
+        "original_assertion_failures": 25,
+        "original_assertion_passes": 167,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 12,
+        "trace_sha256": "55d9bc6d82ded5b49246cebeda4c6e3cd5e463a1a6cb87c07e73a691fc2958e1",
+        "variant": "nonstrict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5"
+            }
+          ],
+          "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334",
+          "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3",
+          "mode": "reviewed-data-array",
+          "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [
+            {
+              "argument": "expected",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3"
+            },
+            {
+              "argument": "actual",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3"
+            }
+          ],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "48e3dbf87ee6213e453dfa5eb12b618e7930ae38a80987d970fd6e27478985e0",
+      "manifest_index": 56,
+      "original_source_site_inventory": {
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 12,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+          "span": [
+            392,
+            408
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 13,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+          "span": [
+            476,
+            492
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 14,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+          "span": [
+            556,
+            572
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 17,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+          "span": [
+            677,
+            693
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 18,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+          "span": [
+            765,
+            781
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:81:23": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 81,
+          "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"short\",\n  })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "4e58bb75fe95fb34fa030d58b82c09b4693a4ca089f8d29cf0b7536b71374fc1",
+          "span": [
+            2711,
+            2802
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:85:21": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 85,
+          "source": "nfShort.formatToParts(number)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b91a571d6672907ebefc3d49d46119f93a89bfd2341c606ad1844cc8291fdeee",
+          "span": [
+            2824,
+            2853
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:87:22": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 87,
+          "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"long\",\n  })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "294b33e1bade5d629e4c0e4d1cd9ef26a77ee676ed19caa8d5035266dc20de32",
+          "span": [
+            2909,
+            2999
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:91:21": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 91,
+          "source": "nfLong.formatToParts(number)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "ac170907b9f3d7734ef520e49ffe16c4425c8efa04f9bdf1ea2d0a3d49519a09",
+          "span": [
+            3021,
+            3049
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "helper_name": "verifyFormatParts",
+          "kind": "helper",
+          "line": 11,
+          "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+          "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+          "span": [
+            334,
+            857
+          ]
+        }
+      }
+    },
+    "strict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "78fa38bc6e458e78de1b61c34fcca5af9349a8ac5331ecdfb714950f3ff28dda",
+        "aggregate_adapters": {
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5"
+              }
+            ],
+            "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334",
+            "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3",
+            "mode": "reviewed-data-array",
+            "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [
+              {
+                "argument": "expected",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3"
+              },
+              {
+                "argument": "actual",
+                "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3"
+              }
+            ],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js",
+        "fixture_sha256": "0e107bd76dddf65120485aac127a991bbf7f6e461b5aa481c22eb6079d4bbe15",
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 12,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+            "span": [
+              392,
+              408
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 13,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+            "span": [
+              476,
+              492
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 14,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+            "span": [
+              556,
+              572
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 17,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+            "span": [
+              677,
+              693
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "data-array-layout",
+            "kind": "assertion",
+            "line": 18,
+            "semantic_obligations": [
+              "Capture requested locale and exact original options per construction.",
+              "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+              "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+              "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+              "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+            ],
+            "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+            "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+            "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+            "span": [
+              765,
+              781
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:81:23": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 81,
+            "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"short\",\n  })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "4e58bb75fe95fb34fa030d58b82c09b4693a4ca089f8d29cf0b7536b71374fc1",
+            "span": [
+              2711,
+              2802
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:85:21": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 85,
+            "source": "nfShort.formatToParts(number)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b91a571d6672907ebefc3d49d46119f93a89bfd2341c606ad1844cc8291fdeee",
+            "span": [
+              2824,
+              2853
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:87:22": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 87,
+            "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"long\",\n  })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "294b33e1bade5d629e4c0e4d1cd9ef26a77ee676ed19caa8d5035266dc20de32",
+            "span": [
+              2909,
+              2999
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:91:21": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 91,
+            "source": "nfLong.formatToParts(number)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "ac170907b9f3d7734ef520e49ffe16c4425c8efa04f9bdf1ea2d0a3d49519a09",
+            "span": [
+              3021,
+              3049
+            ]
+          },
+          "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+            "helper_name": "verifyFormatParts",
+            "kind": "helper",
+            "line": 11,
+            "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+            "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+            "span": [
+              334,
+              857
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "strict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "1588ff08979d83aa1eb46cb64eb47e2dea8efbae573285e3a292c5e46fb98d70",
+        "config_sha256": "78fa38bc6e458e78de1b61c34fcca5af9349a8ac5331ecdfb714950f3ff28dda",
+        "data_mismatches": 37,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 1320,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 270,
+          "exit": 270,
+          "invariant": 688,
+          "original-obligation": 12,
+          "start": 1,
+          "value": 78
+        },
+        "fixture": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js",
+        "generated_sha256": "fdd510917ac1cdb31f1b7c312a28abd61c1d43f8dd79943477b79af9e529b33f",
+        "manifest_index": 57,
+        "original_assertion_failures": 25,
+        "original_assertion_passes": 167,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 12,
+        "trace_sha256": "c75bbceaa1dc638dd95f1e25a17b471c7a5a2175083b29f2a3dfa53593623a49",
+        "variant": "strict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5"
+            }
+          ],
+          "helper": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334",
+          "length_site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3",
+          "mode": "reviewed-data-array",
+          "original_helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [
+            {
+              "argument": "expected",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3"
+            },
+            {
+              "argument": "actual",
+              "site": "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3"
+            }
+          ],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "78fa38bc6e458e78de1b61c34fcca5af9349a8ac5331ecdfb714950f3ff28dda",
+      "manifest_index": 57,
+      "original_source_site_inventory": {
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:12:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 12,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "304fcc8a340d748f3aa82d96eefa7afd100bc8c5c7b6cebbd651cf3e74c2134f",
+          "span": [
+            392,
+            408
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:13:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 13,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b04514ee6ed929982e8727dea91541bbda0c86558e58a3e9c3029ef1ab55a205",
+          "span": [
+            476,
+            492
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:14:3": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 14,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(actual.length, expected.length, `${message}: length`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "349fa0971944ec56dce9d5189131826fed06fd0d8e3922c3c94fd6456203bc00",
+          "span": [
+            556,
+            572
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:17:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 17,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "ea1c13bfa3f60c508e71499eb6458a6684ffcffc93e095f18a658aae2c4c822c",
+          "span": [
+            677,
+            693
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:18:5": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "data-array-layout",
+          "kind": "assertion",
+          "line": 18,
+          "semantic_obligations": [
+            "Capture requested locale and exact original options per construction.",
+            "Independently witness selected locale, numberingSystem, option resolution and supported locale matching; fallback is not established by output spelling.",
+            "Preserve constructor and formatting throws as blockers; inspect result type and every actual part object/type/value shape.",
+            "Bind diagnostics to original fixture hash, original assertion site, helper caller, outer row and part index; no global sameValue interception.",
+            "Capture selected-profile compact magnitude/plural pattern and thresholds independently; verify scaled rounded magnitude, digit defaults and compactDisplay resolution. Do not infer this from a different whole output string."
+          ],
+          "source": "assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`)",
+          "source_review_basis": "Exact output/table data comparator; original parameters and complete actual/expected values captured. Independent semantic assertions stay blocking; semantic qualification remains pending.",
+          "source_sha256": "4dc22a9ca7a3923d9d7b7dbadd75ddcd1ce1928fbdfbfda436e66b31964696fe",
+          "span": [
+            765,
+            781
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:81:23": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 81,
+          "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"short\",\n  })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "4e58bb75fe95fb34fa030d58b82c09b4693a4ca089f8d29cf0b7536b71374fc1",
+          "span": [
+            2711,
+            2802
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:85:21": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 85,
+          "source": "nfShort.formatToParts(number)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b91a571d6672907ebefc3d49d46119f93a89bfd2341c606ad1844cc8291fdeee",
+          "span": [
+            2824,
+            2853
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:87:22": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 87,
+          "source": "new Intl.NumberFormat(\"de-DE\", {\n    notation: \"compact\",\n    compactDisplay: \"long\",\n  })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "294b33e1bade5d629e4c0e4d1cd9ef26a77ee676ed19caa8d5035266dc20de32",
+          "span": [
+            2909,
+            2999
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:91:21": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 91,
+          "source": "nfLong.formatToParts(number)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "ac170907b9f3d7734ef520e49ffe16c4425c8efa04f9bdf1ea2d0a3d49519a09",
+          "span": [
+            3021,
+            3049
+          ]
+        },
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js:helper:verifyFormatParts:334": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "b4c058e3d64faf696eb61436de453ac9236f217fa65b3f2f4650a93ada870f0b",
+          "helper_name": "verifyFormatParts",
+          "kind": "helper",
+          "line": 11,
+          "source": "function verifyFormatParts(actual, expected, message) {\n  assert.sameValue(Array.isArray(expected), true, `${message}: expected is Array`);\n  assert.sameValue(Array.isArray(actual), true, `${message}: actual is Array`);\n  assert.sameValue(actual.length, expected.length, `${message}: length`);\n\n  for (let i = 0; i < actual.length; ++i) {\n    assert.sameValue(actual[i].type, expected[i].type, `${message}: parts[${i}].type`);\n    assert.sameValue(actual[i].value, expected[i].value, `${message}: parts[${i}].value`);\n  }\n}",
+          "source_sha256": "89de98d14fe1a30697bd5002033d534fd81d584d18b6b899d5be621f066d6757",
+          "span": [
+            334,
+            857
+          ]
+        }
+      }
+    }
+  }
+}

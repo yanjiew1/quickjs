@@ -1,0 +1,74 @@
+    <emu-clause id="sec-intl.segmenter">
+      <h1>Intl.Segmenter ( [ _locales_ [ , _options_ ] ] )</h1>
+
+      <p>When the `Intl.Segmenter` function is called with optional arguments _locales_ and _options_, the following steps are taken:</p>
+
+      <emu-alg>
+        1. If NewTarget is *undefined*, throw a *TypeError* exception.
+        1. Let _internalSlotsList_ be « [[InitializedSegmenter]], [[Locale]], [[SegmenterGranularity]] ».
+        1. Let _segmenter_ be ? OrdinaryCreateFromConstructor(NewTarget, *"%Intl.Segmenter.prototype%"*, _internalSlotsList_).
+        1. Let _optionsResolution_ be ? ResolveOptions(%Intl.Segmenter%, %Intl.Segmenter%.[[LocaleData]], _locales_, _options_).
+        1. Set _options_ to _optionsResolution_.[[Options]].
+        1. Let _resolvedLocale_ be _optionsResolution_.[[ResolvedLocale]].
+        1. Set _segmenter_.[[Locale]] to _resolvedLocale_.[[Locale]].
+        1. Let _granularity_ be ? GetOption(_options_, *"granularity"*, ~string~, « *"grapheme"*, *"word"*, *"sentence"* », *"grapheme"*).
+        1. Set _segmenter_.[[SegmenterGranularity]] to _granularity_.
+        1. Return _segmenter_.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-intl-segmenter-constructor">
+    <h1>Properties of the Intl.Segmenter Constructor</h1>
+
+    <p>The Intl.Segmenter constructor:</p>
+    <ul>
+      <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+      <li>has the following properties:</li>
+    </ul>
+
+    <emu-clause id="sec-intl.segmenter.prototype">
+      <h1>Intl.Segmenter.prototype</h1>
+
+      <p>The value of `Intl.Segmenter.prototype` is %Intl.Segmenter.prototype%.</p>
+      <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-intl.segmenter.supportedlocalesof">
+      <h1>Intl.Segmenter.supportedLocalesOf ( _locales_ [ , _options_ ] )</h1>
+
+      <p>When the `supportedLocalesOf` method is called with arguments _locales_ and _options_, the following steps are taken:</p>
+
+      <emu-alg>
+        1. Let _availableLocales_ be %Intl.Segmenter%.[[AvailableLocales]].
+        1. Let _requestedLocales_ be ? CanonicalizeLocaleList(_locales_).
+        1. Return ? FilterLocales(_availableLocales_, _requestedLocales_, _options_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-intl.segmenter-internal-slots">
+      <h1>Internal slots</h1>
+
+      <p>The value of the [[AvailableLocales]] internal slot is implementation-defined within the constraints described in <emu-xref href="#sec-internal-slots"></emu-xref>.</p>
+
+      <p>The value of the [[RelevantExtensionKeys]] internal slot is « ».</p>
+
+      <p>The value of the [[ResolutionOptionDescriptors]] internal slot is « ».</p>
+      <emu-note>
+        Intl.Segmenter does not have any relevant extension keys.
+      </emu-note>
+
+      <p>The value of the [[LocaleData]] internal slot is implementation-defined within the constraints described in <emu-xref href="#sec-internal-slots"></emu-xref>.</p>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-intl-segmenter-prototype-object">
+    <h1>Properties of the Intl.Segmenter Prototype Object</h1>
+
+    <p>The <dfn>Intl.Segmenter prototype object</dfn>:</p>
+    <ul>
+      <li>is <dfn>%Intl.Segmenter.prototype%</dfn>.</li>
+      <li>is an ordinary object.</li>
+      <li>is not an Intl.Segmenter instance and does not have an [[InitializedSegmenter]] internal slot or any of the other internal slots of Intl.Segmenter instance objects.</li>
+      <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
+    </ul>

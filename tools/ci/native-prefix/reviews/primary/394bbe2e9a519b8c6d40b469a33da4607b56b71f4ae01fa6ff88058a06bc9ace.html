@@ -1,0 +1,23 @@
+<emu-clause id="sec-internal-slots">
+    <h1>Internal slots of Service Constructors</h1>
+
+    <p>Each service constructor has the following internal slots:</p>
+
+    <ul>
+      <li>[[AvailableLocales]] is an Available Locales List. It must include the value returned by DefaultLocale. Additionally, for each element with more than one subtag, it must also include a less narrow language tag with the same language subtag and a strict subset of the same following subtags (i.e., omitting one or more) to serve as a potential fallback from <emu-xref href="#sec-resolvelocale">ResolveLocale</emu-xref>. In particular, each element with a language subtag and a script subtag and a region subtag must be accompanied by another element consisting of only the same language subtag and region subtag but missing the script subtag. For example,
+        <ul>
+          <li>If [[AvailableLocales]] contains *"de-DE"*, then it must also contain *"de"* (which might be selected to satisfy requested locales such as *"de-AT"* and *"de-CH"*).</li>
+          <li>If [[AvailableLocales]] contains *"az-Latn-AZ"*, then it must also contain *"az-AZ"* (which might be selected to satisfy requested locales such as *"az-Cyrl-AZ"* if *"az-Cyrl"* is unavailable).</li>
+        </ul>
+      </li>
+      <li>[[RelevantExtensionKeys]] is a List of Unicode locale extension sequence keys defined in <a href="https://unicode.org/reports/tr35/#Key_And_Type_Definitions_">Unicode Technical Standard #35 Part 1 Core, Section 3.6.1 Key and Type Definitions</a> that are relevant for the functionality of the constructed objects.</li>
+      <li>[[ResolutionOptionDescriptors]] is a List of Resolution Option Descriptors used for reading options during object construction.</li>
+      <li>[[SortLocaleData]] and [[SearchLocaleData]] (for Intl.Collator) and [[LocaleData]] (for every other service constructor) are Records. In addition to fields specific to its service constructor, each such Record has a field for each locale contained in [[AvailableLocales]]. The value of each such locale-named field is a Record in which each element of [[RelevantExtensionKeys]] identifies the name of a field whose value is a non-empty List of Strings representing the type values that are supported by the implementation in the relevant locale for the corresponding Unicode locale extension sequence key, with the first element providing the default value for that key in the locale.</li>
+    </ul>
+
+    <emu-note>
+      For example, an implementation of DateTimeFormat might include the language tag *"fa-IR"* in its [[AvailableLocales]] internal slot, and must (according to <emu-xref href="#sec-intl.datetimeformat-internal-slots"></emu-xref>) include the keys *"ca"*, *"hc"*, and *"nu"* in its [[RelevantExtensionKeys]] internal slot.
+      The default calendar for that locale is usually *"persian"*, but an implementation might also support *"gregory"*, *"islamic"*, and *"islamic-civil"*.
+      The Record in the DateTimeFormat [[LocaleData]] internal slot would therefore include a [[fa-IR]] field whose value is a Record like { [[ca]]: « *"persian"*, *"gregory"*, *"islamic"*, *"islamic-civil"* », [[hc]]: « … », [[nu]]: « … » }, along with other locale-named fields having the same value shape but different elements in their Lists.
+    </emu-note>
+  </emu-clause>

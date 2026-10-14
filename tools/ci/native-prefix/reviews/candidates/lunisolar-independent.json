@@ -1,0 +1,599 @@
+{
+  "approved_array_adapter_bindings": [
+    {
+      "path": "tools/ci/native-prefix/reviews/adapters/lunisolar-scalar-lineage.json",
+      "sha256": "713cee9a7d5eed91ca81751a2a50c048aafcc4fa5a5a352ee7ebeb4ff6d144ef"
+    }
+  ],
+  "approved_totalized_original_data_obligation_site_ids": [
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js:call:55:1776",
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js:unavailable-year-read:1098"
+  ],
+  "baseline_sha256": null,
+  "complete_original_assertions_reviewed": true,
+  "config_sha256": null,
+  "conformance_accepted": false,
+  "current_capture_binding": {
+    "capture_kind": "script-variants",
+    "variant_bindings": {
+      "nonstrict": {
+        "config_sha256": "a41d135335766e0c07ad5deb5105e09778e28261de9695d50cb142798a2950e4",
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "generated_sha256": "126670aebe223387c996f9fba74a47a1b7970e499bc163df8bd1d62cd5279855",
+        "trace_sha256": "68a4d078621c2e1908fa492c8f2bb6aa15becd4e91b794fbeec722cead536aff"
+      },
+      "strict": {
+        "config_sha256": "a65812321dd60f42cb7c86370b73d97735f8bea6f17c57f1c215ce9069882ddf",
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "generated_sha256": "5fb143679a7035e789c7acbdcb1150ffbdbccf25f0410c29082fa18cdc4ac1c7",
+        "trace_sha256": "c4ec55fc0e70e96f8b3f7308b4bfac9f858fe7800d1682d7edd3d806c301d158"
+      }
+    }
+  },
+  "data_only_array_totalization_reviewed": true,
+  "effective_profile_sha256": null,
+  "failure_waiver": false,
+  "fixture_sha256": "a2aaeb68a67e1f4e95c81a7eec113474f4ee4e730b804e8df09a1387d446489e",
+  "fixture_source_map_sha256": null,
+  "line": null,
+  "mandatory_semantics_satisfied": true,
+  "normative_proofs": [
+    {
+      "anchor": "sec-temporal.plaindate",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/1967a4b6ef64a15f7e6bdb8025519c41764bb2f5f8c1e9c240ab001d17985566.html",
+        "sha256": "1967a4b6ef64a15f7e6bdb8025519c41764bb2f5f8c1e9c240ab001d17985566"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 49,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 35,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-temporal.plaindate"
+    },
+    {
+      "anchor": "sec-get-temporal.plaindate.prototype.year",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/2f889b29bb9baa00605f5b1bc4375b883931c27be1b5d23c487d48633ae65535.html",
+        "sha256": "2f889b29bb9baa00605f5b1bc4375b883931c27be1b5d23c487d48633ae65535"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 164,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 153,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-get-temporal.plaindate.prototype.year"
+    },
+    {
+      "anchor": "sec-get-temporal.plaindate.prototype.monthsinyear",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/1dd93781e3b0a4e1ea02372c55e74be06aefb4707efb6a762be274c2e72d03b4.html",
+        "sha256": "1dd93781e3b0a4e1ea02372c55e74be06aefb4707efb6a762be274c2e72d03b4"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 311,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 300,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-get-temporal.plaindate.prototype.monthsinyear"
+    },
+    {
+      "anchor": "sec-get-temporal.plaindate.prototype.monthcode",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/3bee04312c53bc990c749802351a817e86215914e534936ce43e8535c986a2ac.html",
+        "sha256": "3bee04312c53bc990c749802351a817e86215914e534936ce43e8535c986a2ac"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 190,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 179,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-get-temporal.plaindate.prototype.monthcode"
+    },
+    {
+      "anchor": "sec-get-temporal.plaindate.prototype.day",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/0611ebf2a49a5f29cbf5b1d03d73a2bf2de9ab0fe900c6bece6bdd405dc7ee68.html",
+        "sha256": "0611ebf2a49a5f29cbf5b1d03d73a2bf2de9ab0fe900c6bece6bdd405dc7ee68"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 203,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 192,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-get-temporal.plaindate.prototype.day"
+    },
+    {
+      "anchor": "sec-get-temporal.plaindate.prototype.inleapyear",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/44137c076290dc7a51107d2a8a320bff6a7e4f807ba34a32443a1436e8700fde.html",
+        "sha256": "44137c076290dc7a51107d2a8a320bff6a7e4f807ba34a32443a1436e8700fde"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 324,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 313,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-get-temporal.plaindate.prototype.inleapyear"
+    },
+    {
+      "anchor": "sec-temporal.plaindate.from",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/e33fabe1d813260feb4d04ab09d9193d4817b905c29bfd414ca1e740677dbee6.html",
+        "sha256": "e33fabe1d813260feb4d04ab09d9193d4817b905c29bfd414ca1e740677dbee6"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 72,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 66,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-temporal.plaindate.from"
+    },
+    {
+      "anchor": "sec-temporal.plaindate.prototype.withcalendar",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/303a528841329f089605030968cf07267e9ae953f50fa6c460c81b71b636460f.html",
+        "sha256": "303a528841329f089605030968cf07267e9ae953f50fa6c460c81b71b636460f"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 401,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 392,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-temporal.plaindate.prototype.withcalendar"
+    },
+    {
+      "anchor": "sec-temporal.plaindate.prototype.tozoneddatetime",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/3b6ee83735da383f60c76a5b1168fc78f0f9d4a5510e39d7b499978919f66af0.html",
+        "sha256": "3b6ee83735da383f60c76a5b1168fc78f0f9d4a5510e39d7b499978919f66af0"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 474,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 448,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-temporal.plaindate.prototype.tozoneddatetime"
+    },
+    {
+      "anchor": "sec-totemporaldate",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/75ae0d9c5a1b4c19b4be689ac7b2c846ffb0081accbf1b4466d6092415faa5f9.html",
+        "sha256": "75ae0d9c5a1b4c19b4be689ac7b2c846ffb0081accbf1b4466d6092415faa5f9"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 641,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-6.emu",
+        "start_line": 598,
+        "whole_file_sha256": "9a6536f8ebebc2fc67db4d2d09c20b4b54fbb3d46b21b0699f01b94efc9107f9"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-totemporaldate"
+    },
+    {
+      "anchor": "sec-nonisocalendardatetoiso",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/1383468ef4dd63c6de09c9bba271bf42401379ed9c77998566d9ed8ce1bacc0b.html",
+        "sha256": "1383468ef4dd63c6de09c9bba271bf42401379ed9c77998566d9ed8ce1bacc0b"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 671,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-0.emu",
+        "start_line": 648,
+        "whole_file_sha256": "5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-nonisocalendardatetoiso"
+    },
+    {
+      "anchor": "sec-calendarisotodate",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/daa694beef63083e2f61618a74806db80dd3e9e924f9c7d63e21f5783359448f.html",
+        "sha256": "daa694beef63083e2f61618a74806db80dd3e9e924f9c7d63e21f5783359448f"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 773,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-0.emu",
+        "start_line": 736,
+        "whole_file_sha256": "5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-calendarisotodate"
+    },
+    {
+      "anchor": "sec-nonisocalendarisotodate",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/d37859d976b503b118df96d85ecf889c1edd5662d1229d9077b8d5303355ec36.html",
+        "sha256": "d37859d976b503b118df96d85ecf889c1edd5662d1229d9077b8d5303355ec36"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 786,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-0.emu",
+        "start_line": 775,
+        "whole_file_sha256": "5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-nonisocalendarisotodate"
+    },
+    {
+      "anchor": "sec-calendardatefromfields",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/0ca016baf8819b6a403c02e5c73a1492c95c87434fe32154bc96ce9a9bb06f0a.html",
+        "sha256": "0ca016baf8819b6a403c02e5c73a1492c95c87434fe32154bc96ce9a9bb06f0a"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 998,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-0.emu",
+        "start_line": 980,
+        "whole_file_sha256": "5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-calendardatefromfields"
+    },
+    {
+      "anchor": "sec-gettemporaloverflowoption",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/0af0bd955058492ae7d499a369b14d6821d38574868b0ffa41d865c0d2d3174f.html",
+        "sha256": "0af0bd955058492ae7d499a369b14d6821d38574868b0ffa41d865c0d2d3174f"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 2343,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-0.emu",
+        "start_line": 2326,
+        "whole_file_sha256": "5dc1a85f8a7bf0861abf2b15824f1068e59c0a943a847ad6d1fec8a292b23cc6"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-gettemporaloverflowoption"
+    },
+    {
+      "anchor": "sec-getstartofday",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/87ef356ce0693b11760ed7fb7b5bc4d2c6690e46651c05bb66ec9388cbd1c899.html",
+        "sha256": "87ef356ce0693b11760ed7fb7b5bc4d2c6690e46651c05bb66ec9388cbd1c899"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 494,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-stage4-latest-merge-pr-imports-root-20261009-v3/ecma262-temporal-12.emu",
+        "start_line": 465,
+        "whole_file_sha256": "a405527da8982b45d7f25a44ddb559fbb3ffba0ab1151bdff707a12f476dcfb8"
+      },
+      "review_date": "2026-10-12",
+      "revision": "3d4a6e7124a6878cb5af3132af7e01e01a88317f",
+      "url": "https://redirect.github.com/tc39/ecma262/pull/3966#sec-getstartofday"
+    },
+    {
+      "anchor": "sec-intl.datetimeformat-internal-slots",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/28c35c387cd4f84bea9a9698c007aad2e9dfa8f9c29e140963eb0e0a4ee00e60.html",
+        "sha256": "28c35c387cd4f84bea9a9698c007aad2e9dfa8f9c29e140963eb0e0a4ee00e60"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 841,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat.html",
+        "start_line": 194,
+        "whole_file_sha256": "e3bd31b5991eb02ce24964f30e330281c43313ee3ba8ca567782be93ce5f2fa5"
+      },
+      "review_date": "2026-10-12",
+      "revision": "48d20d82dc5801bad87e5ec3f9e06d6ae98209a8",
+      "url": "https://github.com/tc39/ecma402/blob/48d20d82dc5801bad87e5ec3f9e06d6ae98209a8/spec/datetimeformat.html#sec-intl.datetimeformat-internal-slots"
+    },
+    {
+      "anchor": "sec-bestfitformatmatcher",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/0f2c278ce8bbb4dc13290f38750ded7c8c584fb0bfcbc0228082cdda65988288.html",
+        "sha256": "0f2c278ce8bbb4dc13290f38750ded7c8c584fb0bfcbc0228082cdda65988288"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1306,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat.html",
+        "start_line": 1295,
+        "whole_file_sha256": "e3bd31b5991eb02ce24964f30e330281c43313ee3ba8ca567782be93ce5f2fa5"
+      },
+      "review_date": "2026-10-12",
+      "revision": "48d20d82dc5801bad87e5ec3f9e06d6ae98209a8",
+      "url": "https://github.com/tc39/ecma402/blob/48d20d82dc5801bad87e5ec3f9e06d6ae98209a8/spec/datetimeformat.html#sec-bestfitformatmatcher"
+    },
+    {
+      "anchor": "sec-formatdatetimepattern",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/ece54b963222d4362ded0448252effa216dd4bb0f908ab9259564d1a76f2c91a.html",
+        "sha256": "ece54b963222d4362ded0448252effa216dd4bb0f908ab9259564d1a76f2c91a"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1427,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat.html",
+        "start_line": 1327,
+        "whole_file_sha256": "e3bd31b5991eb02ce24964f30e330281c43313ee3ba8ca567782be93ce5f2fa5"
+      },
+      "review_date": "2026-10-12",
+      "revision": "48d20d82dc5801bad87e5ec3f9e06d6ae98209a8",
+      "url": "https://github.com/tc39/ecma402/blob/48d20d82dc5801bad87e5ec3f9e06d6ae98209a8/spec/datetimeformat.html#sec-formatdatetimepattern"
+    },
+    {
+      "anchor": "sec-tolocaltime",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/4a251451eadc0ebba089f59424b8a825e01d3a29feb870e5a0d5653f442f20ef.html",
+        "sha256": "4a251451eadc0ebba089f59424b8a825e01d3a29feb870e5a0d5653f442f20ef"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1646,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat.html",
+        "start_line": 1620,
+        "whole_file_sha256": "e3bd31b5991eb02ce24964f30e330281c43313ee3ba8ca567782be93ce5f2fa5"
+      },
+      "review_date": "2026-10-12",
+      "revision": "48d20d82dc5801bad87e5ec3f9e06d6ae98209a8",
+      "url": "https://github.com/tc39/ecma402/blob/48d20d82dc5801bad87e5ec3f9e06d6ae98209a8/spec/datetimeformat.html#sec-tolocaltime"
+    },
+    {
+      "anchor": "sec-formatdatetimetoparts",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/54142af112bbea0a2241b79f8829931c85d2c7089a6cb3101b5942d197265a57.html",
+        "sha256": "54142af112bbea0a2241b79f8829931c85d2c7089a6cb3101b5942d197265a57"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1493,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat.html",
+        "start_line": 1472,
+        "whole_file_sha256": "e3bd31b5991eb02ce24964f30e330281c43313ee3ba8ca567782be93ce5f2fa5"
+      },
+      "review_date": "2026-10-12",
+      "revision": "48d20d82dc5801bad87e5ec3f9e06d6ae98209a8",
+      "url": "https://github.com/tc39/ecma402/blob/48d20d82dc5801bad87e5ec3f9e06d6ae98209a8/spec/datetimeformat.html#sec-formatdatetimetoparts"
+    },
+    {
+      "anchor": "sec-formatdatetime",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/0f3f0ce95214c8f215a6de6592739b72e18e9024af60621df5b99411b854104f.html",
+        "sha256": "0f3f0ce95214c8f215a6de6592739b72e18e9024af60621df5b99411b854104f"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1470,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat.html",
+        "start_line": 1454,
+        "whole_file_sha256": "e3bd31b5991eb02ce24964f30e330281c43313ee3ba8ca567782be93ce5f2fa5"
+      },
+      "review_date": "2026-10-12",
+      "revision": "48d20d82dc5801bad87e5ec3f9e06d6ae98209a8",
+      "url": "https://github.com/tc39/ecma402/blob/48d20d82dc5801bad87e5ec3f9e06d6ae98209a8/spec/datetimeformat.html#sec-formatdatetime"
+    },
+    {
+      "anchor": "sec-formatdatetimepattern",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/b13c2745cf90d55226e085f9acdc3e6f16db219620e3a1d1086c852f09fdd985.html",
+        "sha256": "b13c2745cf90d55226e085f9acdc3e6f16db219620e3a1d1086c852f09fdd985"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1546,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat-temporal.html",
+        "start_line": 1441,
+        "whole_file_sha256": "29d7900356a228ffcd9c6ee380dd2b22cd46f70615a0408d41f688abb4906cbe"
+      },
+      "review_date": "2026-10-12",
+      "revision": "d026068ed653130a37d79a95c0122ecf5319f1a4",
+      "url": "https://redirect.github.com/tc39/ecma402/pull/1044#sec-formatdatetimepattern"
+    },
+    {
+      "anchor": "sec-formatdatetimetoparts",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/cdf630770b6678d91116fc23a715c7d6158124d59e4849eac47e2810d8f8473c.html",
+        "sha256": "cdf630770b6678d91116fc23a715c7d6158124d59e4849eac47e2810d8f8473c"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1611,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat-temporal.html",
+        "start_line": 1590,
+        "whole_file_sha256": "29d7900356a228ffcd9c6ee380dd2b22cd46f70615a0408d41f688abb4906cbe"
+      },
+      "review_date": "2026-10-12",
+      "revision": "d026068ed653130a37d79a95c0122ecf5319f1a4",
+      "url": "https://redirect.github.com/tc39/ecma402/pull/1044#sec-formatdatetimetoparts"
+    },
+    {
+      "anchor": "sec-tolocaltime",
+      "excerpt_binding": {
+        "path": "tools/ci/native-prefix/reviews/primary/9827b103fabbc02f3fa1360bad0a2d1c15b77de19be3b41e1bbced66f0568cca.html",
+        "sha256": "9827b103fabbc02f3fa1360bad0a2d1c15b77de19be3b41e1bbced66f0568cca"
+      },
+      "immutable_primary_provenance": {
+        "end_line": 1916,
+        "file": "/srv/data/work/quickjs-tmp/quickjs-native-postfix-raw-normative-triage-source-20261011-v1/primary-source/datetimeformat-temporal.html",
+        "start_line": 1884,
+        "whole_file_sha256": "29d7900356a228ffcd9c6ee380dd2b22cd46f70615a0408d41f688abb4906cbe"
+      },
+      "review_date": "2026-10-12",
+      "revision": "d026068ed653130a37d79a95c0122ecf5319f1a4",
+      "url": "https://redirect.github.com/tc39/ecma402/pull/1044#sec-tolocaltime"
+    }
+  ],
+  "path": "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js",
+  "production_source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+  "reviewed_data_mismatch_site_ids": [
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js:call:55:1776",
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js:call:87:2775",
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js:unavailable-year-read:1098"
+  ],
+  "schema": "native-original-assertion-review-v2",
+  "semantic_adjudication_complete": true,
+  "signature": null,
+  "stable_observation_expectation": {
+    "capture_kind": "script-variants",
+    "observations": {
+      "nonstrict": {
+        "event_count": 546890,
+        "events_sha256": "31baa0b833546c440d47fc7311159b9a4015488e4e7979c1361d4e608f4d175c",
+        "stable_configuration_sha256": "5463a5a10a506bc12ab409feb24624d2dfdfb68a8467bae80bcf51d00a023eb9"
+      },
+      "strict": {
+        "event_count": 546890,
+        "events_sha256": "87e6477fe9db99e1f89689ae3cbca5ac736385931f3bf6cc070c6053ff283c00",
+        "stable_configuration_sha256": "ae5c4bb0d2af4ec463db4413ef02813deacb6d07add92ab89548a504354e326d"
+      }
+    },
+    "schema": "native-complete-stable-observation-v2",
+    "source_bindings": {
+      "HOSTED-RENDER-PLAN.json": "e0569a41b2258fb180d6970c872b42c7b4b8f42c118991674ae9f9cbd3b5514e",
+      "launch_current_premise_witness.py": "7f6ea3e49547854129871ae918e7de4f0f359656523dc7da0e8381484f4e632e",
+      "launch_practical_witness.py": "7d43cd5d531f5204fb80dd94bbf2ebb043d8a3e8c5381e175aafc5cf821f6b26",
+      "native_profile_gate.py": "9ed9acc63c6d07dedba369c9c3097fd1ba1e61b87537ac83c208193d8ed81dad",
+      "premise-runner-compatibility.json": "ad6e2ecf049b443b6dc3b8e52b6fd12ad6486ef4a56568ee33a0bcb7e381e95d",
+      "premise_source_compatibility.py": "45994f2cacebe21ad470a9aa1a9e0b0089f99e486bdfdccfac6b3ffc154cd494",
+      "project_original_assertions.py": "e08aa3fc5cb41508416e9c7d08f77aa407e619d1866e8e3449c019e2bf5abb51",
+      "render_practical_witness.py": "d9284b1a3e4ad3f00eb2202810e5d450b605ad49b6b1abb0f070b9e7f77572c8",
+      "rtf-reviewed-sampler/capture-relative-diagnostic.js": "39e919c24fc0ab60b4f98992d956527c0e587dae436c269a9de1d72a5e1d8e24",
+      "run.py": "bc00829adac63d344b44b77f94064a3961df9c1a288714ec858c8af1ff67e3e4",
+      "selected_timezone_orchestration.py": "f19a443695b15ca28194c9c10995e682145eb351108a56036ff8f139a371308c",
+      "selected_timezone_proof.py": "61573a57fd9d2f43662f9e1b67665cf5f5239990bb88f3170ef10b006814ba80",
+      "test262/harness/assert.js": "206e274ca325eb8a652e3911c3fbd090e2480d11ed7579dc17a5d17a2360ed48",
+      "test262/harness/compareArray.js": "3330423fe116cd96db70077d194471319ae9767ba1c8e2f73d7c133c5204509d",
+      "test262/harness/deepEqual.js": "b884b27b927d91c62eb9fc7d2ff9d76050d524d8179b9993eda3d5a2d9f86525",
+      "test262/harness/propertyHelper.js": "08bc29114d804c4f24f906bac950ee4dc9c93c659d93258e7b44a54283ba9bb8",
+      "test262/harness/sta.js": "1930c54af79455c484799f43e9a28e2b2f15c40d0917c9941ca54e26db243f35",
+      "test262/harness/testIntlNumberFormat.js": "d2e52c1e2f37d67b3dce488e7da63d32ce35b9a0adb594fc060e6a0c4e03bd74",
+      "test262/test/intl402/BigInt/prototype/toLocaleString/de-DE.js": "dd46e73e0473f74506641bdaccf9139afb8a1ffa09c28fa2487ec2b34d9cfbdc",
+      "test262/test/intl402/Collator/prototype/resolvedOptions/ignorePunctuation-default.js": "947f030de210284f0b66395eac6a622cc48dd0e84b4fb7276093c284365c73b1",
+      "test262/test/intl402/Collator/prototype/resolvedOptions/resolved-collation-unicode-extensions-and-options.js": "90285ec092e99fa17c3c81762c595281ca07de286c47ba3e012a57ffb3e1e165",
+      "test262/test/intl402/Collator/usage-de.js": "804f0251207d70f71615d9246c663449bdfb1b26ed72be2c0e948d90b75c95fe",
+      "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js": "9130c81556bc17307f27aed24e0887b261c240c5a596215df4da2d221534402b",
+      "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js": "c9a5afc70387c3439ca0e3804a3670a01da4140b3892e6ec82f08102a74a1842",
+      "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js": "0760eee3f3997a39aa583b709de9870d9159fd3369e7d8bd54512ce8abdde1cd",
+      "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js": "92ba1ef32042121fe6bfc78a1d31be373856081a1ccd17b328a08018cf2988f8",
+      "test262/test/intl402/DateTimeFormat/prototype/format/german-weekday-no-year.js": "89bd02d69e043a2f55bac71e381a81f772da4c27e01e694116b0c4a246bc150a",
+      "test262/test/intl402/DateTimeFormat/prototype/format/numbering-system.js": "7e9691cc92ffd7dcdd014046ab5ebea4ecffd8da608cc239689ebd481e9decb9",
+      "test262/test/intl402/DateTimeFormat/prototype/format/related-year-zh.js": "6872bc3b8dfcd352a38e71c086d068ea34cde487d448503038d37b9747f8aef9",
+      "test262/test/intl402/DateTimeFormat/prototype/format/temporal-objects-no-time-clip-non-latin-numerals.js": "62a5a45883efdc6137c85a0a6d4b6289f66c8376be371dac9980fcf033357d0b",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRange/date-same-returns-single-date.js": "ea8d5bd6435707239f6478be33eb535f269568d11f8d6e0f4539e7f7516e56ad",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRange/en-US.js": "3c30b523d52d30acfdda9351433965cd26b2331868da253a65f6394b2b5db587",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRange/fractionalSecondDigits.js": "2a07ddcb87ba1e1eb60ca42f8fe281bd7475011184b98f5b6ad331d60f73c479",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-format-with-era.js": "88bd9eb2a1879367b9ff9a3535e3b5690d57b14016e313c8186e3ca7cfcb723d",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-no-time-clip.js": "d70a52f7376ef3bee2e88c5023149e6781d6b3c9df533fd4202775bd5387b72e",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-resolved-time-zone.js": "e8a03699a09fa810410e1625eeb7afe49c4464f9d8f961aec9822dbc3b988305",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/chinese-calendar-dates.js": "99dee450501de783ea816d5feea4869fdbca3a6c9b2212f0c4a927dbaea7ce3f",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/dangi-calendar-dates.js": "9c125037bbf359376907384606c70e355726915da373df0623d0c556edd454ca",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js": "dd9d92758dc1526a27235ea24e8d0fede9421212fcf3dc2f7e45b755fae4471f",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/en-US.js": "d481c01fbde47a95333c94d286c678ce6c412b9713afa777d393abc5fcb24f9e",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js": "13dd324665f7abb6708ae637bc3d327c3151d697e3f719b959c8ec364bcd2f89",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-objects-no-time-clip.js": "e6fd51c6fd5ea3e2c67169480525f6634f13d1b5d8a14d3fa390cf1872c52e1a",
+      "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-objects-resolved-time-zone.js": "ffadc9d589be1252123a0851d5b1a200d21e4b956d0775d7b7be1503560aee08",
+      "test262/test/intl402/DateTimeFormat/prototype/formatToParts/chinese-calendar-dates.js": "7df1d424b9907c7b042a4bd378af49e62e2218fc17c06fe777fcfbd0e134054c",
+      "test262/test/intl402/DateTimeFormat/prototype/formatToParts/compare-to-temporal-lunisolar.js": "a2aaeb68a67e1f4e95c81a7eec113474f4ee4e730b804e8df09a1387d446489e",
+      "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dangi-calendar-dates.js": "18b0f313e9a7b012f37fa4a6de39498a66c0f8ab0736f195c8d24c860e133cbb",
+      "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js": "715716900acf6e868d3e367defe8e8a19cf58db3f117c0a6ff610c0f3500462d",
+      "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js": "e77267ff386e82fef9f2816b092bbfe86f8fae3238806c4ff5937966c4844f20",
+      "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js": "fe08e26203324320096dc1dae0baf3f1acce0dd870e193bdf36de9aa25f2b514",
+      "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year-zh.js": "f0aefb4043cbd351b5531bf8ba9f2e58f774eff59ddf934a0d364ffcda2a0cb3",
+      "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js": "8667903fa2969dc801b45e2505d96c878b2c15e278bad0af3b2a25c64ee749a3",
+      "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js": "49c540f9bd3bdf2fc410db1c49397eab657e0d343519d98790eb46bc80d30bc7",
+      "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle.js": "0c25a93a86d187656f311cb302022effddfeae807e51328ff09591429f8d5834",
+      "test262/test/intl402/DurationFormat/constructor-locales-valid.js": "151f2de8fa1a4a18fc717874663650eda473d11bed4203b2c8867a9d2fa16c71",
+      "test262/test/intl402/DurationFormat/supportedLocalesOf/locales-specific.js": "0d0562a20c60442876d431e1ba590697fe761663d94a81e2ee18ba710cd5d2dd",
+      "test262/test/intl402/ListFormat/constructor/constructor/locales-valid.js": "6613ce16996541126494067d4093c82bdc71e0ac82dbde9f77ca4f5ae374f263",
+      "test262/test/intl402/ListFormat/prototype/format/es-es-long.js": "1ffed6542be590248f9d24c45be42f7f25e8833f00edc8d49ae6908162ba6d2a",
+      "test262/test/intl402/ListFormat/prototype/format/es-es-short.js": "4211cb328429a60ea2f65bb7d5d7b6feddb25a09b076eb79881ee7b2ea2046e6",
+      "test262/test/intl402/ListFormat/prototype/formatToParts/es-es-long.js": "4ca76daf619bfd36fa031de5f078034104a48b693b6da2e026f26a95d2e035c2",
+      "test262/test/intl402/ListFormat/prototype/formatToParts/es-es-short.js": "ec01ee768eb4a8566168b656c3180f23f472af05827ac94cd967f9263b24c263",
+      "test262/test/intl402/Locale/constructor-non-iana-canon.js": "79320d4f4c33a71c38ccbf79ddec0b00c7cb0e0a714391a9f313352990d887a5",
+      "test262/test/intl402/Locale/likely-subtags-grandfathered.js": "21fbdf44641fd89f6f883677851048e75ae361847a5c896de2bd8c9211c43b7e",
+      "test262/test/intl402/Locale/prototype/getCollations/output-array-values.js": "b8b2927b0c519222f3d6150318884567f0aa0f60dd37f902613147857fa9980a",
+      "test262/test/intl402/Locale/prototype/getTextInfo/language-subtag-with-more-than-three-letters.js": "3df1b858d1cdf181ceee703e9d080a67e24b3f6d405309cb481adfaa16412e40",
+      "test262/test/intl402/Locale/prototype/maximize/language-subtag-with-more-than-three-letters.js": "d4a3d6f14e7a5fa2721a2c1f0ec3ef15b182a45d64361216409ac70108b1d3f7",
+      "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-de-DE.js": "9d218bfa54f85a47925e55e84a49442bc9e85f04c611ba5ac2461786b6eed48b",
+      "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-zh-TW.js": "71d21a1d44d0bb924fee984a25b92a334931f113408059cc4683135fd04e6a86",
+      "test262/test/intl402/NumberFormat/prototype/format/notation-compact-de-DE.js": "f632823d6fa3c67a88c7a4f47d7ff9f159c0abd03ec810976ae90bb9d7abd90d",
+      "test262/test/intl402/NumberFormat/prototype/format/notation-compact-ja-JP.js": "48b0a706d74269ef2f16787f1a42bed41780e7db0c93e7d045d955da99a24c0f",
+      "test262/test/intl402/NumberFormat/prototype/format/notation-compact-ko-KR.js": "0b6f0075a5818da76675c22121ffb221719acd63048aeaa90523b46a79baeaca",
+      "test262/test/intl402/NumberFormat/prototype/format/notation-compact-zh-TW.js": "269eabebf6202042b26607e36eca92613389311089ed0f052c69e9aa3c435a12",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-de-DE.js": "a1a261933dce831e9a8d872718858647e85e61d59141535af0cb34c65b55525a",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-ko-KR.js": "544cef1d373ecbaefda4581cf250bec5280704ed16538ecc64e1099443557177",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-zh-TW.js": "48033290f5cd3a5a6398b7cf272154b9bd457e5a91551ee286528fa4876b411b",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-de-DE.js": "8b07710014974b0177ad31dc143adbb58db7b21e5c64cf58bcc3dac929689a0e",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-ko-KR.js": "19dfa16fae2d5c25bf64c0e37748b028ad9f4592376aa3b7d6b058b66c8ebc5b",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-currency-zh-TW.js": "de4ff6f4a9a6685f0def68ece479d24cebbc4a0c550fdf057ee5ec78842d0fe2",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-negative-zh-TW.js": "111ce2bbedbafedd2955f13a87a55e381f695e9638dbd251450504a07a2139b7",
+      "test262/test/intl402/NumberFormat/prototype/format/signDisplay-zh-TW.js": "f209d186ba5cbf3b13ff9db52c4e67559320fb3b581324be4cd315be8e5db140",
+      "test262/test/intl402/NumberFormat/prototype/format/unit-de-DE.js": "db18a49aacbd377ce2b40bf938de02fa42dfb8211892672f8c3d853b8d91b228",
+      "test262/test/intl402/NumberFormat/prototype/format/unit-ja-JP.js": "00285ee0448a213844a2d5a4c1fddaf6b45a9842d322f6e34dcdf84bf162873e",
+      "test262/test/intl402/NumberFormat/prototype/format/unit-ko-KR.js": "05bddee200faef3bf36e009147abecc10acc6041a406c959eaad2ecc8cab388c",
+      "test262/test/intl402/NumberFormat/prototype/format/unit-zh-TW.js": "7b2c896b396aaded56095e444f872b8a69d6d630692bdfaffa7d1a832ca860ea",
+      "test262/test/intl402/NumberFormat/prototype/format/useGrouping-de-DE.js": "aaff2cddf2d705e22b1a4e1b6bd2df6e705a51bd12cf96648e0499aa5733117a",
+      "test262/test/intl402/NumberFormat/prototype/format/useGrouping-en-IN.js": "de49eab6f8ec8a95a75eecdd7f5a0dd425eccc6f8c4620b411760b133b0d155d",
+      "test262/test/intl402/NumberFormat/prototype/format/useGrouping-extended-de-DE.js": "8788f9195927a814112f17a4ca503f7610c807b4ba1702ea543c5774495c03fd",
+      "test262/test/intl402/NumberFormat/prototype/format/useGrouping-extended-en-IN.js": "f89dfca33798083219316744ef4c47114813d3a685612e41926fc8cbcff5c372",
+      "test262/test/intl402/NumberFormat/prototype/formatRange/en-US.js": "9304d9b38b784196f6b380e5288e036d63897b63a329eed3e539dcd263eb2f53",
+      "test262/test/intl402/NumberFormat/prototype/formatRange/pt-PT.js": "1da83ee11a8a2b80f4796b0ce849c785671a2f3c08908d0da7bfae729cbd73f4",
+      "test262/test/intl402/NumberFormat/prototype/formatRangeToParts/en-US.js": "9d09322cec99cd31f8cf84c39100bee8d01b8aaabd9e5abb352d9eb4080c9ba0",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/engineering-scientific-de-DE.js": "1da8cefa5b0796df4a3fa8c8ffed7942e9885e919424147574037fcbb628ab81",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/engineering-scientific-zh-TW.js": "6094663bece9c805eedc11691a9d24973108760c5a8e3763291daccdc7ed3a06",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-de-DE.js": "0e107bd76dddf65120485aac127a991bbf7f6e461b5aa481c22eb6079d4bbe15",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-ja-JP.js": "b43ec792fdfb7dc57ba4f241c726f75a935226182ea3ffd8bf7ed6a17fb03e96",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-ko-KR.js": "041d19f6c94d47194cff314bf91dc460c9b63658858157a1c29700826b3d95ce",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/notation-compact-zh-TW.js": "0947f94100319cb2d30b8459f37f0e7393295b50b771f05521f88820e969f5ca",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-de-DE.js": "2f237ddf3c769610e2df6185bf237648cc8711b84651491ec008b9e768e4be55",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-ko-KR.js": "fdc805666c158fb35e0b225b2679ba82e37f638bf63f1e5df2ed40d6efca63e7",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-currency-zh-TW.js": "d4e4f46e139e655233d169be1b3a0d8956e0f288ffdf59226dca115db3f54b93",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-de-DE.js": "fe40a739053b93573fa9fc102263a3671d73ba97342fe37beac95293c65584eb",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-ko-KR.js": "b72dd9e1790cd98f5136b7dc916b53c9e9754e5d3793fe5354b7496a1e6a9345",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-currency-zh-TW.js": "4599ae06403a7d780ff77199004cd9bd3a5a9cee9a31d2f0c561a327e55e2e07",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-negative-zh-TW.js": "6c7d3559a221f83b2d5ee4db19273b270559eac831e412ef91e610503487c047",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/signDisplay-zh-TW.js": "2a061608f0e88f1002c55e52b94e99dfcf8c37cdb2c3f7f6f2b916de6af600dc",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-de-DE.js": "5fbf1e71cb79847c77935ae2180aa029c1138934394963566322a706385bcffe",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ja-JP.js": "7735c8b81855eb0e5a82d0cfceea4c38fd4e5e95c0d5939406d3ec351e9b6a56",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-ko-KR.js": "676e6baeab7b32184724d107702dd31656b7624f8910742f9d004e55202815a6",
+      "test262/test/intl402/NumberFormat/prototype/formatToParts/unit-zh-TW.js": "3e8ee57449ca7ae48c021333e8b937cf76d02357e029ec691eddd499e0ab34f8",
+      "test262/test/intl402/PluralRules/prototype/resolvedOptions/plural-categories-order.js": "9b8ca051ca537a3b48f99378b2824f3b005b9f10a2397199cf0ad9d1af2134e3",
+      "test262/test/intl402/PluralRules/prototype/select/notation.js": "f4cf034c4af5d48ed19992643b08333e3e8fb9c3660245542e032d5ec0f11d92",
+      "test262/test/intl402/Segmenter/constructor/constructor/locales-valid.js": "b251beefe9f9ab299820090bede72f096ae1bbc89851575114d941c22bb4b2c3",
+      "test262/test/intl402/Segmenter/constructor/supportedLocalesOf/locales-specific.js": "c2b3455e9e0c7dffb8609c2e0314a37d21e1804563fa83b2fb14a371f79d544c",
+      "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/basic.js": "0ebf43ec51984c2bd507b57544541345e644f7c095f5ad6c530f5faad09bb145",
+      "test262/test/intl402/Temporal/Instant/prototype/toLocaleString/hourcycle.js": "8c63421a6e351aa6d85d70719ad3fe92e377e77d9541af234cd439da384f5b07",
+      "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/basic.js": "73c126eff31f388c33b7a97aa47fb4ec74677ef25aca00e203b7c19485193ce3",
+      "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/hourcycle.js": "f84c95848cb23974d85e8e0fce2643692a177a7bd5d6a0ad9222d34739daff77",
+      "test262/test/intl402/Temporal/PlainDateTime/prototype/toLocaleString/resolved-time-zone.js": "2bf82e5ec9aa34b7e74302d6a5c4ed1f7f10f38bc6c2995b21d241c1a806cebf",
+      "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/basic.js": "355be9789cf2e15f86bdce99e1b4b618689f2b7016ae69d4f967b21c1384230b",
+      "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/hourcycle.js": "300a4c8f5324c01bfd441ce8c2a260cef5117157923f3ef7e326e50de7ec2acf",
+      "test262/test/intl402/Temporal/PlainTime/prototype/toLocaleString/resolved-time-zone.js": "aacd2de0d876b4eb17b700fa78383098e3b31f61cc421f07dd9953a2598bd584",
+      "test262/test/intl402/Temporal/ZonedDateTime/links.js": "79341d40e022b1c2d6320bdb9ac3edc7352235c913479b92c50a3fb7fde4b324",
+      "test262/test/intl402/Temporal/ZonedDateTime/prototype/toLocaleString/hourcycle.js": "4a4328952c543510eda0001586589825d5667163e8f2854055d61a1b39e4e85b",
+      "test262/test/staging/sm/String/internalUsage.js": "6e135772186984badc224211e789b119ee62aa58306d39bae1ac07bdbc191dde",
+      "trace_stream.py": "7f216d7f39067297ffdefa0ae30e4fc3e41b2295586ae61714c6bbb22d920b9e",
+      "validate_current_rtf.py": "c8e80c184c1962bf09736dc4fec96e01b8c4875cc20e5772e7ca7a75ca0a6c71",
+      "validate_practical_witness.py": "d511d9faeccae2b761a7c1d039ba86aeb562fc93d4dba61ac821b160c629813d",
+      "witness-runtime.js": "deff4a586797d1406ede8b52ef70165d94e840a5e644045c8dc5d4127bcde338"
+    }
+  },
+  "strict": null,
+  "unclassified_assertion_ids": []
+}

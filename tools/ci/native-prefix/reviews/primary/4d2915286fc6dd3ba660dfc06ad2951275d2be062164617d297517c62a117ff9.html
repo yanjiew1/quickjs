@@ -1,0 +1,31 @@
+<emu-clause id="sec-computeexponent" type="abstract operation">
+      <h1>
+        ComputeExponent (
+          _numberFormat_: an Intl.NumberFormat,
+          _x_: a mathematical value,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It computes an exponent (power of ten) by which to scale _x_ according to the number formatting settings.
+          It handles cases such as 999 rounding up to 1000, requiring a different exponent.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _x_ = 0, then
+          1. Return 0.
+        1. If _x_ &lt; 0, then
+          1. Let _x_ = -_x_.
+        1. Let _magnitude_ be floor(log10(_x_)).
+        1. Let _exponent_ be ComputeExponentForMagnitude(_numberFormat_, _magnitude_).
+        1. Set _x_ to _x_ × 10<sup>-_exponent_</sup>.
+        1. Let _formatNumberResult_ be FormatNumericToString(_numberFormat_, _x_).
+        1. If _formatNumberResult_.[[RoundedNumber]] = 0, then
+          1. Return _exponent_.
+        1. Let _newMagnitude_ be floor(log10(_formatNumberResult_.[[RoundedNumber]])).
+        1. If _newMagnitude_ is _magnitude_ - _exponent_, then
+          1. Return _exponent_.
+        1. Return ComputeExponentForMagnitude(_numberFormat_, _magnitude_ + 1).
+      </emu-alg>
+    </emu-clause>

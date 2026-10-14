@@ -1,0 +1,12 @@
+<emu-clause id="sec-lookupmatchinglocalebybestfit" type="implementation-defined abstract operation" oldids="sec-bestfitmatcher">
+      <h1>
+        LookupMatchingLocaleByBestFit (
+          _availableLocales_: an Available Locales List,
+          _requestedLocales_: a Language Priority List,
+        ): a Record with fields [[locale]] (a Unicode canonicalized locale identifier) and [[extension]] (a Unicode locale extension sequence or ~empty~), or *undefined*
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It determines the best element of _availableLocales_ for satisfying _requestedLocales_, ignoring Unicode locale extension sequences. The algorithm is implementation dependent, but should produce results that a typical user of the requested locales would consider at least as good as those produced by the LookupMatchingLocaleByPrefix algorithm. If a non-default match is found, it returns a Record with a [[locale]] field containing the matching language tag from _availableLocales_ and an [[extension]] field containing the Unicode locale extension sequence of the corresponding element of _requestedLocales_ (or ~empty~ if requested language tag has no such sequence).</dd>
+      </dl>
+    </emu-clause>

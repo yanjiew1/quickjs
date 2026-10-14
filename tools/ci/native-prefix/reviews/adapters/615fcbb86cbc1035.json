@@ -1,0 +1,2109 @@
+{
+  "adaptation_basis": "aggregate-array-source-adapter",
+  "approval_created": true,
+  "bounded_root_review_binding": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-approved-assets-root-20261012-v1/ROOT-BOUNDED-REVIEW-APPROVAL.json",
+    "sha256": "5e53ff07bb5f9f9e5aba7202ca223f6bac9c70fbb987012ef169bd571a55fb08"
+  },
+  "conditional_source_duty_boundaries": {
+    "path": "/srv/data/work/quickjs-tmp/quickjs-final-reviews-actionable-assembly-source-preparation-20261012-v2/SOURCE-ONLY-DUTY-BOUNDARIES.json",
+    "sha256": "89ceef6d420bafb999daa19ca843e97cab47be6698b18f17f2d8a29308a8642a"
+  },
+  "final_current_capture_binding": {
+    "artifact_download_tool_closure": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/ROOT-TOOL-CLOSURE.json",
+      "sha256": "e10d6bdf9420beaad36185ccdb7a6a153b2be8b541b050cec21bf5db49e1e198"
+    },
+    "capture_summary": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/CAPTURE-SUMMARY.json",
+      "sha256": "40122f547214f2c5ca66fa44fff5b1cf9e353a384f28765aa7b210c253520ba8"
+    },
+    "complete_readback": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-h3-fresh-complete-capture-independent-source-readback-20261012-v2/REPORT.json",
+      "sha256": "f3ca1da65c4e8090bb0395be46ff10e7c7eb5e0d05aabd05895c7fdab5e842cf"
+    },
+    "execution_identity": {
+      "actual_production_source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+      "binding_sha256": "f4da692425276c2936eb1640efd4077ecf2506a8b675413498a80fbcc205ecf6",
+      "candidate_sha": "4beac5cf962eb4863cc9025293f65e323f955ad7",
+      "historical_baseline_production_source_map_sha256": "c71443f857120b4ece57b2d4c2ce635e9b54bacf97f33f5eb4b6177c839a3b70",
+      "run_attempt": "1",
+      "run_id": "38178170735",
+      "source_map_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d"
+    },
+    "manifest": {
+      "path": "/srv/data/work/quickjs-tmp/quickjs-final-h3-hosted-artifact-root-20261012-v1/artifact/original-assertions/GENERATED-MANIFEST.json",
+      "sha256": "1df17dac972c44e1a55dec43b465d27d1d300fc0f6364e6e61c093ec108474c3"
+    },
+    "root_capture_or_semantic_approval_created": false
+  },
+  "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+  "fixture_sha256": "13dd324665f7abb6708ae637bc3d327c3151d697e3f719b959c8ec364bcd2f89",
+  "missing_expressions_are_passing_originals": false,
+  "root_semantic_approval_created": true,
+  "schema": "unapproved-original-array-adapter-inventory-v1",
+  "semantic_approval_created": false,
+  "totalized_original_obligation_count": 24,
+  "totalized_original_obligation_site_ids": [
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213"
+  ],
+  "unavailable_original_obligation_site_ids": [],
+  "variants": {
+    "nonstrict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "7063da74be2ca902972b730d09ac2a0736d5d0376b0059054a50258e9439c4e7",
+        "aggregate_adapters": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127"
+              },
+              {
+                "field": "source",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213"
+              }
+            ],
+            "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930",
+            "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819",
+            "mode": "reviewed-data-array",
+            "original_helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+        "fixture_sha256": "13dd324665f7abb6708ae637bc3d327c3151d697e3f719b959c8ec364bcd2f89",
+        "fractional_precision_guard": true,
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:100:4292": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 100,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              4292,
+              4322
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:114:4988": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 114,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              4988,
+              5018
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:128:5686": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 128,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 3})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b19edd84cbbcaff26086d2181576ea1f6188a5e530ddbfb3a9ccc68dff0b1d46",
+            "span": [
+              5682,
+              5784
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:131:5795": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 131,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              5795,
+              5825
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:145:6493": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 145,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              6493,
+              6523
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:14:603": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 14,
+            "source": "new Intl.DateTimeFormat(\"en-US\", { dateStyle: \"short\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "289d921ee659b896cff6ab79f5aa0c08f243cd4f212971d476d4f8a31740936c",
+            "span": [
+              599,
+              655
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:15:658": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 15,
+            "source": ".formatRangeToParts(1 * 86400 * 1000, 366 * 86400 * 1000)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "d595f20b6c675a230d31f493529be660cb3900f3754b4094c9a8072a1f0bc352",
+            "span": [
+              658,
+              715
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 19,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(a.length, b.length)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+            "span": [
+              819,
+              835
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 27,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+            "span": [
+              1044,
+              1060
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 28,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+            "span": [
+              1127,
+              1143
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 29,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "703875313b930255ce1f7d3d5212ad4123d1d1acc3467e081bb4054291252229",
+            "span": [
+              1213,
+              1229
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:33:1320": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 33,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+            "span": [
+              1316,
+              1352
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:34:1369": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 34,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 567)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "76a60a3d19cb0b62daa2abe459bedbcaeb7ee0281217ddd762aed59557c8704a",
+            "span": [
+              1365,
+              1401
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:35:1418": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 35,
+            "source": "new Date(2019, 7, 10,  1, 2, 13, 987)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "348e256ee4e305c84ec069ae23a6f5847d521be24e63f4a02bfe669ffd949998",
+            "span": [
+              1414,
+              1451
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:37:1454": {
+            "assertion_method": "throws",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 37,
+            "semantic_obligations": [
+              "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+            ],
+            "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0});\n  }, \"fractionalSecondDigits 0 should throw RangeError for out of range\")",
+            "source_review_basis": "Original exception and property operations remain mandatory.",
+            "source_sha256": "e7e84e4bb42f07729f0308bcac81bfa73c6b828e1524e7c0c4057fca6f8810d4",
+            "span": [
+              1454,
+              1467
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:38:1496": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 38,
+            "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5a9f74d2f22561a21b16a89cc99439dfab88f9e2501ad4c08b65142b9c399870",
+            "span": [
+              1492,
+              1596
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:42:1674": {
+            "assertion_method": "throws",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 42,
+            "semantic_obligations": [
+              "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+            ],
+            "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4});\n  }, \"fractionalSecondDigits 4 should throw RangeError for out of range\")",
+            "source_review_basis": "Original exception and property operations remain mandatory.",
+            "source_sha256": "74b0b8c18fe01ccbed9691a085c28918b17fb3b364e562104e160aa700edb462",
+            "span": [
+              1674,
+              1687
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:43:1716": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 43,
+            "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1923a42e24a1bfbb62a3b45527c4824df9781f1c17f18507c8d27a4c093e6fda",
+            "span": [
+              1712,
+              1816
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:47:1908": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 47,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: undefined})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "ab9f940c847289843ed5838a478b68b9ab4020415b6baab234af2d0ce657be01",
+            "span": [
+              1904,
+              2014
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:50:2025": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 50,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              2025,
+              2055
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:56:2230": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 56,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              2230,
+              2260
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:66:2684": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 66,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 1})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "071ba8998dbf5e785968bb37244368bc1ebf331b53638ef34151dd8ca1c58d31",
+            "span": [
+              2680,
+              2782
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:69:2793": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 69,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              2793,
+              2823
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:83:3487": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 83,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              3487,
+              3517
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:97:4183": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 97,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 2})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "2ce00ba1d4f923845e00f3e61a3582205561f70f58fee180cc4c60773c99d7c9",
+            "span": [
+              4179,
+              4281
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+            "helper_name": "compare",
+            "kind": "helper",
+            "line": 25,
+            "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n    assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`);\n  }\n}",
+            "source_sha256": "d17e662436b54e5cdf268919abec1a1d289de733741e27c9833d55ea62b3df36",
+            "span": [
+              930,
+              1303
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "nonstrict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "de64fe5aae87f5935bdbfb0f7d346c033f0942452253ad042acb07de2f5668cd",
+        "config_sha256": "7063da74be2ca902972b730d09ac2a0736d5d0376b0059054a50258e9439c4e7",
+        "data_mismatches": 16,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 2276,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 265,
+          "exit": 265,
+          "invariant": 1701,
+          "original-obligation": 12,
+          "start": 1,
+          "value": 31
+        },
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+        "generated_sha256": "91cb95ad4090d9de276ed1768f30bd3f52d806bf16ca46a449ea79525d3472ae",
+        "manifest_index": 126,
+        "original_assertion_failures": 4,
+        "original_assertion_passes": 234,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 12,
+        "trace_sha256": "49d6d19305fe133fcb83250371474be82bede461b72a741891194ee8d52261b3",
+        "variant": "nonstrict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127"
+            },
+            {
+              "field": "source",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213"
+            }
+          ],
+          "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930",
+          "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819",
+          "mode": "reviewed-data-array",
+          "original_helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "7063da74be2ca902972b730d09ac2a0736d5d0376b0059054a50258e9439c4e7",
+      "manifest_index": 126,
+      "original_source_site_inventory": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:100:4292": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 100,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            4292,
+            4322
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:114:4988": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 114,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            4988,
+            5018
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:128:5686": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 128,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 3})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b19edd84cbbcaff26086d2181576ea1f6188a5e530ddbfb3a9ccc68dff0b1d46",
+          "span": [
+            5682,
+            5784
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:131:5795": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 131,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            5795,
+            5825
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:145:6493": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 145,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            6493,
+            6523
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:14:603": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 14,
+          "source": "new Intl.DateTimeFormat(\"en-US\", { dateStyle: \"short\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "289d921ee659b896cff6ab79f5aa0c08f243cd4f212971d476d4f8a31740936c",
+          "span": [
+            599,
+            655
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:15:658": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 15,
+          "source": ".formatRangeToParts(1 * 86400 * 1000, 366 * 86400 * 1000)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "d595f20b6c675a230d31f493529be660cb3900f3754b4094c9a8072a1f0bc352",
+          "span": [
+            658,
+            715
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 19,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(a.length, b.length)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+          "span": [
+            819,
+            835
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 27,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+          "span": [
+            1044,
+            1060
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 28,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+          "span": [
+            1127,
+            1143
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 29,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "703875313b930255ce1f7d3d5212ad4123d1d1acc3467e081bb4054291252229",
+          "span": [
+            1213,
+            1229
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:33:1320": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 33,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+          "span": [
+            1316,
+            1352
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:34:1369": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 34,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 567)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "76a60a3d19cb0b62daa2abe459bedbcaeb7ee0281217ddd762aed59557c8704a",
+          "span": [
+            1365,
+            1401
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:35:1418": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 35,
+          "source": "new Date(2019, 7, 10,  1, 2, 13, 987)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "348e256ee4e305c84ec069ae23a6f5847d521be24e63f4a02bfe669ffd949998",
+          "span": [
+            1414,
+            1451
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:37:1454": {
+          "assertion_method": "throws",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 37,
+          "semantic_obligations": [
+            "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+          ],
+          "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0});\n  }, \"fractionalSecondDigits 0 should throw RangeError for out of range\")",
+          "source_review_basis": "Original exception and property operations remain mandatory.",
+          "source_sha256": "e7e84e4bb42f07729f0308bcac81bfa73c6b828e1524e7c0c4057fca6f8810d4",
+          "span": [
+            1454,
+            1467
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:38:1496": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 38,
+          "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5a9f74d2f22561a21b16a89cc99439dfab88f9e2501ad4c08b65142b9c399870",
+          "span": [
+            1492,
+            1596
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:42:1674": {
+          "assertion_method": "throws",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 42,
+          "semantic_obligations": [
+            "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+          ],
+          "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4});\n  }, \"fractionalSecondDigits 4 should throw RangeError for out of range\")",
+          "source_review_basis": "Original exception and property operations remain mandatory.",
+          "source_sha256": "74b0b8c18fe01ccbed9691a085c28918b17fb3b364e562104e160aa700edb462",
+          "span": [
+            1674,
+            1687
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:43:1716": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 43,
+          "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1923a42e24a1bfbb62a3b45527c4824df9781f1c17f18507c8d27a4c093e6fda",
+          "span": [
+            1712,
+            1816
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:47:1908": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 47,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: undefined})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "ab9f940c847289843ed5838a478b68b9ab4020415b6baab234af2d0ce657be01",
+          "span": [
+            1904,
+            2014
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:50:2025": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 50,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            2025,
+            2055
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:56:2230": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 56,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            2230,
+            2260
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:66:2684": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 66,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 1})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "071ba8998dbf5e785968bb37244368bc1ebf331b53638ef34151dd8ca1c58d31",
+          "span": [
+            2680,
+            2782
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:69:2793": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 69,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            2793,
+            2823
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:83:3487": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 83,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            3487,
+            3517
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:97:4183": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 97,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 2})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "2ce00ba1d4f923845e00f3e61a3582205561f70f58fee180cc4c60773c99d7c9",
+          "span": [
+            4179,
+            4281
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+          "helper_name": "compare",
+          "kind": "helper",
+          "line": 25,
+          "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n    assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`);\n  }\n}",
+          "source_sha256": "d17e662436b54e5cdf268919abec1a1d289de733741e27c9833d55ea62b3df36",
+          "span": [
+            930,
+            1303
+          ]
+        }
+      }
+    },
+    "strict": {
+      "actual_H3_configuration": {
+        "_config_sha256": "4adfe899842e8a1491e9f6534664d71309faf778b17bad783c0700255becc8a8",
+        "aggregate_adapters": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+            "descriptors": [],
+            "fields": [
+              {
+                "field": "type",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044"
+              },
+              {
+                "field": "value",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127"
+              },
+              {
+                "field": "source",
+                "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213"
+              }
+            ],
+            "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930",
+            "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819",
+            "mode": "reviewed-data-array",
+            "original_helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+            "original_iteration": "actual-length",
+            "prototype_sites": [],
+            "shape_sites": [],
+            "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+          }
+        },
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+        "fixture_sha256": "13dd324665f7abb6708ae637bc3d327c3151d697e3f719b959c8ec364bcd2f89",
+        "fractional_precision_guard": true,
+        "max_events": 2000000,
+        "profile": {
+          "defaults": {
+            "Collator": {
+              "caseFirst": "false",
+              "collation": "default",
+              "ignorePunctuation": false,
+              "locale": "en-US",
+              "numeric": false,
+              "sensitivity": "variant",
+              "usage": "sort"
+            },
+            "DateTimeFormat": {
+              "calendar": "gregory",
+              "day": "numeric",
+              "locale": "en-US",
+              "month": "numeric",
+              "numberingSystem": "latn",
+              "timeZone": "UTC",
+              "year": "numeric"
+            },
+            "DisplayNames": {
+              "fallback": "code",
+              "languageDisplay": "dialect",
+              "locale": "en-US",
+              "style": "long",
+              "type": "language"
+            },
+            "DurationFormat": {
+              "days": "short",
+              "daysDisplay": "auto",
+              "hours": "short",
+              "hoursDisplay": "auto",
+              "locale": "en-US",
+              "microseconds": "short",
+              "microsecondsDisplay": "auto",
+              "milliseconds": "short",
+              "millisecondsDisplay": "auto",
+              "minutes": "short",
+              "minutesDisplay": "auto",
+              "months": "short",
+              "monthsDisplay": "auto",
+              "nanoseconds": "short",
+              "nanosecondsDisplay": "auto",
+              "numberingSystem": "latn",
+              "seconds": "short",
+              "secondsDisplay": "auto",
+              "style": "short",
+              "weeks": "short",
+              "weeksDisplay": "auto",
+              "years": "short",
+              "yearsDisplay": "auto"
+            },
+            "ListFormat": {
+              "locale": "en-US",
+              "style": "long",
+              "type": "conjunction"
+            },
+            "NumberFormat": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "numberingSystem": "latn",
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "signDisplay": "auto",
+              "style": "decimal",
+              "trailingZeroDisplay": "auto",
+              "useGrouping": "auto"
+            },
+            "PluralRules": {
+              "locale": "en-US",
+              "maximumFractionDigits": 3,
+              "minimumFractionDigits": 0,
+              "minimumIntegerDigits": 1,
+              "notation": "standard",
+              "pluralCategories": [
+                "one",
+                "other"
+              ],
+              "roundingIncrement": 1,
+              "roundingMode": "halfExpand",
+              "roundingPriority": "auto",
+              "trailingZeroDisplay": "auto",
+              "type": "cardinal"
+            },
+            "RelativeTimeFormat": {
+              "locale": "en-US",
+              "numberingSystem": "latn",
+              "numeric": "always",
+              "style": "long"
+            },
+            "Segmenter": {
+              "granularity": "grapheme",
+              "locale": "en-US"
+            }
+          },
+          "explicitHanidec": {
+            "calendar": "gregory",
+            "hour": "2-digit",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US-u-nu-hanidec",
+            "minute": "2-digit",
+            "numberingSystem": "hanidec",
+            "second": "2-digit",
+            "timeZone": "UTC"
+          },
+          "requestedJapaneseHour12": {
+            "calendar": "gregory",
+            "hour": "numeric",
+            "hour12": true,
+            "hourCycle": "h12",
+            "locale": "en-US",
+            "numberingSystem": "latn",
+            "timeZone": "UTC"
+          },
+          "schema": "intl-effective-profile-v2",
+          "supportedNumberingSystems": [
+            "adlm",
+            "ahom",
+            "arab",
+            "arabext",
+            "bali",
+            "beng",
+            "bhks",
+            "brah",
+            "cakm",
+            "cham",
+            "deva",
+            "diak",
+            "fullwide",
+            "gara",
+            "gong",
+            "gonm",
+            "gujr",
+            "gukh",
+            "guru",
+            "hanidec",
+            "hmng",
+            "hmnp",
+            "java",
+            "kali",
+            "kawi",
+            "khmr",
+            "knda",
+            "krai",
+            "lana",
+            "lanatham",
+            "laoo",
+            "latn",
+            "lepc",
+            "limb",
+            "mathbold",
+            "mathdbl",
+            "mathmono",
+            "mathsanb",
+            "mathsans",
+            "mlym",
+            "modi",
+            "mong",
+            "mroo",
+            "mtei",
+            "mymr",
+            "mymrepka",
+            "mymrpao",
+            "mymrshan",
+            "mymrtlng",
+            "nagm",
+            "newa",
+            "nkoo",
+            "olck",
+            "onao",
+            "orya",
+            "osma",
+            "outlined",
+            "rohg",
+            "saur",
+            "segment",
+            "shrd",
+            "sind",
+            "sinh",
+            "sora",
+            "sund",
+            "sunu",
+            "takr",
+            "talu",
+            "tamldec",
+            "telu",
+            "thai",
+            "tibt",
+            "tirh",
+            "tnsa",
+            "tols",
+            "vaii",
+            "wara",
+            "wcho"
+          ]
+        },
+        "profile_sha256": "de82a182be8d20649246646ec655569ab3616ce93d2f41bef67ca72747eee04d",
+        "schema": "native-original-assertion-trace-v2",
+        "sites": {
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:100:4292": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 100,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              4292,
+              4322
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:114:4988": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 114,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              4988,
+              5018
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:128:5686": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 128,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 3})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "b19edd84cbbcaff26086d2181576ea1f6188a5e530ddbfb3a9ccc68dff0b1d46",
+            "span": [
+              5682,
+              5784
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:131:5795": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 131,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              5795,
+              5825
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:145:6493": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 145,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              6493,
+              6523
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:14:603": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 14,
+            "source": "new Intl.DateTimeFormat(\"en-US\", { dateStyle: \"short\" })",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "289d921ee659b896cff6ab79f5aa0c08f243cd4f212971d476d4f8a31740936c",
+            "span": [
+              599,
+              655
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:15:658": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 15,
+            "source": ".formatRangeToParts(1 * 86400 * 1000, 366 * 86400 * 1000)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "d595f20b6c675a230d31f493529be660cb3900f3754b4094c9a8072a1f0bc352",
+            "span": [
+              658,
+              715
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 19,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(a.length, b.length)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+            "span": [
+              819,
+              835
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 27,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+            "span": [
+              1044,
+              1060
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 28,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+            "span": [
+              1127,
+              1143
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213": {
+            "assertion_method": "sameValue",
+            "continue_exact_data_assertion": true,
+            "disposition": "guarded-fractional-locale-data",
+            "kind": "assertion",
+            "line": 29,
+            "semantic_obligations": [
+              "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+            ],
+            "source": "assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`)",
+            "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+            "source_sha256": "703875313b930255ce1f7d3d5212ad4123d1d1acc3467e081bb4054291252229",
+            "span": [
+              1213,
+              1229
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:33:1320": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 33,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+            "span": [
+              1316,
+              1352
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:34:1369": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 34,
+            "source": "new Date(2019, 7, 10,  1, 2, 3, 567)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "76a60a3d19cb0b62daa2abe459bedbcaeb7ee0281217ddd762aed59557c8704a",
+            "span": [
+              1365,
+              1401
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:35:1418": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 35,
+            "source": "new Date(2019, 7, 10,  1, 2, 13, 987)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "348e256ee4e305c84ec069ae23a6f5847d521be24e63f4a02bfe669ffd949998",
+            "span": [
+              1414,
+              1451
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:37:1454": {
+            "assertion_method": "throws",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 37,
+            "semantic_obligations": [
+              "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+            ],
+            "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0});\n  }, \"fractionalSecondDigits 0 should throw RangeError for out of range\")",
+            "source_review_basis": "Original exception and property operations remain mandatory.",
+            "source_sha256": "e7e84e4bb42f07729f0308bcac81bfa73c6b828e1524e7c0c4057fca6f8810d4",
+            "span": [
+              1454,
+              1467
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:38:1496": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 38,
+            "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "5a9f74d2f22561a21b16a89cc99439dfab88f9e2501ad4c08b65142b9c399870",
+            "span": [
+              1492,
+              1596
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:42:1674": {
+            "assertion_method": "throws",
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "assertion",
+            "line": 42,
+            "semantic_obligations": [
+              "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+            ],
+            "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4});\n  }, \"fractionalSecondDigits 4 should throw RangeError for out of range\")",
+            "source_review_basis": "Original exception and property operations remain mandatory.",
+            "source_sha256": "74b0b8c18fe01ccbed9691a085c28918b17fb3b364e562104e160aa700edb462",
+            "span": [
+              1674,
+              1687
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:43:1716": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 43,
+            "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "1923a42e24a1bfbb62a3b45527c4824df9781f1c17f18507c8d27a4c093e6fda",
+            "span": [
+              1712,
+              1816
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:47:1908": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 47,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: undefined})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "ab9f940c847289843ed5838a478b68b9ab4020415b6baab234af2d0ce657be01",
+            "span": [
+              1904,
+              2014
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:50:2025": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 50,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              2025,
+              2055
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:56:2230": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 56,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              2230,
+              2260
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:66:2684": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 66,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 1})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "071ba8998dbf5e785968bb37244368bc1ebf331b53638ef34151dd8ca1c58d31",
+            "span": [
+              2680,
+              2782
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:69:2793": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 69,
+            "source": "dtf.formatRangeToParts(d1, d2)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+            "span": [
+              2793,
+              2823
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:83:3487": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "call",
+            "line": 83,
+            "source": "dtf.formatRangeToParts(d1, d3)",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+            "span": [
+              3487,
+              3517
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:97:4183": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "kind": "constructor",
+            "line": 97,
+            "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 2})",
+            "source_review_basis": "Exact official source span and unchanged original harness callee.",
+            "source_sha256": "2ce00ba1d4f923845e00f3e61a3582205561f70f58fee180cc4c60773c99d7c9",
+            "span": [
+              4179,
+              4281
+            ]
+          },
+          "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+            "continue_exact_data_assertion": false,
+            "disposition": "mandatory",
+            "helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+            "helper_name": "compare",
+            "kind": "helper",
+            "line": 25,
+            "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n    assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`);\n  }\n}",
+            "source_sha256": "d17e662436b54e5cdf268919abec1a1d289de733741e27c9833d55ea62b3df36",
+            "span": [
+              930,
+              1303
+            ]
+          }
+        },
+        "source_tree_sha256": "0f810b2adb6ec189f8a0d0e21f3b2d83c83b540b2442a18ccae1798dd827c20d",
+        "variant": "strict"
+      },
+      "actual_H3_whole_trace_binding": {
+        "command_complete": true,
+        "command_sha256": "7dfda13553a34aaecace8857ef3dc83ef0748ad789bfe247edc2792edacd9dde",
+        "config_sha256": "4adfe899842e8a1491e9f6534664d71309faf778b17bad783c0700255becc8a8",
+        "data_mismatches": 16,
+        "engine_sha256": "8ebc492d9908460396e489736d84d9f10dfd2bdc0cb5d7004de9ee3672c44a3e",
+        "event_count": 2276,
+        "event_kinds": {
+          "completion": 1,
+          "enter": 265,
+          "exit": 265,
+          "invariant": 1701,
+          "original-obligation": 12,
+          "start": 1,
+          "value": 31
+        },
+        "fixture": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+        "generated_sha256": "e9abd6632568dbb557de9747de338f4e0f8386916b08e7dd3acfe9cf2e64f143",
+        "manifest_index": 127,
+        "original_assertion_failures": 4,
+        "original_assertion_passes": 234,
+        "original_eof_reached": true,
+        "totalized_original_data_obligations": 12,
+        "trace_sha256": "4c535c2ef20a050311a98be9bc34f4c671b090a37ac39d68407fd75c35bec0c2",
+        "variant": "strict"
+      },
+      "aggregate_adapters": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+          "descriptors": [],
+          "fields": [
+            {
+              "field": "type",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044"
+            },
+            {
+              "field": "value",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127"
+            },
+            {
+              "field": "source",
+              "site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213"
+            }
+          ],
+          "helper": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930",
+          "length_site": "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819",
+          "mode": "reviewed-data-array",
+          "original_helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+          "original_iteration": "actual-length",
+          "prototype_sites": [],
+          "shape_sites": [],
+          "totalization": "Full arrays and every actual/expected field pair are retained; missing entry is recorded explicitly. This is diagnostic source adaptation, never original conformance completion."
+        }
+      },
+      "config_sha256": "4adfe899842e8a1491e9f6534664d71309faf778b17bad783c0700255becc8a8",
+      "manifest_index": 127,
+      "original_source_site_inventory": {
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:100:4292": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 100,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            4292,
+            4322
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:114:4988": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 114,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            4988,
+            5018
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:128:5686": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 128,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 3})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "b19edd84cbbcaff26086d2181576ea1f6188a5e530ddbfb3a9ccc68dff0b1d46",
+          "span": [
+            5682,
+            5784
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:131:5795": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 131,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            5795,
+            5825
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:145:6493": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 145,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            6493,
+            6523
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:14:603": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 14,
+          "source": "new Intl.DateTimeFormat(\"en-US\", { dateStyle: \"short\" })",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "289d921ee659b896cff6ab79f5aa0c08f243cd4f212971d476d4f8a31740936c",
+          "span": [
+            599,
+            655
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:15:658": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 15,
+          "source": ".formatRangeToParts(1 * 86400 * 1000, 366 * 86400 * 1000)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "d595f20b6c675a230d31f493529be660cb3900f3754b4094c9a8072a1f0bc352",
+          "span": [
+            658,
+            715
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:19:819": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 19,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(a.length, b.length)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "14a22436de3c1be8c15afe7787c15a1d593de1456f2dc5d2d5360de8822f7211",
+          "span": [
+            819,
+            835
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:27:1044": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 27,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "3f06d050c663eab762756fb13bf892e50f19b40234ae6525885c3e7effe7fbe2",
+          "span": [
+            1044,
+            1060
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:28:1127": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 28,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "72f8b8ddbfeed0cb6160924da3edca2514c934b7f32032cf48c018adb9d6a893",
+          "span": [
+            1127,
+            1143
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:29:1213": {
+          "assertion_method": "sameValue",
+          "continue_exact_data_assertion": true,
+          "disposition": "guarded-fractional-locale-data",
+          "kind": "assertion",
+          "line": 29,
+          "semantic_obligations": [
+            "Explicit fractional precision/truncation is mandatory when selected; exact range pattern, numeric widths, ordered parts and collapsed omitted-millisecond output also depend on data."
+          ],
+          "source": "assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`)",
+          "source_review_basis": "Exact original formatting/layout comparison after mandatory native precision/value guard derived from original Date milliseconds and requested fractionalSecondDigits; original throws stay mandatory.",
+          "source_sha256": "703875313b930255ce1f7d3d5212ad4123d1d1acc3467e081bb4054291252229",
+          "span": [
+            1213,
+            1229
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:33:1320": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 33,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 234)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "fa0e8b4d1d1de94d1f389d4a2f0a40221e8fc4210ca82fd09da73995c8c8414f",
+          "span": [
+            1316,
+            1352
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:34:1369": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 34,
+          "source": "new Date(2019, 7, 10,  1, 2, 3, 567)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "76a60a3d19cb0b62daa2abe459bedbcaeb7ee0281217ddd762aed59557c8704a",
+          "span": [
+            1365,
+            1401
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:35:1418": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 35,
+          "source": "new Date(2019, 7, 10,  1, 2, 13, 987)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "348e256ee4e305c84ec069ae23a6f5847d521be24e63f4a02bfe669ffd949998",
+          "span": [
+            1414,
+            1451
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:37:1454": {
+          "assertion_method": "throws",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 37,
+          "semantic_obligations": [
+            "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+          ],
+          "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0});\n  }, \"fractionalSecondDigits 0 should throw RangeError for out of range\")",
+          "source_review_basis": "Original exception and property operations remain mandatory.",
+          "source_sha256": "e7e84e4bb42f07729f0308bcac81bfa73c6b828e1524e7c0c4057fca6f8810d4",
+          "span": [
+            1454,
+            1467
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:38:1496": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 38,
+          "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 0})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "5a9f74d2f22561a21b16a89cc99439dfab88f9e2501ad4c08b65142b9c399870",
+          "span": [
+            1492,
+            1596
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:42:1674": {
+          "assertion_method": "throws",
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "assertion",
+          "line": 42,
+          "semantic_obligations": [
+            "The specified fractionalSecondDigits bounds require a RangeError independently of locale data."
+          ],
+          "source": "assert.throws(RangeError, () => {\n    new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4});\n  }, \"fractionalSecondDigits 4 should throw RangeError for out of range\")",
+          "source_review_basis": "Original exception and property operations remain mandatory.",
+          "source_sha256": "74b0b8c18fe01ccbed9691a085c28918b17fb3b364e562104e160aa700edb462",
+          "span": [
+            1674,
+            1687
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:43:1716": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 43,
+          "source": "new Intl.DateTimeFormat(\n      'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 4})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "1923a42e24a1bfbb62a3b45527c4824df9781f1c17f18507c8d27a4c093e6fda",
+          "span": [
+            1712,
+            1816
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:47:1908": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 47,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: undefined})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "ab9f940c847289843ed5838a478b68b9ab4020415b6baab234af2d0ce657be01",
+          "span": [
+            1904,
+            2014
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:50:2025": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 50,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            2025,
+            2055
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:56:2230": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 56,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            2230,
+            2260
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:66:2684": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 66,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 1})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "071ba8998dbf5e785968bb37244368bc1ebf331b53638ef34151dd8ca1c58d31",
+          "span": [
+            2680,
+            2782
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:69:2793": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 69,
+          "source": "dtf.formatRangeToParts(d1, d2)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "e0ee9599c2f47b03e682c78e41b0b4d6c88fc5b5e770e2df8ec36e861e06b372",
+          "span": [
+            2793,
+            2823
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:83:3487": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "call",
+          "line": 83,
+          "source": "dtf.formatRangeToParts(d1, d3)",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "0e7be044f9cc4df152aba7fe909ce59bb9b9ae3f2524497bd5198ad070dc84de",
+          "span": [
+            3487,
+            3517
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:call:97:4183": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "kind": "constructor",
+          "line": 97,
+          "source": "new Intl.DateTimeFormat(\n    'en', { minute: \"numeric\", second: \"numeric\", fractionalSecondDigits: 2})",
+          "source_review_basis": "Exact official source span and unchanged original harness callee.",
+          "source_sha256": "2ce00ba1d4f923845e00f3e61a3582205561f70f58fee180cc4c60773c99d7c9",
+          "span": [
+            4179,
+            4281
+          ]
+        },
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js:helper:compare:930": {
+          "continue_exact_data_assertion": false,
+          "disposition": "mandatory",
+          "helper_body_sha256": "f1fe4372519d4722151bff5a2ab7222cbcb95e617a8c5faeec3a4eed48f1bb67",
+          "helper_name": "compare",
+          "kind": "helper",
+          "line": 25,
+          "source": "function compare(actual, expected) {\n  for (const [i, actualEntry, expectedEntry] of zip(actual, expected)) {\n    assert.sameValue(actualEntry.type, expectedEntry.type, `type for entry ${i}`);\n    assert.sameValue(actualEntry.value, expectedEntry.value, `value for entry ${i}`);\n    assert.sameValue(actualEntry.source, expectedEntry.source, `source for entry ${i}`);\n  }\n}",
+          "source_sha256": "d17e662436b54e5cdf268919abec1a1d289de733741e27c9833d55ea62b3df36",
+          "span": [
+            930,
+            1303
+          ]
+        }
+      }
+    }
+  }
+}

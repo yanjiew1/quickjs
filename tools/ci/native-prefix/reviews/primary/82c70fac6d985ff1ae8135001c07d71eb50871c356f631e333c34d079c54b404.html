@@ -1,0 +1,29 @@
+    <emu-clause id="sec-textdirectionoflocale" type="implementation-defined abstract operation">
+      <h1>
+        TextDirectionOfLocale (
+          _loc_: an Intl.Locale,
+        ): a String or *undefined*
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The following algorithm refers to Locale data specified in <a href="https://unicode.org/reports/tr35/tr35.html#Script_Metadata">Unicode Technical Standard #35 Part 1 Core, Script Metadata</a>.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _locale_ be _loc_.[[Locale]].
+        1. Let _script_ be GetLocaleScript(_locale_).
+        1. If _script_ is *undefined*, then
+          1. Let _maximal_ be the result of the <a href="https://unicode.org/reports/tr35/#Likely_Subtags">Add Likely Subtags</a> algorithm applied to _locale_. If an error is signaled, return *undefined*.
+          1. Set _script_ to GetLocaleScript(_maximal_).
+          1. If _script_ is *undefined*, return *undefined*.
+        1. If the default general ordering of characters within a line in _script_ is right-to-left, return *"rtl"*.
+        1. If the default general ordering of characters within a line in _script_ is left-to-right, return *"ltr"*.
+        1. Return *undefined*.
+      </emu-alg>
+      <emu-note>
+        When the direction of default general ordering of characters within a line in the _script_ cannot be determined, or the direction is neither right-to-left nor left-to-right, then *undefined* will be returned.
+      </emu-note>
+      <emu-note>
+        Text in a language may have more than one possible direction. Text in a language written in one script may also have more than one possible direction. Therefore, if there is direction information included in the metadata associated with a piece of text, that direction information should be considered as the primary source of truth. The information returned by TextDirectionOfLocale should only be used as a fallback mechanism while there is no metadata associated with the text to provide the direction information of the text. It should only be used while the direction information is not present but language information is known. Web developers should not rely too much on this API to decide the direction of the text.
+      </emu-note>
+    </emu-clause>
+

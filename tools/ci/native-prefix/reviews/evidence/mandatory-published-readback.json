@@ -1,0 +1,303 @@
+{
+  "approved": false,
+  "complete_originals_provider_lunisolar_binding": "Separate proof owners; no approval manufactured here.",
+  "conformance_accepted": false,
+  "host_default_policy": {
+    "actual_effective_DefaultLocale": "en-US",
+    "ambient_LANG": "C.UTF-8",
+    "ambient_LC_ALL": "C.UTF-8",
+    "ambient_TZ": "UTC",
+    "default_locale_is_explicit_embedding_policy": true,
+    "japanese_fallback_h12_matches_this_policy": true,
+    "source_config_locale": "en-US"
+  },
+  "mandatory_semantics_satisfied": false,
+  "qualification_current_full_capture_accepted": false,
+  "remaining_general_failure_not_waived": "test262/test/intl402/Locale/prototype/getCollations/output-array-values.js",
+  "repairs": [
+    {
+      "actual_capture_fixture_bindings_pending": true,
+      "id": "L1-locale-likely-subtags-no-match",
+      "local_combined_build_and_repository_gate_passed": true,
+      "publication_receipt_path": "/srv/data/work/quickjs-tmp/quickjs-post36-two-gate-batches-runtime-root-20261012-v2-L1-locale-likely-subtags-no-match-publication/state.json",
+      "publication_receipt_sha256": "3a06b9a844ce43434c86097ef85b223336e1bae95a01bfb5065df4999acc942f",
+      "published_commit": "c3078d538d995bab1666f8986f68759648bf63b4",
+      "semantics_from_authentic_message": "intl: preserve locale tags when likely subtags do not match\n\nUnknown posix, xtg and long language tags incorrectly borrow script and\nregion from und. That changes maximize/minimize results and infers a\ntext direction when Add Likely Subtags must report a semantic miss.\n\nUse only the four CLDR language-based candidates. Preserve the original\ncanonical tag on no-match, stop minimize trials before comparing absent\nfields, and guard territory-alias selection when inference has no\nregion. Keep resource/data errors distinct from semantic misses.\n\nExtend the existing Locale unit with unknown tags, missing markers,\nexplicit scripts, extensions, idempotence, territory aliases and known\nen/und/zh inference controls.\n\nECMA-402 revision, reviewed 2026-10-11:\n48d20d82dc5801bad87e5ec3f9e06d6ae98209a8\nhttps://tc39.es/ecma402/#sec-Intl.Locale.prototype.maximize\nhttps://tc39.es/ecma402/#sec-Intl.Locale.prototype.minimize\nhttps://tc39.es/ecma402/#sec-textdirectionoflocale\nReleased CLDR48.2 revision, reviewed 2026-10-11:\n11299982335beb974c1c63c45265184e759c0f41\nhttps://unicode.org/reports/tr35/#Likely_Subtags\n\nRelated Test262 directory: test/intl402/Locale/\nconstructor-non-iana-canon.js\nlikely-subtags-grandfathered.js\nprototype/getTextInfo/language-subtag-with-more-than-three-letters.js\nprototype/maximize/language-subtag-with-more-than-three-letters.js\nFixture revision: c8c798898646638cd0c24879f8e0374e847e7d74\n\nSigned-off-by: Yan-Jie Wang <yanjiewtw@gmail.com>\n",
+      "signed_off_commit_message_path": "/srv/data/work/quickjs-tmp/quickjs-native-post36-independent-fixes-graph-source-preparation-20261011-v3/stages/L1-locale-likely-subtags-no-match/COMMIT-MESSAGE.txt",
+      "source_paths": [
+        {
+          "actual_capture_sha256": "3d3514ddfe3c93968503a17746b44d990422f0281bf60094d73e8cddb2880b78",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "3d3514ddfe3c93968503a17746b44d990422f0281bf60094d73e8cddb2880b78",
+          "path": "src/intl/native-locale-id.c"
+        },
+        {
+          "actual_capture_sha256": "da736085b6641dc60715544d9ade0f7704529067cb4ddcd63a9d61a0128af6c4",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "da736085b6641dc60715544d9ade0f7704529067cb4ddcd63a9d61a0128af6c4",
+          "path": "tests/test_intl_locale.js"
+        }
+      ],
+      "source_proof_owner": {
+        "packet": "/srv/data/work/quickjs-tmp/quickjs-native-locale-fix-independent-source-review-20261011-v1",
+        "reviewed_source_only": true,
+        "seal_sha256": "09d144e9a987e6d4fed04f63cb31a27743bf4f13de53936c92c5f0632fad5573"
+      }
+    },
+    {
+      "actual_capture_fixture_bindings_pending": true,
+      "id": "T1-plain-reference-timezone-info",
+      "local_combined_build_and_repository_gate_passed": true,
+      "publication_receipt_path": "/srv/data/work/quickjs-tmp/quickjs-post36-two-gate-batches-runtime-root-20261012-v2-T1-plain-reference-timezone-info-publication/state.json",
+      "publication_receipt_sha256": "697cf5685cd581032e69ce2f8dc58378f4decb5a143ac16cabee4c936bde5ea1",
+      "published_commit": "ac3b7d6333a6abadaf2aabd52530d3ba4d76ac6e",
+      "semantics_from_authentic_message": "intl: admit plain reference dates in named-zone range queries\n\nValid extreme PlainYearMonth references reach ToLocalTime while range\ncomparison uses the formatter's named zone. The date provider permits 32\nextra epoch days, but qjs_tzif_info rejects beyond Instant plus two\ndays. The zone bridge maps that rejection to OVERFLOW and the frontend\nreports out of memory for valid plain input.\n\nGive only the civil info lookup a bounded Instant plus 33 day guard. The\ndate provider validates the floor epoch-day quotient; its positive 32nd\nextra day includes seconds up to the start of the 33rd extra day. The\nexisting state_info lookup already supports wider bounded CLDR\nname-stability windows. Preserve Instant offset and transition guards.\n\nAdd semantic boundary-range and same-value shared-parts regressions to\nthe existing native Temporal bank fixture. Compare years with endpoint\nparts and strings with part concatenation without prescribing localized\npunctuation or optional interval compression. Preserve Make's census.\n\nECMA-402 living draft, reviewed 2026-10-11:\nRevision: 48d20d82dc5801bad87e5ec3f9e06d6ae98209a8\nhttps://tc39.es/ecma402/#sec-partitiondatetimerangepattern\nhttps://tc39.es/ecma402/#sec-tolocaltime\nCaptured spec/datetimeformat.html SHA256:\ne3bd31b5991eb02ce24964f30e330281c43313ee3ba8ca567782be93ce5f2fa5\n\nPrimary Temporal Intl amendment PR, reviewed 2026-10-11:\nhttps://redirect.github.com/tc39/ecma402/pull/1044\nRevision: d026068ed653130a37d79a95c0122ecf5319f1a4\nPR date: 2026-06-17\nAnchors in captured spec/datetimeformat.html:\nsec-valueformatrecord; sec-partitiondatetimerangepattern\nsec-formatdatetimepattern; sec-tolocaltime\nSHA256:\n29d7900356a228ffcd9c6ee380dd2b22cd46f70615a0408d41f688abb4906cbe\n\nTemporal ECMA-262 amendment PR, reviewed 2026-10-11:\nhttps://redirect.github.com/tc39/ecma262/pull/3966\nRevision: 3d4a6e7124a6878cb5af3132af7e01e01a88317f\nPR date: 2026-09-09\nAnchor in captured temporal/plainyearmonth.emu:\nsec-isoyearmonthwithinlimits\nSHA256:\nca33fe808af9d4d9a8209acf90e77d60a3812c2b572025cfec6f378eb445a5b8\n\nRelated original Test262 fixtures (directory plus filename):\ntest/intl402/DateTimeFormat/prototype/formatRange/\n  temporal-objects-no-time-clip.js\ntest/intl402/DateTimeFormat/prototype/formatRangeToParts/\n  temporal-objects-no-time-clip.js\nFixture revision: c8c798898646638cd0c24879f8e0374e847e7d74\n\nSigned-off-by: Yan-Jie Wang <yanjiewtw@gmail.com>\n",
+      "signed_off_commit_message_path": "/srv/data/work/quickjs-tmp/quickjs-native-post36-independent-fixes-graph-source-preparation-20261011-v3/stages/T1-plain-reference-timezone-info/COMMIT-MESSAGE.txt",
+      "source_paths": [
+        {
+          "actual_capture_sha256": "c60ec7d59ca4c9a0d3af0bdefae8ca751264028764e2435687f1c1ac4fe8433e",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "c60ec7d59ca4c9a0d3af0bdefae8ca751264028764e2435687f1c1ac4fe8433e",
+          "path": "src/timezone/tzif.c"
+        },
+        {
+          "actual_capture_sha256": "8de551df4b8f1bfe041fc18bbfc3b187c9f8aee5314352835c1ca038013f54dc",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "8de551df4b8f1bfe041fc18bbfc3b187c9f8aee5314352835c1ca038013f54dc",
+          "path": "tests/test_intl_native_date_temporal_bank.js"
+        }
+      ],
+      "source_proof_owner": {
+        "packet": "/srv/data/work/quickjs-tmp/quickjs-native-range-fix-independent-source-review-20261011-v1",
+        "reviewed_source_only": true,
+        "seal_sha256": "1914603d230b76d7e9c1cea10852f4cbdad5c6c8cd607f7e452e3588781259b0"
+      }
+    },
+    {
+      "actual_capture_fixture_bindings_pending": true,
+      "id": "F1-fraction-format-records",
+      "local_combined_build_and_repository_gate_passed": true,
+      "publication_receipt_path": "/srv/data/work/quickjs-tmp/quickjs-post36-two-gate-batches-runtime-root-20261012-v2-F1-fraction-format-records-publication/state.json",
+      "publication_receipt_sha256": "0d58a263f4c309ac0334e96718e72a76c140964d386027c866d139f0ab10e1c4",
+      "published_commit": "3fe3adc0b9e02609b3a2bf5bf43fcb6615667cc6",
+      "semantics_from_authentic_message": "intl: add fractional records before native date matching\n\nNative calendar banks contain no fractional-second patterns. Basic\nmatching therefore drops fractionalSecondDigits from the selected\nrecord. Best fit appends a fraction only after ranking, so it cannot\nrepair the required format bank used by both matchers.\n\nAdd conceptual decimal+S/SS/SSS variants of available seconds records\nand date/time joins. Rank complete records before matcher adjustment,\nthen render the selected fraction through the existing decimal/part\npath. Keep base and join order, strict first-on-tie selection, and the\nstyle path. Skip variants dominated by a base or the exact precision; no\nsynthetic pattern arrays or extra no-fraction passes are needed.\n\nAdd regressions to the existing all-calendars unit for both matchers,\nall 16 calendars, precision 1/2/3, required fractional subsets, leading\nzeros, truncation, negative epochs, joined parts, and fraction/style\ncontrols. The separate era-bearing mandatory-subset defect remains for\nthe following era-free bank repair.\n\nECMA-402 stable requirements and algorithms:\nhttps://tc39.es/ecma402/#sec-intl.datetimeformat-internal-slots\nhttps://tc39.es/ecma402/#sec-basicformatmatcher\nhttps://tc39.es/ecma402/#sec-bestfitformatmatcher\nhttps://tc39.es/ecma402/#sec-formatdatetimepattern\nLiving source reviewed 2026-10-11:\n48d20d82dc5801bad87e5ec3f9e06d6ae98209a8\nPrimary Temporal Intl stage-4 amendment, committed 2026-06-17:\nd026068ed653130a37d79a95c0122ecf5319f1a4\nhttps://redirect.github.com/tc39/ecma402/pull/1044\n\nRelevant Test262 paths below test/intl402/DateTimeFormat/:\nconstructor-options-fractionalSecondDigits-valid.js\nprototype/format/fractionalSecondDigits.js\nprototype/formatToParts/fractionalSecondDigits.js\nprototype/formatRange/fractionalSecondDigits.js\nprototype/formatRangeToParts/fractionalSecondDigits.js\nprototype/resolvedOptions/order-fractionalSecondDigits.js\n\nSigned-off-by: Yan-Jie Wang <yanjiewtw@gmail.com>\n",
+      "signed_off_commit_message_path": "/srv/data/work/quickjs-tmp/quickjs-native-post36-independent-fixes-graph-source-preparation-20261011-v3/stages/F1-fraction-format-records/COMMIT-MESSAGE.txt",
+      "source_paths": [
+        {
+          "actual_capture_sha256": "9fc7045fe80c1b83ad13bf817c0d32dfd6e86c332585c5ceb337721df024eb78",
+          "conditional_successor_note": "H2 Hebrew named month handling / release comment changes; root accepted source-duty scoped equivalence, final current-source review binding remains required.",
+          "exact_whole_file": false,
+          "historical_H1_sha256": "f0183a516609c7d08743bfe5f75212d39d1e0e48adb74e186da361621dc1fae4",
+          "path": "src/intl/date-native.c"
+        },
+        {
+          "actual_capture_sha256": "8fc3d6ecd6d8c7511365fdc5a39affbe7ce7917d791a40d0819daf7574518599",
+          "conditional_successor_note": "H2 Hebrew named month handling / release comment changes; root accepted source-duty scoped equivalence, final current-source review binding remains required.",
+          "exact_whole_file": false,
+          "historical_H1_sha256": "c412c940befbcaf437b2bd353518ceca0b8ddb76d697281861d14a9807812af9",
+          "path": "tests/test_intl_native_date_all_calendars.js"
+        }
+      ],
+      "source_proof_owner": {
+        "packet": "/srv/data/work/quickjs-tmp/quickjs-native-fraction-fix-independent-source-review-20261011-v1",
+        "reviewed_source_only": true,
+        "seal_sha256": "6485f35a8a782217dd1b89f2fc6abfaf6423aafbfad77a86eabb8bde81d84999"
+      }
+    },
+    {
+      "actual_capture_fixture_bindings_pending": true,
+      "id": "F2-era-free-format-records",
+      "local_combined_build_and_repository_gate_passed": true,
+      "publication_receipt_path": "/srv/data/work/quickjs-tmp/quickjs-post36-two-gate-batches-runtime-root-20261012-v2-F2-era-free-format-records-publication/state.json",
+      "publication_receipt_sha256": "22f8a15e234cfa8b78956409374254317c301d4850f3881b33f9241a032ca86f",
+      "published_commit": "acb7265af3e7bc3544c332f57c2cf2814e39c6af",
+      "semantics_from_authentic_message": "intl: add era-free records to native date format banks\n\nEleven native calendar banks omit 55 mandatory field subsets. Their\navailable year/date patterns include an era, so an era-bearing superset\ncannot supply a required record using the same subset of fields. Basic\nand best fit can consequently emit an unrequested era.\n\nAppend parsed era-free siblings of available pure-date patterns whose G\ntoken is at a boundary with a space separator. Each sibling owns a slice\nof the copied pattern with G and its separator removed. Derive its\nfields from that actual pattern, then include its date/time joins and\nfractional variants in matching. Retain the entire original bank first\nand strict first-on-tie selection. Requested-era and style formats\nretain their original records.\n\nAdd required-subset regressions to the existing all-calendars unit for\nen/en-US, both matchers, all 16 calendars and fraction widths 1/2/3.\nCheck exact selected fields, genuine parts and absence of era, plus\nrequested-era and style-era controls. Retain fractional truncation,\nleading-zero and negative-epoch coverage.\n\nECMA-402 stable requirements and algorithms:\nhttps://tc39.es/ecma402/#sec-intl.datetimeformat-internal-slots\nhttps://tc39.es/ecma402/#sec-basicformatmatcher\nhttps://tc39.es/ecma402/#sec-bestfitformatmatcher\nhttps://tc39.es/ecma402/#sec-formatdatetimepattern\nLiving source reviewed 2026-10-11:\n48d20d82dc5801bad87e5ec3f9e06d6ae98209a8\nPrimary Temporal Intl stage-4 amendment, committed 2026-06-17:\nd026068ed653130a37d79a95c0122ecf5319f1a4\nhttps://redirect.github.com/tc39/ecma402/pull/1044\n\nRelevant Test262 paths below test/intl402/DateTimeFormat/:\nconstructor-options-fractionalSecondDigits-valid.js\nprototype/format/fractionalSecondDigits.js\nprototype/formatToParts/fractionalSecondDigits.js\nprototype/formatRange/fractionalSecondDigits.js\nprototype/formatRangeToParts/fractionalSecondDigits.js\nprototype/resolvedOptions/order-fractionalSecondDigits.js\n\nSigned-off-by: Yan-Jie Wang <yanjiewtw@gmail.com>\n",
+      "signed_off_commit_message_path": "/srv/data/work/quickjs-tmp/quickjs-native-post36-independent-fixes-graph-source-preparation-20261011-v3/stages/F2-era-free-format-records/COMMIT-MESSAGE.txt",
+      "source_paths": [
+        {
+          "actual_capture_sha256": "9fc7045fe80c1b83ad13bf817c0d32dfd6e86c332585c5ceb337721df024eb78",
+          "conditional_successor_note": "H2 Hebrew named month handling / release comment changes; root accepted source-duty scoped equivalence, final current-source review binding remains required.",
+          "exact_whole_file": false,
+          "historical_H1_sha256": "f0183a516609c7d08743bfe5f75212d39d1e0e48adb74e186da361621dc1fae4",
+          "path": "src/intl/date-native.c"
+        },
+        {
+          "actual_capture_sha256": "8fc3d6ecd6d8c7511365fdc5a39affbe7ce7917d791a40d0819daf7574518599",
+          "conditional_successor_note": "H2 Hebrew named month handling / release comment changes; root accepted source-duty scoped equivalence, final current-source review binding remains required.",
+          "exact_whole_file": false,
+          "historical_H1_sha256": "c412c940befbcaf437b2bd353518ceca0b8ddb76d697281861d14a9807812af9",
+          "path": "tests/test_intl_native_date_all_calendars.js"
+        }
+      ],
+      "source_proof_owner": null
+    },
+    {
+      "actual_capture_fixture_bindings_pending": true,
+      "id": "H1-host-default-locale-policy",
+      "local_combined_build_and_repository_gate_passed": true,
+      "publication_receipt_path": "/srv/data/work/quickjs-tmp/quickjs-post36-two-gate-batches-runtime-root-20261012-v2-H1-host-default-locale-policy-publication/state.json",
+      "publication_receipt_sha256": "3f0fb92fa30251c86159a2e121c55765c350301dda13a22597839ed785172281",
+      "published_commit": "4f5f2352cadb08ea22044bbc485478fae29b4576",
+      "semantics_from_authentic_message": "intl: define the native embedding host locale policy\n\nDocument en-US as the native host's initial language and the existing\nper-realm setter/getter as its current locale configuration. Keep real\nen/en-US admission, canonicalization, fallback closure and ICU policy.\n\nAdd initial raw/ordinary API witnesses and all-service default and\ncapability checks to existing units, including service fallback and\nseparate realm configuration witnesses.\n\nECMA-402 revision, reviewed 2026-10-11:\n48d20d82dc5801bad87e5ec3f9e06d6ae98209a8\nhttps://tc39.es/ecma402/#sec-defaultlocale\nhttps://tc39.es/ecma402/#sec-internal-slots\n\nRelated Test262 directory: test/intl402/DateTimeFormat/\nFile: constructor-default-value.js\n\nSigned-off-by: Yan-Jie Wang <yanjiewtw@gmail.com>\n",
+      "signed_off_commit_message_path": "/srv/data/work/quickjs-tmp/quickjs-native-post36-independent-fixes-graph-source-preparation-20261011-v3/stages/H1-host-default-locale-policy/COMMIT-MESSAGE.txt",
+      "source_paths": [
+        {
+          "actual_capture_sha256": "76331b05e9a4c45b375400f68bea8e04c7abc2ff87b07cda461bfb2f715947e0",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "76331b05e9a4c45b375400f68bea8e04c7abc2ff87b07cda461bfb2f715947e0",
+          "path": "doc/quickjs.texi"
+        },
+        {
+          "actual_capture_sha256": "3c91ea0e85f6af90d3c338e659e6569312ddc714e49bb386ac17bff164a2754a",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "3c91ea0e85f6af90d3c338e659e6569312ddc714e49bb386ac17bff164a2754a",
+          "path": "include/quickjs.h"
+        },
+        {
+          "actual_capture_sha256": "cf11033d2ed89b17412e09618d187b4332c3361d9d29378fcd92fccc960355db",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "cf11033d2ed89b17412e09618d187b4332c3361d9d29378fcd92fccc960355db",
+          "path": "src/intl/provider-native.c"
+        },
+        {
+          "actual_capture_sha256": "60237df4196bec43d5c2d8bd7d1500bc9548f701116d5ebe30d6436f12ec24a2",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "60237df4196bec43d5c2d8bd7d1500bc9548f701116d5ebe30d6436f12ec24a2",
+          "path": "src/quickjs/builtins/intl/core.c"
+        },
+        {
+          "actual_capture_sha256": "c9596289920e9000c51689a4e72e517ca3814d6f7b015cfdf179096ffc20338c",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "c9596289920e9000c51689a4e72e517ca3814d6f7b015cfdf179096ffc20338c",
+          "path": "tests/test_intl_default_locale_api.c"
+        },
+        {
+          "actual_capture_sha256": "0b09a6b713e525aae20c1b9083f3d546e39f248467d2060aea2fe3f35d40eb1a",
+          "conditional_successor_note": null,
+          "exact_whole_file": true,
+          "historical_H1_sha256": "0b09a6b713e525aae20c1b9083f3d546e39f248467d2060aea2fe3f35d40eb1a",
+          "path": "tests/test_intl_native_general.js"
+        }
+      ],
+      "source_proof_owner": {
+        "packet": "/srv/data/work/quickjs-tmp/quickjs-native-host-default-locale-independent-source-review-20261011-v1",
+        "reviewed_source_only": true,
+        "seal_sha256": "de76ad13ba0c671e8ac086d9cd91f446b843f7f232746a8f4cb156a3a579f26f"
+      }
+    }
+  ],
+  "required_actual_selections": {
+    "official-calendar-required": {
+      "command_receipt": "/srv/data/work/quickjs-tmp/quickjs-final-v9-v5-hosted-artifact-root-20261012-v1/artifact/required-official-calendar-required.command.json",
+      "command_sha256": "af7912f6fdfd3ec0873321f57965df3e7f0a64c8ddf46353d1f23b3497c985ee",
+      "raw_observations": [],
+      "summary": {
+        "actual_case_list_sha256": "c1a85d887e0ecea4cb5e4bc1101b548887e070933cd4189927cc35fdf59264c8",
+        "actual_source_count": 18,
+        "error_source_count": 0,
+        "excluded_source_count": 0,
+        "executed_source_count": 18,
+        "known_error_changes": {
+          "changed": 0,
+          "fixed": 0,
+          "new": 0
+        },
+        "known_error_file": "/dev/null",
+        "native_profile_qualification_pending": true,
+        "raw_failures_preserved": true,
+        "runner_summary": [
+          "0",
+          "18",
+          ""
+        ],
+        "selection_config_sha256": "0e38f1897ab32f1089fd2131f87ff0fec44e5b6d202eadd14f96b56dbc59968c",
+        "selection_sha256": "669a01f0bc893fbc0089d4f5ac2f7397b263d197469ebb35849d59bc08890682",
+        "skipped_source_count": 0,
+        "source_config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+        "zero_error_conformance_claim": false
+      }
+    },
+    "official-date-required-cases": {
+      "command_receipt": "/srv/data/work/quickjs-tmp/quickjs-final-v9-v5-hosted-artifact-root-20261012-v1/artifact/required-official-date-required-cases.command.json",
+      "command_sha256": "31183586262f0295a9457209959be398bf77d24943ca1b4e31e1dd4e170eb6b9",
+      "raw_observations": [],
+      "summary": {
+        "actual_case_list_sha256": "7665011c2af0b86e093fbe0cf9a4b251761bc38a5927a412469274459c3590dd",
+        "actual_source_count": 2,
+        "error_source_count": 0,
+        "excluded_source_count": 0,
+        "executed_source_count": 2,
+        "known_error_changes": {
+          "changed": 0,
+          "fixed": 0,
+          "new": 0
+        },
+        "known_error_file": "/dev/null",
+        "native_profile_qualification_pending": true,
+        "raw_failures_preserved": true,
+        "runner_summary": [
+          "0",
+          "2",
+          ""
+        ],
+        "selection_config_sha256": "0e38f1897ab32f1089fd2131f87ff0fec44e5b6d202eadd14f96b56dbc59968c",
+        "selection_sha256": "be9b1a8e56123b0a41ddde8537bbc9e9e162f5ebedb95aa380b0cd5c54a67b31",
+        "skipped_source_count": 0,
+        "source_config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+        "zero_error_conformance_claim": false
+      }
+    },
+    "official-general-current-required": {
+      "command_receipt": "/srv/data/work/quickjs-tmp/quickjs-final-v9-v5-hosted-artifact-root-20261012-v1/artifact/required-official-general-current-required.command.json",
+      "command_sha256": "de08d0a653893de9b174675fac360d85a44ec85a610759fbb018025f87d8234b",
+      "raw_observations": [
+        {
+          "line": 16,
+          "literal": "test262/test/intl402/Locale/prototype/getCollations/output-array-values.js:16: unexpected error: Test262Error: getCollations() for en has at least one element Expected SameValue(\u00ab0\u00bb, \u00ab0\u00bb) to be false",
+          "path": "test262/test/intl402/Locale/prototype/getCollations/output-array-values.js",
+          "raw_log_line": 2,
+          "signature": "unexpected error: Test262Error: getCollations() for en has at least one element Expected SameValue(\u00ab0\u00bb, \u00ab0\u00bb) to be false",
+          "status": "observed-failure",
+          "stream": "stdout",
+          "strict": false
+        }
+      ],
+      "summary": {
+        "actual_case_list_sha256": "31694c964d307269c52353aa924f8e6127ba988f3b2d07c1d4464bb3d08e08b2",
+        "actual_source_count": 114,
+        "error_source_count": 1,
+        "excluded_source_count": 0,
+        "executed_source_count": 114,
+        "known_error_changes": {
+          "changed": 0,
+          "fixed": 0,
+          "new": 1
+        },
+        "known_error_file": "/dev/null",
+        "native_profile_qualification_pending": true,
+        "raw_failures_preserved": true,
+        "runner_summary": [
+          "1",
+          "114",
+          ", 1 new"
+        ],
+        "selection_config_sha256": "0e38f1897ab32f1089fd2131f87ff0fec44e5b6d202eadd14f96b56dbc59968c",
+        "selection_sha256": "f2268927c6f0a47f44290830261cff61a063999b46d46c26881dbff06f516069",
+        "skipped_source_count": 0,
+        "source_config_sha256": "6b6485dea17bcd08d2d1931ab2e50af8c8b1136cec7e1fddb51066397ddaeaa4",
+        "zero_error_conformance_claim": false
+      }
+    }
+  },
+  "required_general_selection_all_passed": false,
+  "schema": "unapproved-mandatory-published-source-readback-v1"
+}

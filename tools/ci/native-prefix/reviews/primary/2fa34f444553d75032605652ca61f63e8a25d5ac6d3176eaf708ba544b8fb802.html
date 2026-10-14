@@ -1,0 +1,24 @@
+    <emu-clause id="sec-partitiondatetimepattern" type="abstract operation">
+      <h1>
+        PartitionDateTimePattern (
+          _dateTimeFormat_: an Intl.DateTimeFormat,
+          _x_: a Number,
+        ): either a normal completion containing a List of Records with fields [[Type]] (a String) and [[Value]] (a String), or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It interprets _x_ as a time value as specified in ECMA-262, <emu-xref href="#sec-time-values-and-time-range"></emu-xref>, and creates the corresponding parts according to the effective locale and the formatting options of _dateTimeFormat_.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _x_ to TimeClip(_x_).
+        1. If _x_ is *NaN*, throw a *RangeError* exception.
+        1. Let _epochNanoseconds_ be ℤ(ℝ(_x_) × 10<sup>6</sup>).
+        1. Let _format_ be _dateTimeFormat_.[[DateTimeFormat]].
+        1. If _dateTimeFormat_.[[HourCycle]] is *"h11"* or *"h12"*, then
+          1. Let _pattern_ be _format_.[[pattern12]].
+        1. Else,
+          1. Let _pattern_ be _format_.[[pattern]].
+        1. Let _result_ be FormatDateTimePattern(_dateTimeFormat_, _format_, _pattern_, _epochNanoseconds_).
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>

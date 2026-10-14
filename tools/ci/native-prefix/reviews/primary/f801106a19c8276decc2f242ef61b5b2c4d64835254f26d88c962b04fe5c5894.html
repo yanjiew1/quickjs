@@ -1,0 +1,66 @@
+    <emu-clause id="sec-getdatetimeformat" type="abstract operation">
+      <h1>
+        GetDateTimeFormat (
+          _formats_: a List of DateTime Format Records,
+          _matcher_: either *"basic"* or *"best fit"*,
+          _options_: a Record,
+          _required_: one of ~date~, ~time~, ~year-month~, ~month-day~, or ~any~,
+          _defaults_: one of ~date~, ~time~, ~year-month~, ~month-day~, ~zoned-date-time~, or ~all~,
+          _inherit_: either ~all~ or ~relevant~,
+        ): either a DateTime Format Record or *null*
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. If _required_ is ~date~, then
+          1. Let _requiredOptions_ be « *"weekday"*, *"year"*, *"month"*, *"day"* ».
+        1. Else if _required_ is ~time~, then
+          1. Let _requiredOptions_ be « *"dayPeriod"*, *"hour"*, *"minute"*, *"second"*, *"fractionalSecondDigits"* ».
+        1. Else if _required_ is ~year-month~, then
+          1. Let _requiredOptions_ be « *"year"*, *"month"* ».
+        1. Else if _required_ is ~month-day~, then
+          1. Let _requiredOptions_ be « *"month"*, *"day"* ».
+        1. Else,
+          1. Assert: _required_ is ~any~.
+          1. Let _requiredOptions_ be « *"weekday"*, *"year"*, *"month"*, *"day"*, *"dayPeriod"*, *"hour"*, *"minute"*, *"second"*, *"fractionalSecondDigits"* ».
+        1. If _defaults_ is ~date~, then
+          1. Let _defaultOptions_ be « *"year"*, *"month"*, *"day"* ».
+        1. Else if _defaults_ is ~time~, then
+          1. Let _defaultOptions_ be « *"hour"*, *"minute"*, *"second"* ».
+        1. Else if _defaults_ is ~year-month~, then
+          1. Let _defaultOptions_ be « *"year"*, *"month"* ».
+        1. Else if _defaults_ is ~month-day~, then
+          1. Let _defaultOptions_ be « *"month"*, *"day"* ».
+        1. Else,
+          1. Assert: _defaults_ is ~zoned-date-time~ or ~all~.
+          1. Let _defaultOptions_ be « *"year"*, *"month"*, *"day"*, *"hour"*, *"minute"*, *"second"* ».
+        1. If _inherit_ is ~all~, then
+          1. Let _formatOptions_ be a copy of _options_.
+        1. Else,
+          1. Let _formatOptions_ be a new Record.
+          1. If _required_ is one of ~date~, ~year-month~, or ~any~, then
+            1. Set _formatOptions_.[[era]] to _options_.[[era]].
+          1. If _required_ is either ~time~ or ~any~, then
+            1. Set _formatOptions_.[[hourCycle]] to _options_.[[hourCycle]].
+        1. Let _anyPresent_ be *false*.
+        1. For each property name _prop_ of « *"weekday"*, *"year"*, *"month"*, *"day"*, *"dayPeriod"*, *"hour"*, *"minute"*, *"second"*, *"fractionalSecondDigits"* », do
+          1. If _options_.[[&lt;_prop_>]] is not *undefined*, set _anyPresent_ to *true*.
+        1. Let _needDefaults_ be *true*.
+        1. For each property name _prop_ of _requiredOptions_, do
+          1. Let _value_ be _options_.[[&lt;_prop_>]].
+          1. If _value_ is not *undefined*, then
+            1. Set _formatOptions_.[[&lt;_prop_>]] to _value_.
+            1. Set _needDefaults_ to *false*.
+        1. If _needDefaults_ is *true*, then
+          1. If _anyPresent_ is *true* and _inherit_ is ~relevant~, return *null*.
+          1. For each property name _prop_ of _defaultOptions_, do
+            1. Set _formatOptions_.[[&lt;_prop_>]] to *"numeric"*.
+          1. If _defaults_ is ~zoned-date-time~ and _formatOptions_.[[timeZoneName]] is *undefined*, then
+            1. Set _formatOptions_.[[timeZoneName]] to *"short"*.
+        1. If _matcher_ is *"basic"*, then
+          1. Let _bestFormat_ be BasicFormatMatcher(_formatOptions_, _formats_).
+        1. Else,
+          1. Let _bestFormat_ be BestFitFormatMatcher(_formatOptions_, _formats_).
+        1. Return _bestFormat_.
+      </emu-alg>
+    </emu-clause>

@@ -1,0 +1,15 @@
+<emu-clause id="sec-collapsenumberrange" type="implementation-defined abstract operation">
+      <h1>
+        CollapseNumberRange (
+          _numberFormat_: an Intl.NumberFormat,
+          _result_: a List of Records with fields [[Type]] (a String), [[Value]] (a String), and [[Source]] (a String),
+        ): a List of Records with fields [[Type]] (a String), [[Value]] (a String), and [[Source]] (a String)
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It modifies _result_ (which must be a List of Records as constructed within PartitionNumberRangePattern) according to the effective locale and the formatting options of _numberFormat_ by removing redundant information, resolving internal inconsistency, replacing characters when necessary, and inserting spacing when necessary. It then returns the resulting List. The algorithm is ILND, but must not introduce ambiguity that would cause the result of <emu-xref href="#sec-intl.numberformat.prototype.formatrange" title></emu-xref> with arguments List « _start1_, _end1_ » to equal the result with arguments List « _start2_, _end2_ » if the results for those same arguments Lists would not be equal with a trivial implementation of CollapseNumberRange that always returns _result_ unmodified.</dd>
+      </dl>
+      <p>For example, an implementation may remove the Record representing a currency symbol after a range separator to convert a _results_ List representing *"$3–$5"* into one representing *"$3–5"*.</p>
+      <p>An implementation may also modify Record [[Value]] fields for grammatical correctness; for example, converting a _results_ List representing *"0.5 miles–1 mile"* into one representing *"0.5–1 miles"*.</p>
+      <p>Returning _result_ unmodified is guaranteed to be a correct implementation of CollapseNumberRange.</p>
+    </emu-clause>

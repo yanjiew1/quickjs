@@ -1,0 +1,65 @@
+<emu-clause id="sec-intl.numberformat" oldids="sec-initializenumberformat">
+      <h1>Intl.NumberFormat ( [ _locales_ [ , _options_ ] ] )</h1>
+
+      <p>When the `Intl.NumberFormat` function is called with optional arguments _locales_ and _options_, the following steps are taken:</p>
+
+      <emu-alg>
+        1. If NewTarget is *undefined*, let _newTarget_ be the active function object, else let _newTarget_ be NewTarget.
+        1. Let _numberFormat_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Intl.NumberFormat.prototype%"*, « [[InitializedNumberFormat]], [[Locale]], [[LocaleData]], [[NumberingSystem]], [[Style]], [[Unit]], [[UnitDisplay]], [[Currency]], [[CurrencyDisplay]], [[CurrencySign]], [[MinimumIntegerDigits]], [[MinimumFractionDigits]], [[MaximumFractionDigits]], [[MinimumSignificantDigits]], [[MaximumSignificantDigits]], [[RoundingType]], [[Notation]], [[CompactDisplay]], [[UseGrouping]], [[SignDisplay]], [[RoundingIncrement]], [[RoundingMode]], [[ComputedRoundingPriority]], [[TrailingZeroDisplay]], [[BoundFormat]] »).
+        1. Let _optionsResolution_ be ? ResolveOptions(%Intl.NumberFormat%, %Intl.NumberFormat%.[[LocaleData]], _locales_, _options_, « ~coerce-options~ »).
+        1. Set _options_ to _optionsResolution_.[[Options]].
+        1. Let _resolvedLocale_ be _optionsResolution_.[[ResolvedLocale]].
+        1. Set _numberFormat_.[[Locale]] to _resolvedLocale_.[[Locale]].
+        1. Set _numberFormat_.[[LocaleData]] to _resolvedLocale_.[[LocaleData]].
+        1. Set _numberFormat_.[[NumberingSystem]] to _resolvedLocale_.[[nu]].
+        1. Perform ? SetNumberFormatUnitOptions(_numberFormat_, _options_).
+        1. Let _style_ be _numberFormat_.[[Style]].
+        1. Let _notation_ be ? GetOption(_options_, *"notation"*, ~string~, « *"standard"*, *"scientific"*, *"engineering"*, *"compact"* », *"standard"*).
+        1. Set _numberFormat_.[[Notation]] to _notation_.
+        1. If _style_ is *"currency"* and _notation_ is *"standard"*, then
+          1. Let _currency_ be _numberFormat_.[[Currency]].
+          1. Let _cDigits_ be CurrencyDigits(_currency_).
+          1. Let _mnfdDefault_ be _cDigits_.
+          1. Let _mxfdDefault_ be _cDigits_.
+        1. Else,
+          1. Let _mnfdDefault_ be 0.
+          1. If _style_ is *"percent"*, then
+            1. Let _mxfdDefault_ be 0.
+          1. Else,
+            1. Let _mxfdDefault_ be 3.
+        1. Perform ? SetNumberFormatDigitOptions(_numberFormat_, _options_, _mnfdDefault_, _mxfdDefault_, _notation_).
+        1. Let _compactDisplay_ be ? GetOption(_options_, *"compactDisplay"*, ~string~, « *"short"*, *"long"* », *"short"*).
+        1. Let _defaultUseGrouping_ be *"auto"*.
+        1. If _notation_ is *"compact"*, then
+          1. Set _numberFormat_.[[CompactDisplay]] to _compactDisplay_.
+          1. Set _defaultUseGrouping_ to *"min2"*.
+        1. NOTE: For historical reasons, the strings *"true"* and *"false"* are accepted and replaced with the default value.
+        1. Let _useGrouping_ be ? GetBooleanOrStringNumberFormatOption(_options_, *"useGrouping"*, « *"min2"*, *"auto"*, *"always"*, *"true"*, *"false"* », _defaultUseGrouping_).
+        1. If _useGrouping_ is *"true"* or _useGrouping_ is *"false"*, set _useGrouping_ to _defaultUseGrouping_.
+        1. If _useGrouping_ is *true*, set _useGrouping_ to *"always"*.
+        1. Set _numberFormat_.[[UseGrouping]] to _useGrouping_.
+        1. Let _signDisplay_ be ? GetOption(_options_, *"signDisplay"*, ~string~, « *"auto"*, *"never"*, *"always"*, *"exceptZero"*, *"negative"* », *"auto"*).
+        1. Set _numberFormat_.[[SignDisplay]] to _signDisplay_.
+        1. If the implementation supports the normative optional constructor mode of <emu-xref href="#legacy-constructor"></emu-xref>, then
+          1. Let _this_ be the *this* value.
+          1. Return ? ChainNumberFormat(_numberFormat_, NewTarget, _this_).
+        1. Return _numberFormat_.
+      </emu-alg>
+
+      <emu-clause id="sec-chainnumberformat" type="abstract operation" normative-optional>
+        <h1>
+          ChainNumberFormat (
+            _numberFormat_: an Intl.NumberFormat,
+            _newTarget_: an ECMAScript language value,
+            _this_: an ECMAScript language value,
+          ): either a normal completion containing an Object or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _newTarget_ is *undefined* and ? OrdinaryHasInstance(%Intl.NumberFormat%, _this_) is *true*, then
+            1. Perform ? DefinePropertyOrThrow(_this_, %Intl%.[[FallbackSymbol]], PropertyDescriptor { [[Value]]: _numberFormat_, [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
+            1. Return _this_.
+          1. Return _numberFormat_.
+        </emu-alg>
+      </emu-clause>

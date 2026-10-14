@@ -1,0 +1,92 @@
+    <emu-clause id="sec-Intl.ListFormat">
+      <h1>Intl.ListFormat ( [ _locales_ [ , _options_ ] ] )</h1>
+
+      <p>When the `Intl.ListFormat` function is called with optional arguments _locales_ and _options_, the following steps are taken:</p>
+
+      <emu-alg>
+        1. If NewTarget is *undefined*, throw a *TypeError* exception.
+        1. Let _listFormat_ be ? OrdinaryCreateFromConstructor(NewTarget, *"%Intl.ListFormat.prototype%"*, « [[InitializedListFormat]], [[Locale]], [[Type]], [[Style]], [[Templates]] »).
+        1. Let _optionsResolution_ be ? ResolveOptions(%Intl.ListFormat%, %Intl.ListFormat%.[[LocaleData]], _locales_, _options_).
+        1. Set _options_ to _optionsResolution_.[[Options]].
+        1. Let _resolvedLocale_ be _optionsResolution_.[[ResolvedLocale]].
+        1. Set _listFormat_.[[Locale]] to _resolvedLocale_.[[Locale]].
+        1. Let _type_ be ? GetOption(_options_, *"type"*, ~string~, « *"conjunction"*, *"disjunction"*, *"unit"* », *"conjunction"*).
+        1. Set _listFormat_.[[Type]] to _type_.
+        1. Let _style_ be ? GetOption(_options_, *"style"*, ~string~, « *"long"*, *"short"*, *"narrow"* », *"long"*).
+        1. Set _listFormat_.[[Style]] to _style_.
+        1. Let _resolvedLocaleData_ be _resolvedLocale_.[[LocaleData]].
+        1. Let _dataLocaleTypes_ be _resolvedLocaleData_.[[&lt;_type_>]].
+        1. Set _listFormat_.[[Templates]] to _dataLocaleTypes_.[[&lt;_style_>]].
+        1. Return _listFormat_.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-intl-listformat-constructor">
+    <h1>Properties of the Intl.ListFormat Constructor</h1>
+
+    <p>The Intl.ListFormat constructor:</p>
+    <ul>
+      <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+      <li>has the following properties:</li>
+    </ul>
+
+    <emu-clause id="sec-Intl.ListFormat.prototype">
+      <h1>Intl.ListFormat.prototype</h1>
+
+      <p>The value of `Intl.ListFormat.prototype` is %Intl.ListFormat.prototype%.</p>
+      <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-Intl.ListFormat.supportedLocalesOf">
+      <h1>Intl.ListFormat.supportedLocalesOf ( _locales_ [ , _options_ ] )</h1>
+
+      <p>When the `supportedLocalesOf` method is called with arguments _locales_ and _options_, the following steps are taken:</p>
+
+      <emu-alg>
+        1. Let _availableLocales_ be %Intl.ListFormat%.[[AvailableLocales]].
+        1. Let _requestedLocales_ be ? CanonicalizeLocaleList(_locales_).
+        1. Return ? FilterLocales(_availableLocales_, _requestedLocales_, _options_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-Intl.ListFormat-internal-slots">
+      <h1>Internal slots</h1>
+
+      <p>The value of the [[AvailableLocales]] internal slot is implementation-defined within the constraints described in <emu-xref href="#sec-internal-slots"></emu-xref>.</p>
+
+      <p>The value of the [[RelevantExtensionKeys]] internal slot is « ».</p>
+
+      <p>The value of the [[ResolutionOptionDescriptors]] internal slot is « ».</p>
+
+      <emu-note>
+        Intl.ListFormat does not have any relevant extension keys.
+      </emu-note>
+
+      <p>The value of the [[LocaleData]] internal slot is implementation-defined within the constraints described in <emu-xref href="#sec-internal-slots"></emu-xref> and the following additional constraints, for each locale value _locale_ in %Intl.ListFormat%.[[AvailableLocales]]:</p>
+
+      <ul>
+        <li>[[LocaleData]].[[&lt;_locale_>]] is a Record which has three fields [[conjunction]], [[disjunction]], and [[unit]]. Each of these is a Record which must have fields with the names of three formatting styles: [[long]], [[short]], and [[narrow]].</li>
+        <li>Each of those fields is considered a <dfn>ListFormat template set</dfn>, which must be a List of Records with fields named: [[Pair]], [[Start]], [[Middle]], and [[End]]. Each of those fields must be a template string as specified in LDML List Format Rules. Each template string must contain the substrings *"{0}"* and *"{1}"* exactly once. The substring *"{0}"* should occur before the substring *"{1}"*.</li>
+      </ul>
+
+      <emu-note>
+        It is recommended that implementations use the locale data provided by the Common Locale Data Repository (available at <a href="https://cldr.unicode.org/">https://cldr.unicode.org/</a>). In <a href="https://unicode.org/reports/tr35/tr35-general.html#ListPatterns">LDML's listPattern</a>, `conjunction` corresponds to "standard", `disjunction` corresponds to "or", and `unit` corresponds to "unit".
+      </emu-note>
+
+      <emu-note>
+        Among the list types, `conjunction` stands for "and"-based lists (e.g., "A, B, and C"), `disjunction` stands for "or"-based lists (e.g., "A, B, or C"), and `unit` stands for lists of values with units (e.g., "5 pounds, 12 ounces").
+      </emu-note>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-intl-listformat-prototype-object">
+    <h1>Properties of the Intl.ListFormat Prototype Object</h1>
+
+    <p>The <dfn>Intl.ListFormat prototype object</dfn>:</p>
+    <ul>
+      <li>is <dfn>%Intl.ListFormat.prototype%</dfn>.</li>
+      <li>is an ordinary object.</li>
+      <li>is not an Intl.ListFormat instance and does not have an [[InitializedListFormat]] internal slot or any of the other internal slots of Intl.ListFormat instance objects.</li>
+      <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
+    </ul>

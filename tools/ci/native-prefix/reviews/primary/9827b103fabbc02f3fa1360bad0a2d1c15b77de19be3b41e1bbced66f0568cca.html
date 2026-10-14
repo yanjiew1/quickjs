@@ -1,0 +1,33 @@
+<emu-clause id="sec-tolocaltime" type="implementation-defined abstract operation">
+      <h1>
+        ToLocalTime (
+          _epochNs_: an epoch nanoseconds value,
+          _calendar_: a String,
+          _timeZoneIdentifier_: a String,
+        ): a ToLocalTime Record
+      </h1>
+
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+
+      <emu-alg>
+        1. If IsOffsetTimeZoneIdentifier(_timeZoneIdentifier_) is *true*, then
+          1. Let _offsetNs_ be ! ParseDateTimeUTCOffset(_timeZoneIdentifier_).
+        1. Else,
+          1. Assert: GetAvailableNamedTimeZoneIdentifier(_timeZoneIdentifier_) is not ~empty~.
+          1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_timeZoneIdentifier_, _epochNs_).
+        1. Let _tz_ be _epochNs_ + _offsetNs_.
+        1. If _calendar_ is *"gregory"*, then
+          1. Return a ToLocalTime Record with fields calculated from _tz_ according to <emu-xref href="#table-datetimeformat-tolocaltime-record"></emu-xref>.
+        1. Else,
+          1. Return a ToLocalTime Record with the fields calculated from _tz_ for the given _calendar_. The calculations should use best available information about the specified _calendar_. Given the same values of _epochNs_, _calendar_, and _timeZoneIdentifier_, the result must be the same for the lifetime of the surrounding agent.
+      </emu-alg>
+
+      <emu-note>
+        Time zone information is subject to change, and host environments may update their time zone database at any time.
+        At a minimum, implementations must ensure that the time zone information for each particular value of _timeZone_ individually remains constant starting from the time it is first accessed, for the lifetime of the surrounding agent.
+        Furthermore, it is recommended that the time zone information for all values of _timeZone_ as a whole (i.e. the time zone database) remains the same for the lifetime of the surrounding agent.
+      </emu-note>
+    </emu-clause>

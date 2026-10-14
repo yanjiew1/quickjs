@@ -1,0 +1,80 @@
+    <emu-clause id="sec-basicformatmatcher" type="abstract operation">
+      <h1>
+        BasicFormatMatcher (
+          _options_: a Record,
+          _formats_: a List of DateTime Format Records,
+        ): a DateTime Format Record
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. Let _removalPenalty_ be 120.
+        1. Let _additionPenalty_ be 20.
+        1. Let _longLessPenalty_ be 8.
+        1. Let _longMorePenalty_ be 6.
+        1. Let _shortLessPenalty_ be 6.
+        1. Let _shortMorePenalty_ be 3.
+        1. Let _offsetPenalty_ be 1.
+        1. Let _bestScore_ be -∞.
+        1. Let _bestFormat_ be *undefined*.
+        1. For each element _format_ of _formats_, do
+          1. Let _score_ be 0.
+          1. For each row of <emu-xref href="#table-datetimeformat-components"></emu-xref>, except the header row, in table order, do
+            1. Let _property_ be the name given in the Property column of the current row.
+            1. If _options_ has a field [[&lt;_property_>]], let _optionsProp_ be _options_.[[&lt;_property_>]]; else let _optionsProp_ be *undefined*.
+            1. If _format_ has a field [[&lt;_property_>]], let _formatProp_ be _format_.[[&lt;_property_>]]; else let _formatProp_ be *undefined*.
+            1. If _optionsProp_ is *undefined* and _formatProp_ is not *undefined*, then
+              1. Set _score_ to _score_ - _additionPenalty_.
+            1. Else if _optionsProp_ is not *undefined* and _formatProp_ is *undefined*, then
+              1. Set _score_ to _score_ - _removalPenalty_.
+            1. Else if _property_ is *"timeZoneName"*, then
+              1. If _optionsProp_ is *"short"* or *"shortGeneric"*, then
+                1. If _formatProp_ is *"shortOffset"*, set _score_ to _score_ - _offsetPenalty_.
+                1. Else if _formatProp_ is *"longOffset"*, set _score_ to _score_ - (_offsetPenalty_ + _shortMorePenalty_).
+                1. Else if _optionsProp_ is *"short"* and _formatProp_ is *"long"*, set _score_ to _score_ - _shortMorePenalty_.
+                1. Else if _optionsProp_ is *"shortGeneric"* and _formatProp_ is *"longGeneric"*, set _score_ to _score_ - _shortMorePenalty_.
+                1. Else if _optionsProp_ ≠ _formatProp_, set _score_ to _score_ - _removalPenalty_.
+              1. Else if _optionsProp_ is *"shortOffset"* and _formatProp_ is *"longOffset"*, then
+                1. Set _score_ to _score_ - _shortMorePenalty_.
+              1. Else if _optionsProp_ is *"long"* or *"longGeneric"*, then
+                1. If _formatProp_ is *"longOffset"*, set _score_ to _score_ - _offsetPenalty_.
+                1. Else if _formatProp_ is *"shortOffset"*, set _score_ to _score_ - (_offsetPenalty_ + _longLessPenalty_).
+                1. Else if _optionsProp_ is *"long"* and _formatProp_ is *"short"*, set _score_ to _score_ - _longLessPenalty_.
+                1. Else if _optionsProp_ is *"longGeneric"* and _formatProp_ is *"shortGeneric"*, set _score_ to _score_ - _longLessPenalty_.
+                1. Else if _optionsProp_ ≠ _formatProp_, set _score_ to _score_ - _removalPenalty_.
+              1. Else if _optionsProp_ is *"longOffset"* and _formatProp_ is *"shortOffset"*, then
+                1. Set _score_ to _score_ - _longLessPenalty_.
+              1. Else if _optionsProp_ ≠ _formatProp_, then
+                1. Set _score_ to _score_ - _removalPenalty_.
+            1. Else if _optionsProp_ ≠ _formatProp_, then
+              1. If _property_ is *"fractionalSecondDigits"*, then
+                1. Let _values_ be « 1, 2, 3 ».
+              1. Else,
+                1. Let _values_ be « *"2-digit"*, *"numeric"*, *"narrow"*, *"short"*, *"long"* ».
+              1. Let _optionsPropIndex_ be the index of _optionsProp_ within _values_.
+              1. Let _formatPropIndex_ be the index of _formatProp_ within _values_.
+              1. Let _delta_ be max(min(_formatPropIndex_ - _optionsPropIndex_, 2), -2).
+              1. If _delta_ = 2, set _score_ to _score_ - _longMorePenalty_.
+              1. Else if _delta_ = 1, set _score_ to _score_ - _shortMorePenalty_.
+              1. Else if _delta_ = -1, set _score_ to _score_ - _shortLessPenalty_.
+              1. Else if _delta_ = -2, set _score_ to _score_ - _longLessPenalty_.
+          1. If _score_ > _bestScore_, then
+            1. Set _bestScore_ to _score_.
+            1. Set _bestFormat_ to _format_.
+        1. Return _bestFormat_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-bestfitformatmatcher" type="implementation-defined abstract operation">
+      <h1>
+        BestFitFormatMatcher (
+          _options_: a Record,
+          _formats_: a List of DateTime Format Records,
+        ): a DateTime Format Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns a set of component representations that a typical user of the selected locale would perceive as at least as good as the one returned by BasicFormatMatcher.</dd>
+      </dl>
+    </emu-clause>
+

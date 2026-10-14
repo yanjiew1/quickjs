@@ -1,0 +1,10 @@
+<emu-clause id="sec-temporal.plaindate.prototype.withcalendar" type="built-in function">
+      <h1>Temporal.PlainDate.prototype.withCalendar ( _calendarLike_ )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _plainDate_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_plainDate_, [[InitializedTemporalDate]]).
+        1. Let _calendar_ be ? ToTemporalCalendarIdentifier(_calendarLike_).
+        1. Return ! CreateTemporalDate(_plainDate_.[[ISODate]], _calendar_).
+      </emu-alg>
+    </emu-clause>

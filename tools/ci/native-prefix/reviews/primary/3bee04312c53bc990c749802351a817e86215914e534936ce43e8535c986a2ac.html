@@ -1,0 +1,12 @@
+<emu-clause id="sec-get-temporal.plaindate.prototype.monthcode" type="built-in function">
+      <h1>get Temporal.PlainDate.prototype.monthCode</h1>
+      <p>
+        `Temporal.PlainDate.prototype.monthCode` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _plainDate_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_plainDate_, [[InitializedTemporalDate]]).
+        1. Return CalendarISOToDate(_plainDate_.[[Calendar]], _plainDate_.[[ISODate]]).[[MonthCode]].
+      </emu-alg>
+    </emu-clause>
