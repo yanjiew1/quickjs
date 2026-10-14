@@ -259,6 +259,24 @@ The following features are not supported yet:
 
 @end itemize
 
+@subsection Temporal
+
+This branch includes the native Temporal implementation. It is enabled by
+@code{CONFIG_TEMPORAL=y}, the default; use @code{CONFIG_TEMPORAL=n} to omit
+it. Temporal uses the native calendar and timezone libraries and does not
+require ICU. The timezone provider tries system data first and uses the
+compiled release-pinned timezone database when system data is unavailable.
+Date and Temporal use the same runtime default-timezone provider.
+
+@code{JS_NewContext} installs Temporal when enabled. Embedders using a raw
+context can call @code{JS_AddIntrinsicTemporal} after installing base objects.
+@code{JS_NewTemporalInstant} and @code{JS_GetTemporalInstantEpochNanoseconds}
+provide exact signed 128-bit epoch-nanosecond access using two 64-bit words.
+@code{JS_SetDefaultTimeZone} and @code{JS_GetDefaultTimeZone} manage the
+runtime default timezone. Their disabled-build behavior and ownership rules
+are documented in @code{include/quickjs.h}; disabled Temporal builds do not
+publish a Temporal global.
+
 @subsection ECMA402
 
 ECMA402 (Internationalization API) is not supported.
