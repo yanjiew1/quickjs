@@ -9,6 +9,56 @@
     function field(parts, type) {
         for (let i = 0; i < parts.length; i++) if (parts[i].type === type) return parts[i].value;
     }
+    /* Standalone flexible periods have their own patterns. The native B
+       policy uses the morning interval at midnight and retains exact noon. */
+    for (const formatMatcher of ["basic", "best fit"])
+    for (const dayPeriod of ["narrow", "short", "long"]) {
+        const period = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", dayPeriod, formatMatcher
+        });
+        const timed = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", dayPeriod, formatMatcher, hour: "numeric"
+        });
+        same(period.resolvedOptions().dayPeriod, dayPeriod);
+        same(period.resolvedOptions().hour, undefined);
+        same(period.resolvedOptions().hourCycle, undefined);
+        const noon = dayPeriod === "narrow" ? "n" : "noon";
+        for (let hour = 0; hour < 24; hour++) {
+            const epoch = Date.UTC(2024, 0, 1, hour);
+            const expected = hour < 12 ? "in the morning" : hour === 12 ? noon :
+                hour < 18 ? "in the afternoon" : hour < 21 ? "in the evening" : "at night";
+            const parts = period.formatToParts(epoch);
+            same(parts.length, 1);
+            same(parts[0].type, "dayPeriod");
+            same(parts[0].value, expected);
+            same(period.format(epoch), expected);
+            const withHour = timed.formatToParts(epoch);
+            same(field(withHour, "hour"), String(hour % 12 || 12));
+            const timedNoon = timed.resolvedOptions().dayPeriod === "narrow" ? "n" : "noon";
+            same(field(withHour, "dayPeriod"), hour === 12 ? timedNoon : expected);
+            same(withHour.map(p => p.value).join(""), timed.format(epoch));
+        }
+        const noonEpoch = Date.UTC(2024, 0, 1, 12);
+        same(period.format(noonEpoch - 1), "in the morning");
+        same(period.format(noonEpoch), noon);
+        same(period.format(noonEpoch + 1), "in the afternoon");
+        for (const hourCycle of ["h11", "h12", "h23", "h24"]) {
+            const f = new Intl.DateTimeFormat("en", {
+                timeZone: "UTC", dayPeriod, formatMatcher, hourCycle
+            });
+            same(f.resolvedOptions().hour, undefined);
+            same(f.resolvedOptions().hourCycle, undefined);
+            same(f.format(0), "in the morning");
+        }
+        /* These candidates also join dates, including explicit era fields. */
+        const dated = new Intl.DateTimeFormat("en", {
+            timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric",
+            era: "short", dayPeriod, formatMatcher
+        });
+        same(dated.resolvedOptions().hour, undefined);
+        same(field(dated.formatToParts(0), "dayPeriod"), "in the morning");
+        assert(field(dated.formatToParts(0), "era") !== undefined);
+    }
     const f = new Intl.DateTimeFormat("en-US-u-ca-iso8601-hc-h23-nu-latn", {
         timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit",
         hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 3

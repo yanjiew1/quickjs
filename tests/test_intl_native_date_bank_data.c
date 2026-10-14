@@ -607,6 +607,48 @@ static void date_utf8_boundaries(void)
 }
 
 
+static void partial_period_names(void)
+{
+    static const QJSIntlDatePattern pattern = {
+        QJS_DATE_AVAILABLE, 255, 1, {"Bh", 2}, {"h B", 3}
+    };
+    static const QJSIntlDateName name = {
+        QJS_DATE_NAME_PERIOD, 0, 1, QJS_DATE_MORNING1, {"morning", 7}
+    };
+    static const QJSIntlDatePeriodRule rule = { QJS_DATE_MORNING1, 0, 0, 86400 };
+    QJSIntlDateData data = {0};
+    QJSIntlDateOptions options = {0};
+    QJSIntlNativeDate *date;
+    QJSIntlFormatted result = {0};
+    Probe probe = {0};
+    QJSIntlAllocator allocator = {&probe, allocate, resize, release};
+    int fields[QJS_DATE_FIELD_COUNT];
+    size_t i;
+    data.patterns = &pattern; data.pattern_count = 1;
+    data.names = &name; data.name_count = 1;
+    data.periods = &rule; data.period_count = 1;
+    for (i = 0; i < 10; i++) data.digits[i] = '0' + i;
+    options.calendar = test_bytes("gregory"); options.time_zone = test_bytes("UTC");
+    options.hour_cycle = QJS_DATE_H12;
+    options.date_style = options.time_style = -1;
+    for (i = 0; i < QJS_DATE_FIELD_COUNT; i++) options.fields[i] = -1;
+    options.fields[QJS_DATE_DAY_PERIOD] = QJS_DATE_LONG;
+    for (options.format_matcher = QJS_DATE_BASIC;
+         options.format_matcher <= QJS_DATE_BEST_FIT; options.format_matcher++) {
+        assert(!qjs_intl_native_date_open(&allocator, &data, &options, NULL, &date));
+        qjs_intl_native_date_resolved_fields(date, fields);
+        assert(fields[QJS_DATE_DAY_PERIOD] == QJS_DATE_SHORT);
+        assert(fields[QJS_DATE_HOUR] == -1);
+        assert(!qjs_intl_native_date_format(date, 0, &result));
+        assert(result.length == 7 && result.part_count == 1);
+        for (i = 0; i < result.length; i++) assert(result.text[i] == (unsigned char)"morning"[i]);
+        assert(result.parts[0].type == QJS_INTL_PART_DAY_PERIOD);
+        qjs_intl_native_date_clear(&allocator, &result);
+        qjs_intl_native_date_close(date);
+        assert(!probe.live);
+    }
+}
+
 int main(void)
 {
     QJSIntlDataView view; QJSIntlDateBankOptions o;
@@ -616,6 +658,7 @@ int main(void)
     unsigned char *copy=malloc(qjs_intl_locale_metadata_blob_size);
     uint32_t locale,numbering; size_t count,i,baseline; int style;
     date_utf8_boundaries();
+    partial_period_names();
     name_offset_join();
     assert(copy); memcpy(copy,qjs_intl_locale_metadata_blob,qjs_intl_locale_metadata_blob_size);
     assert(!qjs_intl_data_open(copy,qjs_intl_locale_metadata_blob_size,&view));

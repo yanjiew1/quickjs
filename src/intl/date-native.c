@@ -14,9 +14,10 @@ struct QJSIntlNativeDate {
     QJSIntlDateData data;
     PatternRow *patterns;
     char *strings, *selected;
-    size_t selected_length, pattern_count;
+    size_t selected_length, pattern_count, base_pattern_count;
     int resolved[QJS_DATE_FIELD_COUNT];
     int add_fraction;
+    unsigned int period_width_mask;
 };
 
 int qjs_intl_native_date_hour_cycle(unsigned int preferred, int hour12)
@@ -230,7 +231,7 @@ static const PatternRow *style_row(const QJSIntlNativeDate *p, unsigned int kind
                                    unsigned int style)
 {
     size_t i;
-    for (i = 0; i < p->data.pattern_count; i++)
+    for (i = 0; i < p->base_pattern_count; i++)
         if (p->patterns[i].row.kind == kind && p->patterns[i].row.style == style)
             return &p->patterns[i];
     return NULL;
@@ -311,7 +312,7 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
             second = base;
             if (!family_allowed(p, base)) {
                 second = NULL;
-                for (i = 0; i < p->data.pattern_count; i++) {
+                for (i = 0; i < p->base_pattern_count; i++) {
                     const PatternRow *candidate = &p->patterns[i];
                     if (candidate->row.kind != QJS_DATE_AVAILABLE ||
                         !pure_time(candidate) || !family_allowed(p, candidate)) continue;
@@ -340,8 +341,8 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
          * An era request strictly prefers each sibling's era-bearing base.
          */
         for (bank = 0; bank < (p->options.fields[QJS_DATE_ERA] < 0 ? 2 : 1); bank++) {
-            begin = bank ? p->data.pattern_count : 0;
-            end = bank ? p->pattern_count : p->data.pattern_count;
+            begin = bank ? p->base_pattern_count : 0;
+            end = bank ? p->pattern_count : p->base_pattern_count;
             for (pass = 0; pass < (p->options.fields[QJS_DATE_FRACTION] >= 0 ? 2 : 1); pass++) {
                 fraction = pass ? p->options.fields[QJS_DATE_FRACTION] : 0;
                 for (i = begin; i < end; i++) {
@@ -362,7 +363,7 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
                     for (i = begin; i < end; i++) {
                         const PatternRow *date = &p->patterns[i];
                         if (date->row.kind != QJS_DATE_AVAILABLE || !pure_date(date)) continue;
-                        for (j = 0; j < p->data.pattern_count; j++) {
+                        for (j = 0; j < p->base_pattern_count; j++) {
                             const PatternRow *time = &p->patterns[j];
                             if (time->row.kind != QJS_DATE_AVAILABLE || !pure_time(time) || !family_allowed(p, time)) continue;
                             if (fraction && (time->fields[QJS_DATE_SECOND] < 0 ||
@@ -429,6 +430,10 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
             if (k == QJS_DATE_MONTH && requested < QJS_DATE_NARROW &&
                 word(p->options.calendar, "hebrew"))
                 continue; /* retain the calendar's named month representation */
+            if (k == QJS_DATE_DAY_PERIOD && p->period_width_mask &&
+                !(p->period_width_mask & (1u << (requested == QJS_DATE_NARROW ? 0 :
+                    requested == QJS_DATE_LONG ? 2 : 1))))
+                continue; /* retain the selected width with complete names */
             p->resolved[k] = requested;
         }
     }
@@ -442,12 +447,38 @@ static QJSIntlStatus select_pattern(QJSIntlNativeDate *p)
     return QJS_INTL_OK;
 }
 
+/* A conceptual flexible-period row needs every selectable format-context
+ * label at its width. Exact midnight is handled by our B rendering policy;
+ * noon and all interval labels retain their ordinary CLDR format rules. */
+static unsigned int period_widths(const QJSIntlDateData *data)
+{
+    unsigned int width, result = 0;
+    size_t i, j;
+    if (!data->period_count) return 0;
+    for (width = 0; width < 3; width++) {
+        for (i = 0; i < data->period_count; i++) {
+            const QJSIntlDatePeriodRule *rule = &data->periods[i];
+            if (rule->exact && rule->period == QJS_DATE_MIDNIGHT) continue;
+            for (j = 0; j < data->name_count; j++) {
+                const QJSIntlDateName *name = &data->names[j];
+                if (name->field == QJS_DATE_NAME_PERIOD && !name->context &&
+                    name->width == width && name->index == rule->period &&
+                    name->name.length) break;
+            }
+            if (j == data->name_count) break;
+        }
+        if (i == data->period_count) result |= 1u << width;
+    }
+    return result;
+}
+
 QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
     const QJSIntlDateData *d, const QJSIntlDateOptions *o,
     const QJSIntlDateEnvironment *e, QJSIntlNativeDate **out)
 {
     QJSIntlNativeDate *p;
     size_t bytes = 0, pattern_count, i, j;
+    unsigned int available_period_widths;
     char *cursor;
     QJSIntlStatus r;
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
@@ -499,6 +530,10 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
             return QJS_INTL_DATA_ERROR;
     }
     pattern_count = d->pattern_count;
+    available_period_widths = o->fields[QJS_DATE_DAY_PERIOD] >= 0 ? period_widths(d) : 0;
+    for (i = 0; i < 3; i++)
+        if ((available_period_widths & (1u << i)) && !size_add(&pattern_count, 1))
+            return QJS_INTL_OVERFLOW;
     for (i = 0; i < d->pattern_count; i++)
         if (d->patterns[i].kind == QJS_DATE_AVAILABLE &&
             era_free_pattern(d->patterns[i].pattern).length &&
@@ -512,6 +547,7 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
     p = a->malloc(a->opaque, sizeof(*p));
     if (!p) return QJS_INTL_NO_MEMORY;
     memset(p, 0, sizeof(*p)); p->allocator = *a; p->options = *o;
+    p->period_width_mask = available_period_widths;
     if (e) p->environment = *e;
     p->data = *d;
     p->data.names = NULL; p->data.periods = NULL;
@@ -560,6 +596,27 @@ QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *a,
             }
         }
     }
+    /* Materialize the standalone B widths before era-free siblings. They
+     * participate in both matchers and date/time joins, including era-bearing
+     * requests. Their immutable literal patterns live for the library lifetime.
+     */
+    for (i = 0; i < 3; i++) {
+        static const char *const patterns[] = { "BBBBB", "B", "BBBB" };
+        PatternRow *row;
+        unsigned int family;
+        if (!(available_period_widths & (1u << i))) continue;
+        row = &p->patterns[p->pattern_count++];
+        memset(row, 0, sizeof(*row));
+        row->row.kind = QJS_DATE_AVAILABLE;
+        row->row.style = 255;
+        row->row.pattern = (QJSIntlBytes){ patterns[i], strlen(patterns[i]) };
+        row->row.skeleton = row->row.pattern;
+        r = qjs_intl_date_pattern_fields(row->row.pattern, row->fields, &family);
+        if (r || family) {
+            qjs_intl_native_date_close(p); return r ? r : QJS_INTL_DATA_ERROR;
+        }
+    }
+    p->base_pattern_count = p->pattern_count;
     /* Append real era-free records. Their fields come from their actual
      * pattern, and their slices remain owned by p->strings until close. */
     for (i = 0; i < p->data.pattern_count; i++) {
@@ -827,7 +884,11 @@ static QJSIntlStatus period_index(const Builder *b, unsigned int symbol,
         int found = 0;
         for (i = 0; i < b->owner->data.period_count; i++) {
             const QJSIntlDatePeriodRule *rule = &b->owner->data.periods[i];
-            if (rule->exact && !b->fields.millisecond && second == rule->from_second) {
+            /* Flexible B uses the surrounding interval at midnight, avoiding
+             * the start/end-of-day ambiguity discussed by LDML. Explicit b
+             * retains its midnight label. Exact noon remains selectable. */
+            if (rule->exact && rule->period != QJS_DATE_MIDNIGHT &&
+                !b->fields.millisecond && second == rule->from_second) {
                 selected = rule->period; found = 1; break;
             }
         }
