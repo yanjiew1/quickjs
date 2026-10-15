@@ -293,12 +293,6 @@ QUICKJS_SRCS= \
     src/quickjs/bytecode-format.c \
     src/quickjs/c-function.c \
     src/quickjs/class.c \
-    src/quickjs/compiler/backend.c \
-    src/quickjs/compiler/bytecode-dump.c \
-    src/quickjs/compiler/eval.c \
-    src/quickjs/compiler/lexer.c \
-    src/quickjs/compiler/parser.c \
-    src/quickjs/compiler/stack-analysis.c \
     src/quickjs/error-support.c \
     src/quickjs/function-list.c \
     src/quickjs/function.c \
@@ -323,6 +317,18 @@ QUICKJS_SRCS= \
     src/quickjs/value/conversion.c \
     src/quickjs/value/print.c \
     src/quickjs/vm.c
+
+# Keep compiler objects after the VM to reduce runtime layout changes from
+# compiler-only edits in non-LTO links.
+QUICKJS_COMPILER_SRCS= \
+    src/quickjs/compiler/backend.c \
+    src/quickjs/compiler/bytecode-dump.c \
+    src/quickjs/compiler/eval.c \
+    src/quickjs/compiler/lexer.c \
+    src/quickjs/compiler/parser.c \
+    src/quickjs/compiler/stack-analysis.c
+QUICKJS_SRCS+=$(QUICKJS_COMPILER_SRCS)
+
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
 all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
