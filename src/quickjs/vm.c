@@ -53,6 +53,18 @@
 #endif
 
 
+/* Keep the private global environment marker on the stack. Choose its
+   current subrecord once, before Object Record operations can reenter JS. */
+static inline JSValueConst js_get_reference_base(JSContext *ctx,
+                                                 JSValueConst base, JSAtom atom)
+{
+    if (JS_IsObject(base) &&
+        JS_VALUE_GET_OBJ(base) == JS_VALUE_GET_OBJ(ctx->global_var_obj) &&
+        !find_own_property1(JS_VALUE_GET_OBJ(base), atom))
+        return ctx->global_obj;
+    return base;
+}
+
 static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
 {
     JSObject *p;
@@ -2093,6 +2105,10 @@ JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                 continue;
             case JS_CLOSURE_MODULE_DECL:
                 var_ref = js_create_var_ref(ctx, cv->is_lexical);
+                if (var_ref) {
+                    var_ref->is_lexical = cv->is_lexical;
+                    var_ref->is_const = cv->is_const;
+                }
                 break;
             case JS_CLOSURE_GLOBAL_DECL:
                 var_ref = js_closure_define_global_var(ctx, cv, b->is_direct_or_indirect_eval);
@@ -4085,6 +4101,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         CASE(OP_get_ref_value):
             {
                 JSValue val;
+                JSValueConst base;
                 JSAtom atom;
                 int ret;
                 
@@ -4097,7 +4114,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     JS_FreeAtom(ctx, atom);
                     goto exception;
                 }
-                ret = JS_HasProperty(ctx, sp[-2], atom);
+                base = js_get_reference_base(ctx, sp[-2], atom);
+                ret = JS_HasProperty(ctx, base, atom);
                 if (unlikely(ret <= 0)) {
                     if (ret < 0) {
                         JS_FreeAtom(ctx, atom);
@@ -4110,7 +4128,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     } 
                     val = JS_UNDEFINED;
                 } else {
-                    val = JS_GetProperty(ctx, sp[-2], atom);
+                    val = JS_GetProperty(ctx, base, atom);
                 }
                 JS_FreeAtom(ctx, atom);
                 if (unlikely(JS_IsException(val)))
@@ -4198,11 +4216,14 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 int ret;
                 JSAtom atom;
+                JSValueConst base;
+                BOOL is_unresolvable;
                 sf->cur_pc = pc;
                 atom = JS_ValueToAtom(ctx, sp[-2]);
                 if (unlikely(atom == JS_ATOM_NULL))
                     goto exception;
-                if (unlikely(JS_IsUndefined(sp[-3]))) {
+                is_unresolvable = JS_IsUndefined(sp[-3]);
+                if (unlikely(is_unresolvable)) {
                     if (is_strict_mode(ctx)) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
                         JS_FreeAtom(ctx, atom);
@@ -4211,19 +4232,24 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         sp[-3] = JS_DupValue(ctx, ctx->global_obj);
                     }
                 }
-                ret = JS_HasProperty(ctx, sp[-3], atom);
-                if (unlikely(ret <= 0)) {
-                    if (unlikely(ret < 0)) {
-                        JS_FreeAtom(ctx, atom);
-                        goto exception;
-                    }
-                    if (is_strict_mode(ctx)) {
-                        JS_ThrowReferenceErrorNotDefined(ctx, atom);
-                        JS_FreeAtom(ctx, atom);
-                        goto exception;
+                base = js_get_reference_base(ctx, sp[-3], atom);
+                /* An unresolved sloppy reference writes the global object
+                   without another HasProperty operation. */
+                if (!is_unresolvable) {
+                    ret = JS_HasProperty(ctx, base, atom);
+                    if (unlikely(ret <= 0)) {
+                        if (unlikely(ret < 0)) {
+                            JS_FreeAtom(ctx, atom);
+                            goto exception;
+                        }
+                        if (is_strict_mode(ctx)) {
+                            JS_ThrowReferenceErrorNotDefined(ctx, atom);
+                            JS_FreeAtom(ctx, atom);
+                            goto exception;
+                        }
                     }
                 }
-                ret = JS_SetPropertyInternal(ctx, sp[-3], atom, sp[-1], sp[-3], JS_PROP_THROW_STRICT);
+                ret = JS_SetPropertyInternal(ctx, base, atom, sp[-1], base, JS_PROP_THROW_STRICT);
                 JS_FreeAtom(ctx, atom);
                 JS_FreeValue(ctx, sp[-2]);
                 JS_FreeValue(ctx, sp[-3]);

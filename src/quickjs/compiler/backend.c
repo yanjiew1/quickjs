@@ -892,7 +892,11 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         /* global variable access */
         switch (op) {
         case OP_scope_make_ref:
-            if (!is_strict && label_done == -1 && can_opt_put_global_ref_value(bc_buf, ls->pos)) {
+            /* Only declarative globals have a stable binding. Object
+               bindings can disappear or be created during the RHS. */
+            if (!is_strict && s->closure_var[idx].is_lexical &&
+                label_done == -1 &&
+                can_opt_put_global_ref_value(bc_buf, ls->pos)) {
                 pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
                                                    pos_next,
                                                    OP_get_var, idx);
