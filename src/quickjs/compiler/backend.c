@@ -411,6 +411,45 @@ static int optimize_scope_make_ref(JSContext *ctx, JSFunctionDef *s,
     return pos_next;
 }
 
+/* Save HasBinding before the RHS without materializing a base/name pair.
+   The active frame selects strict errors or sloppy global-object writes.
+   Reference reads retain the general path. */
+static int optimize_scope_make_global_ref(JSContext *ctx, JSFunctionDef *s,
+                                          DynBuf *bc, uint8_t *bc_buf,
+                                          LabelSlot *ls, int pos_next, int idx)
+{
+    int label_pos = ls->pos;
+    int pos = label_pos - 5;
+    int end_pos = label_pos + 2;
+    int op = bc_buf[label_pos];
+
+    dbuf_putc(bc, OP_check_var);
+    dbuf_put_u16(bc, idx);
+    assert(bc_buf[pos] == OP_label);
+    if (op != OP_nop) {
+        switch (op) {
+        case OP_insert3:
+            op = OP_insert2;
+            break;
+        case OP_perm4:
+            op = OP_perm3;
+            break;
+        case OP_rot3l:
+            op = OP_swap;
+            break;
+        default:
+            abort();
+        }
+        bc_buf[pos++] = op;
+    }
+    bc_buf[pos++] = OP_put_var_check;
+    put_u16(bc_buf + pos, idx);
+    pos += 2;
+    while (pos < end_pos)
+        bc_buf[pos++] = OP_nop;
+    return pos_next;
+}
+
 static int add_var_this(JSContext *ctx, JSFunctionDef *fd)
 {
     int idx;
@@ -916,13 +955,18 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         /* global variable access */
         switch (op) {
         case OP_scope_make_ref:
-            /* Only declarative globals have a stable binding. Object
-               bindings can disappear or be created during the RHS. */
+            /* Known lexical bindings stay resolved across the RHS. Other
+               globals must save HasBinding before evaluating user code. */
             if (s->closure_var[idx].is_lexical && label_done == -1 &&
                 can_opt_put_global_ref_value(bc_buf, ls->pos)) {
                 pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
                                                    pos_next,
                                                    OP_get_var, idx);
+            } else if (label_done == -1 &&
+                       bc_buf[pos_next] != OP_get_ref_value &&
+                       can_opt_put_global_ref_value(bc_buf, ls->pos)) {
+                pos_next = optimize_scope_make_global_ref(ctx, s, bc, bc_buf,
+                                                          ls, pos_next, idx);
             } else {
                 dbuf_putc(bc, OP_make_var_ref);
                 dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
@@ -3147,6 +3191,17 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
         case OP_insert2:
             if (OPTIMIZE) {
+                /* A discarded checked global store needs only its saved
+                   resolution and value, without preserving the result. */
+                if (code_match(&cc, pos_next, OP_put_var_check,
+                               -1, OP_drop, -1)) {
+                    if (cc.line_num >= 0) line_num = cc.line_num;
+                    add_pc2line_info(s, bc_out.size, line_num);
+                    dbuf_putc(&bc_out, OP_put_var_check);
+                    dbuf_put_u16(&bc_out, cc.idx);
+                    pos_next = cc.pos;
+                    break;
+                }
                 /* Transformation:
                    insert2 put_field(a) drop -> put_field(a)
                 */
