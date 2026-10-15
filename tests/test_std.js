@@ -380,6 +380,324 @@ test_ext_json();
 test_async_gc();
 test_async_promise_rejection();
 
+function test_eval_script_global_references()
+{
+    const run = "global_reference_route_eval";
+    const cases = [
+        ["simple", 1, "", "=", 1, 3],
+        ["strict", 1, '"use strict";', "=", 1, 3],
+        ["compound", 1, "", "+=", 1, 4],
+        ["compound_strict", 1, '"use strict";', "+=", 1, 4],
+        ["logical", 0, "", "||=", 0, 3],
+        ["nullish", null, "", "??=", null, 3],
+    ];
+    globalThis[run] = code => std.evalScript(code);
+    try {
+        for (const [suffix, initial, prefix, operator, object, lexical] of cases) {
+            const name = "global_reference_route_" + suffix;
+            globalThis[name] = initial;
+            std.evalScript(`${prefix} ${name} ${operator}
+                (globalThis.${run}("let ${name} = 2"), 3);`);
+            assert(globalThis[name], object);
+            assert(std.evalScript(name), lexical);
+            delete globalThis[name];
+        }
+
+        const name = "global_reference_route_indirect_eval";
+        globalThis[name] = 1;
+        std.evalScript(`${name} = ((0, eval)("let ${name} = 2"), 3);`);
+        assert(globalThis[name], 3);
+        assert(std.evalScript(name), 3);
+        delete globalThis[name];
+
+        for (const compound of [false, true]) {
+            const suspended = "global_reference_route_suspended_" + compound;
+            globalThis[suspended] = 1;
+            const operator = compound ? "+=" : "=";
+            const iterator = std.evalScript(`(function*() {
+                ${suspended} ${operator} yield 9;
+            })()`);
+            assert(iterator.next().value, 9);
+            std.evalScript(`let ${suspended} = 2`);
+            std.gc();
+            assert(iterator.next(3).done, true);
+            assert(globalThis[suspended], 1);
+            assert(std.evalScript(suspended), compound ? 4 : 3);
+            delete globalThis[suspended];
+        }
+    } finally {
+        delete globalThis[run];
+        for (const [suffix] of cases)
+            delete globalThis["global_reference_route_" + suffix];
+        delete globalThis.global_reference_route_indirect_eval;
+        delete globalThis.global_reference_route_suspended_false;
+        delete globalThis.global_reference_route_suspended_true;
+    }
+}
+
+function test_eval_script_global_reference_errors()
+{
+    const run = "global_reference_route_error_eval";
+    const effect = "global_reference_route_error_rhs";
+    const names = [];
+
+    function check_error(expected, source)
+    {
+        let error;
+        try { std.evalScript(source); } catch (e) { error = e; }
+        assert(error instanceof expected);
+    }
+
+    globalThis[run] = code => std.evalScript(code);
+    try {
+        for (const strict of [false, true]) {
+            const prefix = strict ? '"use strict";' : "";
+            const suffix = strict ? "strict" : "sloppy";
+            const name = "global_reference_route_const_" + suffix;
+            names.push(name);
+            globalThis[name] = 1;
+            check_error(TypeError, `${prefix} ${name} =
+                (globalThis.${run}("const ${name} = 2"), 3);`);
+            assert(globalThis[name], 1);
+            assert(std.evalScript(name), 2);
+
+            const tdz = "global_reference_route_tdz_" + suffix;
+            names.push(tdz);
+            globalThis[tdz] = 1;
+            globalThis[effect] = false;
+            check_error(ReferenceError, `${prefix} ${tdz} = (function() {
+                try { globalThis.${run}("throw 0; let ${tdz} = 2"); }
+                catch (e) {}
+                globalThis.${effect} = true;
+                return 3;
+            })();`);
+            assert(globalThis[effect], true);
+            assert(globalThis[tdz], 1);
+            check_error(ReferenceError, tdz);
+
+            const missing = "global_reference_route_missing_" + suffix;
+            names.push(missing);
+            delete globalThis[missing];
+            globalThis[effect] = false;
+            const source = `${prefix} ${missing} =
+                (globalThis.${run}("let ${missing} = 2"),
+                 globalThis.${effect} = true, 3);`;
+            if (strict) {
+                check_error(ReferenceError, source);
+                assert(Object.hasOwn(globalThis, missing), false);
+            } else {
+                std.evalScript(source);
+                assert(globalThis[missing], 3);
+            }
+            assert(globalThis[effect], true);
+            assert(std.evalScript(missing), 2);
+        }
+
+        const name = "global_reference_route_existing_const";
+        names.push(name);
+        globalThis[name] = 1;
+        std.evalScript(`const ${name} = 2`);
+        check_error(TypeError, `${name} = 3`);
+        assert(globalThis[name], 1);
+        assert(std.evalScript(name), 2);
+
+        const tdz = "global_reference_route_existing_tdz";
+        names.push(tdz);
+        globalThis[tdz] = 1;
+        try { std.evalScript(`throw 0; let ${tdz} = 2`); } catch (e) {}
+        globalThis[effect] = false;
+        check_error(ReferenceError, `${tdz} = (globalThis.${effect} = true, 3)`);
+        assert(globalThis[effect], true);
+        assert(globalThis[tdz], 1);
+        check_error(ReferenceError, tdz);
+    } finally {
+        delete globalThis[run];
+        delete globalThis[effect];
+        for (const name of names)
+            delete globalThis[name];
+    }
+}
+
+function test_eval_script_global_reference_environments()
+{
+    const run = "global_reference_route_environment_eval";
+    const effect = "global_reference_route_environment_rhs";
+    const old_prototype = Object.getPrototypeOf(globalThis);
+    const old_unscopables = Object.getOwnPropertyDescriptor(globalThis,
+                                                           Symbol.unscopables);
+    const names = [];
+    globalThis[run] = code => std.evalScript(code);
+    try {
+        for (const blocked of [false, true]) {
+            const name = "global_reference_route_with_" + blocked;
+            names.push(name);
+            globalThis[name] = 1;
+            Object.defineProperty(globalThis, Symbol.unscopables, {
+                value: { [name]: blocked }, configurable: true,
+            });
+            std.evalScript(`with (globalThis) {
+                ${name} = (globalThis.${run}("let ${name} = 2"), 3);
+            }`);
+            assert(globalThis[name], blocked ? 1 : 3);
+            assert(std.evalScript(name), blocked ? 3 : 2);
+            delete globalThis[name];
+        }
+        delete globalThis[Symbol.unscopables];
+
+        for (const mode of ["capture", "capture_tdz", "capture_const", "read",
+                            "write", "false", "false_strict", "throw"]) {
+            const name = "global_reference_route_proxy_" + mode;
+            names.push(name);
+            const target = Object.create(old_prototype);
+            target[name] = 1;
+            const sentinel = new Error("global reference capture");
+            let has_count = 0, get_count = 0, set_count = 0;
+            Object.setPrototypeOf(globalThis, new Proxy(target, {
+                has(object, key) {
+                    if (key !== name)
+                        return Reflect.has(object, key);
+                    has_count++;
+                    if (mode === "throw")
+                        throw sentinel;
+                    if ((mode.startsWith("capture") || mode.startsWith("false")) &&
+                        has_count === 1 ||
+                        (mode === "read" || mode === "write") && has_count === 2) {
+                        if (mode === "capture_tdz") {
+                            try { std.evalScript(`throw 0; let ${name} = 2`); }
+                            catch (e) {}
+                        } else {
+                            const declaration = mode === "capture_const" ? "const" : "let";
+                            std.evalScript(`${declaration} ${name} = 2`);
+                        }
+                    }
+                    if (mode.startsWith("false"))
+                        return false;
+                    return Reflect.has(object, key);
+                },
+                get(object, key, receiver) {
+                    if (key === name)
+                        get_count++;
+                    return Reflect.get(object, key, receiver);
+                },
+                set(object, key, value, receiver) {
+                    if (key === name)
+                        set_count++;
+                    return Reflect.set(object, key, value, receiver);
+                },
+            }));
+            globalThis[effect] = false;
+            const operator = mode.startsWith("capture") || mode === "read" ? "+=" : "=";
+            const prefix = mode === "false_strict" ? '"use strict";' : "";
+            let error;
+            try {
+                std.evalScript(`${prefix} ${name} ${operator}
+                    (globalThis.${effect} = true, 3);`);
+            } catch (e) { error = e; }
+
+            // Inspect counts before later reads can invoke the prototype.
+            if (mode === "capture") {
+                assert(error, undefined);
+                assert(has_count, 1);
+                assert(get_count, 0);
+                assert(set_count, 0);
+                assert(Object.hasOwn(globalThis, name), false);
+                assert(std.evalScript(name), 5);
+            } else if (mode === "capture_tdz" || mode === "capture_const") {
+                assert(error instanceof (mode === "capture_tdz" ? ReferenceError : TypeError));
+                assert(globalThis[effect], mode === "capture_const");
+                assert(has_count, 1);
+                assert(get_count, 0);
+                assert(set_count, 0);
+                assert(Object.hasOwn(globalThis, name), false);
+                if (mode === "capture_const")
+                    assert(std.evalScript(name), 2);
+            } else if (mode === "read") {
+                assert(error, undefined);
+                assert(has_count, 2);
+                assert(get_count, 1);
+                assert(set_count, 0);
+                assert(Object.hasOwn(globalThis, name), false);
+                assert(std.evalScript(name), 4);
+            } else if (mode === "write" || mode === "false") {
+                assert(error, undefined);
+                assert(has_count, mode === "write" ? 2 : 1);
+                assert(get_count, 0);
+                assert(set_count, 1);
+                assert(globalThis[name], 3);
+                assert(std.evalScript(name), 2);
+            } else if (mode === "false_strict") {
+                assert(error instanceof ReferenceError);
+                assert(globalThis[effect], true);
+                assert(has_count, 1);
+                assert(get_count, 0);
+                assert(set_count, 0);
+                assert(Object.hasOwn(globalThis, name), false);
+                assert(std.evalScript(name), 2);
+            } else {
+                assert(error, sentinel);
+                assert(globalThis[effect], false);
+                assert(has_count, 1);
+                assert(get_count, 0);
+                assert(set_count, 0);
+                assert(Object.hasOwn(globalThis, name), false);
+            }
+            Object.setPrototypeOf(globalThis, old_prototype);
+            delete globalThis[name];
+        }
+    } finally {
+        Object.setPrototypeOf(globalThis, old_prototype);
+        if (old_unscopables)
+            Object.defineProperty(globalThis, Symbol.unscopables, old_unscopables);
+        else
+            delete globalThis[Symbol.unscopables];
+        delete globalThis[run];
+        delete globalThis[effect];
+        for (const name of names)
+            delete globalThis[name];
+    }
+}
+
+test_eval_script_global_references();
+test_eval_script_global_reference_errors();
+test_eval_script_global_reference_environments();
+
+function test_assignment_rhs_eval_suspended()
+{
+    /* The std test is a module; use a sloppy function for leaking eval. */
+    const state = Function(`
+        let target = 1;
+        function* suspended() {
+            target = (yield 5, eval("var target = 2"), 3);
+            return target;
+        }
+        return { iterator: suspended(), read: () => target };
+    `)();
+    const iterator = state.iterator;
+    assert(iterator.next().value, 5);
+    std.gc();
+    assert(iterator.next().value, 2);
+    assert(state.read(), 3);
+}
+
+test_assignment_rhs_eval_suspended();
+
+
+function test_eval_script_with_global_reference()
+{
+    const realm = std.createRealm();
+    realm.global.hostEval = source => realm.evalScript(source);
+    realm.evalScript(`
+        globalThis.global_record_target = 1;
+        with ({}) {
+            global_record_target = (hostEval("let global_record_target = 2"), 3);
+        }
+        if (globalThis.global_record_target !== 1 || global_record_target !== 3)
+            throw Error("global reference lost its Environment Record");
+    `);
+}
+
+test_eval_script_with_global_reference();
+
 function test_eval_script_cached_global_tdz()
 {
     const names = [];
