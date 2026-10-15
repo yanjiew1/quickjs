@@ -2235,3 +2235,224 @@ test_destructuring_reference_capture();
 test_update_reference_capture();
 test_iteration_assignment_reference_capture();
 
+function test_assignment_reference_write_order()
+{
+    const name = "reference_write_order_global";
+    const old_prototype = Object.getPrototypeOf(globalThis);
+    const prototype = Object.create(old_prototype);
+    const order = [];
+    const has_error = new Error("write-time has");
+    let rhs_seen = false, throw_live_has = false;
+
+    function reset(resolved) {
+        delete globalThis[name];
+        delete prototype[name];
+        if (resolved)
+            prototype[name] = 1;
+        order.length = 0;
+        rhs_seen = false;
+        throw_live_has = false;
+    }
+
+    function rhs() {
+        order.push("rhs");
+        rhs_seen = true;
+        return 7;
+    }
+
+    const sloppy_writers = [
+        function(value) { reference_write_order_global = value(); },
+        // A transparent with object also exercises saved destructuring
+        // references when ordinary targets use the direct store path.
+        function(value) {
+            with ({})
+                ({ value: reference_write_order_global = value() } = {});
+        },
+        function(value) {
+            with ({})
+                [reference_write_order_global = value()] = [];
+        },
+    ];
+    const strict_writers = [
+        function(value) {
+            "use strict";
+            reference_write_order_global = value();
+        },
+        function(value) {
+            class C { [reference_write_order_global = value()]() {} }
+        },
+    ];
+
+    try {
+        Object.setPrototypeOf(globalThis, new Proxy(prototype, {
+            has(target, key) {
+                if (key === name) {
+                    order.push("has");
+                    if (rhs_seen && throw_live_has)
+                        throw has_error;
+                }
+                return Reflect.has(target, key);
+            },
+            set(target, key, value, receiver) {
+                if (key === name)
+                    order.push("set");
+                return Reflect.set(target, key, value, receiver);
+            },
+        }));
+
+        for (const write of sloppy_writers) {
+            reset(false);
+            write(rhs);
+            assert(order.join(","), "has,rhs,set");
+            assert(globalThis[name], 7);
+
+            // A second has would throw; PutValue must skip that lookup.
+            reset(false);
+            throw_live_has = true;
+            write(rhs);
+            assert(order.join(","), "has,rhs,set");
+            assert(globalThis[name], 7);
+
+            reset(true);
+            write(rhs);
+            assert(order.join(","), "has,rhs,has,set");
+            assert(globalThis[name], 7);
+
+            reset(true);
+            write(() => {
+                const value = rhs();
+                delete prototype[name];
+                return value;
+            });
+            assert(order.join(","), "has,rhs,has,set");
+            assert(globalThis[name], 7);
+
+            // Resolved bindings must propagate the live has exception.
+            reset(true);
+            throw_live_has = true;
+            let caught;
+            try { write(rhs); } catch (e) { caught = e; }
+            assert(caught, has_error);
+            assert(order.join(","), "has,rhs,has");
+            assert(Object.hasOwn(globalThis, name), false);
+        }
+
+        for (const write of strict_writers) {
+            reset(false);
+            assert_throws(ReferenceError, () => write(rhs));
+            assert(order.join(","), "has,rhs");
+            assert(Object.hasOwn(globalThis, name), false);
+
+            // RHS creation cannot resolve a saved missing strict reference.
+            reset(false);
+            assert_throws(ReferenceError, () => write(() => {
+                const value = rhs();
+                Object.defineProperty(globalThis, name, {
+                    value: 4, writable: true, configurable: true,
+                });
+                return value;
+            }));
+            assert(order.join(","), "has,rhs");
+            assert(globalThis[name], 4);
+
+            reset(true);
+            write(rhs);
+            assert(order.join(","), "has,rhs,has,set");
+            assert(globalThis[name], 7);
+
+            reset(true);
+            assert_throws(ReferenceError, () => write(() => {
+                const value = rhs();
+                delete prototype[name];
+                return value;
+            }));
+            assert(order.join(","), "has,rhs,has");
+            assert(Object.hasOwn(globalThis, name), false);
+        }
+    } finally {
+        Object.setPrototypeOf(globalThis, old_prototype);
+        delete globalThis[name];
+        delete prototype[name];
+    }
+}
+test_assignment_reference_write_order();
+function test_guarded_global_pure_store()
+{
+    const name = "__guarded_global_store";
+    const events = [];
+    function write(value) { __guarded_global_store = value; }
+    function strictWrite(value) { "use strict"; __guarded_global_store = value; }
+    Object.defineProperty(globalThis, name, {
+        value: 0, writable: true, configurable: true
+    });
+    try {
+        write(3);
+        assert(globalThis[name], 3);
+        strictWrite(4);
+        assert(globalThis[name], 4);
+        const object = {};
+        write(object);
+        assert(globalThis[name], object);
+
+        Object.defineProperty(globalThis, name, {
+            configurable: true,
+            set(value) { events.push(value); }
+        });
+        write(5);
+        strictWrite(6);
+        assert(events.join(","), "5,6");
+        Object.defineProperty(globalThis, name, {
+            value: 7, writable: false, configurable: true
+        });
+        write(8);
+        assert(globalThis[name], 7);
+        assert_throws(TypeError, () => strictWrite(9));
+        assert(globalThis[name], 7);
+    } finally {
+        delete globalThis[name];
+    }
+}
+
+function test_guarded_global_pure_store_resolution_effects()
+{
+    const oldPrototype = Object.getPrototypeOf(globalThis);
+    const target = Object.create(oldPrototype);
+    const events = [];
+    var local = 1;
+    Object.defineProperty(target, "__guarded_global_inherited", {
+        value: 0, writable: true, configurable: true
+    });
+    const prototype = new Proxy(target, {
+        has(object, name) {
+            if (name === "__guarded_global_inherited") {
+                events.push("has");
+                local = 9;
+            }
+            if (name === "__guarded_global_missing") {
+                events.push("create");
+                globalThis[name] = 17;
+                return false;
+            }
+            return Reflect.has(object, name);
+        }
+    });
+    Object.setPrototypeOf(globalThis, prototype);
+    try {
+        __guarded_global_inherited = local;
+        assert(globalThis.__guarded_global_inherited, 9);
+        assert(events.join(","), "has,has");
+        function strictMissing() {
+            "use strict";
+            __guarded_global_missing = 0;
+        }
+        assert_throws(ReferenceError, strictMissing);
+        assert(events.join(","), "has,has,create");
+        assert(globalThis.__guarded_global_missing, 17);
+    } finally {
+        Object.setPrototypeOf(globalThis, oldPrototype);
+        delete globalThis.__guarded_global_inherited;
+        delete globalThis.__guarded_global_missing;
+    }
+}
+test_guarded_global_pure_store();
+test_guarded_global_pure_store_resolution_effects();
