@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
+ * Copyright (c) 2026 Ben Noordhuis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -67,6 +68,7 @@ extern char **environ;
 #include "thread.h"
 #include "os.h"
 #include "std.h"
+#include "../quickjs/internal/runtime.h"
 
 static void *js_std_dbuf_realloc(void *opaque, void *ptr, size_t size)
 {
@@ -517,7 +519,15 @@ static JSValue js_std_gc(JSContext *ctx, JSValueConst this_val,
 
 static int interrupt_handler(JSRuntime *rt, void *opaque)
 {
-    return (os_pending_signals >> SIGINT) & 1;
+    JSThreadState *ts = opaque;
+
+    if ((os_pending_signals >> SIGINT) & 1) {
+        ts->eval_script_sigint = 1;
+        return 1;
+    }
+    if (ts->prev_interrupt_handler)
+        return ts->prev_interrupt_handler(rt, ts->prev_interrupt_opaque);
+    return 0;
 }
 
 int get_bool_option(JSContext *ctx, BOOL *pbool,
@@ -563,7 +573,10 @@ static JSValue js_evalScript(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (!ts->recv_pipe && ++ts->eval_script_recurse == 1) {
         /* install the interrupt handler */
-        JS_SetInterruptHandler(JS_GetRuntime(ctx), interrupt_handler, NULL);
+        ts->prev_interrupt_handler = rt->interrupt_handler;
+        ts->prev_interrupt_opaque = rt->interrupt_opaque;
+        ts->eval_script_sigint = 0;
+        JS_SetInterruptHandler(rt, interrupt_handler, ts);
     }
     flags = JS_EVAL_TYPE_GLOBAL;
     if (backtrace_barrier)
@@ -574,12 +587,16 @@ static JSValue js_evalScript(JSContext *ctx, JSValueConst this_val,
     JS_FreeCString(ctx, str);
     if (!ts->recv_pipe && --ts->eval_script_recurse == 0) {
         /* remove the interrupt handler */
-        JS_SetInterruptHandler(JS_GetRuntime(ctx), NULL, NULL);
+        JS_SetInterruptHandler(rt, ts->prev_interrupt_handler,
+                               ts->prev_interrupt_opaque);
+        ts->prev_interrupt_handler = NULL;
+        ts->prev_interrupt_opaque = NULL;
         os_pending_signals &= ~((uint64_t)1 << SIGINT);
         /* convert the uncatchable "interrupted" error into a normal error
            so that it can be caught by the REPL */
-        if (JS_IsException(ret))
+        if (JS_IsException(ret) && ts->eval_script_sigint)
             JS_SetUncatchableException(ctx, FALSE);
+        ts->eval_script_sigint = 0;
     }
     return ret;
 }
