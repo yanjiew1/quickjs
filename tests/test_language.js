@@ -3454,3 +3454,199 @@ function test_assignment_rhs_eval_resource_disposal()
 }
 
 test_assignment_rhs_eval_resource_disposal();
+
+
+
+function test_stable_assignment_reference_depth()
+{
+    let first = 1, second = 2, tail;
+    const events = [];
+    const source = {
+        get first() {
+            events.push("first");
+            first = 40;
+            return 3;
+        },
+        get second() {
+            events.push("second");
+            second = 50;
+            return undefined;
+        }
+    };
+    const result = ({ first, second = (events.push("default"), 4) } = source);
+    assert(result, source);
+    assert(first, 3);
+    assert(second, 4);
+    assert(events.join(","), "first,second,default");
+
+    let step = 0, closed = 0;
+    const iterable = {
+        [Symbol.iterator]() { return this; },
+        next() {
+            first = 60 + step;
+            return { value: ++step, done: step > 3 };
+        },
+        return() {
+            closed++;
+            return {};
+        }
+    };
+    [first, second, ...tail] = iterable;
+    assert(second, 2);
+    assert(tail.join(","), "3");
+    assert(first, 63);
+    assert(closed, 0);
+    [first] = iterable;
+    assert(first, undefined);
+    assert(closed, 0);
+
+    let truthy = 1, falsy = 0, nullish = null;
+    assert(truthy ||= (events.push("unexpected"), 2), 1);
+    assert(falsy &&= (events.push("unexpected"), 2), 0);
+    assert(truthy &&= (events.push("and"), truthy = 9, 5), 5);
+    assert(falsy ||= (events.push("or"), falsy = 9, 6), 6);
+    assert(nullish ??= (events.push("nullish"), nullish = 9, 7), 7);
+    assert(events.join(","), "first,second,default,and,or,nullish");
+    assert(truthy, 5);
+    assert(falsy, 6);
+    assert(nullish, 7);
+}
+
+function test_stable_parameter_assignment_reference_depth()
+{
+    function mapped(value) {
+        const source = { get value() { value = 4; return 7; } };
+        ({ value } = source);
+        assert(value, 7);
+        assert(arguments[0], 7);
+        [value] = [8];
+        assert(value, 8);
+        assert(arguments[0], 8);
+        assert(value &&= 9, 9);
+        assert(arguments[0], 9);
+    }
+    function unmapped(value) {
+        "use strict";
+        const source = { get value() { value = 4; return 7; } };
+        ({ value } = source);
+        assert(value, 7);
+        assert(arguments[0], 1);
+        [value] = [8];
+        assert(value, 8);
+        assert(arguments[0], 1);
+        assert(value &&= 9, 9);
+        assert(arguments[0], 1);
+    }
+    mapped(1);
+    unmapped(1);
+}
+
+function test_stable_assignment_reference_depth_errors()
+{
+    let next = 0, closed = 0;
+    const iterable = {
+        [Symbol.iterator]() { return this; },
+        next() {
+            next++;
+            return { value: 1, done: false };
+        },
+        return() {
+            closed++;
+            return {};
+        }
+    };
+    assert_throws(ReferenceError, function() {
+        let uninitialized = ([uninitialized] = iterable);
+    });
+    assert(next, 1);
+    assert(closed, 1);
+
+    const fixed = 0;
+    assert_throws(TypeError, function() { [fixed] = iterable; });
+    assert(next, 2);
+    assert(closed, 2);
+    assert(fixed, 0);
+}
+
+test_stable_assignment_reference_depth();
+test_stable_parameter_assignment_reference_depth();
+test_stable_assignment_reference_depth_errors();
+
+
+
+
+function test_compact_named_assignment_reference()
+{
+    let first = 1, second = 2;
+    const events = [];
+    const source = {
+        get p() { events.push("p"); first = 40; return 3; },
+        get q() { events.push("q"); assert(first, 3); first = 50; return 4; }
+    };
+    const result = ({ p: first, q: second } = source);
+    assert(result, source);
+    assert(first, 50);
+    assert(second, 4);
+    assert(events.join(","), "p,q");
+
+    function mapped(value) {
+        const source = { get p() { value = 4; return 7; } };
+        ({ p: value } = source);
+        assert(value, 7);
+        assert(arguments[0], 7);
+    }
+    function unmapped(value) {
+        "use strict";
+        const source = { get p() { value = 4; return 7; } };
+        ({ p: value } = source);
+        assert(value, 7);
+        assert(arguments[0], 1);
+    }
+    mapped(1);
+    unmapped(1);
+}
+
+function test_compact_named_assignment_reference_abrupt()
+{
+    const events = [];
+    const sentinel = new Error("named extraction");
+    let value = 1, error;
+    try {
+        ({ p: value } = { get p() { events.push("get"); throw sentinel; } });
+    } catch (e) {
+        error = e;
+    }
+    assert(error, sentinel);
+    assert(value, 1);
+    assert(events.join(","), "get");
+
+    assert_throws(ReferenceError, function() {
+        let uninitialized = ({ p: uninitialized } = {
+            get p() { events.push("tdz-get"); return 3; }
+        });
+    });
+    const fixed = 0;
+    assert_throws(TypeError, function() {
+        ({ p: fixed } = { get p() { events.push("const-get"); return 3; } });
+    });
+    assert(events.join(","), "get,tdz-get,const-get");
+
+    events.length = 0;
+    const iterable = {
+        [Symbol.iterator]() { return this; },
+        next() {
+            events.push("next");
+            return { value: { get p() { events.push("get"); throw sentinel; } },
+                     done: false };
+        },
+        return() { events.push("close"); return {}; }
+    };
+    error = undefined;
+    try { [{ p: value }] = iterable; } catch (e) { error = e; }
+    assert(error, sentinel);
+    assert(value, 1);
+    assert(events.join(","), "next,get,close");
+}
+
+test_compact_named_assignment_reference();
+test_compact_named_assignment_reference_abrupt();
