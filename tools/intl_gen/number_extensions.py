@@ -8,7 +8,7 @@ from functools import lru_cache
 import metadata as m
 import number_patterns as n
 
-WIDTHS = {120: 76, 121: 32, 122: 16}
+WIDTHS = {120: 76, 121: 32, 122: 16, 123: 64}
 
 
 @lru_cache(maxsize=None)
@@ -88,6 +88,45 @@ def compound_pattern(value):
     return value.replace('{0}', '{numerator}').replace('{1}', '{denominator}')
 
 
+def named_compounds(resolver):
+    """Sparse sanctioned resources found in authenticated LDML inputs."""
+    result = {}
+    for root in resolver.roots.values():
+        for unit in root.findall('./units/unitLength/unit'):
+            cldr_identifier = unit.get('type', '')
+            family, separator, identifier = cldr_identifier.partition('-')
+            pieces = identifier.split('-per-')
+            if not family or not separator or len(pieces) != 2 or not all(p in n.UNITS for p in pieces):
+                continue
+            m.insert_unique(result, identifier, cldr_identifier, 'named compound identifier')
+    return result
+
+
+def collect_named_compounds(resolver, locales, gaps):
+    rows = []
+    identifiers = sorted(named_compounds(resolver).items())
+    for locale_index, locale in enumerate(locales):
+        for identifier, cldr_identifier in identifiers:
+            for display, width in enumerate(('long', 'short', 'narrow')):
+                base = (n.segment('units'), n.segment('unitLength', type=width),
+                        n.segment('unit', type=cldr_identifier))
+                try:
+                    other = resolver.get(locale, base + (n.segment('unitPattern', count='other'),))
+                    if other is None:
+                        m.require(not any(resolver.get(locale, base +
+                            (n.segment('unitPattern', count=category),)) is not None
+                            for category in n.CATEGORIES if category != 'other'),
+                            'named compound has plural forms without other')
+                        continue
+                    values = tuple(n.placeholder(
+                        resolver.get(locale, base + (n.segment('unitPattern', count=category),)) or other,
+                        number_required=False) for category in n.CATEGORIES)
+                    rows.append((locale_index, identifier, display, values))
+                except m.DataError as exc:
+                    gaps.append({'key': [locale, identifier, width, 'named-compound'], 'reason': str(exc)})
+    return rows
+
+
 def collect(resolver, metadata, base_tables, grammatical, gaps):
     tables = {i: [] for i in WIDTHS}
     derivations = Derivations(grammatical, metadata['parents'])
@@ -108,6 +147,7 @@ def collect(resolver, metadata, base_tables, grammatical, gaps):
 
     systems = sorted(metadata['numbering'])
     locales = sorted(metadata['parents'])
+    tables[123] = collect_named_compounds(resolver, locales, gaps)
     for locale_index, system_index, minimum, symbols in base_tables[80]:
         locale, system = locales[locale_index], systems[system_index]
         for display, width in enumerate(('short', 'long')):
@@ -176,6 +216,9 @@ def collect(resolver, metadata, base_tables, grammatical, gaps):
 
 
 def encode_row(section_id, row, pool):
+    if section_id == 123:
+        a, identifier, display, patterns = row
+        return m.u32(a) + pool.ref(identifier) + bytes((display,)) + b'\0' * 3 + b''.join(pool.ref(v) for v in patterns)
     if section_id == 120:
         a, b, display, magnitude, exponent, patterns, exact = row
         return (m.u32(a) + m.u32(b) + bytes((display,)) + b'\0' * 3 + m.u32(magnitude) +

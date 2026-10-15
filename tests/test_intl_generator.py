@@ -187,6 +187,92 @@ class GeneratorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 number.currency_name_patterns(resolver, 'root', 'arab')
 
+    def test_named_compound_encoding_and_duplicate_keys(self):
+        number, metadata = self.modules['number_patterns'], self.modules['metadata']
+        row = (2, 'kilometer-per-hour', 1, ('{number} km/h',) * 6)
+        data = {'tables': {123: [row]}}
+        pool = metadata.UTF8StringPool(number.strings(data))
+        record = number.encode(data, pool)[123]
+        self.assertEqual(len(record), 64)
+        self.assertEqual(struct.unpack_from('<I', record)[0], 2)
+        self.assertEqual(record[4:12], pool.ref('kilometer-per-hour'))
+        self.assertEqual(record[12:16], b'\x01\0\0\0')
+        self.assertEqual(record[16:], pool.ref('{number} km/h') * 6)
+        with self.assertRaises(ValueError):
+            number.encode({'tables': {123: [row, row]}}, pool)
+        with self.assertRaises(ValueError):
+            number.encode({'tables': {123: [row, (2, row[1], 0, row[3])]}}, pool)
+
+    def named_resolver(self, root, child=None):
+        number = self.modules['number_patterns']
+        inputs = [('main/root.xml', root.encode())]
+        parents = {'root': None}
+        if child is not None:
+            inputs.append(('main/ja.xml', child.encode()))
+            parents['ja'] = 'root'
+        return number.Resolver(inputs, parents)
+
+    def test_named_compound_inheritance_width_alias_and_plural_fallback(self):
+        extension = self.modules['number_extensions']
+        root = '''<ldml><units>
+          <unitLength type="long"><unit type="speed-kilometer-per-hour">
+            <unitPattern count="one">one speed</unitPattern>
+            <unitPattern count="other">{0} root speed</unitPattern></unit></unitLength>
+          <unitLength type="short"><alias source="locale" path="../unitLength[@type='long']"/></unitLength>
+          <unitLength type="narrow"><unit type="speed-kilometer-per-hour">
+            <unitPattern count="other">{0}km/h</unitPattern></unit></unitLength>
+          </units></ldml>'''
+        child = '''<ldml><units><unitLength type="long"><unit type="speed-kilometer-per-hour">
+          <unitPattern count="other">時速 {0}</unitPattern></unit></unitLength></units></ldml>'''
+        resolver = self.named_resolver(root, child)
+        gaps = []
+        rows = extension.collect_named_compounds(resolver, ['ja', 'root'], gaps)
+        self.assertFalse(gaps)
+        self.assertEqual(len(rows), 6)
+        self.assertEqual(rows[0], (0, 'kilometer-per-hour', 0,
+            ('時速 {number}', 'one speed', '時速 {number}', '時速 {number}', '時速 {number}', '時速 {number}')))
+        self.assertEqual(rows[1][3], rows[0][3])
+        self.assertEqual(rows[2][3], ('{number}km/h',) * 6)
+
+    def test_named_compound_vocabulary_and_conflicts(self):
+        extension = self.modules['number_extensions']
+        xml = '''<ldml><units><unitLength type="long">
+          <unit type="speed-kilometer-per-hour"/><unit type="volume-liter"/>
+          <unit type="consumption-liter-per-100-kilometer"/>
+          <unit type="speed-meter-per-second-per-hour"/>
+          <unit type="speed-unknown-per-second"/></unitLength></units></ldml>'''
+        self.assertEqual(extension.named_compounds(self.named_resolver(xml)),
+                         {'kilometer-per-hour': 'speed-kilometer-per-hour'})
+        xml = xml.replace('<unit type="volume-liter"/>', '<unit type="other-kilometer-per-hour"/>')
+        with self.assertRaises(ValueError):
+            extension.named_compounds(self.named_resolver(xml))
+
+    def test_named_compound_malformed_data_is_a_gap(self):
+        extension = self.modules['number_extensions']
+        for pattern in ['{0} {0}', '{1} speed', '{0} {bad}', '\ud800']:
+            # Invalid XML scalars are rejected by the source parser itself.
+            if pattern == '\ud800':
+                with self.assertRaises(ValueError):
+                    self.modules['number_patterns'].placeholder(pattern, number_required=False)
+                continue
+            xml = ('<ldml><units><unitLength type="long"><unit type="speed-meter-per-second">'
+                   '<unitPattern count="other">' + pattern +
+                   '</unitPattern></unit></unitLength></units></ldml>')
+            gaps = []
+            self.assertEqual(extension.collect_named_compounds(self.named_resolver(xml), ['root'], gaps), [])
+            self.assertEqual(len(gaps), 1)
+            self.assertEqual(gaps[0]['key'], ['root', 'meter-per-second', 'long', 'named-compound'])
+
+    def test_named_compound_missing_other_is_a_gap(self):
+        extension = self.modules['number_extensions']
+        xml = ('<ldml><units><unitLength type="long"><unit type="speed-meter-per-second">'
+               '<unitPattern count="one">{0} speed</unitPattern>'
+               '</unit></unitLength></units></ldml>')
+        gaps = []
+        self.assertEqual(extension.collect_named_compounds(self.named_resolver(xml), ['root'], gaps), [])
+        self.assertEqual(len(gaps), 1)
+        self.assertIn('without other', gaps[0]['reason'])
+
     def test_non_english_default_has_controlled_missing_service_error(self):
         metadata = dict(parents={'root': None, 'fr': 'root'},
                         locales={'fr': {'numbering': 'latn'}}, component_parents={},

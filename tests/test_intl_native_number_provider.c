@@ -7,6 +7,7 @@
 #if defined(CONFIG_INTL) && defined(CONFIG_INTL_NATIVE)
 #include "../src/intl/provider-native-number.h"
 #include "../src/intl/data/locale-metadata.h"
+#include "../src/intl/data/number-extra-schema.h"
 typedef struct Heap { size_t calls, failure, live; } Heap;
 static void *allocate(void *opaque, size_t n)
 {
@@ -116,6 +117,141 @@ static void binary_snapshot(const QJSIntlAllocator *a, unsigned int mode)
     qjs_intl_native_number_result_clear(n,&before);qjs_intl_native_number_result_clear(n,&after);
     qjs_intl_native_number_close(n);
 }
+static void installed_digest(const QJSIntlAllocator *a)
+{
+    QJSIntlProvider *p = provider(a);
+    const QJSIntlDataVersions *versions = qjs_intl_provider_versions(p);
+    QJSIntlDataSection digest;
+    size_t i;
+    const char hex[] = "0123456789abcdef";
+    assert(versions && versions->input_manifest_sha256.length == 64);
+    assert(qjs_intl_data_section(qjs_intl_native_provider_view(p),
+        QJS_INTL_DATA_INPUT_SHA256, &digest) == QJS_INTL_DATA_OK);
+    assert(digest.bytes.length == 32);
+    for (i = 0; i < 32; i++) {
+        assert(versions->input_manifest_sha256.data[i * 2] == hex[digest.bytes.data[i] >> 4]);
+        assert(versions->input_manifest_sha256.data[i * 2 + 1] == hex[digest.bytes.data[i] & 15]);
+    }
+    qjs_intl_provider_free(p);
+}
+static uint32_t read32(const unsigned char *p)
+{
+    return (uint32_t)p[0] | (uint32_t)p[1] << 8 |
+           (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
+}
+static void write32(unsigned char *p, uint32_t v)
+{
+    unsigned int i;
+    for (i = 0; i < 4; i++) p[i] = (unsigned char)(v >> (8 * i));
+}
+/* Preserve offsets and clear the removed bytes, including directory padding. */
+static void remove_section(unsigned char *blob, uint32_t id)
+{
+    uint32_t count = read32(blob + QJS_INTL_H_SECTION_COUNT), i;
+    unsigned char *directory = blob + QJS_INTL_DATA_HEADER_SIZE;
+    for (i = 0; i < count; i++) {
+        unsigned char *entry = directory + i * QJS_INTL_DATA_DIRECTORY_RECORD_SIZE;
+        if (read32(entry) != id) continue;
+        memset(blob + read32(entry + QJS_INTL_D_OFFSET), 0,
+               read32(entry + QJS_INTL_D_BYTE_LENGTH));
+        memmove(entry, entry + QJS_INTL_DATA_DIRECTORY_RECORD_SIZE,
+                (count - i - 1) * QJS_INTL_DATA_DIRECTORY_RECORD_SIZE);
+        memset(directory + (count - 1) * QJS_INTL_DATA_DIRECTORY_RECORD_SIZE,
+               0, QJS_INTL_DATA_DIRECTORY_RECORD_SIZE);
+        write32(blob + QJS_INTL_H_SECTION_COUNT, count - 1);
+        return;
+    }
+    assert(0);
+}
+static void pool_reference(const QJSIntlDataView *view, const char *text_value,
+                            unsigned char out[8])
+{
+    QJSIntlDataSection pool;
+    size_t at = 0, length = strlen(text_value);
+    assert(qjs_intl_data_section(view, QJS_INTL_DATA_UTF8_POOL, &pool) == QJS_INTL_DATA_OK);
+    while (at < pool.bytes.length) {
+        size_t size = strlen((const char *)pool.bytes.data + at);
+        if (size == length && !memcmp(pool.bytes.data + at, text_value, size)) {
+            write32(out, (uint32_t)at); write32(out + 4, (uint32_t)size); return;
+        }
+        at += size + 1;
+    }
+    assert(0);
+}
+static void named_compound_data(const QJSIntlAllocator *a)
+{
+    unsigned char *copy = malloc(qjs_intl_locale_metadata_blob_size);
+    QJSIntlDataView view, rejected;
+    QJSIntlDataSection named;
+    QJSIntlNativeNumber *number = NULL;
+    QJSIntlNumberOptions o = options();
+    QJSIntlFormatted value;
+    uint32_t en, latn;
+    unsigned int mode;
+    assert(copy);
+    o.style = QJS_INTL_NUMBER_UNIT; o.unit = text("meter-per-second");
+    o.unit_display = QJS_INTL_UNIT_LONG;
+    for (mode = 0; mode < 3; mode++) {
+        memcpy(copy, qjs_intl_locale_metadata_blob, qjs_intl_locale_metadata_blob_size);
+        if (!mode) {
+            remove_section(copy, QJS_INTL_DATA_NUMBER_UNIT);
+            remove_section(copy, QJS_INTL_DATA_NUMBER_DENOMINATOR);
+            remove_section(copy, QJS_INTL_DATA_NUMBER_COMPOUND_PER);
+        } else if (mode == 1) {
+            remove_section(copy, QJS_INTL_DATA_NUMBER_NAMED_COMPOUND);
+        }
+        assert(qjs_intl_data_open(copy, qjs_intl_locale_metadata_blob_size, &view) == QJS_INTL_DATA_OK);
+        en = index_of(&view, QJS_INTL_DATA_LOCALE, "en");
+        latn = index_of(&view, QJS_INTL_DATA_NUMBERING, "latn");
+        if (mode == 2) {
+            unsigned char ref[8]; uint32_t row;
+            pool_reference(&view, "{number}", ref);
+            assert(qjs_intl_data_section(&view, QJS_INTL_DATA_NUMBER_NAMED_COMPOUND, &named) == QJS_INTL_DATA_OK);
+            /* All named templates may omit their affix, independently of plural. */
+            for (row = 0; row < named.record_count; row++) {
+                unsigned int category;
+                unsigned char *record = copy + (named.bytes.data - view.data) + row * 64;
+                for (category = 0; category < 6; category++) memcpy(record + 16 + category * 8, ref, 8);
+            }
+            assert(qjs_intl_data_open(copy, qjs_intl_locale_metadata_blob_size, &view) == QJS_INTL_DATA_OK);
+        }
+        assert(qjs_intl_native_number_open_data(a, &view, en, latn, &o, &number) == QJS_INTL_OK && number);
+        value = format(number);
+        {
+            const char *expected = mode == 2 ? "12,345.5" : "12,345.5 meters per second";
+            size_t character;
+            assert(value.length == strlen(expected));
+            for (character = 0; character < value.length; character++)
+                assert(value.text[character] == (unsigned char)expected[character]);
+        }
+        qjs_intl_native_number_result_clear(number, &value);
+        qjs_intl_native_number_close(number); number = NULL;
+    }
+    for (mode = 0; mode < 8; mode++) {
+        unsigned char *last;
+        memcpy(copy, qjs_intl_locale_metadata_blob, qjs_intl_locale_metadata_blob_size);
+        assert(qjs_intl_data_open(copy, qjs_intl_locale_metadata_blob_size, &view) == QJS_INTL_DATA_OK);
+        en = index_of(&view, QJS_INTL_DATA_LOCALE, "en");
+        latn = index_of(&view, QJS_INTL_DATA_NUMBERING, "latn");
+        assert(qjs_intl_data_section(&view, QJS_INTL_DATA_NUMBER_NAMED_COMPOUND, &named) == QJS_INTL_DATA_OK);
+        assert(named.record_count > 1);
+        last = copy + (named.bytes.data - view.data) + (named.record_count - 1) * 64;
+        /* Corrupt an unselected locale: ordinary construction still scans it. */
+        if (mode == 0) last[13] = 1;
+        if (mode == 1) last[12] = 3;
+        if (mode == 2) write32(last, UINT32_MAX);
+        if (mode == 3) pool_reference(&view, "{number}", last + 4);
+        if (mode == 4) write32(last + 16, UINT32_MAX);
+        if (mode == 5) pool_reference(&view, "{numerator}/{denominator}", last + 16);
+        if (mode == 6) memcpy(last, last - 64, 16);
+        if (mode == 7) pool_reference(&view, "meter", last + 4);
+        assert(qjs_intl_native_number_open_data(a, &view, en, latn, &o, &number) == QJS_INTL_DATA_ERROR && !number);
+        assert(qjs_intl_data_open(copy, qjs_intl_locale_metadata_blob_size, &rejected) == QJS_INTL_DATA_INVALID);
+        assert(!rejected.data && !rejected.length);
+    }
+    free(copy);
+}
+
 static void allocation_sweep(const QJSIntlAllocator *a, Heap *h)
 {
     QJSIntlProvider *p=provider(a);
@@ -147,6 +283,8 @@ int main(void)
     Heap heap={0};QJSIntlAllocator a={&heap,allocate,resize,release};unsigned int i;
     provider_lifetime(&a);assert(!heap.live);
     for(i=0;i<3;i++){binary_snapshot(&a,i);assert(!heap.live);}
+    installed_digest(&a);assert(!heap.live);
+    named_compound_data(&a);assert(!heap.live);
     allocation_sweep(&a,&heap);assert(!heap.live);
 #endif
     return 0;

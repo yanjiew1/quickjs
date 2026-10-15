@@ -11,7 +11,7 @@ import locale_subset
 
 SCHEMA_MINOR = 3
 WIDTHS = {80: 96, 81: 40, 82: 76, 83: 64, 84: 56, 85: 12,
-          86: 24, 87: 12, 88: 24, 120: 76, 121: 32, 122: 16}
+          86: 24, 87: 12, 88: 24, 120: 76, 121: 32, 122: 16, 123: 64}
 CATEGORIES = ('zero', 'one', 'two', 'few', 'many', 'other')
 SYMBOLS = ('decimal', 'group', 'plusSign', 'minusSign', 'percentSign',
            'exponential', 'infinity', 'nan', 'currencyDecimal', 'currencyGroup')
@@ -453,7 +453,7 @@ def encode(data, pool):
     for section_id, rows in sorted(data['tables'].items()):
         encoded, previous = [], None
         for row in rows:
-            key = row[:4] if section_id in (81, 120) else row[:3] if section_id in (83, 121) else row[:2] if section_id in (80, 82, 84, 86, 87, 88, 122) else row[:1]
+            key = row[:4] if section_id in (81, 120) else row[:3] if section_id in (83, 121, 123) else row[:2] if section_id in (80, 82, 84, 86, 87, 88, 122) else row[:1]
             m.require(previous is None or previous < key, 'unsorted/duplicate number rows')
             previous = key
             if section_id >= 120:

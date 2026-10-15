@@ -333,7 +333,8 @@ static uint32_t section_width(uint32_t id)
     case QJS_INTL_DATA_NUMBER_SYMBOL: return 96;
     case QJS_INTL_DATA_NUMBER_PATTERN: return 40;
     case QJS_INTL_DATA_NUMBER_CURRENCY: return 76;
-    case QJS_INTL_DATA_NUMBER_UNIT: return 64;
+    case QJS_INTL_DATA_NUMBER_UNIT:
+    case QJS_INTL_DATA_NUMBER_NAMED_COMPOUND: return 64;
     case QJS_INTL_DATA_NUMBER_CURRENCY_NAME: return 56;
     case QJS_INTL_DATA_NUMBER_CURRENCY_DIGITS: return 12;
     case QJS_INTL_DATA_NUMBER_MISC: return 24;
@@ -912,6 +913,7 @@ static int validate_records(const QJSIntlDataView *view, QJSIntlDataSlice pool,
         case QJS_INTL_DATA_NUMBER_PATTERN:
         case QJS_INTL_DATA_NUMBER_CURRENCY:
         case QJS_INTL_DATA_NUMBER_UNIT:
+        case QJS_INTL_DATA_NUMBER_NAMED_COMPOUND:
         case QJS_INTL_DATA_NUMBER_CURRENCY_NAME:
         case QJS_INTL_DATA_NUMBER_CURRENCY_DIGITS:
         case QJS_INTL_DATA_NUMBER_MISC:
@@ -923,6 +925,7 @@ static int validate_records(const QJSIntlDataView *view, QJSIntlDataSlice pool,
             case QJS_INTL_DATA_NUMBER_PATTERN: first = 16; refs = 3; break;
             case QJS_INTL_DATA_NUMBER_CURRENCY: first = 4; refs = 9; break;
             case QJS_INTL_DATA_NUMBER_UNIT:
+            case QJS_INTL_DATA_NUMBER_NAMED_COMPOUND:
                 if (!pool_string(pool, read_u32(r + 4), read_u32(r + 8), &a)) return 0;
                 first = 16; refs = 6; break;
             case QJS_INTL_DATA_NUMBER_CURRENCY_NAME: first = 8; refs = 6; break;

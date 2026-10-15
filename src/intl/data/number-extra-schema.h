@@ -5,7 +5,8 @@
 enum {
     QJS_INTL_DATA_NUMBER_COMPACT = 120,
     QJS_INTL_DATA_NUMBER_DENOMINATOR = 121,
-    QJS_INTL_DATA_NUMBER_COMPOUND_PER = 122
+    QJS_INTL_DATA_NUMBER_COMPOUND_PER = 122,
+    QJS_INTL_DATA_NUMBER_NAMED_COMPOUND = 123
 };
 /* Additional optional schema1.3, Unicode18 and a supported CLDR header version
  * (released48.2 or preview49); no coverage activation.
@@ -30,6 +31,10 @@ enum {
  * O(simple units) rows, avoiding a cartesian product of compound-unit rows.
  *83 existing layout is unchanged; its six unit templates now permit an
  * omitted number field for authentic CLDR singular/dual unit forms.
- *123..129 remain reserved/unknown.89 remains reserved/unknown.
+ *123(64): locale:u32@0,sanctionedCompoundUnit:string@4,display:u8@12,
+ * zero13..15,six unit templates@16. Keys(locale,unit,display), independently
+ * optional. Named patterns precede denominator/generic per composition and
+ * do not require83/121/122. Templates use the same grammar as83.
+ *124..129 remain reserved/unknown.89 remains reserved/unknown.
  */
 #endif

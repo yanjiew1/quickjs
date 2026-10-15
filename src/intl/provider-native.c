@@ -54,6 +54,7 @@ struct QJSIntlProvider {
     const char *default_time_zone;
     QJSIntlLocaleInfoCapabilities capabilities;
     QJSIntlDataVersions versions;
+    char input_manifest_sha256[65];
 };
 
 /* Only this module's immutable compiled blob is cached. No shared
@@ -200,6 +201,7 @@ QJSIntlStatus qjs_intl_provider_new(const QJSIntlProviderConfig *config,
     char *canonical = NULL;
     const char *canonical_zone = "UTC";
     unsigned int type, style;
+    QJSIntlDataSection digest;
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     *out = NULL;
     if (!config || config->backend != QJS_INTL_BACKEND_NATIVE ||
@@ -244,7 +246,19 @@ QJSIntlStatus qjs_intl_provider_new(const QJSIntlProviderConfig *config,
     p->versions.cldr = bytes("48.2.0");
     p->versions.collation = bytes("17.0.0");
     p->versions.tzdata = bytes("2026e");
-    p->versions.input_manifest_sha256 = bytes("8b9c06ad8183237e11bbb9145ffa988a452a88ef2d5cea9b3478fad2cbe48cf2");
+    /* Report the digest authenticated by the sole installed binary, rather
+     * than a source literal that can outlive a regenerated data bundle. */
+    if (qjs_intl_data_section(&p->view, QJS_INTL_DATA_INPUT_SHA256, &digest) ||
+        digest.bytes.length != 32) {
+        status = QJS_INTL_DATA_ERROR; goto fail;
+    }
+    for (type = 0; type < 32; type++) {
+        static const char hex[] = "0123456789abcdef";
+        p->input_manifest_sha256[type * 2] = hex[digest.bytes.data[type] >> 4];
+        p->input_manifest_sha256[type * 2 + 1] = hex[digest.bytes.data[type] & 15];
+    }
+    p->input_manifest_sha256[64] = 0;
+    p->versions.input_manifest_sha256 = bytes(p->input_manifest_sha256);
     /* The sole released embedding and its input manifest digest (section2)
      * are pinned by the source stage. Record the validated schema version. */
     p->versions.schema_version =

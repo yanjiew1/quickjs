@@ -226,3 +226,28 @@ for (let repeat = 0; repeat < 3; repeat++) {
         eq(partsCheck(new Intl.NumberFormat(locale), 1234.5).map(p => p.value).join(''), expected,
            'alternate locale proof ' + locale);
 }
+
+/* Named CLDR compounds take priority over independently translated components. */
+for (const [locale, templates, prefixUnits] of [
+    ['ja', ['時速 {number} キロメートル', '{number} km/h', '{number}km/h'], ['時速', 'キロメートル']],
+    ['ko', ['시속 {number}킬로미터', '{number}km/h', '{number}km/h'], ['시속', '킬로미터']]
+]) {
+    const numeric = new Intl.NumberFormat(locale);
+    for (const [index, unitDisplay] of ['long', 'short', 'narrow'].entries()) {
+        const speed = new Intl.NumberFormat(locale, {style:'unit', unit:'kilometer-per-hour', unitDisplay});
+        for (const input of [-0, -1.25, 0, 3.5]) {
+            eq(speed.format(input), templates[index].replace('{number}', numeric.format(input)), 'named speed pattern');
+            const parts = partsCheck(speed, input);
+            const units = parts.filter(part => part.type === 'unit').map(part => part.value);
+            eq(units.join(','), index === 0 ? prefixUnits.join(',') : 'km/h', 'named unit fields');
+            if (index === 0) eq(parts[0].type, 'unit', 'named prefix precedes sign and digits');
+            if (Object.is(input, -0)) ok(parts.some(part => part.type === 'minusSign'), 'named negative zero');
+        }
+    }
+}
+eq(new Intl.NumberFormat('ja', {style:'unit', unit:'meter-per-second', unitDisplay:'long'}).format(2),
+    '秒速 2 メートル', 'second named speed resource');
+const unnamed = new Intl.NumberFormat('ja', {style:'unit', unit:'hectare-per-second', unitDisplay:'long'});
+const unnamedParts = partsCheck(unnamed, 2);
+ok(unnamedParts.some(part => part.type === 'unit' && part.value.includes('ヘクタール')), 'generic numerator retained');
+ok(unnamedParts.some(part => part.type === 'unit' && part.value.includes('秒')), 'generic denominator retained');

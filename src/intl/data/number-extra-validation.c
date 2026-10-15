@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "number-extra-validation.h"
 #include "../number-native.h"
+#include "../number-unit.h"
 #include <string.h>
 
 static uint32_t le32(const unsigned char *p)
@@ -101,13 +102,13 @@ static int compound_exists(const QJSIntlDataSection *s, uint32_t locale, unsigne
 }
 QJSIntlDataStatus qjs_intl_number_extra_data_validate(const QJSIntlDataView *v)
 {
-    static const uint32_t ids[] = {120, 121, 122}, widths[] = {76, 32, 16};
-    QJSIntlDataSection sections[3], symbols, units, locales;
-    unsigned int present[3] = {0}, k, any = 0;
+    static const uint32_t ids[] = {120, 121, 122, 123}, widths[] = {76, 32, 16, 64};
+    QJSIntlDataSection sections[4], symbols, units, locales;
+    unsigned int present[4] = {0}, k, any = 0;
     uint32_t i;
     QJSIntlDataStatus status = qjs_intl_number_data_validate(v);
     if (status != QJS_INTL_DATA_OK) return status;
-    for (k = 0; k < 3; k++) {
+    for (k = 0; k < 4; k++) {
         status = qjs_intl_data_section(v, ids[k], &sections[k]);
         if (status == QJS_INTL_DATA_NOT_FOUND) continue;
         if (status != QJS_INTL_DATA_OK || sections[k].record_width != widths[k]) return QJS_INTL_DATA_INVALID;
@@ -122,7 +123,7 @@ QJSIntlDataStatus qjs_intl_number_extra_data_validate(const QJSIntlDataView *v)
         qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_SYMBOL, &symbols) != QJS_INTL_DATA_OK ||
         (present[1] && qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_UNIT, &units) != QJS_INTL_DATA_OK))
         return QJS_INTL_DATA_INVALID;
-    for (k = 0; k < 3; k++) {
+    for (k = 0; k < 4; k++) {
         uint32_t previous_a = 0, previous_b = 0, previous_m = 0;
         unsigned int previous_display = 0;
         QJSIntlBytes previous_key = {NULL, 0};
@@ -135,7 +136,7 @@ QJSIntlDataStatus qjs_intl_number_extra_data_validate(const QJSIntlDataView *v)
             if (qjs_intl_data_record(&sections[k], i, &row) != QJS_INTL_DATA_OK || row.length != widths[k])
                 return QJS_INTL_DATA_INVALID;
             a = le32(row.data); if (a >= locales.record_count) return QJS_INTL_DATA_INVALID;
-            display = row.data[k == 2 ? 4 : k == 1 ? 12 : 8];
+            display = row.data[k == 2 ? 4 : (k == 1 || k == 3) ? 12 : 8];
             if (display > (k == 0 ? 1u : 2u)) return QJS_INTL_DATA_INVALID;
             if (k == 0) {
                 b = le32(row.data + 4); magnitude = le32(row.data + 12); exponent = le32(row.data + 16);
@@ -160,6 +161,22 @@ QJSIntlDataStatus qjs_intl_number_extra_data_validate(const QJSIntlDataView *v)
                     memchr(value.data, '{', value.length) || memchr(value.data, '}', value.length)) return QJS_INTL_DATA_INVALID;
                 if (i && (a < previous_a || (a == previous_a && (compare(key, previous_key) < 0 ||
                     (!compare(key, previous_key) && display <= previous_display))))) return QJS_INTL_DATA_INVALID;
+            } else if (k == 3) {
+                if (row.data[13] || row.data[14] || row.data[15] ||
+                    !text(v, &sections[k], i, 4, &key) ||
+                    !qjs_intl_number_unit_validate(key)) return QJS_INTL_DATA_INVALID;
+                /* A sanctioned simple unit is not a named compound key. */
+                for (j = 0; j + 5 <= key.length; j++)
+                    if (!memcmp(key.data + j, "-per-", 5)) break;
+                if (j + 5 > key.length) return QJS_INTL_DATA_INVALID;
+                for (j = 0; j < 6; j++)
+                    if (!text(v, &sections[k], i, 16 + j * 8, &value) ||
+                        !qjs_intl_number_template_validate(value, 3))
+                        return QJS_INTL_DATA_INVALID;
+                if (i && (a < previous_a || (a == previous_a &&
+                    (compare(key, previous_key) < 0 ||
+                     (!compare(key, previous_key) && display <= previous_display)))))
+                    return QJS_INTL_DATA_INVALID;
             } else {
                 if (row.data[5] || row.data[6] || row.data[7] || !text(v, &sections[k], i, 8, &value) ||
                     !per_pattern(value) || (i && (a < previous_a || (a == previous_a && display <= previous_display))))

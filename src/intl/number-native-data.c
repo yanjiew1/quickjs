@@ -55,7 +55,8 @@ static int find_string(const QJSIntlDataView *v, const QJSIntlDataSection *s,
         if (value != locale) break;
         if (!text(v, s, i, 4, &candidate)) return -1;
         if (!equal(candidate, key)) continue;
-        if (s->id == QJS_INTL_DATA_NUMBER_UNIT || s->id == QJS_INTL_DATA_NUMBER_DENOMINATOR) {
+        if (s->id == QJS_INTL_DATA_NUMBER_UNIT || s->id == QJS_INTL_DATA_NUMBER_DENOMINATOR ||
+            s->id == QJS_INTL_DATA_NUMBER_NAMED_COMPOUND) {
             if (qjs_intl_data_record(s, i, &row) != QJS_INTL_DATA_OK) return -1;
             if (row.data[12] != display) continue;
         }
@@ -295,19 +296,35 @@ static QJSIntlStatus open_data(const QJSIntlAllocator *a,
         }
     }
     if (o->style == QJS_INTL_NUMBER_UNIT) {
-        r = qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_UNIT, &s);
-        if (r == QJS_INTL_DATA_NOT_FOUND) return QJS_INTL_UNSUPPORTED;
-        if (r != QJS_INTL_DATA_OK ||
-            (found = find_string(v, &s, locale, numerator, o->unit_display, &index)) < 0)
-            return QJS_INTL_DATA_ERROR;
-        if (!found) return QJS_INTL_UNSUPPORTED;
-        for (i = 0; i < 6; i++)
-            if (!text(v, &s, index, 16 + i * 8, &d.unit_patterns[i])) return QJS_INTL_DATA_ERROR;
+        int named = 0;
         if (denominator.length) {
-            size_t maximum = o->maximum_output_length > SIZE_MAX / 4 ? SIZE_MAX : o->maximum_output_length * 4;
-            status = compound_templates(a, v, locale, o->unit_display, denominator, d.unit_patterns, maximum, composed);
-            if (status != QJS_INTL_OK) goto done;
-            for (i = 0; i < 6; i++) d.unit_patterns[i] = composed[i];
+            r = qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_NAMED_COMPOUND, &s);
+            if (r != QJS_INTL_DATA_OK && r != QJS_INTL_DATA_NOT_FOUND)
+                return QJS_INTL_DATA_ERROR;
+            if (r == QJS_INTL_DATA_OK) {
+                named = find_string(v, &s, locale, o->unit, o->unit_display, &index);
+                if (named < 0) return QJS_INTL_DATA_ERROR;
+                if (named)
+                    for (i = 0; i < 6; i++)
+                        if (!text(v, &s, index, 16 + i * 8, &d.unit_patterns[i]))
+                            return QJS_INTL_DATA_ERROR;
+            }
+        }
+        if (!named) {
+            r = qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_UNIT, &s);
+            if (r == QJS_INTL_DATA_NOT_FOUND) return QJS_INTL_UNSUPPORTED;
+            if (r != QJS_INTL_DATA_OK ||
+                (found = find_string(v, &s, locale, numerator, o->unit_display, &index)) < 0)
+                return QJS_INTL_DATA_ERROR;
+            if (!found) return QJS_INTL_UNSUPPORTED;
+            for (i = 0; i < 6; i++)
+                if (!text(v, &s, index, 16 + i * 8, &d.unit_patterns[i])) return QJS_INTL_DATA_ERROR;
+            if (denominator.length) {
+                size_t maximum = o->maximum_output_length > SIZE_MAX / 4 ? SIZE_MAX : o->maximum_output_length * 4;
+                status = compound_templates(a, v, locale, o->unit_display, denominator, d.unit_patterns, maximum, composed);
+                if (status != QJS_INTL_OK) goto done;
+                for (i = 0; i < 6; i++) d.unit_patterns[i] = composed[i];
+            }
         }
     }
     if (o->notation == QJS_INTL_NUMBER_COMPACT) {
