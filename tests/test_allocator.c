@@ -416,6 +416,62 @@ static void test_realloc_limit_overflow(void)
     assert(state.malloc_size == 0 && state.malloc_count == 0);
 }
 
+#ifndef FORCE_GC_AT_MALLOC
+static int gc_estimate_finalized;
+
+static void gc_estimate_finalizer(JSRuntime *rt, JSValue value)
+{
+    gc_estimate_finalized++;
+}
+#endif
+
+static void test_gc_upcoming_properties(void)
+{
+#ifndef FORCE_GC_AT_MALLOC
+    static JSClassID class_id;
+    static const JSClassDef class_def = {
+        "GCEstimate", .finalizer = gc_estimate_finalizer,
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue template, garbage, object;
+    JSProperty props[16];
+    JSShape *shape;
+    int i;
+
+    assert(rt);
+    JS_SetGCThreshold(rt, SIZE_MAX);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_NewClassID(&class_id);
+    assert(JS_NewClass(rt, class_id, &class_def) == 0);
+    template = JS_NewObject(ctx);
+    assert(!JS_IsException(template));
+    for (i = 0; i < countof(props); i++) {
+        props[i].u.value = JS_NewInt32(ctx, i);
+        assert(JS_DefinePropertyValueUint32(ctx, template, i,
+            JS_NewInt32(ctx, i), JS_PROP_C_W_E) >= 0);
+    }
+    shape = js_dup_shape(JS_VALUE_GET_OBJ(template)->shape);
+    assert(shape->prop_count == countof(props));
+    assert(shape->prop_size >= countof(props));
+    garbage = JS_NewObjectClass(ctx, class_id);
+    assert(!JS_IsException(garbage));
+    assert(JS_SetPropertyStr(ctx, garbage, "self", JS_DupValue(ctx, garbage)) >= 0);
+    JS_FreeValue(ctx, garbage);
+    assert(gc_estimate_finalized == 0);
+    /* The header alone fits the budget; its imminent properties do not. */
+    JS_SetGCThreshold(rt, rt->malloc_ctx.malloc_state.malloc_size + sizeof(JSObject));
+    object = JS_NewObjectFromShape(ctx, shape, JS_CLASS_OBJECT, props);
+    assert(!JS_IsException(object));
+    assert(gc_estimate_finalized == 1);
+    JS_FreeValue(ctx, object);
+    JS_FreeValue(ctx, template);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+#endif
+}
+
 static void test_gc_accounting_overflow(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -1141,6 +1197,7 @@ static void test_native_constructor_setup(void)
 
 int main(void)
 {
+    test_gc_upcoming_properties();
     test_int64_atom_table_allocation_failure();
     test_native_constructor_setup();
     int kind;
