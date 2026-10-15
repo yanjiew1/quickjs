@@ -2374,11 +2374,9 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
         }
         if (name == JS_ATOM_this || name == JS_ATOM_new_target)
             goto invalid_lvalue;
-        if (has_with_scope(fd, scope)) {
-            depth = 2;  /* will generate OP_get_ref_value */
-        } else {
-            depth = 0;
-        }
+        /* Capture every identifier lvalue before user code can affect
+           the resolved binding. The backend folds stable references. */
+        depth = 2;  /* will generate OP_get_ref_value */
         break;
     case OP_get_field:
         name = get_u32(fd->byte_code.buf + fd->last_opcode_pos + 1);
