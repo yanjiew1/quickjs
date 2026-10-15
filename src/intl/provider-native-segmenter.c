@@ -1,5 +1,6 @@
-/* Native Segmenter policy: en/en-US use Unicode18 default UAX29 rules.
- * No additional EP table or generated metadata definition is compiled here. */
+/* Native Segmenter policy: installed locales use Unicode18 default UAX29 rules.
+ * No dictionary or language tailoring is claimed. No additional EP table or
+ * generated metadata definition is compiled here. */
 #include "provider-native-segmenter.h"
 #include <string.h>
 struct QJSIntlProviderSegmenter {
@@ -28,12 +29,12 @@ QJSIntlStatus qjs_intl_native_provider_segmenter_open(QJSIntlProvider *p,
     QJSIntlExtendedPictographicSource ep;
     QJSIntlSegmentPropertySource properties;
     QJSIntlStatus status;
+    uint32_t row;
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     *out = NULL;
     if (!a || !view) return QJS_INTL_INVALID_ARGUMENT;
-    if (!locale.data || !((locale.length == 2 && !memcmp(locale.data, "en", 2)) ||
-        (locale.length == 5 && !memcmp(locale.data, "en-US", 5))))
-        return QJS_INTL_UNSUPPORTED;
+    status = qjs_intl_native_provider_locale_row(p, locale, &row);
+    if (status != QJS_INTL_OK) return status;
     s = a->malloc(a->opaque, sizeof(*s));
     if (!s) return QJS_INTL_NO_MEMORY;
     memset(s, 0, sizeof(*s));
@@ -59,14 +60,16 @@ QJSIntlStatus qjs_intl_native_provider_segments_new(QJSIntlProviderSegmenter *s,
     if (!s) { if (out) *out = NULL; return QJS_INTL_INVALID_ARGUMENT; }
     return qjs_intl_native_segments_new(s->handle, input, out);
 }
-QJSIntlStatus qjs_intl_native_provider_segmenter_available(QJSIntlProvider *p)
+QJSIntlStatus qjs_intl_native_provider_segmenter_locale_available(QJSIntlProvider *p,
+    QJSIntlBytes locale, uint32_t row)
 {
     QJSIntlProviderSegmenter *s = NULL;
     QJSIntlStatus status;
     unsigned i;
+    (void)row; /* segmenter_open resolves this same authenticated tag. */
     for (i = 0; i < 3; i++) {
         status = qjs_intl_native_provider_segmenter_open(p,
-            (QJSIntlBytes){ "en", 2 }, (QJSIntlSegmentGranularity)i, &s);
+            locale, (QJSIntlSegmentGranularity)i, &s);
         if (status != QJS_INTL_OK) return status;
         qjs_intl_native_provider_segmenter_close(s);
         s = NULL;

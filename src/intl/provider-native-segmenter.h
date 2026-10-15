@@ -5,7 +5,8 @@
 #include "segmenter-native-data.h"
 #include "segmenter-unicode.h"
 typedef struct QJSIntlProviderSegmenter QJSIntlProviderSegmenter;
-QJSIntlStatus qjs_intl_native_provider_segmenter_available(QJSIntlProvider *);
+QJSIntlStatus qjs_intl_native_provider_segmenter_locale_available(QJSIntlProvider *,
+    QJSIntlBytes, uint32_t);
 QJSIntlStatus qjs_intl_native_provider_segmenter_open(QJSIntlProvider *,
     QJSIntlBytes, QJSIntlSegmentGranularity, QJSIntlProviderSegmenter **);
 void qjs_intl_native_provider_segmenter_close(QJSIntlProviderSegmenter *);

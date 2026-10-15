@@ -8,13 +8,15 @@ assertThrows(TypeError, () => new Intl.Segmenter("en", null));
 assertThrows(RangeError, () => new Intl.Segmenter("en", {granularity: "line"}));
 for (const granularity of ["grapheme", "word", "sentence"]) {
     for (const [tag, resolved] of [["en", "en"], ["en-US", "en-US"],
-                                  ["en-GB", "en"], ["zz", "en-US"]]) {
+                                  ["en-GB", "en"], ["fr", "fr"], ["ja", "ja"],
+                                  ["ar", "ar"], ["zz", "en-US"]]) {
         const s = new Intl.Segmenter(tag, {granularity});
         assert(s.resolvedOptions().locale, resolved);
         assert(s.resolvedOptions().granularity, granularity);
         assertArrayEquals(Object.keys(s.resolvedOptions()), ["locale", "granularity"]);
         for (const input of ["", "a\0b", "a\ud800b\udc00", "\ud83d\ude00",
-            "e\u0301", "\r\n", "hello world.", "\ud83d\udc69\u200d\ud83d\udcbb"]) {
+            "e\u0301", "\r\n", "hello world.", "Привет мир!", "مرحبا بالعالم.",
+            "カタカナ。", "\ud83d\udc69\u200d\ud83d\udcbb"]) {
             const parts = [...s.segment(input)];
             assert(parts.map(p => p.segment).join(""), input);
             let offset = 0;
@@ -30,7 +32,7 @@ for (const granularity of ["grapheme", "word", "sentence"]) {
     }
 }
 assertArrayEquals(Intl.Segmenter.supportedLocalesOf(["en-US", "en-GB", "fr", "zz"]),
-                  ["en-US", "en-GB"]);
+                  ["en-US", "en-GB", "fr"]);
 const g = new Intl.Segmenter("en");
 const input = "\ud83d\ude00e\u0301\ud800\0";
 const segments = g.segment(input);

@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../src/intl/provider-native-duration.h"
+#include "../src/intl/provider-native-segmenter.h"
 #include "../src/intl/provider-native-plural.h"
 #include "../src/intl/provider-native-relative.h"
 #include "../src/intl/data/plural-data-validation.h"
@@ -934,6 +935,20 @@ static void duration_locale_list(QJSIntlProvider *provider, const QJSIntlTagList
     }
 }
 
+static void segmenter_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *tags)
+{
+    size_t i;
+    unsigned int granularity;
+    for (i = 0; i < tags->count; i++) {
+        for (granularity = 0; granularity < 3; granularity++) {
+            QJSIntlProviderSegmenter *segmenter = NULL;
+            assert(qjs_intl_native_provider_segmenter_open(provider, tags->items[i],
+                (QJSIntlSegmentGranularity)granularity, &segmenter) == QJS_INTL_OK && segmenter);
+            qjs_intl_native_provider_segmenter_close(segmenter);
+        }
+    }
+}
+
 /* Warm failures include partial result lists, not just the array allocation. */
 static void available_list_faults(QJSIntlProvider *provider, Heap *heap,
     QJSIntlService service, size_t count, size_t requests)
@@ -995,6 +1010,7 @@ static void available(void)
         if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_DURATION_FORMAT) duration_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_SEGMENTER) segmenter_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&cold, provider);
         provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
@@ -1013,6 +1029,7 @@ static void available(void)
         if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_DURATION_FORMAT) duration_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_SEGMENTER) segmenter_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         available_list_faults(provider, &warm_heap, services[i], admitted_count, warm_calls);
         destroy(&warm_heap, provider);
