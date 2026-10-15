@@ -5806,7 +5806,8 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
         {
             int label_catch, label_catch2, label_finally, label_end;
             int try_scope_start, try_scope_end, catch_scope_start;
-            int catch_scope_level;
+            int catch_value_idx;
+            BOOL catch_has_handler = FALSE;
             JSAtom name;
             BlockEnv block_env;
 
@@ -5847,9 +5848,11 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                     goto fail;
 
                 catch_scope_start = s->cur_func->scope_count;
-                catch_scope_level = s->cur_func->scope_level;
                 emit_label(s, label_catch);
                 close_scope_range(s, try_scope_start, try_scope_end);
+                push_break_entry(s->cur_func, &block_env, JS_ATOM_NULL,
+                                 -1, -1, 1);
+                block_env.label_finally = label_finally;
                 push_scope(s);  /* catch variable */
 
                 if (s->token.val == '{') {
@@ -5860,6 +5863,20 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                         goto fail;
                     if (!(s->token.val == TOK_IDENT && !s->token.u.ident.is_reserved)) {
                         if (s->token.val == '[' || s->token.val == '{') {
+                            /* Protect binding initialization as well as the catch body.
+                               Save the exception while installing its enclosing catch. */
+                            catch_value_idx = add_var(ctx, s->cur_func, JS_ATOM_NULL);
+                            if (catch_value_idx < 0)
+                                goto fail;
+                            emit_op(s, OP_put_loc);
+                            emit_u16(s, catch_value_idx);
+                            emit_goto(s, OP_catch, label_catch2);
+                            emit_op(s, OP_get_loc);
+                            emit_u16(s, catch_value_idx);
+                            emit_op(s, OP_undefined);
+                            emit_op(s, OP_put_loc);
+                            emit_u16(s, catch_value_idx);
+                            catch_has_handler = TRUE;
                             /* XXX: TOK_LET is not completely correct */
                             if (js_parse_destructuring_element(s, TOK_LET, 0, TRUE, -1, TRUE, FALSE) < 0)
                                 goto fail;
@@ -5882,15 +5899,9 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                     if (js_parse_expect(s, ')'))
                         goto fail;
                 }
-                /* XXX: should keep the address to nop it out if there is no finally block */
-                emit_goto(s, OP_catch, label_catch2);
-
+                if (!catch_has_handler)
+                    emit_goto(s, OP_catch, label_catch2);
                 push_scope(s);  /* catch block */
-                push_break_entry(s->cur_func, &block_env, JS_ATOM_NULL,
-                                 -1, -1, 1);
-                block_env.label_finally = label_finally;
-                /* Finally executes outside the catch parameter environment. */
-                block_env.scope_level = catch_scope_level;
 
                 set_eval_ret_undefined(s);
                 if (js_parse_block(s))

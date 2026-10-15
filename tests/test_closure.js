@@ -360,3 +360,53 @@ function test_optional_call_cleanup()
 
 test_optional_call_cleanup();
 test_abrupt_scope_closures();
+
+function test_catch_binding_finally()
+{
+    function eval_binding(input) {
+        try { throw input; }
+        catch ([x = eval("1")]) { return eval("x"); }
+    }
+    assert(eval_binding([2]), 2);
+    assert(eval_binding([]), 1);
+
+    var events = [];
+    var error = {};
+    try {
+        try { throw {}; }
+        catch ({ x = (() => { throw error; })() }) {}
+        finally { events.push("finally"); }
+    } catch (e) {
+        assert(e === error);
+        events.push("catch");
+    }
+    assert(events.join(), "finally,catch");
+
+    function* suspended() {
+        try { throw {}; }
+        catch ({ x = yield 1 }) {}
+        finally { events.push("finally"); }
+    }
+    for (var operation of ["return", "throw"]) {
+        events = [];
+        var iter = suspended();
+        var step = iter.next();
+        assert(step.value, 1);
+        assert(step.done, false);
+        if (operation === "return") {
+            step = iter.return(7);
+            assert(step.value, 7);
+            assert(step.done, true);
+        } else {
+            try {
+                iter.throw(error);
+                assert(false);
+            } catch (e) {
+                assert(e === error);
+            }
+        }
+        assert(events.join(), "finally");
+    }
+}
+
+test_catch_binding_finally();
