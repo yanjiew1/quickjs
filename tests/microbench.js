@@ -643,6 +643,22 @@ function local_destruct(n)
 var global_v1, global_v2, global_v3, global_v4;
 var global_a, global_b, global_c, global_d;
 
+function closure_destruct(n)
+{
+    var v1, v2, v3, v4, a, b, c, d;
+    function run() {
+        var array = [1, 2, 3, 4, 5];
+        var object = { a: 1, b: 2, c: 3, d: 4 };
+        for (var j = 0; j < n; j++) {
+            [v1, v2,, v3, ...v4] = array;
+            ({ a, b, c, d } = object);
+        }
+    }
+    run();
+    global_res = a + b + c + d;
+    return n * 8;
+}
+
 function global_destruct(n)
 {
     var j, v1, v2, v3, v4;
@@ -1632,6 +1648,7 @@ function main(argc, argv, g)
         global_write,
         global_write_strict,
         local_destruct,
+        closure_destruct,
         global_destruct,
         global_destruct_strict,
         global_func_call,
