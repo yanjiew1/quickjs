@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Yan-Jie Wang
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -65,14 +66,20 @@ void dump_byte_code(JSContext *ctx, int pass,
                     const LabelSlot *label_slots, JSFunctionBytecode *b)
 {
     const JSOpCode *oi;
-    int pos, pos_next, op, size, idx, addr, line, line1, in_source, line_num;
-    uint8_t *bits = js_mallocz(ctx, len * sizeof(*bits));
+    int pos, pos_next, op, size, idx, addr, line, line1, in_source;
+    int line_num = 0;
+    uint8_t *bits = js_mallocz_rt(ctx->rt, len * sizeof(*bits));
     BOOL use_short_opcodes = (b != NULL), dump_pc;
 
     if (b) {
         int col_num;
         line_num = find_line_num(ctx, b, -1, &col_num);
     }
+
+    /* Label annotations are optional; do not replace a pending exception
+       or fail compilation if their diagnostic allocation fails. */
+    if (!bits)
+        goto no_labels;
     
     /* scan for jump targets */
     for (pos = 0; pos < len; pos = pos_next) {
@@ -116,6 +123,7 @@ void dump_byte_code(JSContext *ctx, int pass,
             }
         }
     }
+ no_labels:
     in_source = 0;
     if (source) {
         /* Always print first line: needed if single line */
@@ -176,7 +184,7 @@ void dump_byte_code(JSContext *ctx, int pass,
 #if defined(DUMP_BYTECODE) && (DUMP_BYTECODE & 32)
         dump_pc = TRUE;
 #else
-        dump_pc = bits[pos];
+        dump_pc = bits && bits[pos];
 #endif
         if (dump_pc) {
             printf("%5d:  ", pos);
