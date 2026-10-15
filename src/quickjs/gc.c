@@ -195,6 +195,9 @@ void __JS_FreeValueRT(JSRuntime *rt, JSValue v)
             js_free_rt(rt, p);
         }
         break;
+    case JS_TAG_VAR_REF:
+        js_free_var_ref(rt, JS_VALUE_GET_PTR(v));
+        break;
     case JS_TAG_SYMBOL:
         {
             JSAtomStruct *p = JS_VALUE_GET_PTR(v);
@@ -263,6 +266,7 @@ void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func)
         case JS_TAG_OBJECT:
         case JS_TAG_FUNCTION_BYTECODE:
         case JS_TAG_MODULE:
+        case JS_TAG_VAR_REF:
             mark_func(rt, JS_VALUE_GET_PTR(val));
             break;
         default:

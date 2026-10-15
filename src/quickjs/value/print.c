@@ -713,6 +713,9 @@ static void js_print_value(JSPrintValueState *s, JSValueConst val)
             js_print_string(s, val);
         }
         break;
+    case JS_TAG_VAR_REF:
+        js_puts(s, "[var_ref]");
+        break;
     case JS_TAG_FUNCTION_BYTECODE:
         {
             JSFunctionBytecode *b = JS_VALUE_GET_PTR(val);

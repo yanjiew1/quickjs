@@ -153,6 +153,7 @@ int check_function(JSContext *ctx, JSValueConst obj);
 
 void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b);
 void free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
+void js_free_var_ref(JSRuntime *rt, JSVarRef *var_ref);
 JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical);
 BOOL js_class_has_bytecode(JSClassID class_id);
 
