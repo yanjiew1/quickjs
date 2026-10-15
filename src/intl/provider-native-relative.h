@@ -6,5 +6,6 @@
 #include "provider-native-number.h"
 QJSIntlStatus qjs_intl_native_provider_relative_open(QJSIntlProvider *,QJSIntlBytes,
     const QJSIntlRelativeOptions *,const QJSIntlRelativeNumberBridge *,QJSIntlNativeRelative **);
-QJSIntlStatus qjs_intl_native_provider_relative_available(QJSIntlProvider *);
+QJSIntlStatus qjs_intl_native_provider_relative_locale_available(QJSIntlProvider *,
+    QJSIntlBytes, uint32_t);
 #endif

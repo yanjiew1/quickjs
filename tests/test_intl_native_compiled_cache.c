@@ -834,8 +834,10 @@ static void number_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *
     {
         QJSIntlTagList other = {0};
         assert(qjs_intl_locale_key_values(provider, QJS_INTL_RELATIVE_TIME_FORMAT,
-            bytes("de"), bytes("nu"), &other) == QJS_INTL_UNSUPPORTED);
-        assert(!other.count && !other.items);
+            bytes("de"), bytes("nu"), &other) == QJS_INTL_OK);
+        assert(other.count && other.items && other.items[0].length == 4 &&
+               !memcmp(other.items[0].data, "latn", 4));
+        qjs_intl_tag_list_clear(provider, &other);
     }
 }
 
@@ -870,6 +872,46 @@ static void plural_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *
                 &options, &plural) == QJS_INTL_OK && plural);
             qjs_intl_native_plural_close(plural);
         }
+    }
+}
+
+static QJSIntlStatus admission_number_format(void *opaque,
+    const QJSIntlDecimalResult *value, QJSIntlFormatted *out)
+{
+    return qjs_intl_native_number_format_rounded(opaque, value, out);
+}
+static void admission_number_clear(void *opaque, QJSIntlFormatted *out)
+{
+    qjs_intl_native_number_result_clear(opaque, out);
+}
+static void relative_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *tags)
+{
+    QJSIntlNumberOptions number_options_value = number_options();
+    QJSIntlRelativeOptions options = {0};
+    size_t i;
+    unsigned int style, numeric;
+    options.maximum_output_length = 4096;
+    for (i = 0; i < tags->count; i++) {
+        QJSIntlNativeNumber *number = NULL;
+        QJSIntlBytes preferred;
+        QJSIntlRelativeNumberBridge bridge;
+        uint32_t row;
+        assert(qjs_intl_native_provider_locale_row(provider, tags->items[i], &row) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_default_numbering(provider, row, &preferred) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_number_open(provider, tags->items[i], preferred,
+            &number_options_value, &number) == QJS_INTL_OK && number);
+        bridge = (QJSIntlRelativeNumberBridge){number, admission_number_format, admission_number_clear};
+        for (style = 0; style < 3; style++) {
+            for (numeric = 0; numeric < 2; numeric++) {
+                QJSIntlNativeRelative *relative = NULL;
+                options.style = (QJSIntlRelativeStyle)style;
+                options.numeric = (QJSIntlRelativeNumeric)numeric;
+                assert(qjs_intl_native_provider_relative_open(provider, tags->items[i],
+                    &options, &bridge, &relative) == QJS_INTL_OK && relative);
+                qjs_intl_native_relative_close(relative);
+            }
+        }
+        qjs_intl_native_number_close(number);
     }
 }
 
@@ -932,6 +974,7 @@ static void available(void)
         if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&cold, provider);
         provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
@@ -948,6 +991,7 @@ static void available(void)
         if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         available_list_faults(provider, &warm_heap, services[i], admitted_count, warm_calls);
         destroy(&warm_heap, provider);

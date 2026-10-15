@@ -36,5 +36,26 @@ new Intl.RelativeTimeFormat('en',options);eq(log.join(','),'localeMatcher,number
 eq(new Intl.RelativeTimeFormat('en-u-nu-foobar').resolvedOptions().numberingSystem,'latn');
 eq(new Intl.RelativeTimeFormat('en-u-nu-latn',{numberingSystem:'foobar'}).resolvedOptions().locale,'en-u-nu-latn');
 throws(RangeError,()=>new Intl.RelativeTimeFormat('en',{numberingSystem:'a'}));
-eq(Intl.RelativeTimeFormat.supportedLocalesOf(['en','en-US','fr']).join(','),'en,en-US');
+eq(Intl.RelativeTimeFormat.supportedLocalesOf(['en','en-US','zz']).join(','),'en,en-US');
+for (const locale of ['de', 'fr', 'pl', 'ar', 'fa'])
+    eq(Intl.RelativeTimeFormat.supportedLocalesOf([locale])[0], locale);
+eq(new Intl.RelativeTimeFormat('fr').format(1, 'day'), 'dans 1 jour');
+eq(new Intl.RelativeTimeFormat('pl').format(1000, 'second'), 'za 1000 sekund');
+eq(new Intl.RelativeTimeFormat('pl', {numeric:'auto'}).format(-1, 'day'), 'wczoraj');
+const persian = new Intl.RelativeTimeFormat('fa');
+eq(persian.resolvedOptions().numberingSystem, 'arabext');
+for (const locale of ['de', 'fr', 'pl', 'ar', 'fa']) {
+    for (const style of ['long', 'short', 'narrow']) {
+        const relative = new Intl.RelativeTimeFormat(locale, {style});
+        for (const value of [-1234.5, -1, -0, 0, 1, 1234.5]) {
+            const parts = relative.formatToParts(value, 'day');
+            eq(parts.map(part => part.value).join(''), relative.format(value, 'day'));
+            if (value < 0 && parts.some(part => part.type === 'integer'))
+                eq(parts.some(part => part.type === 'minusSign'), true);
+        }
+    }
+}
+/* CLDR Arabic singular text has no numeric placeholder to carry a sign. */
+eq(new Intl.RelativeTimeFormat('ar').format(-1, 'day'), 'قبل يوم واحد');
+eq(new Intl.RelativeTimeFormat('ar').formatToParts(-1, 'day').every(part => part.type === 'literal'), true);
 print('native-relative-ok');
