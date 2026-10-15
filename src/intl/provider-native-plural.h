@@ -6,5 +6,6 @@
 #include "provider-native-number.h"
 QJSIntlStatus qjs_intl_native_provider_plural_open(QJSIntlProvider *,QJSIntlBytes,
     const QJSIntlPluralOptions *,QJSIntlNativePlural **);
-QJSIntlStatus qjs_intl_native_provider_plural_available(QJSIntlProvider *);
+QJSIntlStatus qjs_intl_native_provider_plural_locale_available(QJSIntlProvider *,
+    QJSIntlBytes, uint32_t);
 #endif

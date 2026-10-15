@@ -30,5 +30,18 @@ new Intl.PluralRules('en',options);eq(log.join(','),names.join(','));
 throws(TypeError,()=>Intl.PluralRules());throws(TypeError,()=>Intl.PluralRules.prototype.select.call({},1));
 throws(TypeError,()=>new Intl.PluralRules('en',{roundingIncrement:2,maximumSignificantDigits:3}));
 throws(RangeError,()=>new Intl.PluralRules('en',{minimumFractionDigits:3,maximumFractionDigits:1}));
-eq(Intl.PluralRules.supportedLocalesOf(['en','en-US','fr']).join(','),'en,en-US');
+eq(Intl.PluralRules.supportedLocalesOf(['en','en-US','zz']).join(','),'en,en-US');
+for (const locale of ['fr', 'pl', 'ar', 'ja', 'fa'])
+    eq(Intl.PluralRules.supportedLocalesOf([locale])[0], locale);
+const arabic = new Intl.PluralRules('ar');
+eq(arabic.resolvedOptions().pluralCategories.join(','), 'zero,one,two,few,many,other');
+for (const [value, category] of [[0,'zero'],[1,'one'],[2,'two'],[3,'few'],[11,'many'],[100,'other']])
+    eq(arabic.select(value), category);
+const polish = new Intl.PluralRules('pl');
+eq(polish.select(1), 'one'); eq(polish.select(2), 'few'); eq(polish.select(5), 'many');
+const french = new Intl.PluralRules('fr');
+eq(french.select(0), 'one'); eq(french.select(2), 'other'); eq(french.select(1000000), 'many');
+eq(new Intl.PluralRules('ja').select(1), 'other');
+for (const notation of ['standard', 'scientific', 'engineering', 'compact'])
+    eq(new Intl.PluralRules('fa', {notation}).select(1), 'one');
 print('native-plural-ok');

@@ -301,17 +301,16 @@ static void verify_native_fallback(const char *source, size_t operation)
     "p.resolvedOptions();" \
     "new Intl.DisplayNames('fr',{type:'dateTimeField'}).of('month');"
 #ifdef CONFIG_INTL_NATIVE
-/* This released provider admits en/en-US. Keep the requested-locale operation
-   in every cold/warm/lifetime sweep. Warm only the inventory, as before. */
+/* Keep the requested-locale operation in every cold/warm/lifetime sweep.
+   Warm the inventory without assuming another installed language is absent. */
 #define INTL_SERVICE_WARMUP(service, locale, options) \
-    "Intl." service ".supportedLocalesOf('" locale "').length === 0 &&" \
-    "Intl." service ".supportedLocalesOf('en')[0] === 'en'"
+    "Intl." service ".supportedLocalesOf(['en','zz']).join(',') === 'en'"
 #else
 #define INTL_SERVICE_WARMUP(service, locale, options) \
     "Intl." service ".supportedLocalesOf('" locale "')[0] === '" locale "'"
 #endif
 #define INTL_SERVICE_FALLBACK(service, locale, options) \
-    "new Intl." service "('" locale "'," options ").resolvedOptions().locale ===" \
+    "new Intl." service "('zz'," options ").resolvedOptions().locale ===" \
     "new Intl." service "(undefined," options ").resolvedOptions().locale"
 static const struct {
     const char *once, *repeated, *warmup, *fallback;

@@ -856,6 +856,23 @@ static void list_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *ta
     }
 }
 
+static void plural_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *tags)
+{
+    QJSIntlPluralOptions options = {0};
+    size_t i;
+    unsigned int type;
+    options.digits = number_options().digits;
+    for (i = 0; i < tags->count; i++) {
+        for (type = 0; type < 2; type++) {
+            QJSIntlNativePlural *plural = NULL;
+            options.type = (QJSIntlPluralType)type;
+            assert(qjs_intl_native_provider_plural_open(provider, tags->items[i],
+                &options, &plural) == QJS_INTL_OK && plural);
+            qjs_intl_native_plural_close(plural);
+        }
+    }
+}
+
 /* Warm failures include partial result lists, not just the array allocation. */
 static void available_list_faults(QJSIntlProvider *provider, Heap *heap,
     QJSIntlService service, size_t count, size_t requests)
@@ -914,6 +931,7 @@ static void available(void)
         assert(english && american);
         if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&cold, provider);
         provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
@@ -929,6 +947,7 @@ static void available(void)
                (unsigned int)services[i], cold_calls, admitted_count + 1);
         if (services[i] == QJS_INTL_NUMBER_FORMAT) number_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         available_list_faults(provider, &warm_heap, services[i], admitted_count, warm_calls);
         destroy(&warm_heap, provider);

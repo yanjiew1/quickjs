@@ -64,13 +64,18 @@ static JSValue js_intl_plural_constructor(JSContext *ctx,JSValueConst target,
     if(js_intl_native_error(ctx,status,"PluralRules"))goto fail;
     if (s->notation) {
         QJSIntlNumberOptions number={0};
+        QJSIntlBytes locale={resolved.data_locale,strlen(resolved.data_locale)}, numbering;
+        uint32_t row;
+        status=qjs_intl_native_provider_locale_row(provider,locale,&row);
+        if(js_intl_native_error(ctx,status,"PluralRules locale"))goto fail;
+        status=qjs_intl_native_provider_default_numbering(provider,row,&numbering);
+        if(js_intl_native_error(ctx,status,"PluralRules numbering"))goto fail;
         number.notation=(QJSIntlNumberNotation)s->notation;
         number.compact_display=(QJSIntlCompactDisplay)s->compact_display;
         number.digits=s->native_digits;number.maximum_output_length=1048576;
         /* Only immutable notation data is used; inputs are never re-rounded. */
         status=qjs_intl_native_provider_number_open(provider,
-            (QJSIntlBytes){resolved.data_locale,strlen(resolved.data_locale)},
-            (QJSIntlBytes){"latn",4},&number,&s->notation_formatter);
+            locale,numbering,&number,&s->notation_formatter);
         if(js_intl_native_error(ctx,status,"PluralRules notation"))goto fail;
     }
     s->locale=resolved.locale;resolved.locale=NULL;
