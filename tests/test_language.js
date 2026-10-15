@@ -3847,3 +3847,63 @@ function test_checked_sloppy_global_assignment()
 }
 
 test_checked_sloppy_global_assignment();
+
+function test_closure_destructuring_lowering()
+{
+    let first = 0, second = 0, tail;
+    const events = [];
+    const key = { toString() { events.push("key"); return "q"; } };
+    const source = {
+        get p() { events.push("p"); first = 40; return 3; },
+        get q() { events.push("q"); assert(first, 3); second = 50; return 4; }
+    };
+    function object() { return ({ p: first, [key]: second } = source); }
+    assert(object(), source);
+    assert(first, 3);
+    assert(second, 4);
+    assert(events.join(","), "p,key,q");
+
+    function defaults() {
+        ({ p: first = (first = 90, 5) } = {});
+        [second = (second = 90, 6), ...tail] = [];
+    }
+    defaults();
+    assert(first, 5);
+    assert(second, 6);
+    assert(tail.length, 0);
+
+    function logical() {
+        assert(first ||= 7, 5);
+        assert(second &&= 8, 8);
+        second = null;
+        assert(second ??= 9, 9);
+    }
+    logical();
+
+    function* suspended() { [first = yield 1] = []; return first; }
+    const iterator = suspended();
+    assert(iterator.next().value, 1);
+    first = 99;
+    assert(iterator.next(7).value, 7);
+    assert(first, 7);
+
+    let next = 0, closed = 0;
+    const iterable = {
+        [Symbol.iterator]() { return this; },
+        next() { next++; return { value: 1, done: false }; },
+        return() { closed++; return {}; }
+    };
+    function before_initialization() { [uninitialized] = iterable; }
+    assert_throws(ReferenceError, before_initialization);
+    assert(next, 1);
+    assert(closed, 1);
+    let uninitialized;
+
+    first = 3;
+    assert_throws(ReferenceError, function() {
+        let local = ({ [key]: local } = source);
+    });
+    assert(events.slice(-2).join(","), "key,q");
+}
+
+test_closure_destructuring_lowering();
