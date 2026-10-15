@@ -188,3 +188,40 @@ function test_imported_write_references()
 test_module_const_write_tdz();
 test_imported_write_references();
 export const module_const_write_tdz = 1;
+
+function test_module_assignment_references()
+{
+    let effects = 0;
+    assertThrows(ReferenceError, () => { module_reference_const = ++effects; });
+    assert(effects, 1);
+    assertThrows(ReferenceError, () => { module_reference_let = ++effects; });
+    assert(effects, 2);
+}
+
+test_module_assignment_references();
+export const module_reference_const = 1;
+export let module_reference_let = 1;
+assertThrows(TypeError, () => { module_reference_const = 2; });
+assert(module_reference_const, 1);
+module_reference_let += 2;
+assert(module_reference_let, 3);
+
+
+
+const module_local_reference_const = 23;
+function test_module_local_const_reference()
+{
+    let effects = 0;
+    assertThrows(TypeError, () => {
+        module_local_reference_const = (effects++, 24);
+    });
+    assert(effects, 1);
+    assert(module_local_reference_const, 23);
+    assertThrows(TypeError, () => {
+        module_local_reference_const += (effects++, 1);
+    });
+    assert(effects, 2);
+    assert(module_local_reference_const, 23);
+}
+
+test_module_local_const_reference();
