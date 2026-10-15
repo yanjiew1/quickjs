@@ -52,3 +52,20 @@ async function test_function_constructor_binding()
 }
 
 await test_function_constructor_binding();
+
+async function test_catch_binding_finally()
+{
+    const events = [];
+    const error = {};
+    try {
+        try { throw {}; }
+        catch ({ x = await Promise.reject(error) }) {}
+        finally { events.push("finally"); }
+    } catch (e) {
+        assert(e === error, true);
+        events.push("catch");
+    }
+    assert(events.join(), "finally,catch");
+}
+
+await test_catch_binding_finally();
