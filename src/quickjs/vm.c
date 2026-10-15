@@ -55,6 +55,11 @@
 #endif
 
 
+static inline BOOL is_strict_mode_sf(const JSStackFrame *sf)
+{
+    return sf && (sf->js_mode & JS_MODE_STRICT);
+}
+
 /* Frame references use an int32 base: two high bits for the storage kind,
    followed by the slot index. They never escape the current frame, whose
    arguments, locals and function closure already own the referenced values.
@@ -153,7 +158,8 @@ static inline JSAtom js_get_reference_atom(JSContext *ctx, JSValueConst name,
    SetPropertyInternal consumes it even on failure; report that distinction
    so the existing exception cleanup and reference release stay exact. */
 static no_inline __attribute__((cold)) __exception int
-js_put_reference_slow(JSContext *ctx, JSValueConst base, JSAtom atom,
+js_put_reference_slow(JSContext *ctx, JSStackFrame *sf,
+                      JSValueConst base, JSAtom atom,
                       JSValue value, BOOL is_unresolvable,
                       BOOL *value_consumed)
 {
@@ -167,7 +173,7 @@ js_put_reference_slow(JSContext *ctx, JSValueConst base, JSAtom atom,
         if (unlikely(ret <= 0)) {
             if (unlikely(ret < 0))
                 return -1;
-            if (is_strict_mode(ctx)) {
+            if (is_strict_mode_sf(sf)) {
                 JS_ThrowReferenceErrorNotDefined(ctx, atom);
                 return -1;
             }
@@ -1883,7 +1889,7 @@ static __exception int js_iterator_get_value_done(JSContext *ctx, JSValue *sp)
     JS_FreeValue(ctx, obj);
     /* put again the catch offset so that exceptions close the
        iterator */
-    sp[-2] = JS_NewCatchOffset(ctx, 0); 
+    sp[-2] = JS_NewCatchOffset(ctx, 0);
     sp[-1] = value;
     sp[0] = JS_NewBool(ctx, done);
     return 0;
@@ -3253,7 +3259,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     /* check_var captured resolution before the RHS. A newly
                        created property cannot resolve an earlier reference. */
                     if (unlikely(!JS_VALUE_GET_BOOL(sp[-2]))) {
-                        if (is_strict_mode(ctx)) {
+                        if (is_strict_mode_sf(sf)) {
                             JS_ThrowReferenceErrorNotDefined(ctx,
                                                             b->closure_var[idx].var_name);
                             goto exception;
@@ -3289,7 +3295,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         ret = JS_HasProperty(ctx, ctx->global_obj, cv->var_name);
                         if (ret < 0)
                             goto exception;
-                        if (ret == 0 && is_strict_mode(ctx)) {
+                        if (ret == 0 && is_strict_mode_sf(sf)) {
                             JS_ThrowReferenceErrorNotDefined(ctx, cv->var_name);
                             goto exception;
                         }
@@ -4310,7 +4316,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                             JS_FreeAtom(ctx, atom);
                         goto exception;
                     }
-                    if (is_strict_mode(ctx)) {
+                    if (is_strict_mode_sf(sf)) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
                         if (atom_owned)
                             JS_FreeAtom(ctx, atom);
@@ -4432,7 +4438,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     }
                     if (unlikely((is_lexical && JS_IsUninitialized(*pval)) ||
                                  is_const)) {
-                        if (is_lexical || is_strict_mode(ctx)) {
+                        if (is_lexical || is_strict_mode_sf(sf)) {
                             atom = JS_ValueToAtom(ctx, sp[-2]);
                             if (atom == JS_ATOM_NULL)
                                 goto exception;
@@ -4456,7 +4462,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     goto exception;
                 is_unresolvable = JS_IsUndefined(sp[-3]);
                 if (unlikely(is_unresolvable)) {
-                    if (is_strict_mode(ctx)) {
+                    if (is_strict_mode_sf(sf)) {
                         JS_ThrowReferenceErrorNotDefined(ctx, atom);
                         if (atom_owned)
                             JS_FreeAtom(ctx, atom);
@@ -4474,7 +4480,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 }
                 {
                     BOOL value_consumed;
-                    ret = js_put_reference_slow(ctx, base, atom, sp[-1],
+                    ret = js_put_reference_slow(ctx, sf, base, atom, sp[-1],
                                                 is_unresolvable,
                                                 &value_consumed);
                     if (unlikely(!value_consumed)) {
@@ -5384,7 +5390,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         if (unlikely(ret <= 0)) {
                             if (ret < 0)
                                 goto exception;
-                            if (is_strict_mode(ctx)) {
+                            if (is_strict_mode_sf(sf)) {
                                 JS_ThrowReferenceErrorNotDefined(ctx, atom);
                                 goto exception;
                             } 
@@ -5402,7 +5408,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         if (unlikely(ret <= 0)) {
                             if (ret < 0)
                                 goto exception;
-                            if (is_strict_mode(ctx)) {
+                            if (is_strict_mode_sf(sf)) {
                                 JS_ThrowReferenceErrorNotDefined(ctx, atom);
                                 goto exception;
                             } 
@@ -5432,7 +5438,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         if (unlikely(ret < 0))
                             goto exception;
                         if (!ret) {
-                            if (is_strict_mode(ctx)) {
+                            if (is_strict_mode_sf(sf)) {
                                 JS_ThrowReferenceErrorNotDefined(ctx, atom);
                                 goto exception;
                             }
