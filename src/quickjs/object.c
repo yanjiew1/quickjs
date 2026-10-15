@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Ben Noordhuis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -747,17 +748,19 @@ JSValue JS_NewObjectFromShape(JSContext *ctx, JSShape *sh, JSClassID class_id,
 {
     JSObject *p;
     int i;
-    
-#ifdef JS_PTR64
-    js_trigger_gc(ctx->rt, sizeof(JSObject));
-    p = js_malloc(ctx, sizeof(JSObject));
-#else
-    size_t size = sizeof(JSObject);
+    size_t size = sizeof(JSObject), gc_size = SIZE_MAX;
+
+#ifndef JS_PTR64
     if (class_id == JS_CLASS_C_FUNCTION)
         size += sizeof(JSAtom);
-    js_trigger_gc(ctx->rt, size);
-    p = js_malloc(ctx, size);
 #endif
+    if ((size_t)sh->prop_size <= (SIZE_MAX - size) / sizeof(JSProperty))
+        gc_size = size + sizeof(JSProperty) * sh->prop_size;
+    /* Property storage is allocated immediately after the object header.
+       Include both in the GC estimate so a property-heavy allocation is
+       considered even when its header alone would fit the current budget. */
+    js_trigger_gc(ctx->rt, gc_size);
+    p = js_malloc(ctx, size);
     if (unlikely(!p))
         goto fail;
     p->class_id = class_id;
