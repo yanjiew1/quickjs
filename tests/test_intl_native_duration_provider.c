@@ -78,7 +78,9 @@ int main(void)
     config.default_locale = (QJSIntlBytes){"en-US",5};
     config.default_time_zone = (QJSIntlBytes){"UTC",3};
     assert(qjs_intl_provider_new(&config, &provider) == QJS_INTL_OK);
-    assert(qjs_intl_native_provider_duration_available(provider) == QJS_INTL_OK);
+    assert(qjs_intl_locale_available(provider, QJS_INTL_DURATION_FORMAT, &systems) == QJS_INTL_OK);
+    assert(systems.count > 2);
+    qjs_intl_tag_list_clear(provider, &systems);
     assert(qjs_intl_native_provider_duration_key_values(provider, locale,
             (QJSIntlBytes){"nu",2}, &systems) == QJS_INTL_OK);
     assert(systems.count && systems.items[0].length == 4 && !memcmp(systems.items[0].data,"latn",4));

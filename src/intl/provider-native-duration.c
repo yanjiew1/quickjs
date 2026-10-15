@@ -1,4 +1,4 @@
-/* DurationFormat adapter for the admitted en/en-US development profile.
+/* DurationFormat adapter for individually admitted compiled locale rows.
  * Copyright (c) 2026 Yan-Jie Wang. No ICU, global state or binary owner. */
 #include "provider-native-duration.h"
 #include "native-data-validation-internal.h"
@@ -36,10 +36,9 @@ static QJSIntlStatus indices(QJSIntlProvider *p, QJSIntlBytes locale,
     const QJSIntlDataView *v;
     if (!p || !locale.data || !numbering.data || !numbering.length)
         return QJS_INTL_INVALID_ARGUMENT;
-    if (!same(locale, "en") && !same(locale, "en-US")) return QJS_INTL_UNSUPPORTED;
     v = qjs_intl_native_provider_view(p);
     if (!v) return QJS_INTL_INVALID_ARGUMENT;
-    status = named_index(v, QJS_INTL_DATA_LOCALE, (QJSIntlBytes){"en", 2}, li);
+    status = qjs_intl_native_provider_locale_row(p, locale, li);
     if (status != QJS_INTL_OK) return status;
     return named_index(v, QJS_INTL_DATA_NUMBERING, numbering, ni);
 }
@@ -74,19 +73,22 @@ QJSIntlStatus qjs_intl_native_provider_duration_open(QJSIntlProvider *p,
 /* Validate all ten textual units and three list widths from reader-validated
  * records. This is an availability dependency gate, not a conformance receipt.
  * It avoids twenty complete Number snapshots merely for locale discovery. */
-QJSIntlStatus qjs_intl_native_provider_duration_available(QJSIntlProvider *p)
+QJSIntlStatus qjs_intl_native_provider_duration_locale_available(QJSIntlProvider *p,
+    QJSIntlBytes locale, uint32_t locale_index)
 {
     const QJSIntlDataView *v;
     QJSIntlDataSection section;
     QJSIntlDataSlice row, name;
     QJSIntlStatus status;
-    uint32_t li, ni, i, locale;
+    uint32_t li, ni, i, record_locale;
+    QJSIntlBytes numbering;
     uint8_t two, lists = 0, units[10] = {0};
     size_t unit;
-    status = indices(p, (QJSIntlBytes){"en", 2}, (QJSIntlBytes){"latn", 4}, &li, &ni);
+    status = qjs_intl_native_provider_default_numbering(p, locale_index, &numbering);
     if (status != QJS_INTL_OK) return status;
-    status = qjs_intl_native_provider_duration_clock(p, (QJSIntlBytes){"en", 2},
-                                                     (QJSIntlBytes){"latn", 4}, &two);
+    status = indices(p, locale, numbering, &li, &ni);
+    if (status != QJS_INTL_OK) return status;
+    status = qjs_intl_native_provider_duration_clock(p, locale, numbering, &two);
     if (status != QJS_INTL_OK) return status;
     v = qjs_intl_native_provider_view(p);
     if (qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_UNIT, &section) == QJS_INTL_DATA_NOT_FOUND)
@@ -94,10 +96,10 @@ QJSIntlStatus qjs_intl_native_provider_duration_available(QJSIntlProvider *p)
     if (qjs_intl_data_section(v, QJS_INTL_DATA_NUMBER_UNIT, &section) != QJS_INTL_DATA_OK)
         return QJS_INTL_DATA_ERROR;
     for (i = 0; i < section.record_count; i++) {
-        if (qjs_intl_data_record_u32(&section, i, 0, &locale) != QJS_INTL_DATA_OK ||
+        if (qjs_intl_data_record_u32(&section, i, 0, &record_locale) != QJS_INTL_DATA_OK ||
             qjs_intl_data_record(&section, i, &row) != QJS_INTL_DATA_OK || row.length != 64)
             return QJS_INTL_DATA_ERROR;
-        if (locale != li) continue;
+        if (record_locale != li) continue;
         if (qjs_intl_data_record_string(v, &section, i, 4, &name) != QJS_INTL_DATA_OK)
             return QJS_INTL_DATA_ERROR;
         for (unit = 0; unit < 10; unit++)
@@ -110,14 +112,14 @@ QJSIntlStatus qjs_intl_native_provider_duration_available(QJSIntlProvider *p)
     if (qjs_intl_data_section(v, QJS_INTL_DATA_LIST_PATTERN, &section) != QJS_INTL_DATA_OK)
         return QJS_INTL_DATA_ERROR;
     for (i = 0; i < section.record_count; i++) {
-        if (qjs_intl_data_record_u32(&section, i, 0, &locale) != QJS_INTL_DATA_OK ||
+        if (qjs_intl_data_record_u32(&section, i, 0, &record_locale) != QJS_INTL_DATA_OK ||
             qjs_intl_data_record(&section, i, &row) != QJS_INTL_DATA_OK || row.length != 40)
             return QJS_INTL_DATA_ERROR;
-        if (locale == li && row.data[4] == QJS_INTL_LIST_UNIT && !row.data[6])
+        if (record_locale == li && row.data[4] == QJS_INTL_LIST_UNIT && !row.data[6])
             lists |= (uint8_t)(1u << row.data[5]);
     }
     if (lists != 7) return QJS_INTL_UNSUPPORTED;
-    return qjs_intl_native_provider_number_available(p);
+    return qjs_intl_native_provider_number_locale_available(p, locale, locale_index);
 }
 /* Keep Number's actual supported numeric defaults and exclude missing clocks.
  * Compaction transfers owned strings without another allocation. */
@@ -128,8 +130,16 @@ QJSIntlStatus qjs_intl_native_provider_duration_key_values(QJSIntlProvider *p,
     const QJSIntlAllocator *a;
     size_t i, count = 0;
     uint8_t two;
+    uint32_t row;
+    QJSIntlBytes preferred;
     status = qjs_intl_native_provider_number_key_values(p, locale, key, out);
     if (status != QJS_INTL_OK) return status;
+    status = qjs_intl_native_provider_locale_row(p, locale, &row);
+    if (status == QJS_INTL_OK)
+        status = qjs_intl_native_provider_default_numbering(p, row, &preferred);
+    if (status != QJS_INTL_OK) {
+        qjs_intl_tag_list_clear(p, out); return status;
+    }
     a = qjs_intl_native_provider_allocator(p);
     for (i = 0; i < out->count; i++) {
         status = qjs_intl_native_provider_duration_clock(p, locale, out->items[i], &two);
@@ -144,7 +154,8 @@ QJSIntlStatus qjs_intl_native_provider_duration_key_values(QJSIntlProvider *p,
         }
     }
     out->count = count;
-    if (!count || !same(out->items[0], "latn")) {
+    if (!count || out->items[0].length != preferred.length ||
+        memcmp(out->items[0].data, preferred.data, preferred.length)) {
         qjs_intl_tag_list_clear(p, out); return QJS_INTL_UNSUPPORTED;
     }
     return QJS_INTL_OK;

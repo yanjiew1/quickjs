@@ -915,6 +915,25 @@ static void relative_locale_list(QJSIntlProvider *provider, const QJSIntlTagList
     }
 }
 
+static void duration_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *tags)
+{
+    QJSIntlDurationOptions options = duration_options();
+    size_t i;
+    for (i = 0; i < tags->count; i++) {
+        QJSIntlNativeDuration *duration = NULL;
+        QJSIntlBytes preferred;
+        uint32_t row;
+        uint8_t two;
+        assert(qjs_intl_native_provider_locale_row(provider, tags->items[i], &row) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_default_numbering(provider, row, &preferred) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_duration_clock(provider, tags->items[i], preferred, &two) == QJS_INTL_OK);
+        options.units[4].style = two ? QJS_INTL_DURATION_TWO_DIGIT : QJS_INTL_DURATION_NUMERIC;
+        assert(qjs_intl_native_provider_duration_open(provider, tags->items[i], preferred,
+            &options, &duration) == QJS_INTL_OK && duration);
+        qjs_intl_native_duration_close(duration);
+    }
+}
+
 /* Warm failures include partial result lists, not just the array allocation. */
 static void available_list_faults(QJSIntlProvider *provider, Heap *heap,
     QJSIntlService service, size_t count, size_t requests)
@@ -975,6 +994,7 @@ static void available(void)
         if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_DURATION_FORMAT) duration_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&cold, provider);
         provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
@@ -992,6 +1012,7 @@ static void available(void)
         if (services[i] == QJS_INTL_LIST_FORMAT) list_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_PLURAL_RULES) plural_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_DURATION_FORMAT) duration_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         available_list_faults(provider, &warm_heap, services[i], admitted_count, warm_calls);
         destroy(&warm_heap, provider);

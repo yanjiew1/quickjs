@@ -67,17 +67,6 @@ static void default_options(QJSIntlNumberOptions *o)
     o->digits.rounding_mode = QJS_INTL_ROUND_HALF_EXPAND;
     o->digits.maximum_output_length = o->maximum_output_length = 1048576;
 }
-QJSIntlStatus qjs_intl_native_provider_number_available(QJSIntlProvider *p)
-{
-    QJSIntlNumberOptions o;
-    QJSIntlNativeNumber *number = NULL;
-    QJSIntlStatus status;
-    default_options(&o);
-    status = qjs_intl_native_provider_number_open(p, (QJSIntlBytes){"en",2},
-        (QJSIntlBytes){"latn",4}, &o, &number);
-    qjs_intl_native_number_close(number);
-    return status;
-}
 /* Reader-validated sorted keys admit numeric systems without constructing
  * and discarding a complete snapshot per entry. Final formatter open still
  * proves the selected style and all its required optional rows. */

@@ -396,6 +396,9 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
     if (service == QJS_INTL_NUMBER_FORMAT)
         return available_compiled_locales(p, service,
             qjs_intl_native_provider_number_locale_available, out);
+    if (service == QJS_INTL_DURATION_FORMAT)
+        return available_compiled_locales(p, service,
+            qjs_intl_native_provider_duration_locale_available, out);
     if (service == QJS_INTL_RELATIVE_TIME_FORMAT)
         return available_compiled_locales(p, service,
             qjs_intl_native_provider_relative_locale_available, out);
@@ -414,9 +417,6 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
             if (status != QJS_INTL_OK) return status;
         } else if (service == QJS_INTL_SEGMENTER) {
             QJSIntlStatus status = qjs_intl_native_provider_segmenter_available(p);
-            if (status != QJS_INTL_OK) return status;
-        } else if (service == QJS_INTL_DURATION_FORMAT) {
-            QJSIntlStatus status = qjs_intl_native_provider_duration_available(p);
             if (status != QJS_INTL_OK) return status;
         } else if (service == QJS_INTL_DISPLAY_NAMES) {
             QJSIntlStatus status = qjs_intl_native_provider_display_available(p);

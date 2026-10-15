@@ -1,4 +1,4 @@
-/* Native en/en-US data profile; all observable algorithms run in C.
+/* Native localized duration data; all observable algorithms run in C.
  * Copyright (c) 2026 Yan-Jie Wang. */
 function same(actual, expected, label) {
     if (!Object.is(actual, expected)) throw Error((label || "mismatch") + ": " + actual + " != " + expected);
@@ -93,4 +93,28 @@ if (typeof Temporal === "object") {
     Intl.DurationFormat = function () {throw Error("replaced public constructor");};
     same(d.toLocaleString("en", {style:"digital", fractionalDigits:3}), digital.format(d));
     Intl.DurationFormat = intrinsic;
+}
+
+for (const locale of ['de', 'sr', 'es', 'ar', 'fa']) {
+    same(Intl.DurationFormat.supportedLocalesOf([locale])[0], locale, 'duration locale admission');
+    for (const style of ['long', 'short', 'narrow', 'digital']) {
+        const formatter = new Intl.DurationFormat(locale, {style});
+        same(formatter.resolvedOptions().locale, locale);
+        same(formatter.resolvedOptions().numberingSystem,
+             new Intl.NumberFormat(locale).resolvedOptions().numberingSystem);
+        const record = Object.fromEntries(units.map((unit, i) => [unit, i + 1]));
+        const parts = formatter.formatToParts(record);
+        same(join(parts), formatter.format(record), 'localized duration reconstruction');
+        same(parts.every(part => !part.unit || singular.includes(part.unit)), true);
+    }
+}
+same(new Intl.DurationFormat('de', {style:'long'}).format({years:2}), '2 Jahre');
+const persianDuration = new Intl.DurationFormat('fa', {style:'digital'});
+same(persianDuration.resolvedOptions().numberingSystem, 'arabext');
+for (const part of persianDuration.formatToParts({hours:1, minutes:2, seconds:3})) {
+    if (part.type !== 'integer') continue;
+    const values = {hour:1, minute:2, second:3};
+    const field = {hour:'hours', minute:'minutes', second:'seconds'}[part.unit];
+    const digits = persianDuration.resolvedOptions()[field] === '2-digit' ? 2 : 1;
+    same(part.value, new Intl.NumberFormat('fa', {useGrouping:false, minimumIntegerDigits:digits}).format(values[part.unit]));
 }

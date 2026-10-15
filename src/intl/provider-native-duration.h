@@ -11,7 +11,8 @@ QJSIntlStatus qjs_intl_native_provider_duration_clock(QJSIntlProvider *,
 QJSIntlStatus qjs_intl_native_provider_duration_open(QJSIntlProvider *,
     QJSIntlBytes locale, QJSIntlBytes numbering,
     const QJSIntlDurationOptions *, QJSIntlNativeDuration **);
-QJSIntlStatus qjs_intl_native_provider_duration_available(QJSIntlProvider *);
+QJSIntlStatus qjs_intl_native_provider_duration_locale_available(QJSIntlProvider *,
+    QJSIntlBytes, uint32_t);
 QJSIntlStatus qjs_intl_native_provider_duration_key_values(QJSIntlProvider *,
     QJSIntlBytes locale, QJSIntlBytes key, QJSIntlTagList *);
 #endif
