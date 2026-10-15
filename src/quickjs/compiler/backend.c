@@ -634,8 +634,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
                                                    pos_next, get_op, var_idx);
             } else {
-                /* Create a dummy object with a named slot that is
-                   a reference to the local variable */
+                /* Retain the local or argument binding as a tagged reference. */
                 if (var_idx & ARGUMENT_VAR_OFFSET) {
                     capture_var(s, &s->args[var_idx - ARGUMENT_VAR_OFFSET]);
                     dbuf_putc(bc, OP_make_arg_ref);
@@ -1000,8 +999,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                                                        pos_next,
                                                        get_op, idx);
                 } else {
-                    /* Create a dummy object with a named slot that is
-                       a reference to the closure variable */
+                    /* Retain the closure binding as a tagged reference. */
                     dbuf_putc(bc, OP_make_var_ref_ref);
                     dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
                     dbuf_put_u16(bc, idx);

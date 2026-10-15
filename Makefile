@@ -860,6 +860,7 @@ endif
 	$(WINE) ./qjs$(EXE) tests/test_gsab_worker.js
 ifndef CONFIG_WIN32
 	$(WINE) ./qjs$(EXE) tests/test_std.js
+	$(WINE) ./qjs$(EXE) tests/test_var_ref.js
 	$(WINE) ./qjs$(EXE) tests/test_rw_handler.js
 endif
 ifdef CONFIG_SHARED_LIBS

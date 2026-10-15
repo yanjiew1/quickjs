@@ -3399,15 +3399,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         CASE(OP_make_var_ref_ref):
             {
                 JSVarRef *var_ref;
-                JSProperty *pr;
                 JSAtom atom;
                 int idx;
                 atom = get_u32(pc);
                 idx = get_u16(pc + 4);
                 pc += 6;
-                *sp++ = JS_NewObjectProto(ctx, JS_NULL);
-                if (unlikely(JS_IsException(sp[-1])))
-                    goto exception;
+                sf->cur_pc = pc;
                 if (opcode == OP_make_var_ref_ref) {
                     var_ref = var_refs[idx];
                     js_rc(var_ref)->ref_count++;
@@ -3416,14 +3413,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     if (!var_ref)
                         goto exception;
                 }
-                pr = add_property(ctx, JS_VALUE_GET_OBJ(sp[-1]), atom,
-                                  JS_PROP_WRITABLE | JS_PROP_VARREF);
-                if (!pr) {
-                    free_var_ref(rt, var_ref);
-                    goto exception;
-                }
-                pr->u.var_ref = var_ref;
+                /* Retain the reference's two-slot stack shape without an
+                   object, shape or property allocation for the binding. */
+                *sp++ = JS_MKPTR(JS_TAG_VAR_REF, var_ref);
                 *sp++ = JS_AtomToValue(ctx, atom);
+                if (unlikely(JS_IsException(sp[-1])))
+                    goto exception;
             }
             BREAK;
         CASE(OP_make_var_ref):
@@ -4119,6 +4114,20 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int ret;
                 
                 sf->cur_pc = pc;
+                if (JS_VALUE_GET_TAG(sp[-2]) == JS_TAG_VAR_REF) {
+                    JSVarRef *var_ref = JS_VALUE_GET_PTR(sp[-2]);
+                    val = *var_ref->pvalue;
+                    if (unlikely(JS_IsUninitialized(val))) {
+                        atom = JS_ValueToAtom(ctx, sp[-1]);
+                        if (atom == JS_ATOM_NULL)
+                            goto exception;
+                        JS_ThrowReferenceErrorUninitialized(ctx, atom);
+                        JS_FreeAtom(ctx, atom);
+                        goto exception;
+                    }
+                    *sp++ = JS_DupValue(ctx, val);
+                    BREAK;
+                }
                 atom = JS_ValueToAtom(ctx, sp[-1]);
                 if (atom == JS_ATOM_NULL)
                     goto exception;
@@ -4232,6 +4241,31 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValueConst base;
                 BOOL is_unresolvable;
                 sf->cur_pc = pc;
+                if (JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_VAR_REF) {
+                    JSVarRef *var_ref = JS_VALUE_GET_PTR(sp[-3]);
+                    if (unlikely((var_ref->is_lexical &&
+                                  JS_IsUninitialized(*var_ref->pvalue)) ||
+                                 var_ref->is_const)) {
+                        if (var_ref->is_lexical || is_strict_mode(ctx)) {
+                            atom = JS_ValueToAtom(ctx, sp[-2]);
+                            if (atom == JS_ATOM_NULL)
+                                goto exception;
+                            if (JS_IsUninitialized(*var_ref->pvalue))
+                                JS_ThrowReferenceErrorUninitialized(ctx, atom);
+                            else
+                                JS_ThrowTypeErrorReadOnly(ctx, JS_PROP_THROW, atom);
+                            JS_FreeAtom(ctx, atom);
+                            goto exception;
+                        }
+                        JS_FreeValue(ctx, sp[-1]);
+                    } else {
+                        set_value(ctx, var_ref->pvalue, sp[-1]);
+                    }
+                    JS_FreeValue(ctx, sp[-2]);
+                    JS_FreeValue(ctx, sp[-3]);
+                    sp -= 3;
+                    BREAK;
+                }
                 atom = JS_ValueToAtom(ctx, sp[-2]);
                 if (unlikely(atom == JS_ATOM_NULL))
                     goto exception;

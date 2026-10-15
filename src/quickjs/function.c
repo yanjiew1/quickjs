@@ -202,25 +202,31 @@ JSVarRef *js_create_var_ref(JSContext *ctx, BOOL is_lexical)
     return var_ref;
 }
 
+/* The caller has already released the last counted owner. */
+void js_free_var_ref(JSRuntime *rt, JSVarRef *var_ref)
+{
+    assert(js_rc(var_ref)->ref_count == 0);
+    if (var_ref->is_detached) {
+        JS_FreeValueRT(rt, var_ref->value);
+    } else {
+        JSStackFrame *sf = var_ref->stack_frame;
+        assert(sf->var_refs[var_ref->var_ref_idx] == var_ref);
+        sf->var_refs[var_ref->var_ref_idx] = NULL;
+        if (sf->js_mode & JS_MODE_ASYNC) {
+            JSAsyncFunctionState *async_func = container_of(sf, JSAsyncFunctionState, frame);
+            async_func_free(rt, async_func);
+        }
+    }
+    remove_gc_object(&var_ref->header);
+    js_free_rt(rt, var_ref);
+}
+
 void free_var_ref(JSRuntime *rt, JSVarRef *var_ref)
 {
     if (var_ref) {
         assert(js_rc(var_ref)->ref_count > 0);
-        if (--js_rc(var_ref)->ref_count == 0) {
-            if (var_ref->is_detached) {
-                JS_FreeValueRT(rt, var_ref->value);
-            } else {
-                JSStackFrame *sf = var_ref->stack_frame;
-                assert(sf->var_refs[var_ref->var_ref_idx] == var_ref);
-                sf->var_refs[var_ref->var_ref_idx] = NULL;
-                if (sf->js_mode & JS_MODE_ASYNC) {
-                    JSAsyncFunctionState *async_func = container_of(sf, JSAsyncFunctionState, frame);
-                    async_func_free(rt, async_func);
-                }
-            }
-            remove_gc_object(&var_ref->header);
-            js_free_rt(rt, var_ref);
-        }
+        if (--js_rc(var_ref)->ref_count == 0)
+            js_free_var_ref(rt, var_ref);
     }
 }
 
