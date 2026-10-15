@@ -114,3 +114,6 @@ libwinpthread*.dll
 
 /tests/test_std_interrupt
 /tests/test_std_interrupt.exe
+
+/tests/test_typed_array_sort_oom
+/tests/test_typed_array_sort_oom.exe
