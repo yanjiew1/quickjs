@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../src/intl/provider-native-duration.h"
+#include "../src/intl/provider-native-date.h"
 #include "../src/intl/provider-native-segmenter.h"
 #include "../src/intl/provider-native-plural.h"
 #include "../src/intl/provider-native-relative.h"
@@ -949,6 +950,36 @@ static void segmenter_locale_list(QJSIntlProvider *provider, const QJSIntlTagLis
     }
 }
 
+static void date_locale_list(QJSIntlProvider *provider, const QJSIntlTagList *tags)
+{
+    QJSIntlDateBankOptions options = {0};
+    size_t i, field;
+    options.requested.time_zone = bytes("UTC");
+    options.requested.date_style = options.requested.time_style = -1;
+    options.requested.format_matcher = QJS_DATE_BEST_FIT;
+    options.number_required = QJS_DATE_REQUIRE_ANY;
+    options.number_defaults = QJS_DATE_DEFAULT_DATE;
+    options.instant_defaults = QJS_DATE_DEFAULT_ALL;
+    for (field = 0; field < QJS_DATE_FIELD_COUNT; field++) options.requested.fields[field] = -1;
+    for (i = 0; i < tags->count; i++) {
+        QJSIntlNativeDateBank *bank = NULL;
+        QJSIntlNativeDateProviderEnvironment environment;
+        QJSIntlNativeDateDefaults defaults;
+        QJSIntlBytes numbering;
+        uint32_t row;
+        unsigned int cycle;
+        assert(qjs_intl_native_provider_locale_row(provider, tags->items[i], &row) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_default_numbering(provider, row, &numbering) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_date_hour_cycle(provider, tags->items[i], -1, &cycle) == QJS_INTL_OK);
+        assert(qjs_intl_native_provider_date_defaults_get(provider, row, &defaults));
+        options.requested.calendar = bytes(qjs_calendar_identifier((QJSCalendarId)defaults.calendar));
+        options.requested.hour_cycle = cycle;
+        assert(qjs_intl_native_provider_date_open(provider, tags->items[i], numbering,
+            &options, NULL, &environment, &bank) == QJS_INTL_OK && bank);
+        qjs_intl_native_date_bank_close(bank);
+    }
+}
+
 /* Warm failures include partial result lists, not just the array allocation. */
 static void available_list_faults(QJSIntlProvider *provider, Heap *heap,
     QJSIntlService service, size_t count, size_t requests)
@@ -980,7 +1011,7 @@ static void available(void)
 {
     static const QJSIntlService services[] = {
         QJS_INTL_NUMBER_FORMAT, QJS_INTL_LIST_FORMAT, QJS_INTL_PLURAL_RULES,
-        QJS_INTL_RELATIVE_TIME_FORMAT,
+        QJS_INTL_RELATIVE_TIME_FORMAT, QJS_INTL_DATE_TIME_FORMAT,
         QJS_INTL_DISPLAY_NAMES, QJS_INTL_DURATION_FORMAT, QJS_INTL_SEGMENTER,
         QJS_INTL_COLLATOR, QJS_INTL_COLLATOR_SEARCH
     };
@@ -1011,6 +1042,7 @@ static void available(void)
         if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_DURATION_FORMAT) duration_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_SEGMENTER) segmenter_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_DATE_TIME_FORMAT) date_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         destroy(&cold, provider);
         provider = create(&warm_heap, "en-US", "UTC", QJS_INTL_OK);
@@ -1030,6 +1062,7 @@ static void available(void)
         if (services[i] == QJS_INTL_RELATIVE_TIME_FORMAT) relative_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_DURATION_FORMAT) duration_locale_list(provider, &tags);
         if (services[i] == QJS_INTL_SEGMENTER) segmenter_locale_list(provider, &tags);
+        if (services[i] == QJS_INTL_DATE_TIME_FORMAT) date_locale_list(provider, &tags);
         qjs_intl_tag_list_clear(provider, &tags);
         available_list_faults(provider, &warm_heap, services[i], admitted_count, warm_calls);
         destroy(&warm_heap, provider);
@@ -1105,7 +1138,7 @@ static void table_certificates(void)
     assert(load(&relative_scans) == 1);
     assert(qjs_intl_native_date_data_calendar_mask(view, locale, &mask) == QJS_INTL_OK &&
         load(&date_scans) == 1);
-    assert(qjs_intl_native_provider_date_calendar_mask(provider, &certified_mask) == QJS_INTL_OK &&
+    assert(qjs_intl_native_provider_date_calendar_mask(provider, locale, &certified_mask) == QJS_INTL_OK &&
         mask == certified_mask && load(&date_scans) == 1);
     assert(qjs_intl_native_date_data_calendar_mask_with_validator(&copied, locale,
         qjs_intl_native_provider_validate_compiled_data, provider, &certified_mask) ==

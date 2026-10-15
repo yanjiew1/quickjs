@@ -1,10 +1,8 @@
-/* Native DateTimeFormat admitted development profile. Copyright 2026 Yan-Jie Wang.
- * ICU branches and binary service_coverage remain owned by their existing paths.
- * Complete localized calendar data is admitted by the data owner's mask.
- * The accepted shared arithmetic provider is checked before each calendar
- * is admitted. AvailableLocales stays en/en-US. */
+/* Native DateTimeFormat locale admission. Copyright 2026 Yan-Jie Wang.
+ * Complete localized calendars and shared arithmetic are proved per row. */
 #include "provider-native-date.h"
 #include "metadata-data.h"
+#include "native-locale-info.h"
 #include <string.h>
 
 static QJSIntlBytes bytes(const char *s)
@@ -23,24 +21,6 @@ static QJSIntlStatus text(const QJSIntlDataView *v,
     if (qjs_intl_data_record_string(v, s, row, offset, &b)) return QJS_INTL_DATA_ERROR;
     out->data = (const char *)b.data; out->length = b.length;
     return QJS_INTL_OK;
-}
-static QJSIntlStatus locale_row(QJSIntlProvider *p, QJSIntlBytes locale,
-                                uint32_t *out)
-{
-    const QJSIntlDataView *v = qjs_intl_native_provider_view(p);
-    QJSIntlDataSection s;
-    uint32_t row; QJSIntlBytes tag;
-    if (!v || !out) return QJS_INTL_INVALID_ARGUMENT;
-    if (!equal(locale, bytes("en")) && !equal(locale, bytes("en-US")))
-        return QJS_INTL_UNSUPPORTED;
-    /* Exact en/en-US profile uses the acquired inherited en date rows.
-     * This choice does not confer availability on unrelated identity rows. */
-    if (qjs_intl_data_section(v, QJS_INTL_DATA_LOCALE, &s)) return QJS_INTL_DATA_ERROR;
-    for (row = 0; row < s.record_count; row++) {
-        if (text(v, &s, row, 0, &tag)) return QJS_INTL_DATA_ERROR;
-        if (equal(tag, bytes("en"))) { *out = row; return QJS_INTL_OK; }
-    }
-    return QJS_INTL_UNSUPPORTED;
 }
 static QJSIntlStatus numbering_row(QJSIntlProvider *p, QJSIntlBytes value,
                                    uint32_t *out)
@@ -65,53 +45,32 @@ static QJSIntlStatus append(QJSIntlProvider *p, QJSIntlTagList *out, QJSIntlByte
     for (i = 0; i < out->count; i++) if (equal(out->items[i], value)) return QJS_INTL_OK;
     if (out->count >= SIZE_MAX / sizeof(*items) || value.length == SIZE_MAX)
         return QJS_INTL_OVERFLOW;
-    copy = a->malloc(a->opaque, value.length + 1);
-    if (!copy) return QJS_INTL_NO_MEMORY;
-    if (value.length) memcpy(copy, value.data, value.length);
-    copy[value.length] = 0;
+    copy = NULL;
+    if (value.data) {
+        copy = a->malloc(a->opaque, value.length + 1);
+        if (!copy) return QJS_INTL_NO_MEMORY;
+        if (value.length) memcpy(copy, value.data, value.length);
+        copy[value.length] = 0;
+    }
     items = a->realloc(a->opaque, out->items, (out->count + 1) * sizeof(*items));
-    if (!items) { a->free(a->opaque, copy); return QJS_INTL_NO_MEMORY; }
-    out->items = items; out->items[out->count++] = bytes(copy); return QJS_INTL_OK;
+    if (!items) { if (copy) a->free(a->opaque, copy); return QJS_INTL_NO_MEMORY; }
+    out->items = items; out->items[out->count++] = (QJSIntlBytes){copy, value.length}; return QJS_INTL_OK;
 }
-static QJSIntlStatus default_numbering(QJSIntlProvider *p, uint32_t row, QJSIntlBytes *out)
+static QJSIntlStatus date_defaults(QJSIntlProvider *, QJSIntlBytes,
+    uint32_t, QJSIntlNativeDateDefaults *);
+QJSIntlStatus qjs_intl_native_provider_date_hour_cycle(QJSIntlProvider *p,
+    QJSIntlBytes locale, int hour12, unsigned int *out)
 {
-    const QJSIntlDataView *v = qjs_intl_native_provider_view(p);
-    QJSIntlDataSection s; uint32_t parent, steps;
-    if (qjs_intl_data_section(v, QJS_INTL_DATA_LOCALE, &s)) return QJS_INTL_DATA_ERROR;
-    for (steps = 0; steps < s.record_count; steps++) {
-        if (text(v, &s, row, 36, out)) return QJS_INTL_DATA_ERROR;
-        if (out->length) return QJS_INTL_OK;
-        if (qjs_intl_data_record_u32(&s, row, 8, &parent)) return QJS_INTL_DATA_ERROR;
-        if (parent == QJS_INTL_DATA_INDEX_NONE) return QJS_INTL_UNSUPPORTED;
-        row = parent;
-    }
-    return QJS_INTL_DATA_ERROR;
-}
-QJSIntlStatus qjs_intl_native_provider_date_preferred_hour_cycle(
-    QJSIntlProvider *p, QJSIntlBytes locale, unsigned int *out)
-{
-    const QJSIntlDataView *v = qjs_intl_native_provider_view(p);
-    QJSIntlDataSection s; QJSIntlBytes key, raw; uint32_t row, scope, ignored;
-    QJSIntlStatus status = locale_row(p, locale, &ignored);
-    if (!out) return QJS_INTL_INVALID_ARGUMENT;
+    QJSIntlNativeDateDefaults defaults;
+    QJSIntlStatus status;
+    uint32_t row;
+    if (!out || hour12 < -1 || hour12 > 1) return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_native_provider_locale_row(p, locale, &row);
     if (status) return status;
-    if (qjs_intl_data_section(v, QJS_INTL_DATA_HOUR_DEFAULT, &s)) return QJS_INTL_UNSUPPORTED;
-    /* The admitted en/en-US profile uses CLDR US. Read its preferred raw
-     * symbol explicitly; allowed-cycle ordering is not the preferred cycle. */
-    for (row = 0; row < s.record_count; row++) {
-        if (text(v, &s, row, 0, &key) ||
-            qjs_intl_data_record_u32(&s, row, 8, &scope)) return QJS_INTL_DATA_ERROR;
-        if (scope || !equal(key, bytes("US"))) continue;
-        if (text(v, &s, row, 12, &raw) || !raw.length) return QJS_INTL_DATA_ERROR;
-        switch (raw.data[0]) {
-        case 'K': *out = QJS_DATE_H11; return QJS_INTL_OK;
-        case 'h': *out = QJS_DATE_H12; return QJS_INTL_OK;
-        case 'H': *out = QJS_DATE_H23; return QJS_INTL_OK;
-        case 'k': *out = QJS_DATE_H24; return QJS_INTL_OK;
-        default: return QJS_INTL_DATA_ERROR;
-        }
-    }
-    return QJS_INTL_UNSUPPORTED;
+    status = date_defaults(p, locale, row, &defaults);
+    if (status) return status;
+    *out = defaults.hour_cycles[hour12 < 0 ? 0 : hour12 ? 1 : 2];
+    return QJS_INTL_OK;
 }
 static int calendar_data_supported(void *opaque, QJSCalendarId id)
 {
@@ -128,12 +87,12 @@ QJSIntlStatus qjs_intl_native_provider_date_open(QJSIntlProvider *p,
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     *out = NULL;
     if (!p || !o || !state) return QJS_INTL_INVALID_ARGUMENT;
-    status = locale_row(p, locale, &l); if (status) return status;
+    status = qjs_intl_native_provider_locale_row(p, locale, &l); if (status) return status;
     status = numbering_row(p, numbering, &n); if (status) return status;
     if (qjs_calendar_from_identifier(&calendar, o->requested.calendar.data,
         o->requested.calendar.length)) return QJS_INTL_UNSUPPORTED;
     memset(state, 0, sizeof(*state));
-    status = qjs_intl_native_provider_date_calendar_mask(p, &state->calendar_mask);
+    status = qjs_intl_native_provider_date_calendar_mask(p, l, &state->calendar_mask);
     if (status) return status;
     if (!calendar_data_supported(state, calendar)) return QJS_INTL_UNSUPPORTED;
     state->bridge.upstream.opaque = tz;
@@ -154,22 +113,20 @@ static QJSIntlStatus probe_cycle(QJSIntlProvider *p, QJSIntlBytes locale,
     QJSIntlNativeDateProviderEnvironment state;
     QJSIntlStatus status; unsigned int hc; size_t i; uint32_t l, n;
     QJSCalendarId id;
-    /* Only the immutable provider's capability inventory reuses this proof.
-     * Both admitted spellings map to en and use CLDR US preferred hours.
-     * Validate before lookup, including allocation-free algorithmic rejection. */
-    status = locale_row(p, locale, &l); if (status) return status;
+    /* Authenticate every identity and resolve defaults before proof lookup.
+     * Algorithmic numbering is rejected without allocating. */
+    status = qjs_intl_native_provider_locale_row(p, locale, &l); if (status) return status;
     status = numbering_row(p, nu, &n); if (status) return status;
     if (qjs_calendar_from_identifier(&id, calendar.data, calendar.length))
         return QJS_INTL_UNSUPPORTED;
-    if (qjs_intl_native_provider_date_probe_success(p, n, (uint32_t)id,
-                                                   requested_cycle))
+    status = qjs_intl_native_provider_date_hour_cycle(p, locale, -1, &hc);
+    if (status) return status;
+    if (requested_cycle >= 0) hc = (unsigned int)requested_cycle;
+    if (qjs_intl_native_provider_date_probe_success(p, l, n, (uint32_t)id, hc))
         return QJS_INTL_OK;
     memset(&o, 0, sizeof(o)); o.requested.calendar = calendar;
     o.requested.time_zone = bytes("UTC");
     o.requested.date_style = o.requested.time_style = -1;
-    status = qjs_intl_native_provider_date_preferred_hour_cycle(p, locale, &hc);
-    if (status) return status;
-    if (requested_cycle >= 0) hc = (unsigned int)requested_cycle;
     o.requested.hour_cycle = hc; o.requested.format_matcher = QJS_DATE_BEST_FIT;
     for (i = 0; i < QJS_DATE_FIELD_COUNT; i++) o.requested.fields[i] = -1;
     o.number_required = QJS_DATE_REQUIRE_ANY; o.number_defaults = QJS_DATE_DEFAULT_DATE;
@@ -179,43 +136,103 @@ static QJSIntlStatus probe_cycle(QJSIntlProvider *p, QJSIntlBytes locale,
     if (status) return status;
     /* Failed storage must leave the proof absent and report allocator failure.
      * Every retry then performs the complete probe again. */
-    return qjs_intl_native_provider_date_probe_success_store(p, n,
-        (uint32_t)id, requested_cycle);
+    return qjs_intl_native_provider_date_probe_success_store(p, l, n,
+        (uint32_t)id, hc);
 }
-static QJSIntlStatus probe(QJSIntlProvider *p, QJSIntlBytes locale, QJSIntlBytes nu)
+static QJSIntlStatus default_calendar_uncached(QJSIntlProvider *p, QJSIntlBytes locale,
+    uint32_t row, QJSIntlBytes *out)
 {
-    return probe_cycle(p, locale, nu, -1, bytes("gregory"));
-}
-QJSIntlStatus qjs_intl_native_provider_date_available(QJSIntlProvider *p, QJSIntlTagList *out)
-{
-    uint32_t row; QJSIntlBytes nu; QJSIntlStatus status;
-    if (!out) return QJS_INTL_INVALID_ARGUMENT;
-    memset(out, 0, sizeof(*out));
-    if (!p) return QJS_INTL_INVALID_ARGUMENT;
-    status = locale_row(p, bytes("en"), &row); if (status) return status;
-    status = default_numbering(p, row, &nu); if (status) return status;
-    status = probe(p, bytes("en"), nu); if (status) return status;
-    status = append(p, out, bytes("en"));
-    if (!status) status = append(p, out, bytes("en-US"));
-    if (status) qjs_intl_tag_list_clear(p, out);
+    QJSIntlNativeLocaleInfoResult preferences = {0};
+    QJSIntlStatus status;
+    uint32_t mask;
+    size_t i;
+    status = qjs_intl_native_provider_date_calendar_mask(p, row, &mask);
+    if (status) return status;
+    status = qjs_intl_native_locale_date_calendars(qjs_intl_native_provider_allocator(p),
+        qjs_intl_native_provider_view(p), locale, &preferences);
+    if (status) return status;
+    status = QJS_INTL_UNSUPPORTED;
+    for (i = 0; i < preferences.list.count; i++) {
+        QJSCalendarId id;
+        QJSIntlBytes candidate = preferences.list.items[i];
+        if (qjs_calendar_from_identifier(&id, candidate.data, candidate.length) ||
+            !(mask & (UINT32_C(1) << id)) || !qjs_calendar_is_supported(id)) continue;
+        *out = bytes(qjs_calendar_identifier(id)); status = QJS_INTL_OK; break;
+    }
+    qjs_intl_native_locale_info_result_clear(qjs_intl_native_provider_allocator(p), &preferences);
+    /* A missing preferred bank may use another independently proved calendar. */
+    if (status == QJS_INTL_UNSUPPORTED) {
+        for (i = 0; i < QJS_CAL_COUNT; i++) {
+            if (!(mask & (UINT32_C(1) << i)) || !qjs_calendar_is_supported((QJSCalendarId)i)) continue;
+            *out = bytes(qjs_calendar_identifier((QJSCalendarId)i)); return QJS_INTL_OK;
+        }
+    }
     return status;
+}
+static QJSIntlStatus date_defaults(QJSIntlProvider *p, QJSIntlBytes locale,
+    uint32_t row, QJSIntlNativeDateDefaults *out)
+{
+    QJSIntlNativeDateDefaults defaults;
+    QJSIntlNativeDateHourPreferences hours;
+    QJSIntlBytes calendar;
+    QJSCalendarId id;
+    QJSIntlStatus status;
+    const char *names[3];
+    static const char *const cycles[] = {"h11", "h12", "h23", "h24"};
+    unsigned int field, i;
+    if (qjs_intl_native_provider_date_defaults_get(p, row, out)) return QJS_INTL_OK;
+    status = default_calendar_uncached(p, locale, row, &calendar);
+    if (status) return status;
+    if (qjs_calendar_from_identifier(&id, calendar.data, calendar.length)) return QJS_INTL_DATA_ERROR;
+    defaults.calendar = (uint32_t)id;
+    status = qjs_intl_native_locale_date_hour_preferences(
+        qjs_intl_native_provider_allocator(p), qjs_intl_native_provider_view(p), locale, &hours);
+    if (status) return status;
+    names[0] = hours.preferred; names[1] = hours.twelve; names[2] = hours.twenty_four;
+    for (field = 0; field < 3; field++) {
+        for (i = 0; i < 4; i++) if (!strcmp(names[field], cycles[i])) break;
+        if (i == 4) return QJS_INTL_DATA_ERROR;
+        defaults.hour_cycles[field] = i;
+    }
+    qjs_intl_native_provider_date_defaults_store(p, row, &defaults);
+    *out = defaults;
+    return QJS_INTL_OK;
+}
+static QJSIntlStatus default_calendar(QJSIntlProvider *p, QJSIntlBytes locale,
+    uint32_t row, QJSIntlBytes *out)
+{
+    QJSIntlNativeDateDefaults defaults;
+    QJSIntlStatus status = date_defaults(p, locale, row, &defaults);
+    if (!status) *out = bytes(qjs_calendar_identifier((QJSCalendarId)defaults.calendar));
+    return status;
+}
+QJSIntlStatus qjs_intl_native_provider_date_locale_available(QJSIntlProvider *p,
+    QJSIntlBytes locale, uint32_t row)
+{
+    QJSIntlBytes numbering, calendar;
+    QJSIntlStatus status = qjs_intl_native_provider_default_numbering(p, row, &numbering);
+    if (status) return status;
+    status = default_calendar(p, locale, row, &calendar);
+    if (status) return status;
+    return probe_cycle(p, locale, numbering, -1, calendar);
 }
 QJSIntlStatus qjs_intl_native_provider_date_key_values(QJSIntlProvider *p,
     QJSIntlBytes locale, QJSIntlBytes key, QJSIntlTagList *out)
 {
     const QJSIntlDataView *v; QJSIntlDataSection s;
-    QJSIntlBytes nu, candidate; QJSIntlStatus status; uint32_t row, i; unsigned int hc;
+    QJSIntlBytes nu, candidate, calendar; QJSIntlStatus status; uint32_t row, i;
     static const char *const cycles[] = { "h11", "h12", "h23", "h24" };
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     memset(out, 0, sizeof(*out));
     if (!p) return QJS_INTL_INVALID_ARGUMENT;
-    status = locale_row(p, locale, &row); if (status) return status;
-    status = default_numbering(p, row, &nu); if (status) return status;
-    status = probe(p, locale, nu); if (status) return status;
+    status = qjs_intl_native_provider_locale_row(p, locale, &row); if (status) return status;
+    status = qjs_intl_native_provider_default_numbering(p, row, &nu); if (status) return status;
+    status = default_calendar(p, locale, row, &calendar); if (status) return status;
+    status = probe_cycle(p, locale, nu, -1, calendar); if (status) return status;
     if (equal(key, bytes("ca"))) {
         uint32_t mask;
-        status = qjs_intl_native_provider_date_calendar_mask(p, &mask);
-        if (!status) status = append(p, out, bytes("gregory"));
+        status = qjs_intl_native_provider_date_calendar_mask(p, row, &mask);
+        if (!status) status = append(p, out, calendar);
         for (i = 0; !status && i < QJS_CAL_COUNT; i++) {
             QJSCalendarId id = (QJSCalendarId)i;
             if (!(mask & (UINT32_C(1) << i)) || !qjs_calendar_is_supported(id)) continue;
@@ -225,19 +242,15 @@ QJSIntlStatus qjs_intl_native_provider_date_key_values(QJSIntlProvider *p,
             if (!status) status = append(p, out, candidate);
         }
     } else if (equal(key, bytes("hc"))) {
-        status = qjs_intl_native_provider_date_preferred_hour_cycle(p, locale, &hc);
-        if (!status) status = append(p, out, bytes(cycles[hc]));
-        for (i = 0; !status && i < 4; i++) {
-            status = probe_cycle(p, locale, nu, (int)i, bytes("gregory"));
-            if (status == QJS_INTL_UNSUPPORTED) { status = QJS_INTL_OK; continue; }
-            if (!status) status = append(p, out, bytes(cycles[i]));
-        }
+        /* ResolveLocale represents the default cycle with null, not a string. */
+        status = append(p, out, (QJSIntlBytes){NULL, 0});
+        for (i = 0; !status && i < 4; i++) status = append(p, out, bytes(cycles[i]));
     } else if (equal(key, bytes("nu"))) {
         status = append(p, out, nu); v = qjs_intl_native_provider_view(p);
         if (!status && qjs_intl_data_section(v, QJS_INTL_DATA_NUMBERING, &s)) status = QJS_INTL_DATA_ERROR;
         for (i = 0; !status && i < s.record_count; i++) {
             status = text(v, &s, i, 0, &candidate); if (status) break;
-            status = probe(p, locale, candidate);
+            status = probe_cycle(p, locale, candidate, -1, calendar);
             if (status == QJS_INTL_UNSUPPORTED) { status = QJS_INTL_OK; continue; }
             if (!status) status = append(p, out, candidate);
         }

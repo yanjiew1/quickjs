@@ -22,21 +22,28 @@ const QJSIntlDataView *qjs_intl_native_provider_view(const QJSIntlProvider *);
  * immutable compiled blob with a successful whole-reader certificate. */
 QJSIntlDataStatus qjs_intl_native_provider_validate_compiled_data(void *provider,
     const QJSIntlDataView *);
-/* Date's installed en/en-US policy shares the internally mapped en row.
- * Cache only a successful proof over this provider's immutable compiled data. */
+/* Complete successful Date defaults for one authenticated compiled locale.
+ * No borrowed strings, preference lists or formatter handles are retained. */
+typedef struct QJSIntlNativeDateDefaults {
+    uint32_t calendar;
+    unsigned int hour_cycles[3]; /* default, 12-hour family, 24-hour family */
+} QJSIntlNativeDateDefaults;
+int qjs_intl_native_provider_date_defaults_get(const QJSIntlProvider *,
+    uint32_t locale, QJSIntlNativeDateDefaults *);
+void qjs_intl_native_provider_date_defaults_store(QJSIntlProvider *,
+    uint32_t locale, const QJSIntlNativeDateDefaults *);
+/* Successful masks, including zero, are keyed by the actual compiled row.
+ * At capacity, the complete projection is performed without storing it. */
 QJSIntlStatus qjs_intl_native_provider_date_calendar_mask(QJSIntlProvider *,
-                                                        uint32_t *out);
-/* Private capability inventory cache. Caller validates the exact en/en-US
- * locale policy, decimal numbering row and canonical calendar before lookup,
- * and stores only after a successful complete probe. -1 denotes the shared
- * CLDR US preferred-hour policy; explicit cycles 0..3 have separate proofs.
- * Entries use the provider allocator and die with it; access is serialized
- * under the same contract as other provider mutations. Full caches fall back
- * to uncached successful probes without another allocation. */
+    uint32_t locale, uint32_t *out);
+/* Capability proofs include actual locale/numbering/calendar/effective cycle.
+ * Validate identities before lookup and store only after a complete probe.
+ * Entries own only allocator storage, die with the provider, and are mutated
+ * under its serialized access contract. Full caches keep uncached behavior. */
 int qjs_intl_native_provider_date_probe_success(const QJSIntlProvider *,
-    uint32_t numbering, uint32_t calendar, int requested_cycle);
+    uint32_t locale, uint32_t numbering, uint32_t calendar, unsigned int effective_cycle);
 QJSIntlStatus qjs_intl_native_provider_date_probe_success_store(QJSIntlProvider *,
-    uint32_t numbering, uint32_t calendar, int requested_cycle);
+    uint32_t locale, uint32_t numbering, uint32_t calendar, unsigned int effective_cycle);
 /* Exact candidate row lookup and inherited numeric default in the compiled
  * metadata. Returned bytes are borrowed until provider destruction. Neither
  * helper grants service admission from metadata identity alone. */

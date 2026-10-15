@@ -125,11 +125,6 @@ typedef struct QJSIntlDateEnvironment {
 QJSIntlStatus qjs_intl_native_date_open(const QJSIntlAllocator *,
     const QJSIntlDateData *, const QJSIntlDateOptions *,
     const QJSIntlDateEnvironment *, QJSIntlNativeDate **);
-/* preferred is the locale data preference after applying hour12's
- * suppression of the hc extension, not an ignored hc option. hour12 is -1
- * absent,0 false,1 true; invalid input returns -1. No locale-specific oracle.
- */
-int qjs_intl_native_date_hour_cycle(unsigned int preferred, int hour12);
 void qjs_intl_native_date_close(QJSIntlNativeDate *);
 QJSIntlStatus qjs_intl_native_date_format(QJSIntlNativeDate *, int64_t epoch_ms,
                                          QJSIntlFormatted *);

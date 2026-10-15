@@ -27,13 +27,6 @@ struct QJSIntlNativeDate {
     unsigned int period_width_mask;
 };
 
-int qjs_intl_native_date_hour_cycle(unsigned int preferred, int hour12)
-{
-    if (preferred > 3 || hour12 < -1 || hour12 > 1) return -1;
-    if (hour12 < 0) return (int)preferred;
-    return hour12 ? (preferred == 0 ? 0 : 1) : (preferred == 3 ? 3 : 2);
-}
-
 static int equal(QJSIntlBytes a, QJSIntlBytes b)
 {
     return a.length == b.length && (!a.length || !memcmp(a.data, b.data, a.length));

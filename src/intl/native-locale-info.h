@@ -31,4 +31,14 @@ QJSIntlStatus qjs_intl_native_locale_info_get(const QJSIntlAllocator *,
     QJSIntlNativeLocaleInfoResult *);
 void qjs_intl_native_locale_info_result_clear(const QJSIntlAllocator *,
                                              QJSIntlNativeLocaleInfoResult *);
+/* DateTimeFormat's CLDR preference policy includes explicit world fallback.
+ * Cycle names point to static strings; calendar results own their strings.
+ * These queries do not read the requested hc/ca extension slots. */
+typedef struct QJSIntlNativeDateHourPreferences {
+    const char *preferred, *twelve, *twenty_four;
+} QJSIntlNativeDateHourPreferences;
+QJSIntlStatus qjs_intl_native_locale_date_hour_preferences(const QJSIntlAllocator *,
+    const QJSIntlDataView *, QJSIntlBytes, QJSIntlNativeDateHourPreferences *);
+QJSIntlStatus qjs_intl_native_locale_date_calendars(const QJSIntlAllocator *,
+    const QJSIntlDataView *, QJSIntlBytes, QJSIntlNativeLocaleInfoResult *);
 #endif

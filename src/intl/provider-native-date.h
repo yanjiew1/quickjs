@@ -18,11 +18,11 @@ QJSIntlStatus qjs_intl_native_provider_date_open(QJSIntlProvider *,
     QJSIntlBytes data_locale, QJSIntlBytes numbering_system,
     const QJSIntlDateBankOptions *, QJSTzProvider *,
     QJSIntlNativeDateProviderEnvironment *, QJSIntlNativeDateBank **);
-QJSIntlStatus qjs_intl_native_provider_date_available(QJSIntlProvider *,
-                                                     QJSIntlTagList *);
+QJSIntlStatus qjs_intl_native_provider_date_locale_available(QJSIntlProvider *,
+    QJSIntlBytes, uint32_t);
 QJSIntlStatus qjs_intl_native_provider_date_key_values(QJSIntlProvider *,
     QJSIntlBytes data_locale, QJSIntlBytes key, QJSIntlTagList *);
 /* Query separately from hc resolution because hour12 suppresses hc. */
-QJSIntlStatus qjs_intl_native_provider_date_preferred_hour_cycle(
-    QJSIntlProvider *, QJSIntlBytes data_locale, unsigned int *);
+QJSIntlStatus qjs_intl_native_provider_date_hour_cycle(
+    QJSIntlProvider *, QJSIntlBytes data_locale, int hour12, unsigned int *);
 #endif

@@ -109,7 +109,7 @@
     expected("iso8601", "short", epoch, "2024-02-10");
     same(new Intl.DateTimeFormat("en", {calendar: "islamicc", timeZone: "UTC"}).resolvedOptions().calendar, "islamic-civil");
     same(new Intl.DateTimeFormat("en", {calendar: "ethiopic-amete-alem", timeZone: "UTC"}).resolvedOptions().calendar, "ethioaa");
-    same(Intl.DateTimeFormat.supportedLocalesOf(["en", "en-US", "fr"]).join(","), "en,en-US");
+    same(Intl.DateTimeFormat.supportedLocalesOf(["en", "en-US", "fr"]).join(","), "en,en-US,fr");
     /* Fraction records must be available to both matchers, including the
      * three required time/date-time/dayPeriod subsets in every calendar.
      * Numeric related-year or year-name parts are both valid year records.

@@ -297,11 +297,11 @@ static int available_calendar(InfoContext *c, const QJSIntlDataSection *availabl
     return 0;
 }
 static int preferred_values(InfoContext *c, const char *tag, TagParts p,
-                            int calendars, QJSIntlNativeLocaleInfoResult *out)
+                            int calendars, int world_fallback, QJSIntlNativeLocaleInfoResult *out)
 {
     QJSIntlDataSection pref, list, available;
     char region[4], override[4], language_region[13];
-    const char *regions[2];
+    const char *regions[3];
     uint32_t first = 0, count = 0, row, i, scope;
     size_t r, regions_count;
     if (!section(c, QJS_INTL_DATA_PREFERENCE, &pref)) return 0;
@@ -309,13 +309,14 @@ static int preferred_values(InfoContext *c, const char *tag, TagParts p,
     if (!preference_regions(c, tag, p, region, override)) return 0;
     regions[0] = override[0] ? override : region; regions[1] = region;
     regions_count = override[0] ? 2 : 1;
+    if (world_fallback) regions[regions_count++] = "001";
     for (r = 0; r < regions_count && !count; r++) {
         memcpy(language_region, p.language.data, p.language.length);
         language_region[p.language.length] = '-';
         memcpy(language_region + p.language.length + 1, regions[r], strlen(regions[r]) + 1);
         for (scope = 1; scope <= 2 && !count; scope++) {
-            /* language-region before region; do not silently inherit001.
-             * The specification's missing preference fallback is below. */
+            /* Locale info has its specified missing-data fallback. Date explicitly
+             * requests the CLDR world row after regional candidates. */
             uint32_t wire_scope = scope == 1 ? 1 : 0;
             QJSIntlBytes key = bytes(wire_scope ? language_region : regions[r]);
             for (row = 0; row < pref.record_count; row++) {
@@ -487,14 +488,14 @@ QJSIntlStatus qjs_intl_native_locale_info_get(const QJSIntlAllocator *a,
     } else switch (field) {
     case QJS_INTL_LOCALE_CALENDARS:
         if (!cap->calendars_ready) c.status = QJS_INTL_UNSUPPORTED;
-        else success = preferred_values(&c, tag, p, 1, &result);
+        else success = preferred_values(&c, tag, p, 1, 0, &result);
         break;
     case QJS_INTL_LOCALE_COLLATIONS:
         if (!cap->collator_ready) c.status = QJS_INTL_UNSUPPORTED;
         else success = service_values(&c, p, QJS_INTL_LOCALE_INFO_COLLATOR, &result);
         break;
     case QJS_INTL_LOCALE_HOUR_CYCLES:
-        success = preferred_values(&c, tag, p, 0, &result); break;
+        success = preferred_values(&c, tag, p, 0, 0, &result); break;
     case QJS_INTL_LOCALE_NUMBERING_SYSTEMS:
         if (!cap->number_format_ready) c.status = QJS_INTL_UNSUPPORTED;
         else success = service_values(&c, p, QJS_INTL_LOCALE_INFO_NUMBER, &result);
@@ -523,5 +524,101 @@ done:
         return c.status == QJS_INTL_OK ? QJS_INTL_DATA_ERROR : c.status;
     }
     *out = result;
+    return QJS_INTL_OK;
+}
+
+/* Raw preferred symbols and allowed-family order are different CLDR values. */
+static const char *raw_cycle(QJSIntlBytes raw)
+{
+    if (!raw.length) return NULL;
+    switch (raw.data[0]) {
+    case 'K': return "h11";
+    case 'h': return "h12";
+    case 'H': return "h23";
+    case 'k': return "h24";
+    default: return NULL;
+    }
+}
+QJSIntlStatus qjs_intl_native_locale_date_hour_preferences(const QJSIntlAllocator *a,
+    const QJSIntlDataView *view, QJSIntlBytes locale, QJSIntlNativeDateHourPreferences *out)
+{
+    InfoContext c;
+    QJSIntlDataSection defaults;
+    QJSIntlNativeLocaleInfoResult allowed = {0};
+    QJSIntlNativeDateHourPreferences result = {0};
+    char *tag = NULL, region[4], override[4], language_region[13];
+    const char *regions[3];
+    TagParts p;
+    size_t r, region_count, i;
+    uint32_t scope, row;
+    if (out) memset(out, 0, sizeof(*out));
+    if (!out || !a || !a->malloc || !a->realloc || !a->free || !view)
+        return QJS_INTL_INVALID_ARGUMENT;
+    c.a = a; c.view = view; c.status = QJS_INTL_OK;
+    c.status = qjs_intl_native_locale_canonicalize(a, view, locale, &tag);
+    if (c.status != QJS_INTL_OK) return c.status;
+    p = parts(tag);
+    if (!preference_regions(&c, tag, p, region, override) ||
+        !section(&c, QJS_INTL_DATA_HOUR_DEFAULT, &defaults)) goto done;
+    regions[0] = override[0] ? override : region; regions[1] = region;
+    region_count = override[0] ? 2 : 1;
+    regions[region_count++] = "001";
+    for (r = 0; r < region_count && !result.preferred; r++) {
+        memcpy(language_region, p.language.data, p.language.length);
+        language_region[p.language.length] = '-';
+        strcpy(language_region + p.language.length + 1, regions[r]);
+        for (scope = 1; scope <= 2 && !result.preferred; scope++) {
+            uint32_t wire_scope = scope == 1 ? 1 : 0;
+            QJSIntlBytes key = bytes(wire_scope ? language_region : regions[r]);
+            for (row = 0; row < defaults.record_count; row++) {
+                if (number(&c, &defaults, row, 8) != wire_scope ||
+                    !equal(key, text(&c, &defaults, row, 0))) continue;
+                result.preferred = raw_cycle(text(&c, &defaults, row, 12));
+                if (!result.preferred) c.status = QJS_INTL_DATA_ERROR;
+                break;
+            }
+            if (c.status != QJS_INTL_OK) goto done;
+        }
+    }
+    if (!result.preferred) { c.status = QJS_INTL_UNSUPPORTED; goto done; }
+    if (!preferred_values(&c, tag, p, 0, 1, &allowed)) goto done;
+    if (result.preferred[1] == '1') result.twelve = result.preferred;
+    else result.twenty_four = result.preferred;
+    for (i = 0; i < allowed.list.count; i++) {
+        QJSIntlBytes value = allowed.list.items[i];
+        if (!result.twelve && equal(value, bytes("h11"))) result.twelve = "h11";
+        if (!result.twelve && equal(value, bytes("h12"))) result.twelve = "h12";
+        if (!result.twenty_four && equal(value, bytes("h23"))) result.twenty_four = "h23";
+        if (!result.twenty_four && equal(value, bytes("h24"))) result.twenty_four = "h24";
+    }
+    /* Explicit hour12 still works when a region lists only one family. */
+    if (!result.twelve) result.twelve = "h12";
+    if (!result.twenty_four) result.twenty_four = "h23";
+done:
+    release(&c, tag);
+    qjs_intl_native_locale_info_result_clear(a, &allowed);
+    if (c.status == QJS_INTL_OK) *out = result;
+    return c.status;
+}
+QJSIntlStatus qjs_intl_native_locale_date_calendars(const QJSIntlAllocator *a,
+    const QJSIntlDataView *view, QJSIntlBytes locale, QJSIntlNativeLocaleInfoResult *out)
+{
+    InfoContext c;
+    QJSIntlNativeLocaleInfoResult result = {0};
+    char *tag = NULL;
+    int success;
+    if (out) memset(out, 0, sizeof(*out));
+    if (!out || !a || !a->malloc || !a->realloc || !a->free || !view)
+        return QJS_INTL_INVALID_ARGUMENT;
+    c.a = a; c.view = view; c.status = QJS_INTL_OK;
+    c.status = qjs_intl_native_locale_canonicalize(a, view, locale, &tag);
+    if (c.status != QJS_INTL_OK) return c.status;
+    success = preferred_values(&c, tag, parts(tag), 1, 1, &result);
+    release(&c, tag);
+    if (!success || c.status != QJS_INTL_OK) {
+        qjs_intl_native_locale_info_result_clear(a, &result);
+        return c.status == QJS_INTL_OK ? QJS_INTL_DATA_ERROR : c.status;
+    }
+    result.defined = 1; *out = result;
     return QJS_INTL_OK;
 }

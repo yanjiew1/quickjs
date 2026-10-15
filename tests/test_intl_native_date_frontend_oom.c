@@ -181,6 +181,14 @@ static void check_cold_failures(const char *source, size_t operation)
     size_t count, i;
     size_t failures[4];
 
+    /* Process-wide successful data proofs survive provider destruction.
+     * Stabilize those once, then measure a fresh realm with cold context
+     * inventories, preferences and formatter banks. Their fault positions
+     * must not include admission work that subsequent trials can reuse.
+     * Provider units separately inject cold admission/default/bank failures. */
+    open_operation(&fixture, source);
+    call_operation(&fixture, 0);
+    close_operation(&fixture);
     open_operation(&fixture, source);
     count = call_operation(&fixture, SIZE_MAX);
     assert(count < SIZE_MAX - 1 && !fixture.probe.failed);

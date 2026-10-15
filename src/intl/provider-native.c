@@ -34,19 +34,23 @@
 
 /* Capability proofs only: actual formatter banks always open independently.
  * At capacity, probes keep their normal uncached behavior. */
-#define DATE_PROBE_CACHE_LIMIT 256
+/* Cover installed row/calendar/numbering inventories without evicting warm
+ * proofs. Capacity is still bounded; excess candidates keep uncached behavior. */
+#define DATE_PROBE_CACHE_LIMIT 4096
 struct DateProbeSuccess {
     struct DateProbeSuccess *next;
-    uint32_t numbering, calendar;
-    int requested_cycle;
+    uint32_t locale, numbering, calendar;
+    unsigned int effective_cycle;
 };
 
 struct QJSIntlProvider {
     QJSIntlAllocator allocator;
     QJSIntlDataView view;
     uint32_t list_locale;
-    uint32_t date_calendar_mask;
-    unsigned char date_calendar_mask_ready;
+    struct { uint32_t locale, mask; } date_calendar_masks[64];
+    size_t date_calendar_mask_count;
+    struct { uint32_t locale; QJSIntlNativeDateDefaults value; } date_defaults[64];
+    size_t date_defaults_count;
     struct DateProbeSuccess *date_probe_success;
     size_t date_probe_success_count;
     char *default_locale;
@@ -425,7 +429,8 @@ QJSIntlStatus qjs_intl_locale_available(QJSIntlProvider *p, QJSIntlService servi
         return available_compiled_locales(p, service,
             qjs_intl_native_provider_segmenter_locale_available, out);
     if (service == QJS_INTL_DATE_TIME_FORMAT)
-        return qjs_intl_native_provider_date_available(p, out);
+        return available_compiled_locales(p, service,
+            qjs_intl_native_provider_date_locale_available, out);
     if (qjs_intl_native_provider_validate_compiled_data(p, &p->view) != QJS_INTL_DATA_OK)
         return QJS_INTL_DATA_ERROR;
     if (!compiled_service_is_valid(service)) {
@@ -541,56 +546,90 @@ QJSIntlDataStatus qjs_intl_native_provider_validate_compiled_data(void *opaque,
     return validate_compiled_view(opaque, view);
 }
 
+int qjs_intl_native_provider_date_defaults_get(const QJSIntlProvider *p,
+    uint32_t locale, QJSIntlNativeDateDefaults *out)
+{
+    size_t i;
+    if (!p || !out) return 0;
+    for (i = 0; i < p->date_defaults_count; i++) {
+        if (p->date_defaults[i].locale == locale) {
+            *out = p->date_defaults[i].value; return 1;
+        }
+    }
+    return 0;
+}
+void qjs_intl_native_provider_date_defaults_store(QJSIntlProvider *p,
+    uint32_t locale, const QJSIntlNativeDateDefaults *value)
+{
+    size_t i;
+    QJSIntlNativeDateDefaults ignored;
+    if (!p || !value || qjs_intl_native_provider_date_defaults_get(p, locale, &ignored) ||
+        p->date_defaults_count == sizeof(p->date_defaults) / sizeof(p->date_defaults[0])) return;
+    i = p->date_defaults_count++;
+    p->date_defaults[i].locale = locale;
+    p->date_defaults[i].value = *value;
+}
+
 QJSIntlStatus qjs_intl_native_provider_date_calendar_mask(QJSIntlProvider *p,
-                                                        uint32_t *out)
+    uint32_t locale, uint32_t *out)
 {
     QJSIntlStatus status;
+    QJSIntlDataSection locales;
     uint32_t mask;
+    size_t i;
     if (!out) return QJS_INTL_INVALID_ARGUMENT;
     *out = 0;
     if (!p) return QJS_INTL_INVALID_ARGUMENT;
-    if (!p->date_calendar_mask_ready) {
-        /* Date en/en-US both map to the en row found by find_list_locale.
-         * The provider opens only the immutable compiled blob and retains
-         * that view for its whole lifetime. Caller-owned views still use the
-         * uncached data utility and must be validated on every call. */
-        status = qjs_intl_native_date_data_calendar_mask_with_validator(&p->view,
-            p->list_locale, qjs_intl_native_provider_validate_compiled_data, p, &mask);
-        if (status != QJS_INTL_OK) return status;
-        p->date_calendar_mask = mask;
-        p->date_calendar_mask_ready = 1;
+    if (qjs_intl_native_provider_validate_compiled_data(p, &p->view) ||
+        qjs_intl_data_section(&p->view, QJS_INTL_DATA_LOCALE, &locales))
+        return QJS_INTL_DATA_ERROR;
+    if (locale >= locales.record_count) return QJS_INTL_INVALID_ARGUMENT;
+    for (i = 0; i < p->date_calendar_mask_count; i++) {
+        if (p->date_calendar_masks[i].locale == locale) {
+            *out = p->date_calendar_masks[i].mask;
+            return QJS_INTL_OK;
+        }
     }
-    *out = p->date_calendar_mask;
+    status = qjs_intl_native_date_data_calendar_mask_with_validator(&p->view,
+        locale, qjs_intl_native_provider_validate_compiled_data, p, &mask);
+    if (status != QJS_INTL_OK) return status;
+    if (p->date_calendar_mask_count < sizeof(p->date_calendar_masks) / sizeof(p->date_calendar_masks[0])) {
+        i = p->date_calendar_mask_count++;
+        p->date_calendar_masks[i].locale = locale;
+        p->date_calendar_masks[i].mask = mask;
+    }
+    *out = mask;
     return QJS_INTL_OK;
 }
 
 int qjs_intl_native_provider_date_probe_success(const QJSIntlProvider *p,
-    uint32_t numbering, uint32_t calendar, int requested_cycle)
+    uint32_t locale, uint32_t numbering, uint32_t calendar, unsigned int effective_cycle)
 {
     const struct DateProbeSuccess *entry;
     if (!p) return 0;
     for (entry = p->date_probe_success; entry; entry = entry->next) {
-        if (entry->numbering == numbering && entry->calendar == calendar &&
-            entry->requested_cycle == requested_cycle) return 1;
+        if (entry->locale == locale && entry->numbering == numbering &&
+            entry->calendar == calendar && entry->effective_cycle == effective_cycle) return 1;
     }
     return 0;
 }
 
 QJSIntlStatus qjs_intl_native_provider_date_probe_success_store(QJSIntlProvider *p,
-    uint32_t numbering, uint32_t calendar, int requested_cycle)
+    uint32_t locale, uint32_t numbering, uint32_t calendar, unsigned int effective_cycle)
 {
     struct DateProbeSuccess *entry;
     if (!p) return QJS_INTL_INVALID_ARGUMENT;
-    if (qjs_intl_native_provider_date_probe_success(p, numbering, calendar,
-                                                   requested_cycle))
+    if (qjs_intl_native_provider_date_probe_success(p, locale, numbering, calendar,
+                                                   effective_cycle))
         return QJS_INTL_OK;
     if (p->date_probe_success_count == DATE_PROBE_CACHE_LIMIT)
         return QJS_INTL_OK;
     entry = p->allocator.malloc(p->allocator.opaque, sizeof(*entry));
     if (!entry) return QJS_INTL_NO_MEMORY;
+    entry->locale = locale;
     entry->numbering = numbering;
     entry->calendar = calendar;
-    entry->requested_cycle = requested_cycle;
+    entry->effective_cycle = effective_cycle;
     entry->next = p->date_probe_success;
     p->date_probe_success = entry;
     p->date_probe_success_count++;

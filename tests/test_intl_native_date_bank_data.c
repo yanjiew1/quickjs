@@ -86,69 +86,73 @@ static QJSIntlProvider *mask_provider(const QJSIntlAllocator *a)
 static void calendar_masks(QJSIntlDataView *view, unsigned char *copy,
                             uint32_t locale, const QJSIntlAllocator *a, Probe *heap)
 {
-    QJSIntlProvider *first,*second,*empty;
-    QJSIntlDataSection patterns; QJSIntlDataSlice row;
-    QJSIntlDateBankOptions o; QJSIntlNativeDateProviderEnvironment state;
-    QJSIntlNativeDateBank *bank=NULL;
-    uint32_t expected,mask; unsigned char saved; size_t offset,attempts,live,i;
-    static const char *const tags[]={"en","en-US"};
-    /* The exported utility revalidates a caller-owned view even after success.
-     * Restoring one malformed reserved pattern byte permits a real retry. */
-    assert(!qjs_intl_native_date_data_calendar_mask(view,locale,&expected));
-    assert(expected && !memcmp(copy,qjs_intl_locale_metadata_blob,qjs_intl_locale_metadata_blob_size));
-    assert(!qjs_intl_data_section(view,100,&patterns) && patterns.record_count);
-    assert(!qjs_intl_data_record(&patterns,0,&row) && row.length==32);
-    offset=(size_t)(row.data-copy)+15; saved=copy[offset]; assert(!saved);
-    copy[offset]=1; mask=UINT32_MAX;
-    assert(qjs_intl_native_date_data_calendar_mask(view,locale,&mask)==QJS_INTL_DATA_ERROR && !mask);
-    assert(copy[offset]==1);
-    copy[offset]=saved;
-    assert(!qjs_intl_native_date_data_calendar_mask(view,locale,&mask) && mask==expected);
-    assert(!memcmp(copy,qjs_intl_locale_metadata_blob,qjs_intl_locale_metadata_blob_size));
+    QJSIntlProvider *first, *second, *empty;
+    QJSIntlDataSection patterns;
+    QJSIntlDataSlice row;
+    QJSIntlDateBankOptions o;
+    QJSIntlNativeDateProviderEnvironment state;
+    QJSIntlNativeDateBank *bank = NULL;
+    uint32_t expected, mask, us = find(view, QJS_INTL_DATA_LOCALE, "en-US");
+    unsigned char saved;
+    size_t offset, attempts, live, calls;
+    assert(locale != us);
+    /* Ordinary mutable views must validate unselected records on every call. */
+    assert(!qjs_intl_native_date_data_calendar_mask(view, locale, &expected));
+    assert(expected && !memcmp(copy, qjs_intl_locale_metadata_blob, qjs_intl_locale_metadata_blob_size));
+    assert(!qjs_intl_data_section(view, 100, &patterns) && patterns.record_count);
+    assert(!qjs_intl_data_record(&patterns, 0, &row) && row.length == 32);
+    offset = (size_t)(row.data - copy) + 15;
+    saved = copy[offset]; assert(!saved); copy[offset] = 1;
+    mask = UINT32_MAX;
+    assert(qjs_intl_native_date_data_calendar_mask(view, locale, &mask) == QJS_INTL_DATA_ERROR && !mask);
+    copy[offset] = saved;
+    assert(!qjs_intl_native_date_data_calendar_mask(view, locale, &mask) && mask == expected);
 
-    first=mask_provider(a); assert(!calendar_mask_calls);
-    attempts=heap->attempts; live=heap->live; heap->fail=attempts+1;
-    mask=UINT32_MAX;
-    assert(qjs_intl_native_provider_date_calendar_mask(NULL,&mask)==QJS_INTL_INVALID_ARGUMENT && !mask);
-    assert(qjs_intl_native_provider_date_calendar_mask(first,NULL)==QJS_INTL_INVALID_ARGUMENT);
-    assert(!calendar_mask_calls);
-    calendar_mask_status=QJS_INTL_DATA_ERROR; mask=UINT32_MAX;
-    assert(qjs_intl_native_provider_date_calendar_mask(first,&mask)==QJS_INTL_DATA_ERROR && !mask);
-    assert(calendar_mask_calls==1);
-    calendar_mask_status=QJS_INTL_OK;
-    assert(!qjs_intl_native_provider_date_calendar_mask(first,&mask) && mask==expected);
-    assert(calendar_mask_calls==2);
-    /* A ready entry must skip the validation boundary, even if it would fail.
-     * Injecting a different status also verifies that failures were not cached. */
-    calendar_mask_status=QJS_INTL_UNSUPPORTED;
-    for(i=0;i<3;i++) {
-        mask=UINT32_MAX;
-        assert(!qjs_intl_native_provider_date_calendar_mask(first,&mask) && mask==expected);
-    }
-    assert(calendar_mask_calls==2 && heap->attempts==attempts && heap->live==live);
-    heap->fail=0; calendar_mask_status=QJS_INTL_OK;
-    /* Both installed locale spellings use the same proof in their durable
-     * environment. Existing bank lifetime and exhaustive OOM cases follow. */
-    options(&o,-1);
-    for(i=0;i<sizeof(tags)/sizeof(tags[0]);i++) {
-        assert(!qjs_intl_native_provider_date_open(first,test_bytes(tags[i]),test_bytes("latn"),
-            &o,NULL,&state,&bank) && bank && state.calendar_mask==expected);
-        qjs_intl_native_date_bank_close(bank); bank=NULL;
-        assert(calendar_mask_calls==2 && heap->live==live);
-    }
-    second=mask_provider(a);
-    assert(!qjs_intl_native_provider_date_calendar_mask(second,&mask) && mask==expected);
-    assert(calendar_mask_calls==3); qjs_intl_provider_free(first);
-    assert(!qjs_intl_native_provider_date_calendar_mask(second,&mask) && mask==expected);
-    assert(calendar_mask_calls==3); qjs_intl_provider_free(second);
-    /* Zero is a successful proof value, not a sentinel for an unready entry. */
-    empty=mask_provider(a); calendar_mask_zero=1;
-    assert(!qjs_intl_native_provider_date_calendar_mask(empty,&mask) && !mask);
-    assert(calendar_mask_calls==4); calendar_mask_zero=0;
-    assert(!qjs_intl_native_provider_date_calendar_mask(empty,&mask) && !mask);
-    assert(calendar_mask_calls==4); qjs_intl_provider_free(empty);
+    first = mask_provider(a);
+    calls = calendar_mask_calls;
+    attempts = heap->attempts; live = heap->live; heap->fail = attempts + 1;
+    mask = UINT32_MAX;
+    assert(qjs_intl_native_provider_date_calendar_mask(NULL, locale, &mask) == QJS_INTL_INVALID_ARGUMENT && !mask);
+    assert(qjs_intl_native_provider_date_calendar_mask(first, locale, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_native_provider_date_calendar_mask(first, UINT32_MAX, &mask) == QJS_INTL_INVALID_ARGUMENT && !mask);
+    assert(calendar_mask_calls == calls);
+    calendar_mask_status = QJS_INTL_DATA_ERROR;
+    assert(qjs_intl_native_provider_date_calendar_mask(first, locale, &mask) == QJS_INTL_DATA_ERROR && !mask);
+    assert(calendar_mask_calls == calls + 1);
+    calendar_mask_status = QJS_INTL_OK;
+    assert(!qjs_intl_native_provider_date_calendar_mask(first, locale, &mask) && mask == expected);
+    assert(calendar_mask_calls == calls + 2);
+    calendar_mask_status = QJS_INTL_UNSUPPORTED;
+    assert(!qjs_intl_native_provider_date_calendar_mask(first, locale, &mask) && mask == expected);
+    /* A different actual row cannot reuse the English proof. */
+    assert(qjs_intl_native_provider_date_calendar_mask(first, us, &mask) == QJS_INTL_UNSUPPORTED && !mask);
+    assert(calendar_mask_calls == calls + 3);
+    calendar_mask_status = QJS_INTL_OK;
+    assert(!qjs_intl_native_provider_date_calendar_mask(first, us, &mask) && mask);
+    assert(calendar_mask_calls == calls + 4);
+    assert(heap->attempts == attempts && heap->live == live);
+    heap->fail = 0;
+    options(&o, -1);
+    assert(!qjs_intl_native_provider_date_open(first, test_bytes("en"), test_bytes("latn"),
+        &o, NULL, &state, &bank) && bank && state.calendar_mask == expected);
+    qjs_intl_native_date_bank_close(bank); bank = NULL;
+    assert(calendar_mask_calls == calls + 4 && heap->live == live);
+    second = mask_provider(a);
+    assert(!qjs_intl_native_provider_date_calendar_mask(second, locale, &mask) && mask == expected);
+    assert(calendar_mask_calls == calls + 5);
+    qjs_intl_provider_free(first);
+    assert(!qjs_intl_native_provider_date_calendar_mask(second, locale, &mask) && mask == expected);
+    assert(calendar_mask_calls == calls + 5);
+    qjs_intl_provider_free(second);
+    /* Zero remains a successful, cached projection. */
+    empty = mask_provider(a); calendar_mask_zero = 1;
+    assert(!qjs_intl_native_provider_date_calendar_mask(empty, locale, &mask) && !mask);
+    assert(calendar_mask_calls == calls + 6); calendar_mask_zero = 0;
+    assert(!qjs_intl_native_provider_date_calendar_mask(empty, locale, &mask) && !mask);
+    assert(calendar_mask_calls == calls + 6);
+    qjs_intl_provider_free(empty);
     assert(!heap->live && !heap->failed);
-    assert(!memcmp(copy,qjs_intl_locale_metadata_blob,qjs_intl_locale_metadata_blob_size));
+    assert(!memcmp(copy, qjs_intl_locale_metadata_blob, qjs_intl_locale_metadata_blob_size));
 }
 static void tag_is(QJSIntlBytes tag, const char *expected)
 {
@@ -158,21 +162,22 @@ static void same_owned_tags(const QJSIntlTagList *a, const QJSIntlTagList *b)
 {
     size_t i; assert(a->count==b->count && a->items!=b->items);
     for(i=0;i<a->count;i++) {
-        assert(a->items[i].data!=b->items[i].data);
+        assert(a->items[i].data ? a->items[i].data!=b->items[i].data : !b->items[i].data);
         assert(a->items[i].length==b->items[i].length);
-        assert(!memcmp(a->items[i].data,b->items[i].data,a->items[i].length));
+        assert(!a->items[i].length || !memcmp(a->items[i].data,b->items[i].data,a->items[i].length));
     }
 }
 static void inventory_order(QJSIntlProvider *p, const char *key, const QJSIntlTagList *list)
 {
     const QJSIntlDataView *v=qjs_intl_native_provider_view(p);
     QJSIntlDataSection section; QJSIntlDataSlice tag,row;
-    size_t at=1; uint32_t i,mask; unsigned int hc;
+    size_t at=1; uint32_t i,mask;
+    uint32_t locale=find(v,QJS_INTL_DATA_LOCALE,"en");
     static const char *const cycles[]={"h11","h12","h23","h24"};
     assert(list->count);
     if(!strcmp(key,"ca")) {
         tag_is(list->items[0],"gregory");
-        assert(!qjs_intl_native_provider_date_calendar_mask(p,&mask));
+        assert(!qjs_intl_native_provider_date_calendar_mask(p,locale,&mask));
         for(i=0;i<QJS_CAL_COUNT;i++) {
             const char *id=qjs_calendar_identifier((QJSCalendarId)i);
             if(!(mask&(UINT32_C(1)<<i)) || !qjs_calendar_is_supported((QJSCalendarId)i) ||
@@ -180,9 +185,8 @@ static void inventory_order(QJSIntlProvider *p, const char *key, const QJSIntlTa
             assert(at<list->count); tag_is(list->items[at++],id);
         }
     } else if(!strcmp(key,"hc")) {
-        assert(!qjs_intl_native_provider_date_preferred_hour_cycle(p,test_bytes("en"),&hc));
-        tag_is(list->items[0],cycles[hc]);
-        for(i=0;i<4;i++) if(i!=hc) {
+        assert(!list->items[0].data && !list->items[0].length);
+        for(i=0;i<4;i++) {
             assert(at<list->count); tag_is(list->items[at++],cycles[i]);
         }
     } else {
@@ -201,111 +205,139 @@ static void inventory_order(QJSIntlProvider *p, const char *key, const QJSIntlTa
 }
 static void successful_probe_cache(const unsigned char *source_copy)
 {
-    Probe heap={0},other_heap={0};
-    QJSIntlAllocator a={&heap,allocate,resize,release};
-    QJSIntlAllocator other_a={&other_heap,allocate,resize,release};
-    QJSIntlProvider *p=mask_provider(&a),*other;
-    QJSIntlTagList first={0},repeat={0};
-    QJSIntlDateBankOptions o; QJSIntlNativeDateBank *bank=NULL;
+    Probe heap = {0}, other_heap = {0};
+    QJSIntlAllocator a = {&heap, allocate, resize, release};
+    QJSIntlAllocator other_a = {&other_heap, allocate, resize, release};
+    QJSIntlProvider *p = mask_provider(&a), *other;
+    QJSIntlTagList first = {0}, repeat = {0};
+    QJSIntlDateBankOptions o;
+    QJSIntlNativeDateBank *bank = NULL;
     QJSIntlNativeDateProviderEnvironment state;
-    size_t cold,warm,before,live,owners,owned_bytes,i,j,store_at,fail_at;
-    uint32_t n=find(qjs_intl_native_provider_view(p),QJS_INTL_DATA_NUMBERING,"latn");
-    static const char *const keys[]={"ca","hc","nu"};
-    /* AvailableLocales warms exactly one complete capability proof. */
-    heap.attempts=0;
-    assert(!qjs_intl_native_provider_date_available(p,&first)); cold=heap.attempts;
-    assert(first.count==2); tag_is(first.items[0],"en"); tag_is(first.items[1],"en-US");
-    assert(p->date_probe_success_count==1);
-    assert(qjs_intl_native_provider_date_probe_success(p,n,QJS_CAL_GREGORY,-1));
-    heap.attempts=0;
-    assert(!qjs_intl_native_provider_date_available(p,&repeat)); warm=heap.attempts;
-    assert(warm==4 && cold>warm); same_owned_tags(&first,&repeat);
-    qjs_intl_tag_list_clear(p,&first); qjs_intl_tag_list_clear(p,&repeat);
-    /* A different provider must construct its own proof with its own allocator. */
-    other=mask_provider(&other_a); other_heap.attempts=0;
-    assert(!qjs_intl_native_provider_date_available(other,&first));
-    assert(other_heap.attempts==cold && other->date_probe_success_count==1);
-    qjs_intl_tag_list_clear(other,&first); qjs_intl_provider_free(other);
-    assert(!other_heap.live);
-    for(j=0;j<sizeof(keys)/sizeof(*keys);j++) {
-        heap.attempts=0;
-        assert(!qjs_intl_native_provider_date_key_values(p,test_bytes("en"),test_bytes(keys[j]),&first));
-        before=heap.attempts; inventory_order(p,keys[j],&first);
-        heap.attempts=0;
-        assert(!qjs_intl_native_provider_date_key_values(p,test_bytes("en-US"),test_bytes(keys[j]),&repeat));
-        warm=heap.attempts; assert(before>warm); same_owned_tags(&first,&repeat);
-        qjs_intl_tag_list_clear(p,&repeat); live=heap.live;
-        /* All warm output allocations still occur and every failure is visible.
-         * Completed proofs can survive a later list-copy failure. */
-        for(i=1;i<=warm;i++) {
-            heap.attempts=0; heap.fail=i; heap.failed=0;
-            assert(qjs_intl_native_provider_date_key_values(p,test_bytes("en-US"),test_bytes(keys[j]),&repeat)==QJS_INTL_NO_MEMORY);
-            assert(heap.failed && !repeat.items && !repeat.count && heap.live==live);
-            heap.attempts=0; heap.fail=0; heap.failed=0;
-            assert(!qjs_intl_native_provider_date_key_values(p,test_bytes("en"),test_bytes(keys[j]),&repeat));
-            assert(heap.attempts==warm); same_owned_tags(&first,&repeat);
-            qjs_intl_tag_list_clear(p,&repeat); assert(heap.live==live);
+    QJSIntlNativeDateDefaults defaults;
+    const QJSIntlDataView *view = qjs_intl_native_provider_view(p);
+    uint32_t en = find(view, QJS_INTL_DATA_LOCALE, "en");
+    uint32_t us = find(view, QJS_INTL_DATA_LOCALE, "en-US");
+    uint32_t n = find(view, QJS_INTL_DATA_NUMBERING, "latn");
+    size_t cold, warm, before, live, owners, owned_bytes, i, j;
+    static const char *const keys[] = {"ca", "hc", "nu"};
+    heap.attempts = 0;
+    assert(!qjs_intl_native_provider_date_locale_available(p, test_bytes("en"), en));
+    cold = heap.attempts;
+    assert(p->date_probe_success_count == 1 && p->date_defaults_count == 1);
+    assert(qjs_intl_native_provider_date_defaults_get(p, en, &defaults));
+    assert(qjs_intl_native_provider_date_probe_success(p, en, n, defaults.calendar, defaults.hour_cycles[0]));
+    assert(!qjs_intl_native_provider_date_probe_success(p, us, n, defaults.calendar, defaults.hour_cycles[0]));
+    heap.attempts = 0;
+    assert(!qjs_intl_native_provider_date_locale_available(p, test_bytes("en"), en));
+    assert(!heap.attempts);
+    /* Success on a different provider owns its defaults and formatter proof. */
+    other = mask_provider(&other_a); other_heap.attempts = 0;
+    assert(!qjs_intl_native_provider_date_locale_available(other, test_bytes("en"), en));
+    assert(other_heap.attempts == cold && other->date_probe_success_count == 1);
+    qjs_intl_provider_free(other); assert(!other_heap.live);
+    for (j = 0; j < sizeof(keys) / sizeof(*keys); j++) {
+        heap.attempts = 0;
+        assert(!qjs_intl_native_provider_date_key_values(p, test_bytes("en"), test_bytes(keys[j]), &first));
+        before = heap.attempts; inventory_order(p, keys[j], &first);
+        heap.attempts = 0;
+        assert(!qjs_intl_native_provider_date_key_values(p, test_bytes("en"), test_bytes(keys[j]), &repeat));
+        warm = heap.attempts; assert(before >= warm && warm);
+        same_owned_tags(&first, &repeat);
+        qjs_intl_tag_list_clear(p, &repeat); live = heap.live;
+        /* Every warm output allocation fails independently and remains retryable. */
+        for (i = 1; i <= warm; i++) {
+            heap.attempts = 0; heap.fail = i; heap.failed = 0;
+            assert(qjs_intl_native_provider_date_key_values(p, test_bytes("en"), test_bytes(keys[j]), &repeat) == QJS_INTL_NO_MEMORY);
+            assert(heap.failed && !repeat.items && !repeat.count && heap.live == live);
+            heap.attempts = 0; heap.fail = 0; heap.failed = 0;
+            assert(!qjs_intl_native_provider_date_key_values(p, test_bytes("en"), test_bytes(keys[j]), &repeat));
+            assert(heap.attempts == warm); same_owned_tags(&first, &repeat);
+            qjs_intl_tag_list_clear(p, &repeat); assert(heap.live == live);
         }
-        qjs_intl_tag_list_clear(p,&first);
+        qjs_intl_tag_list_clear(p, &first);
     }
-    qjs_intl_native_provider_memory_usage(p,&owners,&owned_bytes);
-    assert(owners==heap.live && owners==2+p->date_probe_success_count);
-    assert(owned_bytes==sizeof(*p)+strlen(p->default_locale)+1+
-        p->date_probe_success_count*sizeof(struct DateProbeSuccess));
-    /* Locale rejection must precede reuse even with all inventories ready. */
-    heap.attempts=0;
-    assert(qjs_intl_native_provider_date_key_values(p,test_bytes("en-GB"),test_bytes("ca"),&repeat)==QJS_INTL_UNSUPPORTED);
+    /* Actual US identity requires a distinct proof even for equal output data. */
+    before = p->date_probe_success_count;
+    assert(!qjs_intl_native_provider_date_locale_available(p, test_bytes("en-US"), us));
+    assert(p->date_probe_success_count == before + 1 && p->date_defaults_count == 2);
+    heap.attempts = 0;
+    assert(!qjs_intl_native_provider_date_locale_available(p, test_bytes("en-US"), us));
+    assert(!heap.attempts);
+    qjs_intl_native_provider_memory_usage(p, &owners, &owned_bytes);
+    assert(owners == heap.live && owners == 2 + p->date_probe_success_count);
+    assert(owned_bytes == sizeof(*p) + strlen(p->default_locale) + 1 +
+        p->date_probe_success_count * sizeof(struct DateProbeSuccess));
+    heap.attempts = 0;
+    assert(qjs_intl_native_provider_date_key_values(p, test_bytes("en-GB"), test_bytes("ca"), &repeat) == QJS_INTL_UNSUPPORTED);
     assert(!heap.attempts && !repeat.items && !repeat.count);
-    /* Unsupported algorithmic rows remain rejected before allocation. */
+    /* Unsupported algorithmic numbering must be rejected before allocation. */
     {
-        QJSIntlDataSection section; QJSIntlDataSlice row,tag; int found=0;
-        assert(!qjs_intl_data_section(qjs_intl_native_provider_view(p),QJS_INTL_DATA_NUMBERING,&section));
-        for(i=0;i<section.record_count;i++) {
-            assert(!qjs_intl_data_record(&section,(uint32_t)i,&row));
-            if(row.data[8]==10 && !row.data[9]) continue;
-            assert(!qjs_intl_data_record_string(qjs_intl_native_provider_view(p),&section,(uint32_t)i,0,&tag));
-            options(&o,-1); heap.attempts=0; heap.fail=1;
-            assert(qjs_intl_native_provider_date_open(p,test_bytes("en"),
-                (QJSIntlBytes){(const char *)tag.data,tag.length},&o,NULL,&state,&bank)==QJS_INTL_UNSUPPORTED);
-            assert(!bank && !heap.attempts && !heap.failed); found=1;
+        QJSIntlDataSection section; QJSIntlDataSlice row, tag; int found = 0;
+        assert(!qjs_intl_data_section(view, QJS_INTL_DATA_NUMBERING, &section));
+        for (i = 0; i < section.record_count; i++) {
+            assert(!qjs_intl_data_record(&section, (uint32_t)i, &row));
+            if (row.data[8] == 10 && !row.data[9]) continue;
+            assert(!qjs_intl_data_record_string(view, &section, (uint32_t)i, 0, &tag));
+            options(&o, -1); heap.attempts = 0; heap.fail = 1;
+            assert(qjs_intl_native_provider_date_open(p, test_bytes("en"),
+                (QJSIntlBytes){(const char *)tag.data, tag.length}, &o, NULL, &state, &bank) == QJS_INTL_UNSUPPORTED);
+            assert(!bank && !heap.attempts && !heap.failed); found = 1;
         }
-        assert(found); heap.fail=0;
+        assert(found); heap.fail = 0;
     }
-    /* The public formatter path still allocates a fresh bank after warming. */
-    options(&o,-1); live=heap.live; heap.attempts=0; heap.fail=1;
-    assert(qjs_intl_native_provider_date_open(p,test_bytes("en-US"),test_bytes("latn"),
-        &o,NULL,&state,&bank)==QJS_INTL_NO_MEMORY && !bank && heap.failed);
-    assert(heap.live==live); heap.fail=0; heap.failed=0;
-    assert(!qjs_intl_native_provider_date_open(p,test_bytes("en"),test_bytes("latn"),
-        &o,NULL,&state,&bank) && bank);
-    qjs_intl_native_date_bank_close(bank); assert(heap.live==live);
+    options(&o, -1); live = heap.live; heap.attempts = 0; heap.fail = 1;
+    assert(qjs_intl_native_provider_date_open(p, test_bytes("en-US"), test_bytes("latn"),
+        &o, NULL, &state, &bank) == QJS_INTL_NO_MEMORY && !bank && heap.failed);
+    assert(heap.live == live); heap.fail = 0; heap.failed = 0;
+    assert(!qjs_intl_native_provider_date_open(p, test_bytes("en"), test_bytes("latn"),
+        &o, NULL, &state, &bank) && bank);
+    qjs_intl_native_date_bank_close(bank);
     qjs_intl_provider_free(p); assert(!heap.live);
-
-    /* First bank allocation, cache storage, and each following list allocation
-     * fail on fresh providers. Existing open_once sweeps all bank allocations. */
-    memset(&heap,0,sizeof(heap)); p=mask_provider(&a);
-    heap.attempts=0; calendar_mask_status=QJS_INTL_DATA_ERROR;
-    assert(qjs_intl_native_provider_date_available(p,&repeat)==QJS_INTL_DATA_ERROR);
-    assert(!heap.attempts && !p->date_probe_success_count && !repeat.items && !repeat.count);
-    calendar_mask_status=QJS_INTL_OK;
-    assert(!qjs_intl_native_provider_date_available(p,&repeat) && heap.attempts==cold);
-    qjs_intl_tag_list_clear(p,&repeat); qjs_intl_provider_free(p); assert(!heap.live);
-    store_at=cold-4;
-    for(i=0;i<6;i++) {
-        memset(&heap,0,sizeof(heap)); p=mask_provider(&a);
-        fail_at=i ? store_at+i-1 : 1;
-        heap.attempts=0; heap.fail=fail_at;
-        assert(qjs_intl_native_provider_date_available(p,&repeat)==QJS_INTL_NO_MEMORY);
-        assert(heap.failed && !repeat.items && !repeat.count);
-        assert(p->date_probe_success_count==(fail_at>store_at ? 1u : 0u));
-        assert(heap.live==2+p->date_probe_success_count);
-        assert(qjs_intl_native_provider_date_probe_success(p,n,QJS_CAL_GREGORY,-1)==(fail_at>store_at));
-        heap.attempts=0; heap.fail=0; heap.failed=0;
-        assert(!qjs_intl_native_provider_date_available(p,&repeat));
-        assert(heap.attempts==(fail_at>store_at ? 4u : cold));
-        qjs_intl_tag_list_clear(p,&repeat); qjs_intl_provider_free(p); assert(!heap.live);
+    /* Exhaust the new allocating preference preparation independently of banks. */
+    {
+        size_t requests;
+        unsigned int cycle;
+        memset(&heap, 0, sizeof(heap)); p = mask_provider(&a);
+        heap.attempts = 0;
+        assert(!qjs_intl_native_provider_date_hour_cycle(p, test_bytes("en"), -1, &cycle));
+        requests = heap.attempts; assert(requests && p->date_defaults_count == 1);
+        qjs_intl_provider_free(p); assert(!heap.live);
+        for (i = 1; i <= requests; i++) {
+            memset(&heap, 0, sizeof(heap)); p = mask_provider(&a);
+            heap.attempts = 0; heap.fail = i;
+            assert(qjs_intl_native_provider_date_hour_cycle(p, test_bytes("en"), -1, &cycle) == QJS_INTL_NO_MEMORY);
+            assert(heap.failed && !p->date_defaults_count);
+            heap.attempts = 0; heap.fail = 0; heap.failed = 0;
+            assert(!qjs_intl_native_provider_date_hour_cycle(p, test_bytes("en"), -1, &cycle));
+            assert(p->date_defaults_count == 1);
+            heap.attempts = 0; heap.fail = 1;
+            assert(!qjs_intl_native_provider_date_hour_cycle(p, test_bytes("en"), 1, &cycle));
+            assert(!heap.attempts && !heap.failed);
+            heap.fail = 0;
+            qjs_intl_provider_free(p); assert(!heap.live);
+        }
     }
-    assert(!memcmp(source_copy,qjs_intl_locale_metadata_blob,qjs_intl_locale_metadata_blob_size));
+    /* A failed mask is not published; a later complete proof succeeds. */
+    memset(&heap, 0, sizeof(heap)); p = mask_provider(&a);
+    heap.attempts = 0; calendar_mask_status = QJS_INTL_DATA_ERROR;
+    assert(qjs_intl_native_provider_date_locale_available(p, test_bytes("en"), en) == QJS_INTL_DATA_ERROR);
+    assert(!heap.attempts && !p->date_probe_success_count && !p->date_defaults_count);
+    calendar_mask_status = QJS_INTL_OK;
+    assert(!qjs_intl_native_provider_date_locale_available(p, test_bytes("en"), en) && heap.attempts == cold);
+    qjs_intl_provider_free(p); assert(!heap.live);
+    /* Existing open_once exhausts bank allocations; cover defaults and proof storage here. */
+    for (i = 0; i < 3; i++) {
+        size_t failure = i == 0 ? 1 : i == 1 ? cold / 2 : cold;
+        memset(&heap, 0, sizeof(heap)); p = mask_provider(&a);
+        heap.attempts = 0; heap.fail = failure;
+        assert(qjs_intl_native_provider_date_locale_available(p, test_bytes("en"), en) == QJS_INTL_NO_MEMORY);
+        assert(heap.failed && !p->date_probe_success_count);
+        heap.attempts = 0; heap.fail = 0; heap.failed = 0;
+        assert(!qjs_intl_native_provider_date_locale_available(p, test_bytes("en"), en));
+        assert(p->date_probe_success_count == 1 && p->date_defaults_count == 1);
+        qjs_intl_provider_free(p); assert(!heap.live);
+    }
+    assert(!memcmp(source_copy, qjs_intl_locale_metadata_blob, qjs_intl_locale_metadata_blob_size));
 }
 
 static size_t open_once(const QJSIntlDataView *v, uint32_t l, uint32_t n, int style, size_t failure)

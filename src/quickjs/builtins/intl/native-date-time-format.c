@@ -285,13 +285,10 @@ static int dtf_open(JSContext *ctx, JSIntlDateTimeFormat *s, int required,
     static const unsigned int cycles[] = { QJS_DATE_H11, QJS_DATE_H12, QJS_DATE_H23, QJS_DATE_H24 };
     static const int styles[] = { QJS_DATE_FULL, QJS_DATE_STYLE_LONG, QJS_DATE_MEDIUM, QJS_DATE_STYLE_SHORT };
     if (!provider) return -1;
-    if (hour12 >= 0) {
-        status = qjs_intl_native_provider_date_preferred_hour_cycle(provider,
-            dtf_bytes(s->locale.data_locale), &cycle);
-        if (js_intl_native_error(ctx, status, "DateTimeFormat preferred hour cycle")) return -1;
-        i = qjs_intl_native_date_hour_cycle(cycle, hour12);
-        if (i < 0) return js_intl_native_error(ctx, QJS_INTL_DATA_ERROR, "hour cycle");
-        cycle = (unsigned int)i;
+    if (hour12 >= 0 || !s->locale.values[1]) {
+        status = qjs_intl_native_provider_date_hour_cycle(provider,
+            dtf_bytes(s->locale.data_locale), hour12, &cycle);
+        if (js_intl_native_error(ctx, status, "DateTimeFormat hour cycle")) return -1;
     } else {
         for (i = 0; i < 4; i++) if (!strcmp(s->locale.values[1], dtf_cycles[i])) break;
         if (i == 4) return js_intl_native_error(ctx, QJS_INTL_DATA_ERROR, "resolved hour cycle");

@@ -30,12 +30,29 @@ static int era_slot(QJSCalendarId id, uint32_t index)
     if (id == QJS_CAL_COPTIC) return index == 1 ? 0 : -1;
     return index <= 1 ? (int)index : -1;
 }
+static int span(const QJSIntlDataSection *s, uint32_t locale,
+                 uint32_t *first, uint32_t *before)
+{
+    uint32_t lo = 0, hi = s->record_count, key;
+    while (lo < hi) {
+        uint32_t middle = lo + (hi - lo) / 2;
+        if (qjs_intl_data_record_u32(s, middle, 0, &key)) return 0;
+        if (key < locale) lo = middle + 1; else hi = middle;
+    }
+    *first = lo; hi = s->record_count;
+    while (lo < hi) {
+        uint32_t middle = lo + (hi - lo) / 2;
+        if (qjs_intl_data_record_u32(s, middle, 0, &key)) return 0;
+        if (key <= locale) lo = middle + 1; else hi = middle;
+    }
+    *before = lo; return 1;
+}
 static QJSIntlStatus calendar_mask(const QJSIntlDataView *v,
     uint32_t locale, QJSIntlDataValidator validate, void *opaque, uint32_t *out)
 {
     QJSIntlDataSection patterns, names, fallbacks, locales;
     CalendarProof proof[QJS_CAL_COUNT];
-    uint32_t mask = 0, i, l, index;
+    uint32_t mask = 0, i, l, index, first, before;
     unsigned int id, context, width;
     QJSCalendarId calendar;
     QJSIntlDataSlice row;
@@ -48,7 +65,8 @@ static QJSIntlStatus calendar_mask(const QJSIntlDataView *v,
     if (qjs_intl_data_section(v, 100, &patterns) || qjs_intl_data_section(v, 101, &names) ||
         qjs_intl_data_section(v, 107, &fallbacks)) return QJS_INTL_UNSUPPORTED;
     memset(proof, 0, sizeof(proof));
-    for (i = 0; i < patterns.record_count; i++) {
+    if (!span(&patterns, locale, &first, &before)) return QJS_INTL_DATA_ERROR;
+    for (i = first; i < before; i++) {
         if (qjs_intl_data_record_u32(&patterns, i, 0, &l) ||
             qjs_intl_data_record(&patterns, i, &row)) return QJS_INTL_DATA_ERROR;
         if (l != locale || !calendar_id(v, &patterns, i, &calendar)) continue;
@@ -56,11 +74,13 @@ static QJSIntlStatus calendar_mask(const QJSIntlDataView *v,
         if (row.data[12] >= 1 && row.data[12] <= 3)
             proof[calendar].styles |= 1u << ((row.data[12] - 1) * 4 + row.data[13]);
     }
-    for (i = 0; i < fallbacks.record_count; i++) {
+    if (!span(&fallbacks, locale, &first, &before)) return QJS_INTL_DATA_ERROR;
+    for (i = first; i < before; i++) {
         if (qjs_intl_data_record_u32(&fallbacks, i, 0, &l)) return QJS_INTL_DATA_ERROR;
         if (l == locale && calendar_id(v, &fallbacks, i, &calendar)) proof[calendar].fallback = 1;
     }
-    for (i = 0; i < names.record_count; i++) {
+    if (!span(&names, locale, &first, &before)) return QJS_INTL_DATA_ERROR;
+    for (i = first; i < before; i++) {
         CalendarProof *p;
         if (qjs_intl_data_record_u32(&names, i, 0, &l) ||
             qjs_intl_data_record_u32(&names, i, 16, &index) ||

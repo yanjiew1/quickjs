@@ -1,4 +1,4 @@
-/* Source-only frontend integration gate; native en/en-US development profile. */
+/* Source-only frontend integration gate; native compiled locale rows. */
 (function () {
     function assert(v, message) { if (!v) throw Error(message || "assertion failed"); }
     function same(a, b) { assert(a === b, String(a) + " != " + String(b)); }
@@ -59,6 +59,52 @@
         same(field(dated.formatToParts(0), "dayPeriod"), "in the morning");
         assert(field(dated.formatToParts(0), "era") !== undefined);
     }
+    /* CLDR defaults distinguish a preferred cycle from the opposite family. */
+    const regionalHours = [
+        ["en", "en", "h12", "h12", "h23"],
+        ["en-GB", "en", "h12", "h12", "h23"],
+        ["de", "de", "h23", "h12", "h23"],
+        ["ja", "ja", "h23", "h11", "h23"],
+        ["ko", "ko", "h12", "h12", "h23"],
+        ["fa", "fa", "h23", "h12", "h23"],
+        ["th", "th", "h23", "h12", "h23"]
+    ];
+    for (const [locale, resolved, preferred, twelve, twentyFour] of regionalHours) {
+        for (const component of [{hour:"numeric"}, {timeStyle:"short"}]) {
+            for (const [options, cycle] of [
+                [{}, preferred], [{hour12:true, hourCycle:"h24"}, twelve],
+                [{hour12:false, hourCycle:"h11"}, twentyFour],
+                ...["h11", "h12", "h23", "h24"].map(hourCycle => [{hourCycle}, hourCycle])
+            ]) {
+                const f = new Intl.DateTimeFormat(locale, {
+                    timeZone:"UTC", calendar:"gregory", ...component, ...options
+                });
+                same(f.resolvedOptions().locale, resolved);
+                same(f.resolvedOptions().hourCycle, cycle);
+                const parts = f.formatToParts(0);
+                same(parts.map(p => p.value).join(""), f.format(0));
+                const midnight = {h11:0, h12:12, h23:0, h24:24}[cycle];
+                const width = f.resolvedOptions().hour;
+                const numericHour = new Intl.NumberFormat(locale, {
+                    useGrouping:false, minimumIntegerDigits:width === "2-digit" ? 2 : 1
+                }).format(midnight);
+                if (width !== undefined) same(field(parts, "hour"), numericHour);
+                else {
+                    // Style-only resolved options omit component widths.
+                    const paddedHour = new Intl.NumberFormat(locale, {
+                        useGrouping:false, minimumIntegerDigits:2
+                    }).format(midnight);
+                    assert(field(parts, "hour") === numericHour ||
+                           field(parts, "hour") === paddedHour, "localized style midnight");
+                }
+            }
+        }
+    }
+    same(new Intl.DateTimeFormat("fa").resolvedOptions().calendar, "persian");
+    same(new Intl.DateTimeFormat("fa").resolvedOptions().numberingSystem, "arabext");
+    same(new Intl.DateTimeFormat("th").resolvedOptions().calendar, "buddhist");
+    same(new Intl.DateTimeFormat("de", {timeZone:"UTC", weekday:"long"})
+        .format(Date.UTC(2024, 0, 1)), "Montag");
     const f = new Intl.DateTimeFormat("en-US-u-ca-iso8601-hc-h23-nu-latn", {
         timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit",
         hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 3
@@ -190,7 +236,7 @@
     }
     same(new Intl.DateTimeFormat("en-US", {timeZone:"-00"}).resolvedOptions().timeZone, "+00:00");
     throws(RangeError, () => new Intl.DateTimeFormat("en-US", {timeZone:"+24:00"}));
-    same(Intl.DateTimeFormat.supportedLocalesOf(["en", "en-US", "fr"]).join(","), "en,en-US");
+    same(Intl.DateTimeFormat.supportedLocalesOf(["en", "en-US", "fr"]).join(","), "en,en-US,fr");
     /* A valid component combination may have no exact locale pattern.
        Best fit still returns a coherent format, as basic matching does. */
     for (const timeZoneName of ["short", "long", "shortOffset", "longOffset",
