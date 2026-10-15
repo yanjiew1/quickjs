@@ -45,9 +45,7 @@ typedef struct JSClosureVar {
     uint8_t is_lexical : 1; /* lexical variable */
     uint8_t is_const : 1; /* const variable (is_lexical = 1 if is_const = 1 */
     uint8_t var_kind : 4; /* see JSVarKindEnum */
-    uint16_t var_idx; /* is_local = TRUE: index to a normal variable of the
-                    parent function. otherwise: index to a closure
-                    variable of the parent function */
+    uint16_t var_idx; /* index interpreted according to closure_type */
     JSAtom var_name;
 } JSClosureVar;
 
