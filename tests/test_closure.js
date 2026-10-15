@@ -212,6 +212,125 @@ function test_eval_const()
     assert(success);
 }
 
+function test_abrupt_scope_closures()
+{
+    var closures = [];
+    for (let i = 0; i < 2; i++) {
+        try {
+            let x = i;
+            closures.push(() => x);
+            throw 0;
+        } catch (e) {}
+    }
+    assert(closures.map(f => f()).join(), "0,1");
+
+    closures = [];
+    for (let i = 0; i < 2; i++) {
+        try {
+            try {
+                let x = i;
+                { let y = i + 10; closures.push(() => [x, y]); }
+                throw 0;
+            } finally {
+                closures[closures.length - 1]();
+            }
+        } catch (e) {}
+    }
+    assert(JSON.stringify(closures.map(f => f())), "[[0,10],[1,11]]");
+
+    closures = [];
+    for (let i = 0; i < 2; i++) {
+        try {
+            try { throw i; } catch (e) {
+                let x = e;
+                closures.push(() => ++x);
+                throw 0;
+            }
+        } catch (e) {
+            assert(closures[i](), i + 1);
+        }
+    }
+    assert(closures.map(f => f()).join(), "2,3");
+
+    function return_from_finally() {
+        var values = [];
+        for (let i = 0; i < 2; i++) {
+            try {
+                let x = i;
+                values.push(() => x);
+                return;
+            } finally {
+                continue;
+            }
+        }
+        return values.map(f => f()).join();
+    }
+    assert(return_from_finally(), "0,1");
+
+    function return_from_catch() {
+        var values = [];
+        for (let i = 0; i < 2; i++) {
+            try { throw i; }
+            catch (value) {
+                values.push(() => value);
+                return;
+            } finally {
+                continue;
+            }
+        }
+        return values.map(f => f()).join();
+    }
+    assert(return_from_catch(), "0,1");
+
+    closures = [];
+    function* suspended_catch() {
+        for (let i = 0; i < 2; i++) {
+            try { throw i; }
+            catch (value) {
+                closures.push(() => value);
+                yield;
+            } finally {
+                continue;
+            }
+        }
+    }
+    var catch_iter = suspended_catch();
+    catch_iter.next();
+    catch_iter.return();
+    catch_iter.return();
+    assert(closures.map(f => f()).join(), "0,1");
+
+    var caught = false;
+    try {
+        for (let i = 0; i < 2; i++) {
+            try { throw {}; }
+            catch ({ x = (i ? y : 1), y = 2 }) {
+                assert(x, 1);
+            }
+        }
+    } catch (e) {
+        assert(e instanceof ReferenceError);
+        caught = true;
+    }
+    assert(caught);
+
+    closures = [];
+    function* suspended() {
+        for (let i = 0; i < 2; i++) {
+            try {
+                let x = i;
+                closures.push(() => x);
+                yield;
+            } catch (e) {}
+        }
+    }
+    var iter = suspended();
+    iter.next();
+    iter.throw(0);
+    iter.throw(0);
+    assert(closures.map(f => f()).join(), "0,1");
+}
+
 test_closure1();
 test_closure2();
 test_closure3();
@@ -240,3 +359,4 @@ function test_optional_call_cleanup()
 }
 
 test_optional_call_cleanup();
+test_abrupt_scope_closures();

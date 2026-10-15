@@ -444,6 +444,16 @@ static void close_scopes(JSParseState *s, int scope, int scope_stop)
     }
 }
 
+/* An exception skips the normal exits of any scopes inside the handler's
+   protected region. Close their captured locals before entering the handler. */
+static void close_scope_range(JSParseState *s, int first, int end)
+{
+    while (end > first) {
+        emit_op(s, OP_leave_scope);
+        emit_u16(s, --end);
+    }
+}
+
 /* return the variable index or -1 if error */
 int add_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
 {
@@ -4782,6 +4792,7 @@ static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
 static void emit_return(JSParseState *s, BOOL hasval)
 {
     BlockEnv *top;
+    int scope_level;
 
     if (s->cur_func->func_kind != JS_FUNC_NORMAL) {
         if (!hasval) {
@@ -4795,9 +4806,12 @@ static void emit_return(JSParseState *s, BOOL hasval)
         }
     }
 
+    scope_level = s->cur_func->scope_level;
     top = s->cur_func->top_break;
     while (top != NULL) {
         if (top->has_iterator || top->label_finally != -1) {
+            close_scopes(s, scope_level, top->scope_level);
+            scope_level = top->scope_level;
             if (!hasval) {
                 emit_op(s, OP_undefined);
                 hasval = TRUE;
@@ -5791,6 +5805,8 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
     case TOK_TRY:
         {
             int label_catch, label_catch2, label_finally, label_end;
+            int try_scope_start, try_scope_end, catch_scope_start;
+            int catch_scope_level;
             JSAtom name;
             BlockEnv block_env;
 
@@ -5808,8 +5824,10 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             block_env.label_finally = label_finally;
 
             set_eval_ret_undefined(s);
+            try_scope_start = s->cur_func->scope_count;
             if (js_parse_block(s))
                 goto fail;
+            try_scope_end = s->cur_func->scope_count;
 
             pop_break_entry(s->cur_func);
 
@@ -5828,8 +5846,11 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 if (next_token(s))
                     goto fail;
 
-                push_scope(s);  /* catch variable */
+                catch_scope_start = s->cur_func->scope_count;
+                catch_scope_level = s->cur_func->scope_level;
                 emit_label(s, label_catch);
+                close_scope_range(s, try_scope_start, try_scope_end);
+                push_scope(s);  /* catch variable */
 
                 if (s->token.val == '{') {
                     /* support optional-catch-binding feature */
@@ -5868,6 +5889,8 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 push_break_entry(s->cur_func, &block_env, JS_ATOM_NULL,
                                  -1, -1, 1);
                 block_env.label_finally = label_finally;
+                /* Finally executes outside the catch parameter environment. */
+                block_env.scope_level = catch_scope_level;
 
                 set_eval_ret_undefined(s);
                 if (js_parse_block(s))
@@ -5890,6 +5913,8 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 /* catch exceptions thrown in the catch block to execute the
                  * finally clause and rethrow the exception */
                 emit_label(s, label_catch2);
+                close_scope_range(s, catch_scope_start,
+                                  s->cur_func->scope_count);
                 /* catch value is at TOS, no need to push undefined */
                 emit_goto(s, OP_gosub, label_finally);
                 emit_op(s, OP_throw);
@@ -5898,6 +5923,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 /* finally without catch : execute the finally clause
                  * and rethrow the exception */
                 emit_label(s, label_catch);
+                close_scope_range(s, try_scope_start, try_scope_end);
                 /* catch value is at TOS, no need to push undefined */
                 emit_goto(s, OP_gosub, label_finally);
                 emit_op(s, OP_throw);
