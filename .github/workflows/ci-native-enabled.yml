@@ -1,8 +1,7 @@
-name: native-enabled
+name: historical-native-prefix-qualification
+# Preserved sealed qualification for historical checkouts. Current branches use
+# ci-current-test262.yml with unmodified raw outcomes and assertion-level checks.
 on:
-  pull_request:
-  push:
-    branches-ignore: ['scratch/native-prefix/**', 'scratch/current-test262/**', 'codex/all-test262-corrections', 'history/**']
   workflow_dispatch:
 permissions:
   contents: read

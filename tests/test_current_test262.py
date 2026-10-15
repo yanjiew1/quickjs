@@ -86,6 +86,23 @@ class RawCollectionTests(unittest.TestCase):
         self.validate([dict(self.rows[0], mode='none', status='skipped')],
                       'Result: 0/0 errors, 1 skipped\n', expected={self.path: ['none']})
 
+    def test_default_configuration_restores_only_reviewed_oracles(self):
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(collector, 'ROOT', Path(directory)):
+            root = Path(directory)
+            (root / 'tests').mkdir()
+            (root / 'tests/intl-date-time-oracle-policy.json').write_text(
+                '{"fixture_sha256": {"test262/test/oracle.js": "MOCK"}}')
+            (root / 'test262-intl.conf').write_text(
+                '[exclude]\ntest262/test/oracle.js\ntest262/test/keep.js\n')
+            self.assertEqual(collector.configuration(), '[exclude]\ntest262/test/keep.js\n')
+
+    def test_explicit_feature_configuration_is_preserved_exactly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'features.conf'
+            source = '[features]\nIntl=skip\nTemporal\n[exclude]\nMOCK-optional.js\n'
+            path.write_text(source)
+            self.assertEqual(collector.configuration(path), source)
+
     def test_multiline_frontmatter_lists(self):
         source = '/*---\nflags:\n  - noStrict\n  - async\nfeatures: ["Temporal", Intl]\n---*/'
         self.assertEqual(collector.metadata_list(source, 'flags'), {'noStrict', 'async'})

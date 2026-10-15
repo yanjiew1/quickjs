@@ -1,7 +1,9 @@
 name: current-test262
 on:
   push:
-    branches: ['codex/all-test262-corrections', 'scratch/current-test262/**']
+    branches: ['intl', 'codex/all-test262-corrections', 'scratch/current-test262/**']
+  pull_request:
+    branches: [intl]
   workflow_dispatch:
 permissions:
   contents: read
@@ -36,6 +38,9 @@ jobs:
           if test '${{ matrix.sanitizer }}' = asan; then args="$args CONFIG_ASAN=y"; fi
           if test '${{ matrix.sanitizer }}' = ubsan; then args="$args CONFIG_UBSAN=y"; fi
           make --output-sync=target -j$(getconf _NPROCESSORS_ONLN) CC=${{ matrix.compiler }} $args all test
+      - name: Check current public API contracts
+        if: matrix.sanitizer == 'normal'
+        run: python3 tools/ci/check_public_api.py --cc ${{ matrix.compiler }}
       - name: Prepare pinned Test262 with reviewed patches and Unicode overlay
         run: make test2-bootstrap TEST262_COMMIT=c8c798898646638cd0c24879f8e0374e847e7d74 TEST262_UNICODE18_OVERLAY=y
       - name: Run current raw Test262 with an empty error baseline
@@ -67,3 +72,86 @@ jobs:
           path: |
             ci-current-test262/
             ci-current-conformance/
+
+  feature-configurations:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        feature: [base, temporal-only, intl-only, system-icu]
+    env:
+      MAKEFLAGS: ''
+      QJS_TEST262_COMPILER: gcc
+      QJS_TEST262_SANITIZER: asan-ubsan
+      QJS_TEST262_BACKEND: ${{ matrix.feature }}
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install and report system ICU
+        if: matrix.feature == 'system-icu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libicu-dev pkg-config
+          pkg-config --modversion icu-i18n icu-uc | tee system-icu-version.txt
+          pkg-config --cflags --libs icu-i18n icu-uc | tee system-icu-selection.txt
+      - name: Build and test the selected feature configuration
+        shell: bash
+        run: |
+          set -o pipefail
+          case '${{ matrix.feature }}' in
+            base) features='CONFIG_INTL=n CONFIG_TEMPORAL=n CONFIG_INTL_BACKEND=native CONFIG_ICU=n' ;;
+            temporal-only) features='CONFIG_INTL=n CONFIG_TEMPORAL=y CONFIG_INTL_BACKEND=native CONFIG_ICU=n' ;;
+            intl-only) features='CONFIG_INTL=y CONFIG_TEMPORAL=n CONFIG_INTL_BACKEND=native CONFIG_ICU=n' ;;
+            system-icu) features='CONFIG_INTL=y CONFIG_TEMPORAL=y CONFIG_INTL_BACKEND=icu CONFIG_ICU=y' ;;
+          esac
+          printf 'FEATURE_ARGS=%s\n' "$features" >> "$GITHUB_ENV"
+          make --output-sync=target -j$(getconf _NPROCESSORS_ONLN) CC=gcc \
+            CONFIG_ASAN=y CONFIG_UBSAN=y CONFIG_WERROR=y $features all test \
+            2>&1 | tee feature-repository-tests.log
+          python3 tools/ci/check_public_api.py --cc gcc
+      - name: Run complete base or Temporal-only raw Test262 without a baseline
+        if: matrix.feature == 'base' || matrix.feature == 'temporal-only'
+        run: |
+          make $FEATURE_ARGS test2-bootstrap test2-config \
+            TEST262_COMMIT=c8c798898646638cd0c24879f8e0374e847e7d74 TEST262_UNICODE18_OVERLAY=y
+          if test '${{ matrix.feature }}' = base; then temporal=n; else temporal=y; fi
+          python3 tools/ci/current_test262.py --config "test262_intl-n_temporal-$temporal.txt"
+      - name: Report each original variant timing
+        if: always()
+        run: |
+          if test -f ci-current-test262/timings.jsonl; then
+            python3 tools/ci/report_test262_timings.py ci-current-test262/timings.jsonl \
+              --csv ci-current-test262/timings.csv --markdown ci-current-test262/timings.md
+            cat ci-current-test262/timings.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if test -f system-icu-version.txt; then
+            printf '\n### System ICU repository check (not full Test262 qualification)\n' >> "$GITHUB_STEP_SUMMARY"
+            cat system-icu-version.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-feature-${{ github.sha }}-${{ matrix.feature }}
+          path: |
+            ci-current-test262/
+            feature-repository-tests.log
+            system-icu-version.txt
+            system-icu-selection.txt
+
+  collector-portability:
+    name: Pure collector guards on Windows
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check portable original fixture identifiers
+        run: python tests/test_current_test262.py
+      - name: Check portable companion identifiers and evidence guards
+        run: python tests/test_current_conformance_assessment.py

@@ -34,7 +34,9 @@ def execution_identity():
     return values
 
 
-def configuration():
+def configuration(path=None):
+    if path is not None:
+        return path.read_text()
     # Re-run both historical data oracles as ordinary sources.
     oracle = json.loads((ROOT / 'tests/intl-date-time-oracle-policy.json').read_text())
     return ''.join(line for line in (ROOT / 'test262-intl.conf').read_text().splitlines(True)
@@ -186,6 +188,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / 'ci-current-test262')
     parser.add_argument('--sources', nargs='*')
+    parser.add_argument('--config', type=Path, help='Explicit feature-derived configuration')
     args = parser.parse_args()
     if os.environ.get('GITHUB_ACTIONS') != 'true':
         parser.error('Test262 execution is delegated to GitHub Actions')
@@ -197,7 +200,7 @@ def main():
     baseline.write_text('')
     # Config paths are relative to the config file, not the process cwd.
     config = ROOT / 'current-test262.conf'
-    config.write_text(configuration())
+    config.write_text(configuration(args.config))
     config_bytes = config.read_bytes()
     expected, excluded = census(config_bytes.decode(), args.sources)
     (out / 'selection.json').write_text(json.dumps({'expected_modes': expected,
