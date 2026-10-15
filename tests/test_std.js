@@ -835,3 +835,89 @@ function test_eval_script_pure_global_store()
 }
 
 test_eval_script_pure_global_store();
+
+function test_eval_script_destructuring_references()
+{
+    const shapes = {
+        named: "({ p: target } = source);",
+        computed: "({ [key]: target } = source);",
+        array: "[target] = iterable;",
+        rest: "[...target] = iterable;",
+        object_rest: "({...target} = source);",
+        default: "[target = reenter()] = [];",
+        suspended: "(function*() { [target = yield 1] = []; })()",
+    };
+    for (const [shape, body] of Object.entries(shapes)) {
+        for (const strict of [false, true]) {
+            for (const resolved of [false, true]) {
+                const realm = std.createRealm();
+                if (resolved)
+                    realm.global.target = 1;
+                let calls = 0, steps = 0, closed = 0;
+                realm.global.reenter = () => {
+                    calls++;
+                    realm.evalScript("let target = 2");
+                    return 7;
+                };
+                realm.global.source = { get p() { return realm.global.reenter(); } };
+                realm.global.key = { toString() { return "p"; } };
+                realm.global.iterable = {
+                    [Symbol.iterator]() { return this; },
+                    next() {
+                        return steps++ ? { done: true } :
+                            { value: realm.global.reenter(), done: false };
+                    },
+                    return() { closed++; return {}; }
+                };
+                let error;
+                try {
+                    const result = realm.evalScript(`${strict ? '"use strict";' : ''}
+                        ${body}`);
+                    if (shape === "suspended") {
+                        assert(result.next().value, 1);
+                        realm.global.reenter();
+                        std.gc();
+                        assert(result.next(7).done, true);
+                    }
+                } catch (e) { error = e; }
+                assert(calls, 1);
+                if (strict && !resolved)
+                    assert(error instanceof realm.global.ReferenceError);
+                else
+                    assert(error, undefined);
+                const value = realm.evalScript("target");
+                const expected = shape === "rest" ? "7" : 7;
+                const normalize = value => {
+                    if (shape === "rest" && Array.isArray(value))
+                        return value.join(",");
+                    if (shape === "object_rest" && value && typeof value === "object")
+                        return value.p;
+                    return value;
+                };
+                assert(normalize(value), resolved ? expected : 2);
+                assert(normalize(realm.global.target),
+                       resolved ? 1 : strict ? undefined : expected);
+                assert(closed, shape === "array" ? 1 : 0);
+            }
+        }
+    }
+
+    for (const declaration of ["const target = 1", "throw 0; let target"]) {
+        const realm = std.createRealm();
+        try { realm.evalScript(declaration); } catch (e) { assert(e, 0); }
+        let closed = 0;
+        realm.global.iterable = {
+            [Symbol.iterator]() { return this; },
+            next() { return { value: 7, done: false }; },
+            return() { closed++; return {}; }
+        };
+        let error;
+        try { realm.evalScript("[target] = iterable;"); } catch (e) { error = e; }
+        const expected = declaration.startsWith("const") ?
+            realm.global.TypeError : realm.global.ReferenceError;
+        assert(error instanceof expected);
+        assert(closed, 1);
+    }
+}
+
+test_eval_script_destructuring_references();
