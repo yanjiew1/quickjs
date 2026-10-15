@@ -98,7 +98,8 @@ int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags)
     return 0;
 }
 
-/* construct a reference to a global variable */
+/* The private lexical object also identifies the Global Environment
+   Record. Select its current subrecord when the reference is used. */
 int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
 {
     JSObject *p;
@@ -116,7 +117,7 @@ int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
         if (ret < 0)
             return -1;
         if (ret) {
-            sp[0] = JS_DupValue(ctx, ctx->global_obj);
+            sp[0] = JS_DupValue(ctx, ctx->global_var_obj);
         } else {
             sp[0] = JS_UNDEFINED;
         }
