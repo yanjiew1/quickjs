@@ -3650,3 +3650,200 @@ function test_compact_named_assignment_reference_abrupt()
 
 test_compact_named_assignment_reference();
 test_compact_named_assignment_reference_abrupt();
+
+function test_checked_strict_global_assignment()
+{
+    let effects = 0;
+    delete globalThis.checked_strict_global_target;
+    function write() {
+        "use strict";
+        return checked_strict_global_target =
+            (++effects, globalThis.checked_strict_global_target = 1, 2);
+    }
+    assert_throws(ReferenceError, write);
+    assert(effects, 1);
+    assert(globalThis.checked_strict_global_target, 1);
+    assert(write(), 2);
+    assert(effects, 2);
+    assert(globalThis.checked_strict_global_target, 2);
+    delete globalThis.checked_strict_global_target;
+
+    const sentinel = {};
+    function abrupt() {
+        "use strict";
+        return checked_strict_global_target = (() => { throw sentinel; })();
+    }
+    try { abrupt(); assert(false); }
+    catch (error) { assert(error, sentinel); }
+    assert(Object.hasOwn(globalThis, "checked_strict_global_target"), false);
+
+    assert_throws(ReferenceError, () => {
+        class StrictScope {
+            static {
+                checked_strict_global_target =
+                    (globalThis.checked_strict_global_target = 3, 4);
+            }
+        }
+    });
+    assert(globalThis.checked_strict_global_target, 3);
+    delete globalThis.checked_strict_global_target;
+}
+
+test_checked_strict_global_assignment();
+
+function test_checked_global_class_mode()
+{
+    const name = "checked_class_mode_target";
+    const sentinel = {};
+    delete globalThis[name];
+    try {
+        /* A checked global store must keep the enclosing class strict. */
+        assert_throws(ReferenceError, () => {
+            return class { [(checked_class_mode_target = 1)]() {} };
+        });
+        assert(Object.hasOwn(globalThis, name), false);
+
+        Object.defineProperty(globalThis, name, {
+            value: 1, writable: false, configurable: true
+        });
+        assert_throws(TypeError, () => {
+            return class { [(checked_class_mode_target = 2)]() {} };
+        });
+        assert(checked_class_mode_target = 3, 3);
+        assert(globalThis[name], 1);
+        delete globalThis[name];
+
+        /* Suspension retains both the saved resolution and strict mode. */
+        function* create() {
+            return class { [(checked_class_mode_target = yield 0)]() {} };
+        }
+        const generator = create();
+        assert(generator.next().value, 0);
+        globalThis[name] = 4;
+        assert_throws(ReferenceError, () => generator.next(5));
+        assert(globalThis[name], 4);
+        delete globalThis[name];
+
+        /* Unwinding out of a class restores the enclosing sloppy mode. */
+        try {
+            (class { [(checked_class_mode_target = (() => { throw sentinel; })())]() {} });
+            assert(false);
+        } catch (error) {
+            assert(error, sentinel);
+        }
+        checked_class_mode_target = 6;
+        assert(globalThis[name], 6);
+    } finally {
+        delete globalThis[name];
+    }
+}
+
+test_checked_global_class_mode();
+
+function test_assignment_reference_pure_rhs()
+{
+    const old_prototype = Object.getPrototypeOf(globalThis);
+    const order = [];
+    let mutate, resolved;
+    const writers = [
+        function() { pure_rhs_global_reference = -1; return -1; },
+        function() { pure_rhs_global_reference = 7; return 7; },
+        function() {
+            let value = 1;
+            mutate = () => { value = 7; };
+            pure_rhs_global_reference = value;
+            return value;
+        },
+        function(value) {
+            mutate = () => { value = 7; };
+            pure_rhs_global_reference = value;
+            return value;
+        },
+    ];
+    try {
+        Object.setPrototypeOf(globalThis, new Proxy({}, {
+            has(target, name) {
+                if (name !== "pure_rhs_global_reference")
+                    return Reflect.has(target, name);
+                order.push("has");
+                if (order.length === 1)
+                    mutate();
+                return resolved;
+            },
+            set(target, name, value, receiver) {
+                if (name === "pure_rhs_global_reference")
+                    order.push("set");
+                return Reflect.set(target, name, value, receiver);
+            },
+        }));
+        for (resolved of [false, true]) {
+            for (const write of writers) {
+                order.length = 0;
+                mutate = () => {};
+                const expected = write(1);
+                assert(order.join(","), resolved ? "has,has,set" : "has,set");
+                assert(globalThis.pure_rhs_global_reference, expected);
+                delete globalThis.pure_rhs_global_reference;
+            }
+        }
+    } finally {
+        Object.setPrototypeOf(globalThis, old_prototype);
+        delete globalThis.pure_rhs_global_reference;
+    }
+}
+
+test_assignment_reference_pure_rhs();
+
+function test_checked_sloppy_global_assignment()
+{
+    const name = "checked_sloppy_global_target";
+    const old_prototype = Object.getPrototypeOf(globalThis);
+    delete globalThis[name];
+    try {
+        function created() {
+            return checked_sloppy_global_target =
+                (globalThis[name] = 1, 2);
+        }
+        assert(created(), 2);
+        assert(globalThis[name], 2);
+
+        function removed() {
+            return checked_sloppy_global_target =
+                (delete globalThis[name], 3);
+        }
+        assert(removed(), 3);
+        assert(globalThis[name], 3);
+
+        Object.defineProperty(globalThis, name, { writable: false });
+        assert(created(), 2);
+        assert(globalThis[name], 3);
+
+        delete globalThis[name];
+        const sentinel = {};
+        function abrupt() {
+            checked_sloppy_global_target = (() => { throw sentinel; })();
+        }
+        try { abrupt(); assert(false); }
+        catch (error) { assert(error, sentinel); }
+        assert(Object.hasOwn(globalThis, name), false);
+
+        Object.setPrototypeOf(globalThis, new Proxy(Object.create(old_prototype), {
+            has(target, key) {
+                return key === name ? false : Reflect.has(target, key);
+            },
+            set(target, key, value, receiver) {
+                if (key === name)
+                    throw sentinel;
+                return Reflect.set(target, key, value, receiver);
+            },
+        }));
+        function rejected() { checked_sloppy_global_target = {}; }
+        try { rejected(); assert(false); }
+        catch (error) { assert(error, sentinel); }
+    } finally {
+        Object.setPrototypeOf(globalThis, old_prototype);
+        delete globalThis[name];
+    }
+}
+
+test_checked_sloppy_global_assignment();
