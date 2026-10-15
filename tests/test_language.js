@@ -1520,6 +1520,30 @@ function test_template_coercion()
     assert(tag`a${value}b${symbol}c`, "a|b|c");
 }
 
+function test_negated_condition()
+{
+    function branch(value) {
+        if (!value)
+            return 1;
+        return 2;
+    }
+    var falsy = [false, 0, -0, NaN, "", null, undefined, 0n];
+    var truthy = [true, 1, -1, "x", 1n, Symbol(), {},
+        { [Symbol.toPrimitive]() { throw new Error("unexpected coercion"); } }];
+    for (var value of falsy)
+        assert(branch(value), 1);
+    for (var value of truthy)
+        assert(branch(value), 2);
+    var calls = 0, iterations = 0;
+    function done() { return ++calls == 3; }
+    do {
+        iterations++;
+    } while (!done());
+    assert(calls, 3);
+    assert(iterations, 3);
+    assert(!truthy[truthy.length - 1], false);
+}
+
 function test_object_literal()
 {
     var x = 0, get = 1, set = 2, async = 3;
@@ -1935,6 +1959,7 @@ test_computed_parameter_environment();
 test_template();
 test_template_skip();
 test_template_coercion();
+test_negated_condition();
 test_object_literal();
 test_regexp_skip();
 test_labels();
