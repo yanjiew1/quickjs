@@ -1472,6 +1472,54 @@ function test_template_skip()
     assert(b, "BaraBarbaz");
 }
 
+function test_template_coercion()
+{
+    var log = [];
+    var value = {
+        [Symbol.toPrimitive](hint) {
+            log.push(hint);
+            return "first";
+        }
+    };
+    assert(`${value}${(log.push("next"), 2)}end`, "first2end");
+    assert(log.join(), "string,next");
+    assert(`${value}${value}`, "firstfirst");
+    var concat = Object.getOwnPropertyDescriptor(String.prototype, "concat");
+    Object.defineProperty(String.prototype, "concat", {
+        get() { throw new Error("template read concat"); },
+        configurable: true
+    });
+    try {
+        assert(`a${1}b${2}`, "a1b2");
+        assert(`${""}${""}`, "");
+    } finally {
+        Object.defineProperty(String.prototype, "concat", concat);
+    }
+    log = [];
+    value = { toString() { throw 37; } };
+    try {
+        `${value}${log.push("unreachable")}`;
+        assert(false);
+    } catch (e) {
+        assert(e, 37);
+    }
+    assert(log.length, 0);
+    try {
+        `${Symbol()}${log.push("unreachable")}`;
+        assert(false);
+    } catch (e) {
+        assert(e instanceof TypeError);
+    }
+    assert(log.length, 0);
+    function tag(strings, first, second) {
+        assert(first, value);
+        assert(second, symbol);
+        return strings.raw.join("|");
+    }
+    var symbol = Symbol();
+    assert(tag`a${value}b${symbol}c`, "a|b|c");
+}
+
 function test_object_literal()
 {
     var x = 0, get = 1, set = 2, async = 3;
@@ -1886,6 +1934,7 @@ test_parameter_environment_bindings();
 test_computed_parameter_environment();
 test_template();
 test_template_skip();
+test_template_coercion();
 test_object_literal();
 test_regexp_skip();
 test_labels();
