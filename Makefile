@@ -597,6 +597,7 @@ C_TESTS+=tests/test_allocator_policy$(EXE)
 C_TESTS+=tests/test_unicode_oom$(EXE)
 C_TESTS+=tests/test_json_stringify_oom$(EXE)
 C_TESTS+=tests/test_std_interrupt$(EXE)
+C_TESTS+=tests/test_typed_array_sort_oom$(EXE)
 C_TESTS+=tests/test_atomics_wait$(EXE)
 C_TESTS+=tests/test_worker_context_failure$(EXE)
 
@@ -717,6 +718,11 @@ $(OBJDIR)/tests/test_std_interrupt.o: src/quickjs-libc/std.c
 tests/test_std_interrupt$(EXE): $(OBJDIR)/tests/test_std_interrupt.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+$(OBJDIR)/tests/test_typed_array_sort_oom.o: src/quickjs/builtins/typed-array.c
+
+tests/test_typed_array_sort_oom$(EXE): $(OBJDIR)/tests/test_typed_array_sort_oom.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_bytecode$(EXE): $(OBJDIR)/tests/test_bytecode.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -770,6 +776,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_unicode_oom$(EXE)
 	$(WINE) ./tests/test_json_stringify_oom$(EXE)
 	$(WINE) ./tests/test_std_interrupt$(EXE)
+	$(WINE) ./tests/test_typed_array_sort_oom$(EXE)
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
 
 .PHONY: test-regexp
