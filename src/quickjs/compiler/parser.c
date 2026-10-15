@@ -6,6 +6,7 @@
  * Copyright (c) 2023-2026 Ben Noordhuis
  * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  * Copyright (c) 2026 Yan-Jie Wang
+ * Copyright (c) 2026 Iann29
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -962,8 +963,8 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
                 if (depth == 0) {
                     if (s->token.u.str.sep == '`')
                         goto done1;
-                    emit_op(s, OP_get_field2);
-                    emit_atom(s, JS_ATOM_concat);
+                } else {
+                    emit_op(s, OP_add);
                 }
                 depth++;
             } else {
@@ -976,11 +977,16 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
             return -1;
         if (js_parse_expr(s))
             return -1;
+        if (!call) {
+            /* Convert with the string hint before evaluating the next
+               substitution. OP_add rejects a retained Symbol. */
+            emit_op(s, OP_to_propkey);
+            emit_op(s, OP_add);
+        }
         depth++;
         if (s->token.val != '}') {
             return js_parse_error(s, "expected '}' after template expression");
         }
-        /* XXX: should convert to string at this stage? */
         free_token(s, &s->token);
         /* Resume TOK_TEMPLATE parsing (s->token.line_num and
          * s->token.ptr are OK) */
@@ -996,9 +1002,6 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
         seal_template_obj(ctx, raw_array);
         seal_template_obj(ctx, template_object);
         *argc = depth + 1;
-    } else {
-        emit_op(s, OP_call_method);
-        emit_u16(s, depth - 1);
     }
  done1:
     return next_token(s);
