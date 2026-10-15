@@ -321,11 +321,10 @@ static int get_with_scope_opcode(int op)
         return OP_with_get_var + (op - OP_scope_get_var);
 }
 
-static BOOL can_opt_put_ref_value(const uint8_t *bc_buf, int pos,
-                                 BOOL keep_depth)
+static BOOL can_opt_put_ref_value(const uint8_t *bc_buf, int pos)
 {
     int opcode = bc_buf[pos];
-    if (keep_depth && (opcode == OP_put_ref_value))
+    if (opcode == OP_put_ref_value)
         return TRUE;
     return ((bc_buf[pos + 1] == OP_put_ref_value) &&
             (opcode == OP_insert3 ||
@@ -334,14 +333,24 @@ static BOOL can_opt_put_ref_value(const uint8_t *bc_buf, int pos,
              opcode == OP_rot3l));
 }
 
-static BOOL can_opt_put_global_ref_value(const uint8_t *bc_buf, int pos)
+/* Only one extraction and its reference label occur before the store.
+   Defaults, rest loops and other branch paths keep their stack slots. */
+static int get_reference_extract_op(const uint8_t *bc_buf, int pos_next,
+                                    int label_pos)
 {
-    int opcode = bc_buf[pos];
-    return ((bc_buf[pos + 1] == OP_put_ref_value) &&
-            (opcode == OP_insert3 ||
-             opcode == OP_perm4 ||
-             opcode == OP_nop ||
-             opcode == OP_rot3l));
+    if (label_pos == pos_next + 11 &&
+        bc_buf[pos_next] == OP_rot3l &&
+        bc_buf[pos_next + 1] == OP_get_field)
+        return OP_get_field;
+    if (label_pos == pos_next + 7 &&
+        bc_buf[pos_next] == OP_swap2 &&
+        bc_buf[pos_next + 1] == OP_get_array_el)
+        return OP_get_array_el;
+    if (label_pos == pos_next + 8 &&
+        bc_buf[pos_next] == OP_for_of_next && bc_buf[pos_next + 1] == 2 &&
+        bc_buf[pos_next + 2] == OP_drop)
+        return OP_for_of_next;
+    return OP_invalid;
 }
 
 static int optimize_scope_make_ref(JSContext *ctx, JSFunctionDef *s,
@@ -349,7 +358,7 @@ static int optimize_scope_make_ref(JSContext *ctx, JSFunctionDef *s,
                                    LabelSlot *ls, int pos_next,
                                    int get_op, int var_idx)
 {
-    int label_pos, end_pos, pos;
+    int label_pos, end_pos, pos, extract_op;
     BOOL keep_depth, compact_depth;
 
     /* XXX: should optimize `loc(a) += expr` as `expr add_loc(a)`
@@ -363,15 +372,18 @@ static int optimize_scope_make_ref(JSContext *ctx, JSFunctionDef *s,
        does not need an object reference to keep its identity. */
     label_pos = ls->pos;
     keep_depth = (bc_buf[label_pos] == OP_put_ref_value);
-    /* An exact named object extraction has no branch or reference read.
-       Its stable binding needs neither placeholder entries nor rotation.
-       Keep the original getter and checked store, including abrupt order. */
-    compact_depth = keep_depth && !s->has_eval_call &&
-        label_pos == pos_next + 11 &&
-        bc_buf[pos_next] == OP_rot3l &&
-        bc_buf[pos_next + 1] == OP_get_field;
-    if (compact_depth)
-        bc_buf[pos_next] = OP_nop;
+    /* An exact extraction has no branch or reference read. Its stable
+       binding needs no placeholders. Keep getter/next and checked store
+       order, adjusting only rotation or the iterator depth. */
+    extract_op = keep_depth && !s->has_eval_call ?
+        get_reference_extract_op(bc_buf, pos_next, label_pos) : OP_invalid;
+    compact_depth = (extract_op != OP_invalid);
+    if (compact_depth) {
+        if (extract_op == OP_for_of_next)
+            bc_buf[pos_next + 1] = 0;
+        else
+            bc_buf[pos_next] = OP_nop;
+    }
     if (keep_depth && !compact_depth) {
         dbuf_putc(bc, OP_undefined);
         dbuf_putc(bc, OP_undefined);
@@ -420,13 +432,33 @@ static int optimize_scope_make_global_ref(JSContext *ctx, JSFunctionDef *s,
 {
     int label_pos = ls->pos;
     int pos = label_pos - 5;
-    int end_pos = label_pos + 2;
     int op = bc_buf[label_pos];
+    BOOL keep_depth = (op == OP_put_ref_value);
+    int end_pos = label_pos + (keep_depth ? 1 : 2);
+    int extract_op = keep_depth ?
+        get_reference_extract_op(bc_buf, pos_next, label_pos) : OP_invalid;
 
     dbuf_putc(bc, OP_check_var);
     dbuf_put_u16(bc, idx);
+    if (keep_depth) {
+        if (extract_op != OP_invalid) {
+            /* A single saved boolean replaces the two reference entries. */
+            if (extract_op == OP_for_of_next)
+                bc_buf[pos_next + 1] = 1;
+            else
+                bc_buf[pos_next] = (extract_op == OP_get_field) ? OP_swap : OP_rot3r;
+        } else {
+            /* Preserve iterator offsets and branch stack depths. */
+            dbuf_putc(bc, OP_undefined);
+        }
+    }
     assert(bc_buf[pos] == OP_label);
-    if (op != OP_nop) {
+    if (keep_depth) {
+        if (extract_op == OP_invalid) {
+            bc_buf[pos++] = OP_swap;
+            bc_buf[pos++] = OP_drop;
+        }
+    } else if (op != OP_nop) {
         switch (op) {
         case OP_insert3:
             op = OP_insert2;
@@ -685,7 +717,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             if (label_done == -1 &&
                 ((var_idx & ARGUMENT_VAR_OFFSET) ||
                  !s->vars[var_idx].is_const) &&
-                can_opt_put_ref_value(bc_buf, ls->pos, TRUE)) {
+                can_opt_put_ref_value(bc_buf, ls->pos)) {
                 int get_op;
                 if (var_idx & ARGUMENT_VAR_OFFSET) {
                     get_op = OP_get_arg;
@@ -958,13 +990,13 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             /* Known lexical bindings stay resolved across the RHS. Other
                globals must save HasBinding before evaluating user code. */
             if (s->closure_var[idx].is_lexical && label_done == -1 &&
-                can_opt_put_global_ref_value(bc_buf, ls->pos)) {
+                can_opt_put_ref_value(bc_buf, ls->pos)) {
                 pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
                                                    pos_next,
                                                    OP_get_var, idx);
             } else if (label_done == -1 &&
                        bc_buf[pos_next] != OP_get_ref_value &&
-                       can_opt_put_global_ref_value(bc_buf, ls->pos)) {
+                       can_opt_put_ref_value(bc_buf, ls->pos)) {
                 pos_next = optimize_scope_make_global_ref(ctx, s, bc, bc_buf,
                                                           ls, pos_next, idx);
             } else {
@@ -1056,7 +1088,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 } else
                 if (label_done == -1 &&
                     !s->closure_var[idx].is_const &&
-                    can_opt_put_ref_value(bc_buf, ls->pos, FALSE)) {
+                    can_opt_put_ref_value(bc_buf, ls->pos)) {
                     int get_op;
                     if (s->closure_var[idx].is_lexical)
                         get_op = OP_get_var_ref_check;
