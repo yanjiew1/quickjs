@@ -3189,6 +3189,28 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
+        CASE(OP_check_var):
+            {
+                int idx, ret;
+                JSVarRef *var_ref;
+
+                idx = get_u16(pc);
+                pc += 2;
+                var_ref = var_refs[idx];
+                if (!JS_IsUninitialized(*var_ref->pvalue) ||
+                    var_ref->is_lexical || b->closure_var[idx].is_lexical) {
+                    ret = TRUE;
+                } else {
+                    sf->cur_pc = pc;
+                    ret = JS_HasProperty(ctx, ctx->global_obj,
+                                         b->closure_var[idx].var_name);
+                    if (ret < 0)
+                        goto exception;
+                }
+                *sp++ = JS_NewBool(ctx, ret);
+            }
+            BREAK;
+
         CASE(OP_get_var_undef):
         CASE(OP_get_var):
             {
@@ -3218,6 +3240,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
+        CASE(OP_put_var_check):
         CASE(OP_put_var):
         CASE(OP_put_var_init):
             {
@@ -3225,6 +3248,30 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSVarRef *var_ref;
                 idx = get_u16(pc);
                 pc += 2;
+                if (opcode == OP_put_var_check) {
+                    sf->cur_pc = pc;
+                    /* check_var captured resolution before the RHS. A newly
+                       created property cannot resolve an earlier reference. */
+                    if (unlikely(!JS_VALUE_GET_BOOL(sp[-2]))) {
+                        if (is_strict_mode(ctx)) {
+                            JS_ThrowReferenceErrorNotDefined(ctx,
+                                                            b->closure_var[idx].var_name);
+                            goto exception;
+                        }
+                        /* An unresolved sloppy reference targets the global
+                           object even if the RHS introduced a lexical binding. */
+                        ret = JS_SetPropertyInternal(ctx, ctx->global_obj,
+                                                     b->closure_var[idx].var_name,
+                                                     sp[-1], ctx->global_obj,
+                                                     JS_PROP_THROW_STRICT);
+                        sp -= 2;
+                        if (ret < 0)
+                            goto exception;
+                        BREAK;
+                    }
+                    sp[-2] = sp[-1];
+                    sp--;
+                }
                 var_ref = var_refs[idx];
                 if (unlikely(JS_IsUninitialized(*var_ref->pvalue) ||
                              var_ref->is_const)) {
@@ -3242,7 +3289,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         ret = JS_HasProperty(ctx, ctx->global_obj, cv->var_name);
                         if (ret < 0)
                             goto exception;
-                        if (ret == 0 && (is_strict_mode(ctx))) {
+                        if (ret == 0 && is_strict_mode(ctx)) {
                             JS_ThrowReferenceErrorNotDefined(ctx, cv->var_name);
                             goto exception;
                         }
