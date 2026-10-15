@@ -55,6 +55,38 @@
 #endif
 
 
+/* Frame references use an int32 base: two high bits for the storage kind,
+   followed by the slot index. They never escape the current frame, whose
+   arguments, locals and function closure already own the referenced values.
+   Keep indices rather than pointers so suspended frames can resume normally. */
+typedef enum {
+    JS_REFERENCE_LOCAL,
+    JS_REFERENCE_ARGUMENT,
+    JS_REFERENCE_CLOSURE,
+} JSReferenceKind;
+
+#define JS_REFERENCE_KIND_SHIFT 30
+#define JS_REFERENCE_SLOT_MASK ((1U << JS_REFERENCE_KIND_SHIFT) - 1)
+
+static inline JSValue *js_get_frame_reference_slot(uint32_t reference,
+                                                   JSValue *var_buf,
+                                                   JSValue *arg_buf,
+                                                   JSVarRef **var_refs)
+{
+    uint32_t slot = reference & JS_REFERENCE_SLOT_MASK;
+
+    switch (reference >> JS_REFERENCE_KIND_SHIFT) {
+    case JS_REFERENCE_LOCAL:
+        return &var_buf[slot];
+    case JS_REFERENCE_ARGUMENT:
+        return &arg_buf[slot];
+    case JS_REFERENCE_CLOSURE:
+        return var_refs[slot]->pvalue;
+    default:
+        abort();
+    }
+}
+
 /* Keep the private global environment marker on the stack. Choose its
    current subrecord once, before Object Record operations can reenter JS. */
 static inline JSValueConst js_get_reference_base(JSContext *ctx,
@@ -3398,32 +3430,25 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         CASE(OP_make_arg_ref):
         CASE(OP_make_var_ref_ref):
             {
-                JSVarRef *var_ref;
-                JSProperty *pr;
                 JSAtom atom;
+                JSReferenceKind kind;
+                uint32_t reference;
                 int idx;
                 atom = get_u32(pc);
                 idx = get_u16(pc + 4);
                 pc += 6;
-                *sp++ = JS_NewObjectProto(ctx, JS_NULL);
+                sf->cur_pc = pc;
+                if (opcode == OP_make_var_ref_ref)
+                    kind = JS_REFERENCE_CLOSURE;
+                else if (opcode == OP_make_arg_ref)
+                    kind = JS_REFERENCE_ARGUMENT;
+                else
+                    kind = JS_REFERENCE_LOCAL;
+                reference = ((uint32_t)kind << JS_REFERENCE_KIND_SHIFT) | idx;
+                *sp++ = JS_NewInt32(ctx, (int32_t)reference);
+                *sp++ = JS_AtomToValue(ctx, atom);
                 if (unlikely(JS_IsException(sp[-1])))
                     goto exception;
-                if (opcode == OP_make_var_ref_ref) {
-                    var_ref = var_refs[idx];
-                    js_rc(var_ref)->ref_count++;
-                } else {
-                    var_ref = get_var_ref(ctx, sf, idx, opcode == OP_make_arg_ref);
-                    if (!var_ref)
-                        goto exception;
-                }
-                pr = add_property(ctx, JS_VALUE_GET_OBJ(sp[-1]), atom,
-                                  JS_PROP_WRITABLE | JS_PROP_VARREF);
-                if (!pr) {
-                    free_var_ref(rt, var_ref);
-                    goto exception;
-                }
-                pr->u.var_ref = var_ref;
-                *sp++ = JS_AtomToValue(ctx, atom);
             }
             BREAK;
         CASE(OP_make_var_ref):
@@ -4119,6 +4144,22 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int ret;
                 
                 sf->cur_pc = pc;
+                if (JS_VALUE_GET_TAG(sp[-2]) == JS_TAG_INT) {
+                    uint32_t reference = JS_VALUE_GET_INT(sp[-2]);
+                    JSValue *pval = js_get_frame_reference_slot(reference, var_buf,
+                                                                arg_buf, var_refs);
+                    val = *pval;
+                    if (unlikely(JS_IsUninitialized(val))) {
+                        atom = JS_ValueToAtom(ctx, sp[-1]);
+                        if (atom == JS_ATOM_NULL)
+                            goto exception;
+                        JS_ThrowReferenceErrorUninitialized(ctx, atom);
+                        JS_FreeAtom(ctx, atom);
+                        goto exception;
+                    }
+                    *sp++ = JS_DupValue(ctx, val);
+                    BREAK;
+                }
                 atom = JS_ValueToAtom(ctx, sp[-1]);
                 if (atom == JS_ATOM_NULL)
                     goto exception;
@@ -4232,6 +4273,45 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValueConst base;
                 BOOL is_unresolvable;
                 sf->cur_pc = pc;
+                if (JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_INT) {
+                    uint32_t reference = JS_VALUE_GET_INT(sp[-3]);
+                    uint32_t slot = reference & JS_REFERENCE_SLOT_MASK;
+                    BOOL is_lexical = FALSE, is_const = FALSE;
+
+                    JSValue *pval = js_get_frame_reference_slot(reference, var_buf,
+                                                                arg_buf, var_refs);
+                    if ((reference >> JS_REFERENCE_KIND_SHIFT) ==
+                        JS_REFERENCE_LOCAL) {
+                        JSBytecodeVarDef *vd = &b->vardefs[b->arg_count + slot];
+                        is_lexical = vd->is_lexical;
+                        is_const = vd->is_const;
+                    } else if ((reference >> JS_REFERENCE_KIND_SHIFT) ==
+                               JS_REFERENCE_CLOSURE) {
+                        JSVarRef *var_ref = var_refs[slot];
+                        is_lexical = var_ref->is_lexical;
+                        is_const = var_ref->is_const;
+                    }
+                    if (unlikely((is_lexical && JS_IsUninitialized(*pval)) ||
+                                 is_const)) {
+                        if (is_lexical || is_strict_mode(ctx)) {
+                            atom = JS_ValueToAtom(ctx, sp[-2]);
+                            if (atom == JS_ATOM_NULL)
+                                goto exception;
+                            if (JS_IsUninitialized(*pval))
+                                JS_ThrowReferenceErrorUninitialized(ctx, atom);
+                            else
+                                JS_ThrowTypeErrorReadOnly(ctx, JS_PROP_THROW, atom);
+                            JS_FreeAtom(ctx, atom);
+                            goto exception;
+                        }
+                        JS_FreeValue(ctx, sp[-1]);
+                    } else {
+                        set_value(ctx, pval, sp[-1]);
+                    }
+                    JS_FreeValue(ctx, sp[-2]);
+                    sp -= 3;
+                    BREAK;
+                }
                 atom = JS_ValueToAtom(ctx, sp[-2]);
                 if (unlikely(atom == JS_ATOM_NULL))
                     goto exception;
