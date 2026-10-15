@@ -1341,6 +1341,8 @@ test-run-test262: run-test262$(EXE)
 .PHONY: test-test262-timings
 test-test262-timings:
 	$(PYTHON) tests/test_test262_timings.py
+	$(PYTHON) tests/test_current_test262.py
+	$(PYTHON) tests/test_current_conformance_assessment.py
 
 test: test-c test-regexp test-build-dependencies test-run-test262 test-test262-timings
 

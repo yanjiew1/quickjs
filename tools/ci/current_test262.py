@@ -24,18 +24,39 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def execution_identity():
+    names = ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_JOB',
+             'GITHUB_WORKFLOW_REF', 'QJS_TEST262_COMPILER',
+             'QJS_TEST262_SANITIZER', 'QJS_TEST262_BACKEND')
+    values = {name: os.environ.get(name, '') for name in names}
+    if os.environ.get('GITHUB_ACTIONS') == 'true' and not all(values.values()):
+        raise ValueError('Current Test262 requires a complete CI execution identity')
+    return values
+
+
+def configuration():
+    # Re-run both historical data oracles as ordinary sources.
+    oracle = json.loads((ROOT / 'tests/intl-date-time-oracle-policy.json').read_text())
+    return ''.join(line for line in (ROOT / 'test262-intl.conf').read_text().splitlines(True)
+                   if line.strip() not in oracle['fixture_sha256'])
+
+
 def identity():
     paths = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).split(b'\0')
     sources = {os.fsdecode(p): digest((ROOT / os.fsdecode(p)).read_bytes())
                for p in paths if p and (ROOT / os.fsdecode(p)).is_file()}
-    fixture = {str(p.relative_to(ROOT)): digest(p.read_bytes())
+    fixture = {p.relative_to(ROOT).as_posix(): digest(p.read_bytes())
                for p in (ROOT / 'test262').rglob('*') if p.is_file()
                and '.git' not in p.relative_to(ROOT / 'test262').parts}
     return {'checkout': subprocess.check_output(['git', 'rev-parse', 'HEAD'],
                 cwd=ROOT, text=True).strip(),
             'sources': sources, 'fixture': fixture,
             'qjs': digest((ROOT / 'qjs').read_bytes()),
-            'runner': digest((ROOT / 'run-test262').read_bytes())}
+            'runner': digest((ROOT / 'run-test262').read_bytes()),
+            'execution': execution_identity(),
+            'fixture_revision': subprocess.check_output(
+                ['git', '-C', str(ROOT / 'test262'), 'rev-parse', 'HEAD'],
+                cwd=ROOT, text=True).strip()}
 
 
 def metadata_list(source, name):
@@ -82,7 +103,7 @@ def census(config, sources=None):
         elif section == '[exclude]':
             exclusions.add(line)
     if sources is None:
-        paths = {str(p.relative_to(ROOT)) for p in (ROOT / 'test262/test').rglob('*.js')
+        paths = {p.relative_to(ROOT).as_posix() for p in (ROOT / 'test262/test').rglob('*.js')
                  if not p.name.endswith('_FIXTURE.js')}
         exclusions.update(line.strip() for line in (ROOT / 'test262-slow.txt').read_text().splitlines()
                           if line.strip() and not line.lstrip().startswith('#'))
@@ -176,11 +197,7 @@ def main():
     baseline.write_text('')
     # Config paths are relative to the config file, not the process cwd.
     config = ROOT / 'current-test262.conf'
-    # Re-run the two historical data oracles as ordinary original sources.
-    # Other configured exclusions and the user-approved slow exclusions stay.
-    oracle = json.loads((ROOT / 'tests/intl-date-time-oracle-policy.json').read_text())
-    config.write_text(''.join(line for line in (ROOT / 'test262-intl.conf').read_text().splitlines(True)
-                             if line.strip() not in oracle['fixture_sha256']))
+    config.write_text(configuration())
     config_bytes = config.read_bytes()
     expected, excluded = census(config_bytes.decode(), args.sources)
     (out / 'selection.json').write_text(json.dumps({'expected_modes': expected,

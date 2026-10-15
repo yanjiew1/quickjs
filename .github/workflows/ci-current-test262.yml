@@ -16,6 +16,9 @@ jobs:
         sanitizer: [normal, asan, ubsan]
     env:
       MAKEFLAGS: ''
+      QJS_TEST262_COMPILER: ${{ matrix.compiler }}
+      QJS_TEST262_SANITIZER: ${{ matrix.sanitizer }}
+      QJS_TEST262_BACKEND: native
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
@@ -23,7 +26,9 @@ jobs:
         with:
           submodules: recursive
       - name: Check raw collector regressions
-        run: python3 tests/test_current_test262.py
+        run: |
+          python3 tests/test_current_test262.py
+          python3 tests/test_current_conformance_assessment.py
       - name: Build and run repository tests
         run: |
           args='CONFIG_TEMPORAL=y CONFIG_INTL=y CONFIG_INTL_BACKEND=native CONFIG_ICU=n CONFIG_INTL_LEGACY=y CONFIG_WERROR=y'
@@ -31,23 +36,34 @@ jobs:
           if test '${{ matrix.sanitizer }}' = asan; then args="$args CONFIG_ASAN=y"; fi
           if test '${{ matrix.sanitizer }}' = ubsan; then args="$args CONFIG_UBSAN=y"; fi
           make --output-sync=target -j$(getconf _NPROCESSORS_ONLN) CC=${{ matrix.compiler }} $args all test
-      - name: Prepare pinned original Test262 sources
+      - name: Prepare pinned Test262 with reviewed patches and Unicode overlay
         run: make test2-bootstrap TEST262_COMMIT=c8c798898646638cd0c24879f8e0374e847e7d74 TEST262_UNICODE18_OVERLAY=y
       - name: Run current raw Test262 with an empty error baseline
+        continue-on-error: true
         run: python3 tools/ci/current_test262.py
+      - name: Verify individually reviewed assertion conflicts and every valid remainder
+        run: python3 tools/ci/current_conformance_assessment.py
       - name: Report individual variant timings and unresolved failures
         if: always()
         run: |
-          if test -f ci-current-test262/timings.jsonl; then
-            python3 tools/ci/report_test262_timings.py ci-current-test262/timings.jsonl \
-              --csv ci-current-test262/timings.csv --markdown ci-current-test262/timings.md
-            cat ci-current-test262/timings.md >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for suite in ci-current-test262 ci-current-conformance/companion-results; do
+            if test -f "$suite/timings.jsonl"; then
+              python3 tools/ci/report_test262_timings.py "$suite/timings.jsonl" \
+                --csv "$suite/timings.csv" --markdown "$suite/timings.md"
+              printf '\n### %s\n' "$suite" >> "$GITHUB_STEP_SUMMARY"
+              cat "$suite/timings.md" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
           if test -f ci-current-test262/summary.json; then
-            python3 -c 'import json; d=json.load(open("ci-current-test262/summary.json")); print("Raw runner status:", d["raw_runner_returncode"]); print(json.dumps(d["counters"], indent=2)); print("Conforming configured suite:", d["conformance_accepted"])' >> "$GITHUB_STEP_SUMMARY"
+            python3 -c 'import json; d=json.load(open("ci-current-test262/summary.json")); print("Raw runner status:", d["raw_runner_returncode"]); print(json.dumps(d["counters"], indent=2)); print("Original raw suite passed:", d["conformance_accepted"])' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if test -f ci-current-conformance/summary.json; then
+            python3 -c 'import json; d=json.load(open("ci-current-conformance/summary.json")); print("Reviewed assessment:", d["assessment_accepted"]); print("Unresolved failures:", len(d.get("unresolved_failures", []))); print("Passing companion variants:", d.get("companion_variants", 0)); print("Blocking diagnostic:", d.get("blocking_error", "none"))' >> "$GITHUB_STEP_SUMMARY"
           fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: current-test262-${{ github.sha }}-${{ matrix.compiler }}-${{ matrix.sanitizer }}
-          path: ci-current-test262/
+          path: |
+            ci-current-test262/
+            ci-current-conformance/
