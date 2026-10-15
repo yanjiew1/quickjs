@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Ben Noordhuis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -2065,6 +2066,23 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                     }
                     break;
                 }
+            }
+            goto no_change;
+
+        case OP_lnot:
+            if (OPTIMIZE &&
+                code_match(&cc, pos_next, M2(OP_if_false, OP_if_true), -1)) {
+                if (cc.line_num != -1 && cc.line_num != line_num) {
+                    line_num = cc.line_num;
+                    s->line_number_size++;
+                    dbuf_putc(&bc_out, OP_line_num);
+                    dbuf_put_u32(&bc_out, line_num);
+                }
+                dbuf_putc(&bc_out, cc.op ^ OP_if_false ^ OP_if_true);
+                dbuf_put_u32(&bc_out, cc.label);
+                pos_next = cc.pos;
+                s->jump_size++;
+                break;
             }
             goto no_change;
 
