@@ -762,3 +762,76 @@ function test_eval_script_cached_global_tdz()
 }
 
 test_eval_script_cached_global_tdz();
+function test_checked_global_compound_resolution()
+{
+    const realm = std.createRealm();
+    let calls = 0;
+    realm.global.installLexical = () => {
+        calls++;
+        realm.evalScript("let checked_compound_global_target = 7");
+    };
+    realm.evalScript(`
+        const original = Object.getPrototypeOf(globalThis);
+        Object.setPrototypeOf(globalThis, new Proxy(original, {
+            has(target, key) {
+                if (key === "checked_compound_global_target") {
+                    installLexical();
+                    return false;
+                }
+                return Reflect.has(target, key);
+            }
+        }));
+        try {
+            let effects = 0, error;
+            try {
+                (function() {
+                    "use strict";
+                    checked_compound_global_target += ++effects;
+                })();
+            } catch (caught) { error = caught; }
+            if (!(error instanceof ReferenceError) || effects !== 0)
+                throw Error("compound assignment lost its unresolved reference");
+        } finally {
+            Object.setPrototypeOf(globalThis, original);
+        }
+        if (checked_compound_global_target !== 7)
+            throw Error("compound assignment wrote the new lexical binding");
+    `);
+    assert(calls, 1);
+}
+
+test_checked_global_compound_resolution();
+
+function test_eval_script_pure_global_store()
+{
+    for (const strict of [false, true]) {
+        for (const resolved of [false, true]) {
+            const realm = std.createRealm();
+            let has_count = 0;
+            Object.setPrototypeOf(realm.global, new Proxy({}, {
+                has(target, name) {
+                    if (name !== "pure_rhs_binding")
+                        return Reflect.has(target, name);
+                    if (++has_count === 1)
+                        realm.evalScript("let pure_rhs_binding = 2");
+                    return resolved;
+                },
+            }));
+            let error;
+            try {
+                realm.evalScript(`${strict ? '"use strict";' : ''}
+                    (function() { pure_rhs_binding = 7; })();`);
+            } catch (e) { error = e; }
+            assert(has_count, 1);
+            if (strict && !resolved)
+                assert(error instanceof realm.global.ReferenceError);
+            else
+                assert(error, undefined);
+            assert(realm.evalScript("pure_rhs_binding"), resolved ? 7 : 2);
+            assert(realm.global.pure_rhs_binding,
+                   !resolved && !strict ? 7 : undefined);
+        }
+    }
+}
+
+test_eval_script_pure_global_store();
