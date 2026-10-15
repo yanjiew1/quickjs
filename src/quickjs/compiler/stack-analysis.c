@@ -112,7 +112,7 @@ __exception int compute_stack_size(JSContext *ctx,
     s->pc_stack_len = 0;
     s->pc_stack_size = 0;
 
-    /* breadth-first graph exploration */
+    /* Explore reachable instructions with a LIFO worklist. */
     if (ss_check(ctx, s, 0, OP_invalid, 0, -1))
         goto fail;
 
