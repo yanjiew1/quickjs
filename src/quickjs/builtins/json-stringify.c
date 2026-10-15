@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Javier Garcia
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -257,8 +258,10 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                     goto exception;
                 /* XXX: could do this string conversion only when needed */
                 prop = JS_ToStringFree(ctx, JS_NewInt64(ctx, i));
-                if (JS_IsException(prop))
+                if (JS_IsException(prop)) {
+                    JS_FreeValue(ctx, v);
                     goto exception;
+                }
                 v = js_json_check(ctx, jsc, val, v, prop);
                 JS_FreeValue(ctx, prop);
                 prop = JS_UNDEFINED;
