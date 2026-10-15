@@ -108,3 +108,6 @@ libwinpthread*.dll
 /tests/test_qjsc_json_collision_size-first.exe
 /tests/test_qjsc_json_collision_size-last
 /tests/test_qjsc_json_collision_size-last.exe
+
+/tests/test_json_stringify_oom
+/tests/test_json_stringify_oom.exe
