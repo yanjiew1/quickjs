@@ -445,6 +445,10 @@ int main(void)
 {
     test_class_strict_region_bytecode("class Plain {}", 3);
     test_class_strict_region_bytecode(
+        "(class { [(checked_class_mode_target = 1)]() {} });", 3);
+    test_class_strict_region_bytecode(
+        "'use strict'; (class { [(checked_class_mode_target = 1)]() {} });", 0);
+    test_class_strict_region_bytecode(
         "class Plain { method(obj) { obj.x = 1; } }", 3);
     test_class_strict_region_bytecode(
         "class Plain { [(Object.freeze({}).x = 1)]() {} }", 3);
