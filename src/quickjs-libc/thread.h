@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2021 Fabrice Bellard
  * Copyright (c) 2017-2021 Charlie Gordon
+ * Copyright (c) 2026 Ben Noordhuis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +42,9 @@ typedef struct JSThreadState {
     struct list_head port_list; /* list of JSWorkerMessageHandler.link */
     struct list_head rejected_promise_list; /* list of JSRejectedPromiseEntry.link */
     int eval_script_recurse; /* only used in the main thread */
+    JSInterruptHandler *prev_interrupt_handler;
+    void *prev_interrupt_opaque;
+    int eval_script_sigint;
     int next_timer_id; /* for setTimeout() */
     /* not used in the main thread */
     JSWorkerMessagePipe *recv_pipe, *send_pipe;

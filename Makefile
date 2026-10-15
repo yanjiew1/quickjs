@@ -596,6 +596,7 @@ C_TESTS+=tests/test_iterator$(EXE)
 C_TESTS+=tests/test_allocator_policy$(EXE)
 C_TESTS+=tests/test_unicode_oom$(EXE)
 C_TESTS+=tests/test_json_stringify_oom$(EXE)
+C_TESTS+=tests/test_std_interrupt$(EXE)
 C_TESTS+=tests/test_atomics_wait$(EXE)
 C_TESTS+=tests/test_worker_context_failure$(EXE)
 
@@ -711,6 +712,11 @@ $(OBJDIR)/tests/test_json_stringify_oom.o: src/quickjs/builtins/json-stringify.c
 tests/test_json_stringify_oom$(EXE): $(OBJDIR)/tests/test_json_stringify_oom.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+$(OBJDIR)/tests/test_std_interrupt.o: src/quickjs-libc/std.c
+
+tests/test_std_interrupt$(EXE): $(OBJDIR)/tests/test_std_interrupt.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_bytecode$(EXE): $(OBJDIR)/tests/test_bytecode.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -763,6 +769,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_unicode$(EXE)
 	$(WINE) ./tests/test_unicode_oom$(EXE)
 	$(WINE) ./tests/test_json_stringify_oom$(EXE)
+	$(WINE) ./tests/test_std_interrupt$(EXE)
 	$(WINE) ./tests/test_bytecode_trace$(EXE)
 
 .PHONY: test-regexp
