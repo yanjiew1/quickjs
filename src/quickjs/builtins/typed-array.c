@@ -1685,6 +1685,9 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
             uint8_t *array;
             size_t i, j;
 
+            if ((size_t)len > SIZE_MAX / sizeof(array_idx[0]))
+                return JS_ThrowOutOfMemory(ctx);
+
             /* the array must be copied because the comparison
                function may modify it */
             array = js_malloc(ctx, len * elt_size);
