@@ -139,7 +139,7 @@ static inline int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val)
                 ret = v >> 32;
                 /* take the sign into account */
                 if (u.u64 >> 63)
-                    ret = -ret;
+                    ret = -(uint32_t)ret;
             } else {
                 ret = 0; /* also handles NaN and +inf */
             }
