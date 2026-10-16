@@ -1433,6 +1433,50 @@ static void test_optional_property_compaction(void)
     }
 }
 
+static void test_promise_capability_allocation_failure(void)
+{
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        PromiseAllocationFailure padding = { 0 };
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue promise, funcs[2];
+        void *ptr;
+
+        assert(ctx);
+        exhaust_pooled_free_blocks(rt, &padding);
+        oom_test_begin(&allocator, fail_at);
+        promise = JS_NewPromiseCapability(ctx, funcs);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(allocations > 0 && allocations < 32);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(promise)) {
+            assert(fail_at);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            assert(JS_IsFunction(ctx, funcs[0]) && JS_IsFunction(ctx, funcs[1]));
+            assert(JS_PromiseState(ctx, promise) == JS_PROMISE_PENDING);
+            JS_FreeValue(ctx, funcs[0]);
+            JS_FreeValue(ctx, funcs[1]);
+            JS_FreeValue(ctx, promise);
+        }
+        while ((ptr = padding.padding) != NULL) {
+            memcpy(&padding.padding, ptr, sizeof(padding.padding));
+            js_free_rt(rt, ptr);
+        }
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 static void test_compiler_var_lookup_allocation_failure(void)
 {
     size_t fail_at, allocations = 0;
@@ -1684,6 +1728,7 @@ static void test_basic_object_allocation_failures(void)
 int main(void)
 {
     test_basic_object_allocation_failures();
+    test_promise_capability_allocation_failure();
     test_compiler_var_lookup_allocation_failure();
     test_compiler_value_allocation_failure();
     test_function_list_allocation_failure();
