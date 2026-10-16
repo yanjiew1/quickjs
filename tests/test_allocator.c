@@ -1488,8 +1488,61 @@ static void test_compiler_debug_allocation_failure(void)
     }
 }
 
+static void test_function_list_allocation_failure(void)
+{
+    int kind;
+
+    for (kind = 0; kind < 2; kind++) {
+        OOMTestAllocator allocator;
+        PromiseAllocationFailure padding = { 0 };
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSCFunctionListEntry entry = JS_PROP_ATOM_DEF("value", 0, JS_PROP_C_W_E);
+        JSValue obj;
+        JSAtom name;
+        char alias[2048];
+        void *ptr;
+        int ret;
+
+        assert(ctx);
+        obj = JS_NewObject(ctx);
+        name = JS_NewAtom(ctx, "value");
+        assert(!JS_IsException(obj) && name != JS_ATOM_NULL);
+        assert(JS_DefinePropertyValue(ctx, obj, name, JS_UNDEFINED,
+                                      JS_PROP_C_W_E) == 1);
+        if (kind) {
+            memset(alias, 'a', sizeof(alias) - 1);
+            alias[sizeof(alias) - 1] = '\0';
+            entry.def_type = JS_DEF_ALIAS;
+            entry.u.alias.name = alias;
+            entry.u.alias.base = -1;
+        } else {
+            entry.u.i32 = JS_NewAtomUInt32(ctx, 12345);
+            exhaust_pooled_free_blocks(rt, &padding);
+        }
+        oom_test_begin(&allocator, 1);
+        ret = JS_SetPropertyFunctionList(ctx, obj, &entry, 1);
+        oom_test_end(&allocator);
+        assert(allocator.failures == 1 && ret == -1);
+        oom_test_check_exception(ctx);
+        assert(JS_IsUndefined(JS_GetProperty(ctx, obj, name)));
+        if (!kind)
+            JS_FreeAtom(ctx, entry.u.i32);
+        while ((ptr = padding.padding) != NULL) {
+            memcpy(&padding.padding, ptr, sizeof(padding.padding));
+            js_free_rt(rt, ptr);
+        }
+        JS_FreeAtom(ctx, name);
+        JS_FreeValue(ctx, obj);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 int main(void)
 {
+    test_function_list_allocation_failure();
     test_compiler_debug_allocation_failure();
     test_optional_bigint_shrink();
     test_optional_property_compaction();
