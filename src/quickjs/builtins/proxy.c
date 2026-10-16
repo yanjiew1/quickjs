@@ -147,7 +147,7 @@ static int js_proxy_set_prototype(JSContext *ctx, JSValueConst obj,
     ret = JS_CallFree(ctx, method, s->handler, 2, args);
     if (JS_IsException(ret))
         return -1;
-    res = JS_ToBoolFree(ctx, ret);
+    res = JS_ToBoolFree(ctx->rt, ret);
     if (!res)
         return FALSE;
     res2 = JS_IsExtensible(ctx, s->target);
@@ -182,7 +182,7 @@ static int js_proxy_is_extensible(JSContext *ctx, JSValueConst obj)
     ret = JS_CallFree(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
     if (JS_IsException(ret))
         return -1;
-    res = JS_ToBoolFree(ctx, ret);
+    res = JS_ToBoolFree(ctx->rt, ret);
     res2 = JS_IsExtensible(ctx, s->target);
     if (res2 < 0)
         return res2;
@@ -208,7 +208,7 @@ static int js_proxy_prevent_extensions(JSContext *ctx, JSValueConst obj)
     ret = JS_CallFree(ctx, method, s->handler, 1, (JSValueConst *)&s->target);
     if (JS_IsException(ret))
         return -1;
-    res = JS_ToBoolFree(ctx, ret);
+    res = JS_ToBoolFree(ctx->rt, ret);
     if (res) {
         res2 = JS_IsExtensible(ctx, s->target);
         if (res2 < 0)
@@ -246,7 +246,7 @@ static int js_proxy_has(JSContext *ctx, JSValueConst obj, JSAtom atom)
     JS_FreeValue(ctx, atom_val);
     if (JS_IsException(ret1))
         return -1;
-    ret = JS_ToBoolFree(ctx, ret1);
+    ret = JS_ToBoolFree(ctx->rt, ret1);
     if (!ret) {
         JSPropertyDescriptor desc;
         p = JS_VALUE_GET_OBJ(s->target);
@@ -344,7 +344,7 @@ static int js_proxy_set(JSContext *ctx, JSValueConst obj, JSAtom atom,
     JS_FreeValue(ctx, atom_val);
     if (JS_IsException(ret1))
         return -1;
-    ret = JS_ToBoolFree(ctx, ret1);
+    ret = JS_ToBoolFree(ctx->rt, ret1);
     if (ret) {
         JSPropertyDescriptor desc;
         res = JS_GetOwnPropertyInternal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);
@@ -365,7 +365,7 @@ static int js_proxy_set(JSContext *ctx, JSValueConst obj, JSAtom atom,
         }
     } else {
         if ((flags & JS_PROP_THROW) ||
-            ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
+            ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx->rt))) {
             JS_ThrowTypeError(ctx, "proxy: cannot set property");
             return -1;
         }
@@ -593,7 +593,7 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
     JS_FreeValue(ctx, desc_val);
     if (JS_IsException(ret1))
         return -1;
-    ret = JS_ToBoolFree(ctx, ret1);
+    ret = JS_ToBoolFree(ctx->rt, ret1);
     if (!ret) {
         if (flags & JS_PROP_THROW) {
             JS_ThrowTypeError(ctx, "proxy: defineProperty exception");
@@ -659,7 +659,7 @@ static int js_proxy_delete_property(JSContext *ctx, JSValueConst obj,
     JS_FreeValue(ctx, atom_val);
     if (JS_IsException(ret))
         return -1;
-    res = JS_ToBoolFree(ctx, ret);
+    res = JS_ToBoolFree(ctx->rt, ret);
     if (res) {
         JSPropertyDescriptor desc;
         res2 = JS_GetOwnPropertyInternal(ctx, &desc, JS_VALUE_GET_OBJ(s->target), atom);

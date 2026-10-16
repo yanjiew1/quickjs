@@ -123,7 +123,7 @@ JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val)
     return p->u.func.function_bytecode;
 }
 
-void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+void js_method_set_home_object(JSRuntime *rt, JSValueConst func_obj,
                                JSValueConst home_obj)
 {
     JSObject *p, *p1;
@@ -138,10 +138,10 @@ void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
     if (b->need_home_object) {
         p1 = p->u.func.home_object;
         if (p1) {
-            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_OBJECT, p1));
+            JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, p1));
         }
         if (JS_VALUE_GET_TAG(home_obj) == JS_TAG_OBJECT)
-            p1 = JS_VALUE_GET_OBJ(JS_DupValue(ctx, home_obj));
+            p1 = JS_VALUE_GET_OBJ(__JS_DupValue(home_obj));
         else
             p1 = NULL;
         p->u.func.home_object = p1;
@@ -179,7 +179,7 @@ int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
     if (JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_name, name_str,
                                JS_PROP_CONFIGURABLE) < 0)
         return -1;
-    js_method_set_home_object(ctx, func_obj, home_obj);
+    js_method_set_home_object(ctx->rt, func_obj, home_obj);
     return 0;
 }
 
@@ -334,7 +334,7 @@ void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
         JS_MarkValue(rt, bf->argv[i], mark_func);
 }
 
-BOOL JS_IsFunction(JSContext *ctx, JSValueConst val)
+BOOL js_is_function(JSRuntime *rt, JSValueConst val)
 {
     JSObject *p;
     if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
@@ -346,8 +346,13 @@ BOOL JS_IsFunction(JSContext *ctx, JSValueConst val)
     case JS_CLASS_PROXY:
         return p->u.proxy_data->is_func;
     default:
-        return (ctx->rt->class_array[p->class_id].call != NULL);
+        return (rt->class_array[p->class_id].call != NULL);
     }
+}
+
+BOOL JS_IsFunction(JSContext *ctx, JSValueConst val)
+{
+    return js_is_function(ctx->rt, val);
 }
 
 BOOL JS_IsConstructor(JSContext *ctx, JSValueConst val)
