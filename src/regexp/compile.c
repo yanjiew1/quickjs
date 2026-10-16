@@ -227,8 +227,14 @@ static int re_string_find2(REStringList *s, int len, const uint32_t *buf,
         REString **new_hash_table, *p_next;
         int new_hash_bits, i;
         uint32_t new_hash_size;
+        /* Traversal indexes are int; keep the table and its byte count
+           representable before shifting or allocating. */
+        if (s->hash_bits >= 30)
+            return -1;
         new_hash_bits = max_int(s->hash_bits + 1, 4);
-        new_hash_size = 1 << new_hash_bits;
+        new_hash_size = 1U << new_hash_bits;
+        if ((size_t)new_hash_size > SIZE_MAX / sizeof(new_hash_table[0]))
+            return -1;
         new_hash_table = lre_realloc(s->cr.mem_opaque, NULL,
                                      sizeof(new_hash_table[0]) * new_hash_size);
         if (!new_hash_table)
@@ -249,7 +255,9 @@ static int re_string_find2(REStringList *s, int len, const uint32_t *buf,
         h = h0 >> (32 - s->hash_bits);
     }
 
-    p = lre_realloc(s->cr.mem_opaque, NULL, sizeof(REString) + len * sizeof(buf[0]));
+    if ((size_t)len > (SIZE_MAX - sizeof(REString)) / sizeof(buf[0]))
+        return -1;
+    p = lre_realloc(s->cr.mem_opaque, NULL, sizeof(REString) + (size_t)len * sizeof(buf[0]));
     if (!p)
         return -1;
     p->next = s->hash_table[h];
