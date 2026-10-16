@@ -218,6 +218,7 @@ void js_free_function_def(JSRuntime *rt, JSFunctionDef *fd)
         JS_FreeAtomRT(rt, fd->vars[i].var_name);
     }
     js_free_rt(rt, fd->vars);
+    js_free_rt(rt, fd->var_hash);
     for(i = 0; i < fd->arg_count; i++) {
         JS_FreeAtomRT(rt, fd->args[i].var_name);
     }
@@ -3918,6 +3919,8 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
         js_free(ctx, fd->args);
         js_free(ctx, fd->vars);
     }
+    js_free(ctx, fd->var_hash);
+    fd->var_hash = NULL;
     b->cpool_count = fd->cpool_count;
     if (b->cpool_count) {
         b->cpool = (void *)((uint8_t*)b + cpool_offset);
