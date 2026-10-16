@@ -249,8 +249,10 @@ int js_init_disposable_stack(JSContext *ctx)
     JSValue constructor;
 
     if (!JS_IsRegisteredClass(ctx->rt, JS_CLASS_DISPOSABLE_STACK) &&
-        JS_NewClass(ctx->rt, JS_CLASS_DISPOSABLE_STACK, &stack_class) < 0)
+        JS_NewClass(ctx->rt, JS_CLASS_DISPOSABLE_STACK, &stack_class) < 0) {
+        JS_ThrowOutOfMemory(ctx);
         return -1;
+    }
     constructor = JS_NewCConstructor(ctx, JS_CLASS_DISPOSABLE_STACK,
                                      "DisposableStack",
                                      js_disposable_stack_constructor, 0,
