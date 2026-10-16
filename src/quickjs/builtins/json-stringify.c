@@ -175,6 +175,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
                           JSValueConst holder, JSValue val,
                           JSValueConst indent)
 {
+    JSRuntime *rt = ctx->rt;
     JSValue indent1, sep, sep1, tab, v, prop;
     JSObject *p;
     int64_t i, len;
@@ -187,7 +188,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
     tab = JS_UNDEFINED;
     prop = JS_UNDEFINED;
 
-    if (js_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(rt, 0)) {
         JS_ThrowStackOverflow(ctx);
         goto exception;
     }
@@ -207,7 +208,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             goto concat_primitive;
         } else if (cl == JS_CLASS_BOOLEAN || cl == JS_CLASS_BIG_INT) {
             /* This will thow the same error as for the primitive object */
-            set_value(ctx->rt, &val, JS_DupValue(ctx, p->u.object_data));
+            set_value(rt, &val, JS_DupValue(ctx, p->u.object_data));
             goto concat_primitive;
         } else if (cl == JS_CLASS_RAWJSON) {
             JSValue val1;
@@ -221,7 +222,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
         v = js_array_includes(ctx, jsc->stack, 1, (JSValueConst *)&val);
         if (JS_IsException(v))
             goto exception;
-        if (JS_ToBoolFree(ctx->rt, v)) {
+        if (JS_ToBoolFree(rt, v)) {
             JS_ThrowTypeError(ctx, "circular reference");
             goto exception;
         }
@@ -240,7 +241,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             sep1 = JS_DupValue(ctx, jsc->empty);
         }
         v = js_array_push(ctx, jsc->stack, 1, (JSValueConst *)&val, 0);
-        if (check_exception_free(ctx->rt, v))
+        if (check_exception_free(rt, v))
             goto exception;
         ret = JS_IsArray(ctx, val);
         if (ret < 0)
@@ -320,7 +321,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             }
             string_buffer_putc8(jsc->b, '}');
         }
-        if (check_exception_free(ctx->rt, js_array_pop(ctx, jsc->stack, 0, NULL, 0)))
+        if (check_exception_free(rt, js_array_pop(ctx, jsc->stack, 0, NULL, 0)))
             goto exception;
         JS_FreeValue(ctx, val);
         JS_FreeValue(ctx, tab);
