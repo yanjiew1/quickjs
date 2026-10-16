@@ -2023,7 +2023,7 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
     add_gc_object(ctx->rt, &var_ref->header, JS_GC_OBJ_TYPE_VAR_REF);
     var_ref->is_detached = FALSE;
     var_ref->is_lexical = vd->is_lexical;
-    var_ref->is_const = vd->is_const;
+    var_ref->is_const = vd->is_const || vd->var_kind == JS_VAR_FUNCTION_NAME;
     var_ref->var_ref_idx = var_ref_idx;
     var_ref->stack_frame = sf;
     sf->var_refs[var_ref_idx] = var_ref;
@@ -4047,7 +4047,6 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
-        CASE(OP_define_field_ro):
         CASE(OP_define_field):
             {
                 int ret;
@@ -4056,8 +4055,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
 
                 ret = JS_DefinePropertyValue(ctx, sp[-2], atom, sp[-1],
-                                             (opcode == OP_define_field_ro ? 0 :
-                                              JS_PROP_C_W_E) | JS_PROP_THROW);
+                                             JS_PROP_C_W_E | JS_PROP_THROW);
                 sp--;
                 if (unlikely(ret < 0))
                     goto exception;
