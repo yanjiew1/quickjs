@@ -36,6 +36,10 @@
 #include "cutils.h"
 #include "quickjs-libc.h"
 
+#ifdef QJSC_CONFIG_FILE
+#include QJSC_CONFIG_FILE
+#endif
+
 #ifndef CONFIG_LTO_FLAG
 #define CONFIG_LTO_FLAG "-flto"
 #endif
@@ -541,15 +545,33 @@ static int output_executable(const char *out_filename, const char *cfilename,
         pstrcpy(inc_dir, sizeof(inc_dir), exe_dir);
         pstrcpy(lib_dir, sizeof(lib_dir), exe_dir);
     } else {
+#ifdef CONFIG_INCLUDE_DIR
+        pstrcpy(inc_dir, sizeof(inc_dir), CONFIG_INCLUDE_DIR);
+        pstrcpy(lib_dir, sizeof(lib_dir), CONFIG_LIB_DIR);
+#else
         snprintf(inc_dir, sizeof(inc_dir), "%s/include/quickjs", CONFIG_PREFIX);
         snprintf(lib_dir, sizeof(lib_dir), "%s/lib/quickjs", CONFIG_PREFIX);
+#endif
     }
 
     lto_suffix = "";
     bn_suffix = "";
 
     arg = argv;
+#ifdef CONFIG_CC_ARGS
+    {
+        static const char * const configured_cc[] = { CONFIG_CC_ARGS };
+        size_t i;
+        if (countof(configured_cc) > countof(argv) - 32) {
+            fprintf(stderr, "Too many configured compiler arguments\n");
+            return 1;
+        }
+        for (i = 0; i < countof(configured_cc); i++)
+            *arg++ = configured_cc[i];
+    }
+#else
     *arg++ = CONFIG_CC;
+#endif
     *arg++ = "-O2";
 #ifdef CONFIG_M32
     *arg++ = "-m32";
