@@ -704,15 +704,14 @@ static int js_proxy_delete_property(JSContext *ctx, JSValueConst obj,
     return res;
 }
 
-/* return the index of the property or -1 if not found */
-static int find_prop_key(const JSPropertyEnum *tab, int n, JSAtom atom)
+static JSPropertyEnum *find_prop_key(JSPropertyEnum *tab, uint32_t n, JSAtom atom)
 {
-    int i;
+    uint32_t i;
     for(i = 0; i < n; i++) {
         if (tab[i].atom == atom)
-            return i;
+            return &tab[i];
     }
-    return -1;
+    return NULL;
 }
 
 static int js_proxy_get_own_property_names(JSContext *ctx,
@@ -724,10 +723,10 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
     JSValue method, prop_array, val;
     uint32_t len, tab_size, i, len2;
     int64_t target_len, index;
-    JSPropertyEnum *tab, *tab2;
+    JSPropertyEnum *tab, *tab2, *key;
     JSAtom atom;
     JSPropertyDescriptor desc;
-    int res, is_extensible, idx;
+    int res, is_extensible;
 
     s = get_proxy_method(ctx, &method, obj, JS_ATOM_ownKeys);
     if (!s)
@@ -791,7 +790,7 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
     /* check duplicate properties (XXX: inefficient, could store the
      * properties an a temporary object to use the hash) */
     for(i = 1; i < len; i++) {
-        if (find_prop_key(tab, i, tab[i].atom) >= 0) {
+        if (find_prop_key(tab, i, tab[i].atom)) {
             JS_ThrowTypeError(ctx, "proxy: duplicate property");
             goto fail;
         }
@@ -821,14 +820,14 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
         if (res) {  /* safety, property should be found */
             js_free_desc(ctx->rt, &desc);
             if (!(desc.flags & JS_PROP_CONFIGURABLE) || !is_extensible) {
-                idx = find_prop_key(tab, len, tab2[i].atom);
-                if (idx < 0) {
+                key = find_prop_key(tab, len, tab2[i].atom);
+                if (!key) {
                     JS_ThrowTypeError(ctx, "proxy: target property must be present in proxy ownKeys");
                     goto fail;
                 }
                 /* mark the property as found */
                 if (!is_extensible)
-                    tab[idx].is_enumerable = TRUE;
+                    key->is_enumerable = TRUE;
             }
         }
     }

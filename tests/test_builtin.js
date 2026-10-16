@@ -6509,3 +6509,23 @@ function test_owned_conversion_paths()
 }
 
 test_owned_conversion_paths();
+
+function test_proxy_own_keys_matching()
+{
+    const symbol = Symbol("key");
+    const target = { first: 1, second: 2, [symbol]: 3 };
+    Object.preventExtensions(target);
+    const expected = ["second", symbol, "first"];
+    const keys = Reflect.ownKeys(new Proxy(target, { ownKeys() { return expected; } }));
+    assert(keys.length, expected.length);
+    for (let i = 0; i < keys.length; i++)
+        assert(keys[i], expected[i]);
+    for (const result of [["first", "first", symbol], ["first", symbol, symbol],
+                          ["first", "second"], ["first", "second", symbol, "extra"]]) {
+        assert_throws(TypeError, () => Reflect.ownKeys(new Proxy(target, {
+            ownKeys() { return result; },
+        })));
+    }
+}
+
+test_proxy_own_keys_matching();
