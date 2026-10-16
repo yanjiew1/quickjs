@@ -1,7 +1,7 @@
 #!/bin/sh
 # Check capture offsets and unmatched groups in the RegExp test tool.
 set -eu
-regexp_runner=${1:-}
+regexp_runner=${1:-${MESON_EXE_WRAPPER:-}}
 regexp_binary=${2:-./regexp_test}
 regexp_tmp=$(mktemp -d)
 trap 'rm -rf "$regexp_tmp"' EXIT HUP INT TERM
