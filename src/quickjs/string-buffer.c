@@ -39,6 +39,12 @@ int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
     s->len = 0;
     s->is_wide_char = is_wide;
     s->error_status = 0;
+    s->str = NULL;
+    if (size < 0 || size > JS_STRING_LEN_MAX) {
+        JS_ThrowInternalError(ctx, "string too long");
+        s->size = 0;
+        return s->error_status = -1;
+    }
     s->str = js_alloc_string(ctx, size, is_wide);
     if (unlikely(!s->str)) {
         s->size = 0;
@@ -79,7 +85,10 @@ static no_inline int string_buffer_widen(StringBuffer *s, int size)
     str = js_realloc2(s->ctx, s->str, sizeof(JSString) + (size << 1), &slack);
     if (!str)
         return string_buffer_set_error(s);
-    size += slack >> 1;
+    if ((slack >> 1) > (size_t)(JS_STRING_LEN_MAX - size))
+        size = JS_STRING_LEN_MAX;
+    else
+        size += slack >> 1;
     for(i = s->len; i-- > 0;) {
         str->u.str16[i] = str->u.str8[i];
     }
@@ -102,7 +111,8 @@ static no_inline int string_buffer_realloc(StringBuffer *s, int new_len, int c)
         JS_ThrowInternalError(s->ctx, "string too long");
         return string_buffer_set_error(s);
     }
-    new_size = min_int(max_int(new_len, s->size * 3 / 2), JS_STRING_LEN_MAX);
+    new_size = min_int64(max_int64(new_len, (int64_t)s->size * 3 / 2),
+                         JS_STRING_LEN_MAX);
     if (!s->is_wide_char && c >= 0x100) {
         return string_buffer_widen(s, new_size);
     }
@@ -110,7 +120,10 @@ static no_inline int string_buffer_realloc(StringBuffer *s, int new_len, int c)
     new_str = js_realloc2(s->ctx, s->str, new_size_bytes, &slack);
     if (!new_str)
         return string_buffer_set_error(s);
-    new_size = min_int(new_size + (slack >> s->is_wide_char), JS_STRING_LEN_MAX);
+    if ((slack >> s->is_wide_char) > (size_t)(JS_STRING_LEN_MAX - new_size))
+        new_size = JS_STRING_LEN_MAX;
+    else
+        new_size += slack >> s->is_wide_char;
     s->size = new_size;
     s->str = new_str;
     return 0;

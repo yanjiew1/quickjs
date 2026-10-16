@@ -38,6 +38,7 @@
 #include "../src/quickjs/allocator.c"
 #include "../src/quickjs/internal/runtime.h"
 #include "../src/quickjs/internal/object.h"
+#include "../src/quickjs/internal/string-buffer.h"
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
 
@@ -103,6 +104,80 @@ static void test_array_allocation_size(void)
     js_free(ctx, array);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+}
+
+static void test_cstring_allocation_failure(void)
+{
+    int wide;
+    for (wide = 0; wide < 2; wide++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue input;
+        const char *str;
+        size_t length = 1;
+        char text[4096];
+
+        assert(ctx);
+        memset(text, 'a', sizeof(text));
+        text[0] = wide ? '\xc4' : '\xc2';
+        text[1] = wide ? '\x80' : '\xa9';
+        input = JS_NewStringLen(ctx, text, sizeof(text));
+        assert(JS_IsString(input));
+        oom_test_begin(&allocator, 1);
+        str = JS_ToCStringLen(ctx, &length, input);
+        oom_test_end(&allocator);
+        assert(!str && length == 0 && allocator.failures == 1);
+        oom_test_check_exception(ctx);
+        assert(js_rc(JS_VALUE_GET_PTR(input))->ref_count == 1);
+        JS_FreeValue(ctx, input);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
+static void test_string_buffer_growth(void)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    StringBuffer buffer;
+    JSValue value;
+    const uint16_t *text;
+    size_t length;
+    int i;
+
+    assert(ctx && string_buffer_init(ctx, &buffer, 1) == 0);
+    for (i = 0; i < 1024; i++) {
+        assert(string_buffer_putc(&buffer, i < 64 ? 'a' : 0x100) == 0);
+        assert(buffer.size <= JS_STRING_LEN_MAX);
+    }
+    value = string_buffer_end(&buffer);
+    text = JS_ToCStringLenUTF16(ctx, &length, value);
+    assert(text && length == 1024);
+    for (i = 0; i < 1024; i++)
+        assert(text[i] == (i < 64 ? 'a' : 0x100));
+    JS_FreeCStringUTF16(ctx, text);
+    JS_FreeValue(ctx, value);
+
+    assert(string_buffer_init(ctx, &buffer, -1) < 0);
+    assert(!buffer.str && buffer.error_status && buffer.size == 0);
+    oom_test_check_exception(ctx);
+    string_buffer_free(&buffer);
+
+    assert(string_buffer_init(ctx, &buffer, 2048) == 0);
+    assert(string_buffer_fill(&buffer, 'a', 2048) == 0);
+    oom_test_begin(&allocator, 1);
+    assert(string_buffer_putc16(&buffer, 0x100) < 0);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && buffer.error_status);
+    assert(!buffer.str && buffer.len == 0 && buffer.size == 0);
+    oom_test_check_exception(ctx);
+    string_buffer_free(&buffer);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
 }
 
 typedef struct ReactionOwner {
@@ -1800,6 +1875,8 @@ static void test_basic_object_allocation_failures(void)
 
 int main(void)
 {
+    test_cstring_allocation_failure();
+    test_string_buffer_growth();
     test_array_allocation_size();
     test_basic_object_allocation_failures();
     test_promise_capability_allocation_failure();
