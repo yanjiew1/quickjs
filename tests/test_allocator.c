@@ -1604,8 +1604,39 @@ static void test_compiler_value_allocation_failure(void)
     }
 }
 
+static void test_basic_object_allocation_failures(void)
+{
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx;
+
+        oom_test_begin(&allocator, fail_at);
+        ctx = JS_NewContextRaw(rt);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(ctx && allocations > 0 && allocations < 1024);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (ctx) {
+            JSObject *global = JS_VALUE_GET_OBJ(ctx->global_obj);
+
+            assert(!JS_HasException(ctx));
+            assert(JS_IsObject(global->u.global_object.uninitialized_vars));
+            JS_FreeContext(ctx);
+        }
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 int main(void)
 {
+    test_basic_object_allocation_failures();
     test_compiler_value_allocation_failure();
     test_function_list_allocation_failure();
     test_compiler_debug_allocation_failure(0);
