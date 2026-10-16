@@ -3722,6 +3722,7 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
    must be done this way to resolve all the variables. */
 JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
 {
+    JSRuntime *rt = ctx->rt;
     JSValue func_obj;
     JSFunctionBytecode *b;
     struct list_head *el, *el1;
@@ -3941,7 +3942,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
         //compute_pc2line_info(fd, &pc2line);
         //js_free(ctx, fd->line_number_slots)
         /* Shrinking is optional; keep the buffer if allocation fails. */
-        b->debug.pc2line_buf = js_realloc_rt(ctx->rt, fd->pc2line.buf,
+        b->debug.pc2line_buf = js_realloc_rt(rt, fd->pc2line.buf,
                                            fd->pc2line.size);
         if (!b->debug.pc2line_buf)
             b->debug.pc2line_buf = fd->pc2line.buf;
@@ -3989,7 +3990,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
                                      fd->eval_type == JS_EVAL_TYPE_INDIRECT);
     b->realm = JS_DupContext(ctx);
 
-    add_gc_object(ctx->rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
+    add_gc_object(rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
 
 #if defined(DUMP_BYTECODE) && (DUMP_BYTECODE & 1)
     if (!fd->strip_debug) {
@@ -4005,6 +4006,6 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     js_free(ctx, fd);
     return JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
  fail:
-    js_free_function_def(ctx->rt, fd);
+    js_free_function_def(rt, fd);
     return JS_EXCEPTION;
 }
