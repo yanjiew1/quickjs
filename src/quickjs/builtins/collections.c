@@ -155,19 +155,19 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
 }
 
 /* XXX: could normalize strings to speed up comparison */
-static JSValue map_normalize_key(JSContext *ctx, JSValue key)
+static JSValue map_normalize_key(JSValue key)
 {
     uint32_t tag = JS_VALUE_GET_TAG(key);
     /* convert -0.0 to +0.0 */
     if (JS_TAG_IS_FLOAT64(tag) && JS_VALUE_GET_FLOAT64(key) == 0.0) {
-        key = JS_NewInt32(ctx, 0);
+        key = JS_MKVAL(JS_TAG_INT, 0);
     }
     return key;
 }
 
-static JSValueConst map_normalize_key_const(JSContext *ctx, JSValueConst key)
+static JSValueConst map_normalize_key_const(JSValueConst key)
 {
-    return (JSValueConst)map_normalize_key(ctx, (JSValue)key);
+    return (JSValueConst)map_normalize_key((JSValue)key);
 }
 
 /* hash multipliers, same as the Linux kernel (see Knuth vol 3,
@@ -253,7 +253,7 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
     return h;
 }
 
-static JSMapRecord *map_find_record(JSContext *ctx, JSMapState *s,
+static JSMapRecord *map_find_record(JSMapState *s,
                                     JSValueConst key)
 {
     JSMapRecord *mr;
@@ -263,7 +263,7 @@ static JSMapRecord *map_find_record(JSContext *ctx, JSMapState *s,
         if (mr->empty || (s->is_weak && !js_weakref_is_live(mr->key))) {
             /* cannot match */
         } else {
-            if (js_same_value_zero(ctx, mr->key, key))
+            if (js_same_value_zero(mr->key, key))
                 return mr;
         }
     }
@@ -314,7 +314,7 @@ static JSMapRecord *map_add_record(JSContext *ctx, JSMapState *s,
     mr->ref_count = 1;
     mr->empty = FALSE;
     if (s->is_weak) {
-        mr->key = js_weakref_new(ctx, key);
+        mr->key = js_weakref_new(key);
     } else {
         mr->key = JS_DupValue(ctx, key);
     }
@@ -415,14 +415,14 @@ static JSValue js_map_set(JSContext *ctx, JSValueConst this_val,
 
     if (!s)
         return JS_EXCEPTION;
-    key = map_normalize_key_const(ctx, argv[0]);
+    key = map_normalize_key_const(argv[0]);
     if (s->is_weak && !js_weakref_is_target(key))
         return JS_ThrowTypeError(ctx, "invalid value used as %s key", (magic & MAGIC_SET) ? "WeakSet" : "WeakMap");
     if (magic & MAGIC_SET)
         value = JS_UNDEFINED;
     else
         value = argv[1];
-    mr = map_find_record(ctx, s, key);
+    mr = map_find_record(s, key);
     if (mr) {
         JS_FreeValue(ctx, mr->value);
     } else {
@@ -443,8 +443,8 @@ static JSValue js_map_get(JSContext *ctx, JSValueConst this_val,
 
     if (!s)
         return JS_EXCEPTION;
-    key = map_normalize_key_const(ctx, argv[0]);
-    mr = map_find_record(ctx, s, key);
+    key = map_normalize_key_const(argv[0]);
+    mr = map_find_record(s, key);
     if (!mr)
         return JS_UNDEFINED;
     else
@@ -457,7 +457,7 @@ static JSValue map_delete_record(JSContext *ctx, JSMapState *s, JSValueConst key
     JSMapRecord *mr, **pmr;
     uint32_t h;
 
-    key = map_normalize_key_const(ctx, key);
+    key = map_normalize_key_const(key);
     
     h = map_hash_key(key, s->hash_bits);
     pmr = &s->hash_table[h];
@@ -468,7 +468,7 @@ static JSValue map_delete_record(JSContext *ctx, JSMapState *s, JSValueConst key
         if (mr->empty || (s->is_weak && !js_weakref_is_live(mr->key))) {
             /* not valid */
         } else {
-            if (js_same_value_zero(ctx, mr->key, key))
+            if (js_same_value_zero(mr->key, key))
                 break;
         }
         pmr = &mr->hash_next;
@@ -495,16 +495,16 @@ static JSValue js_map_getOrInsert(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (computed && !JS_IsFunction(ctx, argv[1]))
         return JS_ThrowTypeError(ctx, "not a function");
-    key = map_normalize_key_const(ctx, argv[0]);
+    key = map_normalize_key_const(argv[0]);
     if (s->is_weak && !js_weakref_is_target(key))
         return JS_ThrowTypeError(ctx, "invalid value used as WeakMap key");
-    mr = map_find_record(ctx, s, key);
+    mr = map_find_record(s, key);
     if (!mr) {
         if (computed) {
             value = JS_Call(ctx, argv[1], JS_UNDEFINED, 1, &key);
             if (JS_IsException(value))
                 return JS_EXCEPTION;
-            mr = map_find_record(ctx, s, key);
+            mr = map_find_record(s, key);
         } else {
             value = JS_DupValue(ctx, argv[1]);
         }
@@ -531,8 +531,8 @@ static JSValue js_map_has(JSContext *ctx, JSValueConst this_val,
 
     if (!s)
         return JS_EXCEPTION;
-    key = map_normalize_key_const(ctx, argv[0]);
-    mr = map_find_record(ctx, s, key);
+    key = map_normalize_key_const(argv[0]);
+    mr = map_find_record(s, key);
     return JS_NewBool(ctx, mr != NULL);
 }
 
@@ -1077,8 +1077,8 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             if (done) // item is JS_UNDEFINED
                 break;
-            item = map_normalize_key(ctx, item);
-            found = (NULL != map_find_record(ctx, s, item));
+            item = map_normalize_key(item);
+            found = (NULL != map_find_record(s, item));
             JS_FreeValue(ctx, item);
             if (found) {
                 if (JS_IteratorClose(ctx, iter, FALSE) < 0)
@@ -1176,8 +1176,8 @@ static JSValue js_set_isSupersetOf(JSContext *ctx, JSValueConst this_val,
             goto exception;
         if (done) // item is JS_UNDEFINED
             break;
-        item = map_normalize_key(ctx, item);
-        found = (NULL != map_find_record(ctx, s, item));
+        item = map_normalize_key(item);
+        found = (NULL != map_find_record(s, item));
         JS_FreeValue(ctx, item);
         if (!found) {
             if (JS_IteratorClose(ctx, iter, FALSE) < 0)
@@ -1229,10 +1229,10 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             if (done) // item is JS_UNDEFINED
                 break;
-            item = map_normalize_key(ctx, item);
-            if (!map_find_record(ctx, s, item)) {
+            item = map_normalize_key(item);
+            if (!map_find_record(s, item)) {
                 JS_FreeValue(ctx, item);
-            } else if (map_find_record(ctx, t, item)) {
+            } else if (map_find_record(t, item)) {
                 JS_FreeValue(ctx, item); // no duplicates
             } else {
                 mr = set_add_record(ctx, t, item);
@@ -1258,8 +1258,8 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
             ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok > 0) {
-                item = map_normalize_key(ctx, item);
-                if (map_find_record(ctx, t, item)) {
+                item = map_normalize_key(item);
+                if (map_find_record(t, item)) {
                     JS_FreeValue(ctx, item); // no duplicates
                 } else {
                     mr = set_add_record(ctx, t, item);
@@ -1402,9 +1402,9 @@ static JSValue js_set_symmetricDifference(JSContext *ctx, JSValueConst this_val,
         // - if item misses in |this| and |new|, add to |new|
         // - if item exists in |new| but misses in |this|, *don't* add it,
         //   mutating iterator erased it
-        item = map_normalize_key(ctx, item);
-        present = (NULL != map_find_record(ctx, s, item));
-        mr = map_find_record(ctx, t, item);
+        item = map_normalize_key(item);
+        present = (NULL != map_find_record(s, item));
+        mr = map_find_record(t, item);
         if (present) {
             map_delete_record(ctx, t, item);
             JS_FreeValue(ctx, item);

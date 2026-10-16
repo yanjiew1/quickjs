@@ -341,7 +341,7 @@ void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
     }
 }
 
-BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic)
+BOOL JS_IsCFunction(JSValueConst val, JSCFunction *func, int magic)
 {
     JSObject *p;
     if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
