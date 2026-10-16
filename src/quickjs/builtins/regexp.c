@@ -1246,10 +1246,16 @@ static int value_buffer_append(ValueBuffer *b, JSValue val)
         return -1;
 
     if (b->len >= b->size) {
-        int new_size = (b->len + (b->len >> 1) + 31) & ~16;
-        size_t slack;
+        int64_t new_size = ((int64_t)b->len + (b->len >> 1) + 31) & ~INT64_C(16);
+        size_t slack, max_size = min_int64(INT_MAX, SIZE_MAX / sizeof(*b->arr));
         JSValue *new_arr;
 
+        if (b->len >= max_size) {
+            JS_ThrowOutOfMemory(b->ctx);
+            goto fail;
+        }
+        if (new_size > max_size)
+            new_size = max_size;
         if (b->arr == b->def) {
             new_arr = js_realloc2(b->ctx, NULL, sizeof(*b->arr) * new_size, &slack);
             if (new_arr)
@@ -1258,12 +1264,13 @@ static int value_buffer_append(ValueBuffer *b, JSValue val)
             new_arr = js_realloc2(b->ctx, b->arr, sizeof(*b->arr) * new_size, &slack);
         }
         if (!new_arr) {
+        fail:
             value_buffer_free(b);
             JS_FreeValue(b->ctx, val);
             b->error_status = -1;
             return -1;
         }
-        new_size += slack / sizeof(*new_arr);
+        new_size += min_int64(slack / sizeof(*new_arr), max_size - new_size);
         b->arr = new_arr;
         b->size = new_size;
     }
