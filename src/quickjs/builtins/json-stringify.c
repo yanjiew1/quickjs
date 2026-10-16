@@ -207,7 +207,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             goto concat_primitive;
         } else if (cl == JS_CLASS_BOOLEAN || cl == JS_CLASS_BIG_INT) {
             /* This will thow the same error as for the primitive object */
-            set_value(ctx, &val, JS_DupValue(ctx, p->u.object_data));
+            set_value(ctx->rt, &val, JS_DupValue(ctx, p->u.object_data));
             goto concat_primitive;
         } else if (cl == JS_CLASS_RAWJSON) {
             JSValue val1;
@@ -221,7 +221,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
         v = js_array_includes(ctx, jsc->stack, 1, (JSValueConst *)&val);
         if (JS_IsException(v))
             goto exception;
-        if (JS_ToBoolFree(ctx, v)) {
+        if (JS_ToBoolFree(ctx->rt, v)) {
             JS_ThrowTypeError(ctx, "circular reference");
             goto exception;
         }
@@ -240,7 +240,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             sep1 = JS_DupValue(ctx, jsc->empty);
         }
         v = js_array_push(ctx, jsc->stack, 1, (JSValueConst *)&val, 0);
-        if (check_exception_free(ctx, v))
+        if (check_exception_free(ctx->rt, v))
             goto exception;
         ret = JS_IsArray(ctx, val);
         if (ret < 0)
@@ -320,7 +320,7 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
             }
             string_buffer_putc8(jsc->b, '}');
         }
-        if (check_exception_free(ctx, js_array_pop(ctx, jsc->stack, 0, NULL, 0)))
+        if (check_exception_free(ctx->rt, js_array_pop(ctx, jsc->stack, 0, NULL, 0)))
             goto exception;
         JS_FreeValue(ctx, val);
         JS_FreeValue(ctx, tab);
@@ -430,7 +430,7 @@ JSValue JS_JSONStringify(JSContext *ctx, JSValueConst obj,
                     JS_FreeValue(ctx, v);
                     goto exception;
                 }
-                if (!JS_ToBoolFree(ctx, present)) {
+                if (!JS_ToBoolFree(ctx->rt, present)) {
                     JS_SetPropertyInt64(ctx, jsc->property_list, j++, v);
                 } else {
                     JS_FreeValue(ctx, v);
