@@ -39,8 +39,38 @@ static void test_empty_dbuf(void)
     dbuf_free(&b);
 }
 
+static void *reject_printf_allocation(void *opaque, void *ptr, size_t size)
+{
+    size_t *requested = opaque;
+    assert(!ptr);
+    *requested = size;
+    return NULL;
+}
+
+static void test_formatted_buffer(void)
+{
+    DynBuf b;
+    char text[257];
+    size_t requested = 0;
+
+    memset(text, 'x', 256);
+    text[256] = '\0';
+    dbuf_init(&b);
+    assert(dbuf_printf(&b, "%s:%d", text, 7) == 0);
+    assert(b.size == 258 && !memcmp(b.buf, text, 256));
+    assert(b.buf[256] == ':' && b.buf[257] == '7');
+    dbuf_free(&b);
+
+    dbuf_init2(&b, &requested, reject_printf_allocation);
+    assert(dbuf_printf(&b, "%s", text) < 0);
+    assert(dbuf_error(&b) && !b.buf && b.size == 0);
+    assert(requested >= 257);
+    dbuf_free(&b);
+}
+
 int main(void)
 {
     test_empty_dbuf();
+    test_formatted_buffer();
     return 0;
 }
