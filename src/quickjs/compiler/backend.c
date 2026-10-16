@@ -277,7 +277,7 @@ int add_closure_var(JSContext *ctx, JSFunctionDef *s,
     return s->closure_var_count - 1;
 }
 
-static int find_closure_var(JSContext *ctx, JSFunctionDef *s,
+static int find_closure_var(JSFunctionDef *s,
                             JSAtom var_name)
 {
     int i;
@@ -357,7 +357,7 @@ static int get_reference_extract_op(const uint8_t *bc_buf, int pos_next,
     return OP_invalid;
 }
 
-static int optimize_scope_make_ref(JSContext *ctx, JSFunctionDef *s,
+static int optimize_scope_make_ref(JSFunctionDef *s,
                                    DynBuf *bc, uint8_t *bc_buf,
                                    LabelSlot *ls, int pos_next,
                                    int get_op, int var_idx)
@@ -430,7 +430,7 @@ static int optimize_scope_make_ref(JSContext *ctx, JSFunctionDef *s,
 /* Save HasBinding before the RHS without materializing a base/name pair.
    The active frame selects strict errors or sloppy global-object writes.
    Reference reads retain the general path. */
-static int optimize_scope_make_global_ref(JSContext *ctx, JSFunctionDef *s,
+static int optimize_scope_make_global_ref(JSFunctionDef *s,
                                           DynBuf *bc, uint8_t *bc_buf,
                                           LabelSlot *ls, int pos_next, int idx)
 {
@@ -664,7 +664,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         /* argument scope: variables are not visible but pseudo
            variables are visible */
         if (!is_arg_scope) {
-            var_idx = resolve_parameter_copy(s, find_var(ctx, s, var_name));
+            var_idx = resolve_parameter_copy(s, find_var(s, var_name));
         }
 
         if (var_idx < 0 && is_pseudo_var) {
@@ -735,7 +735,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                     else
                         get_op = OP_get_loc;
                 }
-                pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
+                pos_next = optimize_scope_make_ref(s, bc, bc_buf, ls,
                                                    pos_next, get_op, var_idx);
             } else {
                 /* Keep the local or argument slot as a frame reference. */
@@ -843,7 +843,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                         (var_idx >= 0 && fd->has_parameter_expressions &&
                          fd->vars[var_idx].scope_level == ARG_SCOPE_INDEX));
         if (var_idx < 0 && !is_arg_scope)
-            var_idx = find_var(ctx, fd, var_name);
+            var_idx = find_var(fd, var_name);
         var_idx = resolve_parameter_copy(fd, var_idx);
         if (var_idx >= 0) {
             if (fd->has_parameter_expressions &&
@@ -1000,13 +1000,13 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                globals must save HasBinding before evaluating user code. */
             if (s->closure_var[idx].is_lexical && label_done == -1 &&
                 can_opt_put_ref_value(bc_buf, ls->pos)) {
-                pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
+                pos_next = optimize_scope_make_ref(s, bc, bc_buf, ls,
                                                    pos_next,
                                                    OP_get_var, idx);
             } else if (label_done == -1 &&
                        bc_buf[pos_next] != OP_get_ref_value &&
                        can_opt_put_ref_value(bc_buf, ls->pos)) {
-                pos_next = optimize_scope_make_global_ref(ctx, s, bc, bc_buf,
+                pos_next = optimize_scope_make_global_ref(s, bc, bc_buf,
                                                           ls, pos_next, idx);
             } else {
                 dbuf_putc(bc, OP_make_var_ref);
@@ -1103,7 +1103,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                         get_op = OP_get_var_ref_check;
                     else
                         get_op = OP_get_var_ref;
-                    pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
+                    pos_next = optimize_scope_make_ref(s, bc, bc_buf, ls,
                                                        pos_next,
                                                        get_op, idx);
                 } else {
@@ -1172,7 +1172,7 @@ done:
 }
 
 /* search in all scopes */
-static int find_private_class_field_all(JSContext *ctx, JSFunctionDef *fd,
+static int find_private_class_field_all(JSFunctionDef *fd,
                                         JSAtom name, int scope_level)
 {
     int idx;
@@ -1209,7 +1209,7 @@ static int resolve_scope_private_field1(JSContext *ctx,
     fd = s;
     is_ref = FALSE;
     for(;;) {
-        idx = find_private_class_field_all(ctx, fd, var_name, scope_level);
+        idx = find_private_class_field_all(fd, var_name, scope_level);
         if (idx >= 0) {
             var_kind = fd->vars[idx].var_kind;
             if (is_ref) {
@@ -1360,7 +1360,7 @@ static int resolve_scope_private_field(JSContext *ctx, JSFunctionDef *s,
     return 0;
 }
 
-static void mark_eval_captured_variables(JSContext *ctx, JSFunctionDef *s,
+static void mark_eval_captured_variables(JSFunctionDef *s,
                                          int scope_level)
 {
     int idx;
@@ -2065,7 +2065,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             {
                 int call_argc = get_u16(bc_buf + pos + 1);
                 scope = get_u16(bc_buf + pos + 1 + 2);
-                mark_eval_captured_variables(ctx, s, scope);
+                mark_eval_captured_variables(s, scope);
                 dbuf_putc(&bc_out, op);
                 dbuf_put_u16(&bc_out, call_argc);
                 dbuf_put_u16(&bc_out, s->scopes[scope].first - ARG_SCOPE_END);
@@ -2073,7 +2073,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             break;
         case OP_apply_eval: /* convert scope index to adjusted variable index */
             scope = get_u16(bc_buf + pos + 1);
-            mark_eval_captured_variables(ctx, s, scope);
+            mark_eval_captured_variables(s, scope);
             dbuf_putc(&bc_out, op);
             dbuf_put_u16(&bc_out, s->scopes[scope].first - ARG_SCOPE_END);
             break;
@@ -2290,7 +2290,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                 if (s->has_parameter_expressions && scope == ARG_SCOPE_INDEX) {
                     for (scope_idx = s->scopes[scope].first; scope_idx >= 0;) {
                         JSVarDef *vd = &s->vars[scope_idx];
-                        int body_idx = find_var(ctx, s, vd->var_name);
+                        int body_idx = find_var(s, vd->var_name);
 
                         if (body_idx >= 0 && body_idx != scope_idx) {
                             JSVarDef *body = (body_idx & ARGUMENT_VAR_OFFSET) ?
@@ -3700,7 +3700,7 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
         for(i = 0; i < m->export_entries_count; i++) {
             me = &m->export_entries[i];
             if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
-                idx = find_closure_var(ctx, fd, me->local_name);
+                idx = find_closure_var(fd, me->local_name);
                 if (idx < 0) {
                     JS_ThrowSyntaxErrorAtom(ctx, "exported variable '%s' does not exist",
                                             me->local_name);
