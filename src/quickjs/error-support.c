@@ -171,7 +171,7 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
 
             b = p->u.func.function_bytecode;
             if (b->has_debug) {
-                line_num1 = find_line_num(ctx, b,
+                line_num1 = find_line_num(b,
                                           sf->cur_pc - b->byte_code_buf - 1, &col_num1);
                 atom_str = JS_AtomToCString(ctx, b->debug.filename);
                 dbuf_printf(&dbuf, " (%s",
