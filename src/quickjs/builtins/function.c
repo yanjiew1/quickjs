@@ -64,7 +64,7 @@ static JSValue js_function_proto_lineNumber(JSContext *ctx,
     JSFunctionBytecode *b = JS_GetFunctionBytecode(this_val);
     if (b && b->has_debug) {
         int line_num, col_num;
-        line_num = find_line_num(ctx, b, -1, &col_num);
+        line_num = find_line_num(b, -1, &col_num);
         if (is_col)
             return JS_NewInt32(ctx, col_num);
         else
