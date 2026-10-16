@@ -1991,7 +1991,7 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
     add_gc_object(ctx->rt, &var_ref->header, JS_GC_OBJ_TYPE_VAR_REF);
     var_ref->is_detached = FALSE;
     var_ref->is_lexical = vd->is_lexical;
-    var_ref->is_const = vd->is_const;
+    var_ref->is_const = vd->is_const || vd->var_kind == JS_VAR_FUNCTION_NAME;
     var_ref->var_ref_idx = var_ref_idx;
     var_ref->stack_frame = sf;
     sf->var_refs[var_ref_idx] = var_ref;
@@ -3532,7 +3532,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 JSVarRef *var_ref;
                 JSAtom atom;
-                int idx;
+                int idx, tag = JS_TAG_VAR_REF;
                 atom = get_u32(pc);
                 idx = get_u16(pc + 4);
                 pc += 6;
@@ -3540,6 +3540,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 if (opcode == OP_make_var_ref_ref) {
                     var_ref = var_refs[idx];
                     js_rc(var_ref)->ref_count++;
+                    /* Import write policy belongs to this reference, not to
+                       the exporter's potentially mutable shared binding. */
+                    if (b->closure_var[idx].var_kind == JS_VAR_IMPORT)
+                        tag = JS_TAG_VAR_REF_RO;
                 } else {
                     var_ref = get_var_ref(ctx, sf, idx, opcode == OP_make_arg_ref);
                     if (!var_ref)
@@ -3547,7 +3551,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 }
                 /* Retain the reference's two-slot stack shape without an
                    object, shape or property allocation for the binding. */
-                *sp++ = JS_MKPTR(JS_TAG_VAR_REF, var_ref);
+                *sp++ = JS_MKPTR(tag, var_ref);
                 *sp++ = JS_AtomToValue(ctx, atom);
                 if (unlikely(JS_IsException(sp[-1])))
                     goto exception;
@@ -4017,7 +4021,6 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
-        CASE(OP_define_field_ro):
         CASE(OP_define_field):
             {
                 int ret;
@@ -4026,8 +4029,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
 
                 ret = JS_DefinePropertyValue(ctx, sp[-2], atom, sp[-1],
-                                             (opcode == OP_define_field_ro ? 0 :
-                                              JS_PROP_C_W_E) | JS_PROP_THROW);
+                                             JS_PROP_C_W_E | JS_PROP_THROW);
                 sp--;
                 if (unlikely(ret < 0))
                     goto exception;
@@ -4248,7 +4250,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int ret;
                 
                 sf->cur_pc = pc;
-                if (JS_VALUE_GET_TAG(sp[-2]) == JS_TAG_VAR_REF) {
+                if (JS_VALUE_GET_TAG(sp[-2]) == JS_TAG_VAR_REF ||
+                    JS_VALUE_GET_TAG(sp[-2]) == JS_TAG_VAR_REF_RO) {
                     JSVarRef *var_ref = JS_VALUE_GET_PTR(sp[-2]);
                     val = *var_ref->pvalue;
                     if (unlikely(JS_IsUninitialized(val))) {
@@ -4386,8 +4389,17 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValue *pval;
                 JSValueConst base;
                 sf->cur_pc = pc;
-                if (JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_VAR_REF) {
+                if (JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_VAR_REF ||
+                    JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_VAR_REF_RO) {
                     JSVarRef *var_ref = JS_VALUE_GET_PTR(sp[-3]);
+                    if (JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_VAR_REF_RO) {
+                        atom = JS_ValueToAtom(ctx, sp[-2]);
+                        if (atom == JS_ATOM_NULL)
+                            goto exception;
+                        JS_ThrowTypeErrorReadOnly(ctx, JS_PROP_THROW, atom);
+                        JS_FreeAtom(ctx, atom);
+                        goto exception;
+                    }
                     if (unlikely((var_ref->is_lexical &&
                                   JS_IsUninitialized(*var_ref->pvalue)) ||
                                  var_ref->is_const)) {

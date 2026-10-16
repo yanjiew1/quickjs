@@ -83,6 +83,7 @@ enum {
     JS_TAG_STRING      = -7,
     JS_TAG_STRING_ROPE = -6,
     JS_TAG_VAR_REF     = -5, /* used internally */
+    JS_TAG_VAR_REF_RO  = -4, /* used internally */
     JS_TAG_MODULE      = -3, /* used internally */
     JS_TAG_FUNCTION_BYTECODE = -2, /* used internally */
     JS_TAG_OBJECT      = -1,
