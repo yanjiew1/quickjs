@@ -326,7 +326,7 @@ static JSAtom __JS_NewAtom(JSRuntime *rt, JSString *str, int atom_type)
            4 6 9 13 19 28 42 63 94 141 211 316 474 711 1066 1599 2398 3597 5395 8092
            preallocating space for predefined atoms (at least 504).
          */
-        new_size = max_int(711, rt->atom_size * 3 / 2);
+        new_size = max_int(711, rt->atom_size + rt->atom_size / 2);
         if (new_size > JS_ATOM_MAX)
             goto fail;
         /* XXX: should use realloc2 to use slack space */
