@@ -81,7 +81,7 @@ static void test_mixed_fifo(void)
     JSNativeWaitOwner owner;
     JSNativeWaiter first, sync, last, *inline_waiters, *completed;
     pthread_cond_t condition;
-    int location;
+    int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     assert(!pthread_cond_init(&condition, NULL));
@@ -121,7 +121,7 @@ static void test_expiry_is_not_selection(void)
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
     JSNativeWaiter waiter, *completed, *inline_waiters;
-    int location;
+    int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &waiter, &location, 100);
@@ -147,7 +147,7 @@ static void test_inline_notify_keeps_timeout_token_alive(void)
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
     JSNativeWaiter waiter, *completed, *inline_waiters;
-    int location;
+    int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &waiter, &location, 100);
@@ -169,7 +169,7 @@ static void test_timeout_selection_wins(void)
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
     JSNativeWaiter waiter, *completed, *inline_waiters;
-    int location;
+    int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &waiter, &location, 100);
@@ -190,7 +190,7 @@ static void test_owner_wake_and_coalescing(void)
     JSNativeWaiter first, second, *completed;
     TestNotify test = { 0 };
     pthread_t thread;
-    int location;
+    int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &first, &location, JS_NATIVE_WAIT_FOREVER);
@@ -221,7 +221,7 @@ static void test_close_detaches_both_event_slots(void)
     JSNativeWaitQueue queue;
     JSNativeWaitOwner owner;
     JSNativeWaiter first, second, *inline_waiters, *closed;
-    int location;
+    int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &first, &location, 100);
@@ -247,7 +247,7 @@ static void test_teardown_races_native_notifier(void)
     JSNativeWaiter *waiter;
     TestNotify test = { 0 };
     pthread_t thread;
-    int location;
+    int location = 0;
     assert(!js_native_wait_queue_init(&queue));
     owner = malloc(sizeof(*owner));
     waiter = malloc(sizeof(*waiter));
@@ -298,7 +298,7 @@ static void test_generic_jobs_share_exact_fifo(void)
     JSNativeWaitOwner owner;
     JSNativeWaiter waiter, *completed, *inline_waiters;
     JSNativeWaitEvent first, middle, last, *generic;
-    int location, jobs[3];
+    int location = 0, jobs[3] = { 0 };
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &waiter, &location, 100);
@@ -331,7 +331,7 @@ static void test_recursive_owner_append_and_fractional_deadline(void)
     JSNativeWaitOwner owner;
     JSNativeWaiter first, second, *completed;
     JSNativeWaitEvent reaction, *generic;
-    int location, job;
+    int location = 0, job = 0;
     assert(!js_native_wait_queue_init(&queue));
     assert(!js_native_wait_owner_init(&owner, &queue));
     add_wait(&queue, &owner, &first, &location, 100.5L);

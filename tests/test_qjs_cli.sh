@@ -1,7 +1,7 @@
 #!/bin/sh
 # Check virtual CLI modules and real file import.meta with the actual qjs.
 set -eu
-qjs_runner=${1:-}
+qjs_runner=${1:-${MESON_EXE_WRAPPER:-}}
 qjs_binary=${2:-./qjs}
 qjs_root=$(pwd)
 qjs_fixtures=$(CDPATH= cd "$(dirname "$0")" && pwd)
