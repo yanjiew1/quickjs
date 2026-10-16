@@ -75,7 +75,7 @@ static inline int js_bigint_sign(const JSBigInt *a)
 
 JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
 
-double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
+double js_bigint_to_float64(const JSBigInt *a);
 
 /* it is currently assumed that JS_SHORT_BIG_INT_BITS = JS_LIMB_BITS */
 #if JS_SHORT_BIG_INT_BITS == 32
@@ -89,9 +89,9 @@ double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a);
 #endif
 
 JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1);
-int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
+int js_bigint_float64_cmp(const JSBigInt *a,
                           double b);
-int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
+int js_bigint_cmp(const JSBigInt *a,
                   const JSBigInt *b);
 
 JSBigInt *js_bigint_new_di(JSContext *ctx, js_sdlimb_t a);

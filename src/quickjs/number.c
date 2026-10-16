@@ -830,7 +830,7 @@ int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
     return isfinite(d) && floor(d) == d;
 }
 
-BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val)
+BOOL JS_NumberIsNegativeOrMinusZero(JSValueConst val)
 {
     uint32_t tag;
 

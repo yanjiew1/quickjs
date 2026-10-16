@@ -149,7 +149,7 @@ extern const JSClassExoticMethods js_module_ns_exotic_methods;
 
 JSModuleDef *js_new_module_def(JSContext *ctx, JSAtom name);
 
-JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m);
+JSValue JS_NewModuleValue(JSModuleDef *m);
 
 JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst options);
 JSValue js_import_meta(JSContext *ctx);
