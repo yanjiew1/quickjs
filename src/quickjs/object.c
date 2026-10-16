@@ -167,7 +167,10 @@ JSValue JS_ToObject(JSContext *ctx, JSValueConst val)
 
 JSValue JS_ToObjectFree(JSContext *ctx, JSValue val)
 {
-    JSValue obj = JS_ToObject(ctx, val);
+    JSValue obj;
+    if (JS_IsObject(val))
+        return val;
+    obj = JS_ToObject(ctx, val);
     JS_FreeValue(ctx, val);
     return obj;
 }
