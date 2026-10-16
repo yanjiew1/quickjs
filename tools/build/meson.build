@@ -1,0 +1,84 @@
+# Explicit developer tasks; expensive external suites are never default tests.
+foreach entry : [
+  ['stats', ['-qd']],
+  ['microbench', ['--std', meson.project_source_root() / 'tests/microbench.js']],
+]
+  run_target(
+    entry[0],
+    command: [qjs] + entry[1],
+  )
+endforeach
+foreach mode : ['bootstrap', 'run', 'default', 'check', 'update', 'legacy']
+  run_target(
+    'test262-' + mode,
+    command: [
+      python,
+      files('test262.py'),
+      mode,
+      '--source',
+      meson.project_source_root(),
+      '--runner',
+      run_test262,
+    ],
+  )
+endforeach
+v8_files = files(
+  '../../tests/bench-v8/base.js',
+  '../../tests/bench-v8/richards.js',
+  '../../tests/bench-v8/deltablue.js',
+  '../../tests/bench-v8/crypto.js',
+  '../../tests/bench-v8/raytrace.js',
+  '../../tests/bench-v8/earley-boyer.js',
+  '../../tests/bench-v8/regexp.js',
+  '../../tests/bench-v8/splay.js',
+  '../../tests/bench-v8/navier-stokes.js',
+  '../../tests/bench-v8/run_harness.js',
+)
+v8 = custom_target(
+  'v8-source',
+  input: v8_files,
+  output: 'v8-combined.js',
+  command: [python, files('concat.py'), '@OUTPUT@', '@INPUT@'],
+  build_by_default: false,
+)
+run_target(
+  'bench-v8',
+  command: [qjs, '-d', v8],
+)
+if get_option('fuzzing')
+  if cc.get_id() != 'clang'
+    error('The fuzzing targets require a Clang compiler with libFuzzer.')
+  endif
+  fuzz_args = host_args + ['-fsanitize=fuzzer-no-link']
+  fuzz_engine = static_library(
+    'quickjs-fuzz',
+    engine_sources + compiler_sources + support_sources,
+    c_args: fuzz_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    build_by_default: false,
+  )
+  fuzz_vm = static_library(
+    'quickjs-fuzz-vm',
+    vm_sources,
+    c_args: fuzz_args + host_vm_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    build_by_default: false,
+  )
+  foreach name : ['eval', 'compile', 'regexp']
+    sources = files('../../fuzz/fuzz_' + name + '.c')
+    if name != 'regexp'
+      sources += files('../../fuzz/fuzz_common.c')
+    endif
+    executable(
+      'fuzz_' + name,
+      sources,
+      c_args: fuzz_args,
+      link_args: ['-fsanitize=fuzzer'],
+      link_with: [fuzz_vm, fuzz_engine],
+      include_directories: [inc, include_directories('../..')],
+      dependencies: host_deps,
+    )
+  endforeach
+endif
