@@ -25,6 +25,7 @@
 #define LIBUNICODE_H
 
 #include <stdint.h>
+#include <limits.h>
 
 /* unicode standard version */
 #define LIBUNICODE_UNICODE_VERSION_MAJOR 18
@@ -60,6 +61,8 @@ int cr_copy(CharRange *cr, const CharRange *cr1);
 
 static inline int cr_add_point(CharRange *cr, uint32_t v)
 {
+    if (cr->len == INT_MAX)
+        return -1;
     if (cr->len >= cr->size) {
         if (cr_realloc(cr, cr->len + 1))
             return -1;
@@ -70,6 +73,8 @@ static inline int cr_add_point(CharRange *cr, uint32_t v)
 
 static inline int cr_add_interval(CharRange *cr, uint32_t c1, uint32_t c2)
 {
+    if (cr->len > INT_MAX - 2)
+        return -1;
     if ((cr->len + 2) > cr->size) {
         if (cr_realloc(cr, cr->len + 2))
             return -1;
