@@ -362,8 +362,8 @@ JSValue JS_NewCConstructor(JSContext *ctx, int class_id, const char *name,
     if (max_props > SIZE_MAX / sizeof(JSProperty))
         max_props = SIZE_MAX / sizeof(JSProperty);
     /* Shape collision links store property indices in 26 bits. */
-    if (max_props > (((size_t)1 << 26) - 1))
-        max_props = ((size_t)1 << 26) - 1;
+    if (max_props > JS_PROP_MAX)
+        max_props = JS_PROP_MAX;
 
     if (class_id < -1 ||
         (class_id >= 0 && !JS_IsRegisteredClass(ctx->rt, class_id)) ||
