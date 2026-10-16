@@ -164,7 +164,7 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
     if (err) {
     fail:
         free_token(s, &s->token);
-        js_free_function_def(ctx, fd);
+        js_free_function_def(ctx->rt, fd);
         goto fail1;
     }
 
@@ -222,7 +222,7 @@ JSValue JS_EvalFunctionConstructor(JSContext *ctx, JSValueConst parameters,
         JS_FreeCString(ctx, parameters_str);
         return JS_EXCEPTION;
     }
-    js_dbuf_init(ctx, &buf);
+    js_dbuf_init(ctx->rt, &buf);
     dbuf_putc(&buf, '(');
     if (func_kind == JS_FUNC_ASYNC || func_kind == JS_FUNC_ASYNC_GENERATOR)
         dbuf_putstr(&buf, "async ");

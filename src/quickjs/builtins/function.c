@@ -140,13 +140,13 @@ JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
     return JS_EXCEPTION;
 }
 
-void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len)
+void free_arg_list(JSRuntime *rt, JSValue *tab, uint32_t len)
 {
     uint32_t i;
     for(i = 0; i < len; i++) {
-        JS_FreeValue(ctx, tab[i]);
+        JS_FreeValueRT(rt, tab[i]);
     }
-    js_free(ctx, tab);
+    js_free_rt(rt, tab);
 }
 
 /* XXX: should use ValueArray */
@@ -193,7 +193,7 @@ JSValue *build_arg_list(JSContext *ctx, uint32_t *plen,
         for(i = 0; i < len; i++) {
             ret = JS_GetPropertyUint32(ctx, array_arg, i);
             if (JS_IsException(ret)) {
-                free_arg_list(ctx, tab, i);
+                free_arg_list(ctx->rt, tab, i);
                 return NULL;
             }
             tab[i] = ret;
@@ -230,7 +230,7 @@ JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
     } else {
         ret = JS_Call(ctx, this_val, this_arg, len, (JSValueConst *)tab);
     }
-    free_arg_list(ctx, tab, len);
+    free_arg_list(ctx->rt, tab, len);
     return ret;
 }
 

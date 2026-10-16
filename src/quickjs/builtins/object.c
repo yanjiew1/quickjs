@@ -46,7 +46,7 @@ static __exception int JS_DefinePropertyDesc(JSContext *ctx, JSValueConst obj,
 
     ret = JS_DefineProperty(ctx, obj, prop,
                             d.value, d.getter, d.setter, d.flags | flags);
-    js_free_desc(ctx, &d);
+    js_free_desc(ctx->rt, &d);
     return ret;
 }
 
@@ -84,7 +84,7 @@ static __exception int JS_ObjectDefineProperties(JSContext *ctx,
             goto exception;
         if (res) {
             atoms[i].is_enumerable = (prop_desc.flags & JS_PROP_ENUMERABLE) != 0;
-            js_free_desc(ctx, &prop_desc);
+            js_free_desc(ctx->rt, &prop_desc);
             if (atoms[i].is_enumerable) {
                 JSValue desc;
                 desc = JS_GetProperty(ctx, props, atoms[i].atom);
@@ -324,7 +324,7 @@ JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx, JSValueConst this_val
             ||  JS_DefinePropertyValue(ctx, ret, JS_ATOM_configurable,
                                        JS_NewBool(ctx, desc.flags & JS_PROP_CONFIGURABLE), flags) < 0)
                 goto exception1;
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
         }
     }
     JS_FreeAtom(ctx, atom);
@@ -332,7 +332,7 @@ JSValue js_object_getOwnPropertyDescriptor(JSContext *ctx, JSValueConst this_val
     return ret;
 
 exception1:
-    js_free_desc(ctx, &desc);
+    js_free_desc(ctx->rt, &desc);
     JS_FreeValue(ctx, ret);
 exception:
     JS_FreeAtom(ctx, atom);
@@ -640,7 +640,7 @@ JSValue js_object_seal(JSContext *ctx, JSValueConst this_val,
             if (res) {
                 if (desc.flags & JS_PROP_WRITABLE)
                     desc_flags |= JS_PROP_HAS_WRITABLE;
-                js_free_desc(ctx, &desc);
+                js_free_desc(ctx->rt, &desc);
             }
         }
         if (JS_DefineProperty(ctx, obj, prop, JS_UNDEFINED,
@@ -680,7 +680,7 @@ static JSValue js_object_isSealed(JSContext *ctx, JSValueConst this_val,
         if (res < 0)
             goto exception;
         if (res) {
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
             if ((desc.flags & JS_PROP_CONFIGURABLE)
             ||  (is_frozen && (desc.flags & JS_PROP_WRITABLE))) {
                 res = FALSE;
@@ -857,7 +857,7 @@ static JSValue js_object_propertyIsEnumerable(JSContext *ctx, JSValueConst this_
         goto exception;
     if (has_prop) {
         res = JS_NewBool(ctx, desc.flags & JS_PROP_ENUMERABLE);
-        js_free_desc(ctx, &desc);
+        js_free_desc(ctx->rt, &desc);
     } else {
         res = JS_FALSE;
     }
@@ -892,7 +892,7 @@ static JSValue js_object___lookupGetter__(JSContext *ctx, JSValueConst this_val,
                 res = JS_DupValue(ctx, setter ? desc.setter : desc.getter);
             else
                 res = JS_UNDEFINED;
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
             break;
         }
         obj = JS_GetPrototypeFree(ctx, obj);
