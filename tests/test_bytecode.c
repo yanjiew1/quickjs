@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "quickjs.h"
+#include "oom-allocator.h"
 #include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/function.h"
 
@@ -441,8 +442,80 @@ static void test_class_strict_exotics(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_writer_allocation_failure(int kind)
+{
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue input, decoded, result;
+        uint8_t *buf, **sab = (uint8_t **)(uintptr_t)1;
+        size_t len = 17, sab_count = 17;
+        char text[2048];
+        int flags = kind == 2 ? JS_WRITE_OBJ_BYTECODE : 0;
+
+        assert(ctx);
+        memset(text, 'x', sizeof(text));
+        if (kind == 0) {
+            input = JS_NewStringLen(ctx, text, sizeof(text));
+        } else if (kind == 1) {
+            input = JS_NewObject(ctx);
+            text[sizeof(text) - 1] = 0;
+            assert(JS_DefinePropertyValueStr(ctx, input, text,
+                        JS_NewInt32(ctx, 42), JS_PROP_C_W_E) == 1);
+        } else {
+            const char *source = "(() => { let value = 40; return value + 2; })()";
+            input = JS_Eval(ctx, source, strlen(source), "writer-oom.js",
+                            JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+        }
+        assert(!JS_IsException(input));
+        oom_test_begin(&allocator, fail_at);
+        buf = JS_WriteObject2(ctx, &len, input, flags, &sab, &sab_count);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(allocations > 0 && allocations < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (!buf) {
+            assert(fail_at && len == 0 && sab == NULL && sab_count == 0);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx) && len > 0);
+            decoded = JS_ReadObject(ctx, buf, len,
+                                    kind == 2 ? JS_READ_OBJ_BYTECODE : 0);
+            assert(!JS_IsException(decoded));
+            if (kind == 0) {
+                assert(JS_StrictEq(ctx, input, decoded));
+            } else if (kind == 1) {
+                result = JS_GetPropertyStr(ctx, decoded, text);
+                assert(JS_StrictEq(ctx, result, JS_NewInt32(ctx, 42)));
+                JS_FreeValue(ctx, result);
+            } else {
+                result = JS_EvalFunction(ctx, decoded);
+                decoded = JS_UNDEFINED;
+                assert(JS_StrictEq(ctx, result, JS_NewInt32(ctx, 42)));
+                JS_FreeValue(ctx, result);
+            }
+            JS_FreeValue(ctx, decoded);
+            js_free(ctx, buf);
+            js_free(ctx, sab);
+        }
+        JS_FreeValue(ctx, input);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 int main(void)
 {
+    test_writer_allocation_failure(0);
+    test_writer_allocation_failure(1);
+    test_writer_allocation_failure(2);
     test_class_strict_region_bytecode("class Plain {}", 3);
     test_class_strict_region_bytecode(
         "(class { [(checked_class_mode_target = 1)]() {} });", 3);
