@@ -129,7 +129,7 @@ static void test_job_fifo_and_public_poll_contract(void)
     JSNativeJobOwner *owner;
     TestNotify notifier;
     pthread_t thread;
-    int location;
+    int location = 0;
     assert(rt && ctx);
     JS_SetRuntimeOpaque(rt, &log);
     assert(!JS_IsNativeJobPending(rt));
