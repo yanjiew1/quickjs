@@ -513,6 +513,11 @@ static void test_writer_allocation_failure(int kind)
 
 int main(void)
 {
+    test_bytecode_roundtrip(
+        "var fn = function self() {"
+        " [self] = [0]; (() => { [self] = [1]; })(); return self; };"
+        "fn() === fn ? 42 : 0;");
+
     test_writer_allocation_failure(0);
     test_writer_allocation_failure(1);
     test_writer_allocation_failure(2);
