@@ -6410,3 +6410,23 @@ function test_nested_proxy_extensibility()
 }
 
 test_nested_proxy_extensibility();
+
+function test_proxy_own_keys_result_object()
+{
+    for (const result of [null, undefined, false, true, 0, 1, NaN, "", "abc", 1n, Symbol()]) {
+        const proxy = new Proxy({}, { ownKeys() { return result; } });
+        assert_throws(TypeError, () => Reflect.ownKeys(proxy));
+        assert_throws(TypeError, () => Object.keys(proxy));
+    }
+    const symbol = Symbol("key");
+    const proxy = new Proxy({}, {
+        ownKeys() { return { 0: "x", 1: symbol, length: 2 }; },
+    });
+    const keys = Reflect.ownKeys(proxy);
+    assert(keys.length, 2);
+    assert(keys[0], "x");
+    assert(keys[1] === symbol, true);
+    assert(Reflect.ownKeys(new Proxy({}, { ownKeys() { return function() {}; } })).length, 0);
+}
+
+test_proxy_own_keys_result_object();
