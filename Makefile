@@ -331,7 +331,7 @@ QUICKJS_SRCS+=$(QUICKJS_COMPILER_SRCS)
 
 QUICKJS_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_SRCS))
 
-all: $(OBJDIR) $(patsubst %.o,%.check.o,$(QUICKJS_OBJS)) $(OBJDIR)/tools/qjs.check.o $(PROGS)
+all: $(OBJDIR) $(PROGS)
 
 WAIT_SRCS=src/libwait/wait-queue.c
 WAIT_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(WAIT_SRCS))
@@ -348,6 +348,9 @@ QUICKJS_LIBC_SRCS= \
     src/quickjs-libc/std.c \
     src/quickjs-libc/worker.c
 QUICKJS_LIBC_OBJS=$(patsubst %.c,$(OBJDIR)/%.o,$(QUICKJS_LIBC_SRCS))
+CHECK_JSVALUE_SRCS=$(QUICKJS_SRCS) $(QUICKJS_LIBC_SRCS) \
+    tools/qjs.c tools/qjsc.c tools/run-test262.c
+all: $(patsubst %.c,$(OBJDIR)/%.check.o,$(CHECK_JSVALUE_SRCS))
 QJS_LIB_OBJS=$(QUICKJS_OBJS) $(WAIT_OBJS) $(OBJDIR)/src/dtoa/dtoa.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o $(QUICKJS_LIBC_OBJS)
 
 QJS_OBJS=$(OBJDIR)/tools/qjs.o $(OBJDIR)/repl.o $(QJS_LIB_OBJS)
