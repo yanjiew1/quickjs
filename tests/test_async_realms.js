@@ -1,4 +1,4 @@
-/* Cross-realm Array.fromAsync behavioral coverage. The test_api.c unit
+/* Cross-realm asynchronous builtin coverage. The test_api.c unit
  * retains raw-context initialization and GC-after-every-job controls.
  * Copyright (c) 2026 Yan-Jie Wang
  * SPDX-License-Identifier: MIT
@@ -89,7 +89,36 @@ async function test_array_from_async_realm()
     std.gc();
 }
 
+async function test_promise_capability_realms()
+{
+    const result = run_in_realms(async function() {
+        function check(actual, expected) {
+            if (actual !== expected) throw Error("Promise realm mismatch");
+        }
+        const cap = Promise.withResolvers.call(foreign.Promise);
+        check(Object.getPrototypeOf(cap.promise), foreign.Promise.prototype);
+        check(Object.getPrototypeOf(cap.resolve), foreign.Function.prototype);
+        check(Object.getPrototypeOf(cap.reject), foreign.Function.prototype);
+        cap.resolve(37);
+        check(await cap.promise, 37);
+        const resolved = Promise.resolve.call(foreign.Promise, 41);
+        check(Object.getPrototypeOf(resolved), foreign.Promise.prototype);
+        check(await resolved, 41);
+        const source = Promise.resolve(43);
+        Object.defineProperty(source, "constructor", {
+            value: { [Symbol.species]: foreign.Promise },
+        });
+        const chained = source.then(value => value + 1);
+        check(Object.getPrototypeOf(chained), foreign.Promise.prototype);
+        check(await chained, 44);
+        return true;
+    });
+    check(await result, true, "promise_capability_realms");
+    std.gc();
+}
+
 export async function test_async_realms()
 {
     await test_array_from_async_realm();
+    await test_promise_capability_realms();
 }
