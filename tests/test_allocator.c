@@ -30,6 +30,7 @@
 #include "../src/quickjs/internal/allocator.h"
 #include "../src/quickjs/internal/atom.h"
 #include "../src/quickjs/internal/error.h"
+#include "../src/quickjs/internal/bigint.h"
 #include "../src/quickjs/internal/disposal.h"
 #include "../src/quickjs/builtins/array-from-async.h"
 #include "../src/quickjs/builtins/resource-management.h"
@@ -1365,8 +1366,77 @@ static void test_module_export_allocation_failure(void)
     assert(allocator.live == 0);
 }
 
+static void test_optional_bigint_shrink(void)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSBigInt *value, *result;
+
+    assert(ctx);
+    value = js_bigint_new(ctx, 256);
+    assert(value);
+    memset(value->tab, 0, 256 * sizeof(value->tab[0]));
+    value->tab[0] = 17;
+    oom_test_begin(&allocator, 1);
+    result = js_bigint_normalize(ctx, value);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1);
+    assert(result == value && result->len == 1 && result->tab[0] == 17);
+    assert(!JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_MKPTR(JS_TAG_BIG_INT, result));
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
+static void test_optional_property_compaction(void)
+{
+    int fail_at, i;
+
+    for (fail_at = 1; fail_at <= 2; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue obj, value;
+        JSAtom atom;
+        int number, ret;
+
+        assert(ctx);
+        obj = JS_NewObject(ctx);
+        assert(!JS_IsException(obj));
+        for (i = 0; i < 256; i++)
+            assert(JS_DefinePropertyValueUint32(ctx, obj, i,
+                       JS_NewInt32(ctx, i), JS_PROP_C_W_E) == 1);
+        for (i = 0; i < 127; i++) {
+            atom = JS_NewAtomUInt32(ctx, i);
+            assert(JS_DeleteProperty(ctx, obj, atom, 0) == 1);
+            JS_FreeAtom(ctx, atom);
+        }
+        atom = JS_NewAtomUInt32(ctx, 127);
+        oom_test_begin(&allocator, fail_at);
+        ret = JS_DeleteProperty(ctx, obj, atom, 0);
+        oom_test_end(&allocator);
+        assert(allocator.failures == 1 && ret == 1);
+        assert(!JS_HasException(ctx));
+        JS_FreeAtom(ctx, atom);
+        for (i = 128; i < 256; i++) {
+            value = JS_GetPropertyUint32(ctx, obj, i);
+            assert(JS_ToInt32(ctx, &number, value) == 0 && number == i);
+            JS_FreeValue(ctx, value);
+        }
+        assert(JS_IsUndefined(JS_GetPropertyUint32(ctx, obj, 127)));
+        JS_FreeValue(ctx, obj);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 int main(void)
 {
+    test_optional_bigint_shrink();
+    test_optional_property_compaction();
     test_module_export_allocation_failure();
     test_intrinsic_class_registration_failure();
     test_normalization_allocation_failure();

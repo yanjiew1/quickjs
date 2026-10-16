@@ -549,9 +549,9 @@ static int compact_properties(JSContext *ctx, JSObject *p)
         new_hash_size = new_hash_size / 2;
     new_hash_mask = new_hash_size - 1;
 
-    /* resize the hash table and the properties */
+    /* Compaction is optional: allocation failure keeps the existing storage. */
     old_sh = sh;
-    sh = js_malloc(ctx, get_shape_size(new_hash_size, new_size));
+    sh = js_malloc_rt(ctx->rt, get_shape_size(new_hash_size, new_size));
     if (!sh)
         return -1;
     remove_gc_object(&old_sh->header);
@@ -591,7 +591,7 @@ static int compact_properties(JSContext *ctx, JSObject *p)
     js_free(ctx, old_sh);
 
     /* reduce the size of the object properties */
-    new_prop = js_realloc(ctx, p->prop, sizeof(new_prop[0]) * new_size);
+    new_prop = js_realloc_rt(ctx->rt, p->prop, sizeof(new_prop[0]) * new_size);
     if (new_prop)
         p->prop = new_prop;
     return 0;
