@@ -3920,3 +3920,27 @@ function test_lookahead_division()
 }
 
 test_lookahead_division();
+
+function test_large_function_bindings()
+{
+    for (const count of [16, 31, 32, 33, 47, 48, 49, 95, 96, 97, 257]) {
+        const declarations = Array.from({ length: count }, (_, i) =>
+            "var v" + i + "=" + i + ";").join("");
+        const last = "v" + (count - 1);
+        const total = Array.from({ length: count }, (_, i) => "v" + i).join("+");
+        assert(Function(declarations + "return " + total)(), count * (count - 1) / 2);
+        assert(Function(declarations + "return " + last)(), count - 1);
+        assert(Function("a", "a", declarations + "var a; return a+" + last)(1, 2),
+               count + 1);
+        assert(Function("a=3", declarations + "var a; return a+" + last)(), count + 2);
+        assert(Function("{let x=2;}" + declarations +
+                        "var x=9; {let x=3;} return x+" + last)(), count + 8);
+        assert(Function(declarations + "eval('v0=17'); return (()=>v0)();")(), 17);
+        assert(Function(declarations + "with({v0:9}){v0++;} return v0;")(), 0);
+        assert_throws(SyntaxError, () => Function(declarations + "let v0;"));
+        const siblings = "{ let x=2; }".repeat(count);
+        assert(Function(siblings + "var x=7; return x;")(), 7);
+    }
+}
+
+test_large_function_bindings();
