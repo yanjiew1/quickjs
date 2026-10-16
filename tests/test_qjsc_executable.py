@@ -43,3 +43,12 @@ with tempfile.TemporaryDirectory(prefix="qjsc-executable-") as directory:
     assert completed.returncode == 0, (completed.returncode, completed.stderr)
     assert b"qjsc-executable-ok" in completed.stdout.splitlines(), (
         completed.stdout, completed.stderr)
+
+    # Supply argv[0] separately so this also covers hosts with short path limits.
+    source.write_text('print(42);\n')
+    for name in ['x' * 1100, '/' + 'x' * 1015 + '/qjsc']:
+        rejected = subprocess.run([name, '-o', str(executable), str(source)],
+                                  executable=qjsc, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, timeout=30)
+        assert rejected.returncode == 1, (rejected.returncode, rejected.stderr)
+        assert b'Compiler include or library path is too long' in rejected.stderr, rejected.stderr

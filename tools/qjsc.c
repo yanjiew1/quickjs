@@ -530,6 +530,8 @@ static int output_executable(const char *out_filename, const char *cfilename,
     int ret;
 
     /* get the directory of the executable */
+    if (strlen(exename) >= sizeof(exe_dir))
+        goto path_too_long;
     pstrcpy(exe_dir, sizeof(exe_dir), exename);
     p = strrchr(exe_dir, '/');
     if (p) {
@@ -540,7 +542,9 @@ static int output_executable(const char *out_filename, const char *cfilename,
 
     /* if 'quickjs.h' is present at the same path as the executable, we
        use it as include and lib directory */
-    snprintf(buf, sizeof(buf), "%s/quickjs.h", exe_dir);
+    ret = snprintf(buf, sizeof(buf), "%s/quickjs.h", exe_dir);
+    if (ret < 0 || (size_t)ret >= sizeof(buf))
+        goto path_too_long;
     if (access(buf, R_OK) == 0) {
         pstrcpy(inc_dir, sizeof(inc_dir), exe_dir);
         pstrcpy(lib_dir, sizeof(lib_dir), exe_dir);
@@ -611,14 +615,18 @@ static int output_executable(const char *out_filename, const char *cfilename,
 #ifdef CONFIG_SHARED_LIBRARY
     /* A shared engine does not require the generated source to use LTO. */
     lto_suffix = "";
-    snprintf(buf, sizeof(buf), "-Wl,-rpath,%s", lib_dir);
+    ret = snprintf(buf, sizeof(buf), "-Wl,-rpath,%s", lib_dir);
+    if (ret < 0 || (size_t)ret >= sizeof(buf))
+        goto path_too_long;
     *arg++ = buf;
 #endif
 #ifndef CONFIG_LIBRARY_SUFFIX
 #define CONFIG_LIBRARY_SUFFIX ".a"
 #endif
-    snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s%s%s",
-             lib_dir, bn_suffix, lto_suffix, CONFIG_LIBRARY_SUFFIX);
+    ret = snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s%s%s",
+                   lib_dir, bn_suffix, lto_suffix, CONFIG_LIBRARY_SUFFIX);
+    if (ret < 0 || (size_t)ret >= sizeof(libjsname))
+        goto path_too_long;
     *arg++ = libjsname;
     *arg++ = "-lm";
     *arg++ = "-ldl";
@@ -634,6 +642,11 @@ static int output_executable(const char *out_filename, const char *cfilename,
     ret = exec_cmd((char **)argv);
     unlink(cfilename);
     return ret;
+
+ path_too_long:
+    fprintf(stderr, "Compiler include or library path is too long\n");
+    unlink(cfilename);
+    return 1;
 }
 #else
 static int output_executable(const char *out_filename, const char *cfilename,
