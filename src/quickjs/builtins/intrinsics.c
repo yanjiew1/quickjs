@@ -66,7 +66,7 @@ int JS_AddIntrinsicBasicObjects(JSContext *ctx)
                                     countof(js_object_proto_funcs) + 1);
     if (JS_IsException(ctx->class_proto[JS_CLASS_OBJECT]))
         return -1;
-    JS_SetImmutablePrototype(ctx, ctx->class_proto[JS_CLASS_OBJECT]);
+    JS_SetImmutablePrototype(ctx->class_proto[JS_CLASS_OBJECT]);
 
     /* 2 more properties: caller and arguments */
     ctx->function_proto = JS_NewCFunction3(ctx, js_function_proto, "", 0,

@@ -62,6 +62,6 @@ JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
 void js_c_function_data_finalizer(JSRuntime *rt, JSValue val);
 void js_c_function_data_mark(JSRuntime *rt, JSValueConst val,
                              JS_MarkFunc *mark_func);
-BOOL JS_IsCFunction(JSContext *ctx, JSValueConst val, JSCFunction *func, int magic);
+BOOL JS_IsCFunction(JSValueConst val, JSCFunction *func, int magic);
 
 #endif

@@ -840,7 +840,7 @@ JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom)
         JS_FreeValue(ctx, num);
         return str;
     }
-    ret = js_string_eq(ctx, p, JS_VALUE_GET_STRING(str));
+    ret = js_string_eq(p, JS_VALUE_GET_STRING(str));
     JS_FreeValue(ctx, str);
     if (ret) {
         return num;

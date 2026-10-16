@@ -119,7 +119,7 @@ static int js_object_list_add(JSContext *ctx, JSObjectList *s, JSObject *obj)
 }
 
 /* return -1 if not present or the object index */
-static int js_object_list_find(JSContext *ctx, JSObjectList *s, JSObject *obj)
+static int js_object_list_find(JSObjectList *s, JSObject *obj)
 {
     JSObjectListEntry *e;
     uint32_t h, p;
@@ -769,7 +769,7 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
             int ret, idx;
 
             if (s->allow_reference) {
-                idx = js_object_list_find(s->ctx, &s->object_list, p);
+                idx = js_object_list_find(&s->object_list, p);
                 if (idx >= 0) {
                     bc_put_u8(s, BC_TAG_OBJECT_REFERENCE);
                     bc_put_leb128(s, idx);

@@ -324,7 +324,7 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
 #endif
     if (is_reject || !JS_IsObject(resolution)) {
         goto done;
-    } else if (js_same_value(ctx, resolution, s->promise)) {
+    } else if (js_same_value(resolution, s->promise)) {
         JS_ThrowTypeError(ctx, "promise self resolution");
         goto fail_reject;
     }
@@ -517,7 +517,7 @@ JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
         ctor = JS_GetProperty(ctx, argv[0], JS_ATOM_constructor);
         if (JS_IsException(ctor))
             return ctor;
-        is_same = js_same_value(ctx, ctor, this_val);
+        is_same = js_same_value(ctor, this_val);
         JS_FreeValue(ctx, ctor);
         if (is_same)
             return JS_DupValue(ctx, argv[0]);

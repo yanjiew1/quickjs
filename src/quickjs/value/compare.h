@@ -33,9 +33,9 @@ typedef enum JSStrictEqModeEnum {
     JS_EQ_SAME_VALUE_ZERO,
 } JSStrictEqModeEnum;
 
-BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
+BOOL js_strict_eq2(JSValueConst op1, JSValueConst op2,
                    JSStrictEqModeEnum eq_mode);
-BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2);
-BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+BOOL js_same_value(JSValueConst op1, JSValueConst op2);
+BOOL js_same_value_zero(JSValueConst op1, JSValueConst op2);
 
 #endif
