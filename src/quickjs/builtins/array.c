@@ -320,7 +320,7 @@ static JSValue JS_ArraySpeciesGetCtor(JSContext *ctx, JSValueConst obj)
             return JS_EXCEPTION;
         }
         if (realm != ctx &&
-            js_same_value(ctx, ctor, realm->array_ctor)) {
+            js_same_value(ctor, realm->array_ctor)) {
             JS_FreeValue(ctx, ctor);
             ctor = JS_UNDEFINED;
         }
@@ -335,7 +335,7 @@ static JSValue JS_ArraySpeciesGetCtor(JSContext *ctx, JSValueConst obj)
             ctor = JS_UNDEFINED;
     }
     if (!JS_IsUndefined(ctor) &&
-        js_same_value(ctx, ctor, ctx->array_ctor)) {
+        js_same_value(ctor, ctx->array_ctor)) {
         JS_FreeValue(ctx, ctor);
         ctor = JS_UNDEFINED;
     }
@@ -409,7 +409,7 @@ static JSValue js_array_at(JSContext *ctx, JSValueConst this_val,
         idx = len + idx;
     if (idx < 0 || idx >= len) {
         ret = JS_UNDEFINED;
-    } else if (js_get_fast_array(ctx, obj, &arrp, &count) && idx < count) {
+    } else if (js_get_fast_array(obj, &arrp, &count) && idx < count) {
         ret = JS_DupValue(ctx, arrp[idx]);
     } else {
         int present = JS_TryGetPropertyInt64(ctx, obj, idx, &ret);
@@ -457,7 +457,7 @@ static JSValue js_array_with(JSContext *ctx, JSValueConst this_val,
     p = JS_VALUE_GET_OBJ(arr);
     i = 0;
     pval = p->u.array.u.values;
-    if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+    if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
         for (; i < idx; i++, pval++)
             *pval = JS_DupValue(ctx, arrp[i]);
         *pval = JS_DupValue(ctx, argv[1]);
@@ -852,9 +852,9 @@ JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
             if (JS_ToInt64Clamp(ctx, &n, argv[1], 0, len, len))
                 goto exception;
         }
-        if (js_get_fast_array(ctx, obj, &arrp, &count)) {
+        if (js_get_fast_array(obj, &arrp, &count)) {
             for (; n < count; n++) {
-                if (js_strict_eq2(ctx, argv[0], arrp[n],
+                if (js_strict_eq2(argv[0], arrp[n],
                                   JS_EQ_SAME_VALUE_ZERO)) {
                     res = TRUE;
                     goto done;
@@ -865,7 +865,7 @@ JSValue js_array_includes(JSContext *ctx, JSValueConst this_val,
             val = JS_GetPropertyInt64(ctx, obj, n);
             if (JS_IsException(val))
                 goto exception;
-            if (js_strict_eq2(ctx, argv[0], val,
+            if (js_strict_eq2(argv[0], val,
                               JS_EQ_SAME_VALUE_ZERO)) {
                 JS_FreeValue(ctx, val);
                 res = TRUE;
@@ -902,9 +902,9 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
             if (JS_ToInt64Clamp(ctx, &n, argv[1], 0, len, len))
                 goto exception;
         }
-        if (js_get_fast_array(ctx, obj, &arrp, &count)) {
+        if (js_get_fast_array(obj, &arrp, &count)) {
             for (; n < count; n++) {
-                if (js_strict_eq2(ctx, argv[0], arrp[n], JS_EQ_STRICT)) {
+                if (js_strict_eq2(argv[0], arrp[n], JS_EQ_STRICT)) {
                     res = n;
                     goto done;
                 }
@@ -915,7 +915,7 @@ static JSValue js_array_indexOf(JSContext *ctx, JSValueConst this_val,
             if (present < 0)
                 goto exception;
             if (present) {
-                if (js_strict_eq2(ctx, argv[0], val, JS_EQ_STRICT)) {
+                if (js_strict_eq2(argv[0], val, JS_EQ_STRICT)) {
                     JS_FreeValue(ctx, val);
                     res = n;
                     break;
@@ -957,7 +957,7 @@ static JSValue js_array_lastIndexOf(JSContext *ctx, JSValueConst this_val,
             if (present < 0)
                 goto exception;
             if (present) {
-                if (js_strict_eq2(ctx, argv[0], val, JS_EQ_STRICT)) {
+                if (js_strict_eq2(argv[0], val, JS_EQ_STRICT)) {
                     JS_FreeValue(ctx, val);
                     res = n;
                     break;
@@ -1144,7 +1144,7 @@ JSValue js_array_pop(JSContext *ctx, JSValueConst this_val,
     if (len > 0) {
         newLen = len - 1;
         /* Special case fast arrays */
-        if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+        if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
             JSObject *p = JS_VALUE_GET_OBJ(obj);
             if (shift) {
                 res = arrp[0];
@@ -1257,7 +1257,7 @@ static JSValue js_array_reverse(JSContext *ctx, JSValueConst this_val,
         goto exception;
 
     /* Special case fast arrays */
-    if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+    if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
         uint32_t ll, hh;
 
         if (count32 > 1) {
@@ -1338,7 +1338,7 @@ static JSValue js_array_toReversed(JSContext *ctx, JSValueConst this_val,
 
         i = len - 1;
         pval = p->u.array.u.values;
-        if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+        if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
             for (; i >= 0; i--, pval++)
                 *pval = JS_DupValue(ctx, arrp[i]);
         } else {
@@ -1389,7 +1389,7 @@ static JSValue js_array_slice(JSContext *ctx, JSValueConst this_val,
 
     final = start + count;
     if (JS_IsUndefined(ctor) &&
-        js_get_fast_array(ctx, obj, &arrp, &count32) &&
+        js_get_fast_array(obj, &arrp, &count32) &&
         final <= count32) {
         /* fast case */
         arr = js_create_array(ctx, count, (JSValueConst *)arrp + start);
@@ -1597,7 +1597,7 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
     pval = &p->u.array.u.values[0];
     last = &p->u.array.u.values[newlen];
 
-    if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+    if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
         for (i = 0; i < start; i++, pval++)
             *pval = JS_DupValue(ctx, arrp[i]);
         for (j = 0; j < add; j++, pval++)
@@ -1831,7 +1831,7 @@ static int js_array_cmp_generic(const void *a, const void *b, void *opaque) {
                 goto exception;
             bp->str = JS_VALUE_GET_STRING(str);
         }
-        cmp = js_string_compare(ctx, ap->str, bp->str);
+        cmp = js_string_compare(ap->str, bp->str);
     }
     if (cmp != 0)
         return cmp;
@@ -1957,7 +1957,7 @@ static JSValue js_array_toSorted(JSContext *ctx, JSValueConst this_val,
         p = JS_VALUE_GET_OBJ(arr);
         i = 0;
         pval = p->u.array.u.values;
-        if (js_get_fast_array(ctx, obj, &arrp, &count32) && count32 == len) {
+        if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
             for (; i < len; i++, pval++)
                 *pval = JS_DupValue(ctx, arrp[i]);
         } else {

@@ -297,7 +297,7 @@ JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
     }
     if (flags & JS_CALL_FLAG_CONSTRUCTOR) {
         new_target = this_obj;
-        if (js_same_value(ctx, func_obj, new_target))
+        if (js_same_value(func_obj, new_target))
             new_target = bf->func_obj;
         return JS_CallConstructor2(ctx, bf->func_obj, new_target,
                                    arg_count, arg_buf);
@@ -378,8 +378,8 @@ JSValue js_instantiate_prototype(JSContext *ctx, JSObject *p, JSAtom atom, void 
     obj = JS_NewObject(ctx);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
-    set_cycle_flag(ctx, obj);
-    set_cycle_flag(ctx, this_val);
+    set_cycle_flag(obj);
+    set_cycle_flag(this_val);
     ret = JS_DefinePropertyValue(ctx, obj, JS_ATOM_constructor,
                                  JS_DupValue(ctx, this_val),
                                  JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);

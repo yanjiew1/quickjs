@@ -197,7 +197,7 @@ static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
     return JS_ToInt32Free(ctx, (int32_t *)pres, val);
 }
 
-BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val);
+BOOL JS_NumberIsNegativeOrMinusZero(JSValueConst val);
 JSValue JS_ToNumericFree(JSContext *ctx, JSValue val);
 
 #endif
