@@ -327,8 +327,8 @@ int JS_SetConstructor2(JSContext *ctx,
                                JS_DupValue(ctx, func_obj),
                                ctor_flags | JS_PROP_THROW) < 0)
         return -1;
-    set_cycle_flag(ctx, func_obj);
-    set_cycle_flag(ctx, proto);
+    set_cycle_flag(func_obj);
+    set_cycle_flag(proto);
     return 0;
 }
 

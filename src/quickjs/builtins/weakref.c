@@ -88,7 +88,7 @@ void js_weakref_free(JSRuntime *rt, JSValue val)
 
 /* val must be an object, a symbol or undefined (see
    js_weakref_is_target). */
-JSValue js_weakref_new(JSContext *ctx, JSValueConst val)
+JSValue js_weakref_new(JSValueConst val)
 {
     if (JS_VALUE_GET_TAG(val) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(val);
@@ -150,7 +150,7 @@ JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
         JS_FreeValue(ctx, obj);
         return JS_EXCEPTION;
     }
-    wrd->target = js_weakref_new(ctx, arg);
+    wrd->target = js_weakref_new(arg);
     wrd->weakref_header.weakref_type = JS_WEAKREF_TYPE_WEAKREF;
     list_add_tail(&wrd->weakref_header.link, &ctx->rt->weakref_list);
     JS_SetOpaque(obj, wrd);

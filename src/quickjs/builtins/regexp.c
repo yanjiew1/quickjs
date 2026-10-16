@@ -248,7 +248,7 @@ static JSValue js_regexp_constructor(JSContext *ctx, JSValueConst new_target,
             ctor = JS_GetProperty(ctx, pat, JS_ATOM_constructor);
             if (JS_IsException(ctor))
                 return ctor;
-            res = js_same_value(ctx, ctor, new_target);
+            res = js_same_value(ctor, new_target);
             JS_FreeValue(ctx, ctor);
             if (res)
                 return JS_DupValue(ctx, pat);
@@ -363,7 +363,7 @@ static JSValue js_regexp_get_source(JSContext *ctx, JSValueConst this_val)
     if (JS_VALUE_GET_TAG(this_val) != JS_TAG_OBJECT)
         return JS_ThrowTypeErrorNotAnObject(ctx);
 
-    if (js_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_REGEXP]))
+    if (js_same_value(this_val, ctx->class_proto[JS_CLASS_REGEXP]))
         goto empty_regex;
 
     re = js_get_regexp(ctx, this_val, TRUE);
@@ -429,7 +429,7 @@ static JSValue js_regexp_get_flag(JSContext *ctx, JSValueConst this_val, int mas
 
     re = js_get_regexp(ctx, this_val, FALSE);
     if (!re) {
-        if (js_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_REGEXP]))
+        if (js_same_value(this_val, ctx->class_proto[JS_CLASS_REGEXP]))
             return JS_UNDEFINED;
         else
             return JS_ThrowTypeErrorInvalidClass(ctx, JS_CLASS_REGEXP);
@@ -1289,8 +1289,7 @@ static JSShapeProperty *find_property_regexp(JSProperty **ppr,
     }
 }
 
-static BOOL check_regexp_getter(JSContext *ctx,
-                                JSObject *p, JSAtom atom,
+static BOOL check_regexp_getter(JSObject *p, JSAtom atom,
                                 JSCFunction *func, int magic)
 {
     JSProperty *pr;
@@ -1303,11 +1302,11 @@ static BOOL check_regexp_getter(JSContext *ctx,
         return FALSE;
     if (!pr->u.getset.getter)
         return FALSE;
-    return JS_IsCFunction(ctx, JS_MKPTR(JS_TAG_OBJECT, pr->u.getset.getter),
+    return JS_IsCFunction(JS_MKPTR(JS_TAG_OBJECT, pr->u.getset.getter),
                           func, magic);
 }
 
-static BOOL js_is_standard_regexp(JSContext *ctx, JSValueConst obj)
+static BOOL js_is_standard_regexp(JSValueConst obj)
 {
     JSObject *p;
     JSProperty *pr;
@@ -1332,16 +1331,16 @@ static BOOL js_is_standard_regexp(JSContext *ctx, JSValueConst obj)
         return FALSE;
     if ((prs->flags & JS_PROP_TMASK) != JS_PROP_NORMAL)
         return FALSE;
-    if (!JS_IsCFunction(ctx, pr->u.value, js_regexp_exec, 0))
+    if (!JS_IsCFunction(pr->u.value, js_regexp_exec, 0))
         return FALSE;
     /* check the flag getters */
     ft.getter = js_regexp_get_flags;
-    if (!check_regexp_getter(ctx, p, JS_ATOM_flags, ft.generic, 0))
+    if (!check_regexp_getter(p, JS_ATOM_flags, ft.generic, 0))
         return FALSE;
     ft.getter_magic = js_regexp_get_flag;
-    if (!check_regexp_getter(ctx, p, JS_ATOM_global, ft.generic, LRE_FLAG_GLOBAL))
+    if (!check_regexp_getter(p, JS_ATOM_global, ft.generic, LRE_FLAG_GLOBAL))
         return FALSE;
-    if (!check_regexp_getter(ctx, p, JS_ATOM_unicode, ft.generic, LRE_FLAG_UNICODE))
+    if (!check_regexp_getter(p, JS_ATOM_unicode, ft.generic, LRE_FLAG_UNICODE))
         return FALSE;
     /* XXX: need to check all accessors, need a faster way.  */
     return TRUE;
@@ -1386,7 +1385,7 @@ static JSValue js_regexp_Symbol_replace(JSContext *ctx, JSValueConst this_val,
             goto exception;
     }
 
-    if (!functionalReplace && js_is_standard_regexp(ctx, rx)) {
+    if (!functionalReplace && js_is_standard_regexp(rx)) {
         /* use faster version for simple cases */
         res = js_regexp_replace(ctx, rx, str, rep_val);
         if (!JS_IsUndefined(res))
@@ -1562,7 +1561,7 @@ static JSValue js_regexp_Symbol_search(JSContext *ctx, JSValueConst this_val,
     if (JS_IsException(previousLastIndex))
         goto exception;
 
-    if (!js_same_value(ctx, previousLastIndex, JS_NewInt32(ctx, 0))) {
+    if (!js_same_value(previousLastIndex, JS_NewInt32(ctx, 0))) {
         if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, JS_NewInt32(ctx, 0)) < 0) {
             goto exception;
         }
@@ -1573,7 +1572,7 @@ static JSValue js_regexp_Symbol_search(JSContext *ctx, JSValueConst this_val,
     currentLastIndex = JS_GetProperty(ctx, rx, JS_ATOM_lastIndex);
     if (JS_IsException(currentLastIndex))
         goto exception;
-    if (js_same_value(ctx, currentLastIndex, previousLastIndex)) {
+    if (js_same_value(currentLastIndex, previousLastIndex)) {
         JS_FreeValue(ctx, previousLastIndex);
     } else {
         if (JS_SetProperty(ctx, rx, JS_ATOM_lastIndex, previousLastIndex) < 0) {

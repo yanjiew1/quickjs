@@ -103,7 +103,7 @@ static JSValue js_iterator_set_own_property(JSContext *ctx,
 
     if (!JS_IsObject(this_val))
         return JS_ThrowTypeErrorNotAnObject(ctx);
-    if (js_same_value(ctx, this_val, ctx->class_proto[JS_CLASS_ITERATOR]))
+    if (js_same_value(this_val, ctx->class_proto[JS_CLASS_ITERATOR]))
         return JS_ThrowTypeError(ctx, "Cannot assign to read only property");
     res = JS_GetOwnProperty(ctx, NULL, this_val, prop);
     if (res < 0)
@@ -142,7 +142,7 @@ JSValue js_iterator_constructor(JSContext *ctx, JSValueConst new_target,
 {
     if (JS_TAG_OBJECT != JS_VALUE_GET_TAG(new_target))
         return JS_ThrowTypeError(ctx, "constructor requires 'new'");
-    if (js_same_value(ctx, new_target, ctx->iterator_ctor)) {
+    if (js_same_value(new_target, ctx->iterator_ctor)) {
         return JS_ThrowTypeError(ctx, "abstract class not constructable");
     }
     return JS_CreateFromConstructor(ctx, new_target, JS_CLASS_ITERATOR);
@@ -1452,7 +1452,7 @@ static JSValue js_iterator_proto_includes(JSContext *ctx, JSValueConst this_val,
             JS_FreeValue(ctx, item);
             continue;
         }
-        match = js_same_value_zero(ctx, item, argv[0]);
+        match = js_same_value_zero(item, argv[0]);
         JS_FreeValue(ctx, item);
         if (match) {
             result = JS_IteratorClose(ctx, this_val, FALSE) < 0 ?

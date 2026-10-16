@@ -400,7 +400,7 @@ JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val)
     return js_bigint_set_si(buf, JS_VALUE_GET_SHORT_BIG_INT(val));
 }
 
-static __maybe_unused void js_bigint_dump1(JSContext *ctx, const char *str,
+static __maybe_unused void js_bigint_dump1(const char *str,
                                            const js_limb_t *tab, int len)
 {
     int i;
@@ -415,10 +415,10 @@ static __maybe_unused void js_bigint_dump1(JSContext *ctx, const char *str,
     printf("\n");
 }
 
-static __maybe_unused void js_bigint_dump(JSContext *ctx, const char *str,
+static __maybe_unused void js_bigint_dump(const char *str,
                                           const JSBigInt *p)
 {
-    js_bigint_dump1(ctx, str, p->tab, p->len);
+    js_bigint_dump1(str, p->tab, p->len);
 }
 
 static JSBigInt *js_bigint_new_si(JSContext *ctx, js_slimb_t a)
@@ -946,8 +946,7 @@ JSBigInt *js_bigint_pow(JSContext *ctx, const JSBigInt *a, JSBigInt *b)
 
 /* return (mant, exp) so that abs(a) ~ mant*2^(exp - (limb_bits -
    1). a must be != 0. */
-static uint64_t js_bigint_get_mant_exp(JSContext *ctx,
-                                       int *pexp, const JSBigInt *a)
+static uint64_t js_bigint_get_mant_exp(int *pexp, const JSBigInt *a)
 {
     js_limb_t t[4 - JS_LIMB_BITS / 32], carry, v, low_bits;
     int n1, n2, sgn, shift, i, j, e;
@@ -1014,7 +1013,7 @@ static uint64_t shr_rndn(uint64_t a, int n)
 
 /* convert to float64 with round to nearest, ties to even. Return
    +/-infinity if too large. */
-double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
+double js_bigint_to_float64(const JSBigInt *a)
 {
     int sgn, e;
     uint64_t mant;
@@ -1025,7 +1024,7 @@ double js_bigint_to_float64(JSContext *ctx, const JSBigInt *a)
     }
 
     sgn = js_bigint_sign(a);
-    mant = js_bigint_get_mant_exp(ctx, &e, a);
+    mant = js_bigint_get_mant_exp(&e, a);
     if (e > 1023) {
         /* overflow: return infinity */
         mant = 0;
@@ -1095,7 +1094,7 @@ JSBigInt *js_bigint_from_float64(JSContext *ctx, int *pres, double a1)
 }
 
 /* return -1, 0, 1 or (2) (unordered) */
-int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
+int js_bigint_float64_cmp(const JSBigInt *a,
                           double b)
 {
     int b_sign, a_sign, e, f;
@@ -1130,7 +1129,7 @@ int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
         /* Note: handling denormals is not necessary because we
            compare to integers hence f >= 0 */
         /* compute f so that 2^f <= abs(a) < 2^(f+1) */
-        a_mant = js_bigint_get_mant_exp(ctx, &f, a);
+        a_mant = js_bigint_get_mant_exp(&f, a);
         if (f != e) {
             if (f < e)
                 return -1;
@@ -1149,7 +1148,7 @@ int js_bigint_float64_cmp(JSContext *ctx, const JSBigInt *a,
 }
 
 /* return -1, 0 or 1 */
-int js_bigint_cmp(JSContext *ctx, const JSBigInt *a,
+int js_bigint_cmp(const JSBigInt *a,
                   const JSBigInt *b)
 {
     int a_sign, b_sign, res, i;

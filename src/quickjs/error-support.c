@@ -203,7 +203,7 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
 }
 
 /* Note: it is important that no exception is returned by this function */
-BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj)
+BOOL is_backtrace_needed(JSValueConst obj)
 {
     JSObject *p;
     if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)

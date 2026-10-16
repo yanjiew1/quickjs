@@ -56,7 +56,7 @@ JSValue js_number_constructor(JSContext *ctx, JSValueConst new_target,
             {
                 JSBigInt *p = JS_VALUE_GET_PTR(val);
                 double d;
-                d = js_bigint_to_float64(ctx, p);
+                d = js_bigint_to_float64(p);
                 JS_FreeValue(ctx, val);
                 val = JS_NewFloat64(ctx, d);
             }
