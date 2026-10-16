@@ -255,7 +255,7 @@ static int js_proxy_has(JSContext *ctx, JSValueConst obj, JSAtom atom)
             return -1;
         if (res) {
             res2 = !(desc.flags & JS_PROP_CONFIGURABLE);
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
             if (res2 || !p->extensible) {
                 JS_ThrowTypeError(ctx, "proxy: inconsistent has");
                 return -1;
@@ -305,12 +305,12 @@ static JSValue js_proxy_get(JSContext *ctx, JSValueConst obj, JSAtom atom,
         } else if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE)) == JS_PROP_GETSET) {
             if (JS_IsUndefined(desc.getter) && !JS_IsUndefined(ret)) {
             fail:
-                js_free_desc(ctx, &desc);
+                js_free_desc(ctx->rt, &desc);
                 JS_FreeValue(ctx, ret);
                 return JS_ThrowTypeError(ctx, "proxy: inconsistent get");
             }
         }
-        js_free_desc(ctx, &desc);
+        js_free_desc(ctx->rt, &desc);
     }
     return ret;
 }
@@ -357,11 +357,11 @@ static int js_proxy_set(JSContext *ctx, JSValueConst obj, JSAtom atom,
                 }
             } else if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE)) == JS_PROP_GETSET && JS_IsUndefined(desc.setter)) {
                 fail:
-                    js_free_desc(ctx, &desc);
+                    js_free_desc(ctx->rt, &desc);
                     JS_ThrowTypeError(ctx, "proxy: inconsistent set");
                     return -1;
             }
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
         }
     } else {
         if ((flags & JS_PROP_THROW) ||
@@ -481,7 +481,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
         if (target_desc_ret) {
             BOOL tmp;
             tmp = !(target_desc.flags & JS_PROP_CONFIGURABLE) || !p->extensible;
-            js_free_desc(ctx, &target_desc);
+            js_free_desc(ctx->rt, &target_desc);
             if (tmp)
                 goto fail;
         }
@@ -492,14 +492,14 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
         if (extensible_target < 0) {
             JS_FreeValue(ctx, trap_result_obj);
             if (target_desc_ret)
-                js_free_desc(ctx, &target_desc);
+                js_free_desc(ctx->rt, &target_desc);
             return -1;
         }
         res = js_obj_to_desc(ctx, &result_desc, trap_result_obj);
         JS_FreeValue(ctx, trap_result_obj);
         if (res < 0) {
             if (target_desc_ret)
-                js_free_desc(ctx, &target_desc);
+                js_free_desc(ctx->rt, &target_desc);
             return -1;
         }
 
@@ -535,21 +535,21 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
                 (target_desc.flags & JS_PROP_WRITABLE) != 0) {
                 /* proxy-missing-checks */
             fail1:
-                js_free_desc(ctx, &result_desc);
+                js_free_desc(ctx->rt, &result_desc);
                 if (target_desc_ret)
-                    js_free_desc(ctx, &target_desc);
+                    js_free_desc(ctx->rt, &target_desc);
             fail:
                 JS_ThrowTypeError(ctx, "proxy: inconsistent getOwnPropertyDescriptor");
                 return -1;
             }
         }
         if (target_desc_ret)
-            js_free_desc(ctx, &target_desc);
+            js_free_desc(ctx->rt, &target_desc);
         ret = TRUE;
         if (pdesc) {
             *pdesc = result_desc;
         } else {
-            js_free_desc(ctx, &result_desc);
+            js_free_desc(ctx->rt, &result_desc);
         }
     }
     return ret;
@@ -624,12 +624,12 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
             (desc.flags & (JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == JS_PROP_WRITABLE &&
             (flags & (JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE)) == JS_PROP_HAS_WRITABLE) {
         fail1:
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
         fail:
             JS_ThrowTypeError(ctx, "proxy: inconsistent defineProperty");
             return -1;
         }
-        js_free_desc(ctx, &desc);
+        js_free_desc(ctx->rt, &desc);
     }
     return 1;
 }
@@ -676,10 +676,10 @@ static int js_proxy_delete_property(JSContext *ctx, JSValueConst obj,
             fail:
                 JS_ThrowTypeError(ctx, "proxy: inconsistent deleteProperty");
             fail1:
-                js_free_desc(ctx, &desc);
+                js_free_desc(ctx->rt, &desc);
                 return -1;
             }
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
         }
     }
     return res;
@@ -779,7 +779,7 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
         if (res < 0)
             goto fail;
         if (res) {  /* safety, property should be found */
-            js_free_desc(ctx, &desc);
+            js_free_desc(ctx->rt, &desc);
             if (!(desc.flags & JS_PROP_CONFIGURABLE) || !is_extensible) {
                 idx = find_prop_key(tab, len, tab2[i].atom);
                 if (idx < 0) {
