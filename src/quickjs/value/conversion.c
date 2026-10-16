@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -247,6 +248,9 @@ JSValue JS_ToString(JSContext *ctx, JSValueConst val)
 JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
 {
     JSValue ret;
+    /* Rope inputs still need the normal flattening path. */
+    if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING)
+        return val;
     ret = JS_ToString(ctx, val);
     JS_FreeValue(ctx, val);
     return ret;
