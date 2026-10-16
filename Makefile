@@ -910,6 +910,23 @@ ifdef CONFIG_SHARED_LIBS
 	$(WINE) ./qjs$(EXE) tests/test_bjson.js
 endif
 
+# Focused POSIX worker/native-wait coverage, also used by the TSan job.
+.PHONY: test-threading
+test-threading: qjs$(EXE) run-test262$(EXE) tests/test_atomics_wait$(EXE) \
+    tests/test_wait_async$(EXE) tests/test_native_jobs$(EXE) \
+    tests/test_worker_context_failure$(EXE) tests/test_wait_queue$(EXE)
+	$(WINE) ./tests/test_atomics_wait$(EXE)
+	$(WINE) ./tests/test_wait_async$(EXE)
+	$(WINE) ./tests/test_native_jobs$(EXE)
+	$(WINE) ./tests/test_worker_context_failure$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_gsab_worker.js
+	$(WINE) ./qjs$(EXE) -m tests/test_wait_async.js
+	$(WINE) ./run-test262$(EXE) -N tests/test_wait_async_agents.js
+	@for round in 1 2 3; do \
+	    $(WINE) ./tests/test_wait_queue$(EXE) && \
+	    $(WINE) ./qjs$(EXE) tests/test_worker.js || exit $$?; \
+	done
+
 stats: qjs$(EXE)
 	$(WINE) ./qjs$(EXE) -qd
 
