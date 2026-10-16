@@ -112,7 +112,7 @@ JSValue JS_ToPrimitive(JSContext *ctx, JSValueConst val, int hint)
     return JS_ToPrimitiveFree(ctx, JS_DupValue(ctx, val), hint);
 }
 
-int JS_ToBoolFree(JSContext *ctx, JSValue val)
+int JS_ToBoolFree(JSRuntime *rt, JSValue val)
 {
     uint32_t tag = JS_VALUE_GET_TAG(val);
     switch(tag) {
@@ -127,13 +127,13 @@ int JS_ToBoolFree(JSContext *ctx, JSValue val)
     case JS_TAG_STRING:
         {
             BOOL ret = JS_VALUE_GET_STRING(val)->len != 0;
-            JS_FreeValue(ctx, val);
+            JS_FreeValueRT(rt, val);
             return ret;
         }
     case JS_TAG_STRING_ROPE:
         {
             BOOL ret = JS_VALUE_GET_STRING_ROPE(val)->len != 0;
-            JS_FreeValue(ctx, val);
+            JS_FreeValueRT(rt, val);
             return ret;
         }
     case JS_TAG_SHORT_BIG_INT:
@@ -154,7 +154,7 @@ int JS_ToBoolFree(JSContext *ctx, JSValue val)
                     break;
                 }
             }
-            JS_FreeValue(ctx, val);
+            JS_FreeValueRT(rt, val);
             return ret;
         }
     case JS_TAG_OBJECT:
@@ -162,7 +162,7 @@ int JS_ToBoolFree(JSContext *ctx, JSValue val)
             JSObject *p = JS_VALUE_GET_OBJ(val);
             BOOL ret;
             ret = !p->is_HTMLDDA;
-            JS_FreeValue(ctx, val);
+            JS_FreeValueRT(rt, val);
             return ret;
         }
         break;
@@ -171,7 +171,7 @@ int JS_ToBoolFree(JSContext *ctx, JSValue val)
             double d = JS_VALUE_GET_FLOAT64(val);
             return !isnan(d) && d != 0;
         } else {
-            JS_FreeValue(ctx, val);
+            JS_FreeValueRT(rt, val);
             return TRUE;
         }
     }
@@ -179,7 +179,7 @@ int JS_ToBoolFree(JSContext *ctx, JSValue val)
 
 int JS_ToBool(JSContext *ctx, JSValueConst val)
 {
-    return JS_ToBoolFree(ctx, JS_DupValue(ctx, val));
+    return JS_ToBoolFree(ctx->rt, JS_DupValue(ctx, val));
 }
 
 static JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToPropertyKey)

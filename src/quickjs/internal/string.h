@@ -163,7 +163,7 @@ BOOL js_string_eq(const JSString *p1, const JSString *p2);
 int string_rope_get(JSValueConst val, uint32_t idx);
 int js_string_rope_compare(JSValueConst op1, JSValueConst op2, BOOL eq_only);
 JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
-BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2);
+BOOL JS_ConcatStringInPlace(JSRuntime *rt, JSString *p1, JSValueConst op2);
 
 __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
 
