@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Ben Noordhuis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1124,6 +1125,9 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
                 return JS_ThrowSyntaxError(ctx, "invalid object reference (%u >= %u)",
                                            val, s->objects_count);
             }
+            /* A TypedArray placeholder is not yet a usable object. */
+            if (!s->objects[val])
+                return JS_ThrowSyntaxError(ctx, "invalid pending object reference");
             obj = JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, s->objects[val]));
         }
         break;
