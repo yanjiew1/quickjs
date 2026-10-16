@@ -26,6 +26,7 @@
 #define QUICKJS_LIBC_EVENT_LOOP_H
 
 #include "thread.h"
+#include <stdatomic.h>
 
 typedef struct {
     struct list_head link;
@@ -48,7 +49,8 @@ typedef struct {
 } JSOSTimer;
 
 extern uint64_t os_pending_signals;
-extern int (*os_poll_func)(JSContext *ctx);
+typedef int JSOSPollFunc(JSContext *ctx);
+extern _Atomic(JSOSPollFunc *) os_poll_func;
 
 JSValue js_os_now(JSContext *ctx, JSValueConst this_val,
                   int argc, JSValueConst *argv);
