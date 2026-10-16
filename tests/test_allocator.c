@@ -1379,7 +1379,7 @@ static void test_optional_bigint_shrink(void)
     memset(value->tab, 0, 256 * sizeof(value->tab[0]));
     value->tab[0] = 17;
     oom_test_begin(&allocator, 1);
-    result = js_bigint_normalize(ctx, value);
+    result = js_bigint_normalize(rt, value);
     oom_test_end(&allocator);
     assert(allocator.failures == 1);
     assert(result == value && result->len == 1 && result->tab[0] == 17);
