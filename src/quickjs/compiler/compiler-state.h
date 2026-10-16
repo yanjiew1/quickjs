@@ -64,6 +64,7 @@ struct JSVarDef {
        variable in the same or enclosing lexical scope
     */
     int scope_next;
+    uint32_t hash_next; /* next variable index + 1 in the lookup bucket */
     uint8_t is_const : 1;
     uint8_t is_lexical : 1;
     uint8_t is_captured : 1; /* XXX: could remove and use a var_ref_idx value */
@@ -141,6 +142,8 @@ typedef struct JSFunctionDef {
     JSVarDef *vars;
     int var_size; /* allocated size for vars[] */
     int var_count;
+    uint32_t *var_hash; /* newest variable index + 1 per bucket */
+    int var_hash_size;
     JSVarDef *args;
     int arg_size; /* allocated size for args[] */
     int arg_count; /* number of arguments */
