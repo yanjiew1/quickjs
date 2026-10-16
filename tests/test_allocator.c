@@ -1919,8 +1919,50 @@ static void test_basic_object_allocation_failures(void)
     }
 }
 
+static void test_shape_capacity_limits(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue value, shared;
+    int saved_count;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    value = JS_NewObjectProtoClassAlloc(ctx, JS_NULL, JS_CLASS_OBJECT, INT_MAX);
+    assert(JS_IsException(value));
+    oom_test_check_exception(ctx);
+    value = JS_NewObject(ctx);
+    shared = JS_NewObject(ctx);
+    assert(!JS_IsException(value) && !JS_IsException(shared));
+    saved_count = rt->shape_hash_count;
+    rt->shape_hash_count = INT_MAX;
+    assert(js_new_shape2(ctx, NULL, 2, 0) == NULL);
+    rt->shape_hash_count = saved_count;
+    /* The artificial limit also prevents allocating an OOM Error object. */
+    assert(JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    rt->shape_hash_count = INT_MAX;
+    assert(JS_DefinePropertyValueStr(ctx, value, "capacity_probe", JS_UNDEFINED,
+                                     JS_PROP_C_W_E) < 0);
+    rt->shape_hash_count = saved_count;
+    assert(JS_HasException(ctx));
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    assert(JS_IsUndefined(JS_GetPropertyStr(ctx, value, "capacity_probe")));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, shared);
+    assert(get_shape_size(SIZE_MAX, 0) == SIZE_MAX);
+    assert(get_shape_size(2, SIZE_MAX) == SIZE_MAX);
+    value = JS_NewObject(ctx);
+    assert(!JS_IsException(value));
+    JS_FreeValue(ctx, value);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_shape_capacity_limits();
 #ifdef JS_MALLOC_USE_ITER
     test_allocation_iteration();
 #endif
