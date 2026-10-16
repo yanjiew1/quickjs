@@ -302,6 +302,8 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
         default:
             abort();
         }
+        if (JS_IsException(val))
+            return -1;
         if (JS_SetModuleExport(ctx, m, e->name, val))
             return -1;
     }

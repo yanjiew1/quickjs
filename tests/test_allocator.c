@@ -1316,8 +1316,58 @@ static void test_intrinsic_class_registration_failure(void)
     }
 }
 
+static char export_oom_text[2048];
+
+static int allocation_failure_module_init(JSContext *ctx, JSModuleDef *m)
+{
+    static const JSCFunctionListEntry exports[] = {
+        JS_PROP_STRING_DEF("value", export_oom_text, 0),
+    };
+    OOMTestAllocator *allocator = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+    int ret;
+
+    oom_test_begin(allocator, 1);
+    ret = JS_SetModuleExportList(ctx, m, exports, countof(exports));
+    oom_test_end(allocator);
+    assert(allocator->failures == 1);
+    assert(ret == -1 && JS_HasException(ctx));
+    return ret;
+}
+
+static void test_module_export_allocation_failure(void)
+{
+    static const char source[] = "import { value } from 'allocation-failure';";
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSModuleDef *m;
+    JSValue result, error;
+
+    assert(ctx);
+    memset(export_oom_text, 'x', sizeof(export_oom_text) - 1);
+    JS_SetRuntimeOpaque(rt, &allocator);
+    m = JS_NewCModule(ctx, "allocation-failure", allocation_failure_module_init);
+    assert(m && JS_AddModuleExport(ctx, m, "value") == 0);
+    result = JS_Eval(ctx, source, sizeof(source) - 1, "export-oom.js",
+                     JS_EVAL_TYPE_MODULE);
+    assert(allocator.failures == 1);
+    if (JS_IsException(result)) {
+        oom_test_check_exception(ctx);
+    } else {
+        assert(JS_PromiseState(ctx, result) == JS_PROMISE_REJECTED);
+        error = JS_PromiseResult(ctx, result);
+        assert(JS_IsError(ctx, error));
+        JS_FreeValue(ctx, error);
+    }
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
 int main(void)
 {
+    test_module_export_allocation_failure();
     test_intrinsic_class_registration_failure();
     test_normalization_allocation_failure();
     test_gc_upcoming_properties();
