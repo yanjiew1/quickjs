@@ -144,7 +144,7 @@ static JS_ALLOCATOR_INLINE void *__js_malloc(JSMallocContext *s, size_t size)
                 list_del(&ar->free_link);
             }
 #ifdef JS_MALLOC_USE_ITER
-            ar->bitmap[block_idx / 32] |= 1 << (block_idx % 32);
+            ar->bitmap[block_idx / 32] |= 1U << (block_idx % 32);
 #endif
             return b->user_data;
         } else {
