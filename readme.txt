@@ -1,1 +1,3 @@
-The main documentation is in doc/quickjs.pdf or doc/quickjs.html.
+See BUILDING.md for Meson build, test and installation instructions.
+The embedding manual is doc/quickjs.texi; the optional docs and docs-pdf
+targets generate HTML and PDF copies in the build directory.

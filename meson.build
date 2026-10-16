@@ -579,6 +579,7 @@ pkg.generate(
   libraries_private: host_deps,
 )
 shared_modules = host_machine.system() not in ['windows', 'darwin']
+subdir('doc')
 subdir('examples')
 subdir('tools/build')
 if get_option('tests')
