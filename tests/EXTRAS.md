@@ -15,8 +15,8 @@ checks. They are separate from the repository's unit tests and Test262.
 ## V8 version 7
 
 `bench-v8/` contains the original workload sources, framework, documentation,
-runner, Makefile, and combined script. The existing top-level `make bench-v8`
-target runs this suite. Performance measurements can use the separate sources with a dedicated
+runner, archival Makefile, and combined script. The project uses
+`meson compile -C build bench-v8` to assemble and run the suite without Make. Performance measurements can use the separate sources with a dedicated
 runner so that each measured case has a fresh JavaScript process.
 
 The archive's `combined.js` lacks the `"use strip";` line that is present in
@@ -26,11 +26,11 @@ adds that line. Both files are preserved as distributed by upstream.
 ## Octane
 
 `octane/run.js` can run a selected workload. For example, from the repository
-root after building `qjs`:
+root after building `qjs` with Meson:
 
 ```sh
-./qjs tests/octane/run.js raytrace
-./qjs tests/octane/run.js regexp
+./build/qjs tests/octane/run.js raytrace
+./build/qjs tests/octane/run.js regexp
 ```
 
 Some workloads use supporting files that the runner loads with the same name
@@ -104,5 +104,5 @@ PYTHON
 A developer can then run that optional workload with:
 
 ```sh
-./qjs /srv/data/work/quickjs-tmp/quickjs-extra-cli/cli.js
+./build/qjs /srv/data/work/quickjs-tmp/quickjs-extra-cli/cli.js
 ```
