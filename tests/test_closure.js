@@ -410,3 +410,44 @@ function test_catch_binding_finally()
 }
 
 test_catch_binding_finally();
+
+function test_for_let_continue_closures()
+{
+    let values = [];
+    for (let i = 0; i < 2; i++) {
+        values.push(() => i);
+        continue;
+    }
+    assert(values.map(f => f()).join(), "0,1");
+
+    values = [];
+    for (let i = 0; i < 2;) {
+        values.push(() => i);
+        i++;
+        continue;
+    }
+    assert(values.map(f => f()).join(), "1,2");
+
+    values = [];
+    outer: for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 2; j++) {
+            values.push(() => i + j);
+            continue outer;
+        }
+    }
+    assert(values.map(f => f()).join(), "0,1");
+
+    values = [];
+    for (let i = 0; i < 4; i++) {
+        try {
+            values.push(() => i);
+            continue;
+        } finally {
+            i++;
+            values.push(() => i);
+        }
+    }
+    assert(values.map(f => f()).join(), "1,1,3,3");
+}
+
+test_for_let_continue_closures();
