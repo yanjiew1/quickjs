@@ -84,9 +84,11 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         
         for (size_t i = 0; i < sizeof(test_strings) / sizeof(test_strings[0]); i++) {
             char match_script[4096];
-            snprintf(match_script, sizeof(match_script),
-                     "var re = %s; re.test(%s); re.exec(%s); %s.match(re);",
-                     script, test_strings[i], test_strings[i], test_strings[i]);
+            int match_len = snprintf(match_script, sizeof(match_script),
+                                     "var re = %s; re.test(%s); re.exec(%s); %s.match(re);",
+                                     script, test_strings[i], test_strings[i], test_strings[i]);
+            if (match_len < 0 || (size_t)match_len >= sizeof(match_script))
+                continue;
             
             JSValue match_result = JS_Eval(ctx, match_script, strlen(match_script), 
                                            "<regexp-match>", 0);
