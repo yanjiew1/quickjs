@@ -2110,6 +2110,25 @@ function test_date_setyear_coercion()
     assert(coerced, false, "receiver brand is checked before year coercion");
 }
 
+function test_regexp_replace_buffer()
+{
+    const input = "a".repeat(256);
+    let executions = 0, replacements = 0;
+    const rx = /a/g;
+    const exec = rx.exec;
+    rx.exec = function(str) {
+        executions++;
+        return exec.call(this, str);
+    };
+    const result = input.replace(rx, function(match, index) {
+        assert(executions, 257);
+        assert(index, replacements++);
+        return "b";
+    });
+    assert(result, "b".repeat(256));
+    assert(replacements, 256);
+}
+
 function test_regexp()
 {
     var a, str;
@@ -5739,6 +5758,7 @@ test_json_parse_source_duplicates();
 test_date();
 test_date_setyear_coercion();
 test_regexp();
+test_regexp_replace_buffer();
 test_regexp_unicode_18();
 test_symbol();
 test_map();
