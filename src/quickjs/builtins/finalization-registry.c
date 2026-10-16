@@ -161,16 +161,16 @@ static JSValue js_finrec_register(JSContext *ctx, JSValueConst this_val,
 
     if (!js_weakref_is_target(target))
         return JS_ThrowTypeError(ctx, "invalid target");
-    if (js_same_value(ctx, target, held_val))
+    if (js_same_value(target, held_val))
         return JS_ThrowTypeError(ctx, "held value cannot be the target");
     if (!JS_IsUndefined(token) && !js_weakref_is_target(token))
         return JS_ThrowTypeError(ctx, "invalid unregister token");
     fre = js_malloc(ctx, sizeof(*fre));
     if (!fre)
         return JS_EXCEPTION;
-    fre->target = js_weakref_new(ctx, target);
+    fre->target = js_weakref_new(target);
     fre->held_val = JS_DupValue(ctx, held_val);
-    fre->token = js_weakref_new(ctx, token);
+    fre->token = js_weakref_new(token);
     list_add_tail(&fre->link, &frd->entries);
     return JS_UNDEFINED;
 }
@@ -191,7 +191,7 @@ static JSValue js_finrec_unregister(JSContext *ctx, JSValueConst this_val, int a
     removed = FALSE;
     list_for_each_safe(el, el1, &frd->entries) {
         JSFinRecEntry *fre = list_entry(el, JSFinRecEntry, link);
-        if (js_weakref_is_live(fre->token) && js_same_value(ctx, fre->token, token)) {
+        if (js_weakref_is_live(fre->token) && js_same_value(fre->token, token)) {
             js_weakref_free(ctx->rt, fre->target);
             js_weakref_free(ctx->rt, fre->token);
             JS_FreeValue(ctx, fre->held_val);

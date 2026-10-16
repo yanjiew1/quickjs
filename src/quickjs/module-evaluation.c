@@ -152,7 +152,7 @@ static JSValue js_async_module_execution_rejected(JSContext *ctx, JSValueConst t
 
     for(i = 0; i < module->async_parent_modules_count; i++) {
         JSModuleDef *m = module->async_parent_modules[i];
-        JSValue m_obj = JS_NewModuleValue(ctx, m);
+        JSValue m_obj = JS_NewModuleValue(m);
         js_async_module_execution_rejected(ctx, JS_UNDEFINED, 1, &error, 0,
                                            &m_obj);
         JS_FreeValue(ctx, m_obj);
@@ -205,7 +205,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst 
         } else {
             JSValue error;
             if (js_execute_sync_module(ctx, m, &error) < 0) {
-                JSValue m_obj = JS_NewModuleValue(ctx, m);
+                JSValue m_obj = JS_NewModuleValue(m);
                 js_async_module_execution_rejected(ctx, JS_UNDEFINED,
                                                    1, (JSValueConst *)&error, 0,
                                                    &m_obj);
@@ -231,7 +231,7 @@ static int js_execute_async_module(JSContext *ctx, JSModuleDef *m)
     promise = js_async_function_call(ctx, m->func_obj, JS_UNDEFINED, 0, NULL, 0);
     if (JS_IsException(promise))
         return -1;
-    m_obj = JS_NewModuleValue(ctx, m);
+    m_obj = JS_NewModuleValue(m);
     resolve_funcs[0] = JS_NewCFunctionData(ctx, js_async_module_execution_fulfilled, 0, 0, 1, (JSValueConst *)&m_obj);
     resolve_funcs[1] = JS_NewCFunctionData(ctx, js_async_module_execution_rejected, 0, 0, 1, (JSValueConst *)&m_obj);
     ret_val = js_promise_then(ctx, promise, 2, (JSValueConst *)resolve_funcs);
