@@ -1289,6 +1289,7 @@ fini:
 static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv)
 {
+    JSRuntime *rt = ctx->rt;
     JSValue newset, item, iter, keys, has, next, rv;
     JSMapState *s, *t;
     int64_t size;
@@ -1320,13 +1321,13 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
             if (done) // item is JS_UNDEFINED
                 break;
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
-            ok = JS_ToBoolFree(ctx->rt, rv); // returns -1 if rv is JS_EXCEPTION
+            ok = JS_ToBoolFree(rt, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok < 0) {
                 JS_FreeValue(ctx, item);
                 goto exception;
             }
             if (ok) {
-                map_delete_record(ctx->rt, t, item);
+                map_delete_record(rt, t, item);
             }
             JS_FreeValue(ctx, item);
         }
@@ -1343,7 +1344,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             if (done) // item is JS_UNDEFINED
                 break;
-            map_delete_record(ctx->rt, t, item);
+            map_delete_record(rt, t, item);
             JS_FreeValue(ctx, item);
         }
     }
