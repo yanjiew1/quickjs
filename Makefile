@@ -55,6 +55,8 @@ PREFIX?=/usr/local
 #CONFIG_UBSAN=y
 # use thread sanitizer
 #CONFIG_TSAN=y
+# collect at every existing allocation-triggered GC check
+#CONFIG_GC_STRESS=y
 
 # TEST262 bootstrap config: commit id and shallow "since" parameter
 TEST262_COMMIT?=7ab7fafa0003f73fc85c1b95d88094d33f7eb8bd
@@ -157,7 +159,11 @@ CFLAGS+=-fwrapv # ensure that signed overflows behave as expected
 ifdef CONFIG_WERROR
 CFLAGS+=-Werror
 endif
-DEFINES:=-D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
+ifeq ($(CONFIG_GC_STRESS),y)
+DEFINES_GC_STRESS=-DFORCE_GC_AT_MALLOC
+endif
+
+DEFINES:=$(DEFINES_GC_STRESS) -D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
 ifdef CONFIG_WIN32
 DEFINES+=-D__USE_MINGW_ANSI_STDIO # for standard snprintf behavior
 endif
@@ -882,6 +888,26 @@ endif
 ifdef CONFIG_SHARED_LIBS
 	$(WINE) ./qjs$(EXE) tests/test_bjson.js
 	$(WINE) ./qjs$(EXE) examples/test_point.js
+endif
+
+# Use a clean checkout: generated binaries are not separated by CONFIG_GC_STRESS.
+.PHONY: test-gc-stress
+ifdef CONFIG_SHARED_LIBS
+test-gc-stress: tests/bjson.so
+endif
+test-gc-stress: qjs$(EXE) tests/test_api$(EXE) tests/test_native_jobs$(EXE)
+	@test "$(CONFIG_GC_STRESS)" = y || { echo "CONFIG_GC_STRESS=y is required" >&2; exit 1; }
+	$(WINE) ./tests/test_api$(EXE)
+	$(WINE) ./tests/test_native_jobs$(EXE)
+	$(WINE) ./qjs$(EXE) tests/test_closure.js
+	$(WINE) ./qjs$(EXE) -m tests/test_realm.js
+	$(WINE) ./qjs$(EXE) -m tests/test_iterator_realms.js
+	$(WINE) ./qjs$(EXE) -m tests/test_disposal_realms.js
+	$(WINE) ./qjs$(EXE) -m tests/test_resource_realms.js
+	$(WINE) ./qjs$(EXE) -m tests/test_async.js
+	$(WINE) ./qjs$(EXE) -m tests/test_wait_async.js
+ifdef CONFIG_SHARED_LIBS
+	$(WINE) ./qjs$(EXE) tests/test_bjson.js
 endif
 
 stats: qjs$(EXE)
