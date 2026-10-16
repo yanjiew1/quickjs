@@ -49,6 +49,27 @@ meson compile -C build-value-check quickjs-value-check
 This separate representation is checked at compile time; it is never linked
 into the interpreter used by runtime tests.
 
+## Static and shared libraries
+
+Use `-Ddefault_library=static` (the default), `shared`, or `both`. Shared builds
+link the command-line tools to the shared engine. Only callable declarations in
+`include/quickjs.h` and `include/quickjs-libc.h` are exported; internal functions
+and table data remain hidden. Static archives retain the same public API.
+
+On Windows, the runtime DLL installs into `bindir` beside the tools, and the
+import library installs into `libdir`. On other platforms, the library
+installs into `libdir/quickjs` and installed tools have the configured runtime
+search path. Applications select their own runtime search path when linking.
+`pkg-config --cflags --libs quickjs` supplies include and link flags;
+`--static` also supplies support-library dependencies.
+
+In `shared` mode, `qjsc` executable output links the shared engine with a runtime
+search path. In `static` and `both` modes, its executable output uses the static
+archive, preserving standalone executable generation. Private white-box tests
+use an internal static archive even in shared builds; it is not installed in
+`shared` mode. The public embedding test and JavaScript suites exercise the
+selected shared engine.
+
 ## External suites and developer tools
 
 Full Test262 runs belong in CI. To prepare and run the pinned suite explicitly:
