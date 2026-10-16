@@ -272,11 +272,6 @@ DEF(            nop, 1, 0, 0, none)
 def(    enter_scope, 3, 0, 0, u16)  /* emitted in phase 1, removed in phase 2 */
 def(    leave_scope, 3, 0, 0, u16)  /* emitted in phase 1, removed in phase 2 */
 
-/* Class strict boundary: cleanup-subroutine label and normal-exit label.
-   Expanded in phase 3 after binding resolution. */
-def(   enter_strict, 5, 0, 0, label)
-def(   leave_strict, 5, 0, 0, label)
-
 def(          label, 5, 0, 0, label) /* emitted in phase 1, removed in phase 3 */
 
 /* the following opcodes must be in the same order as the 'with_x' and
