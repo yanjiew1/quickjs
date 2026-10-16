@@ -141,6 +141,8 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
     case JS_DEF_ALIAS: /* using autoinit for aliases is not safe */
         {
             JSAtom atom1 = find_atom(ctx, e->u.alias.name);
+            if (atom1 == JS_ATOM_NULL)
+                return -1;
             switch (e->u.alias.base) {
             case -1:
                 val = JS_GetProperty(ctx, obj, atom1);
@@ -231,6 +233,8 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
     default:
         abort();
     }
+    if (JS_IsException(val))
+        return -1;
     if (JS_DefinePropertyValue(ctx, obj, atom, val,
                                 prop_flags | JS_PROP_THROW) < 0)
         return -1;
