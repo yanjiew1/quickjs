@@ -370,7 +370,7 @@ static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
                 }
                 put_u32(bc_buf + pos + 1, atom);
 #ifdef DUMP_READ_OBJECT
-                bc_read_trace(s, "at %d, fixup atom: ", pos + 1); print_atom(s->ctx, atom); printf("\n");
+                bc_read_trace(s, "at %d, fixup atom: ", pos + 1); print_atom(s->ctx->rt, atom); printf("\n");
 #endif
             }
             break;
@@ -546,7 +546,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     obj = JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
 
 #ifdef DUMP_READ_OBJECT
-    bc_read_trace(s, "name: "); print_atom(s->ctx, b->func_name); printf("\n");
+    bc_read_trace(s, "name: "); print_atom(s->ctx->rt, b->func_name); printf("\n");
 #endif
     bc_read_trace(s, "args=%d vars=%d defargs=%d closures=%d cpool=%d\n",
                   b->arg_count, b->var_count, b->defined_arg_count,
@@ -574,7 +574,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
             vd->is_captured = bc_get_flags(v8, &idx, 1);
             vd->has_scope = bc_get_flags(v8, &idx, 1);
 #ifdef DUMP_READ_OBJECT
-            bc_read_trace(s, "name: "); print_atom(s->ctx, vd->var_name); printf("\n");
+            bc_read_trace(s, "name: "); print_atom(s->ctx->rt, vd->var_name); printf("\n");
 #endif
         }
         bc_read_trace(s, "}\n");
@@ -597,7 +597,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
             cv->is_lexical = bc_get_flags(v16, &idx, 1);
             cv->var_kind = bc_get_flags(v16, &idx, 4);
 #ifdef DUMP_READ_OBJECT
-            bc_read_trace(s, "name: "); print_atom(s->ctx, cv->var_name); printf("\n");
+            bc_read_trace(s, "name: "); print_atom(s->ctx->rt, cv->var_name); printf("\n");
 #endif
         }
         bc_read_trace(s, "}\n");
@@ -614,7 +614,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
         if (bc_get_atom(s, &b->debug.filename))
             goto fail;
 #ifdef DUMP_READ_OBJECT
-        bc_read_trace(s, "filename: "); print_atom(s->ctx, b->debug.filename); printf("\n");
+        bc_read_trace(s, "filename: "); print_atom(s->ctx->rt, b->debug.filename); printf("\n");
 #endif
         if (bc_get_leb128_int(s, &b->debug.pc2line_len))
             goto fail;
@@ -667,7 +667,7 @@ static JSValue JS_ReadModule(BCReaderState *s)
     if (bc_get_atom(s, &module_name))
         goto fail;
 #ifdef DUMP_READ_OBJECT
-    bc_read_trace(s, "name: "); print_atom(s->ctx, module_name); printf("\n");
+    bc_read_trace(s, "name: "); print_atom(s->ctx->rt, module_name); printf("\n");
 #endif
     m = js_new_module_def(ctx, module_name);
     if (!m)
@@ -791,7 +791,7 @@ static JSValue JS_ReadObjectTag(BCReaderState *s)
         if (bc_get_atom(s, &atom))
             goto fail;
 #ifdef DUMP_READ_OBJECT
-        bc_read_trace(s, "propname: "); print_atom(s->ctx, atom); printf("\n");
+        bc_read_trace(s, "propname: "); print_atom(s->ctx->rt, atom); printf("\n");
 #endif
         val = JS_ReadObjectRec(s);
         if (JS_IsException(val)) {

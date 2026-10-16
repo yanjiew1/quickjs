@@ -153,7 +153,7 @@ JSValue js_get_function_name(JSContext *ctx, JSAtom name)
     JSValue name_str;
 
     name_str = JS_AtomToString(ctx, name);
-    if (JS_AtomSymbolHasDescription(ctx, name)) {
+    if (JS_AtomSymbolHasDescription(ctx->rt, name)) {
         name_str = JS_ConcatString3(ctx, "[", name_str, "]");
     }
     return name_str;
