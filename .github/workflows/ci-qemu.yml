@@ -1,4 +1,4 @@
-name: ci-qemu
+name: CI / Virtualized platforms
 
 on:
   pull_request:
@@ -15,48 +15,107 @@ on:
     branches:
       - '*'
 
-env:
-  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
-
 jobs:
   freebsd:
+    name: FreeBSD / x86_64
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
-      - name: Build + test
+      - name: Start FreeBSD VM and install dependencies
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
-          copyback: false
+          # Custom-shell steps reuse this VM and copy diagnostics back after each phase.
+          sync: rsync
+          copyback: true
           mem: 16384
           prepare: |
-            pkg install -y gmake python3
-          run: |
-            export MAKEFLAGS='CONFIG_TEMPORAL=n CONFIG_INTL=n'
-            gmake
-            ./qjs -qd
-            gmake test
+            pkg install -y meson ninja python3
+      - name: Configure
+        shell: freebsd {0}
+        run: meson setup build
+      - name: Compile
+        id: compile
+        shell: freebsd {0}
+        run: meson compile -C build -j "$(sysctl -n hw.ncpu)"
+      - name: Runtime statistics
+        shell: freebsd {0}
+        run: ./build/qjs -qd
+      - name: Repository unit tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        shell: freebsd {0}
+        run: meson test -C build --no-rebuild --suite unit --logbase repo-unit --print-errorlogs --num-processes "$(sysctl -n hw.ncpu)" --timeout-multiplier 3
+      - name: Repository integration tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        shell: freebsd {0}
+        run: meson test -C build --no-rebuild --suite integration --logbase repo-integration --print-errorlogs --num-processes "$(sysctl -n hw.ncpu)" --timeout-multiplier 3
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: freebsd-x86_64-logs
+          path: build/meson-logs/
+          if-no-files-found: ignore
 
   qemu-alpine:
+    name: Alpine / ${{ matrix.platform }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
 
     strategy:
       fail-fast: false
       matrix:
-        platform:
-        - linux/386
-        - linux/riscv64
-        - linux/arm/v6
-        - linux/arm/v7
-        - linux/s390x
-        - linux/ppc64le
+        include:
+        - id: '386'
+          platform: linux/386
+        - id: 'riscv64'
+          platform: linux/riscv64
+        - id: 'arm-v6'
+          platform: linux/arm/v6
+        - id: 'arm-v7'
+          platform: linux/arm/v7
+        - id: 's390x'
+          platform: linux/s390x
+        - id: 'ppc64le'
+          platform: linux/ppc64le
 
     steps:
       - uses: actions/checkout@v7
         with:
-            submodules: recursive
-      - name: Get qemu
+          submodules: recursive
+      - name: Install QEMU binary format handlers
         # See https://github.com/tonistiigi/binfmt/issues/215#issuecomment-2613004741
         run: docker run --privileged --rm tonistiigi/binfmt:master --install all
-      - name: Run tests on ${{ matrix.platform }}
-        run: docker run --rm --interactive --env MAKEFLAGS --mount type=bind,source=$(pwd),target=/host --platform ${{ matrix.platform }} alpine sh -c "apk add git patch make gcc libc-dev python3 && cd /host && make test"
+      - name: Start Alpine container
+        run: >-
+          docker run --detach --name quickjs-qemu
+          --mount "type=bind,source=$GITHUB_WORKSPACE,target=/host"
+          --platform '${{ matrix.platform }}' --workdir /host
+          alpine tail -f /dev/null
+      - name: Install dependencies
+        run: docker exec quickjs-qemu apk add --no-cache git patch meson ninja gcc libc-dev python3
+      - name: Configure
+        run: docker exec quickjs-qemu meson setup build
+      - name: Compile
+        id: compile
+        run: docker exec quickjs-qemu meson compile -C build
+      - name: Repository unit tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: docker exec quickjs-qemu meson test -C build --no-rebuild --suite unit --logbase repo-unit --print-errorlogs --timeout-multiplier 10
+      - name: Repository integration tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: docker exec quickjs-qemu meson test -C build --no-rebuild --suite integration --logbase repo-integration --print-errorlogs --timeout-multiplier 10
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: alpine-${{ matrix.id }}-logs
+          path: build/meson-logs/
+          if-no-files-found: ignore
+      - name: Remove Alpine container
+        if: always()
+        run: |
+          if docker container inspect quickjs-qemu >/dev/null 2>&1; then
+            docker rm --force quickjs-qemu
+          fi
