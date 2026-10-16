@@ -1429,23 +1429,41 @@ static const JSCFunctionListEntry js_std_file_proto_funcs[] = {
 
 static int js_std_init(JSContext *ctx, JSModuleDef *m)
 {
-    JSValue proto;
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSValue proto, value;
+    FILE *streams[] = { stdin, stdout, stderr };
+    static const char * const names[] = { "in", "out", "err" };
+    int i;
 
     /* FILE class */
     /* the class ID is created once */
     JS_NewClassID(&js_std_file_class_id);
     /* the class is created once per runtime */
-    JS_NewClass(JS_GetRuntime(ctx), js_std_file_class_id, &js_std_file_class);
+    if (!JS_IsRegisteredClass(rt, js_std_file_class_id) &&
+        JS_NewClass(rt, js_std_file_class_id, &js_std_file_class) < 0) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
     proto = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, proto, js_std_file_proto_funcs,
-                               countof(js_std_file_proto_funcs));
+    if (JS_IsException(proto))
+        return -1;
+    if (JS_SetPropertyFunctionList(ctx, proto, js_std_file_proto_funcs,
+                                  countof(js_std_file_proto_funcs)) < 0) {
+        JS_FreeValue(ctx, proto);
+        return -1;
+    }
     JS_SetClassProto(ctx, js_std_file_class_id, proto);
 
-    JS_SetModuleExportList(ctx, m, js_std_funcs,
-                           countof(js_std_funcs));
-    JS_SetModuleExport(ctx, m, "in", js_new_std_file(ctx, stdin, FALSE, FALSE));
-    JS_SetModuleExport(ctx, m, "out", js_new_std_file(ctx, stdout, FALSE, FALSE));
-    JS_SetModuleExport(ctx, m, "err", js_new_std_file(ctx, stderr, FALSE, FALSE));
+    if (JS_SetModuleExportList(ctx, m, js_std_funcs,
+                              countof(js_std_funcs)) < 0)
+        return -1;
+    for (i = 0; i < countof(streams); i++) {
+        value = js_new_std_file(ctx, streams[i], FALSE, FALSE);
+        if (JS_IsException(value))
+            return -1;
+        if (JS_SetModuleExport(ctx, m, names[i], value) < 0)
+            return -1;
+    }
     return 0;
 }
 

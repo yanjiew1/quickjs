@@ -1244,7 +1244,8 @@ static int js_os_init(JSContext *ctx, JSModuleDef *m)
     os_poll_func = js_os_poll;
 
 #ifdef USE_WORKER
-    js_init_worker(ctx, m);
+    if (js_init_worker(ctx, m) < 0)
+        return -1;
 #endif
 
     return JS_SetModuleExportList(ctx, m, js_os_funcs,
