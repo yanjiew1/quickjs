@@ -1358,7 +1358,8 @@ double js_atod(const char *str, const char **pnext, int radix, int flags,
     const char *p, *p_start;
     limb_t cur_limb, radix_base, extra_digits;
     int is_neg, digit_count, limb_digit_count, digits_per_limb, sep, radix1, radix_shift;
-    int radix_bits, expn, e, max_digits, expn_offset, dot_pos, sig_pos, pos;
+    int radix_bits, e, max_digits, expn_offset, dot_pos, sig_pos, pos;
+    int64_t expn;
     mpb_t *tmp0;
     double dval;
     BOOL is_bin_exp, is_zero, expn_overflow;
@@ -1568,17 +1569,19 @@ double js_atod(const char *str, const char **pnext, int radix, int flags,
     if (is_zero) {
         a = 0;
     } else {
-        int expn1;
+        /* Normalize in wide arithmetic before classifying double overflow.
+           The surviving exponent then fits the rounding helpers' int range. */
+        int64_t expn1;
         if (radix_bits != 0) {
             if (!is_bin_exp)
                 expn *= radix_bits;
-            expn -= expn_offset * radix_bits;
+            expn -= (int64_t)expn_offset * radix_bits;
             expn1 = expn + digit_count * radix_bits;
             if (expn1 >= 1024 + radix_bits)
                 goto overflow;
             else if (expn1 <= -1075)
                 goto underflow;
-            m = round_to_d(&e, tmp0, -expn, JS_RNDN);
+            m = round_to_d(&e, tmp0, -(int)expn, JS_RNDN);
         } else {
             expn -= expn_offset;
             expn1 = expn + digit_count;
@@ -1586,7 +1589,7 @@ double js_atod(const char *str, const char **pnext, int radix, int flags,
                 goto overflow;
             else if (expn1 <= min_exponent[radix - 2])
                 goto underflow;
-            m = mul_pow_round_to_d(&e, tmp0, radix1, radix_shift, expn, JS_RNDN);
+            m = mul_pow_round_to_d(&e, tmp0, radix1, radix_shift, (int)expn, JS_RNDN);
         }
         if (m == 0) {
         underflow:
