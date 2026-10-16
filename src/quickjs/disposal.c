@@ -394,8 +394,10 @@ static int js_init_disposable_resource_list(JSContext *ctx)
         .gc_mark = js_disposable_resource_list_mark,
     };
 
-    if (!JS_IsRegisteredClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST))
-        return JS_NewClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST,
-                            &list_class);
+    if (!JS_IsRegisteredClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST) &&
+        JS_NewClass(ctx->rt, JS_CLASS_DISPOSABLE_RESOURCE_LIST, &list_class) < 0) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
     return 0;
 }
