@@ -180,6 +180,51 @@ static void test_string_buffer_growth(void)
     assert(allocator.live == 0);
 }
 
+#ifdef JS_MALLOC_USE_ITER
+typedef struct AllocationIteration {
+    void *ptrs[97];
+    int seen[97];
+} AllocationIteration;
+
+static void allocation_iteration_visit(void *opaque, void *ptr)
+{
+    AllocationIteration *test = opaque;
+    int i;
+    for (i = 0; i < 97; i++) {
+        if (ptr == test->ptrs[i])
+            test->seen[i]++;
+    }
+}
+
+static void test_allocation_iteration(void)
+{
+    AllocationIteration test = { 0 };
+    JSRuntime *rt = JS_NewRuntime();
+    int i;
+
+    assert(rt);
+    for (i = 0; i < 97; i++) {
+        test.ptrs[i] = js_malloc_rt(rt, i == 96 ? 4096 : 24);
+        assert(test.ptrs[i]);
+    }
+    js_malloc_iter(&rt->malloc_ctx, allocation_iteration_visit, &test);
+    for (i = 0; i < 97; i++) {
+        assert(test.seen[i] == 1);
+        if (!(i & 1)) {
+            js_free_rt(rt, test.ptrs[i]);
+            test.ptrs[i] = NULL;
+        }
+    }
+    memset(test.seen, 0, sizeof(test.seen));
+    js_malloc_iter(&rt->malloc_ctx, allocation_iteration_visit, &test);
+    for (i = 0; i < 97; i++) {
+        assert(test.seen[i] == (i & 1));
+        js_free_rt(rt, test.ptrs[i]);
+    }
+    JS_FreeRuntime(rt);
+}
+#endif
+
 typedef struct ReactionOwner {
     int calls;
     int finalized;
@@ -1875,6 +1920,9 @@ static void test_basic_object_allocation_failures(void)
 
 int main(void)
 {
+#ifdef JS_MALLOC_USE_ITER
+    test_allocation_iteration();
+#endif
     test_cstring_allocation_failure();
     test_string_buffer_growth();
     test_array_allocation_size();

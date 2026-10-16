@@ -57,6 +57,8 @@ PREFIX?=/usr/local
 #CONFIG_TSAN=y
 # collect at every existing allocation-triggered GC check
 #CONFIG_GC_STRESS=y
+# track allocated blocks for allocator diagnostics
+#CONFIG_MALLOC_ITER=y
 
 # TEST262 bootstrap config: commit id and shallow "since" parameter
 TEST262_COMMIT?=7ab7fafa0003f73fc85c1b95d88094d33f7eb8bd
@@ -164,6 +166,9 @@ DEFINES_GC_STRESS=-DFORCE_GC_AT_MALLOC
 endif
 
 DEFINES:=$(DEFINES_GC_STRESS) -D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
+ifeq ($(CONFIG_MALLOC_ITER),y)
+DEFINES+=-DJS_MALLOC_USE_ITER
+endif
 ifdef CONFIG_WIN32
 DEFINES+=-D__USE_MINGW_ANSI_STDIO # for standard snprintf behavior
 endif
@@ -900,8 +905,9 @@ endif
 ifdef CONFIG_SHARED_LIBS
 test-gc-stress: tests/bjson.so
 endif
-test-gc-stress: qjs$(EXE) tests/test_api$(EXE) tests/test_native_jobs$(EXE)
+test-gc-stress: qjs$(EXE) tests/test_api$(EXE) tests/test_native_jobs$(EXE) tests/test_allocator$(EXE)
 	@test "$(CONFIG_GC_STRESS)" = y || { echo "CONFIG_GC_STRESS=y is required" >&2; exit 1; }
+	$(WINE) ./tests/test_allocator$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./qjs$(EXE) tests/test_closure.js
