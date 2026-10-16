@@ -55,6 +55,9 @@ static int js_parse_error_v(JSParseState *s, const uint8_t *ptr, const char *fmt
 {
     JSContext *ctx = s->ctx;
     int line_num, col_num;
+
+    if (s->suppress_parse_errors)
+        return -1;
     line_num = get_line_col(&col_num, s->buf_start, ptr - s->buf_start);
     JS_ThrowError2(ctx, JS_SYNTAX_ERROR, fmt, ap, FALSE);
     build_backtrace(ctx, ctx->rt->current_exception, s->filename,
