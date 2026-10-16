@@ -921,3 +921,17 @@ function test_eval_script_destructuring_references()
 }
 
 test_eval_script_destructuring_references();
+
+async function test_extreme_timer_delays()
+{
+    let fired = false;
+    const distant = os.setTimeout(() => { fired = true; }, 9223372036854774784);
+    await new Promise(resolve => os.setTimeout(() => {
+        os.clearTimeout(distant);
+        resolve();
+    }, 0));
+    assert(fired, false);
+    await os.sleepAsync(-9223372036854775808);
+}
+
+await test_extreme_timer_delays();
