@@ -27,6 +27,7 @@ static int test_pclose(FILE *f)
 #include "../src/quickjs-libc/std.c"
 #undef popen
 #undef pclose
+#include "../src/quickjs-libc/event-loop.h"
 
 static void check_body(JSContext *ctx, JSValueConst value)
 {
@@ -172,8 +173,35 @@ static void test_class_registration_failure(int worker)
     assert(allocator.live == 0);
 }
 
+static void test_sleep_timer_deadline(void)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSThreadState *ts;
+    JSOSTimer *timer;
+    JSValue delay, promise;
+
+    assert(ctx);
+    js_std_init_handlers(rt);
+    ts = JS_GetRuntimeOpaque(rt);
+    delay = JS_NewFloat64(ctx, 9223372036854774784.0);
+    promise = js_os_sleepAsync(ctx, JS_UNDEFINED, 1, (JSValueConst *)&delay);
+    assert(!JS_IsException(promise));
+    assert(!list_empty(&ts->os_timers));
+    timer = list_entry(ts->os_timers.next, JSOSTimer, link);
+    assert(timer->timeout >= INT64_MAX - 1023);
+    JS_FreeValue(ctx, promise);
+    /* Teardown cancels the enormous deadline; never poll or await it. */
+    js_std_free_handlers(rt);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
 int main(void)
 {
+    test_sleep_timer_deadline();
     test_class_registration_failure(0);
 #ifdef USE_WORKER
     test_class_registration_failure(1);
