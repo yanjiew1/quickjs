@@ -6430,3 +6430,50 @@ function test_proxy_own_keys_result_object()
 }
 
 test_proxy_own_keys_result_object();
+
+function test_proxy_own_keys_length()
+{
+    for (const length of [2 ** 32, 2 ** 32 + 1, 2 ** 53 - 1, Infinity]) {
+        const sentinel = {};
+        let reads = 0, caught = false;
+        const proxy = new Proxy({}, { ownKeys() { return {
+            length,
+            get 0() { reads++; throw sentinel; },
+        }; } });
+        try { Reflect.ownKeys(proxy); } catch (error) {
+            caught = true;
+            assert(error === sentinel, true);
+        }
+        assert(caught, true);
+        assert(reads, 1);
+    }
+    for (const length of [-1, -Infinity, NaN]) {
+        const proxy = new Proxy({}, { ownKeys() { return {
+            length,
+            get 0() { throw Error("index read for zero ToLength"); },
+        }; } });
+        assert(Reflect.ownKeys(proxy).length, 0);
+    }
+    const events = [];
+    const proxy = new Proxy({}, { ownKeys() { return {
+        length: { valueOf() { events.push("length"); return 2.9; } },
+        get 0() { events.push("0"); return "first"; },
+        get 1() { events.push("1"); return "second"; },
+    }; } });
+    assert(Reflect.ownKeys(proxy).join(","), "first,second");
+    assert(events.join(","), "length,0,1");
+    const expected = Array.from({ length: 40 }, (_, i) => "key" + i);
+    assert(Reflect.ownKeys(new Proxy({}, { ownKeys() { return expected; } })).join(","),
+           expected.join(","));
+    const sentinel = {};
+    let caught = false;
+    const failing = { length: 50 };
+    for (let i = 0; i < 25; i++)
+        failing[i] = Symbol();
+    Object.defineProperty(failing, 25, { get() { throw sentinel; } });
+    try { Reflect.ownKeys(new Proxy({}, { ownKeys() { return failing; } })); }
+    catch (error) { caught = true; assert(error === sentinel, true); }
+    assert(caught, true);
+}
+
+test_proxy_own_keys_length();
