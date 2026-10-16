@@ -300,6 +300,7 @@ static void js_std_promise_rejection_check(JSContext *ctx)
 void js_std_loop(JSContext *ctx)
 {
     int err;
+    JSOSPollFunc *poll_func;
 
     for(;;) {
         /* execute the pending jobs */
@@ -314,8 +315,9 @@ void js_std_loop(JSContext *ctx)
 
         js_std_promise_rejection_check(ctx);
 
-        if (os_poll_func) {
-            err = os_poll_func(ctx);
+        poll_func = atomic_load_explicit(&os_poll_func, memory_order_relaxed);
+        if (poll_func) {
+            err = poll_func(ctx);
             if (err) {
                 if (err == -2)
                     js_std_dump_error(ctx);
@@ -358,10 +360,12 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
                 js_std_dump_error(ctx);
             }
             if (err == 0) {
-                js_std_promise_rejection_check(ctx);
+                JSOSPollFunc *poll_func;
 
-                if (os_poll_func) {
-                    if (os_poll_func(ctx) == -2) {
+                js_std_promise_rejection_check(ctx);
+                poll_func = atomic_load_explicit(&os_poll_func, memory_order_relaxed);
+                if (poll_func) {
+                    if (poll_func(ctx) == -2) {
                         ret = JS_EXCEPTION;
                         JS_FreeValue(ctx, obj);
                         break;
