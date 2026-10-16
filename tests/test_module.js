@@ -1,3 +1,4 @@
+import * as std from "std";
 import { assert, assertThrows } from "./assert.js";
 import "./test_module_json_so_attributes.js";
 import "./test_module_import_attributes.js";
@@ -314,3 +315,22 @@ assert(typeof usingModuleResource[Symbol.dispose], "function");
 import { awaitUsingModuleEvents, awaitUsingModuleResource } from "./fixture_await_using_module.js";
 assert(awaitUsingModuleEvents.join(","), "evaluated,async start,async end,sync");
 assert(typeof awaitUsingModuleResource[Symbol.asyncDispose], "function");
+
+async function test_suspended_import_reference()
+{
+    let resume, error;
+    update(1);
+    const waiting = new Promise(resolve => { resume = resolve; });
+    const assignment = (async () => {
+        try { imported = await waiting; } catch (e) { error = e; }
+    })();
+    update(42);
+    std.gc();
+    resume(7);
+    await assignment;
+    assert(error instanceof TypeError);
+    assert(imported, 42);
+    update(0);
+}
+
+await test_suspended_import_reference();

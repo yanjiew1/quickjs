@@ -1801,6 +1801,48 @@ function test_function_expr_name()
     assert_throws(TypeError, f);
 }
 
+function test_readonly_binding_references()
+{
+    for (const captured of [false, true]) {
+        for (const strict of [false, true]) {
+            for (const expression of [
+                "self = rhs()", "self += rhs()", "self &&= rhs()",
+                "[self] = [rhs()]", "({ value: self } = { value: rhs() })",
+            ]) {
+                let effects = 0;
+                const code = captured ? "(() => (" + expression + "))()" :
+                                        "(" + expression + ")";
+                const make = Function("rhs", `return function self() {
+                    ${strict ? '"use strict";' : ''}
+                    let error;
+                    try { ${code}; } catch (e) { error = e; }
+                    return [self, error];
+                };`);
+                const fn = make(() => { effects++; return 7; });
+                const result = fn();
+                assert(result[0], fn);
+                assert(effects, 1);
+                if (strict)
+                    assert(result[1] instanceof TypeError);
+                else
+                    assert(result[1], undefined);
+            }
+        }
+    }
+    const sloppy = function self() {
+        let effects = 0;
+        assert_throws(TypeError, () => {
+            class C { [self = (++effects, "method")]() {} }
+        });
+        self = 7;
+        assert(effects, 1);
+        return self;
+    };
+    assert(sloppy(), sloppy);
+}
+
+test_readonly_binding_references();
+
 function test_parse_semicolon()
 {
     /* 'yield' or 'await' may not be considered as a token if the
