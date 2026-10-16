@@ -124,8 +124,7 @@ static inline void js_free_string(JSRuntime *rt, JSString *str)
     }
 }
 
-int js_string_compare(JSContext *ctx,
-                      const JSString *p1, const JSString *p2);
+int js_string_compare(const JSString *p1, const JSString *p2);
 int js_string_find_invalid_codepoint(JSString *p);
 JSString *js_alloc_string(JSContext *ctx, int max_len, int is_wide_char);
 JSString *js_alloc_string_rt(JSRuntime *rt, int max_len, int is_wide_char);
@@ -147,7 +146,7 @@ JSValue js_new_string16_len(JSContext *ctx, const uint16_t *buf, int len);
 #define JS_STRING_INLINE static inline
 #endif
 
-JS_STRING_INLINE BOOL js_string_eq(JSContext *ctx, const JSString *p1,
+JS_STRING_INLINE BOOL js_string_eq(const JSString *p1,
                                    const JSString *p2)
 {
     if (p1->len != p2->len)
@@ -159,10 +158,10 @@ JS_STRING_INLINE BOOL js_string_eq(JSContext *ctx, const JSString *p1,
 
 #undef JS_STRING_INLINE
 #else
-BOOL js_string_eq(JSContext *ctx, const JSString *p1, const JSString *p2);
+BOOL js_string_eq(const JSString *p1, const JSString *p2);
 #endif
 int string_rope_get(JSValueConst val, uint32_t idx);
-int js_string_rope_compare(JSContext *ctx, JSValueConst op1, JSValueConst op2, BOOL eq_only);
+int js_string_rope_compare(JSValueConst op1, JSValueConst op2, BOOL eq_only);
 JSValue js_linearize_string_rope(JSContext *ctx, JSValue rope);
 BOOL JS_ConcatStringInPlace(JSContext *ctx, JSString *p1, JSValueConst op2);
 

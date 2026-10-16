@@ -40,8 +40,7 @@
 
 /* String */
 
-uint32_t js_string_obj_get_length(JSContext *ctx,
-                                  JSValueConst obj)
+uint32_t js_string_obj_get_length(JSValueConst obj)
 {
     JSObject *p;
     uint32_t len = 0;
@@ -131,7 +130,7 @@ static int js_string_delete_property(JSContext *ctx,
 
     if (__JS_AtomIsTaggedInt(prop)) {
         idx = __JS_AtomToUInt32(prop);
-        if (idx < js_string_obj_get_length(ctx, obj)) {
+        if (idx < js_string_obj_get_length(obj)) {
             return FALSE;
         }
     }
@@ -1550,7 +1549,7 @@ static JSValue js_string_localeCompare(JSContext *ctx, JSValueConst this_val,
         JS_FreeValue(ctx, a);
         return JS_EXCEPTION;
     }
-    cmp = js_string_compare(ctx, JS_VALUE_GET_STRING(a), JS_VALUE_GET_STRING(b));
+    cmp = js_string_compare(JS_VALUE_GET_STRING(a), JS_VALUE_GET_STRING(b));
     JS_FreeValue(ctx, a);
     JS_FreeValue(ctx, b);
     return JS_NewInt32(ctx, cmp);
