@@ -75,9 +75,9 @@ static void *js_std_dbuf_realloc(void *opaque, void *ptr, size_t size)
     return js_realloc_rt(opaque, ptr, size);
 }
 
-static void js_std_dbuf_init(JSContext *ctx, DynBuf *s)
+static void js_std_dbuf_init(JSRuntime *rt, DynBuf *s)
 {
-    dbuf_init2(s, JS_GetRuntime(ctx), js_std_dbuf_realloc);
+    dbuf_init2(s, rt, js_std_dbuf_realloc);
 }
 
 static BOOL my_isdigit(int c)
@@ -106,7 +106,7 @@ static JSValue js_printf_internal(JSContext *ctx,
     /* Use indirect call to dbuf_printf to prevent gcc warning */
     int (*dbuf_printf_fun)(DynBuf *s, const char *fmt, ...) = (void*)dbuf_printf;
 
-    js_std_dbuf_init(ctx, &dbuf);
+    js_std_dbuf_init(JS_GetRuntime(ctx), &dbuf);
 
     if (argc > 0) {
         fmt_str = JS_ToCStringLen(ctx, &fmt_len, argv[0]);
@@ -1054,7 +1054,7 @@ static JSValue js_std_file_getline(JSContext *ctx, JSValueConst this_val,
     if (!f)
         return JS_EXCEPTION;
 
-    js_std_dbuf_init(ctx, &dbuf);
+    js_std_dbuf_init(JS_GetRuntime(ctx), &dbuf);
     for(;;) {
         c = fgetc(f);
         if (c == EOF) {
@@ -1105,7 +1105,7 @@ static JSValue js_std_file_readAsString(JSContext *ctx, JSValueConst this_val,
             max_size = max_size64;
     }
 
-    js_std_dbuf_init(ctx, &dbuf);
+    js_std_dbuf_init(JS_GetRuntime(ctx), &dbuf);
     while (max_size != 0) {
         c = fgetc(f);
         if (c == EOF)
@@ -1185,6 +1185,7 @@ static int http_get_status(const char *buf)
 static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
+    JSRuntime *rt = JS_GetRuntime(ctx);
     const char *url;
     DynBuf cmd_buf;
     DynBuf data_buf_s, *data_buf = &data_buf_s;
@@ -1217,7 +1218,7 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
         }
     }
 
-    js_std_dbuf_init(ctx, &cmd_buf);
+    js_std_dbuf_init(rt, &cmd_buf);
     dbuf_printf(&cmd_buf, "%s '", URL_GET_PROGRAM);
     for(i = 0; url[i] != '\0'; i++) {
         unsigned char c = url[i];
@@ -1249,8 +1250,8 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
         return JS_ThrowTypeError(ctx, "could not start curl");
     }
 
-    js_std_dbuf_init(ctx, data_buf);
-    js_std_dbuf_init(ctx, header_buf);
+    js_std_dbuf_init(rt, data_buf);
+    js_std_dbuf_init(rt, header_buf);
 
     buf = js_malloc(ctx, URL_GET_BUF_SIZE);
     if (!buf)
