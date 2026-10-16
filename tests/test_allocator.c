@@ -1183,6 +1183,15 @@ static void test_atom_table_allocation_failure(void)
         assert(js_rc(JS_VALUE_GET_OBJ(value))->ref_count == 1);
         assert(rt->atom_free_index == 0);
     }
+    atom = JS_NewAtom(ctx, "atom_after_failed_growth");
+    assert(atom != JS_ATOM_NULL && !JS_HasException(ctx));
+    assert(rt->atom_size > capacity);
+    for (size_t i = 0; i < count; i++) {
+        JSAtom retained = JS_NewAtomInt64(ctx, INT64_MIN + (int64_t)i);
+        assert(retained == atoms[i]);
+        JS_FreeAtom(ctx, retained);
+    }
+    JS_FreeAtom(ctx, atom);
     while (count)
         JS_FreeAtom(ctx, atoms[--count]);
     free(atoms);
