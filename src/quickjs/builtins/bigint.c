@@ -62,7 +62,7 @@ static JSValue JS_ToBigIntCtorFree(JSContext *ctx, JSValue val)
                 } else {
                     val = JS_ThrowRangeError(ctx, "cannot convert NaN or Infinity to BigInt");                }
             } else {
-                val = JS_CompactBigInt(ctx, r);
+                val = JS_CompactBigIntRT(ctx->rt, r);
             }
         }
         break;
@@ -161,7 +161,7 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
         return JS_EXCEPTION;
     if (bits == 0) {
         JS_FreeValue(ctx, a);
-        res = __JS_NewShortBigInt(ctx, 0);
+        res = __JS_NewShortBigInt(0);
     } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
         /* fast case */
         js_slimb_t sv = JS_VALUE_GET_SHORT_BIG_INT(a);
@@ -181,7 +181,7 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
                 v = (int64_t)v >> shift;
             else
                 v = v >> shift;
-            res = __JS_NewShortBigInt(ctx, v);
+            res = __JS_NewShortBigInt(v);
         }
     } else {
         JSBigInt *r;
@@ -225,10 +225,10 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
                     return JS_EXCEPTION;
                 }
             } else {
-                r = js_bigint_normalize(ctx, r);
+                r = js_bigint_normalize(ctx->rt, r);
             }
             JS_FreeValue(ctx, a);
-            res = JS_CompactBigInt(ctx, r);
+            res = JS_CompactBigIntRT(ctx->rt, r);
         }
     }
     return res;
