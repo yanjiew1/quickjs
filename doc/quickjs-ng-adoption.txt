@@ -1,0 +1,270 @@
+QuickJS-NG adoption assessment
+=============================
+Review date: 2026-10-16
+Current fork main: 03fad1119211b93977a7299eea76136182869cf9
+Fetched NG master: 9b061718955874e648d8c2bf2910a717aac8fa63
+ECMA-262 living-draft source: f3777af132ed6415e4aac8cd74041539ea7625a4
+(source timestamp 2026-10-15T18:39:21Z; reviewed 2026-10-16).
+
+Scope and evidence
+------------------
+This is a dated adoption assessment against the source revisions above, not a
+live implementation checklist. Later commits may already implement candidates.
+NG development followed its imported release snapshots; history.txt in the
+original review inventoried 1,226 commits after snapshot 2788d71. Candidate
+implementations and current equivalents were inspected separately; not every
+historical commit was individually proved correct.
+
+Recommendation: fix confirmed existing defects first, then add focused native
+integration APIs and measure the small performance candidates. Do not merge
+NG wholesale or infer performance gains from NG's own benchmark numbers.
+
+A. Confirmed fixes / host-control hardening to prioritize
+-------------------------------------------------------
+A1. Preserve abrupt completion while converting property descriptors.
+NG 63852341b6c8622285f665b1ca26131d7c2c8e87 fixes getter/setter exception
+replacement; earlier NG c15ef1f8 also checks each HasProperty result for -1.
+Local src/quickjs/object.c:174 js_obj_to_desc has both defects: a throwing
+get/set accessor becomes TypeError, and six if(JS_HasProperty(...)) tests
+mistake exception -1 for true. Our bounded Proxy-descriptor probe observes
+six subsequent get traps and a different TypeError instead of the original
+thrown value. Port both related corrections as one descriptor-completion fix.
+Regressions: every descriptor key's throwing has trap; get/set accessor throw;
+Object.defineProperty, Reflect.defineProperty and descriptor conversion users.
+Spec: https://tc39.es/ecma262/multipage/abstract-operations.html#sec-topropertydescriptor
+
+A2. Nested Proxy extensibility invariant checks.
+NG 32b6912 and current local builtins/proxy.c differ in has, getOwnProperty
+(undefined-result path), and defineProperty invariants. Local direct
+p->extensible reads bypass an inner Proxy's [[IsExtensible]], its traps and
+exceptions. Adapt the NG JS_IsExtensible paths, preserving exact spec order.
+Regressions: Proxy-on-Proxy targets, nonextensible targets, throwing/revoked
+inner proxy, and observed trap order.
+Spec: https://tc39.es/ecma262/multipage/ordinary-and-exotic-objects-behaviours.html#sec-proxy-object-internal-methods-and-internal-slots
+
+A3. Reject primitive ownKeys trap results.
+NG 82626eacc81825340736af5a6f363f5ebdf8aede. Local proxy.c obtains length
+without first requiring an Object. Bounded observations: ownKeys returning
+1/true yields [], returning 'abc' yields character keys instead of TypeError.
+Add the object check before any length/index access. JS-only regression.
+Spec: https://tc39.es/ecma262/multipage/abstract-operations.html#sec-createlistfromarraylike
+
+A4. Checked allocation for Proxy ownKeys enumeration arrays.
+NG 252209d99cf112568160548bdcaa98d95e0d0068. Local proxy.c:729 multiplies
+uint32_t length by sizeof(JSPropertyEnum) directly in size_t; 32-bit can wrap.
+Use the fork's checked array-allocation/limit conventions. Test arithmetic
+boundaries with allocator failure instrumentation rather than actually creating
+billions of properties. Native 32-bit coverage is particularly relevant.
+
+A5. External ArrayBuffer cleanup should not reuse an already-called callback.
+NG 4369dd64885bc45d85fb58529216c60f3363564b. Local detach calls free_func and
+clears data, but retains callback and opaque; finalization calls it again with
+NULL data. The callback-count C probe confirmed calls 1 and 2, the second with
+NULL. This does not itself free the same backing pointer twice, but callbacks
+that also release opaque state can double-release that state. Adapt callback
+clearing/ownership transfer carefully, including transfer, resizable buffers,
+shared buffers, failed construction and normalized zero-length backing stores.
+Needs C embedding tests; this callback contract is not directly ECMA-defined.
+
+A6. Reject NULL pending object references in binary deserialization.
+NG 5c47676bba9adebf3cbe3f3e87fe20f5b44ccb5c. Local reader.c creates a NULL
+placeholder for a TypedArray, but a nested object reference can reach it before
+initialization. Index bounds alone do not reject the placeholder; JS_DupValue
+then dereferences NULL. A bounded data-only JS_READ_OBJ_REFERENCE probe
+reproduced a UBSan diagnostic and ASan crash. Add the narrow NULL guard plus
+native malformed-data regression. This probe does not execute bytecode; the
+existing trusted-bytecode warning is not a justification for ignoring it.
+No claim is made that this narrow check validates arbitrary hostile bytecode.
+
+A7. Allow embedder interruption inside long native Array loops.
+NG ad874efbee47cff076391c7058e8a917ebd7a0a8. Local array.c has no interrupt
+polling in several every/map/filter/reduce/search/find loops. Huge sparse
+array-like inputs can spend a long time skipping holes without executing JS
+or revisiting VM interrupt checks. Add bounded polling with correct error and
+value cleanup. Test deterministic handler cancellation and measure the extra
+countdown/branch in ordinary array workloads. This is host-control hardening,
+not a claim that ECMA requires an interrupt callback.
+
+B. Sorting behavior: worth evaluating, with a spec qualification
+--------------------------------------------------------------
+NG 47302a1b73e863f50bee3cac65d5968715149855 removes the identical-JSValue
+shortcut that skips a user comparator. Current main retains it. This improves
+compatibility with other engines and code using comparator side effects, e.g.
+a duplicate-detection callback on [o,o]. However SortIndexedProperties allows
+an implementation-defined comparison-call sequence. Do not repeat NG's commit
+message as proof that skipping any identical pair is automatically a normative
+violation. Recommend a separate compatibility/performance decision with precise
+sort/toSorted tests; do not assert an exact number of comparisons.
+Spec: https://tc39.es/ecma262/multipage/indexed-collections.html#sec-sortindexedproperties
+
+C. Small performance candidates to measure, not promised speedups
+---------------------------------------------------------------
+C1. NG 95fc452 / 011d97f: JS_ToObjectFree and JS_ToStringFree already own the
+input, so return an object/flat string directly instead of retaining then
+freeing it. Local object.c:167 and value/conversion.c:247 still round-trip.
+Use exact JS_TAG_STRING, not JS_IsString: this fork must still flatten ropes.
+Best first low-complexity throughput trial.
+
+C2. NG 000061f with e2b100e: thresholded compiler declaration lookup table.
+Local find_var/find_arg use linear scans. Useful for generated functions with
+many locals; retain cheap small-function behavior. Audit shadowing, duplicate
+var/function declarations, eval, insertion order and allocation failure.
+Measure compile time separately from script execution.
+
+C3. NG cad311ecbfe6c7e30446ae2e568dd1d187579545: mix tagged integer property
+atoms before selecting hash buckets. Local find_own_property and all related
+insert/resize/compact/delete sites use atom & mask. Power-of-two-strided keys
+can collide badly. Update every table user together. Measure adversarial keys
+AND normal object lookup on GCC/Clang, 32/64-bit; extra hash arithmetic has cost.
+This is separate from Map, whose local numeric hashes already mix keys.
+
+C4. NG 4951c83: direct intrinsic Promise capability creation avoids a temporary
+C executor object. Local js_new_promise_capability always takes the generic
+executor path. Preserve user constructors, subclassing, cross-realm identity,
+thenables, native jobs and all OOM cleanup. Good async allocation trial after
+native Promise API contracts are reviewed.
+
+C5. Conditional: initial atom/shape tables (4355069, 7238ee6), string concat
+preallocation (5468a73), and removal of internal allocation-slack requests
+(b16e7bd). Measure actual local startup counts and arena behavior. Keep exported
+js_realloc2 compatibility even if changing internal callers. Existing ropes
+can make flat-string concat preallocation less useful than NG's premise.
+
+C6. Larger later experiments: RegExp compilation zero copy (5beca15) and
+reference-counted substring slices (08db51a plus 62b4eed/73be8a5/396e1e0).
+This fork has ropes but not NG's indirect/slice string representation. Audit
+atoms, UTF-16, CString, serialization, GC and retained-parent memory cost.
+A dedicated owned RegExp bytecode buffer may fit our boundaries better than
+adding a general string kind. Do not introduce these solely for a claimed win.
+
+D. Useful native/public APIs, added without breaking existing signatures
+----------------------------------------------------------------------
+Highest value:
+- JS_PromiseThen, JS_PromiseMarkAsHandled, JS_NewSettledPromise
+  (a07a918, 1a5ee30, 918eb3c): host promise integration without mutable .then.
+  Define borrowed values, realm, jobs, rejection tracking and thenable behavior.
+- JS_NewCClosure and named JS_NewCFunctionData2 (5b7087e, d01ca44): native
+  callback state/finalizer and diagnostics; preserve GC-visible captures.
+- Builtin brand predicates (36e3513, 6d64933, ffcdb41, 8a01f56, d44bb29 etc.):
+  non-observable C inspection; define proxies/subclasses/detached values.
+- Expose existing private JS_DupAtomRT / JS_ToNumber and add JS_GetClassName
+  (e0746cc, 7021858, 307a59f; class-name ownership corrected by 94c303f).
+- js_std_loop_once / js_std_poll_io (6bdf1df), worker runtime factory (dd1cb46):
+  integrate external host loops and worker allocator/resource policies. Include
+  this fork's native async jobs/wait wakeups, not just NG's JS job queue.
+
+Useful lower priority: Eval options/start line, pending job context, GC threshold,
+version query, intrinsic freeze/seal, SAB read metadata, JSValue-key property
+operations, explicit typed error constructors and runtime cleanup hooks.
+Many remaining API name differences are aliases/convenience, not capabilities.
+Contract details and representative provenance are summarized here.
+
+E. Language, host and optional features
+--------------------------------------
+The majority of NG's standard additions are already present here: TLA, modern
+Array/TypedArray methods, WeakRef/FinalizationRegistry, Error causes/isError,
+RAB/GSAB/transfer, RegExp d/v/modifiers/escape, Float16, Set algebra/grouping,
+Math.sumPrecise, Promise.try/withResolvers, iterator helpers/concat/zip/chunks/
+windows/includes/join, Array.fromAsync, resource management, JSON modules/import
+attributes and Uint8Array Base64/hex. Their fixes still need individual review;
+feature presence alone does not prove full conformance.
+
+Main-only missing NG features mostly need a policy/use-case decision:
+- V8-style captureStackTrace/prepareStackTrace/stackTraceLimit/CallSite: useful
+  debugging compatibility, distinct from the Stage-3 stack-accessor proposal.
+- DOMException, atob/btoa, queueMicrotask, performance.timeOrigin: Web/host APIs;
+  performance.now already exists. Keep host ownership rather than forcing these
+  into the mandatory language core.
+- Immutable ArrayBuffers: Stage 2.7; stack accessor and nonextensible/private
+  proposal: Stage 3 as reviewed. Do not label these missing finalized standards.
+- Text/byte imports: evaluate current proposal and loader capability policies;
+  NG byte imports rely on immutable buffers. Do not copy loader decisions blindly.
+- Private embedder symbols: hidden host properties, not JS private-field syntax.
+  Consider only with explicit reflection/encapsulation and GC semantics.
+- Temporal/Intl already have dedicated branches here. NG is not a source for
+  replacing them or a reason to pull their dependencies into main.
+Current TC39 finished inventory (some proposal READMEs lag):
+https://github.com/tc39/proposals/blob/main/finished-proposals.md
+
+F. Build, validation and maintenance improvements
+------------------------------------------------
+- Add GC-stress CI coverage (NG 4e8e822): local FORCE_GC_AT_MALLOC already
+  exists; start with focused repository tests, bounded matrix/schedule, then
+  suitable Test262 subsets. No second stress mechanism is required.
+- Consider a focused TSan host-worker/libwait job when its runtime works on the
+  runner. CONFIG_TSAN exists; current hosted workflow has no explicit TSan job.
+- Add C/C++ public-header compile/link smoke checks and generated Unicode table
+  regenerate/compare checks. Existing CONFIG_CHECK_JSVALUE is already broad.
+- Optional parserless deployment (90b2437): compiler separation helps, but
+  preserve JSON parsing and explicit eval-disabled APIs/errors.
+- Optional DSO exports (66adc82) and Windows native-module visibility macros:
+  useful with a real shared-library target. Hidden DSO symbols do NOT solve
+  static-archive duplicate symbol resolution; no mass private rename is needed
+  for this evaluation.
+- CMake/Meson, MSVC/Windows ARM64, WASI reactor and mimalloc are integration
+  projects, not prerequisite correctness fixes or guaranteed performance wins.
+  Keep Makefile and portable supported paths unless consumers justify additions.
+- NG security reporting/no-CVE policy is governance, not a code improvement
+  this repository should copy automatically. Keep trusted-bytecode contracts
+  explicit; a checksum is neither bytecode validation nor authentication.
+
+G. Changes specifically not to copy verbatim
+-------------------------------------------
+G1. NG 807f271 Map hash randomization uses the calling context's seed.
+Cross-realm operations need stable table/runtime provenance. XORing a constant
+also preserves same-tag collisions, so do not claim keyed collision resistance.
+Adopt the hardening goal only with a redesigned, measured hash contract.
+
+G2. NG 8968855 checksum: current bc_csum uses i+4<n and residual cases 0..3,
+so a positive multiple-of-four payload omits its last four bytes. For length4
+the checksum is always zero. Independently verified in source. If adding a
+checksum, fix full-word coverage, test each byte position/length0..9, update
+format version, and retain a clear non-adversarial corruption-only contract.
+
+G3. NG JS_NewObjectFrom / FromStr convenience construction: source review
+finds consumed-value cleanup gaps, possible repeat free on setter failure,
+and zero-count JS_EXCEPTION without a pending exception. These are reasons to
+implement the API contracts using our checked helpers, not port the body.
+These NG API findings are from source inspection, not executable NG probes.
+
+G4. NG C closure call path explicitly lacks realm switching; function-property
+setup is void and does not propagate fallible definitions. Use this fork's
+checked setup, native-call realm behavior and OOM tests for any analogous API.
+
+G5. Global-delete shortcut 02368b6 assumes NG ordinary global objects; this
+fork's special global environment and saved references require separate audit.
+The compact atom encoding 5301314 optimizes a different pre-existing format;
+NG's stated size reduction is not evidence of savings versus ours.
+
+G6. Keep public callback ABI and current project policies: do not replace the
+ArrayBuffer free callback with NG's realloc callback, alter interrupt callback
+parameters, remove js_realloc2, blindly change class-ID allocation, make all
+OOM/InternalError uncatchable, remove CHECK_JSVALUE, remove big-endian support,
+or replace C builtins with NG's embedded JavaScript implementations.
+
+H. Already incorporated; exclude from a new port queue
+-----------------------------------------------------
+Previously recommended NG template conversion, JSON index-conversion leak,
+RegExp compilation OOM, std.evalScript interrupt preservation, TypedArray sort
+allocation checks, lnot+jump peephole and imminent-properties GC estimate are
+already on main. So are arena allocation, mixed numeric/array VM fast paths,
+RegExp shape caches/register VM/interruption, GCC14 full-width JSValue setup,
+DynBuf overflow handling, compile-only JSValue checks and Test262 parallelism.
+Keep the fork's independent coroutine/varref/scope cleanup contracts; an absent
+NG-specific field name is not proof that its corresponding bug exists here.
+Polymorphic inline caches were introduced by NG6b78c7f but removed by7de6d46;
+the website still advertising them is historical, not current HEAD evidence.
+
+Practical next queue, if implementation is separately requested
+--------------------------------------------------------------
+1. Descriptor completion; Proxy invariants/result/size checks; external buffer
+   callback lifetime; NULL binary object-reference guard (separate small fixes).
+2. Native Array interrupt polling plus cancellation and cleanup tests.
+3. Small conversion fast paths, large-scope compiler lookup, property hash,
+   direct intrinsic promise capability; measure each against its parent.
+4. High-value public promise/closure/brand/host-loop APIs, with focused C tests.
+5. Optional debugging/Web features and larger memory/platform experiments only
+   after selecting concrete use cases and confirming proposal stage.
+Each implemented correctness/feature change should carry focused repo tests,
+spec/provenance where applicable, and CI validation; this assessment makes no
+claim that unimplemented ports already pass those gates.
