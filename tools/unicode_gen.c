@@ -2361,6 +2361,8 @@ static void zwj_encode_string(DynBuf *dbuf, const uint32_t *buf, int len, int mo
             code = c - 0x1f000 + 0x1000;
         } else {
             assert(0);
+            /* The encoder cannot continue when assertions are disabled. */
+            abort();
         }
         if (i < len && is_emoji_modifier(buf[i])) {
             /* modifier */

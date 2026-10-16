@@ -678,11 +678,11 @@ tests/test_worker_context_failure$(EXE): $(OBJDIR)/tests/test_worker_context_fai
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # Compile the actual qjsc-generated context/main into the native fault unit.
-$(OBJDIR)/tests/qjsc-context-generated.c: $(QJSC) tests/fixture_qjsc_context.js
+$(OBJDIR)/tests/qjsc-context-generated.h: $(QJSC) tests/fixture_qjsc_context.js
 	mkdir -p $(@D)
 	$(QJSC) -e -o $@ tests/fixture_qjsc_context.js
 
-$(OBJDIR)/tests/test_qjsc_context_failures.o: $(OBJDIR)/tests/qjsc-context-generated.c
+$(OBJDIR)/tests/test_qjsc_context_failures.o: $(OBJDIR)/tests/qjsc-context-generated.h
 $(OBJDIR)/tests/test_qjsc_context_failures.o: CFLAGS+=-I$(OBJDIR)/tests
 
 tests/test_qjsc_context_failures$(EXE): $(OBJDIR)/tests/test_qjsc_context_failures.o libquickjs$(LTOEXT).a
