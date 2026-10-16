@@ -310,13 +310,17 @@ function test_os_exec()
     assert(status & 0x7f, 0); /* exited */
     assert(status >> 8, 0); /* exit code */
 
-    pid = os.exec(["cat"], { block: false } );
+    /* Keep stdin open so cat cannot exit on EOF before receiving SIGTERM. */
+    fds = os.pipe();
+    pid = os.exec(["cat"], { block: false, stdin: fds[0] } );
     assert(pid >= 0);
-    os.kill(pid, os.SIGTERM);
+    os.close(fds[0]);
+    assert(os.kill(pid, os.SIGTERM), 0);
     [ret, status] = os.waitpid(pid, 0);
     assert(ret, pid);
     assert(status !== 0, true, `expect nonzero exit code (got ${status})`);
     assert(status & 0x7f, os.SIGTERM);
+    os.close(fds[1]);
 }
 
 function test_timer()
