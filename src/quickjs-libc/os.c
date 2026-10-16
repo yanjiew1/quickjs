@@ -1241,7 +1241,8 @@ static const JSCFunctionListEntry js_os_funcs[] = {
 
 static int js_os_init(JSContext *ctx, JSModuleDef *m)
 {
-    os_poll_func = js_os_poll;
+    /* Worker runtimes can initialize this module while another thread polls. */
+    atomic_store_explicit(&os_poll_func, js_os_poll, memory_order_relaxed);
 
 #ifdef USE_WORKER
     if (js_init_worker(ctx, m) < 0)
