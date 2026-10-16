@@ -1,0 +1,16 @@
+/* Generated build configuration for the command-line compiler. */
+#ifndef QJSC_BUILD_CONFIG_H
+#define QJSC_BUILD_CONFIG_H
+#mesondefine CONFIG_CC
+#mesondefine CONFIG_CC_ARGS
+#mesondefine CONFIG_PREFIX
+#mesondefine CONFIG_INCLUDE_DIR
+#mesondefine CONFIG_LIB_DIR
+#mesondefine CONFIG_LTO
+#mesondefine CONFIG_LTO_FLAG
+#mesondefine CONFIG_M32
+#mesondefine CONFIG_ASAN
+#mesondefine CONFIG_MSAN
+#mesondefine CONFIG_UBSAN
+#mesondefine CONFIG_TSAN
+#endif
