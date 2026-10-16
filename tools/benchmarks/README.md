@@ -1,9 +1,13 @@
 # Informational CI benchmarks
 
+The benchmark tooling requires Python 3.8 or newer. Meson and Ninja are needed
+when either revision uses Meson; historical Make revisions still require Make.
+
 The `benchmarks` workflow compares the exact candidate commit with its actual
 immediate first parent. The runner independently verifies this relationship.
 GCC and Clang each build both
-revisions using their own checked out Makefile with `-O2`, no LTO, and no
+revisions using their own checked out build definitions (Meson, or Make for
+historical parents) with `-O2`, no LTO, and no
 sanitizers. Complete build commands, compiler flags, binary checksums, and
 compiler/linker versions are retained with the measurements. Compiler
 versions come from the selected Ubuntu runner image and are reported.
@@ -104,7 +108,8 @@ python3 tools/benchmarks/run.py \
 The tool checks both revisions and hashes the resulting binaries before
 and after measurement. It also refuses existing `.obj`, engine/compiler
 binaries, generated `repl.c`, root objects/archives/dependencies, and
-untracked compatibility headers before invoking make. A clean tracked
+untracked compatibility headers before invoking a build. Meson builds use a fresh directory in the report
+folder, and their compiler database is checked against the objects produced. A clean tracked
 tree is insufficient when ignored products from another compiler remain.
 The tool never deletes these files; use new pristine checkouts instead.
 Existing output directories are rejected so a
