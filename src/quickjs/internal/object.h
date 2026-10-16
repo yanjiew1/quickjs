@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Ben Noordhuis
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -66,6 +67,7 @@ struct JSShape {
     /* true if the shape is inserted in the shape hash table. If not,
        JSShape.hash is not valid */
     uint8_t is_hashed;
+    uint8_t prop_hash_shift; /* 32 - log2(property hash size) */
     uint32_t hash; /* current hash value */
     uint32_t prop_hash_mask; /* >= 2 */
     int prop_size; /* allocated properties */
@@ -204,6 +206,13 @@ static inline JSShapeProperty *get_shape_prop(JSShape *sh)
     return (JSShapeProperty *)((uint32_t *)(sh + 1) + sh->prop_hash_mask + 1);
 }
 
+/* Shapes have at least two buckets; their cached shift is in [0, 31].
+   Use 32-bit atom arithmetic regardless of the host pointer width. */
+static inline uint32_t js_property_hash(JSAtom atom, unsigned shift)
+{
+    return (atom * 0x61c88647U) >> shift;
+}
+
 static force_inline JSShapeProperty *find_own_property1(JSObject *p,
                                                         JSAtom atom)
 {
@@ -211,7 +220,7 @@ static force_inline JSShapeProperty *find_own_property1(JSObject *p,
     JSShapeProperty *pr, *prop;
     intptr_t h;
     sh = p->shape;
-    h = (uintptr_t)atom & sh->prop_hash_mask;
+    h = js_property_hash(atom, sh->prop_hash_shift);
     h = sh->hash_table[h];
     prop = get_shape_prop(sh);
     while (h) {
@@ -232,7 +241,7 @@ static force_inline JSShapeProperty *find_own_property(JSProperty **ppr,
     JSShapeProperty *pr, *prop;
     intptr_t h;
     sh = p->shape;
-    h = (uintptr_t)atom & sh->prop_hash_mask;
+    h = js_property_hash(atom, sh->prop_hash_shift);
     h = sh->hash_table[h];
     prop = get_shape_prop(sh);
     while (h) {
