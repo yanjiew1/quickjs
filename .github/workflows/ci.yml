@@ -19,10 +19,16 @@ env:
 
 jobs:
   linux:
-    name: Linux (Ubuntu)
-    runs-on: ubuntu-latest
+    name: Linux (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,7 +64,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test262-timings-linux
+          name: test262-timings-linux-${{ matrix.arch }}
           path: |
             test262_timings.jsonl
             test262_timings.csv
