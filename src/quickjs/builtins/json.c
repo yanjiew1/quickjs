@@ -452,26 +452,26 @@ typedef struct JSONParseRecordEntry {
     JSONParseRecord parse_record;
 } JSONParseRecordEntry;
 
-static void json_parse_record_init_obj(JSContext *ctx, JSONParseRecord *pr, JSValueConst val)
+static void json_parse_record_init_obj(JSONParseRecord *pr, JSValueConst val)
 {
-    pr->value = JS_DupValue(ctx, val);
+    pr->value = __JS_DupValue(val);
     pr->u.obj.count = 0;
     pr->u.obj.entries = NULL;
     pr->u.obj.hash_table = NULL;
     pr->u.obj.hash_size = 0;
 }
 
-static void json_parse_record_init_array(JSContext *ctx, JSONParseRecord *pr, JSValueConst val)
+static void json_parse_record_init_array(JSONParseRecord *pr, JSValueConst val)
 {
-    pr->value = JS_DupValue(ctx, val);
+    pr->value = __JS_DupValue(val);
     pr->u.array.count = 0;
     pr->u.array.elements = NULL;
 }
 
-static void json_parse_record_init_primitive(JSContext *ctx, JSONParseRecord *pr, JSValueConst val,
+static void json_parse_record_init_primitive(JSONParseRecord *pr, JSValueConst val,
                                              uint32_t source_pos, uint32_t source_len)
 {
-    pr->value = JS_DupValue(ctx, val);
+    pr->value = __JS_DupValue(val);
     pr->u.primitive.source_pos = source_pos;
     pr->u.primitive.source_len = source_len;
 }
@@ -603,7 +603,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
             if (JS_IsException(val))
                 goto fail;
             if (pr) {
-                json_parse_record_init_obj(ctx, pr, val);
+                json_parse_record_init_obj(pr, val);
                 pr_size = 0;
             }
             if (s->token.val != '}') {
@@ -666,7 +666,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
             if (JS_IsException(val))
                 goto fail;
             if (pr) {
-                json_parse_record_init_array(ctx, pr, val);
+                json_parse_record_init_array(pr, val);
                 pr_size = 0;
             }
             if (s->token.val != ']') {
@@ -703,7 +703,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
     case TOK_STRING:
         val = JS_DupValue(ctx, s->token.u.str.str);
         if (pr) {
-            json_parse_record_init_primitive(ctx, pr, val, 
+            json_parse_record_init_primitive(pr, val,
                                              s->token.ptr - s->buf_start,
                                              s->buf_ptr - s->token.ptr);
         }
@@ -713,7 +713,7 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
     case TOK_NUMBER:
         val = s->token.u.num.val;
         if (pr) {
-            json_parse_record_init_primitive(ctx, pr, val, 
+            json_parse_record_init_primitive(pr, val,
                                              s->token.ptr - s->buf_start,
                                              s->buf_ptr - s->token.ptr);
         }
@@ -725,14 +725,14 @@ static JSValue json_parse_value(JSParseState *s, JSONParseRecord *pr)
             s->token.u.ident.atom == JS_ATOM_true) {
             val = JS_NewBool(ctx, s->token.u.ident.atom == JS_ATOM_true);
             if (pr) {
-                json_parse_record_init_primitive(ctx, pr, val, 
+                json_parse_record_init_primitive(pr, val,
                                                  s->token.ptr - s->buf_start,
                                                  s->buf_ptr - s->token.ptr);
             }
         } else if (s->token.u.ident.atom == JS_ATOM_null) {
             val = JS_NULL;
             if (pr) {
-                json_parse_record_init_primitive(ctx, pr, val, 
+                json_parse_record_init_primitive(pr, val,
                                                  s->token.ptr - s->buf_start,
                                                  s->buf_ptr - s->token.ptr);
             }
@@ -836,7 +836,7 @@ static JSValue internalize_json_property(JSContext *ctx, JSValueConst holder,
         } else {
             pr = json_parse_record_find(pr, name);
         }
-        if (pr && !js_same_value(ctx, pr->value, val)) {
+        if (pr && !js_same_value(pr->value, val)) {
             pr = NULL;
         }
     }
@@ -929,7 +929,7 @@ static JSValue js_json_parse(JSContext *ctx, JSValueConst this_val,
         root = JS_NewObject(ctx);
         if (JS_IsException(root))
             goto fail;
-        json_parse_record_init_obj(ctx, pr, root);
+        json_parse_record_init_obj(pr, root);
         size = 0;
         pr1 = json_parse_record_add(ctx, pr, JS_ATOM_empty_string, &size);
         if (!pr1)

@@ -184,7 +184,7 @@ js_put_reference_slow(JSContext *ctx, JSStackFrame *sf,
                                  JS_PROP_THROW_STRICT);
 }
 
-static inline BOOL JS_IsHTMLDDA(JSContext *ctx, JSValueConst obj)
+static inline BOOL JS_IsHTMLDDA(JSValueConst obj)
 {
     JSObject *p;
     if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
@@ -853,7 +853,7 @@ static no_inline __exception int js_binary_logic_slow(JSContext *ctx,
 }
 
 /* op1 must be a bigint or int. */
-static JSBigInt *JS_ToBigIntBuf(JSContext *ctx, JSBigIntBuf *buf1,
+static JSBigInt *JS_ToBigIntBuf(JSBigIntBuf *buf1,
                                 JSValue op1)
 {
     JSBigInt *p1;
@@ -900,14 +900,14 @@ static int js_compare_bigint(JSContext *ctx, OPCodeEnum op,
         val = (v1 > v2) - (v1 < v2);
     } else {
         if (tag1 == JS_TAG_FLOAT64) {
-            p2 = JS_ToBigIntBuf(ctx, &buf2, op2);
-            val = js_bigint_float64_cmp(ctx, p2, JS_VALUE_GET_FLOAT64(op1));
+            p2 = JS_ToBigIntBuf(&buf2, op2);
+            val = js_bigint_float64_cmp(p2, JS_VALUE_GET_FLOAT64(op1));
             if (val == 2)
                 goto unordered;
             val = -val;
         } else if (tag2 == JS_TAG_FLOAT64) {
-            p1 = JS_ToBigIntBuf(ctx, &buf1, op1);
-            val = js_bigint_float64_cmp(ctx, p1, JS_VALUE_GET_FLOAT64(op2));
+            p1 = JS_ToBigIntBuf(&buf1, op1);
+            val = js_bigint_float64_cmp(p1, JS_VALUE_GET_FLOAT64(op2));
             if (val == 2) {
             unordered:
                 JS_FreeValue(ctx, op1);
@@ -915,9 +915,9 @@ static int js_compare_bigint(JSContext *ctx, OPCodeEnum op,
                 return FALSE;
             }
         } else {
-            p1 = JS_ToBigIntBuf(ctx, &buf1, op1);
-            p2 = JS_ToBigIntBuf(ctx, &buf2, op2);
-            val = js_bigint_cmp(ctx, p1, p2);
+            p1 = JS_ToBigIntBuf(&buf1, op1);
+            p2 = JS_ToBigIntBuf(&buf2, op2);
+            val = js_bigint_cmp(p1, p2);
         }
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
@@ -971,10 +971,10 @@ static no_inline int js_relational_slow(JSContext *ctx, JSValue *sp,
 
     if (tag_is_string(tag1) && tag_is_string(tag2)) {
         if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) {
-            res = js_string_compare(ctx, JS_VALUE_GET_STRING(op1),
+            res = js_string_compare(JS_VALUE_GET_STRING(op1),
                                     JS_VALUE_GET_STRING(op2));
         } else {
-            res = js_string_rope_compare(ctx, op1, op2, FALSE);
+            res = js_string_rope_compare(op1, op2, FALSE);
         }
         switch(op) {
         case OP_lt:
@@ -1121,7 +1121,7 @@ static no_inline __exception int js_eq_slow(JSContext *ctx, JSValue *sp,
             res = js_compare_bigint(ctx, OP_eq, op1, op2);
         }
     } else if (tag1 == tag2) {
-        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+        res = js_strict_eq2(op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if ((tag1 == JS_TAG_NULL && tag2 == JS_TAG_UNDEFINED) ||
@@ -1129,7 +1129,7 @@ static no_inline __exception int js_eq_slow(JSContext *ctx, JSValue *sp,
         res = TRUE;
     } else if (tag_is_string(tag1) && tag_is_string(tag2)) {
         /* needed when comparing strings and ropes */
-        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+        res = js_strict_eq2(op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if ((tag_is_string(tag1) && tag_is_number(tag2)) ||
@@ -1166,7 +1166,7 @@ static no_inline __exception int js_eq_slow(JSContext *ctx, JSValue *sp,
                 goto exception;
             }
         }
-        res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+        res = js_strict_eq2(op1, op2, JS_EQ_STRICT);
         JS_FreeValue(ctx, op1);
         JS_FreeValue(ctx, op2);
     } else if (tag1 == JS_TAG_BOOL) {
@@ -1192,9 +1192,9 @@ static no_inline __exception int js_eq_slow(JSContext *ctx, JSValue *sp,
         goto redo;
     } else {
         /* IsHTMLDDA object is equivalent to undefined for '==' and '!=' */
-        if ((JS_IsHTMLDDA(ctx, op1) &&
+        if ((JS_IsHTMLDDA(op1) &&
              (tag2 == JS_TAG_NULL || tag2 == JS_TAG_UNDEFINED)) ||
-            (JS_IsHTMLDDA(ctx, op2) &&
+            (JS_IsHTMLDDA(op2) &&
              (tag1 == JS_TAG_NULL || tag1 == JS_TAG_UNDEFINED))) {
             res = TRUE;
         } else {
@@ -1920,7 +1920,7 @@ static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
     if (JS_IsException(iterator))
         return -1;
     ft.generic_magic = js_create_array_iterator;
-    is_array_iterator = JS_IsCFunction(ctx, iterator, ft.generic,
+    is_array_iterator = JS_IsCFunction(iterator, ft.generic,
                                        JS_ITERATOR_KIND_VALUE);
     JS_FreeValue(ctx, iterator);
 
@@ -1935,8 +1935,8 @@ static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
 
     ft.iterator_next = js_array_iterator_next;
     if (is_array_iterator
-    &&  JS_IsCFunction(ctx, method, ft.generic, 0)
-    &&  js_get_fast_array(ctx, sp[-1], &arrp, &count32)) {
+    &&  JS_IsCFunction(method, ft.generic, 0)
+    &&  js_get_fast_array(sp[-1], &arrp, &count32)) {
         uint32_t len;
         if (js_get_length32(ctx, &len, sp[-1]))
             goto exception;
@@ -2400,8 +2400,8 @@ static int js_op_define_class(JSContext *ctx, JSValue *sp,
     if (JS_DefinePropertyValue(ctx, ctor, JS_ATOM_prototype,
                                JS_DupValue(ctx, proto), JS_PROP_THROW) < 0)
         goto fail;
-    set_cycle_flag(ctx, ctor);
-    set_cycle_flag(ctx, proto);
+    set_cycle_flag(ctor);
+    set_cycle_flag(proto);
 
     JS_FreeValue(ctx, parent_proto);
     JS_FreeValue(ctx, parent_class);
@@ -3106,7 +3106,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
                 call_argv = sp - call_argc;
                 sf->cur_pc = pc;
-                if (js_same_value(ctx, call_argv[-1], ctx->eval_obj)) {
+                if (js_same_value(call_argv[-1], ctx->eval_obj)) {
                     if (call_argc >= 1)
                         obj = call_argv[0];
                     else
@@ -3139,7 +3139,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 tab = build_arg_list(ctx, &len, sp[-1]);
                 if (!tab)
                     goto exception;
-                if (js_same_value(ctx, sp[-2], ctx->eval_obj)) {
+                if (js_same_value(sp[-2], ctx->eval_obj)) {
                     if (len >= 1)
                         obj = tab[0];
                     else
@@ -5187,7 +5187,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         goto slow_eq ## inv;                            \
                     }                                                   \
                 } else if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) { \
-                    res = js_string_eq(ctx, JS_VALUE_GET_STRING(op1),   \
+                    res = js_string_eq(JS_VALUE_GET_STRING(op1),   \
                                        JS_VALUE_GET_STRING(op2));       \
                     JS_FreeValue(ctx, op1);                             \
                     JS_FreeValue(ctx, op2);                             \
@@ -5248,12 +5248,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     res = (tag1 == tag2);                               \
                     JS_FreeValue(ctx, op2);                             \
                 } else if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) { \
-                    res = js_string_eq(ctx, JS_VALUE_GET_STRING(op1),   \
+                    res = js_string_eq(JS_VALUE_GET_STRING(op1),   \
                                        JS_VALUE_GET_STRING(op2));       \
                     JS_FreeValue(ctx, op1);                             \
                     JS_FreeValue(ctx, op2);                             \
                 } else {                                                \
-                    res = js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);   \
+                    res = js_strict_eq2(op1, op2, JS_EQ_STRICT);   \
                     JS_FreeValue(ctx, op1);                             \
                     JS_FreeValue(ctx, op2);                             \
                 }                                                       \
@@ -5570,7 +5570,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         }
     }
  exception:
-    if (is_backtrace_needed(ctx, rt->current_exception)) {
+    if (is_backtrace_needed(rt->current_exception)) {
         /* add the backtrace information now (it is not done
            before if the exception happens in a bytecode
            operation */

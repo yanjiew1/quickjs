@@ -117,7 +117,7 @@ static JSValue js_proxy_get_prototype(JSContext *ctx, JSValueConst obj)
             JS_FreeValue(ctx, ret);
             return JS_EXCEPTION;
         }
-        if (!js_same_value(ctx, proto1, ret)) {
+        if (!js_same_value(proto1, ret)) {
             JS_FreeValue(ctx, proto1);
         fail:
             JS_FreeValue(ctx, ret);
@@ -157,7 +157,7 @@ static int js_proxy_set_prototype(JSContext *ctx, JSValueConst obj,
         proto1 = JS_GetPrototype(ctx, s->target);
         if (JS_IsException(proto1))
             return -1;
-        if (!js_same_value(ctx, proto_val, proto1)) {
+        if (!js_same_value(proto_val, proto1)) {
             JS_FreeValue(ctx, proto1);
             JS_ThrowTypeError(ctx, "proxy: inconsistent prototype");
             return -1;
@@ -299,7 +299,7 @@ static JSValue js_proxy_get(JSContext *ctx, JSValueConst obj, JSAtom atom,
     }
     if (res) {
         if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == 0) {
-            if (!js_same_value(ctx, desc.value, ret)) {
+            if (!js_same_value(desc.value, ret)) {
                 goto fail;
             }
         } else if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE)) == JS_PROP_GETSET) {
@@ -352,7 +352,7 @@ static int js_proxy_set(JSContext *ctx, JSValueConst obj, JSAtom atom,
             return -1;
         if (res) {
             if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == 0) {
-                if (!js_same_value(ctx, desc.value, value)) {
+                if (!js_same_value(desc.value, value)) {
                     goto fail;
                 }
             } else if ((desc.flags & (JS_PROP_GETSET | JS_PROP_CONFIGURABLE)) == JS_PROP_GETSET && JS_IsUndefined(desc.setter)) {
@@ -412,7 +412,7 @@ static JSValue js_create_desc(JSContext *ctx, JSValueConst val,
 }
 
 /* return FALSE if not OK */
-static BOOL check_define_prop_desc(JSContext *ctx, const JSPropertyDescriptor *desc,
+static BOOL check_define_prop_desc(const JSPropertyDescriptor *desc,
                                    JSValueConst val, JSValueConst getter, JSValueConst setter,
                                    int flags)
 {
@@ -423,16 +423,16 @@ static BOOL check_define_prop_desc(JSContext *ctx, const JSPropertyDescriptor *d
     if (!(desc->flags & JS_PROP_CONFIGURABLE)) {
         if ((desc->flags & JS_PROP_TMASK) == JS_PROP_GETSET) {
             if ((flags & JS_PROP_HAS_GET) &&
-                !js_same_value(ctx, getter, desc->getter)) {
+                !js_same_value(getter, desc->getter)) {
                 return FALSE;
             }
             if ((flags & JS_PROP_HAS_SET) &&
-                !js_same_value(ctx, setter, desc->setter)) {
+                !js_same_value(setter, desc->setter)) {
                 return FALSE;
             }
         } else if (!(desc->flags & JS_PROP_WRITABLE)) {
             if ((flags & JS_PROP_HAS_VALUE) &&
-                !js_same_value(ctx, val, desc->value)) {
+                !js_same_value(val, desc->value)) {
                 return FALSE;
             }
         }
@@ -518,7 +518,7 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
                 flags1 |= JS_PROP_HAS_GET | JS_PROP_HAS_SET;
             else
                 flags1 |= JS_PROP_HAS_VALUE | JS_PROP_HAS_WRITABLE;
-            if (!check_define_prop_desc(ctx, &target_desc, result_desc.value,
+            if (!check_define_prop_desc(&target_desc, result_desc.value,
                                         result_desc.getter, result_desc.setter, flags1)) {
                 goto fail1;
             }
@@ -613,7 +613,7 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
         if (!p->extensible || setting_not_configurable)
             goto fail;
     } else {
-        if (!check_define_prop_desc(ctx, &desc, val, getter, setter, flags))
+        if (!check_define_prop_desc(&desc, val, getter, setter, flags))
             goto fail1;
 
         /* additional checks */

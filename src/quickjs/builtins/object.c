@@ -769,7 +769,7 @@ static JSValue js_object_fromEntries(JSContext *ctx, JSValueConst this_val,
 static JSValue js_object_is(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv)
 {
-    return JS_NewBool(ctx, js_same_value(ctx, argv[0], argv[1]));
+    return JS_NewBool(ctx, js_same_value(argv[0], argv[1]));
 }
 
 static JSValue js_object_get___proto__(JSContext *ctx, JSValueConst this_val)
