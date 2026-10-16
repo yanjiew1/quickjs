@@ -110,8 +110,8 @@ int JS_AddIntrinsicBasicObjects(JSContext *ctx)
         const JSCFunctionListEntry *funcs;
         int n_args;
         char buf[ATOM_GET_STR_BUF_SIZE];
-        const char *name = JS_AtomGetStr(ctx, buf, sizeof(buf),
-                                         JS_ATOM_EvalError + i);
+        const char *name = JS_AtomGetStrRT(ctx->rt, buf, sizeof(buf),
+                                           JS_ATOM_EvalError + i);
         n_args = i == JS_SUPPRESSED_ERROR ? 3 :
             1 + (i == JS_AGGREGATE_ERROR);
         funcs = js_native_error_proto_funcs + 2 * i;

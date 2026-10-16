@@ -130,7 +130,7 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj,
     
     /* Allocations can replace and release the pending exception. */
     error_ref = JS_DupValue(ctx, error_obj);
-    js_dbuf_init(ctx, &dbuf);
+    js_dbuf_init(ctx->rt, &dbuf);
     if (filename) {
         dbuf_printf(&dbuf, "    at %s", filename);
         if (line_num != -1)
@@ -301,7 +301,7 @@ JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContex
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return JS_ThrowSyntaxError(ctx, fmt,
-                             JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
+                             JS_AtomGetStrRT(ctx->rt, buf, sizeof(buf), atom));
 }
 
 JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...)
@@ -378,7 +378,7 @@ JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name)
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return JS_ThrowReferenceError(ctx, "'%s' is not defined",
-                                  JS_AtomGetStr(ctx, buf, sizeof(buf), name));
+                                  JS_AtomGetStrRT(ctx->rt, buf, sizeof(buf), name));
 }
 
 JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name)
@@ -386,7 +386,7 @@ JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name)
     char buf[ATOM_GET_STR_BUF_SIZE];
     return JS_ThrowReferenceError(ctx, "%s is not initialized",
                                   name == JS_ATOM_NULL ? "lexical variable" :
-                                  JS_AtomGetStr(ctx, buf, sizeof(buf), name));
+                                  JS_AtomGetStrRT(ctx->rt, buf, sizeof(buf), name));
 }
 
 JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
@@ -416,5 +416,5 @@ JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext 
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return JS_ThrowTypeError(ctx, fmt,
-                             JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
+                             JS_AtomGetStrRT(ctx->rt, buf, sizeof(buf), atom));
 }

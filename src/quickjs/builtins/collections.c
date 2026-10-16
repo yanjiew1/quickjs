@@ -452,7 +452,7 @@ static JSValue js_map_get(JSContext *ctx, JSValueConst this_val,
 }
 
 /* return JS_TRUE or JS_FALSE */
-static JSValue map_delete_record(JSContext *ctx, JSMapState *s, JSValueConst key)
+static JSValue map_delete_record(JSRuntime *rt, JSMapState *s, JSValueConst key)
 {
     JSMapRecord *mr, **pmr;
     uint32_t h;
@@ -477,7 +477,7 @@ static JSValue map_delete_record(JSContext *ctx, JSMapState *s, JSValueConst key
     /* remove from the hash table */
     *pmr = mr->hash_next;
     
-    map_delete_record_internal(ctx->rt, s, mr);
+    map_delete_record_internal(rt, s, mr);
     return JS_TRUE;
 }
 
@@ -542,7 +542,7 @@ static JSValue js_map_delete(JSContext *ctx, JSValueConst this_val,
     JSMapState *s = JS_GetOpaque2(ctx, this_val, JS_CLASS_MAP + magic);
     if (!s)
         return JS_EXCEPTION;
-    return map_delete_record(ctx, s, argv[0]);
+    return map_delete_record(ctx->rt, s, argv[0]);
 }
 
 static JSValue js_map_clear(JSContext *ctx, JSValueConst this_val,
@@ -1326,7 +1326,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             }
             if (ok) {
-                map_delete_record(ctx, t, item);
+                map_delete_record(ctx->rt, t, item);
             }
             JS_FreeValue(ctx, item);
         }
@@ -1343,7 +1343,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
                 goto exception;
             if (done) // item is JS_UNDEFINED
                 break;
-            map_delete_record(ctx, t, item);
+            map_delete_record(ctx->rt, t, item);
             JS_FreeValue(ctx, item);
         }
     }
@@ -1406,7 +1406,7 @@ static JSValue js_set_symmetricDifference(JSContext *ctx, JSValueConst this_val,
         present = (NULL != map_find_record(s, item));
         mr = map_find_record(t, item);
         if (present) {
-            map_delete_record(ctx, t, item);
+            map_delete_record(ctx->rt, t, item);
             JS_FreeValue(ctx, item);
         } else if (mr) {
             JS_FreeValue(ctx, item);
@@ -1579,8 +1579,8 @@ int JS_AddIntrinsicMapSet(JSContext *ctx)
 
     for(i = 0; i < 4; i++) {
         JSCFunctionType ft;
-        const char *name = JS_AtomGetStr(ctx, buf, sizeof(buf),
-                                         JS_ATOM_Map + i);
+        const char *name = JS_AtomGetStrRT(ctx->rt, buf, sizeof(buf),
+                                           JS_ATOM_Map + i);
         ft.constructor_magic = js_map_constructor;
         obj1 = JS_NewCConstructor(ctx, JS_CLASS_MAP + i, name,
                                   ft.generic, 0, JS_CFUNC_constructor_magic, i,

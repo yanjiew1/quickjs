@@ -40,7 +40,6 @@ enum {
 #define JS_ATOM_TAG_INT (1U << 31)
 #define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
 #define ATOM_GET_STR_BUF_SIZE 64
-const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom);
 static inline BOOL __JS_AtomIsTaggedInt(JSAtom v)
 {
     return (v & JS_ATOM_TAG_INT) != 0;
@@ -59,7 +58,7 @@ static inline uint32_t __JS_AtomToUInt32(JSAtom atom)
 
 void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p);
 JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p);
-BOOL JS_AtomIsString(JSContext *ctx, JSAtom v);
+BOOL JS_AtomIsString(JSRuntime *rt, JSAtom v);
 __maybe_unused void JS_DumpAtoms(JSRuntime *rt);
 JSAtom js_atom_concat_str(JSContext *ctx, JSAtom name, const char *str1);
 JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n);
@@ -80,16 +79,16 @@ typedef enum {
 int JS_InitAtoms(JSRuntime *rt);
 JSAtom __JS_NewAtomInit(JSRuntime *rt, const char *str, int len, int atom_type);
 JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
-JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v);
+JSAtomKindEnum JS_AtomGetKind(JSRuntime *rt, JSAtom v);
 JSAtom __JS_FindAtom(JSRuntime *rt, const char *str, size_t len, int atom_type);
 JSValue JS_NewSymbolInternal(JSContext *ctx, JSString *p, int atom_type);
 JSValue JS_NewSymbolFromAtom(JSContext *ctx, JSAtom descr, int atom_type);
 const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size, JSAtom atom);
-BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval, JSAtom atom);
+BOOL JS_AtomIsArrayIndex(JSRuntime *rt, uint32_t *pval, JSAtom atom);
 JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom);
 int JS_AtomIsNumericIndex(JSContext *ctx, JSAtom atom);
-BOOL JS_AtomSymbolHasDescription(JSContext *ctx, JSAtom v);
+BOOL JS_AtomSymbolHasDescription(JSRuntime *rt, JSAtom v);
 
-JSAtom js_symbol_to_atom(JSContext *ctx, JSValue val);
+JSAtom js_symbol_to_atom(JSRuntime *rt, JSValue val);
 
 #endif

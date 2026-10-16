@@ -59,7 +59,7 @@ static JSValue js_reflect_construct(JSContext *ctx, JSValueConst this_val,
     if (!tab)
         return JS_EXCEPTION;
     ret = JS_CallConstructor2(ctx, func, new_target, len, (JSValueConst *)tab);
-    free_arg_list(ctx, tab, len);
+    free_arg_list(ctx->rt, tab, len);
     return ret;
 }
 
