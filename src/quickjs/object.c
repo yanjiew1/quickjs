@@ -4,6 +4,7 @@
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
  * Copyright (c) 2026 Ben Noordhuis
+ * Copyright (c) 2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -176,7 +177,7 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
 {
     JSRuntime *rt = ctx->rt;
     JSValue val, getter, setter;
-    int flags;
+    int flags, present;
 
     if (!JS_IsObject(desc)) {
         JS_ThrowTypeErrorNotAnObject(ctx);
@@ -186,7 +187,10 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
     val = JS_UNDEFINED;
     getter = JS_UNDEFINED;
     setter = JS_UNDEFINED;
-    if (JS_HasProperty(ctx, desc, JS_ATOM_enumerable)) {
+    present = JS_HasProperty(ctx, desc, JS_ATOM_enumerable);
+    if (present < 0)
+        goto fail;
+    if (present) {
         JSValue prop = JS_GetProperty(ctx, desc, JS_ATOM_enumerable);
         if (JS_IsException(prop))
             goto fail;
@@ -194,7 +198,10 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
         if (JS_ToBoolFree(rt, prop))
             flags |= JS_PROP_ENUMERABLE;
     }
-    if (JS_HasProperty(ctx, desc, JS_ATOM_configurable)) {
+    present = JS_HasProperty(ctx, desc, JS_ATOM_configurable);
+    if (present < 0)
+        goto fail;
+    if (present) {
         JSValue prop = JS_GetProperty(ctx, desc, JS_ATOM_configurable);
         if (JS_IsException(prop))
             goto fail;
@@ -202,13 +209,19 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
         if (JS_ToBoolFree(rt, prop))
             flags |= JS_PROP_CONFIGURABLE;
     }
-    if (JS_HasProperty(ctx, desc, JS_ATOM_value)) {
+    present = JS_HasProperty(ctx, desc, JS_ATOM_value);
+    if (present < 0)
+        goto fail;
+    if (present) {
         flags |= JS_PROP_HAS_VALUE;
         val = JS_GetProperty(ctx, desc, JS_ATOM_value);
         if (JS_IsException(val))
             goto fail;
     }
-    if (JS_HasProperty(ctx, desc, JS_ATOM_writable)) {
+    present = JS_HasProperty(ctx, desc, JS_ATOM_writable);
+    if (present < 0)
+        goto fail;
+    if (present) {
         JSValue prop = JS_GetProperty(ctx, desc, JS_ATOM_writable);
         if (JS_IsException(prop))
             goto fail;
@@ -216,20 +229,28 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
         if (JS_ToBoolFree(rt, prop))
             flags |= JS_PROP_WRITABLE;
     }
-    if (JS_HasProperty(ctx, desc, JS_ATOM_get)) {
+    present = JS_HasProperty(ctx, desc, JS_ATOM_get);
+    if (present < 0)
+        goto fail;
+    if (present) {
         flags |= JS_PROP_HAS_GET;
         getter = JS_GetProperty(ctx, desc, JS_ATOM_get);
-        if (JS_IsException(getter) ||
-            !(JS_IsUndefined(getter) || JS_IsFunction(ctx, getter))) {
+        if (JS_IsException(getter))
+            goto fail;
+        if (!(JS_IsUndefined(getter) || JS_IsFunction(ctx, getter))) {
             JS_ThrowTypeError(ctx, "invalid getter");
             goto fail;
         }
     }
-    if (JS_HasProperty(ctx, desc, JS_ATOM_set)) {
+    present = JS_HasProperty(ctx, desc, JS_ATOM_set);
+    if (present < 0)
+        goto fail;
+    if (present) {
         flags |= JS_PROP_HAS_SET;
         setter = JS_GetProperty(ctx, desc, JS_ATOM_set);
-        if (JS_IsException(setter) ||
-            !(JS_IsUndefined(setter) || JS_IsFunction(ctx, setter))) {
+        if (JS_IsException(setter))
+            goto fail;
+        if (!(JS_IsUndefined(setter) || JS_IsFunction(ctx, setter))) {
             JS_ThrowTypeError(ctx, "invalid setter");
             goto fail;
         }
