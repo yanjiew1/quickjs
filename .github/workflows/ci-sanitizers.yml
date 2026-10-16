@@ -35,7 +35,7 @@ jobs:
       USE_ASAN: ${{ matrix.sanitizer == 'ASan' && 'y' || '' }}
       USE_UBSAN: ${{ matrix.sanitizer == 'UBSan' && 'y' || '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
       - name: Build
@@ -56,7 +56,7 @@ jobs:
           ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
       - name: Preserve Test262 diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test262-${{ matrix.compiler }}-${{ matrix.sanitizer }}
           path: |
@@ -65,7 +65,7 @@ jobs:
   linux-msan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
       - name: Build
@@ -88,7 +88,7 @@ jobs:
           ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
       - name: Preserve Test262 diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test262-clang-MSan
           path: |
@@ -97,7 +97,7 @@ jobs:
   macos-asan:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: |
           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
@@ -110,7 +110,7 @@ jobs:
   macos-ubsan:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: |
           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
