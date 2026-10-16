@@ -46,9 +46,9 @@ static inline int js_resize_array(JSContext *ctx, void **parray, int elem_size,
 
 void *js_dbuf_realloc(void *opaque, void *ptr, size_t size);
 
-static inline void js_dbuf_init(JSContext *ctx, DynBuf *s)
+static inline void js_dbuf_init(JSRuntime *rt, DynBuf *s)
 {
-    dbuf_init2(s, ctx->rt, js_dbuf_realloc);
+    dbuf_init2(s, rt, js_dbuf_realloc);
 }
 
 void *js_realloc_bytecode_rt(void *opaque, void *ptr, size_t size);

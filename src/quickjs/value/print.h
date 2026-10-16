@@ -28,7 +28,7 @@
 #include "../internal/base.h"
 
 void js_dump_value_write(void *opaque, const char *buf, size_t len);
-__maybe_unused void print_atom(JSContext *ctx, JSAtom atom);
+__maybe_unused void print_atom(JSRuntime *rt, JSAtom atom);
 __maybe_unused void JS_DumpValue(JSContext *ctx, const char *str, JSValueConst val);
 __maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
 __maybe_unused void JS_DumpObject(JSRuntime *rt, JSObject *p);
