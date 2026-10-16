@@ -53,6 +53,7 @@ struct BlockEnv {
     int label_async_close; /* compiler-owned AsyncIteratorClose subroutine */
     int iterator_idx; /* unnamed local used only while closing */
     int scope_level;
+    uint8_t has_lexical_iteration : 1; /* ordinary for-let head */
     uint8_t has_iterator : 1;
     uint8_t is_async_iterator : 1;
     uint8_t is_regular_stmt : 1; /* i.e. not a loop statement */
@@ -4824,6 +4825,7 @@ static void push_break_entry(JSFunctionDef *fd, BlockEnv *be,
     be->label_async_close = -1;
     be->iterator_idx = -1;
     be->scope_level = fd->scope_level;
+    be->has_lexical_iteration = FALSE;
     be->has_iterator = FALSE;
     be->is_async_iterator = FALSE;
     be->is_regular_stmt = FALSE;
@@ -5170,7 +5172,12 @@ static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
         if (is_cont &&
             top->label_cont != -1 &&
             (name == JS_ATOM_NULL || top->label_name == name)) {
-            /* continue stays inside the same block */
+            /* The next for-let iteration gets a fresh environment before
+               its update expression, even when continue skips fallthrough. */
+            if (top->has_lexical_iteration) {
+                emit_op(s, OP_leave_scope);
+                emit_u16(s, top->scope_level);
+            }
             emit_goto(s, OP_goto, top->label_cont);
             return 0;
         }
@@ -6207,6 +6214,8 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             push_break_entry(s->cur_func, &break_entry,
                              label_name, label_break, label_cont, 0);
 
+            break_entry.has_lexical_iteration = tok == TOK_LET && !is_using;
+
             /* test expression */
             if (s->token.val == ';') {
                 /* no test expression */
@@ -6245,7 +6254,6 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 goto fail;
 
             /* close the closures before the next iteration */
-            /* XXX: check continue case for ordinary lexical heads */
             if (!is_using)
                 close_scopes(s, s->cur_func->scope_level, block_scope_level);
 
