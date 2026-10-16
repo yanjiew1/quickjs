@@ -34,8 +34,10 @@ async function test_array_from_async_realm()
                 check(Object.getPrototypeOf(error), TypeError.prototype,
                       "next-result TypeError belongs to the suspended factory realm");
             });
+        runGC();
         settle(invalidNext.resolve, 1);
         await invalidCheck;
+        runGC();
 
         const first = gate();
         const second = Promise.resolve(18);
@@ -49,8 +51,10 @@ async function test_array_from_async_realm()
         const arrayLikeResult = Array.fromAsync({
             0: first.promise, 1: second, length: 2,
         });
+        runGC();
         settle(first.resolve, 17);
         const values = await arrayLikeResult;
+        runGC();
         check(values[0], 17, "first array-like value");
         check(values[1], 18, "second array-like value");
         check(constructorReads, 1, "later Await checks the original intrinsic once");
@@ -74,8 +78,10 @@ async function test_array_from_async_realm()
                 check(Object.getPrototypeOf(error), TypeError.prototype,
                       "indexed-definition error belongs to the factory realm");
             });
+        runGC();
         settle(next.resolve, { value: 23, done: false });
         await closedCheck;
+        runGC();
         check(closes, 1, "property failure still closes exactly once");
         return true;
     });
