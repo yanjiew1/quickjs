@@ -15,9 +15,6 @@ on:
     branches:
       - '*'
 
-env:
-  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
-
 jobs:
   linux-sanitizers:
     name: Linux ${{ matrix.arch }} ${{ matrix.compiler }} ${{ matrix.sanitizer }}
@@ -37,29 +34,31 @@ jobs:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
       COMPILER: ${{ matrix.compiler }}
-      USE_CLANG: ${{ matrix.compiler == 'clang' && 'y' || '' }}
-      USE_ASAN: ${{ matrix.sanitizer == 'ASan' && 'y' || '' }}
-      USE_UBSAN: ${{ matrix.sanitizer == 'UBSan' && 'y' || '' }}
       # ASan bypasses small-block pools; UBSan must cover pooled iteration.
       USE_MALLOC_ITER: ${{ matrix.compiler == 'gcc' && matrix.sanitizer == 'UBSan' && 'y' || '' }}
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: true
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO= \
-            CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
-            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" \
-            CONFIG_MALLOC_ITER="$USE_MALLOC_ITER"
+          sanitizer=undefined
+          if test "${{ matrix.sanitizer }}" = ASan; then sanitizer=address; fi
+          iteration=false
+          if test "$USE_MALLOC_ITER" = y; then iteration=true; fi
+          CC="$COMPILER" meson setup build -Dwerror=true -Db_sanitize="$sanitizer" -Dmalloc_iter="$iteration"
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Run built-in tests
         run: |
-          make CONFIG_WERROR=y CONFIG_LTO= \
-            CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
-            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" \
-            CONFIG_MALLOC_ITER="$USE_MALLOC_ITER" test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
       - name: Install pinned Test262
-        run: make test2-bootstrap
+        run: python3 tools/build/test262.py bootstrap
       - name: Run Test262
         # GCC ARM64 fake-stack scanning dominates long loops. Retain UAR
         # checks in its repo tests and in Clang/x86 full Test262 runs.
@@ -67,7 +66,7 @@ jobs:
           ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=${{ matrix.arch == 'arm64' && matrix.compiler == 'gcc' && '0' || '1' }}
         run: |
           set -o pipefail
-          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+          ./build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
       - name: Report Test262 timings
         if: always()
         run: |
@@ -90,6 +89,25 @@ jobs:
             test262_timings.csv
             test262_timings.md
 
+  linux-shared-sanitizers:
+    name: Linux Clang shared ASan and UBSan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
+      - name: Build and test the shared engine
+        run: |
+          CC=clang meson setup build -Dwerror=true -Ddefault_library=shared -Db_sanitize=address,undefined
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
   linux-gc-stress:
     name: Linux ${{ matrix.arch }} allocation-triggered GC stress
     runs-on: ${{ matrix.runner }}
@@ -110,13 +128,17 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
       - uses: actions/checkout@v7
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Build and run focused GC stress tests
         run: |
           set -o pipefail
-          make -j$(getconf _NPROCESSORS_ONLN) CC="${{ matrix.compiler }}" HOST_CC="${{ matrix.compiler }}" \
-            CONFIG_CLANG="${{ matrix.compiler == 'clang' && 'y' || '' }}" \
-            CONFIG_WERROR=y CONFIG_LTO= CONFIG_ASAN=y CONFIG_UBSAN=y \
-            CONFIG_GC_STRESS=y CONFIG_MALLOC_ITER=y test-gc-stress 2>&1 | tee gc-stress.log
+          CC="${{ matrix.compiler }}" meson setup build -Dwerror=true -Db_sanitize=address,undefined -Dgc_stress=true -Dmalloc_iter=true
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+          meson test -C build --suite gc-stress --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3 2>&1 | tee gc-stress.log
+
       - name: Preserve GC stress diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -140,6 +162,10 @@ jobs:
       TSAN_OPTIONS: halt_on_error=1:exitcode=66
     steps:
       - uses: actions/checkout@v7
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Check ThreadSanitizer startup
         run: |
           set -o pipefail
@@ -154,9 +180,11 @@ jobs:
       - name: Build and run focused concurrency tests
         run: |
           set -o pipefail
-          make -j$(getconf _NPROCESSORS_ONLN) CC=gcc HOST_CC=gcc \
-            CONFIG_WERROR=y CONFIG_LTO= CONFIG_TSAN=y \
-            test-threading 2>&1 | tee tsan-logs/tests.log
+          CC=gcc meson setup build -Dwerror=true -Db_sanitize=thread
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+          meson test -C build --suite threading --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3 2>&1 | tee tsan-logs/tests.log
+          meson test -C build --no-rebuild --repeat 2 test_wait_queue worker --print-errorlogs 2>&1 | tee -a tsan-logs/tests.log
+
       - name: Preserve ThreadSanitizer diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -179,24 +207,31 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: true
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Build
         env:
           CC: clang
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_MSAN=y CONFIG_CLANG=y
+          CC=clang meson setup build -Dwerror=true -Db_sanitize=memory -Db_pie=true
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Run built-in tests
         env:
           MSAN_OPTIONS: halt_on_error=1
         run: |
-          make CONFIG_MSAN=y CONFIG_CLANG=y test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
       - name: Install pinned Test262
-        run: make test2-bootstrap
+        run: python3 tools/build/test262.py bootstrap
       - name: Run Test262
         env:
           MSAN_OPTIONS: halt_on_error=1
         run: |
           set -o pipefail
-          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+          ./build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
       - name: Report Test262 timings
         if: always()
         run: |
@@ -223,24 +258,34 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Meson and Ninja
+        run: |
+          brew install meson ninja
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
+          meson setup build -Dwerror=true -Db_sanitize=address
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Run built-in tests
         env:
           ASAN_OPTIONS: halt_on_error=1
         run: |
-          make CONFIG_ASAN=y test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
 
   macos-ubsan:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Meson and Ninja
+        run: |
+          brew install meson ninja
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
+          meson setup build -Dwerror=true -Db_sanitize=undefined
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Run built-in tests
         env:
           UBSAN_OPTIONS: halt_on_error=1
         run: |
-          make CONFIG_UBSAN=y test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
