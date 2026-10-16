@@ -177,6 +177,10 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
     fd->get_line_col_cache = get_line_col_cache;
     
     js_dbuf_init(ctx, &fd->pc2line);
+    if (fd->filename == JS_ATOM_NULL) {
+        js_free_function_def(ctx, fd);
+        return NULL;
+    }
     //fd->pc2line_last_line_num = line_num;
     //fd->pc2line_last_pc = 0;
     fd->last_opcode_source_ptr = source_ptr;
@@ -2435,7 +2439,7 @@ static void add_pc2line_info(JSFunctionDef *s, uint32_t pc, uint32_t source_pos)
    bytes. Alternatively, get_line_col_cached() could be issued in
    emit_source_pos() so that the deltas are more likely to be
    small. */
-static void compute_pc2line_info(JSFunctionDef *s)
+static int compute_pc2line_info(JSFunctionDef *s)
 {
     if (!s->strip_debug) {
         int last_line_num, last_col_num;
@@ -2485,7 +2489,12 @@ static void compute_pc2line_info(JSFunctionDef *s)
             last_line_num = line_num;
             last_col_num = col_num;
         }
+        if (dbuf_error(&s->pc2line)) {
+            JS_ThrowOutOfMemory(s->ctx);
+            return -1;
+        }
     }
+    return 0;
 }
 
 static RelocEntry *add_reloc(JSContext *ctx, LabelSlot *ls, uint32_t addr, int size)
@@ -3561,7 +3570,8 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
     js_free(ctx, s->label_slots);
     s->label_slots = NULL;
     /* XXX: should delay until copying to runtime bytecode function */
-    compute_pc2line_info(s);
+    if (compute_pc2line_info(s) < 0)
+        goto fail;
     js_free(ctx, s->line_number_slots);
     s->line_number_slots = NULL;
     /* set the new byte code */
@@ -3695,6 +3705,10 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     int closure_var_offset, vardefs_offset;
     BOOL strip_var_debug;
     
+    if (dbuf_error(&fd->byte_code)) {
+        JS_ThrowOutOfMemory(ctx);
+        goto fail;
+    }
     if (fd->has_parameter_expressions && fd->has_arguments_binding &&
         add_arguments_arg(ctx, fd) < 0)
         goto fail;
@@ -3901,7 +3915,9 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
         //DynBuf pc2line;
         //compute_pc2line_info(fd, &pc2line);
         //js_free(ctx, fd->line_number_slots)
-        b->debug.pc2line_buf = js_realloc(ctx, fd->pc2line.buf, fd->pc2line.size);
+        /* Shrinking is optional; keep the buffer if allocation fails. */
+        b->debug.pc2line_buf = js_realloc_rt(ctx->rt, fd->pc2line.buf,
+                                           fd->pc2line.size);
         if (!b->debug.pc2line_buf)
             b->debug.pc2line_buf = fd->pc2line.buf;
         b->debug.pc2line_len = fd->pc2line.size;
