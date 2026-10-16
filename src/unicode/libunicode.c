@@ -29,7 +29,7 @@
 
 #include "cutils.h"
 #include "libunicode.h"
-#include "libunicode-table.h"
+#include <libunicode-table.h>
 #include "unicode-encoding.h"
 #ifdef USE_TEST
 #include "unicode-test.h"

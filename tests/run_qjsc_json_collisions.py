@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Run each compiled collision witness in an empty source-free directory."""
+import os
 from pathlib import Path
 import shlex
 import subprocess
 import sys
 import tempfile
 
-prefix = shlex.split(sys.argv[1])
+prefix = shlex.split(sys.argv[1] or os.environ.get('MESON_EXE_WRAPPER', ''))
 if prefix and "/" in prefix[0] and not Path(prefix[0]).is_absolute():
     prefix[0] = str(Path(prefix[0]).resolve())
 command = prefix + [str(Path(sys.argv[2]).resolve())]
