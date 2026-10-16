@@ -160,7 +160,7 @@ static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
 
     if (!s || s->promise_state != JS_PROMISE_PENDING)
         return; /* should never happen */
-    set_value(ctx, &s->promise_result, JS_DupValue(ctx, value));
+    set_value(ctx->rt, &s->promise_result, JS_DupValue(ctx, value));
     s->promise_state = JS_PROMISE_FULFILLED + is_reject;
 #ifdef DUMP_PROMISE
     printf("fulfill_or_reject_promise: is_reject=%d\n", is_reject);
@@ -793,7 +793,7 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
             ret = JS_InvokeFree(ctx, next_promise, JS_ATOM_then, 2, then_args);
             JS_FreeValue(ctx, resolve_element);
             JS_FreeValue(ctx, reject_element);
-            if (check_exception_free(ctx, ret))
+            if (check_exception_free(ctx->rt, ret))
                 goto fail_reject1;
             index++;
         }
@@ -812,7 +812,7 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
             }
             ret = JS_Call(ctx, resolving_funcs[is_promise_any], JS_UNDEFINED,
                           1, (JSValueConst *)&values);
-            if (check_exception_free(ctx, ret))
+            if (check_exception_free(ctx->rt, ret))
                 goto fail_reject;
         }
     }
@@ -882,7 +882,7 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
             }
             ret = JS_InvokeFree(ctx, next_promise, JS_ATOM_then, 2,
                                 (JSValueConst *)resolving_funcs);
-            if (check_exception_free(ctx, ret))
+            if (check_exception_free(ctx->rt, ret))
                 goto fail_reject1;
         }
     }

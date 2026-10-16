@@ -78,14 +78,14 @@ static int JS_CopySubArray(JSContext *ctx,
                 l = min_int64(l, from + 1);
                 l = min_int64(l, to + 1);
                 for(j = 0; j < l; j++) {
-                    set_value(ctx, &p->u.array.u.values[to - j],
+                    set_value(ctx->rt, &p->u.array.u.values[to - j],
                               JS_DupValue(ctx, p->u.array.u.values[from - j]));
                 }
             } else {
                 l = min_int64(l, len - from);
                 l = min_int64(l, len - to);
                 for(j = 0; j < l; j++) {
-                    set_value(ctx, &p->u.array.u.values[to + j],
+                    set_value(ctx->rt, &p->u.array.u.values[to + j],
                               JS_DupValue(ctx, p->u.array.u.values[from + j]));
                 }
             }
@@ -386,7 +386,7 @@ static int JS_isConcatSpreadable(JSContext *ctx, JSValueConst obj)
     if (JS_IsException(val))
         return -1;
     if (!JS_IsUndefined(val))
-        return JS_ToBoolFree(ctx, val);
+        return JS_ToBoolFree(ctx->rt, val);
     return JS_IsArray(ctx, obj);
 }
 
@@ -639,14 +639,14 @@ JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
             switch (special) {
             case special_every:
             case special_every | special_TA:
-                if (!JS_ToBoolFree(ctx, res)) {
+                if (!JS_ToBoolFree(ctx->rt, res)) {
                     ret = JS_FALSE;
                     goto done;
                 }
                 break;
             case special_some:
             case special_some | special_TA:
-                if (JS_ToBoolFree(ctx, res)) {
+                if (JS_ToBoolFree(ctx->rt, res)) {
                     ret = JS_TRUE;
                     goto done;
                 }
@@ -662,7 +662,7 @@ JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                 break;
             case special_filter:
             case special_filter | special_TA:
-                if (JS_ToBoolFree(ctx, res)) {
+                if (JS_ToBoolFree(ctx->rt, res)) {
                     if (JS_DefinePropertyValueInt64(ctx, ret, n++, JS_DupValue(ctx, val),
                                                     JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                         goto exception;
@@ -686,7 +686,7 @@ done:
             goto exception;
         args[0] = ret;
         res = JS_Invoke(ctx, arr, JS_ATOM_set, 1, args);
-        if (check_exception_free(ctx, res)) {
+        if (check_exception_free(ctx->rt, res)) {
             JS_FreeValue(ctx, arr);
             goto exception;
         }
@@ -1022,7 +1022,7 @@ static JSValue js_array_find(JSContext *ctx, JSValueConst this_val,
         res = JS_Call(ctx, func, this_arg, 3, args);
         if (JS_IsException(res))
             goto exception;
-        if (JS_ToBoolFree(ctx, res)) {
+        if (JS_ToBoolFree(ctx->rt, res)) {
             if (mode == ArrayFindIndex || mode == ArrayFindLastIndex) {
                 JS_FreeValue(ctx, val);
                 JS_FreeValue(ctx, obj);
@@ -1500,7 +1500,7 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
             p->u.array.count = new_count32;
         }
         for(i = 0; i < item_count; i++)
-            set_value(ctx, &arrp[start + i], JS_DupValue(ctx, argv[i + 2]));
+            set_value(ctx->rt, &arrp[start + i], JS_DupValue(ctx, argv[i + 2]));
     } else {
         arr = JS_ArrayCreateFromCtor(ctx, ctor, del_count);
         JS_FreeValue(ctx, ctor);

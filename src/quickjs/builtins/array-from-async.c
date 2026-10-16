@@ -303,7 +303,7 @@ static JSValue js_array_from_async_resume(JSContext *ctx, JSValueConst this_val,
         value = JS_GetProperty(ctx, argv[0], JS_ATOM_done);
         if (JS_IsException(value))
             goto fail;
-        done = JS_ToBoolFree(ctx, value);
+        done = JS_ToBoolFree(ctx->rt, value);
         if (done) {
             js_array_from_async_complete(ctx, owner);
             break;

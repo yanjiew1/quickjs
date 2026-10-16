@@ -190,7 +190,7 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
         if (JS_IsException(prop))
             goto fail;
         flags |= JS_PROP_HAS_ENUMERABLE;
-        if (JS_ToBoolFree(ctx, prop))
+        if (JS_ToBoolFree(ctx->rt, prop))
             flags |= JS_PROP_ENUMERABLE;
     }
     if (JS_HasProperty(ctx, desc, JS_ATOM_configurable)) {
@@ -198,7 +198,7 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
         if (JS_IsException(prop))
             goto fail;
         flags |= JS_PROP_HAS_CONFIGURABLE;
-        if (JS_ToBoolFree(ctx, prop))
+        if (JS_ToBoolFree(ctx->rt, prop))
             flags |= JS_PROP_CONFIGURABLE;
     }
     if (JS_HasProperty(ctx, desc, JS_ATOM_value)) {
@@ -212,7 +212,7 @@ int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
         if (JS_IsException(prop))
             goto fail;
         flags |= JS_PROP_HAS_WRITABLE;
-        if (JS_ToBoolFree(ctx, prop))
+        if (JS_ToBoolFree(ctx->rt, prop))
             flags |= JS_PROP_WRITABLE;
     }
     if (JS_HasProperty(ctx, desc, JS_ATOM_get)) {
@@ -1108,7 +1108,7 @@ void js_object_data_mark(JSRuntime *rt, JSValueConst val,
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom)
 {
     if ((flags & JS_PROP_THROW) ||
-        ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
+        ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx->rt))) {
         JS_ThrowTypeErrorAtom(ctx, "'%s' is read-only", atom);
         return -1;
     } else {
@@ -1388,7 +1388,7 @@ int JS_IsInstanceOf(JSContext *ctx, JSValueConst val, JSValueConst obj)
     if (!JS_IsNull(method) && !JS_IsUndefined(method)) {
         JSValue ret;
         ret = JS_CallFree(ctx, method, obj, 1, &val);
-        return JS_ToBoolFree(ctx, ret);
+        return JS_ToBoolFree(ctx->rt, ret);
     }
 
     /* legacy case */
@@ -1709,7 +1709,7 @@ int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
         JS_FreeValue(ctx, val);
         return -1;
     }
-    set_value(ctx, &pr->u.value, val);
+    set_value(ctx->rt, &pr->u.value, val);
     return 0;
 }
 
@@ -2712,7 +2712,7 @@ static int call_setter(JSContext *ctx, JSObject *setter,
     } else {
         JS_FreeValue(ctx, val);
         if ((flags & JS_PROP_THROW) ||
-            ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
+            ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx->rt))) {
             JS_ThrowTypeError(ctx, "no setter for property");
             return -1;
         }
@@ -2804,7 +2804,7 @@ static int set_array_length(JSContext *ctx, JSObject *p, JSValue val,
         } else {
             cur_len = len;
         }
-        set_value(ctx, &p->prop[0].u.value, JS_NewUint32(ctx, cur_len));
+        set_value(rt, &p->prop[0].u.value, JS_NewUint32(ctx, cur_len));
         if (unlikely(cur_len > len)) {
             return JS_ThrowTypeErrorOrFalse(ctx, flags, "not configurable");
         }
@@ -2885,7 +2885,7 @@ JSValue js_allocate_fast_array(JSContext *ctx, int64_t len)
         for(i = 0; i < len; i++) 
             p->u.array.u.values[i] = JS_UNDEFINED;
         /* update the 'length' field */
-        set_value(ctx, &p->prop[0].u.value, JS_NewInt32(ctx, len));
+        set_value(ctx->rt, &p->prop[0].u.value, JS_NewInt32(ctx, len));
     }
     return arr;
 }
@@ -2909,7 +2909,7 @@ JSValue js_create_array(JSContext *ctx, int len, JSValueConst *tab)
         for(i = 0; i < len; i++) 
             p->u.array.u.values[i] = JS_DupValue(ctx, tab[i]);
         /* update the 'length' field */
-        set_value(ctx, &p->prop[0].u.value, JS_NewInt32(ctx, len));
+        set_value(ctx->rt, &p->prop[0].u.value, JS_NewInt32(ctx, len));
     }
     return obj;
 }
@@ -2936,7 +2936,7 @@ JSValue js_create_array_free(JSContext *ctx, int len, JSValue *tab)
         for(i = 0; i < len; i++) 
             p->u.array.u.values[i] = tab[i];
         /* update the 'length' field */
-        set_value(ctx, &p->prop[0].u.value, JS_NewInt32(ctx, len));
+        set_value(ctx->rt, &p->prop[0].u.value, JS_NewInt32(ctx, len));
     }
     return obj;
 }
@@ -3001,7 +3001,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
         if (likely((prs->flags & (JS_PROP_TMASK | JS_PROP_WRITABLE |
                                   JS_PROP_LENGTH)) == JS_PROP_WRITABLE)) {
             /* fast case */
-            set_value(ctx, &pr->u.value, val);
+            set_value(ctx->rt, &pr->u.value, val);
             return TRUE;
         } else if (p1->class_id == JS_CLASS_MODULE_NS) {
             /* Namespace [[Set]] always rejects the write without reading
@@ -3025,7 +3025,7 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
                     flags |= JS_PROP_THROW;
                 goto read_only_prop;
             }
-            set_value(ctx, var_ref->pvalue, val);
+            set_value(ctx->rt, var_ref->pvalue, val);
             return TRUE;
         } else if ((prs->flags & JS_PROP_TMASK) == JS_PROP_AUTOINIT) {
             /* Instantiate property and retry (potentially useless) */
@@ -3288,17 +3288,17 @@ int JS_SetPropertyValue(JSContext *ctx, JSValueConst this_obj,
                 /* add element */
                 return add_fast_array_element(ctx, p, val, flags);
             }
-            set_value(ctx, &p->u.array.u.values[idx], val);
+            set_value(ctx->rt, &p->u.array.u.values[idx], val);
             break;
         case JS_CLASS_ARGUMENTS:
             if (unlikely(idx >= (uint32_t)p->u.array.count))
                 goto slow_path;
-            set_value(ctx, &p->u.array.u.values[idx], val);
+            set_value(ctx->rt, &p->u.array.u.values[idx], val);
             break;
         case JS_CLASS_MAPPED_ARGUMENTS:
             if (unlikely(idx >= (uint32_t)p->u.array.count))
                 goto slow_path;
-            set_value(ctx, p->u.array.u.var_refs[idx]->pvalue, val);
+            set_value(ctx->rt, p->u.array.u.var_refs[idx]->pvalue, val);
             break;
         case JS_CLASS_UINT8C_ARRAY:
             if (JS_ToUint8ClampFree(ctx, &v, val))
@@ -3503,7 +3503,7 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
                     /* XXX: should update the length after defining
                        the property */
                     len = idx + 1;
-                    set_value(ctx, &plen->u.value, JS_NewUint32(ctx, len));
+                    set_value(rt, &plen->u.value, JS_NewUint32(ctx, len));
                 }
             }
         } else if (p->class_id >= JS_CLASS_UINT8C_ARRAY &&
@@ -3829,7 +3829,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                                 goto not_configurable;
                         } else {
                             /* update the reference */
-                            set_value(ctx, pr->u.var_ref->pvalue,
+                            set_value(ctx->rt, pr->u.var_ref->pvalue,
                                       JS_DupValue(ctx, val));
                         }
                     }
@@ -3917,7 +3917,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                             goto redo_prop_update;
                     }
                     if (flags & JS_PROP_HAS_VALUE) {
-                        set_value(ctx, &p->u.array.u.values[idx], JS_DupValue(ctx, val));
+                        set_value(ctx->rt, &p->u.array.u.values[idx], JS_DupValue(ctx, val));
                     }
                     return TRUE;
                 }
@@ -4164,7 +4164,7 @@ int JS_DeleteProperty(JSContext *ctx, JSValueConst obj, JSAtom prop, int flags)
     if (res != FALSE)
         return res;
     if ((flags & JS_PROP_THROW) ||
-        ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
+        ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx->rt))) {
         JS_ThrowTypeError(ctx, "could not delete property");
         return -1;
     }
