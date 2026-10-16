@@ -5687,7 +5687,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     int label_next, label_expr, label_cont, label_body, label_break;
     int pos_next, pos_expr;
     BlockEnv break_entry;
-    JSAsyncIteratorScope async_scope;
+    JSAsyncIteratorScope async_scope = { 0 };
     JSResourceScope resources;
 
     has_initializer = FALSE;
