@@ -30,6 +30,9 @@
 #include "../src/quickjs/internal/allocator.h"
 #include "../src/quickjs/internal/atom.h"
 #include "../src/quickjs/internal/error.h"
+#include "../src/quickjs/internal/disposal.h"
+#include "../src/quickjs/builtins/array-from-async.h"
+#include "../src/quickjs/builtins/resource-management.h"
 /* Inspect the actual pool owner without adding an engine test API. */
 #include "../src/quickjs/allocator.c"
 #include "../src/quickjs/internal/runtime.h"
@@ -1265,8 +1268,57 @@ static void test_normalization_allocation_failure(void)
     }
 }
 
+static void test_intrinsic_class_registration_failure(void)
+{
+    int kind;
+
+    for (kind = 0; kind < 4; kind++) {
+        AllocationFailure failure = { 0 };
+        JSRuntime *rt = new_allocation_failure_runtime(&failure);
+        JSContext *ctx = JS_NewContextRaw(rt);
+        JSAtom *atoms;
+        size_t count = 0, capacity = rt->atom_size;
+        char name[48];
+        JSValue value;
+        int ret;
+
+        assert(ctx);
+        atoms = malloc(capacity * sizeof(*atoms));
+        assert(atoms);
+        while (rt->atom_free_index) {
+            assert(count < capacity);
+            snprintf(name, sizeof(name), "class_failure_%zu", count);
+            atoms[count] = JS_NewAtom(ctx, name);
+            assert(atoms[count] != JS_ATOM_NULL);
+            count++;
+        }
+        failure.fail_table_realloc = TRUE;
+        if (kind == 0) {
+            value = js_new_disposable_resource_list(ctx);
+            assert(JS_IsException(value));
+        } else {
+            ret = kind == 1 ? js_init_array_from_async(ctx) :
+                  kind == 2 ? js_init_disposable_stack(ctx) :
+                              js_init_async_disposable_stack(ctx);
+            assert(ret == -1);
+        }
+        assert(failure.failures == 1 && !failure.fail_table_realloc);
+        assert(JS_HasException(ctx));
+        value = JS_GetException(ctx);
+        assert(JS_IsError(ctx, value));
+        JS_FreeValue(ctx, value);
+        while (count)
+            JS_FreeAtom(ctx, atoms[--count]);
+        free(atoms);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(failure.live_allocations == 0);
+    }
+}
+
 int main(void)
 {
+    test_intrinsic_class_registration_failure();
     test_normalization_allocation_failure();
     test_gc_upcoming_properties();
     test_atom_table_allocation_failure();
