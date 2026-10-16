@@ -67,7 +67,6 @@ foreach native : [false, true]
     args += compiler.get_supported_arguments(
       '-Wextra',
       '-Wno-sign-compare',
-      '-Wno-missing-field-initializers',
       '-Wundef',
       '-Wuninitialized',
       '-Wunused',
@@ -75,12 +74,6 @@ foreach native : [false, true]
       '-Wwrite-strings',
       '-Wchar-subscripts',
       '-funsigned-char',
-    )
-  else
-    args += compiler.get_supported_arguments(
-      '-Wno-array-bounds',
-      '-Wno-format-truncation',
-      '-Wno-infinite-recursion',
     )
   endif
   if system == 'windows'
@@ -554,10 +547,15 @@ if get_option('check_jsvalue')
     'tools/qjsc.c',
     'tools/run-test262.c',
   )
+  # The non-runnable pointer-tag model makes negative-tag base cases unreachable.
+  check_args = ['-DCONFIG_CHECK_JSVALUE']
+  if cc.get_id() == 'gcc' and cc.has_argument('-Winfinite-recursion')
+    check_args += '-Wno-infinite-recursion'
+  endif
   static_library(
     'quickjs-value-check',
     check_sources,
-    c_args: host_args + ['-DCONFIG_CHECK_JSVALUE'],
+    c_args: host_args + check_args,
     include_directories: inc,
     dependencies: host_deps,
     override_options: ['optimization=0', 'b_lto=false'],
