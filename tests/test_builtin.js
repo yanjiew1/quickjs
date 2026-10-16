@@ -6340,3 +6340,73 @@ function test_property_descriptor_abrupt_completion()
 }
 
 test_property_descriptor_abrupt_completion();
+
+function test_nested_proxy_extensibility()
+{
+    const operations = [
+        { trap: "has", result: false, run: proxy => "x" in proxy },
+        { trap: "getOwnPropertyDescriptor", result: undefined,
+          run: proxy => Object.getOwnPropertyDescriptor(proxy, "x") },
+        { trap: "defineProperty", result: true,
+          run: proxy => Reflect.defineProperty(proxy, "x", { value: 2 }) },
+    ];
+    for (const operation of operations) {
+        for (const extensible of [true, false]) {
+            const target = { x: {} }, events = [];
+            if (!extensible)
+                Object.preventExtensions(target);
+            const inner = new Proxy(target, {
+                getOwnPropertyDescriptor(target, key) {
+                    events.push("descriptor");
+                    return Reflect.getOwnPropertyDescriptor(target, key);
+                },
+                isExtensible(target) {
+                    events.push("extensible");
+                    return Reflect.isExtensible(target);
+                },
+            });
+            const outer = new Proxy(inner, {
+                [operation.trap]() { return operation.result; },
+            });
+            if (extensible || operation.trap === "defineProperty")
+                assert(operation.run(outer), operation.result);
+            else
+                assert_throws(TypeError, () => operation.run(outer));
+            assert(events.join(","), "descriptor,extensible");
+        }
+        const sentinel = {};
+        let checks = 0, caught = false;
+        const inner = new Proxy({ x: {} }, {
+            isExtensible() { checks++; throw sentinel; },
+        });
+        const outer = new Proxy(inner, {
+            [operation.trap]() { return operation.result; },
+        });
+        try { operation.run(outer); } catch (error) {
+            caught = true;
+            assert(error === sentinel, true);
+        }
+        assert(caught, true);
+        assert(checks, 1);
+    }
+    for (const trap of ["has", "getOwnPropertyDescriptor"]) {
+        let checks = 0;
+        const target = Object.defineProperty({}, "x", { value: {} });
+        const inner = new Proxy(target, {
+            isExtensible() { checks++; throw Error("unexpected extensibility check"); },
+        });
+        const outer = new Proxy(inner, { [trap]() { return trap === "has" ? false : undefined; } });
+        assert_throws(TypeError, () => trap === "has" ? "x" in outer :
+                      Object.getOwnPropertyDescriptor(outer, "x"));
+        assert(checks, 0);
+    }
+    let checks = 0;
+    const inner = new Proxy(Object.preventExtensions({}), {
+        isExtensible(target) { checks++; return Reflect.isExtensible(target); },
+    });
+    assert_throws(TypeError, () => Reflect.defineProperty(
+        new Proxy(inner, { defineProperty() { return true; } }), "x", { value: 1 }));
+    assert(checks, 1);
+}
+
+test_nested_proxy_extensibility();
