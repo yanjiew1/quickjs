@@ -108,7 +108,7 @@ jobs:
           set -o pipefail
           make -j$(getconf _NPROCESSORS_ONLN) CC=gcc HOST_CC=gcc \
             CONFIG_WERROR=y CONFIG_LTO= CONFIG_ASAN=y CONFIG_UBSAN=y \
-            CONFIG_GC_STRESS=y test-gc-stress 2>&1 | tee gc-stress.log
+            CONFIG_GC_STRESS=y CONFIG_MALLOC_ITER=y test-gc-stress 2>&1 | tee gc-stress.log
       - name: Preserve GC stress diagnostics
         if: always()
         uses: actions/upload-artifact@v7
