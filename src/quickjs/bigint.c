@@ -1487,16 +1487,21 @@ JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 
 /* if possible transform a BigInt to short big and free it, otherwise
    return a normal bigint */
-JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+JSValue JS_CompactBigIntRT(JSRuntime *rt, JSBigInt *p)
 {
     JSValue res;
     if (p->len == 1) {
-        res = __JS_NewShortBigInt(ctx, (js_slimb_t)p->tab[0]);
-        js_free(ctx, p);
+        res = __JS_NewShortBigInt((js_slimb_t)p->tab[0]);
+        js_free_rt(rt, p);
         return res;
     } else {
         return JS_MKPTR(JS_TAG_BIG_INT, p);
     }
+}
+
+JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+{
+    return JS_CompactBigIntRT(ctx->rt, p);
 }
 
 JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
@@ -1507,10 +1512,10 @@ JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
 JSValue JS_NewBigInt64(JSContext *ctx, int64_t v)
 {
 #if JS_SHORT_BIG_INT_BITS == 64
-    return __JS_NewShortBigInt(ctx, v);
+    return __JS_NewShortBigInt(v);
 #else
     if (v >= JS_SHORT_BIG_INT_MIN && v <= JS_SHORT_BIG_INT_MAX) {
-        return __JS_NewShortBigInt(ctx, v);
+        return __JS_NewShortBigInt(v);
     } else {
         JSBigInt *p;
         p = js_bigint_new_si64(ctx, v);
@@ -1524,7 +1529,7 @@ JSValue JS_NewBigInt64(JSContext *ctx, int64_t v)
 JSValue JS_NewBigUint64(JSContext *ctx, uint64_t v)
 {
     if (v <= JS_SHORT_BIG_INT_MAX) {
-        return __JS_NewShortBigInt(ctx, v);
+        return __JS_NewShortBigInt(v);
     } else {
         JSBigInt *p;
         p = js_bigint_new_ui64(ctx, v);
@@ -1589,7 +1594,7 @@ JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
     case JS_TAG_FLOAT64:
         goto fail;
     case JS_TAG_BOOL:
-        val = __JS_NewShortBigInt(ctx, JS_VALUE_GET_INT(val));
+        val = __JS_NewShortBigInt(JS_VALUE_GET_INT(val));
         break;
     case JS_TAG_STRING:
     case JS_TAG_STRING_ROPE:

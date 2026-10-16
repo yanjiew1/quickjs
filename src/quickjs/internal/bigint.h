@@ -64,6 +64,7 @@ typedef struct {
 JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
 
 JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
+JSValue JS_CompactBigIntRT(JSRuntime *rt, JSBigInt *p);
 JSBigInt *js_bigint_new(JSContext *ctx, int len);
 JSBigInt *js_bigint_extend(JSContext *ctx, JSBigInt *r, js_limb_t op1);
 
