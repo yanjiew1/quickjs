@@ -121,7 +121,7 @@ JSValue js_object_constructor(JSContext *ctx, JSValueConst new_target,
     JSValue ret;
     if (!JS_IsUndefined(new_target) &&
         JS_VALUE_GET_OBJ(new_target) !=
-        JS_VALUE_GET_OBJ(JS_GetActiveFunction(ctx))) {
+        JS_VALUE_GET_OBJ(JS_GetActiveFunction(ctx->rt))) {
         ret = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_OBJECT);
     } else {
         int tag = JS_VALUE_GET_NORM_TAG(argv[0]);
