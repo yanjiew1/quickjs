@@ -1389,8 +1389,8 @@ function test_class_strict_region_control_flow()
         }
     })();
 
-    /* An elided class boundary must not consume an outer catch marker
-       when the generator is returned from, or replace its finally. */
+    /* Class cleanup must not consume an outer catch marker when the
+       generator is returned from, or replace its finally. */
     for (const source of [
         "class C { [(yield 1)]() {} }",
         "class C extends (yield 1) {}",
