@@ -6529,3 +6529,38 @@ function test_proxy_own_keys_matching()
 }
 
 test_proxy_own_keys_matching();
+
+function test_sort_identical_comparisons()
+{
+    for (const method of ["sort", "toSorted"]) {
+        for (const value of [1, "same", null, NaN, 0n, Symbol("key"), {}]) {
+            for (const count of [2, 32]) {
+                const input = Array(count).fill(value);
+                let calls = 0;
+                const sorted = input[method]((a, b) => {
+                    calls++;
+                    assert(Object.is(a, value), true);
+                    assert(Object.is(b, value), true);
+                    return 0;
+                });
+                assert(calls > 0, true);
+                assert(sorted.length, count);
+                for (const item of sorted)
+                    assert(Object.is(item, value), true);
+            }
+        }
+        const sentinel = {};
+        const value = {};
+        for (const compare of [() => { throw sentinel; },
+                               () => ({ valueOf() { throw sentinel; } })]) {
+            let caught = false;
+            try { Array(32).fill(value)[method](compare); }
+            catch (error) { caught = true; assert(error === sentinel, true); }
+            assert(caught, true);
+        }
+        for (const input of [[], [1], [undefined, undefined], Array(4)])
+            input[method](() => { throw Error("unexpected comparator call"); });
+    }
+}
+
+test_sort_identical_comparisons();
