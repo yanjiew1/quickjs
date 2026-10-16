@@ -99,7 +99,7 @@ static JSValue async_func_resume(JSContext *ctx, JSAsyncFunctionState *s)
     JSValue func_obj, ret;
 
     assert(!s->is_completed);
-    if (js_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(rt, 0)) {
         ret = JS_ThrowStackOverflow(ctx);
     } else {
         /* the tag does not matter provided it is not an object */

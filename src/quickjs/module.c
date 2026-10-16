@@ -1202,6 +1202,7 @@ int js_create_module_function(JSContext *ctx, JSModuleDef *m)
 static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                                    JSModuleDef **pstack_top, int index)
 {
+    JSRuntime *rt = ctx->rt;
     int i;
     JSImportEntry *mi;
     JSModuleDef *m1;
@@ -1210,7 +1211,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
     BOOL is_c_module;
     JSValue ret_val;
 
-    if (js_check_stack_overflow(ctx->rt, 0)) {
+    if (js_check_stack_overflow(rt, 0)) {
         JS_ThrowStackOverflow(ctx);
         return -1;
     }
@@ -1218,7 +1219,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("js_inner_module_linking '%s':\n", JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), m->module_name));
+        printf("js_inner_module_linking '%s':\n", JS_AtomGetStrRT(rt, buf1, sizeof(buf1), m->module_name));
     }
 #endif
 
@@ -1256,7 +1257,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("instantiating module '%s':\n", JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), m->module_name));
+        printf("instantiating module '%s':\n", JS_AtomGetStrRT(rt, buf1, sizeof(buf1), m->module_name));
     }
 #endif
     /* check the indirect exports */
@@ -1280,8 +1281,8 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
         printf("exported bindings:\n");
         for(i = 0; i < m->export_entries_count; i++) {
             JSExportEntry *me = &m->export_entries[i];
-            printf(" name="); print_atom(ctx->rt, me->export_name);
-            printf(" local="); print_atom(ctx->rt, me->local_name);
+            printf(" name="); print_atom(rt, me->export_name);
+            printf(" local="); print_atom(rt, me->local_name);
             printf(" type=%d idx=%d\n", me->export_type, me->u.local.var_idx);
         }
     }
@@ -1297,7 +1298,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
             mi = &m->import_entries[i];
 #ifdef DUMP_MODULE_RESOLVE
             printf("import var_idx=%d name=", mi->var_idx);
-            print_atom(ctx->rt, mi->import_name);
+            print_atom(rt, mi->import_name);
             printf(": ");
 #endif
             m1 = m->req_module_entries[mi->req_module_idx].module;
@@ -1307,7 +1308,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                 val = JS_GetModuleNamespace(ctx, m1);
                 if (JS_IsException(val))
                     goto fail;
-                set_value(ctx->rt, &var_refs[mi->var_idx]->value, val);
+                set_value(rt, &var_refs[mi->var_idx]->value, val);
 #ifdef DUMP_MODULE_RESOLVE
                 printf("namespace\n");
 #endif
@@ -1336,7 +1337,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                         JS_FreeValue(ctx, val);
                         goto fail;
                     }
-                    set_value(ctx->rt, &var_ref->value, val);
+                    set_value(rt, &var_ref->value, val);
                     var_refs[mi->var_idx] = var_ref;
 #ifdef DUMP_MODULE_RESOLVE
                     printf("namespace from\n");

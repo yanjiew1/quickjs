@@ -554,6 +554,7 @@ exception:
 JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                        int argc, JSValueConst *argv, int special)
 {
+    JSRuntime *rt = ctx->rt;
     JSValue obj, val, index_val, res, ret;
     JSValueConst args[3];
     JSValueConst func, this_arg;
@@ -639,14 +640,14 @@ JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
             switch (special) {
             case special_every:
             case special_every | special_TA:
-                if (!JS_ToBoolFree(ctx->rt, res)) {
+                if (!JS_ToBoolFree(rt, res)) {
                     ret = JS_FALSE;
                     goto done;
                 }
                 break;
             case special_some:
             case special_some | special_TA:
-                if (JS_ToBoolFree(ctx->rt, res)) {
+                if (JS_ToBoolFree(rt, res)) {
                     ret = JS_TRUE;
                     goto done;
                 }
@@ -662,7 +663,7 @@ JSValue js_array_every(JSContext *ctx, JSValueConst this_val,
                 break;
             case special_filter:
             case special_filter | special_TA:
-                if (JS_ToBoolFree(ctx->rt, res)) {
+                if (JS_ToBoolFree(rt, res)) {
                     if (JS_DefinePropertyValueInt64(ctx, ret, n++, JS_DupValue(ctx, val),
                                                     JS_PROP_C_W_E | JS_PROP_THROW) < 0)
                         goto exception;
@@ -686,7 +687,7 @@ done:
             goto exception;
         args[0] = ret;
         res = JS_Invoke(ctx, arr, JS_ATOM_set, 1, args);
-        if (check_exception_free(ctx->rt, res)) {
+        if (check_exception_free(rt, res)) {
             JS_FreeValue(ctx, arr);
             goto exception;
         }
