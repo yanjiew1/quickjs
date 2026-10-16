@@ -395,7 +395,8 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
     assert(idx <= 16);
     bc_put_u16(s, flags);
     bc_put_u8(s, b->js_mode);
-    bc_put_atom(s, b->func_name);
+    if (bc_put_atom(s, b->func_name))
+        goto fail;
 
     bc_put_leb128(s, b->arg_count);
     bc_put_leb128(s, b->var_count);
@@ -409,7 +410,8 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
         bc_put_leb128(s, b->arg_count + b->var_count);
         for(i = 0; i < b->arg_count + b->var_count; i++) {
             JSBytecodeVarDef *vd = &b->vardefs[i];
-            bc_put_atom(s, vd->var_name);
+            if (bc_put_atom(s, vd->var_name))
+                goto fail;
             bc_put_leb128(s, vd->scope_next + 1);
             bc_put_leb128(s, vd->var_ref_idx);
             flags = idx = 0;
@@ -427,7 +429,8 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
 
     for(i = 0; i < b->closure_var_count; i++) {
         JSClosureVar *cv = &b->closure_var[i];
-        bc_put_atom(s, cv->var_name);
+        if (bc_put_atom(s, cv->var_name))
+            goto fail;
         bc_put_leb128(s, cv->var_idx);
         flags = idx = 0;
         bc_set_flags(&flags, &idx, cv->closure_type, 3);
@@ -442,7 +445,8 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
         goto fail;
 
     if (b->has_debug) {
-        bc_put_atom(s, b->debug.filename);
+        if (bc_put_atom(s, b->debug.filename))
+            goto fail;
         bc_put_leb128(s, b->debug.pc2line_len);
         dbuf_put(&s->dbuf, b->debug.pc2line_buf, b->debug.pc2line_len);
         if (b->debug.source) {
@@ -468,12 +472,14 @@ static int JS_WriteModule(BCWriterState *s, JSValueConst obj)
     int i;
 
     bc_put_u8(s, BC_TAG_MODULE);
-    bc_put_atom(s, m->module_name);
+    if (bc_put_atom(s, m->module_name))
+        goto fail;
 
     bc_put_leb128(s, m->req_module_entries_count);
     for(i = 0; i < m->req_module_entries_count; i++) {
         JSReqModuleEntry *rme = &m->req_module_entries[i];
-        bc_put_atom(s, rme->module_name);
+        if (bc_put_atom(s, rme->module_name))
+            goto fail;
         if (JS_WriteObjectRec(s, rme->attributes))
             goto fail;
     }
@@ -490,9 +496,11 @@ static int JS_WriteModule(BCWriterState *s, JSValueConst obj)
             bc_put_leb128(s, me->u.local.var_idx);
         } else {
             bc_put_leb128(s, me->u.req_module_idx);
-            bc_put_atom(s, me->local_name);
+            if (bc_put_atom(s, me->local_name))
+                goto fail;
         }
-        bc_put_atom(s, me->export_name);
+        if (bc_put_atom(s, me->export_name))
+            goto fail;
     }
 
     bc_put_leb128(s, m->star_export_entries_count);
@@ -506,7 +514,8 @@ static int JS_WriteModule(BCWriterState *s, JSValueConst obj)
         JSImportEntry *mi = &m->import_entries[i];
         bc_put_leb128(s, mi->var_idx);
         bc_put_u8(s, mi->is_star);
-        bc_put_atom(s, mi->import_name);
+        if (bc_put_atom(s, mi->import_name))
+            goto fail;
         bc_put_leb128(s, mi->req_module_idx);
     }
 
@@ -625,7 +634,8 @@ static int JS_WriteObjectTag(BCWriterState *s, JSValueConst obj)
                 if (pass == 0) {
                     prop_count++;
                 } else {
-                    bc_put_atom(s, atom);
+                    if (bc_put_atom(s, atom))
+                        goto fail;
                     if (JS_WriteObjectRec(s, p->prop[i].u.value))
                         goto fail;
                 }
@@ -848,21 +858,23 @@ static int JS_WriteObjectAtoms(BCWriterState *s)
         JSAtomStruct *p = rt->atom_array[s->idx_to_atom[i]];
         JS_WriteString(s, p);
     }
-    /* XXX: should check for OOM in above phase */
+    if (dbuf_error(&s->dbuf))
+        goto oom;
 
     /* move the atoms at the start */
     /* XXX: could just append dbuf1 data, but it uses more memory if
        dbuf1 is larger than dbuf */
     atoms_size = s->dbuf.size;
     if (dbuf_claim(&dbuf1, atoms_size))
-        goto fail;
+        goto oom;
     memmove(dbuf1.buf + atoms_size, dbuf1.buf, dbuf1.size);
     memcpy(dbuf1.buf, s->dbuf.buf, atoms_size);
     dbuf1.size += atoms_size;
     dbuf_free(&s->dbuf);
     s->dbuf = dbuf1;
     return 0;
- fail:
+ oom:
+    JS_ThrowOutOfMemory(s->ctx);
     dbuf_free(&dbuf1);
     return -1;
 }
@@ -887,6 +899,10 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
 
     if (JS_WriteObjectRec(s, obj))
         goto fail;
+    if (dbuf_error(&s->dbuf)) {
+        JS_ThrowOutOfMemory(ctx);
+        goto fail;
+    }
     if (JS_WriteObjectAtoms(s))
         goto fail;
     js_object_list_end(ctx, &s->object_list);
