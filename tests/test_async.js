@@ -2052,3 +2052,81 @@ async function test_catch_binding_finally()
 }
 
 await test_catch_binding_finally();
+
+async function test_intrinsic_promise_capability()
+{
+    const { promise, resolve, reject } = Promise.withResolvers();
+    assert(Object.getPrototypeOf(promise), Promise.prototype);
+    for (const fn of [resolve, reject]) {
+        assert(typeof fn, "function");
+        assert(fn.length, 1);
+        assert(fn.name, "");
+        assert(Object.getPrototypeOf(fn), Function.prototype);
+    }
+    resolve(17);
+    reject(19);
+    assert(await promise, 17);
+    class SubPromise extends Promise {}
+    const sub = SubPromise.withResolvers();
+    assert(Object.getPrototypeOf(sub.promise), SubPromise.prototype);
+    sub.resolve(23);
+    assert(await sub.promise, 23);
+
+    let calls = 0, capturedResolve;
+    const marker = {};
+    function Custom(executor) {
+        calls++;
+        executor(value => { capturedResolve = value; }, () => {});
+        return marker;
+    }
+    const custom = Promise.withResolvers.call(Custom);
+    assert(custom.promise, marker);
+    custom.resolve(29);
+    assert(capturedResolve, 29);
+    assert(calls, 1);
+    for (const ctor of [function(executor) {}, function(executor) { executor(1, 2); },
+                        function(executor) {
+                            executor(() => {}, () => {});
+                            executor(() => {}, () => {});
+                        }]) {
+        let caught = false;
+        try { Promise.withResolvers.call(ctor); }
+        catch (error) { caught = true; assert(error instanceof TypeError, true); }
+        assert(caught, true);
+    }
+    let constructs = 0;
+    const proxy = new Proxy(Promise, {
+        construct(target, args, newTarget) {
+            constructs++;
+            return Reflect.construct(target, args, newTarget);
+        },
+    });
+    const proxied = Promise.withResolvers.call(proxy);
+    assert(constructs, 1);
+    proxied.resolve(31);
+    assert(await proxied.promise, 31);
+
+    const sentinel = {};
+    let prototypeReads = 0;
+    const newTarget = new Proxy(function() {}, {
+        get(target, key, receiver) {
+            if (key === "prototype") {
+                prototypeReads++;
+                throw sentinel;
+            }
+            return Reflect.get(target, key, receiver);
+        },
+    });
+    let caught = false;
+    try { Reflect.construct(Promise, [null], newTarget); }
+    catch (error) { caught = true; assert(error instanceof TypeError, true); }
+    assert(caught, true);
+    assert(prototypeReads, 0);
+    caught = false;
+    try { Reflect.construct(Promise, [() => {}], newTarget); }
+    catch (error) { caught = true; assert(error, sentinel); }
+    assert(caught, true);
+    assert(prototypeReads, 1);
+}
+
+await test_intrinsic_promise_capability();
