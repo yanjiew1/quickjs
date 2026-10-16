@@ -615,8 +615,7 @@ int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
 }
 
 /* return < 0, 0 or > 0 */
-int js_string_compare(JSContext *ctx,
-                      const JSString *p1, const JSString *p2)
+int js_string_compare(const JSString *p1, const JSString *p2)
 {
     int res, len;
     len = min_int(p1->len, p2->len);
@@ -782,7 +781,7 @@ static uint32_t string_rope_get_len(JSValueConst val)
         return JS_VALUE_GET_STRING_ROPE(val)->len;
 }
 
-int js_string_rope_compare(JSContext *ctx, JSValueConst op1,
+int js_string_rope_compare(JSValueConst op1,
                            JSValueConst op2, BOOL eq_only)
 {
     uint32_t len1, len2, len, pos1, pos2, l;

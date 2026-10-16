@@ -73,7 +73,7 @@ int JS_IsArray(JSContext *ctx, JSValueConst val)
 }
 
 /* Access an Array's internal JSValue array if available */
-BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
+BOOL js_get_fast_array(JSValueConst obj,
                        JSValue **arrpp, uint32_t *countp)
 {
     /* Try and handle fast arrays explicitly */
@@ -1062,7 +1062,7 @@ void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags)
 
 
 /* indicate that the object may be part of a function prototype cycle */
-void set_cycle_flag(JSContext *ctx, JSValueConst obj)
+void set_cycle_flag(JSValueConst obj)
 {
 }
 
@@ -1129,7 +1129,7 @@ JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, int class_id)
     return JS_ThrowTypeErrorAtom(ctx, "%s object expected", name);
 }
 
-void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj)
+void JS_SetImmutablePrototype(JSValueConst obj)
 {
     JSObject *p;
     if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
@@ -1903,7 +1903,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
             }
         } else if (p->class_id == JS_CLASS_STRING) {
             if (flags & JS_GPN_STRING_MASK) {
-                num_keys_count += js_string_obj_get_length(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
+                num_keys_count += js_string_obj_get_length(JS_MKPTR(JS_TAG_OBJECT, p));
             }
         } else {
             const JSClassExoticMethods *em = ctx->rt->class_array[p->class_id].exotic;
@@ -2001,7 +2001,7 @@ int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
             }
         } else if (p->class_id == JS_CLASS_STRING) {
             if (flags & JS_GPN_STRING_MASK) {
-                len = js_string_obj_get_length(ctx, JS_MKPTR(JS_TAG_OBJECT, p));
+                len = js_string_obj_get_length(JS_MKPTR(JS_TAG_OBJECT, p));
             add_array_keys:
                 for(i = 0; i < len; i++) {
                     tab_atom[num_index].atom = __JS_AtomFromUInt32(i);
@@ -3809,7 +3809,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                 } else {
                     if ((prs->flags & (JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)) == 0 &&
                         (flags & JS_PROP_HAS_VALUE)) {
-                        if (!js_same_value(ctx, val, pr->u.value)) {
+                        if (!js_same_value(val, pr->u.value)) {
                             goto not_configurable;
                         } else {
                             return TRUE;
@@ -3822,7 +3822,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                             /* JS_PROP_WRITABLE is always true for variable
                                references, but they are write protected in module name
                                spaces. */
-                            if (!js_same_value(ctx, val, *pr->u.var_ref->pvalue))
+                            if (!js_same_value(val, *pr->u.var_ref->pvalue))
                                 goto not_configurable;
                         } else {
                             /* update the reference */
@@ -3940,7 +3940,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                     JS_FreeValue(ctx, num);
                     return JS_ThrowTypeErrorOrFalse(ctx, flags, "non integer index in typed array");
                 }
-                ret = JS_NumberIsNegativeOrMinusZero(ctx, num);
+                ret = JS_NumberIsNegativeOrMinusZero(num);
                 JS_FreeValue(ctx, num);
                 if (ret) {
                     return JS_ThrowTypeErrorOrFalse(ctx, flags, "negative index in typed array");
@@ -4089,7 +4089,7 @@ int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
 
 
 /* return TRUE if 'obj' has a non empty 'name' string */
-static BOOL js_object_has_name(JSContext *ctx, JSValueConst obj)
+static BOOL js_object_has_name(JSValueConst obj)
 {
     JSProperty *pr;
     JSShapeProperty *prs;
@@ -4113,7 +4113,7 @@ int JS_DefineObjectName(JSContext *ctx, JSValueConst obj,
 {
     if (name != JS_ATOM_NULL
     &&  JS_IsObject(obj)
-    &&  !js_object_has_name(ctx, obj)
+    &&  !js_object_has_name(obj)
     &&  JS_DefinePropertyValue(ctx, obj, JS_ATOM_name, JS_AtomToString(ctx, name), flags) < 0) {
         return -1;
     }
@@ -4124,7 +4124,7 @@ int JS_DefineObjectNameComputed(JSContext *ctx, JSValueConst obj,
                                 JSValueConst str, int flags)
 {
     if (JS_IsObject(obj) &&
-        !js_object_has_name(ctx, obj)) {
+        !js_object_has_name(obj)) {
         JSAtom prop;
         JSValue name_str;
         prop = JS_ValueToAtom(ctx, str);

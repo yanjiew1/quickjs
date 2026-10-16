@@ -180,7 +180,7 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
         m->func_obj = fun_obj;
         if (js_resolve_module(ctx, m) < 0)
             goto fail1;
-        fun_obj = JS_NewModuleValue(ctx, m);
+        fun_obj = JS_NewModuleValue(m);
     }
     if (flags & JS_EVAL_FLAG_COMPILE_ONLY) {
         ret_val = fun_obj;

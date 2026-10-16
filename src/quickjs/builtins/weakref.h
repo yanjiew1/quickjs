@@ -31,7 +31,7 @@
 BOOL js_weakref_is_target(JSValueConst val);
 BOOL js_weakref_is_live(JSValueConst val);
 void js_weakref_free(JSRuntime *rt, JSValue val);
-JSValue js_weakref_new(JSContext *ctx, JSValueConst val);
+JSValue js_weakref_new(JSValueConst val);
 void weakref_delete_weakref(JSRuntime *rt, JSWeakRefHeader *wh);
 
 extern const JSCFunctionListEntry js_weakref_proto_funcs[2];

@@ -38,7 +38,7 @@ JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
                                              JSFunctionBytecode *b,
                                              int idx, BOOL is_ref);
 const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop);
-BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj);
+BOOL is_backtrace_needed(JSValueConst obj);
 JSValue JS_ThrowTypeErrorNotAnObject(JSContext *ctx);
 JSValue JS_ThrowStackOverflow(JSContext *ctx);
 JSValue JS_ThrowTypeErrorNotAConstructor(JSContext *ctx,
