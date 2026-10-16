@@ -75,7 +75,7 @@ JSFunctionDef *js_new_function_def(JSContext *ctx, JSFunctionDef *parent,
                                    const char *filename,
                                    const uint8_t *source_ptr,
                                    GetLineColCache *get_line_col_cache);
-void js_free_function_def(JSContext *ctx, JSFunctionDef *fd);
+void js_free_function_def(JSRuntime *rt, JSFunctionDef *fd);
 int add_closure_var(JSContext *ctx, JSFunctionDef *s,
                     JSClosureTypeEnum closure_type, int var_idx,
                     JSAtom var_name, BOOL is_const, BOOL is_lexical,

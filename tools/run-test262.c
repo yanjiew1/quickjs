@@ -891,9 +891,9 @@ static JSValue js_agent_start(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
-static void js_agent_free(JSContext *ctx)
+static void js_agent_free(JSRuntime *rt)
 {
-    ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+    ThreadLocalStorage *tls = JS_GetRuntimeOpaque(rt);
     struct list_head *el, *el1;
     Test262Agent *agent;
 
@@ -915,7 +915,7 @@ static void js_agent_free(JSContext *ctx)
         agent_wake_close(agent);
         for (root = agent->broadcast_roots; root; root = next) {
             next = root->next;
-            JS_FreeValue(ctx, root->value);
+            JS_FreeValueRT(rt, root->value);
             free(root);
         }
         list_del(&agent->link);
@@ -2084,7 +2084,7 @@ int run_test_buf(ThreadLocalStorage *tls,
     if (dump_memory) {
         update_stats(rt, filename);
     }
-    js_agent_free(ctx);
+    js_agent_free(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return ret;
@@ -2435,7 +2435,7 @@ int run_test262_harness_test(ThreadLocalStorage *tls,
         JS_FreeValue(ctx, promise);
     }
     free(buf);
-    js_agent_free(ctx);
+    js_agent_free(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return ret_code;

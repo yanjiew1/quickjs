@@ -113,8 +113,8 @@ static int js_parse_error_reserved_identifier(JSParseState *s)
 {
     char buf1[ATOM_GET_STR_BUF_SIZE];
     return js_parse_error(s, "'%s' is a reserved identifier",
-                          JS_AtomGetStr(s->ctx, buf1, sizeof(buf1),
-                                        s->token.u.ident.atom));
+                          JS_AtomGetStrRT(s->ctx->rt, buf1, sizeof(buf1),
+                                          s->token.u.ident.atom));
 }
 
 static inline BOOL token_is_pseudo_keyword(JSParseState *s, JSAtom atom) {
@@ -2710,7 +2710,7 @@ static int js_unsupported_keyword(JSParseState *s, JSAtom atom)
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return js_parse_error(s, "unsupported keyword: %s",
-                          JS_AtomGetStr(s->ctx, buf, sizeof(buf), atom));
+                          JS_AtomGetStrRT(s->ctx->rt, buf, sizeof(buf), atom));
 }
 
 static __exception int js_define_var(JSParseState *s, JSAtom name, int tok)
@@ -8006,7 +8006,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     return 0;
  fail:
     s->cur_func = fd->parent;
-    js_free_function_def(ctx, fd);
+    js_free_function_def(ctx->rt, fd);
     if (pfd)
         *pfd = NULL;
     return -1;
