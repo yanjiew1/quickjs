@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -256,7 +257,13 @@ static int js_proxy_has(JSContext *ctx, JSValueConst obj, JSAtom atom)
         if (res) {
             res2 = !(desc.flags & JS_PROP_CONFIGURABLE);
             js_free_desc(ctx->rt, &desc);
-            if (res2 || !p->extensible) {
+            if (!res2) {
+                res = JS_IsExtensible(ctx, s->target);
+                if (res < 0)
+                    return -1;
+                res2 = !res;
+            }
+            if (res2) {
                 JS_ThrowTypeError(ctx, "proxy: inconsistent has");
                 return -1;
             }
@@ -480,9 +487,14 @@ static int js_proxy_get_own_property(JSContext *ctx, JSPropertyDescriptor *pdesc
     if (JS_IsUndefined(trap_result_obj)) {
         if (target_desc_ret) {
             BOOL tmp;
-            tmp = !(target_desc.flags & JS_PROP_CONFIGURABLE) || !p->extensible;
+            tmp = !(target_desc.flags & JS_PROP_CONFIGURABLE);
             js_free_desc(ctx->rt, &target_desc);
             if (tmp)
+                goto fail;
+            res = JS_IsExtensible(ctx, s->target);
+            if (res < 0)
+                return -1;
+            if (!res)
                 goto fail;
         }
         ret = FALSE;
@@ -562,7 +574,7 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
 {
     JSProxyData *s;
     JSValue method, ret1, prop_val, desc_val;
-    int res, ret;
+    int res, ret, extensible_target;
     JSObject *p;
     JSValueConst args[3];
     JSPropertyDescriptor desc;
@@ -606,11 +618,18 @@ static int js_proxy_define_own_property(JSContext *ctx, JSValueConst obj,
     res = JS_GetOwnPropertyInternal(ctx, &desc, p, prop);
     if (res < 0)
         return -1;
+    /* The target can itself be a Proxy with an observable extensibility trap. */
+    extensible_target = JS_IsExtensible(ctx, s->target);
+    if (extensible_target < 0) {
+        if (res)
+            js_free_desc(ctx->rt, &desc);
+        return -1;
+    }
     setting_not_configurable = ((flags & (JS_PROP_HAS_CONFIGURABLE |
                                           JS_PROP_CONFIGURABLE)) ==
                                 JS_PROP_HAS_CONFIGURABLE);
     if (!res) {
-        if (!p->extensible || setting_not_configurable)
+        if (!extensible_target || setting_not_configurable)
             goto fail;
     } else {
         if (!check_define_prop_desc(&desc, val, getter, setter, flags))
