@@ -612,6 +612,7 @@ C_TESTS+=tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json_exec$(EXE) tests/
 QJSC_JSON_COLLISION_CASES:=attributes-first attributes-last size-first size-last
 C_TESTS+=$(addprefix tests/test_qjsc_json_collision_,$(addsuffix $(EXE),$(QJSC_JSON_COLLISION_CASES)))
 
+C_TESTS+=tests/test_unicode_gen$(EXE)
 C_TESTS+=tests/test_dtoa$(EXE)
 C_TESTS+=tests/test_object$(EXE)
 
@@ -775,6 +776,9 @@ tests/test_typed_array$(EXE): $(OBJDIR)/tests/test_typed_array.o libquickjs$(LTO
 tests/test_unicode_oom$(EXE): $(OBJDIR)/tests/test_unicode_oom.o $(REGEXP_OBJS) $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_unicode_gen$(EXE): $(OBJDIR)/tests/test_unicode_gen.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_unicode$(EXE): $(OBJDIR)/tests/test_unicode.o $(OBJDIR)/src/unicode/libunicode.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -815,6 +819,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_dtoa$(EXE)
 	$(WINE) ./tests/test_cutils$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
+	$(WINE) ./tests/test_unicode_gen$(EXE)
 	$(WINE) ./tests/test_unicode_oom$(EXE)
 	$(WINE) ./tests/test_json_stringify_oom$(EXE)
 	$(WINE) ./tests/test_std_interrupt$(EXE)
