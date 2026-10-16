@@ -1420,8 +1420,10 @@ static int js_string_normalize1(JSContext *ctx, uint32_t **pout_buf,
     out_len = unicode_normalize(&out_buf, buf, buf_len, n_type,
                                 ctx->rt, js_dbuf_realloc);
     js_free(ctx, buf);
-    if (out_len < 0)
+    if (out_len < 0) {
+        JS_ThrowOutOfMemory(ctx);
         return -1;
+    }
     *pout_buf = out_buf;
     return out_len;
 }
