@@ -2130,3 +2130,45 @@ async function test_intrinsic_promise_capability()
 }
 
 await test_intrinsic_promise_capability();
+
+async function test_delegated_yield_result_shapes()
+{
+    let syncReads = 0, syncNext = 0;
+    const syncResult = { done: false, get value() { syncReads++; return 47; } };
+    const syncSource = {
+        [Symbol.iterator]() { return this; },
+        next() { return syncNext++ ? { done: true, value: 53 } : syncResult; },
+    };
+    const sync = (function*() { return yield* syncSource; })();
+    const first = sync.next();
+    assert(first, syncResult);
+    assert(syncReads, 0);
+    assert(first.value, 47);
+    assert(syncReads, 1);
+    const last = sync.next();
+    assert(last.done, true);
+    assert(last.value, 53);
+
+    let asyncReads = 0, asyncNext = 0, awaits = 0;
+    const thenable = { then(resolve) { awaits++; resolve(59); } };
+    const asyncResult = { done: false, get value() {
+        asyncReads++;
+        return thenable;
+    } };
+    const asyncSource = {
+        [Symbol.asyncIterator]() { return this; },
+        next() { return asyncNext++ ? { done: true, value: 61 } : asyncResult; },
+    };
+    const async = (async function*() { return yield* asyncSource; })();
+    const yielded = await async.next();
+    assert(yielded.done, false);
+    /* Async yield* forwards the async iterator's value without an extra Await. */
+    assert(yielded.value, thenable);
+    assert(asyncReads, 1);
+    assert(awaits, 0);
+    const returned = await async.next();
+    assert(returned.done, true);
+    assert(returned.value, 61);
+}
+
+await test_delegated_yield_result_shapes();
