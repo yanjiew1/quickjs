@@ -935,3 +935,36 @@ async function test_extreme_timer_delays()
 }
 
 await test_extreme_timer_delays();
+
+async function test_poll_fd_growth()
+{
+    if (os.platform === "win32")
+        return;
+    const pipes = [];
+    try {
+        const waits = [];
+        for (let i = 0; i < 40; i++) {
+            const pipe = os.pipe();
+            pipes.push(pipe);
+            waits.push(new Promise(resolve => {
+                os.setReadHandler(pipe[0], () => {
+                    const byte = new Uint8Array(1);
+                    assert(os.read(pipe[0], byte.buffer, 0, 1), 1);
+                    assert(byte[0], i);
+                    os.setReadHandler(pipe[0], null);
+                    resolve();
+                });
+            }));
+            assert(os.write(pipe[1], new Uint8Array([i]).buffer, 0, 1), 1);
+        }
+        await Promise.all(waits);
+    } finally {
+        for (const [read, write] of pipes) {
+            os.setReadHandler(read, null);
+            os.close(read);
+            os.close(write);
+        }
+    }
+}
+
+await test_poll_fd_growth();
