@@ -1546,8 +1546,67 @@ static void test_function_list_allocation_failure(void)
     }
 }
 
+static void test_compiler_value_allocation_failure(void)
+{
+    static const char * const classes[] = {
+        "class C { x = 7; static y = 11; } new C().x + C.y;",
+        "class C { a() {} b() {} c() {} x = 7; static y = 11; } new C().x + C.y;",
+    };
+    char literal[2059];
+    const char *source;
+    int kind;
+
+    literal[0] = '"';
+    memset(literal + 1, 'q', 2048);
+    strcpy(literal + 2049, "\".length;");
+    for (kind = 0; kind < 3; kind++) {
+        size_t fail_at, allocations = 0;
+
+        source = kind < 2 ? classes[kind] : literal;
+        for (fail_at = 0; fail_at <= allocations; fail_at++) {
+            OOMTestAllocator allocator;
+            PromiseAllocationFailure padding = { 0 };
+            JSRuntime *rt = oom_test_runtime(&allocator);
+            JSContext *ctx = JS_NewContext(rt);
+            JSValue result;
+            int number;
+            void *ptr;
+
+            assert(ctx);
+            exhaust_pooled_free_blocks(rt, &padding);
+            oom_test_begin(&allocator, fail_at);
+            result = JS_Eval(ctx, source, strlen(source), "value-oom.js",
+                             JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+            oom_test_end(&allocator);
+            if (!fail_at) {
+                allocations = allocator.calls;
+                assert(allocations > 0 && allocations < 256);
+            } else {
+                assert(allocator.failures == 1);
+            }
+            if (JS_IsException(result)) {
+                oom_test_check_exception(ctx);
+            } else {
+                assert(!JS_HasException(ctx));
+                result = JS_EvalFunction(ctx, result);
+                assert(JS_ToInt32(ctx, &number, result) == 0);
+                assert(number == (kind < 2 ? 18 : 2048));
+                JS_FreeValue(ctx, result);
+            }
+            while ((ptr = padding.padding) != NULL) {
+                memcpy(&padding.padding, ptr, sizeof(padding.padding));
+                js_free_rt(rt, ptr);
+            }
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(allocator.live == 0);
+        }
+    }
+}
+
 int main(void)
 {
+    test_compiler_value_allocation_failure();
     test_function_list_allocation_failure();
     test_compiler_debug_allocation_failure(0);
     test_compiler_debug_allocation_failure(1);
