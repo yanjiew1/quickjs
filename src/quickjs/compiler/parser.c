@@ -315,14 +315,77 @@ static int find_arg(JSFunctionDef *fd, JSAtom name)
     return -1;
 }
 
+/* Variable names and indices stay stable until bytecode creation. Scoped
+   rows are removed when their final scope is assigned after insertion. */
+static uint32_t var_hash_bucket(JSAtom name, int size)
+{
+    return (name * 0x61c88647U) >> clz32(size - 1);
+}
+
 int find_var(JSFunctionDef *fd, JSAtom name)
 {
     int i;
-    for(i = fd->var_count; i-- > 0;) {
-        if (fd->vars[i].var_name == name && fd->vars[i].scope_level == 0)
-            return i;
+
+    if (fd->var_hash) {
+        uint32_t bucket = var_hash_bucket(name, fd->var_hash_size);
+
+        for (i = fd->var_hash[bucket]; i; i = fd->vars[i - 1].hash_next) {
+            JSVarDef *vd = &fd->vars[i - 1];
+            if (vd->var_name == name && vd->scope_level == 0)
+                return i - 1;
+        }
+    } else {
+        for(i = fd->var_count; i-- > 0;) {
+            if (fd->vars[i].var_name == name && fd->vars[i].scope_level == 0)
+                return i;
+        }
     }
     return find_arg(fd, name);
+}
+
+/* Keep small functions allocation-free. Grow before publishing a new row;
+   failure leaves the old index valid for definition teardown. */
+static int prepare_var_hash(JSContext *ctx, JSFunctionDef *fd)
+{
+    uint32_t *tab, bucket;
+    int size, i;
+
+    if (fd->var_count < 31)
+        return 0;
+    size = fd->var_hash_size;
+    if (size && fd->var_count + 1 <= size * 3 / 4)
+        return 0;
+    size = size ? size * 2 : 64;
+    /* JS_MAX_LOCAL_VARS bounds this table to at most 131072 entries. */
+    tab = js_mallocz(ctx, size * sizeof(*tab));
+    if (!tab)
+        return -1;
+    for (i = 0; i < fd->var_count; i++) {
+        if (fd->vars[i].scope_level != 0)
+            continue;
+        bucket = var_hash_bucket(fd->vars[i].var_name, size);
+        fd->vars[i].hash_next = tab[bucket];
+        tab[bucket] = i + 1;
+    }
+    js_free(ctx, fd->var_hash);
+    fd->var_hash = tab;
+    fd->var_hash_size = size;
+    return 0;
+}
+
+/* Only a just-added row changes from var scope to a lexical scope. Remove
+   that bucket head so repeated sibling names do not slow var-only lookup. */
+static void set_var_scope(JSFunctionDef *fd, int idx, int scope)
+{
+    JSVarDef *vd = &fd->vars[idx];
+
+    assert(idx == fd->var_count - 1 && vd->scope_level == 0);
+    if (fd->var_hash && scope != 0) {
+        uint32_t bucket = var_hash_bucket(vd->var_name, fd->var_hash_size);
+        assert(fd->var_hash[bucket] == idx + 1);
+        fd->var_hash[bucket] = vd->hash_next;
+    }
+    vd->scope_level = scope;
 }
 
 /* find a variable declaration in a given scope */
@@ -501,10 +564,17 @@ int add_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
     if (js_resize_array(ctx, (void **)&fd->vars, sizeof(fd->vars[0]),
                         &fd->var_size, fd->var_count + 1))
         return -1;
+    if (prepare_var_hash(ctx, fd))
+        return -1;
     vd = &fd->vars[fd->var_count++];
     memset(vd, 0, sizeof(*vd));
     vd->var_name = JS_DupAtom(ctx, name);
     vd->func_pool_idx = -1;
+    if (fd->var_hash) {
+        uint32_t bucket = var_hash_bucket(name, fd->var_hash_size);
+        vd->hash_next = fd->var_hash[bucket];
+        fd->var_hash[bucket] = fd->var_count;
+    }
     return fd->var_count - 1;
 }
 
@@ -515,7 +585,7 @@ static int add_scope_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name,
     if (idx >= 0) {
         JSVarDef *vd = &fd->vars[idx];
         vd->var_kind = var_kind;
-        vd->scope_level = fd->scope_level;
+        set_var_scope(fd, idx, fd->scope_level);
         vd->scope_next = fd->scope_first;
         fd->scopes[fd->scope_level].first = idx;
         fd->scope_first = idx;
@@ -560,7 +630,7 @@ int add_arguments_arg(JSContext *ctx, JSFunctionDef *fd)
                 return -1;
             fd->vars[idx].scope_next = fd->scopes[ARG_SCOPE_INDEX].first;
             fd->scopes[ARG_SCOPE_INDEX].first = idx;
-            fd->vars[idx].scope_level = ARG_SCOPE_INDEX;
+            set_var_scope(fd, idx, ARG_SCOPE_INDEX);
             fd->vars[idx].is_lexical = TRUE;
 
             fd->arguments_arg_idx = idx;

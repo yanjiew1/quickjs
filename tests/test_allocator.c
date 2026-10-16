@@ -1433,6 +1433,53 @@ static void test_optional_property_compaction(void)
     }
 }
 
+static void test_compiler_var_lookup_allocation_failure(void)
+{
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        PromiseAllocationFailure padding = { 0 };
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSFunctionDef fd = { 0 };
+        int i, count;
+        void *ptr;
+
+        assert(ctx);
+        exhaust_pooled_free_blocks(rt, &padding);
+        oom_test_begin(&allocator, fail_at);
+        for (i = 0; i < 100; i++) {
+            JSAtom atom = __JS_AtomFromUInt32(i);
+            if (add_var(ctx, &fd, atom) < 0)
+                break;
+        }
+        oom_test_end(&allocator);
+        count = i;
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(count == 100 && allocations > 0 && allocations < 64);
+        } else {
+            assert(allocator.failures == 1 && count < 100);
+            oom_test_check_exception(ctx);
+        }
+        /* A failed growth must leave all previously inserted rows searchable. */
+        for (i = 0; i < count; i++) {
+            assert(find_var(&fd, __JS_AtomFromUInt32(i)) == i);
+            JS_FreeAtom(ctx, fd.vars[i].var_name);
+        }
+        js_free(ctx, fd.vars);
+        js_free(ctx, fd.var_hash);
+        while ((ptr = padding.padding) != NULL) {
+            memcpy(&padding.padding, ptr, sizeof(padding.padding));
+            js_free_rt(rt, ptr);
+        }
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 static void test_compiler_debug_allocation_failure(int nested)
 {
     char source[8192];
@@ -1637,6 +1684,7 @@ static void test_basic_object_allocation_failures(void)
 int main(void)
 {
     test_basic_object_allocation_failures();
+    test_compiler_var_lookup_allocation_failure();
     test_compiler_value_allocation_failure();
     test_function_list_allocation_failure();
     test_compiler_debug_allocation_failure(0);
