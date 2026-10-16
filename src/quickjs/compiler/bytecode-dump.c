@@ -267,22 +267,22 @@ void dump_byte_code(JSContext *ctx, int pass,
             break;
         case OP_FMT_atom:
             printf(" ");
-            print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx->rt, get_u32(tab + pos));
             break;
         case OP_FMT_atom_u8:
             printf(" ");
-            print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx->rt, get_u32(tab + pos));
             printf(",%d", get_u8(tab + pos + 4));
             break;
         case OP_FMT_atom_u16:
             printf(" ");
-            print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx->rt, get_u32(tab + pos));
             printf(",%d", get_u16(tab + pos + 4));
             break;
         case OP_FMT_atom_label_u8:
         case OP_FMT_atom_label_u16:
             printf(" ");
-            print_atom(ctx, get_u32(tab + pos));
+            print_atom(ctx->rt, get_u32(tab + pos));
             addr = get_u32(tab + pos + 4);
             if (pass == 1)
                 printf(",%u:%u", addr, label_slots[addr].pos);
@@ -306,7 +306,7 @@ void dump_byte_code(JSContext *ctx, int pass,
         has_loc:
             printf(" %d: ", idx);
             if (idx < var_count) {
-                print_atom(ctx, vars ? vars[idx].var_name : vardefs[arg_count + idx].var_name);
+                print_atom(ctx->rt, vars ? vars[idx].var_name : vardefs[arg_count + idx].var_name);
             }
             break;
         case OP_FMT_none_arg:
@@ -317,7 +317,7 @@ void dump_byte_code(JSContext *ctx, int pass,
         has_arg:
             printf(" %d: ", idx);
             if (idx < arg_count) {
-                print_atom(ctx, args ? args[idx].var_name : vardefs[idx].var_name);
+                print_atom(ctx->rt, args ? args[idx].var_name : vardefs[idx].var_name);
             }
             break;
         case OP_FMT_none_var_ref:
@@ -328,7 +328,7 @@ void dump_byte_code(JSContext *ctx, int pass,
         has_var_ref:
             printf(" %d: ", idx);
             if (idx < closure_var_count) {
-                print_atom(ctx, closure_var[idx].var_name);
+                print_atom(ctx->rt, closure_var[idx].var_name);
             }
             break;
         default:
@@ -413,12 +413,12 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
 
     if (b->has_debug && b->debug.filename != JS_ATOM_NULL) {
         int line_num, col_num;
-        str = JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), b->debug.filename);
+        str = JS_AtomGetStrRT(ctx->rt, atom_buf, sizeof(atom_buf), b->debug.filename);
         line_num = find_line_num(b, -1, &col_num);
         printf("%s:%d:%d: ", str, line_num, col_num);
     }
 
-    str = JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), b->func_name);
+    str = JS_AtomGetStrRT(ctx->rt, atom_buf, sizeof(atom_buf), b->func_name);
     printf("function: %s%s\n", &"*"[b->func_kind != JS_FUNC_GENERATOR], str);
     if (b->js_mode) {
         printf("  mode:");
@@ -429,8 +429,8 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
     if (b->arg_count && b->vardefs) {
         printf("  args:");
         for(i = 0; i < b->arg_count; i++) {
-            printf(" %s", JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf),
-                                        b->vardefs[i].var_name));
+            printf(" %s", JS_AtomGetStrRT(ctx->rt, atom_buf, sizeof(atom_buf),
+                                          b->vardefs[i].var_name));
         }
         printf("\n");
     }
@@ -444,7 +444,7 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
                     vd->var_kind == JS_VAR_NEW_FUNCTION_DECL) ? "function" :
                    vd->is_const ? "const" :
                    vd->is_lexical ? "let" : "var",
-                   JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), vd->var_name));
+                   JS_AtomGetStrRT(ctx->rt, atom_buf, sizeof(atom_buf), vd->var_name));
             if (vd->has_scope)
                 printf(" [next:%d]", vd->scope_next);
             printf("\n");
@@ -457,7 +457,7 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
             printf("%5d: %s %s", i,
                    cv->is_const ? "const" :
                    cv->is_lexical ? "let" : "var",
-                   JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), cv->var_name));
+                   JS_AtomGetStrRT(ctx->rt, atom_buf, sizeof(atom_buf), cv->var_name));
             switch(cv->closure_type) {
             case JS_CLOSURE_LOCAL:
                 printf(" [loc%d]\n", cv->var_idx);
