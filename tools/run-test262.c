@@ -599,15 +599,15 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val,
     return js_print_to(ctx, outfile, argc, argv);
 }
 
-static JSValue js_detachArrayBuffer(JSContext *ctx, JSValue this_val,
-                                    int argc, JSValue *argv)
+static JSValue js_detachArrayBuffer(JSContext *ctx, JSValueConst this_val,
+                                    int argc, JSValueConst *argv)
 {
     JS_DetachArrayBuffer(ctx, argv[0]);
     return JS_UNDEFINED;
 }
 
-static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
-                             int argc, JSValue *argv)
+static JSValue js_evalScript(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv)
 {
     const char *str;
     size_t len;
@@ -838,8 +838,8 @@ static void *agent_start(void *arg)
     return NULL;
 }
 
-static JSValue js_agent_start(JSContext *ctx, JSValue this_val,
-                              int argc, JSValue *argv)
+static JSValue js_agent_start(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
 {
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     const char *script;
@@ -923,8 +923,8 @@ static void js_agent_free(JSContext *ctx)
     }
 }
 
-static JSValue js_agent_leaving(JSContext *ctx, JSValue this_val,
-                                int argc, JSValue *argv)
+static JSValue js_agent_leaving(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
 {
     Test262Agent *agent = JS_GetContextOpaque(ctx);
     if (!agent)
@@ -946,8 +946,8 @@ static BOOL is_broadcast_pending(ThreadLocalStorage *tls)
     return FALSE;
 }
 
-static JSValue js_agent_broadcast(JSContext *ctx, JSValue this_val,
-                                  int argc, JSValue *argv)
+static JSValue js_agent_broadcast(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv)
 {
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     JSValueConst sab = argv[0];
@@ -1004,8 +1004,8 @@ static JSValue js_agent_broadcast(JSContext *ctx, JSValue this_val,
     return JS_UNDEFINED;
 }
 
-static JSValue js_agent_receiveBroadcast(JSContext *ctx, JSValue this_val,
-                                         int argc, JSValue *argv)
+static JSValue js_agent_receiveBroadcast(JSContext *ctx, JSValueConst this_val,
+                                         int argc, JSValueConst *argv)
 {
     Test262Agent *agent = JS_GetContextOpaque(ctx);
     if (!agent)
@@ -1017,8 +1017,8 @@ static JSValue js_agent_receiveBroadcast(JSContext *ctx, JSValue this_val,
     return JS_UNDEFINED;
 }
 
-static JSValue js_agent_sleep(JSContext *ctx, JSValue this_val,
-                              int argc, JSValue *argv)
+static JSValue js_agent_sleep(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
 {
     uint32_t duration;
     if (JS_ToUint32(ctx, &duration, argv[0]))
@@ -1081,14 +1081,14 @@ static void write_test_timing(const char *filename, int thread, int index,
     pthread_mutex_unlock(&timing_log_mutex);
 }
 
-static JSValue js_agent_monotonicNow(JSContext *ctx, JSValue this_val,
-                                     int argc, JSValue *argv)
+static JSValue js_agent_monotonicNow(JSContext *ctx, JSValueConst this_val,
+                                     int argc, JSValueConst *argv)
 {
     return JS_NewInt64(ctx, get_clock_ms());
 }
 
-static JSValue js_agent_getReport(JSContext *ctx, JSValue this_val,
-                                  int argc, JSValue *argv)
+static JSValue js_agent_getReport(JSContext *ctx, JSValueConst this_val,
+                                  int argc, JSValueConst *argv)
 {
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     AgentReport *rep;
@@ -1112,8 +1112,8 @@ static JSValue js_agent_getReport(JSContext *ctx, JSValue this_val,
     return ret;
 }
 
-static JSValue js_agent_report(JSContext *ctx, JSValue this_val,
-                               int argc, JSValue *argv)
+static JSValue js_agent_report(JSContext *ctx, JSValueConst this_val,
+                               int argc, JSValueConst *argv)
 {
     ThreadLocalStorage *tls = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
     const char *str;
@@ -1155,8 +1155,8 @@ static JSValue js_new_agent(JSContext *ctx)
     return agent;
 }
 
-static JSValue js_createRealm(JSContext *ctx, JSValue this_val,
-                              int argc, JSValue *argv)
+static JSValue js_createRealm(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
 {
     JSContext *ctx1;
     JSValue ret;
@@ -1170,8 +1170,8 @@ static JSValue js_createRealm(JSContext *ctx, JSValue this_val,
     return ret;
 }
 
-static JSValue js_IsHTMLDDA(JSContext *ctx, JSValue this_val,
-                            int argc, JSValue *argv)
+static JSValue js_IsHTMLDDA(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv)
 {
     return JS_NULL;
 }
@@ -1750,10 +1750,12 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
         is_error = JS_IsError(ctx, exception_val);
         /* XXX: should get the filename and line number */
         if (outfile) {
+            JSValueConst args[1] = { exception_val };
+
             if (!is_error)
                 fprintf(outfile, "%sThrow: ", (eval_flags & JS_EVAL_FLAG_STRICT) ?
                         "strict mode: " : "");
-            js_print_to(ctx, outfile, 1, &exception_val);
+            js_print_to(ctx, outfile, 1, args);
         }
         if (is_error) {
             JSValue name, stack;
