@@ -80,7 +80,7 @@ JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
     int arg_index;
 
     if (JS_IsUndefined(new_target))
-        new_target = JS_GetActiveFunction(ctx);
+        new_target = JS_GetActiveFunction(ctx->rt);
     proto = JS_GetProperty(ctx, new_target, JS_ATOM_prototype);
     if (JS_IsException(proto))
         return proto;
