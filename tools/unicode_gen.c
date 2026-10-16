@@ -1646,15 +1646,22 @@ void build_conv_table(CCInfo *tab)
 #endif
 }
 
-void dump_case_conv_table(FILE *f)
+typedef struct UnicodeTableOutput {
+    FILE *source;
+    FILE *header;
+} UnicodeTableOutput;
+
+void dump_case_conv_table(UnicodeTableOutput *out)
 {
-    int i;
+    FILE *f = out->source;
+    int i, simple_count = 0;
     uint32_t v;
     const TableEntry *te;
 
     total_tables++;
     total_table_bytes += conv_table_len * sizeof(uint32_t);
-    fprintf(f, "static const uint32_t case_conv_table1[%d] = {", conv_table_len);
+    fprintf(out->header, "extern const uint32_t case_conv_table1[%d];\n", conv_table_len);
+    fprintf(f, "const uint32_t case_conv_table1[%d] = {", conv_table_len);
     for(i = 0; i < conv_table_len; i++) {
         if (i % 4 == 0)
             fprintf(f, "\n   ");
@@ -1669,7 +1676,8 @@ void dump_case_conv_table(FILE *f)
 
     total_tables++;
     total_table_bytes += conv_table_len;
-    fprintf(f, "static const uint8_t case_conv_table2[%d] = {", conv_table_len);
+    fprintf(out->header, "extern const uint8_t case_conv_table2[%d];\n", conv_table_len);
+    fprintf(f, "const uint8_t case_conv_table2[%d] = {", conv_table_len);
     for(i = 0; i < conv_table_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
@@ -1680,7 +1688,8 @@ void dump_case_conv_table(FILE *f)
 
     total_tables++;
     total_table_bytes += ext_data_len * sizeof(uint16_t);
-    fprintf(f, "static const uint16_t case_conv_ext[%d] = {", ext_data_len);
+    fprintf(out->header, "extern const uint16_t case_conv_ext[%d];\n", ext_data_len);
+    fprintf(f, "const uint16_t case_conv_ext[%d] = {", ext_data_len);
     for(i = 0; i < ext_data_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
@@ -1691,7 +1700,7 @@ void dump_case_conv_table(FILE *f)
     /* The compressed conversion table keeps the full fold for these
        entries. Regexp canonicalization must instead use the simple fold. */
     total_tables++;
-    fprintf(f, "static const uint32_t case_conv_simple_folding[][2] = {\n");
+    fprintf(f, "const uint32_t case_conv_simple_folding[][2] = {\n");
     for(i = 0; i < conv_table_len; i++) {
         const CCInfo *ci;
         te = &conv_table[i];
@@ -1701,9 +1710,11 @@ void dump_case_conv_table(FILE *f)
             assert(te->len == 1);
             fprintf(f, "    { 0x%05x, 0x%05x },\n", te->code, ci->f_data[0]);
             total_table_bytes += 2 * sizeof(uint32_t);
+            simple_count++;
         }
     }
     fprintf(f, "};\n\n");
+    fprintf(out->header, "extern const uint32_t case_conv_simple_folding[%d][2];\n", simple_count);
 }
 
 
@@ -1814,13 +1825,15 @@ void compute_internal_props(void)
     }
 }
 
-void dump_byte_table(FILE *f, const char *cname, const uint8_t *tab, int len)
+void dump_byte_table(UnicodeTableOutput *out, const char *cname, const uint8_t *tab, int len)
 {
+    FILE *f = out->source;
     int i;
 
     total_tables++;
     total_table_bytes += len;
-    fprintf(f, "static const uint8_t %s[%d] = {", cname, len);
+    fprintf(out->header, "extern const uint8_t %s[%d];\n", cname, len);
+    fprintf(f, "const uint8_t %s[%d] = {", cname, len);
     for(i = 0; i < len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
@@ -1829,13 +1842,15 @@ void dump_byte_table(FILE *f, const char *cname, const uint8_t *tab, int len)
     fprintf(f, "\n};\n\n");
 }
 
-void dump_index_table(FILE *f, const char *cname, const uint8_t *tab, int len)
+void dump_index_table(UnicodeTableOutput *out, const char *cname, const uint8_t *tab, int len)
 {
+    FILE *f = out->source;
     int i, code, offset;
 
     total_index++;
     total_index_bytes += len;
-    fprintf(f, "static const uint8_t %s[%d] = {\n", cname, len);
+    fprintf(out->header, "extern const uint8_t %s[%d];\n", cname, len);
+    fprintf(f, "const uint8_t %s[%d] = {\n", cname, len);
     for(i = 0; i < len; i += 3) {
         code = tab[i] + (tab[i+1] << 8) + ((tab[i+2] & 0x1f) << 16);
         offset = ((i / 3) + 1) * 32 + (tab[i+2] >> 5);
@@ -1848,7 +1863,7 @@ void dump_index_table(FILE *f, const char *cname, const uint8_t *tab, int len)
 
 #define PROP_BLOCK_LEN 32
 
-void build_prop_table(FILE *f, const char *name, int prop_index, BOOL add_index)
+void build_prop_table(UnicodeTableOutput *out, const char *name, int prop_index, BOOL add_index)
 {
     int i, j, n, v, offset, code;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
@@ -1945,10 +1960,10 @@ void build_prop_table(FILE *f, const char *name, int prop_index, BOOL add_index)
            (int)(dbuf->size + dbuf2->size));
 #endif
     snprintf(cname, sizeof(cname), "unicode_prop_%s_table", unicode_prop_name[prop_index]);
-    dump_byte_table(f, cname, dbuf->buf, dbuf->size);
+    dump_byte_table(out, cname, dbuf->buf, dbuf->size);
     if (add_index) {
         snprintf(cname, sizeof(cname), "unicode_prop_%s_index", unicode_prop_name[prop_index]);
-        dump_index_table(f, cname, dbuf2->buf, dbuf2->size);
+        dump_index_table(out, cname, dbuf2->buf, dbuf2->size);
     }
 
     dbuf_free(dbuf);
@@ -1956,17 +1971,18 @@ void build_prop_table(FILE *f, const char *name, int prop_index, BOOL add_index)
     dbuf_free(dbuf2);
 }
 
-void build_flags_tables(FILE *f)
+void build_flags_tables(UnicodeTableOutput *out)
 {
-    build_prop_table(f, "Cased1", PROP_Cased1, TRUE);
-    build_prop_table(f, "Case_Ignorable", PROP_Case_Ignorable, TRUE);
-    build_prop_table(f, "ID_Start", PROP_ID_Start, TRUE);
-    build_prop_table(f, "ID_Continue1", PROP_ID_Continue1, TRUE);
+    build_prop_table(out, "Cased1", PROP_Cased1, TRUE);
+    build_prop_table(out, "Case_Ignorable", PROP_Case_Ignorable, TRUE);
+    build_prop_table(out, "ID_Start", PROP_ID_Start, TRUE);
+    build_prop_table(out, "ID_Continue1", PROP_ID_Continue1, TRUE);
 }
 
-void dump_name_table(FILE *f, const char *cname, const char **tab_name, int len,
+void dump_name_table(UnicodeTableOutput *out, const char *cname, const char **tab_name, int len,
                      const char **tab_short_name)
 {
+    FILE *f = out->source;
     int i, w, maxw;
 
     maxw = 0;
@@ -1980,7 +1996,8 @@ void dump_name_table(FILE *f, const char *cname, const char **tab_name, int len,
     }
 
     /* generate a sequence of strings terminated by an empty string */
-    fprintf(f, "static const char %s[] =\n", cname);
+    fprintf(out->header, "extern const char %s[];\n", cname);
+    fprintf(f, "const char %s[] =\n", cname);
     for(i = 0; i < len; i++) {
         fprintf(f, "    \"");
         w = fprintf(f, "%s", tab_name[i]);
@@ -1992,7 +2009,7 @@ void dump_name_table(FILE *f, const char *cname, const char **tab_name, int len,
     fprintf(f, ";\n\n");
 }
 
-void build_general_category_table(FILE *f)
+void build_general_category_table(UnicodeTableOutput *out)
 {
     int i, v, j, n, n1;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
@@ -2000,13 +2017,13 @@ void build_general_category_table(FILE *f)
     int cw_count, cw_len_count[4], cw_start;
 #endif
 
-    fprintf(f, "typedef enum {\n");
+    fprintf(out->header, "typedef enum {\n");
     for(i = 0; i < GCAT_COUNT; i++)
-        fprintf(f, "    UNICODE_GC_%s,\n", unicode_gc_name[i]);
-    fprintf(f, "    UNICODE_GC_COUNT,\n");
-    fprintf(f, "} UnicodeGCEnum;\n\n");
+        fprintf(out->header, "    UNICODE_GC_%s,\n", unicode_gc_name[i]);
+    fprintf(out->header, "    UNICODE_GC_COUNT,\n");
+    fprintf(out->header, "} UnicodeGCEnum;\n\n");
 
-    dump_name_table(f, "unicode_gc_name_table",
+    dump_name_table(out, "unicode_gc_name_table",
                     unicode_gc_name, GCAT_COUNT,
                     unicode_gc_short_name);
 
@@ -2073,12 +2090,12 @@ void build_general_category_table(FILE *f)
     printf(" ], length=%d bytes\n", (int)dbuf->size);
 #endif
 
-    dump_byte_table(f, "unicode_gc_table", dbuf->buf, dbuf->size);
+    dump_byte_table(out, "unicode_gc_table", dbuf->buf, dbuf->size);
 
     dbuf_free(dbuf);
 }
 
-void build_script_table(FILE *f)
+void build_script_table(UnicodeTableOutput *out)
 {
     int i, v, j, n, n1, type;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
@@ -2086,13 +2103,13 @@ void build_script_table(FILE *f)
     int cw_count, cw_len_count[4], cw_start;
 #endif
 
-    fprintf(f, "typedef enum {\n");
+    fprintf(out->header, "typedef enum {\n");
     for(i = 0; i < SCRIPT_COUNT; i++)
-        fprintf(f, "    UNICODE_SCRIPT_%s,\n", unicode_script_name[i]);
-    fprintf(f, "    UNICODE_SCRIPT_COUNT,\n");
-    fprintf(f, "} UnicodeScriptEnum;\n\n");
+        fprintf(out->header, "    UNICODE_SCRIPT_%s,\n", unicode_script_name[i]);
+    fprintf(out->header, "    UNICODE_SCRIPT_COUNT,\n");
+    fprintf(out->header, "} UnicodeScriptEnum;\n\n");
 
-    dump_name_table(f, "unicode_script_name_table",
+    dump_name_table(out, "unicode_script_name_table",
                     unicode_script_name, SCRIPT_COUNT,
                     unicode_script_short_name);
 
@@ -2149,12 +2166,12 @@ void build_script_table(FILE *f)
     printf(" ], length=%d bytes\n", (int)dbuf->size);
 #endif
 
-    dump_byte_table(f, "unicode_script_table", dbuf->buf, dbuf->size);
+    dump_byte_table(out, "unicode_script_table", dbuf->buf, dbuf->size);
 
     dbuf_free(dbuf);
 }
 
-void build_script_ext_table(FILE *f)
+void build_script_ext_table(UnicodeTableOutput *out)
 {
     int i, j, n, n1, script_ext_len;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
@@ -2202,7 +2219,7 @@ void build_script_ext_table(FILE *f)
     printf(", length=%d bytes\n", (int)dbuf->size);
 #endif
 
-    dump_byte_table(f, "unicode_script_ext_table", dbuf->buf, dbuf->size);
+    dump_byte_table(out, "unicode_script_ext_table", dbuf->buf, dbuf->size);
 
     dbuf_free(dbuf);
 }
@@ -2210,8 +2227,9 @@ void build_script_ext_table(FILE *f)
 /* the following properties are synthetized so no table is necessary */
 #define PROP_TABLE_COUNT PROP_ASCII
 
-void build_prop_list_table(FILE *f)
+void build_prop_list_table(UnicodeTableOutput *out)
 {
+    FILE *f = out->source;
     int i;
 
     for(i = 0; i < PROP_TABLE_COUNT; i++) {
@@ -2220,28 +2238,30 @@ void build_prop_list_table(FILE *f)
             i == PROP_ID_Continue1) {
             /* already generated */
         } else {
-            build_prop_table(f, unicode_prop_name[i], i, FALSE);
+            build_prop_table(out, unicode_prop_name[i], i, FALSE);
         }
     }
 
-    fprintf(f, "typedef enum {\n");
+    fprintf(out->header, "typedef enum {\n");
     for(i = 0; i < PROP_COUNT; i++)
-        fprintf(f, "    UNICODE_PROP_%s,\n", unicode_prop_name[i]);
-    fprintf(f, "    UNICODE_PROP_COUNT,\n");
-    fprintf(f, "} UnicodePropertyEnum;\n\n");
+        fprintf(out->header, "    UNICODE_PROP_%s,\n", unicode_prop_name[i]);
+    fprintf(out->header, "    UNICODE_PROP_COUNT,\n");
+    fprintf(out->header, "} UnicodePropertyEnum;\n\n");
 
     i = PROP_ASCII_Hex_Digit;
-    dump_name_table(f, "unicode_prop_name_table",
+    dump_name_table(out, "unicode_prop_name_table",
                     unicode_prop_name + i, PROP_XID_Start - i + 1,
                     unicode_prop_short_name + i);
 
-    fprintf(f, "static const uint8_t * const unicode_prop_table[] = {\n");
+    fprintf(out->header, "extern const uint8_t * const unicode_prop_table[%d];\n", PROP_TABLE_COUNT);
+    fprintf(f, "const uint8_t * const unicode_prop_table[] = {\n");
     for(i = 0; i < PROP_TABLE_COUNT; i++) {
         fprintf(f, "    unicode_prop_%s_table,\n", unicode_prop_name[i]);
     }
     fprintf(f, "};\n\n");
 
-    fprintf(f, "static const uint16_t unicode_prop_len_table[] = {\n");
+    fprintf(out->header, "extern const uint16_t unicode_prop_len_table[%d];\n", PROP_TABLE_COUNT);
+    fprintf(f, "const uint16_t unicode_prop_len_table[] = {\n");
     for(i = 0; i < PROP_TABLE_COUNT; i++) {
         fprintf(f, "    countof(unicode_prop_%s_table),\n", unicode_prop_name[i]);
     }
@@ -2366,7 +2386,7 @@ static void zwj_encode_string(DynBuf *dbuf, const uint32_t *buf, int len, int mo
     }
 }
 
-static void build_rgi_emoji_zwj_sequence(FILE *f, REStringList *sl)
+static void build_rgi_emoji_zwj_sequence(UnicodeTableOutput *out, REStringList *sl)
 {
     int mod_pos[2], mod_count, hair_color_pos, j, h;
     REString *p;
@@ -2438,26 +2458,26 @@ static void build_rgi_emoji_zwj_sequence(FILE *f, REStringList *sl)
     }
 
     /* Encode */
-    dump_byte_table(f, "unicode_rgi_emoji_zwj_sequence", dbuf.buf, dbuf.size);
+    dump_byte_table(out, "unicode_rgi_emoji_zwj_sequence", dbuf.buf, dbuf.size);
 
     dbuf_free(&dbuf);
 }
 
-void build_sequence_prop_list_table(FILE *f)
+void build_sequence_prop_list_table(UnicodeTableOutput *out)
 {
     int i;
-    fprintf(f, "typedef enum {\n");
+    fprintf(out->header, "typedef enum {\n");
     for(i = 0; i < SEQUENCE_PROP_COUNT; i++)
-        fprintf(f, "    UNICODE_SEQUENCE_PROP_%s,\n", unicode_sequence_prop_name[i]);
-    fprintf(f, "    UNICODE_SEQUENCE_PROP_COUNT,\n");
-    fprintf(f, "} UnicodeSequencePropertyEnum;\n\n");
+        fprintf(out->header, "    UNICODE_SEQUENCE_PROP_%s,\n", unicode_sequence_prop_name[i]);
+    fprintf(out->header, "    UNICODE_SEQUENCE_PROP_COUNT,\n");
+    fprintf(out->header, "} UnicodeSequencePropertyEnum;\n\n");
 
-    dump_name_table(f, "unicode_sequence_prop_name_table",
+    dump_name_table(out, "unicode_sequence_prop_name_table",
                     unicode_sequence_prop_name, SEQUENCE_PROP_COUNT, NULL);
 
-    dump_byte_table(f, "unicode_rgi_emoji_tag_sequence", rgi_emoji_tag_sequence.buf, rgi_emoji_tag_sequence.size);
+    dump_byte_table(out, "unicode_rgi_emoji_tag_sequence", rgi_emoji_tag_sequence.buf, rgi_emoji_tag_sequence.size);
 
-    build_rgi_emoji_zwj_sequence(f, &rgi_emoji_zwj_sequence);
+    build_rgi_emoji_zwj_sequence(out, &rgi_emoji_zwj_sequence);
 }
 
 #ifdef USE_TEST
@@ -2595,7 +2615,7 @@ void check_flags(void)
 
 #define CC_BLOCK_LEN 32
 
-void build_cc_table(FILE *f)
+void build_cc_table(UnicodeTableOutput *out)
 {
     // Compress combining class table
     // see: https://www.unicode.org/reports/tr44/#Canonical_Combining_Class_Values
@@ -2692,8 +2712,8 @@ void build_cc_table(FILE *f)
     dbuf_putc(dbuf1, v >> 8);
     dbuf_putc(dbuf1, v >> 16);
 
-    dump_byte_table(f, "unicode_cc_table", dbuf->buf, dbuf->size);
-    dump_index_table(f, "unicode_cc_index", dbuf1->buf, dbuf1->size);
+    dump_byte_table(out, "unicode_cc_table", dbuf->buf, dbuf->size);
+    dump_index_table(out, "unicode_cc_index", dbuf1->buf, dbuf1->size);
 
 #if defined(DUMP_CC_TABLE) || defined(DUMP_TABLE_SIZE)
     printf("CC table: size=%d (%d entries) [",
@@ -3281,10 +3301,11 @@ void dump_large_char(void)
 }
 #endif
 
-void build_compose_table(FILE *f, const DecompEntry *tab_de);
+void build_compose_table(UnicodeTableOutput *out, const DecompEntry *tab_de);
 
-void build_decompose_table(FILE *f)
+void build_decompose_table(UnicodeTableOutput *out)
 {
+    FILE *f = out->source;
     int i, array_len, code_max, data_len, count;
     DecompEntry *tab_de, de_s, *de = &de_s;
     uint8_t *data_buf;
@@ -3336,7 +3357,8 @@ void build_decompose_table(FILE *f)
 
     total_tables++;
     total_table_bytes += array_len * sizeof(uint32_t);
-    fprintf(f, "static const uint32_t unicode_decomp_table1[%d] = {", array_len);
+    fprintf(out->header, "extern const uint32_t unicode_decomp_table1[%d];\n", array_len);
+    fprintf(f, "const uint32_t unicode_decomp_table1[%d] = {", array_len);
     count = 0;
     for(i = 0; i <= code_max; i++) {
         de = &tab_de[i];
@@ -3356,7 +3378,8 @@ void build_decompose_table(FILE *f)
 
     total_tables++;
     total_table_bytes += array_len * sizeof(uint16_t);
-    fprintf(f, "static const uint16_t unicode_decomp_table2[%d] = {", array_len);
+    fprintf(out->header, "extern const uint16_t unicode_decomp_table2[%d];\n", array_len);
+    fprintf(f, "const uint16_t unicode_decomp_table2[%d] = {", array_len);
     count = 0;
     for(i = 0; i <= code_max; i++) {
         de = &tab_de[i];
@@ -3371,7 +3394,8 @@ void build_decompose_table(FILE *f)
 
     total_tables++;
     total_table_bytes += data_len;
-    fprintf(f, "static const uint8_t unicode_decomp_data[%d] = {", data_len);
+    fprintf(out->header, "extern const uint8_t unicode_decomp_data[%d];\n", data_len);
+    fprintf(f, "const uint8_t unicode_decomp_data[%d] = {", data_len);
     for(i = 0; i < data_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
@@ -3379,7 +3403,7 @@ void build_decompose_table(FILE *f)
     }
     fprintf(f, "\n};\n\n");
 
-    build_compose_table(f, tab_de);
+    build_compose_table(out, tab_de);
 
     free(data_buf);
 
@@ -3432,8 +3456,9 @@ static int get_decomp_pos(const DecompEntry *tab_de, int c)
     return -1;
 }
 
-void build_compose_table(FILE *f, const DecompEntry *tab_de)
+void build_compose_table(UnicodeTableOutput *out, const DecompEntry *tab_de)
 {
+    FILE *f = out->source;
     int i, v, tab_ce_len;
     ComposeEntry *ce, *tab_ce;
 
@@ -3464,7 +3489,8 @@ void build_compose_table(FILE *f, const DecompEntry *tab_de)
 
     total_tables++;
     total_table_bytes += tab_ce_len * sizeof(uint16_t);
-    fprintf(f, "static const uint16_t unicode_comp_table[%u] = {", tab_ce_len);
+    fprintf(out->header, "extern const uint16_t unicode_comp_table[%u];\n", tab_ce_len);
+    fprintf(f, "const uint16_t unicode_comp_table[%u] = {", tab_ce_len);
     for(i = 0; i < tab_ce_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
@@ -3725,33 +3751,71 @@ int main(int argc, char *argv[])
 #endif
     } else
     {
-        FILE *fo = fopen(outfilename, "wb");
+        UnicodeTableOutput output, *out = &output;
+        char headerfilename[1024];
+        const char *header_basename, *backslash;
+        int source_error, header_error;
+        size_t len = strlen(outfilename);
 
-        if (!fo) {
+        if (len < 2 || strcmp(outfilename + len - 2, ".c") ||
+            len >= sizeof(headerfilename)) {
+            fprintf(stderr, "Unicode table output must have a .c suffix\n");
+            exit(1);
+        }
+        memcpy(headerfilename, outfilename, len + 1);
+        headerfilename[len - 1] = 'h';
+        header_basename = strrchr(headerfilename, '/');
+        backslash = strrchr(headerfilename, '\\');
+        if (backslash && (!header_basename || backslash > header_basename))
+            header_basename = backslash;
+        header_basename = header_basename ? header_basename + 1 : headerfilename;
+        out->source = fopen(outfilename, "wb");
+        if (!out->source) {
             perror(outfilename);
             exit(1);
         }
-        fprintf(fo,
+        out->header = fopen(headerfilename, "wb");
+        if (!out->header) {
+            perror(headerfilename);
+            fclose(out->source);
+            exit(1);
+        }
+        fprintf(out->source,
                 "/* Compressed unicode tables */\n"
-                "/* Automatically generated file - do not edit */\n"
-                "\n"
-                "#include <stdint.h>\n"
-                "\n");
-        dump_case_conv_table(fo);
+                "/* Automatically generated file - do not edit */\n\n"
+                "#include \"cutils.h\"\n"
+                "#include \"libunicode.h\"\n"
+                "#include \"%s\"\n\n", header_basename);
+        fprintf(out->header,
+                "/* Unicode table declarations. */\n"
+                "/* Automatically generated file - do not edit */\n\n"
+                "#ifndef LIBUNICODE_TABLE_H\n#define LIBUNICODE_TABLE_H\n\n"
+                "#include <stdint.h>\n\n");
+        dump_case_conv_table(out);
         compute_internal_props();
-        build_flags_tables(fo);
-        fprintf(fo, "#ifdef CONFIG_ALL_UNICODE\n\n");
-        build_cc_table(fo);
-        build_decompose_table(fo);
-        build_general_category_table(fo);
-        build_script_table(fo);
-        build_script_ext_table(fo);
-        build_prop_list_table(fo);
-        build_sequence_prop_list_table(fo);
-        fprintf(fo, "#endif /* CONFIG_ALL_UNICODE */\n");
-        fprintf(fo, "/* %u tables / %u bytes, %u index / %u bytes */\n",
+        build_flags_tables(out);
+        fprintf(out->source, "#ifdef CONFIG_ALL_UNICODE\n\n");
+        fprintf(out->header, "#ifdef CONFIG_ALL_UNICODE\n\n");
+        build_cc_table(out);
+        build_decompose_table(out);
+        build_general_category_table(out);
+        build_script_table(out);
+        build_script_ext_table(out);
+        build_prop_list_table(out);
+        build_sequence_prop_list_table(out);
+        fprintf(out->source, "#endif /* CONFIG_ALL_UNICODE */\n");
+        fprintf(out->header, "#endif /* CONFIG_ALL_UNICODE */\n\n");
+        fprintf(out->header, "#endif /* LIBUNICODE_TABLE_H */\n");
+        fprintf(out->source, "/* %u tables / %u bytes, %u index / %u bytes */\n",
                 total_tables, total_table_bytes, total_index, total_index_bytes);
-        fclose(fo);
+        source_error = ferror(out->source);
+        header_error = ferror(out->header);
+        source_error |= fclose(out->source);
+        header_error |= fclose(out->header);
+        if (source_error || header_error) {
+            perror(outfilename);
+            exit(1);
+        }
     }
     re_string_list_free(&rgi_emoji_zwj_sequence);
     return 0;
