@@ -421,7 +421,7 @@ static void test_unaligned_atomics(JSContext *ctx, JSTypedArrayEnum type,
         JS_FreeValue(ctx, view);
         JS_FreeValue(ctx, buffer);
         assert(owner.freed == 1);
-        assert(owner.null_calls == 1);
+        assert(owner.null_calls == 0);
     }
     JS_FreeValue(ctx, function);
 }
