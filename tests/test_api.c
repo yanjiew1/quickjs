@@ -2947,112 +2947,6 @@ static void test_module_normalize_bytecode(void)
     JS_FreeRuntime(rt);
 }
 
-static void test_array_from_async_realm(void)
-{
-    JSRuntime *rt = JS_NewRuntime();
-    JSContext *ctx[2], *job_ctx;
-    JSValue global, result, value;
-    int ret;
-    static const char script[] =
-        "/* Source-only probe. A native bootstrap exposes the second realm as foreign. */\n"
-        "(async function () {\n"
-        "    function check(actual, expected, message) {\n"
-        "        if (actual !== expected) throw Error(message);\n"
-        "    }\n"
-        "\n"
-        "    const settle = foreign.Function(\"resolve\", \"value\", \"resolve(value)\");\n"
-        "    function gate() {\n"
-        "        let resolve;\n"
-        "        const promise = new Promise(function (r) { resolve = r; });\n"
-        "        return { promise, resolve };\n"
-        "    }\n"
-        "\n"
-        "    const invalidNext = gate();\n"
-        "    const invalidResult = Array.fromAsync({\n"
-        "        [Symbol.asyncIterator]() {\n"
-        "            return { next() { return invalidNext.promise; } };\n"
-        "        },\n"
-        "    });\n"
-        "    check(Object.getPrototypeOf(invalidResult), Promise.prototype,\n"
-        "          \"result promise belongs to the factory realm\");\n"
-        "    const invalidCheck = invalidResult.then(\n"
-        "        function () { throw Error(\"primitive next result was accepted\"); },\n"
-        "        function (error) {\n"
-        "            check(Object.getPrototypeOf(error), TypeError.prototype,\n"
-        "                  \"next-result TypeError belongs to the suspended factory realm\");\n"
-        "        });\n"
-        "    settle(invalidNext.resolve, 1);\n"
-        "    await invalidCheck;\n"
-        "\n"
-        "    const first = gate();\n"
-        "    const second = Promise.resolve(18);\n"
-        "    let constructorReads = 0, thenReads = 0;\n"
-        "    Object.defineProperty(second, \"constructor\", {\n"
-        "        get() { constructorReads++; return Promise; },\n"
-        "    });\n"
-        "    Object.defineProperty(second, \"then\", {\n"
-        "        get() { thenReads++; throw Error(\"foreign intrinsic Promise was used\"); },\n"
-        "    });\n"
-        "    const arrayLikeResult = Array.fromAsync({\n"
-        "        0: first.promise, 1: second, length: 2,\n"
-        "    });\n"
-        "    settle(first.resolve, 17);\n"
-        "    const values = await arrayLikeResult;\n"
-        "    check(values[0], 17, \"first array-like value\");\n"
-        "    check(values[1], 18, \"second array-like value\");\n"
-        "    check(constructorReads, 1, \"later Await checks the original intrinsic once\");\n"
-        "    check(thenReads, 0, \"branded same-realm promise skips mutable then\");\n"
-        "\n"
-        "    const next = gate();\n"
-        "    let closes = 0;\n"
-        "    const closedResult = Array.fromAsync.call(function Output() {\n"
-        "        return Object.preventExtensions({});\n"
-        "    }, {\n"
-        "        [Symbol.asyncIterator]() {\n"
-        "            return {\n"
-        "                next() { return next.promise; },\n"
-        "                return() { closes++; return {}; },\n"
-        "            };\n"
-        "        },\n"
-        "    });\n"
-        "    const closedCheck = closedResult.then(\n"
-        "        function () { throw Error(\"non-extensible output accepted an element\"); },\n"
-        "        function (error) {\n"
-        "            check(Object.getPrototypeOf(error), TypeError.prototype,\n"
-        "                  \"indexed-definition error belongs to the factory realm\");\n"
-        "        });\n"
-        "    settle(next.resolve, { value: 23, done: false });\n"
-        "    await closedCheck;\n"
-        "    check(closes, 1, \"property failure still closes exactly once\");\n"
-        "    return true;\n"
-        "})()\n";
-
-    assert(rt);
-    ctx[0] = JS_NewContext(rt);
-    ctx[1] = JS_NewContext(rt);
-    assert(ctx[0] && ctx[1]);
-    global = JS_GetGlobalObject(ctx[0]);
-    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
-                             JS_GetGlobalObject(ctx[1])) >= 0);
-    JS_FreeValue(ctx[0], global);
-    result = JS_Eval(ctx[0], script, sizeof(script) - 1,
-                     "<array-from-async-realm>", JS_EVAL_TYPE_GLOBAL);
-    assert(!JS_IsException(result));
-    JS_RunGC(rt);
-    while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
-        JS_RunGC(rt);
-    assert(ret == 0);
-    assert(JS_PromiseState(ctx[0], result) == JS_PROMISE_FULFILLED);
-    value = JS_PromiseResult(ctx[0], result);
-    assert(JS_ToBool(ctx[0], value) == 1);
-    JS_FreeValue(ctx[0], value);
-    JS_FreeValue(ctx[0], result);
-    JS_RunGC(rt);
-    JS_FreeContext(ctx[1]);
-    JS_FreeContext(ctx[0]);
-    JS_FreeRuntime(rt);
-}
-
 static void test_array_from_async_raw_context(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -3089,68 +2983,51 @@ static void test_array_from_async_raw_context(void)
     JS_FreeRuntime(rt);
 }
 
-static JSValue test_resource_realms_gc(JSContext *ctx, JSValueConst value,
-                                       int argc, JSValueConst *argv)
+/* JS realm tests cover behavior. Keep native control of host context release
+   and collection after every job to check suspended builtin state roots. */
+static void test_async_realm_job_roots(void)
 {
-    JS_RunGC(JS_GetRuntime(ctx));
-    return JS_UNDEFINED;
-}
-
-static void test_async_disposable_stack_realms(void)
-{
-    const char *filename = "tests/test_resource_realms.js";
+    static const char source[] =
+        "(async function() {"
+        " const make = foreign.Function('return Promise.resolve(42)');"
+        " const values = foreign.Array.fromAsync({"
+        "   0: Promise.resolve(42), length: 1"
+        " });"
+        " const stack = new foreign.AsyncDisposableStack();"
+        " stack.defer(make);"
+        " const disposal = stack.disposeAsync();"
+        " globalThis.foreign = null;"
+        " const result = await values;"
+        " await disposal;"
+        " return result.length === 1 && result[0] === 42;"
+        "})()";
     JSRuntime *rt = JS_NewRuntime();
-    JSContext *ctx[2], *job_ctx;
+    JSContext *ctx, *foreign, *job_ctx;
     JSValue global, result, value;
-    FILE *file;
-    char *script;
-    long length;
     int ret;
 
     assert(rt);
-    ctx[0] = JS_NewContext(rt);
-    ctx[1] = JS_NewContext(rt);
-    assert(ctx[0] && ctx[1]);
-    global = JS_GetGlobalObject(ctx[0]);
-    assert(JS_SetPropertyStr(ctx[0], global, "foreign",
-                             JS_GetGlobalObject(ctx[1])) >= 0);
-    assert(JS_SetPropertyStr(ctx[0], global, "runGC",
-                             JS_NewCFunction(ctx[0], test_resource_realms_gc,
-                                              "runGC", 0)) >= 0);
-    JS_FreeValue(ctx[0], global);
-    file = fopen(filename, "rb");
-    assert(file);
-    assert(fseek(file, 0, SEEK_END) == 0);
-    length = ftell(file);
-    assert(length > 0 && length < 65536);
-    assert(fseek(file, 0, SEEK_SET) == 0);
-    script = malloc((size_t)length + 1);
-    assert(script);
-    assert(fread(script, 1, (size_t)length, file) == (size_t)length);
-    assert(fclose(file) == 0);
-    script[length] = '\0';
-    result = JS_Eval(ctx[0], script, (size_t)length, filename,
+    ctx = JS_NewContext(rt);
+    foreign = JS_NewContext(rt);
+    assert(ctx && foreign);
+    global = JS_GetGlobalObject(ctx);
+    assert(JS_SetPropertyStr(ctx, global, "foreign",
+                             JS_GetGlobalObject(foreign)) >= 0);
+    JS_FreeValue(ctx, global);
+    result = JS_Eval(ctx, source, sizeof(source) - 1, "async-realm-job-roots",
                      JS_EVAL_TYPE_GLOBAL);
-    free(script);
     assert(!JS_IsException(result));
-    /* Suspended callbacks and private data must retain the released realm. */
-    JS_FreeContext(ctx[1]);
+    JS_FreeContext(foreign);
     JS_RunGC(rt);
     while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
         JS_RunGC(rt);
     assert(ret == 0);
-    value = JS_PromiseResult(ctx[0], result);
-    if (JS_PromiseState(ctx[0], result) != JS_PROMISE_FULFILLED) {
-        const char *message = JS_ToCString(ctx[0], value);
-        fprintf(stderr, "%s: %s\n", filename, message ? message : "pending");
-        JS_FreeCString(ctx[0], message);
-    }
-    assert(JS_PromiseState(ctx[0], result) == JS_PROMISE_FULFILLED);
-    assert(JS_ToBool(ctx[0], value) == 1);
-    JS_FreeValue(ctx[0], value);
-    JS_FreeValue(ctx[0], result);
-    JS_RunGC(rt);
-    JS_FreeContext(ctx[0]);
+    assert(JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+    value = JS_PromiseResult(ctx, result);
+    assert(JS_IsBool(value) && JS_ToBool(ctx, value));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 }
 
@@ -3923,8 +3800,7 @@ int main(int argc, char **argv)
         void (*run)(void);
     } tests[] = {
         { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },
-        { "async-disposable-stack-realms", test_async_disposable_stack_realms },
-        { "array-from-async-realm", test_array_from_async_realm },
+        { "async-realm-job-roots", test_async_realm_job_roots },
         { "array-from-async-raw-context", test_array_from_async_raw_context },
         { "module-normalize-attributes", test_module_normalize_attributes },
         { "module-normalize-rejection", test_module_normalize_rejection },
