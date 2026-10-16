@@ -3923,12 +3923,52 @@ static void test_constructor_link_failure(void)
     JS_FreeRuntime(rt);
 }
 
+static void test_promise_constructor_bit(void)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue global, ctor, result, funcs[2];
+    const char *source =
+        "(() => { for (const create of [() => Promise.withResolvers(),"
+        " () => Promise.resolve(1), () => Promise.reject(1), () => Promise.all([])]) {"
+        " let caught = false; try { create(); } catch (e) {"
+        " if (!(e instanceof TypeError)) throw e; caught = true; }"
+        " if (!caught) throw Error('nonconstructor accepted'); } return true; })()";
+
+    assert(rt && ctx);
+    global = JS_GetGlobalObject(ctx);
+    ctor = JS_GetPropertyStr(ctx, global, "Promise");
+    assert(JS_IsConstructor(ctx, ctor));
+    assert(JS_SetConstructorBit(ctx, ctor, 0));
+    result = JS_Eval(ctx, source, strlen(source), "promise-constructor-bit.js",
+                     JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsBool(result) && JS_ToBool(ctx, result));
+    JS_FreeValue(ctx, result);
+    /* The C API's internal intrinsic sentinel does not use this public bit. */
+    result = JS_NewPromiseCapability(ctx, funcs);
+    assert(!JS_IsException(result));
+    JS_FreeValue(ctx, funcs[0]);
+    JS_FreeValue(ctx, funcs[1]);
+    JS_FreeValue(ctx, result);
+    assert(JS_SetConstructorBit(ctx, ctor, 1));
+    source = "Promise.withResolvers().promise instanceof Promise";
+    result = JS_Eval(ctx, source, strlen(source), "promise-constructor-bit.js",
+                     JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsBool(result) && JS_ToBool(ctx, result));
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, ctor);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(int argc, char **argv)
 {
     static const struct {
         const char *name;
         void (*run)(void);
     } tests[] = {
+        { "promise-constructor-bit", test_promise_constructor_bit },
         { "async-iterator-disposal-raw", test_async_iterator_disposal_raw_context },
         { "async-realm-job-roots", test_async_realm_job_roots },
         { "array-from-async-raw-context", test_array_from_async_raw_context },

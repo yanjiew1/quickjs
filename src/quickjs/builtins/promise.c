@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -391,18 +392,15 @@ static void js_promise_mark(JSRuntime *rt, JSValueConst val,
     JS_MarkValue(rt, s->promise_result, mark_func);
 }
 
-static JSValue js_promise_constructor(JSContext *ctx, JSValueConst new_target,
-                                      int argc, JSValueConst *argv)
+/* Allocate the intrinsic state and resolving pair without an executor object.
+   An explicit constructor still supplies its observable prototype lookup. */
+static JSValue js_new_promise(JSContext *ctx, JSValueConst new_target,
+                             JSValue *resolving_funcs)
 {
-    JSValueConst executor;
     JSValue obj;
     JSPromiseData *s;
-    JSValue args[2], ret;
     int i;
 
-    executor = argv[0];
-    if (check_function(ctx, executor))
-        return JS_EXCEPTION;
     obj = JS_CreateFromConstructor(ctx, new_target, JS_CLASS_PROMISE);
     if (JS_IsException(obj))
         return JS_EXCEPTION;
@@ -415,8 +413,25 @@ static JSValue js_promise_constructor(JSContext *ctx, JSValueConst new_target,
         init_list_head(&s->promise_reactions[i]);
     s->promise_result = JS_UNDEFINED;
     JS_SetOpaque(obj, s);
-    if (js_create_resolving_functions(ctx, args, obj))
+    if (js_create_resolving_functions(ctx, resolving_funcs, obj))
         goto fail;
+    return obj;
+ fail:
+    JS_FreeValue(ctx, obj);
+    return JS_EXCEPTION;
+}
+
+static JSValue js_promise_constructor(JSContext *ctx, JSValueConst new_target,
+                                      int argc, JSValueConst *argv)
+{
+    JSValueConst executor = argv[0];
+    JSValue obj, args[2], ret;
+
+    if (check_function(ctx, executor))
+        return JS_EXCEPTION;
+    obj = js_new_promise(ctx, new_target, args);
+    if (JS_IsException(obj))
+        return obj;
     ret = JS_Call(ctx, executor, JS_UNDEFINED, 2, (JSValueConst *)args);
     if (JS_IsException(ret)) {
         JSValue ret2, error;
@@ -434,7 +449,6 @@ static JSValue js_promise_constructor(JSContext *ctx, JSValueConst new_target,
  fail1:
     JS_FreeValue(ctx, args[0]);
     JS_FreeValue(ctx, args[1]);
- fail:
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
 }
@@ -472,17 +486,18 @@ static JSValue js_new_promise_capability(JSContext *ctx,
     JSCFunctionDataRecord *s;
     int i;
 
+    if (JS_IsUndefined(ctor) ||
+        (JS_IsObject(ctor) &&
+         JS_VALUE_GET_OBJ(ctor) == JS_VALUE_GET_OBJ(ctx->promise_ctor) &&
+         JS_VALUE_GET_OBJ(ctor)->is_constructor))
+        return js_new_promise(ctx, ctor, resolving_funcs);
+
     executor = js_promise_executor_new(ctx);
     if (JS_IsException(executor))
         return executor;
 
-    if (JS_IsUndefined(ctor)) {
-        result_promise = js_promise_constructor(ctx, ctor, 1,
-                                                (JSValueConst *)&executor);
-    } else {
-        result_promise = JS_CallConstructor(ctx, ctor, 1,
-                                            (JSValueConst *)&executor);
-    }
+    result_promise = JS_CallConstructor(ctx, ctor, 1,
+                                        (JSValueConst *)&executor);
     if (JS_IsException(result_promise))
         goto fail;
     s = JS_GetOpaque(executor, JS_CLASS_C_FUNCTION_DATA);
