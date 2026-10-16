@@ -92,6 +92,11 @@ build directory instead of using the checked-in tables. The directory must
 contain the generator's UCD and emoji inputs. `-Dfuzzing=true` enables the Clang
 libFuzzer applications; select sanitizers separately with `b_sanitize`.
 
+The optional `docs` target builds HTML when `makeinfo` is installed. With
+`texi2pdf`, `docs-pdf` also builds the PDF manual. Set `-Ddocumentation=enabled`
+to require HTML tooling, or `disabled` to omit these targets. Documentation and
+its generated version file remain in the build directory.
+
 ## Cross compilation
 
 Use Meson's `--cross-file` and define its `exe_wrapper` when target executables
@@ -99,3 +104,16 @@ need an emulator. Native bytecode and Unicode generators are built with the
 build-machine compiler. Script-driven tests consume the same wrapper through
 Meson's `MESON_EXE_WRAPPER` environment variable. Target compiler flags must be
 in the cross file, not in native compiler settings.
+
+## Release archives
+
+`tools/release.sh quickjs --output /path/to/releases` packages tracked sources,
+including nested fixtures and build helpers. When documentation tools are
+installed, it also builds and includes the manual. Untracked working notes and
+build products are excluded. A source archive records its source revision and
+whether the working tree contains changes.
+
+The default release is the source archive. Explicit `binary`, `win_binary` and
+`extras` selections require the corresponding toolchains or Unicode inputs.
+All binary builds use temporary directories under the selected output path.
+The optional `cosmo_binary` mode remains outside CI coverage.
