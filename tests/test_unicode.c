@@ -37,6 +37,47 @@ static void *test_realloc(void *opaque, void *ptr, size_t size)
     return realloc(ptr, size);
 }
 
+typedef struct RangeAllocation {
+    size_t requested;
+    int calls;
+} RangeAllocation;
+
+static void *reject_range_allocation(void *opaque, void *ptr, size_t size)
+{
+    RangeAllocation *allocation = opaque;
+    assert(!ptr);
+    allocation->requested = size;
+    allocation->calls++;
+    return NULL;
+}
+
+static void test_range_capacity_limits(void)
+{
+    RangeAllocation allocation = { 0 };
+    CharRange range;
+    int capacity = INT_MAX / 2;
+
+    /* Capacity-only fixtures: the rejecting callback never accesses points. */
+    cr_init(&range, &allocation, reject_range_allocation);
+    range.size = capacity;
+    assert(cr_realloc(&range, capacity + 1) < 0);
+    assert(!range.points && range.size == capacity && range.len == 0);
+    if (SIZE_MAX / sizeof(uint32_t) >= (size_t)capacity + 1) {
+        assert(allocation.calls == 1);
+        assert(allocation.requested == ((uint64_t)capacity + capacity / 2) * sizeof(uint32_t));
+    } else {
+        assert(allocation.calls == 0);
+    }
+    allocation.calls = 0;
+    range.len = range.size = INT_MAX;
+    assert(cr_add_point(&range, 1) < 0);
+    range.len = INT_MAX - 1;
+    assert(cr_add_interval(&range, 1, 2) < 0);
+    assert(cr_invert(&range) < 0);
+    assert(allocation.calls == 0 && !range.points && range.len == INT_MAX - 1);
+    assert(cr_realloc(&range, -1) < 0);
+}
+
 static void test_empty_range(void)
 {
     CharRange src, dst;
@@ -78,6 +119,7 @@ static void test_case_folding(void)
 
 int main(void)
 {
+    test_range_capacity_limits();
     test_empty_range();
     test_case_folding();
     return 0;
