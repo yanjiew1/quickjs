@@ -73,7 +73,7 @@ void dump_byte_code(JSContext *ctx, int pass,
 
     if (b) {
         int col_num;
-        line_num = find_line_num(ctx, b, -1, &col_num);
+        line_num = find_line_num(b, -1, &col_num);
     }
 
     /* Label annotations are optional; do not replace a pending exception
@@ -137,7 +137,7 @@ void dump_byte_code(JSContext *ctx, int pass,
         if (source && b) {
             int col_num;
             if (b) {
-                line1 = find_line_num(ctx, b, pos, &col_num) - line_num + 1;
+                line1 = find_line_num(b, pos, &col_num) - line_num + 1;
             } else if (op == OP_line_num) {
                 /* XXX: no longer works */
                 line1 = get_u32(tab + pos + 1) - line_num + 1;
@@ -345,7 +345,7 @@ void dump_byte_code(JSContext *ctx, int pass,
     js_free(ctx, bits);
 }
 
-static __maybe_unused void dump_pc2line(JSContext *ctx, const uint8_t *buf, int len)
+static __maybe_unused void dump_pc2line(const uint8_t *buf, int len)
 {
     const uint8_t *p_end, *p;
     int pc, v, line_num, col_num, ret;
@@ -414,7 +414,7 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
     if (b->has_debug && b->debug.filename != JS_ATOM_NULL) {
         int line_num, col_num;
         str = JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), b->debug.filename);
-        line_num = find_line_num(ctx, b, -1, &col_num);
+        line_num = find_line_num(b, -1, &col_num);
         printf("%s:%d:%d: ", str, line_num, col_num);
     }
 
@@ -502,7 +502,7 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
                    NULL, b);
 #if defined(DUMP_BYTECODE) && (DUMP_BYTECODE & 32)
     if (b->has_debug)
-        dump_pc2line(ctx, b->debug.pc2line_buf, b->debug.pc2line_len);
+        dump_pc2line(b->debug.pc2line_buf, b->debug.pc2line_len);
 #endif
     printf("\n");
 }
