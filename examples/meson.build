@@ -39,6 +39,7 @@ if get_option('examples')
   ]
   hello_c = custom_target(
     'hello-source',
+    depends: generator_runtime_deps,
     input: 'hello.js',
     output: 'hello.c',
     command: [python, codegen, meson.project_source_root(), generator_qjsc, '@OUTPUT@'] + hello_flags,
@@ -52,6 +53,7 @@ if get_option('examples')
   )
   hello_module_c = custom_target(
     'hello-module-source',
+    depends: generator_runtime_deps,
     input: [
       'hello_module.js',
       'fib_module.js',
@@ -78,6 +80,7 @@ if get_option('examples')
   )
   fib_c = custom_target(
     'fib-source',
+    depends: generator_runtime_deps,
     input: 'test_fib.js',
     output: 'test_fib.c',
     command: [

@@ -178,6 +178,7 @@ endforeach
 
 context_c = custom_target(
   'qjsc-context-source',
+  depends: generator_runtime_deps,
   input: 'fixture_qjsc_context.js',
   output: 'qjsc-context-generated.h',
   command: [
@@ -285,6 +286,7 @@ test(
 runner_prefix = ''
 json_c = custom_target(
   'qjsc-json-attributes-source',
+  depends: generator_runtime_deps,
   input: files(
     'prepare_qjsc_json_attributes.py',
     'qjsc-json-attributes/main.js',
@@ -328,6 +330,7 @@ test(
 )
 native_std_c = custom_target(
   'qjsc-native-std-source',
+  depends: generator_runtime_deps,
   input: 'qjsc-json-attributes/native-std.js',
   output: 'qjsc-native-std.c',
   command: [
@@ -376,6 +379,7 @@ collision_inputs = files(
 foreach name : ['attributes-first', 'attributes-last', 'size-first', 'size-last']
   generated = custom_target(
     'qjsc-json-collision-' + name,
+    depends: generator_runtime_deps,
     input: collision_inputs,
     output: 'qjsc-json-collision-' + name + '.c',
     command: [
@@ -572,6 +576,44 @@ test(
     meson.project_source_root(),
     meson.project_build_root(),
   ],
+  suite: ['repo', 'build', 'unit'],
+  timeout: 30,
+)
+
+public_api_test = executable(
+  'test_shared_api',
+  'test_shared_api.c',
+  c_args: host_args,
+  include_directories: include_directories('../include'),
+  dependencies: engine_dep,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'public-embedding-api',
+  public_api_test,
+  suite: ['repo', 'embedding', 'integration'],
+  workdir: test_workdir,
+  timeout: 120,
+)
+if shared_build
+  test(
+    'shared-library-exports',
+    python,
+    args: [
+      files('test_shared_exports.py'),
+      meson.project_source_root(),
+      shared_engine,
+      host_machine.system(),
+    ],
+    suite: ['repo', 'embedding', 'integration'],
+    timeout: 30,
+  )
+endif
+
+test(
+  'export-report-parser',
+  python,
+  args: files('test_export_report.py'),
   suite: ['repo', 'build', 'unit'],
   timeout: 30,
 )
