@@ -62,7 +62,7 @@ __exception int js_parse_function_constructor(JSParseState *s,
 __exception int js_parse_program(JSParseState *s);
 
 int new_label_fd(JSFunctionDef *fd);
-int find_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
+int find_var(JSFunctionDef *fd, JSAtom name);
 int add_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
 int add_func_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name);
 int add_arguments_var(JSContext *ctx, JSFunctionDef *fd);
