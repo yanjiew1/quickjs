@@ -30,7 +30,7 @@ engine. It supports most of the ES2025 specification
 
 @itemize
 
-@item Small and easily embeddable: just a few C files, no external dependency, 210 KiB of x86 code for a simple ``hello world'' program.
+@item Embeddable C engine with no required third-party libraries.
 
 @item Fast interpreter with very low startup time: runs the tests of the ECMAScript Test Suite@footnote{@url{https://github.com/tc39/test262}} in less than 2 minutes on a single core of a desktop PC. The complete life cycle of a runtime instance completes in less than 300 microseconds.
 
@@ -38,7 +38,7 @@ engine. It supports most of the ES2025 specification
 
 @item Passes nearly 100% of the ECMAScript Test Suite tests when selecting the ES2025 features.
 
-@item Compile Javascript sources to executables with no external dependency.
+@item Compile Javascript sources to executables using static or shared engine linking.
 
 @item Garbage collection using reference counting (to reduce memory usage and have deterministic behavior) with cycle removal.
 
@@ -52,20 +52,28 @@ engine. It supports most of the ES2025 specification
 
 @section Installation
 
-A Makefile is provided to compile the engine on Linux or MacOS/X.  A
-preliminary Windows support is available thru cross compilation on a
-Linux host with the MingGW tools.
+Build the engine with Meson 0.58 or newer, Ninja, Python 3 and a C compiler:
 
-Edit the top of the @code{Makefile} if you wish to select specific
-options then run @code{make}.
+@example
+meson setup build
+meson compile -C build
+meson test -C build --print-errorlogs
+meson install -C build
+@end example
 
-You can type @code{make install} as root if you wish to install the binaries and support files to
-@code{/usr/local} (this is not necessary to use QuickJS).
+The source and build directories may be separate, including on different
+filesystems. Generated files and objects remain in the build directory.
+Use @code{--prefix}, @code{--libdir} and @code{--includedir} at setup to select
+installation paths. See @file{BUILDING.md} and @file{meson_options.txt} for
+compiler, sanitizer, cross-compilation and optional tooling configuration.
 
-Note: On some OSes atomic operations are not available or need a
-specific library. If you get related errors, you should either add
-@code{-latomics} in the Makefile @code{LIBS} variable or disable
-@code{CONFIG_ATOMICS} in @file{src/quickjs/internal/base.h}.
+Select @code{-Ddefault_library=static}, @code{shared} or @code{both}. Shared
+libraries export only the declarations in the public headers. Native embedding
+applications can obtain flags with @code{pkg-config --cflags --libs quickjs};
+add @code{--static} for static-library dependencies.
+
+If a platform requires an additional atomic support library, supply its link
+flags through the Meson native/cross file or @code{LDFLAGS} at initial setup.
 
 @section Quick start
 
@@ -73,17 +81,20 @@ specific library. If you get related errors, you should either add
 Javascript files and/or expressions as arguments to execute them:
 
 @example
-./qjs examples/hello.js
+./build/qjs examples/hello.js
 @end example
 
 @code{qjsc} is the command line compiler:
 
 @example
-./qjsc -o hello examples/hello.js
+./build/qjsc -o hello examples/hello.js
 ./hello
 @end example
 
-generates a @code{hello} executable with no external dependency.
+generates a @code{hello} executable. In @code{static} and @code{both} builds,
+the engine is linked into the executable. In @code{shared} builds, the
+executable uses the installed or build-tree QuickJS shared library. Platform
+libraries such as the C library may still be required in either case.
 
 @section Command line options
 
@@ -186,8 +197,8 @@ Disable selected language features to produce a smaller executable file.
 
 @section Built-in tests
 
-Run @code{make test} to run the few built-in tests included in the
-QuickJS archive.
+Run @code{meson test -C build --print-errorlogs} to run the repository
+regression suite. Use @code{--num-processes} to choose concurrent tests.
 
 @section Test262 (ECMAScript Test Suite)
 
@@ -195,10 +206,7 @@ A test262 runner is included in the QuickJS archive. The test262 tests
 can be installed in the QuickJS source directory with:
 
 @example
-git clone https://github.com/tc39/test262.git test262
-cd test262
-patch -p1 < ../tests/test262.patch
-cd ..
+python3 tools/build/test262.py bootstrap
 @end example
 
 The patch adds the implementation specific @code{harness} functions
@@ -208,7 +216,7 @@ slow string initialization function is optimized).
 
 The tests can be run with
 @example
-make test2
+meson compile -C build test262-run
 @end example
 
 The configuration files @code{test262.conf}
@@ -221,18 +229,18 @@ based on features or filename.
 The file @code{test262_errors.txt} contains the current list of
 errors. The runner displays a message when a new error appears or when
 an existing error is corrected or modified. Use the @code{-u} option
-to update the current list of errors (or @code{make test2-update}).
+to update the current list of errors (or @code{meson compile -C build test262-update}).
 
 The file @code{test262_report.txt} contains the logs of all the
 tests. It is useful to have a clearer analysis of a particular
 error. In case of crash, the last line corresponds to the failing
 test.
 
-Use the syntax @code{./run-test262 -c test262.conf -f filename.js} to
-run a single test. Use the syntax @code{./run-test262 -c test262.conf
+Use the syntax @code{./build/run-test262 -c test262.conf -f filename.js} to
+run a single test. Use the syntax @code{./build/run-test262 -c test262.conf
 N} to start testing at test number @code{N}.
 
-For more information, run @code{./run-test262} to see the command line
+For more information, run @code{./build/run-test262} to see the command line
 options of the test262 runner.
 
 @code{run-test262} accepts the @code{-N} option to be invoked from

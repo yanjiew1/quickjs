@@ -21,21 +21,24 @@ Current user instructions take precedence over this guide. Read any nested
 
 ## Build and test commands
 
-Run commands from the repository root. A C toolchain, make and Python 3 are
-needed; check the Makefile and matching CI job for platform dependencies and
-compiler options. Select `CC`, `HOST_CC` and `PYTHON` when the environment requires.
+Use Meson 0.58 or newer, Ninja, Python 3 and a C toolchain. Read
+`BUILDING.md`, `meson_options.txt` and the matching CI job for dependencies and
+compiler options. Select the compiler at setup with `CC` or a Meson native/cross
+file. Keep each compiler/configuration in a separate build directory; the source
+and build directories may be on different paths or filesystems.
 
 Default local validation for implementation changes is a combined ASan+UBSan
-build and repository suite:
+build and repository suite, using a fresh build directory:
 
 ```sh
-make -j4 CONFIG_WERROR=y CONFIG_LTO= CONFIG_ASAN=y CONFIG_UBSAN=y all test
+meson setup build-sanitize -Dwerror=true -Db_sanitize=address,undefined
+meson compile -C build-sanitize -j4
+meson test -C build-sanitize --print-errorlogs --num-processes 4
 ```
 
-Use a clean checkout for each compiler/configuration experiment: `OBJDIR`
-separates objects but not all binaries or generated products. For focused checks
-after building, use the relevant test, for example `./qjs tests/test_language.js`,
-`./qjs -m tests/test_std.js` or `./tests/test_api`.
+Generated files, objects and runtime fixtures belong in the build directory.
+For focused checks, use `meson test -C build-sanitize language` or the matching
+native test name. Test executables are under the build directory's `tests/`.
 For documentation-only tasks, check Markdown, references and the file-change scope.
 
 ## Architecture and ownership
@@ -57,13 +60,15 @@ For documentation-only tasks, check Markdown, references and the file-change sco
 - Share genuinely common declarations in the owning private header; keep local
   types, macros and helpers in their `.c` file. Keep engine-independent support
   libraries independent of JS objects, and host services behind the public API.
-- Compile engine implementation files as real translation units. Mirror source paths
-  in object directories so duplicate basenames need no artificial renaming.
+- Compile engine implementation files as real translation units. Preserve source-path
+  identity in object names so duplicate basenames need no artificial renaming.
   Keep generated tables with one owner; splitting Unicode must not duplicate
   large table definitions across translation units.
 - Only `include/` is the public header surface. Preserve API/ABI compatibility
   when extending it. Private interfaces may evolve; `JS_`/`js_` spelling alone
-  does not establish whether a function is public.
+  does not establish whether a function is public. Keep shared-library symbols
+  hidden unless declared on that public surface. Mark public callable
+  declarations with `JS_EXTERN` and check the exact export list.
 
 ## C conventions and correctness
 
@@ -102,7 +107,7 @@ For documentation-only tasks, check Markdown, references and the file-change sco
 - Native allocation failure tests must account for allocator pools so the
   intended failure occurs.
 - Run full Test262 and its sanitizer/platform variants in GitHub Actions. Use
-  `make test2-bootstrap` for the repository pin and patches; it resets an existing
+  `python3 tools/build/test262.py bootstrap` for the repository pin and patches; it resets an existing
   Test262 checkout. Target failing cases during diagnosis and use available runner
   threads. Reuse passing exact-revision CI evidence instead of repeating it locally.
 - Inspect `.github/workflows/ci.yml`, `ci-sanitizers.yml` and `ci-qemu.yml`
