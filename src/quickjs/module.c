@@ -278,7 +278,7 @@ int add_req_module_entry(JSContext *ctx, JSModuleDef *m,
     return i;
 }
 
-static JSExportEntry *find_export_entry(JSContext *ctx, JSModuleDef *m,
+static JSExportEntry *find_export_entry(JSModuleDef *m,
                                         JSAtom export_name)
 {
     JSExportEntry *me;
@@ -298,7 +298,7 @@ static JSExportEntry *add_export_entry2(JSContext *ctx,
 {
     JSExportEntry *me;
 
-    if (find_export_entry(ctx, m, export_name)) {
+    if (find_export_entry(m, export_name)) {
         char buf1[ATOM_GET_STR_BUF_SIZE];
         if (s) {
             js_parse_error(s, "duplicate exported name '%s'",
@@ -400,7 +400,7 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
     name = JS_NewAtom(ctx, export_name);
     if (name == JS_ATOM_NULL)
         goto fail;
-    me = find_export_entry(ctx, m, name);
+    me = find_export_entry(m, name);
     JS_FreeAtom(ctx, name);
     if (!me)
         goto fail;
@@ -714,7 +714,7 @@ static JSResolveResultEnum js_resolve_export1(JSContext *ctx,
         return JS_RESOLVE_RES_CIRCULAR;
     if (add_resolve_entry(ctx, s, m, export_name) < 0)
         return JS_RESOLVE_RES_EXCEPTION;
-    me = find_export_entry(ctx, m, export_name);
+    me = find_export_entry(m, export_name);
     if (me) {
         if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
             /* local export */
@@ -947,7 +947,7 @@ static int exported_names_cmp(const void *p1, const void *p2, void *opaque)
         /* XXX: raise an error ? */
         ret = 0;
     } else {
-        ret = js_string_compare(ctx, JS_VALUE_GET_STRING(str1),
+        ret = js_string_compare(JS_VALUE_GET_STRING(str1),
                                 JS_VALUE_GET_STRING(str2));
     }
     JS_FreeValue(ctx, str1);
@@ -1505,9 +1505,9 @@ JSValue js_import_meta(JSContext *ctx)
     return JS_GetImportMeta(ctx, m);
 }
 
-JSValue JS_NewModuleValue(JSContext *ctx, JSModuleDef *m)
+JSValue JS_NewModuleValue(JSModuleDef *m)
 {
-    return JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+    return __JS_DupValue(JS_MKPTR(JS_TAG_MODULE, m));
 }
 
 static JSValue js_load_module_rejected(JSContext *ctx, JSValueConst this_val,
@@ -1569,7 +1569,7 @@ static void JS_LoadModuleInternal(JSContext *ctx, const char *basename,
     }
 
     /* Evaluate the module code */
-    func_obj = JS_NewModuleValue(ctx, m);
+    func_obj = JS_NewModuleValue(m);
     evaluate_promise = JS_EvalFunction(ctx, func_obj);
     if (JS_IsException(evaluate_promise)) {
     fail:
@@ -1581,7 +1581,7 @@ static void JS_LoadModuleInternal(JSContext *ctx, const char *basename,
         return;
     }
 
-    func_obj = JS_NewModuleValue(ctx, m);
+    func_obj = JS_NewModuleValue(m);
     func_data[0] = resolving_funcs[0];
     func_data[1] = resolving_funcs[1];
     func_data[2] = func_obj;

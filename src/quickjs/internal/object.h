@@ -281,7 +281,7 @@ int JS_CreateDataPropertyUint32(JSContext *ctx, JSValueConst this_obj,
 
 
 int JS_TryGetPropertyInt64(JSContext *ctx, JSValueConst obj, int64_t idx, JSValue *pval);
-BOOL js_get_fast_array(JSContext *ctx, JSValueConst obj,
+BOOL js_get_fast_array(JSValueConst obj,
                        JSValue **arrpp, uint32_t *countp);
 JSValue js_allocate_fast_array(JSContext *ctx, int64_t len);
 
@@ -323,7 +323,7 @@ JSValue JS_GetPrototypeFree(JSContext *ctx, JSValue obj);
 
 JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
                                     JSClassID class_id, int n_alloc_props);
-void JS_SetImmutablePrototype(JSContext *ctx, JSValueConst obj);
+void JS_SetImmutablePrototype(JSValueConst obj);
 int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
                        JSValueConst name, JSValue val);
 int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom);
@@ -344,7 +344,7 @@ void js_free_shape_null(JSRuntime *rt, JSShape *sh);
 void js_object_data_finalizer(JSRuntime *rt, JSValue val);
 void js_object_data_mark(JSRuntime *rt, JSValueConst val,
                          JS_MarkFunc *mark_func);
-void set_cycle_flag(JSContext *ctx, JSValueConst obj);
+void set_cycle_flag(JSValueConst obj);
 
 
 __exception int JS_CopyDataProperties(JSContext *ctx, JSValueConst target, JSValueConst source, JSValueConst excluded, BOOL setprop);
