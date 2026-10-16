@@ -219,8 +219,8 @@ static int64_t get_time_ns(void)
 }
 #endif
 
-JSValue js_os_now(JSContext *ctx, JSValue this_val,
-                  int argc, JSValue *argv)
+JSValue js_os_now(JSContext *ctx, JSValueConst this_val,
+                  int argc, JSValueConst *argv)
 {
     return JS_NewFloat64(ctx, (double)get_time_ns() / 1e6);
 }

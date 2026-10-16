@@ -62,7 +62,7 @@ check_recipes clang yes CONFIG_CLANG=y
 check_recipes cosmo yes CONFIG_COSMO=y
 check_recipes clang-cosmo yes CONFIG_CLANG=y CONFIG_COSMO=y
 
-check_core_coverage() {
+check_jsvalue_coverage() {
     build_mode=$1
     shift
     build_obj="$build_tmp/coverage-$build_mode"
@@ -73,19 +73,21 @@ check_core_coverage() {
         CONFIG_ASAN= CONFIG_UBSAN= PROGS= OBJDIR="$build_obj" \
         CC="$build_tmp/compiler" HOST_CC="$build_tmp/compiler" "$@" all
     # Compare source paths, not only counts: equal basenames have distinct owners.
-    find src/quickjs -name '*.c' | sed 's/\.c$/.check.o/' | sort \
-        > "$build_tmp/expected-checks"
+    {
+        find src/quickjs src/quickjs-libc -name '*.c'
+        printf '%s\n' tools/qjs.c tools/qjsc.c tools/run-test262.c
+    } | sed 's/\.c$/.check.o/' | sort > "$build_tmp/expected-checks"
     if [ ! -d "$build_obj/src/quickjs" ]; then
-        echo "all omitted the core CONFIG_CHECK_JSVALUE checks" >&2
+        echo "all omitted the CONFIG_CHECK_JSVALUE checks" >&2
         exit 1
     fi
-    find "$build_obj/src/quickjs" -name '*.check.o' \
+    find "$build_obj" -name '*.check.o' \
         | sed "s|^$build_obj/||" | sort > "$build_tmp/actual-checks"
     diff -u "$build_tmp/expected-checks" "$build_tmp/actual-checks"
 }
-check_core_coverage gcc
-check_core_coverage clang CONFIG_CLANG=y
-check_core_coverage gcc-asan CONFIG_ASAN=y
-check_core_coverage clang-asan CONFIG_CLANG=y CONFIG_ASAN=y
-check_core_coverage gcc-ubsan CONFIG_UBSAN=y
-check_core_coverage clang-ubsan CONFIG_CLANG=y CONFIG_UBSAN=y
+check_jsvalue_coverage gcc
+check_jsvalue_coverage clang CONFIG_CLANG=y
+check_jsvalue_coverage gcc-asan CONFIG_ASAN=y
+check_jsvalue_coverage clang-asan CONFIG_CLANG=y CONFIG_ASAN=y
+check_jsvalue_coverage gcc-ubsan CONFIG_UBSAN=y
+check_jsvalue_coverage clang-ubsan CONFIG_CLANG=y CONFIG_UBSAN=y
