@@ -1433,17 +1433,17 @@ static void test_optional_property_compaction(void)
     }
 }
 
-static void test_compiler_debug_allocation_failure(void)
+static void test_compiler_debug_allocation_failure(int nested)
 {
     char source[8192];
     uint8_t expected_pc2line[8192];
     size_t length, fail_at, allocations = 0, pc2line_len = 0;
     int i;
 
-    strcpy(source, "var a = 0;\n");
+    strcpy(source, nested ? "function f(a) {\n" : "var a = 0;\n");
     for (i = 0; i < 512; i++)
         strcat(source, "a += 1;\n");
-    strcat(source, "a;\n");
+    strcat(source, nested ? "return a;\n}\nf(0);\n" : "a;\n");
     length = strlen(source);
     for (fail_at = 0; fail_at <= allocations; fail_at++) {
         OOMTestAllocator allocator;
@@ -1469,7 +1469,13 @@ static void test_compiler_debug_allocation_failure(void)
         } else {
             JSFunctionBytecode *b = JS_VALUE_GET_PTR(result);
 
-            assert(!JS_HasException(ctx) && b->has_debug);
+            assert(!JS_HasException(ctx));
+            if (nested) {
+                assert(b->cpool_count > 0);
+                assert(JS_VALUE_GET_TAG(b->cpool[0]) == JS_TAG_FUNCTION_BYTECODE);
+                b = JS_VALUE_GET_PTR(b->cpool[0]);
+            }
+            assert(b->has_debug);
             if (!fail_at) {
                 pc2line_len = b->debug.pc2line_len;
                 assert(pc2line_len > 512 && pc2line_len <= sizeof(expected_pc2line));
@@ -1543,7 +1549,8 @@ static void test_function_list_allocation_failure(void)
 int main(void)
 {
     test_function_list_allocation_failure();
-    test_compiler_debug_allocation_failure();
+    test_compiler_debug_allocation_failure(0);
+    test_compiler_debug_allocation_failure(1);
     test_optional_bigint_shrink();
     test_optional_property_compaction();
     test_module_export_allocation_failure();
