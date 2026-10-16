@@ -305,7 +305,7 @@ static __exception int emit_push_const(JSParseState *s, JSValueConst val,
 
 /* return the variable index or -1 if not found,
    add ARGUMENT_VAR_OFFSET for argument variables */
-static int find_arg(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
+static int find_arg(JSFunctionDef *fd, JSAtom name)
 {
     int i;
     for(i = fd->arg_count; i-- > 0;) {
@@ -315,18 +315,18 @@ static int find_arg(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
     return -1;
 }
 
-int find_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
+int find_var(JSFunctionDef *fd, JSAtom name)
 {
     int i;
     for(i = fd->var_count; i-- > 0;) {
         if (fd->vars[i].var_name == name && fd->vars[i].scope_level == 0)
             return i;
     }
-    return find_arg(ctx, fd, name);
+    return find_arg(fd, name);
 }
 
 /* find a variable declaration in a given scope */
-static int find_var_in_scope(JSContext *ctx, JSFunctionDef *fd,
+static int find_var_in_scope(JSFunctionDef *fd,
                              JSAtom name, int scope_level)
 {
     int scope_idx;
@@ -342,7 +342,7 @@ static int find_var_in_scope(JSContext *ctx, JSFunctionDef *fd,
 
 /* return true if scope == parent_scope or if scope is a child of
    parent_scope */
-static BOOL is_child_scope(JSContext *ctx, JSFunctionDef *fd,
+static BOOL is_child_scope(JSFunctionDef *fd,
                            int scope, int parent_scope)
 {
     while (scope >= 0) {
@@ -354,14 +354,14 @@ static BOOL is_child_scope(JSContext *ctx, JSFunctionDef *fd,
 }
 
 /* find a 'var' declaration in the same scope or a child scope */
-static int find_var_in_child_scope(JSContext *ctx, JSFunctionDef *fd,
+static int find_var_in_child_scope(JSFunctionDef *fd,
                                    JSAtom name, int scope_level)
 {
     int i;
     for(i = 0; i < fd->var_count; i++) {
         JSVarDef *vd = &fd->vars[i];
         if (vd->var_name == name && vd->scope_level == 0) {
-            if (is_child_scope(ctx, fd, vd->scope_next,
+            if (is_child_scope(fd, vd->scope_next,
                                scope_level))
                 return i;
         }
@@ -391,7 +391,7 @@ static JSGlobalVar *find_lexical_global_var(JSFunctionDef *fd, JSAtom name)
         return NULL;
 }
 
-static int find_lexical_decl(JSContext *ctx, JSFunctionDef *fd, JSAtom name,
+static int find_lexical_decl(JSFunctionDef *fd, JSAtom name,
                              int scope_idx, BOOL check_catch_var)
 {
     while (scope_idx >= 0) {
@@ -553,7 +553,7 @@ int add_arguments_arg(JSContext *ctx, JSFunctionDef *fd)
 {
     int idx;
     if (fd->arguments_arg_idx < 0) {
-        idx = find_var_in_scope(ctx, fd, JS_ATOM_arguments, ARG_SCOPE_INDEX);
+        idx = find_var_in_scope(fd, JS_ATOM_arguments, ARG_SCOPE_INDEX);
         if (idx < 0) {
             idx = add_var(ctx, fd, JS_ATOM_arguments);
             if (idx < 0)
@@ -675,7 +675,7 @@ int resolve_annex_function_declarations(JSContext *ctx, JSFunctionDef *fd)
                 hf->scope_level = 0;
             }
         } else if (name == JS_ATOM_arguments && fd->has_arguments_binding) {
-            if (fd->has_parameter_expressions && find_var(ctx, fd, name) < 0) {
+            if (fd->has_parameter_expressions && find_var(fd, name) < 0) {
                 fd->has_annex_arguments = TRUE;
                 if (fd->var_object_idx < 0) {
                     fd->var_object_idx = add_var(ctx, fd, JS_ATOM__var_);
@@ -685,7 +685,7 @@ int resolve_annex_function_declarations(JSContext *ctx, JSFunctionDef *fd)
             }
             if (add_arguments_var(ctx, fd) < 0)
                 return -1;
-        } else if (find_var(ctx, fd, name) < 0) {
+        } else if (find_var(fd, name) < 0) {
             if (add_var(ctx, fd, name) < 0)
                 return -1;
         }
@@ -719,7 +719,7 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
     case JS_VAR_DEF_CONST:
     case JS_VAR_DEF_FUNCTION_DECL:
     case JS_VAR_DEF_NEW_FUNCTION_DECL:
-        idx = find_lexical_decl(ctx, fd, name, fd->scope_first, TRUE);
+        idx = find_lexical_decl(fd, name, fd->scope_first, TRUE);
         if (idx >= 0) {
             if (idx < GLOBAL_VAR_OFFSET) {
                 if (fd->vars[idx].scope_level == fd->scope_level) {
@@ -745,19 +745,19 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
         if (var_def_type != JS_VAR_DEF_FUNCTION_DECL &&
             var_def_type != JS_VAR_DEF_NEW_FUNCTION_DECL &&
             fd->scope_level == fd->body_scope &&
-            find_arg(ctx, fd, name) >= 0) {
+            find_arg(fd, name) >= 0) {
             /* lexical variable redefines a parameter name */
             return js_parse_error(s, "invalid redefinition of parameter name");
         }
 
-        if (find_var_in_child_scope(ctx, fd, name, fd->scope_level) >= 0) {
+        if (find_var_in_child_scope(fd, name, fd->scope_level) >= 0) {
             return js_parse_error(s, "invalid redefinition of a variable");
         }
 
         if (fd->is_global_var) {
             JSGlobalVar *hf;
             hf = find_global_var(fd, name);
-            if (hf && is_child_scope(ctx, fd, hf->scope_level,
+            if (hf && is_child_scope(fd, hf->scope_level,
                                      fd->scope_level)) {
                 return js_parse_error(s, "invalid redefinition of global identifier");
             }
@@ -796,7 +796,7 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
         break;
 
     case JS_VAR_DEF_VAR:
-        if (find_lexical_decl(ctx, fd, name, fd->scope_first,
+        if (find_lexical_decl(fd, name, fd->scope_first,
                               FALSE) >= 0) {
        invalid_lexical_redefinition:
             /* error to redefine a var that inside a lexical scope */
@@ -815,7 +815,7 @@ static int define_var(JSParseState *s, JSFunctionDef *fd, JSAtom name,
             idx = GLOBAL_VAR_OFFSET;
         } else {
             /* if the variable already exists, don't add it again  */
-            idx = find_var(ctx, fd, name);
+            idx = find_var(fd, name);
             if (idx >= 0) {
                 if (fd->in_function_body) {
                     if (idx & ARGUMENT_VAR_OFFSET)
@@ -1587,7 +1587,7 @@ static __exception int js_parse_class_default_ctor(JSParseState *s,
 }
 
 /* find field in the current scope */
-static int find_private_class_field(JSContext *ctx, JSFunctionDef *fd,
+static int find_private_class_field(JSFunctionDef *fd,
                                     JSAtom name, int scope_level)
 {
     int idx;
@@ -1895,7 +1895,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
 
             if (is_private) {
                 int idx, var_kind, is_static1;
-                idx = find_private_class_field(ctx, fd, name, fd->scope_level);
+                idx = find_private_class_field(fd, name, fd->scope_level);
                 if (idx >= 0) {
                     var_kind = fd->vars[idx].var_kind;
                     is_static1 = fd->vars[idx].is_static_private;
@@ -1965,7 +1965,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             }
 
             if (is_private) {
-                if (find_private_class_field(ctx, fd, name,
+                if (find_private_class_field(fd, name,
                                              fd->scope_level) >= 0) {
                     goto private_field_already_defined;
                 }
@@ -2069,7 +2069,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
                 ctor_fd = method_fd;
             } else if (is_private) {
                 method_fd->need_home_object = TRUE; /* needed for brand check */
-                if (find_private_class_field(ctx, fd, name,
+                if (find_private_class_field(fd, name,
                                              fd->scope_level) >= 0) {
                 private_field_already_defined:
                     js_parse_error(s, "private class field is already defined");
@@ -4938,7 +4938,7 @@ static void emit_async_iterator_close_body(JSParseState *s, BlockEnv *block,
 
     emit_label(s, scope->label_close);
     for (level = fd->scope_count - 1; level >= scope->scope_level; level--) {
-        if (is_child_scope(s->ctx, fd, level, scope->scope_level)) {
+        if (is_child_scope(fd, level, scope->scope_level)) {
             emit_op(s, OP_leave_scope);
             emit_u16(s, level);
         }
@@ -5137,7 +5137,7 @@ static void pop_resource_scope(JSParseState *s, JSResourceScope *scope)
        into an enclosing catch and permit their slots to be reused. */
     for (scope_level = fd->scope_count - 1;
          scope_level >= scope->block.scope_level; scope_level--) {
-        if (is_child_scope(s->ctx, fd, scope_level,
+        if (is_child_scope(fd, scope_level,
                            scope->block.scope_level)) {
             emit_op(s, OP_leave_scope);
             emit_u16(s, scope_level);
@@ -7533,7 +7533,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
     if (func_type == JS_PARSE_FUNC_VAR) {
         if (!(fd->js_mode & JS_MODE_STRICT)
         && func_kind == JS_FUNC_NORMAL
-        &&  !((func_idx = find_var(ctx, fd, func_name)) >= 0 && (func_idx & ARGUMENT_VAR_OFFSET))) {
+        &&  !((func_idx = find_var(fd, func_name)) >= 0 && (func_idx & ARGUMENT_VAR_OFFSET))) {
             create_func_var = TRUE;
         }
         /* Create the lexical name here so that the function closure
@@ -7790,9 +7790,9 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         }
     }
 
-    if (find_var(ctx, fd, JS_ATOM_arguments) >= 0 ||
+    if (find_var(fd, JS_ATOM_arguments) >= 0 ||
         (fd->has_parameter_expressions &&
-         find_var_in_scope(ctx, fd, JS_ATOM_arguments, ARG_SCOPE_INDEX) >= 0))
+         find_var_in_scope(fd, JS_ATOM_arguments, ARG_SCOPE_INDEX) >= 0))
         fd->has_arguments_binding = FALSE;
 
     if (fd->has_parameter_expressions) {
@@ -7805,7 +7805,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
             JSVarDef *vd = &fd->vars[idx];
             if (vd->scope_level != fd->scope_level)
                 break;
-            if (find_var(ctx, fd, vd->var_name) < 0) {
+            if (find_var(fd, vd->var_name) < 0) {
                 if (add_var(ctx, fd, vd->var_name) < 0)
                     goto fail;
                 vd = &fd->vars[idx]; /* fd->vars may have been reallocated */
