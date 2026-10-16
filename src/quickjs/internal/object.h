@@ -55,6 +55,8 @@ typedef struct JSProperty {
 } JSProperty;
 
 #define JS_PROP_INITIAL_HASH_SIZE 4 /* must be a power of two */
+/* Collision links below store one-based property indices in 26 bits. */
+#define JS_PROP_MAX ((1U << 26) - 1)
 
 typedef struct JSShapeProperty {
     uint32_t hash_next : 26; /* 0 if last in list */
@@ -196,8 +198,14 @@ __exception int js_get_length32(JSContext *ctx, uint32_t *pres,
 
 static inline size_t get_shape_size(size_t hash_size, size_t prop_size)
 {
-    return sizeof(JSShape) + hash_size * sizeof(uint32_t) +
-        prop_size * sizeof(JSShapeProperty);
+    size_t size;
+
+    if (hash_size > (SIZE_MAX - sizeof(JSShape)) / sizeof(uint32_t))
+        return SIZE_MAX;
+    size = sizeof(JSShape) + hash_size * sizeof(uint32_t);
+    if (prop_size > (SIZE_MAX - size) / sizeof(JSShapeProperty))
+        return SIZE_MAX;
+    return size + prop_size * sizeof(JSShapeProperty);
 }
 
 
