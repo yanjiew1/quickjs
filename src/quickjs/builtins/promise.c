@@ -153,6 +153,7 @@ void JS_SetHostPromiseRejectionTracker(JSRuntime *rt,
 static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
                                       JSValueConst value, BOOL is_reject)
 {
+    JSRuntime *rt;
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
     struct list_head *el, *el1;
     JSPromiseReactionData *rd;
@@ -160,13 +161,14 @@ static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
 
     if (!s || s->promise_state != JS_PROMISE_PENDING)
         return; /* should never happen */
-    set_value(ctx->rt, &s->promise_result, JS_DupValue(ctx, value));
+    rt = ctx->rt;
+    set_value(rt, &s->promise_result, JS_DupValue(ctx, value));
     s->promise_state = JS_PROMISE_FULFILLED + is_reject;
 #ifdef DUMP_PROMISE
     printf("fulfill_or_reject_promise: is_reject=%d\n", is_reject);
 #endif
     if (s->promise_state == JS_PROMISE_REJECTED && !s->is_handled) {
-        JSRuntime *rt = ctx->rt;
+
         if (rt->host_promise_rejection_tracker) {
             rt->host_promise_rejection_tracker(ctx, promise, value, FALSE,
                                                rt->host_promise_rejection_tracker_opaque);
@@ -182,13 +184,13 @@ static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
         args[4] = value;
         JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
         list_del(&rd->link);
-        promise_reaction_data_free(ctx->rt, rd);
+        promise_reaction_data_free(rt, rd);
     }
 
     list_for_each_safe(el, el1, &s->promise_reactions[1 - is_reject]) {
         rd = list_entry(el, JSPromiseReactionData, link);
         list_del(&rd->link);
-        promise_reaction_data_free(ctx->rt, rd);
+        promise_reaction_data_free(rt, rd);
     }
 }
 
@@ -905,6 +907,7 @@ __exception int perform_promise_then(JSContext *ctx,
                                      JSValueConst *resolve_reject,
                                      JSValueConst *cap_resolving_funcs)
 {
+    JSRuntime *rt = ctx->rt;
     JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
     JSPromiseReactionData *rd_array[2], *rd;
     int i, j, ret = 0;
@@ -916,7 +919,7 @@ __exception int perform_promise_then(JSContext *ctx,
         rd = js_mallocz(ctx, sizeof(*rd));
         if (!rd) {
             if (i == 1)
-                promise_reaction_data_free(ctx->rt, rd_array[0]);
+                promise_reaction_data_free(rt, rd_array[0]);
             return -1;
         }
         for(j = 0; j < 2; j++)
@@ -934,7 +937,7 @@ __exception int perform_promise_then(JSContext *ctx,
     } else {
         JSValueConst args[5];
         if (s->promise_state == JS_PROMISE_REJECTED && !s->is_handled) {
-            JSRuntime *rt = ctx->rt;
+
             if (rt->host_promise_rejection_tracker) {
                 rt->host_promise_rejection_tracker(ctx, promise, s->promise_result,
                                                    TRUE, rt->host_promise_rejection_tracker_opaque);
@@ -949,7 +952,7 @@ __exception int perform_promise_then(JSContext *ctx,
         args[4] = s->promise_result;
         ret = JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
         for(i = 0; i < 2; i++)
-            promise_reaction_data_free(ctx->rt, rd_array[i]);
+            promise_reaction_data_free(rt, rd_array[i]);
     }
     s->is_handled = TRUE;
     return ret;

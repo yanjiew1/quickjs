@@ -278,7 +278,7 @@ int JS_EnqueueJob2(JSContext *ctx, JSJobFunc *job_func,
         size += sizeof(JSNativeWaitEvent);
 #endif
     if (no_exception)
-        e = js_malloc_rt(ctx->rt, size);
+        e = js_malloc_rt(rt, size);
     else
         e = js_malloc(ctx, size);
     if (!e)
@@ -723,17 +723,17 @@ void JS_FreeContext(JSContext *ctx)
     assert(js_rc(ctx)->ref_count == 0);
 
 #ifdef DUMP_ATOMS
-    JS_DumpAtoms(ctx->rt);
+    JS_DumpAtoms(rt);
 #endif
 #ifdef DUMP_SHAPES
-    JS_DumpShapes(ctx->rt);
+    JS_DumpShapes(rt);
 #endif
 #ifdef DUMP_OBJECTS
     {
         struct list_head *el;
         JSGCObjectHeader *p;
         printf("JSObjects: {\n");
-        JS_DumpObjectHeader(ctx->rt);
+        JS_DumpObjectHeader(rt);
         list_for_each(el, &rt->gc_obj_list) {
             p = list_entry(el, JSGCObjectHeader, link);
             JS_DumpGCObject(rt, p);
@@ -773,15 +773,15 @@ void JS_FreeContext(JSContext *ctx)
     JS_FreeValue(ctx, ctx->function_ctor);
     JS_FreeValue(ctx, ctx->function_proto);
 
-    js_free_shape_null(ctx->rt, ctx->array_shape);
-    js_free_shape_null(ctx->rt, ctx->arguments_shape);
-    js_free_shape_null(ctx->rt, ctx->mapped_arguments_shape);
-    js_free_shape_null(ctx->rt, ctx->regexp_shape);
-    js_free_shape_null(ctx->rt, ctx->regexp_result_shape);
+    js_free_shape_null(rt, ctx->array_shape);
+    js_free_shape_null(rt, ctx->arguments_shape);
+    js_free_shape_null(rt, ctx->mapped_arguments_shape);
+    js_free_shape_null(rt, ctx->regexp_shape);
+    js_free_shape_null(rt, ctx->regexp_result_shape);
 
     list_del(&ctx->link);
     remove_gc_object(&ctx->header);
-    js_free_rt(ctx->rt, ctx);
+    js_free_rt(rt, ctx);
 }
 
 JSRuntime *JS_GetRuntime(JSContext *ctx)

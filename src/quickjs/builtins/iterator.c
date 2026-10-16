@@ -202,6 +202,7 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
                                        int argc, JSValueConst *argv,
                                        int *pdone, int magic)
 {
+    JSRuntime *rt;
     JSValue iter, item, next, val, *obj, *meth, ret;
     JSIteratorConcatData *it;
     int done;
@@ -219,6 +220,7 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
     }
 
     ctx = it->realm;
+    rt = ctx->rt;
     it->running = TRUE;
     for(;;) {
         if (it->index >= it->count) {
@@ -256,7 +258,7 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
                 ret = JS_EXCEPTION;
                 break;
             }
-            done = JS_ToBoolFree(ctx->rt, val);
+            done = JS_ToBoolFree(rt, val);
             if (done)
                 goto done_next;
             ret = JS_GetProperty(ctx, item, JS_ATOM_value);
@@ -275,13 +277,13 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
         }
     }
     if (JS_IsException(ret)) {
-        js_iterator_concat_complete(ctx->rt, it);
+        js_iterator_concat_complete(rt, it);
         *pdone = TRUE;
     } else {
         ret = js_create_iterator_result(ctx, ret, *pdone);
         if (JS_IsException(ret) && !*pdone) {
             JS_IteratorClose(ctx, it->iter, TRUE);
-            js_iterator_concat_complete(ctx->rt, it);
+            js_iterator_concat_complete(rt, it);
             *pdone = TRUE;
         }
     }
@@ -1172,6 +1174,7 @@ fail:
 static JSValue js_iterator_zip_keyed(JSContext *ctx, JSValueConst this_val,
                                      int argc, JSValueConst *argv)
 {
+    JSRuntime *rt = ctx->rt;
     JSIteratorZipData *zip;
     JSIteratorZipEntry *entry;
     JSIteratorZipModeEnum mode;
@@ -1206,7 +1209,7 @@ static JSValue js_iterator_zip_keyed(JSContext *ctx, JSValueConst this_val,
         if (!res)
             continue;
         res = (desc.flags & JS_PROP_ENUMERABLE) != 0;
-        js_free_desc(ctx->rt, &desc);
+        js_free_desc(rt, &desc);
         if (!res)
             continue;
         value = JS_GetProperty(ctx, argv[0], all_keys[i].atom);
@@ -1250,13 +1253,14 @@ fail:
     JS_FreeValue(ctx, value);
     JS_FreeValue(ctx, padding);
     JS_FreePropertyEnum(ctx, all_keys, key_count);
-    js_iterator_zip_free(ctx->rt, zip);
+    js_iterator_zip_free(rt, zip);
     return JS_EXCEPTION;
 }
 
 static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv, int magic)
 {
+    JSRuntime *rt = ctx->rt;
     JSValue item, method, ret, func, index_val, r;
     JSValueConst args[2];
     int64_t idx;
@@ -1294,7 +1298,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                 JS_FreeValue(ctx, index_val);
                 if (JS_IsException(ret))
                     goto fail;
-                if (!JS_ToBoolFree(ctx->rt, ret)) {
+                if (!JS_ToBoolFree(rt, ret)) {
                     if (JS_IteratorClose(ctx, this_val, FALSE) < 0)
                         r = JS_EXCEPTION;
                     else
@@ -1324,7 +1328,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                     JS_FreeValue(ctx, item);
                     goto fail;
                 }
-                if (JS_ToBoolFree(ctx->rt, ret)) {
+                if (JS_ToBoolFree(rt, ret)) {
                     if (JS_IteratorClose(ctx, this_val, FALSE) < 0) {
                         JS_FreeValue(ctx, item);
                         r = JS_EXCEPTION;
@@ -1380,7 +1384,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                 JS_FreeValue(ctx, index_val);
                 if (JS_IsException(ret))
                     goto fail;
-                if (JS_ToBoolFree(ctx->rt, ret)) {
+                if (JS_ToBoolFree(rt, ret)) {
                     if (JS_IteratorClose(ctx, this_val, FALSE) < 0)
                         r = JS_EXCEPTION;
                     else
@@ -1744,6 +1748,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                                       int argc, JSValueConst *argv,
                                       int *pdone, int magic)
 {
+    JSRuntime *rt;
     JSIteratorHelperData *it;
     JSValue ret;
 
@@ -1789,6 +1794,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
     it->started = 1;
     ctx = it->kind == JS_ITERATOR_HELPER_KIND_ZIP
         ? it->zip->realm : it->realm;
+    rt = ctx->rt;
 
     if (magic == GEN_MAGIC_RETURN) {
         *pdone = TRUE;
@@ -1945,7 +1951,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     JS_FreeValue(ctx, item);
                     goto fail;
                 }
-                if (JS_ToBoolFree(ctx->rt, selected)) {
+                if (JS_ToBoolFree(rt, selected)) {
                     ret = item;
                     break;
                 }
@@ -2082,7 +2088,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
         it->done = *pdone;
         it->executing = 0;
         if (*pdone) {
-            js_iterator_zip_free(ctx->rt, it->zip);
+            js_iterator_zip_free(rt, it->zip);
             it->zip = NULL;
         }
         *pdone = 2;
@@ -2105,7 +2111,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
         }
     }
     if (*pdone && js_iterator_has_buffer(it))
-        js_iterator_buffer_free(ctx->rt, it);
+        js_iterator_buffer_free(rt, it);
     it->done = *pdone;
     it->executing = 0;
     if (*pdone) {
