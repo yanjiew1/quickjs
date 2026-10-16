@@ -3957,3 +3957,15 @@ function test_typeof_comparison_alternatives()
 }
 
 test_typeof_comparison_alternatives();
+
+function test_to_int32_signed_minimum()
+{
+    for (const value of [-2147483648.5, -6442450944.5, 2147483648.5, 6442450944.5]) {
+        assert(value | 0, -2147483648);
+        assert(value >> 0, -2147483648);
+        assert(value >>> 0, 2147483648);
+        assert(~value, 2147483647);
+    }
+}
+
+test_to_int32_signed_minimum();
