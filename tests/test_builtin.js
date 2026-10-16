@@ -6294,3 +6294,49 @@ function test_iterator_dispose()
 }
 
 test_iterator_dispose();
+
+function test_property_descriptor_abrupt_completion()
+{
+    const fields = ["enumerable", "configurable", "value", "writable", "get", "set"];
+    const consumers = [
+        descriptor => Object.defineProperty({}, "x", descriptor),
+        descriptor => Reflect.defineProperty({}, "x", descriptor),
+        descriptor => Object.defineProperties({}, { x: descriptor }),
+        descriptor => Object.create(null, { x: descriptor }),
+    ];
+    for (const consume of consumers) {
+        for (let index = 0; index < fields.length; index++) {
+            const sentinel = {}, events = [];
+            const descriptor = new Proxy({}, {
+                has(target, key) {
+                    events.push("has " + key);
+                    if (key === fields[index])
+                        throw sentinel;
+                    return false;
+                },
+                get() { throw Error("get after failed or false HasProperty"); },
+            });
+            let caught = false;
+            try { consume(descriptor); } catch (error) {
+                caught = true;
+                assert(error === sentinel, true);
+            }
+            assert(caught, true);
+            assert(events.join(","), fields.slice(0, index + 1).map(
+                key => "has " + key).join(","));
+        }
+        for (const field of ["get", "set"]) {
+            const sentinel = {}, descriptor = {};
+            Object.defineProperty(descriptor, field, { get() { throw sentinel; } });
+            let caught = false;
+            try { consume(descriptor); } catch (error) {
+                caught = true;
+                assert(error === sentinel, true);
+            }
+            assert(caught, true);
+            assert_throws(TypeError, () => consume({ [field]: 1 }));
+        }
+    }
+}
+
+test_property_descriptor_abrupt_completion();
