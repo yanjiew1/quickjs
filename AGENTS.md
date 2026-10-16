@@ -131,6 +131,9 @@ For documentation-only tasks, check Markdown, references and the file-change sco
 - Measure likely performance changes directly; follow the benchmark tooling's
   current cadence for routine broader checks. Include repository microbenchmarks
   as well as V8 v7; Zoo excludes zlib. Add workloads when new behavior lacks coverage.
+- Disable C assertions in benchmark builds for both compared revisions
+  (`-Db_ndebug=true` with Meson, or `-DNDEBUG`). Keep assertions enabled for
+  correctness validation; record the setting with benchmark results.
 - Prefer measured inline/no-inline/force-inline and fast/slow-path adjustments
   before rewriting algorithm bodies. Record body changes and their rationale.
   Investigate regressions using workload behavior, assembly and code layout;
