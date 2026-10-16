@@ -140,7 +140,7 @@ static inline JS_BOOL JS_VALUE_IS_NAN(JSValue v)
     return 0;
 }
 
-static inline JSValue __JS_NewShortBigInt(JSContext *ctx, int32_t d)
+static inline JSValue __JS_NewShortBigInt(int32_t d)
 {
     return JS_MKVAL(JS_TAG_SHORT_BIG_INT, d);
 }
@@ -211,7 +211,7 @@ static inline JS_BOOL JS_VALUE_IS_NAN(JSValue v)
     return tag == (JS_NAN >> 32);
 }
 
-static inline JSValue __JS_NewShortBigInt(JSContext *ctx, int32_t d)
+static inline JSValue __JS_NewShortBigInt(int32_t d)
 {
     return JS_MKVAL(JS_TAG_SHORT_BIG_INT, d);
 }
@@ -274,7 +274,7 @@ static inline JS_BOOL JS_VALUE_IS_NAN(JSValue v)
     return (u.u64 & 0x7fffffffffffffff) > 0x7ff0000000000000;
 }
 
-static inline JSValue __JS_NewShortBigInt(JSContext *ctx, int64_t d)
+static inline JSValue __JS_NewShortBigInt(int64_t d)
 {
     JSValue v;
     v.tag = JS_TAG_SHORT_BIG_INT;
