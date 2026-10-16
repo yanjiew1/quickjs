@@ -710,7 +710,8 @@ static inline void JS_FreeValueRT(JSRuntime *rt, JSValue v)
     }
 }
 
-static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
+/* Shared implementation for callers that do not need a context or runtime. */
+static inline JSValue __JS_DupValue(JSValueConst v)
 {
     if (JS_VALUE_HAS_REF_COUNT(v)) {
         JSRefCountHeader *p = __js_rc(JS_VALUE_GET_PTR(v));
@@ -719,13 +720,14 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
     return (JSValue)v;
 }
 
+static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
+{
+    return __JS_DupValue(v);
+}
+
 static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
 {
-    if (JS_VALUE_HAS_REF_COUNT(v)) {
-        JSRefCountHeader *p = __js_rc(JS_VALUE_GET_PTR(v));
-        p->ref_count++;
-    }
-    return (JSValue)v;
+    return __JS_DupValue(v);
 }
 
 JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);

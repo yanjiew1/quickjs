@@ -754,7 +754,7 @@ static JSValue js_array_buffer_slice(JSContext *ctx,
     if (!new_abuf)
         goto fail;
     if (abuf->shared ? new_abuf->data == abuf->data :
-        js_same_value(ctx, new_obj, this_val)) {
+        js_same_value(new_obj, this_val)) {
         JS_ThrowTypeError(ctx, "cannot use identical ArrayBuffer");
         goto fail;
     }
