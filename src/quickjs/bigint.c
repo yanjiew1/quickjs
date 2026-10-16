@@ -492,7 +492,7 @@ JSBigInt *js_bigint_new_di(JSContext *ctx, js_sdlimb_t a)
 /* Remove redundant high order limbs. Warning: 'a' may be
    reallocated. Can never fail.
 */
-static JSBigInt *js_bigint_normalize1(JSContext *ctx, JSBigInt *a, int l)
+static JSBigInt *js_bigint_normalize1(JSRuntime *rt, JSBigInt *a, int l)
 {
     js_limb_t v;
 
@@ -509,16 +509,16 @@ static JSBigInt *js_bigint_normalize1(JSContext *ctx, JSBigInt *a, int l)
         JSBigInt *a1;
         /* realloc to reduce the size */
         a->len = l;
-        a1 = js_realloc_rt(ctx->rt, a, sizeof(JSBigInt) + l * sizeof(js_limb_t));
+        a1 = js_realloc_rt(rt, a, sizeof(JSBigInt) + l * sizeof(js_limb_t));
         if (a1)
             a = a1;
     }
     return a;
 }
 
-JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a)
+JSBigInt *js_bigint_normalize(JSRuntime *rt, JSBigInt *a)
 {
-    return js_bigint_normalize1(ctx, a, a->len);
+    return js_bigint_normalize1(rt, a, a->len);
 }
 
 js_slimb_t js_bigint_get_si_sat(const JSBigInt *a)
@@ -559,7 +559,7 @@ JSBigInt *js_bigint_extend(JSContext *ctx, JSBigInt *r,
         r->tab[n2] = op1;
     } else {
         /* otherwise still need to normalize the result */
-        r = js_bigint_normalize(ctx, r);
+        r = js_bigint_normalize(ctx->rt, r);
     }
     return r;
 }
@@ -631,7 +631,7 @@ JSBigInt *js_bigint_mul(JSContext *ctx, const JSBigInt *a,
         mp_sub(r->tab + a->len, r->tab + a->len, b->tab, b->len, 0);
     if (js_bigint_sign(b))
         mp_sub(r->tab + b->len, r->tab + b->len, a->tab, a->len, 0);
-    return js_bigint_normalize(ctx, r);
+    return js_bigint_normalize(ctx->rt, r);
 }
 
 /* return the division or the remainder. 'b' must be != 0. return NULL
@@ -724,7 +724,7 @@ JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
         r->tab[nb++] = 0;
         if (a_sign)
             mp_neg(r->tab, r->tab, nb);
-        r = js_bigint_normalize1(ctx, r, nb);
+        r = js_bigint_normalize1(ctx->rt, r, nb);
         return r;
     } else {
         js_free(ctx, r);
@@ -732,7 +732,7 @@ JSBigInt *js_bigint_divrem(JSContext *ctx, const JSBigInt *a,
         if (a_sign ^ b_sign) {
             mp_neg(q->tab, q->tab, q->len);
         }
-        q = js_bigint_normalize(ctx, q);
+        q = js_bigint_normalize(ctx->rt, q);
         return q;
     }
 }
@@ -787,7 +787,7 @@ JSBigInt *js_bigint_logic(JSContext *ctx, const JSBigInt *a,
     default:
         abort();
     }
-    return js_bigint_normalize(ctx, r);
+    return js_bigint_normalize(ctx->rt, r);
 }
 
 JSBigInt *js_bigint_not(JSContext *ctx, const JSBigInt *a)
@@ -856,7 +856,7 @@ JSBigInt *js_bigint_shr(JSContext *ctx, const JSBigInt *a,
         /* no normalization is needed */
     } else {
         mp_shr(r->tab, a->tab + d, n1, shift, -a_sign);
-        r = js_bigint_normalize(ctx, r);
+        r = js_bigint_normalize(ctx->rt, r);
     }
     return r;
 }
@@ -1292,7 +1292,7 @@ JSBigInt *js_bigint_from_string(JSContext *ctx,
             }
         }
     }
-    r = js_bigint_normalize(ctx, r);
+    r = js_bigint_normalize(ctx->rt, r);
     /* XXX: could do it in place */
     if (is_neg) {
         JSBigInt *r1;
@@ -1487,12 +1487,12 @@ JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 
 /* if possible transform a BigInt to short big and free it, otherwise
    return a normal bigint */
-JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
+JSValue JS_CompactBigIntRT(JSRuntime *rt, JSBigInt *p)
 {
     JSValue res;
     if (p->len == 1) {
-        res = __JS_NewShortBigInt(ctx, (js_slimb_t)p->tab[0]);
-        js_free(ctx, p);
+        res = __JS_NewShortBigInt((js_slimb_t)p->tab[0]);
+        js_free_rt(rt, p);
         return res;
     } else {
         return JS_MKPTR(JS_TAG_BIG_INT, p);
@@ -1507,10 +1507,10 @@ JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
 JSValue JS_NewBigInt64(JSContext *ctx, int64_t v)
 {
 #if JS_SHORT_BIG_INT_BITS == 64
-    return __JS_NewShortBigInt(ctx, v);
+    return __JS_NewShortBigInt(v);
 #else
     if (v >= JS_SHORT_BIG_INT_MIN && v <= JS_SHORT_BIG_INT_MAX) {
-        return __JS_NewShortBigInt(ctx, v);
+        return __JS_NewShortBigInt(v);
     } else {
         JSBigInt *p;
         p = js_bigint_new_si64(ctx, v);
@@ -1524,7 +1524,7 @@ JSValue JS_NewBigInt64(JSContext *ctx, int64_t v)
 JSValue JS_NewBigUint64(JSContext *ctx, uint64_t v)
 {
     if (v <= JS_SHORT_BIG_INT_MAX) {
-        return __JS_NewShortBigInt(ctx, v);
+        return __JS_NewShortBigInt(v);
     } else {
         JSBigInt *p;
         p = js_bigint_new_ui64(ctx, v);
@@ -1589,7 +1589,7 @@ JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
     case JS_TAG_FLOAT64:
         goto fail;
     case JS_TAG_BOOL:
-        val = __JS_NewShortBigInt(ctx, JS_VALUE_GET_INT(val));
+        val = __JS_NewShortBigInt(JS_VALUE_GET_INT(val));
         break;
     case JS_TAG_STRING:
     case JS_TAG_STRING_ROPE:
@@ -1745,7 +1745,7 @@ JSValue JS_NewBigInt128(JSContext *ctx, uint64_t low, uint64_t high)
         r->tab[0] = low;
         r->tab[1] = high;
 #endif
-        r = js_bigint_normalize(ctx, r);
-        return JS_CompactBigInt(ctx, r);
+        r = js_bigint_normalize(ctx->rt, r);
+        return JS_CompactBigIntRT(ctx->rt, r);
     }
 }
