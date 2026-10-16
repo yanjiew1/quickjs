@@ -441,8 +441,76 @@ static void test_class_strict_exotics(void)
     JS_FreeRuntime(rt);
 }
 
+static void check_local_slot_layout(JSValueConst compiled, BOOL reuse)
+{
+    JSFunctionBytecode *script = JS_VALUE_GET_PTR(compiled);
+    JSFunctionBytecode *b;
+    int i;
+
+    assert(script->cpool_count == 1);
+    assert(JS_VALUE_GET_TAG(script->cpool[0]) == JS_TAG_FUNCTION_BYTECODE);
+    b = JS_VALUE_GET_PTR(script->cpool[0]);
+    if (reuse)
+        assert(b->var_count == 3 && b->var_slot_count == 1);
+    else
+        assert(b->var_slot_count == b->var_count);
+    for (i = 0; i < b->var_count; i++)
+        assert(b->vardefs[b->arg_count + i].slot_idx == (reuse ? 0 : i));
+}
+
+static void test_local_slot_layout(int strip, int kind)
+{
+    static const char reused[] =
+        "function layout() {"
+        " { let x = 1; x; } { let x = 2; x; } { let y = 3; y; }"
+        " return 42; } layout();";
+    static const char evaluated[] =
+        "function layout() {"
+        " { let x = 1; eval('x'); } { let x = 2; x; } { let y = 3; y; }"
+        " return 42; } layout();";
+    static const char captured[] =
+        "function layout(out) {"
+        " { let x = 1; out.push(() => x); }"
+        " { let x = 2; out.push(() => x); }"
+        " { let y = 3; out.push(() => y); }"
+        " return out[0]() + out[1]() + out[2]() + 36; } layout([]);";
+    const char *source = kind == 1 ? evaluated : kind == 2 ? captured : reused;
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled, loaded, result;
+    uint8_t *buf;
+    size_t len;
+    int32_t value;
+
+    assert(rt);
+    JS_SetStripInfo(rt, strip);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    compiled = JS_Eval(ctx, source, strlen(source), "local-slots.js",
+                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    check_local_slot_layout(compiled, kind != 1);
+    buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(buf);
+    JS_FreeValue(ctx, compiled);
+    loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE);
+    js_free(ctx, buf);
+    assert(!JS_IsException(loaded));
+    check_local_slot_layout(loaded, kind != 1);
+    result = JS_EvalFunction(ctx, loaded);
+    assert(!JS_IsException(result));
+    assert(JS_ToInt32(ctx, &value, result) == 0 && value == 42);
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 int main(void)
 {
+    test_local_slot_layout(0, 0);
+    test_local_slot_layout(JS_STRIP_DEBUG, 0);
+    test_local_slot_layout(0, 1);
+    test_local_slot_layout(0, 2);
     test_class_strict_region_bytecode("class Plain {}", 3);
     test_class_strict_region_bytecode(
         "(class { [(checked_class_mode_target = 1)]() {} });", 3);

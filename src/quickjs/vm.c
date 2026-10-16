@@ -1970,7 +1970,7 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
         pvalue = &sf->arg_buf[var_idx];
     } else {
         vd = &b->vardefs[b->arg_count + var_idx];
-        pvalue = &sf->var_buf[var_idx];
+        pvalue = &sf->var_buf[vd->slot_idx];
     }
     assert(vd->is_captured);
     var_ref_idx = vd->var_ref_idx;
@@ -2493,7 +2493,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             var_refs = p->u.func.var_refs;
             local_buf = arg_buf = sf->arg_buf;
             var_buf = sf->var_buf;
-            stack_buf = sf->var_buf + b->var_count;
+            stack_buf = sf->var_buf + b->var_slot_count;
             sp = sf->cur_sp;
             sf->cur_sp = NULL; /* cur_sp is NULL if the function is running */
             pc = sf->cur_pc;
@@ -2526,7 +2526,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         arg_allocated_size = 0;
     }
 
-    alloca_size = sizeof(JSValue) * (arg_allocated_size + b->var_count +
+    alloca_size = sizeof(JSValue) * (arg_allocated_size + b->var_slot_count +
                                      b->stack_size) +
         sizeof(JSVarRef *) * b->var_ref_count;
     if (js_check_stack_overflow(rt, alloca_size))
@@ -2552,10 +2552,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     sf->var_buf = var_buf;
     sf->arg_buf = arg_buf;
 
-    for(i = 0; i < b->var_count; i++)
+    for(i = 0; i < b->var_slot_count; i++)
         var_buf[i] = JS_UNDEFINED;
 
-    stack_buf = var_buf + b->var_count;
+    stack_buf = var_buf + b->var_slot_count;
     sf->var_refs = (JSVarRef **)(stack_buf + b->stack_size);
     for(i = 0; i < b->var_ref_count; i++)
         sf->var_refs[i] = NULL;

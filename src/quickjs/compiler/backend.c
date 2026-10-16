@@ -2594,8 +2594,15 @@ static void push_short_int(DynBuf *bc_out, int val)
     dbuf_put_u32(bc_out, val);
 }
 
-static void put_short_code(DynBuf *bc_out, int op, int idx)
+static int local_slot(const int *slots, int idx)
 {
+    return slots ? slots[idx] : idx;
+}
+
+static void put_short_code(const int *slots, DynBuf *bc_out, int op, int idx)
+{
+    if (opcode_info[op].fmt == OP_FMT_loc && op != OP_close_loc)
+        idx = local_slot(slots, idx);
 #if SHORT_OPCODES
     if (idx < 4) {
         switch (op) {
@@ -2653,7 +2660,8 @@ static void put_short_code(DynBuf *bc_out, int op, int idx)
 }
 
 /* peephole optimizations and resolve goto/labels */
-static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
+static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s,
+                                      const int *local_slots)
 {
     int pos, pos_next, bc_len, op, op1, len, i, line_num;
     const uint8_t *bc_buf;
@@ -2694,29 +2702,29 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
     if (s->home_object_var_idx >= 0) {
         dbuf_putc(&bc_out, OP_special_object);
         dbuf_putc(&bc_out, OP_SPECIAL_OBJECT_HOME_OBJECT);
-        put_short_code(&bc_out, OP_put_loc, s->home_object_var_idx);
+        put_short_code(local_slots, &bc_out, OP_put_loc, s->home_object_var_idx);
     }
     /* initialize the 'this.active_func' variable if needed */
     if (s->this_active_func_var_idx >= 0) {
         dbuf_putc(&bc_out, OP_special_object);
         dbuf_putc(&bc_out, OP_SPECIAL_OBJECT_THIS_FUNC);
-        put_short_code(&bc_out, OP_put_loc, s->this_active_func_var_idx);
+        put_short_code(local_slots, &bc_out, OP_put_loc, s->this_active_func_var_idx);
     }
     /* initialize the 'new.target' variable if needed */
     if (s->new_target_var_idx >= 0) {
         dbuf_putc(&bc_out, OP_special_object);
         dbuf_putc(&bc_out, OP_SPECIAL_OBJECT_NEW_TARGET);
-        put_short_code(&bc_out, OP_put_loc, s->new_target_var_idx);
+        put_short_code(local_slots, &bc_out, OP_put_loc, s->new_target_var_idx);
     }
     /* initialize the 'this' variable if needed. In a derived class
        constructor, this is initially uninitialized. */
     if (s->this_var_idx >= 0) {
         if (s->is_derived_class_constructor) {
             dbuf_putc(&bc_out, OP_set_loc_uninitialized);
-            dbuf_put_u16(&bc_out, s->this_var_idx);
+            dbuf_put_u16(&bc_out, local_slot(local_slots, s->this_var_idx));
         } else {
             dbuf_putc(&bc_out, OP_push_this);
-            put_short_code(&bc_out, OP_put_loc, s->this_var_idx);
+            put_short_code(local_slots, &bc_out, OP_put_loc, s->this_var_idx);
         }
     }
     /* initialize the 'arguments' variable if needed */
@@ -2735,25 +2743,25 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         }
         if (s->arguments_arg_idx >= 0 &&
             s->arguments_arg_idx != s->arguments_var_idx)
-            put_short_code(&bc_out, OP_set_loc, s->arguments_arg_idx);
-        put_short_code(&bc_out, OP_put_loc, s->arguments_var_idx);
+            put_short_code(local_slots, &bc_out, OP_set_loc, s->arguments_arg_idx);
+        put_short_code(local_slots, &bc_out, OP_put_loc, s->arguments_var_idx);
     }
     /* initialize a reference to the current function if needed */
     if (s->func_var_idx >= 0) {
         dbuf_putc(&bc_out, OP_special_object);
         dbuf_putc(&bc_out, OP_SPECIAL_OBJECT_THIS_FUNC);
-        put_short_code(&bc_out, OP_put_loc, s->func_var_idx);
+        put_short_code(local_slots, &bc_out, OP_put_loc, s->func_var_idx);
     }
     /* initialize the variable environment object if needed */
     if (s->var_object_idx >= 0) {
         dbuf_putc(&bc_out, OP_special_object);
         dbuf_putc(&bc_out, OP_SPECIAL_OBJECT_VAR_OBJECT);
-        put_short_code(&bc_out, OP_put_loc, s->var_object_idx);
+        put_short_code(local_slots, &bc_out, OP_put_loc, s->var_object_idx);
     }
     if (s->arg_var_object_idx >= 0) {
         dbuf_putc(&bc_out, OP_special_object);
         dbuf_putc(&bc_out, OP_SPECIAL_OBJECT_VAR_OBJECT);
-        put_short_code(&bc_out, OP_put_loc, s->arg_var_object_idx);
+        put_short_code(local_slots, &bc_out, OP_put_loc, s->arg_var_object_idx);
     }
 
     for (pos = 0; pos < bc_len; pos = pos_next) {
@@ -2823,12 +2831,12 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                 if (code_match(&cc, pos_next, OP_return, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
                     add_pc2line_info(s, bc_out.size, line_num);
-                    put_short_code(&bc_out, op + 1, argc);
+                    put_short_code(local_slots, &bc_out, op + 1, argc);
                     pos_next = skip_dead_code(s, bc_buf, bc_len, cc.pos, &line_num);
                     break;
                 }
                 add_pc2line_info(s, bc_out.size, line_num);
-                put_short_code(&bc_out, op, argc);
+                put_short_code(local_slots, &bc_out, op, argc);
                 break;
             }
             goto no_change;
@@ -3272,7 +3280,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                         }
                     }
                     add_pc2line_info(s, bc_out.size, line_num);
-                    put_short_code(&bc_out, op1, cc.idx);
+                    put_short_code(local_slots, &bc_out, op1, cc.idx);
                     if (line2 >= 0) line_num = line2;
                     break;
                 }
@@ -3287,16 +3295,17 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                    get_loc(n) dec dup put_loc(n) drop -> dec_loc(n)
                    get_loc(n) inc dup put_loc(n) drop -> inc_loc(n)
                  */
-                int idx;
+                int idx, slot;
                 idx = get_u16(bc_buf + pos + 1);
-                if (idx >= 256)
+                slot = local_slot(local_slots, idx);
+                if (slot >= 256)
                     goto no_change;
                 if (code_match(&cc, pos_next, M2(OP_post_dec, OP_post_inc), OP_put_loc, idx, OP_drop, -1) ||
                     code_match(&cc, pos_next, M2(OP_dec, OP_inc), OP_dup, OP_put_loc, idx, OP_drop, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
                     add_pc2line_info(s, bc_out.size, line_num);
                     dbuf_putc(&bc_out, (cc.op == OP_inc || cc.op == OP_post_inc) ? OP_inc_loc : OP_dec_loc);
-                    dbuf_putc(&bc_out, idx);
+                    dbuf_putc(&bc_out, slot);
                     pos_next = cc.pos;
                     break;
                 }
@@ -3317,7 +3326,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                         dbuf_put_u32(&bc_out, cc.atom);
                     }
                     dbuf_putc(&bc_out, OP_add_loc);
-                    dbuf_putc(&bc_out, idx);
+                    dbuf_putc(&bc_out, slot);
                     pos_next = cc.pos;
                     break;
                 }
@@ -3329,7 +3338,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                     add_pc2line_info(s, bc_out.size, line_num);
                     push_short_int(&bc_out, cc.label);
                     dbuf_putc(&bc_out, OP_add_loc);
-                    dbuf_putc(&bc_out, idx);
+                    dbuf_putc(&bc_out, slot);
                     pos_next = cc.pos;
                     break;
                 }
@@ -3341,14 +3350,14 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                 if (code_match(&cc, pos_next, M3(OP_get_loc, OP_get_arg, OP_get_var_ref), -1, OP_add, OP_dup, OP_put_loc, idx, OP_drop, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
                     add_pc2line_info(s, bc_out.size, line_num);
-                    put_short_code(&bc_out, cc.op, cc.idx);
+                    put_short_code(local_slots, &bc_out, cc.op, cc.idx);
                     dbuf_putc(&bc_out, OP_add_loc);
-                    dbuf_putc(&bc_out, idx);
+                    dbuf_putc(&bc_out, slot);
                     pos_next = cc.pos;
                     break;
                 }
                 add_pc2line_info(s, bc_out.size, line_num);
-                put_short_code(&bc_out, op, idx);
+                put_short_code(local_slots, &bc_out, op, idx);
                 break;
             }
             goto no_change;
@@ -3359,7 +3368,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                 int idx;
                 idx = get_u16(bc_buf + pos + 1);
                 add_pc2line_info(s, bc_out.size, line_num);
-                put_short_code(&bc_out, op, idx);
+                put_short_code(local_slots, &bc_out, op, idx);
                 break;
             }
             goto no_change;
@@ -3375,12 +3384,12 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                 if (code_match(&cc, pos_next, op - 1, idx, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;
                     add_pc2line_info(s, bc_out.size, line_num);
-                    put_short_code(&bc_out, op + 1, idx);
+                    put_short_code(local_slots, &bc_out, op + 1, idx);
                     pos_next = cc.pos;
                     break;
                 }
                 add_pc2line_info(s, bc_out.size, line_num);
-                put_short_code(&bc_out, op, idx);
+                put_short_code(local_slots, &bc_out, op, idx);
                 break;
             }
             goto no_change;
@@ -3406,7 +3415,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                     }
                     add_pc2line_info(s, bc_out.size, line_num);
                     dbuf_putc(&bc_out, OP_dec + (op - OP_post_dec));
-                    put_short_code(&bc_out, op1, idx);
+                    put_short_code(local_slots, &bc_out, op1, idx);
                     break;
                 }
                 if (code_match(&cc, pos_next, OP_perm3, OP_put_field, OP_drop, -1)) {
@@ -3474,7 +3483,14 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         default:
         no_change:
             add_pc2line_info(s, bc_out.size, line_num);
-            dbuf_put(&bc_out, bc_buf + pos, len);
+            if (local_slots && opcode_info[op].fmt == OP_FMT_loc &&
+                op != OP_close_loc) {
+                dbuf_putc(&bc_out, op);
+                dbuf_put_u16(&bc_out, local_slot(local_slots,
+                                               get_u16(bc_buf + pos + 1)));
+            } else {
+                dbuf_put(&bc_out, bc_buf + pos, len);
+            }
             break;
         }
     }
@@ -3686,6 +3702,72 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
     return 0;
 }
 
+/* Ordinary lexical bindings share storage only after their scope exits.
+   Captured bindings retain distinct references detached by close_loc. */
+static BOOL can_reuse_local_slot(const JSVarDef *vd)
+{
+    return vd->is_lexical &&
+        vd->scope_level > ARG_SCOPE_INDEX && vd->var_name != JS_ATOM_NULL &&
+        vd->var_kind == JS_VAR_NORMAL;
+}
+
+/* Keep binding metadata intact, but give disjoint lexical scopes the same
+   physical slot range. A scope's range follows all its ancestors' ranges.
+   This is linear in the number of bindings and scopes, not pairwise liveness. */
+static int assign_local_slots(JSContext *ctx, JSFunctionDef *s, int **pslots)
+{
+    int *slots, *counts, *bases;
+    int i, scope, fixed_count, slot_count, eligible_count = 0;
+
+    *pslots = NULL;
+    /* Eval exposes the original binding layout to separately compiled code. */
+    if (s->is_eval || s->has_eval_call)
+        return s->var_count;
+    for (i = 0; i < s->var_count; i++)
+        eligible_count += can_reuse_local_slot(&s->vars[i]);
+    if (eligible_count < 2)
+        return s->var_count;
+    slots = js_mallocz(ctx, sizeof(*slots) *
+                      (s->var_count + 2 * s->scope_count));
+    if (!slots)
+        return -1;
+    counts = slots + s->var_count;
+    bases = counts + s->scope_count;
+    fixed_count = s->var_count - eligible_count;
+    for (i = 0; i < s->var_count; i++) {
+        if (can_reuse_local_slot(&s->vars[i]))
+            counts[s->vars[i].scope_level]++;
+    }
+    slot_count = fixed_count;
+    for (scope = 0; scope < s->scope_count; scope++) {
+        int parent = s->scopes[scope].parent;
+        if (parent >= 0) {
+            assert(parent < scope);
+            bases[scope] = bases[parent] + counts[parent];
+        }
+        slot_count = max_int(slot_count,
+                             fixed_count + bases[scope] + counts[scope]);
+    }
+    if (slot_count == s->var_count) {
+        js_free(ctx, slots);
+        return s->var_count;
+    }
+    memset(counts, 0, sizeof(*counts) * s->scope_count);
+    fixed_count = 0;
+    for (i = 0; i < s->var_count; i++) {
+        JSVarDef *vd = &s->vars[i];
+        if (can_reuse_local_slot(vd)) {
+            scope = vd->scope_level;
+            slots[i] = s->var_count - eligible_count +
+                bases[scope] + counts[scope]++;
+        } else {
+            slots[i] = fixed_count++;
+        }
+    }
+    *pslots = slots;
+    return slot_count;
+}
+
 /* create a function object from a function definition. The function
    definition is freed. All the child functions are also created. It
    must be done this way to resolve all the variables. */
@@ -3698,6 +3780,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     int function_size, byte_code_offset, cpool_offset;
     int closure_var_offset, vardefs_offset;
     BOOL strip_var_debug;
+    int *local_slots = NULL, var_slot_count;
     
     if (fd->has_parameter_expressions && fd->has_arguments_binding &&
         add_arguments_arg(ctx, fd) < 0)
@@ -3804,7 +3887,11 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     }
 #endif
 
-    if (resolve_labels(ctx, fd))
+    var_slot_count = assign_local_slots(ctx, fd, &local_slots);
+    if (var_slot_count < 0)
+        goto fail;
+
+    if (resolve_labels(ctx, fd, local_slots))
         goto fail;
 
     if (compute_stack_size(ctx, fd, &stack_size) < 0)
@@ -3856,6 +3943,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
             vd1->is_captured = vd->is_captured;
             vd1->var_kind = vd->var_kind;
             vd1->var_ref_idx = vd->var_ref_idx;
+            vd1->slot_idx = i;
         }
         
         for(i = 0; i < fd->var_count; i++) {
@@ -3874,6 +3962,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
             vd1->is_captured = vd->is_captured;
             vd1->var_kind = vd->var_kind;
             vd1->var_ref_idx = vd->var_ref_idx;
+            vd1->slot_idx = local_slots ? local_slots[i] : i;
         }
         b->var_count = fd->var_count;
         b->arg_count = fd->arg_count;
@@ -3882,6 +3971,9 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
         js_free(ctx, fd->args);
         js_free(ctx, fd->vars);
     }
+    b->var_slot_count = var_slot_count;
+    js_free(ctx, local_slots);
+    local_slots = NULL;
     b->cpool_count = fd->cpool_count;
     if (b->cpool_count) {
         b->cpool = (void *)((uint8_t*)b + cpool_offset);
@@ -3968,6 +4060,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     js_free(ctx, fd);
     return JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
  fail:
+    js_free(ctx, local_slots);
     js_free_function_def(ctx, fd);
     return JS_EXCEPTION;
 }

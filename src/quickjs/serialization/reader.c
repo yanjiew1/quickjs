@@ -461,6 +461,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     uint16_t v16;
     uint8_t v8;
     int idx, i, local_count;
+    uint32_t scope_next;
     int cpool_offset, byte_code_offset;
     int closure_var_offset, vardefs_offset;
     uint64_t function_size;
@@ -491,6 +492,12 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
         goto fail;
     if (bc_get_leb128_u16(s, &bc.var_count))
         goto fail;
+    if (bc_get_leb128_u16(s, &bc.var_slot_count))
+        goto fail;
+    if (bc.var_slot_count > bc.var_count) {
+        JS_ThrowSyntaxError(s->ctx, "invalid local slot count");
+        goto fail;
+    }
     if (bc_get_leb128_u16(s, &bc.defined_arg_count))
         goto fail;
     if (bc_get_leb128_u16(s, &bc.stack_size))
@@ -560,11 +567,25 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
             JSBytecodeVarDef *vd = &b->vardefs[i];
             if (bc_get_atom(s, &vd->var_name))
                 goto fail;
-            if (bc_get_leb128_int(s, &vd->scope_next))
+            if (bc_get_leb128(s, &scope_next))
                 goto fail;
-            vd->scope_next--;
+            if (scope_next == UINT32_MAX) {
+                vd->scope_next = ARG_SCOPE_END;
+            } else if (scope_next <= (uint32_t)UINT16_MAX + 1) {
+                vd->scope_next = (int)scope_next - 1;
+            } else {
+                JS_ThrowSyntaxError(s->ctx, "invalid local scope link");
+                goto fail;
+            }
             if (bc_get_leb128_u16(s, &vd->var_ref_idx))
                 goto fail;
+            if (bc_get_leb128_u16(s, &vd->slot_idx))
+                goto fail;
+            if (vd->slot_idx >= (i < b->arg_count ?
+                                 b->arg_count : b->var_slot_count)) {
+                JS_ThrowSyntaxError(s->ctx, "invalid local slot index");
+                goto fail;
+            }
             if (bc_get_u8(s, &v8))
                 goto fail;
             idx = 0;

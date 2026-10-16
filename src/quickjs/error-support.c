@@ -398,8 +398,24 @@ JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
         atom = b->closure_var[idx].var_name;
     } else {
         /* not present if the function is stripped and contains no eval() */
-        if (b->vardefs)
+        if (b->vardefs && b->var_slot_count == b->var_count) {
             atom = b->vardefs[b->arg_count + idx].var_name;
+        } else if (b->vardefs) {
+            int i;
+            BOOL found = FALSE;
+            for (i = 0; i < b->var_count; i++) {
+                JSBytecodeVarDef *vd = &b->vardefs[b->arg_count + i];
+                if (vd->slot_idx == idx) {
+                    if (found && vd->var_name != atom) {
+                        /* A shared slot has no unique diagnostic name. */
+                        atom = JS_ATOM_NULL;
+                        break;
+                    }
+                    atom = vd->var_name;
+                    found = TRUE;
+                }
+            }
+        }
     }
     return JS_ThrowReferenceErrorUninitialized(ctx, atom);
 }

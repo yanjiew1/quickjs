@@ -399,6 +399,7 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
 
     bc_put_leb128(s, b->arg_count);
     bc_put_leb128(s, b->var_count);
+    bc_put_leb128(s, b->var_slot_count);
     bc_put_leb128(s, b->defined_arg_count);
     bc_put_leb128(s, b->stack_size);
     bc_put_leb128(s, b->var_ref_count);
@@ -412,6 +413,7 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
             bc_put_atom(s, vd->var_name);
             bc_put_leb128(s, vd->scope_next + 1);
             bc_put_leb128(s, vd->var_ref_idx);
+            bc_put_leb128(s, vd->slot_idx);
             flags = idx = 0;
             bc_set_flags(&flags, &idx, vd->var_kind, 4);
             bc_set_flags(&flags, &idx, vd->is_const, 1);

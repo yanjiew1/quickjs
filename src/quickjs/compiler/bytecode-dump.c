@@ -305,8 +305,21 @@ void dump_byte_code(JSContext *ctx, int pass,
             idx = get_u16(tab + pos);
         has_loc:
             printf(" %d: ", idx);
-            if (idx < var_count) {
-                print_atom(ctx, vars ? vars[idx].var_name : vardefs[arg_count + idx].var_name);
+            if (vars && idx < var_count) {
+                print_atom(ctx, vars[idx].var_name);
+            } else if (vardefs) {
+                if (op == OP_close_loc && idx < var_count) {
+                    print_atom(ctx, vardefs[arg_count + idx].var_name);
+                } else {
+                    int i, matches = 0;
+                    for (i = 0; i < var_count; i++) {
+                        if (vardefs[arg_count + i].slot_idx == idx) {
+                            if (matches++)
+                                printf(" / ");
+                            print_atom(ctx, vardefs[arg_count + i].var_name);
+                        }
+                    }
+                }
             }
             break;
         case OP_FMT_none_arg:
@@ -445,6 +458,7 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
                    vd->is_const ? "const" :
                    vd->is_lexical ? "let" : "var",
                    JS_AtomGetStr(ctx, atom_buf, sizeof(atom_buf), vd->var_name));
+            printf(" [slot:%u]", vd->slot_idx);
             if (vd->has_scope)
                 printf(" [next:%d]", vd->scope_next);
             printf("\n");

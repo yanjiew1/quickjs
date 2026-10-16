@@ -71,20 +71,20 @@ typedef enum {
 
 typedef struct JSBytecodeVarDef {
     JSAtom var_name;
-    /* index into JSFunctionBytecode.vars of the next variable in the same or
-       enclosing lexical scope
-    */
-    int scope_next; /* XXX: store on 16 bits */
-    uint8_t is_const : 1;
-    uint8_t is_lexical : 1;
-    uint8_t is_captured : 1; /* XXX: could remove and use a var_ref_idx value */
-    uint8_t has_scope: 1; /* true if JSVarDef.scope_level != 0 */
-    uint8_t var_kind : 4; /* see JSVarKindEnum */
+    /* Next logical local in this or an enclosing scope. Seventeen signed
+       bits hold all 16-bit local indices and the -1/-2 scope sentinels. */
+    signed int scope_next : 17;
+    unsigned int is_const : 1;
+    unsigned int is_lexical : 1;
+    unsigned int is_captured : 1;
+    unsigned int has_scope : 1; /* true if JSVarDef.scope_level != 0 */
+    unsigned int var_kind : 4; /* see JSVarKindEnum */
     /* If is_captured = TRUE, provides, the index of the corresponding
        JSVarRef on stack. It would be more compact to have a separate
        table with the corresponding inverted table but it requires
        more modifications in the code. */
     uint16_t var_ref_idx;
+    uint16_t slot_idx; /* physical frame slot; binding indices stay logical */
 } JSBytecodeVarDef;
 
 /* for the encoding of the pc2line table */
@@ -122,7 +122,8 @@ typedef struct JSFunctionBytecode {
     JSBytecodeVarDef *vardefs; /* arguments + local variables (arg_count + var_count) (self pointer) */
     JSClosureVar *closure_var; /* list of variables in the closure (self pointer) */
     uint16_t arg_count;
-    uint16_t var_count;
+    uint16_t var_count; /* logical local bindings */
+    uint16_t var_slot_count; /* physical local storage slots */
     uint16_t defined_arg_count; /* for length function property */
     uint16_t stack_size; /* maximum stack size */
     uint16_t var_ref_count; /* number of local variable references */

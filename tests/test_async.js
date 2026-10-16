@@ -2052,3 +2052,27 @@ async function test_catch_binding_finally()
 }
 
 await test_catch_binding_finally();
+
+async function test_disjoint_async_local_slots()
+{
+    const events = [];
+    {
+        await using resource = {
+            async [Symbol.asyncDispose]() {
+                await 0;
+                events.push("dispose");
+            }
+        };
+        let x = 1;
+        await 0;
+        events.push(x);
+    }
+    {
+        let y = 2;
+        await 0;
+        events.push(y);
+    }
+    assert(events.join(), "1,dispose,2");
+}
+
+await test_disjoint_async_local_slots();

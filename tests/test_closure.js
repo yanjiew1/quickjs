@@ -451,3 +451,194 @@ function test_for_let_continue_closures()
 }
 
 test_for_let_continue_closures();
+
+function test_disjoint_local_slots()
+{
+    let total = 0;
+    { let x = 1; total += x; }
+    { let x = 2; total += x; }
+    { const y = 3; total += y; }
+    assert(total, 6);
+
+    {
+        let parent = 10;
+        { let child = 20; total = parent + child; }
+        { let child = 30; total += parent + child; }
+        assert(parent, 10);
+    }
+    assert(total, 70);
+
+    for (let i = 0; i < 2; i++) {
+        { let previous = 7; total += previous; }
+        try {
+            let next = next;
+            assert(false);
+        } catch (e) {
+            assert(e instanceof ReferenceError);
+        }
+    }
+    switch (1) {
+    case 1:
+        let first = 4;
+    case 2:
+        let second = 5;
+        assert(first + second, 9);
+    }
+
+    const captured = [];
+    { let x = 11; captured.push(() => x); }
+    { let y = 12; captured.push(() => y); }
+    { let scratch = 99; total += scratch; }
+    assert(captured.map(f => f()).join(), "11,12");
+
+    function evaluated() {
+        { let x = 13; assert(eval("x"), 13); }
+        { let x = 14; assert(eval("x"), 14); }
+    }
+    evaluated();
+
+    const events = [];
+    try {
+        { let x = 15; events.push(x); throw 0; }
+    } catch (e) {
+        let y = 16;
+        events.push(y);
+    } finally {
+        let z = 17;
+        events.push(z);
+    }
+    {
+        using resource = { [Symbol.dispose]() { events.push(18); } };
+        let x = 19;
+        events.push(x);
+    }
+    { let y = 20; events.push(y); }
+    assert(events.join(), "15,16,17,19,18,20");
+
+    function* suspended() {
+        { let x = 21; yield x; yield x; }
+        { let y = 22; yield y; }
+    }
+    assert([...suspended()].join(), "21,21,22");
+}
+
+test_disjoint_local_slots();
+
+function test_reused_captured_slots()
+{
+    let saved;
+    {
+        let original = 23;
+        saved = () => eval("original");
+    }
+    { let replacement = 24; assert(replacement, 24); }
+    assert(saved(), 23);
+
+    const captures = [];
+    for (let i = 0; i < 2; i++) {
+        try {
+            let x = i;
+            captures.push(() => x);
+            throw 0;
+        } catch (e) {
+            let y = i + 2;
+            captures.push(() => y);
+        }
+        { let scratch = 100; assert(scratch, 100); }
+    }
+    assert(captures.map(f => f()).join(), "0,2,1,3");
+
+    function cancel_return() {
+        for (let i = 0; i < 2; i++) {
+            try {
+                let x = i;
+                captures.push(() => x);
+                return;
+            } finally {
+                continue;
+            }
+        }
+    }
+    captures.length = 0;
+    cancel_return();
+    assert(captures.map(f => f()).join(), "0,1");
+
+    function* cancelled() {
+        try {
+            let x = 25;
+            saved = () => x;
+            yield 0;
+        } finally {
+            let y = 26;
+            assert(y, 26);
+        }
+    }
+    const iter = cancelled();
+    iter.next();
+    iter.return();
+    assert(saved(), 25);
+
+    {
+        let x = 27;
+        saved = () => x;
+        using resource = { [Symbol.dispose]() { assert(saved(), 27); } };
+    }
+    { let y = 28; assert(y, 28); }
+    assert(saved(), 27);
+}
+
+test_reused_captured_slots();
+
+function test_reused_slots_with_prologue()
+{
+    function Constructor(value) {
+        { let x = 1; assert(x, 1); }
+        { let y = 2; assert(y, 2); }
+        this.inspect = () => [this, arguments[0], new.target];
+    }
+    const object = new Constructor(29);
+    const result = object.inspect();
+    assert(result[0], object);
+    assert(result[1], 29);
+    assert(result[2], Constructor);
+
+    class Derived extends Constructor {
+        constructor() {
+            { let before = 3; assert(before, 3); }
+            super(30);
+            { let after = 4; assert(after, 4); }
+        }
+    }
+    const derived = new Derived();
+    assert(derived.inspect()[0], derived);
+    assert(derived.inspect()[1], 30);
+    assert(derived.inspect()[2], Derived);
+}
+
+test_reused_slots_with_prologue();
+
+function test_reused_slot_exception_sweep()
+{
+    const captures = [];
+    try {
+        { let closed = 31; captures.push(() => closed); }
+        { let active = 32; captures.push(() => active); throw 0; }
+    } catch (e) {
+        let replacement = 33;
+        assert(replacement, 33);
+    }
+    assert(captures.map(f => f()).join(), "31,32");
+}
+
+test_reused_slot_exception_sweep();
+
+function test_reused_slots_with_wide_binding_indices()
+{
+    let source = "";
+    for (let i = 0; i < 260; i++)
+        source += "{ let value = " + i + "; }";
+    source += "var count = 0; for (var i = 0; i < 42; i++) count++; return count;";
+    assert(Function(source)(), 42);
+}
+
+test_reused_slots_with_wide_binding_indices();
