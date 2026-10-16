@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <limits.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/time.h>
@@ -501,9 +502,15 @@ int js_os_poll(JSContext *ctx)
 static no_inline int js_poll_expand(JSThreadState *ts)
 {
     struct pollfd *new_fds;
-    int new_size = max_int(ts->poll_fds_size +
-                           ts->poll_fds_size / 2, 16);
-    new_fds = realloc(ts->poll_fds, new_size * sizeof(struct pollfd));
+    size_t max_size = min_int64(INT_MAX, SIZE_MAX / sizeof(*new_fds));
+    size_t new_size = max_int64((int64_t)ts->poll_fds_size +
+                               ts->poll_fds_size / 2, 16);
+
+    if (ts->poll_fds_size >= max_size)
+        return -1;
+    if (new_size > max_size)
+        new_size = max_size;
+    new_fds = realloc(ts->poll_fds, new_size * sizeof(*new_fds));
     if (!new_fds)
         return -1;
     ts->poll_fds = new_fds;
