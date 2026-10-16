@@ -103,7 +103,7 @@ JSValue JS_IteratorNext(JSContext *ctx, JSValueConst enum_obj,
         done_val = JS_GetProperty(ctx, obj, JS_ATOM_done);
         if (JS_IsException(done_val))
             goto fail;
-        *pdone = JS_ToBoolFree(ctx, done_val);
+        *pdone = JS_ToBoolFree(ctx->rt, done_val);
         value = JS_UNDEFINED;
         if (!*pdone) {
             value = JS_GetProperty(ctx, obj, JS_ATOM_value);
@@ -165,7 +165,7 @@ JSValue JS_IteratorGetCompleteValue(JSContext *ctx, JSValueConst obj,
     done_val = JS_GetProperty(ctx, obj, JS_ATOM_done);
     if (JS_IsException(done_val))
         goto fail;
-    done = JS_ToBoolFree(ctx, done_val);
+    done = JS_ToBoolFree(ctx->rt, done_val);
     value = JS_GetProperty(ctx, obj, JS_ATOM_value);
     if (JS_IsException(value))
         goto fail;

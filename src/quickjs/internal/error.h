@@ -27,7 +27,7 @@
 
 #include "function.h"
 
-int check_exception_free(JSContext *ctx, JSValue obj);
+int check_exception_free(JSRuntime *rt, JSValue obj);
 JSValue JS_ThrowSyntaxErrorVarRedeclaration(JSContext *ctx, JSAtom prop);
 
 JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
