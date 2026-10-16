@@ -149,6 +149,7 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
     fd->is_eval = is_eval;
     fd->is_func_expr = is_func_expr;
     js_dbuf_bytecode_init(ctx, &fd->byte_code);
+    js_dbuf_init(ctx, &fd->resource_declarations);
     fd->last_opcode_pos = -1;
     fd->func_name = JS_ATOM_NULL;
     fd->var_object_idx = -1;
@@ -198,6 +199,7 @@ void js_free_function_def(JSContext *ctx, JSFunctionDef *fd)
     free_bytecode_atoms(ctx->rt, fd->byte_code.buf, fd->byte_code.size,
                         fd->use_short_opcodes);
     dbuf_free(&fd->byte_code);
+    dbuf_free(&fd->resource_declarations);
     js_free(ctx, fd->jump_slots);
     js_free(ctx, fd->label_slots);
     js_free(ctx, fd->line_number_slots);
@@ -3698,7 +3700,14 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     int function_size, byte_code_offset, cpool_offset;
     int closure_var_offset, vardefs_offset;
     BOOL strip_var_debug;
-    
+
+    /* Resource order has already been lowered to local disposal opcodes. */
+    dbuf_free(&fd->resource_declarations);
+    if (dbuf_error(&fd->byte_code)) {
+        JS_ThrowOutOfMemory(ctx);
+        goto fail;
+    }
+
     if (fd->has_parameter_expressions && fd->has_arguments_binding &&
         add_arguments_arg(ctx, fd) < 0)
         goto fail;

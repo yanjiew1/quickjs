@@ -1,5 +1,5 @@
 /*
- * QuickJS disposable resource traversal
+ * QuickJS shared disposal operations
  *
  * Copyright (c) 2026 Yan-Jie Wang
  * SPDX-License-Identifier: MIT
@@ -14,22 +14,12 @@ typedef enum {
     JS_DISPOSAL_ASYNC,
 } JSDisposalKind;
 
-JSValue js_new_disposable_resource_list(JSContext *ctx);
-int js_add_disposable_resource(JSContext *ctx, JSValueConst resources,
-                               JSValueConst value, JSDisposalKind kind);
-/* First input seeds the completion; subsequent input resumes Await.
-   Return 0 for normal completion, 1 for an owned Await operand, and
-   -1 with the final throw completion in the context exception slot. */
-int js_dispose_resources_step(JSContext *ctx, JSValueConst resources,
-                              JSValueConst input, BOOL is_throw,
-                              JSValue *await_value);
-
-/* Consume method even when inserting the resource fails. */
-int js_adopt_disposable_resource(JSContext *ctx, JSValueConst resources,
-                                 JSValueConst value, JSValue method,
-                                 JSDisposalKind kind);
-int js_defer_disposable_resource(JSContext *ctx, JSValueConst resources,
-                                 JSValue method, JSDisposalKind kind);
+/* Return an owned method, undefined for nullish resources, or an exception. */
+JSValue js_disposable_resource_method(JSContext *ctx, JSValueConst value,
+                                      JSDisposalKind kind);
+/* Consume next_error and update the owned accumulated completion. */
+void js_disposable_resource_add_error(JSContext *ctx, JSValue *error,
+                                      BOOL *has_error, JSValue next_error);
 
 void js_async_dispose_settle(JSContext *ctx, JSValueConst *funcs,
                             JSValueConst value, BOOL reject);

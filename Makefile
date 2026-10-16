@@ -269,6 +269,7 @@ QUICKJS_SRCS= \
     src/quickjs/builtins/collections.c \
     src/quickjs/builtins/data-view.c \
     src/quickjs/builtins/date.c \
+    src/quickjs/builtins/disposable-resource-list.c \
     src/quickjs/builtins/error.c \
     src/quickjs/builtins/finalization-registry.c \
     src/quickjs/builtins/function.c \
@@ -296,6 +297,7 @@ QUICKJS_SRCS= \
     src/quickjs/error-support.c \
     src/quickjs/function-list.c \
     src/quickjs/function.c \
+    src/quickjs/frame-resources.c \
     src/quickjs/gc.c \
     src/quickjs/generator.c \
     src/quickjs/global-environment.c \

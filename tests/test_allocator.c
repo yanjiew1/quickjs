@@ -1195,8 +1195,69 @@ static void test_native_constructor_setup(void)
     assert(factory_proto_finalized == 3);
 }
 
+static void test_using_frame_allocation(void)
+{
+    static const char source[] =
+        "(function(resource) {"
+        " for (let i = 0; i < 4; i++) {"
+        "   using first = resource, second = resource;"
+        "   if (i < 3) continue;"
+        " } return 42; })";
+    static const char resource_source[] = "({ [Symbol.dispose]() {} })";
+    PromiseAllocationFailure failure = { 0 };
+    JSMallocFunctions mf = def_malloc_funcs;
+    JSRuntime *rt;
+    JSContext *ctx;
+    JSValue function, resource, result;
+    int32_t value;
+    void *ptr;
+
+    mf.js_malloc = promise_failure_malloc;
+    mf.js_free = promise_failure_free;
+    mf.js_realloc = promise_failure_realloc;
+    rt = JS_NewRuntime2(&mf, &failure);
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    function = JS_Eval(ctx, source, sizeof(source) - 1, "frame-using.js",
+                       JS_EVAL_TYPE_GLOBAL);
+    resource = JS_Eval(ctx, resource_source, sizeof(resource_source) - 1,
+                       "resource.js", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(function) && !JS_IsException(resource));
+    {
+        static const char invalid[] =
+            "function invalid() { using first = null, second = null; @ }";
+        result = JS_Eval(ctx, invalid, sizeof(invalid) - 1, "invalid-using.js",
+                         JS_EVAL_TYPE_GLOBAL);
+        assert(JS_IsException(result));
+        result = JS_GetException(ctx);
+        JS_FreeValue(ctx, result);
+    }
+
+    /* Pre-created methods/resources and ordinary frames need no allocation
+       to register or dispose lexical resources, even across iterations. */
+    exhaust_pooled_free_blocks(rt, &failure);
+    failure.fail_next = TRUE;
+    result = JS_Call(ctx, function, JS_UNDEFINED, 1, &resource);
+    assert(!JS_IsException(result));
+    assert(failure.fail_next && failure.failures == 0);
+    failure.fail_next = FALSE;
+    assert(JS_ToInt32(ctx, &value, result) == 0 && value == 42);
+    JS_FreeValue(ctx, result);
+    while ((ptr = failure.padding) != NULL) {
+        memcpy(&failure.padding, ptr, sizeof(failure.padding));
+        js_free_rt(rt, ptr);
+    }
+    JS_FreeValue(ctx, resource);
+    JS_FreeValue(ctx, function);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(failure.live_allocations == 0);
+}
+
 int main(void)
 {
+    test_using_frame_allocation();
     test_gc_upcoming_properties();
     test_int64_atom_table_allocation_failure();
     test_native_constructor_setup();

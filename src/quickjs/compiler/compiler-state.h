@@ -183,6 +183,7 @@ typedef struct JSFunctionDef {
     int label_count;
     BlockEnv *top_break; /* break/continue label stack */
     JSResourceScope *resource_scope; /* parser only */
+    DynBuf resource_declarations; /* parser-owned declaration order */
 
     /* constant pool (strings, functions, numbers) */
     JSValue *cpool;

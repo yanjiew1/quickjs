@@ -29,7 +29,7 @@
 #include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/function.h"
 
-static void test_bytecode_roundtrip(const char *source)
+static void test_bytecode_roundtrip_flags(const char *source, int flags)
 {
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx;
@@ -44,7 +44,7 @@ static void test_bytecode_roundtrip(const char *source)
     compiled = JS_Eval(ctx, source, strlen(source), "roundtrip.js",
                        JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
     assert(!JS_IsException(compiled));
-    buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE | flags);
     assert(buf && len > 0);
     JS_FreeValue(ctx, compiled);
     loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE);
@@ -52,10 +52,26 @@ static void test_bytecode_roundtrip(const char *source)
     assert(!JS_IsException(loaded));
     result = JS_EvalFunction(ctx, loaded);
     assert(!JS_IsException(result));
+    if (!JS_IsNumber(result)) {
+        JSContext *job_ctx;
+        JSValue promise = result;
+
+        while (JS_IsJobPending(rt))
+            assert(JS_ExecutePendingJob(rt, &job_ctx) > 0);
+        assert(JS_PromiseState(ctx, promise) == JS_PROMISE_FULFILLED);
+        result = JS_PromiseResult(ctx, promise);
+        JS_FreeValue(ctx, promise);
+    }
     assert(JS_ToInt32(ctx, &value, result) == 0 && value == 42);
     JS_FreeValue(ctx, result);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+}
+
+static void test_bytecode_roundtrip(const char *source)
+{
+    test_bytecode_roundtrip_flags(source, 0);
+    test_bytecode_roundtrip_flags(source, JS_WRITE_OBJ_BSWAP);
 }
 
 static void test_import_bytecode_roundtrip(void)
@@ -461,6 +477,17 @@ int main(void)
         "'use strict'; class Plain { [eval('0')]() {} }", 0);
     test_class_strict_exotics();
     test_bytecode_roundtrip("function saved() { return 42; } saved();");
+    test_bytecode_roundtrip(
+        "(function() { let result = 0;"
+        " { using first = { [Symbol.dispose]() { result += 2; } };"
+        "   using second = { [Symbol.dispose]() { result += 40; } }; }"
+        " return result; })();");
+    test_bytecode_roundtrip(
+        "(async function() { let result = 0;"
+        " { using first = { [Symbol.dispose]() { result += 2; } };"
+        "   await using second = { async [Symbol.asyncDispose]() {"
+        "     await 0; result += 40; } }; }"
+        " return result; })();");
     test_bytecode_roundtrip(
         "(function() { let effects = 0; const binding = 1;"
         " function saved() { with ({}) { binding ||= ++effects;"

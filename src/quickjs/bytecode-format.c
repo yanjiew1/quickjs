@@ -54,6 +54,7 @@ void bc_byte_swap(uint8_t *bc_buf, int bc_len)
         case OP_FMT_label16:
         case OP_FMT_npop:
         case OP_FMT_loc:
+        case OP_FMT_loc_u8:
         case OP_FMT_arg:
         case OP_FMT_var_ref:
             put_u16(bc_buf + pos + 1,
@@ -87,6 +88,7 @@ void bc_byte_swap(uint8_t *bc_buf, int bc_len)
             }
             break;
         case OP_FMT_npop_u16:
+        case OP_FMT_loc_loc_u8:
             put_u16(bc_buf + pos + 1,
                     bswap16(get_u16(bc_buf + pos + 1)));
             put_u16(bc_buf + pos + 1 + 2,

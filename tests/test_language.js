@@ -3907,3 +3907,33 @@ function test_closure_destructuring_lowering()
 }
 
 test_closure_destructuring_lowering();
+
+function test_using_frame_reentry()
+{
+    const events = [];
+    const failure = {};
+    let read;
+    function nested() {
+        using inner = { [Symbol.dispose]() { events.push("inner"); } };
+    }
+    for (let i = 0; i < 3; i++) {
+        try {
+            let value = i;
+            using first = {
+                [Symbol.dispose]() {
+                    value++;
+                    nested();
+                    events.push(read());
+                }
+            };
+            read = () => value;
+            using second = {
+                get [Symbol.dispose]() { throw failure; }
+            };
+        } catch (error) { assert(error, failure); }
+        assert(read(), i + 1);
+    }
+    assert(events.join(","), "inner,1,inner,2,inner,3");
+}
+
+test_using_frame_reentry();

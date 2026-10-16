@@ -2052,3 +2052,101 @@ async function test_catch_binding_finally()
 }
 
 await test_catch_binding_finally();
+
+async function test_using_frame_error_across_await()
+{
+    const bodyError = {}, syncError = {}, asyncError = {};
+    for (const reject of [false, true]) {
+        for (let iteration = 0; iteration < 3; iteration++) {
+            let caught, resumed = false;
+            try {
+                await using first = {
+                    async [Symbol.asyncDispose]() {
+                        std.gc();
+                        await Promise.resolve();
+                        resumed = true;
+                        if (reject)
+                            throw asyncError;
+                    }
+                };
+                using last = { [Symbol.dispose]() { throw syncError; } };
+                throw bodyError;
+            } catch (error) { caught = error; }
+            assert(resumed, true);
+            if (reject) {
+                assert(caught.error, asyncError);
+                caught = caught.suppressed;
+            }
+            assert(caught instanceof SuppressedError, true);
+            assert(caught.error, syncError);
+            assert(caught.suppressed, bodyError);
+        }
+    }
+}
+
+async function test_using_frame_suspended_generator()
+{
+    const events = [];
+    let read;
+    async function* generate() {
+        using first = { [Symbol.dispose]() { events.push("first"); } };
+        await using second = {
+            async [Symbol.asyncDispose]() {
+                std.gc();
+                await Promise.resolve();
+                events.push("second");
+            }
+        };
+        read = () => second;
+        yield 1;
+    }
+    const generator = generate();
+    assert((await generator.next()).value, 1);
+    std.gc();
+    assert((await generator.return(42)).value, 42);
+    assert(events.join(","), "second,first");
+    assert(typeof read()[Symbol.asyncDispose], "function");
+}
+
+await test_using_frame_error_across_await();
+await test_using_frame_suspended_generator();
+
+async function test_dispose_loc_skipped_declarations()
+{
+    const asyncError = {};
+    const events = [];
+    let caught, didThrow = false;
+    try {
+        using first = { [Symbol.dispose]() { events.push("sync"); } };
+        await using second = {
+            [Symbol.asyncDispose]() {
+                events.push("async");
+                return Promise.reject(asyncError);
+            }
+        };
+        throw undefined;
+        using skipped = { [Symbol.dispose]() { assert(false); } };
+    } catch (error) { caught = error; didThrow = true; }
+    assert(didThrow, true);
+    assert(caught instanceof SuppressedError, true);
+    assert(caught.error, asyncError);
+    assert(caught.suppressed, undefined);
+    assert(events.join(","), "async,sync");
+
+    events.length = 0;
+    async function nullish() {
+        try {
+            using first = { [Symbol.dispose]() { events.push("sync"); } };
+            await using second = null;
+            throw asyncError;
+            using skipped = null;
+        } catch (error) { assert(error, asyncError); }
+        events.push("after");
+    }
+    const pending = nullish();
+    assert(events.length, 0);
+    await pending;
+    assert(events.join(","), "sync,after");
+}
+
+await test_dispose_loc_skipped_declarations();

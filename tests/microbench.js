@@ -1546,6 +1546,23 @@ function iterator_reduce(n)
     return n * values.length;
 }
 
+function using_sync(n)
+{
+    var resource = { [Symbol.dispose]() {} };
+    for (var i = 0; i < n; i++) {
+        using value = resource;
+    }
+    return n;
+}
+
+function using_nullish(n)
+{
+    for (var i = 0; i < n; i++) {
+        using first = null, second = undefined;
+    }
+    return n * 2;
+}
+
 function load_result(filename)
 {
     var has_filename = filename;
@@ -1654,6 +1671,8 @@ function main(argc, argv, g)
         global_func_call,
         func_call,
         func_closure_call,
+        using_sync,
+        using_nullish,
         int_arith,
         float_arith,
         map_set_string,

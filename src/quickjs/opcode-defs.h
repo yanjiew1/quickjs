@@ -41,6 +41,8 @@ FMT(npop)
 FMT(npopx)
 FMT(npop_u16)
 FMT(loc)
+FMT(loc_u8)
+FMT(loc_loc_u8)
 FMT(arg)
 FMT(var_ref)
 FMT(u32)
@@ -263,7 +265,9 @@ DEF(     set_strict, 2, 0, 0, u8)
 
 DEF(define_field_ro, 5, 2, 1, atom) /* immutable binding reference */
 
-DEF(resource_management, 2, 3, 2, u8)
+DEF(      using_loc, 4, 1, 1, loc_u8) /* record, disposal kind */
+DEF(    dispose_loc, 6, 2, 2, loc_loc_u8) /* state, record, disposal kind */
+DEF(  dispose_scope, 3, 2, 2, loc) /* finalize completion and synthetic Await */
 
 /* must be the last non short and non temporary opcode */
 DEF(            nop, 1, 0, 0, none)

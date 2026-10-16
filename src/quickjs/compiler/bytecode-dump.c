@@ -213,6 +213,13 @@ void dump_byte_code(JSContext *ctx, int pass,
         case OP_FMT_npop_u16:
             printf(" %u,%u", get_u16(tab + pos), get_u16(tab + pos + 2));
             break;
+        case OP_FMT_loc_u8:
+            printf(" %u,%u", get_u16(tab + pos), get_u8(tab + pos + 2));
+            break;
+        case OP_FMT_loc_loc_u8:
+            printf(" %u,%u,%u", get_u16(tab + pos),
+                   get_u16(tab + pos + 2), get_u8(tab + pos + 4));
+            break;
         case OP_FMT_i16:
             printf(" %d", get_i16(tab + pos));
             break;
