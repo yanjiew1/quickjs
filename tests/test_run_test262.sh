@@ -1,8 +1,12 @@
 #!/bin/sh
 # Check runner diagnostics using a small local harness, without Test262.
 set -eu
-test262_runner=${1:-}
+test262_runner=${1:-${MESON_EXE_WRAPPER:-}}
 test262_binary=${2:-./run-test262}
+case "$test262_binary" in
+    /*) ;;
+    *) test262_binary="$(pwd)/$test262_binary" ;;
+esac
 # Relative paths also work when the runner is a Windows binary under Wine.
 test262_tmp=$(mktemp -d ./test262-runner.XXXXXX)
 cleanup_runner_fixture() {

@@ -22,6 +22,8 @@ static int test_pclose(FILE *f)
     return fclose(f);
 }
 
+#undef popen
+#undef pclose
 #define popen test_popen
 #define pclose test_pclose
 #include "../src/quickjs-libc/std.c"

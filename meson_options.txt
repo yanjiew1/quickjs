@@ -1,0 +1,48 @@
+option(
+  'tests',
+  type: 'boolean',
+  value: true,
+  description: 'Build and register repository unit and integration tests',
+)
+option(
+  'examples',
+  type: 'boolean',
+  value: true,
+  description: 'Build embedding examples',
+)
+option(
+  'check_jsvalue',
+  type: 'boolean',
+  value: false,
+  description: 'Compile the non-runnable JSValue type diagnostic',
+)
+option(
+  'gc_stress',
+  type: 'boolean',
+  value: false,
+  description: 'Collect at every allocation-triggered GC check',
+)
+option(
+  'malloc_iter',
+  type: 'boolean',
+  value: false,
+  description: 'Track allocations for diagnostic iteration',
+)
+option(
+  'fuzzing',
+  type: 'boolean',
+  value: false,
+  description: 'Build libFuzzer test executables (requires Clang)',
+)
+option(
+  'qjsc_cc',
+  type: 'array',
+  value: [],
+  description: 'C compiler command used by qjsc executable output',
+)
+option(
+  'unicode_data',
+  type: 'string',
+  value: '',
+  description: 'Unicode source-data directory; empty uses bundled tables',
+)
