@@ -63,7 +63,7 @@ foreach name : native_test_names
     name + '.c',
     c_args: host_args,
     include_directories: [inc, include_directories('..')],
-    dependencies: engine_dep,
+    dependencies: test_engine_dep,
     override_options: ['b_ndebug=false'],
   )
   suites = ['repo', 'native']
@@ -96,7 +96,7 @@ allocation_fuzz_test = executable(
   ],
   c_args: host_args,
   include_directories: [inc, include_directories('..')],
-  dependencies: engine_dep,
+  dependencies: test_engine_dep,
   override_options: ['b_ndebug=false'],
 )
 test(
@@ -192,7 +192,7 @@ context_test = executable(
   ['test_qjsc_context_failures.c', context_c],
   c_args: host_args,
   include_directories: [inc, include_directories('.')],
-  dependencies: engine_dep,
+  dependencies: test_engine_dep,
   override_options: ['b_ndebug=false'],
 )
 test(
@@ -218,7 +218,7 @@ probe_test = executable(
   c_args: host_args,
   include_directories: inc,
   link_with: probe,
-  dependencies: engine_dep,
+  dependencies: test_engine_dep,
   override_options: ['b_ndebug=false'],
 )
 test(
@@ -246,7 +246,7 @@ trace_test = executable(
   ),
   c_args: host_args,
   include_directories: [inc, include_directories('..')],
-  dependencies: engine_dep,
+  dependencies: test_engine_dep,
   override_options: ['b_ndebug=false'],
 )
 test(
@@ -266,7 +266,7 @@ fuzz_support = executable(
   ],
   c_args: host_args,
   include_directories: [inc, include_directories('..')],
-  dependencies: engine_dep,
+  dependencies: test_engine_dep,
   override_options: ['b_ndebug=false'],
 )
 test(
@@ -307,7 +307,7 @@ json_exec = executable(
   json_c,
   c_args: host_args,
   include_directories: inc,
-  dependencies: engine_dep,
+  dependencies: test_engine_dep,
 )
 test(
   'qjsc-json-attributes',
@@ -342,7 +342,7 @@ native_std_exec = executable(
   native_std_c,
   c_args: host_args,
   include_directories: inc,
-  dependencies: engine_dep,
+  dependencies: test_engine_dep,
 )
 test(
   'qjsc-native-std',
@@ -389,7 +389,7 @@ foreach name : ['attributes-first', 'attributes-last', 'size-first', 'size-last'
     generated,
     c_args: host_args,
     include_directories: inc,
-    dependencies: engine_dep,
+    dependencies: test_engine_dep,
   )
   test(
     'qjsc-json-collision-' + name,
@@ -569,6 +569,44 @@ test(
     meson.project_source_root(),
     meson.project_build_root(),
   ],
+  suite: ['repo', 'build'],
+  timeout: 30,
+)
+
+public_api_test = executable(
+  'test_shared_api',
+  'test_shared_api.c',
+  c_args: host_args,
+  include_directories: include_directories('../include'),
+  dependencies: engine_dep,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'public-embedding-api',
+  public_api_test,
+  suite: ['repo', 'embedding'],
+  workdir: test_workdir,
+  timeout: 120,
+)
+if shared_build
+  test(
+    'shared-library-exports',
+    python,
+    args: [
+      files('test_shared_exports.py'),
+      meson.project_source_root(),
+      shared_engine,
+      host_machine.system(),
+    ],
+    suite: ['repo', 'embedding'],
+    timeout: 30,
+  )
+endif
+
+test(
+  'export-report-parser',
+  python,
+  args: files('test_export_report.py'),
   suite: ['repo', 'build'],
   timeout: 30,
 )
