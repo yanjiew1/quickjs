@@ -40,3 +40,10 @@ option(
   value: '',
   description: 'Optional UCD directory for Unicode table regeneration',
 )
+
+option(
+  'documentation',
+  type: 'feature',
+  value: 'auto',
+  description: 'Enable optional HTML and PDF documentation targets',
+)
