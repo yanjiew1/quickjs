@@ -168,7 +168,7 @@ static void __js_free(JSMallocContext *s, void *ptr)
         b->u.free_next = ar->first_free_block;
         ar->first_free_block = block_idx;
 #ifdef JS_MALLOC_USE_ITER
-        ar->bitmap[block_idx / 32] &= ~(1 << (block_idx % 32));
+        ar->bitmap[block_idx / 32] &= ~(1U << (block_idx % 32));
 #endif
         /* add back to the free list if needed */
         if (unlikely(ar->n_used_blocks == ar->n_blocks)) {
@@ -312,8 +312,10 @@ static __maybe_unused void js_malloc_iter(JSMallocContext *s, JSMallocIterFunc *
                 bmp = ar->bitmap[i];
                 while (bmp != 0) {
                     j = ctz32(bmp);
-                    bmp &= ~(1 << j);
-                    iter_func(iter_opaque, get_arena_block(ar, i * 32+ j, block_size));
+                    bmp &= ~(1U << j);
+                    JSMallocBlockHeader *block =
+                        get_arena_block(ar, i * 32 + j, block_size);
+                    iter_func(iter_opaque, block->user_data);
                 }
             }
         }
