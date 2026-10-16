@@ -497,6 +497,8 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
         goto fail;
     if (bc_get_leb128_u16(s, &bc.var_ref_count))
         goto fail;
+    if (bc_get_leb128_u16(s, &bc.dispose_count))
+        goto fail;
     if (bc_get_leb128_int(s, &bc.closure_var_count))
         goto fail;
     if (bc_get_leb128_int(s, &bc.cpool_count))

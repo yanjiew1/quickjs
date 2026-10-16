@@ -46,7 +46,7 @@
 #include "builtins/typed-array.h"
 #include "builtins/regexp.h"
 #include "builtins/function.h"
-#include "internal/disposal.h"
+#include "internal/frame-resources.h"
 
 #if defined(__EMSCRIPTEN__)
 #define DIRECT_DISPATCH  0
@@ -2493,12 +2493,25 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             var_refs = p->u.func.var_refs;
             local_buf = arg_buf = sf->arg_buf;
             var_buf = sf->var_buf;
-            stack_buf = sf->var_buf + b->var_count;
+            stack_buf = sf->dispose_buf + b->dispose_count;
             sp = sf->cur_sp;
             sf->cur_sp = NULL; /* cur_sp is NULL if the function is running */
             pc = sf->cur_pc;
             sf->prev_frame = rt->current_stack_frame;
             rt->current_stack_frame = sf;
+            if (sf->dispose_state & JS_DISPOSE_WAIT_MASK) {
+                /* The async driver has replaced the Await operand with its
+                   fulfillment, or left a placeholder and installed a throw.
+                   Retry the suspended disposal opcode with its error below. */
+                JS_FreeValue(ctx, *--sp);
+                if (s->throw_flag)
+                    js_frame_disposal_error(ctx, sp - 1, JS_GetException(ctx));
+                if (sf->dispose_state & JS_DISPOSE_WAIT_METHOD)
+                    sf->dispose_state |= JS_DISPOSE_HAS_AWAITED;
+                sf->dispose_state &= ~JS_DISPOSE_WAIT_MASK;
+                s->throw_flag = FALSE;
+                goto restart;
+            }
             if (s->throw_flag)
                 goto exception;
             else
@@ -2527,7 +2540,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     }
 
     alloca_size = sizeof(JSValue) * (arg_allocated_size + b->var_count +
-                                     b->stack_size) +
+                                     b->dispose_count + b->stack_size) +
         sizeof(JSVarRef *) * b->var_ref_count;
     if (js_check_stack_overflow(rt, alloca_size))
         return JS_ThrowStackOverflow(caller_ctx);
@@ -2552,10 +2565,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     sf->var_buf = var_buf;
     sf->arg_buf = arg_buf;
 
-    for(i = 0; i < b->var_count; i++)
+    for(i = 0; i < b->var_count + b->dispose_count; i++)
         var_buf[i] = JS_UNDEFINED;
 
-    stack_buf = var_buf + b->var_count;
+    sf->dispose_buf = var_buf + b->var_count;
+    sf->dispose_state = 0;
+    stack_buf = sf->dispose_buf + b->dispose_count;
     sf->var_refs = (JSVarRef **)(stack_buf + b->stack_size);
     for(i = 0; i < b->var_ref_count; i++)
         sf->var_refs[i] = NULL;
@@ -2696,12 +2711,6 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     break;
                 case OP_SPECIAL_OBJECT_IMPORT_META:
                     *sp++ = js_import_meta(ctx);
-                    if (unlikely(JS_IsException(sp[-1])))
-                        goto exception;
-                    break;
-                case OP_SPECIAL_OBJECT_DISPOSABLE_RESOURCE_LIST:
-                    sf->cur_pc = pc;
-                    *sp++ = js_new_disposable_resource_list(ctx);
                     if (unlikely(JS_IsException(sp[-1])))
                         goto exception;
                     break;
@@ -5434,41 +5443,51 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             ret_val = JS_NewInt32(ctx, FUNC_RET_INITIAL_YIELD);
             goto done_generator;
 
-        CASE(OP_resource_management):
+        CASE(OP_using_add):
+            sf->cur_pc = pc + 5;
+            if (js_using_add(ctx, sf, get_u16(pc), get_u16(pc + 2),
+                             pc[4], sp[-1]) < 0)
+                goto exception;
+            pc += 5;
+            BREAK;
+        CASE(OP_dispose):
             {
-                int operation = *pc++;
+                JSValue await_value;
                 int status;
-                JSValue result;
 
-                sf->cur_pc = pc;
-                if (operation == OP_RESOURCE_ADD_SYNC ||
-                    operation == OP_RESOURCE_ADD_ASYNC) {
-                    status = js_add_disposable_resource(ctx, sp[-3], sp[-2],
-                        operation == OP_RESOURCE_ADD_ASYNC ?
-                        JS_DISPOSAL_ASYNC : JS_DISPOSAL_SYNC);
-                    if (unlikely(status < 0))
-                        goto exception;
-                    result = sp[-2];
-                    JS_FreeValue(ctx, sp[-3]);
-                    JS_FreeValue(ctx, sp[-1]);
-                    sp[-3] = result;
-                    sp[-2] = JS_FALSE;
-                } else if (operation == OP_RESOURCE_DISPOSE_STEP) {
-                    status = js_dispose_resources_step(ctx, sp[-3], sp[-2],
-                        JS_ToBool(ctx, sp[-1]), &result);
-                    if (unlikely(status < 0))
-                        goto exception;
-                    JS_FreeValue(ctx, sp[-3]);
-                    JS_FreeValue(ctx, sp[-2]);
-                    JS_FreeValue(ctx, sp[-1]);
-                    sp[-3] = result;
-                    sp[-2] = JS_NewBool(ctx, status != 0);
-                } else {
-                    JS_ThrowInternalError(ctx, "invalid resource operation");
-                    goto exception;
+                sf->cur_pc = pc + 5;
+                status = js_dispose_resource(ctx, sf, get_u16(pc),
+                                            get_u16(pc + 2), pc[4], sp - 1,
+                                            &await_value);
+                if (status) {
+                    /* Save the opcode start for retry after Await. */
+                    pc--;
+                    *sp++ = await_value;
+                    ret_val = JS_NewInt32(ctx, FUNC_RET_AWAIT);
+                    goto done_generator;
                 }
-                sp--;
+                pc += 5;
             }
+            BREAK;
+        CASE(OP_push_uninitialized):
+            *sp++ = JS_UNINITIALIZED;
+            BREAK;
+        CASE(OP_throw_if_initialized):
+            if ((sf->dispose_state & JS_DISPOSE_NEEDS_AWAIT) &&
+                !(sf->dispose_state & JS_DISPOSE_HAS_AWAITED)) {
+                sf->dispose_state &= ~JS_DISPOSE_NEEDS_AWAIT;
+                sf->dispose_state |= JS_DISPOSE_WAIT_END;
+                pc--;
+                *sp++ = JS_UNDEFINED;
+                ret_val = JS_NewInt32(ctx, FUNC_RET_AWAIT);
+                goto done_generator;
+            }
+            sf->dispose_state = 0;
+            if (!JS_IsUninitialized(sp[-1])) {
+                JS_Throw(ctx, *--sp);
+                goto exception;
+            }
+            sp--;
             BREAK;
         CASE(OP_nop):
             BREAK;

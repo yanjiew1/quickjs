@@ -49,6 +49,7 @@ void bc_byte_swap(uint8_t *bc_buf, int bc_len)
         len = short_opcode_info(op).size;
         fmt = short_opcode_info(op).fmt;
         switch(fmt) {
+        case OP_FMT_u16_u8:
         case OP_FMT_u16:
         case OP_FMT_i16:
         case OP_FMT_label16:
@@ -86,6 +87,7 @@ void bc_byte_swap(uint8_t *bc_buf, int bc_len)
                         bswap16(get_u16(bc_buf + pos + 1 + 4 + 4)));
             }
             break;
+        case OP_FMT_loc_dispose_u8:
         case OP_FMT_npop_u16:
             put_u16(bc_buf + pos + 1,
                     bswap16(get_u16(bc_buf + pos + 1)));

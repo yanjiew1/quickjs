@@ -126,6 +126,7 @@ typedef struct JSFunctionBytecode {
     uint16_t defined_arg_count; /* for length function property */
     uint16_t stack_size; /* maximum stack size */
     uint16_t var_ref_count; /* number of local variable references */
+    uint16_t dispose_count; /* cached disposal methods in each frame */
     JSContext *realm; /* function realm */
     JSValue *cpool; /* constant pool (self pointer) */
     int cpool_count;

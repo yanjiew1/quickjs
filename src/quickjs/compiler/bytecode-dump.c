@@ -206,6 +206,13 @@ void dump_byte_code(JSContext *ctx, int pass,
         case OP_FMT_i8:
             printf(" %d", get_i8(tab + pos));
             break;
+        case OP_FMT_u16_u8:
+            printf(" %u,%u", get_u16(tab + pos), tab[pos + 2]);
+            break;
+        case OP_FMT_loc_dispose_u8:
+            printf(" %u,%u,%u", get_u16(tab + pos),
+                   get_u16(tab + pos + 2), tab[pos + 4]);
+            break;
         case OP_FMT_u16:
         case OP_FMT_npop:
             printf(" %u", get_u16(tab + pos));
@@ -491,6 +498,7 @@ __maybe_unused void js_dump_function_bytecode(JSContext *ctx, JSFunctionBytecode
     }
     printf("  stack_size: %d\n", b->stack_size);
     printf("  var_ref_count: %d\n", b->var_ref_count);
+    printf("  dispose_count: %d\n", b->dispose_count);
     printf("  opcodes:\n");
     dump_byte_code(ctx, 3, b->byte_code_buf, b->byte_code_len,
                    b->vardefs,

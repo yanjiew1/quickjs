@@ -134,6 +134,13 @@ __exception int compute_stack_size(JSContext *ctx,
             JS_ThrowInternalError(ctx, "bytecode buffer overflow (op=%d, pc=%d)", op, pos);
             goto fail;
         }
+        if (op == OP_dispose || op == OP_throw_if_initialized) {
+            if (stack_len + 1 > JS_STACK_SIZE_MAX) {
+                JS_ThrowInternalError(ctx, "disposal stack overflow");
+                goto fail;
+            }
+            s->stack_len_max = max_int(s->stack_len_max, stack_len + 1);
+        }
         n_pop = oi->n_pop;
         /* call pops a variable number of arguments */
         if (oi->fmt == OP_FMT_npop || oi->fmt == OP_FMT_npop_u16) {

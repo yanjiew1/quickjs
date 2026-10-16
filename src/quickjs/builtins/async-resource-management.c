@@ -13,6 +13,7 @@
 #include "../internal/function-list.h"
 #include "resource-management.h"
 #include "../internal/disposal.h"
+#include "disposable-resource-list.h"
 #include "promise.h"
 
 typedef struct JSAsyncDisposableStackData {

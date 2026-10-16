@@ -139,6 +139,8 @@ typedef struct JSStackFrame {
     /* only used in generators. Current stack pointer value. NULL if
        the function is running. */
     JSValue *cur_sp;
+    JSValue *dispose_buf; /* cached methods, separate from lexical locals */
+    uint8_t dispose_state; /* current disposal sequence and Await reason */
 } JSStackFrame;
 
 typedef enum {

@@ -66,16 +66,15 @@ typedef enum {
     OP_SPECIAL_OBJECT_HOME_OBJECT,
     OP_SPECIAL_OBJECT_VAR_OBJECT,
     OP_SPECIAL_OBJECT_IMPORT_META,
-    OP_SPECIAL_OBJECT_DISPOSABLE_RESOURCE_LIST,
 } OPSpecialObjectEnum;
 
-/* Argument of OP_resource_management. All forms have the same stack
-   effect: list, value, is_throw -> value, needs_await. */
+/* Temporary leave_scope lowering modes. Conservative reference sweeps must
+   not dispose a scope before its completion-routing subroutine runs. */
 typedef enum {
-    OP_RESOURCE_ADD_SYNC,
-    OP_RESOURCE_ADD_ASYNC,
-    OP_RESOURCE_DISPOSE_STEP,
-} OPResourceManagementEnum;
+    JS_SCOPE_LEAVE_NORMAL,
+    JS_SCOPE_LEAVE_COMPLETION, /* caller owns the final throw test */
+    JS_SCOPE_LEAVE_CLOSE_ONLY,
+} JSScopeLeaveMode;
 
 #define JS_DEFINE_CLASS_HAS_HERITAGE     (1 << 0)
 #define JS_DEFINE_CLASS_HAS_STRICT_CATCH (1 << 1)

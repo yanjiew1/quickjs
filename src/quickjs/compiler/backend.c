@@ -2305,6 +2305,31 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                         break;
                     }
                 }
+                if (bc_buf[pos + 3] != JS_SCOPE_LEAVE_CLOSE_ONLY) {
+                    BOOL has_resources = FALSE;
+                    int mode = bc_buf[pos + 3];
+
+                    /* Scope chains run from the last declaration backwards. */
+                    for (scope_idx = s->scopes[scope].first; scope_idx >= 0;) {
+                        JSVarDef *vd = &s->vars[scope_idx];
+                        if (vd->scope_level != scope)
+                            break;
+                        if (vd->dispose_method_idx >= 0) {
+                            if (!has_resources && mode == JS_SCOPE_LEAVE_NORMAL)
+                                dbuf_putc(&bc_out, OP_push_uninitialized);
+                            has_resources = TRUE;
+                            dbuf_putc(&bc_out, OP_dispose);
+                            dbuf_put_u16(&bc_out, scope_idx);
+                            dbuf_put_u16(&bc_out, vd->dispose_method_idx);
+                            dbuf_putc(&bc_out, vd->dispose_async);
+                        }
+                        scope_idx = vd->scope_next;
+                    }
+                    /* Completion-mode cleanup leaves the real exception on
+                       top for the shared subroutine's final throw test. */
+                    if (has_resources && mode == JS_SCOPE_LEAVE_NORMAL)
+                        dbuf_putc(&bc_out, OP_throw_if_initialized);
+                }
             }
             break;
 
@@ -3891,6 +3916,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     fd->cpool = NULL;
 
     b->stack_size = stack_size;
+    b->dispose_count = fd->dispose_count;
 
     if (fd->strip_debug) {
         JS_FreeAtom(ctx, fd->filename);

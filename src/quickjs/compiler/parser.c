@@ -37,6 +37,7 @@
 #include "../internal/error.h"
 #include "../internal/module.h"
 #include "../internal/bytecode.h"
+#include "../internal/disposal.h"
 #include "../internal/parse-state.h"
 #include "compiler-internal.h"
 #include "lexer.h"
@@ -73,11 +74,7 @@ struct JSResourceScope {
     struct JSResourceScope *prev;
     BlockEnv block;
     BOOL declarations_allowed;
-    BOOL has_async;
-    int label_step, label_await_failed, label_disposed;
-    int resources_idx;
     int error_idx;
-    int has_error_idx;
     int label_catch;
     int label_end;
 };
@@ -455,35 +452,43 @@ static int get_first_lexical_var(JSFunctionDef *fd, int scope)
     return -1;
 }
 
+static void emit_scope_leave(JSParseState *s, int scope, JSScopeLeaveMode mode)
+{
+    emit_op(s, OP_leave_scope);
+    emit_u16(s, scope);
+    emit_u8(s, mode);
+}
+
 static void pop_scope(JSParseState *s) {
     if (s->cur_func) {
-        /* disable scoped variables */
         JSFunctionDef *fd = s->cur_func;
         int scope = fd->scope_level;
-        emit_op(s, OP_leave_scope);
-        emit_u16(s, scope);
+        emit_scope_leave(s, scope, JS_SCOPE_LEAVE_NORMAL);
         fd->scope_level = fd->scopes[scope].parent;
         fd->scope_first = get_first_lexical_var(fd, fd->scope_level);
     }
 }
 
-static void close_scopes(JSParseState *s, int scope, int scope_stop)
+static void close_scopes_mode(JSParseState *s, int scope, int scope_stop,
+                              JSScopeLeaveMode mode)
 {
     while (scope > scope_stop) {
-        emit_op(s, OP_leave_scope);
-        emit_u16(s, scope);
+        emit_scope_leave(s, scope, mode);
         scope = s->cur_func->scopes[scope].parent;
     }
 }
 
-/* An exception skips the normal exits of any scopes inside the handler's
-   protected region. Close their captured locals before entering the handler. */
+static void close_scopes(JSParseState *s, int scope, int scope_stop)
+{
+    close_scopes_mode(s, scope, scope_stop, JS_SCOPE_LEAVE_NORMAL);
+}
+
+/* Resource catches have already disposed their own scopes before rethrowing.
+   Handler landings only detach references skipped by the normal exit. */
 static void close_scope_range(JSParseState *s, int first, int end)
 {
-    while (end > first) {
-        emit_op(s, OP_leave_scope);
-        emit_u16(s, --end);
-    }
+    while (end > first)
+        emit_scope_leave(s, --end, JS_SCOPE_LEAVE_CLOSE_ONLY);
 }
 
 /* return the variable index or -1 if error */
@@ -503,6 +508,7 @@ int add_var(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
     memset(vd, 0, sizeof(*vd));
     vd->var_name = JS_DupAtom(ctx, name);
     vd->func_pool_idx = -1;
+    vd->dispose_method_idx = -1;
     return fd->var_count - 1;
 }
 
@@ -583,6 +589,7 @@ static int add_arg(JSContext *ctx, JSFunctionDef *fd, JSAtom name)
     memset(vd, 0, sizeof(*vd));
     vd->var_name = JS_DupAtom(ctx, name);
     vd->func_pool_idx = -1;
+    vd->dispose_method_idx = -1;
     return fd->arg_count - 1;
 }
 
@@ -4891,8 +4898,7 @@ static void emit_async_iterator_close_body(JSParseState *s, BlockEnv *block,
     emit_label(s, scope->label_close);
     for (level = fd->scope_count - 1; level >= scope->scope_level; level--) {
         if (is_child_scope(s->ctx, fd, level, scope->scope_level)) {
-            emit_op(s, OP_leave_scope);
-            emit_u16(s, level);
+            emit_scope_leave(s, level, JS_SCOPE_LEAVE_CLOSE_ONLY);
         }
     }
     /* Stack: pending value, return address, catch, iterator, method. */
@@ -4954,13 +4960,13 @@ static void push_resource_scope(JSParseState *s, JSResourceScope *scope,
 {
     scope->prev = s->cur_func->resource_scope;
     scope->declarations_allowed = declarations_allowed;
-    scope->has_async = FALSE;
-    scope->resources_idx = -1;
+    scope->error_idx = -1;
     push_break_entry(s->cur_func, &scope->block, JS_ATOM_NULL, -1, -1, 0);
     s->cur_func->resource_scope = scope;
 }
 
-/* Emit no instructions or hidden locals for scopes without resources. */
+/* The synthetic catch routes abrupt completions through the same scope exit.
+   Resource storage itself belongs to the function frame, not a heap list. */
 static int activate_resource_scope(JSParseState *s, BOOL preserve_value)
 {
     JSFunctionDef *fd = s->cur_func;
@@ -4969,13 +4975,10 @@ static int activate_resource_scope(JSParseState *s, BOOL preserve_value)
     if (!scope || !scope->declarations_allowed ||
         scope->block.scope_level != fd->scope_level)
         return js_parse_error(s, "using declaration is not allowed here");
-    if (scope->resources_idx >= 0)
+    if (scope->error_idx >= 0)
         return 0;
-    scope->resources_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
     scope->error_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
-    scope->has_error_idx = add_var(s->ctx, fd, JS_ATOM_NULL);
-    if (scope->resources_idx < 0 || scope->error_idx < 0 ||
-        scope->has_error_idx < 0)
+    if (scope->error_idx < 0)
         return -1;
     scope->label_catch = new_label(s);
     scope->label_end = new_label(s);
@@ -4984,81 +4987,64 @@ static int activate_resource_scope(JSParseState *s, BOOL preserve_value)
         scope->block.label_finally < 0)
         return -1;
     scope->block.drop_count = 1;
-
-    emit_op(s, OP_special_object);
-    emit_u8(s, OP_SPECIAL_OBJECT_DISPOSABLE_RESOURCE_LIST);
-    emit_op(s, OP_put_loc);
-    emit_u16(s, scope->resources_idx);
-    emit_op(s, OP_undefined);
+    if (!preserve_value)
+        emit_op(s, OP_push_uninitialized);
     emit_op(s, OP_put_loc);
     emit_u16(s, scope->error_idx);
-    emit_op(s, OP_push_false);
-    emit_op(s, OP_put_loc);
-    emit_u16(s, scope->has_error_idx);
-    if (preserve_value) {
-        /* List allocation has succeeded. Stash the iteration value
-           before installing the catch so its analyzed baseline is
-           the iterator record, matching the runtime unwind stack. */
-        emit_op(s, OP_put_loc);
-        emit_u16(s, scope->error_idx);
-    }
     emit_goto(s, OP_catch, scope->label_catch);
     if (preserve_value) {
-        /* The throw flag is still false. Reuse its error slot only
-           for this nonthrowing transfer and immediately clear it. */
         emit_op(s, OP_get_loc);
         emit_u16(s, scope->error_idx);
-        emit_op(s, OP_undefined);
+        emit_op(s, OP_push_uninitialized);
         emit_op(s, OP_put_loc);
         emit_u16(s, scope->error_idx);
     }
     return 0;
 }
 
-/* Async hints belong to records in the shared list. A scope containing
-   any await using declaration can suspend even while disposing sync records. */
 static int mark_resource_scope_async(JSParseState *s)
 {
     JSFunctionDef *fd = s->cur_func;
-    JSResourceScope *scope = fd->resource_scope;
 
     if (!(fd->func_kind & JS_FUNC_ASYNC) || !fd->in_function_body)
         return js_parse_error(s, "await using requires an asynchronous body");
-    assert(scope && scope->resources_idx >= 0);
-    if (!scope->has_async) {
-        scope->label_step = new_label(s);
-        scope->label_await_failed = new_label(s);
-        scope->label_disposed = new_label(s);
-        if (scope->label_step < 0 || scope->label_await_failed < 0 ||
-            scope->label_disposed < 0)
-            return -1;
-        scope->has_async = TRUE;
-    }
     fd->has_await = TRUE;
     return 0;
 }
 
-static void emit_resource_registration(JSParseState *s, int operation)
+static int emit_resource_registration(JSParseState *s, int operation)
 {
-    emit_op(s, OP_get_loc);
-    emit_u16(s, s->cur_func->resource_scope->resources_idx);
-    emit_op(s, OP_swap);
-    emit_op(s, OP_push_false);
-    emit_op(s, OP_resource_management);
+    JSFunctionDef *fd = s->cur_func;
+    JSVarDef *vd;
+    int idx;
+
+    if (fd->dispose_count >= UINT16_MAX)
+        return js_parse_error(s, "too many disposable resources");
+    /* The binding may be a module/eval reference. Keep ownership in a hidden
+       local so disposal does not depend on how that binding is represented. */
+    idx = add_scope_var(s->ctx, fd, JS_ATOM_NULL, JS_VAR_NORMAL);
+    if (idx < 0)
+        return -1;
+    vd = &fd->vars[idx];
+    vd->dispose_method_idx = fd->dispose_count++;
+    vd->dispose_async = operation == JS_DISPOSAL_ASYNC;
+    emit_op(s, OP_using_add);
+    emit_u16(s, idx);
+    emit_u16(s, vd->dispose_method_idx);
     emit_u8(s, operation);
-    emit_op(s, OP_drop);
+    return 0;
 }
 
 static void pop_resource_scope(JSParseState *s, JSResourceScope *scope)
 {
     JSFunctionDef *fd = s->cur_func;
-    int scope_level;
+    int level;
 
-    assert(s->cur_func->resource_scope == scope);
-    assert(s->cur_func->top_break == &scope->block);
-    s->cur_func->resource_scope = scope->prev;
-    pop_break_entry(s->cur_func);
-    if (scope->resources_idx < 0)
+    assert(fd->resource_scope == scope);
+    assert(fd->top_break == &scope->block);
+    fd->resource_scope = scope->prev;
+    pop_break_entry(fd);
+    if (scope->error_idx < 0)
         return;
 
     if (js_is_live_code(s)) {
@@ -5071,85 +5057,28 @@ static void pop_resource_scope(JSParseState *s, JSResourceScope *scope)
     emit_label(s, scope->label_catch);
     emit_op(s, OP_put_loc);
     emit_u16(s, scope->error_idx);
-    emit_op(s, OP_push_true);
-    emit_op(s, OP_put_loc);
-    emit_u16(s, scope->has_error_idx);
     emit_op(s, OP_undefined);
     emit_goto(s, OP_gosub, scope->block.label_finally);
     emit_op(s, OP_drop);
-    /* A seeded throw is rethrown by the cursor, including throw undefined. */
+    /* The cleanup subroutine propagates every throw, including undefined. */
     emit_op(s, OP_get_loc);
     emit_u16(s, scope->error_idx);
     emit_op(s, OP_throw);
 
     emit_label(s, scope->block.label_finally);
-    /* Stack: pending completion value, gosub return address. */
-    /* A return or exception can skip an inner scope's normal leave.
-       Detach all exited lexical bindings before a disposer can throw
-       into an enclosing catch and permit their slots to be reused. */
-    for (scope_level = fd->scope_count - 1;
-         scope_level >= scope->block.scope_level; scope_level--) {
-        if (is_child_scope(s->ctx, fd, scope_level,
-                           scope->block.scope_level)) {
-            emit_op(s, OP_leave_scope);
-            emit_u16(s, scope_level);
-        }
+    /* Stack: pending value, return address. Close skipped inner bindings
+       before invoking a disposer that could throw into an enclosing catch. */
+    for (level = fd->scope_count - 1; level >= scope->block.scope_level; level--) {
+        if (is_child_scope(s->ctx, fd, level, scope->block.scope_level))
+            emit_scope_leave(s, level, JS_SCOPE_LEAVE_CLOSE_ONLY);
     }
-    if (scope->has_async)
-        emit_label(s, scope->label_step);
-    emit_op(s, OP_get_loc);
-    emit_u16(s, scope->resources_idx);
     emit_op(s, OP_get_loc);
     emit_u16(s, scope->error_idx);
-    emit_op(s, OP_get_loc);
-    emit_u16(s, scope->has_error_idx);
-    /* The cursor owns the seeded completion or resumed Await result.
-       Release the duplicate hidden roots before advancing the cursor. */
-    emit_op(s, OP_undefined);
+    emit_op(s, OP_push_uninitialized);
     emit_op(s, OP_put_loc);
     emit_u16(s, scope->error_idx);
-    emit_op(s, OP_push_false);
-    emit_op(s, OP_put_loc);
-    emit_u16(s, scope->has_error_idx);
-    emit_op(s, OP_resource_management);
-    emit_u8(s, OP_RESOURCE_DISPOSE_STEP);
-    if (scope->has_async) {
-        /* Stack: pending completion, return address, Await operand, flag.
-           Suspend directly, without disposeAsync's overall promise. */
-        emit_goto(s, OP_if_false, scope->label_disposed);
-        emit_op(s, OP_put_loc);
-        emit_u16(s, scope->error_idx);
-        /* Emit the catch below the operand; never swap a catch marker. */
-        emit_goto(s, OP_catch, scope->label_await_failed);
-        emit_op(s, OP_get_loc);
-        emit_u16(s, scope->error_idx);
-        emit_op(s, OP_undefined);
-        emit_op(s, OP_put_loc);
-        emit_u16(s, scope->error_idx);
-        emit_op(s, OP_await);
-        emit_op(s, OP_nip); /* remove catch, preserve fulfillment */
-        emit_op(s, OP_put_loc);
-        emit_u16(s, scope->error_idx);
-        emit_op(s, OP_push_false);
-        emit_op(s, OP_put_loc);
-        emit_u16(s, scope->has_error_idx);
-        emit_goto(s, OP_goto, scope->label_step);
-        emit_label(s, scope->label_await_failed);
-        emit_op(s, OP_put_loc);
-        emit_u16(s, scope->error_idx);
-        emit_op(s, OP_push_true);
-        emit_op(s, OP_put_loc);
-        emit_u16(s, scope->has_error_idx);
-        emit_goto(s, OP_goto, scope->label_step);
-        emit_label(s, scope->label_disposed);
-        emit_op(s, OP_drop); /* unused normal result */
-    } else {
-        emit_op(s, OP_drop); /* false Await flag */
-        emit_op(s, OP_drop); /* unused normal result */
-    }
-    emit_op(s, OP_undefined);
-    emit_op(s, OP_put_loc);
-    emit_u16(s, scope->resources_idx);
+    emit_scope_leave(s, scope->block.scope_level, JS_SCOPE_LEAVE_COMPLETION);
+    emit_op(s, OP_throw_if_initialized);
     emit_op(s, OP_ret);
     emit_label(s, scope->label_end);
 }
@@ -5170,8 +5099,7 @@ static __exception int emit_break(JSParseState *s, JSAtom name, int is_cont)
             /* The next for-let iteration gets a fresh environment before
                its update expression, even when continue skips fallthrough. */
             if (top->has_lexical_iteration) {
-                emit_op(s, OP_leave_scope);
-                emit_u16(s, top->scope_level);
+                emit_scope_leave(s, top->scope_level, JS_SCOPE_LEAVE_NORMAL);
             }
             emit_goto(s, OP_goto, top->label_cont);
             return 0;
@@ -5264,6 +5192,8 @@ static void emit_return(JSParseState *s, BOOL hasval)
         }
         top = top->prev;
     }
+    close_scopes(s, scope_level, 0);
+    emit_scope_leave(s, 0, JS_SCOPE_LEAVE_NORMAL);
     if (s->cur_func->is_derived_class_constructor) {
         int label_return;
 
@@ -5399,8 +5329,9 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
                         goto var_error;
                     set_object_name(s, name);
                     emit_source_pos(s, source_ptr);
-                    if (resource_operation >= 0)
-                        emit_resource_registration(s, resource_operation);
+                    if (resource_operation >= 0 &&
+                        emit_resource_registration(s, resource_operation) < 0)
+                        goto var_error;
                     emit_op(s, (tok == TOK_CONST || tok == TOK_LET) ?
                         OP_scope_put_var_init : OP_scope_put_var);
                     emit_atom(s, name);
@@ -5545,11 +5476,11 @@ static int resource_declaration_operation(JSParseState *s, BOOL for_in_of)
     if (result < 0)
         return -2;
     if (result)
-        return OP_RESOURCE_ADD_ASYNC;
+        return JS_DISPOSAL_ASYNC;
     result = is_using_declaration(s, for_in_of);
     if (result < 0)
         return -2;
-    return result ? OP_RESOURCE_ADD_SYNC : -1;
+    return result ? JS_DISPOSAL_SYNC : -1;
 }
 
 /* A resource frame belongs inside the iterator frame. The binding
@@ -5620,7 +5551,7 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
         if (activate_resource_scope(s, TRUE) < 0)
             return -1;
         /* Stack: iterator record, resource catch offset, value. */
-        if (resource_operation == OP_RESOURCE_ADD_ASYNC) {
+        if (resource_operation == JS_DISPOSAL_ASYNC) {
             if (mark_resource_scope_async(s) < 0 || next_token(s))
                 return -1;
         }
@@ -5650,8 +5581,10 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
                 JS_FreeAtom(s->ctx, var_name);
                 return -1;
             }
-            if (is_using)
-                emit_resource_registration(s, resource_operation);
+            if (is_using && emit_resource_registration(s, resource_operation) < 0) {
+                JS_FreeAtom(s->ctx, var_name);
+                return -1;
+            }
             emit_op(s, (tok == TOK_CONST || tok == TOK_LET) ?
                     OP_scope_put_var_init : OP_scope_put_var);
             emit_atom(s, var_name);
@@ -5745,7 +5678,8 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
     }
     /* close the scope after having evaluated the expression so that
        the TDZ values are in the closures */
-    close_scopes(s, s->cur_func->scope_level, block_scope_level);
+    close_scopes_mode(s, s->cur_func->scope_level, block_scope_level,
+                      JS_SCOPE_LEAVE_CLOSE_ONLY);
     if (is_for_of) {
         /* set has_iterator after the iterable expression is parsed so
            that a yield in the expression does not try to close a
@@ -6176,7 +6110,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                     push_resource_scope(s, &resources, TRUE);
                     if (activate_resource_scope(s, FALSE) < 0)
                         goto fail;
-                    if (resource_operation == OP_RESOURCE_ADD_ASYNC) {
+                    if (resource_operation == JS_DISPOSAL_ASYNC) {
                         if (mark_resource_scope_async(s) < 0 || next_token(s))
                             goto fail;
                     }
@@ -6635,7 +6569,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
                 next_token(s) || next_token(s))
                 goto fail;
             if (js_parse_var(s, PF_IN_ACCEPTED, TOK_CONST, FALSE,
-                             OP_RESOURCE_ADD_ASYNC) ||
+                             JS_DISPOSAL_ASYNC) ||
                 js_parse_expect_semi(s))
                 goto fail;
             goto done;
@@ -6658,7 +6592,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s,
             if (activate_resource_scope(s, FALSE) < 0 || next_token(s))
                 goto fail;
             if (js_parse_var(s, PF_IN_ACCEPTED, TOK_CONST, FALSE,
-                             OP_RESOURCE_ADD_SYNC) ||
+                             JS_DISPOSAL_SYNC) ||
                 js_parse_expect_semi(s))
                 goto fail;
             goto done;
@@ -7755,8 +7689,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
         }
 
         /* the argument scope has no parent, hence we don't use pop_scope(s) */
-        emit_op(s, OP_leave_scope);
-        emit_u16(s, fd->scope_level);
+        emit_scope_leave(s, fd->scope_level, JS_SCOPE_LEAVE_NORMAL);
 
         /* set the variable scope as the current scope */
         fd->scope_level = 0;
@@ -7793,10 +7726,7 @@ static __exception int js_parse_function_decl2(JSParseState *s,
             if (js_parse_assign_expr2(s, body_parse_flags))
                 goto fail;
 
-            if (func_kind != JS_FUNC_NORMAL)
-                emit_op(s, OP_return_async);
-            else
-                emit_op(s, OP_return);
+            emit_return(s, TRUE);
 
             if (!fd->strip_source) {
                 /* save the function source code */

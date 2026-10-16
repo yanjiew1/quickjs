@@ -78,6 +78,8 @@ struct JSVarDef {
        the definition of the 'var' variables (they have scope_level =
        0) */
     int func_pool_idx;
+    int dispose_method_idx; /* -1 unless this local owns a using resource */
+    BOOL dispose_async;
 };
 
 typedef enum JSParseFunctionEnum {
@@ -147,6 +149,7 @@ typedef struct JSFunctionDef {
     int defined_arg_count;
     int parameter_var_count; /* parsed formal bindings before the body */
     int var_ref_count; /* number of local/arg variable references */
+    int dispose_count; /* number of cached disposal methods */
     int var_object_idx; /* -1 if none */
     int arg_var_object_idx; /* -1 if none (var object for the argument scope) */
     int arguments_var_idx; /* -1 if none */

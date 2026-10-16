@@ -402,6 +402,7 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
     bc_put_leb128(s, b->defined_arg_count);
     bc_put_leb128(s, b->stack_size);
     bc_put_leb128(s, b->var_ref_count);
+    bc_put_leb128(s, b->dispose_count);
     bc_put_leb128(s, b->closure_var_count);
     bc_put_leb128(s, b->cpool_count);
     bc_put_leb128(s, b->byte_code_len);

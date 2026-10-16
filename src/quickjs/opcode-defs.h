@@ -35,6 +35,8 @@ FMT(loc8)
 FMT(const8)
 FMT(label8)
 FMT(u16)
+FMT(u16_u8)
+FMT(loc_dispose_u8)
 FMT(i16)
 FMT(label16)
 FMT(npop)
@@ -263,7 +265,10 @@ DEF(     set_strict, 2, 0, 0, u8)
 
 DEF(define_field_ro, 5, 2, 1, atom) /* immutable binding reference */
 
-DEF(resource_management, 2, 3, 2, u8)
+DEF(      using_add, 6, 1, 1, loc_dispose_u8)
+DEF(        dispose, 6, 1, 1, loc_dispose_u8)
+DEF(push_uninitialized, 1, 0, 1, none)
+DEF(throw_if_initialized, 1, 1, 0, none)
 
 /* must be the last non short and non temporary opcode */
 DEF(            nop, 1, 0, 0, none)
@@ -271,7 +276,7 @@ DEF(            nop, 1, 0, 0, none)
 /* temporary opcodes: never emitted in the final bytecode */
 
 def(    enter_scope, 3, 0, 0, u16)  /* emitted in phase 1, removed in phase 2 */
-def(    leave_scope, 3, 0, 0, u16)  /* emitted in phase 1, removed in phase 2 */
+def(    leave_scope, 4, 0, 0, u16_u8)  /* emitted in phase 1, removed in phase 2 */
 
 /* Class strict boundary: cleanup-subroutine label and normal-exit label.
    Expanded in phase 3 after binding resolution. */

@@ -149,6 +149,8 @@ JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
             arg_buf[i] = JS_UNDEFINED;
         sf->arg_count = arg_count;
     }
+    sf->dispose_buf = NULL;
+    sf->dispose_state = 0;
     sf->arg_buf = (JSValue*)arg_buf;
 
     func = p->u.cfunc.c_function;
