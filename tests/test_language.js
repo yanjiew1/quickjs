@@ -3944,3 +3944,16 @@ function test_large_function_bindings()
 }
 
 test_large_function_bindings();
+
+function test_typeof_comparison_alternatives()
+{
+    for (const op of ["==", "!=", "===", "!=="]) {
+        const compare = Function("value", "return typeof value " + op + " 'string';");
+        for (const value of [undefined, null, 1, "s", {}, function() {}, Symbol()]) {
+            const equal = typeof value === "string";
+            assert(compare(value), op === "==" || op === "===" ? equal : !equal);
+        }
+    }
+}
+
+test_typeof_comparison_alternatives();
