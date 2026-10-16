@@ -40,6 +40,8 @@ jobs:
       USE_CLANG: ${{ matrix.compiler == 'clang' && 'y' || '' }}
       USE_ASAN: ${{ matrix.sanitizer == 'ASan' && 'y' || '' }}
       USE_UBSAN: ${{ matrix.sanitizer == 'UBSan' && 'y' || '' }}
+      # ASan bypasses small-block pools; UBSan must cover pooled iteration.
+      USE_MALLOC_ITER: ${{ matrix.compiler == 'gcc' && matrix.sanitizer == 'UBSan' && 'y' || '' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -48,12 +50,14 @@ jobs:
         run: |
           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO= \
             CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
-            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN"
+            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" \
+            CONFIG_MALLOC_ITER="$USE_MALLOC_ITER"
       - name: Run built-in tests
         run: |
           make CONFIG_WERROR=y CONFIG_LTO= \
             CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
-            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" test
+            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" \
+            CONFIG_MALLOC_ITER="$USE_MALLOC_ITER" test
       - name: Install pinned Test262
         run: make test2-bootstrap
       - name: Run Test262
@@ -95,8 +99,11 @@ jobs:
         include:
           - arch: x86_64
             runner: ubuntu-latest
+            compiler: gcc
           - arch: arm64
             runner: ubuntu-24.04-arm
+            # Keep UAR coverage without GCC ARM64 fake-stack scanning costs.
+            compiler: clang
     timeout-minutes: 25
     env:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
@@ -106,7 +113,8 @@ jobs:
       - name: Build and run focused GC stress tests
         run: |
           set -o pipefail
-          make -j$(getconf _NPROCESSORS_ONLN) CC=gcc HOST_CC=gcc \
+          make -j$(getconf _NPROCESSORS_ONLN) CC="${{ matrix.compiler }}" HOST_CC="${{ matrix.compiler }}" \
+            CONFIG_CLANG="${{ matrix.compiler == 'clang' && 'y' || '' }}" \
             CONFIG_WERROR=y CONFIG_LTO= CONFIG_ASAN=y CONFIG_UBSAN=y \
             CONFIG_GC_STRESS=y CONFIG_MALLOC_ITER=y test-gc-stress 2>&1 | tee gc-stress.log
       - name: Preserve GC stress diagnostics
