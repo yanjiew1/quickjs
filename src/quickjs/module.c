@@ -404,7 +404,7 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
     JS_FreeAtom(ctx, name);
     if (!me)
         goto fail;
-    set_value(ctx, me->u.local.var_ref->pvalue, val);
+    set_value(ctx->rt, me->u.local.var_ref->pvalue, val);
     return 0;
  fail:
     JS_FreeValue(ctx, val);
@@ -413,7 +413,7 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
 
 int JS_SetModulePrivateValue(JSContext *ctx, JSModuleDef *m, JSValue val)
 {
-    set_value(ctx, &m->private_value, val);
+    set_value(ctx->rt, &m->private_value, val);
     return 0;
 }
 
@@ -1307,7 +1307,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                 val = JS_GetModuleNamespace(ctx, m1);
                 if (JS_IsException(val))
                     goto fail;
-                set_value(ctx, &var_refs[mi->var_idx]->value, val);
+                set_value(ctx->rt, &var_refs[mi->var_idx]->value, val);
 #ifdef DUMP_MODULE_RESOLVE
                 printf("namespace\n");
 #endif
@@ -1336,7 +1336,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
                         JS_FreeValue(ctx, val);
                         goto fail;
                     }
-                    set_value(ctx, &var_ref->value, val);
+                    set_value(ctx->rt, &var_ref->value, val);
                     var_refs[mi->var_idx] = var_ref;
 #ifdef DUMP_MODULE_RESOLVE
                     printf("namespace from\n");
