@@ -743,6 +743,10 @@ static int js_proxy_get_own_property_names(JSContext *ctx,
     len = 0;
     tab2 = NULL;
     len2 = 0;
+    if (!JS_IsObject(prop_array)) {
+        JS_ThrowTypeErrorNotAnObject(ctx);
+        goto fail;
+    }
     if (js_get_length32(ctx, &len, prop_array))
         goto fail;
     if (len > 0) {
