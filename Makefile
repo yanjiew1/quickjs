@@ -601,6 +601,8 @@ C_TESTS+=tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json_exec$(EXE) tests/
 QJSC_JSON_COLLISION_CASES:=attributes-first attributes-last size-first size-last
 C_TESTS+=$(addprefix tests/test_qjsc_json_collision_,$(addsuffix $(EXE),$(QJSC_JSON_COLLISION_CASES)))
 
+C_TESTS+=tests/test_object$(EXE)
+
 C_TESTS+=tests/test_iterator$(EXE)
 C_TESTS+=tests/test_allocator_policy$(EXE)
 C_TESTS+=tests/test_unicode_oom$(EXE)
@@ -715,6 +717,9 @@ $(OBJDIR)/tests/qjsc-json-collision-%.o: $(OBJDIR)/tests/qjsc-json-collision-%.c
 tests/test_qjsc_json_collision_%$(EXE): $(OBJDIR)/tests/qjsc-json-collision-%.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_object$(EXE): $(OBJDIR)/tests/test_object.o libquickjs$(LTOEXT).a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_api$(EXE): $(OBJDIR)/tests/test_api.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -788,6 +793,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_wait_async$(EXE)
 	$(WINE) ./tests/test_native_jobs$(EXE)
 	$(WINE) ./tests/test_wait_queue$(EXE)
+	$(WINE) ./tests/test_object$(EXE)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
