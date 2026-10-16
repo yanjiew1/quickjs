@@ -160,7 +160,7 @@ void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj)
 {
     JSRuntime *rt = ctx->rt;
     assert(class_id < rt->class_count);
-    set_value(ctx, &ctx->class_proto[class_id], obj);
+    set_value(rt, &ctx->class_proto[class_id], obj);
 }
 
 JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id)

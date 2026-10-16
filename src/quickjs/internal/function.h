@@ -163,7 +163,8 @@ JSValue js_call_bound_function(JSContext *ctx, JSValueConst func_obj,
 void js_bound_function_finalizer(JSRuntime *rt, JSValue val);
 void js_bound_function_mark(JSRuntime *rt, JSValueConst val,
                                 JS_MarkFunc *mark_func);
-void js_method_set_home_object(JSContext *ctx, JSValueConst func_obj,
+BOOL js_is_function(JSRuntime *rt, JSValueConst val);
+void js_method_set_home_object(JSRuntime *rt, JSValueConst func_obj,
                                JSValueConst home_obj);
 int js_method_set_properties(JSContext *ctx, JSValueConst func_obj,
                              JSAtom name, int flags, JSValueConst home_obj);

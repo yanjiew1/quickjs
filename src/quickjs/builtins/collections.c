@@ -1058,7 +1058,7 @@ static JSValue js_set_isDisjointFrom(JSContext *ctx, JSValueConst this_val,
                 break;
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
             JS_FreeValue(ctx, item);
-            ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+            ok = JS_ToBoolFree(ctx->rt, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok < 0)
                 goto exception;
             found = (ok > 0);
@@ -1128,7 +1128,7 @@ static JSValue js_set_isSubsetOf(JSContext *ctx, JSValueConst this_val,
             break;
         rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
         JS_FreeValue(ctx, item);
-        ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+        ok = JS_ToBoolFree(ctx->rt, rv); // returns -1 if rv is JS_EXCEPTION
         if (ok < 0)
             goto exception;
         found = (ok > 0);
@@ -1256,7 +1256,7 @@ static JSValue js_set_intersection(JSContext *ctx, JSValueConst this_val,
             if (done) // item is JS_UNDEFINED
                 break;
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
-            ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+            ok = JS_ToBoolFree(ctx->rt, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok > 0) {
                 item = map_normalize_key(item);
                 if (map_find_record(t, item)) {
@@ -1320,7 +1320,7 @@ static JSValue js_set_difference(JSContext *ctx, JSValueConst this_val,
             if (done) // item is JS_UNDEFINED
                 break;
             rv = JS_Call(ctx, has, argv[0], 1, (JSValueConst *)&item);
-            ok = JS_ToBoolFree(ctx, rv); // returns -1 if rv is JS_EXCEPTION
+            ok = JS_ToBoolFree(ctx->rt, rv); // returns -1 if rv is JS_EXCEPTION
             if (ok < 0) {
                 JS_FreeValue(ctx, item);
                 goto exception;
