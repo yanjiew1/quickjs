@@ -1112,7 +1112,7 @@ static JSValue js_std_file_readAsString(JSContext *ctx, JSValueConst this_val,
             break;
         if (dbuf_putc(&dbuf, c)) {
             dbuf_free(&dbuf);
-            return JS_EXCEPTION;
+            return JS_ThrowOutOfMemory(ctx);
         }
         max_size--;
     }
@@ -1192,7 +1192,7 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
     char *buf;
     size_t i, len;
     int status;
-    JSValue response = JS_UNDEFINED, ret_obj;
+    JSValue response = JS_UNDEFINED, ret_obj = JS_UNDEFINED;
     JSValueConst options_obj;
     FILE *f;
     BOOL binary_flag, full_flag;
@@ -1240,7 +1240,7 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
     dbuf_putc(&cmd_buf, '\0');
     if (dbuf_error(&cmd_buf)) {
         dbuf_free(&cmd_buf);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
     //    printf("%s\n", (char *)cmd_buf.buf);
     f = popen((char *)cmd_buf.buf, "r");
@@ -1270,6 +1270,8 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
     for(;;) {
         if (http_get_header_line(f, buf, URL_GET_BUF_SIZE, header_buf) < 0) {
         bad_header:
+            if (dbuf_error(header_buf))
+                goto oom;
             response = JS_NULL;
             goto done;
         }
@@ -1277,7 +1279,7 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
             break;
     }
     if (dbuf_error(header_buf))
-        goto fail;
+        goto oom;
     header_buf->size -= 2; /* remove the trailing CRLF */
 
     /* download the data */
@@ -1288,7 +1290,7 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
         dbuf_put(data_buf, (uint8_t *)buf, len);
     }
     if (dbuf_error(data_buf))
-        goto fail;
+        goto oom;
     if (binary_flag) {
         response = JS_NewArrayBufferCopy(ctx,
                                          data_buf->buf, data_buf->size);
@@ -1306,26 +1308,39 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
     data_buf = NULL;
 
     if (full_flag) {
+        BOOL has_response = !JS_IsNull(response);
+        JSValue headers;
+        int ret;
+
         ret_obj = JS_NewObject(ctx);
         if (JS_IsException(ret_obj))
             goto fail;
-        JS_DefinePropertyValueStr(ctx, ret_obj, "response",
-                                  response,
-                                  JS_PROP_C_W_E);
-        if (!JS_IsNull(response)) {
-            JS_DefinePropertyValueStr(ctx, ret_obj, "responseHeaders",
-                                      JS_NewStringLen(ctx, (char *)header_buf->buf,
-                                                      header_buf->size),
-                                      JS_PROP_C_W_E);
-            JS_DefinePropertyValueStr(ctx, ret_obj, "status",
-                                      JS_NewInt32(ctx, status),
-                                      JS_PROP_C_W_E);
+        ret = JS_DefinePropertyValueStr(ctx, ret_obj, "response",
+                                        response, JS_PROP_C_W_E);
+        response = JS_UNDEFINED;
+        if (ret < 0)
+            goto fail;
+        if (has_response) {
+            headers = JS_NewStringLen(ctx, (char *)header_buf->buf,
+                                      header_buf->size);
+            if (JS_IsException(headers))
+                goto fail;
+            if (JS_DefinePropertyValueStr(ctx, ret_obj, "responseHeaders",
+                                          headers, JS_PROP_C_W_E) < 0)
+                goto fail;
+            if (JS_DefinePropertyValueStr(ctx, ret_obj, "status",
+                                          JS_NewInt32(ctx, status),
+                                          JS_PROP_C_W_E) < 0)
+                goto fail;
         }
     } else {
         ret_obj = response;
+        response = JS_UNDEFINED;
     }
     dbuf_free(header_buf);
     return ret_obj;
+ oom:
+    JS_ThrowOutOfMemory(ctx);
  fail:
     if (f)
         pclose(f);
@@ -1335,6 +1350,7 @@ static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
     if (header_buf)
         dbuf_free(header_buf);
     JS_FreeValue(ctx, response);
+    JS_FreeValue(ctx, ret_obj);
     return JS_EXCEPTION;
 }
 
