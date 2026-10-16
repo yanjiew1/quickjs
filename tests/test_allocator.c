@@ -1433,8 +1433,64 @@ static void test_optional_property_compaction(void)
     }
 }
 
+static void test_compiler_debug_allocation_failure(void)
+{
+    char source[8192];
+    uint8_t expected_pc2line[8192];
+    size_t length, fail_at, allocations = 0, pc2line_len = 0;
+    int i;
+
+    strcpy(source, "var a = 0;\n");
+    for (i = 0; i < 512; i++)
+        strcat(source, "a += 1;\n");
+    strcat(source, "a;\n");
+    length = strlen(source);
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue result;
+        int number;
+
+        assert(ctx);
+        JS_SetStripInfo(rt, 0);
+        oom_test_begin(&allocator, fail_at);
+        result = JS_Eval(ctx, source, length, "compiler-oom.js",
+                         JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(allocations > 0 && allocations < 256);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            oom_test_check_exception(ctx);
+        } else {
+            JSFunctionBytecode *b = JS_VALUE_GET_PTR(result);
+
+            assert(!JS_HasException(ctx) && b->has_debug);
+            if (!fail_at) {
+                pc2line_len = b->debug.pc2line_len;
+                assert(pc2line_len > 512 && pc2line_len <= sizeof(expected_pc2line));
+                memcpy(expected_pc2line, b->debug.pc2line_buf, pc2line_len);
+            } else {
+                assert(b->debug.pc2line_len == pc2line_len);
+                assert(!memcmp(expected_pc2line, b->debug.pc2line_buf, pc2line_len));
+            }
+            result = JS_EvalFunction(ctx, result);
+            assert(JS_ToInt32(ctx, &number, result) == 0 && number == 512);
+            JS_FreeValue(ctx, result);
+        }
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 int main(void)
 {
+    test_compiler_debug_allocation_failure();
     test_optional_bigint_shrink();
     test_optional_property_compaction();
     test_module_export_allocation_failure();
