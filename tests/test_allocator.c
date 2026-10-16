@@ -41,6 +41,70 @@
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
 
+typedef struct ArraySizeAllocator {
+    BOOL enabled;
+    size_t requested;
+} ArraySizeAllocator;
+
+static void *array_size_malloc(JSMallocState *ms, size_t size)
+{
+    ArraySizeAllocator *s = ms->opaque;
+    if (s->enabled && size >= 1024 * 1024) {
+        s->requested = size;
+        return NULL;
+    }
+    return def_malloc_funcs.js_malloc(ms, size);
+}
+
+static void *array_size_realloc(JSMallocState *ms, void *ptr, size_t size)
+{
+    ArraySizeAllocator *s = ms->opaque;
+    if (s->enabled && size >= 1024 * 1024) {
+        s->requested = size;
+        return NULL;
+    }
+    return def_malloc_funcs.js_realloc(ms, ptr, size);
+}
+
+static void test_array_allocation_size(void)
+{
+    ArraySizeAllocator allocator = { 0 };
+    JSMallocFunctions mf = def_malloc_funcs;
+    JSRuntime *rt;
+    JSContext *ctx;
+    void *array = NULL, *saved;
+    int capacity = 0;
+    int count = INT_MAX / sizeof(JSValue) + 1;
+
+    mf.js_malloc = array_size_malloc;
+    mf.js_realloc = array_size_realloc;
+    rt = JS_NewRuntime2(&mf, &allocator);
+    ctx = JS_NewContext(rt);
+    assert(rt && ctx);
+    allocator.enabled = TRUE;
+    assert(js_realloc_array(ctx, &array, sizeof(JSValue), &capacity, count) < 0);
+    allocator.enabled = FALSE;
+    assert(!array && capacity == 0);
+    assert(allocator.requested >= (size_t)count * sizeof(JSValue));
+    assert(allocator.requested - (size_t)count * sizeof(JSValue) < 1024);
+    oom_test_check_exception(ctx);
+
+    assert(js_resize_array(ctx, &array, 1, &capacity, 64) == 0);
+    memset(array, 0x5a, 64);
+    saved = array;
+    count = capacity;
+    allocator.enabled = TRUE;
+    assert(js_realloc_array(ctx, &array, 1, &capacity, INT_MAX) < 0);
+    allocator.enabled = FALSE;
+    assert(array == saved && capacity == count);
+    for (count = 0; count < 64; count++)
+        assert(((unsigned char *)array)[count] == 0x5a);
+    oom_test_check_exception(ctx);
+    js_free(ctx, array);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 typedef struct ReactionOwner {
     int calls;
     int finalized;
@@ -1727,6 +1791,7 @@ static void test_basic_object_allocation_failures(void)
 
 int main(void)
 {
+    test_array_allocation_size();
     test_basic_object_allocation_failures();
     test_promise_capability_allocation_failure();
     test_compiler_var_lookup_allocation_failure();
