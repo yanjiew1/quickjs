@@ -844,7 +844,7 @@ static JSValue js_typed_array_find(JSContext *ctx, JSValueConst this_val,
         res = JS_Call(ctx, func, this_arg, 3, args);
         if (JS_IsException(res))
             goto exception;
-        if (JS_ToBoolFree(ctx, res)) {
+        if (JS_ToBoolFree(ctx->rt, res)) {
             if (mode == ArrayFindIndex || mode == ArrayFindLastIndex) {
                 JS_FreeValue(ctx, val);
                 return index_val;

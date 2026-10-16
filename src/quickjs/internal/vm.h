@@ -52,16 +52,16 @@ void js_for_in_iterator_finalizer(JSRuntime *rt, JSValue val);
 void js_for_in_iterator_mark(JSRuntime *rt, JSValueConst val,
                              JS_MarkFunc *mark_func);
 
-static inline BOOL is_strict_mode(JSContext *ctx)
+static inline BOOL is_strict_mode(JSRuntime *rt)
 {
-    JSStackFrame *sf = ctx->rt->current_stack_frame;
+    JSStackFrame *sf = rt->current_stack_frame;
     return (sf && (sf->js_mode & JS_MODE_STRICT));
 }
 
 JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
                     int argc, JSValueConst *argv);
 
-JSValueConst JS_GetActiveFunction(JSContext *ctx);
+JSValueConst JS_GetActiveFunction(JSRuntime *rt);
 
 JSValue js_closure2(JSContext *ctx, JSValue func_obj,
                     JSFunctionBytecode *b,
