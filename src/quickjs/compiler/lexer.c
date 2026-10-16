@@ -51,7 +51,7 @@ static void __attribute((unused)) dump_token(JSParseState *s,
         {
             char buf[ATOM_GET_STR_BUF_SIZE];
             printf("ident: '%s'\n",
-                   JS_AtomGetStr(s->ctx, buf, sizeof(buf), token->u.ident.atom));
+                   JS_AtomGetStrRT(s->ctx->rt, buf, sizeof(buf), token->u.ident.atom));
         }
         break;
     case TOK_STRING:
