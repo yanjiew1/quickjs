@@ -25,6 +25,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include "oom-allocator.h"
 
 #include "../src/quickjs/internal/allocator.h"
 #include "../src/quickjs/internal/atom.h"
@@ -1216,8 +1217,57 @@ static void test_native_constructor_setup(void)
     assert(factory_proto_finalized == 3);
 }
 
+static void test_normalization_allocation_failure(void)
+{
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue input, method, result;
+        char text[2048];
+        const char *normalized;
+        size_t len;
+
+        assert(ctx);
+        memset(text, 'x', sizeof(text));
+        memcpy(text, "e\xcc\x81", 3);
+        input = JS_NewStringLen(ctx, text, sizeof(text));
+        method = JS_GetPropertyStr(ctx, input, "normalize");
+        assert(!JS_IsException(input) && JS_IsFunction(ctx, method));
+        oom_test_begin(&allocator, fail_at);
+        result = JS_Call(ctx, method, input, 0, NULL);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(allocations > 0 && allocations < 32);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            assert(fail_at);
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            normalized = JS_ToCStringLen(ctx, &len, result);
+            assert(normalized && len == sizeof(text) - 1);
+            assert(!memcmp(normalized, "\xc3\xa9", 2));
+            assert(!memcmp(normalized + 2, text + 3, sizeof(text) - 3));
+            JS_FreeCString(ctx, normalized);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, method);
+        JS_FreeValue(ctx, input);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 int main(void)
 {
+    test_normalization_allocation_failure();
     test_gc_upcoming_properties();
     test_atom_table_allocation_failure();
     test_native_constructor_setup();
