@@ -607,6 +607,7 @@ C_TESTS+=tests/test_qjsc_json_probe$(EXE) tests/test_qjsc_json_exec$(EXE) tests/
 QJSC_JSON_COLLISION_CASES:=attributes-first attributes-last size-first size-last
 C_TESTS+=$(addprefix tests/test_qjsc_json_collision_,$(addsuffix $(EXE),$(QJSC_JSON_COLLISION_CASES)))
 
+C_TESTS+=tests/test_dtoa$(EXE)
 C_TESTS+=tests/test_object$(EXE)
 
 C_TESTS+=tests/test_iterator$(EXE)
@@ -757,6 +758,9 @@ tests/test_bytecode_dump$(EXE): $(OBJDIR)/tests/test_bytecode_dump.o libquickjs$
 tests/test_bytecode$(EXE): $(OBJDIR)/tests/test_bytecode.o libquickjs$(LTOEXT).a
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+tests/test_dtoa$(EXE): $(OBJDIR)/tests/test_dtoa.o $(OBJDIR)/src/dtoa/dtoa.o $(OBJDIR)/src/cutils/cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 tests/test_cutils$(EXE): $(OBJDIR)/tests/test_cutils.o $(OBJDIR)/src/cutils/cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
@@ -803,6 +807,7 @@ test-c: $(C_TESTS)
 	$(WINE) ./tests/test_api$(EXE)
 	$(WINE) ./tests/test_typed_array$(EXE)
 	$(WINE) ./tests/test_bytecode$(EXE)
+	$(WINE) ./tests/test_dtoa$(EXE)
 	$(WINE) ./tests/test_cutils$(EXE)
 	$(WINE) ./tests/test_unicode$(EXE)
 	$(WINE) ./tests/test_unicode_oom$(EXE)
