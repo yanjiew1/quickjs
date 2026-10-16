@@ -2110,6 +2110,20 @@ function test_date_setyear_coercion()
     assert(coerced, false, "receiver brand is checked before year coercion");
 }
 
+function test_regexp_string_set_growth()
+{
+    const strings = Array.from({ length: 257 }, (_, i) => "s" + i + "x");
+    const pattern = "[\\q{" + strings.join("|") + "}]";
+    const rx = new RegExp("^" + pattern + "$", "v");
+    for (const str of strings)
+        assert(rx.test(str));
+    assert(rx.test("s258x"), false);
+    const difference = new RegExp("^[" + pattern + "--[\\q{s0x|s256x}]]$", "v");
+    assert(difference.test("s0x"), false);
+    assert(difference.test("s256x"), false);
+    assert(difference.test("s128x"), true);
+}
+
 function test_regexp_replace_buffer()
 {
     const input = "a".repeat(256);
@@ -5759,6 +5773,7 @@ test_date();
 test_date_setyear_coercion();
 test_regexp();
 test_regexp_replace_buffer();
+test_regexp_string_set_growth();
 test_regexp_unicode_18();
 test_symbol();
 test_map();
