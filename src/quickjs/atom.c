@@ -530,6 +530,7 @@ static void __JS_FreeAtom(JSRuntime *rt, uint32_t i)
 JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p)
 {
     JSRuntime *rt = ctx->rt;
+    JSAtom atom;
     uint32_t n;
     if (is_num_string(&n, p)) {
         if (n <= JS_ATOM_MAX_INT) {
@@ -537,8 +538,10 @@ JSAtom JS_NewAtomStr(JSContext *ctx, JSString *p)
             return __JS_AtomFromUInt32(n);
         }
     }
-    /* XXX: should generate an exception */
-    return __JS_NewAtom(rt, p, JS_ATOM_TYPE_STRING);
+    atom = __JS_NewAtom(rt, p, JS_ATOM_TYPE_STRING);
+    if (atom == JS_ATOM_NULL)
+        JS_ThrowOutOfMemory(ctx);
+    return atom;
 }
 
 /* str is UTF-8 encoded */
@@ -569,6 +572,7 @@ JSAtom JS_NewAtomUInt32(JSContext *ctx, uint32_t n)
     if (n <= JS_ATOM_MAX_INT) {
         return __JS_AtomFromUInt32(n);
     } else {
+        JSAtom atom;
         char buf[11];
         JSValue val;
         size_t len;
@@ -576,8 +580,11 @@ JSAtom JS_NewAtomUInt32(JSContext *ctx, uint32_t n)
         val = js_new_string8_len(ctx, buf, len);
         if (JS_IsException(val))
             return JS_ATOM_NULL;
-        return __JS_NewAtom(ctx->rt, JS_VALUE_GET_STRING(val),
-                            JS_ATOM_TYPE_STRING);
+        atom = __JS_NewAtom(ctx->rt, JS_VALUE_GET_STRING(val),
+                             JS_ATOM_TYPE_STRING);
+        if (atom == JS_ATOM_NULL)
+            JS_ThrowOutOfMemory(ctx);
+        return atom;
     }
 }
 
