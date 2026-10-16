@@ -120,3 +120,6 @@ libwinpthread*.dll
 
 /tests/test_bytecode_dump
 /tests/test_bytecode_dump.exe
+
+/tests/test_std_oom
+/tests/test_std_oom.exe
