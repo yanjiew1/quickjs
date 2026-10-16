@@ -95,6 +95,10 @@ jobs:
         with:
           path: parent
           ref: ${{ needs.select.outputs.parent_revision }}
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Verify benchmark tool contracts
         run: |
           python3 -m unittest discover -s tooling/tools/benchmarks -p 'test_*.py'

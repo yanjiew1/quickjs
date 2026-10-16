@@ -26,6 +26,7 @@ class BenchmarkToolTests(unittest.TestCase):
         self.assertTrue(select_benchmark.selection("push", 26, ["doc/quickjs.texi"], 24)[0])
         self.assertTrue(select_benchmark.selection("push", 27, ["src/intl/date-native-bank.c"], 26)[0])
         self.assertTrue(select_benchmark.selection("push", 27, ["tests/microbench.js"], 26)[0])
+        self.assertTrue(select_benchmark.selection("push", 27, ["tools/build/qjsc_codegen.py"], 26)[0])
         self.assertFalse(select_benchmark.selection("push", 27, ["doc/quickjs.texi"], 26)[0])
         self.assertTrue(select_benchmark.selection("workflow_dispatch", 26, [])[0])
         for before_count in (None, 0, 26, 27):
@@ -151,6 +152,49 @@ class BenchmarkToolTests(unittest.TestCase):
                     run.build(source, "clang", source, 2)
                 execute.assert_not_called()
             self.assertEqual(old_object.read_bytes(), b"old compiler object")
+
+    def test_meson_build_checks_produced_objects_and_ignores_unbuilt_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, output = root / "source", root / "output"
+            source.mkdir()
+            output.mkdir()
+            (source / "meson.build").write_text("project('fixture', 'c')")
+
+            def execute(command, cwd, log, timeout):
+                log.write_text("fixture build\n")
+                if command[1] == "setup":
+                    build = output / "meson-build"
+                    build.mkdir()
+                    (build / "engine.o").write_bytes(b"object")
+                    (build / "qjs").write_bytes(b"executable")
+                    commands = [dict(directory=str(build), file="engine.c",
+                                     command="cc -O2 -c engine.c -o engine.o"),
+                                dict(directory=str(build), file="unbuilt.c",
+                                     command="cc -O0 -c unbuilt.c -o unbuilt.o")]
+                    (build / "compile_commands.json").write_text(json.dumps(commands))
+                return 0.1
+
+            with patch.object(run.subprocess, "check_output",
+                              side_effect=lambda command: b"cc -o qjs engine.o\n" if command[0] == "ninja" else b""), \
+                 patch.object(run, "checked_process", side_effect=execute) as process:
+                result = run.build(source, "gcc", output, 2)
+            self.assertEqual(result["backend"], "meson")
+            self.assertEqual(len(result["actual_compile_commands"]), 1)
+            self.assertEqual(process.call_count, 2)
+            self.assertIn("-Db_sanitize=none", result["configure_command"])
+            self.assertEqual(result["actual_build_commands"], ["cc -o qjs engine.o"])
+            self.assertTrue(Path(result["binary"]).is_file())
+
+    def test_meson_link_only_instrumentation_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for flag in ["-fsanitize=address", "-flto=auto"]:
+                with patch.object(run, "checked_process", return_value=0), \
+                     patch.object(run.subprocess, "check_output",
+                                  return_value=("cc -o qjs engine.o " + flag).encode()):
+                    with self.assertRaisesRegex(ValueError, "link/build command"):
+                        run.build_meson(root, "gcc", root, 2, "core")
 
     def test_tracked_parent_headers_are_not_stale_products(self):
         with tempfile.TemporaryDirectory() as directory:
