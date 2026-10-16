@@ -4648,14 +4648,12 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
             label_next = emit_goto(s, OP_if_true, -1); /* end of loop */
             emit_label(s, label_yield);
             if (is_async) {
-                /* OP_async_yield_star takes the value as parameter */
+                /* Async delegation yields the value; sync delegation keeps
+                   the original iterator result object. */
                 emit_op(s, OP_get_field);
                 emit_atom(s, JS_ATOM_value);
-                emit_op(s, OP_async_yield_star);
-            } else {
-                /* OP_yield_star takes (value, done) as parameter */
-                emit_op(s, OP_yield_star);
             }
+            emit_op(s, OP_yield_star);
             emit_op(s, OP_dup);
             label_return = emit_goto(s, OP_if_true, -1);
             emit_op(s, OP_drop);
