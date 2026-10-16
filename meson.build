@@ -209,7 +209,54 @@ executable(
 )
 subdir('src')
 
+shared_build = get_option('default_library') != 'static'
+static_install = get_option('default_library') != 'shared'
+shared_link_args = []
+library_install_dir = get_option('libdir') / 'quickjs'
+shared_kwargs = {
+  'install_dir': library_install_dir,
+}
+if host_machine.system() == 'windows'
+  # Meson 0.58 installs DLLs to bindir and import libraries to libdir by default.
+  library_install_dir = get_option('libdir')
+endif
+if shared_build
+  export_style = 'elf'
+  if host_machine.system() in ['windows', 'darwin']
+    export_style = host_machine.system()
+  endif
+  export_name = export_style == 'windows' ? 'quickjs.def' : 'quickjs.exports'
+  export_file = configure_file(
+    input: files(
+      'include/quickjs.h',
+      'include/quickjs-libc.h',
+    ),
+    output: export_name,
+    command: [python, files('tools/build/public_exports.py'), export_style, '@INPUT@'],
+    capture: true,
+  )
+  if export_style == 'windows'
+    shared_kwargs = {
+      'vs_module_defs': export_file,
+    }
+  elif export_style == 'darwin'
+    shared_link_args = [
+      '-Wl,-exported_symbols_list,' + (
+        meson.project_build_root() / export_name
+      ),
+    ]
+  else
+    shared_link_args = [
+      '-Wl,--version-script=' + (
+        meson.project_build_root() / export_name
+      ),
+    ]
+  endif
+endif
 variants = [['normal', false, false]]
+if shared_build
+  variants += [['shared', false, get_option('b_lto')]]
+endif
 if get_option('b_lto')
   variants += [['lto', false, true]]
 endif
@@ -221,6 +268,9 @@ foreach variant : variants
   native = variant[1]
   lto = variant[2]
   args = native ? native_args : host_args
+  if tag == 'shared'
+    args += '-DJS_BUILD_SHARED_LIBRARY'
+  endif
   deps = native ? native_deps : host_deps
   compiler = native ? build_cc : cc
   overrides = ['b_lto=' + (lto ? 'true' : 'false')]
@@ -234,8 +284,9 @@ foreach variant : variants
     c_args: args,
     include_directories: inc,
     dependencies: deps,
-    pic: false,
+    pic: tag == 'shared',
     build_by_default: false,
+    gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
   vm_args = []
@@ -252,8 +303,9 @@ foreach variant : variants
     c_args: args + vm_args,
     include_directories: inc,
     dependencies: deps,
-    pic: false,
+    pic: tag == 'shared',
     build_by_default: false,
+    gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
   if tag == 'normal'
@@ -266,8 +318,9 @@ foreach variant : variants
     c_args: args,
     include_directories: inc,
     dependencies: deps,
-    pic: false,
+    pic: tag == 'shared',
     build_by_default: false,
+    gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
   support_objects = static_library(
@@ -277,8 +330,9 @@ foreach variant : variants
     c_args: args,
     include_directories: inc,
     dependencies: deps,
-    pic: false,
+    pic: tag == 'shared',
     build_by_default: false,
+    gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
   objects = [
@@ -296,31 +350,59 @@ foreach variant : variants
     ),
   ]
   libname = tag == 'normal' ? 'quickjs' : 'quickjs.' + tag
-  lib = static_library(
-    libname,
-    objects: objects,
-    native: native,
-    install: not native,
-    install_dir: get_option('libdir') / 'quickjs',
-    build_by_default: not native,
-    override_options: overrides,
-  )
+  if tag == 'shared'
+    shared_overrides = []
+    if compiler.get_id() == 'clang' and get_option('b_sanitize') != 'none'
+      # Clang resolves sanitizer hooks from the instrumented executable.
+      shared_overrides += 'b_lundef=false'
+    endif
+    lib = shared_library(
+      'quickjs',
+      objects: objects,
+      dependencies: deps,
+      link_args: shared_link_args,
+      link_depends: export_file,
+      kwargs: shared_kwargs,
+      override_options: shared_overrides,
+      install: true,
+    )
+  else
+    lib = static_library(
+      libname,
+      objects: objects,
+      native: native,
+      install: not native and static_install,
+      install_dir: library_install_dir,
+      build_by_default: not native and (static_install or get_option('tests')),
+      override_options: overrides,
+    )
+  endif
   if tag == 'normal'
     normal_engine = lib
+  elif tag == 'shared'
+    shared_engine = lib
   elif tag == 'lto'
     lto_engine = lib
   else
     native_engine = lib
   endif
 endforeach
-engine = get_option('b_lto') ? lto_engine : normal_engine
+test_engine = get_option('b_lto') ? lto_engine : normal_engine
+engine = shared_build ? shared_engine : test_engine
+engine_link = shared_build ? [engine] : []
+engine_whole = shared_build ? [] : [engine]
+tool_support = shared_build ? files('src/cutils/cutils.c') : []
+tool_rpath = shared_build ? get_option('prefix') / library_install_dir : ''
+test_engine_dep = declare_dependency(
+  link_with: test_engine,
+  include_directories: include_directories('include'),
+  dependencies: host_deps,
+)
 engine_dep = declare_dependency(
   link_with: engine,
   include_directories: include_directories('include'),
   dependencies: host_deps,
 )
-# Private unit tests use the same archive until shared linkage is selected.
-test_engine_dep = engine_dep
 meson.override_dependency('quickjs', engine_dep)
 
 qjsc_variants = [['target', false]]
@@ -351,10 +433,13 @@ foreach variant : qjsc_variants
     'CONFIG_INCLUDE_DIR',
     get_option('prefix') / get_option('includedir') / 'quickjs',
   )
-  config.set_quoted(
-    'CONFIG_LIB_DIR',
-    get_option('prefix') / get_option('libdir') / 'quickjs',
-  )
+  config.set('CONFIG_SHARED_LIBRARY', not static_install and not native)
+  library_suffix = '.a'
+  if not static_install and not native
+    library_suffix = host_machine.system() == 'darwin' ? '.dylib' : '.so'
+  endif
+  config.set_quoted('CONFIG_LIBRARY_SUFFIX', library_suffix)
+  config.set_quoted('CONFIG_LIB_DIR', get_option('prefix') / library_install_dir)
   config.set('CONFIG_LTO', get_option('b_lto') and not native)
   lto_flag = '-flto'
   if get_option('b_lto_mode') == 'thin' and compiler.get_id() == 'clang'
@@ -386,13 +471,16 @@ foreach variant : qjsc_variants
   overrides = native ? ['b_lto=false', 'b_sanitize=none'] : []
   app = executable(
     native ? 'host-qjsc' : 'qjsc',
-    'tools/qjsc.c',
+    ['tools/qjsc.c', native ? [] : tool_support],
     native: native,
     c_args: qjsc_args,
     include_directories: inc,
     dependencies: native ? native_deps : host_deps,
-    link_whole: native ? native_engine : engine,
+    link_whole: native ? [native_engine] : engine_whole,
+    link_with: native ? [] : engine_link,
+    install_rpath: native ? '' : tool_rpath,
     override_options: overrides,
+    gnu_symbol_visibility: 'hidden',
     install: not native,
   )
   if native
@@ -402,12 +490,18 @@ foreach variant : qjsc_variants
     target_qjsc_args = qjsc_args
   endif
 endforeach
-if not meson.is_cross_build()
+# Generated bytecode depends on engine behavior even when the shared export
+# list, and consequently the qjsc executable timestamp, does not change.
+if meson.is_cross_build()
+  generator_runtime_deps = [native_engine]
+else
   generator_qjsc = qjsc
+  generator_runtime_deps = engine_link + engine_whole
 endif
 codegen = files('tools/build/qjsc_codegen.py')
 repl = custom_target(
   'repl',
+  depends: generator_runtime_deps,
   input: 'tools/repl.js',
   output: 'repl.c',
   command: [
@@ -424,21 +518,26 @@ repl = custom_target(
 )
 qjs = executable(
   'qjs',
-  ['tools/qjs.c', repl],
+  ['tools/qjs.c', repl, tool_support],
   c_args: host_args,
   include_directories: inc,
   dependencies: host_deps,
-  link_whole: engine,
+  link_whole: engine_whole,
+  link_with: engine_link,
+  install_rpath: tool_rpath,
+  gnu_symbol_visibility: 'hidden',
   export_dynamic: host_machine.system() != 'windows',
   install: true,
 )
 run_test262 = executable(
   'run-test262',
-  'tools/run-test262.c',
+  ['tools/run-test262.c', tool_support],
   c_args: host_args,
   include_directories: inc,
   dependencies: host_deps,
-  link_whole: engine,
+  link_whole: engine_whole,
+  link_with: engine_link,
+  gnu_symbol_visibility: 'hidden',
 )
 
 # This diagnostic uses a separate, non-runnable value representation.
@@ -468,9 +567,13 @@ endif
 
 pkg = import('pkgconfig')
 pkg.generate(
-  normal_engine,
   name: 'QuickJS',
   filebase: 'quickjs',
+  libraries: [
+    host_machine.system() == 'windows' ? '-L${libdir}' : '-L${libdir}/quickjs',
+    '-lquickjs',
+  ],
+  install_dir: get_option('libdir') / 'pkgconfig',
   description: 'Embeddable JavaScript engine',
   subdirs: 'quickjs',
   libraries_private: host_deps,

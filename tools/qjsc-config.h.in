@@ -6,6 +6,8 @@
 #mesondefine CONFIG_PREFIX
 #mesondefine CONFIG_INCLUDE_DIR
 #mesondefine CONFIG_LIB_DIR
+#mesondefine CONFIG_SHARED_LIBRARY
+#mesondefine CONFIG_LIBRARY_SUFFIX
 #mesondefine CONFIG_LTO
 #mesondefine CONFIG_LTO_FLAG
 #mesondefine CONFIG_M32
