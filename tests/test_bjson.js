@@ -279,3 +279,25 @@ function bjson_test_all()
 }
 
 bjson_test_all();
+
+function bjson_test_pending_typed_array_reference()
+{
+    const typed = new Uint8Array(bjson.write(new Uint8Array(0), true));
+    const cyclic = [];
+    cyclic.push(cyclic);
+    const encodedCycle = new Uint8Array(bjson.write(cyclic, true));
+    /* Both atom tables are empty. The first six typed-array bytes contain
+       the current header, tag, kind, zero length and zero offset. Replace
+       its backing buffer with the writer's reference to object zero. */
+    assert(typed[1], 0);
+    assert(encodedCycle[1], 0);
+    const malformed = new Uint8Array(8);
+    malformed.set(typed.subarray(0, 6));
+    malformed.set(encodedCycle.subarray(-2), 6);
+    let error;
+    try { bjson.read(malformed.buffer, 0, malformed.length, true); }
+    catch (caught) { error = caught; }
+    assert(error instanceof SyntaxError, true);
+}
+
+bjson_test_pending_typed_array_reference();
