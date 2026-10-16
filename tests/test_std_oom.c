@@ -1,6 +1,7 @@
 /* Host FILE and URL allocation-failure tests.
  * Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
 #include "oom-allocator.h"
+#include "../src/quickjs-libc/worker.h"
 
 static FILE *test_pipe;
 static int test_pipe_closed;
@@ -142,8 +143,41 @@ static void test_failure(int mode)
     }
 }
 
+static void test_class_registration_failure(int worker)
+{
+    OOMTestAllocator allocator;
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSAtom atom;
+    int ret;
+
+    assert(ctx);
+    js_std_init_handlers(rt);
+    atom = JS_NewAtom(ctx, worker ? "Worker" : "FILE");
+    assert(atom != JS_ATOM_NULL);
+    oom_test_begin(&allocator, 1);
+#ifdef USE_WORKER
+    if (worker)
+        ret = js_init_worker(ctx, NULL);
+    else
+#endif
+        ret = js_std_init(ctx, NULL);
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1 && ret == -1);
+    oom_test_check_exception(ctx);
+    JS_FreeAtom(ctx, atom);
+    js_std_free_handlers(rt);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
 int main(void)
 {
+    test_class_registration_failure(0);
+#ifdef USE_WORKER
+    test_class_registration_failure(1);
+#endif
     test_failure(0);
     test_failure(1);
     test_failure(2);
