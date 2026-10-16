@@ -3907,3 +3907,16 @@ function test_closure_destructuring_lowering()
 }
 
 test_closure_destructuring_lowering();
+
+/* Lookahead must tolerate a provisional RegExp error for division after
+   contextual identifiers, without affecting ordinary syntax diagnostics. */
+function test_lookahead_division()
+{
+    function f(of, x = of / 2) { return x; }
+    function g(yield, x = yield / 2) { return x; }
+    assert(f(4), 2);
+    assert(g(6), 3);
+    assert_throws(SyntaxError, () => eval("function broken(a = ) {}"));
+}
+
+test_lookahead_division();

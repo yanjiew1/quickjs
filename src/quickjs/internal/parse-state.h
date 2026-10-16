@@ -172,6 +172,7 @@ typedef struct JSParseState {
     struct JSFunctionDef *cur_func;
     BOOL is_module; /* parsing a module */
     BOOL allow_html_comments;
+    BOOL suppress_parse_errors; /* speculative syntax only; preserve other errors */
     BOOL ext_json; /* JSON parsing: true if accepting JSON superset */
     GetLineColCache get_line_col_cache;
 } JSParseState;
