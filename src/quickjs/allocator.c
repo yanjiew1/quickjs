@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <limits.h>
 #include "internal/base.h"
 #include "internal/runtime.h"
 #include "internal/allocator.h"
@@ -434,17 +435,33 @@ no_inline int js_realloc_array(JSContext *ctx, void **parray,
                                int elem_size, int *psize, int req_size)
 {
     int new_size;
-    size_t slack;
+    size_t max_count, grown_size, slack;
     void *new_array;
-    /* XXX: potential arithmetic overflow */
-    new_size = max_int(req_size, *psize * 3 / 2);
-    new_array = js_realloc2(ctx, *parray, new_size * elem_size, &slack);
+
+    if (elem_size <= 0 || *psize < 0 || req_size < 0)
+        goto fail;
+    max_count = SIZE_MAX / (size_t)elem_size;
+    if (max_count > INT_MAX)
+        max_count = INT_MAX;
+    if ((size_t)req_size > max_count)
+        goto fail;
+    grown_size = (size_t)*psize + (size_t)*psize / 2;
+    if (grown_size > max_count)
+        grown_size = max_count;
+    new_size = max_int(req_size, grown_size);
+    new_array = js_realloc2(ctx, *parray, (size_t)new_size * elem_size, &slack);
     if (!new_array)
         return -1;
-    new_size += slack / elem_size;
+    slack /= elem_size;
+    if (slack > max_count - new_size)
+        slack = max_count - new_size;
+    new_size += slack;
     *psize = new_size;
     *parray = new_array;
     return 0;
+ fail:
+    JS_ThrowOutOfMemory(ctx);
+    return -1;
 }
 
 void *js_dbuf_realloc(void *opaque, void *ptr, size_t size)
