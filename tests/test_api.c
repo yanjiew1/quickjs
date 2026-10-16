@@ -3258,6 +3258,8 @@ static void test_conversion_public_api(void)
     JSValue object, primitive, result, method, error;
     const char *text;
     int value;
+    int64_t value64;
+    unsigned i;
 
     assert(rt);
     ctx = JS_NewContext(rt);
@@ -3314,6 +3316,13 @@ static void test_conversion_public_api(void)
     assert(JS_ToInt32Sat(ctx, &value, JS_NAN) == 0 && value == 0);
     assert(JS_ToInt32Sat(ctx, &value, JS_NewFloat64(ctx, -3.75)) == 0);
     assert(value == -3);
+    {
+        const double values[] = { -0x1p63, -0x1.8p64, 0x1p63, 0x1.8p64 };
+        for (i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+            assert(JS_ToInt64(ctx, &value64, JS_NewFloat64(ctx, values[i])) == 0);
+            assert(value64 == INT64_MIN);
+        }
+    }
     assert(!JS_HasException(ctx));
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
