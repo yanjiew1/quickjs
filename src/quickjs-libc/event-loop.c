@@ -46,7 +46,7 @@ typedef sig_t sighandler_t;
 #include "worker.h"
 
 uint64_t os_pending_signals;
-int (*os_poll_func)(JSContext *ctx);
+_Atomic(JSOSPollFunc *) os_poll_func;
 
 static JSOSRWHandler *find_rh(JSThreadState *ts, int fd)
 {
