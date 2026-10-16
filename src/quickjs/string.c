@@ -24,6 +24,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <limits.h>
 #define JS_STRING_IMPLEMENTATION
 #include "internal/base.h"
 #include "internal/string-buffer.h"
@@ -422,6 +423,10 @@ const char *JS_ToCStringLen2(JSContext *ctx, size_t *plen, JSValueConst val1, BO
         /* Allocate 3 bytes per 16 bit code point. Surrogate pairs may
            produce 4 bytes but use 2 code points.
          */
+        if (len > INT_MAX / 3) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
         str_new = js_alloc_string(ctx, len * 3, 0);
         if (!str_new)
             goto fail;
@@ -459,6 +464,7 @@ const char *JS_ToCStringLen2(JSContext *ctx, size_t *plen, JSValueConst val1, BO
         *plen = str_new->len;
     return (const char *)str_new->u.str8;
  fail:
+    JS_FreeValue(ctx, val);
     if (plen)
         *plen = 0;
     return NULL;
