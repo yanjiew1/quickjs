@@ -751,19 +751,21 @@ static JSValue js_atomics_notify(JSContext *ctx,
     }
     abuf = p->u.typed_array->buffer->u.array_buffer;
     if (abuf->shared && count > 0) {
+        JSRuntime *rt = ctx->rt;
+
         ptr = p->u.array.u.uint8_ptr + ((uintptr_t)idx << size_log2);
         queue = js_native_jobs_wait_queue();
         if (!queue)
             return JS_ThrowInternalError(ctx, "cannot initialize native wait queue");
-        calling_owner = ctx->rt->native_jobs ?
-                        &ctx->rt->native_jobs->native : NULL;
+        calling_owner = rt->native_jobs ?
+                        &rt->native_jobs->native : NULL;
         js_native_wait_queue_lock(queue);
         while (n < count &&
                js_native_wait_notify_one_locked(queue, ptr, calling_owner,
                                                 &inline_waiter)) {
             n++;
             if (inline_waiter &&
-                js_native_jobs_complete(ctx->rt, inline_waiter,
+                js_native_jobs_complete(rt, inline_waiter,
                                         JS_NATIVE_WAIT_OK) < 0) {
                 error = 1;
                 break;
@@ -772,8 +774,8 @@ static JSValue js_atomics_notify(JSContext *ctx,
         /* Each same-agent resolve publishes its reaction jobs before selecting
            the next waiter or permitting a foreign notifier to append work. */
         js_native_wait_queue_unlock(queue);
-        if (ctx->rt->native_jobs)
-            js_native_jobs_flush_retired(ctx->rt);
+        if (rt->native_jobs)
+            js_native_jobs_flush_retired(rt);
     }
     return error ? JS_EXCEPTION : JS_NewInt32(ctx, n);
 }
