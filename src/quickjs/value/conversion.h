@@ -33,7 +33,7 @@
 #define HINT_FORCE_ORDINARY (1 << 4) // don't try Symbol.toPrimitive
 
 JSValue JS_ToPrimitiveFree(JSContext *ctx, JSValue val, int hint);
-int JS_ToBoolFree(JSContext *ctx, JSValue val);
+int JS_ToBoolFree(JSRuntime *rt, JSValue val);
 JSValue JS_ToStringFree(JSContext *ctx, JSValue val);
 JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val);
 JSValue JS_ToStringCheckObject(JSContext *ctx, JSValueConst val);

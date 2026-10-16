@@ -222,7 +222,7 @@ int js_is_regexp(JSContext *ctx, JSValueConst obj)
     if (JS_IsException(m))
         return -1;
     if (!JS_IsUndefined(m))
-        return JS_ToBoolFree(ctx, m);
+        return JS_ToBoolFree(ctx->rt, m);
     return js_get_regexp(ctx, obj, FALSE) != NULL;
 }
 
@@ -241,7 +241,7 @@ static JSValue js_regexp_constructor(JSContext *ctx, JSValueConst new_target,
         return JS_EXCEPTION;
     if (JS_IsUndefined(new_target)) {
         /* called as a function */
-        new_target = JS_GetActiveFunction(ctx);
+        new_target = JS_GetActiveFunction(ctx->rt);
         if (pat_is_regexp && JS_IsUndefined(flags1)) {
             JSValue ctor;
             BOOL res;
@@ -461,7 +461,7 @@ static JSValue js_regexp_get_flags(JSContext *ctx, JSValueConst this_val)
         return JS_ThrowTypeErrorNotAnObject(ctx);
 
     for(i = 0; i < RE_FLAG_COUNT; i++) {
-        res = JS_ToBoolFree(ctx, JS_GetProperty(ctx, this_val, flag_atom[i]));
+        res = JS_ToBoolFree(ctx->rt, JS_GetProperty(ctx, this_val, flag_atom[i]));
         if (res < 0)
             goto exception;
         if (res)
@@ -597,7 +597,7 @@ static force_inline int js_regexp_set_lastIndex(JSContext *ctx, JSValueConst thi
     /* lastIndex is always the first property (it is not configurable) */
     if (likely(JS_VALUE_GET_TAG(p->prop[0].u.value) == JS_TAG_INT &&
                (get_shape_prop(p->shape)->flags & JS_PROP_WRITABLE))) {
-        set_value(ctx, &p->prop[0].u.value, JS_NewInt32(ctx, last_index));
+        set_value(ctx->rt, &p->prop[0].u.value, JS_NewInt32(ctx, last_index));
     } else {
         if (JS_SetProperty(ctx, this_val, JS_ATOM_lastIndex,
                            JS_NewInt32(ctx, last_index)) < 0)

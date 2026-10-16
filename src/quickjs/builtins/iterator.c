@@ -256,7 +256,7 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
                 ret = JS_EXCEPTION;
                 break;
             }
-            done = JS_ToBoolFree(ctx, val);
+            done = JS_ToBoolFree(ctx->rt, val);
             if (done)
                 goto done_next;
             ret = JS_GetProperty(ctx, item, JS_ATOM_value);
@@ -602,7 +602,7 @@ static JSValue js_iterator_zip_step(JSContext *ctx, JSValueConst iter,
         JS_FreeValue(ctx, item);
         return JS_EXCEPTION;
     }
-    *pdone = JS_ToBoolFree(ctx, done_value);
+    *pdone = JS_ToBoolFree(ctx->rt, done_value);
     value = JS_UNDEFINED;
     if (!*pdone && read_value)
         value = JS_GetProperty(ctx, item, JS_ATOM_value);
@@ -1294,7 +1294,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                 JS_FreeValue(ctx, index_val);
                 if (JS_IsException(ret))
                     goto fail;
-                if (!JS_ToBoolFree(ctx, ret)) {
+                if (!JS_ToBoolFree(ctx->rt, ret)) {
                     if (JS_IteratorClose(ctx, this_val, FALSE) < 0)
                         r = JS_EXCEPTION;
                     else
@@ -1324,7 +1324,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                     JS_FreeValue(ctx, item);
                     goto fail;
                 }
-                if (JS_ToBoolFree(ctx, ret)) {
+                if (JS_ToBoolFree(ctx->rt, ret)) {
                     if (JS_IteratorClose(ctx, this_val, FALSE) < 0) {
                         JS_FreeValue(ctx, item);
                         r = JS_EXCEPTION;
@@ -1380,7 +1380,7 @@ static JSValue js_iterator_proto_func(JSContext *ctx, JSValueConst this_val,
                 JS_FreeValue(ctx, index_val);
                 if (JS_IsException(ret))
                     goto fail;
-                if (JS_ToBoolFree(ctx, ret)) {
+                if (JS_ToBoolFree(ctx->rt, ret)) {
                     if (JS_IteratorClose(ctx, this_val, FALSE) < 0)
                         r = JS_EXCEPTION;
                     else
@@ -1945,7 +1945,7 @@ static JSValue js_iterator_helper_next(JSContext *ctx, JSValueConst this_val,
                     JS_FreeValue(ctx, item);
                     goto fail;
                 }
-                if (JS_ToBoolFree(ctx, selected)) {
+                if (JS_ToBoolFree(ctx->rt, selected)) {
                     ret = item;
                     break;
                 }

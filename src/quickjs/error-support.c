@@ -286,7 +286,7 @@ int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ct
     va_list ap;
 
     if ((flags & JS_PROP_THROW) ||
-        ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
+        ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx->rt))) {
         va_start(ap, fmt);
         JS_ThrowError(ctx, JS_TYPE_ERROR, fmt, ap);
         va_end(ap);
@@ -405,9 +405,9 @@ JSValue JS_ThrowReferenceErrorUninitialized2(JSContext *ctx,
 }
 
 
-int check_exception_free(JSContext *ctx, JSValue obj)
+int check_exception_free(JSRuntime *rt, JSValue obj)
 {
-    JS_FreeValue(ctx, obj);
+    JS_FreeValueRT(rt, obj);
     return JS_IsException(obj);
 }
 

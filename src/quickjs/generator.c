@@ -197,11 +197,6 @@ void js_generator_finalizer(JSRuntime *rt, JSValue obj)
     }
 }
 
-static void free_generator_stack(JSContext *ctx, JSGeneratorData *s)
-{
-    free_generator_stack_rt(ctx->rt, s);
-}
-
 void js_generator_mark(JSRuntime *rt, JSValueConst val,
                        JS_MarkFunc *mark_func)
 {
@@ -231,7 +226,7 @@ JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
         if (magic == GEN_MAGIC_NEXT) {
             goto exec_no_arg;
         } else {
-            free_generator_stack(ctx, s);
+            free_generator_stack_rt(ctx->rt, s);
             goto done;
         }
         break;
@@ -256,7 +251,7 @@ JSValue js_generator_next(JSContext *ctx, JSValueConst this_val,
         s->state = JS_GENERATOR_STATE_SUSPENDED_YIELD;
         if (s->func_state->is_completed) {
             /* finalize the execution in case of exception or normal return */
-            free_generator_stack(ctx, s);
+            free_generator_stack_rt(ctx->rt, s);
             return func_ret;
         } else {
             assert(JS_VALUE_GET_TAG(func_ret) == JS_TAG_INT);
@@ -656,12 +651,12 @@ static void js_async_generator_reject(JSContext *ctx,
     js_async_generator_resolve_or_reject(ctx, s, exception, 1);
 }
 
-static void js_async_generator_complete(JSContext *ctx,
+static void js_async_generator_complete(JSRuntime *rt,
                                         JSAsyncGeneratorData *s)
 {
     if (s->state != JS_ASYNC_GENERATOR_STATE_COMPLETED) {
         s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
-        async_func_free(ctx->rt, s->func_state);
+        async_func_free(rt, s->func_state);
         s->func_state = NULL;
     }
 }
@@ -724,7 +719,7 @@ static void js_async_generator_resume_next(JSContext *ctx,
             if (next->completion_type == GEN_MAGIC_NEXT) {
                 goto exec_no_arg;
             } else {
-                js_async_generator_complete(ctx, s);
+                js_async_generator_complete(ctx->rt, s);
             }
             break;
         case JS_ASYNC_GENERATOR_STATE_COMPLETED:
@@ -760,12 +755,12 @@ static void js_async_generator_resume_next(JSContext *ctx,
             if (s->func_state->is_completed) {
                 if (JS_IsException(func_ret)) {
                     value = JS_GetException(ctx);
-                    js_async_generator_complete(ctx, s);
+                    js_async_generator_complete(ctx->rt, s);
                     js_async_generator_reject(ctx, s, value);
                     JS_FreeValue(ctx, value);
                 } else {
                     /* end of function */
-                    js_async_generator_complete(ctx, s);
+                    js_async_generator_complete(ctx->rt, s);
                     js_async_generator_resolve(ctx, s, func_ret, TRUE);
                     JS_FreeValue(ctx, func_ret);
                 }
