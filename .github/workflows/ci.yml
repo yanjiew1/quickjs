@@ -14,9 +14,6 @@ on:
     branches:
       - '*'
 
-env:
-  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
-
 jobs:
   linux:
     name: Linux (${{ matrix.arch }})
@@ -33,22 +30,30 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: true
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+          meson setup build -Dwerror=true -Ddefault_library=both
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Stats
         run: |
-          ./qjs -qd
+          ./build/qjs -qd
       - name: Run built-in tests
         run: |
-          make test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
       - name: Run microbench
         run: |
-          make microbench
+          meson compile -C build microbench
+
       - name: Run test262
         run: |
-          make test2-bootstrap
-          make test2 TEST262_TIMING_LOG=test262_timings.jsonl
+          python3 tools/build/test262.py bootstrap
+          python3 tools/build/test262.py run --runner build/run-test262 --threads "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl
 
       - name: Report Test262 timings
         if: always()
@@ -79,15 +84,22 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: true
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y LTO_FLAG=-flto=auto all test-binaries
+          meson setup build -Dwerror=true -Db_lto=true
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Run built-in tests
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO=y LTO_FLAG=-flto=auto test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
       - name: Run microbench
         run: |
-          make CONFIG_LTO=y LTO_FLAG=-flto=auto microbench
+          meson compile -C build microbench
 
   linux-32bit:
     name: Linux 32bit
@@ -102,16 +114,23 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y gcc-multilib
+      - name: Install Meson and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_M32=y
+          CC='gcc -m32' meson setup build -Dwerror=true
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Run built-in tests
         run: |
-          make CONFIG_M32=y test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
       - name: Run test262
         run: |
-          make test2-bootstrap
-          make CONFIG_M32=y test2 TEST262_TIMING_LOG=test262_timings.jsonl
+          python3 tools/build/test262.py bootstrap
+          python3 tools/build/test262.py run --runner build/run-test262 --threads "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl
 
       - name: Report Test262 timings
         if: always()
@@ -140,19 +159,25 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v7
+      - name: Install Meson and Ninja
+        run: |
+          brew install meson ninja
       - name: Build
         run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+          meson setup build -Dwerror=true
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Stats
         run: |
-          ./qjs -qd
+          ./build/qjs -qd
       - name: Run built-in tests
         run: |
-          make test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
       - name: Run test262
         run: |
-          make test2-bootstrap
-          make test2 TEST262_TIMING_LOG=test262_timings.jsonl
+          python3 tools/build/test262.py bootstrap
+          python3 tools/build/test262.py run --runner build/run-test262 --threads "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl
 
       - name: Report Test262 timings
         if: always()
@@ -189,9 +214,7 @@ jobs:
       - name: Install MinGW and Wine
         run: |
           sudo apt update
-          sudo apt install -y wine64 mingw-w64
-          cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll .
-          cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll tests/
+          sudo apt install -y wine64 mingw-w64 meson ninja-build
       - name: Setup Wine
         run: |
           # Set the prefix here, where runner shell variables are available.
@@ -207,11 +230,21 @@ jobs:
           #sudo systemctl restart systemd-binfmt
       - name: Build
         run: |
-          make CONFIG_WIN32=y
+          meson setup build --cross-file build-aux/cross/mingw64.ini --cross-file build-aux/cross/wine64.ini -Ddefault_library=shared
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+          cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll build/
+          gcc_runtime=$(x86_64-w64-mingw32-gcc -print-file-name=libgcc_s_seh-1.dll)
+          if test ! -f "$gcc_runtime"; then
+            gcc_runtime=$(find /usr/lib/gcc/x86_64-w64-mingw32 /usr/x86_64-w64-mingw32 -name libgcc_s_seh-1.dll -print -quit)
+          fi
+          cp "$gcc_runtime" build/
+          # Script drivers also run executables from source-free directories.
+          wine_path=$(/usr/lib/wine/wine64 winepath.exe -w "$PWD/build")
+          printf 'WINEPATH=%s\n' "$wine_path" >> "$GITHUB_ENV"
+
       - name: Run built-in tests
         run: |
-          # If binfmt support worked, could just run `make CONFIG_WIN32=y test`
-          make WINE=/usr/lib/wine/wine64 CONFIG_WIN32=y test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
 
   windows-msys:
     name: Windows MSYS2
@@ -225,16 +258,45 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          install: git make diffutils python mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
+          install: git diffutils python mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-dlfcn
       - name: Build
         run: |
-           make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y
+          meson setup build -Dwerror=true -Ddefault_library=both
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+
       - name: Stats
         run: |
-          ./qjs -qd
+          ./build/qjs -qd
       - name: Run built-in tests
         run: |
-          make test
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
       - name: Run microbench
         run: |
-          make microbench
+          meson compile -C build microbench
+
+  linux-shared-install:
+    name: Linux shared library installation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkg-config
+      - name: Build and test the shared configuration
+        run: |
+          meson setup build --prefix "$RUNNER_TEMP/quickjs-install" -Dwerror=true -Ddefault_library=shared
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+          meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+      - name: Install and exercise public consumers
+        run: |
+          meson install -C build
+          prefix="$RUNNER_TEMP/quickjs-install"
+          "$prefix/bin/qjs" -e 'if (6 * 7 !== 42) throw Error("installed qjs");'
+          python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' '' n n
+          export PKG_CONFIG_PATH="$prefix/lib/x86_64-linux-gnu/pkgconfig:$prefix/lib64/pkgconfig:$prefix/lib/pkgconfig"
+          libdir="$(pkg-config --variable=libdir quickjs)"
+          cc tests/test_shared_api.c $(pkg-config --cflags --libs quickjs) \
+            -Wl,-rpath,"$libdir/quickjs" -o "$RUNNER_TEMP/public-embedding"
+          "$RUNNER_TEMP/public-embedding"

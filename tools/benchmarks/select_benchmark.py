@@ -7,8 +7,8 @@ import re
 import subprocess
 
 
-IMPACT_PREFIXES = ("src/", "include/", "tools/benchmarks/", "tools/timezone/", "tools/intl/")
-IMPACT_FILES = {"Makefile", "tests/microbench.js", ".github/workflows/benchmarks.yml"}
+IMPACT_PREFIXES = ("src/", "include/", "tools/benchmarks/", "tools/build/", "tools/timezone/", "tools/intl/", "build-aux/")
+IMPACT_FILES = {"Makefile", "meson.build", "meson_options.txt", "tests/microbench.js", ".github/workflows/benchmarks.yml"}
 
 
 def selection(event, commit_count, paths, before_count=None):

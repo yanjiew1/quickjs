@@ -16,6 +16,7 @@ from pathlib import Path
 import platform
 import re
 import shutil
+import shlex
 import signal
 import statistics
 import subprocess
@@ -148,6 +149,8 @@ def environment(compiler, affinity):
         "linker": observed_command([linker_name, "--version"])
             if linker_name else {"unavailable": "Compiler did not name linker"},
         "make": observed_command(["make", "--version"]),
+        "meson": observed_command(["meson", "--version"]),
+        "ninja": observed_command(["ninja", "--version"]),
         "clock": {"process_wall_time": vars(time.get_clock_info("perf_counter")),
                   "v8": "Date milliseconds, original V8 v7 harness",
                   "microbench": "os.now milliseconds, reported ns per operation",
@@ -268,6 +271,8 @@ def require_pristine_build(source):
 
 def build(source, compiler, output, jobs, suite="core"):
     require_pristine_build(source)
+    if (source / "meson.build").is_file():
+        return build_meson(source, compiler, output, jobs, suite)
     command = ["make", f"-j{jobs}", f"CC={compiler}", f"HOST_CC={compiler}",
                "CONFIG_CLANG=" + ("y" if "clang" in compiler else ""),
                "CONFIG_LTO=", "CONFIG_WERROR=y"]
@@ -293,6 +298,52 @@ def build(source, compiler, output, jobs, suite="core"):
             "binary_sha256": sha256(binary), "build_log_sha256": sha256(output / "build.log"),
             "actual_compile_commands": compiler_lines, "feature_config": config,
             "flags": "Makefile defaults with -O2, non-LTO, no sanitizers, Werror"}
+
+
+def build_meson(source, compiler, output, jobs, suite):
+    build_dir = output.resolve() / "meson-build"
+    native_file = output.resolve() / "compiler.ini"
+    native_file.write_text("[binaries]\nc = [" + repr(compiler) + "]\n")
+    configure = ["meson", "setup", str(build_dir), str(source.resolve()),
+                 "--native-file", str(native_file), "-Dbuildtype=debugoptimized",
+                 "-Doptimization=2", "-Db_lto=false", "-Db_sanitize=none",
+                 "-Dwerror=true", "-Ddefault_library=static",
+                 "-Dtests=false", "-Dexamples=false"]
+    elapsed = checked_process(configure, source, output / "configure.log", 1200)
+    command = ["meson", "compile", "-C", str(build_dir), "-j", str(jobs), "qjs"]
+    elapsed += checked_process(command, source, output / "build.log", 1200)
+    actual_commands = subprocess.check_output(
+        ["ninja", "-C", str(build_dir), "-t", "commands", "qjs"]).decode().splitlines()
+    if not actual_commands:
+        raise ValueError("Missing actual qjs build commands")
+    for line in actual_commands:
+        if any(word.startswith(("-flto", "-fsanitize=")) for word in shlex.split(line)):
+            raise ValueError("Unexpected LTO or sanitizer link/build command")
+    compiler_lines = []
+    for entry in json.loads((build_dir / "compile_commands.json").read_text()):
+        words = entry.get("arguments") or shlex.split(entry["command"])
+        if "-o" not in words or "-DCONFIG_CHECK_JSVALUE" in words:
+            continue
+        object_path = Path(entry["directory"]) / words[words.index("-o") + 1]
+        if object_path.is_file():
+            compiler_lines.append(shlex.join(words) if hasattr(shlex, "join") else
+                                  " ".join(shlex.quote(word) for word in words))
+    if not compiler_lines or any("-O2" not in shlex.split(line) for line in compiler_lines):
+        raise ValueError("Every compiled runtime object must show -O2")
+    for line in compiler_lines:
+        if re.search(r"(?:^|\s)(?:-flto\S*|-fsanitize=\S*|-O(?:[013szg]|fast))(?:\s|$)", line):
+            raise ValueError("Unexpected optimization, LTO or sanitizer build")
+    binary = build_dir / "qjs"
+    if not binary.is_file():
+        raise ValueError("Build did not produce qjs")
+    return {"backend": "meson", "configure_command": configure,
+            "actual_build_commands": actual_commands,
+            "command": command, "seconds": elapsed, "binary": str(binary),
+            "binary_sha256": sha256(binary),
+            "build_log_sha256": sha256(output / "build.log"),
+            "actual_compile_commands": compiler_lines,
+            "feature_config": feature_config(suite),
+            "flags": "Meson -O2, non-LTO, no sanitizers, Werror"}
 
 
 def fetch_zoo(manifest, output):
