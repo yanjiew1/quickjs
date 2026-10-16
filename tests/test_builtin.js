@@ -6564,3 +6564,19 @@ function test_sort_identical_comparisons()
 }
 
 test_sort_identical_comparisons();
+
+function test_number_extreme_exponents()
+{
+    for (const mantissa of ["111111111111", "1".repeat(100)]) {
+        assert(Number(mantissa + "e2147483636"), Infinity);
+        assert(Number("-" + mantissa + "e2147483636"), -Infinity);
+        assert(parseFloat(mantissa + "e2147483636tail"), Infinity);
+    }
+    const tiny = "0." + "0".repeat(100) + "1e-2147483636";
+    assert(Number(tiny), 0);
+    assert(Object.is(Number("-" + tiny), -0), true);
+    assert(Number("0e2147483636"), 0);
+    assert(Object.is(Number("-0e-2147483636"), -0), true);
+}
+
+test_number_extreme_exponents();
