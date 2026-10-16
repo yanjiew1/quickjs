@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "../src/quickjs/internal/allocator.h"
+#include "../src/quickjs/internal/atom.h"
 #include "../src/quickjs/internal/error.h"
 /* Inspect the actual pool owner without adding an engine test API. */
 #include "../src/quickjs/allocator.c"
@@ -1035,13 +1036,13 @@ static void test_autoinit_allocation_failure(int kind, BOOL retry)
     assert(failure.live_allocations == 0);
 }
 
-static void test_int64_atom_table_allocation_failure(void)
+static void test_atom_table_allocation_failure(void)
 {
     AllocationFailure failure = { 0 };
     JSRuntime *rt = new_allocation_failure_runtime(&failure);
     JSContext *ctx = JS_NewContext(rt);
     JSAtom *atoms, atom;
-    JSValue object, value, result, exception;
+    JSValue object, value, property, result, exception;
     size_t count = 0, capacity;
     int operation, ret;
 
@@ -1058,7 +1059,9 @@ static void test_int64_atom_table_allocation_failure(void)
         assert(atoms[count] != JS_ATOM_NULL && !JS_HasException(ctx));
         count++;
     }
-    for (operation = 0; operation < 5; operation++) {
+    property = JS_NewString(ctx, "missing_atom_oom");
+    assert(!JS_IsException(property));
+    for (operation = 0; operation < 9; operation++) {
         failure.fail_table_realloc = TRUE;
         switch (operation) {
         case 0:
@@ -1080,16 +1083,33 @@ static void test_int64_atom_table_allocation_failure(void)
                                               JS_PROP_C_W_E);
             assert(ret == -1);
             break;
-        default:
+        case 4:
             ret = JS_DeletePropertyInt64(ctx, object, INT64_MAX,
                                          JS_PROP_THROW);
             assert(ret == -1);
+            break;
+        case 5:
+            atom = JS_NewAtom(ctx, "missing_atom_oom");
+            assert(atom == JS_ATOM_NULL);
+            break;
+        case 6:
+            atom = JS_NewAtomUInt32(ctx, UINT32_MAX);
+            assert(atom == JS_ATOM_NULL);
+            break;
+        case 7:
+            result = JS_GetPropertyStr(ctx, object, "missing_atom_oom");
+            assert(JS_IsException(result));
+            break;
+        default:
+            atom = JS_ValueToAtom(ctx, property);
+            assert(atom == JS_ATOM_NULL);
             break;
         }
         assert(!failure.fail_table_realloc);
         assert(failure.failures == operation + 1);
         assert(JS_HasException(ctx));
         exception = JS_GetException(ctx);
+        assert(JS_IsError(ctx, exception));
         JS_FreeValue(ctx, exception);
         assert(js_rc(JS_VALUE_GET_OBJ(value))->ref_count == 1);
         assert(rt->atom_free_index == 0);
@@ -1097,6 +1117,7 @@ static void test_int64_atom_table_allocation_failure(void)
     while (count)
         JS_FreeAtom(ctx, atoms[--count]);
     free(atoms);
+    JS_FreeValue(ctx, property);
     JS_FreeValue(ctx, value);
     JS_FreeValue(ctx, object);
     JS_FreeContext(ctx);
@@ -1198,7 +1219,7 @@ static void test_native_constructor_setup(void)
 int main(void)
 {
     test_gc_upcoming_properties();
-    test_int64_atom_table_allocation_failure();
+    test_atom_table_allocation_failure();
     test_native_constructor_setup();
     int kind;
 
