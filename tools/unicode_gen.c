@@ -1659,7 +1659,7 @@ void dump_case_conv_table(FILE *f)
         if (i % 4 == 0)
             fprintf(f, "\n   ");
         te = &conv_table[i];
-        v = te->code << (32 - 17);
+        v = (uint32_t)te->code << (32 - 17);
         v |= te->len << (32 - 17 - 7);
         v |= te->type << (32 - 17 - 7 - 4);
         v |= te->data_index >> 8;
@@ -3344,7 +3344,7 @@ void build_decompose_table(FILE *f)
             uint32_t v;
             if (count++ % 4 == 0)
                 fprintf(f, "\n   ");
-            v = (de->code << (32 - 18)) |
+            v = ((uint32_t)de->code << (32 - 18)) |
                 (de->len << (32 - 18 - 7)) |
                 (de->type << (32 - 18 - 7 - 6)) |
                 unicode_db[de->code].is_compat;
