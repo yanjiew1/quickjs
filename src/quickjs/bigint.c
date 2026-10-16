@@ -509,7 +509,7 @@ static JSBigInt *js_bigint_normalize1(JSContext *ctx, JSBigInt *a, int l)
         JSBigInt *a1;
         /* realloc to reduce the size */
         a->len = l;
-        a1 = js_realloc(ctx, a, sizeof(JSBigInt) + l * sizeof(js_limb_t));
+        a1 = js_realloc_rt(ctx->rt, a, sizeof(JSBigInt) + l * sizeof(js_limb_t));
         if (a1)
             a = a1;
     }
