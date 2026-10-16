@@ -658,32 +658,48 @@ void js_std_set_worker_new_context_func(JSContext *(*func)(JSRuntime *rt))
 
 
 #ifdef USE_WORKER
-void js_init_worker(JSContext *ctx, JSModuleDef *m)
+int js_init_worker(JSContext *ctx, JSModuleDef *m)
 {
-    {
-        JSRuntime *rt = JS_GetRuntime(ctx);
-        JSThreadState *ts = JS_GetRuntimeOpaque(rt);
-        JSValue proto, obj;
-        /* Worker class */
-        JS_NewClassID(&js_worker_class_id);
-        JS_NewClass(JS_GetRuntime(ctx), js_worker_class_id, &js_worker_class);
-        proto = JS_NewObject(ctx);
-        JS_SetPropertyFunctionList(ctx, proto, js_worker_proto_funcs, countof(js_worker_proto_funcs));
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSThreadState *ts = JS_GetRuntimeOpaque(rt);
+    JSValue proto = JS_UNDEFINED, obj = JS_UNDEFINED, parent;
 
-        obj = JS_NewCFunction2(ctx, js_worker_ctor, "Worker", 1,
-                               JS_CFUNC_constructor, 0);
-        JS_SetConstructor(ctx, obj, proto);
-
-        JS_SetClassProto(ctx, js_worker_class_id, proto);
-
-        /* set 'Worker.parent' if necessary */
-        if (ts->recv_pipe && ts->send_pipe) {
-            JS_DefinePropertyValueStr(ctx, obj, "parent",
-                                      js_worker_ctor_internal(ctx, JS_UNDEFINED, ts->recv_pipe, ts->send_pipe),
-                                      JS_PROP_C_W_E);
-        }
-
-        JS_SetModuleExport(ctx, m, "Worker", obj);
+    /* Worker class */
+    JS_NewClassID(&js_worker_class_id);
+    if (!JS_IsRegisteredClass(rt, js_worker_class_id) &&
+        JS_NewClass(rt, js_worker_class_id, &js_worker_class) < 0) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
     }
+    proto = JS_NewObject(ctx);
+    if (JS_IsException(proto))
+        goto fail;
+    if (JS_SetPropertyFunctionList(ctx, proto, js_worker_proto_funcs,
+                                  countof(js_worker_proto_funcs)) < 0)
+        goto fail;
+    obj = JS_NewCFunction2(ctx, js_worker_ctor, "Worker", 1,
+                          JS_CFUNC_constructor, 0);
+    if (JS_IsException(obj))
+        goto fail;
+    if (JS_SetConstructor(ctx, obj, proto) < 0)
+        goto fail;
+    JS_SetClassProto(ctx, js_worker_class_id, proto);
+    proto = JS_UNDEFINED;
+
+    /* set 'Worker.parent' if necessary */
+    if (ts->recv_pipe && ts->send_pipe) {
+        parent = js_worker_ctor_internal(ctx, JS_UNDEFINED,
+                                         ts->recv_pipe, ts->send_pipe);
+        if (JS_IsException(parent))
+            goto fail;
+        if (JS_DefinePropertyValueStr(ctx, obj, "parent", parent,
+                                      JS_PROP_C_W_E) < 0)
+            goto fail;
+    }
+    return JS_SetModuleExport(ctx, m, "Worker", obj);
+ fail:
+    JS_FreeValue(ctx, obj);
+    JS_FreeValue(ctx, proto);
+    return -1;
 }
 #endif
