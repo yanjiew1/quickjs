@@ -198,7 +198,7 @@ int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
         /* fast case */
         return dbuf_put(s, (uint8_t *)buf, len);
     } else {
-        if (dbuf_claim(s, len + 1))
+        if (dbuf_claim(s, (size_t)len + 1))
             return -1;
         va_start(ap, fmt);
         vsnprintf((char *)(s->buf + s->size), s->allocated_size - s->size,
