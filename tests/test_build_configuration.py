@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""Check selected test capabilities and the unit/integration CI partition."""
+import argparse
+import json
+from pathlib import Path
+import shlex
+
+
+def load(build, name):
+    return json.loads((build / name).read_text())
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('source', type=Path)
+    parser.add_argument('build', type=Path)
+    args = parser.parse_args()
+    source, build = args.source.resolve(), args.build.resolve()
+    options = {row['name']: row['value'] for row in
+               load(build, 'meson-info/intro-buildoptions.json')}
+    tests = load(build, 'meson-info/intro-tests.json')
+    targets = load(build, 'meson-info/intro-targets.json')
+    names = {row['name'] for row in tests}
+    for row in tests:
+        suites = {name.rsplit(':', 1)[-1] for name in row['suite']}
+        if 'repo' in suites:
+            assert len(suites & {'unit', 'integration'}) == 1, row['name']
+
+    intl = options.get('intl', 'disabled')
+    temporal = options.get('temporal', False)
+    calendars = temporal or intl != 'disabled'
+    prepared = {row['name'] for row in targets
+                if row['name'].startswith('intl-fixture-data-')}
+    expected = {'intl-fixture-data-' + intl} if intl != 'disabled' else set()
+    assert prepared == expected, (prepared, expected)
+    if 'intl' in options and intl == 'disabled':
+        # The public disabled-API contract remains tested; real components and
+        # no-op feature OOM executables must not create extra configurations.
+        assert not {name for name in names if name.startswith('intl-')}, names
+        assert not {name for name in names if name.startswith('test_intl_')
+                    and name not in ('test_intl_api', 'test_intl_defaults')}, names
+    if 'temporal' in options and not temporal:
+        assert not {name for name in names if name.startswith('test_temporal_')}, names
+
+    providers = set()
+    commands = load(build, 'compile_commands.json')
+    checked = False
+    for row in commands:
+        words = row.get('arguments') or shlex.split(row['command'])
+        checked |= '-DCONFIG_CHECK_JSVALUE' in words
+        if '-o' not in words:
+            continue
+        output = Path(words[words.index('-o') + 1])
+        # Host data exporters remain available as explicit developer targets.
+        # Only the selected runtime's test objects participate in this check.
+        if not output.parts or output.parts[0] != 'tests':
+            continue
+        filename = (Path(row['directory']) / row['file']).resolve()
+        try:
+            relative = filename.relative_to(source).as_posix()
+        except ValueError:
+            continue
+        if relative in {
+            'src/calendar/calendar-minimal.c',
+            'src/calendar/calendar-native.c',
+            'src/timezone/timezone-minimal.c',
+            'src/timezone/timezone-native.c',
+        }:
+            providers.add(relative)
+    expected = set()
+    if calendars:
+        calendar = 'native' if options['calendars'] == 'native' else 'minimal'
+        expected = {
+            'src/calendar/calendar-' + calendar + '.c',
+            'src/timezone/timezone-' + options['timezone_backend'] + '.c',
+        }
+    assert providers == expected, (providers, expected)
+    assert checked == options['check_jsvalue'], (checked, options['check_jsvalue'])
+    print('Selected configuration and repository suite partition verified.')
+
+
+if __name__ == '__main__':
+    main()
