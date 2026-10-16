@@ -224,12 +224,10 @@ JSAtom JS_DupAtom(JSContext *ctx, JSAtom v)
     return v;
 }
 
-JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v)
+JSAtomKindEnum JS_AtomGetKind(JSRuntime *rt, JSAtom v)
 {
-    JSRuntime *rt;
     JSAtomStruct *p;
 
-    rt = ctx->rt;
     if (__JS_AtomIsTaggedInt(v))
         return JS_ATOM_KIND_STRING;
     p = rt->atom_array[v];
@@ -248,9 +246,9 @@ JSAtomKindEnum JS_AtomGetKind(JSContext *ctx, JSAtom v)
     }
 }
 
-BOOL JS_AtomIsString(JSContext *ctx, JSAtom v)
+BOOL JS_AtomIsString(JSRuntime *rt, JSAtom v)
 {
-    return JS_AtomGetKind(ctx, v) == JS_ATOM_KIND_STRING;
+    return JS_AtomGetKind(rt, v) == JS_ATOM_KIND_STRING;
 }
 
 JSAtom js_get_atom_index(JSRuntime *rt, JSAtomStruct *p)
@@ -729,11 +727,6 @@ const char *JS_AtomGetStrRT(JSRuntime *rt, char *buf, int buf_size,
     return buf;
 }
 
-const char *JS_AtomGetStr(JSContext *ctx, char *buf, int buf_size, JSAtom atom)
-{
-    return JS_AtomGetStrRT(ctx->rt, buf, buf_size, atom);
-}
-
 static JSValue __JS_AtomToValue(JSContext *ctx, JSAtom atom, BOOL force_string)
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
@@ -773,13 +766,12 @@ JSValue JS_AtomToString(JSContext *ctx, JSAtom atom)
 
 /* return TRUE if the atom is an array index (i.e. 0 <= index <=
    2^32-2 and return its value */
-BOOL JS_AtomIsArrayIndex(JSContext *ctx, uint32_t *pval, JSAtom atom)
+BOOL JS_AtomIsArrayIndex(JSRuntime *rt, uint32_t *pval, JSAtom atom)
 {
     if (__JS_AtomIsTaggedInt(atom)) {
         *pval = __JS_AtomToUInt32(atom);
         return TRUE;
     } else {
-        JSRuntime *rt = ctx->rt;
         JSAtomStruct *p;
         uint32_t val;
 
@@ -876,12 +868,10 @@ void JS_FreeAtomRT(JSRuntime *rt, JSAtom v)
 }
 
 /* return TRUE if 'v' is a symbol with a string description */
-BOOL JS_AtomSymbolHasDescription(JSContext *ctx, JSAtom v)
+BOOL JS_AtomSymbolHasDescription(JSRuntime *rt, JSAtom v)
 {
-    JSRuntime *rt;
     JSAtomStruct *p;
 
-    rt = ctx->rt;
     if (__JS_AtomIsTaggedInt(v))
         return FALSE;
     p = rt->atom_array[v];
@@ -951,15 +941,16 @@ JSAtom js_atom_concat_num(JSContext *ctx, JSAtom name, uint32_t n)
 }
 
 /* val must be a symbol */
-JSAtom js_symbol_to_atom(JSContext *ctx, JSValue val)
+JSAtom js_symbol_to_atom(JSRuntime *rt, JSValue val)
 {
     JSAtomStruct *p = JS_VALUE_GET_PTR(val);
-    return js_get_atom_index(ctx->rt, p);
+    return js_get_atom_index(rt, p);
 }
 
 /* return JS_ATOM_NULL in case of exception */
 JSAtom JS_ValueToAtom(JSContext *ctx, JSValueConst val)
 {
+    JSRuntime *rt = ctx->rt;
     JSAtom atom;
     uint32_t tag;
     tag = JS_VALUE_GET_TAG(val);
@@ -969,14 +960,14 @@ JSAtom JS_ValueToAtom(JSContext *ctx, JSValueConst val)
         atom = __JS_AtomFromUInt32(JS_VALUE_GET_INT(val));
     } else if (tag == JS_TAG_SYMBOL) {
         JSAtomStruct *p = JS_VALUE_GET_PTR(val);
-        atom = JS_DupAtom(ctx, js_get_atom_index(ctx->rt, p));
+        atom = JS_DupAtom(ctx, js_get_atom_index(rt, p));
     } else {
         JSValue str;
         str = JS_ToPropertyKey(ctx, val);
         if (JS_IsException(str))
             return JS_ATOM_NULL;
         if (JS_VALUE_GET_TAG(str) == JS_TAG_SYMBOL) {
-            atom = js_symbol_to_atom(ctx, str);
+            atom = js_symbol_to_atom(rt, str);
         } else {
             atom = JS_NewAtomStr(ctx, JS_VALUE_GET_STRING(str));
         }

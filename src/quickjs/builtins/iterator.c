@@ -187,13 +187,13 @@ void js_iterator_concat_mark(JSRuntime *rt, JSValueConst val,
     }
 }
 
-static void js_iterator_concat_complete(JSContext *ctx,
-                                         JSIteratorConcatData *it)
+static void js_iterator_concat_complete(JSRuntime *rt,
+                                        JSIteratorConcatData *it)
 {
     while (it->index < it->count)
-        JS_FreeValue(ctx, it->values[it->index++]);
-    JS_FreeValue(ctx, it->iter);
-    JS_FreeValue(ctx, it->next);
+        JS_FreeValueRT(rt, it->values[it->index++]);
+    JS_FreeValueRT(rt, it->iter);
+    JS_FreeValueRT(rt, it->next);
     it->iter = JS_UNDEFINED;
     it->next = JS_UNDEFINED;
 }
@@ -275,13 +275,13 @@ static JSValue js_iterator_concat_next(JSContext *ctx, JSValueConst this_val,
         }
     }
     if (JS_IsException(ret)) {
-        js_iterator_concat_complete(ctx, it);
+        js_iterator_concat_complete(ctx->rt, it);
         *pdone = TRUE;
     } else {
         ret = js_create_iterator_result(ctx, ret, *pdone);
         if (JS_IsException(ret) && !*pdone) {
             JS_IteratorClose(ctx, it->iter, TRUE);
-            js_iterator_concat_complete(ctx, it);
+            js_iterator_concat_complete(ctx->rt, it);
             *pdone = TRUE;
         }
     }
@@ -312,7 +312,7 @@ static JSValue js_iterator_concat_return(JSContext *ctx, JSValueConst this_val,
         if (JS_IteratorClose(ctx, it->iter, FALSE) < 0)
             ret = JS_EXCEPTION;
     }
-    js_iterator_concat_complete(ctx, it);
+    js_iterator_concat_complete(ctx->rt, it);
     if (!JS_IsException(ret))
         ret = js_create_iterator_result(ctx, JS_UNDEFINED, TRUE);
     it->running = FALSE;
@@ -1206,7 +1206,7 @@ static JSValue js_iterator_zip_keyed(JSContext *ctx, JSValueConst this_val,
         if (!res)
             continue;
         res = (desc.flags & JS_PROP_ENUMERABLE) != 0;
-        js_free_desc(ctx, &desc);
+        js_free_desc(ctx->rt, &desc);
         if (!res)
             continue;
         value = JS_GetProperty(ctx, argv[0], all_keys[i].atom);

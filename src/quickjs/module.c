@@ -302,7 +302,7 @@ static JSExportEntry *add_export_entry2(JSContext *ctx,
         char buf1[ATOM_GET_STR_BUF_SIZE];
         if (s) {
             js_parse_error(s, "duplicate exported name '%s'",
-                           JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name));
+                           JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), export_name));
         } else {
             JS_ThrowSyntaxErrorAtom(ctx, "duplicate exported name '%s'", export_name);
         }
@@ -821,18 +821,18 @@ static void js_resolve_export_throw_error(JSContext *ctx,
     default:
     case JS_RESOLVE_RES_NOT_FOUND:
         JS_ThrowSyntaxError(ctx, "Could not find export '%s' in module '%s'",
-                            JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name),
-                            JS_AtomGetStr(ctx, buf2, sizeof(buf2), m->module_name));
+                            JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), export_name),
+                            JS_AtomGetStrRT(ctx->rt, buf2, sizeof(buf2), m->module_name));
         break;
     case JS_RESOLVE_RES_CIRCULAR:
         JS_ThrowSyntaxError(ctx, "circular reference when looking for export '%s' in module '%s'",
-                            JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name),
-                            JS_AtomGetStr(ctx, buf2, sizeof(buf2), m->module_name));
+                            JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), export_name),
+                            JS_AtomGetStrRT(ctx->rt, buf2, sizeof(buf2), m->module_name));
         break;
     case JS_RESOLVE_RES_AMBIGUOUS:
         JS_ThrowSyntaxError(ctx, "export '%s' in module '%s' is ambiguous",
-                            JS_AtomGetStr(ctx, buf1, sizeof(buf1), export_name),
-                            JS_AtomGetStr(ctx, buf2, sizeof(buf2), m->module_name));
+                            JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), export_name),
+                            JS_AtomGetStrRT(ctx->rt, buf2, sizeof(buf2), m->module_name));
         break;
     }
 }
@@ -1112,7 +1112,7 @@ int js_resolve_module(JSContext *ctx, JSModuleDef *m)
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("resolving module '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("resolving module '%s':\n", JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), m->module_name));
     }
 #endif
     m->resolved = TRUE;
@@ -1218,7 +1218,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("js_inner_module_linking '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("js_inner_module_linking '%s':\n", JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), m->module_name));
     }
 #endif
 
@@ -1256,7 +1256,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("instantiating module '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("instantiating module '%s':\n", JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), m->module_name));
     }
 #endif
     /* check the indirect exports */
@@ -1280,8 +1280,8 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
         printf("exported bindings:\n");
         for(i = 0; i < m->export_entries_count; i++) {
             JSExportEntry *me = &m->export_entries[i];
-            printf(" name="); print_atom(ctx, me->export_name);
-            printf(" local="); print_atom(ctx, me->local_name);
+            printf(" name="); print_atom(ctx->rt, me->export_name);
+            printf(" local="); print_atom(ctx->rt, me->local_name);
             printf(" type=%d idx=%d\n", me->export_type, me->u.local.var_idx);
         }
     }
@@ -1297,7 +1297,7 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
             mi = &m->import_entries[i];
 #ifdef DUMP_MODULE_RESOLVE
             printf("import var_idx=%d name=", mi->var_idx);
-            print_atom(ctx, mi->import_name);
+            print_atom(ctx->rt, mi->import_name);
             printf(": ");
 #endif
             m1 = m->req_module_entries[mi->req_module_idx].module;
@@ -1404,7 +1404,7 @@ int js_link_module(JSContext *ctx, JSModuleDef *m)
 #ifdef DUMP_MODULE_RESOLVE
     {
         char buf1[ATOM_GET_STR_BUF_SIZE];
-        printf("js_link_module '%s':\n", JS_AtomGetStr(ctx, buf1, sizeof(buf1), m->module_name));
+        printf("js_link_module '%s':\n", JS_AtomGetStrRT(ctx->rt, buf1, sizeof(buf1), m->module_name));
     }
 #endif
     assert(m->status == JS_MODULE_STATUS_UNLINKED ||

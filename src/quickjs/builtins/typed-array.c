@@ -2216,8 +2216,8 @@ int JS_AddIntrinsicTypedArrays(JSContext *ctx)
         char buf[ATOM_GET_STR_BUF_SIZE];
         const char *name;
             
-        name = JS_AtomGetStr(ctx, buf, sizeof(buf),
-                             JS_ATOM_Uint8ClampedArray + i - JS_CLASS_UINT8C_ARRAY);
+        name = JS_AtomGetStrRT(ctx->rt, buf, sizeof(buf),
+                               JS_ATOM_Uint8ClampedArray + i - JS_CLASS_UINT8C_ARRAY);
         if (i == JS_CLASS_UINT8_ARRAY) {
             obj = JS_NewCConstructor(ctx, i, name,
                                      ft.generic, 3, JS_CFUNC_constructor_magic, i,

@@ -138,10 +138,10 @@ static int js_object_list_find(JSObjectList *s, JSObject *obj)
     return -1;
 }
 
-static void js_object_list_end(JSContext *ctx, JSObjectList *s)
+static void js_object_list_end(JSRuntime *rt, JSObjectList *s)
 {
-    js_free(ctx, s->object_tab);
-    js_free(ctx, s->hash_table);
+    js_free_rt(rt, s->object_tab);
+    js_free_rt(rt, s->hash_table);
 }
 
 /*******************************************************************/
@@ -625,7 +625,7 @@ static int JS_WriteObjectTag(BCWriterState *s, JSValueConst obj)
         for(i = 0, pr = get_shape_prop(sh); i < sh->prop_count; i++, pr++) {
             atom = pr->atom;
             if (atom != JS_ATOM_NULL &&
-                JS_AtomIsString(s->ctx, atom) &&
+                JS_AtomIsString(s->ctx->rt, atom) &&
                 (pr->flags & JS_PROP_ENUMERABLE)) {
                 if (pr->flags & JS_PROP_TMASK) {
                     JS_ThrowTypeError(s->ctx, "only value properties are supported");
@@ -850,7 +850,7 @@ static int JS_WriteObjectAtoms(BCWriterState *s)
     int i, atoms_size;
 
     dbuf1 = s->dbuf;
-    js_dbuf_init(s->ctx, &s->dbuf);
+    js_dbuf_init(rt, &s->dbuf);
     bc_put_u8(s, BC_VERSION);
 
     bc_put_leb128(s, s->idx_to_atom_count);
@@ -882,6 +882,7 @@ static int JS_WriteObjectAtoms(BCWriterState *s)
 uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
                          int flags, uint8_t ***psab_tab, size_t *psab_tab_len)
 {
+    JSRuntime *rt = ctx->rt;
     BCWriterState ss, *s = &ss;
 
     memset(s, 0, sizeof(*s));
@@ -894,7 +895,7 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
         s->first_atom = JS_ATOM_END;
     else
         s->first_atom = 1;
-    js_dbuf_init(ctx, &s->dbuf);
+    js_dbuf_init(rt, &s->dbuf);
     js_object_list_init(&s->object_list);
 
     if (JS_WriteObjectRec(s, obj))
@@ -905,7 +906,7 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
     }
     if (JS_WriteObjectAtoms(s))
         goto fail;
-    js_object_list_end(ctx, &s->object_list);
+    js_object_list_end(rt, &s->object_list);
     js_free(ctx, s->atom_to_idx);
     js_free(ctx, s->idx_to_atom);
     *psize = s->dbuf.size;
@@ -917,7 +918,7 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
         *psab_tab_len = s->sab_tab_len;
     return s->dbuf.buf;
  fail:
-    js_object_list_end(ctx, &s->object_list);
+    js_object_list_end(rt, &s->object_list);
     js_free(ctx, s->atom_to_idx);
     js_free(ctx, s->idx_to_atom);
     dbuf_free(&s->dbuf);
