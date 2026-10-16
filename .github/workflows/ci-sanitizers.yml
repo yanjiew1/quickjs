@@ -3,25 +3,23 @@ name: ci-sanitizers
 on:
   pull_request:
     paths:
-      - '**'
-      - '!.gitignore'
-      - '!LICENSE'
-      - '!TODO'
-      - '!doc/**'
-      - '!examples/**'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/ci-sanitizers.yml'
+    - '**'
+    - '!.gitignore'
+    - '!LICENSE'
+    - '!TODO'
+    - '!doc/**'
+    - '!examples/**'
+    - '.github/workflows/ci.yml'
+    - '.github/workflows/ci-sanitizers.yml'
   push:
     branches:
-      - '*'
-
-env:
-  MAKEFLAGS: 'CONFIG_TEMPORAL=n CONFIG_INTL=n'
+    - '*'
 
 jobs:
   linux-sanitizers:
     name: Linux ${{ matrix.arch }} ${{ matrix.compiler }} ${{ matrix.sanitizer }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -29,66 +27,141 @@ jobs:
         sanitizer: [ASan, UBSan]
         arch: [x86_64, arm64]
         include:
-          - arch: x86_64
-            runner: ubuntu-latest
-          - arch: arm64
-            runner: ubuntu-24.04-arm
+        - arch: x86_64
+          runner: ubuntu-latest
+        - arch: arm64
+          runner: ubuntu-24.04-arm
     env:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
       COMPILER: ${{ matrix.compiler }}
-      USE_CLANG: ${{ matrix.compiler == 'clang' && 'y' || '' }}
-      USE_ASAN: ${{ matrix.sanitizer == 'ASan' && 'y' || '' }}
-      USE_UBSAN: ${{ matrix.sanitizer == 'UBSan' && 'y' || '' }}
       # ASan bypasses small-block pools; UBSan must cover pooled iteration.
       USE_MALLOC_ITER: ${{ matrix.compiler == 'gcc' && matrix.sanitizer == 'UBSan' && 'y' || '' }}
     steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: true
-      - name: Build
-        run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_LTO= \
-            CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
-            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" \
-            CONFIG_MALLOC_ITER="$USE_MALLOC_ITER"
-      - name: Run built-in tests
-        run: |
-          make CONFIG_WERROR=y CONFIG_LTO= \
-            CC="$COMPILER" HOST_CC="$COMPILER" CONFIG_CLANG="$USE_CLANG" \
-            CONFIG_ASAN="$USE_ASAN" CONFIG_UBSAN="$USE_UBSAN" \
-            CONFIG_MALLOC_ITER="$USE_MALLOC_ITER" test
-      - name: Install pinned Test262
-        run: make test2-bootstrap
-      - name: Run Test262
+    - uses: actions/checkout@v7
+      with:
+        submodules: true
+    - name: Install Meson and Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build
+    - name: Configure selected sanitizer
+      run: |
+        sanitizer=undefined
+        if test "${{ matrix.sanitizer }}" = ASan; then sanitizer=address; fi
+        iteration=false
+        if test "$USE_MALLOC_ITER" = y; then iteration=true; fi
+        CC="$COMPILER" meson setup build -Dwerror=true -Db_sanitize="$sanitizer" -Dmalloc_iter="$iteration"
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository unit tests
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Run repository integration tests
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
+    - name: Install pinned Test262
+      run: |
+        python3 tools/build/test262.py bootstrap
+    - name: Run Test262
         # GCC ARM64 fake-stack scanning dominates long loops. Retain UAR
-        # checks in its repo tests and in Clang/x86 full Test262 runs.
-        env:
-          ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=${{ matrix.arch == 'arm64' && matrix.compiler == 'gcc' && '0' || '1' }}
-        run: |
-          set -o pipefail
-          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
-      - name: Report Test262 timings
-        if: always()
-        run: |
-          if test -f test262_timings.jsonl; then
-            report_status=0
-            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
-              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
-            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
-            exit "$report_status"
+        # checks in functional repo tests and in Clang/x86 full Test262 runs.
+      env:
+        ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=${{ matrix.arch == 'arm64' && matrix.compiler == 'gcc' && '0' || '1' }}
+      run: |
+        set -o pipefail
+        timeout --kill-after=30s 3600s ./build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+    - name: Report repository test results
+      if: always()
+      run: |
+        for stage in repo-unit repo-integration; do
+          log="build/meson-logs/$stage.txt"
+          if test -f "$log"; then
+            printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Preserve Test262 diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test262-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.sanitizer }}
-          path: |
-            test262_runtime.log
-            test262_progress.jsonl
-            test262_timings.jsonl
-            test262_timings.csv
-            test262_timings.md
+        done
+    - name: Report Test262 timings
+      if: always()
+      run: |
+        if test -f test262_timings.jsonl; then
+          report_status=0
+          python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+            --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
+          cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+          exit "$report_status"
+        fi
+    - name: Preserve Test262 diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: test262-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.sanitizer }}
+        path: |
+          test262_runtime.log
+          test262_progress.jsonl
+          test262_timings.jsonl
+          test262_timings.csv
+          test262_timings.md
+          test262_selection.md
+          build/meson-logs/repo-unit.*
+          build/meson-logs/repo-integration.*
+
+  linux-shared-sanitizers:
+    name: Linux Clang shared ASan and UBSan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install Meson and Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build
+    - name: Configure the shared engine
+      run: |
+        CC=clang meson setup build -Dwerror=true -Ddefault_library=shared -Db_sanitize=address,undefined
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository unit tests
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Run repository integration tests
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Report repository test results
+      if: always()
+      run: |
+        for stage in repo-unit repo-integration; do
+          log="build/meson-logs/$stage.txt"
+          if test -f "$log"; then
+            printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+        done
+    - name: Preserve repository test diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: linux-shared-sanitizers
+        path: |
+          build/meson-logs/repo-unit.*
+          build/meson-logs/repo-integration.*
+        if-no-files-found: ignore
 
   linux-gc-stress:
     name: Linux ${{ matrix.arch }} allocation-triggered GC stress
@@ -97,32 +170,44 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
-            runner: ubuntu-latest
-            compiler: gcc
-          - arch: arm64
-            runner: ubuntu-24.04-arm
+        - arch: x86_64
+          runner: ubuntu-latest
+          compiler: gcc
+        - arch: arm64
+          runner: ubuntu-24.04-arm
             # Keep UAR coverage without GCC ARM64 fake-stack scanning costs.
-            compiler: clang
+          compiler: clang
     timeout-minutes: 25
     env:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
-      - uses: actions/checkout@v7
-      - name: Build and run focused GC stress tests
-        run: |
-          set -o pipefail
-          make -j$(getconf _NPROCESSORS_ONLN) CC="${{ matrix.compiler }}" HOST_CC="${{ matrix.compiler }}" \
-            CONFIG_CLANG="${{ matrix.compiler == 'clang' && 'y' || '' }}" \
-            CONFIG_WERROR=y CONFIG_LTO= CONFIG_ASAN=y CONFIG_UBSAN=y \
-            CONFIG_GC_STRESS=y CONFIG_MALLOC_ITER=y test-gc-stress 2>&1 | tee gc-stress.log
-      - name: Preserve GC stress diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: gc-stress-${{ matrix.arch }}
-          path: gc-stress.log
+    - uses: actions/checkout@v7
+    - name: Install Meson and Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build
+    - name: Configure allocation-triggered GC stress
+      run: |
+        CC="${{ matrix.compiler }}" meson setup build -Dwerror=true -Db_sanitize=address,undefined -Dgc_stress=true -Dmalloc_iter=true
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run focused GC stress tests
+      run: |
+        set -o pipefail
+        meson test -C build --no-rebuild --suite gc-stress --logbase gc-stress \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3 2>&1 | tee gc-stress.log
+
+    - name: Preserve GC stress diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: gc-stress-${{ matrix.arch }}
+        path: |
+          gc-stress.log
+          build/meson-logs/gc-stress.*
 
   linux-tsan:
     name: Linux ${{ matrix.arch }} focused thread sanitizer
@@ -131,116 +216,240 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
-            runner: ubuntu-latest
-          - arch: arm64
-            runner: ubuntu-24.04-arm
+        - arch: x86_64
+          runner: ubuntu-latest
+        - arch: arm64
+          runner: ubuntu-24.04-arm
     timeout-minutes: 25
     env:
       TSAN_OPTIONS: halt_on_error=1:exitcode=66
     steps:
-      - uses: actions/checkout@v7
-      - name: Check ThreadSanitizer startup
-        run: |
-          set -o pipefail
-          mkdir -p tsan-logs
-          # GCC TSan needs a compatible shadow mapping on this ephemeral runner.
-          if test "$(sysctl -n vm.mmap_rnd_bits)" -gt 28; then
-            sudo sysctl -w vm.mmap_rnd_bits=28
-          fi
-          printf 'int main(void) { return 0; }\n' > tsan-logs/probe.c
-          gcc -g -O1 -fsanitize=thread tsan-logs/probe.c -o tsan-logs/probe
-          ./tsan-logs/probe 2>&1 | tee tsan-logs/startup.log
-      - name: Build and run focused concurrency tests
-        run: |
-          set -o pipefail
-          make -j$(getconf _NPROCESSORS_ONLN) CC=gcc HOST_CC=gcc \
-            CONFIG_WERROR=y CONFIG_LTO= CONFIG_TSAN=y \
-            test-threading 2>&1 | tee tsan-logs/tests.log
-      - name: Preserve ThreadSanitizer diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: thread-sanitizer-${{ matrix.arch }}
-          path: tsan-logs/
+    - uses: actions/checkout@v7
+    - name: Install Meson and Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build
+    - name: Check ThreadSanitizer startup
+      run: |
+        set -o pipefail
+        mkdir -p tsan-logs
+        # GCC TSan needs a compatible shadow mapping on this ephemeral runner.
+        if test "$(sysctl -n vm.mmap_rnd_bits)" -gt 28; then
+          sudo sysctl -w vm.mmap_rnd_bits=28
+        fi
+        printf 'int main(void) { return 0; }\n' > tsan-logs/probe.c
+        gcc -g -O1 -fsanitize=thread tsan-logs/probe.c -o tsan-logs/probe
+        ./tsan-logs/probe 2>&1 | tee tsan-logs/startup.log
+    - name: Configure ThreadSanitizer
+      run: |
+        CC=gcc meson setup build -Dwerror=true -Db_sanitize=thread
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run focused concurrency tests
+      run: |
+        set -o pipefail
+        meson test -C build --no-rebuild --suite threading --logbase threading \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3 2>&1 | tee tsan-logs/tests.log
+    - name: Repeat wait-queue and worker tests
+      run: |
+        set -o pipefail
+        meson test -C build --no-rebuild --repeat 2 test_wait_queue worker --logbase threading-repeat \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee tsan-logs/repeats.log
+
+    - name: Preserve ThreadSanitizer diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: thread-sanitizer-${{ matrix.arch }}
+        path: |
+          tsan-logs/
+          build/meson-logs/threading.*
+          build/meson-logs/threading-repeat.*
 
   linux-msan:
     name: Linux ${{ matrix.arch }} MSan
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
-            runner: ubuntu-latest
-          - arch: arm64
-            runner: ubuntu-24.04-arm
+        - arch: x86_64
+          runner: ubuntu-latest
+        - arch: arm64
+          runner: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: true
-      - name: Build
-        env:
-          CC: clang
-        run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_MSAN=y CONFIG_CLANG=y
-      - name: Run built-in tests
-        env:
-          MSAN_OPTIONS: halt_on_error=1
-        run: |
-          make CONFIG_MSAN=y CONFIG_CLANG=y test
-      - name: Install pinned Test262
-        run: make test2-bootstrap
-      - name: Run Test262
-        env:
-          MSAN_OPTIONS: halt_on_error=1
-        run: |
-          set -o pipefail
-          ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
-      - name: Report Test262 timings
-        if: always()
-        run: |
-          if test -f test262_timings.jsonl; then
-            report_status=0
-            python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
-              --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
-            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
-            exit "$report_status"
+    - uses: actions/checkout@v7
+      with:
+        submodules: true
+    - name: Install Meson and Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build
+    - name: Configure MemorySanitizer with PIE
+      env:
+        CC: clang
+      run: |
+        meson setup build -Dwerror=true -Db_sanitize=memory -Db_pie=true
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository unit tests
+      env:
+        MSAN_OPTIONS: halt_on_error=1
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Run repository integration tests
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      env:
+        MSAN_OPTIONS: halt_on_error=1
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+
+    - name: Install pinned Test262
+      run: |
+        python3 tools/build/test262.py bootstrap
+    - name: Run Test262
+      env:
+        MSAN_OPTIONS: halt_on_error=1
+      run: |
+        set -o pipefail
+        timeout --kill-after=30s 3600s ./build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
+    - name: Report repository test results
+      if: always()
+      run: |
+        for stage in repo-unit repo-integration; do
+          log="build/meson-logs/$stage.txt"
+          if test -f "$log"; then
+            printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Preserve Test262 diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test262-clang-MSan-${{ matrix.arch }}
-          path: |
-            test262_runtime.log
-            test262_progress.jsonl
-            test262_timings.jsonl
-            test262_timings.csv
-            test262_timings.md
+        done
+    - name: Report Test262 timings
+      if: always()
+      run: |
+        if test -f test262_timings.jsonl; then
+          report_status=0
+          python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
+            --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
+          cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+          exit "$report_status"
+        fi
+    - name: Preserve Test262 diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: test262-clang-MSan-${{ matrix.arch }}
+        path: |
+          test262_runtime.log
+          test262_progress.jsonl
+          test262_timings.jsonl
+          test262_timings.csv
+          test262_timings.md
+          test262_selection.md
+          build/meson-logs/repo-unit.*
+          build/meson-logs/repo-integration.*
 
   macos-asan:
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - name: Build
-        run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_ASAN=y
-      - name: Run built-in tests
-        env:
-          ASAN_OPTIONS: halt_on_error=1
-        run: |
-          make CONFIG_ASAN=y test
+    - uses: actions/checkout@v7
+    - name: Install Meson and Ninja
+      run: |
+        brew install meson ninja
+    - name: Configure selected sanitizer
+      run: |
+        meson setup build -Dwerror=true -Db_sanitize=address
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository unit tests
+      env:
+        ASAN_OPTIONS: halt_on_error=1
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Run repository integration tests
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      env:
+        ASAN_OPTIONS: halt_on_error=1
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Report repository test results
+      if: always()
+      run: |
+        for stage in repo-unit repo-integration; do
+          log="build/meson-logs/$stage.txt"
+          if test -f "$log"; then
+            printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+        done
+    - name: Preserve repository test diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: macos-asan
+        path: |
+          build/meson-logs/repo-unit.*
+          build/meson-logs/repo-integration.*
+        if-no-files-found: ignore
 
   macos-ubsan:
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - name: Build
-        run: |
-          make -j$(getconf _NPROCESSORS_ONLN) CONFIG_WERROR=y CONFIG_UBSAN=y
-      - name: Run built-in tests
-        env:
-          UBSAN_OPTIONS: halt_on_error=1
-        run: |
-          make CONFIG_UBSAN=y test
+    - uses: actions/checkout@v7
+    - name: Install Meson and Ninja
+      run: |
+        brew install meson ninja
+    - name: Configure selected sanitizer
+      run: |
+        meson setup build -Dwerror=true -Db_sanitize=undefined
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository unit tests
+      env:
+        UBSAN_OPTIONS: halt_on_error=1
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Run repository integration tests
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      env:
+        UBSAN_OPTIONS: halt_on_error=1
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Report repository test results
+      if: always()
+      run: |
+        for stage in repo-unit repo-integration; do
+          log="build/meson-logs/$stage.txt"
+          if test -f "$log"; then
+            printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+        done
+    - name: Preserve repository test diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: macos-ubsan
+        path: |
+          build/meson-logs/repo-unit.*
+          build/meson-logs/repo-integration.*
+        if-no-files-found: ignore
