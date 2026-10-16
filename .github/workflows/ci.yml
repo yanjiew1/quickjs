@@ -646,7 +646,7 @@ jobs:
     - name: Configure selected build
       id: configure
       run: |
-        CC=gcc meson setup build -Dwerror=true  \
+        CC=gcc meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dcheck_jsvalue=true \
             \
     - name: Compile selected build
@@ -705,7 +705,7 @@ jobs:
     - name: Configure selected build
       id: configure
       run: |
-        meson setup build -Dwerror=true  \
+        meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
     - name: Compile selected build
       id: compile
