@@ -214,7 +214,6 @@ DEF(  iterator_call, 2, 4, 5, u8)
 DEF(  initial_yield, 1, 0, 0, none)
 DEF(          yield, 1, 1, 2, none)
 DEF(     yield_star, 1, 1, 2, none)
-DEF(async_yield_star, 1, 1, 2, none)
 DEF(          await, 1, 1, 1, none)
 
 /* arithmetic/logic operations */
