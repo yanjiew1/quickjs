@@ -4430,7 +4430,15 @@ function test_finalization_registry()
         let finrec = new FinalizationRegistry(v => { actual = v });
         finrec.register({}, expected);
         os.setTimeout(() => {
-            assert(actual, expected);
+            try {
+                /* Keep the registry reachable until its cleanup is observed. */
+                assert(finrec instanceof FinalizationRegistry);
+                assert(actual, expected);
+            } catch (e) {
+                /* Timer exceptions alone do not fail the shell process. */
+                console.log(e.stack);
+                std.exit(1);
+            }
         }, 0);
     }
     {
@@ -4439,7 +4447,15 @@ function test_finalization_registry()
         let finrec = new FinalizationRegistry(v => { actual = v });
         finrec.register({}, expected);
         os.setTimeout(() => {
-            assert(actual, expected);
+            try {
+                /* Keep the registry reachable until its cleanup is observed. */
+                assert(finrec instanceof FinalizationRegistry);
+                assert(actual, expected);
+            } catch (e) {
+                /* Timer exceptions alone do not fail the shell process. */
+                console.log(e.stack);
+                std.exit(1);
+            }
         }, 0);
     }
     std.gc();
