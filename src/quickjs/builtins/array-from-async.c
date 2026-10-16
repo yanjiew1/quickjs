@@ -465,8 +465,10 @@ int js_init_array_from_async(JSContext *ctx)
     };
 
     if (!JS_IsRegisteredClass(ctx->rt, JS_CLASS_ARRAY_FROM_ASYNC) &&
-        JS_NewClass(ctx->rt, JS_CLASS_ARRAY_FROM_ASYNC, &class_def))
+        JS_NewClass(ctx->rt, JS_CLASS_ARRAY_FROM_ASYNC, &class_def) < 0) {
+        JS_ThrowOutOfMemory(ctx);
         return -1;
+    }
     return JS_SetPropertyFunctionList(ctx, ctx->array_ctor,
                                       funcs, countof(funcs));
 }
