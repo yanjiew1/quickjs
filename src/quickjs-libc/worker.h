@@ -67,7 +67,7 @@ void *js_sab_alloc(void *opaque, size_t size);
 void js_sab_free(void *opaque, void *ptr);
 void js_sab_dup(void *opaque, void *ptr);
 void js_free_message_pipe(JSWorkerMessagePipe *ps);
-void js_init_worker(JSContext *ctx, JSModuleDef *m);
+int js_init_worker(JSContext *ctx, JSModuleDef *m);
 #endif
 
 #endif
