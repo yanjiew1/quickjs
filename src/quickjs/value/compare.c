@@ -32,7 +32,7 @@
 #include "../internal/object.h"
 #include "compare.h"
 
-BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
+BOOL js_strict_eq2(JSValueConst op1, JSValueConst op2,
                    JSStrictEqModeEnum eq_mode)
 {
     BOOL res;
@@ -59,10 +59,10 @@ BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
             if (!tag_is_string(tag2)) {
                 res = FALSE;
             } else if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) {
-                res = js_string_eq(ctx, JS_VALUE_GET_STRING(op1),
+                res = js_string_eq(JS_VALUE_GET_STRING(op1),
                                    JS_VALUE_GET_STRING(op2));
             } else {
-                res = (js_string_rope_compare(ctx, op1, op2, TRUE) == 0);
+                res = (js_string_rope_compare(op1, op2, TRUE) == 0);
             }
         }
         break;
@@ -143,7 +143,7 @@ BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
                 p2 = js_bigint_set_short(&buf2, op2);
             else
                 p2 = JS_VALUE_GET_PTR(op2);
-            res = (js_bigint_cmp(ctx, p1, p2) == 0);
+            res = (js_bigint_cmp(p1, p2) == 0);
         }
         break;
     default:
@@ -153,32 +153,32 @@ BOOL js_strict_eq2(JSContext *ctx, JSValueConst op1, JSValueConst op2,
     return res;
 }
 
-static BOOL js_strict_eq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
+static BOOL js_strict_eq(JSValueConst op1, JSValueConst op2)
 {
-    return js_strict_eq2(ctx, op1, op2, JS_EQ_STRICT);
+    return js_strict_eq2(op1, op2, JS_EQ_STRICT);
 }
 
 BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return js_strict_eq(ctx, op1, op2);
+    return js_strict_eq(op1, op2);
 }
 
-BOOL js_same_value(JSContext *ctx, JSValueConst op1, JSValueConst op2)
+BOOL js_same_value(JSValueConst op1, JSValueConst op2)
 {
-    return js_strict_eq2(ctx, op1, op2, JS_EQ_SAME_VALUE);
+    return js_strict_eq2(op1, op2, JS_EQ_SAME_VALUE);
 }
 
 BOOL JS_SameValue(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return js_same_value(ctx, op1, op2);
+    return js_same_value(op1, op2);
 }
 
-BOOL js_same_value_zero(JSContext *ctx, JSValueConst op1, JSValueConst op2)
+BOOL js_same_value_zero(JSValueConst op1, JSValueConst op2)
 {
-    return js_strict_eq2(ctx, op1, op2, JS_EQ_SAME_VALUE_ZERO);
+    return js_strict_eq2(op1, op2, JS_EQ_SAME_VALUE_ZERO);
 }
 
 BOOL JS_SameValueZero(JSContext *ctx, JSValueConst op1, JSValueConst op2)
 {
-    return js_same_value_zero(ctx, op1, op2);
+    return js_same_value_zero(op1, op2);
 }
