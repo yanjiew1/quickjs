@@ -1695,7 +1695,8 @@ typedef struct CodeContext {
 
 #define M2(op1, op2)            ((op1) | ((op2) << 8))
 #define M3(op1, op2, op3)       ((op1) | ((op2) << 8) | ((op3) << 16))
-#define M4(op1, op2, op3, op4)  ((op1) | ((op2) << 8) | ((op3) << 16) | ((op4) << 24))
+/* code_match reads int varargs; only the packing uses unsigned arithmetic. */
+#define M4(op1, op2, op3, op4)  ((int)((uint32_t)M3(op1, op2, op3) | ((uint32_t)(op4) << 24)))
 
 static BOOL code_match(CodeContext *s, int pos, ...)
 {
