@@ -2023,7 +2023,7 @@ static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf, int var_idx,
     add_gc_object(ctx->rt, &var_ref->header, JS_GC_OBJ_TYPE_VAR_REF);
     var_ref->is_detached = FALSE;
     var_ref->is_lexical = vd->is_lexical;
-    var_ref->is_const = vd->is_const;
+    var_ref->is_const = vd->is_const || vd->var_kind == JS_VAR_FUNCTION_NAME;
     var_ref->var_ref_idx = var_ref_idx;
     var_ref->stack_frame = sf;
     sf->var_refs[var_ref_idx] = var_ref;
@@ -4047,7 +4047,6 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
-        CASE(OP_define_field_ro):
         CASE(OP_define_field):
             {
                 int ret;
@@ -4056,8 +4055,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
 
                 ret = JS_DefinePropertyValue(ctx, sp[-2], atom, sp[-1],
-                                             (opcode == OP_define_field_ro ? 0 :
-                                              JS_PROP_C_W_E) | JS_PROP_THROW);
+                                             JS_PROP_C_W_E | JS_PROP_THROW);
                 sp--;
                 if (unlikely(ret < 0))
                     goto exception;
@@ -4421,7 +4419,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 if (JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_INT) {
                     uint32_t reference = JS_VALUE_GET_INT(sp[-3]);
                     uint32_t slot = reference & JS_REFERENCE_SLOT_MASK;
-                    BOOL is_lexical = FALSE, is_const = FALSE;
+                    BOOL is_lexical = FALSE, is_const = FALSE, is_import = FALSE;
 
                     JSValue *pval = js_get_frame_reference_slot(reference, var_buf,
                                                                 arg_buf, var_refs);
@@ -4429,12 +4427,24 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         JS_REFERENCE_LOCAL) {
                         JSBytecodeVarDef *vd = &b->vardefs[b->arg_count + slot];
                         is_lexical = vd->is_lexical;
-                        is_const = vd->is_const;
+                        is_const = vd->is_const ||
+                            vd->var_kind == JS_VAR_FUNCTION_NAME;
                     } else if ((reference >> JS_REFERENCE_KIND_SHIFT) ==
                                JS_REFERENCE_CLOSURE) {
                         JSVarRef *var_ref = var_refs[slot];
                         is_lexical = var_ref->is_lexical;
                         is_const = var_ref->is_const;
+                        /* Imports are read-only even when the shared
+                           exporting binding is mutable. */
+                        is_import = b->closure_var[slot].var_kind == JS_VAR_IMPORT;
+                    }
+                    if (is_import) {
+                        atom = JS_ValueToAtom(ctx, sp[-2]);
+                        if (atom == JS_ATOM_NULL)
+                            goto exception;
+                        JS_ThrowTypeErrorReadOnly(ctx, JS_PROP_THROW, atom);
+                        JS_FreeAtom(ctx, atom);
+                        goto exception;
                     }
                     if (unlikely((is_lexical && JS_IsUninitialized(*pval)) ||
                                  is_const)) {
