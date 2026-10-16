@@ -190,7 +190,7 @@ int get_sleb128(int32_t *pval, const uint8_t *buf,
 }
 
 /* use pc_value = -1 to get the position of the function definition */
-int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
+int find_line_num(JSFunctionBytecode *b,
                   uint32_t pc_value, int *pcol_num)
 {
     const uint8_t *p_end, *p;
