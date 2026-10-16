@@ -1,21 +1,44 @@
 # Informational CI benchmarks
 
-The `benchmarks` workflow compares the exact candidate commit with its actual
-immediate first parent. The runner independently verifies this relationship.
-GCC and Clang each build both
-revisions using their own checked out Makefile with `-O2`, no LTO, and no
-sanitizers. Complete build commands, compiler flags, binary checksums, and
+The benchmark tooling requires Python 3.8 or newer. Meson and Ninja are needed
+when either revision uses Meson; historical Make revisions still require Make.
+
+The `benchmarks` workflow compares the exact candidate commit separately with
+both its actual immediate first parent and original Bellard QuickJS. The default
+Bellard reference is the fixed fork upstream base
+`535a7c250ff4a577ec36c3e103daab6dadeea650` from
+`https://github.com/bellard/quickjs.git` (2026-09-29); it is not a claim about
+current upstream HEAD. Manual dispatch can select a different exact Bellard SHA.
+The runner verifies the first-parent relationship for parent comparisons and the
+original repository origin for Bellard comparisons. Reports record the baseline
+kind, source repository and exact SHA.
+
+The compiler/baseline matrix runs four independent paired comparisons. GCC and
+Clang each build candidate and baseline using their own checked out build
+definitions (Meson, or Make for historical parents and the pinned Bellard base)
+with `-O2`, assertions disabled (`-DNDEBUG`), no LTO, and no sanitizers. Meson uses `-Db_ndebug=true`; historical Make builds append
+`-DNDEBUG` to the environment's `CFLAGS`, preserving the Makefile's defaults.
+The driver verifies that every produced runtime object's compile command
+contains `-DNDEBUG` and does not undefine it. Complete build commands,
+compiler flags, binary checksums, and
 compiler/linker versions are retained with the measurements. Compiler
 versions come from the selected Ubuntu runner image and are reported.
+Feature defines are reported separately for baseline and candidate from their
+actual compile commands. Meson builds retain each revision's defaults; the
+legacy Make feature request is recorded separately and is not evidence of a
+Meson build's configuration.
 
-On `main`, routine benchmarks run when a push crosses a multiple of 25
+Pushes to the latest formal branch tips (`main`, `main-new`, `temporal`, `intl`)
+always run both comparisons. Every `scratch-verify-*` push runs the lightweight
+selection job. Scratch measurements run when a push crosses a multiple of 25
 first-parent commits, and earlier when changed runtime, build, or workload
 paths anywhere in `github.event.before..candidate` indicate likely performance
-impact. Only an exact, available before revision on the candidate's first-parent
-history with a lower positive commit count permits skipping. New branches,
-missing revisions, nonancestor revisions, and rewritten history conservatively
-run. This push range selects work; the measured baseline remains candidate
-`HEAD^1`. Other pushes create a lightweight selection job. Selected pushes run
+impact. A newly published scratch branch has a zero before SHA; selection then
+uses the candidate's immediate-parent tree difference and an exact multiple of
+25, rather than measuring merely because the branch is new. For other uncertain,
+missing, nonancestor or rewritten push histories, selection remains conservative.
+This push range selects work; the measured parent baseline remains candidate
+`HEAD^1`. Selected pushes run
 one paired round of all 10 V8 v7 cases and all 72 frozen QuickJS microbenchmarks.
 Manual dispatch always runs and offers 1 or 3 to 6 rounds, Zoo alone,
 all three historical suites. Zoo runs exactly
@@ -24,7 +47,7 @@ This means 10 samples per engine per Zoo score, rather than 10 engine
 invocations total. The hosted default is intentionally a noisy reference.
 Local measurements continue to use their separate controlled policy.
 
-Each workload invocation starts a fresh JavaScript process. Parent and
+Each workload invocation starts a fresh JavaScript process. Baseline and
 candidate order alternates by case and round; each run has a separate
 working directory. V8 preserves its original warmup/workload rules and
 reports microseconds per iteration. The microbenchmarks report nanoseconds
@@ -101,10 +124,30 @@ python3 tools/benchmarks/run.py \
   --cpu auto --output /path/to/new-report
 ```
 
+For an original Bellard comparison, use a clean checkout whose `origin` is the
+original `bellard/quickjs` repository and select the exact revision explicitly:
+
+```sh
+python3 tools/benchmarks/run.py \
+  --candidate /path/to/candidate --candidate-revision EXACT_COMMIT_HASH \
+  --baseline /path/to/bellard --baseline-revision 535a7c250ff4a577ec36c3e103daab6dadeea650 \
+  --baseline-kind bellard --compiler gcc --suite core --rounds 3 \
+  --cpu auto --output /path/to/new-bellard-report
+```
+
+`--baseline-kind parent` is the default and enforces the actual first parent.
+`--parent` and `--parent-revision` remain aliases for `--baseline` and
+`--baseline-revision`. The version 2 report schema consistently uses `baseline`
+for raw samples, build directories, feature defines and individual scores; the
+state records `baseline_kind`, `baseline_repository` and `baseline_revision`.
+Workflow artifacts include the compiler and baseline kind in their names. No
+benchmark run is cancelled by a later push.
+
 The tool checks both revisions and hashes the resulting binaries before
 and after measurement. It also refuses existing `.obj`, engine/compiler
 binaries, generated `repl.c`, root objects/archives/dependencies, and
-untracked compatibility headers before invoking make. A clean tracked
+untracked compatibility headers before invoking a build. Meson builds use a fresh directory in the report
+folder, and their compiler database is checked against the objects produced. A clean tracked
 tree is insufficient when ignored products from another compiler remain.
 The tool never deletes these files; use new pristine checkouts instead.
 Existing output directories are rejected so a
@@ -120,13 +163,20 @@ microbenchmark also saves a positive numeric score.
 The small Python unit suite checks parsers, printed sort failures,
 corruption rejection, catalog coverage, incomplete sample rejection,
 stale product rejection without deletion, cancellation/timeout child
-cleanup, speed direction, geometric mean, and the distinct Zoo median
-contract without timing an engine:
+cleanup, exact parent/Bellard provenance, scratch cadence, latest formal tips,
+speed direction, geometric mean, and the distinct Zoo median contract without timing an engine:
 
 ```sh
 python3 -m unittest discover -s tools/benchmarks -p 'test_*.py'
 ```
 
 The fixture manifest upstream revision records historical provenance; it
-does not select the comparison baseline. The measured baseline is always
-the candidate's actual immediate first parent.
+does not select the comparison baseline. The comparison baseline is selected
+explicitly: either the candidate's actual immediate first parent or the exact original Bellard revision. Fixture provenance
+is independent of both baseline sources.
+
+The pinned Bellard Make build retains compiler warnings without treating them
+as errors: disabling assertions makes some upstream assertion-only locals unused.
+The source remains unmodified. Both compared engines still use `-O2`, non-LTO
+code and `-DNDEBUG`; each build report records its actual warning policy. Candidate
+and parent builds retain their usual warnings-as-errors checks.

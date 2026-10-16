@@ -7,11 +7,13 @@ import re
 import subprocess
 
 
-IMPACT_PREFIXES = ("src/", "include/", "tools/benchmarks/", "tools/timezone/", "tools/intl/")
-IMPACT_FILES = {"Makefile", "tests/microbench.js", ".github/workflows/benchmarks.yml"}
+IMPACT_PREFIXES = ("src/", "include/", "tools/benchmarks/", "tools/build/", "tools/timezone/", "tools/intl/", "build-aux/")
+IMPACT_FILES = {"Makefile", "meson.build", "meson_options.txt", "tests/microbench.js", ".github/workflows/benchmarks.yml"}
 
 
-def selection(event, commit_count, paths, before_count=None):
+def selection(event, commit_count, paths, before_count=None, branch=""):
+    if event == "push" and branch in ("main", "main-new", "temporal", "intl"):
+        return True, "Latest formal branch tip"
     if event == "workflow_dispatch":
         return True, "Explicit dispatch"
     if commit_count < 1:
@@ -30,6 +32,7 @@ def main():
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--candidate-revision", required=True)
     parser.add_argument("--before-revision", default="")
+    parser.add_argument("--branch", default="", help="Push branch name, for new scratch verification policy")
     parser.add_argument("--event", choices=("push", "workflow_dispatch"), required=True)
     parser.add_argument("--github-output", type=Path, required=True)
     args = parser.parse_args()
@@ -57,7 +60,18 @@ def main():
                     before_count = previous
         except (subprocess.CalledProcessError, ValueError):
             before_count, paths = None, []
-    selected, reason = selection(args.event, count, paths, before_count)
+    new_scratch = (args.event == "push" and args.branch.startswith("scratch-verify-")
+                   and args.before_revision == "0" * 40)
+    if new_scratch:
+        # A newly published verification branch has no prior remote tip. Its
+        # immediate-parent tree difference still gives a useful impact signal;
+        # a zero before SHA alone must not launch throughput measurements.
+        paths = [name.decode("utf-8", "surrogateescape") for name in
+                 git("diff", "--name-only", "--no-renames", "-z", parent, "HEAD", "--").split(b"\0") if name]
+        before_count = count - 1
+    selected, reason = selection(args.event, count, paths, before_count, args.branch)
+    if new_scratch:
+        reason = "New scratch branch; immediate-parent policy: " + reason
     with args.github_output.open("a") as output:
         output.write(f"run={str(selected).lower()}\nparent_revision={parent}\n")
         output.write(f"commit_count={count}\nreason={reason}\n")
