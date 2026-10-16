@@ -180,7 +180,7 @@ JSValue JS_GetOwnPropertyNames2(JSContext *ctx, JSValueConst obj1,
                                 int flags, int kind);
 int JS_GetOwnPropertyInternal(JSContext *ctx, JSPropertyDescriptor *desc,
                               JSObject *p, JSAtom prop);
-void js_free_desc(JSContext *ctx, JSPropertyDescriptor *desc);
+void js_free_desc(JSRuntime *rt, JSPropertyDescriptor *desc);
 
 int js_obj_to_desc(JSContext *ctx, JSPropertyDescriptor *d,
                    JSValueConst desc);
