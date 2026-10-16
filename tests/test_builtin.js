@@ -6478,6 +6478,38 @@ function test_proxy_own_keys_length()
 
 test_proxy_own_keys_length();
 
+function test_owned_conversion_paths()
+{
+    const base = "a".repeat(128), wide = "\u0100".repeat(128);
+    for (const value of ["flat", base + base, base + wide, wide + "\ud83d\ude00"]) {
+        assert(String.raw({ raw: { 0: value, length: 1 } }), value);
+        assert("x".replace("x", () => value), value);
+    }
+    assert(String.raw({ raw: "ab" }, 9), "a9b");
+    for (const value of [null, undefined])
+        assert_throws(TypeError, () => String.raw({ raw: value }));
+    const events = [];
+    const raw = {
+        get length() { events.push("length"); return 1; },
+        get 0() {
+            events.push("element");
+            return { [Symbol.toPrimitive](hint) {
+                events.push(hint);
+                return "converted";
+            } };
+        },
+    };
+    assert(String.raw({ get raw() { events.push("raw"); return raw; } }), "converted");
+    assert(events.join(","), "raw,length,element,string");
+    const sentinel = {};
+    let caught = false;
+    try { String.raw({ get raw() { throw sentinel; } }); }
+    catch (error) { caught = true; assert(error === sentinel, true); }
+    assert(caught, true);
+}
+
+test_owned_conversion_paths();
+
 function test_proxy_own_keys_matching()
 {
     const symbol = Symbol("key");
@@ -6497,4 +6529,3 @@ function test_proxy_own_keys_matching()
 }
 
 test_proxy_own_keys_matching();
-
