@@ -396,7 +396,7 @@ static JSValue JS_ReadBigInt(BCReaderState *s)
     if (len == 0) {
         /* zero case */
         bc_read_trace(s, "}\n");
-        return __JS_NewShortBigInt(s->ctx, 0);
+        return __JS_NewShortBigInt(0);
     }
     p = js_bigint_new(s->ctx, (len - 1) / (JS_LIMB_BITS / 8) + 1);
     if (!p)
@@ -428,7 +428,7 @@ static JSValue JS_ReadBigInt(BCReaderState *s)
         p->tab[p->len - 1] = v;
     }
     bc_read_trace(s, "}\n");
-    return JS_CompactBigInt(s->ctx, p);
+    return JS_CompactBigIntRT(s->ctx->rt, p);
  fail:
     JS_FreeValue(s->ctx, obj);
     return JS_EXCEPTION;
