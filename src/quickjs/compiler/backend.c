@@ -2240,15 +2240,19 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             }
             goto no_change;
 
-        case OP_enter_strict:
-        case OP_leave_strict:
-            s->jump_size++;
-            goto no_change;
-
         case OP_enter_scope:
             {
                 int scope_idx, scope = get_u16(bc_buf + pos + 1);
+                int parent = s->scopes[scope].parent;
+                BOOL strict = (s->js_mode & JS_MODE_STRICT) ||
+                    s->scopes[scope].is_strict;
+                BOOL parent_strict = (s->js_mode & JS_MODE_STRICT) ||
+                    (parent >= 0 && s->scopes[parent].is_strict);
 
+                if (strict != parent_strict) {
+                    dbuf_putc(&bc_out, OP_set_strict);
+                    dbuf_putc(&bc_out, strict);
+                }
                 if (scope == s->body_scope) {
                     instantiate_hoisted_definitions(rt, s, &bc_out);
                 }
@@ -2282,6 +2286,11 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
         case OP_leave_scope:
             {
                 int scope_idx, scope = get_u16(bc_buf + pos + 1);
+                int parent = s->scopes[scope].parent;
+                BOOL strict = (s->js_mode & JS_MODE_STRICT) ||
+                    s->scopes[scope].is_strict;
+                BOOL parent_strict = (s->js_mode & JS_MODE_STRICT) ||
+                    (parent >= 0 && s->scopes[parent].is_strict);
 
                 /* Parameter bindings remain live throughout the body. */
                 if (s->has_parameter_expressions && scope == ARG_SCOPE_INDEX) {
@@ -2321,6 +2330,10 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                     } else {
                         break;
                     }
+                }
+                if (strict != parent_strict) {
+                    dbuf_putc(&bc_out, OP_set_strict);
+                    dbuf_putc(&bc_out, parent_strict);
                 }
             }
             break;
@@ -2784,21 +2797,6 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         len = opcode_info[op].size;
         pos_next = pos + len;
         switch(op) {
-        case OP_enter_strict:
-            /* The operand names the generator-return cleanup subroutine. */
-            update_label(s, get_u32(bc_buf + pos + 1), -1);
-            dbuf_putc(&bc_out, OP_set_strict);
-            dbuf_putc(&bc_out, 1);
-            break;
-
-        case OP_leave_strict:
-            label = get_u32(bc_buf + pos + 1);
-            dbuf_putc(&bc_out, OP_nip);
-            dbuf_putc(&bc_out, OP_set_strict);
-            dbuf_putc(&bc_out, 0);
-            op = OP_goto;
-            goto has_goto;
-
         case OP_line_num:
             /* line number info (for debug). We put it in a separate
                compressed table to reduce memory usage and get better

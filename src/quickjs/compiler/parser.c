@@ -1785,6 +1785,7 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     BlockEnv strict_block;
     BlockEnv *saved_top_break = fd->top_break;
     int label_strict_catch = -1, label_strict_end = -1;
+    int strict_scope = -1;
     const uint8_t *class_start_ptr = s->token.ptr;
     const uint8_t *start_ptr;
     ClassFieldsDef class_fields[2];
@@ -1805,7 +1806,9 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
             goto fail;
         /* Native exotic hooks can observe the active frame's strictness.
            Keep it until class evaluation and its abrupt cleanup finish. */
-        emit_goto(s, OP_enter_strict, strict_block.label_finally);
+        strict_scope = push_scope(s);
+        if (strict_scope < 0)
+            goto fail;
         emit_goto(s, OP_catch, label_strict_catch);
         class_flags |= JS_DEFINE_CLASS_HAS_STRICT_CATCH;
     }
@@ -2279,14 +2282,16 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     if (!(saved_js_mode & JS_MODE_STRICT)) {
         pop_break_entry(fd);
         /* Preserve the class value while removing its catch marker. */
-        emit_goto(s, OP_leave_strict, label_strict_end);
+        pop_scope(s);
+        emit_op(s, OP_nip);
+        emit_goto(s, OP_goto, label_strict_end);
         emit_label(s, label_strict_catch);
         emit_goto(s, OP_gosub, strict_block.label_finally);
         emit_op(s, OP_throw);
         /* Also reached by generator.return() before outer cleanup. */
         emit_label(s, strict_block.label_finally);
-        emit_op(s, OP_set_strict);
-        emit_u8(s, 0);
+        emit_op(s, OP_leave_scope);
+        emit_u16(s, strict_scope);
         emit_op(s, OP_ret);
         emit_label(s, label_strict_end);
     }
