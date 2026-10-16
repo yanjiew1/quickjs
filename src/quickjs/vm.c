@@ -258,12 +258,12 @@ static no_inline __exception int js_unary_arith_slow(JSContext *ctx,
             case OP_inc:
                 if (v == JS_SHORT_BIG_INT_MAX)
                     goto bigint_slow_case;
-                sp[-1] = __JS_NewShortBigInt(ctx, v + 1);
+                sp[-1] = __JS_NewShortBigInt(v + 1);
                 break;
             case OP_dec:
                 if (v == JS_SHORT_BIG_INT_MIN)
                     goto bigint_slow_case;
-                sp[-1] = __JS_NewShortBigInt(ctx, v - 1);
+                sp[-1] = __JS_NewShortBigInt(v - 1);
                 break;
             case OP_neg:
                 v = JS_VALUE_GET_SHORT_BIG_INT(op1);
@@ -272,7 +272,7 @@ static no_inline __exception int js_unary_arith_slow(JSContext *ctx,
                     p1 = js_bigint_set_short(&buf1, op1);
                     goto bigint_slow_case1;
                 }
-                sp[-1] = __JS_NewShortBigInt(ctx, -v);
+                sp[-1] = __JS_NewShortBigInt(-v);
                 break;
             default:
                 abort();
@@ -310,7 +310,7 @@ static no_inline __exception int js_unary_arith_slow(JSContext *ctx,
             JS_FreeValue(ctx, op1);
             if (!r)
                 goto exception;
-            sp[-1] = JS_CompactBigInt(ctx, r);
+            sp[-1] = JS_CompactBigIntRT(ctx->rt, r);
         }
         break;
     default:
@@ -368,14 +368,14 @@ static no_inline int js_not_slow(JSContext *ctx, JSValue *sp)
     if (JS_IsException(op1))
         goto exception;
     if (JS_VALUE_GET_TAG(op1) == JS_TAG_SHORT_BIG_INT) {
-        sp[-1] = __JS_NewShortBigInt(ctx, ~JS_VALUE_GET_SHORT_BIG_INT(op1));
+        sp[-1] = __JS_NewShortBigInt(~JS_VALUE_GET_SHORT_BIG_INT(op1));
     } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_BIG_INT) {
         JSBigInt *r;
         r = js_bigint_not(ctx, JS_VALUE_GET_PTR(op1));
         JS_FreeValue(ctx, op1);
         if (!r)
             goto exception;
-        sp[-1] = JS_CompactBigInt(ctx, r);
+        sp[-1] = JS_CompactBigIntRT(ctx->rt, r);
     } else {
         int32_t v1;
         if (unlikely(JS_ToInt32Free(ctx, &v1, op1)))
@@ -424,7 +424,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
                  v2 == -1)) {
                 goto slow_big_int;
             }
-            sp[-2] = __JS_NewShortBigInt(ctx, v1 / v2);
+            sp[-2] = __JS_NewShortBigInt(v1 / v2);
             return 0;
         case OP_mod:
             if (v2 == 0 ||
@@ -432,7 +432,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
                  v2 == -1)) {
                 goto slow_big_int;
             }
-            sp[-2] = __JS_NewShortBigInt(ctx, v1 % v2);
+            sp[-2] = __JS_NewShortBigInt(v1 % v2);
             return 0;
         case OP_pow:
             goto slow_big_int;
@@ -440,7 +440,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
             abort();
         }
         if (likely(v >= JS_SHORT_BIG_INT_MIN && v <= JS_SHORT_BIG_INT_MAX)) {
-            sp[-2] = __JS_NewShortBigInt(ctx, v);
+            sp[-2] = __JS_NewShortBigInt(v);
         } else {
             JSBigInt *r = js_bigint_new_di(ctx, v);
             if (!r)
@@ -536,7 +536,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
         JS_FreeValue(ctx, op2);
         if (!r)
             goto exception;
-        sp[-2] = JS_CompactBigInt(ctx, r);
+        sp[-2] = JS_CompactBigIntRT(ctx->rt, r);
     } else {
         double dr;
         /* float64 result */
@@ -601,7 +601,7 @@ static no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp)
         v2 = JS_VALUE_GET_SHORT_BIG_INT(op2);
         v = (js_sdlimb_t)v1 + (js_sdlimb_t)v2;
         if (likely(v >= JS_SHORT_BIG_INT_MIN && v <= JS_SHORT_BIG_INT_MAX)) {
-            sp[-2] = __JS_NewShortBigInt(ctx, v);
+            sp[-2] = __JS_NewShortBigInt(v);
         } else {
             JSBigInt *r = js_bigint_new_di(ctx, v);
             if (!r)
@@ -672,7 +672,7 @@ static no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp)
         JS_FreeValue(ctx, op2);
         if (!r)
             goto exception;
-        sp[-2] = JS_CompactBigInt(ctx, r);
+        sp[-2] = JS_CompactBigIntRT(ctx->rt, r);
     } else {
         double d1, d2;
         /* float64 result */
@@ -757,7 +757,7 @@ static no_inline __exception int js_binary_logic_slow(JSContext *ctx,
         default:
             abort();
         }
-        sp[-2] = __JS_NewShortBigInt(ctx, v);
+        sp[-2] = __JS_NewShortBigInt(v);
         return 0;
     }
     op1 = JS_ToNumericFree(ctx, op1);
@@ -816,7 +816,7 @@ static no_inline __exception int js_binary_logic_slow(JSContext *ctx,
         JS_FreeValue(ctx, op2);
         if (!r)
             goto exception;
-        sp[-2] = JS_CompactBigInt(ctx, r);
+        sp[-2] = JS_CompactBigIntRT(ctx->rt, r);
     } else {
         if (unlikely(JS_ToInt32Free(ctx, (int32_t *)&v1, op1))) {
             JS_FreeValue(ctx, op2);
@@ -2608,7 +2608,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             pc += 4;
             BREAK;
         CASE(OP_push_bigint_i32):
-            *sp++ = __JS_NewShortBigInt(ctx, (int)get_u32(pc));
+            *sp++ = __JS_NewShortBigInt((int)get_u32(pc));
             pc += 4;
             BREAK;
         CASE(OP_push_const):

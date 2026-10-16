@@ -272,7 +272,7 @@ JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
                 val = JS_EXCEPTION;
                 goto done;
             }
-            val = JS_CompactBigInt(ctx, r);
+            val = JS_CompactBigIntRT(ctx->rt, r);
         }
         break;
     default:
