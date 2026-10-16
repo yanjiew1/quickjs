@@ -98,6 +98,38 @@ jobs:
           name: gc-stress
           path: gc-stress.log
 
+  linux-tsan:
+    name: Linux focused thread sanitizer
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TSAN_OPTIONS: halt_on_error=1:exitcode=66
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check ThreadSanitizer startup
+        run: |
+          set -o pipefail
+          mkdir -p tsan-logs
+          # GCC TSan needs a compatible shadow mapping on this ephemeral runner.
+          if test "$(sysctl -n vm.mmap_rnd_bits)" -gt 28; then
+            sudo sysctl -w vm.mmap_rnd_bits=28
+          fi
+          printf 'int main(void) { return 0; }\n' > tsan-logs/probe.c
+          gcc -g -O1 -fsanitize=thread tsan-logs/probe.c -o tsan-logs/probe
+          ./tsan-logs/probe 2>&1 | tee tsan-logs/startup.log
+      - name: Build and run focused concurrency tests
+        run: |
+          set -o pipefail
+          make -j$(getconf _NPROCESSORS_ONLN) CC=gcc HOST_CC=gcc \
+            CONFIG_WERROR=y CONFIG_LTO= CONFIG_TSAN=y \
+            test-threading 2>&1 | tee tsan-logs/tests.log
+      - name: Preserve ThreadSanitizer diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: thread-sanitizer
+          path: tsan-logs/
+
   linux-msan:
     runs-on: ubuntu-latest
     steps:
