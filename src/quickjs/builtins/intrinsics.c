@@ -84,6 +84,8 @@ int JS_AddIntrinsicBasicObjects(JSContext *ctx)
     {
         JSObject *p;
         obj = JS_NewObjectProtoClassAlloc(ctx, JS_NULL, JS_CLASS_OBJECT, 4);
+        if (JS_IsException(obj))
+            return -1;
         p = JS_VALUE_GET_OBJ(ctx->global_obj);
         p->u.global_object.uninitialized_vars = obj;
     }
