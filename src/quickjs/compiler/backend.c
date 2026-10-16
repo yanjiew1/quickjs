@@ -532,10 +532,10 @@ static int resolve_pseudo_var(JSContext *ctx, JSFunctionDef *s,
         var_idx = s->this_var_idx;
         break;
     default:
-        var_idx = -1;
-        break;
+        return -1;
     }
-    return var_idx;
+    /* Distinguish a failed binding allocation from an absent binding. */
+    return var_idx < 0 ? -2 : var_idx;
 }
 
 /* test if 'var_name' is in the variable object on the stack. If is it
@@ -667,8 +667,11 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             var_idx = resolve_parameter_copy(s, find_var(ctx, s, var_name));
         }
 
-        if (var_idx < 0 && is_pseudo_var)
+        if (var_idx < 0 && is_pseudo_var) {
             var_idx = resolve_pseudo_var(ctx, s, var_name);
+            if (var_idx == -2)
+                return -1;
+        }
 
         if (var_idx < 0 && var_name == JS_ATOM_arguments &&
             s->has_arguments_binding) {
@@ -863,6 +866,8 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         }
         if (is_pseudo_var) {
             var_idx = resolve_pseudo_var(ctx, fd, var_name);
+            if (var_idx == -2)
+                return -1;
             if (var_idx >= 0)
                 break;
         }
@@ -2084,6 +2089,8 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
             scope = get_u16(bc_buf + pos + 5);
             pos_next = resolve_scope_var(ctx, s, var_name, scope, op, &bc_out,
                                          NULL, NULL, pos_next);
+            if (pos_next < 0)
+                goto fail;
             JS_FreeAtom(ctx, var_name);
             break;
         case OP_scope_make_ref:
@@ -2097,6 +2104,8 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                 ls->ref_count--;  /* always remove label reference */
                 pos_next = resolve_scope_var(ctx, s, var_name, scope, op, &bc_out,
                                              bc_buf, ls, pos_next);
+                if (pos_next < 0)
+                    goto fail;
                 JS_FreeAtom(ctx, var_name);
             }
             break;
@@ -2800,18 +2809,20 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
                 for(re = ls->first_reloc; re != NULL; re = re_next) {
                     int diff = ls->addr - re->addr;
                     re_next = re->next;
-                    switch (re->size) {
-                    case 4:
-                        put_u32(bc_out.buf + re->addr, diff);
-                        break;
-                    case 2:
-                        assert(diff == (int16_t)diff);
-                        put_u16(bc_out.buf + re->addr, diff);
-                        break;
-                    case 1:
-                        assert(diff == (int8_t)diff);
-                        put_u8(bc_out.buf + re->addr, diff);
-                        break;
+                    if (!dbuf_error(&bc_out)) {
+                        switch (re->size) {
+                        case 4:
+                            put_u32(bc_out.buf + re->addr, diff);
+                            break;
+                        case 2:
+                            assert(diff == (int16_t)diff);
+                            put_u16(bc_out.buf + re->addr, diff);
+                            break;
+                        case 1:
+                            assert(diff == (int8_t)diff);
+                            put_u8(bc_out.buf + re->addr, diff);
+                            break;
+                        }
                     }
                     js_free(ctx, re);
                 }
@@ -3489,7 +3500,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
         assert(label_slots[i].first_reloc == NULL);
     }
 #if SHORT_OPCODES
-    if (OPTIMIZE) {
+    if (OPTIMIZE && !dbuf_error(&bc_out)) {
         /* more jump optimizations */
         int patch_offsets = 0;
         for (i = 0, jp = s->jump_slots; i < s->jump_count; i++, jp++) {
@@ -3584,6 +3595,16 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
     }
     return 0;
  fail:
+    if (s->label_slots) {
+        for (i = 0; i < s->label_count; i++) {
+            ls = &s->label_slots[i];
+            for (re = ls->first_reloc; re != NULL; re = re_next) {
+                re_next = re->next;
+                js_free(ctx, re);
+            }
+            ls->first_reloc = NULL;
+        }
+    }
     /* XXX: not safe */
     dbuf_free(&bc_out);
     return -1;
