@@ -126,3 +126,7 @@ libwinpthread*.dll
 
 /tests/test_object
 /tests/test_object.exe
+
+/tests/test_dtoa
+/tests/test_dtoa.exe
+/tests/test_dtoa-debug
