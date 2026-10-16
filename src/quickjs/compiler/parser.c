@@ -286,7 +286,9 @@ static __exception int emit_push_const(JSParseState *s, JSValueConst val,
         /* warning: JS_NewAtomStr frees the string value */
         JS_DupValue(s->ctx, val);
         atom = JS_NewAtomStr(s->ctx, JS_VALUE_GET_STRING(val));
-        if (atom != JS_ATOM_NULL && !__JS_AtomIsTaggedInt(atom)) {
+        if (atom == JS_ATOM_NULL)
+            return -1;
+        if (!__JS_AtomIsTaggedInt(atom)) {
             emit_op(s, OP_push_atom_value);
             emit_u32(s, atom);
             return 0;
@@ -1577,6 +1579,8 @@ static __exception int js_parse_class_default_ctor(JSParseState *s,
 
     /* the real object will be set at the end of the compilation */
     idx = cpool_add(s, JS_NULL);
+    if (idx < 0)
+        return -1;
     fd->parent_cpool_idx = idx;
 
     return 0;
@@ -1675,7 +1679,7 @@ static __exception int emit_class_init_start(JSParseState *s,
     return 0;
 }
 
-static void emit_class_init_end(JSParseState *s, ClassFieldsDef *cf)
+static int emit_class_init_end(JSParseState *s, ClassFieldsDef *cf)
 {
     int cpool_idx;
 
@@ -1684,10 +1688,13 @@ static void emit_class_init_end(JSParseState *s, ClassFieldsDef *cf)
     s->cur_func = s->cur_func->parent;
 
     cpool_idx = cpool_add(s, JS_NULL);
+    if (cpool_idx < 0)
+        return -1;
     cf->fields_init_fd->parent_cpool_idx = cpool_idx;
     emit_op(s, OP_fclosure);
     emit_u32(s, cpool_idx);
     emit_op(s, OP_set_home_object);
+    return 0;
 }
 
 
@@ -2102,6 +2109,10 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
         if (js_parse_class_default_ctor(s, class_flags & JS_DEFINE_CLASS_HAS_HERITAGE, &ctor_fd))
             goto fail;
     }
+    if (dbuf_error(&fd->byte_code)) {
+        JS_ThrowOutOfMemory(ctx);
+        goto fail;
+    }
     /* patch the constant pool index for the constructor */
     put_u32(fd->byte_code.buf + ctor_cpool_offset, ctor_fd->parent_cpool_idx);
 
@@ -2147,7 +2158,8 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
         if (var_idx < 0)
             goto fail;
         if (cf->fields_init_fd) {
-            emit_class_init_end(s, cf);
+            if (emit_class_init_end(s, cf) < 0)
+                goto fail;
         } else {
             emit_op(s, OP_undefined);
         }
@@ -2180,7 +2192,8 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
     if (class_fields[1].fields_init_fd != NULL) {
         ClassFieldsDef *cf = &class_fields[1];
         emit_op(s, OP_dup);
-        emit_class_init_end(s, cf);
+        if (emit_class_init_end(s, cf) < 0)
+            goto fail;
         emit_op(s, OP_call_method);
         emit_u16(s, 0);
         emit_op(s, OP_drop);
