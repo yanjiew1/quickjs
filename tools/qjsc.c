@@ -608,8 +608,17 @@ static int output_executable(const char *out_filename, const char *cfilename,
     if (dynamic_export)
         *arg++ = "-rdynamic";
     *arg++ = cfilename;
-    snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s%s.a",
-             lib_dir, bn_suffix, lto_suffix);
+#ifdef CONFIG_SHARED_LIBRARY
+    /* A shared engine does not require the generated source to use LTO. */
+    lto_suffix = "";
+    snprintf(buf, sizeof(buf), "-Wl,-rpath,%s", lib_dir);
+    *arg++ = buf;
+#endif
+#ifndef CONFIG_LIBRARY_SUFFIX
+#define CONFIG_LIBRARY_SUFFIX ".a"
+#endif
+    snprintf(libjsname, sizeof(libjsname), "%s/libquickjs%s%s%s",
+             lib_dir, bn_suffix, lto_suffix, CONFIG_LIBRARY_SUFFIX);
     *arg++ = libjsname;
     *arg++ = "-lm";
     *arg++ = "-ldl";
