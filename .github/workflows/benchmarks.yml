@@ -2,13 +2,17 @@ name: benchmarks
 
 on:
   push:
-    branches: [main, main-new, temporal, intl, 'scratch/benchmarks/**']
+    branches: [main, main-new, temporal, intl, 'scratch/benchmarks/**', 'scratch-verify-*']
   workflow_dispatch:
     inputs:
       candidate_revision:
         description: Exact candidate commit SHA (blank uses the selected workflow revision)
         type: string
         default: ''
+      bellard_revision:
+        description: Exact Bellard QuickJS SHA (default is the fixed fork upstream base, not latest)
+        type: string
+        default: '535a7c250ff4a577ec36c3e103daab6dadeea650'
       suite:
         description: Workloads (Zoo excludes zlib)
         type: choice
@@ -38,6 +42,7 @@ jobs:
       CANDIDATE_SHA: ${{ inputs.candidate_revision || github.sha }}
       EVENT_NAME: ${{ github.event_name }}
       BEFORE_SHA: ${{ github.event.before }}
+      BRANCH_NAME: ${{ github.ref_name }}
     steps:
       - name: Check out exact benchmark tooling
         uses: actions/checkout@v7
@@ -55,30 +60,32 @@ jobs:
         run: |
           python3 tooling/tools/benchmarks/select_benchmark.py \
             --candidate candidate --candidate-revision "$CANDIDATE_SHA" \
-            --before-revision "$BEFORE_SHA" --event "$EVENT_NAME" \
+            --before-revision "$BEFORE_SHA" --branch "$BRANCH_NAME" --event "$EVENT_NAME" \
             --github-output "$GITHUB_OUTPUT"
 
   compare:
     needs: select
     if: needs.select.outputs.run == 'true'
-    name: Informational ${{ matrix.compiler }} benchmarks
+    name: Informational ${{ matrix.compiler }} versus ${{ matrix.baseline }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
         compiler: [gcc, clang]
+        baseline: [parent, bellard]
     env:
       SUITE: ${{ inputs.suite || 'core' }}
       ROUNDS: ${{ inputs.rounds || '1' }}
       COMPILER: ${{ matrix.compiler }}
       CANDIDATE_SHA: ${{ inputs.candidate_revision || github.sha }}
-      PARENT_SHA: ${{ needs.select.outputs.parent_revision }}
+      BASELINE_KIND: ${{ matrix.baseline }}
+      BASELINE_SHA: ${{ matrix.baseline == 'parent' && needs.select.outputs.parent_revision || inputs.bellard_revision || '535a7c250ff4a577ec36c3e103daab6dadeea650' }}
       TOOLING_SHA: ${{ github.sha }}
     steps:
       - name: Select report directory
         run: |
-          echo "REPORT=$RUNNER_TEMP/quickjs-benchmarks-$COMPILER" >> "$GITHUB_ENV"
+          echo "REPORT=$RUNNER_TEMP/quickjs-benchmarks-$COMPILER-$BASELINE_KIND" >> "$GITHUB_ENV"
       - name: Check out exact benchmark tooling
         uses: actions/checkout@v7
         with:
@@ -91,18 +98,31 @@ jobs:
           ref: ${{ inputs.candidate_revision || github.sha }}
           fetch-depth: 2
       - name: Check out actual immediate parent
+        if: matrix.baseline == 'parent'
         uses: actions/checkout@v7
         with:
-          path: parent
+          path: baseline
           ref: ${{ needs.select.outputs.parent_revision }}
+      - name: Check out exact original Bellard QuickJS revision
+        if: matrix.baseline == 'bellard'
+        uses: actions/checkout@v7
+        with:
+          repository: bellard/quickjs
+          path: baseline
+          ref: ${{ inputs.bellard_revision || '535a7c250ff4a577ec36c3e103daab6dadeea650' }}
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
       - name: Verify benchmark tool contracts
         run: |
           python3 -m unittest discover -s tooling/tools/benchmarks -p 'test_*.py'
-      - name: Build and compare fresh JavaScript processes
+      - name: Build without assertions and compare fresh JavaScript processes
         run: |
           python3 tooling/tools/benchmarks/run.py \
             --candidate candidate --candidate-revision "$CANDIDATE_SHA" \
-            --parent parent --parent-revision "$PARENT_SHA" \
+            --baseline baseline --baseline-revision "$BASELINE_SHA" \
+            --baseline-kind "$BASELINE_KIND" \
             --tooling-revision "$TOOLING_SHA" --compiler "$COMPILER" \
             --suite "$SUITE" --rounds "$ROUNDS" --build-jobs 2 \
             --cpu auto --output "$REPORT"
@@ -119,7 +139,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: benchmarks-${{ matrix.compiler }}-${{ inputs.candidate_revision || github.sha }}
+          name: benchmarks-${{ matrix.compiler }}-${{ matrix.baseline }}-${{ inputs.candidate_revision || github.sha }}
           path: ${{ env.REPORT }}
           if-no-files-found: warn
           retention-days: 30
