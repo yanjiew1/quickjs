@@ -130,3 +130,6 @@ libwinpthread*.dll
 /tests/test_dtoa
 /tests/test_dtoa.exe
 /tests/test_dtoa-debug
+
+/tests/test_unicode_gen
+/tests/test_unicode_gen.exe
