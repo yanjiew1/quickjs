@@ -73,9 +73,9 @@ struct LineNumberSlot {
 
 
 
-static inline void js_dbuf_bytecode_init(JSContext *ctx, DynBuf *s)
+static inline void js_dbuf_bytecode_init(JSRuntime *rt, DynBuf *s)
 {
-    dbuf_init2(s, ctx->rt, js_realloc_bytecode_rt);
+    dbuf_init2(s, rt, js_realloc_bytecode_rt);
 }
 
 static inline void put_u8(uint8_t *tab, uint8_t val)
@@ -126,6 +126,7 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
                                    const uint8_t *source_ptr,
                                    GetLineColCache *get_line_col_cache)
 {
+    JSRuntime *rt = ctx->rt;
     JSFunctionDef *fd;
 
     fd = js_mallocz(ctx, sizeof(*fd));
@@ -143,12 +144,12 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
         fd->js_mode = parent->js_mode;
         fd->parent_scope_level = parent->scope_level;
     }
-    fd->strip_debug = ((ctx->rt->strip_flags & JS_STRIP_DEBUG) != 0);
-    fd->strip_source = ((ctx->rt->strip_flags & (JS_STRIP_DEBUG | JS_STRIP_SOURCE)) != 0);
+    fd->strip_debug = ((rt->strip_flags & JS_STRIP_DEBUG) != 0);
+    fd->strip_source = ((rt->strip_flags & (JS_STRIP_DEBUG | JS_STRIP_SOURCE)) != 0);
 
     fd->is_eval = is_eval;
     fd->is_func_expr = is_func_expr;
-    js_dbuf_bytecode_init(ctx, &fd->byte_code);
+    js_dbuf_bytecode_init(rt, &fd->byte_code);
     fd->last_opcode_pos = -1;
     fd->func_name = JS_ATOM_NULL;
     fd->var_object_idx = -1;
@@ -176,9 +177,9 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
     fd->source_pos = source_ptr - get_line_col_cache->buf_start;
     fd->get_line_col_cache = get_line_col_cache;
     
-    js_dbuf_init(ctx, &fd->pc2line);
+    js_dbuf_init(rt, &fd->pc2line);
     if (fd->filename == JS_ATOM_NULL) {
-        js_free_function_def(ctx, fd);
+        js_free_function_def(rt, fd);
         return NULL;
     }
     //fd->pc2line_last_line_num = line_num;
@@ -187,7 +188,7 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
     return fd;
 }
 
-void js_free_function_def(JSContext *ctx, JSFunctionDef *fd)
+void js_free_function_def(JSRuntime *rt, JSFunctionDef *fd)
 {
     int i;
     struct list_head *el, *el1;
@@ -196,56 +197,56 @@ void js_free_function_def(JSContext *ctx, JSFunctionDef *fd)
     list_for_each_safe(el, el1, &fd->child_list) {
         JSFunctionDef *fd1;
         fd1 = list_entry(el, JSFunctionDef, link);
-        js_free_function_def(ctx, fd1);
+        js_free_function_def(rt, fd1);
     }
 
-    free_bytecode_atoms(ctx->rt, fd->byte_code.buf, fd->byte_code.size,
+    free_bytecode_atoms(rt, fd->byte_code.buf, fd->byte_code.size,
                         fd->use_short_opcodes);
     dbuf_free(&fd->byte_code);
-    js_free(ctx, fd->jump_slots);
-    js_free(ctx, fd->label_slots);
-    js_free(ctx, fd->line_number_slots);
+    js_free_rt(rt, fd->jump_slots);
+    js_free_rt(rt, fd->label_slots);
+    js_free_rt(rt, fd->line_number_slots);
 
     for(i = 0; i < fd->cpool_count; i++) {
-        JS_FreeValue(ctx, fd->cpool[i]);
+        JS_FreeValueRT(rt, fd->cpool[i]);
     }
-    js_free(ctx, fd->cpool);
+    js_free_rt(rt, fd->cpool);
 
-    JS_FreeAtom(ctx, fd->func_name);
+    JS_FreeAtomRT(rt, fd->func_name);
 
     for(i = 0; i < fd->var_count; i++) {
-        JS_FreeAtom(ctx, fd->vars[i].var_name);
+        JS_FreeAtomRT(rt, fd->vars[i].var_name);
     }
-    js_free(ctx, fd->vars);
+    js_free_rt(rt, fd->vars);
     for(i = 0; i < fd->arg_count; i++) {
-        JS_FreeAtom(ctx, fd->args[i].var_name);
+        JS_FreeAtomRT(rt, fd->args[i].var_name);
     }
-    js_free(ctx, fd->args);
+    js_free_rt(rt, fd->args);
 
     for(i = 0; i < fd->global_var_count; i++) {
-        JS_FreeAtom(ctx, fd->global_vars[i].var_name);
+        JS_FreeAtomRT(rt, fd->global_vars[i].var_name);
     }
-    js_free(ctx, fd->global_vars);
+    js_free_rt(rt, fd->global_vars);
 
     for(i = 0; i < fd->closure_var_count; i++) {
         JSClosureVar *cv = &fd->closure_var[i];
-        JS_FreeAtom(ctx, cv->var_name);
+        JS_FreeAtomRT(rt, cv->var_name);
     }
-    js_free(ctx, fd->closure_var);
+    js_free_rt(rt, fd->closure_var);
 
     if (fd->scopes != fd->def_scope_array)
-        js_free(ctx, fd->scopes);
+        js_free_rt(rt, fd->scopes);
 
-    JS_FreeAtom(ctx, fd->filename);
+    JS_FreeAtomRT(rt, fd->filename);
     dbuf_free(&fd->pc2line);
 
-    js_free(ctx, fd->source);
+    js_free_rt(rt, fd->source);
 
     if (fd->parent) {
         /* remove in parent list */
         list_del(&fd->link);
     }
-    js_free(ctx, fd);
+    js_free_rt(rt, fd);
 }
 
 
@@ -540,12 +541,12 @@ static int resolve_pseudo_var(JSContext *ctx, JSFunctionDef *s,
 
 /* test if 'var_name' is in the variable object on the stack. If is it
    the case, handle it and jump to 'label_done' */
-static void var_object_test(JSContext *ctx, JSFunctionDef *s,
+static void var_object_test(JSRuntime *rt, JSFunctionDef *s,
                             JSAtom var_name, int op, DynBuf *bc,
                             int *plabel_done, BOOL is_with)
 {
     dbuf_putc(bc, get_with_scope_opcode(op));
-    dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
+    dbuf_put_u32(bc, JS_DupAtomRT(rt, var_name));
     if (*plabel_done < 0) {
         *plabel_done = new_label_fd(s);
         if (*plabel_done < 0) {
@@ -591,7 +592,7 @@ static int resolve_parameter_copy(JSFunctionDef *fd, int var_idx)
 
 /* The RHS has already been evaluated. A lexical binding must be
    initialized before its immutable write is rejected. */
-static void emit_var_read_only_error(JSContext *ctx, DynBuf *bc,
+static void emit_var_read_only_error(JSRuntime *rt, DynBuf *bc,
                                      JSAtom var_name, int get_op, int var_idx)
 {
     if (get_op != OP_invalid) {
@@ -600,7 +601,7 @@ static void emit_var_read_only_error(JSContext *ctx, DynBuf *bc,
         dbuf_putc(bc, OP_drop);
     }
     dbuf_putc(bc, OP_throw_error);
-    dbuf_put_u32(bc, JS_DupAtom(ctx, var_name));
+    dbuf_put_u32(bc, JS_DupAtomRT(rt, var_name));
     dbuf_putc(bc, JS_THROW_VAR_RO);
 }
 
@@ -609,6 +610,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                              DynBuf *bc, uint8_t *bc_buf,
                              LabelSlot *ls, int pos_next)
 {
+    JSRuntime *rt = ctx->rt;
     int idx, var_idx, is_put;
     int label_done;
     JSFunctionDef *fd;
@@ -651,7 +653,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
         if (vd->var_name == JS_ATOM__with_ && !is_pseudo_var && !is_decl) {
             dbuf_putc(bc, OP_get_loc);
             dbuf_put_u16(bc, idx);
-            var_object_test(ctx, s, var_name, op, bc, &label_done, 1);
+            var_object_test(rt, s, var_name, op, bc, &label_done, 1);
         }
         idx = vd->scope_next;
     }
@@ -693,14 +695,14 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
             !is_arg_scope && s->var_object_idx >= 0) {
             dbuf_putc(bc, OP_get_loc);
             dbuf_put_u16(bc, s->var_object_idx);
-            var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+            var_object_test(rt, s, var_name, op, bc, &label_done, 0);
         }
         if (op == OP_scope_put_var &&
             !(var_idx & ARGUMENT_VAR_OFFSET) &&
             (s->vars[var_idx].is_const ||
              (is_strict_binding &&
               s->vars[var_idx].var_kind == JS_VAR_FUNCTION_NAME))) {
-            emit_var_read_only_error(ctx, bc, var_name,
+            emit_var_read_only_error(rt, bc, var_name,
                                      s->vars[var_idx].is_lexical ?
                                      OP_get_loc_check : OP_invalid, var_idx);
             goto done;
@@ -810,13 +812,13 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
     if (!is_arg_scope && s->var_object_idx >= 0 && !is_pseudo_var) {
         dbuf_putc(bc, OP_get_loc);
         dbuf_put_u16(bc, s->var_object_idx);
-        var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+        var_object_test(rt, s, var_name, op, bc, &label_done, 0);
     }
     /* check eval object in argument scope */
     if (s->arg_var_object_idx >= 0 && !is_pseudo_var) {
         dbuf_putc(bc, OP_get_loc);
         dbuf_put_u16(bc, s->arg_var_object_idx);
-        var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+        var_object_test(rt, s, var_name, op, bc, &label_done, 0);
     }
 
     /* check parent scopes */
@@ -834,7 +836,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 if (idx >= 0) {
                     dbuf_putc(bc, OP_get_var_ref);
                     dbuf_put_u16(bc, idx);
-                    var_object_test(ctx, s, var_name, op, bc, &label_done, 1);
+                    var_object_test(rt, s, var_name, op, bc, &label_done, 1);
                 }
             }
             idx = vd->scope_next;
@@ -859,7 +861,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                     return -1;
                 dbuf_putc(bc, OP_get_var_ref);
                 dbuf_put_u16(bc, idx);
-                var_object_test(ctx, s, var_name, op, bc, &label_done,
+                var_object_test(rt, s, var_name, op, bc, &label_done,
                                 0);
             }
             break;
@@ -882,7 +884,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                                       FALSE, FALSE, JS_VAR_NORMAL);
                 dbuf_putc(bc, OP_get_var_ref);
                 dbuf_put_u16(bc, idx);
-                var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+                var_object_test(rt, s, var_name, op, bc, &label_done, 0);
             }
             break;
         }
@@ -901,7 +903,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                                   FALSE, FALSE, JS_VAR_NORMAL);
             dbuf_putc(bc, OP_get_var_ref);
             dbuf_put_u16(bc, idx);
-            var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+            var_object_test(rt, s, var_name, op, bc, &label_done, 0);
         }
 
         /* check eval object in argument scope */
@@ -913,7 +915,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                                   FALSE, FALSE, JS_VAR_NORMAL);
             dbuf_putc(bc, OP_get_var_ref);
             dbuf_put_u16(bc, idx);
-            var_object_test(ctx, s, var_name, op, bc, &label_done, 0);
+            var_object_test(rt, s, var_name, op, bc, &label_done, 0);
         }
 
         if (fd->is_eval)
@@ -974,7 +976,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 }
                 dbuf_putc(bc, OP_get_var_ref);
                 dbuf_put_u16(bc, idx);
-                var_object_test(ctx, s, var_name, op, bc, &label_done, is_with);
+                var_object_test(rt, s, var_name, op, bc, &label_done, is_with);
             }
         }
 
@@ -1060,7 +1062,7 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
                 JSClosureVar *cv = &s->closure_var[idx];
                 /* An import is initialized independently of the target
                    binding, whose value must not be read for this write. */
-                emit_var_read_only_error(ctx, bc, var_name,
+                emit_var_read_only_error(rt, bc, var_name,
                                          cv->is_lexical &&
                                          cv->var_kind != JS_VAR_IMPORT ?
                                          OP_get_var_ref_check : OP_invalid,
@@ -1561,7 +1563,7 @@ static void add_eval_variables(JSContext *ctx, JSFunctionDef *s)
     }
 }
 
-static void set_closure_from_var(JSContext *ctx, JSClosureVar *cv,
+static void set_closure_from_var(JSRuntime *rt, JSClosureVar *cv,
                                  JSBytecodeVarDef *vd, int var_idx)
 {
     cv->closure_type = JS_CLOSURE_LOCAL;
@@ -1569,7 +1571,7 @@ static void set_closure_from_var(JSContext *ctx, JSClosureVar *cv,
     cv->is_lexical = vd->is_lexical;
     cv->var_kind = vd->var_kind;
     cv->var_idx = var_idx;
-    cv->var_name = JS_DupAtom(ctx, vd->var_name);
+    cv->var_name = JS_DupAtomRT(rt, vd->var_name);
 }
 
 /* for direct eval compilation: add references to the variables of the
@@ -1577,6 +1579,7 @@ static void set_closure_from_var(JSContext *ctx, JSClosureVar *cv,
 __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
                                       JSFunctionBytecode *b, int scope_idx)
 {
+    JSRuntime *rt = ctx->rt;
     int i, count;
     JSBytecodeVarDef *vd;
     BOOL is_arg_scope;
@@ -1595,7 +1598,7 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
         vd = &b->vardefs[b->arg_count + i];
         if (vd->has_scope) {
             JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
-            set_closure_from_var(ctx, cv, vd, i);
+            set_closure_from_var(rt, cv, vd, i);
         }
         i = vd->scope_next;
     }
@@ -1622,7 +1625,7 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
                 vd->var_name != JS_ATOM_NULL &&
                 vd->var_kind != JS_VAR_PARAMETER_COPY) {
                 JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
-                set_closure_from_var(ctx, cv, vd, i);
+                set_closure_from_var(rt, cv, vd, i);
             }
         }
         /* Parameter bindings are outside the body variable environment. */
@@ -1635,7 +1638,7 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
                 end = b->vardefs[b->arg_count + end].scope_next;
             if (end == ARG_SCOPE_END) {
                 JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
-                set_closure_from_var(ctx, cv, vd, i);
+                set_closure_from_var(rt, cv, vd, i);
             }
         }
     } else {
@@ -1644,7 +1647,7 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
             vd = &b->vardefs[b->arg_count + i];
             if (!vd->has_scope && is_var_in_arg_scope(vd->var_name, vd->var_kind)) {
                 JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
-                set_closure_from_var(ctx, cv, vd, i);
+                set_closure_from_var(rt, cv, vd, i);
             }
         }
     }
@@ -1817,7 +1820,7 @@ static BOOL code_match(CodeContext *s, int pos, ...)
     return ret;
 }
 
-static void instantiate_hoisted_definitions(JSContext *ctx, JSFunctionDef *s, DynBuf *bc)
+static void instantiate_hoisted_definitions(JSRuntime *rt, JSFunctionDef *s, DynBuf *bc)
 {
     int i, idx, label_next = -1;
 
@@ -1895,7 +1898,7 @@ static void instantiate_hoisted_definitions(JSContext *ctx, JSFunctionDef *s, Dy
                 if (hf->var_name == JS_ATOM__default_) {
                     /* set default export function name */
                     dbuf_putc(bc, OP_set_name);
-                    dbuf_put_u32(bc, JS_DupAtom(ctx, JS_ATOM_default));
+                    dbuf_put_u32(bc, JS_DupAtomRT(rt, JS_ATOM_default));
                 }
             } else {
                 dbuf_putc(bc, OP_undefined);
@@ -1905,11 +1908,11 @@ static void instantiate_hoisted_definitions(JSContext *ctx, JSFunctionDef *s, Dy
                 dbuf_put_u16(bc, idx);
             } else {
                 dbuf_putc(bc, OP_define_field);
-                dbuf_put_u32(bc, JS_DupAtom(ctx, hf->var_name));
+                dbuf_put_u32(bc, JS_DupAtomRT(rt, hf->var_name));
                 dbuf_putc(bc, OP_drop);
             }
         }
-        JS_FreeAtom(ctx, hf->var_name);
+        JS_FreeAtomRT(rt, hf->var_name);
     }
 
     if (s->module) {
@@ -1920,7 +1923,7 @@ static void instantiate_hoisted_definitions(JSContext *ctx, JSFunctionDef *s, Dy
         s->label_slots[label_next].pos2 = bc->size;
     }
 
-    js_free(ctx, s->global_vars);
+    js_free_rt(rt, s->global_vars);
     s->global_vars = NULL;
     s->global_var_count = 0;
     s->global_var_size = 0;
@@ -2003,6 +2006,7 @@ static int get_label_pos(JSFunctionDef *s, int label)
    variables when necessary */
 static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
 {
+    JSRuntime *rt = ctx->rt;
     int pos, pos_next, bc_len, op, len, line_num, i, idx;
     uint8_t *bc_buf;
     JSAtom var_name;
@@ -2012,7 +2016,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
 
     cc.bc_buf = bc_buf = s->byte_code.buf;
     cc.bc_len = bc_len = s->byte_code.size;
-    js_dbuf_bytecode_init(ctx, &bc_out);
+    js_dbuf_bytecode_init(rt, &bc_out);
 
     /* first pass for runtime checks (must be done before the
        variables are created) */
@@ -2248,7 +2252,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                     dbuf_putc(&bc_out, strict);
                 }
                 if (scope == s->body_scope) {
-                    instantiate_hoisted_definitions(ctx, s, &bc_out);
+                    instantiate_hoisted_definitions(rt, s, &bc_out);
                 }
 
                 for(scope_idx = s->scopes[scope].first; scope_idx >= 0;) {
@@ -2455,7 +2459,7 @@ static int compute_pc2line_info(JSFunctionDef *s)
         uint32_t last_pc = 0;
         int i, line_num, col_num;
         const uint8_t *buf_start = s->get_line_col_cache->buf_start;
-        js_dbuf_init(s->ctx, &s->pc2line);
+        js_dbuf_init(s->ctx->rt, &s->pc2line);
 
         last_line_num = get_line_col_cached(s->get_line_col_cache,
                                             &last_col_num,
@@ -2701,7 +2705,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
     cc.bc_buf = bc_buf = s->byte_code.buf;
     cc.bc_len = bc_len = s->byte_code.size;
-    js_dbuf_bytecode_init(ctx, &bc_out);
+    js_dbuf_bytecode_init(ctx->rt, &bc_out);
 
 #if SHORT_OPCODES
     if (s->jump_size) {
@@ -4001,6 +4005,6 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     js_free(ctx, fd);
     return JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
  fail:
-    js_free_function_def(ctx, fd);
+    js_free_function_def(ctx->rt, fd);
     return JS_EXCEPTION;
 }

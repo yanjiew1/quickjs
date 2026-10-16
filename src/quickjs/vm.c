@@ -1428,7 +1428,7 @@ static int js_arguments_define_own_property(JSContext *ctx,
     uint32_t idx;
     p = JS_VALUE_GET_OBJ(this_obj);
     /* convert to normal array when redefining an existing numeric field */
-    if (p->fast_array && JS_AtomIsArrayIndex(ctx, &idx, prop) &&
+    if (p->fast_array && JS_AtomIsArrayIndex(ctx->rt, &idx, prop) &&
         idx < p->u.array.count) {
         if (convert_fast_array_to_array(ctx, p))
             return -1;
@@ -3150,7 +3150,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     ret_val = JS_Call(ctx, sp[-2], JS_UNDEFINED, len,
                                       (JSValueConst *)tab);
                 }
-                free_arg_list(ctx, tab, len);
+                free_arg_list(rt, tab, len);
                 if (unlikely(JS_IsException(ret_val)))
                     goto exception;
                 JS_FreeValue(ctx, sp[-2]);

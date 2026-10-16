@@ -813,21 +813,20 @@ void js_dump_value_write(void *opaque, const char *buf, size_t len)
     fwrite(buf, 1, len, fo);
 }
 
-__maybe_unused void print_atom(JSContext *ctx, JSAtom atom)
+__maybe_unused void print_atom(JSRuntime *rt, JSAtom atom)
 {
     JSPrintValueState ss, *s = &ss;
     memset(s, 0, sizeof(*s));
-    s->rt = ctx->rt;
-    s->ctx = ctx;
+    s->rt = rt;
     s->write_func = js_dump_value_write;
     s->write_opaque = stdout;
     js_print_atom(s, atom);
 }
 
-static __maybe_unused void JS_DumpAtom(JSContext *ctx, const char *str, JSAtom atom)
+static __maybe_unused void JS_DumpAtom(JSRuntime *rt, const char *str, JSAtom atom)
 {
     printf("%s=", str);
-    print_atom(ctx, atom);
+    print_atom(rt, atom);
     printf("\n");
 }
 
