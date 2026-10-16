@@ -1638,6 +1638,82 @@ static void test_allocator_size_overflow(void)
     JS_FreeRuntime(rt);
 }
 
+static JSValue array_interrupt_callback(JSContext *ctx, JSValueConst this_val,
+                                         int argc, JSValueConst *argv)
+{
+    return JS_FALSE;
+}
+
+static int array_test_interrupt(JSRuntime *rt, void *opaque)
+{
+    int *count = opaque;
+    (*count)++;
+    return 1;
+}
+
+static void test_array_native_interrupt(void)
+{
+    static const struct {
+        const char *name;
+        int initial;
+    } cases[] = {
+        { "every", 0 }, { "some", 0 }, { "forEach", 0 },
+        { "map", 0 }, { "filter", 0 },
+        { "includes", 0 }, { "indexOf", 0 }, { "lastIndexOf", 0 },
+        { "find", 0 }, { "findIndex", 0 },
+        { "findLast", 0 }, { "findLastIndex", 0 },
+        { "reduce", 0 }, { "reduceRight", 0 },
+        { "reduce", 1 }, { "reduceRight", 1 },
+    };
+    size_t i;
+
+    for (i = 0; i < countof(cases); i++) {
+        JSRuntime *rt = JS_NewRuntime();
+        JSContext *ctx;
+        JSValue global, array, prototype, method, input, args[2], result, error;
+        const char *message;
+        int count = 0;
+
+        assert(rt);
+        ctx = JS_NewContext(rt);
+        assert(ctx);
+        global = JS_GetGlobalObject(ctx);
+        array = JS_GetPropertyStr(ctx, global, "Array");
+        prototype = JS_GetPropertyStr(ctx, array, "prototype");
+        method = JS_GetPropertyStr(ctx, prototype, cases[i].name);
+        assert(JS_IsFunction(ctx, method));
+        input = JS_NewObject(ctx);
+        assert(!JS_IsException(input));
+        assert(JS_SetPropertyStr(ctx, input, "length", JS_NewInt32(ctx, 100000)) >= 0);
+        args[0] = JS_NewCFunction(ctx, array_interrupt_callback, "callback", 0);
+        assert(!JS_IsException(args[0]));
+        args[1] = JS_NewInt32(ctx, 0);
+        /* Prime the VM budget so call entry itself cannot satisfy the test. */
+        result = JS_Eval(ctx, "0", 1, "prime-array-interrupt", JS_EVAL_TYPE_GLOBAL);
+        assert(!JS_IsException(result));
+        JS_FreeValue(ctx, result);
+        JS_SetInterruptHandler(rt, array_test_interrupt, &count);
+        result = JS_Call(ctx, method, input, cases[i].initial ? 2 : 1, args);
+        JS_SetInterruptHandler(rt, NULL, NULL);
+        assert(JS_IsException(result));
+        assert(count == 1);
+        error = JS_GetException(ctx);
+        message = JS_ToCString(ctx, error);
+        assert(message && strstr(message, "interrupted"));
+        JS_FreeCString(ctx, message);
+        JS_FreeValue(ctx, error);
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, args[0]);
+        JS_FreeValue(ctx, input);
+        JS_FreeValue(ctx, method);
+        JS_FreeValue(ctx, prototype);
+        JS_FreeValue(ctx, array);
+        JS_FreeValue(ctx, global);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+    }
+}
+
 static int regexp_test_interrupt(JSRuntime *rt, void *opaque)
 {
     unsigned int *count = opaque;
@@ -3901,6 +3977,7 @@ int main(int argc, char **argv)
         { "shared-buffer-clone-release", test_shared_clone_release_callback },
         { "typed-array-arguments", test_typed_array_arguments },
         { "atom", test_empty_atom },
+        { "array-native-interrupt", test_array_native_interrupt },
         { "buffer-callback-lifetime", test_external_buffer_callback_lifetime },
         { "buffer-transfer", test_empty_buffer_transfer },
         { "buffer-transfer-no-free", test_buffer_transfer_without_free_callback },
