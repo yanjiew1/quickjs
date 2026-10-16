@@ -63,7 +63,7 @@ typedef struct {
 
 JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val);
 
-JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p);
+JSValue JS_CompactBigIntRT(JSRuntime *rt, JSBigInt *p);
 JSBigInt *js_bigint_new(JSContext *ctx, int len);
 JSBigInt *js_bigint_extend(JSContext *ctx, JSBigInt *r, js_limb_t op1);
 
@@ -105,7 +105,7 @@ JSBigInt *js_bigint_shr(JSContext *ctx, const JSBigInt *a,
                         unsigned int shift1);
 JSBigInt *js_bigint_pow(JSContext *ctx, const JSBigInt *a, JSBigInt *b);
 JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix);
-JSBigInt *js_bigint_normalize(JSContext *ctx, JSBigInt *a);
+JSBigInt *js_bigint_normalize(JSRuntime *rt, JSBigInt *a);
 JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val);
 
 JSBigInt *js_bigint_set_si(JSBigIntBuf *buf, js_slimb_t a);
