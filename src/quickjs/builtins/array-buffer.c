@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2026 Divy Srivastava
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -500,8 +501,12 @@ void JS_DetachArrayBuffer(JSContext *ctx, JSValueConst obj)
 
     if (!abuf || abuf->detached)
         return;
-    if (abuf->free_func)
+    if (abuf->free_func) {
         abuf->free_func(ctx->rt, abuf->opaque, abuf->data);
+        /* The callback can release opaque state as well as backing storage. */
+        abuf->free_func = NULL;
+        abuf->opaque = NULL;
+    }
     abuf->data = NULL;
     abuf->atomic_unaligned = FALSE;
     abuf->byte_length = 0;
@@ -642,6 +647,9 @@ static JSValue js_array_buffer_transfer(JSContext *ctx,
             if (JS_IsException(res))
                 return res;
         }
+        /* The backing store was released or its ownership moved to res. */
+        abuf->free_func = NULL;
+        abuf->opaque = NULL;
         /* neuter the backing buffer */
         abuf->data = NULL;
         abuf->atomic_unaligned = FALSE;
