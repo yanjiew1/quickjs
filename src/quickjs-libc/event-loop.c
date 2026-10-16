@@ -232,6 +232,18 @@ void free_timer(JSRuntime *rt, JSOSTimer *th)
     js_free_rt(rt, th);
 }
 
+/* Negative delays are already due. A very distant future timer saturates
+   instead of overflowing the signed clock representation. */
+static int64_t timer_deadline(int64_t delay)
+{
+    int64_t now = get_time_ms();
+    if (delay <= 0)
+        return now;
+    if (now > INT64_MAX - delay)
+        return INT64_MAX;
+    return now + delay;
+}
+
 JSValue js_os_setTimeout(JSContext *ctx, JSValueConst this_val,
                          int argc, JSValueConst *argv)
 {
@@ -254,7 +266,7 @@ JSValue js_os_setTimeout(JSContext *ctx, JSValueConst this_val,
         ts->next_timer_id = 1;
     else
         ts->next_timer_id++;
-    th->timeout = get_time_ms() + delay;
+    th->timeout = timer_deadline(delay);
     th->func = JS_DupValue(ctx, func);
     list_add_tail(&th->link, &ts->os_timers);
     return JS_NewInt32(ctx, th->timer_id);
@@ -314,7 +326,7 @@ JSValue js_os_sleepAsync(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     }
     th->timer_id = -1;
-    th->timeout = get_time_ms() + delay;
+    th->timeout = timer_deadline(delay);
     th->func = JS_DupValue(ctx, resolving_funcs[0]);
     list_add_tail(&th->link, &ts->os_timers);
     JS_FreeValue(ctx, resolving_funcs[0]);
@@ -346,7 +358,8 @@ int js_os_poll(JSContext *ctx)
     int min_delay, count, worker_base, native_delay, native_index = -1;
     size_t worker_count = 0;
     intptr_t native_wake;
-    int64_t cur_time, delay;
+    int64_t cur_time;
+    uint64_t delay;
     JSOSRWHandler *rh;
     struct list_head *el;
     HANDLE handles[MAXIMUM_WAIT_OBJECTS]; // 64
@@ -370,8 +383,7 @@ int js_os_poll(JSContext *ctx)
         min_delay = 10000;
         list_for_each(el, &ts->os_timers) {
             JSOSTimer *th = list_entry(el, JSOSTimer, link);
-            delay = th->timeout - cur_time;
-            if (delay <= 0) {
+            if (th->timeout <= cur_time) {
                 JSValue func;
                 /* the timer expired */
                 func = th->func;
@@ -380,8 +392,10 @@ int js_os_poll(JSContext *ctx)
                 call_handler(ctx, func);
                 JS_FreeValue(ctx, func);
                 return 0;
-            } else if (delay < min_delay) {
-                min_delay = delay;
+            } else {
+                delay = (uint64_t)th->timeout - (uint64_t)cur_time;
+                if (delay < (unsigned)min_delay)
+                    min_delay = delay;
             }
         }
     } else {
@@ -520,7 +534,8 @@ int js_os_poll(JSContext *ctx)
     JSThreadState *ts = JS_GetRuntimeOpaque(rt);
     int min_delay, nfds, native_delay, native_index = -1;
     intptr_t native_wake;
-    int64_t cur_time, delay;
+    int64_t cur_time;
+    uint64_t delay;
     JSOSRWHandler *rh;
     struct list_head *el;
 
@@ -557,8 +572,7 @@ int js_os_poll(JSContext *ctx)
         min_delay = 10000;
         list_for_each(el, &ts->os_timers) {
             JSOSTimer *th = list_entry(el, JSOSTimer, link);
-            delay = th->timeout - cur_time;
-            if (delay <= 0) {
+            if (th->timeout <= cur_time) {
                 JSValue func;
                 /* the timer expired */
                 func = th->func;
@@ -567,8 +581,10 @@ int js_os_poll(JSContext *ctx)
                 call_handler(ctx, func);
                 JS_FreeValue(ctx, func);
                 return 0;
-            } else if (delay < min_delay) {
-                min_delay = delay;
+            } else {
+                delay = (uint64_t)th->timeout - (uint64_t)cur_time;
+                if (delay < (unsigned)min_delay)
+                    min_delay = delay;
             }
         }
     } else {
