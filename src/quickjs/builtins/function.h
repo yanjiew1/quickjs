@@ -36,7 +36,7 @@ JSValue js_function_constructor(JSContext *ctx, JSValueConst new_target,
 JSValue js_function_apply(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv, int magic);
 JSValue *build_arg_list(JSContext *ctx, uint32_t *plen, JSValueConst array_arg);
-void free_arg_list(JSContext *ctx, JSValue *tab, uint32_t len);
+void free_arg_list(JSRuntime *rt, JSValue *tab, uint32_t len);
 extern const JSCFunctionListEntry js_function_proto_funcs[8];
 extern const JSCFunctionListEntry js_generator_function_proto_funcs[1];
 extern const JSCFunctionListEntry js_generator_proto_funcs[4];

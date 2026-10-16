@@ -113,7 +113,7 @@ static int js_define_function_list_lazy(JSContext *ctx, JSValueConst obj,
 
     ordinary_key = !p->is_exotic ||
         ((p->class_id == JS_CLASS_ARRAY || p->class_id == JS_CLASS_STRING) &&
-         atom != JS_ATOM_length && !JS_AtomIsArrayIndex(ctx, &index, atom));
+         atom != JS_ATOM_length && !JS_AtomIsArrayIndex(ctx->rt, &index, atom));
     if (ordinary_key && p->class_id == JS_CLASS_GLOBAL_OBJECT) {
         JSValue hidden = p->u.global_object.uninitialized_vars;
         if (JS_IsObject(hidden) &&
