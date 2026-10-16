@@ -1359,8 +1359,62 @@ static void run_external_buffer(const char *source, int freed_during_eval)
     assert(external.free_count == freed_during_eval);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
-    /* Finalizing a detached buffer may call the callback again with NULL. */
-    assert(external.free_count >= 1);
+    assert(external.free_count == 1);
+}
+
+static void test_external_buffer_callback_lifetime(void)
+{
+    static const char *sources[] = {
+        "external",
+        "external.transfer()",
+        "external.transfer(0)",
+        "external.transfer(2)",
+        "external.transferToFixedLength()",
+        "external.transferToFixedLength(0)",
+        "external.transferToFixedLength(2)",
+        ("try { external.transfer(-1); throw Error('accepted'); }"
+         "catch (e) { if (!(e instanceof RangeError)) throw e; } external"),
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue global, buffer, result;
+    ExternalBufferData external;
+    size_t i, len;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    global = JS_GetGlobalObject(ctx);
+    for (len = 0; len <= 1; len++) {
+        for (i = 0; i < countof(sources); i++) {
+            external.byte = 42;
+            external.free_count = 0;
+            buffer = JS_NewArrayBuffer(ctx, &external.byte, len,
+                                       free_external, &external, FALSE);
+            assert(!JS_IsException(buffer));
+            assert(JS_SetPropertyStr(ctx, global, "external",
+                                     JS_DupValue(ctx, buffer)) >= 0);
+            result = JS_Eval(ctx, sources[i], strlen(sources[i]),
+                             "external-buffer-callback", JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(result));
+            assert(JS_SetPropertyStr(ctx, global, "external", JS_UNDEFINED) >= 0);
+            JS_FreeValue(ctx, buffer);
+            JS_FreeValue(ctx, result);
+            assert(external.free_count == 1);
+        }
+    }
+    external.free_count = 0;
+    buffer = JS_NewArrayBuffer(ctx, &external.byte, 1,
+                               free_external, &external, FALSE);
+    assert(!JS_IsException(buffer));
+    JS_DetachArrayBuffer(ctx, buffer);
+    JS_DetachArrayBuffer(ctx, buffer);
+    assert(external.free_count == 1);
+    JS_FreeValue(ctx, buffer);
+    assert(external.free_count == 1);
+    JS_FreeValue(ctx, global);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
 }
 
 static void test_empty_buffer_transfer(void)
@@ -3847,6 +3901,7 @@ int main(int argc, char **argv)
         { "shared-buffer-clone-release", test_shared_clone_release_callback },
         { "typed-array-arguments", test_typed_array_arguments },
         { "atom", test_empty_atom },
+        { "buffer-callback-lifetime", test_external_buffer_callback_lifetime },
         { "buffer-transfer", test_empty_buffer_transfer },
         { "buffer-transfer-no-free", test_buffer_transfer_without_free_callback },
     };
