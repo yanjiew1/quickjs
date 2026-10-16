@@ -382,10 +382,19 @@ int cr_realloc(CharRange *cr, int size)
     int new_size;
     uint32_t *new_buf;
 
+    if (size < 0)
+        return -1;
     if (size > cr->size) {
-        new_size = max_int(size, cr->size * 3 / 2);
+        size_t max_count = SIZE_MAX / sizeof(cr->points[0]);
+        int64_t grown_size = (int64_t)cr->size + cr->size / 2;
+
+        if (max_count > INT_MAX)
+            max_count = INT_MAX;
+        if ((size_t)size > max_count)
+            return -1;
+        new_size = max_int64(size, min_int64(grown_size, max_count));
         new_buf = cr->realloc_func(cr->mem_opaque, cr->points,
-                                   new_size * sizeof(cr->points[0]));
+                                   (size_t)new_size * sizeof(cr->points[0]));
         if (!new_buf)
             return -1;
         cr->points = new_buf;
@@ -505,6 +514,8 @@ int cr_invert(CharRange *cr)
 {
     int len;
     len = cr->len;
+    if (len > INT_MAX - 2)
+        return -1;
     if (cr_realloc(cr, len + 2))
         return -1;
     memmove(cr->points + 1, cr->points, len * sizeof(cr->points[0]));
