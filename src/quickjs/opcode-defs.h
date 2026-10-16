@@ -260,7 +260,6 @@ DEF(push_bigint_i32, 5, 0, 1, i32)
 /* Dynamic strictness for class evaluation in a sloppy frame. */
 DEF(     set_strict, 2, 0, 0, u8)
 
-DEF(define_field_ro, 5, 2, 1, atom) /* immutable binding reference */
 
 DEF(resource_management, 2, 3, 2, u8)
 
