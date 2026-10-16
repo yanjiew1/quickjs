@@ -1,0 +1,42 @@
+option(
+  'tests',
+  type: 'boolean',
+  value: true,
+  description: 'Build repository regression tests',
+)
+option(
+  'examples',
+  type: 'boolean',
+  value: true,
+  description: 'Build embedding examples',
+)
+option(
+  'gc_stress',
+  type: 'boolean',
+  value: false,
+  description: 'Collect at every allocation-triggered GC check',
+)
+option(
+  'malloc_iter',
+  type: 'boolean',
+  value: false,
+  description: 'Track allocations for diagnostic iteration',
+)
+option(
+  'fuzzing',
+  type: 'boolean',
+  value: false,
+  description: 'Build libFuzzer entry points with Clang',
+)
+option(
+  'qjsc_cc',
+  type: 'array',
+  value: [],
+  description: 'Compiler command used by installed qjsc executable output',
+)
+option(
+  'unicode_data',
+  type: 'string',
+  value: '',
+  description: 'Optional UCD directory for Unicode table regeneration',
+)

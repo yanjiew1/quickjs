@@ -166,7 +166,7 @@ static void fault_loop(JSContext *ctx)
 #define js_std_add_helpers fault_add_helpers
 #define js_std_eval_binary fault_eval_binary
 #define js_std_loop fault_loop
-#include "qjsc-context-generated.c"
+#include "qjsc-context-generated.h"
 #undef main
 #undef JS_NewRuntime
 #undef JS_NewContextRaw
