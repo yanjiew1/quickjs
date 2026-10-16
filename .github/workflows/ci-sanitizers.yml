@@ -20,15 +20,21 @@ env:
 
 jobs:
   linux-sanitizers:
-    name: Linux ${{ matrix.compiler }} ${{ matrix.sanitizer }}
-    runs-on: ubuntu-latest
+    name: Linux ${{ matrix.arch }} ${{ matrix.compiler }} ${{ matrix.sanitizer }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         compiler: [gcc, clang]
         sanitizer: [ASan, UBSan]
+        arch: [x86_64, arm64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     env:
-      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
       COMPILER: ${{ matrix.compiler }}
       USE_CLANG: ${{ matrix.compiler == 'clang' && 'y' || '' }}
@@ -51,6 +57,10 @@ jobs:
       - name: Install pinned Test262
         run: make test2-bootstrap
       - name: Run Test262
+        # GCC ARM64 fake-stack scanning dominates long loops. Retain UAR
+        # checks in its repo tests and in Clang/x86 full Test262 runs.
+        env:
+          ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=${{ matrix.arch == 'arm64' && matrix.compiler == 'gcc' && '0' || '1' }}
         run: |
           set -o pipefail
           ./run-test262 -T "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl -t -m -c test262.conf -a 2>&1 | tee test262_runtime.log
@@ -68,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test262-${{ matrix.compiler }}-${{ matrix.sanitizer }}
+          name: test262-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.sanitizer }}
           path: |
             test262_runtime.log
             test262_progress.jsonl
@@ -77,8 +87,16 @@ jobs:
             test262_timings.md
 
   linux-gc-stress:
-    name: Linux allocation-triggered GC stress
-    runs-on: ubuntu-latest
+    name: Linux ${{ matrix.arch }} allocation-triggered GC stress
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     timeout-minutes: 25
     env:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
@@ -95,12 +113,20 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gc-stress
+          name: gc-stress-${{ matrix.arch }}
           path: gc-stress.log
 
   linux-tsan:
-    name: Linux focused thread sanitizer
-    runs-on: ubuntu-latest
+    name: Linux ${{ matrix.arch }} focused thread sanitizer
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     timeout-minutes: 25
     env:
       TSAN_OPTIONS: halt_on_error=1:exitcode=66
@@ -127,11 +153,20 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: thread-sanitizer
+          name: thread-sanitizer-${{ matrix.arch }}
           path: tsan-logs/
 
   linux-msan:
-    runs-on: ubuntu-latest
+    name: Linux ${{ matrix.arch }} MSan
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
         with:
@@ -168,7 +203,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test262-clang-MSan
+          name: test262-clang-MSan-${{ matrix.arch }}
           path: |
             test262_runtime.log
             test262_progress.jsonl
