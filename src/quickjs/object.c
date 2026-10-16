@@ -24,6 +24,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <limits.h>
+
 #include "internal/vm.h"
 #include "internal/global-environment.h"
 #include "internal/class.h"
@@ -324,7 +326,13 @@ static int resize_shape_hash(JSRuntime *rt, int new_shape_hash_bits)
     uint32_t h;
     JSShape **new_shape_hash, *sh, *sh_next;
 
-    new_shape_hash_size = 1 << new_shape_hash_bits;
+    /* Hash sizes and traversal indexes use signed int. Rehashing is
+       optional, so keep the old table when another doubling cannot fit. */
+    if (new_shape_hash_bits > 30)
+        return -1;
+    new_shape_hash_size = 1U << new_shape_hash_bits;
+    if ((size_t)new_shape_hash_size > SIZE_MAX / sizeof(rt->shape_hash[0]))
+        return -1;
     new_shape_hash = js_mallocz_rt(rt, sizeof(rt->shape_hash[0]) *
                                    new_shape_hash_size);
     if (!new_shape_hash)
@@ -372,9 +380,15 @@ static inline JSShape *js_new_shape_nohash(JSContext *ctx, JSObject *proto,
 {
     JSRuntime *rt = ctx->rt;
     JSShape *sh;
+    size_t size;
 
     assert(hash_size >= 2 && (hash_size & (hash_size - 1)) == 0);
-    sh = js_malloc(ctx, get_shape_size(hash_size, prop_size));
+    size = get_shape_size(hash_size, prop_size);
+    if (size == SIZE_MAX) {
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
+    sh = js_malloc(ctx, size);
     if (!sh)
         return NULL;
     js_rc(sh)->ref_count = 1;
@@ -399,8 +413,12 @@ no_inline JSShape *js_new_shape2(JSContext *ctx, JSObject *proto,
     JSRuntime *rt = ctx->rt;
     JSShape *sh;
 
+    if (rt->shape_hash_count == INT_MAX) {
+        JS_ThrowOutOfMemory(ctx);
+        return NULL;
+    }
     /* resize the shape hash table if necessary */
-    if (2 * (rt->shape_hash_count + 1) > rt->shape_hash_size) {
+    if (2 * ((int64_t)rt->shape_hash_count + 1) > rt->shape_hash_size) {
         resize_shape_hash(rt, rt->shape_hash_bits + 1);
     }
 
@@ -499,7 +517,20 @@ static no_inline int resize_properties(JSContext *ctx, JSShape **psh,
     JSShape *old_sh;
 
     sh = *psh;
-    new_size = max_int(count, sh->prop_size * 3 / 2);
+    if (count > JS_PROP_MAX) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
+    new_size = min_int64(max_int64(count, (int64_t)sh->prop_size * 3 / 2),
+                          JS_PROP_MAX);
+    new_hash_size = sh->prop_hash_mask + 1;
+    while (new_hash_size < new_size)
+        new_hash_size *= 2;
+    if ((size_t)new_size > SIZE_MAX / sizeof(JSProperty) ||
+        get_shape_size(new_hash_size, new_size) == SIZE_MAX) {
+        JS_ThrowOutOfMemory(ctx);
+        return -1;
+    }
     /* Reallocate prop array first to avoid crash or size inconsistency
        in case of memory allocation failure */
     if (p) {
@@ -509,9 +540,6 @@ static no_inline int resize_properties(JSContext *ctx, JSShape **psh,
             return -1;
         p->prop = new_prop;
     }
-    new_hash_size = sh->prop_hash_mask + 1;
-    while (new_hash_size < new_size)
-        new_hash_size = 2 * new_hash_size;
     /* resize the property shapes. Using js_realloc() is not possible in
        case the GC runs during the allocation */
     old_sh = sh;
@@ -947,8 +975,10 @@ JSValue JS_NewObjectProtoClassAlloc(JSContext *ctx, JSValueConst proto_val,
         n_alloc_props = JS_PROP_INITIAL_SIZE;
         hash_size = JS_PROP_INITIAL_HASH_SIZE;
     } else {
+        if (n_alloc_props > JS_PROP_MAX)
+            return JS_ThrowOutOfMemory(ctx);
         hash_bits = 32 - clz32(n_alloc_props - 1); /* ceil(log2(radix)) */
-        hash_size = 1 << hash_bits;
+        hash_size = 1U << hash_bits;
     }
     proto = get_proto_obj(proto_val);
     sh = js_new_shape_nohash(ctx, proto, hash_size, n_alloc_props);
@@ -2563,6 +2593,10 @@ JSProperty *add_property(JSContext *ctx,
             return &p->prop[new_sh->prop_count - 1];
         } else if (js_rc(sh)->ref_count != 1) {
             /* if the shape is shared, clone it */
+            if (rt->shape_hash_count == INT_MAX) {
+                JS_ThrowOutOfMemory(ctx);
+                return NULL;
+            }
             new_sh = js_clone_shape(ctx, sh);
             if (!new_sh)
                 return NULL;
