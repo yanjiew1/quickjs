@@ -46,3 +46,10 @@ option(
   value: '',
   description: 'Unicode source-data directory; empty uses bundled tables',
 )
+
+option(
+  'documentation',
+  type: 'feature',
+  value: 'auto',
+  description: 'Documentation targets: enabled, disabled, or auto-detected (PDF optional)',
+)
