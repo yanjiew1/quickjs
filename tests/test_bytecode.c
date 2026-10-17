@@ -537,6 +537,10 @@ static void test_integer_folding_bytecode_flags(const char *source, int opcode,
         int op = b->byte_code_buf[pos];
         assert(op < OP_COUNT && short_opcode_info(op).size > 0);
         count += op == opcode;
+#if SHORT_OPCODES
+        count += (opcode == OP_if_false && op == OP_if_false8) ||
+            (opcode == OP_if_true && op == OP_if_true8);
+#endif
         pos += short_opcode_info(op).size;
         assert(pos <= b->byte_code_len);
     }
@@ -741,6 +745,15 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    test_integer_folding_bytecode("false && unknown();", OP_if_false, 0);
+    test_integer_folding_bytecode("true || unknown();", OP_if_true, 0);
+    test_integer_folding_bytecode("null ?? unknown();", OP_if_false, 0);
+    test_integer_folding_bytecode("42 ?? unknown();", OP_if_false, 0);
+    test_integer_folding_bytecode("!12345678901234567890n;", OP_lnot, 0);
+    test_integer_folding_bytecode_flags("false && unknown();", OP_if_false, 1, 0);
+    test_integer_folding_bytecode_flags("false && unknown();", OP_if_false, 1,
+                                      JS_COMPILER_OPT_CONSTANT_PROPAGATION);
+    test_bytecode_roundtrip("Number(false || 42);");
     test_literal_folding_allocation_failure(6);
     test_integer_folding_bytecode("9007199254740993n > 9007199254740992;", OP_gt, 0);
     test_integer_folding_bytecode("'c' > 'a';", OP_gt, 0);

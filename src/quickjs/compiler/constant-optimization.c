@@ -448,9 +448,11 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             len += opcode_info[OP_undefined].size;
             goto have_result;
         }
-        if ((op == OP_plus || op == OP_neg || op == OP_not) && count >= 1) {
+        if ((op == OP_plus || op == OP_neg || op == OP_not || op == OP_lnot) && count >= 1) {
             left = stack[count - 1];
-            if (JS_IsBigInt(ctx, left)) {
+            if (op == OP_lnot) {
+                result = JS_NewBool(ctx, !JS_ToBool(ctx, left));
+            } else if (JS_IsBigInt(ctx, left)) {
                 int folded;
                 if (op == OP_plus)
                     goto known_throw;
@@ -674,6 +676,24 @@ static int put_literal(JSContext *ctx, JSFunctionDef *s, DynBuf *out,
     return 0;
 }
 
+/* Recognize only the adjacent short-circuit scaffold emitted by the parser.
+   Labels and source markers are never crossed by this match. */
+static int literal_branch(const uint8_t *buf, int size, int pos,
+                           BOOL *pnullish)
+{
+    int branch = pos + 1, end;
+
+    if (buf[pos] != OP_dup || branch >= size)
+        return -1;
+    *pnullish = buf[branch] == OP_is_undefined_or_null;
+    if (*pnullish)
+        branch++;
+    if (branch >= size || (buf[branch] != OP_if_true && buf[branch] != OP_if_false))
+        return -1;
+    end = branch + opcode_info[buf[branch]].size;
+    return end < size && buf[end] == OP_drop ? branch : -1;
+}
+
 int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
 {
     DynBuf out;
@@ -723,7 +743,8 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
                     literal_top = FALSE;
             } else if (op != OP_line_num && op != OP_dup &&
                        !(folding && (is_binary_operation(op) ||
-                                      op == OP_plus || op == OP_neg || op == OP_not))) {
+                                      op == OP_plus || op == OP_neg ||
+                                      op == OP_not || op == OP_lnot))) {
                 literal_top = FALSE;
             }
             if (ends_constant_region(op))
@@ -735,8 +756,15 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
             op = buf[pos];
             if (is_literal(s, op, buf + pos)) {
                 depth++;
+            } else if (op == OP_dup && depth >= 1) {
+                BOOL nullish;
+                if (literal_branch(buf, s->byte_code.size, pos, &nullish) >= 0) {
+                    candidate = TRUE;
+                    break;
+                }
+                depth = 0;
             } else if ((is_binary_operation(op) && depth >= 2) ||
-                       ((op == OP_plus || op == OP_neg || op == OP_not ||
+                       ((op == OP_plus || op == OP_neg || op == OP_not || op == OP_lnot ||
                          (op == OP_drop && pos + 1 < s->byte_code.size &&
                           buf[pos + 1] == OP_undefined)) && depth >= 1)) {
                 candidate = TRUE;
@@ -761,6 +789,34 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
     for (pos = 0; pos < s->byte_code.size; pos = next) {
         op = buf[pos];
         next = pos + opcode_info[op].size;
+        if (folding && pending_known && op == OP_dup) {
+            BOOL nullish;
+            int branch = literal_branch(buf, s->byte_code.size, pos, &nullish);
+            if (branch >= 0) {
+                int label = get_u32(buf + branch + 1);
+                BOOL test = nullish ? (JS_IsNull(pending) || JS_IsUndefined(pending)) :
+                    JS_ToBool(ctx, pending);
+                BOOL taken = test == (buf[branch] == OP_if_true);
+                if (taken) {
+                    uint8_t jump[5];
+                    jump[0] = OP_goto;
+                    put_u32(jump + 1, label);
+                    if (dbuf_put(&out, jump, sizeof(jump)))
+                        goto fail;
+                    epoch++;
+                    JS_FreeValue(ctx, pending);
+                    pending = JS_UNDEFINED;
+                    pending_known = FALSE;
+                } else {
+                    assert(s->label_slots[label].ref_count > 0);
+                    s->label_slots[label].ref_count--;
+                }
+                /* Keep the drop: it consumes the original operand when the
+                   RHS runs, or becomes unreachable after the new goto. */
+                next = branch + opcode_info[buf[branch]].size;
+                continue;
+            }
+        }
         if (is_literal(s, op, buf + pos) || known_local(locals, epoch, op, buf + pos)) {
             int folded_line = line, error;
             const char *message;
@@ -792,7 +848,7 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
                 continue;
             }
             JS_FreeValue(ctx, value);
-            if (locals) {
+            {
                 JS_FreeValue(ctx, pending);
                 pending = known_local(locals, epoch, op, buf + pos) ?
                     JS_DupValue(ctx, locals[get_u16(buf + pos + 1)].value) :

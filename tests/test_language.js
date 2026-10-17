@@ -4352,3 +4352,51 @@ function test_primitive_comparison_folding()
 }
 
 test_primitive_comparison_folding();
+
+
+function test_logical_literal_folding()
+{
+    const inputs = ["false", "true", "null", "void 0", "0", "-0", "0/0", "1",
+                    "''", "'x'", "0n", "1n", "12345678901234567890n"];
+    for (const a of inputs) {
+        const value = Function("return " + a)();
+        assert(Function("return !(" + a + ")")(), !value);
+        for (const op of ["&&", "||", "??"]) {
+            let calls = 0;
+            const effect = () => { calls++; return 42; };
+            const expected = Function("a", "effect", "return a " + op + " effect()")(value, effect);
+            const expectedCalls = calls;
+            calls = 0;
+            const actual = Function("effect", "return (" + a + ") " + op + " effect()")(effect);
+            assert(actual, expected, a + op);
+            assert(calls, expectedCalls, a + op);
+        }
+    }
+    assert(Function("return false && (1n / 0n)")(), false);
+    assert(Function("return true || (1n + 1)")(), true);
+    assert_throws(RangeError, Function("return true && (1n / 0n)"));
+    assert_throws(ReferenceError, Function("true && x; let x;"));
+    assert(Function("false && x; let x; return 42;")(), 42);
+    assert(Function("return (false || true) && (null ?? 42)")(), 42);
+    assert(Function("return 0 || 1 || 42")(), 1);
+    assert(Function("return false && true && 42")(), false);
+    assert(Function("return null ?? (void 0) ?? 42")(), 42);
+    assert(Function("try { return true && (1n + 1); } catch(e) { return e instanceof TypeError; }")(), true);
+    let assignments = 0;
+    const effect = () => { assignments++; return 42; };
+    assert(Function("effect", "let x = 0; x ||= effect(); return x;")(effect), 42);
+    assert(assignments, 1);
+    assert_throws(TypeError, () => Function("effect", "const x = 1; x &&= effect();")(effect));
+    assert(assignments, 2);
+    const values = [];
+    const g = Function("return function*() { yield false && (yield 1); return true && (yield 2); }")()();
+    values.push(g.next().value, g.next().value, g.next(42).value);
+    assert(values.join(','), 'false,2,42');
+    let calls = 0;
+    const object = { get value() { calls++; return 7; }, method() { return this; } };
+    assert(Function('object', 'return false || object.value')(object), 7);
+    assert(Function('object', 'return (true && object).method()')(object) === object);
+    assert(calls, 1);
+}
+
+test_logical_literal_folding();
