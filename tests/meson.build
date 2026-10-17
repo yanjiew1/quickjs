@@ -58,6 +58,7 @@ native_test_names = [
   'test_fuzz_exception_ownership',
   'test_wait_async',
   'test_native_jobs',
+  'test_promise_oom',
   'test_qjsc_json_preload',
 ]
 foreach name : native_test_names
