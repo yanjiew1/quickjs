@@ -4513,3 +4513,41 @@ function test_captured_let_propagation()
 }
 
 test_captured_let_propagation();
+
+
+function test_control_flow_constant_propagation()
+{
+    for (const flag of [false, true]) {
+        assert(Function('flag', 'let x; if(flag) x = 3; else x = 3; return x + 4;')(flag), 7);
+        assert(Function('flag', 'let x; if(flag) x = 3; else x = 4; return x + 4;')(flag), flag ? 7 : 8);
+        assert(Function('flag', 'var x; if(flag) x = 3; return x;')(flag), flag ? 3 : undefined);
+        assert(Function('flag', 'let x = 3; try { if(flag) throw 0; x = 4; } catch(e) { x = 5; } return x + 1;')(flag), flag ? 6 : 5);
+        assert(Function('flag', 'let x = 3; try { if(flag) return x; } finally { x = 5; } return x + 1;')(flag), flag ? 3 : 6);
+        assert(Function('flag', 'let x = 3; try { throw 0; } catch(e) { x = 5; } finally { x = 6; } return x + 1;')(flag), 7);
+        assert(Object.is(Function('flag', 'let x; if(flag) x = -0; else x = 0; return x;')(flag), flag ? -0 : 0));
+    }
+    for (const count of [0, 1, 4]) {
+        let n = count;
+        assert(Function('flag', 'let x = 3; while(flag()) { x = 3; } return x + 4;')(() => n-- > 0), 7);
+        n = count;
+        assert(Function('flag', 'let x = 3; while(flag()) { x++; } return x + 4;')(() => n-- > 0), 7 + count);
+    }
+    assert_throws(ReferenceError, Function('let result = x + 1; let x = 3; return result;'));
+    assert_throws(ReferenceError, Function('try { throw 0; let x = 3; } catch(e) { return x + 1; }'));
+    assert(Function('let x = 3; const set = () => x = 9; if(true) set(); return x + 1;')(), 10);
+    assert(Function('let x = 3; eval("x = 9"); if(true) {} return x + 1;')(), 10);
+    assert(Function('let x = 3; with ({}) { x = 9; } return x + 1;')(), 10);
+    const iterator = Function('return function*() { let x = 3; yield x; x = 9; return x + 1; };')()();
+    assert(iterator.next().value, 3);
+    assert(iterator.next().value, 10);
+    const closures = Function('const a = []; for (let i = 0; i < 4; i++) { let x = i; a.push(() => x); if(i < 2) continue; break; } return a;')();
+    assert(closures.map(f => f()).join(','), '0,1,2');
+    assert(Function('let sum = 0; for(let i = 0; i < 4; i++) { let x; if(i & 1) x = 3; else x = 3; if(i === 2) continue; sum += x + 1; } return sum;')(), 12);
+    let source = 'let x = 3;';
+    for (let i = 0; i < 150; i++) source += 'if (flag) x = 3; else x = 4;';
+    source += 'return x + 1;';
+    assert(Function('flag', source)(false), 5);
+    assert(Function('flag', source)(true), 4);
+}
+
+test_control_flow_constant_propagation();

@@ -20,6 +20,7 @@ typedef struct LocalConstant {
     uint32_t initialized_after;
     int last_reset;
     uint8_t writes;
+    uint8_t literal_stores;
     BOOL stable;
     BOOL eligible;
 } LocalConstant;
@@ -86,8 +87,8 @@ static void free_local_constants(JSContext *ctx, LocalConstant *locals, int coun
     js_free(ctx, locals);
 }
 
-/* No facts flow through joins, exceptional entries or suspended execution.
-   Ordinary calls cannot change an uncaptured local in a function without eval. */
+/* Regional facts stop at control boundaries; separately solved CFG entries may
+   restore them. Calls cannot change uncaptured locals in a function without eval. */
 static BOOL ends_constant_region(int op)
 {
     switch (opcode_info[op].fmt) {
@@ -646,15 +647,24 @@ static int analyze_stable_locals(JSContext *ctx, JSFunctionDef *s,
 {
     const uint8_t *buf = s->byte_code.buf;
     int pos, next, op, index, found = 0, first_barrier = s->byte_code.size;
+    BOOL literal_top = FALSE;
 
     for (pos = 0; pos < s->byte_code.size; pos += opcode_info[op].size) {
+        BOOL literal_store = literal_top;
         op = buf[pos];
+        if (is_literal(s, op, buf + pos))
+            literal_top = TRUE;
+        else if (op != OP_line_num && op != OP_dup &&
+                 op != OP_set_loc && op != OP_set_loc_check)
+            literal_top = FALSE;
         if ((op == OP_label || ends_constant_region(op)) && pos < first_barrier)
             first_barrier = pos;
         switch (op) {
         case OP_put_loc: case OP_set_loc:
         case OP_put_loc_check: case OP_set_loc_check: case OP_put_loc_check_init:
             index = get_u16(buf + pos + 1);
+            if (literal_store && locals[index].literal_stores < 2)
+                locals[index].literal_stores++;
             break;
         case OP_inc_loc: case OP_dec_loc: case OP_add_loc:
             index = buf[pos + 1];
@@ -1004,6 +1014,277 @@ static BOOL has_literal_candidate(JSFunctionDef *s)
     return FALSE;
 }
 
+#define FLOW_BLOCK_LIMIT 128
+#define FLOW_CELL_LIMIT 4096
+#define FLOW_WORK_LIMIT 65536
+
+typedef struct ConstantBlock {
+    int start, end, last;
+    int next[2];
+    BOOL seeded, reachable;
+} ConstantBlock;
+
+typedef struct ConstantFlow {
+    ConstantBlock blocks[FLOW_BLOCK_LIMIT];
+    int count, local_count;
+    JSValue *entries;
+} ConstantFlow;
+
+static void free_constant_flow(JSContext *ctx, ConstantFlow *flow)
+{
+    int i;
+    if (!flow)
+        return;
+    if (flow->entries) {
+        for (i = 0; i < flow->count * flow->local_count; i++)
+            JS_FreeValue(ctx, flow->entries[i]);
+    }
+    js_free(ctx, flow->entries);
+    js_free(ctx, flow);
+}
+
+static int flow_label_block(const ConstantFlow *flow, const uint8_t *buf, int label)
+{
+    int i;
+    for (i = 0; i < flow->count; i++) {
+        int pos = flow->blocks[i].start;
+        if (buf[pos] == OP_label && get_u32(buf + pos + 1) == label)
+            return i;
+    }
+    return -1;
+}
+
+static BOOL flow_terminates(int op)
+{
+    switch (op) {
+    case OP_return: case OP_return_undef: case OP_return_async:
+    case OP_ret: case OP_tail_call: case OP_tail_call_method:
+    case OP_throw: case OP_throw_error:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+/* UNKNOWN includes uninitialized bindings. An exact join requires SameValue,
+   so signed zero stays distinct and NaN joins consistently. */
+static BOOL merge_flow_entry(JSContext *ctx, ConstantFlow *flow, int block,
+                             const JSValue *values)
+{
+    ConstantBlock *b = &flow->blocks[block];
+    JSValue *entry = flow->entries + block * flow->local_count;
+    BOOL changed = FALSE;
+    int i;
+
+    if (!b->reachable) {
+        for (i = 0; i < flow->local_count; i++)
+            entry[i] = JS_DupValue(ctx, values[i]);
+        b->reachable = TRUE;
+        return TRUE;
+    }
+    for (i = 0; i < flow->local_count; i++) {
+        if (!JS_IsUninitialized(entry[i]) &&
+            (JS_IsUninitialized(values[i]) || !JS_SameValue(ctx, entry[i], values[i]))) {
+            JS_FreeValue(ctx, entry[i]);
+            entry[i] = JS_UNINITIALIZED;
+            changed = TRUE;
+        }
+    }
+    return changed;
+}
+
+/* Solve the original stream before rewriting it. The first CFG stage tracks
+   literal/known-local stores, not expression stacks or exception return edges.
+   Budget exhaustion discards every flow fact and retains regional propagation. */
+static int analyze_constant_flow(JSContext *ctx, JSFunctionDef *s,
+                                 const LocalConstant *locals, ConstantFlow **pflow)
+{
+    const uint8_t *buf = s->byte_code.buf;
+    ConstantFlow *flow;
+    JSValue *values = NULL, pending = JS_UNINITIALIZED;
+    int start = 0, last = 0, pos, op, i, n, work = 0;
+    BOOL changed;
+
+    *pflow = NULL;
+    if (!s->var_count || s->var_count > FLOW_CELL_LIMIT || s->has_eval_call)
+        return 0;
+    for (i = 0; i < s->var_count; i++) {
+        if (locals[i].eligible && (locals[i].literal_stores >= 2 ||
+            (locals[i].stable && !locals[i].initialized_after)))
+            break;
+    }
+    if (i == s->var_count)
+        return 0;
+    flow = js_mallocz(ctx, sizeof(*flow));
+    if (!flow)
+        return -1;
+    flow->local_count = s->var_count;
+    for (pos = 0; pos <= s->byte_code.size;) {
+        op = pos < s->byte_code.size ? buf[pos] : OP_invalid;
+        if (pos == s->byte_code.size || (op == OP_label && pos > start)) {
+            if (pos > start) {
+                if (flow->count == FLOW_BLOCK_LIMIT)
+                    goto fallback;
+                flow->blocks[flow->count++] = (ConstantBlock){
+                    .start = start, .end = pos, .last = last
+                };
+            }
+            start = pos;
+        }
+        if (pos == s->byte_code.size)
+            break;
+        last = pos;
+        pos += opcode_info[op].size;
+        if (op != OP_label && ends_constant_region(op)) {
+            if (flow->count == FLOW_BLOCK_LIMIT)
+                goto fallback;
+            flow->blocks[flow->count++] = (ConstantBlock){
+                .start = start, .end = pos, .last = last
+            };
+            start = pos;
+        }
+    }
+    n = flow->count;
+    if (n < 2 || n * s->var_count > FLOW_CELL_LIMIT)
+        goto fallback;
+    for (i = 0; i < n; i++) {
+        ConstantBlock *b = &flow->blocks[i];
+        int target = -1;
+        op = buf[b->last];
+        b->next[0] = i + 1 < n ? i + 1 : -1;
+        b->next[1] = -1;
+        if (op != OP_label && (opcode_info[op].fmt == OP_FMT_label ||
+                               opcode_info[op].fmt == OP_FMT_atom_label_u8)) {
+            int offset = opcode_info[op].fmt == OP_FMT_label ? 1 : 5;
+            target = flow_label_block(flow, buf, get_u32(buf + b->last + offset));
+            if (target < 0)
+                goto fallback;
+        }
+        if (op == OP_catch || op == OP_gosub) {
+            flow->blocks[target].seeded = TRUE;
+            if (op == OP_gosub && b->next[0] >= 0)
+                flow->blocks[b->next[0]].seeded = TRUE;
+        } else if (target >= 0) {
+            b->next[1] = target;
+            if (op == OP_goto)
+                b->next[0] = -1;
+        }
+        if (flow_terminates(op))
+            b->next[0] = b->next[1] = -1;
+        if ((op == OP_initial_yield || op == OP_yield ||
+             op == OP_yield_star || op == OP_await) && b->next[0] >= 0)
+            flow->blocks[b->next[0]].seeded = TRUE;
+    }
+    flow->entries = js_malloc(ctx, sizeof(*flow->entries) * n * s->var_count);
+    if (!flow->entries)
+        goto fail;
+    for (i = 0; i < n * s->var_count; i++)
+        flow->entries[i] = JS_UNINITIALIZED;
+    values = js_malloc(ctx, sizeof(*values) * s->var_count);
+    if (!values)
+        goto fail;
+    for (i = 0; i < s->var_count; i++)
+        values[i] = JS_UNINITIALIZED;
+    flow->blocks[0].seeded = TRUE;
+    for (i = 0; i < n; i++)
+        flow->blocks[i].reachable = flow->blocks[i].seeded;
+    do {
+        changed = FALSE;
+        for (i = 0; i < n; i++) {
+            ConstantBlock *b = &flow->blocks[i];
+            int index, edge;
+            if (!b->reachable)
+                continue;
+            work += 3 * s->var_count;
+            if (work > FLOW_WORK_LIMIT)
+                goto fallback;
+            for (index = 0; index < s->var_count; index++) {
+                JS_FreeValue(ctx, values[index]);
+                values[index] = JS_DupValue(ctx, flow->entries[i * s->var_count + index]);
+            }
+            JS_FreeValue(ctx, pending);
+            pending = JS_UNINITIALIZED;
+            for (pos = b->start; pos < b->end; pos += opcode_info[op].size) {
+                if (++work > FLOW_WORK_LIMIT)
+                    goto fallback;
+                op = buf[pos];
+                if (is_literal(s, op, buf + pos)) {
+                    JS_FreeValue(ctx, pending);
+                    pending = read_literal(ctx, s, buf + pos);
+                    if (JS_IsException(pending)) {
+                        pending = JS_UNINITIALIZED;
+                        goto fail;
+                    }
+                    if ((JS_IsString(pending) &&
+                         literal_string_length(pending) > FOLD_STRING_LIMIT) ||
+                        (JS_VALUE_GET_TAG(pending) == JS_TAG_BIG_INT &&
+                         bigint_bits(JS_VALUE_GET_PTR(pending)) > FOLD_BIGINT_BITS)) {
+                        JS_FreeValue(ctx, pending);
+                        pending = JS_UNINITIALIZED;
+                    }
+                } else if (op == OP_get_loc || op == OP_get_loc_check) {
+                    JS_FreeValue(ctx, pending);
+                    pending = JS_DupValue(ctx, values[get_u16(buf + pos + 1)]);
+                } else {
+                    switch (op) {
+                    case OP_put_loc: case OP_set_loc:
+                    case OP_put_loc_check: case OP_set_loc_check: case OP_put_loc_check_init:
+                        index = get_u16(buf + pos + 1);
+                        JS_FreeValue(ctx, values[index]);
+                        values[index] = locals[index].eligible ?
+                            JS_DupValue(ctx, pending) : JS_UNINITIALIZED;
+                        break;
+                    case OP_set_loc_uninitialized: case OP_close_loc:
+                        index = get_u16(buf + pos + 1);
+                        goto kill;
+                    case OP_inc_loc: case OP_dec_loc: case OP_add_loc:
+                        index = buf[pos + 1];
+                    kill:
+                        JS_FreeValue(ctx, values[index]);
+                        values[index] = JS_UNINITIALIZED;
+                        break;
+                    default:
+                        break;
+                    }
+                    if (op != OP_line_num && op != OP_label && op != OP_dup &&
+                        op != OP_set_loc && op != OP_set_loc_check) {
+                        JS_FreeValue(ctx, pending);
+                        pending = JS_UNINITIALIZED;
+                    }
+                }
+            }
+            for (edge = 0; edge < 2; edge++) {
+                if (b->next[edge] >= 0)
+                    changed |= merge_flow_entry(ctx, flow, b->next[edge], values);
+            }
+        }
+    } while (changed);
+    JS_FreeValue(ctx, pending);
+    for (i = 0; i < s->var_count; i++)
+        JS_FreeValue(ctx, values[i]);
+    js_free(ctx, values);
+    *pflow = flow;
+    return 0;
+ fallback:
+    JS_FreeValue(ctx, pending);
+    if (values) {
+        for (i = 0; i < s->var_count; i++)
+            JS_FreeValue(ctx, values[i]);
+    }
+    js_free(ctx, values);
+    free_constant_flow(ctx, flow);
+    return 0;
+ fail:
+    JS_FreeValue(ctx, pending);
+    if (values) {
+        for (i = 0; i < s->var_count; i++)
+            JS_FreeValue(ctx, values[i]);
+    }
+    js_free(ctx, values);
+    free_constant_flow(ctx, flow);
+    return -1;
+}
+
 int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
 {
     DynBuf out;
@@ -1015,6 +1296,8 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
     int fact_count = s->var_count + s->closure_var_count;
     BOOL folding = s->compiler_optimization_flags & JS_COMPILER_OPT_CONSTANT_FOLDING;
     LocalConstant *locals = NULL;
+    ConstantFlow *flow = NULL;
+    int block_index = 0;
     uint32_t epoch = 1;
     JSValue value, pending = JS_UNDEFINED;
     uint8_t marker[5];
@@ -1105,7 +1388,9 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
         if (i < 0)
             goto fail;
         preserve_guards = i != 0 || captured;
-        if (!preserve_guards && !regional_candidate) {
+        if (analyze_constant_flow(ctx, s, locals, &flow))
+            goto fail;
+        if (!flow && !preserve_guards && !regional_candidate) {
             /* The cross-region candidate was only a cheap possibility.
                Without a stable summary, avoid rewriting unchanged code. */
             free_local_constants(ctx, locals, fact_count);
@@ -1115,6 +1400,23 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
         }
     }
     for (pos = 0; pos < s->byte_code.size; pos = next) {
+        if (flow) {
+            while (block_index < flow->count && flow->blocks[block_index].start < pos)
+                block_index++;
+            if (block_index < flow->count && flow->blocks[block_index].start == pos) {
+                const JSValue *entry = flow->entries + block_index * s->var_count;
+                epoch++;
+                JS_FreeValue(ctx, pending);
+                pending = JS_UNDEFINED;
+                pending_known = FALSE;
+                for (i = 0; i < s->var_count; i++) {
+                    JS_FreeValue(ctx, locals[i].value);
+                    locals[i].value = JS_IsUninitialized(entry[i]) ? JS_UNDEFINED :
+                        JS_DupValue(ctx, entry[i]);
+                    locals[i].epoch = JS_IsUninitialized(entry[i]) ? 0 : epoch;
+                }
+            }
+        }
         op = buf[pos];
         next = pos + opcode_info[op].size;
         if (folding && pending_known && op == OP_dup) {
@@ -1200,7 +1502,7 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
                 pending_known = FALSE;
             }
         }
-        if (ends_constant_region(op)) {
+        if (ends_constant_region(op) && !(flow && op == OP_label)) {
             epoch++;
             JS_FreeValue(ctx, pending);
             pending = JS_UNDEFINED;
@@ -1215,6 +1517,7 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
     }
     JS_FreeValue(ctx, pending);
     free_local_constants(ctx, locals, fact_count);
+    free_constant_flow(ctx, flow);
     free_bytecode_atoms(ctx->rt, buf, s->byte_code.size, FALSE);
     dbuf_free(&s->byte_code);
     s->byte_code = out;
@@ -1222,6 +1525,7 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
  fail:
     JS_FreeValue(ctx, pending);
     free_local_constants(ctx, locals, fact_count);
+    free_constant_flow(ctx, flow);
     free_bytecode_atoms(ctx->rt, out.buf, out.size, FALSE);
     dbuf_free(&out);
     if (!JS_HasException(ctx))

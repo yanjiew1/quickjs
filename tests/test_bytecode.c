@@ -658,11 +658,8 @@ static void free_optimizer_padding(JSRuntime *rt, void *padding)
 }
 
 /* Exercise summary lifetime while preparation and child finalization fail. */
-static void test_captured_constant_allocation_failure(void)
+static void test_compiler_constant_allocation_failure(const char *source)
 {
-    const char source[] =
-        "(function() { const x = 'outer'; return () => { const y = 'inner';"
-        " return () => x + y; }; })";
     size_t fail_at, allocations = 0;
 
     for (fail_at = 0; fail_at <= allocations; fail_at++) {
@@ -675,7 +672,7 @@ static void test_captured_constant_allocation_failure(void)
         assert(ctx);
         padding = exhaust_optimizer_pools(rt);
         oom_test_begin(&allocator, fail_at);
-        compiled = JS_Eval(ctx, source, sizeof(source) - 1, "captured-oom.js",
+        compiled = JS_Eval(ctx, source, strlen(source), "constant-oom.js",
                            JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
         oom_test_end(&allocator);
         if (!fail_at) {
@@ -848,7 +845,29 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
-    test_captured_constant_allocation_failure();
+    {
+        uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;
+        const char *join = "(function(flag) { let x; if(flag) x = 3; else x = 3; return x + 4; })";
+        test_local_constant_bytecode(
+            "(function(flag) { let x; if(flag) x = 'a'; else x = 'a'; return x + 'b'; })", both, 0, 0);
+        test_local_constant_bytecode(
+            "(function(flag) { let x; if(flag) x = 3n; else x = 3n; return x + 4n; })", both, 0, 0);
+        test_local_constant_bytecode(join, both, 0, 0);
+        test_local_constant_bytecode(join, JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, 1);
+        test_local_constant_bytecode(join, JS_COMPILER_OPT_CONSTANT_FOLDING, 1, 1);
+        test_local_constant_bytecode(
+            "(function(flag) { let x; if(flag) x = 3; else x = 4; return x + 4; })", both, 1, 1);
+        test_local_constant_bytecode(
+            "(function(flag) { let x = 3; while(flag()) { x = 3; } return x + 4; })", both, 0, 0);
+        test_local_constant_bytecode(
+            "(function(flag) { let x = 3; while(flag()) { x = 4; } return x + 4; })", both, 1, 1);
+    }
+    test_compiler_constant_allocation_failure(
+        "(function() { const x = 'outer'; return () => { const y = 'inner';"
+        " return () => x + y; }; })");
+    test_compiler_constant_allocation_failure(
+        "(function(flag) { let x; if(flag) x = 'same'; else x = 'same';"
+        " return x + 'tail'; })");
     test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING |
                                     JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, FALSE);
     test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING, 1, FALSE);
@@ -880,7 +899,7 @@ int main(void)
         test_local_constant_bytecode(branch, JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, 2);
         test_local_constant_bytecode(
             "(function(flag) { if(flag) {} let a = 3; if(flag) return a + 1; return a + 2; })",
-            both, 2, 0);
+            both, 0, 0);
         test_local_constant_bytecode(
             "(function(flag) { let a = flag ? 3 : 9; return a + 1; })", both, 1, 1);
         test_local_constant_bytecode(
