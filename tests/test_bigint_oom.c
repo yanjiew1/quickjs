@@ -1,0 +1,55 @@
+/* BigInt allocation-failure regression tests.
+ * Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
+#include "oom-allocator.h"
+#include "../src/quickjs/internal/bigint.h"
+
+static void test_power_failure(void)
+{
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSBigIntBuf exponent_buf;
+        JSBigInt *base, *exponent, *result;
+        int len = 600 / sizeof(js_limb_t) + 1;
+
+        assert(ctx);
+        /* All products exceed allocator pools; exponent 3 exercises both
+           squaring and the subsequent multiplication by the base. */
+        base = js_bigint_new(ctx, len);
+        assert(base);
+        memset(base->tab, 0, len * sizeof(js_limb_t));
+        base->tab[0] = 3;
+        base->tab[len - 1] = 1;
+        exponent = js_bigint_set_si(&exponent_buf, 3);
+        oom_test_begin(&allocator, fail_at);
+        result = js_bigint_pow(ctx, base, exponent);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(allocations >= 3 && allocations < 32);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (result) {
+            assert(!JS_HasException(ctx));
+            assert(result->tab[0] == 27);
+            js_free_rt(rt, result);
+        } else {
+            assert(fail_at);
+            oom_test_check_exception(ctx);
+        }
+        js_free_rt(rt, base);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
+int main(void)
+{
+    test_power_failure();
+    return 0;
+}
