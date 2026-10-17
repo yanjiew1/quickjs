@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/time.h>
 #include <time.h>
 #include <signal.h>
@@ -335,7 +336,7 @@ JSValue js_os_sleepAsync(JSContext *ctx, JSValueConst this_val,
     return promise;
 }
 
-static void call_handler(JSContext *ctx, JSValueConst func)
+static int call_handler(JSContext *ctx, JSValueConst func)
 {
     JSValue ret, func1;
     /* 'func' might be destroyed when calling itself (if it frees the
@@ -344,15 +345,16 @@ static void call_handler(JSContext *ctx, JSValueConst func)
     ret = JS_Call(ctx, func1, JS_UNDEFINED, 0, NULL);
     JS_FreeValue(ctx, func1);
     if (JS_IsException(ret))
-        js_std_dump_error(ctx);
+        return -3;
     JS_FreeValue(ctx, ret);
+    return 1;
 }
 
 
 
 #if defined(_WIN32)
 
-int js_os_poll(JSContext *ctx)
+int js_os_poll(JSContext *ctx, int timeout_ms)
 {
     JSRuntime *rt = JS_GetRuntime(ctx);
     JSThreadState *ts = JS_GetRuntimeOpaque(rt);
@@ -373,7 +375,7 @@ int js_os_poll(JSContext *ctx)
         return -2;
     }
     if (native_delay > 0)
-        return 0;
+        return 1;
     if (list_empty(&ts->os_rw_handlers) && list_empty(&ts->os_timers) &&
         list_empty(&ts->port_list) && !JS_IsNativeJobPending(rt)) {
         return -1; /* no more events */
@@ -390,9 +392,9 @@ int js_os_poll(JSContext *ctx)
                 func = th->func;
                 th->func = JS_UNDEFINED;
                 free_timer(rt, th);
-                call_handler(ctx, func);
+                int ret = call_handler(ctx, func);
                 JS_FreeValue(ctx, func);
-                return 0;
+                return ret;
             } else {
                 delay = (uint64_t)th->timeout - (uint64_t)cur_time;
                 if (delay < (unsigned)min_delay)
@@ -406,6 +408,10 @@ int js_os_poll(JSContext *ctx)
     native_delay = JS_GetNativeJobTimeout(rt);
     if (native_delay >= 0 && (min_delay < 0 || native_delay < min_delay))
         min_delay = native_delay;
+    if (JS_IsJobPending(rt))
+        timeout_ms = 0;
+    if (timeout_ms >= 0 && (min_delay < 0 || timeout_ms < min_delay))
+        min_delay = timeout_ms;
     native_wake = JS_IsNativeJobPending(rt) ?
                   JS_GetNativeJobWakeHandle(rt) : -1;
     count = 0;
@@ -460,22 +466,28 @@ int js_os_poll(JSContext *ctx)
         if (min_delay != -1)
             timeout = min_delay;
         ret = WaitForMultipleObjects(count, handles, FALSE, timeout);
+        if (ret == WAIT_FAILED) {
+            JS_ThrowInternalError(ctx, "host polling failed: %lu",
+                                  (unsigned long)GetLastError());
+            return -2;
+        }
         native_delay = JS_PollNativeJobs(rt, 0);
         if (native_delay < 0) {
             JS_ThrowInternalError(ctx, "native job polling failed");
             return -2;
         }
-        if ((native_index >= 0 && ret == (DWORD)native_index) ||
-            native_delay > 0)
-            goto done;
+        if (native_delay > 0)
+            return 1;
+        if (native_index >= 0 && ret == (DWORD)native_index)
+            return 0;
 
         if (ret < count) {
             list_for_each(el, &ts->os_rw_handlers) {
                 rh = list_entry(el, JSOSRWHandler, link);
-                if (rh->fd == 0 && !JS_IsNull(rh->rw_func[0])) {
-                    call_handler(ctx, rh->rw_func[0]);
-                    /* must stop because the list may have been modified */
-                    goto done;
+                if (rh->fd == 0 && !JS_IsNull(rh->rw_func[0]) &&
+                    (HANDLE)_get_osfhandle(rh->fd) == handles[ret]) {
+                    /* The callback can modify both handler lists. */
+                    return call_handler(ctx, rh->rw_func[0]);
                 }
             }
 
@@ -484,8 +496,9 @@ int js_os_poll(JSContext *ctx)
                 if (!JS_IsNull(port->on_message_func)) {
                     JSWorkerMessagePipe *ps = port->recv_pipe;
                     if (ps->waker.handle == handles[ret]) {
-                        if (handle_posted_message(rt, ctx, port))
-                            goto done;
+                        int status = handle_posted_message(rt, ctx, port);
+                        if (status)
+                            return status < 0 ? -3 : 1;
                     }
                 }
             }
@@ -493,7 +506,6 @@ int js_os_poll(JSContext *ctx)
     } else {
         Sleep(min_delay);
     }
- done:
     return 0;
 }
 
@@ -535,7 +547,7 @@ static int js_poll_add_poll_fd(JSThreadState *ts, int *pnfds, int fd, int events
     return 0;
 }
 
-int js_os_poll(JSContext *ctx)
+int js_os_poll(JSContext *ctx, int timeout_ms)
 {
     JSRuntime *rt = JS_GetRuntime(ctx);
     JSThreadState *ts = JS_GetRuntimeOpaque(rt);
@@ -557,8 +569,7 @@ int js_os_poll(JSContext *ctx)
             mask = (uint64_t)1 << sh->sig_num;
             if (os_pending_signals & mask) {
                 os_pending_signals &= ~mask;
-                call_handler(ctx, sh->func);
-                return 0;
+                return call_handler(ctx, sh->func);
             }
         }
     }
@@ -569,7 +580,7 @@ int js_os_poll(JSContext *ctx)
         return -2;
     }
     if (native_delay > 0)
-        return 0;
+        return 1;
     if (list_empty(&ts->os_rw_handlers) && list_empty(&ts->os_timers) &&
         list_empty(&ts->port_list) && !JS_IsNativeJobPending(rt))
         return -1; /* no more events */
@@ -585,9 +596,9 @@ int js_os_poll(JSContext *ctx)
                 func = th->func;
                 th->func = JS_UNDEFINED;
                 free_timer(rt, th);
-                call_handler(ctx, func);
+                int ret = call_handler(ctx, func);
                 JS_FreeValue(ctx, func);
-                return 0;
+                return ret;
             } else {
                 delay = (uint64_t)th->timeout - (uint64_t)cur_time;
                 if (delay < (unsigned)min_delay)
@@ -601,13 +612,17 @@ int js_os_poll(JSContext *ctx)
     native_delay = JS_GetNativeJobTimeout(rt);
     if (native_delay >= 0 && (min_delay < 0 || native_delay < min_delay))
         min_delay = native_delay;
+    if (JS_IsJobPending(rt))
+        timeout_ms = 0;
+    if (timeout_ms >= 0 && (min_delay < 0 || timeout_ms < min_delay))
+        min_delay = timeout_ms;
     native_wake = JS_IsNativeJobPending(rt) ?
                   JS_GetNativeJobWakeHandle(rt) : -1;
     nfds = 0;
     if (native_wake != -1) {
         native_index = nfds;
         if (js_poll_add_poll_fd(ts, &nfds, (int)native_wake, POLLIN))
-            return -1;
+            goto oom;
     }
     list_for_each(el, &ts->os_rw_handlers) {
         int events;
@@ -621,7 +636,7 @@ int js_os_poll(JSContext *ctx)
         if (events) {
             rh->poll_fd_index = nfds;
             if (js_poll_add_poll_fd(ts, &nfds, rh->fd, events))
-                return -1;
+                goto oom;
         }
     }
 
@@ -631,33 +646,41 @@ int js_os_poll(JSContext *ctx)
             JSWorkerMessagePipe *ps = port->recv_pipe;
             port->poll_fd_index = nfds;
             if (js_poll_add_poll_fd(ts, &nfds, ps->waker.read_fd, POLLIN))
-                return -1;
+                goto oom;
         }
     }
 
     nfds = poll(ts->poll_fds, nfds, min_delay);
+    if (nfds < 0) {
+        if (errno == EINTR)
+            return 0;
+        JS_ThrowInternalError(ctx, "host polling failed: %s", strerror(errno));
+        return -2;
+    }
     native_delay = JS_PollNativeJobs(rt, 0);
     if (native_delay < 0) {
         JS_ThrowInternalError(ctx, "native job polling failed");
         return -2;
     }
-    if ((native_index >= 0 &&
-         ts->poll_fds[native_index].revents != 0) || native_delay > 0)
-        goto done;
+    if (native_delay > 0)
+        return 1;
+    if (native_index >= 0 && ts->poll_fds[native_index].revents != 0)
+        return 0;
     if (nfds > 0) {
         list_for_each(el, &ts->os_rw_handlers) {
             rh = list_entry(el, JSOSRWHandler, link);
+            if (ts->poll_fds[rh->poll_fd_index].revents & POLLNVAL) {
+                JS_ThrowInternalError(ctx, "invalid host file descriptor");
+                return -2;
+            }
             if (!JS_IsNull(rh->rw_func[0]) &&
                 (ts->poll_fds[rh->poll_fd_index].revents & (POLLERR | POLLHUP | POLLNVAL | POLLIN))) {
-                call_handler(ctx, rh->rw_func[0]);
-                /* must stop because the list may have been modified */
-                goto done;
+                /* The callback can modify both handler lists. */
+                return call_handler(ctx, rh->rw_func[0]);
             }
             if (!JS_IsNull(rh->rw_func[1]) &&
                 (ts->poll_fds[rh->poll_fd_index].revents & (POLLERR | POLLHUP | POLLNVAL | POLLOUT))) {
-                call_handler(ctx, rh->rw_func[1]);
-                /* must stop because the list may have been modified */
-                goto done;
+                return call_handler(ctx, rh->rw_func[1]);
             }
         }
 
@@ -665,14 +688,17 @@ int js_os_poll(JSContext *ctx)
             JSWorkerMessageHandler *port = list_entry(el, JSWorkerMessageHandler, link);
             if (!JS_IsNull(port->on_message_func)) {
                 if (ts->poll_fds[port->poll_fd_index].revents != 0) {
-                    if (handle_posted_message(rt, ctx, port))
-                        goto done;
+                    int status = handle_posted_message(rt, ctx, port);
+                    if (status)
+                        return status < 0 ? -3 : 1;
                 }
             }
         }
     }
- done:
     return 0;
+ oom:
+    JS_ThrowOutOfMemory(ctx);
+    return -2;
 }
 #endif /* !_WIN32 */
 
