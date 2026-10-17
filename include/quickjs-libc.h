@@ -64,6 +64,12 @@ JS_EXTERN void js_std_eval_binary_json_module2(JSContext *ctx,
 JS_EXTERN void js_std_promise_rejection_tracker(JSContext *ctx, JSValueConst promise,
                                                 JSValueConst reason,
                                                 JS_BOOL is_handled, void *opaque);
+/* Factories run on the Worker thread. A NULL runtime factory restores
+   JS_NewRuntime; a context factory must be installed to run Worker scripts.
+   The runtime must be fresh, exclusively owned and have no contexts or host
+   handlers. Host setup owns runtime opaque state and installs its services.
+   Each Worker snapshots both factories before starting its thread. */
+JS_EXTERN void js_std_set_worker_new_runtime_func(JSRuntime *(*func)(void));
 JS_EXTERN void js_std_set_worker_new_context_func(JSContext *(*func)(JSRuntime *rt));
 
 #ifdef __cplusplus
