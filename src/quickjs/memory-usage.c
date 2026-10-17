@@ -299,6 +299,12 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
                 }
             }
             break;
+        case JS_CLASS_C_CLOSURE:
+            if (p->u.opaque) {
+                s->memory_used_count += 1;
+                s->memory_used_size += sizeof(JSCClosureRecord);
+            }
+            break;
         case JS_CLASS_REGEXP:            /* u.regexp */
             compute_jsstring_size(p->u.regexp.pattern, hp);
             compute_jsstring_size(p->u.regexp.bytecode, hp);

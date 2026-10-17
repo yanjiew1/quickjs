@@ -44,6 +44,7 @@ native_test_names = [
   'test_builtin_brands',
   'test_embedding_helpers',
   'test_c_function_data',
+  'test_c_closure',
   'test_bytecode',
   'test_typed_array',
   'test_allocator',
