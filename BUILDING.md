@@ -145,3 +145,19 @@ propagate it too. Direct source-header users must supply the matching
 compact library. `qjsc` executable generation uses its matching configured
 headers. The original representation remains available for unsupported
 platforms and sanitizer configurations.
+
+### Experimental VM stack cache
+
+Enable the experimental cache with `-Dvm_stack_cache=true`. It is off by
+default. Use separate build directories to compare both modes. This option
+does not change bytecode or the public ABI.
+
+The local top operand is authoritative across opcode dispatches. Unary and
+numeric operations update it without writing the physical top stack slot.
+Pushing another value publishes the former top because it becomes a lower
+slot; popping reloads the newly exposed lower value. Unary slow helpers can
+operate directly on the local operand. Helpers and calls that need a contiguous
+stack range explicitly publish and reload it. Exception cleanup and suspended
+frames retain their physical-stack contract. Both computed-goto and switch
+dispatch use the same handler bodies; `CFLAGS=-DDIRECT_DISPATCH=0` selects the
+switch path for validation.
