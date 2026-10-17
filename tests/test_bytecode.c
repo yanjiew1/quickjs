@@ -700,9 +700,9 @@ int main(void)
     test_integer_folding_bytecode("1 +\n2 * 3;", OP_add, 0);
     test_integer_folding_bytecode("2147483647 + 1;", OP_add, 0);
     test_integer_folding_bytecode("(2147483647 + 1) - 1;", OP_add, 0);
-    test_integer_folding_bytecode("-1 * 0;", OP_mul, 1);
-    test_integer_folding_bytecode("-4 % 2;", OP_mod, 1);
-    test_integer_folding_bytecode("1 / 0;", OP_div, 1);
+    test_integer_folding_bytecode("-1 * 0;", OP_mul, 0);
+    test_integer_folding_bytecode("-4 % 2;", OP_mod, 0);
+    test_integer_folding_bytecode("1 / 0;", OP_div, 0);
     test_integer_folding_bytecode("(1 + 2) + unknown;", OP_add, 1);
     test_bytecode_roundtrip("(2 + 5) * (9 - 3);");
     test_bytecode_roundtrip(

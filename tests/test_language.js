@@ -4137,3 +4137,32 @@ function test_literal_string_folding()
 }
 
 test_literal_string_folding();
+
+function test_primitive_numeric_folding()
+{
+    const inputs = ["0", "1", "-1", "2", "1.25", "true", "false", "null",
+                    "'2'", "'x'", "0n", "1n", "-1n", "2n"];
+    for (const op of ["+", "-", "*", "/", "%", "**", "&", "|", "^", "<<", ">>", ">>>"]) {
+        const runtime = Function("a", "b", "return a " + op + " b;");
+        for (const a of inputs) {
+            for (const b of inputs) {
+                const left = Function("return " + a)();
+                const right = Function("return " + b)();
+                const constant = Function("return (" + a + ") " + op + " (" + b + ");");
+                let expected, error;
+                try { expected = runtime(left, right); } catch (e) { error = e; }
+                if (error) {
+                    let actual;
+                    try { constant(); } catch (e) { actual = e; }
+                    assert(actual instanceof error.constructor);
+                    assert(actual.message, error.message, a + op + b);
+                } else {
+                    assert(constant(), expected, a + op + b);
+                }
+            }
+        }
+    }
+
+}
+
+test_primitive_numeric_folding();

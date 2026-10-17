@@ -7,6 +7,7 @@
 #include "../internal/bytecode.h"
 #include "../internal/bytecode-format.h"
 #include "../internal/string.h"
+#include "../internal/number.h"
 
 #define FOLD_STRING_LIMIT 4096
 #define FOLD_STEP_LIMIT 32
@@ -65,16 +66,29 @@ static JSValue read_literal(JSContext *ctx, JSFunctionDef *s,
     }
 }
 
+static BOOL is_binary_operation(int op)
+{
+    switch (op) {
+    case OP_add: case OP_sub: case OP_mul: case OP_div: case OP_mod:
+    case OP_pow: case OP_and: case OP_or: case OP_xor:
+    case OP_shl: case OP_sar: case OP_shr:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
 /* Speculative values own their references; input bytecode remains untouched.
    Record only complete prefixes and never consume a label or user operation. */
-static int fold_addition(JSContext *ctx, JSFunctionDef *s, int start,
-                         JSValue *pres, int *pline)
+static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
+                                    JSValue *pres, int *pline)
 {
     const uint8_t *buf = s->byte_code.buf;
     int pos = start, best = start, line = *pline, count = 0, steps;
     JSValue stack[FOLD_STEP_LIMIT], result, left, right;
-    double a, b;
-
+    double a, b, number;
+    int32_t i1, i2;
+    uint32_t bits;
     *pres = JS_UNDEFINED;
     for (steps = 0; steps < FOLD_STEP_LIMIT && pos < s->byte_code.size; steps++) {
         int op = buf[pos];
@@ -99,11 +113,34 @@ static int fold_addition(JSContext *ctx, JSFunctionDef *s, int start,
             pos += len;
             continue;
         }
-        if (op != OP_add || count < 2)
+        if ((op == OP_plus || op == OP_neg || op == OP_not) && count >= 1) {
+            left = stack[count - 1];
+            if (JS_IsBigInt(ctx, left)) {
+                js_slimb_t short_value = JS_VALUE_GET_SHORT_BIG_INT(left);
+                if (op == OP_plus)
+                    break;
+                if (op != OP_neg ||
+                    JS_VALUE_GET_TAG(left) != JS_TAG_SHORT_BIG_INT ||
+                    short_value == JS_SHORT_BIG_INT_MIN)
+                    break;
+                result = __JS_NewShortBigInt(-short_value);
+            } else if (op == OP_not) {
+                if (JS_ToInt32Free(ctx, &i1, JS_DupValue(ctx, left)))
+                    goto fail;
+                result = JS_NewInt32(ctx, ~i1);
+            } else {
+                if (JS_ToFloat64Free(ctx, &a, JS_DupValue(ctx, left)))
+                    goto fail;
+                result = JS_NewFloat64(ctx, op == OP_neg ? -a : a);
+            }
+            JS_FreeValue(ctx, stack[--count]);
+            goto have_result;
+        }
+        if (!is_binary_operation(op) || count < 2)
             break;
         left = stack[count - 2];
         right = stack[count - 1];
-        if (JS_IsString(left) || JS_IsString(right)) {
+        if (op == OP_add && (JS_IsString(left) || JS_IsString(right))) {
             left = JS_ToString(ctx, left);
             if (JS_IsException(left))
                 goto fail;
@@ -122,16 +159,47 @@ static int fold_addition(JSContext *ctx, JSFunctionDef *s, int start,
             if (JS_IsException(result))
                 goto fail;
         } else {
-            /* BigInt arithmetic and incompatible numeric types remain runtime
-               operations here. Primitive Number conversions cannot call JS. */
             if (JS_IsBigInt(ctx, left) || JS_IsBigInt(ctx, right))
                 break;
-            if (JS_ToFloat64(ctx, &a, left) || JS_ToFloat64(ctx, &b, right))
-                goto fail;
-            result = JS_NewFloat64(ctx, a + b);
+            if (op == OP_and || op == OP_or || op == OP_xor ||
+                op == OP_shl || op == OP_sar || op == OP_shr) {
+                int shift;
+                if (JS_ToInt32Free(ctx, &i1, JS_DupValue(ctx, left)) ||
+                    JS_ToInt32Free(ctx, &i2, JS_DupValue(ctx, right)))
+                    goto fail;
+                shift = (uint32_t)i2 & 31;
+                switch (op) {
+                case OP_and: bits = (uint32_t)i1 & (uint32_t)i2; break;
+                case OP_or: bits = (uint32_t)i1 | (uint32_t)i2; break;
+                case OP_xor: bits = (uint32_t)i1 ^ (uint32_t)i2; break;
+                case OP_shl: bits = (uint32_t)i1 << shift; break;
+                default:
+                    bits = (uint32_t)i1 >> shift;
+                    if (op == OP_sar && i1 < 0 && shift != 0)
+                        bits |= UINT32_MAX << (32 - shift);
+                    break;
+                }
+                number = bits;
+                if (op != OP_shr && bits > INT32_MAX)
+                    number -= 4294967296.0;
+            } else {
+                if (JS_ToFloat64Free(ctx, &a, JS_DupValue(ctx, left)) ||
+                    JS_ToFloat64Free(ctx, &b, JS_DupValue(ctx, right)))
+                    goto fail;
+                switch (op) {
+                case OP_add: number = a + b; break;
+                case OP_sub: number = a - b; break;
+                case OP_mul: number = a * b; break;
+                case OP_div: number = a / b; break;
+                case OP_mod: number = fmod(a, b); break;
+                default: number = js_pow(a, b); break;
+                }
+            }
+            result = JS_NewFloat64(ctx, number);
         }
         JS_FreeValue(ctx, stack[--count]);
         JS_FreeValue(ctx, stack[--count]);
+    have_result:
         stack[count++] = result;
         pos += len;
         if (count == 1) {
@@ -230,7 +298,8 @@ int js_fold_literal_expressions(JSContext *ctx, JSFunctionDef *s)
         op = buf[pos];
         if (is_literal(s, op, buf + pos)) {
             depth++;
-        } else if (op == OP_add && depth >= 2) {
+        } else if ((is_binary_operation(op) && depth >= 2) ||
+                   ((op == OP_plus || op == OP_neg || op == OP_not) && depth >= 1)) {
             candidate = TRUE;
             break;
         } else if (op != OP_line_num) {
@@ -245,7 +314,7 @@ int js_fold_literal_expressions(JSContext *ctx, JSFunctionDef *s)
         next = pos + opcode_info[op].size;
         if (is_literal(s, op, buf + pos)) {
             int folded_line = line;
-            int end = fold_addition(ctx, s, pos, &value, &folded_line);
+            int end = fold_literal_expression(ctx, s, pos, &value, &folded_line);
             if (end < 0)
                 goto fail;
             if (end > pos) {
