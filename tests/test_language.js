@@ -4264,3 +4264,56 @@ function test_local_let_propagation()
 }
 
 test_local_let_propagation();
+
+
+function test_successful_bigint_folding()
+{
+    const inputs = ["0n", "1n", "-1n", "3n", "-7n",
+                    "123456789012345678901234567890n",
+                    "-987654321098765432109876543210n"];
+    for (const op of ["+", "-", "*", "/", "%", "&", "|", "^"]) {
+        const runtime = Function("a", "b", "return a " + op + " b;");
+        for (const a of inputs) {
+            for (const b of inputs) {
+                if ((op === "/" || op === "%") && b === "0n")
+                    continue;
+                const source = "(" + a + ")" + op + "(" + b + ")";
+                assert(Function("return " + source)(),
+                       runtime(Function("return " + a)(), Function("return " + b)()), source);
+            }
+        }
+    }
+    for (const a of inputs) {
+        const value = Function("return " + a)();
+        for (const op of ["-", "~"])
+            assert(Function("return " + op + "(" + a + ")")(),
+                   Function("a", "return " + op + "a")(value));
+        for (const op of ["<<", ">>", "**"]) {
+            const runtime = Function("a", "b", "return a " + op + " b;");
+            for (const shift of [-64n, -1n, 0n, 1n, 31n, 64n]) {
+                if (op === "**" && shift < 0n)
+                    continue;
+                const source = "(" + a + ")" + op + "(" + shift + "n)";
+                assert(Function("return " + source)(), runtime(value, shift), source);
+            }
+        }
+    }
+    /* Budget fallback must preserve results, including negative shift counts. */
+    for (const shift of [4095n, 4096n]) {
+        assert(Function("return 1n << " + shift + "n")(), 1n << shift);
+        assert(Function("return (-1n) << " + shift + "n")(), (-1n) << shift);
+    }
+    assert(Function("return 1n << (-9223372036854775808n)")(), 0n);
+    assert(Function("return (-3n) >> 9223372036854775808n")(), -1n);
+    const shift = 5000n;
+    assert(Function("return 1n << 5000n")(), 1n << shift);
+    assert(Function("return -3n >> -5000n")(), -3n >> -shift);
+    assert(Function("return 3n ** 5000n")(), 3n ** shift);
+    const huge = "0x1" + "0".repeat(1200) + "n";
+    assert(Function("return (" + huge + ") + 1n")(), BigInt(huge.slice(0, -1)) + 1n);
+    assert(Function("return 1n ** 123456789012345678901234567890n")(), 1n);
+    assert(Function("return (-1n) ** 123456789012345678901234567891n")(), -1n);
+    assert(Function("return 0n ** 0n")(), 1n);
+}
+
+test_successful_bigint_folding();

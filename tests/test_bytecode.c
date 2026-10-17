@@ -644,11 +644,11 @@ static void test_literal_folding_allocation_failure(int mode)
             dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode == 1 ? "2" : "folded-right"));
         } else {
             dbuf_putc(&fd.byte_code, OP_push_bigint_i32);
-            dbuf_put_u32(&fd.byte_code, 1);
+            dbuf_put_u32(&fd.byte_code, mode == 5 ? 3 : 1);
             dbuf_putc(&fd.byte_code, mode == 2 ? OP_push_i32 : OP_push_bigint_i32);
-            dbuf_put_u32(&fd.byte_code, mode == 2 ? 1 : 0);
+            dbuf_put_u32(&fd.byte_code, mode == 5 ? 55 : mode == 2 ? 1 : 0);
         }
-        dbuf_putc(&fd.byte_code, mode == 3 ? OP_div : OP_add);
+        dbuf_putc(&fd.byte_code, mode == 5 ? OP_pow : mode == 3 ? OP_div : OP_add);
         if (mode == 4) {
             dbuf_putc(&fd.byte_code, OP_put_loc);
             dbuf_put_u16(&fd.byte_code, 0);
@@ -676,8 +676,10 @@ static void test_literal_folding_allocation_failure(int mode)
             oom_test_check_exception(ctx);
         } else {
             assert(!JS_HasException(ctx));
-            assert(fd.byte_code.size == (mode == 4 ? 25 : mode < 2 ? 17 : 18));
-            assert(label.pos2 == (mode == 4 ? 24 : mode < 2 ? 16 : 17));
+            int expected_size = mode == 4 ? 25 :
+                ((mode < 2 || mode == 5) ? 17 : 18);
+            assert(fd.byte_code.size == expected_size);
+            assert(label.pos2 == expected_size - 1);
         }
         free_bytecode_atoms(rt, fd.byte_code.buf, fd.byte_code.size, FALSE);
         dbuf_free(&fd.byte_code);
@@ -735,6 +737,17 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    test_literal_folding_allocation_failure(5);
+    test_integer_folding_bytecode("3n ** 55n;", OP_pow, 0);
+    test_integer_folding_bytecode_flags("3n ** 55n;", OP_pow, 1, 0);
+    test_integer_folding_bytecode("12345678901234567890n * -17n;", OP_mul, 0);
+    test_integer_folding_bytecode("~12345678901234567890n;", OP_not, 0);
+    test_integer_folding_bytecode("1n << 4095n;", OP_shl, 0);
+    test_integer_folding_bytecode("(-1n) << 4095n;", OP_shl, 0);
+    test_integer_folding_bytecode("1n << 4096n;", OP_shl, 1);
+    test_integer_folding_bytecode("1n << 5000n;", OP_shl, 1);
+    test_integer_folding_bytecode("3n ** 5000n;", OP_pow, 1);
+    test_bytecode_roundtrip("Number((3n ** 50n) % 100n) - 7;");
     test_literal_folding_allocation_failure(4);
     {
         const char *chain = "(function() { const a = 3; const b = a + 4; return b + 35; })";

@@ -11,6 +11,7 @@
 
 #define FOLD_STRING_LIMIT 4096
 #define FOLD_STEP_LIMIT 32
+#define FOLD_BIGINT_BITS 4096
 
 typedef struct LocalConstant {
     JSValue value;
@@ -177,6 +178,99 @@ static BOOL bigint_is_negative(JSValueConst value)
     return js_bigint_sign(JS_VALUE_GET_PTR(value));
 }
 
+/* Borrow a normalized BigInt, using temporary storage for immediate values. */
+static JSBigInt *literal_bigint(JSValueConst value, JSBigIntBuf *buf)
+{
+    if (JS_VALUE_GET_TAG(value) == JS_TAG_SHORT_BIG_INT)
+        return js_bigint_set_short(buf, value);
+    return JS_VALUE_GET_PTR(value);
+}
+
+/* Conservative magnitude bound, including the carry from negating a negative
+   two's-complement value. This budget is independent of the target limb size. */
+static unsigned bigint_bits(const JSBigInt *value)
+{
+    BOOL negative = js_bigint_sign(value);
+    js_limb_t high = value->tab[value->len - 1] ^ -(js_limb_t)negative;
+    unsigned bits = (value->len - 1) * JS_LIMB_BITS + negative;
+
+    if (high) {
+#if JS_LIMB_BITS == 32
+        bits += 32 - clz32(high);
+#else
+        bits += 64 - clz64(high);
+#endif
+    }
+    return bits;
+}
+
+/* 1: folded, 0: leave the operation at runtime, -1: allocation failure.
+   Operands are borrowed. Bound expensive operations before allocating results. */
+static int fold_bigint(JSContext *ctx, int op, JSValueConst left,
+                       JSValueConst right, JSValue *pres)
+{
+    JSBigIntBuf abuf, bbuf;
+    JSBigInt *a = literal_bigint(left, &abuf), *b = NULL, *result;
+    unsigned abits = bigint_bits(a), bbits = 0;
+    js_slimb_t shift;
+
+    if (abits > FOLD_BIGINT_BITS)
+        return 0;
+    if (op != OP_neg && op != OP_not) {
+        b = literal_bigint(right, &bbuf);
+        bbits = bigint_bits(b);
+        if (bbits > FOLD_BIGINT_BITS)
+            return 0;
+    }
+    switch (op) {
+    case OP_neg: result = js_bigint_neg(ctx, a); break;
+    case OP_not: result = js_bigint_not(ctx, a); break;
+    case OP_add: case OP_sub:
+        result = js_bigint_add(ctx, a, b, op == OP_sub);
+        break;
+    case OP_mul:
+        if (abits + bbits > FOLD_BIGINT_BITS)
+            return 0;
+        result = js_bigint_mul(ctx, a, b);
+        break;
+    case OP_div: case OP_mod:
+        result = js_bigint_divrem(ctx, a, b, op == OP_mod);
+        break;
+    case OP_and: case OP_or: case OP_xor:
+        result = js_bigint_logic(ctx, a, b, op);
+        break;
+    case OP_pow:
+        /* The helper handles 0, 1 and -1 without expanding the exponent. */
+        if (!(a->len == 1 && (a->tab[0] <= 1 || a->tab[0] == (js_limb_t)-1)) &&
+            (b->len != 1 || b->tab[0] > FOLD_BIGINT_BITS ||
+             (uint64_t)abits * b->tab[0] > FOLD_BIGINT_BITS))
+            return 0;
+        result = js_bigint_pow(ctx, a, b);
+        break;
+    case OP_shl: case OP_sar:
+        shift = js_bigint_get_si_sat(b);
+        if (shift < -FOLD_BIGINT_BITS || shift > FOLD_BIGINT_BITS)
+            return 0;
+        if (op == OP_sar)
+            shift = -shift;
+        if (shift > 0 && abits + shift > FOLD_BIGINT_BITS)
+            return 0;
+        result = shift < 0 ? js_bigint_shr(ctx, a, -shift) :
+            js_bigint_shl(ctx, a, shift);
+        break;
+    default:
+        return 0;
+    }
+    if (!result)
+        return -1;
+    if (bigint_bits(result) > FOLD_BIGINT_BITS) {
+        js_free(ctx, result);
+        return 0;
+    }
+    *pres = JS_CompactBigIntRT(ctx->rt, result);
+    return 1;
+}
+
 /* Speculative values own their references; input bytecode remains untouched.
    Record only complete prefixes and never consume a label or user operation. */
 static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
@@ -215,7 +309,7 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             if ((JS_IsString(result) &&
                  literal_string_length(result) > FOLD_STRING_LIMIT) ||
                 (JS_VALUE_GET_TAG(result) == JS_TAG_BIG_INT &&
-                 ((JSBigInt *)JS_VALUE_GET_PTR(result))->len > 64)) {
+                 ((JSBigInt *)JS_VALUE_GET_PTR(result))->len > FOLD_BIGINT_BITS / JS_LIMB_BITS + 1)) {
                 JS_FreeValue(ctx, result);
                 break;
             }
@@ -234,14 +328,14 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
         if ((op == OP_plus || op == OP_neg || op == OP_not) && count >= 1) {
             left = stack[count - 1];
             if (JS_IsBigInt(ctx, left)) {
-                js_slimb_t short_value = JS_VALUE_GET_SHORT_BIG_INT(left);
+                int folded;
                 if (op == OP_plus)
                     goto known_throw;
-                if (op != OP_neg ||
-                    JS_VALUE_GET_TAG(left) != JS_TAG_SHORT_BIG_INT ||
-                    short_value == JS_SHORT_BIG_INT_MIN)
+                folded = fold_bigint(ctx, op, left, JS_UNDEFINED, &result);
+                if (folded < 0)
+                    goto fail;
+                if (!folded)
                     break;
-                result = __JS_NewShortBigInt(-short_value);
             } else if (op == OP_not) {
                 if (JS_ToInt32Free(ctx, &i1, JS_DupValue(ctx, left)))
                     goto fail;
@@ -294,7 +388,14 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
                     message = "BigInt negative exponent";
                     goto known_throw;
                 }
-                break;
+                {
+                    int folded = fold_bigint(ctx, op, left, right, &result);
+                    if (folded < 0)
+                        goto fail;
+                    if (!folded)
+                        break;
+                }
+                goto binary_result;
             }
             if (op == OP_and || op == OP_or || op == OP_xor ||
                 op == OP_shl || op == OP_sar || op == OP_shr) {
@@ -332,6 +433,7 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             }
             result = JS_NewFloat64(ctx, number);
         }
+    binary_result:
         JS_FreeValue(ctx, stack[--count]);
         JS_FreeValue(ctx, stack[--count]);
     have_result:
