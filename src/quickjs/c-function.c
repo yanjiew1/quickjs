@@ -1,8 +1,10 @@
 /*
  * QuickJS native C function objects
  *
- * Copyright (c) 2017-2025 Fabrice Bellard
+ * Copyright (c) 2017-2026 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -261,13 +263,14 @@ void js_c_function_mark(JSRuntime *rt, JSValueConst val,
         mark_func(rt, &p->u.cfunc.realm->header);
 }
 
-JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
-                            int length, int magic, int data_len,
-                            JSValueConst *data)
+static JSValue js_new_c_function_data(JSContext *ctx, JSCFunctionData *func,
+                                      const char *name, int length, int magic,
+                                      int data_len, JSValueConst *data)
 {
     JSCFunctionDataRecord *s;
     JSValue func_obj;
-    int i;
+    JSAtom name_atom = JS_ATOM_empty_string;
+    int i, ret;
 
     if (length < 0 || length > UINT8_MAX)
         return JS_ThrowRangeError(ctx, "invalid native function length");
@@ -292,12 +295,34 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
     for(i = 0; i < data_len; i++)
         s->data[i] = JS_DupValue(ctx, data[i]);
     JS_SetOpaque(func_obj, s);
-    if (js_function_set_properties(ctx, func_obj,
-                                   JS_ATOM_empty_string, length) < 0) {
+    if (name && *name) {
+        name_atom = JS_NewAtom(ctx, name);
+        if (name_atom == JS_ATOM_NULL) {
+            JS_FreeValue(ctx, func_obj);
+            return JS_EXCEPTION;
+        }
+    }
+    ret = js_function_set_properties(ctx, func_obj, name_atom, length);
+    JS_FreeAtom(ctx, name_atom);
+    if (ret < 0) {
         JS_FreeValue(ctx, func_obj);
         return JS_EXCEPTION;
     }
     return func_obj;
+}
+
+JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
+                           int length, int magic, int data_len,
+                           JSValueConst *data)
+{
+    return js_new_c_function_data(ctx, func, NULL, length, magic, data_len, data);
+}
+
+JSValue JS_NewCFunctionData2(JSContext *ctx, JSCFunctionData *func,
+                             const char *name, int length, int magic,
+                             int data_len, JSValueConst *data)
+{
+    return js_new_c_function_data(ctx, func, name, length, magic, data_len, data);
 }
 
 JSValue js_c_function_data_call(JSContext *ctx, JSValueConst func_obj,
