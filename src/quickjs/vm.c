@@ -48,10 +48,16 @@
 #include "builtins/function.h"
 #include "internal/disposal.h"
 
+#ifndef CONFIG_VM_STACK_CACHE
+#define CONFIG_VM_STACK_CACHE 0
+#endif
+
+#ifndef DIRECT_DISPATCH
 #if defined(__EMSCRIPTEN__)
 #define DIRECT_DISPATCH  0
 #else
 #define DIRECT_DISPATCH  1
+#endif
 #endif
 
 
@@ -2454,11 +2460,60 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     JSVarRef **var_refs;
     size_t alloca_size;
 
+#if CONFIG_VM_STACK_CACHE
+    JSValue tos = JS_UNDEFINED;
+
+    /* Below the top, physical stack slots are always current. A cached
+       result owns the original stack reference, not an extra reference.
+       Only these handlers can consume a top that is not materialized. */
+#define CACHE_INPUT_BASE(op) \
+    ((op) == OP_add || (op) == OP_sub || (op) == OP_mul || \
+     (op) == OP_div || (op) == OP_mod || \
+     (op) == OP_put_loc || (op) == OP_set_loc || \
+     (op) == OP_put_arg || (op) == OP_set_arg)
+#if SHORT_OPCODES
+#define CACHE_INPUT(op) \
+    (CACHE_INPUT_BASE(op) || (op) == OP_put_loc8 || (op) == OP_set_loc8 || \
+     ((op) >= OP_put_loc0 && (op) <= OP_put_loc3) || \
+     ((op) >= OP_set_loc0 && (op) <= OP_set_loc3) || \
+     ((op) >= OP_put_arg0 && (op) <= OP_put_arg3) || \
+     ((op) >= OP_set_arg0 && (op) <= OP_set_arg3))
+#else
+#define CACHE_INPUT(op) CACHE_INPUT_BASE(op)
+#endif
+#define TOP_VALUE tos
+#define RESULT_VALUE tos
+#define RELOAD_TOS() do { if (sp > stack_buf) tos = sp[-1]; } while (0)
+#define FLUSH_TOS() (sp[-1] = tos)
+#define PUSH_VALUE(v) do { tos = (v); sp++; } while (0)
+#else
+#define TOP_VALUE sp[-1]
+#define RESULT_VALUE sp[-2]
+#define RELOAD_TOS() ((void)0)
+#define FLUSH_TOS() ((void)0)
+#define PUSH_VALUE(v) (*sp++ = (v))
+#define CACHED_BREAK BREAK
+#endif
+
 #if !DIRECT_DISPATCH
+#if CONFIG_VM_STACK_CACHE
+#define SWITCH(pc)      dispatch: opcode = *pc++; dispatch_ready: switch (opcode)
+#define CACHED_BREAK    do { \
+    opcode = *pc++; \
+    if (!CACHE_INPUT(opcode)) \
+        FLUSH_TOS(); \
+    goto dispatch_ready; \
+} while (0)
+#else
 #define SWITCH(pc)      switch (opcode = *pc++)
+#endif
 #define CASE(op)        case op
 #define DEFAULT         default
+#if CONFIG_VM_STACK_CACHE
+#define BREAK           { RELOAD_TOS(); goto dispatch; }
+#else
 #define BREAK           break
+#endif
 #else
     /* Keep an unreachable fallback slot when all byte values are used,
        so the range initializer below is never empty. */
@@ -2472,14 +2527,44 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 #include "opcode-defs.h"
         [ OP_COUNT ... 255 + (OP_COUNT == 256) ] = &&case_default
     };
-#define SWITCH(pc)      goto *dispatch_table[opcode = *pc++];
-#ifdef OPCODE_ASM_LABEL
-#define CASE(op)        case_ ## op: asm volatile("label_" #op ":\n.globl label_" #op); dummy_case_ ## op
+#if CONFIG_VM_STACK_CACHE
+    /* The next opcode chooses whether to publish TOS. No dirty flag or
+       duplicated handler body is needed. Pushes go through materialization
+       because the old top becomes a lower slot. */
+    static const void * const cached_dispatch_table[256 + (OP_COUNT == 256)] = {
+#define DEF(id, size, n_pop, n_push, f) \
+        CACHE_INPUT(OP_ ## id) ? &&case_OP_ ## id : &&cached_OP_ ## id,
+#if SHORT_OPCODES
+#define def(id, size, n_pop, n_push, f)
 #else
-#define CASE(op)        case_ ## op
+#define def(id, size, n_pop, n_push, f) &&materialize_tos,
+#endif
+#include "opcode-defs.h"
+        [ OP_COUNT ... 255 + (OP_COUNT == 256) ] = &&materialize_tos
+    };
+#define CACHED_BREAK    goto *cached_dispatch_table[opcode = *pc++]
+#endif
+#define SWITCH(pc)      goto *dispatch_table[opcode = *pc++];
+#if CONFIG_VM_STACK_CACHE
+    /* Normal entry skips publication; cached entry publishes at the handler
+       itself, avoiding a second indirect jump through a shared trampoline.
+       The body label also lets grouped cases fall through without flushing. */
+#define CASE_ENTRY(op)  case_ ## op: goto body_ ## op; \
+                        cached_ ## op: FLUSH_TOS(); body_ ## op
+#else
+#define CASE_ENTRY(op)  case_ ## op
+#endif
+#ifdef OPCODE_ASM_LABEL
+#define CASE(op)        CASE_ENTRY(op): asm volatile("label_" #op ":\n.globl label_" #op); dummy_case_ ## op
+#else
+#define CASE(op)        CASE_ENTRY(op)
 #endif
 #define DEFAULT         case_default
+#if CONFIG_VM_STACK_CACHE
+#define BREAK           do { RELOAD_TOS(); SWITCH(pc) } while (0)
+#else
 #define BREAK           SWITCH(pc)
+#endif
 #endif
 
     if (js_poll_interrupts(caller_ctx))
@@ -2568,23 +2653,30 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     ctx = b->realm; /* set the current realm */
 
  restart:
+    RELOAD_TOS();
     for(;;) {
         int call_argc;
         JSValue *call_argv;
 
         SWITCH(pc) {
+#if CONFIG_VM_STACK_CACHE && DIRECT_DISPATCH
+        materialize_tos:
+            /* The opcode has already been fetched. Do not advance pc again. */
+            FLUSH_TOS();
+            goto *dispatch_table[opcode];
+#endif
         CASE(OP_push_i32):
-            *sp++ = JS_NewInt32(ctx, get_u32(pc));
+            PUSH_VALUE(JS_NewInt32(ctx, get_u32(pc)));
             pc += 4;
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_push_bigint_i32):
-            *sp++ = __JS_NewShortBigInt((int)get_u32(pc));
+            PUSH_VALUE(__JS_NewShortBigInt((int)get_u32(pc)));
             pc += 4;
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_push_const):
-            *sp++ = JS_DupValue(ctx, b->cpool[get_u32(pc)]);
+            PUSH_VALUE(JS_DupValue(ctx, b->cpool[get_u32(pc)]));
             pc += 4;
-            BREAK;
+            CACHED_BREAK;
 #if SHORT_OPCODES
         CASE(OP_push_minus1):
         CASE(OP_push_0):
@@ -2595,19 +2687,19 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         CASE(OP_push_5):
         CASE(OP_push_6):
         CASE(OP_push_7):
-            *sp++ = JS_NewInt32(ctx, opcode - OP_push_0);
-            BREAK;
+            PUSH_VALUE(JS_NewInt32(ctx, opcode - OP_push_0));
+            CACHED_BREAK;
         CASE(OP_push_i8):
-            *sp++ = JS_NewInt32(ctx, get_i8(pc));
+            PUSH_VALUE(JS_NewInt32(ctx, get_i8(pc)));
             pc += 1;
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_push_i16):
-            *sp++ = JS_NewInt32(ctx, get_i16(pc));
+            PUSH_VALUE(JS_NewInt32(ctx, get_i16(pc)));
             pc += 2;
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_push_const8):
-            *sp++ = JS_DupValue(ctx, b->cpool[*pc++]);
-            BREAK;
+            PUSH_VALUE(JS_DupValue(ctx, b->cpool[*pc++]));
+            CACHED_BREAK;
         CASE(OP_fclosure8):
             *sp++ = js_closure(ctx, JS_DupValue(ctx, b->cpool[*pc++]), var_refs, sf, FALSE);
             if (unlikely(JS_IsException(sp[-1])))
@@ -2622,11 +2714,11 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             pc += 4;
             BREAK;
         CASE(OP_undefined):
-            *sp++ = JS_UNDEFINED;
-            BREAK;
+            PUSH_VALUE(JS_UNDEFINED);
+            CACHED_BREAK;
         CASE(OP_null):
-            *sp++ = JS_NULL;
-            BREAK;
+            PUSH_VALUE(JS_NULL);
+            CACHED_BREAK;
         CASE(OP_push_this):
             /* OP_push_this is only called at the start of a function */
             {
@@ -2650,11 +2742,11 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
         CASE(OP_push_false):
-            *sp++ = JS_FALSE;
-            BREAK;
+            PUSH_VALUE(JS_FALSE);
+            CACHED_BREAK;
         CASE(OP_push_true):
-            *sp++ = JS_TRUE;
-            BREAK;
+            PUSH_VALUE(JS_TRUE);
+            CACHED_BREAK;
         CASE(OP_object):
             *sp++ = JS_NewObject(ctx);
             if (unlikely(JS_IsException(sp[-1])))
@@ -3287,16 +3379,15 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int idx;
                 idx = get_u16(pc);
                 pc += 2;
-                sp[0] = JS_DupValue(ctx, var_buf[idx]);
-                sp++;
+                PUSH_VALUE(JS_DupValue(ctx, var_buf[idx]));
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_put_loc):
             {
                 int idx;
                 idx = get_u16(pc);
                 pc += 2;
-                set_value(rt, &var_buf[idx], sp[-1]);
+                set_value(rt, &var_buf[idx], TOP_VALUE);
                 sp--;
             }
             BREAK;
@@ -3305,24 +3396,23 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int idx;
                 idx = get_u16(pc);
                 pc += 2;
-                set_value(rt, &var_buf[idx], JS_DupValue(ctx, sp[-1]));
+                set_value(rt, &var_buf[idx], JS_DupValue(ctx, TOP_VALUE));
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_get_arg):
             {
                 int idx;
                 idx = get_u16(pc);
                 pc += 2;
-                sp[0] = JS_DupValue(ctx, arg_buf[idx]);
-                sp++;
+                PUSH_VALUE(JS_DupValue(ctx, arg_buf[idx]));
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_put_arg):
             {
                 int idx;
                 idx = get_u16(pc);
                 pc += 2;
-                set_value(rt, &arg_buf[idx], sp[-1]);
+                set_value(rt, &arg_buf[idx], TOP_VALUE);
                 sp--;
             }
             BREAK;
@@ -3331,39 +3421,102 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int idx;
                 idx = get_u16(pc);
                 pc += 2;
-                set_value(rt, &arg_buf[idx], JS_DupValue(ctx, sp[-1]));
+                set_value(rt, &arg_buf[idx], JS_DupValue(ctx, TOP_VALUE));
             }
-            BREAK;
+            CACHED_BREAK;
 
 #if SHORT_OPCODES
-        CASE(OP_get_loc8): *sp++ = JS_DupValue(ctx, var_buf[*pc++]); BREAK;
-        CASE(OP_put_loc8): set_value(rt, &var_buf[*pc++], *--sp); BREAK;
-        CASE(OP_set_loc8): set_value(rt, &var_buf[*pc++], JS_DupValue(ctx, sp[-1])); BREAK;
+        CASE(OP_get_loc8):
+            PUSH_VALUE(JS_DupValue(ctx, var_buf[*pc++]));
+            CACHED_BREAK;
+        CASE(OP_put_loc8):
+            set_value(rt, &var_buf[*pc++], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_set_loc8):
+            set_value(rt, &var_buf[*pc++], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
 
-        CASE(OP_get_loc0): *sp++ = JS_DupValue(ctx, var_buf[0]); BREAK;
-        CASE(OP_get_loc1): *sp++ = JS_DupValue(ctx, var_buf[1]); BREAK;
-        CASE(OP_get_loc2): *sp++ = JS_DupValue(ctx, var_buf[2]); BREAK;
-        CASE(OP_get_loc3): *sp++ = JS_DupValue(ctx, var_buf[3]); BREAK;
-        CASE(OP_put_loc0): set_value(rt, &var_buf[0], *--sp); BREAK;
-        CASE(OP_put_loc1): set_value(rt, &var_buf[1], *--sp); BREAK;
-        CASE(OP_put_loc2): set_value(rt, &var_buf[2], *--sp); BREAK;
-        CASE(OP_put_loc3): set_value(rt, &var_buf[3], *--sp); BREAK;
-        CASE(OP_set_loc0): set_value(rt, &var_buf[0], JS_DupValue(ctx, sp[-1])); BREAK;
-        CASE(OP_set_loc1): set_value(rt, &var_buf[1], JS_DupValue(ctx, sp[-1])); BREAK;
-        CASE(OP_set_loc2): set_value(rt, &var_buf[2], JS_DupValue(ctx, sp[-1])); BREAK;
-        CASE(OP_set_loc3): set_value(rt, &var_buf[3], JS_DupValue(ctx, sp[-1])); BREAK;
-        CASE(OP_get_arg0): *sp++ = JS_DupValue(ctx, arg_buf[0]); BREAK;
-        CASE(OP_get_arg1): *sp++ = JS_DupValue(ctx, arg_buf[1]); BREAK;
-        CASE(OP_get_arg2): *sp++ = JS_DupValue(ctx, arg_buf[2]); BREAK;
-        CASE(OP_get_arg3): *sp++ = JS_DupValue(ctx, arg_buf[3]); BREAK;
-        CASE(OP_put_arg0): set_value(rt, &arg_buf[0], *--sp); BREAK;
-        CASE(OP_put_arg1): set_value(rt, &arg_buf[1], *--sp); BREAK;
-        CASE(OP_put_arg2): set_value(rt, &arg_buf[2], *--sp); BREAK;
-        CASE(OP_put_arg3): set_value(rt, &arg_buf[3], *--sp); BREAK;
-        CASE(OP_set_arg0): set_value(rt, &arg_buf[0], JS_DupValue(ctx, sp[-1])); BREAK;
-        CASE(OP_set_arg1): set_value(rt, &arg_buf[1], JS_DupValue(ctx, sp[-1])); BREAK;
-        CASE(OP_set_arg2): set_value(rt, &arg_buf[2], JS_DupValue(ctx, sp[-1])); BREAK;
-        CASE(OP_set_arg3): set_value(rt, &arg_buf[3], JS_DupValue(ctx, sp[-1])); BREAK;
+        CASE(OP_get_loc0):
+            PUSH_VALUE(JS_DupValue(ctx, var_buf[0]));
+            CACHED_BREAK;
+        CASE(OP_get_loc1):
+            PUSH_VALUE(JS_DupValue(ctx, var_buf[1]));
+            CACHED_BREAK;
+        CASE(OP_get_loc2):
+            PUSH_VALUE(JS_DupValue(ctx, var_buf[2]));
+            CACHED_BREAK;
+        CASE(OP_get_loc3):
+            PUSH_VALUE(JS_DupValue(ctx, var_buf[3]));
+            CACHED_BREAK;
+        CASE(OP_put_loc0):
+            set_value(rt, &var_buf[0], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_put_loc1):
+            set_value(rt, &var_buf[1], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_put_loc2):
+            set_value(rt, &var_buf[2], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_put_loc3):
+            set_value(rt, &var_buf[3], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_set_loc0):
+            set_value(rt, &var_buf[0], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
+        CASE(OP_set_loc1):
+            set_value(rt, &var_buf[1], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
+        CASE(OP_set_loc2):
+            set_value(rt, &var_buf[2], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
+        CASE(OP_set_loc3):
+            set_value(rt, &var_buf[3], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
+        CASE(OP_get_arg0):
+            PUSH_VALUE(JS_DupValue(ctx, arg_buf[0]));
+            CACHED_BREAK;
+        CASE(OP_get_arg1):
+            PUSH_VALUE(JS_DupValue(ctx, arg_buf[1]));
+            CACHED_BREAK;
+        CASE(OP_get_arg2):
+            PUSH_VALUE(JS_DupValue(ctx, arg_buf[2]));
+            CACHED_BREAK;
+        CASE(OP_get_arg3):
+            PUSH_VALUE(JS_DupValue(ctx, arg_buf[3]));
+            CACHED_BREAK;
+        CASE(OP_put_arg0):
+            set_value(rt, &arg_buf[0], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_put_arg1):
+            set_value(rt, &arg_buf[1], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_put_arg2):
+            set_value(rt, &arg_buf[2], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_put_arg3):
+            set_value(rt, &arg_buf[3], TOP_VALUE);
+            sp--;
+            BREAK;
+        CASE(OP_set_arg0):
+            set_value(rt, &arg_buf[0], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
+        CASE(OP_set_arg1):
+            set_value(rt, &arg_buf[1], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
+        CASE(OP_set_arg2):
+            set_value(rt, &arg_buf[2], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
+        CASE(OP_set_arg3):
+            set_value(rt, &arg_buf[3], JS_DupValue(ctx, TOP_VALUE));
+            CACHED_BREAK;
         CASE(OP_get_var_ref0): *sp++ = JS_DupValue(ctx, *var_refs[0]->pvalue); BREAK;
         CASE(OP_get_var_ref1): *sp++ = JS_DupValue(ctx, *var_refs[1]->pvalue); BREAK;
         CASE(OP_get_var_ref2): *sp++ = JS_DupValue(ctx, *var_refs[2]->pvalue); BREAK;
@@ -4533,14 +4686,14 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 JSValue op1, op2;
                 op1 = sp[-2];
-                op2 = sp[-1];
+                op2 = TOP_VALUE;
                 if (likely(JS_VALUE_IS_BOTH_INT(op1, op2))) {
                     int64_t r;
                     r = (int64_t)JS_VALUE_GET_INT(op1) + JS_VALUE_GET_INT(op2);
                     if (unlikely((int)r != r)) {
-                        sp[-2] = __JS_NewFloat64(ctx, (double)r);
+                        RESULT_VALUE = __JS_NewFloat64(ctx, (double)r);
                     } else {
-                        sp[-2] = JS_NewInt32(ctx, r);
+                        RESULT_VALUE = JS_NewInt32(ctx, r);
                     }
                     sp--;
                 } else if (JS_VALUE_IS_FLOAT64(op1) ||
@@ -4560,22 +4713,26 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     } else {
                         goto add_slow_case;
                     }
-                    sp[-2] = __JS_NewFloat64(ctx, d1 + d2);
+                    RESULT_VALUE = __JS_NewFloat64(ctx, d1 + d2);
                     sp--;
                 } else if (JS_IsString(op1) && JS_IsString(op2)) {
+                    FLUSH_TOS();
                     sp[-2] = JS_ConcatString(ctx, op1, op2);
                     sp--;
                     if (JS_IsException(sp[-1]))
                         goto exception;
+                    BREAK;
                 } else {
                 add_slow_case:
+                    FLUSH_TOS();
                     sf->cur_pc = pc;
                     if (js_add_slow(ctx, sp))
                         goto exception;
                     sp--;
+                    BREAK;
                 }
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_add_loc):
             {
                 JSValue op2;
@@ -4629,14 +4786,14 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 JSValue op1, op2;
                 op1 = sp[-2];
-                op2 = sp[-1];
+                op2 = TOP_VALUE;
                 if (likely(JS_VALUE_IS_BOTH_INT(op1, op2))) {
                     int64_t r;
                     r = (int64_t)JS_VALUE_GET_INT(op1) - JS_VALUE_GET_INT(op2);
                     if (unlikely((int)r != r)) {
-                        sp[-2] = __JS_NewFloat64(ctx, (double)r);
+                        RESULT_VALUE = __JS_NewFloat64(ctx, (double)r);
                     } else {
-                        sp[-2] = JS_NewInt32(ctx, r);
+                        RESULT_VALUE = JS_NewInt32(ctx, r);
                     }
                     sp--;
                 } else if (JS_VALUE_IS_FLOAT64(op1) ||
@@ -4656,19 +4813,19 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     } else {
                         goto binary_arith_slow;
                     }
-                    sp[-2] = __JS_NewFloat64(ctx, d1 - d2);
+                    RESULT_VALUE = __JS_NewFloat64(ctx, d1 - d2);
                     sp--;
                 } else {
                     goto binary_arith_slow;
                 }
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_mul):
             {
                 JSValue op1, op2;
                 double d;
                 op1 = sp[-2];
-                op2 = sp[-1];
+                op2 = TOP_VALUE;
                 if (likely(JS_VALUE_IS_BOTH_INT(op1, op2))) {
                     int32_t v1, v2;
                     int64_t r;
@@ -4684,7 +4841,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         d = -0.0;
                         goto mul_fp_res;
                     }
-                    sp[-2] = JS_NewInt32(ctx, r);
+                    RESULT_VALUE = JS_NewInt32(ctx, r);
                     sp--;
                 } else if (JS_VALUE_IS_FLOAT64(op1) ||
                            JS_VALUE_IS_FLOAT64(op2)) {
@@ -4705,34 +4862,34 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     }
                     d = d1 * d2;
                 mul_fp_res:
-                    sp[-2] = __JS_NewFloat64(ctx, d);
+                    RESULT_VALUE = __JS_NewFloat64(ctx, d);
                     sp--;
                 } else {
                     goto binary_arith_slow;
                 }
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_div):
             {
                 JSValue op1, op2;
                 op1 = sp[-2];
-                op2 = sp[-1];
+                op2 = TOP_VALUE;
                 if (likely(JS_VALUE_IS_BOTH_INT(op1, op2))) {
                     int v1, v2;
                     v1 = JS_VALUE_GET_INT(op1);
                     v2 = JS_VALUE_GET_INT(op2);
-                    sp[-2] = JS_NewFloat64(ctx, (double)v1 / (double)v2);
+                    RESULT_VALUE = JS_NewFloat64(ctx, (double)v1 / (double)v2);
                     sp--;
                 } else {
                     goto binary_arith_slow;
                 }
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_mod):
             {
                 JSValue op1, op2;
                 op1 = sp[-2];
-                op2 = sp[-1];
+                op2 = TOP_VALUE;
                 if (likely(JS_VALUE_IS_BOTH_INT(op1, op2))) {
                     int v1, v2, r;
                     v1 = JS_VALUE_GET_INT(op1);
@@ -4742,15 +4899,16 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     if (unlikely(v1 < 0 || v2 <= 0))
                         goto binary_arith_slow;
                     r = v1 % v2;
-                    sp[-2] = JS_NewInt32(ctx, r);
+                    RESULT_VALUE = JS_NewInt32(ctx, r);
                     sp--;
                 } else {
                     goto binary_arith_slow;
                 }
             }
-            BREAK;
+            CACHED_BREAK;
         CASE(OP_pow):
         binary_arith_slow:
+            FLUSH_TOS();
             sf->cur_pc = pc;
             if (js_binary_arith_slow(ctx, sp, opcode))
                 goto exception;
@@ -5586,6 +5744,16 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     rt->current_stack_frame = sf->prev_frame;
     return ret_val;
 }
+
+#undef CASE_ENTRY
+#undef CACHE_INPUT_BASE
+#undef CACHE_INPUT
+#undef TOP_VALUE
+#undef RESULT_VALUE
+#undef RELOAD_TOS
+#undef FLUSH_TOS
+#undef PUSH_VALUE
+#undef CACHED_BREAK
 
 #ifdef OPCODE_ASM_LABEL
 #pragma GCC diagnostic pop

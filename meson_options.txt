@@ -55,3 +55,10 @@ option(
   value: 'legacy',
   description: 'JSValue ABI: original platform default, wide union, or Q=1 compact NaN boxing',
 )
+
+option(
+  'vm_stack_cache',
+  type: 'boolean',
+  value: false,
+  description: 'Experimental local VM top-of-stack cache with deferred writeback',
+)
