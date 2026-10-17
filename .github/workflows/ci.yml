@@ -15,6 +15,45 @@ on:
     - '*'
 
 jobs:
+  unicode:
+    name: Unicode table regeneration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install generator build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build
+    - name: Download and verify Unicode inputs
+      run: |
+        cd "$RUNNER_TEMP"
+        "$GITHUB_WORKSPACE/tools/unicode_download.sh"
+        cd unicode
+        sha256sum --check "$GITHUB_WORKSPACE/tools/unicode-data.sha256"
+    - name: Configure unicode tools
+      run: |
+        meson setup build-unicode -Dwerror=true -Dunicode_data="$RUNNER_TEMP/unicode"
+    - name: Compile unicode tools
+      run: |
+        meson compile -C build-unicode -j "$(getconf _NPROCESSORS_ONLN)" \
+          unicode-tables
+    - name: Compare generated tables with the repository
+      run: |
+        status=0
+        for file in libunicode-table.c libunicode-table.h; do
+          diff -u "src/unicode/$file" "build-unicode/$file" || status=1
+        done
+        exit "$status"
+    - name: Preserve generated tables on failure
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: unicode-generated-tables
+        path: |
+          build-unicode/libunicode-table.c
+          build-unicode/libunicode-table.h
+
   linux:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
