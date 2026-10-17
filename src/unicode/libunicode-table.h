@@ -413,5 +413,4 @@ extern const uint8_t unicode_rgi_emoji_tag_sequence[18];
 extern const uint8_t unicode_rgi_emoji_zwj_sequence[2392];
 #endif /* CONFIG_ALL_UNICODE */
 
-
 #endif /* LIBUNICODE_TABLE_H */
