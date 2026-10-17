@@ -1003,6 +1003,26 @@ callback can be used to implement an execution timeout.
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
 
+@subsection Builtin brand queries
+
+The @code{JS_IsPromise}, @code{JS_IsMap}, @code{JS_IsSet}, @code{JS_IsWeakMap},
+@code{JS_IsWeakSet}, @code{JS_IsWeakRef}, @code{JS_IsRegExp}, @code{JS_IsDate},
+@code{JS_IsArrayBuffer}, @code{JS_IsSharedArrayBuffer} and @code{JS_IsDataView}
+queries inspect the builtin brand directly. They work across realms and with
+subclasses, do not call JavaScript, and leave pending exceptions untouched.
+Forged prototypes and @code{Symbol.toStringTag} do not confer a brand;
+Proxies around branded values do not inherit it. Detached and out-of-bounds
+views retain their brands. ArrayBuffer and SharedArrayBuffer are distinct.
+
+@code{JS_IsProxy} includes revoked Proxies. @code{JS_IsAsyncFunction} recognizes
+async functions, excluding async generators, bound functions and Proxies.
+@code{JS_IsRegExp} deliberately does not implement ECMAScript's observable
+@code{IsRegExp} operation, which consults @code{Symbol.match}.
+
+The existing @code{JS_IsArray(ctx, value)} remains proxy-aware and can throw
+for a revoked Proxy. Use @code{JS_GetTypedArrayType(value)} to query a TypedArray
+brand and its element type without invoking JavaScript.
+
 @subsection Native Promise integration
 
 @code{JS_PromiseThen(ctx, promise, on_fulfilled, on_rejected)} attaches

@@ -1208,3 +1208,9 @@ int JS_AddIntrinsicPromise(JSContext *ctx)
         return -1;
     return js_init_array_from_async(ctx);
 }
+
+JS_BOOL JS_IsPromise(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_PROMISE;
+}
