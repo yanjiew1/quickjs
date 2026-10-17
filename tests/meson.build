@@ -183,6 +183,7 @@ endforeach
 
 context_c = custom_target(
   'qjsc-context-source',
+  depends: generator_runtime_deps,
   input: 'fixture_qjsc_context.js',
   output: 'qjsc-context-generated.h',
   command: [
@@ -290,6 +291,7 @@ test(
 runner_prefix = ''
 json_c = custom_target(
   'qjsc-json-attributes-source',
+  depends: generator_runtime_deps,
   input: files(
     'prepare_qjsc_json_attributes.py',
     'qjsc-json-attributes/main.js',
@@ -333,6 +335,7 @@ test(
 )
 native_std_c = custom_target(
   'qjsc-native-std-source',
+  depends: generator_runtime_deps,
   input: 'qjsc-json-attributes/native-std.js',
   output: 'qjsc-native-std.c',
   command: [
@@ -381,6 +384,7 @@ collision_inputs = files(
 foreach name : ['attributes-first', 'attributes-last', 'size-first', 'size-last']
   generated = custom_target(
     'qjsc-json-collision-' + name,
+    depends: generator_runtime_deps,
     input: collision_inputs,
     output: 'qjsc-json-collision-' + name + '.c',
     command: [
