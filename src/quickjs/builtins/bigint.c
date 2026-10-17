@@ -164,7 +164,7 @@ static JSValue js_bigint_asUintN(JSContext *ctx,
         res = __JS_NewShortBigInt(0);
     } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
         /* fast case */
-        js_slimb_t sv = JS_VALUE_GET_SHORT_BIG_INT(a);
+        int64_t sv = JS_VALUE_GET_SHORT_BIG_INT(a);
         if (bits >= JS_SHORT_BIG_INT_BITS) {
             if (!asIntN && sv < 0) {
                 p = js_bigint_set_short(&buf, a);

@@ -77,10 +77,13 @@ JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val);
 
 double js_bigint_to_float64(const JSBigInt *a);
 
-/* it is currently assumed that JS_SHORT_BIG_INT_BITS = JS_LIMB_BITS */
+/* Inline range and heap limb width are independent. */
 #if JS_SHORT_BIG_INT_BITS == 32
 #define JS_SHORT_BIG_INT_MIN INT32_MIN
 #define JS_SHORT_BIG_INT_MAX INT32_MAX
+#elif JS_SHORT_BIG_INT_BITS == 48
+#define JS_SHORT_BIG_INT_MIN (-INT64_C(140737488355328))
+#define JS_SHORT_BIG_INT_MAX INT64_C(140737488355327)
 #elif JS_SHORT_BIG_INT_BITS == 64
 #define JS_SHORT_BIG_INT_MIN INT64_MIN
 #define JS_SHORT_BIG_INT_MAX INT64_MAX

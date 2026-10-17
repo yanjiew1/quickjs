@@ -31,6 +31,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
+#include <float.h>
+#include "quickjs-config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,8 +76,14 @@ typedef uint32_t JSAtom;
 #define JS_PTR64_DEF(a)
 #endif
 
-#ifndef JS_PTR64
+/* The selected representation is part of the build's public ABI. */
+#if JS_VALUE_MODE == 2
+#define JS_COMPACT_NAN_BOXING
 #define JS_NAN_BOXING
+#elif JS_VALUE_MODE == 0 && !defined(JS_PTR64)
+#define JS_NAN_BOXING
+#elif JS_VALUE_MODE != 0 && JS_VALUE_MODE != 1
+#error unsupported JSValue representation
 #endif
 
 #if defined(__SIZEOF_INT128__) && (INTPTR_MAX >= INT64_MAX)
@@ -83,7 +92,11 @@ typedef uint32_t JSAtom;
 #define JS_LIMB_BITS 32
 #endif
 
+#if defined(JS_COMPACT_NAN_BOXING) && defined(JS_PTR64)
+#define JS_SHORT_BIG_INT_BITS 48
+#else
 #define JS_SHORT_BIG_INT_BITS JS_LIMB_BITS
+#endif
     
 enum {
     /* all tags with a reference count are negative */
@@ -155,6 +168,125 @@ static inline JS_BOOL JS_VALUE_IS_NAN(JSValue v)
 static inline JSValue __JS_NewShortBigInt(int32_t d)
 {
     return JS_MKVAL(JS_TAG_SHORT_BIG_INT, d);
+}
+
+#elif defined(JS_COMPACT_NAN_BOXING)
+
+#if FLT_RADIX != 2 || DBL_MANT_DIG != 53 || DBL_MAX_EXP != 1024
+#error compact JSValue requires IEEE binary64 doubles
+#endif
+
+/* Q=1: RC:1 | exponent:11 | quiet:1 | major:2 | payload:49.
+   All numeric NaNs canonicalize to JS_NAN. Negative finite doubles do not
+   have the RC meaning: classification must include the entire NaN prefix.
+   Reference payloads use the low two alignment bits as a subtype. */
+typedef uint64_t JSValue;
+#define JSValueConst JSValue
+
+#define JS_COMPACT_RC_PREFIX UINT64_C(0xfff8000000000000)
+#define JS_COMPACT_MAJOR_MASK UINT64_C(0xfffe000000000000)
+#define JS_COMPACT_PTR_MASK UINT64_C(0x0001fffffffffffc)
+#define JS_COMPACT_INT UINT64_C(0x7ffa000000000000)
+#define JS_COMPACT_BIG_INT UINT64_C(0x7ffc000000000000)
+#define JS_COMPACT_SPECIAL UINT64_C(0x7ffe000000000000)
+#define JS_COMPACT_PRIMITIVE UINT64_C(0xfffa000000000000)
+#define JS_COMPACT_INTERNAL UINT64_C(0xfffc000000000000)
+#define JS_NAN UINT64_C(0x7ff8000000000000)
+
+#define JS_VALUE_GET_INT(v) ((int32_t)(v))
+#define JS_VALUE_GET_BOOL(v) JS_VALUE_GET_INT(v)
+#define JS_VALUE_GET_PTR(v) ((void *)(uintptr_t)((v) & JS_COMPACT_PTR_MASK))
+#if JS_SHORT_BIG_INT_BITS == 48
+#define JS_VALUE_GET_SHORT_BIG_INT(v) ((int64_t)((uint64_t)(v) << 16) >> 16)
+#else
+#define JS_VALUE_GET_SHORT_BIG_INT(v) ((int32_t)(v))
+#endif
+/* Keep static initializers valid and preserve full int32/catch payloads. */
+#define JS_MKVAL(tag, val) (((tag) == JS_TAG_INT ? JS_COMPACT_INT : \
+    JS_COMPACT_SPECIAL | ((uint64_t)(tag) << 32)) | (uint32_t)(val))
+
+static inline JSValue JS_MKPTR(int tag, const void *ptr)
+{
+    uint64_t p = (uintptr_t)ptr;
+    uint64_t prefix;
+    /* There is no context for reporting an exception here. Never silently
+       truncate an unsupported address, including in release builds. */
+    if (js_unlikely(p & ~JS_COMPACT_PTR_MASK))
+        abort();
+    switch (tag) {
+    case JS_TAG_OBJECT: prefix = JS_COMPACT_RC_PREFIX; break;
+    case JS_TAG_STRING: prefix = JS_COMPACT_PRIMITIVE; break;
+    case JS_TAG_STRING_ROPE: prefix = JS_COMPACT_PRIMITIVE | 1; break;
+    case JS_TAG_SYMBOL: prefix = JS_COMPACT_PRIMITIVE | 2; break;
+    case JS_TAG_BIG_INT: prefix = JS_COMPACT_PRIMITIVE | 3; break;
+    case JS_TAG_VAR_REF: prefix = JS_COMPACT_INTERNAL; break;
+    case JS_TAG_VAR_REF_RO: prefix = JS_COMPACT_INTERNAL | 1; break;
+    case JS_TAG_MODULE: prefix = JS_COMPACT_INTERNAL | 2; break;
+    case JS_TAG_FUNCTION_BYTECODE: prefix = JS_COMPACT_INTERNAL | 3; break;
+    default: abort();
+    }
+    return prefix | p;
+}
+
+static inline JS_BOOL JS_VALUE_IS_FLOAT64(JSValue v)
+{
+    /* Only the canonical positive NaN is a Number in the boxed range. */
+    return (v & UINT64_C(0x7fffffffffffffff)) <= JS_NAN &&
+        v != JS_COMPACT_RC_PREFIX;
+}
+
+static inline int JS_VALUE_GET_TAG(JSValue v)
+{
+    uint64_t major;
+    if (JS_VALUE_IS_FLOAT64(v))
+        return JS_TAG_FLOAT64;
+    major = v & JS_COMPACT_MAJOR_MASK;
+    if (major == JS_COMPACT_INT)
+        return JS_TAG_INT;
+    if (major == JS_COMPACT_BIG_INT)
+        return JS_TAG_SHORT_BIG_INT;
+    if (major == JS_COMPACT_SPECIAL)
+        return (int)((v >> 32) & 0x1ffff);
+    if (major == JS_COMPACT_RC_PREFIX)
+        return JS_TAG_OBJECT;
+    if (major == JS_COMPACT_INTERNAL)
+        return JS_TAG_VAR_REF + (int)(v & 3);
+    switch (v & 3) {
+    case 0: return JS_TAG_STRING;
+    case 1: return JS_TAG_STRING_ROPE;
+    case 2: return JS_TAG_SYMBOL;
+    default: return JS_TAG_BIG_INT;
+    }
+}
+
+#define JS_VALUE_GET_NORM_TAG(v) JS_VALUE_GET_TAG(v)
+#define JS_TAG_IS_FLOAT64(tag) ((unsigned)(tag) == JS_TAG_FLOAT64)
+
+static inline double JS_VALUE_GET_FLOAT64(JSValue v)
+{
+    double d;
+    memcpy(&d, &v, sizeof(d));
+    return d;
+}
+
+static inline JSValue __JS_NewFloat64(JSContext *ctx, double d)
+{
+    uint64_t bits;
+    memcpy(&bits, &d, sizeof(bits));
+    if (js_unlikely((bits & UINT64_C(0x7fffffffffffffff)) >
+                    UINT64_C(0x7ff0000000000000)))
+        return JS_NAN;
+    return bits;
+}
+
+static inline JS_BOOL JS_VALUE_IS_NAN(JSValue v)
+{
+    return v == JS_NAN;
+}
+
+static inline JSValue __JS_NewShortBigInt(int64_t d)
+{
+    return JS_COMPACT_BIG_INT | ((uint64_t)d & UINT64_C(0x0000ffffffffffff));
 }
 
 #elif defined(JS_NAN_BOXING)
@@ -296,10 +428,19 @@ static inline JSValue __JS_NewShortBigInt(int64_t d)
 
 #endif /* !JS_NAN_BOXING */
 
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+#define JS_VALUE_IS_BOTH_INT(v1, v2) \
+    ((((v1) ^ JS_COMPACT_INT) | ((v2) ^ JS_COMPACT_INT)) >> 32 == 0)
+#define JS_VALUE_IS_BOTH_FLOAT(v1, v2) \
+    (JS_VALUE_IS_FLOAT64(v1) && JS_VALUE_IS_FLOAT64(v2))
+#define JS_VALUE_HAS_REF_COUNT(v) ((uint64_t)(v) >= JS_COMPACT_RC_PREFIX)
+#else
+#define JS_VALUE_IS_FLOAT64(v) JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(v))
 #define JS_VALUE_IS_BOTH_INT(v1, v2) ((JS_VALUE_GET_TAG(v1) | JS_VALUE_GET_TAG(v2)) == 0)
 #define JS_VALUE_IS_BOTH_FLOAT(v1, v2) (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(v1)) && JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(v2)))
 
 #define JS_VALUE_HAS_REF_COUNT(v) ((unsigned)JS_VALUE_GET_TAG(v) >= (unsigned)JS_TAG_FIRST)
+#endif
 
 /* special values */
 #define JS_NULL      JS_MKVAL(JS_TAG_NULL, 0)
@@ -642,55 +783,96 @@ static js_force_inline JSValue JS_NewFloat64(JSContext *ctx, double d)
 
 static inline JS_BOOL JS_IsNumber(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return (v & JS_COMPACT_MAJOR_MASK) == JS_COMPACT_INT || JS_VALUE_IS_FLOAT64(v);
+#else
     int tag = JS_VALUE_GET_TAG(v);
     return tag == JS_TAG_INT || JS_TAG_IS_FLOAT64(tag);
+#endif
 }
 
 static inline JS_BOOL JS_IsBigInt(JSContext *ctx, JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return (v & JS_COMPACT_MAJOR_MASK) == JS_COMPACT_BIG_INT ||
+        (v & (JS_COMPACT_MAJOR_MASK | 3)) == (JS_COMPACT_PRIMITIVE | 3);
+#else
     int tag = JS_VALUE_GET_TAG(v);
     return tag == JS_TAG_BIG_INT || tag == JS_TAG_SHORT_BIG_INT;
+#endif
 }
 
 static inline JS_BOOL JS_IsBool(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return (v >> 32) == ((JS_COMPACT_SPECIAL >> 32) | JS_TAG_BOOL);
+#else
     return JS_VALUE_GET_TAG(v) == JS_TAG_BOOL;
+#endif
 }
 
 static inline JS_BOOL JS_IsNull(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return v == JS_NULL;
+#else
     return JS_VALUE_GET_TAG(v) == JS_TAG_NULL;
+#endif
 }
 
 static inline JS_BOOL JS_IsUndefined(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return v == JS_UNDEFINED;
+#else
     return JS_VALUE_GET_TAG(v) == JS_TAG_UNDEFINED;
+#endif
 }
 
 static inline JS_BOOL JS_IsException(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return js_unlikely(v == JS_EXCEPTION);
+#else
     return js_unlikely(JS_VALUE_GET_TAG(v) == JS_TAG_EXCEPTION);
+#endif
 }
 
 static inline JS_BOOL JS_IsUninitialized(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return js_unlikely(v == JS_UNINITIALIZED);
+#else
     return js_unlikely(JS_VALUE_GET_TAG(v) == JS_TAG_UNINITIALIZED);
+#endif
 }
 
 static inline JS_BOOL JS_IsString(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return (v & (JS_COMPACT_MAJOR_MASK | 2)) == JS_COMPACT_PRIMITIVE;
+#else
     return JS_VALUE_GET_TAG(v) == JS_TAG_STRING ||
         JS_VALUE_GET_TAG(v) == JS_TAG_STRING_ROPE;
+#endif
 }
 
 static inline JS_BOOL JS_IsSymbol(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return (v & (JS_COMPACT_MAJOR_MASK | 3)) == (JS_COMPACT_PRIMITIVE | 2);
+#else
     return JS_VALUE_GET_TAG(v) == JS_TAG_SYMBOL;
+#endif
 }
 
 static inline JS_BOOL JS_IsObject(JSValueConst v)
 {
+#if defined(JS_COMPACT_NAN_BOXING) && !defined(CONFIG_CHECK_JSVALUE)
+    return (v & JS_COMPACT_MAJOR_MASK) == JS_COMPACT_RC_PREFIX;
+#else
     return JS_VALUE_GET_TAG(v) == JS_TAG_OBJECT;
+#endif
 }
 
 /* Nonobservable builtin brands: no property access or Proxy unwrapping.

@@ -397,7 +397,7 @@ static JSBigInt *js_bigint_set_si64(JSBigIntBuf *buf, int64_t a)
 /* val must be a short big int */
 JSBigInt *js_bigint_set_short(JSBigIntBuf *buf, JSValueConst val)
 {
-    return js_bigint_set_si(buf, JS_VALUE_GET_SHORT_BIG_INT(val));
+    return js_bigint_set_si64(buf, JS_VALUE_GET_SHORT_BIG_INT(val));
 }
 
 static __maybe_unused void js_bigint_dump1(const char *str,
@@ -1494,13 +1494,24 @@ JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
 JSValue JS_CompactBigIntRT(JSRuntime *rt, JSBigInt *p)
 {
     JSValue res;
-    if (p->len == 1) {
+    if (p->len == 1 &&
+        (js_slimb_t)p->tab[0] >= JS_SHORT_BIG_INT_MIN &&
+        (js_slimb_t)p->tab[0] <= JS_SHORT_BIG_INT_MAX) {
         res = __JS_NewShortBigInt((js_slimb_t)p->tab[0]);
         js_free_rt(rt, p);
         return res;
-    } else {
-        return JS_MKPTR(JS_TAG_BIG_INT, p);
     }
+#if JS_SHORT_BIG_INT_BITS > JS_LIMB_BITS
+    if (p->len == 2) {
+        int64_t v = (int64_t)(js_slimb_t)p->tab[1] * INT64_C(4294967296) |
+            p->tab[0];
+        if (v >= JS_SHORT_BIG_INT_MIN && v <= JS_SHORT_BIG_INT_MAX) {
+            js_free_rt(rt, p);
+            return __JS_NewShortBigInt(v);
+        }
+    }
+#endif
+    return JS_MKPTR(JS_TAG_BIG_INT, p);
 }
 
 JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
