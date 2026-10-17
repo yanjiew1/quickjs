@@ -46,7 +46,26 @@ inc = include_directories(
   'src/regexp',
 )
 version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
-common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
+value_mode = 0
+if get_option('value_representation') == 'wide'
+  value_mode = 1
+elif get_option('value_representation') == 'compact'
+  value_mode = 2
+endif
+value_config = configuration_data()
+value_config.set('JS_VALUE_MODE', value_mode)
+configure_file(
+  input: 'include/quickjs-config.h.in',
+  output: 'quickjs-config.h',
+  configuration: value_config,
+  install_dir: get_option('includedir') / 'quickjs',
+)
+common_args = [
+  '-D_GNU_SOURCE',
+  version_arg,
+  '-fwrapv',
+  '-DJS_VALUE_MODE=' + value_mode.to_string(),
+]
 if get_option('gc_stress')
   common_args += '-DFORCE_GC_AT_MALLOC'
 endif
@@ -380,11 +399,14 @@ engine_whole = shared_build ? [] : [engine]
 tool_support = shared_build ? files('src/cutils/cutils.c') : []
 tool_rpath = shared_build ? get_option('prefix') / library_install_dir : ''
 test_engine_dep = declare_dependency(
+  compile_args: ['-DJS_VALUE_MODE=' + value_mode.to_string()],
+  compile_args: ['-DJS_VALUE_MODE=' + value_mode.to_string()],
   link_with: test_engine,
   include_directories: include_directories('include'),
   dependencies: host_deps,
 )
 engine_dep = declare_dependency(
+  compile_args: ['-DJS_VALUE_MODE=' + value_mode.to_string()],
   link_with: engine,
   include_directories: include_directories('include'),
   dependencies: host_deps,
@@ -580,6 +602,7 @@ summary(
     'Forced GC': get_option('gc_stress'),
     'Allocation iteration': get_option('malloc_iter'),
     'Sanitizers': get_option('b_sanitize'),
+    'JSValue representation': get_option('value_representation'),
     'Native code generator': meson.is_cross_build(),
   },
 )

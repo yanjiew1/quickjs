@@ -182,7 +182,7 @@ static no_inline __exception int js_unary_arith_slow(JSContext *ctx,
 
     op1 = sp[-1];
     /* fast path for float64 */
-    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)))
+    if (JS_VALUE_IS_FLOAT64(op1))
         goto handle_float64;
     op1 = JS_ToNumericFree(ctx, op1);
     if (JS_IsException(op1))
@@ -374,7 +374,8 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
         goto handle_float64;
     }
     /* fast path for short big int operations */
-    if (tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
+    if (JS_SHORT_BIG_INT_BITS <= JS_LIMB_BITS &&
+        tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
         js_slimb_t v1, v2;
         js_sdlimb_t v;
         v1 = JS_VALUE_GET_SHORT_BIG_INT(op1);
@@ -388,7 +389,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
             break;
         case OP_div:
             if (v2 == 0 ||
-                ((js_limb_t)v1 == (js_limb_t)1 << (JS_LIMB_BITS - 1) &&
+                (v1 == JS_SHORT_BIG_INT_MIN &&
                  v2 == -1)) {
                 goto slow_big_int;
             }
@@ -396,7 +397,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
             return 0;
         case OP_mod:
             if (v2 == 0 ||
-                ((js_limb_t)v1 == (js_limb_t)1 << (JS_LIMB_BITS - 1) &&
+                (v1 == JS_SHORT_BIG_INT_MIN &&
                  v2 == -1)) {
                 goto slow_big_int;
             }
@@ -562,7 +563,8 @@ static no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp)
         return 0;
     }
     /* fast path for short bigint */
-    if (tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
+    if (JS_SHORT_BIG_INT_BITS <= JS_LIMB_BITS &&
+        tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
         js_slimb_t v1, v2;
         js_sdlimb_t v;
         v1 = JS_VALUE_GET_SHORT_BIG_INT(op1);
@@ -672,7 +674,8 @@ static no_inline __exception int js_binary_logic_slow(JSContext *ctx,
     tag1 = JS_VALUE_GET_NORM_TAG(op1);
     tag2 = JS_VALUE_GET_NORM_TAG(op2);
 
-    if (tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
+    if (JS_SHORT_BIG_INT_BITS <= JS_LIMB_BITS &&
+        tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
         js_slimb_t v1, v2, v;
         js_sdlimb_t vd;
         v1 = JS_VALUE_GET_SHORT_BIG_INT(op1);
@@ -856,7 +859,7 @@ static int js_compare_bigint(JSRuntime *rt, OPCodeEnum op,
     if ((tag1 == JS_TAG_SHORT_BIG_INT || tag1 == JS_TAG_INT) &&
         (tag2 == JS_TAG_SHORT_BIG_INT || tag2 == JS_TAG_INT)) {
         /* fast path */
-        js_slimb_t v1, v2;
+        int64_t v1, v2;
         if (tag1 == JS_TAG_INT)
             v1 = JS_VALUE_GET_INT(op1);
         else
@@ -2483,15 +2486,14 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         return JS_EXCEPTION;
     if (unlikely(JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)) {
         if (flags & JS_CALL_FLAG_GENERATOR) {
-            JSAsyncFunctionState *s = JS_VALUE_GET_PTR(func_obj);
-            /* func_obj get contains a pointer to JSFuncAsyncState */
+            JSAsyncFunctionState *s = (JSAsyncFunctionState *)argv;
             /* the stack frame is already allocated */
             sf = &s->frame;
             p = JS_VALUE_GET_OBJ(sf->cur_func);
             b = p->u.func.function_bytecode;
             ctx = b->realm;
             var_refs = p->u.func.var_refs;
-            local_buf = arg_buf = sf->arg_buf;
+            local_buf = arg_buf = argv = sf->arg_buf;
             var_buf = sf->var_buf;
             stack_buf = sf->var_buf + b->var_count;
             sp = sf->cur_sp;
@@ -4541,17 +4543,17 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         sp[-2] = JS_NewInt32(ctx, r);
                     }
                     sp--;
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||
+                           JS_VALUE_IS_FLOAT64(op2)) {
                     double d1, d2;
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {
+                    if (JS_VALUE_IS_FLOAT64(op1)) {
                         d1 = JS_VALUE_GET_FLOAT64(op1);
                     } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
                         d1 = JS_VALUE_GET_INT(op1);
                     } else {
                         goto add_slow_case;
                     }
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                    if (JS_VALUE_IS_FLOAT64(op2)) {
                         d2 = JS_VALUE_GET_FLOAT64(op2);
                     } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {
                         d2 = JS_VALUE_GET_INT(op2);
@@ -4637,17 +4639,17 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         sp[-2] = JS_NewInt32(ctx, r);
                     }
                     sp--;
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||
+                           JS_VALUE_IS_FLOAT64(op2)) {
                     double d1, d2;
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {
+                    if (JS_VALUE_IS_FLOAT64(op1)) {
                         d1 = JS_VALUE_GET_FLOAT64(op1);
                     } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
                         d1 = JS_VALUE_GET_INT(op1);
                     } else {
                         goto binary_arith_slow;
                     }
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                    if (JS_VALUE_IS_FLOAT64(op2)) {
                         d2 = JS_VALUE_GET_FLOAT64(op2);
                     } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {
                         d2 = JS_VALUE_GET_INT(op2);
@@ -4684,17 +4686,17 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     }
                     sp[-2] = JS_NewInt32(ctx, r);
                     sp--;
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||
+                           JS_VALUE_IS_FLOAT64(op2)) {
                     double d1, d2;
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {
+                    if (JS_VALUE_IS_FLOAT64(op1)) {
                         d1 = JS_VALUE_GET_FLOAT64(op1);
                     } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
                         d1 = JS_VALUE_GET_INT(op1);
                     } else {
                         goto binary_arith_slow;
                     }
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                    if (JS_VALUE_IS_FLOAT64(op2)) {
                         d2 = JS_VALUE_GET_FLOAT64(op2);
                     } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {
                         d2 = JS_VALUE_GET_INT(op2);
@@ -5070,17 +5072,17 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 if (likely(JS_VALUE_IS_BOTH_INT(op1, op2))) {           \
                     sp[-2] = JS_NewBool(ctx, JS_VALUE_GET_INT(op1) binary_op JS_VALUE_GET_INT(op2)); \
                     sp--;                                               \
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||  \
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {  \
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||  \
+                           JS_VALUE_IS_FLOAT64(op2)) {  \
                     double d1, d2;                                      \
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {     \
+                    if (JS_VALUE_IS_FLOAT64(op1)) {     \
                         d1 = JS_VALUE_GET_FLOAT64(op1);                 \
                     } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {   \
                         d1 = JS_VALUE_GET_INT(op1);                     \
                     } else {                                            \
                         goto opcode ## _slow_case;                      \
                     }                                                   \
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {     \
+                    if (JS_VALUE_IS_FLOAT64(op2)) {     \
                         d2 = JS_VALUE_GET_FLOAT64(op2);                 \
                     } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {   \
                         d2 = JS_VALUE_GET_INT(op2);                     \

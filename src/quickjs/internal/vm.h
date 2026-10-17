@@ -43,7 +43,8 @@ typedef struct JSForInIterator {
 #define FUNC_RET_YIELD_STAR    2
 #define FUNC_RET_INITIAL_YIELD 3
 
-/* A generator resumes its detached stack frame through this VM entry point. */
+/* A generator resumes its detached frame with func_obj = JS_UNDEFINED and
+   argv pointing to its borrowed JSAsyncFunctionState, not an argument array. */
 JSValue JS_CallInternal(JSContext *ctx, JSValueConst func_obj,
                         JSValueConst this_obj, JSValueConst new_target,
                         int argc, JSValue *argv, int flags);

@@ -112,3 +112,30 @@ The default release is the source archive. Explicit `binary`, `win_binary` and
 `extras` selections require the corresponding toolchains or Unicode inputs.
 All binary builds use temporary directories under the selected output path.
 The optional `cosmo_binary` mode remains outside CI coverage.
+
+## Experimental JSValue representations
+
+Select `-Dvalue_representation=legacy` (default), `wide`, or `compact` in a
+separate build directory. Legacy retains the original platform choice: an
+8-byte NaN box on 32-bit targets and a 16-byte union/tag on 64-bit targets.
+Wide uses the union/tag implementation on both. Compact uses a common 8-byte,
+Q=1 NaN-boxed format with a reference-count flag, major tags, and pointer
+subtags. It requires binary64 doubles, pointers below 2^49, and at least
+4-byte alignment for boxed pointers. Unsupported addresses fail fast rather
+than being truncated, including in release builds. Pointer metadata such as
+HWASan/MTE tags is not supported: select wide for those configurations.
+
+Compact inline BigInts hold signed 48-bit values on 64-bit platforms and signed
+32-bit values on 32-bit platforms. Heap limb width remains unchanged (64 bits
+on 64-bit targets with `__int128`). Numeric NaNs are canonicalized; raw
+ArrayBuffer bytes are preserved. Serialization encodes logical values, not the
+in-memory JSValue layout.
+
+Changing modes changes the public ABI. Rebuild applications, native modules,
+and generated executable output with matching headers and libraries. The
+installed `quickjs-config.h` records the mode; build-tree Meson dependencies
+propagate it too. Direct source-header users must supply the matching
+`-DJS_VALUE_MODE=0`, `1`, or `2`; do not mix a source default header with a
+compact library. `qjsc` executable generation uses its matching configured
+headers. The original representation remains available for unsupported
+platforms and sanitizer configurations.
