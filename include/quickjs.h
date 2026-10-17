@@ -100,6 +100,20 @@ typedef uint32_t JSAtom;
     
 enum {
     /* all tags with a reference count are negative */
+#if defined(JS_COMPACT_NAN_BOXING)
+    /* Low three bits are the pointer subtype; bit 3 selects the Object
+       major. Keep negative tags for reference-bearing values. */
+    JS_TAG_FIRST       = -16,
+    JS_TAG_BIG_INT     = -16,
+    JS_TAG_SYMBOL      = -15,
+    JS_TAG_STRING      = -14,
+    JS_TAG_STRING_ROPE = -13,
+    JS_TAG_VAR_REF     = -12, /* used internally */
+    JS_TAG_VAR_REF_RO  = -11, /* used internally */
+    JS_TAG_MODULE      = -10, /* used internally */
+    JS_TAG_FUNCTION_BYTECODE = -9, /* used internally */
+    JS_TAG_OBJECT      = -8,
+#else
     JS_TAG_FIRST       = -9, /* first negative tag */
     JS_TAG_BIG_INT     = -9,
     JS_TAG_SYMBOL      = -8,
@@ -110,6 +124,7 @@ enum {
     JS_TAG_MODULE      = -3, /* used internally */
     JS_TAG_FUNCTION_BYTECODE = -2, /* used internally */
     JS_TAG_OBJECT      = -1,
+#endif
 
     JS_TAG_INT         = 0,
     JS_TAG_BOOL        = 1,
@@ -210,24 +225,16 @@ typedef uint64_t JSValue;
 static inline JSValue JS_MKPTR(int tag, const void *ptr)
 {
     uint64_t p = (uintptr_t)ptr;
-    uint64_t prefix;
     /* There is no context for reporting an exception here. Never silently
        truncate an unsupported address, including in release builds. */
     if (js_unlikely(p & ~JS_COMPACT_PTR_MASK))
         abort();
-    switch (tag) {
-    case JS_TAG_OBJECT: prefix = JS_COMPACT_OBJECT; break;
-    case JS_TAG_BIG_INT: prefix = JS_COMPACT_REFERENCE; break;
-    case JS_TAG_SYMBOL: prefix = JS_COMPACT_REFERENCE | 1; break;
-    case JS_TAG_STRING: prefix = JS_COMPACT_REFERENCE | 2; break;
-    case JS_TAG_STRING_ROPE: prefix = JS_COMPACT_REFERENCE | 3; break;
-    case JS_TAG_VAR_REF: prefix = JS_COMPACT_REFERENCE | 4; break;
-    case JS_TAG_VAR_REF_RO: prefix = JS_COMPACT_REFERENCE | 5; break;
-    case JS_TAG_MODULE: prefix = JS_COMPACT_REFERENCE | 6; break;
-    case JS_TAG_FUNCTION_BYTECODE: prefix = JS_COMPACT_REFERENCE | 7; break;
-    default: abort();
-    }
-    return prefix | p;
+    if (js_unlikely((unsigned)tag - (unsigned)JS_TAG_FIRST >
+                    JS_TAG_OBJECT - JS_TAG_FIRST))
+        abort();
+    /* Constant tags fold to one prefix OR; dynamic tags need no lookup. */
+    return JS_COMPACT_REFERENCE | ((uint64_t)(tag & 8) << 46) |
+        (tag & 7) | p;
 }
 
 static inline JS_BOOL JS_VALUE_IS_FLOAT64(JSValue v)
@@ -243,10 +250,9 @@ static inline int JS_VALUE_GET_TAG(JSValue v)
     if (major == JS_COMPACT_INT)
         return JS_TAG_INT;
     if (v >= JS_COMPACT_RC_PREFIX) {
-        /* Major 2: eight non-Object reference types (-9..-2), major 3:
-           Object (-1, subtype 0). Reference major 0/1 remain reserved.
-           Preserve logical tags without a table or pointee access. */
-        return (int)(((v >> 46) & 8) | (v & 7)) - 9;
+        /* Tag bits already match the major/subtype. Sign-extend the low
+           four tag bits; reference majors 0/1 remain reserved. */
+        return (int)(((v >> 46) & 8) | (v & 7)) | -16;
     }
     if (major == JS_COMPACT_BIG_INT)
         return JS_TAG_SHORT_BIG_INT;

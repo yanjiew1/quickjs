@@ -97,6 +97,10 @@ static void test_pointer_tags(JSContext *ctx)
     for (i = 0; i < sizeof(tags) / sizeof(*tags); i++) {
         JSValue v = JS_MKPTR(tags[i], &aligned);
         assert(JS_VALUE_GET_TAG(v) == tags[i]);
+#if defined(JS_COMPACT_NAN_BOXING)
+        assert((v & 7) == (unsigned)(tags[i] & 7));
+        assert(((v >> 46) & 8) == (unsigned)(tags[i] & 8));
+#endif
         assert(JS_VALUE_GET_PTR(v) == &aligned);
         assert(JS_VALUE_HAS_REF_COUNT(v));
         assert(!JS_IsNumber(v));
