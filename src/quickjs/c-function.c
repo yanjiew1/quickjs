@@ -269,6 +269,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
     JSValue func_obj;
     int i;
 
+    if (length < 0 || length > UINT8_MAX)
+        return JS_ThrowRangeError(ctx, "invalid native function length");
+    if (data_len < 0 ||
+        (size_t)data_len > (SIZE_MAX - sizeof(*s)) / sizeof(JSValue))
+        return JS_ThrowRangeError(ctx, "invalid native capture count");
+    if (!func || (data_len && !data))
+        return JS_ThrowTypeError(ctx, "invalid native callback or captures");
     func_obj = JS_NewObjectProtoClass(ctx, ctx->function_proto,
                                       JS_CLASS_C_FUNCTION_DATA);
     if (JS_IsException(func_obj))
