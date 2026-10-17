@@ -219,6 +219,7 @@ void js_free_function_def(JSRuntime *rt, JSFunctionDef *fd)
     for(i = 0; i < fd->var_count; i++) {
         JS_FreeAtomRT(rt, fd->vars[i].var_name);
     }
+    js_free_constant_summaries(rt, fd);
     js_free_rt(rt, fd->vars);
     js_free_rt(rt, fd->var_hash);
     for(i = 0; i < fd->arg_count; i++) {
@@ -3699,20 +3700,13 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
     return 0;
 }
 
-/* create a function object from a function definition. The function
-   definition is freed. All the child functions are also created. It
-   must be done this way to resolve all the variables. */
-JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
+/* Prepare enclosing scopes before children, then resolve children first so
+   their capture flags are known when the parent emits scope cleanup. */
+static int prepare_function_tree(JSContext *ctx, JSFunctionDef *fd)
 {
-    JSRuntime *rt = ctx->rt;
-    JSValue func_obj;
-    JSFunctionBytecode *b;
-    struct list_head *el, *el1;
-    int stack_size, scope, idx;
-    int function_size, byte_code_offset, cpool_offset;
-    int closure_var_offset, vardefs_offset;
-    BOOL strip_var_debug;
-    
+    struct list_head *el;
+    int scope, idx;
+
     if (dbuf_error(&fd->byte_code)) {
         JS_ThrowOutOfMemory(ctx);
         goto fail;
@@ -3780,19 +3774,10 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
             goto fail;
     } 
 
-    /* first create all the child functions */
-    list_for_each_safe(el, el1, &fd->child_list) {
-        JSFunctionDef *fd1;
-        int cpool_idx;
-
-        fd1 = list_entry(el, JSFunctionDef, link);
-        cpool_idx = fd1->parent_cpool_idx;
-        func_obj = js_create_function(ctx, fd1);
-        if (JS_IsException(func_obj))
+    list_for_each(el, &fd->child_list) {
+        JSFunctionDef *child = list_entry(el, JSFunctionDef, link);
+        if (prepare_function_tree(ctx, child))
             goto fail;
-        /* save it in the constant pool */
-        assert(cpool_idx >= 0);
-        fd->cpool[cpool_idx] = func_obj;
     }
 
 #if defined(DUMP_BYTECODE) && (DUMP_BYTECODE & 4)
@@ -3822,8 +3807,41 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     }
 #endif
 
+    return 0;
+ fail:
+    return -1;
+}
+
+/* Publish parent constant summaries before compiling children. Finalize child
+   bytecode first, keeping every enclosing summary alive until it is consumed. */
+static JSValue create_function_bytecode(JSContext *ctx, JSFunctionDef *fd)
+{
+    JSRuntime *rt = ctx->rt;
+    JSValue func_obj;
+    JSFunctionBytecode *b;
+    struct list_head *el, *el1;
+    int stack_size;
+    int function_size, byte_code_offset, cpool_offset;
+    int closure_var_offset, vardefs_offset;
+    BOOL strip_var_debug;
+
     if (js_optimize_constants(ctx, fd))
         goto fail;
+
+    /* Create all the child functions before laying out the constant pool. */
+    list_for_each_safe(el, el1, &fd->child_list) {
+        JSFunctionDef *fd1;
+        int cpool_idx;
+
+        fd1 = list_entry(el, JSFunctionDef, link);
+        cpool_idx = fd1->parent_cpool_idx;
+        func_obj = create_function_bytecode(ctx, fd1);
+        if (JS_IsException(func_obj))
+            goto fail;
+        /* save it in the constant pool */
+        assert(cpool_idx >= 0);
+        fd->cpool[cpool_idx] = func_obj;
+    }
 
     if (resolve_labels(ctx, fd))
         goto fail;
@@ -3990,9 +4008,20 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
         list_del(&fd->link);
     }
 
+    js_free_constant_summaries(rt, fd);
     js_free(ctx, fd);
     return JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
  fail:
     js_free_function_def(rt, fd);
     return JS_EXCEPTION;
+}
+
+/* Consume the complete parsed tree, including failure paths during preparation. */
+JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
+{
+    if (prepare_function_tree(ctx, fd)) {
+        js_free_function_def(ctx->rt, fd);
+        return JS_EXCEPTION;
+    }
+    return create_function_bytecode(ctx, fd);
 }

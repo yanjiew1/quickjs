@@ -84,5 +84,6 @@ __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
                                       JSFunctionBytecode *b, int scope_idx);
 JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd);
 int js_optimize_constants(JSContext *ctx, JSFunctionDef *fd);
+void js_free_constant_summaries(JSRuntime *rt, JSFunctionDef *fd);
 
 #endif

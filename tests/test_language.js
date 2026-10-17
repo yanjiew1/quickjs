@@ -4461,3 +4461,29 @@ function test_write_once_var_propagation()
 }
 
 test_write_once_var_propagation();
+
+
+function test_captured_const_propagation()
+{
+    assert(Function('const x = 3; return () => x + 4;')()(), 7);
+    assert(Function('const x = "a"; return () => x + "b";')()(), 'ab');
+    assert(Function('const x = 3n; return () => x * 4n;')()(), 12n);
+    assert(Function('const x = 3; return () => () => x + 4;')()()(), 7);
+    assert(Function('const x = 3; return () => { const y = 4; return () => x + y; };')()()(), 7);
+    assert(Function('const x = 3; return flag => flag ? x + 1 : x + 2;')()(false), 5);
+    assert_throws(ReferenceError, Function('const f = () => x + 1; f(); const x = 3;'));
+    const uninitialized = Function('let f; try { f = () => x + 1; throw 0; const x = 3; } catch(e) {} return f;')();
+    assert_throws(ReferenceError, uninitialized);
+    assert_throws(ReferenceError, Function('const f = () => x + 1n; f(); const x = 3;'));
+    assert_throws(TypeError, Function('const x = 3; return () => x + 1n;')());
+    assert_throws(TypeError, Function('const x = 3; return () => { x = 4; return x + 1; };')());
+    const closures = Function('const a = []; for (let i = 0; i < 3; i++) { const x = 3; a.push(() => x + 1); } return a;')();
+    assert(closures.map(f => f()).join(','), '4,4,4');
+    assert(Function('const x = 3; return () => { eval("0"); return x + 1; };')()(), 4);
+    assert(Function('const x = 3; return () => { with({x: 9}) return x + 1; };')()(), 10);
+    const iterator = Function('const x = 3; return function* () { yield x + 1; return x + 2; };')()();
+    assert(iterator.next().value, 4);
+    assert(iterator.next().value, 5);
+}
+
+test_captured_const_propagation();

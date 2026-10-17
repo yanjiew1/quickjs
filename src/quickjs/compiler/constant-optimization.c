@@ -1,4 +1,4 @@
-/* Bounded literal folding and local constant propagation.
+/* Bounded primitive folding and binding constant propagation.
  * Copyright (c) 2026 Yan-Jie Wang; SPDX-License-Identifier: MIT */
 #include "compiler-internal.h"
 #include "../internal/allocator.h"
@@ -32,35 +32,45 @@ static BOOL eligible_local(const JSFunctionDef *s, int index)
                             vd->var_name != JS_ATOM_NULL));
 }
 
-static BOOL known_local(const LocalConstant *locals, uint32_t epoch,
-                        int op, const uint8_t *pc, int pos)
+static int constant_read_index(const JSFunctionDef *s, int op, const uint8_t *pc)
+{
+    if (op == OP_get_loc || op == OP_get_loc_check)
+        return get_u16(pc + 1);
+    if (op == OP_get_var_ref_check)
+        return s->var_count + get_u16(pc + 1);
+    return -1;
+}
+
+static BOOL known_local(const JSFunctionDef *s, const LocalConstant *locals,
+                        uint32_t epoch, int op, const uint8_t *pc, int pos)
 {
     const LocalConstant *local;
-    if (!locals || (op != OP_get_loc && op != OP_get_loc_check))
+    int index = constant_read_index(s, op, pc);
+    if (!locals || index < 0)
         return FALSE;
-    local = &locals[get_u16(pc + 1)];
+    local = &locals[index];
     return local->epoch == epoch || (local->stable &&
-        (op == OP_get_loc_check ||
+        (op == OP_get_loc_check || op == OP_get_var_ref_check ||
          (local->initialized_after && pos >= local->initialized_after)));
 }
 
-static BOOL guarded_local(const LocalConstant *locals, uint32_t epoch,
-                          int op, const uint8_t *pc, int pos)
+static BOOL guarded_local(const JSFunctionDef *s, const LocalConstant *locals,
+                          uint32_t epoch, int op, const uint8_t *pc, int pos)
 {
     const LocalConstant *local;
-    if (!known_local(locals, epoch, op, pc, pos))
+    if (!known_local(s, locals, epoch, op, pc, pos))
         return FALSE;
-    local = &locals[get_u16(pc + 1)];
+    local = &locals[constant_read_index(s, op, pc)];
     return local->epoch != epoch &&
         !(local->initialized_after && pos >= local->initialized_after);
 }
 
 /* Borrow a value; a flow fact proves initialization, while a stable summary
    still needs its original checked read at execution. */
-static JSValueConst local_value(const LocalConstant *locals, uint32_t epoch,
-                                const uint8_t *pc)
+static JSValueConst local_value(const JSFunctionDef *s, const LocalConstant *locals,
+                                uint32_t epoch, const uint8_t *pc)
 {
-    const LocalConstant *local = &locals[get_u16(pc + 1)];
+    const LocalConstant *local = &locals[constant_read_index(s, pc[0], pc)];
     return local->epoch == epoch ? local->value : local->stable_value;
 }
 
@@ -447,10 +457,10 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             continue;
         }
         if (is_literal(s, op, buf + pos) ||
-            known_local(locals, epoch, op, buf + pos, pos)) {
-            BOOL local = known_local(locals, epoch, op, buf + pos, pos);
-            BOOL guard = local && guarded_local(locals, epoch, op, buf + pos, pos);
-            result = local ? JS_DupValue(ctx, local_value(locals, epoch, buf + pos)) :
+            known_local(s, locals, epoch, op, buf + pos, pos)) {
+            BOOL local = known_local(s, locals, epoch, op, buf + pos, pos);
+            BOOL guard = local && guarded_local(s, locals, epoch, op, buf + pos, pos);
+            result = local ? JS_DupValue(ctx, local_value(s, locals, epoch, buf + pos)) :
                 read_literal(ctx, s, buf + pos);
             if (JS_IsException(result))
                 goto fail;
@@ -718,6 +728,75 @@ static int analyze_stable_locals(JSContext *ctx, JSFunctionDef *s,
     return found;
 }
 
+void js_free_constant_summaries(JSRuntime *rt, JSFunctionDef *s)
+{
+    int i;
+    if (!s->constant_summaries)
+        return;
+    for (i = 0; i < s->var_count; i++)
+        JS_FreeValueRT(rt, s->constant_summaries[i]);
+    js_free_rt(rt, s->constant_summaries);
+    s->constant_summaries = NULL;
+}
+
+/* Only immutable lexical locals qualify here. Even a known initializer does
+   not prove that an escaping closure is called after initialization. */
+static int analyze_captured_constants(JSContext *ctx, JSFunctionDef *s, BOOL folding)
+{
+    LocalConstant *locals;
+    int i, found;
+
+    if (s->is_eval || s->has_eval_call ||
+        !(s->compiler_optimization_flags & JS_COMPILER_OPT_CONSTANT_PROPAGATION))
+        return 0;
+    for (i = 0; i < s->var_count; i++) {
+        const JSVarDef *vd = &s->vars[i];
+        if (vd->is_captured && vd->is_const && vd->is_lexical &&
+            vd->var_kind == JS_VAR_NORMAL)
+            break;
+    }
+    if (i == s->var_count)
+        return 0;
+    locals = js_mallocz(ctx, sizeof(*locals) * s->var_count);
+    if (!locals)
+        return -1;
+    for (i = 0; i < s->var_count; i++) {
+        const JSVarDef *vd = &s->vars[i];
+        locals[i].value = JS_UNDEFINED;
+        locals[i].stable_value = JS_UNDEFINED;
+        locals[i].eligible = vd->is_captured && vd->is_const && vd->is_lexical &&
+            vd->var_kind == JS_VAR_NORMAL;
+    }
+    found = analyze_stable_locals(ctx, s, locals, folding);
+    if (found > 0) {
+        s->constant_summaries = js_malloc(ctx, sizeof(*s->constant_summaries) *
+                                             s->var_count);
+        if (!s->constant_summaries) {
+            found = -1;
+        } else {
+            for (i = 0; i < s->var_count; i++)
+                s->constant_summaries[i] = locals[i].stable ?
+                    JS_DupValue(ctx, locals[i].stable_value) : JS_UNINITIALIZED;
+        }
+    }
+    free_local_constants(ctx, locals, s->var_count);
+    return found < 0 ? -1 : 0;
+}
+
+static JSValueConst captured_constant(const JSFunctionDef *s, int index)
+{
+    while (s->parent) {
+        const JSClosureVar *cv = &s->closure_var[index];
+        s = s->parent;
+        index = cv->var_idx;
+        if (cv->closure_type == JS_CLOSURE_LOCAL)
+            return s->constant_summaries ? s->constant_summaries[index] : JS_UNINITIALIZED;
+        if (cv->closure_type != JS_CLOSURE_REF)
+            break;
+    }
+    return JS_UNINITIALIZED;
+}
+
 static int put_instruction(JSContext *ctx, DynBuf *out, const uint8_t *pc)
 {
     const JSOpCode *oi = &opcode_info[pc[0]];
@@ -754,7 +833,7 @@ static int put_constant_guards(JSContext *ctx, JSFunctionDef *s, DynBuf *out,
         int op = buf[pos];
         if (op == OP_line_num) {
             line = get_u32(buf + pos + 1);
-        } else if (guarded_local(locals, epoch, op, buf + pos, pos)) {
+        } else if (guarded_local(s, locals, epoch, op, buf + pos, pos)) {
             if (line != *pline) {
                 uint8_t marker[5];
                 marker[0] = OP_line_num;
@@ -879,12 +958,25 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
     int pos, next, op, i, line = s->source_pos;
     BOOL candidate = FALSE, propagate = FALSE, pending_known = FALSE;
     BOOL preserve_guards = FALSE, regional_candidate = FALSE;
+    BOOL captured = FALSE;
+    int fact_count = s->var_count + s->closure_var_count;
     BOOL folding = s->compiler_optimization_flags & JS_COMPILER_OPT_CONSTANT_FOLDING;
     LocalConstant *locals = NULL;
     uint32_t epoch = 1;
     JSValue value, pending = JS_UNDEFINED;
     uint8_t marker[5];
 
+    if (analyze_captured_constants(ctx, s, folding))
+        return -1;
+    if ((s->compiler_optimization_flags & JS_COMPILER_OPT_CONSTANT_PROPAGATION) &&
+        !s->has_eval_call) {
+        for (i = 0; i < s->closure_var_count; i++) {
+            if (!JS_IsUninitialized(captured_constant(s, i))) {
+                captured = TRUE;
+                break;
+            }
+        }
+    }
     if ((s->compiler_optimization_flags & JS_COMPILER_OPT_CONSTANT_PROPAGATION) &&
         !s->has_eval_call) {
         for (i = 0; i < s->var_count; i++) {
@@ -894,7 +986,7 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
             }
         }
     }
-    if (!folding && !propagate)
+    if (!folding && !propagate && !captured)
         return 0;
     /* Avoid constructing another bytecode buffer for functions without a
        foldable expression or an eligible local read. */
@@ -932,13 +1024,15 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
                 regional_seed = literal_top = FALSE;
         }
     }
+    candidate |= captured;
+    propagate |= captured;
     if (!candidate && folding)
         candidate = has_literal_candidate(s);
     if (!candidate)
         return 0;
     dbuf_init2(&out, ctx->rt, js_realloc_bytecode_rt);
     if (propagate) {
-        locals = js_mallocz(ctx, sizeof(*locals) * s->var_count);
+        locals = js_mallocz(ctx, sizeof(*locals) * fact_count);
         if (!locals)
             goto fail;
         for (i = 0; i < s->var_count; i++) {
@@ -946,14 +1040,22 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
             locals[i].stable_value = JS_UNDEFINED;
             locals[i].eligible = eligible_local(s, i);
         }
+        for (i = 0; i < s->closure_var_count; i++) {
+            LocalConstant *local = &locals[s->var_count + i];
+            JSValueConst value = captured ? captured_constant(s, i) : JS_UNINITIALIZED;
+            local->value = JS_UNDEFINED;
+            local->stable_value = JS_IsUninitialized(value) ? JS_UNDEFINED :
+                JS_DupValue(ctx, value);
+            local->stable = !JS_IsUninitialized(value);
+        }
         i = analyze_stable_locals(ctx, s, locals, folding);
         if (i < 0)
             goto fail;
-        preserve_guards = i != 0;
+        preserve_guards = i != 0 || captured;
         if (!preserve_guards && !regional_candidate) {
             /* The cross-region candidate was only a cheap possibility.
                Without a stable summary, avoid rewriting unchanged code. */
-            free_local_constants(ctx, locals, s->var_count);
+            free_local_constants(ctx, locals, fact_count);
             locals = NULL;
             if (!folding || !has_literal_candidate(s))
                 return 0;
@@ -990,7 +1092,7 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
                 continue;
             }
         }
-        if (is_literal(s, op, buf + pos) || known_local(locals, epoch, op, buf + pos, pos)) {
+        if (is_literal(s, op, buf + pos) || known_local(s, locals, epoch, op, buf + pos, pos)) {
             int folded_line = line, error;
             const char *message;
             int end = fold_literal_expression(ctx, s, pos, &value, &folded_line,
@@ -1028,8 +1130,8 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
             JS_FreeValue(ctx, value);
             {
                 JS_FreeValue(ctx, pending);
-                pending = known_local(locals, epoch, op, buf + pos, pos) ?
-                    JS_DupValue(ctx, local_value(locals, epoch, buf + pos)) :
+                pending = known_local(s, locals, epoch, op, buf + pos, pos) ?
+                    JS_DupValue(ctx, local_value(s, locals, epoch, buf + pos)) :
                     read_literal(ctx, s, buf + pos);
                 if (JS_IsException(pending))
                     goto fail;
@@ -1059,14 +1161,14 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
             goto fail;
     }
     JS_FreeValue(ctx, pending);
-    free_local_constants(ctx, locals, s->var_count);
+    free_local_constants(ctx, locals, fact_count);
     free_bytecode_atoms(ctx->rt, buf, s->byte_code.size, FALSE);
     dbuf_free(&s->byte_code);
     s->byte_code = out;
     return 0;
  fail:
     JS_FreeValue(ctx, pending);
-    free_local_constants(ctx, locals, s->var_count);
+    free_local_constants(ctx, locals, fact_count);
     free_bytecode_atoms(ctx->rt, out.buf, out.size, FALSE);
     dbuf_free(&out);
     if (!JS_HasException(ctx))

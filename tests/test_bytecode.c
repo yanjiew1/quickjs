@@ -587,6 +587,47 @@ static void test_local_constant_bytecode(const char *source, uint32_t flags,
     JS_FreeRuntime(rt);
 }
 
+static void test_captured_constant_bytecode(uint32_t flags, int expected_adds)
+{
+    const char source[] = "(function() { const x = 3; return () => () => x + 4; })()()";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled, loaded, function, result;
+    JSFunctionBytecode *b;
+    uint8_t *buf;
+    size_t len;
+    int pos, reads = 0, adds = 0;
+
+    assert(rt);
+    JS_SetCompilerOptimizationFlags(rt, flags);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "captured-constant.js",
+                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(buf);
+    loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE);
+    assert(!JS_IsException(loaded));
+    js_free(ctx, buf);
+    JS_FreeValue(ctx, compiled);
+    function = JS_EvalFunction(ctx, loaded);
+    assert(!JS_IsException(function));
+    b = JS_GetFunctionBytecode(function);
+    assert(b);
+    for (pos = 0; pos < b->byte_code_len; pos += short_opcode_info(b->byte_code_buf[pos]).size) {
+        reads += b->byte_code_buf[pos] == OP_get_var_ref_check;
+        adds += b->byte_code_buf[pos] == OP_add;
+    }
+    assert(reads == 1 && adds == expected_adds);
+    result = JS_Call(ctx, function, JS_UNDEFINED, 0, NULL);
+    assert(JS_IsNumber(result) && JS_VALUE_GET_INT(result) == 7);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, function);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
 /* Existing free arena blocks must not bypass the requested host failure. */
 static void *exhaust_optimizer_pools(JSRuntime *rt)
 {
@@ -611,6 +652,46 @@ static void free_optimizer_padding(JSRuntime *rt, void *padding)
         memcpy(&next, padding, sizeof(next));
         js_free_rt(rt, padding);
         padding = next;
+    }
+}
+
+/* Exercise summary lifetime while preparation and child finalization fail. */
+static void test_captured_constant_allocation_failure(void)
+{
+    const char source[] =
+        "(function() { const x = 'outer'; return () => { const y = 'inner';"
+        " return () => x + y; }; })";
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSValue compiled;
+        void *padding;
+
+        assert(ctx);
+        padding = exhaust_optimizer_pools(rt);
+        oom_test_begin(&allocator, fail_at);
+        compiled = JS_Eval(ctx, source, sizeof(source) - 1, "captured-oom.js",
+                           JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(!JS_IsException(compiled));
+            assert(allocations > 0 && allocations < 256);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(compiled))
+            oom_test_check_exception(ctx);
+        else
+            assert(!JS_HasException(ctx));
+        JS_FreeValue(ctx, compiled);
+        free_optimizer_padding(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
     }
 }
 
@@ -765,6 +846,12 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    test_captured_constant_allocation_failure();
+    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING |
+                                    JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0);
+    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING, 1);
+    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_PROPAGATION, 1);
+    test_captured_constant_bytecode(0, 1);
     {
         uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;
         const char *branch = "(function(flag) { var a = 3; if(flag) return a + 1; return a + 2; })";

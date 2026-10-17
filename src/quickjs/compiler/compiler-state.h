@@ -198,6 +198,9 @@ typedef struct JSFunctionDef {
     int closure_var_size;
     JSClosureVar *closure_var;
 
+    /* Compile-only primitive summaries; uninitialized entries are unknown. */
+    JSValue *constant_summaries;
+
     JumpSlot *jump_slots;
     int jump_size;
     int jump_count;
