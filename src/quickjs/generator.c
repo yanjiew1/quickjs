@@ -47,7 +47,7 @@ static JSAsyncFunctionState *async_func_init(JSContext *ctx,
     p = JS_VALUE_GET_OBJ(func_obj);
     b = p->u.func.function_bytecode;
     arg_buf_len = max_int(b->arg_count, argc);
-    s = js_malloc(ctx, sizeof(*s) + sizeof(JSValue) * (arg_buf_len + b->var_count + b->stack_size) + sizeof(JSVarRef *) * b->var_ref_count);
+    s = js_malloc(ctx, sizeof(*s) + sizeof(JSValue) * (arg_buf_len + b->var_count + b->stack_size + 1) + sizeof(JSVarRef *) * b->var_ref_count);
     if (!s)
         return NULL;
     memset(s, 0, sizeof(*s));
@@ -63,13 +63,14 @@ static JSAsyncFunctionState *async_func_init(JSContext *ctx,
     s->argc = argc;
     sf->arg_count = arg_buf_len;
     sf->var_buf = sf->arg_buf + arg_buf_len;
-    sf->cur_sp = sf->var_buf + b->var_count;
+    /* Reserve the same bottom sentinel as an ordinary interpreter frame. */
+    sf->cur_sp = sf->var_buf + b->var_count + 1;
     sf->var_refs = (JSVarRef **)(sf->cur_sp + b->stack_size);
     for(i = 0; i < b->var_ref_count; i++)
         sf->var_refs[i] = NULL;
     for(i = 0; i < argc; i++)
         sf->arg_buf[i] = JS_DupValue(ctx, argv[i]);
-    n = arg_buf_len + b->var_count;
+    n = arg_buf_len + b->var_count + 1;
     for(i = argc; i < n; i++)
         sf->arg_buf[i] = JS_UNDEFINED;
     s->resolving_funcs[0] = JS_UNDEFINED;

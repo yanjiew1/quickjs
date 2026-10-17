@@ -45,6 +45,7 @@ native_test_names = [
   'test_regexp_oom',
   'test_bigint_oom',
   'test_value_representation',
+  'test_vm_stack',
   'test_bytecode',
   'test_typed_array',
   'test_allocator',
@@ -77,7 +78,7 @@ foreach name : native_test_names
     override_options: ['b_ndebug=false'],
   )
   suites = ['repo', 'native']
-  if name in ['test_api', 'test_allocator', 'test_native_jobs']
+  if name in ['test_api', 'test_allocator', 'test_native_jobs', 'test_vm_stack']
     suites += 'gc-stress'
   endif
   if name in [
@@ -428,6 +429,7 @@ js_tests = {
   'disposal-realms': ['-m', 'tests/test_disposal_realms.js'],
   'resource-realms': ['-m', 'tests/test_resource_realms.js'],
   'language': ['tests/test_language.js'],
+  'vm-stack': ['-m', 'tests/test_vm_stack.js'],
   'module': ['-m', 'tests/test_module.js'],
   'module-names': ['-m', 'tests/test_module_names.js'],
   'builtin': ['--std', 'tests/test_builtin.js'],
@@ -468,6 +470,7 @@ foreach name, args : js_tests
     'disposal-realms',
     'resource-realms',
     'async',
+    'vm-stack',
     'wait-async',
     'bjson',
   ]

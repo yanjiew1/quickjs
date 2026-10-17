@@ -2,7 +2,7 @@ name: ci-nan-boxing
 
 on:
   push:
-    branches: [nan_boxing]
+    branches: [nan_boxing, tos3]
   pull_request:
     paths:
       - 'include/**'
@@ -51,6 +51,16 @@ jobs:
             cflags: '-U__SIZEOF_INT128__'
             mode: compact
             sanitizer: none
+          - name: GCC compact switch dispatch ASan and UBSan
+            compiler: gcc
+            cflags: '-DDIRECT_DISPATCH=0'
+            mode: compact
+            sanitizer: address,undefined
+          - name: GCC wide switch dispatch ASan and UBSan
+            compiler: gcc
+            cflags: '-DDIRECT_DISPATCH=0'
+            mode: wide
+            sanitizer: address,undefined
     env:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1

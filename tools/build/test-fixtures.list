@@ -9,6 +9,7 @@ test262-slow.txt
 test262_errors.txt
 test262o_errors.txt
 tests/assert.js
+tests/test_vm_stack.js
 tests/bench-v8/LICENSE-GPL-2.0.txt
 tests/bench-v8/README.txt
 tests/bench-v8/base.js
