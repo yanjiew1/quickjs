@@ -60,6 +60,28 @@
 #include "std.h"
 #include "module-loader.h"
 
+/* Runtime opaque may belong to a bare embedder. Never probe it as host state.
+   Registration is protected across Worker creation and owner-thread transfers. */
+static struct list_head handler_registry = LIST_HEAD_INIT(handler_registry);
+static pthread_mutex_t handler_registry_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static BOOL js_std_has_handlers(JSRuntime *rt)
+{
+    struct list_head *el;
+    BOOL found = FALSE;
+
+    pthread_mutex_lock(&handler_registry_mutex);
+    list_for_each(el, &handler_registry) {
+        JSThreadState *ts = list_entry(el, JSThreadState, registry_link);
+        if (ts->runtime == rt) {
+            found = TRUE;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&handler_registry_mutex);
+    return found;
+}
+
 typedef struct {
     struct list_head link;
     JSValue promise;
@@ -153,6 +175,10 @@ int js_std_init_handlers_checked(JSRuntime *rt)
     init_list_head(&ts->rejected_promise_list);
     ts->next_timer_id = 1;
 
+    ts->runtime = rt;
+    pthread_mutex_lock(&handler_registry_mutex);
+    list_add_tail(&ts->registry_link, &handler_registry);
+    pthread_mutex_unlock(&handler_registry_mutex);
     JS_SetRuntimeOpaque(rt, ts);
 
 #ifdef USE_WORKER
@@ -220,6 +246,9 @@ void js_std_free_handlers(JSRuntime *rt)
     free(ts->poll_fds);
 #endif
 
+    pthread_mutex_lock(&handler_registry_mutex);
+    list_del(&ts->registry_link);
+    pthread_mutex_unlock(&handler_registry_mutex);
     free(ts);
     JS_SetRuntimeOpaque(rt, NULL); /* fail safe */
 }
@@ -303,6 +332,50 @@ static void js_std_promise_rejection_check(JSContext *ctx)
     }
 }
 
+/* Keep the exception pending for embedding callers. */
+static int js_std_poll(JSContext *ctx, int timeout_ms)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSOSPollFunc *poll_func;
+    int ret;
+
+    poll_func = atomic_load_explicit(&os_poll_func, memory_order_relaxed);
+    if (poll_func && js_std_has_handlers(rt))
+        return poll_func(ctx, timeout_ms);
+    if (!JS_IsNativeJobPending(rt))
+        return -1;
+    if (JS_IsJobPending(rt))
+        timeout_ms = 0;
+    ret = JS_PollNativeJobs(rt, timeout_ms);
+    if (ret < 0) {
+        JS_ThrowInternalError(ctx, "native job polling failed");
+        return -2;
+    }
+    return ret > 0 ? 1 : 0;
+}
+
+int js_std_poll_io(JSContext *ctx, int timeout_ms)
+{
+    int ret = js_std_poll(ctx, timeout_ms);
+
+    return ret < -1 ? -1 : ret > 0;
+}
+
+int js_std_loop_once(JSContext *ctx)
+{
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    int ret, progress = 0;
+
+    while ((ret = JS_ExecutePendingJob(rt, NULL)) > 0)
+        progress = 1;
+    if (ret < 0)
+        return -1;
+    ret = js_std_poll(ctx, 0);
+    if (ret < -1)
+        return -1;
+    return progress || ret != -1;
+}
+
 /* main loop which calls the user JS callbacks */
 void js_std_loop(JSContext *ctx)
 {
@@ -324,8 +397,12 @@ void js_std_loop(JSContext *ctx)
 
         poll_func = atomic_load_explicit(&os_poll_func, memory_order_relaxed);
         if (poll_func) {
-            err = poll_func(ctx);
-            if (err) {
+            err = poll_func(ctx, -1);
+            if (err == -3) {
+                js_std_dump_error(ctx);
+                continue;
+            }
+            if (err < 0) {
                 if (err == -2)
                     js_std_dump_error(ctx);
                 break;
@@ -372,7 +449,10 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
                 js_std_promise_rejection_check(ctx);
                 poll_func = atomic_load_explicit(&os_poll_func, memory_order_relaxed);
                 if (poll_func) {
-                    if (poll_func(ctx) == -2) {
+                    err = poll_func(ctx, -1);
+                    if (err == -3)
+                        js_std_dump_error(ctx);
+                    if (err == -2) {
                         ret = JS_EXCEPTION;
                         JS_FreeValue(ctx, obj);
                         break;
