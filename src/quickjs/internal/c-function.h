@@ -41,8 +41,8 @@ static inline JSAtom *js_c_function_initial_name(JSObject *p)
 typedef struct JSCFunctionDataRecord {
     JSCFunctionData *func;
     uint8_t length;
-    uint8_t data_len;
     uint16_t magic;
+    int data_len;
     JSValue data[0];
 } JSCFunctionDataRecord;
 
