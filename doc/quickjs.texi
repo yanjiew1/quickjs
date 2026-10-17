@@ -882,14 +882,22 @@ optimizations for code compiled subsequently in that runtime, including
 @code{eval} and the @code{Function} constructor. The default enables
 @code{JS_COMPILER_OPT_CONSTANT_FOLDING} and
 @code{JS_COMPILER_OPT_CONSTANT_PROPAGATION}. The latter substitutes proven
-primitive values of uncaptured local @code{const} and @code{let} bindings within
-straight-line regions. Known writes update the tracked value; unknown writes
-discard it. This does not change whether a JavaScript binding is mutable.
-The pass preserves binding initialization and checks, and excludes functions
-containing direct @code{eval}. Each flag can be selected independently.
+primitive values of local @code{const}, @code{let} and function-scoped
+@code{var} bindings, including selected control-flow joins. Captured @code{const}
+and write-once @code{let} initializers can also supply values to nested functions.
+Known writes update tracked values; unknown writes and reference aliases discard
+unsupported facts. Captured mutable bindings require the absence of writes and
+dynamic @code{eval} in their descendants.
+
+This does not change whether a JavaScript binding is mutable. The propagation
+pass preserves initialization, temporal dead zone checks and stores, and excludes functions
+containing direct @code{eval}. Folding and propagation have bounded analysis
+and value-size budgets; unsupported cases retain ordinary runtime evaluation.
+Each flag can be selected independently.
 Pass zero to disable the optional passes, and use
-@code{JS_GetCompilerOptimizationFlags()} to read the active flags. Unknown bits are ignored. Changing these flags does not rewrite
-already compiled or deserialized bytecode.
+@code{JS_GetCompilerOptimizationFlags()} to read the active flags. Unknown bits
+are ignored. Changing these flags does not rewrite already compiled or
+deserialized bytecode.
 
 
 If the script or module was compiled to bytecode with @code{qjsc}, it
