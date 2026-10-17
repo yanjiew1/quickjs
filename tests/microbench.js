@@ -1031,6 +1031,34 @@ function math_min(n)
     return n * 1000;
 }
 
+function regexp_compile(n)
+{
+    var i, j, r;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 1000; i++)
+            r = new RegExp("(?:foo|bar)+(\\d+)");
+        global_res = r;
+    }
+    return n * 1000;
+}
+
+var regexp_compile_large_pattern;
+
+function regexp_compile_large(n)
+{
+    var i, j, r;
+    if (regexp_compile_large_pattern === undefined) {
+        regexp_compile_large_pattern = Array.from({ length: 500 },
+                                                  (_, i) => "word" + i).join("|");
+    }
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            r = new RegExp(regexp_compile_large_pattern, "u");
+        global_res = r;
+    }
+    return n * 100;
+}
+
 function regexp_ascii(n)
 {
     var i, j, r, s;
@@ -1666,6 +1694,8 @@ function main(argc, argv, g)
         array_for_in,
         array_for_of,
         math_min,
+        regexp_compile,
+        regexp_compile_large,
         regexp_ascii,
         regexp_utf16,
         regexp_replace,
