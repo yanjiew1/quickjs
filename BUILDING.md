@@ -120,8 +120,9 @@ separate build directory. Legacy retains the original platform choice: an
 8-byte NaN box on 32-bit targets and a 16-byte union/tag on 64-bit targets.
 Wide uses the union/tag implementation on both. Compact uses a common 8-byte,
 Q=1 NaN-boxed format with a reference-count flag, major tags, and pointer
-subtags. It requires binary64 doubles, pointers below 2^49, and at least
-4-byte alignment for boxed pointers. Unsupported addresses fail fast rather
+three-bit subtags. Immediate values do not use these low-bit subtags.
+It requires binary64 doubles, pointers below 2^49, and at least
+8-byte alignment for boxed pointers. Unsupported addresses fail fast rather
 than being truncated, including in release builds. Pointer metadata such as
 HWASan/MTE tags is not supported: select wide for those configurations.
 

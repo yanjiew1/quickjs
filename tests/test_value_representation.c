@@ -21,6 +21,8 @@ static void test_immediates(JSContext *ctx)
         assert(JS_VALUE_GET_INT(v) == integers[i]);
         assert(JS_VALUE_IS_BOTH_INT(v, v));
         assert(!JS_VALUE_IS_BOTH_FLOAT(v, v));
+        assert(!JS_VALUE_IS_BOTH_INT(v, JS_NAN));
+        assert(!JS_VALUE_IS_BOTH_FLOAT(v, JS_NAN));
         assert(!JS_VALUE_HAS_REF_COUNT(v));
         JS_FreeValue(ctx, v);
     }
@@ -74,14 +76,14 @@ static void test_doubles(JSContext *ctx)
     }
 }
 
-static void test_pointer_tags(void)
+static void test_pointer_tags(JSContext *ctx)
 {
     static const int tags[] = {
         JS_TAG_OBJECT, JS_TAG_STRING, JS_TAG_STRING_ROPE, JS_TAG_SYMBOL,
         JS_TAG_BIG_INT, JS_TAG_VAR_REF, JS_TAG_VAR_REF_RO, JS_TAG_MODULE,
         JS_TAG_FUNCTION_BYTECODE,
     };
-    uint64_t aligned;
+    _Alignas(8) uint64_t aligned;
     size_t i;
     for (i = 0; i < sizeof(tags) / sizeof(*tags); i++) {
         JSValue v = JS_MKPTR(tags[i], &aligned);
@@ -95,12 +97,15 @@ static void test_pointer_tags(void)
         assert(JS_IsString(v) == (tags[i] == JS_TAG_STRING ||
                                   tags[i] == JS_TAG_STRING_ROPE));
         assert(JS_IsSymbol(v) == (tags[i] == JS_TAG_SYMBOL));
+        assert(JS_IsBigInt(ctx, v) == (tags[i] == JS_TAG_BIG_INT));
+        assert(!JS_VALUE_IS_BOTH_INT(JS_NewInt32(ctx, 0), v));
+        assert(!JS_VALUE_IS_BOTH_FLOAT(JS_NAN, v));
     }
 #if defined(JS_COMPACT_NAN_BOXING) && defined(JS_PTR64)
     /* Synthetic addresses are decoded only, never dereferenced. Bit 48 must
        not be mistaken for a tag bit, and low subtype bits must be stripped. */
     for (i = 0; i < sizeof(tags) / sizeof(*tags); i++) {
-        uintptr_t address = UINT64_C(0x0001fffffffffffc);
+        uintptr_t address = UINT64_C(0x0001fffffffffff8);
         JSValue v = JS_MKPTR(tags[i], (void *)address);
         assert((uintptr_t)JS_VALUE_GET_PTR(v) == address);
         assert(JS_VALUE_GET_TAG(v) == tags[i]);
@@ -152,7 +157,7 @@ int main(void)
     assert(ctx);
     test_immediates(ctx);
     test_doubles(ctx);
-    test_pointer_tags();
+    test_pointer_tags(ctx);
     test_bigint_boundaries(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);

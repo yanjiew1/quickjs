@@ -1256,7 +1256,8 @@ collection roots need to be manipulated in the C code.
 @subsection JSValue
 
 It is a Javascript value which can be a primitive type (such as
-Number, String, ...) or an Object. The default representation uses NaN boxing on 32-bit targets and a
+Number, String, ...) or an Object. The default representation uses NaN boxing
+on 32-bit targets and a
 128-bit payload/tag pair on 64-bit targets. The experimental Meson
 @code{value_representation=compact} option uses a common 64-bit quiet-NaN
 encoding on both, with a reference-count flag, major tags and pointer subtags.
@@ -1265,8 +1266,9 @@ rebuilding all consumers. The @code{wide} option retains the payload/tag
 representation on either platform. See @file{BUILDING.md} for configuration
 and sanitizer limitations.
 
-In both cases (32 or 64 bits), JSValue exactly fits two CPU registers,
-so it can be efficiently returned by C functions.
+The legacy representation fits two general-purpose registers on either
+platform. Compact values fit one on 64-bit targets and two on 32-bit targets;
+actual function-call conventions depend on the platform ABI.
 
 @subsection Function call
 
