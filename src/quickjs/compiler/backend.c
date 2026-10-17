@@ -3700,11 +3700,8 @@ static int add_global_variables(JSContext *ctx, JSFunctionDef *fd)
     return 0;
 }
 
-/* Prepare enclosing scopes before children, then resolve children first so
-   their capture flags are known when the parent emits scope cleanup. */
-static int prepare_function_tree(JSContext *ctx, JSFunctionDef *fd)
+static int prepare_function_scope(JSContext *ctx, JSFunctionDef *fd)
 {
-    struct list_head *el;
     int scope, idx;
 
     if (dbuf_error(&fd->byte_code)) {
@@ -3774,12 +3771,13 @@ static int prepare_function_tree(JSContext *ctx, JSFunctionDef *fd)
             goto fail;
     } 
 
-    list_for_each(el, &fd->child_list) {
-        JSFunctionDef *child = list_entry(el, JSFunctionDef, link);
-        if (prepare_function_tree(ctx, child))
-            goto fail;
-    }
+    return 0;
+ fail:
+    return -1;
+}
 
+static int resolve_function_variables(JSContext *ctx, JSFunctionDef *fd)
+{
 #if defined(DUMP_BYTECODE) && (DUMP_BYTECODE & 4)
     if (!fd->strip_debug) {
         printf("pass 1\n");
@@ -3812,9 +3810,50 @@ static int prepare_function_tree(JSContext *ctx, JSFunctionDef *fd)
     return -1;
 }
 
-/* Publish parent constant summaries before compiling children. Finalize child
-   bytecode first, keeping every enclosing summary alive until it is consumed. */
-static JSValue create_function_bytecode(JSContext *ctx, JSFunctionDef *fd)
+/* Summaries are only published for normal lexical locals outside eval.
+   Without such an owner, preserve the original child-at-a-time lifetime of
+   compiler allocations and the resulting runtime allocator pool state. */
+static BOOL needs_captured_constants(JSFunctionDef *fd)
+{
+    struct list_head *el;
+    int i;
+
+    if (!fd->is_eval && !fd->has_eval_call && !list_empty(&fd->child_list) &&
+        (fd->compiler_optimization_flags & JS_COMPILER_OPT_CONSTANT_PROPAGATION)) {
+        for (i = 0; i < fd->var_count; i++) {
+            const JSVarDef *vd = &fd->vars[i];
+            if (vd->is_lexical && vd->var_kind == JS_VAR_NORMAL)
+                return TRUE;
+        }
+    }
+    list_for_each(el, &fd->child_list) {
+        JSFunctionDef *child = list_entry(el, JSFunctionDef, link);
+        if (needs_captured_constants(child))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/* Prepare enclosing scopes before children, then resolve children first so
+   their capture flags are known when the parent emits scope cleanup. */
+static int prepare_function_tree(JSContext *ctx, JSFunctionDef *fd)
+{
+    struct list_head *el;
+
+    if (prepare_function_scope(ctx, fd))
+        return -1;
+    list_for_each(el, &fd->child_list) {
+        JSFunctionDef *child = list_entry(el, JSFunctionDef, link);
+        if (prepare_function_tree(ctx, child))
+            return -1;
+    }
+    return resolve_function_variables(ctx, fd);
+}
+
+/* In a prepared tree, publish parent summaries before compiling children.
+   Keep enclosing summaries alive until every descendant has consumed them. */
+static JSValue create_function_bytecode(JSContext *ctx, JSFunctionDef *fd,
+                                        BOOL prepared)
 {
     JSRuntime *rt = ctx->rt;
     JSValue func_obj;
@@ -3825,8 +3864,12 @@ static JSValue create_function_bytecode(JSContext *ctx, JSFunctionDef *fd)
     int closure_var_offset, vardefs_offset;
     BOOL strip_var_debug;
 
-    if (js_optimize_constants(ctx, fd))
+    if (prepared) {
+        if (js_optimize_constants(ctx, fd))
+            goto fail;
+    } else if (prepare_function_scope(ctx, fd)) {
         goto fail;
+    }
 
     /* Create all the child functions before laying out the constant pool. */
     list_for_each_safe(el, el1, &fd->child_list) {
@@ -3835,13 +3878,17 @@ static JSValue create_function_bytecode(JSContext *ctx, JSFunctionDef *fd)
 
         fd1 = list_entry(el, JSFunctionDef, link);
         cpool_idx = fd1->parent_cpool_idx;
-        func_obj = create_function_bytecode(ctx, fd1);
+        func_obj = create_function_bytecode(ctx, fd1, prepared);
         if (JS_IsException(func_obj))
             goto fail;
         /* save it in the constant pool */
         assert(cpool_idx >= 0);
         fd->cpool[cpool_idx] = func_obj;
     }
+
+    if (!prepared && (resolve_function_variables(ctx, fd) ||
+                      js_optimize_constants(ctx, fd)))
+        goto fail;
 
     if (resolve_labels(ctx, fd))
         goto fail;
@@ -4019,9 +4066,10 @@ static JSValue create_function_bytecode(JSContext *ctx, JSFunctionDef *fd)
 /* Consume the complete parsed tree, including failure paths during preparation. */
 JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
 {
-    if (prepare_function_tree(ctx, fd)) {
+    BOOL prepared = needs_captured_constants(fd);
+    if (prepared && prepare_function_tree(ctx, fd)) {
         js_free_function_def(ctx->rt, fd);
         return JS_EXCEPTION;
     }
-    return create_function_bytecode(ctx, fd);
+    return create_function_bytecode(ctx, fd, prepared);
 }
