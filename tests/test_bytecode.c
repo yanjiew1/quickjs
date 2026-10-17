@@ -624,24 +624,28 @@ static void test_literal_folding_allocation_failure(int mode)
         JSContext *ctx = JS_NewContext(rt);
         JSFunctionDef fd = { 0 };
         JSVarDef local = { 0 };
-        LabelSlot label = { 0 };
+        LabelSlot labels[2] = { { 0 } };
         int ret;
         void *padding;
 
         assert(ctx);
         fd.ctx = ctx;
         fd.compiler_optimization_flags = JS_COMPILER_OPT_CONSTANT_FOLDING;
-        if (mode == 4) {
+        if (mode == 4 || mode == 7) {
             local.is_const = TRUE;
             local.is_lexical = TRUE;
             fd.vars = &local;
             fd.var_count = 1;
             fd.compiler_optimization_flags |= JS_COMPILER_OPT_CONSTANT_PROPAGATION;
         }
-        fd.label_slots = &label;
-        fd.label_count = 1;
+        fd.label_slots = labels;
+        fd.label_count = mode == 7 ? 2 : 1;
         dbuf_init2(&fd.byte_code, rt, js_realloc_bytecode_rt);
-        if (mode < 2 || mode == 4) {
+        if (mode == 7) {
+            dbuf_putc(&fd.byte_code, OP_label);
+            dbuf_put_u32(&fd.byte_code, 1);
+        }
+        if (mode < 2 || mode == 4 || mode == 7) {
             dbuf_putc(&fd.byte_code, OP_push_atom_value);
             dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode == 1 ? "1" : "folded-left"));
             dbuf_putc(&fd.byte_code, OP_push_atom_value);
@@ -657,17 +661,28 @@ static void test_literal_folding_allocation_failure(int mode)
         }
         dbuf_putc(&fd.byte_code, mode == 6 ? OP_lt :
                   mode == 5 ? OP_pow : mode == 3 ? OP_div : OP_add);
-        if (mode == 4) {
+        if (mode == 4 || mode == 7) {
             dbuf_putc(&fd.byte_code, OP_put_loc);
             dbuf_put_u16(&fd.byte_code, 0);
+            if (mode == 7) {
+                dbuf_putc(&fd.byte_code, OP_label);
+                dbuf_put_u32(&fd.byte_code, 0);
+            }
             dbuf_putc(&fd.byte_code, OP_get_loc_check);
             dbuf_put_u16(&fd.byte_code, 0);
+            if (mode == 7) {
+                dbuf_putc(&fd.byte_code, OP_push_atom_value);
+                dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, "guarded-tail"));
+                dbuf_putc(&fd.byte_code, OP_add);
+            }
         }
         dbuf_putc(&fd.byte_code, OP_push_atom_value);
         dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, "borrowed-tail"));
         dbuf_putc(&fd.byte_code, OP_drop);
-        dbuf_putc(&fd.byte_code, OP_label);
-        dbuf_put_u32(&fd.byte_code, 0);
+        if (mode != 7) {
+            dbuf_putc(&fd.byte_code, OP_label);
+            dbuf_put_u32(&fd.byte_code, 0);
+        }
         dbuf_putc(&fd.byte_code, OP_return);
         assert(!dbuf_error(&fd.byte_code));
         padding = exhaust_optimizer_pools(rt);
@@ -683,11 +698,16 @@ static void test_literal_folding_allocation_failure(int mode)
         if (ret < 0) {
             oom_test_check_exception(ctx);
         } else {
-            assert(!JS_HasException(ctx));
-            int expected_size = mode == 6 ? 13 : mode == 4 ? 25 :
+            int expected_size = mode == 7 ? 34 : mode == 6 ? 13 : mode == 4 ? 25 :
                 ((mode < 2 || mode == 5) ? 17 : 18);
+            assert(!JS_HasException(ctx));
             assert(fd.byte_code.size == expected_size);
-            assert(label.pos2 == expected_size - 1);
+            assert(labels[0].pos2 == (mode == 7 ? 18 : expected_size - 1));
+            if (mode == 7) {
+                assert(labels[1].pos2 == 5);
+                assert(fd.byte_code.buf[18] == OP_get_loc_check);
+                assert(fd.byte_code.buf[21] == OP_drop);
+            }
         }
         free_bytecode_atoms(rt, fd.byte_code.buf, fd.byte_code.size, FALSE);
         dbuf_free(&fd.byte_code);
@@ -745,6 +765,21 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    test_literal_folding_allocation_failure(7);
+    {
+        uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;
+        const char *branch = "(function(flag) { let a = 3; if (flag) return a + 1; return a + 2; })";
+        test_local_constant_bytecode(branch, both, 0, 0);
+        test_local_constant_bytecode(branch, JS_COMPILER_OPT_CONSTANT_FOLDING, 2, 2);
+        test_local_constant_bytecode(branch, JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, 2);
+        test_local_constant_bytecode(
+            "(function(flag) { if(flag) {} let a = 3; if(flag) return a + 1; return a + 2; })",
+            both, 2, 0);
+        test_local_constant_bytecode(
+            "(function(flag) { let a = flag ? 3 : 9; return a + 1; })", both, 1, 1);
+        test_local_constant_bytecode(
+            "(function(flag) { let a = 3; if (flag) a = 9; return a + 1; })", both, 1, 1);
+    }
     test_integer_folding_bytecode("false && unknown();", OP_if_false, 0);
     test_integer_folding_bytecode("true || unknown();", OP_if_true, 0);
     test_integer_folding_bytecode("null ?? unknown();", OP_if_false, 0);

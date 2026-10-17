@@ -4400,3 +4400,35 @@ function test_logical_literal_folding()
 }
 
 test_logical_literal_folding();
+
+
+function test_write_once_propagation()
+{
+    for (const flag of [false, true]) {
+        assert(Function('flag', 'let a = 3; if(flag) return a + 1; return a + 2;')(flag), flag ? 4 : 5);
+        assert(Function('flag', 'let a = flag ? 3 : 9; return a + 1;')(flag), flag ? 4 : 10);
+        assert(Function('flag', 'let a = 3; if(flag) a = 9; return a + 1;')(flag), flag ? 10 : 4);
+        assert(Function('flag', 'let a = 3; try { if(flag) throw 0; } catch(e) {} return a + 4;')(flag), 7);
+    }
+    assert(Function('let result; try { a + 1; } catch(e) { result = e instanceof ReferenceError; }' +
+                    'let a = 3; return result;')(), true);
+    assert_throws(ReferenceError, Function('return a + 1; let a = 3;'));
+    assert_throws(ReferenceError, Function('let a = a + 1; return a;'));
+    assert(Function('try { return (1n + 1) + a; } catch(e) { return e instanceof TypeError; } let a = 3;')(), true);
+    assert(Function('try { return a + (1n + 1); } catch(e) { return e instanceof ReferenceError; } let a = 3;')(), true);
+    assert(Function('let total = 0; for(let i = 0; i < 3; i++) {' +
+                    'let a = 3; if(i === 1) continue; total += a + 1; } return total;')(), 8);
+    assert(Function('for(let i = 0; i < 2; i++) { try {' +
+                    'if(i) return a + 1; let a = 3;' +
+                    '} catch(e) { return e instanceof ReferenceError; } } return false;')(), true);
+    assert(Function('let a = 3; if(true) {} [a] = [9]; return a + 1;')(), 10);
+    assert(Function('let a = 3; if(true) {} a++; return a + 1;')(), 5);
+    assert(Function('let a = 3; if(true) {} a += 2; return a + 1;')(), 6);
+    assert(Function('let a = 3; const change = () => a = 9; change(); return a + 1;')(), 10);
+    assert(Function('let a = 3; eval("a = 9"); return a + 1;')(), 10);
+    const g = Function('return function*() { let a = 3; yield a; return a + 1; }')()();
+    assert(g.next().value, 3);
+    assert(g.next().value, 4);
+}
+
+test_write_once_propagation();
