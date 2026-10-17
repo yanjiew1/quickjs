@@ -102,6 +102,7 @@ typedef struct JSVarScope {
 
 typedef struct JSFunctionDef {
     JSContext *ctx;
+    uint32_t compiler_optimization_flags;
     struct JSFunctionDef *parent;
     int parent_cpool_idx; /* index in the constant pool of the parent
                              or -1 if none */

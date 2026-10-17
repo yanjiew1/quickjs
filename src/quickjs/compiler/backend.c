@@ -134,6 +134,8 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
         return NULL;
 
     fd->ctx = ctx;
+    fd->compiler_optimization_flags = parent ?
+        parent->compiler_optimization_flags : rt->compiler_optimization_flags;
     init_list_head(&fd->child_list);
 
     /* insert in parent list */
@@ -2665,6 +2667,124 @@ static void put_short_code(DynBuf *bc_out, int op, int idx)
     dbuf_put_u16(bc_out, idx);
 }
 
+/* Fold only literal Number operations whose intermediate results stay in
+   int32_t. Never cross labels or instructions that can perform coercion or
+   call user code. Preserve the last folded operation's source position.
+   A bounded scan keeps compilation linear even for long runs of unrelated
+   constants. */
+static int fold_integer_expression(const uint8_t *bc_buf, int bc_len, int pos,
+                                   int32_t *pres, int *pline_num)
+{
+    int32_t values[32];
+    int count = 1, best_pos = pos + 5, steps;
+    int op, shift, line_num = *pline_num;
+    int64_t a, b, result;
+    uint32_t bits;
+
+    values[0] = *pres = get_i32(bc_buf + pos + 1);
+    pos += 5;
+    for (steps = 0; steps < 32 && pos < bc_len; steps++) {
+        op = bc_buf[pos];
+        if (op == OP_line_num) {
+            if (bc_len - pos < 5)
+                break;
+            line_num = get_u32(bc_buf + pos + 1);
+            pos += 5;
+            continue;
+        }
+        if (op == OP_push_i32) {
+            if (bc_len - pos < 5 || count == countof(values))
+                break;
+            values[count++] = get_i32(bc_buf + pos + 1);
+            pos += 5;
+            continue;
+        }
+        a = values[count - 1];
+        switch (op) {
+        case OP_plus:
+            result = a;
+            break;
+        case OP_neg:
+            if (a == 0) /* preserve negative zero */
+                goto done;
+            result = -a;
+            break;
+        case OP_not:
+            result = ~(int32_t)a;
+            break;
+        default:
+            if (count < 2)
+                goto done;
+            b = a;
+            a = values[count - 2];
+            switch (op) {
+            case OP_add:
+                result = a + b;
+                break;
+            case OP_sub:
+                result = a - b;
+                break;
+            case OP_mul:
+                if ((a == 0 && b < 0) || (b == 0 && a < 0))
+                    goto done;
+                result = a * b;
+                break;
+            case OP_div:
+                if (b == 0 || a % b != 0 || (a == 0 && b < 0))
+                    goto done;
+                result = a / b;
+                break;
+            case OP_mod:
+                if (b == 0)
+                    goto done;
+                result = a % b;
+                if (result == 0 && a < 0) /* negative zero */
+                    goto done;
+                break;
+            case OP_and:
+                result = (int32_t)a & (int32_t)b;
+                break;
+            case OP_or:
+                result = (int32_t)a | (int32_t)b;
+                break;
+            case OP_xor:
+                result = (int32_t)a ^ (int32_t)b;
+                break;
+            case OP_shl:
+            case OP_sar:
+            case OP_shr:
+                shift = (uint32_t)b & 31;
+                if (op == OP_shl) {
+                    bits = (uint32_t)a << shift;
+                } else {
+                    bits = (uint32_t)a >> shift;
+                    if (op == OP_sar && a < 0 && shift != 0)
+                        bits |= UINT32_MAX << (32 - shift);
+                }
+                result = bits;
+                if (op != OP_shr && bits > INT32_MAX)
+                    result -= INT64_C(0x100000000);
+                break;
+            default:
+                goto done;
+            }
+            count--;
+            break;
+        }
+        if (result < INT32_MIN || result > INT32_MAX)
+            break;
+        values[count - 1] = result;
+        pos++;
+        if (count == 1) {
+            best_pos = pos;
+            *pres = result;
+            *pline_num = line_num;
+        }
+    }
+ done:
+    return best_pos;
+}
+
 /* peephole optimizations and resolve goto/labels */
 static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 {
@@ -3072,8 +3192,12 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
 
         case OP_push_i32:
             if (OPTIMIZE) {
-                /* transform i32(val) neg -> i32(-val) */
                 val = get_i32(bc_buf + pos + 1);
+                if (s->compiler_optimization_flags &
+                    JS_COMPILER_OPT_CONSTANT_FOLDING)
+                    pos_next = fold_integer_expression(bc_buf, bc_len, pos,
+                                                       &val, &line_num);
+                /* transform i32(val) neg -> i32(-val) */
                 if ((val != INT32_MIN && val != 0)
                 &&  code_match(&cc, pos_next, OP_neg, -1)) {
                     if (cc.line_num >= 0) line_num = cc.line_num;

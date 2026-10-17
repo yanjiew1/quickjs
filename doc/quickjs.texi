@@ -877,6 +877,15 @@ occurred. The actual exception object is stored in the
 
 Use @code{JS_Eval()} to evaluate a script or module source.
 
+@code{JS_SetCompilerOptimizationFlags()} selects optional compiler
+optimizations for code compiled subsequently in that runtime, including
+@code{eval} and the @code{Function} constructor. The default enables
+@code{JS_COMPILER_OPT_CONSTANT_FOLDING}. Pass zero to disable the optional
+passes, and use @code{JS_GetCompilerOptimizationFlags()} to read the active
+flags. Unknown bits are ignored. Changing these flags does not rewrite
+already compiled or deserialized bytecode.
+
+
 If the script or module was compiled to bytecode with @code{qjsc}, it
 can be evaluated by calling @code{js_std_eval_binary()}. The advantage
 is that no compilation is needed so it is faster and smaller because

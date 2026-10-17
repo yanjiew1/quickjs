@@ -4011,3 +4011,83 @@ function test_to_int32_signed_minimum()
 }
 
 test_to_int32_signed_minimum();
+
+function test_integer_constant_folding()
+{
+    const cases = [
+        ["1 + 2 * 3", 7],
+        ["(-7 + 3) * (9 - 2)", -28],
+        ["9 / 3 + 7 % 3", 4],
+        ["((3 << 5) | 7) ^ 2", 101],
+        ["~(3 & 5)", -2],
+        ["-2147483648 / -1", 2147483648],
+        ["2147483647 + 1", 2147483648],
+        ["(2147483647 + 1) - 1", 2147483647],
+        ["(2147483647 * 2147483647) - 4611686014132420608", 0],
+        ["2147483647 * 2147483647", 4611686014132420609],
+        ["-(-2147483648)", 2147483648],
+        ["-1 * 0", -0],
+        ["0 / -1", -0],
+        ["-4 % 2", -0],
+        ["1 / 2", 0.5],
+        ["1 / 0", Infinity],
+        ["0 / 0", NaN],
+        ["0.1 + 0.2", 0.30000000000000004],
+        ["(1 + 2) * 0.5", 1.5],
+        ["1 + '2'", "12"],
+        ["1n + 2n", 3n],
+        ["(1 + 2) === 3", true],
+        ["!(1 - 1)", true],
+        ["true ? (1 + 2) : (3 + 4)", 3],
+        ["false ? (1 + 2) : (3 + 4)", 7],
+        ["1 +\n2 * 3", 7],
+    ];
+    for (const [source, expected] of cases)
+        assert(Function("return (" + source + ");")(), expected, source);
+
+    const inputs = [-2147483648, -2147483647, -65536, -33, -1, 0, 1,
+                    2, 3, 31, 32, 33, 65536, 2147483647];
+    for (const op of ["+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>", ">>>"]) {
+        const runtime = Function("a", "b", "return a " + op + " b;");
+        for (const a of inputs) {
+            for (const b of inputs) {
+                const source = "(" + a + ")" + op + "(" + b + ")";
+                assert(Function("return " + source)(), runtime(a, b), source);
+            }
+        }
+    }
+    const array = Array.from({ length: 10 }, (_, i) => i * 2);
+    assert(array[5 + 3], 16);
+    array[5 + 3] = 21;
+    assert(array[5 + 3]++, 21);
+    assert(array[8], 22);
+    const typed = new Int32Array(array);
+    assert(typed[5 + 3], 22);
+    const receiver = { 8() { return this; } };
+    assert(receiver[5 + 3]() === receiver);
+    let key;
+    const proxy = new Proxy({}, { get(target, property) { key = property; return 42; } });
+    assert(proxy[5 + 3], 42);
+    assert(key, "8");
+    const conditional = Function("condition",
+                                 "return 1 + (condition ? 2 + 3 : 4 + 5);");
+    assert(conditional(true), 6);
+    assert(conditional(false), 10);
+    const longSum = Array(200).fill("1").join("+");
+    assert(Function("return " + longSum)(), 200);
+    const nested = "1+(".repeat(80) + "0" + ")".repeat(80);
+    assert(Function("return " + nested)(), 80);
+
+    let calls = 0;
+    const object = { valueOf() { calls++; return 4; } };
+    assert((1 + 2) + object, 7);
+    assert(calls, 1);
+    let saved;
+    assert_throws(TypeError, () => { saved = (1 + 2) + 1n; });
+    assert(saved, undefined);
+    assert_throws(RangeError, () => { saved = 1n / 0n; });
+    assert(saved, undefined);
+    assert_throws(TypeError, () => +1n);
+}
+
+test_integer_constant_folding();

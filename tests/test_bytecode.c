@@ -511,8 +511,105 @@ static void test_writer_allocation_failure(int kind)
     }
 }
 
+static void test_integer_folding_bytecode_flags(const char *source, int opcode,
+                                                int expected, uint32_t flags)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled;
+    JSFunctionBytecode *b;
+    int pos, count = 0;
+
+    assert(rt);
+    assert(JS_GetCompilerOptimizationFlags(rt) == JS_COMPILER_OPT_CONSTANT_FOLDING);
+    JS_SetCompilerOptimizationFlags(rt, flags);
+    assert(JS_GetCompilerOptimizationFlags(rt) == flags);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    compiled = JS_Eval(ctx, source, strlen(source), "constant-folding.js",
+                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    b = JS_VALUE_GET_PTR(compiled);
+    for (pos = 0; pos < b->byte_code_len;) {
+        int op = b->byte_code_buf[pos];
+        assert(op < OP_COUNT && short_opcode_info(op).size > 0);
+        count += op == opcode;
+        pos += short_opcode_info(op).size;
+        assert(pos <= b->byte_code_len);
+    }
+    if (count != expected)
+        fprintf(stderr, "opcode %d: expected %d, got %d for %s\n",
+                opcode, expected, count, source);
+    assert(count == expected);
+    JS_FreeValue(ctx, compiled);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_compiler_optimization_flags(void)
+{
+    const char source[] = "(1 + 2) * 6;";
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue compiled, loaded, result;
+    uint8_t *buf;
+    size_t len;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    JS_SetCompilerOptimizationFlags(rt, UINT32_MAX);
+    assert(JS_GetCompilerOptimizationFlags(rt) == JS_COMPILER_OPT_CONSTANT_FOLDING);
+    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "flags.js",
+                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    assert(!JS_IsException(compiled));
+    JS_SetCompilerOptimizationFlags(rt, 0);
+    buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(buf);
+    loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE);
+    assert(!JS_IsException(loaded));
+    js_free(ctx, buf);
+    result = JS_EvalFunction(ctx, compiled);
+    assert(JS_StrictEq(ctx, result, JS_NewInt32(ctx, 18)));
+    JS_FreeValue(ctx, result);
+    result = JS_EvalFunction(ctx, loaded);
+    assert(JS_StrictEq(ctx, result, JS_NewInt32(ctx, 18)));
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_integer_folding_bytecode(const char *source, int opcode,
+                                          int expected)
+{
+    test_integer_folding_bytecode_flags(source, opcode, expected,
+                                        JS_COMPILER_OPT_CONSTANT_FOLDING);
+}
+
 int main(void)
 {
+    test_compiler_optimization_flags();
+    test_integer_folding_bytecode_flags("1 + 2 * 3;", OP_add, 1, 0);
+    test_integer_folding_bytecode_flags("1 + 2 * 3;", OP_mul, 1, 0);
+    test_integer_folding_bytecode("unknown[5 + 3];", OP_add, 0);
+    test_integer_folding_bytecode("unknown[5 + 3];", OP_get_array_el, 1);
+    test_integer_folding_bytecode("1 + 2 * 3;", OP_add, 0);
+    test_integer_folding_bytecode("1 + 2 * 3;", OP_mul, 0);
+    test_integer_folding_bytecode("(-7 + 3) * (9 - 2);", OP_mul, 0);
+    test_integer_folding_bytecode("9 / 3 + 7 % 3;", OP_div, 0);
+    test_integer_folding_bytecode("((3 << 5) | 7) ^ 2;", OP_shl, 0);
+    test_integer_folding_bytecode("~(1 + 2);", OP_not, 0);
+    test_integer_folding_bytecode("-(1 + 2);", OP_neg, 0);
+    test_integer_folding_bytecode("-8 >> 2;", OP_sar, 0);
+    test_integer_folding_bytecode("-1 >>> 1;", OP_shr, 0);
+    test_integer_folding_bytecode("1 +\n2 * 3;", OP_add, 0);
+    test_integer_folding_bytecode("2147483647 + 1;", OP_add, 1);
+    test_integer_folding_bytecode("(2147483647 + 1) - 1;", OP_add, 1);
+    test_integer_folding_bytecode("-1 * 0;", OP_mul, 1);
+    test_integer_folding_bytecode("-4 % 2;", OP_mod, 1);
+    test_integer_folding_bytecode("1 / 0;", OP_div, 1);
+    test_integer_folding_bytecode("(1 + 2) + unknown;", OP_add, 1);
+    test_bytecode_roundtrip("(2 + 5) * (9 - 3);");
     test_bytecode_roundtrip(
         "var fn = function self() {"
         " [self] = [0]; (() => { [self] = [1]; })(); return self; };"

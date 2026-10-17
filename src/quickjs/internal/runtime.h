@@ -109,6 +109,7 @@ struct JSRuntime {
     JSSharedArrayBufferFunctions sab_funcs;
     /* see JS_SetStripInfo() */
     uint8_t strip_flags;
+    uint32_t compiler_optimization_flags;
 
     /* Shape hash table */
     int shape_hash_bits;

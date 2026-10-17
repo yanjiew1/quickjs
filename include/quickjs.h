@@ -1091,6 +1091,13 @@ JS_EXTERN void JS_SetCanBlock(JSRuntime *rt, JS_BOOL can_block);
 JS_EXTERN void JS_SetStripInfo(JSRuntime *rt, int flags);
 JS_EXTERN int JS_GetStripInfo(JSRuntime *rt);
 
+/* Compiler optimizations for subsequently compiled code. Existing bytecode
+   is unchanged. All supported flags are enabled by default; unknown bits
+   are ignored. Zero disables these optional optimizations. */
+#define JS_COMPILER_OPT_CONSTANT_FOLDING (1u << 0)
+JS_EXTERN void JS_SetCompilerOptimizationFlags(JSRuntime *rt, uint32_t flags);
+JS_EXTERN uint32_t JS_GetCompilerOptimizationFlags(JSRuntime *rt);
+
 /* set the [IsHTMLDDA] internal slot */
 JS_EXTERN void JS_SetIsHTMLDDA(JSContext *ctx, JSValueConst obj);
 
