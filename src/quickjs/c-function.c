@@ -384,3 +384,102 @@ BOOL JS_IsCFunction(JSValueConst val, JSCFunction *func, int magic)
     else
         return FALSE;
 }
+
+void js_c_closure_finalizer(JSRuntime *rt, JSValue val)
+{
+    JSCClosureRecord *s = JS_GetOpaque(val, JS_CLASS_C_CLOSURE);
+
+    if (s) {
+        if (s->opaque_finalize)
+            s->opaque_finalize(s->opaque);
+        JS_FreeContext(s->realm);
+        js_free_rt(rt, s);
+    }
+}
+
+void js_c_closure_mark(JSRuntime *rt, JSValueConst val,
+                      JS_MarkFunc *mark_func)
+{
+    JSCClosureRecord *s = JS_GetOpaque(val, JS_CLASS_C_CLOSURE);
+
+    if (s)
+        mark_func(rt, &s->realm->header);
+}
+
+JSValue js_call_c_closure(JSContext *ctx, JSValueConst func_obj,
+                         JSValueConst this_val, int argc,
+                         JSValueConst *argv, int flags)
+{
+    JSRuntime *rt = ctx->rt;
+    JSCClosureRecord *s = JS_GetOpaque(func_obj, JS_CLASS_C_CLOSURE);
+    JSStackFrame sf;
+    JSValueConst *arg_buf = argv;
+    JSValue result;
+    int i;
+
+    ctx = s->realm;
+    if (js_check_stack_overflow(rt, sizeof(argv[0]) * s->length))
+        return JS_ThrowStackOverflow(ctx);
+    if (unlikely(argc < s->length)) {
+        arg_buf = alloca(sizeof(argv[0]) * s->length);
+        for (i = 0; i < argc; i++)
+            arg_buf[i] = argv[i];
+        for (i = argc; i < s->length; i++)
+            arg_buf[i] = JS_UNDEFINED;
+    }
+    sf.prev_frame = rt->current_stack_frame;
+    sf.cur_func = (JSValue)func_obj;
+    sf.arg_count = max_int(argc, s->length);
+    sf.arg_buf = (JSValue *)arg_buf;
+    sf.js_mode = 0;
+    rt->current_stack_frame = &sf;
+    result = s->func(ctx, this_val, argc, arg_buf, s->magic, s->opaque);
+    rt->current_stack_frame = sf.prev_frame;
+    return result;
+}
+
+JSValue JS_NewCClosure(JSContext *ctx, JSCClosure *func, const char *name,
+                      JSCClosureFinalizerFunc *opaque_finalize,
+                      int length, int magic, void *opaque)
+{
+    JSCClosureRecord *s;
+    JSValue function;
+    JSAtom name_atom = JS_ATOM_empty_string;
+    int ret;
+
+    if (length < 0 || length > UINT16_MAX)
+        return JS_ThrowRangeError(ctx, "invalid native closure length");
+    if (!func)
+        return JS_ThrowTypeError(ctx, "invalid native closure callback");
+    function = JS_NewObjectProtoClass(ctx, ctx->function_proto,
+                                     JS_CLASS_C_CLOSURE);
+    if (JS_IsException(function))
+        return function;
+    s = js_mallocz(ctx, sizeof(*s));
+    if (!s) {
+        JS_FreeValue(ctx, function);
+        return JS_EXCEPTION;
+    }
+    s->func = func;
+    s->realm = JS_DupContext(ctx);
+    s->length = length;
+    s->magic = magic;
+    JS_SetOpaque(function, s);
+    if (name && *name) {
+        name_atom = JS_NewAtom(ctx, name);
+        if (name_atom == JS_ATOM_NULL) {
+            JS_FreeValue(ctx, function);
+            return JS_EXCEPTION;
+        }
+    }
+    ret = js_function_set_properties(ctx, function, name_atom, length);
+    JS_FreeAtom(ctx, name_atom);
+    if (ret < 0) {
+        JS_FreeValue(ctx, function);
+        return JS_EXCEPTION;
+    }
+    /* No fallible initialization remains after ownership transfers. */
+    s->opaque = opaque;
+    s->opaque_finalize = opaque_finalize;
+    return function;
+}

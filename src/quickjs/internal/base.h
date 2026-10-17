@@ -191,6 +191,8 @@ enum {
     JS_CLASS_ASYNC_DISPOSABLE_STACK, /* shared stack dispatch */
     JS_CLASS_ARRAY_FROM_ASYNC, /* opaque asynchronous construction state */
 
+    JS_CLASS_C_CLOSURE, /* opaque native callback and creator realm */
+
     JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
 };
 

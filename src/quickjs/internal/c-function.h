@@ -46,6 +46,22 @@ typedef struct JSCFunctionDataRecord {
     JSValue data[0];
 } JSCFunctionDataRecord;
 
+typedef struct JSCClosureRecord {
+    JSCClosure *func;
+    JSContext *realm;
+    void *opaque;
+    JSCClosureFinalizerFunc *opaque_finalize;
+    int length;
+    int magic;
+} JSCClosureRecord;
+
+void js_c_closure_finalizer(JSRuntime *rt, JSValue val);
+void js_c_closure_mark(JSRuntime *rt, JSValueConst val,
+                      JS_MarkFunc *mark_func);
+JSValue js_call_c_closure(JSContext *ctx, JSValueConst func_obj,
+                         JSValueConst this_val, int argc,
+                         JSValueConst *argv, int flags);
+
 JSValue JS_NewCFunction3(JSContext *ctx, JSCFunction *func,
                          const char *name,
                          int length, JSCFunctionEnum cproto, int magic,
