@@ -37,6 +37,13 @@ JS_EXTERN JSModuleDef *js_init_module_std(JSContext *ctx, const char *module_nam
 JS_EXTERN JSModuleDef *js_init_module_os(JSContext *ctx, const char *module_name);
 JS_EXTERN void js_std_add_helpers(JSContext *ctx, int argc, char **argv);
 JS_EXTERN void js_std_loop(JSContext *ctx);
+/* Nonblocking: drain jobs and dispatch at most one ready host callback.
+   Return 1 for progress or remaining work, 0 when idle, -1 on exception. */
+JS_EXTERN int js_std_loop_once(JSContext *ctx);
+/* Poll all host sources without executing queued JS jobs. Negative timeout
+   permits unbounded waiting; pending jobs prevent sleeping. Return 1 for
+   readiness/progress, 0 for timeout/idle, -1 on exception. Neither API prints errors. */
+JS_EXTERN int js_std_poll_io(JSContext *ctx, int timeout_ms);
 JS_EXTERN JSValue js_std_await(JSContext *ctx, JSValue obj);
 JS_EXTERN void js_std_init_handlers(JSRuntime *rt);
 JS_EXTERN void js_std_free_handlers(JSRuntime *rt);
