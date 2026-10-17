@@ -575,7 +575,7 @@ static void free_optimizer_padding(JSRuntime *rt, void *padding)
     }
 }
 
-static void test_literal_folding_allocation_failure(int numeric)
+static void test_literal_folding_allocation_failure(int mode)
 {
     size_t fail_at, allocations = 0;
 
@@ -594,11 +594,18 @@ static void test_literal_folding_allocation_failure(int numeric)
         fd.label_slots = &label;
         fd.label_count = 1;
         dbuf_init2(&fd.byte_code, rt, js_realloc_bytecode_rt);
-        dbuf_putc(&fd.byte_code, OP_push_atom_value);
-        dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, numeric ? "1" : "folded-left"));
-        dbuf_putc(&fd.byte_code, OP_push_atom_value);
-        dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, numeric ? "2" : "folded-right"));
-        dbuf_putc(&fd.byte_code, OP_add);
+        if (mode < 2) {
+            dbuf_putc(&fd.byte_code, OP_push_atom_value);
+            dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode ? "1" : "folded-left"));
+            dbuf_putc(&fd.byte_code, OP_push_atom_value);
+            dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode ? "2" : "folded-right"));
+        } else {
+            dbuf_putc(&fd.byte_code, OP_push_bigint_i32);
+            dbuf_put_u32(&fd.byte_code, 1);
+            dbuf_putc(&fd.byte_code, mode == 2 ? OP_push_i32 : OP_push_bigint_i32);
+            dbuf_put_u32(&fd.byte_code, mode == 2 ? 1 : 0);
+        }
+        dbuf_putc(&fd.byte_code, mode == 3 ? OP_div : OP_add);
         dbuf_putc(&fd.byte_code, OP_push_atom_value);
         dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, "borrowed-tail"));
         dbuf_putc(&fd.byte_code, OP_drop);
@@ -620,7 +627,8 @@ static void test_literal_folding_allocation_failure(int numeric)
             oom_test_check_exception(ctx);
         } else {
             assert(!JS_HasException(ctx));
-            assert(fd.byte_code.size == 17 && label.pos2 == 16);
+            assert(fd.byte_code.size == (mode < 2 ? 17 : 18));
+            assert(label.pos2 == (mode < 2 ? 16 : 17));
         }
         free_bytecode_atoms(rt, fd.byte_code.buf, fd.byte_code.size, FALSE);
         dbuf_free(&fd.byte_code);
@@ -679,6 +687,14 @@ int main(void)
     test_compiler_optimization_flags();
     test_literal_folding_allocation_failure(0);
     test_literal_folding_allocation_failure(1);
+    test_literal_folding_allocation_failure(2);
+    test_literal_folding_allocation_failure(3);
+    test_integer_folding_bytecode("1n + 1;", OP_add, 0);
+    test_integer_folding_bytecode("1n + 1;", OP_throw_error, 1);
+    test_integer_folding_bytecode("1n / 0n;", OP_div, 0);
+    test_integer_folding_bytecode("1n / 0n;", OP_throw_error, 1);
+    test_integer_folding_bytecode("+1n;", OP_throw_error, 1);
+    test_integer_folding_bytecode_flags("1n + 1;", OP_add, 1, 0);
     test_integer_folding_bytecode("'foo' + 'bar';", OP_add, 0);
     test_integer_folding_bytecode("'1' + '2';", OP_add, 0);
     test_integer_folding_bytecode("'x' + true + null;", OP_add, 0);
@@ -705,6 +721,8 @@ int main(void)
     test_integer_folding_bytecode("1 / 0;", OP_div, 0);
     test_integer_folding_bytecode("(1 + 2) + unknown;", OP_add, 1);
     test_bytecode_roundtrip("(2 + 5) * (9 - 3);");
+    test_bytecode_roundtrip("try { 1n + 1; } catch(e) { e instanceof TypeError ? 42 : 0; }");
+    test_bytecode_roundtrip("try { 1n / 0n; } catch(e) { e instanceof RangeError ? 42 : 0; }");
     test_bytecode_roundtrip(
         "var fn = function self() {"
         " [self] = [0]; (() => { [self] = [1]; })(); return self; };"

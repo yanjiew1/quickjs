@@ -145,3 +145,18 @@ export async function test_realms()
 }
 
 await test_realms();
+
+function test_folded_error_realms()
+{
+    const realm = std.createRealm();
+    for (const [source, name] of [["1n + 1", "TypeError"],
+                                 ["1n / 0n", "RangeError"]]) {
+        const f = realm.evalScript("(function() { return " + source + "; })");
+        let error;
+        try { f(); } catch (e) { error = e; }
+        check(error instanceof realm.global[name], true);
+        check(error instanceof globalThis[name], false);
+    }
+}
+
+test_folded_error_realms();

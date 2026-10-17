@@ -3061,6 +3061,16 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 if (type == JS_THROW_ERROR_INVALID_LVALUE_CALL)
                     JS_ThrowReferenceError(ctx, "invalid assignment left-hand side");
                 else
+                if (type == JS_THROW_ERROR_TYPE)
+                    JS_ThrowTypeErrorAtom(ctx, "%s", atom);
+                else
+                if (type == JS_THROW_ERROR_RANGE) {
+                    const char *message = JS_AtomToCString(ctx, atom);
+                    if (message) {
+                        JS_ThrowRangeError(ctx, "%s", message);
+                        JS_FreeCString(ctx, message);
+                    }
+                } else
                     JS_ThrowInternalError(ctx, "invalid throw var type %d", type);
             }
             goto exception;

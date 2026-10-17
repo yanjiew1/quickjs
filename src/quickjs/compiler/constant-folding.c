@@ -78,10 +78,26 @@ static BOOL is_binary_operation(int op)
     }
 }
 
+static BOOL bigint_is_zero(JSValueConst value)
+{
+    if (JS_VALUE_GET_TAG(value) == JS_TAG_SHORT_BIG_INT)
+        return JS_VALUE_GET_SHORT_BIG_INT(value) == 0;
+    return ((JSBigInt *)JS_VALUE_GET_PTR(value))->len == 1 &&
+        ((JSBigInt *)JS_VALUE_GET_PTR(value))->tab[0] == 0;
+}
+
+static BOOL bigint_is_negative(JSValueConst value)
+{
+    if (JS_VALUE_GET_TAG(value) == JS_TAG_SHORT_BIG_INT)
+        return JS_VALUE_GET_SHORT_BIG_INT(value) < 0;
+    return js_bigint_sign(JS_VALUE_GET_PTR(value));
+}
+
 /* Speculative values own their references; input bytecode remains untouched.
    Record only complete prefixes and never consume a label or user operation. */
 static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
-                                    JSValue *pres, int *pline)
+                                    JSValue *pres, int *pline,
+                                    int *perror, const char **pmessage)
 {
     const uint8_t *buf = s->byte_code.buf;
     int pos = start, best = start, line = *pline, count = 0, steps;
@@ -89,7 +105,12 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
     double a, b, number;
     int32_t i1, i2;
     uint32_t bits;
+    int error_type = JS_THROW_ERROR_TYPE;
+    const char *message = "cannot convert bigint to number";
+
     *pres = JS_UNDEFINED;
+    *perror = -1;
+    *pmessage = NULL;
     for (steps = 0; steps < FOLD_STEP_LIMIT && pos < s->byte_code.size; steps++) {
         int op = buf[pos];
         int len = opcode_info[op].size;
@@ -118,7 +139,7 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             if (JS_IsBigInt(ctx, left)) {
                 js_slimb_t short_value = JS_VALUE_GET_SHORT_BIG_INT(left);
                 if (op == OP_plus)
-                    break;
+                    goto known_throw;
                 if (op != OP_neg ||
                     JS_VALUE_GET_TAG(left) != JS_TAG_SHORT_BIG_INT ||
                     short_value == JS_SHORT_BIG_INT_MIN)
@@ -159,8 +180,25 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             if (JS_IsException(result))
                 goto fail;
         } else {
-            if (JS_IsBigInt(ctx, left) || JS_IsBigInt(ctx, right))
+            if (op == OP_shr && (JS_IsBigInt(ctx, left) || JS_IsBigInt(ctx, right))) {
+                message = "bigint operands are forbidden for >>>";
+                goto known_throw;
+            }
+            if (JS_IsBigInt(ctx, left) != JS_IsBigInt(ctx, right))
+                goto known_throw;
+            if (JS_IsBigInt(ctx, left)) {
+                if ((op == OP_div || op == OP_mod) && bigint_is_zero(right)) {
+                    error_type = JS_THROW_ERROR_RANGE;
+                    message = "BigInt division by zero";
+                    goto known_throw;
+                }
+                if (op == OP_pow && bigint_is_negative(right)) {
+                    error_type = JS_THROW_ERROR_RANGE;
+                    message = "BigInt negative exponent";
+                    goto known_throw;
+                }
                 break;
+            }
             if (op == OP_and || op == OP_or || op == OP_xor ||
                 op == OP_shl || op == OP_sar || op == OP_shr) {
                 int shift;
@@ -209,6 +247,15 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             best = pos;
         }
     }
+    goto done;
+ known_throw:
+    JS_FreeValue(ctx, *pres);
+    *pres = JS_UNDEFINED;
+    *perror = error_type;
+    *pmessage = message;
+    *pline = line;
+    best = pos + opcode_info[buf[pos]].size;
+ done:
     while (count)
         JS_FreeValue(ctx, stack[--count]);
     return best;
@@ -237,6 +284,23 @@ static int put_instruction(JSContext *ctx, DynBuf *out, const uint8_t *pc)
         break;
     }
     if (dbuf_put(out, pc, oi->size)) {
+        JS_FreeAtom(ctx, atom);
+        return -1;
+    }
+    return 0;
+}
+
+static int put_throw(JSContext *ctx, DynBuf *out, int error, const char *message)
+{
+    uint8_t code[6];
+    JSAtom atom = JS_NewAtom(ctx, message);
+
+    if (atom == JS_ATOM_NULL)
+        return -1;
+    code[0] = OP_throw_error;
+    put_u32(code + 1, atom);
+    code[5] = error;
+    if (dbuf_put(out, code, sizeof(code))) {
         JS_FreeAtom(ctx, atom);
         return -1;
     }
@@ -313,8 +377,10 @@ int js_fold_literal_expressions(JSContext *ctx, JSFunctionDef *s)
         op = buf[pos];
         next = pos + opcode_info[op].size;
         if (is_literal(s, op, buf + pos)) {
-            int folded_line = line;
-            int end = fold_literal_expression(ctx, s, pos, &value, &folded_line);
+            int folded_line = line, error;
+            const char *message;
+            int end = fold_literal_expression(ctx, s, pos, &value, &folded_line,
+                                              &error, &message);
             if (end < 0)
                 goto fail;
             if (end > pos) {
@@ -327,7 +393,8 @@ int js_fold_literal_expressions(JSContext *ctx, JSFunctionDef *s)
                     }
                     line = folded_line;
                 }
-                if (put_literal(ctx, s, &out, value)) {
+                if (error >= 0 ? put_throw(ctx, &out, error, message) :
+                    put_literal(ctx, s, &out, value)) {
                     JS_FreeValue(ctx, value);
                     goto fail;
                 }

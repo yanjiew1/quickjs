@@ -4162,7 +4162,16 @@ function test_primitive_numeric_folding()
             }
         }
     }
-
+    for (const [source, error] of [["1n + 1", TypeError], ["+1n", TypeError],
+                                  ["1n / 0n", RangeError], ["1n ** -1n", RangeError]]) {
+        const f = Function("return " + source + ";");
+        assert_throws(error, f);
+        assert(Function("if (false) { return " + source + "; } return 7;")(), 7);
+        const caught = Function("try { return " + source + "; } catch (e) { return e; }");
+        const first = caught(), second = caught();
+        assert(first instanceof error && second instanceof error);
+        assert(first !== second);
+    }
 }
 
 test_primitive_numeric_folding();
