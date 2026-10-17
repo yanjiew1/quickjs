@@ -6,6 +6,8 @@
 #include <time.h>
 #include <unistd.h>
 #include "quickjs-libc.h"
+#include "../src/quickjs/internal/allocator.h"
+#include "../src/quickjs-libc/worker.h"
 #ifndef _WIN32
 #include <signal.h>
 #endif
@@ -64,6 +66,48 @@ static void clear_exception(JSContext *ctx)
     JS_FreeValue(ctx, error);
 }
 
+#ifdef USE_WORKER
+/* Receiving the last message does not join a detached Worker. Wait for
+   its final runtime allocation to be freed before process leak checking. */
+static pthread_mutex_t worker_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t worker_cond = PTHREAD_COND_INITIALIZER;
+static int worker_done;
+
+static void worker_free(JSMallocState *state, void *ptr)
+{
+    int had_ptr = ptr != NULL;
+
+    def_malloc_funcs.js_free(state, ptr);
+    if (had_ptr && state->malloc_count == 0) {
+        assert(pthread_mutex_lock(&worker_mutex) == 0);
+        worker_done = 1;
+        assert(pthread_cond_signal(&worker_cond) == 0);
+        assert(pthread_mutex_unlock(&worker_mutex) == 0);
+    }
+}
+
+static JSRuntime *worker_runtime(void)
+{
+    JSMallocFunctions functions = def_malloc_funcs;
+
+    functions.js_free = worker_free;
+    return JS_NewRuntime2(&functions, NULL);
+}
+
+static void wait_worker_cleanup(void)
+{
+    struct timespec deadline;
+
+    assert(clock_gettime(CLOCK_REALTIME, &deadline) == 0);
+    deadline.tv_sec += 5;
+    assert(pthread_mutex_lock(&worker_mutex) == 0);
+    while (!worker_done) {
+        assert(pthread_cond_timedwait(&worker_cond, &worker_mutex,
+                                     &deadline) == 0);
+    }
+    assert(pthread_mutex_unlock(&worker_mutex) == 0);
+}
+
 static JSContext *worker_context(JSRuntime *rt)
 {
     JSContext *ctx = JS_NewContext(rt);
@@ -73,6 +117,7 @@ static JSContext *worker_context(JSRuntime *rt)
     }
     return ctx;
 }
+#endif
 
 int main(void)
 {
@@ -175,6 +220,8 @@ int main(void)
 #endif
     run(ctx, "done = false; Atomics.waitAsync(shared, 0, 0, 1).value.then(() => done = true)");
     wait_for(ctx, "done");
+#ifdef USE_WORKER
+    js_std_set_worker_new_runtime_func(worker_runtime);
     js_std_set_worker_new_context_func(worker_context);
     JS_SetModuleLoaderFunc2(rt, NULL, js_module_loader, js_module_check_attributes, NULL);
     value = eval(ctx,
@@ -195,7 +242,10 @@ int main(void)
         }
     }
     assert(js_std_loop_once(ctx) == 0);
+    wait_worker_cleanup();
+    js_std_set_worker_new_runtime_func(NULL);
     js_std_set_worker_new_context_func(NULL);
+#endif
     {
         int embedder_state = 42;
         JSRuntime *bare_rt = JS_NewRuntime();
