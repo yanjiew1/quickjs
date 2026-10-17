@@ -155,7 +155,7 @@ js_put_reference_slow(JSContext *ctx, JSStackFrame *sf,
 static inline BOOL JS_IsHTMLDDA(JSValueConst obj)
 {
     JSObject *p;
-    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
+    if (!JS_IsObject(obj))
         return FALSE;
     p = JS_VALUE_GET_OBJ(obj);
     return p->is_HTMLDDA;
@@ -182,7 +182,7 @@ static no_inline __exception int js_unary_arith_slow(JSContext *ctx,
 
     op1 = sp[-1];
     /* fast path for float64 */
-    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)))
+    if (JS_VALUE_IS_FLOAT64(op1))
         goto handle_float64;
     op1 = JS_ToNumericFree(ctx, op1);
     if (JS_IsException(op1))
@@ -374,7 +374,8 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
         goto handle_float64;
     }
     /* fast path for short big int operations */
-    if (tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
+    if (JS_SHORT_BIG_INT_BITS <= JS_LIMB_BITS &&
+        tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
         js_slimb_t v1, v2;
         js_sdlimb_t v;
         v1 = JS_VALUE_GET_SHORT_BIG_INT(op1);
@@ -388,7 +389,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
             break;
         case OP_div:
             if (v2 == 0 ||
-                ((js_limb_t)v1 == (js_limb_t)1 << (JS_LIMB_BITS - 1) &&
+                (v1 == JS_SHORT_BIG_INT_MIN &&
                  v2 == -1)) {
                 goto slow_big_int;
             }
@@ -396,7 +397,7 @@ static no_inline __exception int js_binary_arith_slow(JSContext *ctx, JSValue *s
             return 0;
         case OP_mod:
             if (v2 == 0 ||
-                ((js_limb_t)v1 == (js_limb_t)1 << (JS_LIMB_BITS - 1) &&
+                (v1 == JS_SHORT_BIG_INT_MIN &&
                  v2 == -1)) {
                 goto slow_big_int;
             }
@@ -562,7 +563,8 @@ static no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp)
         return 0;
     }
     /* fast path for short bigint */
-    if (tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
+    if (JS_SHORT_BIG_INT_BITS <= JS_LIMB_BITS &&
+        tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
         js_slimb_t v1, v2;
         js_sdlimb_t v;
         v1 = JS_VALUE_GET_SHORT_BIG_INT(op1);
@@ -672,7 +674,8 @@ static no_inline __exception int js_binary_logic_slow(JSContext *ctx,
     tag1 = JS_VALUE_GET_NORM_TAG(op1);
     tag2 = JS_VALUE_GET_NORM_TAG(op2);
 
-    if (tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
+    if (JS_SHORT_BIG_INT_BITS <= JS_LIMB_BITS &&
+        tag1 == JS_TAG_SHORT_BIG_INT && tag2 == JS_TAG_SHORT_BIG_INT) {
         js_slimb_t v1, v2, v;
         js_sdlimb_t vd;
         v1 = JS_VALUE_GET_SHORT_BIG_INT(op1);
@@ -856,7 +859,7 @@ static int js_compare_bigint(JSRuntime *rt, OPCodeEnum op,
     if ((tag1 == JS_TAG_SHORT_BIG_INT || tag1 == JS_TAG_INT) &&
         (tag2 == JS_TAG_SHORT_BIG_INT || tag2 == JS_TAG_INT)) {
         /* fast path */
-        js_slimb_t v1, v2;
+        int64_t v1, v2;
         if (tag1 == JS_TAG_INT)
             v1 = JS_VALUE_GET_INT(op1);
         else
@@ -1227,7 +1230,7 @@ static __exception int js_operator_in(JSContext *ctx, JSValue *sp)
     op1 = sp[-2];
     op2 = sp[-1];
 
-    if (JS_VALUE_GET_TAG(op2) != JS_TAG_OBJECT) {
+    if (!JS_IsObject(op2)) {
         JS_ThrowTypeError(ctx, "invalid 'in' operand");
         return -1;
     }
@@ -1252,7 +1255,7 @@ static __exception int js_operator_private_in(JSContext *ctx, JSValue *sp)
     op1 = sp[-2]; /* object */
     op2 = sp[-1]; /* field name or method function */
 
-    if (JS_VALUE_GET_TAG(op1) != JS_TAG_OBJECT) {
+    if (!JS_IsObject(op1)) {
         JS_ThrowTypeError(ctx, "invalid 'in' operand");
         return -1;
     }
@@ -1696,7 +1699,7 @@ static __exception int js_for_in_next(JSContext *ctx, JSValue *sp)
 
     enum_obj = sp[-1];
     /* fail safe */
-    if (JS_VALUE_GET_TAG(enum_obj) != JS_TAG_OBJECT)
+    if (!JS_IsObject(enum_obj))
         goto done;
     p = JS_VALUE_GET_OBJ(enum_obj);
     if (p->class_id != JS_CLASS_FOR_IN_ITERATOR)
@@ -1871,7 +1874,7 @@ static __exception int js_append_enumerate(JSContext *ctx, JSValue *sp)
     uint32_t i, count32, pos;
     JSCFunctionType ft;
 
-    if (JS_VALUE_GET_TAG(sp[-2]) != JS_TAG_INT) {
+    if (!JS_VALUE_IS_INT(sp[-2])) {
         JS_ThrowInternalError(ctx, "invalid index for append");
         return -1;
     }
@@ -2481,17 +2484,16 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 
     if (js_poll_interrupts(caller_ctx))
         return JS_EXCEPTION;
-    if (unlikely(JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)) {
+    if (unlikely(!JS_IsObject(func_obj))) {
         if (flags & JS_CALL_FLAG_GENERATOR) {
-            JSAsyncFunctionState *s = JS_VALUE_GET_PTR(func_obj);
-            /* func_obj get contains a pointer to JSFuncAsyncState */
+            JSAsyncFunctionState *s = (JSAsyncFunctionState *)argv;
             /* the stack frame is already allocated */
             sf = &s->frame;
             p = JS_VALUE_GET_OBJ(sf->cur_func);
             b = p->u.func.function_bytecode;
             ctx = b->realm;
             var_refs = p->u.func.var_refs;
-            local_buf = arg_buf = sf->arg_buf;
+            local_buf = arg_buf = argv = sf->arg_buf;
             var_buf = sf->var_buf;
             stack_buf = sf->var_buf + b->var_count;
             sp = sf->cur_sp;
@@ -3698,7 +3700,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValue op1;
                 uint32_t pos;
                 op1 = sp[-1];
-                if (unlikely(JS_VALUE_GET_TAG(op1) != JS_TAG_INT))
+                if (unlikely(!JS_VALUE_IS_INT(op1)))
                     goto ret_fail;
                 pos = JS_VALUE_GET_INT(op1);
                 if (unlikely(pos >= b->byte_code_len)) {
@@ -3875,7 +3877,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 }                                                       \
                                                                         \
                 obj = sp[-1];                                           \
-                if (likely(JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT)) {   \
+                if (likely(JS_IsObject(obj))) {   \
                     p = JS_VALUE_GET_OBJ(obj);                          \
                     for(;;) {                                           \
                         prs = find_own_property(&pr, p, atom);          \
@@ -3942,7 +3944,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
 
                 obj = sp[-2];
-                if (likely(JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT)) {
+                if (likely(JS_IsObject(obj))) {
                     p = JS_VALUE_GET_OBJ(obj);
                     prs = find_own_property(&pr, p, atom);
                     if (!prs)
@@ -4156,8 +4158,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                                                                         \
                 obj = sp[-2];                                           \
                 prop = sp[-1];                                          \
-                if (likely(JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT &&    \
-                           JS_VALUE_GET_TAG(prop) == JS_TAG_INT)) {     \
+                if (likely(JS_IsObject(obj) &&    \
+                           JS_VALUE_IS_INT(prop))) {     \
                     p = JS_VALUE_GET_OBJ(obj);                          \
                     idx = JS_VALUE_GET_INT(prop);                       \
                     if (unlikely(p->class_id != JS_CLASS_ARRAY))        \
@@ -4200,8 +4202,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSObject *p;
                 uint32_t idx;
 
-                if (likely(JS_VALUE_GET_TAG(sp[-2]) == JS_TAG_OBJECT &&
-                           JS_VALUE_GET_TAG(sp[-1]) == JS_TAG_INT)) {
+                if (likely(JS_IsObject(sp[-2]) &&
+                           JS_VALUE_IS_INT(sp[-1]))) {
                     p = JS_VALUE_GET_OBJ(sp[-2]);
                     idx = JS_VALUE_GET_INT(sp[-1]);
                     if (unlikely(p->class_id != JS_CLASS_ARRAY))
@@ -4337,8 +4339,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSObject *p;
                 uint32_t idx;
 
-                if (likely(JS_VALUE_GET_TAG(sp[-3]) == JS_TAG_OBJECT &&
-                           JS_VALUE_GET_TAG(sp[-2]) == JS_TAG_INT)) {
+                if (likely(JS_IsObject(sp[-3]) &&
+                           JS_VALUE_IS_INT(sp[-2]))) {
                     p = JS_VALUE_GET_OBJ(sp[-3]);
                     idx = JS_VALUE_GET_INT(sp[-2]);
                     if (unlikely(p->class_id != JS_CLASS_ARRAY))
@@ -4350,7 +4352,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                                      !can_extend_fast_array(p))) {
                             goto put_array_el_slow_path;
                         }
-                        if (likely(JS_VALUE_GET_TAG(p->prop[0].u.value) != JS_TAG_INT))
+                        if (likely(!JS_VALUE_IS_INT(p->prop[0].u.value)))
                             goto put_array_el_slow_path;
                         /* cannot overflow otherwise the length would not be an integer */
                         new_len = idx + 1;
@@ -4471,7 +4473,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int ret;
                 JSAtom atom;
                 sf->cur_pc = pc;
-                if (JS_VALUE_GET_TAG(sp[-3]) != JS_TAG_OBJECT) {
+                if (!JS_IsObject(sp[-3])) {
                     JS_ThrowTypeErrorNotAnObject(ctx);
                     goto exception;
                 }
@@ -4541,19 +4543,19 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         sp[-2] = JS_NewInt32(ctx, r);
                     }
                     sp--;
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||
+                           JS_VALUE_IS_FLOAT64(op2)) {
                     double d1, d2;
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {
+                    if (JS_VALUE_IS_FLOAT64(op1)) {
                         d1 = JS_VALUE_GET_FLOAT64(op1);
-                    } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                    } else if (JS_VALUE_IS_INT(op1)) {
                         d1 = JS_VALUE_GET_INT(op1);
                     } else {
                         goto add_slow_case;
                     }
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                    if (JS_VALUE_IS_FLOAT64(op2)) {
                         d2 = JS_VALUE_GET_FLOAT64(op2);
-                    } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {
+                    } else if (JS_VALUE_IS_INT(op2)) {
                         d2 = JS_VALUE_GET_INT(op2);
                     } else {
                         goto add_slow_case;
@@ -4637,19 +4639,19 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         sp[-2] = JS_NewInt32(ctx, r);
                     }
                     sp--;
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||
+                           JS_VALUE_IS_FLOAT64(op2)) {
                     double d1, d2;
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {
+                    if (JS_VALUE_IS_FLOAT64(op1)) {
                         d1 = JS_VALUE_GET_FLOAT64(op1);
-                    } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                    } else if (JS_VALUE_IS_INT(op1)) {
                         d1 = JS_VALUE_GET_INT(op1);
                     } else {
                         goto binary_arith_slow;
                     }
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                    if (JS_VALUE_IS_FLOAT64(op2)) {
                         d2 = JS_VALUE_GET_FLOAT64(op2);
-                    } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {
+                    } else if (JS_VALUE_IS_INT(op2)) {
                         d2 = JS_VALUE_GET_INT(op2);
                     } else {
                         goto binary_arith_slow;
@@ -4684,19 +4686,19 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     }
                     sp[-2] = JS_NewInt32(ctx, r);
                     sp--;
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||
+                           JS_VALUE_IS_FLOAT64(op2)) {
                     double d1, d2;
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {
+                    if (JS_VALUE_IS_FLOAT64(op1)) {
                         d1 = JS_VALUE_GET_FLOAT64(op1);
-                    } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                    } else if (JS_VALUE_IS_INT(op1)) {
                         d1 = JS_VALUE_GET_INT(op1);
                     } else {
                         goto binary_arith_slow;
                     }
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {
+                    if (JS_VALUE_IS_FLOAT64(op2)) {
                         d2 = JS_VALUE_GET_FLOAT64(op2);
-                    } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {
+                    } else if (JS_VALUE_IS_INT(op2)) {
                         d2 = JS_VALUE_GET_INT(op2);
                     } else {
                         goto binary_arith_slow;
@@ -4809,7 +4811,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValue op1;
                 int val;
                 op1 = sp[-1];
-                if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                if (JS_VALUE_IS_INT(op1)) {
                     val = JS_VALUE_GET_INT(op1);
                     if (unlikely(val == INT32_MAX))
                         goto inc_slow;
@@ -4827,7 +4829,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValue op1;
                 int val;
                 op1 = sp[-1];
-                if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                if (JS_VALUE_IS_INT(op1)) {
                     val = JS_VALUE_GET_INT(op1);
                     if (unlikely(val == INT32_MIN))
                         goto dec_slow;
@@ -4845,7 +4847,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValue op1;
                 int val;
                 op1 = sp[-1];
-                if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                if (JS_VALUE_IS_INT(op1)) {
                     val = JS_VALUE_GET_INT(op1);
                     if (unlikely(val == INT32_MAX))
                         goto post_inc_slow;
@@ -4864,7 +4866,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 JSValue op1;
                 int val;
                 op1 = sp[-1];
-                if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                if (JS_VALUE_IS_INT(op1)) {
                     val = JS_VALUE_GET_INT(op1);
                     if (unlikely(val == INT32_MIN))
                         goto post_dec_slow;
@@ -4887,7 +4889,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 1;
 
                 op1 = var_buf[idx];
-                if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                if (JS_VALUE_IS_INT(op1)) {
                     val = JS_VALUE_GET_INT(op1);
                     if (unlikely(val == INT32_MAX))
                         goto inc_loc_slow;
@@ -4913,7 +4915,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 1;
 
                 op1 = var_buf[idx];
-                if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                if (JS_VALUE_IS_INT(op1)) {
                     val = JS_VALUE_GET_INT(op1);
                     if (unlikely(val == INT32_MIN))
                         goto dec_loc_slow;
@@ -4934,7 +4936,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 JSValue op1;
                 op1 = sp[-1];
-                if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {
+                if (JS_VALUE_IS_INT(op1)) {
                     sp[-1] = JS_NewInt32(ctx, ~JS_VALUE_GET_INT(op1));
                 } else {
                     sf->cur_pc = pc;
@@ -5070,19 +5072,19 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 if (likely(JS_VALUE_IS_BOTH_INT(op1, op2))) {           \
                     sp[-2] = JS_NewBool(ctx, JS_VALUE_GET_INT(op1) binary_op JS_VALUE_GET_INT(op2)); \
                     sp--;                                               \
-                } else if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1)) ||  \
-                           JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {  \
+                } else if (JS_VALUE_IS_FLOAT64(op1) ||  \
+                           JS_VALUE_IS_FLOAT64(op2)) {  \
                     double d1, d2;                                      \
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op1))) {     \
+                    if (JS_VALUE_IS_FLOAT64(op1)) {     \
                         d1 = JS_VALUE_GET_FLOAT64(op1);                 \
-                    } else if (JS_VALUE_GET_TAG(op1) == JS_TAG_INT) {   \
+                    } else if (JS_VALUE_IS_INT(op1)) {   \
                         d1 = JS_VALUE_GET_INT(op1);                     \
                     } else {                                            \
                         goto opcode ## _slow_case;                      \
                     }                                                   \
-                    if (JS_TAG_IS_FLOAT64(JS_VALUE_GET_TAG(op2))) {     \
+                    if (JS_VALUE_IS_FLOAT64(op2)) {     \
                         d2 = JS_VALUE_GET_FLOAT64(op2);                 \
-                    } else if (JS_VALUE_GET_TAG(op2) == JS_TAG_INT) {   \
+                    } else if (JS_VALUE_IS_INT(op2)) {   \
                         d2 = JS_VALUE_GET_INT(op2);                     \
                     } else {                                            \
                         goto opcode ## _slow_case;                      \
@@ -5283,7 +5285,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             BREAK;
 
         CASE(OP_to_object):
-            if (JS_VALUE_GET_TAG(sp[-1]) != JS_TAG_OBJECT) {
+            if (!JS_IsObject(sp[-1])) {
                 sf->cur_pc = pc;
                 ret_val = JS_ToObject(ctx, sp[-1]);
                 if (JS_IsException(ret_val))
@@ -5617,7 +5619,7 @@ static JSValue JS_CallConstructorInternal(JSContext *ctx,
     if (js_poll_interrupts(ctx))
         return JS_EXCEPTION;
     flags |= JS_CALL_FLAG_CONSTRUCTOR;
-    if (unlikely(JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT))
+    if (unlikely(!JS_IsObject(func_obj)))
         goto not_a_function;
     p = JS_VALUE_GET_OBJ(func_obj);
     if (unlikely(!p->is_constructor))
@@ -5643,7 +5645,7 @@ static JSValue JS_CallConstructorInternal(JSContext *ctx,
         if (JS_IsException(obj))
             return JS_EXCEPTION;
         ret = JS_CallInternal(ctx, func_obj, obj, new_target, argc, argv, flags);
-        if (JS_VALUE_GET_TAG(ret) == JS_TAG_OBJECT ||
+        if (JS_IsObject(ret) ||
             JS_IsException(ret)) {
             JS_FreeValue(ctx, obj);
             return ret;

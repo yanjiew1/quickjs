@@ -96,16 +96,16 @@ static JSValue async_func_resume(JSContext *ctx, JSAsyncFunctionState *s)
 {
     JSRuntime *rt = ctx->rt;
     JSStackFrame *sf = &s->frame;
-    JSValue func_obj, ret;
+    JSValue ret;
 
     assert(!s->is_completed);
     if (js_check_stack_overflow(rt, 0)) {
         ret = JS_ThrowStackOverflow(ctx);
     } else {
-        /* the tag does not matter provided it is not an object */
-        func_obj = JS_MKPTR(JS_TAG_INT, s);
-        ret = JS_CallInternal(ctx, func_obj, s->this_val, JS_UNDEFINED,
-                              s->argc, sf->arg_buf, JS_CALL_FLAG_GENERATOR);
+        /* The generator flag makes argv a borrowed resume-state pointer,
+           not an argument array. No raw pointer is disguised as a JSValue. */
+        ret = JS_CallInternal(ctx, JS_UNDEFINED, s->this_val, JS_UNDEFINED,
+                              s->argc, (JSValue *)s, JS_CALL_FLAG_GENERATOR);
     }
     if (JS_IsException(ret) || JS_IsUndefined(ret)) {
         JSObject *p;

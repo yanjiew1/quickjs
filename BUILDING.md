@@ -112,3 +112,36 @@ The default release is the source archive. Explicit `binary`, `win_binary` and
 `extras` selections require the corresponding toolchains or Unicode inputs.
 All binary builds use temporary directories under the selected output path.
 The optional `cosmo_binary` mode remains outside CI coverage.
+
+## Experimental JSValue representations
+
+Select `-Dvalue_representation=legacy` (default), `wide`, or `compact` in a
+separate build directory. Legacy retains the original platform choice: an
+8-byte NaN box on 32-bit targets and a 16-byte union/tag on 64-bit targets.
+Wide uses the union/tag implementation on both. Compact uses a common 8-byte
+format with a 16-bit tag and 48-bit payload. Non-NaN double bits rotate left
+by one on encoding and right by one on decoding. This groups the NaN prefixes
+so 30 full-payload boxed tags fit in one contiguous range. Numeric NaNs use a
+reserved quiet-NaN encoding; reference values are identified by tag range.
+
+It requires binary64 doubles and pointers below 2^48. Pointer low bits are
+preserved; there are no alignment subtags. Unsupported addresses fail fast
+rather than being truncated, including in release builds. Pointer metadata
+such as HWASan/MTE tags is not supported: select wide for those configurations.
+Compact reserves logical tags 8..20 for expansion and uses 21 for FLOAT64;
+other tag numbers match legacy. Use symbolic `JS_TAG_*` constants.
+
+Compact inline BigInts hold signed 48-bit values on 64-bit platforms and signed
+32-bit values on 32-bit platforms. Heap limb width remains unchanged (64 bits
+on 64-bit targets with `__int128`). Numeric NaNs are canonicalized; raw
+ArrayBuffer bytes are preserved. Serialization encodes logical values, not the
+in-memory JSValue layout.
+
+Changing modes changes the public ABI. Rebuild applications, native modules,
+and generated executable output with matching headers and libraries. The
+installed `quickjs-config.h` records the mode; build-tree Meson dependencies
+propagate it too. Direct source-header users must supply the matching
+`-DJS_VALUE_MODE=0`, `1`, or `2`; do not mix a source default header with a
+compact library. `qjsc` executable generation uses its matching configured
+headers. The original representation remains available for unsupported
+platforms and sanitizer configurations.
