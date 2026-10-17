@@ -56,4 +56,6 @@ typedef struct JSThreadState {
 #endif
 } JSThreadState;
 
+int js_std_init_handlers_checked(JSRuntime *rt);
+
 #endif
