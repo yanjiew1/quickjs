@@ -21,7 +21,7 @@ typedef struct LocalConstant {
 static BOOL eligible_local(const JSFunctionDef *s, int index)
 {
     const JSVarDef *vd = &s->vars[index];
-    return vd->is_lexical && vd->is_const && !vd->is_captured &&
+    return vd->is_lexical && !vd->is_captured &&
         vd->var_kind == JS_VAR_NORMAL;
 }
 
@@ -472,13 +472,34 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
     /* Avoid constructing another bytecode buffer for functions without a
        foldable expression or an eligible local read. */
     if (propagate) {
+        BOOL seed = FALSE, literal_top = FALSE;
+        propagate = FALSE;
         for (pos = 0; pos < s->byte_code.size; pos += opcode_info[op].size) {
             op = buf[pos];
-            if ((op == OP_get_loc || op == OP_get_loc_check) &&
+            if ((op == OP_get_loc || op == OP_get_loc_check) && seed &&
                 eligible_local(s, get_u16(buf + pos + 1))) {
-                candidate = TRUE;
+                propagate = candidate = TRUE;
                 break;
             }
+            /* A local fact must originate in a possible primitive store.
+               This inexpensive filter tolerates false positives; it does
+               not establish facts or remove instructions. */
+            if (is_literal(s, op, buf + pos)) {
+                literal_top = TRUE;
+            } else if (op == OP_put_loc || op == OP_set_loc ||
+                       op == OP_put_loc_check || op == OP_set_loc_check ||
+                       op == OP_put_loc_check_init) {
+                if (literal_top && eligible_local(s, get_u16(buf + pos + 1)))
+                    seed = TRUE;
+                if (op != OP_set_loc && op != OP_set_loc_check)
+                    literal_top = FALSE;
+            } else if (op != OP_line_num && op != OP_dup &&
+                       !(folding && (is_binary_operation(op) ||
+                                      op == OP_plus || op == OP_neg || op == OP_not))) {
+                literal_top = FALSE;
+            }
+            if (ends_constant_region(op))
+                seed = literal_top = FALSE;
         }
     }
     if (!candidate && folding) {
@@ -554,7 +575,7 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
             if (locals)
                 update_local_constant(ctx, locals, epoch, op, buf + pos,
                                       pending_known, pending);
-            if (op != OP_set_loc && op != OP_set_loc_check) {
+            if (op != OP_set_loc && op != OP_set_loc_check && op != OP_dup) {
                 JS_FreeValue(ctx, pending);
                 pending = JS_UNDEFINED;
                 pending_known = FALSE;

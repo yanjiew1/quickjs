@@ -4222,3 +4222,45 @@ function test_local_const_propagation()
 }
 
 test_local_const_propagation();
+
+
+function test_local_let_propagation()
+{
+    const cases = [
+        ["let a = 3; let b = a + 4; return b * 6;", 42],
+        ["let a = 3; a = 8; return a + 1;", 9],
+        ["let a = 3; let b = (a = 8); return a + b;", 16],
+        ["let a = 3; a += 4; return a + 1;", 8],
+        ["let a = 3; ++a; return a;", 4],
+        ["let a = 3; a--; return a;", 2],
+        ["let a = '3'; const b = a++; return a + b;", 7],
+        ["let a; a = 3; return a;", 3],
+        ["let a = 3; a = (() => 9)(); return a + 1;", 10],
+        ["let a = 3; const f = () => { a = 9; }; f(); return a;", 9],
+        ["let a = 3; eval('a = 9'); return a;", 9],
+        ["let a = 3; const f = () => eval('a = 9'); f(); return a;", 9],
+        ["let a = 3; [a] = [9]; return a;", 9],
+        ["let a = 3; a ||= 9; return a;", 3],
+        ["let a = 3; a &&= 9; return a;", 9],
+        ["let a = null; a ??= 9; return a;", 9],
+        ["let a = 3; { let a = 9; a++; } return a;", 3],
+        ["let a = 3; try { a = 9; throw 1; } catch (e) {} return a;", 9],
+        ["let a = 3; try { throw 1; } finally { a = 9; return a; }", 9],
+        ["let a = 3; with ({a: 7}) { a = 9; } return a;", 3],
+    ];
+    for (const [body, value] of cases)
+        assert(Function(body)(), value, body);
+    const branch = Function('flag', 'let a = 3; if (flag) a = 9; return a;');
+    assert(branch(false), 3);
+    assert(branch(true), 9);
+    const loop = Function('n', 'let a = 3; for (let i = 0; i < n; i++) a += i; return a;');
+    assert(loop(0), 3);
+    assert(loop(4), 9);
+    const closures = [];
+    for (let i = 0; i < 3; i++) { let a = i; closures.push(() => a); a++; }
+    assert(closures.map(f => f()).join(','), '1,2,3');
+    assert_throws(ReferenceError, Function('let a = a; return a;'));
+    assert_throws(ReferenceError, Function('{ a = 3; let a; }'));
+}
+
+test_local_let_propagation();

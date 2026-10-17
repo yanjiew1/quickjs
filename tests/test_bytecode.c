@@ -750,6 +750,20 @@ int main(void)
         test_bytecode_roundtrip(
             "(function() { const a = 3; const b = a + 4; return b * 6; })();");
     }
+    {
+        uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;
+        test_local_constant_bytecode(
+            "(function() { let a = 3; let b = a + 4; return b + 35; })", both, 0, 0);
+        test_local_constant_bytecode(
+            "(function() { let a = 3; a = 8; return a + 34; })", both, 0, 0);
+        test_local_constant_bytecode(
+            "(function() { let a = 3; a += 4; return a + 35; })", both, 0, 0);
+        test_local_constant_bytecode(
+            "(function() { let a = 3; a = 8; return a + 34; })",
+            JS_COMPILER_OPT_CONSTANT_FOLDING, 0, 1);
+        test_bytecode_roundtrip(
+            "(function() { let a = 3; a = 8; return a + 34; })();");
+    }
     test_literal_folding_allocation_failure(0);
     test_literal_folding_allocation_failure(1);
     test_literal_folding_allocation_failure(2);

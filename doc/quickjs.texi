@@ -882,11 +882,13 @@ optimizations for code compiled subsequently in that runtime, including
 @code{eval} and the @code{Function} constructor. The default enables
 @code{JS_COMPILER_OPT_CONSTANT_FOLDING} and
 @code{JS_COMPILER_OPT_CONSTANT_PROPAGATION}. The latter substitutes proven
-primitive values of uncaptured local @code{const} bindings within straight-line
-regions. It preserves binding initialization and checks, and excludes functions
-containing direct @code{eval}. Each flag can be selected independently. Pass zero to disable the optional
-passes, and use @code{JS_GetCompilerOptimizationFlags()} to read the active
-flags. Unknown bits are ignored. Changing these flags does not rewrite
+primitive values of uncaptured local @code{const} and @code{let} bindings within
+straight-line regions. Known writes update the tracked value; unknown writes
+discard it. This does not change whether a JavaScript binding is mutable.
+The pass preserves binding initialization and checks, and excludes functions
+containing direct @code{eval}. Each flag can be selected independently.
+Pass zero to disable the optional passes, and use
+@code{JS_GetCompilerOptimizationFlags()} to read the active flags. Unknown bits are ignored. Changing these flags does not rewrite
 already compiled or deserialized bytecode.
 
 
