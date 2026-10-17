@@ -58,6 +58,8 @@ native_test_names = [
   'test_bytecode_dump',
   'test_atomics_wait',
   'test_worker_context_failure',
+  'test_host_loop',
+  'test_host_poll_oom',
   'test_fuzz_json',
   'test_fuzz_exception_ownership',
   'test_wait_async',

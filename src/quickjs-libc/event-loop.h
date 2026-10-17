@@ -49,7 +49,8 @@ typedef struct {
 } JSOSTimer;
 
 extern uint64_t os_pending_signals;
-typedef int JSOSPollFunc(JSContext *ctx);
+/* -3: callback exception, -2: poll error, -1: idle, 0: alive, 1: progress. */
+typedef int JSOSPollFunc(JSContext *ctx, int timeout_ms);
 extern _Atomic(JSOSPollFunc *) os_poll_func;
 
 JSValue js_os_now(JSContext *ctx, JSValueConst this_val,
@@ -68,6 +69,6 @@ JSValue js_os_clearTimeout(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv);
 JSValue js_os_sleepAsync(JSContext *ctx, JSValueConst this_val,
                          int argc, JSValueConst *argv);
-int js_os_poll(JSContext *ctx);
+int js_os_poll(JSContext *ctx, int timeout_ms);
 
 #endif
