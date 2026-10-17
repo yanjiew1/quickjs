@@ -1081,3 +1081,9 @@ int JS_AddIntrinsicProxy(JSContext *ctx)
     JS_FreeValue(ctx, obj1);
     return -1;
 }
+
+JS_BOOL JS_IsProxy(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_PROXY;
+}
