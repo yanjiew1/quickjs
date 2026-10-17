@@ -13,10 +13,10 @@ mkdir -p unicode
 
 for f in $files; do
     g="${url}/${version}/ucd/${f}"
-    wget $g -O unicode/$f
+    wget --https-only --timeout=30 --tries=3 "$g" -O "unicode/$f"
 done
 
-wget "${url}/${version}/ucd/emoji/emoji-data.txt" -O unicode/emoji-data.txt
+wget --https-only --timeout=30 --tries=3 "${url}/${version}/ucd/emoji/emoji-data.txt" -O unicode/emoji-data.txt
 
-wget "${url}/${version}/emoji/emoji-sequences.txt" -O unicode/emoji-sequences.txt
-wget "${url}/${version}/emoji/emoji-zwj-sequences.txt" -O unicode/emoji-zwj-sequences.txt
+wget --https-only --timeout=30 --tries=3 "${url}/${version}/emoji/emoji-sequences.txt" -O unicode/emoji-sequences.txt
+wget --https-only --timeout=30 --tries=3 "${url}/${version}/emoji/emoji-zwj-sequences.txt" -O unicode/emoji-zwj-sequences.txt
