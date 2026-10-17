@@ -351,3 +351,35 @@ function test_negative_float_comparison()
 }
 
 test_negative_float_comparison();
+
+function test_inline_boundaries()
+{
+    /* Exercise both edges of the 32-bit and compact 48-bit inline ranges.
+       Decimal parsing and arithmetic must agree across inline/heap transitions. */
+    for (const bits of [31n, 47n, 63n]) {
+        const limit = 1n << bits;
+        for (const x of [limit - 1n, limit, -limit, -limit - 1n]) {
+            assert(BigInt(String(x)), x);
+            assert((x + 1n) - 1n, x);
+            assert((x - 1n) + 1n, x);
+            assert(-(-x), x);
+            assert(~(~x), x);
+            assert((x * 3n) / 3n, x);
+            assert(x / -1n, -x);
+            assert(x % -1n, 0n);
+            assert((x << 5n) >> 5n, x);
+            assert((x >> -5n) << -5n, x);
+            assert((x ^ -1n) ^ -1n, x);
+            for (const width of [32, 48, 64]) {
+                const mask = (1n << BigInt(width)) - 1n;
+                const unsigned = x & mask;
+                assert(BigInt.asUintN(width, x), unsigned);
+                assert(BigInt.asIntN(width, x),
+                       unsigned >= (1n << BigInt(width - 1)) ?
+                       unsigned - (1n << BigInt(width)) : unsigned);
+            }
+        }
+    }
+}
+
+test_inline_boundaries();

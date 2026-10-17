@@ -1,0 +1,95 @@
+name: ci-nan-boxing
+
+on:
+  push:
+    branches: [nan_boxing]
+  pull_request:
+    paths:
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'meson*'
+      - '.github/workflows/ci-nan-boxing.yml'
+  workflow_dispatch:
+
+jobs:
+  value-representations:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC compact 64-bit ASan and UBSan
+            compiler: gcc
+            cflags: ''
+            mode: compact
+            sanitizer: address,undefined
+          - name: Clang compact 64-bit ASan and UBSan
+            compiler: clang
+            cflags: ''
+            mode: compact
+            sanitizer: address,undefined
+          - name: GCC compact 32-bit
+            compiler: gcc
+            cflags: '-m32'
+            mode: compact
+            sanitizer: none
+          - name: GCC legacy 32-bit
+            compiler: gcc
+            cflags: '-m32'
+            mode: legacy
+            sanitizer: none
+          - name: GCC wide 32-bit
+            compiler: gcc
+            cflags: '-m32'
+            mode: wide
+            sanitizer: none
+          - name: GCC compact 64-bit without int128
+            compiler: gcc
+            cflags: '-U__SIZEOF_INT128__'
+            mode: compact
+            sanitizer: none
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build gcc-multilib
+      - name: Build
+        env:
+          CC: ${{ matrix.compiler }}
+          CFLAGS: ${{ matrix.cflags }}
+          LDFLAGS: ${{ matrix.cflags }}
+        run: |
+          meson setup build -Dwerror=true -Dvalue_representation=${{ matrix.mode }} -Db_sanitize=${{ matrix.sanitizer }}
+          meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+      - name: Run repository tests
+        run: meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+      - name: Run Test262
+        run: |
+          python3 tools/build/test262.py bootstrap
+          python3 tools/build/test262.py run --runner build/run-test262 --threads "$(getconf _NPROCESSORS_ONLN)" --timing-log test262_timings.jsonl
+      - name: Report Test262 timings
+        if: always()
+        run: |
+          if test -f test262_timings.jsonl; then
+            python3 tools/ci/report_test262_timings.py test262_timings.jsonl --csv test262_timings.csv --markdown test262_timings.md
+            cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nan-boxing-${{ strategy.job-index }}
+          path: |
+            build/meson-logs/
+            test262_timings.*
+            test262_progress.jsonl
+            test262_errors.txt
