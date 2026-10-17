@@ -27,8 +27,9 @@ typedef struct LocalConstant {
 static BOOL eligible_local(const JSFunctionDef *s, int index)
 {
     const JSVarDef *vd = &s->vars[index];
-    return vd->is_lexical && !vd->is_captured &&
-        vd->var_kind == JS_VAR_NORMAL;
+    return !vd->is_captured && vd->var_kind == JS_VAR_NORMAL &&
+        (vd->is_lexical || (!s->is_eval && vd->scope_level == 0 &&
+                            vd->var_name != JS_ATOM_NULL));
 }
 
 static BOOL known_local(const LocalConstant *locals, uint32_t epoch,

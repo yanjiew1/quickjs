@@ -765,6 +765,17 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    {
+        uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;
+        const char *branch = "(function(flag) { var a = 3; if(flag) return a + 1; return a + 2; })";
+        test_local_constant_bytecode(branch, both, 0, 0);
+        test_local_constant_bytecode(branch, JS_COMPILER_OPT_CONSTANT_FOLDING, 2, 2);
+        test_local_constant_bytecode(branch, JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, 2);
+        test_local_constant_bytecode(
+            "(function(flag) { if(flag) { var a = 3; } return a + 1; })", both, 1, 1);
+        test_local_constant_bytecode(
+            "(function() { var a = 3; a = 4; return a + 1; })", both, 0, 0);
+    }
     test_literal_folding_allocation_failure(7);
     {
         uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;

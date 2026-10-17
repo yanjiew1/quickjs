@@ -4432,3 +4432,32 @@ function test_write_once_propagation()
 }
 
 test_write_once_propagation();
+
+
+function test_write_once_var_propagation()
+{
+    for (const flag of [false, true]) {
+        assert(Function('flag', 'var a = 3; if(flag) return a + 1; return a + 2;')(flag), flag ? 4 : 5);
+        assert(Function('flag', 'if(flag) { var a = 3; } return a;')(flag), flag ? 3 : undefined);
+        assert(Function('flag', 'var a; if(flag) a = 3; return a;')(flag), flag ? 3 : undefined);
+    }
+    assert(Function('var result = a; var a = 3; return result;')(), undefined);
+    assert(Function('var result = typeof a; var a = 3; return result;')(), 'undefined');
+    assert(Function('var a; return a;')(), undefined);
+    assert(Function('var a = a; return a;')(), undefined);
+    assert(Function('var a = 3; a = 4; return a + 1;')(), 5);
+    assert(Function('a', 'var a = 3; arguments[0] = 9; return a;')(1), 9);
+    assert(Function('a = 1', 'var a = 3; arguments[0] = 9; return a;')(1), 3);
+    assert(Function('a = 1', 'var a = a + 2; return a;')(), 3);
+    assert(Function('a = 1, f = () => a', 'var a = 50; return a + f();')(), 51);
+    assert(Function('var a = 3; for (var i = 0; i < 2; i++) a++; return a;')(), 5);
+    assert(Function('var arguments; return arguments[0];')(7), 7);
+    assert(Function('var arguments = 3; if(true) {} return arguments + 1;')(), 4);
+    assert(Function('var a = 3; const change = () => a = 9; change(); return a;')(), 9);
+    assert(Function('var a = 3; eval("a = 9"); return a;')(), 9);
+    assert(Function('var a = 3; const change = () => eval("a = 9"); change(); return a;')(), 9);
+    assert(Function('var a = 3; with({a: 9}) { return a; }')(), 9);
+    assert(Function('var a = 3; try { throw 0; } finally { a = 9; return a; }')(), 9);
+}
+
+test_write_once_var_propagation();
