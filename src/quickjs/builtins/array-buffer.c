@@ -814,3 +814,15 @@ const JSCFunctionListEntry js_shared_array_buffer_proto_funcs[] = {
     JS_CFUNC_MAGIC_DEF("slice", 2, js_array_buffer_slice, JS_CLASS_SHARED_ARRAY_BUFFER ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "SharedArrayBuffer", JS_PROP_CONFIGURABLE ),
 };
+
+JS_BOOL JS_IsArrayBuffer(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_ARRAY_BUFFER;
+}
+
+JS_BOOL JS_IsSharedArrayBuffer(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_SHARED_ARRAY_BUFFER;
+}
