@@ -1017,6 +1017,23 @@ contract. A null or empty name selects the empty string. The @code{name} and
 @code{length} properties are configurable, non-writable and non-enumerable.
 Construction failure leaves the caller's captures owned by the caller.
 
+@subsection Stepping the host event loop
+
+@code{js_std_loop_once(ctx)} drains pending jobs and polls without waiting,
+dispatching at most one ready host callback. It returns 1 after progress or
+while registered work remains, 0 when idle, and -1 on exception.
+@code{js_std_poll_io(ctx, timeout_ms)} polls timers, I/O, Workers, signals and
+native asynchronous waits without executing JavaScript jobs. A negative timeout
+allows an unbounded wait, limited by the next deadline; queued jobs prevent
+sleeping. It returns 1 for readiness or progress, 0 for timeout or idle, and -1 on exception.
+Both functions leave exceptions pending and neither prints nor exits.
+
+Initialize host handlers before using host modules. Native asynchronous waits
+can also be driven without importing @code{os} or initializing host handlers.
+Signals alone do not keep an otherwise idle loop alive. Call these functions on
+the runtime's owner thread. The existing @code{js_std_loop()} remains the
+blocking command-line loop, including rejection reporting.
+
 @subsection Worker runtime factories
 
 Worker embedders can install @code{js_std_set_worker_new_runtime_func()}
