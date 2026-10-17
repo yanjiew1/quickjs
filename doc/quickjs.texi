@@ -1003,6 +1003,15 @@ callback can be used to implement an execution timeout.
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
 
+@subsection Native callback captures
+
+@code{JS_NewCFunctionData} borrows and duplicates each supplied captured value;
+the resulting callback keeps every capture alive and traces it during cycle
+collection. Release the caller's values normally. The capture count must be
+nonnegative and its allocation must fit in @code{size_t}; a positive count
+requires a data array. The callback pointer must be non-null, and the minimum
+readable argument count @code{length} must be between 0 and 255.
+
 @subsection Embedding diagnostics and ownership helpers
 
 @code{JS_GetVersion()} returns immutable, library-owned build-version text,
