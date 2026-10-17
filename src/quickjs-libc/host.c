@@ -138,15 +138,13 @@ void js_std_add_helpers(JSContext *ctx, int argc, char **argv)
     JS_FreeValue(ctx, global_obj);
 }
 
-void js_std_init_handlers(JSRuntime *rt)
+int js_std_init_handlers_checked(JSRuntime *rt)
 {
     JSThreadState *ts;
 
     ts = malloc(sizeof(*ts));
-    if (!ts) {
-        fprintf(stderr, "Could not allocate memory for the worker");
-        exit(1);
-    }
+    if (!ts)
+        return -1;
     memset(ts, 0, sizeof(*ts));
     init_list_head(&ts->os_rw_handlers);
     init_list_head(&ts->os_signal_handlers);
@@ -168,6 +166,15 @@ void js_std_init_handlers(JSRuntime *rt)
         JS_SetSharedArrayBufferFunctions(rt, &sf);
     }
 #endif
+    return 0;
+}
+
+void js_std_init_handlers(JSRuntime *rt)
+{
+    if (js_std_init_handlers_checked(rt) < 0) {
+        fprintf(stderr, "Could not allocate memory for the worker");
+        exit(1);
+    }
 }
 
 void js_std_free_handlers(JSRuntime *rt)
