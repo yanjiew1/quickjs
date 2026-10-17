@@ -1017,6 +1017,25 @@ contract. A null or empty name selects the empty string. The @code{name} and
 @code{length} properties are configurable, non-writable and non-enumerable.
 Construction failure leaves the caller's captures owned by the caller.
 
+@subsection Opaque native closures
+
+@code{JS_NewCClosure} creates a named callback with native opaque state and an
+optional native finalizer. The callback runs in its retained creator context,
+even when called from another realm or used as a Promise handler. Its
+@code{magic} argument preserves the full C @code{int}. The @code{length}
+parameter, between 0 and 65535, supplies the minimum readable argument count;
+missing arguments are undefined, while @code{argc} remains the actual count.
+A null or empty name selects the empty string. Closures are not constructors
+by default.
+
+If supplied, the finalizer assumes cleanup responsibility only after successful
+construction and runs exactly once. Failed construction never invokes it.
+Without a finalizer, keep the opaque state valid for the closure lifetime.
+Finalizers must not execute JavaScript. Opaque state is not traced and must
+not own JavaScript values or contexts; use @code{JS_NewCFunctionData2} for
+GC-visible captures. The engine separately retains and traces the creator
+context, including cycles through that context's globals.
+
 @subsection Embedding diagnostics and ownership helpers
 
 @code{JS_GetVersion()} returns immutable, library-owned build-version text,
