@@ -1025,6 +1025,18 @@ typedef enum JSPromiseStateEnum {
 } JSPromiseStateEnum;
 
 JS_EXTERN JSValue JS_NewPromiseCapability(JSContext *ctx, JSValue *resolving_funcs);
+/* All inputs are borrowed; returned values are owned. PromiseThen requires
+   a genuine Promise and creates an intrinsic Promise in ctx without reading
+   the input's then, constructor or species. Noncallable handlers are ignored. */
+JS_EXTERN JSValue JS_PromiseThen(JSContext *ctx, JSValueConst promise,
+                                 JSValueConst on_fulfilled,
+                                 JSValueConst on_rejected);
+/* Idempotent, including pending Promises. Non-Promises are ignored. */
+JS_EXTERN void JS_PromiseMarkAsHandled(JSContext *ctx, JSValueConst promise);
+/* Intrinsic Promise.resolve/reject semantics, including identity reuse and
+   thenable assimilation. Resolution need not settle synchronously. */
+JS_EXTERN JSValue JS_NewSettledPromise(JSContext *ctx, JS_BOOL is_reject,
+                                       JSValueConst value);
 JS_EXTERN JSPromiseStateEnum JS_PromiseState(JSContext *ctx, JSValue promise);
 JS_EXTERN JSValue JS_PromiseResult(JSContext *ctx, JSValue promise);
 

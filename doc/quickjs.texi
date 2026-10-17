@@ -1003,6 +1003,30 @@ callback can be used to implement an execution timeout.
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
 
+@subsection Native Promise integration
+
+@code{JS_PromiseThen(ctx, promise, on_fulfilled, on_rejected)} attaches
+reactions to a genuine Promise without invoking its @code{then} property
+or reading its constructor or @code{Symbol.species}. The result is a new
+intrinsic Promise from @code{ctx}. Reactions run asynchronously; JavaScript
+handlers execute in their own realms, and native callbacks follow the usual
+@code{JS_Call} context rules. Noncallable handlers forward the value or rejection. A non-Promise
+input throws a TypeError, including a Proxy wrapping a Promise.
+
+@code{JS_NewSettledPromise(ctx, is_reject, value)} follows intrinsic
+@code{Promise.resolve} or @code{Promise.reject} semantics. Resolution may
+reuse a Promise with the same constructor, read a constructor or then getter,
+and leave a result pending while assimilating a thenable. Rejection uses
+@code{value} directly without assimilation. The name does not guarantee
+immediate settlement. Both APIs borrow all inputs and return owned values.
+
+@code{JS_PromiseMarkAsHandled(ctx, promise)} records that the host handles
+a rejection without installing a JavaScript reaction. It also works before
+settlement and ignores non-Promises. An already-rejected, unhandled Promise
+notifies the host rejection tracker once; repeated and reentrant calls do
+not repeat this notification. Inspecting @code{JS_PromiseResult} alone does
+not mark a Promise handled. All these APIs run on the runtime owner thread.
+
 @subsection Native asynchronous waits
 
 @code{Atomics.waitAsync} never blocks JavaScript execution, including in a
