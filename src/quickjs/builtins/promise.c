@@ -310,6 +310,7 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
     JSValueConst resolution, args[3];
     JSValue then;
     BOOL is_reject;
+    int ret;
 
     s = p->u.promise_function_data;
     if (!s || s->presolved->already_resolved)
@@ -346,8 +347,14 @@ static JSValue js_promise_resolve_function_call(JSContext *ctx,
         args[0] = s->promise;
         args[1] = resolution;
         args[2] = then;
-        JS_EnqueueJob(ctx, js_promise_resolve_thenable_job, 3, args);
+        ret = JS_EnqueueJob(ctx, js_promise_resolve_thenable_job, 3, args);
         JS_FreeValue(ctx, then);
+        if (ret < 0) {
+            /* No assimilation was published. Let the caller reject or retry
+               instead of ignoring the failure through the resolved guard. */
+            s->presolved->already_resolved = FALSE;
+            return JS_EXCEPTION;
+        }
     }
     return JS_UNDEFINED;
 }
