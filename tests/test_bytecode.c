@@ -29,6 +29,8 @@
 #include "oom-allocator.h"
 #include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/function.h"
+#include "../src/quickjs/compiler/compiler-internal.h"
+#include "../src/quickjs/internal/bytecode-format.h"
 
 static void test_bytecode_roundtrip(const char *source)
 {
@@ -546,6 +548,92 @@ static void test_integer_folding_bytecode_flags(const char *source, int opcode,
     JS_FreeRuntime(rt);
 }
 
+/* Existing free arena blocks must not bypass the requested host failure. */
+static void *exhaust_optimizer_pools(JSRuntime *rt)
+{
+    void *padding = NULL, *ptr;
+    size_t size;
+
+    JS_SetMemoryLimit(rt, 0);
+    for (size = sizeof(void *); size <= 512; size += sizeof(void *)) {
+        while ((ptr = js_malloc_rt(rt, size)) != NULL) {
+            memcpy(ptr, &padding, sizeof(padding));
+            padding = ptr;
+        }
+    }
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    return padding;
+}
+
+static void free_optimizer_padding(JSRuntime *rt, void *padding)
+{
+    while (padding) {
+        void *next;
+        memcpy(&next, padding, sizeof(next));
+        js_free_rt(rt, padding);
+        padding = next;
+    }
+}
+
+static void test_literal_folding_allocation_failure(int numeric)
+{
+    size_t fail_at, allocations = 0;
+
+    for (fail_at = 0; fail_at <= allocations; fail_at++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContext(rt);
+        JSFunctionDef fd = { 0 };
+        LabelSlot label = { 0 };
+        int ret;
+        void *padding;
+
+        assert(ctx);
+        fd.ctx = ctx;
+        fd.compiler_optimization_flags = JS_COMPILER_OPT_CONSTANT_FOLDING;
+        fd.label_slots = &label;
+        fd.label_count = 1;
+        dbuf_init2(&fd.byte_code, rt, js_realloc_bytecode_rt);
+        dbuf_putc(&fd.byte_code, OP_push_atom_value);
+        dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, numeric ? "1" : "folded-left"));
+        dbuf_putc(&fd.byte_code, OP_push_atom_value);
+        dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, numeric ? "2" : "folded-right"));
+        dbuf_putc(&fd.byte_code, OP_add);
+        dbuf_putc(&fd.byte_code, OP_push_atom_value);
+        dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, "borrowed-tail"));
+        dbuf_putc(&fd.byte_code, OP_drop);
+        dbuf_putc(&fd.byte_code, OP_label);
+        dbuf_put_u32(&fd.byte_code, 0);
+        dbuf_putc(&fd.byte_code, OP_return);
+        assert(!dbuf_error(&fd.byte_code));
+        padding = exhaust_optimizer_pools(rt);
+        oom_test_begin(&allocator, fail_at);
+        ret = js_fold_literal_expressions(ctx, &fd);
+        oom_test_end(&allocator);
+        if (!fail_at) {
+            allocations = allocator.calls;
+            assert(allocations > 0 && allocations < 64);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (ret < 0) {
+            oom_test_check_exception(ctx);
+        } else {
+            assert(!JS_HasException(ctx));
+            assert(fd.byte_code.size == 17 && label.pos2 == 16);
+        }
+        free_bytecode_atoms(rt, fd.byte_code.buf, fd.byte_code.size, FALSE);
+        dbuf_free(&fd.byte_code);
+        while (fd.cpool_count)
+            JS_FreeValue(ctx, fd.cpool[--fd.cpool_count]);
+        js_free(ctx, fd.cpool);
+        free_optimizer_padding(rt, padding);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(allocator.live == 0);
+    }
+}
+
 static void test_compiler_optimization_flags(void)
 {
     const char source[] = "(1 + 2) * 6;";
@@ -589,6 +677,13 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    test_literal_folding_allocation_failure(0);
+    test_literal_folding_allocation_failure(1);
+    test_integer_folding_bytecode("'foo' + 'bar';", OP_add, 0);
+    test_integer_folding_bytecode("'1' + '2';", OP_add, 0);
+    test_integer_folding_bytecode("'x' + true + null;", OP_add, 0);
+    test_integer_folding_bytecode("1 + 2 + 'x';", OP_add, 0);
+    test_integer_folding_bytecode_flags("'foo' + 'bar';", OP_add, 1, 0);
     test_integer_folding_bytecode_flags("1 + 2 * 3;", OP_add, 1, 0);
     test_integer_folding_bytecode_flags("1 + 2 * 3;", OP_mul, 1, 0);
     test_integer_folding_bytecode("unknown[5 + 3];", OP_add, 0);
@@ -603,8 +698,8 @@ int main(void)
     test_integer_folding_bytecode("-8 >> 2;", OP_sar, 0);
     test_integer_folding_bytecode("-1 >>> 1;", OP_shr, 0);
     test_integer_folding_bytecode("1 +\n2 * 3;", OP_add, 0);
-    test_integer_folding_bytecode("2147483647 + 1;", OP_add, 1);
-    test_integer_folding_bytecode("(2147483647 + 1) - 1;", OP_add, 1);
+    test_integer_folding_bytecode("2147483647 + 1;", OP_add, 0);
+    test_integer_folding_bytecode("(2147483647 + 1) - 1;", OP_add, 0);
     test_integer_folding_bytecode("-1 * 0;", OP_mul, 1);
     test_integer_folding_bytecode("-4 % 2;", OP_mod, 1);
     test_integer_folding_bytecode("1 / 0;", OP_div, 1);

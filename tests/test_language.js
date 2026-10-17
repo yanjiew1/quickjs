@@ -4091,3 +4091,49 @@ function test_integer_constant_folding()
 }
 
 test_integer_constant_folding();
+
+function test_literal_string_folding()
+{
+    const cases = [
+        ["'foo' + 'bar'", "foobar"],
+        ["'1' + '2'", "12"],
+        ["'' + 'x'", "x"],
+        ["'a\\0' + 'b'", "a\0b"],
+        ["'\\ud800' + '\\udc00'", "\ud800\udc00"],
+        ["'\\ud800' + 'x'", "\ud800x"],
+        ["'x' + 1 + 2", "x12"],
+        ["1 + 2 + 'x'", "3x"],
+        ["'x' + (1 + 2)", "x3"],
+        ["'x' + true + null", "xtruenull"],
+        ["'x' + 123n", "x123"],
+        ["true + null", 1],
+        ["'x' + 0.25", "x0.25"],
+    ];
+    for (const [source, expected] of cases)
+        assert(Function("return " + source)(), expected, source);
+    const inputs = ["''", "'x'", "'123'", "'\\0'", "true", "false", "null",
+                    "0", "1", "1.25", "2147483647", "1n", "12345678901234567890n"];
+    const add = Function("a", "b", "return a + b;");
+    for (const a of inputs) {
+        for (const b of inputs) {
+            const left = Function("return " + a)();
+            const right = Function("return " + b)();
+            const constant = Function("return (" + a + ") + (" + b + ");");
+            if ((typeof left === "bigint" || typeof right === "bigint") &&
+                typeof left !== typeof right &&
+                typeof left !== "string" && typeof right !== "string") {
+                assert_throws(TypeError, constant);
+            } else {
+                assert(constant(), add(left, right), a + "+" + b);
+            }
+        }
+    }
+    const large = "x".repeat(3000);
+    assert(Function("return " + JSON.stringify(large) + "+" +
+                    JSON.stringify(large))(), large + large);
+    const chain = Array(100).fill("'abc'").join("+");
+    assert(Function("return " + chain)(), "abc".repeat(100));
+    assert(Function("undefined", "return 'x' + undefined;")(7), "x7");
+}
+
+test_literal_string_folding();
