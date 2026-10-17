@@ -129,7 +129,7 @@ static void js_waker_close(JSWaker *w)
 
 static void js_free_message(JSWorkerMessage *msg);
 
-/* return 1 if a message was handled, 0 if no message */
+/* Return 1 for a handled message, 0 for no message, -1 for exception. */
 int handle_posted_message(JSRuntime *rt, JSContext *ctx,
                           JSWorkerMessageHandler *port)
 {
@@ -164,7 +164,11 @@ int handle_posted_message(JSRuntime *rt, JSContext *ctx,
             JS_FreeValue(ctx, data_obj);
             goto fail;
         }
-        JS_DefinePropertyValueStr(ctx, obj, "data", data_obj, JS_PROP_C_W_E);
+        if (JS_DefinePropertyValueStr(ctx, obj, "data", data_obj,
+                                      JS_PROP_C_W_E) < 0) {
+            JS_FreeValue(ctx, obj);
+            goto fail;
+        }
 
         /* 'func' might be destroyed when calling itself (if it frees the
            handler), so must take extra care */
@@ -174,7 +178,7 @@ int handle_posted_message(JSRuntime *rt, JSContext *ctx,
         JS_FreeValue(ctx, func);
         if (JS_IsException(retval)) {
         fail:
-            js_std_dump_error(ctx);
+            return -1;
         } else {
             JS_FreeValue(ctx, retval);
         }
