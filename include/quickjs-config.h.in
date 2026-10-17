@@ -1,0 +1,8 @@
+/* Generated public ABI configuration. Rebuild all consumers when changing it. */
+#ifndef QUICKJS_CONFIG_H
+#define QUICKJS_CONFIG_H
+#if defined(JS_VALUE_MODE) && JS_VALUE_MODE != @JS_VALUE_MODE@
+#error JSValue representation differs from the installed QuickJS build
+#endif
+#define JS_VALUE_MODE @JS_VALUE_MODE@
+#endif

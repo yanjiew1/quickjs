@@ -47,3 +47,11 @@ option(
   value: 'auto',
   description: 'Enable optional HTML and PDF documentation targets',
 )
+
+option(
+  'value_representation',
+  type: 'combo',
+  choices: ['legacy', 'wide', 'compact'],
+  value: 'legacy',
+  description: 'JSValue ABI: original platform default, wide union, or Q=1 compact NaN boxing',
+)

@@ -4011,3 +4011,21 @@ function test_to_int32_signed_minimum()
 }
 
 test_to_int32_signed_minimum();
+
+function test_generator_resume_arguments()
+{
+    function* unmapped(a = 3, ...rest) {
+        yield [a, arguments[0], rest.join(",")].join(":");
+        yield arguments.length;
+    }
+    const first = unmapped(7, 8, 9);
+    assert(first.next().value, "7:7:8,9");
+    assert(first.next().value, 3);
+    function* mapped(a) {
+        a = 11;
+        yield arguments[0];
+    }
+    assert(mapped(1).next().value, 11);
+}
+
+test_generator_resume_arguments();
