@@ -36,6 +36,8 @@ typedef struct JSWorkerMessagePipe JSWorkerMessagePipe;
 
 
 typedef struct JSThreadState {
+    struct list_head registry_link;
+    JSRuntime *runtime;
     struct list_head os_rw_handlers; /* list of JSOSRWHandler.link */
     struct list_head os_signal_handlers; /* list JSOSSignalHandler.link */
     struct list_head os_timers; /* list of JSOSTimer.link */
