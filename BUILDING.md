@@ -89,8 +89,14 @@ checkout to the repository pin and applies its patches.
 `unicode_gen` and `unicode_gen_test` are optional build targets. Configure
 `-Dunicode_data=/path/to/ucd` to regenerate both Unicode table files inside the
 build directory instead of using the checked-in tables. The directory must
-contain the generator's UCD and emoji inputs. `-Dfuzzing=true` enables the Clang
-libFuzzer applications; select sanitizers separately with `b_sanitize`.
+contain the generator's UCD and emoji inputs. The `Unicode table regeneration`
+CI job downloads the version pinned in `tools/unicode_download.sh`, verifies
+`tools/unicode-data.sha256`, and compares both generated files byte for byte
+with the repository. Update the downloader, checksums and generated tables
+together when changing Unicode versions.
+
+`-Dfuzzing=true` enables the Clang libFuzzer applications; select sanitizers
+separately with `b_sanitize`.
 
 The optional `docs` target builds HTML when `makeinfo` is installed. With
 `texi2pdf`, `docs-pdf` also builds the PDF manual. Set `-Ddocumentation=enabled`
