@@ -16,6 +16,8 @@
 #ifdef USE_WORKER
 static JSRuntime *test_worker_rt;
 static size_t test_live;
+static int test_failure_mode; /* 0: context, 1: runtime, 2: host setup */
+static int test_runtime_factory_calls;
 static int test_factory_calls, test_handlers_created, test_handlers_freed;
 static int test_runtimes_freed, test_contexts_freed;
 static int test_helpers_called, test_modules_called, test_loops_called;
@@ -31,7 +33,7 @@ static pthread_cond_t test_completion_cond = PTHREAD_COND_INITIALIZER;
 static void *(*test_worker_entry)(void *);
 
 static JSRuntime *test_new_runtime(void);
-static void test_init_handlers(JSRuntime *rt);
+static int test_init_handlers(JSRuntime *rt);
 static void test_free_handlers(JSRuntime *rt);
 static void test_free_runtime(JSRuntime *rt);
 static void test_free_context(JSContext *ctx);
@@ -46,7 +48,7 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
 /* Headers precede redirection. Compile the actual Worker implementation;
    its exported definitions also replace the archive's normal worker object. */
 #define JS_NewRuntime test_new_runtime
-#define js_std_init_handlers test_init_handlers
+#define js_std_init_handlers_checked test_init_handlers
 #define js_std_free_handlers test_free_handlers
 #define JS_FreeRuntime test_free_runtime
 #define JS_FreeContext test_free_context
@@ -57,7 +59,7 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
 #define pthread_create test_create_thread
 #include "../src/quickjs-libc/worker.c"
 #undef JS_NewRuntime
-#undef js_std_init_handlers
+#undef js_std_init_handlers_checked
 #undef js_std_free_handlers
 #undef JS_FreeRuntime
 #undef JS_FreeContext
@@ -101,16 +103,21 @@ static JSRuntime *test_new_runtime(void)
         test_malloc, test_allocator_free, test_realloc, NULL,
     };
     assert(!test_worker_rt && !test_live);
+    test_runtime_factory_calls++;
+    if (test_failure_mode == 1)
+        return NULL;
     test_worker_rt = JS_NewRuntime2(&functions, NULL);
     assert(test_worker_rt);
     return test_worker_rt;
 }
 
-static void test_init_handlers(JSRuntime *rt)
+static int test_init_handlers(JSRuntime *rt)
 {
     assert(rt == test_worker_rt && !test_handlers_created);
+    if (test_failure_mode == 2)
+        return -1;
     test_handlers_created++;
-    js_std_init_handlers(rt);
+    return js_std_init_handlers_checked(rt);
 }
 
 static void test_free_handlers(JSRuntime *rt)
@@ -123,7 +130,8 @@ static void test_free_handlers(JSRuntime *rt)
 
 static void test_free_runtime(JSRuntime *rt)
 {
-    assert(rt == test_worker_rt && test_handlers_freed == 1);
+    assert(rt == test_worker_rt);
+    assert(test_handlers_freed == (test_failure_mode == 2 ? 0 : 1));
     assert(!test_runtimes_freed && !JS_GetRuntimeOpaque(rt));
     test_runtimes_freed++;
     JS_FreeRuntime(rt);
@@ -209,6 +217,9 @@ static int test_create_thread(pthread_t *thread, const pthread_attr_t *attr,
     test_recv_address = (uintptr_t)test_recv_pipe;
     test_send_address = (uintptr_t)test_send_pipe;
     test_worker_entry = entry;
+    /* Changing setters after capture must not affect this Worker. */
+    js_std_set_worker_new_runtime_func(NULL);
+    js_std_set_worker_new_context_func(NULL);
     /* Keep the test's real worker joinable so cleanup/return is acknowledged.
        Production still requests a detached worker; its caller is unchanged. */
     result = pthread_create(thread, NULL, test_worker_trampoline, argument);
@@ -262,7 +273,7 @@ static void test_join_worker(void)
     assert(!result);
 }
 
-int main(void)
+static void test_failure(int mode)
 {
     static const char source[] =
         "import { Worker } from 'os';\n"
@@ -273,12 +284,20 @@ int main(void)
     JSValue value, global, worker;
     JSWorkerData *data;
     int status;
+    test_failure_mode = mode;
+    test_worker_rt = NULL;
+    test_factory_calls = test_runtime_factory_calls = 0;
+    test_handlers_created = test_handlers_freed = test_runtimes_freed = 0;
+    test_thread_created = test_completed = 0;
+    test_args_freed = test_filename_freed = test_basename_freed = 0;
+    test_recv_freed = test_send_freed = 0;
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
     js_std_init_handlers(rt);
     module = js_init_module_os(ctx, "os");
     assert(module);
+    js_std_set_worker_new_runtime_func(test_new_runtime);
     js_std_set_worker_new_context_func(test_null_factory);
     value = JS_Eval(ctx, source, sizeof(source) - 1,
                     "tests/worker-null-factory.js", JS_EVAL_TYPE_MODULE);
@@ -286,9 +305,11 @@ int main(void)
     assert(!JS_IsException(value) && !JS_HasException(ctx));
     JS_FreeValue(ctx, value);
     test_join_worker();
-    assert(test_factory_calls == 1 && !test_live);
-    assert(test_handlers_created == 1 && test_handlers_freed == 1);
-    assert(test_runtimes_freed == 1 && !test_contexts_freed);
+    assert(test_runtime_factory_calls == 1 && !test_live);
+    assert(test_factory_calls == (mode == 0));
+    assert(test_handlers_created == (mode == 0));
+    assert(test_handlers_freed == (mode == 0));
+    assert(test_runtimes_freed == (mode != 1) && !test_contexts_freed);
     assert(!test_helpers_called && !test_modules_called && !test_loops_called);
     assert(test_args_freed == 1 && test_filename_freed == 1);
     assert(test_basename_freed == 1);
@@ -305,10 +326,18 @@ int main(void)
     JS_FreeValue(ctx, worker);
     JS_FreeValue(ctx, global);
     assert(test_recv_freed == 1 && test_send_freed == 1);
-    js_std_set_worker_new_context_func(JS_NewContext);
+    js_std_set_worker_new_runtime_func(NULL);
+    js_std_set_worker_new_context_func(NULL);
     js_std_free_handlers(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+}
+
+int main(void)
+{
+    test_failure(0);
+    test_failure(1);
+    test_failure(2);
     if (pthread_cond_destroy(&test_completion_cond) ||
         pthread_mutex_destroy(&test_completion_mutex))
         abort();
