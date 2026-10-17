@@ -192,9 +192,11 @@ static JSValue js_regexp_set_internal(JSContext *ctx,
     re = &p->u.regexp;
     re->pattern = JS_VALUE_GET_STRING(pattern);
     re->bytecode = JS_VALUE_GET_STRING(bc);
-    /* Note: cannot fail because the field is preallocated */
-    JS_DefinePropertyValue(ctx, obj, JS_ATOM_lastIndex, JS_NewInt32(ctx, 0),
-                           JS_PROP_WRITABLE);
+    if (JS_DefinePropertyValue(ctx, obj, JS_ATOM_lastIndex,
+                               JS_NewInt32(ctx, 0), JS_PROP_WRITABLE) < 0) {
+        JS_FreeValue(ctx, obj);
+        return JS_EXCEPTION;
+    }
     return obj;
 }
 
