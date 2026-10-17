@@ -523,7 +523,8 @@ static void test_integer_folding_bytecode_flags(const char *source, int opcode,
     int pos, count = 0;
 
     assert(rt);
-    assert(JS_GetCompilerOptimizationFlags(rt) == JS_COMPILER_OPT_CONSTANT_FOLDING);
+    assert(JS_GetCompilerOptimizationFlags(rt) ==
+           (JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION));
     JS_SetCompilerOptimizationFlags(rt, flags);
     assert(JS_GetCompilerOptimizationFlags(rt) == flags);
     ctx = JS_NewContext(rt);
@@ -544,6 +545,40 @@ static void test_integer_folding_bytecode_flags(const char *source, int opcode,
                 opcode, expected, count, source);
     assert(count == expected);
     JS_FreeValue(ctx, compiled);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+}
+
+static void test_local_constant_bytecode(const char *source, uint32_t flags,
+                                         int reads, int adds)
+{
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx;
+    JSValue function;
+    JSFunctionBytecode *b;
+    int pos, actual_reads = 0, actual_adds = 0;
+
+    assert(rt);
+    JS_SetCompilerOptimizationFlags(rt, flags);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    function = JS_Eval(ctx, source, strlen(source), "local-constant.js", JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(function));
+    b = JS_GetFunctionBytecode(function);
+    assert(b);
+    for (pos = 0; pos < b->byte_code_len;) {
+        int op = b->byte_code_buf[pos];
+        actual_reads += op == OP_get_loc || op == OP_get_loc_check ||
+            op == OP_get_loc8 || (op >= OP_get_loc0 && op <= OP_get_loc3);
+        actual_adds += op == OP_add;
+        assert(short_opcode_info(op).size > 0);
+        pos += short_opcode_info(op).size;
+    }
+    if (actual_reads != reads || actual_adds != adds)
+        fprintf(stderr, "reads=%d/%d adds=%d/%d flags=%u for %s\n",
+                actual_reads, reads, actual_adds, adds, flags, source);
+    assert(actual_reads == reads && actual_adds == adds);
+    JS_FreeValue(ctx, function);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
 }
@@ -584,6 +619,7 @@ static void test_literal_folding_allocation_failure(int mode)
         JSRuntime *rt = oom_test_runtime(&allocator);
         JSContext *ctx = JS_NewContext(rt);
         JSFunctionDef fd = { 0 };
+        JSVarDef local = { 0 };
         LabelSlot label = { 0 };
         int ret;
         void *padding;
@@ -591,14 +627,21 @@ static void test_literal_folding_allocation_failure(int mode)
         assert(ctx);
         fd.ctx = ctx;
         fd.compiler_optimization_flags = JS_COMPILER_OPT_CONSTANT_FOLDING;
+        if (mode == 4) {
+            local.is_const = TRUE;
+            local.is_lexical = TRUE;
+            fd.vars = &local;
+            fd.var_count = 1;
+            fd.compiler_optimization_flags |= JS_COMPILER_OPT_CONSTANT_PROPAGATION;
+        }
         fd.label_slots = &label;
         fd.label_count = 1;
         dbuf_init2(&fd.byte_code, rt, js_realloc_bytecode_rt);
-        if (mode < 2) {
+        if (mode < 2 || mode == 4) {
             dbuf_putc(&fd.byte_code, OP_push_atom_value);
-            dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode ? "1" : "folded-left"));
+            dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode == 1 ? "1" : "folded-left"));
             dbuf_putc(&fd.byte_code, OP_push_atom_value);
-            dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode ? "2" : "folded-right"));
+            dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, mode == 1 ? "2" : "folded-right"));
         } else {
             dbuf_putc(&fd.byte_code, OP_push_bigint_i32);
             dbuf_put_u32(&fd.byte_code, 1);
@@ -606,6 +649,12 @@ static void test_literal_folding_allocation_failure(int mode)
             dbuf_put_u32(&fd.byte_code, mode == 2 ? 1 : 0);
         }
         dbuf_putc(&fd.byte_code, mode == 3 ? OP_div : OP_add);
+        if (mode == 4) {
+            dbuf_putc(&fd.byte_code, OP_put_loc);
+            dbuf_put_u16(&fd.byte_code, 0);
+            dbuf_putc(&fd.byte_code, OP_get_loc_check);
+            dbuf_put_u16(&fd.byte_code, 0);
+        }
         dbuf_putc(&fd.byte_code, OP_push_atom_value);
         dbuf_put_u32(&fd.byte_code, JS_NewAtom(ctx, "borrowed-tail"));
         dbuf_putc(&fd.byte_code, OP_drop);
@@ -615,7 +664,7 @@ static void test_literal_folding_allocation_failure(int mode)
         assert(!dbuf_error(&fd.byte_code));
         padding = exhaust_optimizer_pools(rt);
         oom_test_begin(&allocator, fail_at);
-        ret = js_fold_literal_expressions(ctx, &fd);
+        ret = js_optimize_constants(ctx, &fd);
         oom_test_end(&allocator);
         if (!fail_at) {
             allocations = allocator.calls;
@@ -627,8 +676,8 @@ static void test_literal_folding_allocation_failure(int mode)
             oom_test_check_exception(ctx);
         } else {
             assert(!JS_HasException(ctx));
-            assert(fd.byte_code.size == (mode < 2 ? 17 : 18));
-            assert(label.pos2 == (mode < 2 ? 16 : 17));
+            assert(fd.byte_code.size == (mode == 4 ? 25 : mode < 2 ? 17 : 18));
+            assert(label.pos2 == (mode == 4 ? 24 : mode < 2 ? 16 : 17));
         }
         free_bytecode_atoms(rt, fd.byte_code.buf, fd.byte_code.size, FALSE);
         dbuf_free(&fd.byte_code);
@@ -655,7 +704,8 @@ static void test_compiler_optimization_flags(void)
     ctx = JS_NewContext(rt);
     assert(ctx);
     JS_SetCompilerOptimizationFlags(rt, UINT32_MAX);
-    assert(JS_GetCompilerOptimizationFlags(rt) == JS_COMPILER_OPT_CONSTANT_FOLDING);
+    assert(JS_GetCompilerOptimizationFlags(rt) ==
+           (JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION));
     compiled = JS_Eval(ctx, source, sizeof(source) - 1, "flags.js",
                        JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
     assert(!JS_IsException(compiled));
@@ -685,6 +735,21 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    test_literal_folding_allocation_failure(4);
+    {
+        const char *chain = "(function() { const a = 3; const b = a + 4; return b + 35; })";
+        uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;
+        test_local_constant_bytecode(chain, both, 0, 0);
+        test_local_constant_bytecode(chain, JS_COMPILER_OPT_CONSTANT_FOLDING, 2, 2);
+        test_local_constant_bytecode(chain, JS_COMPILER_OPT_CONSTANT_PROPAGATION, 1, 2);
+        test_local_constant_bytecode(chain, 0, 2, 2);
+        test_local_constant_bytecode(
+            "(function() { const a = 3; eval('a'); return a + 1; })", both, 2, 1);
+        test_local_constant_bytecode(
+            "(function() { const a = 3; const f = () => a; return a + 1; })", both, 1, 1);
+        test_bytecode_roundtrip(
+            "(function() { const a = 3; const b = a + 4; return b * 6; })();");
+    }
     test_literal_folding_allocation_failure(0);
     test_literal_folding_allocation_failure(1);
     test_literal_folding_allocation_failure(2);

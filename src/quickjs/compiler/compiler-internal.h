@@ -83,6 +83,6 @@ int add_closure_var(JSContext *ctx, JSFunctionDef *s,
 __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
                                       JSFunctionBytecode *b, int scope_idx);
 JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd);
-int js_fold_literal_expressions(JSContext *ctx, JSFunctionDef *fd);
+int js_optimize_constants(JSContext *ctx, JSFunctionDef *fd);
 
 #endif

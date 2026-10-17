@@ -2172,3 +2172,21 @@ async function test_delegated_yield_result_shapes()
 }
 
 await test_delegated_yield_result_shapes();
+
+
+async function test_local_constant_suspension()
+{
+    const a = 3;
+    await Promise.resolve();
+    assert(a + 4, 7);
+    const g = (async function*() {
+        const b = 5;
+        yield b;
+        await Promise.resolve();
+        return b + 4;
+    })();
+    assert((await g.next()).value, 5);
+    assert((await g.next()).value, 9);
+}
+
+await test_local_constant_suspension();

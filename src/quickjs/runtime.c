@@ -136,7 +136,8 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     rt->malloc_ctx.mf = *mf;
     rt->malloc_ctx.malloc_state = ms;
     rt->malloc_gc_threshold = 256 * 1024;
-    rt->compiler_optimization_flags = JS_COMPILER_OPT_CONSTANT_FOLDING;
+    rt->compiler_optimization_flags = JS_COMPILER_OPT_CONSTANT_FOLDING |
+        JS_COMPILER_OPT_CONSTANT_PROPAGATION;
 
     init_list_head(&rt->context_list);
     init_list_head(&rt->gc_obj_list);
@@ -242,7 +243,8 @@ void JS_SetSharedArrayBufferFunctions(JSRuntime *rt,
 
 void JS_SetCompilerOptimizationFlags(JSRuntime *rt, uint32_t flags)
 {
-    rt->compiler_optimization_flags = flags & JS_COMPILER_OPT_CONSTANT_FOLDING;
+    rt->compiler_optimization_flags = flags & (JS_COMPILER_OPT_CONSTANT_FOLDING |
+        JS_COMPILER_OPT_CONSTANT_PROPAGATION);
 }
 
 uint32_t JS_GetCompilerOptimizationFlags(JSRuntime *rt)

@@ -66,7 +66,7 @@ engine_sources = files(
 vm_sources = files('quickjs/vm.c')
 compiler_sources = files(
   'quickjs/compiler/backend.c',
-  'quickjs/compiler/constant-folding.c',
+  'quickjs/compiler/constant-optimization.c',
   'quickjs/compiler/bytecode-dump.c',
   'quickjs/compiler/eval.c',
   'quickjs/compiler/lexer.c',

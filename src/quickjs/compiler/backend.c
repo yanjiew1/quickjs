@@ -3822,7 +3822,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     }
 #endif
 
-    if (js_fold_literal_expressions(ctx, fd))
+    if (js_optimize_constants(ctx, fd))
         goto fail;
 
     if (resolve_labels(ctx, fd))

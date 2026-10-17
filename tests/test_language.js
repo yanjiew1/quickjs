@@ -4175,3 +4175,50 @@ function test_primitive_numeric_folding()
 }
 
 test_primitive_numeric_folding();
+
+
+function test_local_const_propagation()
+{
+    const cases = [
+        ["const a = 3; const b = a + 4; return b * 6;", 42],
+        ["const a = 'x'; const b = a + 2; return b + null;", "x2null"],
+        ["const a = -0; return a;", -0],
+        ["const a = 0 / 0; return a;", NaN],
+        ["const a = true; const b = null; return a + b;", 1],
+        ["const a = void 0; return a;", undefined],
+        ["const a = 2n; return a;", 2n],
+        ["const a = 3; { const a = 7; a; } return a;", 3],
+        ["const a = 3; try { throw 1; } catch (e) {} return a;", 3],
+        ["const a = 3; try { return a; } finally { a; }", 3],
+        ["const a = 3; eval('a'); return a + 1;", 4],
+        ["const a = 3; const f = () => a; return f() + a;", 6],
+        ["const a = 3; const f = () => eval('a'); return f() + a;", 6],
+        ["const a = 3; with ({a: 7}) { return a; }", 7],
+        ["let calls = 0; const a = {valueOf() { calls++; return 3; }};" +
+         "const b = a + 1; return b + calls;", 5],
+        ["const [a] = [3]; return a + 4;", 7],
+    ];
+    for (const [body, value] of cases)
+        assert(Function(body)(), value, body);
+    assert_throws(ReferenceError, Function("const a = a; return a;"));
+    assert_throws(ReferenceError, Function("return a; const a = 1;"));
+    assert_throws(ReferenceError, Function("const f = () => a; f(); const a = 1;"));
+    assert_throws(TypeError, Function("const a = 1; a = 2; return a;"));
+    let effects = 0;
+    const f = Function("effect", "const a = 3; try { a = effect(); }" +
+                       "catch (e) { if (!(e instanceof TypeError)) throw e; } return a;");
+    assert(f(() => { effects++; return 9; }), 3);
+    assert(effects, 1);
+    const large = "x".repeat(5000);
+    assert(Function("const a = " + JSON.stringify(large) + "; return a;")(), large);
+    const bigint = "0x1" + "0".repeat(1200) + "n";
+    assert(Function("const a = " + bigint + "; return a;")(), Function("return " + bigint)());
+    const g = (function*() { const a = 3; yield a; return a + 4; })();
+    assert(g.next().value, 3);
+    assert(g.next().value, 7);
+    const h = Function("n", "const a = 3; if (n) { return a + 4; } return a + 5;");
+    assert(h(true), 7);
+    assert(h(false), 8);
+}
+
+test_local_const_propagation();
