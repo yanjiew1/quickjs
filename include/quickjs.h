@@ -680,6 +680,25 @@ static inline JS_BOOL JS_IsObject(JSValueConst v)
     return JS_VALUE_GET_TAG(v) == JS_TAG_OBJECT;
 }
 
+/* Nonobservable builtin brands: no property access or Proxy unwrapping.
+   Subclasses and detached/out-of-bounds views retain their brands.
+   IsProxy includes revoked proxies. IsAsyncFunction excludes bound functions,
+   async generators and proxies. IsRegExp does not inspect Symbol.match.
+   Unlike these predicates, JS_IsArray retains its proxy-aware behavior. */
+JS_EXTERN JS_BOOL JS_IsMap(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsSet(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsWeakMap(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsWeakSet(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsWeakRef(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsRegExp(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsDate(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsProxy(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsArrayBuffer(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsSharedArrayBuffer(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsDataView(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsPromise(JSValueConst value);
+JS_EXTERN JS_BOOL JS_IsAsyncFunction(JSValueConst value);
+
 JS_EXTERN JSValue JS_Throw(JSContext *ctx, JSValue obj);
 JS_EXTERN void JS_SetUncatchableException(JSContext *ctx, JS_BOOL flag);
 JS_EXTERN JSValue JS_GetException(JSContext *ctx);
