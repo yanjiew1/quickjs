@@ -1017,6 +1017,19 @@ contract. A null or empty name selects the empty string. The @code{name} and
 @code{length} properties are configurable, non-writable and non-enumerable.
 Construction failure leaves the caller's captures owned by the caller.
 
+@subsection Worker runtime factories
+
+Worker embedders can install @code{js_std_set_worker_new_runtime_func()}
+and @code{js_std_set_worker_new_context_func()}. A @code{NULL} runtime
+factory restores @code{JS_NewRuntime}. Install a context factory to run
+Worker scripts; no default context constructor is linked into custom hosts. Both factories are captured when a Worker is
+created and run on its thread. The runtime factory must return a fresh,
+exclusively owned runtime without contexts or initialized host services, or
+@code{NULL} on failure. Custom allocation and runtime limits are permitted.
+Host initialization owns runtime opaque state and installs module loading,
+SharedArrayBuffer handlers and blocking policy. Failed creation releases the
+runtime and message pipes; it does not terminate the embedding process.
+
 @subsection Opaque native closures
 
 @code{JS_NewCClosure} creates a named callback with native opaque state and an

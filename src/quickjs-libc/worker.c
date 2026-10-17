@@ -208,6 +208,8 @@ typedef struct {
     char *basename; /* module base name */
     JSWorkerMessagePipe *recv_pipe, *send_pipe;
     int strip_flags;
+    JSRuntime *(*new_runtime)(void);
+    JSContext *(*new_context)(JSRuntime *rt);
 } WorkerFuncArgs;
 
 typedef struct {
@@ -218,7 +220,10 @@ typedef struct {
 } JSSABHeader;
 
 static JSClassID js_worker_class_id;
-static JSContext *(*js_worker_new_context_func)(JSRuntime *rt);
+typedef JSRuntime *JSWorkerRuntimeFactory(void);
+typedef JSContext *JSWorkerContextFactory(JSRuntime *rt);
+static _Atomic(JSWorkerRuntimeFactory *) js_worker_new_runtime_func = JS_NewRuntime;
+static _Atomic(JSWorkerContextFactory *) js_worker_new_context_func;
 
 static int atomic_add_int(int *ptr, int v)
 {
@@ -360,13 +365,14 @@ static void *worker_func(void *opaque)
     JSContext *ctx;
     JSValue val;
 
-    rt = JS_NewRuntime();
-    if (rt == NULL) {
-        fprintf(stderr, "JS_NewRuntime failure");
-        exit(1);
-    }
+    rt = args->new_runtime();
+    if (!rt)
+        goto fail_args;
     JS_SetStripInfo(rt, args->strip_flags);
-    js_std_init_handlers(rt);
+    if (js_std_init_handlers_checked(rt) < 0) {
+        JS_FreeRuntime(rt);
+        goto fail_args;
+    }
 
     JS_SetModuleLoaderFunc2(rt, NULL, js_module_loader, js_module_check_attributes, NULL);
 
@@ -377,7 +383,7 @@ static void *worker_func(void *opaque)
 
     /* function pointer to avoid linking the whole JS_NewContext() if
        not needed */
-    ctx = js_worker_new_context_func(rt);
+    ctx = args->new_context ? args->new_context(rt) : NULL;
     if (ctx == NULL) {
         fprintf(stderr, "JS_NewContext failure");
         free(args->filename);
@@ -407,6 +413,14 @@ static void *worker_func(void *opaque)
     JS_FreeContext(ctx);
     js_std_free_handlers(rt);
     JS_FreeRuntime(rt);
+    return NULL;
+
+ fail_args:
+    free(args->filename);
+    free(args->basename);
+    js_free_message_pipe(args->recv_pipe);
+    js_free_message_pipe(args->send_pipe);
+    free(args);
     return NULL;
 }
 
@@ -481,6 +495,8 @@ static JSValue js_worker_ctor(JSContext *ctx, JSValueConst new_target,
     memset(args, 0, sizeof(*args));
     args->filename = strdup(filename);
     args->basename = strdup(basename);
+    if (!args->filename || !args->basename)
+        goto oom_fail;
 
     /* ports */
     args->recv_pipe = js_new_message_pipe();
@@ -491,6 +507,10 @@ static JSValue js_worker_ctor(JSContext *ctx, JSValueConst new_target,
         goto oom_fail;
 
     args->strip_flags = JS_GetStripInfo(rt);
+    args->new_runtime = atomic_load_explicit(&js_worker_new_runtime_func,
+                                             memory_order_relaxed);
+    args->new_context = atomic_load_explicit(&js_worker_new_context_func,
+                                             memory_order_relaxed);
 
     obj = js_worker_ctor_internal(ctx, new_target,
                                   args->send_pipe, args->recv_pipe);
@@ -649,10 +669,18 @@ static const JSCFunctionListEntry js_worker_proto_funcs[] = {
 
 #endif /* USE_WORKER */
 
+void js_std_set_worker_new_runtime_func(JSRuntime *(*func)(void))
+{
+#ifdef USE_WORKER
+    atomic_store_explicit(&js_worker_new_runtime_func,
+                          func ? func : JS_NewRuntime, memory_order_relaxed);
+#endif
+}
+
 void js_std_set_worker_new_context_func(JSContext *(*func)(JSRuntime *rt))
 {
 #ifdef USE_WORKER
-    js_worker_new_context_func = func;
+    atomic_store_explicit(&js_worker_new_context_func, func, memory_order_relaxed);
 #endif
 }
 
