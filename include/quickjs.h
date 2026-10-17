@@ -362,6 +362,9 @@ static inline JSValue __JS_NewShortBigInt(int64_t d)
 typedef JSValue JSCFunction(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 typedef JSValue JSCFunctionMagic(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic);
 typedef JSValue JSCFunctionData(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data);
+typedef JSValue JSCClosure(JSContext *ctx, JSValueConst this_val, int argc,
+                          JSValueConst *argv, int magic, void *opaque);
+typedef void JSCClosureFinalizerFunc(void *opaque);
 
 typedef struct JSMallocState {
     size_t malloc_count;
@@ -1242,6 +1245,16 @@ JS_EXTERN JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
 JS_EXTERN JSValue JS_NewCFunctionData2(JSContext *ctx, JSCFunctionData *func,
                                        const char *name, int length, int magic,
                                        int data_len, JSValueConst *data);
+/* Native-only opaque state: no owned JSValue/JSContext references in opaque.
+   Finalizer cleanup responsibility transfers only on success; without one,
+   keep opaque valid for the closure lifetime. A finalizer runs once and must
+   not execute JavaScript. Calls use the retained creator context.
+   length is in [0, 65535]; at least that many argv entries are readable,
+   while argc remains the actual argument count. NULL name selects "". */
+JS_EXTERN JSValue JS_NewCClosure(JSContext *ctx, JSCClosure *func,
+                                const char *name,
+                                JSCClosureFinalizerFunc *opaque_finalize,
+                                int length, int magic, void *opaque);
 
 static inline JSValue JS_NewCFunction(JSContext *ctx, JSCFunction *func, const char *name,
                                       int length)
