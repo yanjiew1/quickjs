@@ -70,6 +70,13 @@ BOOL JS_IsRegisteredClass(JSRuntime *rt, JSClassID class_id)
             rt->class_array[class_id].class_id != 0);
 }
 
+JSAtom JS_GetClassName(JSRuntime *rt, JSClassID class_id)
+{
+    if (!JS_IsRegisteredClass(rt, class_id))
+        return JS_ATOM_NULL;
+    return JS_DupAtomRT(rt, rt->class_array[class_id].class_name);
+}
+
 /* create a new object internal class. Return -1 if error, 0 if
    OK. The finalizer can be NULL if none is needed. */
 static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
