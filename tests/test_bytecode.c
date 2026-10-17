@@ -645,10 +645,14 @@ static void test_literal_folding_allocation_failure(int mode)
         } else {
             dbuf_putc(&fd.byte_code, OP_push_bigint_i32);
             dbuf_put_u32(&fd.byte_code, mode == 5 ? 3 : 1);
-            dbuf_putc(&fd.byte_code, mode == 2 ? OP_push_i32 : OP_push_bigint_i32);
-            dbuf_put_u32(&fd.byte_code, mode == 5 ? 55 : mode == 2 ? 1 : 0);
+            dbuf_putc(&fd.byte_code, mode == 6 ? OP_push_atom_value :
+                      mode == 2 ? OP_push_i32 : OP_push_bigint_i32);
+            dbuf_put_u32(&fd.byte_code, mode == 6 ?
+                         JS_NewAtom(ctx, "12345678901234567890") :
+                         mode == 5 ? 55 : mode == 2 ? 1 : 0);
         }
-        dbuf_putc(&fd.byte_code, mode == 5 ? OP_pow : mode == 3 ? OP_div : OP_add);
+        dbuf_putc(&fd.byte_code, mode == 6 ? OP_lt :
+                  mode == 5 ? OP_pow : mode == 3 ? OP_div : OP_add);
         if (mode == 4) {
             dbuf_putc(&fd.byte_code, OP_put_loc);
             dbuf_put_u16(&fd.byte_code, 0);
@@ -676,7 +680,7 @@ static void test_literal_folding_allocation_failure(int mode)
             oom_test_check_exception(ctx);
         } else {
             assert(!JS_HasException(ctx));
-            int expected_size = mode == 4 ? 25 :
+            int expected_size = mode == 6 ? 13 : mode == 4 ? 25 :
                 ((mode < 2 || mode == 5) ? 17 : 18);
             assert(fd.byte_code.size == expected_size);
             assert(label.pos2 == expected_size - 1);
@@ -737,6 +741,13 @@ static void test_integer_folding_bytecode(const char *source, int opcode,
 int main(void)
 {
     test_compiler_optimization_flags();
+    test_literal_folding_allocation_failure(6);
+    test_integer_folding_bytecode("9007199254740993n > 9007199254740992;", OP_gt, 0);
+    test_integer_folding_bytecode("'c' > 'a';", OP_gt, 0);
+    test_integer_folding_bytecode("'1.25' < 2n;", OP_lt, 0);
+    test_integer_folding_bytecode("null == (void 0);", OP_eq, 0);
+    test_integer_folding_bytecode_flags("9007199254740993n > 9007199254740992;", OP_gt, 1, 0);
+    test_bytecode_roundtrip("(9007199254740993n > 9007199254740992) ? 42 : 0;");
     test_literal_folding_allocation_failure(5);
     test_integer_folding_bytecode("3n ** 55n;", OP_pow, 0);
     test_integer_folding_bytecode_flags("3n ** 55n;", OP_pow, 1, 0);

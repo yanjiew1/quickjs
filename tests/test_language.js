@@ -4317,3 +4317,38 @@ function test_successful_bigint_folding()
 }
 
 test_successful_bigint_folding();
+
+
+function test_primitive_comparison_folding()
+{
+    const inputs = ["0", "-0", "1", "-1", "1.25", "0/0", "1/0", "-1/0",
+                    "true", "false", "null", "void 0", "''", "'0'", "'1.25'",
+                    "'x'", "'a'", "'c'", "'0x10'", "'  '", "'\\ud800'", "'\\udc00'",
+                    "0n", "1n", "-1n", "16n", "9007199254740993n",
+                    "-9007199254740993n", "9007199254740992"];
+    for (const op of ["<", "<=", ">", ">=", "==", "!=", "===", "!=="]) {
+        const runtime = Function("a", "b", "return a " + op + " b;");
+        for (const a of inputs) {
+            for (const b of inputs) {
+                const source = "(" + a + ")" + op + "(" + b + ")";
+                assert(Function("return " + source)(),
+                       runtime(Function("return " + a)(), Function("return " + b)()), source);
+            }
+        }
+    }
+    assert(Function("return 9007199254740993n > 9007199254740992")(), true);
+    assert(Function("return 9007199254740993n == 9007199254740992")(), false);
+    assert(Function("return 1267650600228229401496703205377n > 1267650600228229401496703205376")(), true);
+    assert(Function("return 1267650600228229401496703205377n == 1267650600228229401496703205376")(), false);
+    assert(Function("return -1267650600228229401496703205377n < -1267650600228229401496703205376")(), true);
+    assert(Function("return '1.25' < 2n")(), false);
+    assert(Function("return (0/0) >= 0n")(), false);
+    let calls = 0;
+    const object = { valueOf() { calls++; return 2; } };
+    assert(Function("object", "return 1 < object")(object), true);
+    assert(calls, 1);
+    assert(Function("effect", "return (void effect()) == null")(() => calls++), true);
+    assert(calls, 2);
+}
+
+test_primitive_comparison_folding();

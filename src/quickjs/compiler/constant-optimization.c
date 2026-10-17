@@ -151,6 +151,17 @@ static JSValue read_literal(JSContext *ctx, JSFunctionDef *s,
     }
 }
 
+static BOOL is_comparison(int op)
+{
+    switch (op) {
+    case OP_lt: case OP_lte: case OP_gt: case OP_gte:
+    case OP_eq: case OP_neq: case OP_strict_eq: case OP_strict_neq:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
 static BOOL is_binary_operation(int op)
 {
     switch (op) {
@@ -159,7 +170,7 @@ static BOOL is_binary_operation(int op)
     case OP_shl: case OP_sar: case OP_shr:
         return TRUE;
     default:
-        return FALSE;
+        return is_comparison(op);
     }
 }
 
@@ -271,6 +282,109 @@ static int fold_bigint(JSContext *ctx, int op, JSValueConst left,
     return 1;
 }
 
+/* Compare primitive numeric values without rounding a BigInt to Number.
+   Two denotes unordered (NaN), and must not be negated when swapping operands. */
+static int compare_numeric_literals(JSContext *ctx, JSValueConst left,
+                                    JSValueConst right, int *pres)
+{
+    JSBigIntBuf abuf, bbuf;
+    BOOL a_big = JS_IsBigInt(ctx, left), b_big = JS_IsBigInt(ctx, right);
+    double a, b;
+    int cmp;
+
+    if (a_big && b_big) {
+        cmp = js_bigint_cmp(literal_bigint(left, &abuf),
+                            literal_bigint(right, &bbuf));
+    } else if (a_big || b_big) {
+        if (JS_ToFloat64Free(ctx, &a, JS_DupValue(ctx, a_big ? right : left)))
+            return -1;
+        cmp = js_bigint_float64_cmp(literal_bigint(a_big ? left : right, &abuf), a);
+        if (!a_big && cmp != 2)
+            cmp = -cmp;
+    } else {
+        if (JS_ToFloat64Free(ctx, &a, JS_DupValue(ctx, left)) ||
+            JS_ToFloat64Free(ctx, &b, JS_DupValue(ctx, right)))
+            return -1;
+        cmp = isnan(a) || isnan(b) ? 2 : (a > b) - (a < b);
+    }
+    *pres = cmp;
+    return 0;
+}
+
+static int fold_comparison(JSContext *ctx, int op, JSValueConst left,
+                           JSValueConst right, JSValue *pres)
+{
+    JSValue a = JS_DupValue(ctx, left), b = JS_DupValue(ctx, right);
+    BOOL equality = op == OP_eq || op == OP_neq;
+    int cmp, result;
+
+    if (op == OP_strict_eq || op == OP_strict_neq) {
+        result = JS_StrictEq(ctx, a, b) ^ (op == OP_strict_neq);
+        goto done;
+    }
+    if (equality) {
+        BOOL a_null = JS_IsNull(a) || JS_IsUndefined(a);
+        BOOL b_null = JS_IsNull(b) || JS_IsUndefined(b);
+        if (a_null || b_null) {
+            result = (a_null && b_null) ^ (op == OP_neq);
+            goto done;
+        }
+        if (JS_IsBool(a))
+            a = JS_NewInt32(ctx, JS_VALUE_GET_BOOL(a));
+        if (JS_IsBool(b))
+            b = JS_NewInt32(ctx, JS_VALUE_GET_BOOL(b));
+    }
+    if (JS_IsString(a) && JS_IsString(b)) {
+        if (equality) {
+            result = JS_StrictEq(ctx, a, b) ^ (op == OP_neq);
+            goto done;
+        }
+        cmp = js_string_rope_compare(a, b, FALSE);
+        cmp = (cmp > 0) - (cmp < 0);
+    } else {
+        if (JS_IsBigInt(ctx, a) && JS_IsString(b)) {
+            b = JS_StringToBigInt(ctx, b);
+            if (JS_IsException(b))
+                goto fail;
+            if (!JS_IsBigInt(ctx, b)) {
+                cmp = 2;
+                goto compare;
+            }
+        } else if (JS_IsString(a) && JS_IsBigInt(ctx, b)) {
+            a = JS_StringToBigInt(ctx, a);
+            if (JS_IsException(a))
+                goto fail;
+            if (!JS_IsBigInt(ctx, a)) {
+                cmp = 2;
+                goto compare;
+            }
+        }
+        if (compare_numeric_literals(ctx, a, b, &cmp))
+            goto fail;
+    }
+ compare:
+    switch (op) {
+    case OP_lt: result = cmp != 2 && cmp < 0; break;
+    case OP_lte: result = cmp != 2 && cmp <= 0; break;
+    case OP_gt: result = cmp != 2 && cmp > 0; break;
+    case OP_gte: result = cmp != 2 && cmp >= 0; break;
+    case OP_eq: result = cmp == 0; break;
+    default:
+        assert(op == OP_neq);
+        result = cmp != 0;
+        break;
+    }
+ done:
+    JS_FreeValue(ctx, a);
+    JS_FreeValue(ctx, b);
+    *pres = JS_NewBool(ctx, result);
+    return 0;
+ fail:
+    JS_FreeValue(ctx, a);
+    JS_FreeValue(ctx, b);
+    return -1;
+}
+
 /* Speculative values own their references; input bytecode remains untouched.
    Record only complete prefixes and never consume a label or user operation. */
 static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
@@ -325,6 +439,15 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
         }
         if (!folding)
             break;
+        /* A pure void operand leaves undefined. Do not cross arbitrary
+           drops, since they can separate independently evaluated expressions. */
+        if (op == OP_drop && count >= 1 && pos + len < s->byte_code.size &&
+            buf[pos + len] == OP_undefined) {
+            JS_FreeValue(ctx, stack[--count]);
+            result = JS_UNDEFINED;
+            len += opcode_info[OP_undefined].size;
+            goto have_result;
+        }
         if ((op == OP_plus || op == OP_neg || op == OP_not) && count >= 1) {
             left = stack[count - 1];
             if (JS_IsBigInt(ctx, left)) {
@@ -352,7 +475,10 @@ static int fold_literal_expression(JSContext *ctx, JSFunctionDef *s, int start,
             break;
         left = stack[count - 2];
         right = stack[count - 1];
-        if (op == OP_add && (JS_IsString(left) || JS_IsString(right))) {
+        if (is_comparison(op)) {
+            if (fold_comparison(ctx, op, left, right, &result))
+                goto fail;
+        } else if (op == OP_add && (JS_IsString(left) || JS_IsString(right))) {
             left = JS_ToString(ctx, left);
             if (JS_IsException(left))
                 goto fail;
@@ -610,7 +736,9 @@ int js_optimize_constants(JSContext *ctx, JSFunctionDef *s)
             if (is_literal(s, op, buf + pos)) {
                 depth++;
             } else if ((is_binary_operation(op) && depth >= 2) ||
-                       ((op == OP_plus || op == OP_neg || op == OP_not) && depth >= 1)) {
+                       ((op == OP_plus || op == OP_neg || op == OP_not ||
+                         (op == OP_drop && pos + 1 < s->byte_code.size &&
+                          buf[pos + 1] == OP_undefined)) && depth >= 1)) {
                 candidate = TRUE;
                 break;
             } else if (op != OP_line_num) {
