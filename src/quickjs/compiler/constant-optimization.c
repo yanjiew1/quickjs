@@ -739,8 +739,62 @@ void js_free_constant_summaries(JSRuntime *rt, JSFunctionDef *s)
     s->constant_summaries = NULL;
 }
 
-/* Only immutable lexical locals qualify here. Even a known initializer does
-   not prove that an escaping closure is called after initialization. */
+static const JSFunctionDef *captured_owner(const JSFunctionDef *s, int *pindex)
+{
+    int index = *pindex;
+    while (s->parent) {
+        const JSClosureVar *cv = &s->closure_var[index];
+        s = s->parent;
+        index = cv->var_idx;
+        if (cv->closure_type == JS_CLOSURE_LOCAL) {
+            *pindex = index;
+            return s;
+        }
+        if (cv->closure_type != JS_CLOSURE_REF)
+            break;
+    }
+    return NULL;
+}
+
+/* Aliases and dynamic eval can write a captured let even when its owner has
+   only one store. Inspect all descendants before publishing its summary. */
+static void invalidate_captured_writes(const JSFunctionDef *s,
+                                       const JSFunctionDef *owner,
+                                       LocalConstant *locals)
+{
+    struct list_head *el;
+    int pos, op, index;
+
+    if (s->has_eval_call) {
+        for (index = 0; index < owner->var_count; index++) {
+            if (!owner->vars[index].is_const)
+                locals[index].eligible = FALSE;
+        }
+    }
+    for (pos = 0; pos < s->byte_code.size; pos += opcode_info[op].size) {
+        op = s->byte_code.buf[pos];
+        switch (op) {
+        case OP_put_var_ref: case OP_set_var_ref:
+        case OP_put_var_ref_check: case OP_put_var_ref_check_init:
+            index = get_u16(s->byte_code.buf + pos + 1);
+            break;
+        case OP_make_var_ref_ref:
+            index = get_u16(s->byte_code.buf + pos + 5);
+            break;
+        default:
+            continue;
+        }
+        if (captured_owner(s, &index) == owner && !owner->vars[index].is_const)
+            locals[index].eligible = FALSE;
+    }
+    list_for_each(el, &s->child_list) {
+        const JSFunctionDef *child = list_entry(el, JSFunctionDef, link);
+        invalidate_captured_writes(child, owner, locals);
+    }
+}
+
+/* A unique initializer and no possible writes make a captured lexical value
+   stable. They do not prove that an escaping closure runs after initialization. */
 static int analyze_captured_constants(JSContext *ctx, JSFunctionDef *s, BOOL folding)
 {
     LocalConstant *locals;
@@ -751,7 +805,7 @@ static int analyze_captured_constants(JSContext *ctx, JSFunctionDef *s, BOOL fol
         return 0;
     for (i = 0; i < s->var_count; i++) {
         const JSVarDef *vd = &s->vars[i];
-        if (vd->is_captured && vd->is_const && vd->is_lexical &&
+        if (vd->is_captured && vd->is_lexical &&
             vd->var_kind == JS_VAR_NORMAL)
             break;
     }
@@ -764,8 +818,15 @@ static int analyze_captured_constants(JSContext *ctx, JSFunctionDef *s, BOOL fol
         const JSVarDef *vd = &s->vars[i];
         locals[i].value = JS_UNDEFINED;
         locals[i].stable_value = JS_UNDEFINED;
-        locals[i].eligible = vd->is_captured && vd->is_const && vd->is_lexical &&
+        locals[i].eligible = vd->is_captured && vd->is_lexical &&
             vd->var_kind == JS_VAR_NORMAL;
+    }
+    {
+        struct list_head *el;
+        list_for_each(el, &s->child_list) {
+            const JSFunctionDef *child = list_entry(el, JSFunctionDef, link);
+            invalidate_captured_writes(child, s, locals);
+        }
     }
     found = analyze_stable_locals(ctx, s, locals, folding);
     if (found > 0) {
@@ -785,16 +846,8 @@ static int analyze_captured_constants(JSContext *ctx, JSFunctionDef *s, BOOL fol
 
 static JSValueConst captured_constant(const JSFunctionDef *s, int index)
 {
-    while (s->parent) {
-        const JSClosureVar *cv = &s->closure_var[index];
-        s = s->parent;
-        index = cv->var_idx;
-        if (cv->closure_type == JS_CLOSURE_LOCAL)
-            return s->constant_summaries ? s->constant_summaries[index] : JS_UNINITIALIZED;
-        if (cv->closure_type != JS_CLOSURE_REF)
-            break;
-    }
-    return JS_UNINITIALIZED;
+    s = captured_owner(s, &index);
+    return s && s->constant_summaries ? s->constant_summaries[index] : JS_UNINITIALIZED;
 }
 
 static int put_instruction(JSContext *ctx, DynBuf *out, const uint8_t *pc)

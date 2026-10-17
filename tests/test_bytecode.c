@@ -587,9 +587,11 @@ static void test_local_constant_bytecode(const char *source, uint32_t flags,
     JS_FreeRuntime(rt);
 }
 
-static void test_captured_constant_bytecode(uint32_t flags, int expected_adds)
+static void test_captured_constant_bytecode(uint32_t flags, int expected_adds, BOOL mutable)
 {
-    const char source[] = "(function() { const x = 3; return () => () => x + 4; })()()";
+    const char *source = mutable ?
+        "(function() { let x = 3; return () => () => x + 4; })()()" :
+        "(function() { const x = 3; return () => () => x + 4; })()()";
     JSRuntime *rt = JS_NewRuntime();
     JSContext *ctx;
     JSValue compiled, loaded, function, result;
@@ -602,7 +604,7 @@ static void test_captured_constant_bytecode(uint32_t flags, int expected_adds)
     JS_SetCompilerOptimizationFlags(rt, flags);
     ctx = JS_NewContext(rt);
     assert(ctx);
-    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "captured-constant.js",
+    compiled = JS_Eval(ctx, source, strlen(source), "captured-constant.js",
                        JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
     assert(!JS_IsException(compiled));
     buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
@@ -848,10 +850,16 @@ int main(void)
     test_compiler_optimization_flags();
     test_captured_constant_allocation_failure();
     test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING |
-                                    JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0);
-    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING, 1);
-    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_PROPAGATION, 1);
-    test_captured_constant_bytecode(0, 1);
+                                    JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, FALSE);
+    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING, 1, FALSE);
+    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_PROPAGATION, 1, FALSE);
+    test_captured_constant_bytecode(0, 1, FALSE);
+    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_FOLDING |
+                                    JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, TRUE);
+    test_captured_constant_bytecode(JS_COMPILER_OPT_CONSTANT_PROPAGATION, 1, TRUE);
+    test_local_constant_bytecode(
+        "(function() { let x = 3; const set = () => x = 9; return () => (set(), x + 4); })()",
+        JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION, 0, 1);
     {
         uint32_t both = JS_COMPILER_OPT_CONSTANT_FOLDING | JS_COMPILER_OPT_CONSTANT_PROPAGATION;
         const char *branch = "(function(flag) { var a = 3; if(flag) return a + 1; return a + 2; })";

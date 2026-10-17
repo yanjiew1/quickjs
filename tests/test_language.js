@@ -4487,3 +4487,29 @@ function test_captured_const_propagation()
 }
 
 test_captured_const_propagation();
+
+
+function test_captured_let_propagation()
+{
+    assert(Function('let x = 3; return () => x + 4;')()(), 7);
+    assert(Function('let x = "a"; return () => () => x + "b";')()()(), 'ab');
+    assert_throws(ReferenceError, Function('const f = () => x + 1; f(); let x = 3;'));
+    assert(Function('let x = 3; const f = () => x + 4; x = 9; return f;')()(), 13);
+    assert(Function('let x = 3; const set = () => x = 9; return () => (set(), x + 4);')()(), 13);
+    assert(Function('let x = 3; const set = () => () => x = 9; return () => (set()(), x + 4);')()(), 13);
+    assert(Function('let x = 3; const set = () => { [x] = [9]; }; return () => (set(), x + 4);')()(), 13);
+    assert(Function('let x = 3; const set = () => eval("x = 9"); return () => (set(), x + 4);')()(), 13);
+    assert(Function('let x = 3; const set = () => () => eval("x = 9"); return () => (set()(), x + 4);')()(), 13);
+    for (const write of ['x++', 'x += 6', 'x &&= 9', '({x} = {x: 9})',
+                         'for (x of [9]) {}', 'with ({}) { x = 9; }']) {
+        const expected = write === 'x++' ? 8 : 13;
+        assert(Function('let x = 3; const set = () => { ' + write +
+                        '; }; return () => (set(), x + 4);')()(), expected);
+    }
+    const each = Function('const a = []; for (let i = 0; i < 3; i++) { let x = 3; a.push(() => x + 1); } return a;')();
+    assert(each.map(f => f()).join(','), '4,4,4');
+    const varying = Function('const a = []; for (let i = 0; i < 3; i++) { let x = i; a.push(() => x + 1); } return a;')();
+    assert(varying.map(f => f()).join(','), '1,2,3');
+}
+
+test_captured_let_propagation();
