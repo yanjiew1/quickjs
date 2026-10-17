@@ -379,11 +379,15 @@ typedef struct JSMallocFunctions {
 
 typedef struct JSGCObjectHeader JSGCObjectHeader;
 
+/* Library-owned build version text; not an ABI or feature-capability query. */
+JS_EXTERN const char *JS_GetVersion(void);
 JS_EXTERN JSRuntime *JS_NewRuntime(void);
 /* info lifetime must exceed that of rt */
 JS_EXTERN void JS_SetRuntimeInfo(JSRuntime *rt, const char *info);
 JS_EXTERN void JS_SetMemoryLimit(JSRuntime *rt, size_t limit);
 JS_EXTERN void JS_SetGCThreshold(JSRuntime *rt, size_t gc_threshold);
+/* Current threshold, including adjustments made by automatic GC. */
+JS_EXTERN size_t JS_GetGCThreshold(JSRuntime *rt);
 /* use 0 to disable maximum stack size check */
 JS_EXTERN void JS_SetMaxStackSize(JSRuntime *rt, size_t stack_size);
 /* should be called when changing thread to update the stack top value
@@ -470,6 +474,8 @@ JS_EXTERN JSAtom JS_NewAtomUInt32(JSContext *ctx, uint32_t n);
    with an exception. Release the result with JS_FreeAtom. */
 JS_EXTERN JSAtom JS_NewAtomInt64(JSContext *ctx, int64_t n);
 JS_EXTERN JSAtom JS_DupAtom(JSContext *ctx, JSAtom v);
+/* Retains an atom from rt without allocation. */
+JS_EXTERN JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
 JS_EXTERN void JS_FreeAtom(JSContext *ctx, JSAtom v);
 JS_EXTERN void JS_FreeAtomRT(JSRuntime *rt, JSAtom v);
 JS_EXTERN JSValue JS_AtomToValue(JSContext *ctx, JSAtom atom);
@@ -565,6 +571,8 @@ JS_EXTERN JSClassID JS_NewClassID(JSClassID *pclass_id);
 JS_EXTERN JSClassID JS_GetClassID(JSValue v);
 JS_EXTERN int JS_NewClass(JSRuntime *rt, JSClassID class_id, const JSClassDef *class_def);
 JS_EXTERN int JS_IsRegisteredClass(JSRuntime *rt, JSClassID class_id);
+/* Owned atom, released with JS_FreeAtomRT; JS_ATOM_NULL for unregistered IDs. */
+JS_EXTERN JSAtom JS_GetClassName(JSRuntime *rt, JSClassID class_id);
 
 /* value handling */
 
@@ -777,6 +785,8 @@ static inline int JS_ToUint32(JSContext *ctx, uint32_t *pres, JSValueConst val)
 JS_EXTERN int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val);
 JS_EXTERN int JS_ToInt64(JSContext *ctx, int64_t *pres, JSValueConst val);
 JS_EXTERN int JS_ToIndex(JSContext *ctx, uint64_t *plen, JSValueConst val);
+/* Standard ToNumber: borrows val, returns an owned number or JS_EXCEPTION. */
+JS_EXTERN JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
 JS_EXTERN int JS_ToFloat64(JSContext *ctx, double *pres, JSValueConst val);
 /* return an exception if 'val' is a Number */
 JS_EXTERN int JS_ToBigInt64(JSContext *ctx, int64_t *pres, JSValueConst val);

@@ -173,7 +173,6 @@ __maybe_unused JSValue JS_ToIntegerFree(JSContext *ctx, JSValue val);
 __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
                                      JSValue val, BOOL is_array_ctor);
 
-JSValue JS_ToNumber(JSContext *ctx, JSValueConst val);
 
 JSValue JS_ToNumeric(JSContext *ctx, JSValueConst val);
 BOOL is_safe_integer(double d);
