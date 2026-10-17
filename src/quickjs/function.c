@@ -30,6 +30,7 @@
 #include "internal/string.h"
 #include "internal/object.h"
 #include "internal/function.h"
+#include "internal/c-function.h"
 #include "internal/bytecode-format.h"
 #include "builtins/proxy.h"
 #include "internal/generator.h"
@@ -414,6 +415,9 @@ JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
     switch(p->class_id) {
     case JS_CLASS_C_FUNCTION:
         realm = p->u.cfunc.realm;
+        break;
+    case JS_CLASS_C_CLOSURE:
+        realm = ((JSCClosureRecord *)p->u.opaque)->realm;
         break;
     case JS_CLASS_BYTECODE_FUNCTION:
     case JS_CLASS_GENERATOR_FUNCTION:
