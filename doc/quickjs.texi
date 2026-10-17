@@ -1003,6 +1003,22 @@ callback can be used to implement an execution timeout.
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
 
+@subsection Embedding diagnostics and ownership helpers
+
+@code{JS_GetVersion()} returns immutable, library-owned build-version text,
+useful for identifying a dynamically loaded engine. It does not identify
+ABI compatibility or enabled features. @code{JS_GetGCThreshold(rt)} returns
+the current threshold, which automatic garbage collection can adjust.
+
+@code{JS_GetClassName(rt, class_id)} returns an owned atom for a registered
+class, or @code{JS_ATOM_NULL} for an invalid or unregistered ID. Release the
+atom with @code{JS_FreeAtomRT}. @code{JS_DupAtomRT(rt, atom)} retains an atom
+belonging to that runtime without requiring a context or allocating memory.
+
+@code{JS_ToNumber(ctx, value)} implements ECMAScript @code{ToNumber}, including
+observable primitive coercion and TypeErrors for Symbol and BigInt inputs.
+It borrows its input and returns an owned numeric value or @code{JS_EXCEPTION}.
+
 @subsection Builtin brand queries
 
 The @code{JS_IsPromise}, @code{JS_IsMap}, @code{JS_IsSet}, @code{JS_IsWeakMap},

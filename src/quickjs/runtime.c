@@ -184,6 +184,11 @@ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque)
     rt->user_opaque = opaque;
 }
 
+const char *JS_GetVersion(void)
+{
+    return CONFIG_VERSION;
+}
+
 JSRuntime *JS_NewRuntime(void)
 {
     return JS_NewRuntime2(&def_malloc_funcs, NULL);
@@ -198,6 +203,11 @@ void JS_SetMemoryLimit(JSRuntime *rt, size_t limit)
 void JS_SetGCThreshold(JSRuntime *rt, size_t gc_threshold)
 {
     rt->malloc_gc_threshold = gc_threshold;
+}
+
+size_t JS_GetGCThreshold(JSRuntime *rt)
+{
+    return rt->malloc_gc_threshold;
 }
 
 #define malloc(s) malloc_is_forbidden(s)
