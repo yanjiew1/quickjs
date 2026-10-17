@@ -917,6 +917,20 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
     goto done;
 }
 
+static void js_promise_mark_as_handled(JSContext *ctx, JSValueConst promise,
+                                      JSPromiseData *s)
+{
+    JSRuntime *rt = ctx->rt;
+    BOOL notify = !s->is_handled && s->promise_state == JS_PROMISE_REJECTED;
+
+    /* The host tracker can reenter and attach another handler. */
+    s->is_handled = TRUE;
+    if (notify && rt->host_promise_rejection_tracker) {
+        rt->host_promise_rejection_tracker(ctx, promise, s->promise_result,
+                                         TRUE, rt->host_promise_rejection_tracker_opaque);
+    }
+}
+
 __exception int perform_promise_then(JSContext *ctx,
                                      JSValueConst promise,
                                      JSValueConst *resolve_reject,
@@ -946,18 +960,12 @@ __exception int perform_promise_then(JSContext *ctx,
         rd_array[i] = rd;
     }
 
+    js_promise_mark_as_handled(ctx, promise, s);
     if (s->promise_state == JS_PROMISE_PENDING) {
         for(i = 0; i < 2; i++)
             list_add_tail(&rd_array[i]->link, &s->promise_reactions[i]);
     } else {
         JSValueConst args[5];
-        if (s->promise_state == JS_PROMISE_REJECTED && !s->is_handled) {
-
-            if (rt->host_promise_rejection_tracker) {
-                rt->host_promise_rejection_tracker(ctx, promise, s->promise_result,
-                                                   TRUE, rt->host_promise_rejection_tracker_opaque);
-            }
-        }
         i = s->promise_state - JS_PROMISE_FULFILLED;
         rd = rd_array[i];
         args[0] = rd->resolving_funcs[0];
@@ -969,7 +977,6 @@ __exception int perform_promise_then(JSContext *ctx,
         for(i = 0; i < 2; i++)
             promise_reaction_data_free(rt, rd_array[i]);
     }
-    s->is_handled = TRUE;
     return ret;
 }
 
