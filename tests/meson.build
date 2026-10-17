@@ -46,6 +46,7 @@ native_test_names = [
   'test_c_function_data',
   'test_c_closure',
   'test_regexp_oom',
+  'test_bigint_oom',
   'test_bytecode',
   'test_typed_array',
   'test_allocator',
