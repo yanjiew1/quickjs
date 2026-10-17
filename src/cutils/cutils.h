@@ -64,10 +64,55 @@ enum {
 };
 #endif
 
-void pstrcpy(char *buf, int buf_size, const char *str);
-char *pstrcat(char *buf, int buf_size, const char *s);
-int strstart(const char *str, const char *val, const char **ptr);
-int has_suffix(const char *str, const char *suffix);
+static inline void pstrcpy(char *buf, int buf_size, const char *str)
+{
+    int c;
+    char *q = buf;
+
+    if (buf_size <= 0)
+        return;
+
+    for(;;) {
+        c = *str++;
+        if (c == 0 || q >= buf + buf_size - 1)
+            break;
+        *q++ = c;
+    }
+    *q = '\0';
+}
+
+/* strcat and truncate. */
+static inline char *pstrcat(char *buf, int buf_size, const char *s)
+{
+    int len;
+    len = strlen(buf);
+    if (len < buf_size)
+        pstrcpy(buf + len, buf_size - len, s);
+    return buf;
+}
+
+static inline int strstart(const char *str, const char *val, const char **ptr)
+{
+    const char *p, *q;
+    p = str;
+    q = val;
+    while (*q != '\0') {
+        if (*p != *q)
+            return 0;
+        p++;
+        q++;
+    }
+    if (ptr)
+        *ptr = p;
+    return 1;
+}
+
+static inline int has_suffix(const char *str, const char *suffix)
+{
+    size_t len = strlen(str);
+    size_t slen = strlen(suffix);
+    return (len >= slen && !memcmp(str + len - slen, suffix, slen));
+}
 
 static inline int max_int(int a, int b)
 {
@@ -228,16 +273,68 @@ typedef struct DynBuf {
     void *opaque; /* for realloc_func */
 } DynBuf;
 
-void dbuf_init(DynBuf *s);
 void dbuf_init2(DynBuf *s, void *opaque, DynBufReallocFunc *realloc_func);
 int dbuf_claim(DynBuf *s, size_t len);
-int dbuf_put(DynBuf *s, const uint8_t *data, size_t len);
-int dbuf_put_self(DynBuf *s, size_t offset, size_t len);
-int dbuf_putstr(DynBuf *s, const char *str);
-int __dbuf_putc(DynBuf *s, uint8_t c);
-int __dbuf_put_u16(DynBuf *s, uint16_t val);
-int __dbuf_put_u32(DynBuf *s, uint32_t val);
-int __dbuf_put_u64(DynBuf *s, uint64_t val);
+
+static inline void dbuf_init(DynBuf *s)
+{
+    dbuf_init2(s, NULL, NULL);
+}
+
+/* Prevent UB when n == 0 and (src == NULL or dest == NULL) */
+static inline void memcpy_no_ub(void *dest, const void *src, size_t n) {
+    if (n)
+        memcpy(dest, src, n);
+}
+
+static force_inline int dbuf_put(DynBuf *s, const uint8_t *data, size_t len)
+{
+    if (len == 0)
+        return 0;
+    if (unlikely((s->allocated_size - s->size) < len)) {
+        if (dbuf_claim(s, len))
+            return -1;
+    }
+    memcpy_no_ub(s->buf + s->size, data, len);
+    s->size += len;
+    return 0;
+}
+
+static inline int dbuf_put_self(DynBuf *s, size_t offset, size_t len)
+{
+    if (unlikely((s->allocated_size - s->size) < len)) {
+        if (dbuf_claim(s, len))
+            return -1;
+    }
+    memcpy(s->buf + s->size, s->buf + offset, len);
+    s->size += len;
+    return 0;
+}
+
+static inline int dbuf_putstr(DynBuf *s, const char *str)
+{
+    return dbuf_put(s, (const uint8_t *)str, strlen(str));
+}
+
+static inline int __dbuf_putc(DynBuf *s, uint8_t c)
+{
+    return dbuf_put(s, &c, 1);
+}
+
+static inline int __dbuf_put_u16(DynBuf *s, uint16_t val)
+{
+    return dbuf_put(s, (uint8_t *)&val, 2);
+}
+
+static inline int __dbuf_put_u32(DynBuf *s, uint32_t val)
+{
+    return dbuf_put(s, (uint8_t *)&val, 4);
+}
+
+static inline int __dbuf_put_u64(DynBuf *s, uint64_t val)
+{
+    return dbuf_put(s, (uint8_t *)&val, 8);
+}
 
 static inline int dbuf_putc(DynBuf *s, uint8_t val)
 {
@@ -273,7 +370,15 @@ static inline int dbuf_put_u32(DynBuf *s, uint32_t val)
 
 int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
                                                       const char *fmt, ...);
-void dbuf_free(DynBuf *s);
+static inline void dbuf_free(DynBuf *s)
+{
+    /* we test s->buf as a fail safe to avoid crashing if dbuf_free()
+       is called twice */
+    if (s->buf) {
+        s->realloc_func(s->opaque, s->buf, 0);
+    }
+    memset(s, 0, sizeof(*s));
+}
 static inline BOOL dbuf_error(DynBuf *s) {
     return s->error;
 }
