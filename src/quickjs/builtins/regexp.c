@@ -1820,3 +1820,9 @@ int JS_AddIntrinsicRegExp(JSContext *ctx)
 
     return 0;
 }
+
+JS_BOOL JS_IsRegExp(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_REGEXP;
+}
