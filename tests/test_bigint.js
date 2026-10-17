@@ -327,3 +327,27 @@ test_bigint2();
 test_bigint3();
 test_pi();
 test_bigint_asintn();
+
+function test_negative_float_comparison()
+{
+    /* Differing magnitudes reverse their order when both values are negative.
+       Fractions force the shared BigInt/Float64 path rather than int32 compares. */
+    for (const [number, bigint, less] of [[-1.5, -4n, false], [-8.5, -4n, true],
+                                        [-0.5, -1n, false],
+                                        [-1.5, -9007199254740993n, false],
+                                        [-1e30, -9007199254740993n, true],
+                                        [-Number.MIN_VALUE, -2n, false],
+                                        [-2.5, -3n, false], [1.5, 4n, true],
+                                        [8.5, 4n, false]]) {
+        assert(number < bigint, less);
+        assert(number <= bigint, less);
+        assert(number > bigint, !less);
+        assert(number >= bigint, !less);
+        assert(bigint < number, !less);
+        assert(bigint <= number, !less);
+        assert(bigint > number, less);
+        assert(bigint >= number, less);
+    }
+}
+
+test_negative_float_comparison();

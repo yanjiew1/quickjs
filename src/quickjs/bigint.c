@@ -1136,9 +1136,9 @@ int js_bigint_float64_cmp(const JSBigInt *a,
         a_mant = js_bigint_get_mant_exp(&f, a);
         if (f != e) {
             if (f < e)
-                return -1;
+                return 2 * a_sign - 1;
             else
-                return 1;
+                return 1 - 2 * a_sign;
         } else {
             mant = (mant | ((uint64_t)1 << 52)) << 11; /* align to a_mant */
             if (a_mant < mant)
