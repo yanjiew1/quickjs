@@ -1,0 +1,26 @@
+name: ci-tos2
+
+on:
+  push:
+    branches: [tos2]
+    paths: ['.github/workflows/ci-tos2.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare isolated validation inputs
+        run: |
+          mkdir -p "$RUNNER_TEMP/tos2-inputs"
+          git archive --format=tar HEAD | gzip > "$RUNNER_TEMP/tos2-inputs/source.tar.gz"
+          python3 -m pip download --no-deps meson -d "$RUNNER_TEMP/tos2-inputs"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tos2-validation-inputs
+          path: ${{ runner.temp }}/tos2-inputs/
+          retention-days: 1
