@@ -187,6 +187,7 @@ tests/test_rw_handler.js
 tests/test_std.js
 tests/test_unicode_property_grammar.js
 tests/test_var_ref.js
+tests/test_vm_stack.js
 tests/test_wait_async.js
 tests/test_wait_async_agents.js
 tests/test_wait_async_worker_overflow.js

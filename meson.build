@@ -294,12 +294,12 @@ foreach variant : variants
     gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
-  vm_args = []
+  vm_args = ['-DCONFIG_VM_STACK_CACHE=' + (get_option('vm_stack_cache') ? '1' : '0')]
   if compiler.get_id() == 'clang' and compiler.has_multi_arguments(
     '-mllvm',
     '-tail-dup-succ-size=256',
   )
-    vm_args = ['-mllvm', '-tail-dup-succ-size=256']
+    vm_args += ['-mllvm', '-tail-dup-succ-size=256']
   endif
   vm_objects = static_library(
     'quickjs-vm-' + tag,

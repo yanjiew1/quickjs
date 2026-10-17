@@ -2,7 +2,7 @@ name: ci-nan-boxing
 
 on:
   push:
-    branches: [nan_boxing]
+    branches: [nan_boxing, tos]
   pull_request:
     paths:
       - 'include/**'
@@ -51,6 +51,17 @@ jobs:
             cflags: '-U__SIZEOF_INT128__'
             mode: compact
             sanitizer: none
+          - name: Clang compact 64-bit switch dispatch ASan and UBSan
+            compiler: clang
+            cflags: '-DDIRECT_DISPATCH=0'
+            mode: compact
+            sanitizer: address,undefined
+          - name: GCC compact 64-bit uncached ASan and UBSan
+            compiler: gcc
+            cflags: ''
+            mode: compact
+            sanitizer: address,undefined
+            cache: 'false'
     env:
       ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:detect_stack_use_after_return=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
@@ -68,7 +79,7 @@ jobs:
           CFLAGS: ${{ matrix.cflags }}
           LDFLAGS: ${{ matrix.cflags }}
         run: |
-          meson setup build -Dwerror=true -Dvalue_representation=${{ matrix.mode }} -Db_sanitize=${{ matrix.sanitizer }}
+          meson setup build -Dwerror=true -Dvalue_representation=${{ matrix.mode }} -Db_sanitize=${{ matrix.sanitizer }} -Dvm_stack_cache=${{ matrix.cache || 'true' }}
           meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
       - name: Run repository tests
         run: meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
