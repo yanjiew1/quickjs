@@ -3,7 +3,8 @@
  *
  * Copyright (c) 2017-2025 Fabrice Bellard
  * Copyright (c) 2017-2025 Charlie Gordon
- * Copyright (c) 2026 Saúl Ibarra Corretgé
+ * Copyright (c) 2023-2026 Ben Noordhuis
+ * Copyright (c) 2023-2026 Saúl Ibarra Corretgé
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -560,6 +561,12 @@ JSValue js_promise_resolve(JSContext *ctx, JSValueConst this_val,
     return result_promise;
 }
 
+JSValue JS_NewSettledPromise(JSContext *ctx, JS_BOOL is_reject,
+                             JSValueConst value)
+{
+    return js_promise_resolve(ctx, ctx->promise_ctor, 1, &value, !!is_reject);
+}
+
 static JSValue js_promise_withResolvers(JSContext *ctx,
                                         JSValueConst this_val,
                                         int argc, JSValueConst *argv)
@@ -925,7 +932,7 @@ static JSValue js_promise_race(JSContext *ctx, JSValueConst this_val,
 }
 
 static void js_promise_mark_as_handled(JSContext *ctx, JSValueConst promise,
-                                      JSPromiseData *s)
+                                       JSPromiseData *s)
 {
     JSRuntime *rt = ctx->rt;
     BOOL notify = !s->is_handled && s->promise_state == JS_PROMISE_REJECTED;
@@ -936,6 +943,14 @@ static void js_promise_mark_as_handled(JSContext *ctx, JSValueConst promise,
         rt->host_promise_rejection_tracker(ctx, promise, s->promise_result,
                                          TRUE, rt->host_promise_rejection_tracker_opaque);
     }
+}
+
+void JS_PromiseMarkAsHandled(JSContext *ctx, JSValueConst promise)
+{
+    JSPromiseData *s = JS_GetOpaque(promise, JS_CLASS_PROMISE);
+
+    if (s)
+        js_promise_mark_as_handled(ctx, promise, s);
 }
 
 __exception int perform_promise_then(JSContext *ctx,
@@ -985,6 +1000,29 @@ __exception int perform_promise_then(JSContext *ctx,
             promise_reaction_data_free(rt, rd_array[i]);
     }
     return ret;
+}
+
+JSValue JS_PromiseThen(JSContext *ctx, JSValueConst promise,
+                       JSValueConst on_fulfilled, JSValueConst on_rejected)
+{
+    JSValue result_promise, resolving_funcs[2];
+    JSValueConst handlers[2] = { on_fulfilled, on_rejected };
+    int i, ret;
+
+    if (!JS_GetOpaque2(ctx, promise, JS_CLASS_PROMISE))
+        return JS_EXCEPTION;
+    result_promise = JS_NewPromiseCapability(ctx, resolving_funcs);
+    if (JS_IsException(result_promise))
+        return result_promise;
+    ret = perform_promise_then(ctx, promise, handlers,
+                              (JSValueConst *)resolving_funcs);
+    for (i = 0; i < 2; i++)
+        JS_FreeValue(ctx, resolving_funcs[i]);
+    if (ret) {
+        JS_FreeValue(ctx, result_promise);
+        return JS_EXCEPTION;
+    }
+    return result_promise;
 }
 
 JSValue js_promise_then(JSContext *ctx, JSValueConst this_val,
