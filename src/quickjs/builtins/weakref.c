@@ -178,3 +178,9 @@ const JSClassShortDef js_weakref_class_def[] = {
 };
 
 
+
+JS_BOOL JS_IsWeakRef(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_WEAK_REF;
+}

@@ -1604,3 +1604,27 @@ int JS_AddIntrinsicMapSet(JSContext *ctx)
     }
     return 0;
 }
+
+JS_BOOL JS_IsMap(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_MAP;
+}
+
+JS_BOOL JS_IsSet(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_SET;
+}
+
+JS_BOOL JS_IsWeakMap(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_WEAKMAP;
+}
+
+JS_BOOL JS_IsWeakSet(JSValueConst value)
+{
+    return JS_IsObject(value) &&
+           JS_VALUE_GET_OBJ(value)->class_id == JS_CLASS_WEAKSET;
+}
