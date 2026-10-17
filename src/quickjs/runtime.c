@@ -114,6 +114,10 @@ static JSClassShortDef const js_std_class_def[] = {
     { JS_ATOM_Object, NULL, NULL }, /* JS_CLASS_RAWJSON */
 };
 
+static const JSClassShortDef js_c_closure_class_def = {
+    JS_ATOM_Function, js_c_closure_finalizer, js_c_closure_mark,
+};
+
 JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
 {
     JSRuntime *rt;
@@ -156,6 +160,10 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     rt->class_array[JS_CLASS_STRING].exotic = &js_string_exotic_methods;
     rt->class_array[JS_CLASS_MODULE_NS].exotic = &js_module_ns_exotic_methods;
 
+    if (init_class_range(rt, &js_c_closure_class_def,
+                         JS_CLASS_C_CLOSURE, 1) < 0)
+        goto fail;
+    rt->class_array[JS_CLASS_C_CLOSURE].call = js_call_c_closure;
     rt->class_array[JS_CLASS_C_FUNCTION].call = js_call_c_function;
     rt->class_array[JS_CLASS_C_FUNCTION_DATA].call = js_c_function_data_call;
     rt->class_array[JS_CLASS_BOUND_FUNCTION].call = js_call_bound_function;
