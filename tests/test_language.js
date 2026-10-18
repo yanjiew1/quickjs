@@ -4011,3 +4011,71 @@ function test_to_int32_signed_minimum()
 }
 
 test_to_int32_signed_minimum();
+
+function test_exception_operand_cleanup()
+{
+    const sentinel = {};
+    class Private { #value; static read(value) { return value.#value; } }
+    const operations = [
+        () => { throw sentinel; },
+        () => +{ valueOf() { throw sentinel; } },
+        () => "x" + { toString() { throw sentinel; } },
+        () => ({ get value() { throw sentinel; } }).value,
+        () => Private.read({}),
+    ];
+    for (let index = 0; index < operations.length; index++) {
+        let closed = 0, finalized = 0, caught = false;
+        const iterator = {
+            [Symbol.iterator]() { return this; },
+            next() { return { value: 1, done: false }; },
+            return() { closed++; throw Error("close error"); },
+        };
+        try {
+            try {
+                for (const value of iterator)
+                    operations[index]();
+            } finally {
+                finalized++;
+            }
+        } catch (error) {
+            caught = true;
+            assert(index === operations.length - 1 ? error instanceof TypeError :
+                                                    error === sentinel);
+        }
+        assert(caught);
+        assert(closed, 1);
+        assert(finalized, 1);
+    }
+
+    for (const abrupt of ["throw", "return"]) {
+        let closed = 0, finalized = 0;
+        const iterator = {
+            [Symbol.iterator]() { return this; },
+            next() { return { value: 1, done: false }; },
+            return() { closed++; return {}; },
+        };
+        const generator = (function*() {
+            try {
+                for (const value of iterator)
+                    yield value;
+            } finally {
+                finalized++;
+            }
+        })();
+        assert(generator.next().value, 1);
+        if (abrupt === "throw") {
+            let caught = false;
+            try { generator.throw(sentinel); }
+            catch (error) { caught = true; assert(error, sentinel); }
+            assert(caught);
+        } else {
+            const result = generator.return(7);
+            assert(result.value, 7);
+            assert(result.done, true);
+        }
+        assert(closed, 1);
+        assert(finalized, 1);
+    }
+}
+
+test_exception_operand_cleanup();
