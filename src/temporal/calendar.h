@@ -44,8 +44,6 @@ typedef struct QJSTemporalCalendarDate {
 /* Inputs are borrowed. Fallible operations leave their result unchanged.
    Only ISO is available in the minimal configuration. */
 const char *qjs_temporal_calendar_identifier(QJSCalendarId calendar);
-int qjs_temporal_calendar_from_identifier(QJSCalendarId *result,
-                                          const char *text, size_t length);
 unsigned qjs_temporal_calendar_extra_fields(QJSCalendarId calendar,
                                             unsigned requested);
 unsigned qjs_temporal_calendar_fields_to_ignore(QJSCalendarId calendar,
