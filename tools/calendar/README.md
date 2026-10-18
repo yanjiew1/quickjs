@@ -40,7 +40,7 @@ the required Islamic civil fallback continuously.
 
 ## Acquisition and offline normalization
 
-Download the hash-pinned official PDF into a selected cache:
+Download the hash-pinned publications into a selected cache:
 
 ```sh
 python3 tools/calendar/acquire.py --cache /path/to/calendar-cache
@@ -63,9 +63,55 @@ the exact pinned PDF. Downloaded publications are never runtime dependencies.
 Run the fast offline generator tests with
 `python3 tests/test_calendar_generator.py`.
 
+## Chinese and Dangi publications
+
+The PMO source is the `lunarInfo` numeric table hosted and actively used by
+the specification-linked PMO page. Its third-party widget author is Jea Yang.
+The tool extracts factual numeric records only; it never executes or
+redistributes the widget code. These records agree with all 45,991 overlapping
+daily records in the separately reviewed PMO 1900–2025 PDF. That comparison
+does not independently certify the widget's future dates through 2100.
+HKO differs on 30 dates in 2057; HKO values are not substituted for PMO.
+
+The table starts at lunar New Year 1900. Its preceding M12 is manually
+transcribed from PDF page 3: January 1 is day 1, January 30 is day 30, and
+January 31 starts the next year. `pin.json` records the source PDF and page.
+Earlier months of lunar 1899 use the explicitly documented approximation.
+
+Dangi records come from 24 pinned official KASI responses, one normal/leap
+month-start query per month. The response's Gregorian date, JDN, weekday,
+Gregorian leap flag, request identity and stated length are checked before
+merging. The actual response coverage, rather than its requested end year,
+controls the proven interval. Lunar 2050 M11 ends on January 13, 2051; its M12
+is outside the required Gregorian 1900–2050 interval and uses approximation.
+
+The normalizer checks complete mandatory date coverage, normal/leap month
+order and every join. It accepts approximate months only entirely outside
+the mandatory Gregorian interval. Normalized records retain primary spans,
+required spans and the exact approximate months; approximation is never
+labelled a published fact. These are factual publication transcriptions,
+without a claim that PMO/KASI publish their website code under our license.
+
+After acquisition, build the small exporter for the build host and normalize:
+
+```sh
+meson compile -C /path/to/build calendar-boundary
+python3 tools/calendar/lunisolar.py \
+  --cache /path/to/calendar-cache \
+  --boundary-tool /path/to/build/calendar-boundary \
+  --output-dir /path/to/build/calendar
+cmp data/calendar/chinese.json /path/to/build/calendar/chinese.json
+cmp data/calendar/dangi.json /path/to/build/calendar/dangi.json
+```
+
+No target executable, ICU installation or system timezone database is used.
+Normal builds do not fetch these publications. Offline pack regeneration
+checks the normalized records against their recorded byte hashes; the command
+above separately reproduces those records from the acquired source receipts.
+
 ## Single binary pack
 
-`generate.py` checks normalized records against their source receipts and emits
+`generate.py` checks normalized records and their source identities, then emits
 one `calendar-data.bin` plus a provenance manifest. QJCA version 1 uses big-endian
 integers: a 32-byte header, 32-byte dataset indices, source-version strings and
 12-byte year records. Each year stores its first epoch day, two bits per month
@@ -80,7 +126,7 @@ indexes directly into immutable records, avoiding repeated cumulative scans.
 `embed.py` validates the pack and creates one C data owner in the build directory.
 The C reader also accepts an immutable byte span for a future external loader;
 current builds do not load calendar files at runtime. No compression library is
-required. Persian and Umm data together currently occupy 7288 bytes.
+required. The four publication datasets together currently occupy 11,672 bytes.
 
 ```sh
 python3 tools/calendar/generate.py \
