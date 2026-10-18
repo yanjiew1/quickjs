@@ -244,6 +244,11 @@ endforeach
 standalone = {
 }
 standalone += {
+  'test_temporal_clock': files(
+    'test_temporal_clock.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/clock.c',
+  ),
   'test_temporal_zone_rules': files(
     'test_temporal_zone_rules.c',
     '../src/calendar/iso.c',
