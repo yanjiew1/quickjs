@@ -77,6 +77,14 @@ int qjs_timezone_backend_offset(const QJSTimeZoneRules *zone, int64_t seconds,
     return 0;
 }
 
+int qjs_timezone_backend_info(const QJSTimeZoneRules *zone, int64_t seconds,
+                              QJSTimeZoneInfo *result)
+{
+    qjs_timezone_backend_offset(zone, seconds, &result->offset_seconds);
+    result->is_dst = 0;
+    return 0;
+}
+
 int qjs_timezone_backend_candidates(const QJSTimeZoneRules *zone, int64_t local,
                                     QJSTimeZoneVisit *visit, void *opaque,
                                     size_t *count, int32_t *before,

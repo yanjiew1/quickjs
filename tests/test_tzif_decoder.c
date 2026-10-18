@@ -400,6 +400,32 @@ static void three_offsets(void)
     assert(before == 0 && after == 7200 && end == 0);
 }
 
+static void daylight_information(void)
+{
+    Fixture f;
+    int64_t at = 0;
+    unsigned char type = 1;
+    QJSTzifState state;
+    QJSTimeZoneInfo info;
+
+    /* A designation change can leave the offset unchanged. */
+    fixture(&f, '3', &at, &type, 1, 3600, 3600, "");
+    state = parse(&f);
+    assert(!qjs_tzif_info(&state, -1, &info));
+    assert(info.offset_seconds == 3600 && !info.is_dst);
+    assert(!qjs_tzif_info(&state, 0, &info));
+    assert(info.offset_seconds == 3600 && info.is_dst);
+    none(&state, -1, 1, 0); /* Temporal transitions require an offset change. */
+
+    fixture(&f, '3', NULL, NULL, 0, 0, 0,
+             "STD-1DST-1,M3.2.0,M11.1.0");
+    state = parse(&f);
+    assert(!qjs_tzif_info(&state, 1704067200, &info));
+    assert(info.offset_seconds == 3600 && !info.is_dst);
+    assert(!qjs_tzif_info(&state, 1719792000, &info));
+    assert(info.offset_seconds == 3600 && info.is_dst);
+}
+
 int main(void)
 {
     framing();
@@ -407,5 +433,6 @@ int main(void)
     history_and_limits();
     local_times();
     three_offsets();
+    daylight_information();
     return 0;
 }
