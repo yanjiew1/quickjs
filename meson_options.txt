@@ -88,3 +88,10 @@ option(
   value: 'native',
   description: 'Named-zone backend: native IANA rules or minimal; UTC and offsets remain in core',
 )
+option(
+  'system_timezone_policy',
+  type: 'combo',
+  choices: ['utc', 'host-offset'],
+  value: 'utc',
+  description: 'Default-zone fallback when no supported host zone is found: UTC or current host offset',
+)
