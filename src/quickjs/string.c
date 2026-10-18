@@ -1000,8 +1000,9 @@ static int js_rebalancee_string_rope_rec(JSContext *ctx, JSValue *buckets,
         buckets[i] = a;
     } else {
         JSStringRope *r = JS_VALUE_GET_STRING_ROPE(val);
-        js_rebalancee_string_rope_rec(ctx, buckets, r->left);
-        js_rebalancee_string_rope_rec(ctx, buckets, r->right);
+        if (js_rebalancee_string_rope_rec(ctx, buckets, r->left))
+            return -1;
+        return js_rebalancee_string_rope_rec(ctx, buckets, r->right);
     }
     return 0;
 }
