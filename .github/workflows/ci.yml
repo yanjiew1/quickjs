@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: [minimal, disabled]
+        profile: [minimal, host-offset, disabled]
     steps:
       - uses: actions/checkout@v7
       - name: Install build tools
@@ -33,8 +33,11 @@ jobs:
         run: |
           enabled=true
           backend=minimal
+          policy=utc
           if test '${{ matrix.profile }}' = disabled; then enabled=false; backend=native; fi
-          meson setup build -Dwerror=true -Dtemporal="$enabled" -Dtimezone_backend="$backend"
+          if test '${{ matrix.profile }}' = host-offset; then policy=host-offset; fi
+          meson setup build -Dwerror=true -Dtemporal="$enabled" \
+            -Dtimezone_backend="$backend" -Dsystem_timezone_policy="$policy"
           meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
           meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
   timezone-data:
