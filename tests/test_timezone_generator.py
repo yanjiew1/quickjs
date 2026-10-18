@@ -8,6 +8,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import struct
+import subprocess
 import unittest
 from unittest import mock
 
@@ -29,6 +30,8 @@ def load_tool(name):
 
 primary = load_tool('primary')
 bundle = load_tool('bundle')
+with mock.patch.dict('sys.modules', {'acquire': acquire, 'bundle': bundle}):
+    embed = load_tool('embed')
 
 
 def sha256(data):
@@ -124,6 +127,48 @@ class AcquisitionTests(unittest.TestCase):
         for name, source in pin['cldr']['files'].items():
             data = (ROOT / 'data' / 'timezone' / 'sources' / 'cldr' / name).read_bytes()
             self.assertEqual(sha256(data), source['sha256'], name)
+
+
+class EmbeddingTests(unittest.TestCase):
+    def test_requires_canonical_core_utc(self):
+        blob = b'TZif2' + bytes(39)
+        for zones in ({'utc': ('utc', blob)}, {'Zulu': ('Zulu', blob)},
+                      {'UTC': ('Zulu', blob), 'Zulu': ('Zulu', blob)}):
+            binary = bundle.pack(zones, 'test', 'test')
+            rows = bundle.unpack(binary)['records']
+            spans = sorted({(row['offset'], row['length']) for row in rows})
+            with self.assertRaisesRegex(ValueError, 'canonical UTC'):
+                embed.render(binary, spans, [{'future': 1}] * len(spans))
+
+    def test_rejects_incomplete_production_history(self):
+        binary = bundle.pack({'UTC': ('UTC', b'TZif2' + bytes(39))}, 'test', 'test')
+        row = bundle.unpack(binary)['records'][0]
+        with self.assertRaisesRegex(ValueError, 'complete footer'):
+            embed.render(binary, [(row['offset'], row['length'])], [{'future': 0}])
+
+    def test_rejects_nonzero_utc_rules(self):
+        blob = b'TZif2' + bytes(39) + struct.pack('>iBB', 3600, 0, 0)
+        binary = bundle.pack({'UTC': ('UTC', blob)}, 'test', 'test')
+        row = bundle.unpack(binary)['records'][0]
+        state = {'future': 1, 'standard_offset': 0, 'type_count': 1,
+                 'types': row['offset'] + 44}
+        with self.assertRaisesRegex(ValueError, 'zero offsets and no DST'):
+            embed.render(binary, [(row['offset'], row['length'])], [state])
+
+    def test_failed_reader_preserves_previous_output(self):
+        binary = bundle.pack({'UTC': ('UTC', b'TZif2' + bytes(39))}, 'test', 'test')
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'input.bin'
+            output = Path(directory) / 'output.c'
+            source.write_bytes(binary)
+            output.write_bytes(b'previous complete output')
+            failures = [subprocess.CalledProcessError(1, 'reader'),
+                        subprocess.TimeoutExpired('reader', 60)]
+            for failure in failures:
+                with mock.patch.object(embed.subprocess, 'run', side_effect=failure):
+                    with self.assertRaises(type(failure)):
+                        embed.generate(source, output, Path(directory) / 'reader')
+                self.assertEqual(output.read_bytes(), b'previous complete output')
 
 
 class PrimaryTests(unittest.TestCase):
