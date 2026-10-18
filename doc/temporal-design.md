@@ -215,7 +215,7 @@ Advertise only fully implemented and validated capabilities.
 | dangi | KASI publication, Gregorian 1900 through 2050 | Documented approximation |
 | persian | Iranian calendar authority, 1206 through 1498 AP | Documented approximation |
 | islamic-umalqura | KACST month data, 1300 through 1600 AH | islamic-civil |
-| japanese | Government era dates with ECMA's date/era semantics | Follow the specified proleptic model |
+| japanese | Pinned released CLDR era data, reviewed against government/ECMA era semantics | Follow the specified proleptic model |
 | Other standard calendars | Specified arithmetic, epochs and era rules | Specified proleptic model |
 
 Chinese and Dangi publication coverage must include calendar-year boundary
