@@ -128,7 +128,7 @@ JSValue JS_ToObject(JSContext *ctx, JSValueConst val)
     case JS_TAG_UNDEFINED:
         return JS_ThrowTypeError(ctx, "cannot convert to object");
     case JS_TAG_OBJECT:
-    case JS_TAG_EXCEPTION:
+    case JS_TAG_CONTROL:
         return JS_DupValue(ctx, val);
     case JS_TAG_SHORT_BIG_INT:
     case JS_TAG_BIG_INT:
@@ -1532,7 +1532,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
             return JS_ThrowTypeErrorAtom(ctx, "cannot read property '%s' of null", prop);
         case JS_TAG_UNDEFINED:
             return JS_ThrowTypeErrorAtom(ctx, "cannot read property '%s' of undefined", prop);
-        case JS_TAG_EXCEPTION:
+        case JS_TAG_CONTROL:
             return JS_EXCEPTION;
         case JS_TAG_STRING:
             {

@@ -100,8 +100,7 @@ enum {
     JS_TAG_NULL        = 2,
     JS_TAG_UNDEFINED   = 3,
     JS_TAG_UNINITIALIZED = 4,
-    JS_TAG_CATCH_OFFSET = 5,
-    JS_TAG_EXCEPTION   = 6,
+    JS_TAG_CONTROL     = 6, /* exception results and private VM markers */
     JS_TAG_SHORT_BIG_INT = 7,
     JS_TAG_FLOAT64     = 8,
     /* any larger tag is FLOAT64 if JS_NAN_BOXING */
@@ -303,7 +302,7 @@ static inline JSValue __JS_NewShortBigInt(int64_t d)
 #define JS_UNDEFINED JS_MKVAL(JS_TAG_UNDEFINED, 0)
 #define JS_FALSE     JS_MKVAL(JS_TAG_BOOL, 0)
 #define JS_TRUE      JS_MKVAL(JS_TAG_BOOL, 1)
-#define JS_EXCEPTION JS_MKVAL(JS_TAG_EXCEPTION, 0)
+#define JS_EXCEPTION JS_MKVAL(JS_TAG_CONTROL, UINT32_MAX)
 #define JS_UNINITIALIZED JS_MKVAL(JS_TAG_UNINITIALIZED, 0)
 
 /* flags for object properties */
@@ -588,11 +587,6 @@ static js_force_inline JSValue JS_NewInt32(JSContext *ctx, int32_t val)
     return JS_MKVAL(JS_TAG_INT, val);
 }
 
-static js_force_inline JSValue JS_NewCatchOffset(JSContext *ctx, int32_t val)
-{
-    return JS_MKVAL(JS_TAG_CATCH_OFFSET, val);
-}
-
 static js_force_inline JSValue JS_NewInt64(JSContext *ctx, int64_t val)
 {
     JSValue v;
@@ -664,9 +658,11 @@ static inline JS_BOOL JS_IsUndefined(JSValueConst v)
     return JS_VALUE_GET_TAG(v) == JS_TAG_UNDEFINED;
 }
 
+/* Tests a public value or API result. Catch markers sharing this tag are
+   private VM state, never ordinary values, arguments or callback results. */
 static inline JS_BOOL JS_IsException(JSValueConst v)
 {
-    return js_unlikely(JS_VALUE_GET_TAG(v) == JS_TAG_EXCEPTION);
+    return js_unlikely(JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL);
 }
 
 static inline JS_BOOL JS_IsUninitialized(JSValueConst v)

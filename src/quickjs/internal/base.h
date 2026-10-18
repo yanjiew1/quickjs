@@ -47,6 +47,19 @@
 #include "list.h"
 #include "quickjs.h"
 
+/* Generic internal diagnostics cannot infer whether a control value came
+   from a function result or a VM stack. Compare the sentinel payload too. */
+static inline BOOL js_is_exception_sentinel(JSValueConst v)
+{
+#ifdef CONFIG_CHECK_JSVALUE
+    /* The compile-only pointer model does not retain full int32 payloads. */
+    return v == JS_EXCEPTION;
+#else
+    return JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL &&
+           (uint32_t)JS_VALUE_GET_INT(v) == UINT32_MAX;
+#endif
+}
+
 static inline BOOL is_be(void)
 {
     union {

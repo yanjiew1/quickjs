@@ -649,9 +649,13 @@ static void js_print_value(JSPrintValueState *s, JSValueConst val)
     case JS_TAG_NULL:
         str = "null";
         goto print_str;
-    case JS_TAG_EXCEPTION:
-        str = "exception";
-        goto print_str;
+    case JS_TAG_CONTROL:
+        if (js_is_exception_sentinel(val)) {
+            str = "exception";
+            goto print_str;
+        }
+        js_printf(s, "[catch offset=%u]", (uint32_t)JS_VALUE_GET_INT(val));
+        break;
     case JS_TAG_UNINITIALIZED:
         str = "uninitialized";
         goto print_str;

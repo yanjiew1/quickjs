@@ -317,7 +317,7 @@ static JSValue JS_ToNumberHintFree(JSContext *ctx, JSValue val,
         break;
     case JS_TAG_FLOAT64:
     case JS_TAG_INT:
-    case JS_TAG_EXCEPTION:
+    case JS_TAG_CONTROL:
         ret = val;
         break;
     case JS_TAG_BOOL:
@@ -474,7 +474,7 @@ static int JS_ToInt32SatFree(JSContext *ctx, int *pres, JSValue val)
     case JS_TAG_UNDEFINED:
         ret = JS_VALUE_GET_INT(val);
         break;
-    case JS_TAG_EXCEPTION:
+    case JS_TAG_CONTROL:
         *pres = 0;
         return -1;
     case JS_TAG_FLOAT64:
@@ -546,7 +546,7 @@ static int JS_ToInt64SatFree(JSContext *ctx, int64_t *pres, JSValue val,
             return JS_TO_INT64_SAT_NAN;
         else
             return 0;
-    case JS_TAG_EXCEPTION:
+    case JS_TAG_CONTROL:
         *pres = 0;
         return -1;
     case JS_TAG_FLOAT64:
