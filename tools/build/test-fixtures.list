@@ -169,6 +169,7 @@ tests/test_temporal_plain.js
 tests/test_temporal_realm.js
 tests/test_temporal_now.js
 tests/test_temporal_zoned.js
+tests/test_temporal_iana.js
 tests/test_temporal_offset_wall_date_boundaries.js
 tests/test_temporal_year_month_date_boundaries.js
 tests/test_temporal_zero_zoned_duration_boundaries.js
