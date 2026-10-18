@@ -150,10 +150,17 @@ if get_option('temporal')
     )
   endforeach
   if get_option('timezone_backend') == 'native'
+    iana_args = ['--std', 'tests/test_temporal_iana.js']
+    iana_env = []
+    if host_machine.system() != 'windows'
+      iana_args += '--default-ny'
+      iana_env += 'TZ=:US/Eastern'
+    endif
     test(
       'temporal-iana',
       qjs,
-      args: ['--std', 'tests/test_temporal_iana.js'],
+      args: iana_args,
+      env: iana_env,
       suite: ['repo', 'temporal', 'integration'],
       workdir: test_workdir,
       depends: fixtures,
@@ -313,6 +320,16 @@ endforeach
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
+if calendar_enabled
+  standalone += {
+    'test_system_timezone': files(
+      'test_system_timezone.c',
+      '../src/calendar/iso.c',
+      '../src/timezone/system-zone.c',
+    ) + timezone_test_sources + system_timezone_test_sources,
+  }
+endif
+
 if native_timezones
   standalone += {
     'test_windows_timezone': files(
