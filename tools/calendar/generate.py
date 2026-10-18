@@ -30,6 +30,25 @@ def datasets():
                 years.append((day, [29 + ((mask >> (11 - m)) & 1) for m in range(12)], 0))
         result.append({'calendar': data['calendar'], 'first_year': data['first_year'],
                        'end_epoch_day': data['end_epoch_day'], 'version': version, 'years': years})
+    for name in ('chinese', 'dangi'):
+        path = SOURCES.parent / (name + '.json')
+        raw = path.read_bytes()
+        if digest(raw) != pin['normalized'][path.name]['sha256']:
+            raise ValueError('modified normalized lunisolar publication: ' + name)
+        data = json.loads(raw.decode('ascii'))
+        first, end = data['primary_span']
+        required_first, required_end = data['required_span']
+        if data['schema'] != 1 or data['calendar'] != name or not first <= required_first < required_end <= end:
+            raise ValueError('incomplete mandatory lunisolar publication coverage')
+        for year, nominal, leap, day, length in data['approximate_months']:
+            if not (day + length <= required_first or day >= required_end):
+                raise ValueError('approximation enters mandatory calendar dates')
+        if [r[0] for r in data['rows']] != list(range(1899, (2100 if name == 'chinese' else 2050) + 1)):
+            raise ValueError('incomplete normalized calendar years')
+        years = [(day, months, leap) for year, day, months, leap in data['rows']]
+        result.append({'calendar': name, 'first_year': data['first_year'],
+                       'end_epoch_day': data['end_epoch_day'], 'years': years,
+                       'version': name + '-publications-20261019-model1'})
     return result, pin
 
 
@@ -39,6 +58,8 @@ def generate(output, manifest):
     contents = unpack(binary)
     receipt = {'format': 'QJCA', 'format_version': 1, 'algorithm_version': 1,
                'spec_commit': pin['spec_commit'], 'sources': pin['sources'],
+               'normalized': pin['normalized'], 'boundary_model': pin['boundary_model'],
+               'boundary_months': pin['boundary_months'],
                'binary_sha256': digest(binary), 'binary_size': len(binary),
                'calendars': []}
     for data in contents:
