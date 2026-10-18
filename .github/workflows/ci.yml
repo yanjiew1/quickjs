@@ -112,6 +112,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=${{ matrix.library }} \
+           -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -230,6 +231,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Db_lto=true  \
+          -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -301,7 +303,7 @@ jobs:
     - name: Configure selected build
       id: configure
       run: |
-        meson setup build -Dwerror=true   \
+        meson setup build -Dwerror=true  -Dtemporal=true \
     - name: Compile selected build
       id: compile
       run: |
@@ -532,6 +534,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=both  \
+          -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -605,7 +608,7 @@ jobs:
       id: configure
       run: |
         meson setup build --prefix "$RUNNER_TEMP/quickjs-install" \
-          -Dwerror=true -Ddefault_library=shared
+          -Dwerror=true -Ddefault_library=shared  -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -628,7 +631,7 @@ jobs:
         meson install -C build
         prefix="$RUNNER_TEMP/quickjs-install"
         "$prefix/bin/qjs" -e 'if (6 * 7 !== 42) throw Error("installed qjs");'
-        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' '' n n
+        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' '' n y
         export PKG_CONFIG_PATH="$prefix/lib/x86_64-linux-gnu/pkgconfig:$prefix/lib64/pkgconfig:$prefix/lib/pkgconfig"
         libdir="$(pkg-config --variable=libdir quickjs)"
         cc tests/test_shared_api.c $(pkg-config --cflags --libs quickjs) \
@@ -680,6 +683,9 @@ jobs:
         - id: core-off
           intl: disabled
           temporal: 'false'
+        - id: temporal-native
+          intl: disabled
+          temporal: 'true'
     steps:
     - uses: actions/checkout@v7
     - name: Install diagnostic compiler and build tools
@@ -691,7 +697,7 @@ jobs:
       run: |
         CC=gcc meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dcheck_jsvalue=true \
-            \
+           -Dtemporal=${{ matrix.temporal }} \
     - name: Compile selected build
       id: compile
       run: |
@@ -750,6 +756,7 @@ jobs:
       run: |
         meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
+           -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
