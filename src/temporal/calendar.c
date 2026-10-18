@@ -2,6 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  */
 #include "calendar.h"
+#include "noniso-calendar.h"
 #include "civil.h"
 #include <limits.h>
 #include <math.h>
@@ -38,7 +39,9 @@ int qjs_temporal_calendar_from_identifier(QJSCalendarId *result,
 unsigned qjs_temporal_calendar_extra_fields(QJSCalendarId calendar,
                                            unsigned requested)
 {
-    return 0;
+    return qjs_temporal_noniso_has_era(calendar) &&
+           (requested & QJS_TEMPORAL_FIELD_YEAR) ?
+           QJS_TEMPORAL_FIELD_ERA | QJS_TEMPORAL_FIELD_ERA_YEAR : 0;
 }
 
 unsigned qjs_temporal_calendar_fields_to_ignore(QJSCalendarId calendar,
@@ -46,6 +49,15 @@ unsigned qjs_temporal_calendar_fields_to_ignore(QJSCalendarId calendar,
 {
     if (additional & (QJS_TEMPORAL_FIELD_MONTH | QJS_TEMPORAL_FIELD_MONTH_CODE))
         additional |= QJS_TEMPORAL_FIELD_MONTH | QJS_TEMPORAL_FIELD_MONTH_CODE;
+    if (qjs_temporal_noniso_has_era(calendar) &&
+        (additional & (QJS_TEMPORAL_FIELD_YEAR | QJS_TEMPORAL_FIELD_ERA |
+                       QJS_TEMPORAL_FIELD_ERA_YEAR)))
+        additional |= QJS_TEMPORAL_FIELD_YEAR | QJS_TEMPORAL_FIELD_ERA |
+                      QJS_TEMPORAL_FIELD_ERA_YEAR;
+    if (calendar == QJS_CAL_JAPANESE &&
+        (additional & (QJS_TEMPORAL_FIELD_DAY | QJS_TEMPORAL_FIELD_MONTH |
+                       QJS_TEMPORAL_FIELD_MONTH_CODE)))
+        additional |= QJS_TEMPORAL_FIELD_ERA | QJS_TEMPORAL_FIELD_ERA_YEAR;
     return additional;
 }
 
@@ -121,9 +133,8 @@ int qjs_temporal_calendar_date_from_fields(QJSCalendarId calendar,
     QJSTemporalISODate date;
     int error;
 
-    if (calendar != QJS_CAL_ISO8601)
-        return QJS_TEMPORAL_ERROR_UNSUPPORTED;
-    error = resolve(fields, 0, overflow, &date);
+    error = calendar == QJS_CAL_ISO8601 ? resolve(fields, 0, overflow, &date) :
+            qjs_temporal_noniso_resolve(calendar, fields, 0, overflow, &date);
     if (error)
         return error;
     if (!qjs_temporal_iso_date_within_limits(date))
@@ -137,7 +148,7 @@ int qjs_temporal_calendar_year_month_from_fields(
     QJSTemporalOverflow overflow, QJSTemporalISODate *result)
 {
     if (calendar != QJS_CAL_ISO8601)
-        return QJS_TEMPORAL_ERROR_UNSUPPORTED;
+        return qjs_temporal_noniso_resolve(calendar, fields, 1, overflow, result);
     return resolve(fields, 1, overflow, result);
 }
 
@@ -157,7 +168,7 @@ int qjs_temporal_calendar_fields(QJSCalendarId calendar,
     QJSTemporalCalendarDate fields = { 0 };
 
     if (calendar != QJS_CAL_ISO8601)
-        return QJS_TEMPORAL_ERROR_UNSUPPORTED;
+        return qjs_temporal_noniso_fields(calendar, date, result);
     if (!qjs_iso_date_is_valid(date))
         return RANGE;
     fields.year = date.year;
