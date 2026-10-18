@@ -104,5 +104,103 @@ int main(void)
     result = saved;
     assert(qjs_temporal_calendar_date_from_fields(QJS_CAL_GREGORY, &fields, constrain, &result));
     assert(!memcmp(&result, &saved, sizeof(result)));
+
+    memset(&fields, 0, sizeof(fields));
+    fields.present = QJS_TEMPORAL_FIELD_MONTH_CODE | QJS_TEMPORAL_FIELD_DAY;
+    fields.day = 30;
+    strcpy(fields.month_code, "M01");
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_CHINESE, &fields, reject, &result));
+    assert(result.year == 1970);
+    strcpy(fields.month_code, "M03");
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_DANGI, &fields, reject, &result));
+    assert(result.year == 1968);
+    strcpy(fields.month_code, "M05L");
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_HEBREW, &fields, reject, &result));
+    assert(result.year == 1970);
+    strcpy(fields.month_code, "M11L");
+    fields.day = 10;
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_CHINESE, &fields, reject, &result));
+    assert(result.year == 2033);
+    fields.day = 11;
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_CHINESE, &fields, reject, &result));
+    assert(result.year == 2034);
+    fields.day = 30;
+    result = saved;
+    assert(qjs_temporal_calendar_month_day_from_fields(QJS_CAL_CHINESE, &fields, reject, &result));
+    assert(!memcmp(&result, &saved, sizeof(result)));
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_CHINESE, &fields, constrain, &result));
+    assert(!qjs_temporal_calendar_fields(QJS_CAL_CHINESE, result, &metadata));
+    assert(!strcmp(metadata.month_code, "M11") && metadata.day == 30);
+    strcpy(fields.month_code, "M13");
+    fields.day = 6;
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_COPTIC, &fields, reject, &result));
+    assert(result.year == 1971);
+    fields.day = 7;
+    assert(qjs_temporal_calendar_month_day_from_fields(QJS_CAL_COPTIC, &fields, reject, &result));
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_COPTIC, &fields, constrain, &result));
+    assert(!qjs_temporal_calendar_fields(QJS_CAL_COPTIC, result, &metadata));
+    assert(metadata.day == 6);
+    fields.present |= QJS_TEMPORAL_FIELD_YEAR;
+    fields.year = 1e300;
+    result = saved;
+    assert(qjs_temporal_calendar_month_day_from_fields(QJS_CAL_COPTIC, &fields, constrain, &result));
+    assert(!memcmp(&result, &saved, sizeof(result)));
+    fields.present &= ~QJS_TEMPORAL_FIELD_YEAR;
+    fields.present |= QJS_TEMPORAL_FIELD_MONTH;
+    fields.month = 1;
+    assert(qjs_temporal_calendar_month_day_from_fields(QJS_CAL_HEBREW, &fields,
+            constrain, &result) == QJS_TEMPORAL_ERROR_MISSING);
+    assert(!memcmp(&result, &saved, sizeof(result)));
+    fields.present = QJS_TEMPORAL_FIELD_YEAR | QJS_TEMPORAL_FIELD_MONTH_CODE |
+                     QJS_TEMPORAL_FIELD_DAY;
+    fields.year = 275760;
+    fields.day = 31;
+    strcpy(fields.month_code, "M12");
+    assert(qjs_temporal_calendar_month_day_from_fields(QJS_CAL_GREGORY, &fields,
+            constrain, &result) == QJS_TEMPORAL_ERROR_RANGE);
+    assert(!memcmp(&result, &saved, sizeof(result)));
+    fields.year = -271821;
+    fields.day = 18;
+    strcpy(fields.month_code, "M04");
+    assert(qjs_temporal_calendar_month_day_from_fields(QJS_CAL_GREGORY, &fields,
+            constrain, &result) == QJS_TEMPORAL_ERROR_RANGE);
+    assert(!memcmp(&result, &saved, sizeof(result)));
+    fields.day = 19;
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_GREGORY, &fields,
+                                                      constrain, &result));
+    assert(result.year == 1972 && result.month == 4 && result.day == 19);
+    fields.year = 275760;
+    fields.day = 13;
+    strcpy(fields.month_code, "M09");
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_GREGORY, &fields,
+                                                      constrain, &result));
+    assert(result.year == 1972 && result.month == 9 && result.day == 13);
+    fields.day = 14;
+    assert(qjs_temporal_calendar_month_day_from_fields(QJS_CAL_GREGORY, &fields,
+            constrain, &result) == QJS_TEMPORAL_ERROR_RANGE);
+    fields.present &= ~QJS_TEMPORAL_FIELD_YEAR;
+    fields.day = 26;
+    strcpy(fields.month_code, "M04");
+    assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_HEBREW, &fields,
+                                                      constrain, &result));
+    assert(result.year == 1972 && result.month == 12 && result.day == 31);
+    for (int id = QJS_CAL_BUDDHIST; id < QJS_CAL_COUNT; id++) {
+        int count = id == QJS_CAL_COPTIC || id == QJS_CAL_ETHIOAA ||
+                    id == QJS_CAL_ETHIOPIC ? 13 : 12;
+
+        memset(&fields, 0, sizeof(fields));
+        fields.present = QJS_TEMPORAL_FIELD_MONTH_CODE | QJS_TEMPORAL_FIELD_DAY;
+        for (int month = 1; month <= count; month++) {
+            fields.month_code[0] = 'M';
+            fields.month_code[1] = '0' + month / 10;
+            fields.month_code[2] = '0' + month % 10;
+            fields.day = 1e300;
+            assert(!qjs_temporal_calendar_month_day_from_fields((QJSCalendarId)id,
+                    &fields, constrain, &result));
+            assert(!qjs_temporal_calendar_fields((QJSCalendarId)id, result, &metadata));
+            assert(!strcmp(metadata.month_code, fields.month_code));
+            assert(metadata.day >= 6 && metadata.day <= 31);
+        }
+    }
     return 0;
 }
