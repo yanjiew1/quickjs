@@ -83,17 +83,18 @@ into the interpreter used by runtime tests.
 
 ## Temporal
 
-Temporal is enabled by default on this branch. The minimal configuration
-implements all Temporal classes with the ISO calendar, UTC and explicit
-numeric offset timezones. It has no ICU or installed timezone-data dependency.
+Temporal is enabled by default on this branch with the ISO calendar and embedded
+IANA timezone rules. It has no ICU or installed timezone-data dependency.
+Use `-Dtimezone_backend=minimal` for all Temporal classes with only core UTC
+and explicit numeric offsets; that backend contains no additional named zones.
 The runtime's initial default timezone is UTC; embedders can set a shared
 Date/Temporal default with `JS_SetDefaultTimeZone()`.
 
 Use `-Dtemporal=false` to omit Temporal and retain Date's existing host policy.
 Temporal embedding entry points remain callable and report TypeError when the
 feature is disabled. `Temporal=auto` in the Test262 configuration follows the
-runner's build setting. IANA zones and non-ISO calendars are subsequent stages
-of the [native Temporal design](doc/temporal-design.md).
+runner's build setting. Non-ISO calendars are a subsequent stage of the
+[native Temporal design](doc/temporal-design.md).
 
 ## Static and shared libraries
 
