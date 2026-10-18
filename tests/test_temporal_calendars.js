@@ -94,8 +94,32 @@ function test_field_order() {
     assert(log.join(), "calendar,day,era,eraYear,month,monthCode,year,overflow");
 }
 
+function test_dangi_precomputed_extension() {
+    // ICU4X precomputed dates after the KASI publication interval, including
+    // the source joins and months where the former approximation differed.
+    const cases = [
+        ["2051-01-12", 2050, "M11", 30],
+        ["2051-01-13", 2050, "M12", 1],
+        ["2051-08-06", 2051, "M06", 30],
+        ["2051-11-03", 2051, "M10", 1],
+        ["2097-01-13", 2096, "M12", 1],
+        ["2100-12-31", 2100, "M12", 1],
+        ["2101-01-28", 2100, "M12", 29],
+        ["2101-01-29", 2101, "M01", 1],
+    ];
+    for (const [iso, year, monthCode, day] of cases) {
+        const value = Date.from(iso).withCalendar("dangi");
+        assert(value.year, year, iso);
+        assert(value.monthCode, monthCode, iso);
+        assert(value.day, day, iso);
+        assert(Date.from({calendar: "dangi", year, monthCode, day})
+            .withCalendar("iso8601").toString(), iso);
+    }
+}
+
 if (test_profiles()) {
     test_publications_and_eras();
     test_leap_months_and_reference_dates();
     test_field_order();
+    test_dangi_precomputed_extension();
 }
