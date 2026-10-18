@@ -157,7 +157,7 @@ int qjs_temporal_calendar_month_day_from_fields(
     QJSTemporalOverflow overflow, QJSTemporalISODate *result)
 {
     if (calendar != QJS_CAL_ISO8601)
-        return QJS_TEMPORAL_ERROR_UNSUPPORTED;
+        return qjs_temporal_noniso_month_day(calendar, fields, overflow, result);
     return resolve(fields, 2, overflow, result);
 }
 
