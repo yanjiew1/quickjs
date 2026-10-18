@@ -54,6 +54,14 @@ converting the minimum Instant with a negative offset. The
 was checked on 2026-10-19. Test262's PlainDate and PlainDateTime limit tests
 agree with the wider range; they do not need a local patch.
 
+The same pinned PR's GetAvailableNamedTimeZoneIdentifier reads
+[[PrimaryIdentifier]] from an Available Named Time Zone Identifier Return
+Record, whose fields are only [[Identifier]] and [[Result]]. Primary identity
+belongs to a nonempty result's Time Zone Identifier Record. Keep immutable
+identifier/primary mappings directly; do not reproduce that invalid field
+access or dereference an empty cached result. Source: temporal/timezone.emu
+at the pinned PR head, reviewed 2026-10-19.
+
 ## Code ownership and backend selection
 
 - JavaScript builtins own coercion and property access order, realms, exceptions,
