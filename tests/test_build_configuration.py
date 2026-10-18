@@ -103,14 +103,21 @@ def main():
             'src/timezone/timezone-native.c',
         }:
             providers.add(relative)
+    # Foundations can precede the option that selects their runtime provider.
+    # Assert exclusivity only once that option actually exists in this snapshot.
     expected = set()
-    if calendars:
-        calendar = 'native' if options['calendars'] == 'native' else 'minimal'
-        expected = {
-            'src/calendar/calendar-' + calendar + '.c',
-            'src/timezone/timezone-' + options['timezone_backend'] + '.c',
-        }
-    assert providers == expected, (providers, expected)
+    controlled = set()
+    for option, family in [('calendars', 'calendar'), ('timezone_backend', 'timezone')]:
+        if option not in options:
+            continue
+        controlled.update('src/' + family + '/' + family + '-' + name + '.c'
+                          for name in ('minimal', 'native'))
+        if calendars:
+            selected = options[option]
+            if option == 'calendars' and selected == 'iso':
+                selected = 'minimal'
+            expected.add('src/' + family + '/' + family + '-' + selected + '.c')
+    assert providers & controlled == expected, (providers & controlled, expected)
     assert checked == options['check_jsvalue'], (checked, options['check_jsvalue'])
     print('Selected configuration and repository suite partition verified.')
 
