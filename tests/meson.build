@@ -322,6 +322,11 @@ standalone = {
 }
 if calendar_enabled
   standalone += {
+    'test_calendar_hebrew': files(
+      'test_calendar_hebrew.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/hebrew.c',
+    ),
     'test_calendar_solar': files(
       'test_calendar_solar.c',
       '../src/calendar/iso.c',
