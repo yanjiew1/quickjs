@@ -28,6 +28,11 @@ const char *qjs_timezone_primary_identifier(const QJSTimeZone *zone)
     return zone->primary;
 }
 
+int qjs_timezone_is_primary(const QJSTimeZone *zone)
+{
+    return !strcmp(zone->identifier, zone->primary);
+}
+
 const char *qjs_timezone_data_version(void)
 {
     return qjs_timezone_backend_data_version();
@@ -68,6 +73,16 @@ int qjs_timezone_offset(const QJSTimeZone *zone, int64_t epoch_seconds,
         return qjs_timezone_backend_offset(zone->rules, epoch_seconds,
                                            offset_seconds);
     *offset_seconds = 0;
+    return 0;
+}
+
+int qjs_timezone_info(const QJSTimeZone *zone, int64_t epoch_seconds,
+                      QJSTimeZoneInfo *result)
+{
+    if (zone->rules)
+        return qjs_timezone_backend_info(zone->rules, epoch_seconds, result);
+    result->offset_seconds = 0;
+    result->is_dst = 0;
     return 0;
 }
 
