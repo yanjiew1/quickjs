@@ -322,6 +322,11 @@ standalone = {
 }
 if calendar_enabled
   standalone += {
+    'test_calendar_solar': files(
+      'test_calendar_solar.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/solar.c',
+    ),
     'test_system_timezone': files(
       'test_system_timezone.c',
       '../src/calendar/iso.c',
