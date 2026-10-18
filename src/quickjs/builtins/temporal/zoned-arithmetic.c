@@ -31,7 +31,7 @@ int js_temporal_zoned_add_duration(JSContext *ctx,
 }
 int js_temporal_zoned_difference_raw(JSContext *ctx,
     QJSTemporalEpochNs start, QJSTemporalEpochNs end,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar,
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar,
     QJSTemporalUnit largest, QJSTemporalInternalDuration *result)
 {
     QJSTemporalInternalDuration duration = {0};
@@ -79,7 +79,7 @@ int js_temporal_zoned_difference_raw(JSContext *ctx,
 }
 int js_temporal_zoned_difference_round(JSContext *ctx,
     QJSTemporalEpochNs start, QJSTemporalEpochNs end,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar,
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar,
     const QJSTemporalDifferenceSettings *settings,
     QJSTemporalInternalDuration *result)
 {
@@ -107,7 +107,7 @@ int js_temporal_zoned_difference_round(JSContext *ctx,
 }
 int js_temporal_zoned_difference_total(JSContext *ctx,
     QJSTemporalEpochNs start, QJSTemporalEpochNs end,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar,
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar,
     QJSTemporalUnit unit, double *result)
 {
     QJSTemporalInternalDuration duration = {0};
