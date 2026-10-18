@@ -777,6 +777,14 @@ test(
   workdir: test_workdir,
   timeout: 120,
 )
+
+test(
+  'timezone-generator',
+  python,
+  args: files('test_timezone_generator.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
 if not meson.is_cross_build() and host_machine.system() != 'windows'
   expected_flags = []
   if cc.sizeof('void *') == 4 and host_machine.cpu_family() in ['x86', 'x86_64']
