@@ -36,6 +36,12 @@ if calendar_enabled
   calendar_test_sources = files(
     '../src/calendar/iso.c',
   )
+  timezone_test_sources = files(
+    '../src/timezone/timezone.c',
+  )
+  timezone_test_sources += files(
+    '../src/timezone/timezone-minimal.c',
+  )
 endif
 
 fixture_manifest = files('../tools/build/test-fixtures.list')
@@ -238,6 +244,27 @@ endforeach
 standalone = {
 }
 standalone += {
+  'test_temporal_zone_rules': files(
+    'test_temporal_zone_rules.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/parse.c',
+    '../src/temporal/format.c',
+    '../src/temporal/time-zone.c',
+    '../src/timezone/timezone.c',
+  ),
+  'test_temporal_minimal_zones': files(
+    'test_temporal_minimal_zones.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/parse.c',
+    '../src/temporal/format.c',
+    '../src/temporal/time-zone.c',
+    '../src/timezone/timezone.c',
+    '../src/timezone/timezone-minimal.c',
+  ),
   'test_temporal_calendars': files(
     'test_temporal_calendars.c',
     '../src/temporal/epoch.c',
