@@ -172,6 +172,11 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_windows_timezone': [
+    'test_windows_timezone.c',
+    '../src/timezone/windows-zone.c',
+    windows_timezone_data,
+  ],
   'test_native_timezone': [
     'test_native_timezone.c',
     '../src/calendar/iso.c',
