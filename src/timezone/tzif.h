@@ -36,5 +36,9 @@ int qjs_tzif_offset(const QJSTzifState *state, int64_t seconds,
    Common Temporal code applies public Instant bounds after disambiguation. */
 int qjs_tzif_transition(const QJSTzifState *state, int64_t seconds, int next,
                         int inclusive, int64_t *result, int *found);
+int qjs_tzif_candidates(const QJSTzifState *state, int64_t wall,
+                        QJSTimeZoneVisit *visit, void *opaque, size_t *count,
+                        int32_t *gap_before, int32_t *gap_after,
+                        int64_t *gap_end);
 
 #endif /* QUICKJS_TIMEZONE_TZIF_H */

@@ -480,3 +480,79 @@ int qjs_tzif_transition(const QJSTzifState *s, int64_t seconds, int next,
     *found = exists;
     return QJS_TZ_OK;
 }
+
+int qjs_tzif_candidates(const QJSTzifState *s, int64_t wall,
+                        QJSTimeZoneVisit *visit, void *opaque, size_t *count,
+                        int32_t *gap_before, int32_t *gap_after,
+                        int64_t *gap_end)
+{
+    int32_t offsets[258];
+    int64_t candidates[258];
+    size_t length = 0, matches = 0, i;
+    uint32_t types;
+
+    if (wall < -QJS_TZ_WALL_LIMIT || wall > QJS_TZ_WALL_LIMIT)
+        return QJS_TZ_RANGE;
+    /* There are at most 256 TZif types and two footer offsets. Sorting
+       unique offsets descending visits all matching epochs ascending,
+       including histories with three or more simultaneous candidates. */
+    types = s->type_count + (s->future ? 2 : 0);
+    for (i = 0; i < types; i++) {
+        int32_t offset = i < s->type_count ? type_offset(s, i)
+            : i == s->type_count           ? s->standard_offset
+                                           : s->daylight_offset;
+        size_t at = 0;
+
+        while (at < length && offsets[at] > offset)
+            at++;
+        if (at < length && offsets[at] == offset)
+            continue;
+        memmove(offsets + at + 1, offsets + at,
+                (length - at) * sizeof(*offsets));
+        offsets[at] = offset;
+        length++;
+    }
+    for (i = 0; i < length; i++) {
+        int64_t epoch = wall - offsets[i];
+        int32_t actual;
+        int error = qjs_tzif_offset(s, epoch, &actual);
+
+        if (error)
+            return error;
+        if (actual == offsets[i])
+            candidates[matches++] = epoch;
+    }
+    if (matches) {
+        for (i = 0; i < matches; i++)
+            visit(opaque, candidates[i]);
+        *count = matches;
+        return QJS_TZ_OK;
+    }
+    {
+        int64_t cursor = wall - 86400, transition;
+        int found, error;
+
+        for (;;) {
+            int32_t before, after;
+
+            error = qjs_tzif_transition(s, cursor, 1, 0, &transition, &found);
+            if (error)
+                return error;
+            if (!found || transition > wall + 86400)
+                break;
+            if (qjs_tzif_offset(s, transition - 1, &before) ||
+                qjs_tzif_offset(s, transition, &after))
+                return QJS_TZ_DATA;
+            if (before < after && wall >= transition + before &&
+                wall < transition + after) {
+                *count = 0;
+                *gap_before = before;
+                *gap_after = after;
+                *gap_end = transition;
+                return QJS_TZ_OK;
+            }
+            cursor = transition;
+        }
+    }
+    return QJS_TZ_DATA;
+}

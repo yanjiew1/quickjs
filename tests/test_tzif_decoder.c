@@ -278,10 +278,134 @@ static void history_and_limits(void)
     assert(qjs_tzif_offset(&s, -QJS_TZ_OFFSET_LIMIT - 1, &actual) ==
            QJS_TZ_RANGE);
 }
+typedef struct Candidates {
+    int64_t values[8];
+    size_t length;
+} Candidates;
+
+static void collect(void *opaque, int64_t seconds)
+{
+    Candidates *candidates = opaque;
+
+    assert(candidates->length < 8);
+    candidates->values[candidates->length++] = seconds;
+}
+
+static void local_times(void)
+{
+    Fixture f;
+    QJSTzifState state;
+    Candidates candidates = {{0}, 0};
+    int32_t before = 42, after = 43;
+    int64_t end = 44, at = INT64_MIN;
+    size_t count = 45;
+    unsigned char type = 0;
+
+    fixture(&f, '2', &at, &type, 1, -18000, -14400, "EST5EDT,M3.2.0,M11.1.0");
+    state = parse(&f);
+    assert(!qjs_tzif_candidates(&state, INT64_C(1710037800), collect,
+                                &candidates, &count, &before, &after, &end));
+    assert(!count && !candidates.length);
+    assert(before == -18000 && after == -14400 && end == INT64_C(1710054000));
+    assert(!qjs_tzif_candidates(&state, INT64_C(1730597400), collect,
+                                &candidates, &count, &before, &after, &end));
+    assert(count == 2 && candidates.length == 2);
+    assert(candidates.values[0] == INT64_C(1730597400) + 14400);
+    assert(candidates.values[1] == INT64_C(1730597400) + 18000);
+
+    /* Raw gap lookup must see transitions outside the Instant range before
+       the common layer chooses an interpretation that may be in range. */
+    candidates.length = 0;
+    at = -QJS_TZ_INSTANT_LIMIT - 3600;
+    type = 1;
+    fixture(&f, '2', &at, &type, 1, 0, 7200, "");
+    state = parse(&f);
+    assert(!qjs_tzif_candidates(&state, -QJS_TZ_INSTANT_LIMIT + 1800, collect,
+                                &candidates, &count, &before, &after, &end));
+    assert(!count && !candidates.length);
+    assert(before == 0 && after == 7200 && end == at);
+    at = QJS_TZ_INSTANT_LIMIT + 3600;
+    fixture(&f, '2', &at, &type, 1, -7200, 0, "");
+    state = parse(&f);
+    assert(!qjs_tzif_candidates(&state, QJS_TZ_INSTANT_LIMIT - 1800, collect,
+                                &candidates, &count, &before, &after, &end));
+    assert(!count && !candidates.length);
+    assert(before == -7200 && after == 0 && end == at);
+
+    count = 45;
+    before = 42;
+    after = 43;
+    end = 44;
+    assert(qjs_tzif_candidates(&state, QJS_TZ_WALL_LIMIT + 1, collect,
+                               &candidates, &count, &before, &after,
+                               &end) == QJS_TZ_RANGE);
+    assert(!candidates.length && count == 45);
+    assert(before == 42 && after == 43 && end == 44);
+}
+
+static void three_offsets(void)
+{
+    Fixture f;
+    size_t block, position = 0, transition_start = 0;
+    const int32_t offsets[] = {7200, 3600, 0};
+    QJSTzifState state;
+    Candidates candidates = {{0}, 0};
+    size_t count;
+    int32_t before, after;
+    int64_t end;
+
+    memset(&f, 0, sizeof(f));
+    for (block = 0; block < 2; block++) {
+        unsigned char *h = f.bytes + position;
+        size_t n = block ? 2 : 0, types = 44 + n * 9, i;
+
+        memcpy(h, "TZif", 4);
+        h[4] = '2';
+        put32(h + 32, (int32_t)n);
+        put32(h + 36, 3);
+        put32(h + 40, 4);
+        if (n) {
+            transition_start = position + 44;
+            f.types = position + types;
+            put64(h + 44, -1);
+            put64(h + 52, 0);
+            h[60] = 1;
+            h[61] = 2;
+        }
+        for (i = 0; i < 3; i++)
+            put32(h + types + 6 * i, offsets[i]);
+        memcpy(h + types + 18, "STD", 4);
+        position += types + 22;
+    }
+    f.bytes[position++] = '\n';
+    f.bytes[position++] = '\n';
+    f.size = position;
+    state = parse(&f);
+    assert(!qjs_tzif_candidates(&state, 3599, collect, &candidates, &count,
+                                &before, &after, &end));
+    assert(count == 3 && candidates.length == 3);
+    assert(candidates.values[0] == -3601 && candidates.values[1] == -1 &&
+           candidates.values[2] == 3599);
+
+    /* A backward jump can precede the forward jump that skips midnight. */
+    put32(f.bytes + f.types, 1800);
+    put32(f.bytes + f.types + 6, 0);
+    put32(f.bytes + f.types + 12, 7200);
+    put64(f.bytes + transition_start, -3600);
+    state = parse(&f);
+    candidates.length = 0;
+    assert(!qjs_tzif_candidates(&state, 0, collect, &candidates, &count,
+                                &before, &after, &end));
+    assert(!count && !candidates.length);
+    assert(before == 0 && after == 7200 && end == 0);
+}
+
 int main(void)
 {
     framing();
     future();
     history_and_limits();
+    local_times();
+    three_offsets();
     return 0;
 }
