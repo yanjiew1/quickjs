@@ -114,6 +114,8 @@ support_sources = support_library_sources + files(
 # Immutable generated tables have one object owner outside LTO.
 data_sources = []
 data_sources += unicode_tables
+windows_timezone_sources = []
+windows_timezone_data_sources = []
 
 # The coordinator also provides disabled-build public API stubs.
 engine_sources += files(
@@ -146,6 +148,7 @@ if get_option('temporal')
     'temporal/relative.c',
     'temporal/time.c',
     'temporal/time-zone.c',
+    'timezone/system-zone.c',
     'timezone/timezone.c',
   )
   if get_option('timezone_backend') == 'native'
@@ -154,6 +157,8 @@ if get_option('temporal')
       'timezone/tzif.c',
     )
     data_sources += timezone_data
+    windows_timezone_sources = files('timezone/windows-zone.c')
+    windows_timezone_data_sources += windows_timezone_data
   else
     support_sources += files('timezone/timezone-minimal.c')
   endif
