@@ -1,8 +1,9 @@
-/* ISO Temporal calendar resolution and arithmetic.
+/* Temporal calendar resolution and arithmetic; checked ISO remains in core.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  */
 #include "calendar.h"
 #include "noniso-calendar.h"
+#include "../calendar/calendar.h"
 #include "civil.h"
 #include <limits.h>
 #include <math.h>
@@ -14,26 +15,7 @@
 
 const char *qjs_temporal_calendar_identifier(QJSCalendarId calendar)
 {
-    return calendar == QJS_CAL_ISO8601 ? "iso8601" : NULL;
-}
-
-int qjs_temporal_calendar_from_identifier(QJSCalendarId *result,
-                                          const char *text, size_t length)
-{
-    static const char identifier[] = "iso8601";
-    size_t i;
-
-    if (length != sizeof(identifier) - 1)
-        return RANGE;
-    for (i = 0; i < length; i++) {
-        unsigned char c = text[i];
-        if (c >= 'A' && c <= 'Z')
-            c += 'a' - 'A';
-        if (c != (unsigned char)identifier[i])
-            return RANGE;
-    }
-    *result = QJS_CAL_ISO8601;
-    return 0;
+    return qjs_calendar_is_supported(calendar) ? qjs_calendar_identifier(calendar) : NULL;
 }
 
 unsigned qjs_temporal_calendar_extra_fields(QJSCalendarId calendar,

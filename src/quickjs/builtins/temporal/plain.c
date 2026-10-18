@@ -1,6 +1,7 @@
 /* Native Temporal Plain civil objects.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, as in instant.c.
  */
+#include "../../../calendar/calendar.h"
 #include "calendar-fields.h"
 #include "../../internal/object.h"
 #include "../../../temporal/civil.h"
@@ -236,7 +237,7 @@ static int canonicalize_calendar(JSContext *ctx, JSValueConst value,
     text = JS_ToCStringLen(ctx, &length, value);
     if (!text)
         return -1;
-    error = qjs_temporal_calendar_from_identifier(result, text, length);
+    error = qjs_calendar_from_identifier(result, text, length);
     JS_FreeCString(ctx, text);
     return js_temporal_calendar_error(ctx, error);
 }
