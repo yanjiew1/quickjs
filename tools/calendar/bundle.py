@@ -1,12 +1,30 @@
-"""Endian-independent QJCA calendar year records; no compression dependency."""
+"""Endian-independent QJCA year and era records; no compression dependency."""
 # Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
+import re
 import struct
 
 HEADER = struct.Struct('>4s7I')
 INDEX = struct.Struct('>IiIi4I')
 YEAR = struct.Struct('>iIBBH')
-KINDS = {'persian': 10, 'islamic-umalqura': 20, 'chinese': 30, 'dangi': 40}
+ERA = struct.Struct('>ii32s')
+KINDS = {'persian': 10, 'islamic-umalqura': 20, 'chinese': 30, 'dangi': 40,
+         'japanese': 50}
 NAMES = {v: k for k, v in KINDS.items()}
+
+
+def checked_eras(rows):
+    if not 1 <= len(rows) <= 1024:
+        raise ValueError('invalid Japanese era count')
+    previous, names = None, {'ce', 'bce', 'ad', 'bc'}
+    for day, offset, name in rows:
+        if (type(day) is not int or not -2147483648 <= day <= 2147483647 or
+                type(offset) is not int or not -1000000 <= offset <= 1000000 or
+                previous is not None and day <= previous or
+                not isinstance(name, str) or
+                not re.fullmatch(r'[a-z][a-z0-9-]{0,30}', name) or name in names):
+            raise ValueError('invalid Japanese era record')
+        previous = day
+        names.add(name)
 
 
 def checked_year(kind, months, leap):
@@ -44,6 +62,16 @@ def pack(datasets):
     version_at = string_start
     for data in datasets:
         kind = KINDS[data['calendar']]
+        if kind == 50:
+            rows = data['eras']
+            checked_eras(rows)
+            offset = payload_start + len(payload)
+            for day, year_offset, name in rows:
+                payload.extend(ERA.pack(day, year_offset, name.encode('ascii')))
+            index.extend(INDEX.pack(kind, 0, len(rows), 0, offset,
+                                    len(rows) * ERA.size, version_at, 0))
+            version_at += len(data['version'].encode('ascii')) + 1
+            continue
         rows = data['years']
         if not rows or len(rows) > 10000 or not -1000000 <= data['first_year'] <= 1000000 - len(rows) + 1:
             raise ValueError('invalid calendar year range')
@@ -55,7 +83,7 @@ def pack(datasets):
         index.extend(INDEX.pack(kind, data['first_year'], len(rows), data['end_epoch_day'],
                                 offset, len(rows) * YEAR.size, version_at, 0))
         version_at += len(data['version'].encode('ascii')) + 1
-    blob = HEADER.pack(b'QJCA', 1, payload_start + len(payload), len(datasets),
+    blob = HEADER.pack(b'QJCA', 2, payload_start + len(payload), len(datasets),
                        HEADER.size, string_start, payload_start, 1) + index + strings + payload
     unpack(blob)
     return blob
@@ -65,7 +93,7 @@ def unpack(blob):
     if len(blob) < HEADER.size or len(blob) > 1024 * 1024:
         raise ValueError('invalid calendar pack size')
     magic, version, size, count, index_at, strings_at, payload_at, algorithm = HEADER.unpack_from(blob)
-    if (magic, version, algorithm) != (b'QJCA', 1, 1) or size != len(blob):
+    if (magic, version, algorithm) != (b'QJCA', 2, 1) or size != len(blob):
         raise ValueError('invalid calendar pack header')
     if not 1 <= count <= len(KINDS) or index_at != HEADER.size or strings_at != index_at + count * INDEX.size:
         raise ValueError('invalid calendar pack index')
@@ -77,9 +105,12 @@ def unpack(blob):
         kind, first, years, end_day, offset, length, source, reserved = INDEX.unpack_from(blob, index_at + i * INDEX.size)
         if kind not in NAMES or kind <= previous or reserved:
             raise ValueError('invalid calendar kind or reserved field')
-        if not 1 <= years <= 10000 or not -1000000 <= first <= 1000000 - years + 1:
+        if (not 1 <= years <= (1024 if kind == 50 else 10000) or
+                (kind == 50 and (first or end_day)) or
+                (kind != 50 and not -1000000 <= first <= 1000000 - years + 1)):
             raise ValueError('invalid calendar year range')
-        if length != years * YEAR.size or offset != next_payload or length > size - offset:
+        record_size = ERA.size if kind == 50 else YEAR.size
+        if length != years * record_size or offset != next_payload or length > size - offset:
             raise ValueError('invalid calendar payload extent')
         if source != next_string or source >= payload_at:
             raise ValueError('invalid calendar source string offset')
@@ -88,6 +119,24 @@ def unpack(blob):
             raise ValueError('invalid calendar source string')
         version_text = blob[source:end].decode('ascii')
         next_string = end + 1
+        if kind == 50:
+            rows = []
+            for n in range(years):
+                day, year_offset, raw_name = ERA.unpack_from(blob, offset + n * ERA.size)
+                zero = raw_name.find(b'\0')
+                if zero < 0 or any(raw_name[zero:]):
+                    raise ValueError('invalid Japanese era name storage')
+                try:
+                    name = raw_name[:zero].decode('ascii')
+                except UnicodeDecodeError:
+                    raise ValueError('invalid Japanese era name')
+                rows.append((day, year_offset, name))
+            checked_eras(rows)
+            datasets.append({'calendar': 'japanese', 'version': version_text,
+                             'eras': rows})
+            next_payload += length
+            previous = kind
+            continue
         rows = []
         expected = None
         for n in range(years):

@@ -1,4 +1,4 @@
-/* Checked QJCA version 1 reader; no native-struct serialization.
+/* Checked QJCA version 2 reader; no native-struct serialization.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  */
 #include "data.h"
@@ -9,6 +9,7 @@
 #define HEADER_SIZE 32
 #define INDEX_SIZE 32
 #define YEAR_SIZE 12
+#define ERA_SIZE 40
 
 static uint32_t read_u32(const uint8_t *p)
 {
@@ -30,8 +31,34 @@ static unsigned calendar_kind(QJSCalendarId calendar)
     case QJS_CAL_ISLAMIC_UMALQURA: return 20;
     case QJS_CAL_CHINESE: return 30;
     case QJS_CAL_DANGI: return 40;
+    case QJS_CAL_JAPANESE: return 50;
     default: return 0;
     }
+}
+
+static int valid_era(const uint8_t *row)
+{
+    int32_t offset = read_i32(row + 4);
+    const uint8_t *name = row + 8;
+    unsigned i = 0;
+
+    if (offset < QJS_CAL_MIN_YEAR || offset > QJS_CAL_MAX_YEAR ||
+        name[0] < 'a' || name[0] > 'z')
+        return 0;
+    while (i < 32 && name[i]) {
+        if (!(name[i] >= 'a' && name[i] <= 'z') &&
+            !(i && ((name[i] >= '0' && name[i] <= '9') || name[i] == '-')))
+            return 0;
+        i++;
+    }
+    if (i == 32)
+        return 0;
+    while (i < 32) {
+        if (name[i++])
+            return 0;
+    }
+    return strcmp((const char *)name, "ce") && strcmp((const char *)name, "bce") &&
+           strcmp((const char *)name, "ad") && strcmp((const char *)name, "bc");
 }
 
 static int year_length(unsigned kind, const uint8_t *row)
@@ -77,13 +104,13 @@ int qjs_calendar_data_open(QJSCalendarData *result, const uint8_t *bytes,
     QJSCalendarData value;
 
     if (size < HEADER_SIZE || size > 1024 * 1024 ||
-        memcmp(bytes, "QJCA", 4) || read_u32(bytes + 4) != 1 ||
+        memcmp(bytes, "QJCA", 4) || read_u32(bytes + 4) != 2 ||
         read_u32(bytes + 8) != size || read_u32(bytes + 28) != 1)
         return QJS_CAL_BACKEND;
     count = read_u32(bytes + 12);
     strings = read_u32(bytes + 20);
     payload = read_u32(bytes + 24);
-    if (!count || count > 4 || read_u32(bytes + 16) != HEADER_SIZE ||
+    if (!count || count > 5 || read_u32(bytes + 16) != HEADER_SIZE ||
         strings != HEADER_SIZE + count * INDEX_SIZE ||
         strings > payload || payload > size || payload % 4)
         return QJS_CAL_BACKEND;
@@ -93,15 +120,18 @@ int qjs_calendar_data_open(QJSCalendarData *result, const uint8_t *bytes,
         const uint8_t *entry = bytes + HEADER_SIZE + i * INDEX_SIZE;
         uint32_t kind = read_u32(entry), years = read_u32(entry + 8);
         uint32_t offset = read_u32(entry + 16), length = read_u32(entry + 20);
+        unsigned record_size = kind == 50 ? ERA_SIZE : YEAR_SIZE;
         int32_t first = read_i32(entry + 4), end = read_i32(entry + 12);
         size_t start = next_string;
         int64_t expected = 0;
         uint32_t n;
 
-        if ((kind != 10 && kind != 20 && kind != 30 && kind != 40) ||
-            kind <= previous || read_u32(entry + 28) || !years || years > 10000 ||
+        if ((kind != 10 && kind != 20 && kind != 30 && kind != 40 && kind != 50) ||
+            kind <= previous || read_u32(entry + 28) || !years ||
+            years > (kind == 50 ? 1024 : 10000) ||
             first < QJS_CAL_MIN_YEAR || (int64_t)first + years - 1 > QJS_CAL_MAX_YEAR ||
-            length != years * YEAR_SIZE || offset != next_payload ||
+            (kind == 50 && (first || end)) ||
+            length != years * record_size || offset != next_payload ||
             offset > size || length > size - offset ||
             read_u32(entry + 24) != next_string)
             return QJS_CAL_BACKEND;
@@ -114,15 +144,30 @@ int qjs_calendar_data_open(QJSCalendarData *result, const uint8_t *bytes,
             return QJS_CAL_BACKEND;
         next_string++;
         for (n = 0; n < years; n++) {
-            const uint8_t *row = bytes + offset + n * YEAR_SIZE;
-            int days = year_length(kind, row);
-            int32_t day = read_i32(row);
+            const uint8_t *row = bytes + offset + n * record_size;
+            uint32_t j;
+            int days;
+            int32_t day;
+
+            if (kind == 50) {
+                if (!valid_era(row) || (n && read_i32(row) <= expected))
+                    return QJS_CAL_BACKEND;
+                for (j = 0; j < n; j++) {
+                    if (!strcmp((const char *)bytes + offset + j * ERA_SIZE + 8,
+                                (const char *)row + 8))
+                        return QJS_CAL_BACKEND;
+                }
+                expected = read_i32(row);
+                continue;
+            }
+            days = year_length(kind, row);
+            day = read_i32(row);
 
             if (!days || (n && day != expected))
                 return QJS_CAL_BACKEND;
             expected = (int64_t)day + days;
         }
-        if (expected != end)
+        if (kind != 50 && expected != end)
             return QJS_CAL_BACKEND;
         previous = kind;
         next_payload += length;
@@ -163,7 +208,7 @@ int qjs_calendar_data_year(const QJSCalendarData *data, QJSCalendarId calendar,
     uint32_t count;
     QJSCalendarYear value;
 
-    if (!entry)
+    if (!entry || calendar == QJS_CAL_JAPANESE)
         return QJS_CAL_UNSUPPORTED;
     index = (int64_t)year - read_i32(entry + 4);
     count = read_u32(entry + 8);
@@ -185,4 +230,29 @@ const char *qjs_calendar_data_version(const QJSCalendarData *data,
     const uint8_t *entry = find_calendar(data, calendar);
 
     return entry ? (const char *)data->bytes + read_u32(entry + 24) : NULL;
+}
+
+size_t qjs_calendar_data_japanese_era_count(const QJSCalendarData *data)
+{
+    const uint8_t *entry = find_calendar(data, QJS_CAL_JAPANESE);
+
+    return entry ? read_u32(entry + 8) : 0;
+}
+
+int qjs_calendar_data_japanese_era(const QJSCalendarData *data, size_t index,
+                                   QJSCalendarEra *result)
+{
+    const uint8_t *entry = find_calendar(data, QJS_CAL_JAPANESE), *row;
+    QJSCalendarEra value;
+
+    if (!entry)
+        return QJS_CAL_UNSUPPORTED;
+    if (index >= read_u32(entry + 8))
+        return QJS_CAL_RANGE;
+    row = data->bytes + read_u32(entry + 16) + index * ERA_SIZE;
+    value.first_day = read_i32(row);
+    value.year_offset = read_i32(row + 4);
+    value.name = (const char *)row + 8;
+    *result = value;
+    return QJS_CAL_OK;
 }
