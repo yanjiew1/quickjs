@@ -102,7 +102,7 @@ jobs:
       - name: Verify benchmark tool contracts
         run: |
           python3 -m unittest discover -s tooling/tools/benchmarks -p 'test_*.py'
-      - name: Build and compare fresh JavaScript processes
+      - name: Build without assertions and compare fresh JavaScript processes
         run: |
           python3 tooling/tools/benchmarks/run.py \
             --candidate candidate --candidate-revision "$CANDIDATE_SHA" \
