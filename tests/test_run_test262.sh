@@ -24,6 +24,7 @@
 set -eu
 test262_runner=${MESON_EXE_WRAPPER:-}
 test262_binary=${1:-./run-test262}
+test262_temporal=${2:-n}
 case "$test262_binary" in
     /*) ;;
     *) test262_binary="$(pwd)/$test262_binary" ;;
@@ -595,6 +596,33 @@ CONFIG
 invoke_runner no -q -c "$test262_tmp/dst-config" -T 2 -a -d "$test262_tmp/test262/test"
 test "$test262_status" -eq 0
 grep -Fx 'Result: 0/1 error, 8 excluded' "$test262_tmp/err"
+
+# Build-selected Temporal coverage must execute in enabled builds and skip
+# only when the runner really lacks the feature.
+cat > "$test262_tmp/temporal-config" <<'CONFIG'
+[config]
+style=new
+harnessdir=harness
+[features]
+Temporal=auto
+CONFIG
+cat > "$test262_tmp/temporal.js" <<'JS'
+/*---
+features: [Temporal]
+flags: [noStrict]
+---*/
+if (typeof Temporal !== "object") throw Error("Temporal was not installed");
+JS
+invoke_runner no -q -c "$test262_tmp/temporal-config" \
+    --timing-log "$test262_tmp/temporal.jsonl" -f "$test262_tmp/temporal.js"
+test "$test262_status" -eq 0
+python3 - "$test262_tmp/temporal.jsonl" "$test262_temporal" <<'PYCODE'
+import json, sys
+with open(sys.argv[1]) as stream:
+    rows = [json.loads(line) for line in stream]
+assert len(rows) == 1
+assert rows[0]['status'] == ('pass' if sys.argv[2] == 'y' else 'skipped')
+PYCODE
 
 # Path capabilities replace a broad rule at a narrower directory or exact
 # file. Metadata requirements remain independent and conjunctive.
