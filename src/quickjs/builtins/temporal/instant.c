@@ -488,7 +488,7 @@ static JSValue js_temporal_instant_to_zoned(JSContext *ctx,
     if (js_temporal_to_time_zone(ctx, argv[0], &zone))
         return JS_EXCEPTION;
     result = js_temporal_create_zoned_date_time(ctx, JS_UNDEFINED, *instant,
-                                               &zone, QJS_TEMPORAL_CAL_ISO8601);
+                                               &zone, QJS_CAL_ISO8601);
     js_temporal_free_time_zone(ctx, &zone);
     return result;
 }
