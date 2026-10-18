@@ -2,12 +2,13 @@
 """Generate one calendar binary from the checked normalized publications."""
 # Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
 import argparse
+import datetime
 import json
 from pathlib import Path
 
 from acquire import SOURCES, atomic_write, checked_sources, digest
 from bundle import pack, unpack
-from normalize import persian, ummalqura
+from normalize import EPOCH, japanese_eras, persian, ummalqura
 
 
 def datasets():
@@ -49,6 +50,16 @@ def datasets():
         result.append({'calendar': name, 'first_year': data['first_year'],
                        'end_epoch_day': data['end_epoch_day'], 'years': years,
                        'version': name + '-publications-20261019-model1'})
+    eras = japanese_eras((SOURCES / 'cldr-calendarData.json').read_text(encoding='utf-8'))
+    if json.loads((SOURCES.parent / 'japanese.json').read_text()) != eras:
+        raise ValueError('normalized Japanese eras differ from source')
+    rows = []
+    for name, date, offset in eras['eras']:
+        day = (datetime.date(*map(int, date.split('-'))) - EPOCH).days
+        rows.append((day, offset, name))
+    result.append({'calendar': 'japanese', 'version':
+                   'cldr-' + pin['sources']['cldr-calendarData.json']['revision'],
+                   'eras': rows})
     return result, pin
 
 
@@ -56,13 +67,19 @@ def generate(output, manifest):
     records, pin = datasets()
     binary = pack(records)
     contents = unpack(binary)
-    receipt = {'format': 'QJCA', 'format_version': 1, 'algorithm_version': 1,
+    receipt = {'format': 'QJCA', 'format_version': 2, 'algorithm_version': 1,
                'spec_commit': pin['spec_commit'], 'sources': pin['sources'],
                'normalized': pin['normalized'], 'boundary_model': pin['boundary_model'],
                'boundary_months': pin['boundary_months'],
                'binary_sha256': digest(binary), 'binary_size': len(binary),
                'calendars': []}
     for data in contents:
+        if data['calendar'] == 'japanese':
+            receipt['calendars'].append({'calendar': 'japanese',
+                'version': data['version'], 'era_count': len(data['eras']),
+                'eras': [{'first_epoch_day': day, 'year_offset': offset, 'name': name}
+                         for day, offset, name in data['eras']]})
+            continue
         record = {k: v for k, v in data.items() if k != 'years'}
         record['year_count'] = len(data['years'])
         record['first_epoch_day'] = data['years'][0][0]
