@@ -291,6 +291,13 @@ endforeach
 standalone = {
 }
 standalone += {
+  'test_native_timezone': files(
+    'test_native_timezone.c',
+    '../src/calendar/iso.c',
+    '../src/timezone/timezone.c',
+    '../src/timezone/timezone-native.c',
+    '../src/timezone/tzif.c',
+  ) + [timezone_data],
   'test_tzif_decoder': files(
     'test_tzif_decoder.c',
     '../src/calendar/iso.c',
