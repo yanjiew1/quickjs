@@ -1,5 +1,6 @@
 /* Observable Temporal field coercion, calendar and zone identifiers.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE. */
+#include "../../../calendar/calendar.h"
 #include "calendar-fields.h"
 #include <string.h>
 
@@ -259,13 +260,13 @@ int js_temporal_to_calendar(JSContext *ctx, JSValueConst value,
     }
     text = JS_ToCStringLen(ctx, &length, identifier);
     if (!text) return -1;
-    error = qjs_temporal_calendar_from_identifier(result, text, length);
+    error = qjs_calendar_from_identifier(result, text, length);
     if (error && !qjs_temporal_parse_iso_datetime(&parsed, text, length,
             QJS_TEMPORAL_PARSE_DATE_TIME | QJS_TEMPORAL_PARSE_ZONED |
             QJS_TEMPORAL_PARSE_INSTANT | QJS_TEMPORAL_PARSE_TIME | QJS_TEMPORAL_PARSE_YEAR_MONTH | QJS_TEMPORAL_PARSE_MONTH_DAY))
-        error = qjs_temporal_calendar_from_identifier(result,
-                parsed.calendar ? parsed.calendar : "iso8601",
-                parsed.calendar ? parsed.calendar_length : 7);
+        error = qjs_calendar_from_identifier(result,
+                                             parsed.calendar ? parsed.calendar : "iso8601",
+                                             parsed.calendar ? parsed.calendar_length : 7);
     JS_FreeCString(ctx, text);
     return js_temporal_calendar_error(ctx, error);
 }
@@ -545,9 +546,9 @@ int js_temporal_get_relative_to(JSContext *ctx, JSValueConst options,
         error = qjs_temporal_parse_iso_datetime(&parsed, text, length,
                     QJS_TEMPORAL_PARSE_DATE_TIME | QJS_TEMPORAL_PARSE_ZONED);
         if (!error) {
-            error = qjs_temporal_calendar_from_identifier(&calendar,
-                parsed.calendar ? parsed.calendar : "iso8601",
-                parsed.calendar ? parsed.calendar_length : 7);
+            error = qjs_calendar_from_identifier(&calendar,
+                                                 parsed.calendar ? parsed.calendar : "iso8601",
+                                                 parsed.calendar ? parsed.calendar_length : 7);
             if (!error && parsed.time_zone) {
                 identifier = JS_NewStringLen(ctx, parsed.time_zone, parsed.time_zone_length);
                 if (JS_IsException(identifier)) error = -100;
