@@ -17,6 +17,12 @@ Use these sources in order:
    sources do not give sufficient algorithms.
 4. ICU4C implementations and documentation for comparison and remaining details.
 
+For Temporal while Stage 4 remains unmerged, the PR specification is primary.
+Resolve apparent specification defects using its PR discussion first, then the
+Temporal proposal specification. If these still do not settle a question,
+choose a reasonable interpretation and record the reasoning and focused tests.
+Do not silently treat a reference implementation as normative.
+
 An implementation's newer release does not establish conformance. Check the
 chosen model, published data, negative years, division, range and overflow
 semantics against the specification. Review reusable QuickJS and QuickJS-NG
