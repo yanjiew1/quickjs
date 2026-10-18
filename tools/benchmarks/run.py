@@ -277,6 +277,24 @@ def require_assertions_disabled(commands):
             raise ValueError("Every compiled runtime object must disable assertions with -DNDEBUG")
 
 
+def compiled_feature_config(commands):
+    """Report feature defines actually present in compiled translation units."""
+    names = ("CONFIG_INTL", "CONFIG_TEMPORAL", "CONFIG_ICU")
+    enabled = set()
+    for command in commands:
+        definitions = set()
+        words = iter(shlex.split(command))
+        for word in words:
+            if word in ("-D", "-U"):
+                word += next(words, "")
+            if word.startswith("-D"):
+                definitions.add(word[2:].split("=", 1)[0])
+            elif word.startswith("-U"):
+                definitions.discard(word[2:])
+        enabled.update(definitions)
+    return {name: "y" if name in enabled else "n" for name in names}
+
+
 def build(source, compiler, output, jobs, suite="core"):
     require_pristine_build(source)
     if (source / "meson.build").is_file():
@@ -308,7 +326,9 @@ def build(source, compiler, output, jobs, suite="core"):
         raise ValueError("Build did not produce qjs")
     return {"command": command, "seconds": elapsed, "binary": str(binary),
             "binary_sha256": sha256(binary), "build_log_sha256": sha256(output / "build.log"),
-            "actual_compile_commands": compiler_lines, "feature_config": config,
+            "actual_compile_commands": compiler_lines,
+            "feature_config": compiled_feature_config(compiler_lines),
+            "requested_feature_config": config,
             "build_environment": {"CFLAGS": build_env["CFLAGS"]},
             "assertions_enabled": False,
             "flags": "Makefile defaults with -O2, -DNDEBUG, non-LTO, no sanitizers, Werror"}
@@ -357,7 +377,7 @@ def build_meson(source, compiler, output, jobs, suite):
             "binary_sha256": sha256(binary),
             "build_log_sha256": sha256(output / "build.log"),
             "actual_compile_commands": compiler_lines,
-            "feature_config": feature_config(suite),
+            "feature_config": compiled_feature_config(compiler_lines),
             "assertions_enabled": False,
             "flags": "Meson -O2, -DNDEBUG, non-LTO, no sanitizers, Werror"}
 
@@ -507,7 +527,8 @@ def main():
              "parent_revision": args.parent_revision,
              "comparison": "candidate versus actual immediate first parent",
              "tooling_revision": args.tooling_revision, "runner_sha256": sha256(__file__),
-             "feature_config": feature_config(args.suite),
+             "feature_config": {},
+             "legacy_make_feature_request": feature_config(args.suite),
              "suite": args.suite, "rounds": {"v8": args.rounds, "microbench": args.rounds, "zoo": 10},
              "fresh_process_per_case": True, "manifest_sha256": sha256(MANIFEST)}
     rows = []
@@ -535,6 +556,7 @@ def main():
             directory = args.output / variant
             directory.mkdir()
             builds[variant] = build(source, args.compiler, directory, args.build_jobs, args.suite)
+            state["feature_config"][variant] = builds[variant]["feature_config"]
             write_json(args.output / "builds.json", builds)
         checked_revision(args.candidate, args.candidate_revision)
         checked_revision(args.parent, args.parent_revision)

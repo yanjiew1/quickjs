@@ -13,6 +13,19 @@ import select_benchmark
 
 
 class BenchmarkToolTests(unittest.TestCase):
+    def test_build_features_follow_actual_defines(self):
+        self.assertEqual(run.compiled_feature_config([
+            "cc -DCONFIG_TEMPORAL -c engine.c",
+            "cc -DCONFIG_TEMPORAL -c builtin.c",
+        ]), {"CONFIG_INTL": "n", "CONFIG_TEMPORAL": "y", "CONFIG_ICU": "n"})
+        self.assertEqual(run.compiled_feature_config([
+            "cc -DCONFIG_TEMPORAL_STUB -DCONFIG_INTL=0 -D CONFIG_ICU=1 "
+            "-DCONFIG_TEMPORAL -U CONFIG_TEMPORAL -c engine.c",
+        ]), {"CONFIG_INTL": "y", "CONFIG_TEMPORAL": "n", "CONFIG_ICU": "y"})
+        self.assertEqual(run.compiled_feature_config([
+            "cc -DCONFIG_ICU -UCONFIG_ICU -c engine.c",
+        ]), {"CONFIG_INTL": "n", "CONFIG_TEMPORAL": "n", "CONFIG_ICU": "n"})
+
     def test_actual_parent_contract_rejects_other_revision(self):
         with patch.object(run.subprocess, "run", return_value=
                           subprocess.CompletedProcess([], 0, "b" * 40 + "\n", "")) as git:
