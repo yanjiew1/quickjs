@@ -227,6 +227,23 @@ executable(
   override_options: ['b_lto=false', 'b_sanitize=none'],
   build_by_default: false,
 )
+# Selected calendar repository tests execute this build-machine tool.
+calendar_boundary = executable(
+  'calendar-boundary',
+  [
+    'tools/calendar/boundary.c',
+    'src/calendar/astronomy.c',
+    'src/calendar/iso.c',
+    'src/calendar/lunisolar.c',
+  ],
+  native: true,
+  c_args: native_args,
+  include_directories: inc,
+  dependencies: native_deps,
+  override_options: ['b_lto=false', 'b_sanitize=none'],
+  build_by_default: get_option('tests') and (get_option('temporal')),
+)
+
 # A validated byte pack has one C owner, generated without target execution.
 calendar_data = custom_target(
   'native-calendar-data',
