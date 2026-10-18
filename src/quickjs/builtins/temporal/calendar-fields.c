@@ -27,7 +27,7 @@ int js_temporal_calendar_error(JSContext *ctx, int error)
     return -1;
 }
 int js_temporal_calendar_date_add(
-    JSContext *ctx, QJSTemporalCalendar calendar, QJSTemporalISODate date,
+    JSContext *ctx, QJSCalendarId calendar, QJSTemporalISODate date,
     QJSTemporalDateDuration duration, QJSTemporalOverflow overflow,
     QJSTemporalISODate *result)
 {
@@ -86,7 +86,7 @@ static int offset_string(JSContext *ctx, JSValueConst value, JSValue *result)
     return 0;
 }
 int js_temporal_prepare_calendar_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, JSValueConst object,
+    QJSCalendarId calendar, JSValueConst object,
     unsigned calendar_names, unsigned non_calendar_names,
     unsigned required_names, BOOL partial, JSTemporalFields *result)
 {
@@ -169,7 +169,7 @@ int js_temporal_prepare_calendar_fields(JSContext *ctx,
     return -1;
 }
 int js_temporal_iso_date_to_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, QJSTemporalISODate date,
+    QJSCalendarId calendar, QJSTemporalISODate date,
     JSTemporalFields *result)
 {
     QJSTemporalCalendarDate record;
@@ -185,7 +185,7 @@ int js_temporal_iso_date_to_fields(JSContext *ctx,
     return 0;
 }
 void js_temporal_calendar_merge_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, const JSTemporalFields *original,
+    QJSCalendarId calendar, const JSTemporalFields *original,
     const JSTemporalFields *additional, JSTemporalFields *result)
 {
     unsigned kept = original->present &
@@ -228,7 +228,7 @@ void js_temporal_calendar_merge_fields(JSContext *ctx,
     result->calendar.present = result->present &
         (QJS_TEMPORAL_DATE_FIELDS | QJS_TEMPORAL_FIELD_ERA | QJS_TEMPORAL_FIELD_ERA_YEAR);
 }
-static int calendar_from_slot(JSValueConst value, QJSTemporalCalendar *result)
+static int calendar_from_slot(JSValueConst value, QJSCalendarId *result)
 {
     if (JS_IsObject(value)) {
         JSTemporalPlainDateData *date;
@@ -246,7 +246,7 @@ static int calendar_from_slot(JSValueConst value, QJSTemporalCalendar *result)
     return 0;
 }
 int js_temporal_to_calendar(JSContext *ctx, JSValueConst value,
-                            QJSTemporalCalendar *result)
+                            QJSCalendarId *result)
 {
     JSValueConst identifier = value;
     const char *text;
@@ -270,14 +270,14 @@ int js_temporal_to_calendar(JSContext *ctx, JSValueConst value,
     return js_temporal_calendar_error(ctx, error);
 }
 int js_temporal_get_calendar(JSContext *ctx, JSValueConst object,
-                             QJSTemporalCalendar *result)
+                             QJSCalendarId *result)
 {
     JSValue value;
     int error;
     if (calendar_from_slot(object, result)) return 0;
     value = JS_GetPropertyStr(ctx, object, "calendar");
     if (JS_IsException(value)) return -1;
-    if (JS_IsUndefined(value)) { JS_FreeValue(ctx, value); *result = QJS_TEMPORAL_CAL_ISO8601; return 0; }
+    if (JS_IsUndefined(value)) { JS_FreeValue(ctx, value); *result = QJS_CAL_ISO8601; return 0; }
     error = js_temporal_to_calendar(ctx, value, result);
     JS_FreeValue(ctx, value);
     return error;
@@ -493,7 +493,7 @@ int js_temporal_get_relative_to(JSContext *ctx, JSValueConst options,
     JSTemporalPlainDateTimeData *datetime_slot;
     JSTemporalZonedDateTimeData *zoned;
     QJSTemporalISODateTime datetime;
-    QJSTemporalCalendar calendar;
+    QJSCalendarId calendar;
     QJSTemporalEpochNs epoch;
     JSTemporalFields fields;
     QJSTemporalParsedISO parsed;
