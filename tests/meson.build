@@ -75,10 +75,17 @@ if get_option('temporal')
     )
   endforeach
   if get_option('timezone_backend') == 'native'
+    iana_args = ['--std', 'tests/test_temporal_iana.js']
+    iana_env = []
+    if host_machine.system() != 'windows'
+      iana_args += '--default-ny'
+      iana_env += 'TZ=:US/Eastern'
+    endif
     test(
       'temporal-iana',
       qjs,
-      args: ['--std', 'tests/test_temporal_iana.js'],
+      args: iana_args,
+      env: iana_env,
       suite: ['repo', 'temporal'],
       workdir: test_workdir,
       depends: test_deps,
@@ -172,6 +179,15 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_system_timezone': [
+    'test_system_timezone.c',
+    '../src/calendar/iso.c',
+    '../src/timezone/system-zone.c',
+    '../src/timezone/timezone.c',
+    '../src/timezone/timezone-minimal.c',
+    '../src/timezone/windows-zone.c',
+    windows_timezone_data,
+  ],
   'test_windows_timezone': [
     'test_windows_timezone.c',
     '../src/timezone/windows-zone.c',
