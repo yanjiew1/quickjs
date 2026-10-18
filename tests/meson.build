@@ -119,6 +119,11 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_temporal_clock': [
+    'test_temporal_clock.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/clock.c',
+  ],
   'test_temporal_zone_rules': [
     'test_temporal_zone_rules.c',
     '../src/calendar/iso.c',
