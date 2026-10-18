@@ -186,8 +186,10 @@ standalone = {
   ],
   'test_calendar_islamic': [
     'test_calendar_islamic.c',
+    '../src/calendar/data.c',
     '../src/calendar/iso.c',
     '../src/calendar/islamic.c',
+    calendar_data,
   ],
   'test_calendar_hebrew': [
     'test_calendar_hebrew.c',
