@@ -29,6 +29,8 @@
 
 #include "../src/quickjs/internal/allocator.h"
 #include "../src/quickjs/internal/atom.h"
+#include "../src/quickjs/internal/global-environment.h"
+#include "../src/quickjs/internal/bytecode.h"
 #include "../src/quickjs/internal/error.h"
 #include "../src/quickjs/internal/bigint.h"
 #include "../src/quickjs/internal/disposal.h"
@@ -1889,6 +1891,71 @@ static void test_compiler_value_allocation_failure(void)
     }
 }
 
+static void test_numeric_global_reference_allocation_failure(void)
+{
+    static const char source[] = "(function() { reference_target += 1; })";
+    OOMTestAllocator allocator;
+    PromiseAllocationFailure padding = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSFunctionBytecode *b;
+    JSValue func, result, base;
+    JSAtom atom;
+    int pos, count = 0, ref_count;
+    void *ptr;
+
+    assert(ctx);
+    atom = JS_NewAtomUInt32(ctx, 123456789);
+    assert(atom != JS_ATOM_NULL);
+    base = JS_GetGlobalVarRef(ctx, atom);
+    assert(JS_IsUndefined(base));
+    assert(JS_DefinePropertyValue(ctx, ctx->global_obj, atom,
+                                 JS_NewInt32(ctx, 1), JS_PROP_C_W_E) >= 0);
+    ref_count = js_rc(JS_VALUE_GET_PTR(ctx->global_var_obj))->ref_count;
+    base = JS_GetGlobalVarRef(ctx, atom);
+    assert(JS_IsObject(base));
+    assert(JS_VALUE_GET_OBJ(base) == JS_VALUE_GET_OBJ(ctx->global_var_obj));
+    assert(js_rc(JS_VALUE_GET_PTR(base))->ref_count == ref_count + 1);
+    JS_FreeValue(ctx, base);
+    assert(js_rc(JS_VALUE_GET_PTR(ctx->global_var_obj))->ref_count == ref_count);
+
+    func = JS_Eval(ctx, source, strlen(source), "numeric-global-reference.js",
+                   JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(func));
+    b = JS_GetFunctionBytecode(func);
+    assert(b);
+    /* Numeric identifiers require an internal fixture. Keep the compiler's
+       stack layout and replace only the reference's owned atom operand. */
+    for (pos = 0; pos < b->byte_code_len;) {
+        int op = b->byte_code_buf[pos];
+        if (op == OP_make_var_ref) {
+            JS_FreeAtom(ctx, get_u32(b->byte_code_buf + pos + 1));
+            put_u32(b->byte_code_buf + pos + 1, JS_DupAtom(ctx, atom));
+            count++;
+        }
+        pos += short_opcode_info(op).size;
+    }
+    assert(count == 1);
+    exhaust_pooled_free_blocks(rt, &padding);
+    ref_count = js_rc(JS_VALUE_GET_PTR(ctx->global_var_obj))->ref_count;
+    oom_test_begin(&allocator, 1);
+    result = JS_Call(ctx, func, JS_UNDEFINED, 0, NULL);
+    oom_test_end(&allocator);
+    assert(JS_IsException(result) && allocator.failures == 1);
+    assert(js_rc(JS_VALUE_GET_PTR(ctx->global_var_obj))->ref_count == ref_count);
+    oom_test_check_exception(ctx);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, func);
+    while ((ptr = padding.padding) != NULL) {
+        memcpy(&padding.padding, ptr, sizeof(padding.padding));
+        js_free_rt(rt, ptr);
+    }
+    JS_FreeAtom(ctx, atom);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
 static void test_basic_object_allocation_failures(void)
 {
     size_t fail_at, allocations = 0;
@@ -1969,6 +2036,7 @@ int main(void)
     test_cstring_allocation_failure();
     test_string_buffer_growth();
     test_array_allocation_size();
+    test_numeric_global_reference_allocation_failure();
     test_basic_object_allocation_failures();
     test_promise_capability_allocation_failure();
     test_compiler_var_lookup_allocation_failure();
