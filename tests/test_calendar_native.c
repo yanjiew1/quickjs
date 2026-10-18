@@ -169,7 +169,7 @@ int main(void)
         assert(epoch == 123);
     }
     publication_months(QJS_CAL_CHINESE, 1899, 2100);
-    publication_months(QJS_CAL_DANGI, 1899, 2050);
+    publication_months(QJS_CAL_DANGI, 1899, 2100);
     publication_months(QJS_CAL_PERSIAN, 1206, 1498);
     publication_months(QJS_CAL_ISLAMIC_UMALQURA, 1300, 1600);
     assert(!qjs_calendar_month_ordinal(QJS_CAL_HEBREW, 5784, "M05L", 0, &ordinal) && ordinal == 6);
