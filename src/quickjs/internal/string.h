@@ -73,6 +73,17 @@ typedef struct JSStringRope {
 } JSStringRope;
 
 
+/* Flat storage and ropes have different layouts and distinct value tags. */
+static inline BOOL JS_IsStringRope(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING_ROPE;
+}
+
+static inline BOOL JS_IsFlatString(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING;
+}
+
 static inline int string_get(const JSString *p, int idx) {
     return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
 }
