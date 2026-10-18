@@ -1,4 +1,4 @@
-/* Immutable, endian-independent calendar publication records.
+/* Immutable, endian-independent calendar publication and era records.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  */
 #ifndef QUICKJS_CALENDAR_DATA_H
@@ -21,6 +21,11 @@ typedef struct QJSCalendarYear {
     uint8_t months, leap_month;
 } QJSCalendarYear;
 
+typedef struct QJSCalendarEra {
+    int32_t first_day, year_offset;
+    const char *name;
+} QJSCalendarEra;
+
 /* The caller retains the immutable byte span for the view's lifetime. Open
    validates the complete pack. Queries require that view (or an equivalently
    validated compiled view), allocate nothing and preserve outputs on failure. */
@@ -30,5 +35,10 @@ int qjs_calendar_data_year(const QJSCalendarData *data, QJSCalendarId calendar,
                            int32_t year, QJSCalendarYear *result);
 const char *qjs_calendar_data_version(const QJSCalendarData *data,
                                       QJSCalendarId calendar);
+/* Era names borrow the same immutable span as the data view. An absent era
+   dataset has count zero. Queries preserve outputs on failure. */
+size_t qjs_calendar_data_japanese_era_count(const QJSCalendarData *data);
+int qjs_calendar_data_japanese_era(const QJSCalendarData *data, size_t index,
+                                   QJSCalendarEra *result);
 extern const QJSCalendarData qjs_native_calendar_data;
 #endif /* QUICKJS_CALENDAR_DATA_H */
