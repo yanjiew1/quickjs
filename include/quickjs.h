@@ -91,7 +91,6 @@ enum {
     JS_TAG_BIG_INT     = -9,
     JS_TAG_SYMBOL      = -8,
     JS_TAG_STRING      = -7,
-    JS_TAG_STRING_ROPE = -6,
     JS_TAG_MODULE      = -3, /* used internally */
     JS_TAG_FUNCTION_BYTECODE = -2, /* used internally */
     JS_TAG_OBJECT      = -1,
@@ -677,8 +676,7 @@ static inline JS_BOOL JS_IsUninitialized(JSValueConst v)
 
 static inline JS_BOOL JS_IsString(JSValueConst v)
 {
-    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING ||
-        JS_VALUE_GET_TAG(v) == JS_TAG_STRING_ROPE;
+    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING;
 }
 
 static inline JS_BOOL JS_IsSymbol(JSValueConst v)

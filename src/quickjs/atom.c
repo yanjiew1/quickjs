@@ -376,6 +376,7 @@ static JSAtom __JS_NewAtom(JSRuntime *rt, JSString *str, int atom_type)
                 goto fail;
             js_rc(p)->ref_count = 1;
             p->is_wide_char = str->is_wide_char;
+            p->is_rope = 0;
             p->len = str->len;
 #ifdef DUMP_LEAKS
             list_add_tail(&p->link, &rt->string_list);
@@ -391,6 +392,7 @@ static JSAtom __JS_NewAtom(JSRuntime *rt, JSString *str, int atom_type)
         js_rc(p)->ref_count = 1;
         p->is_wide_char = 1;    /* Hack to represent NULL as a JSString */
         p->len = 0;
+        p->is_rope = 0;
 #ifdef DUMP_LEAKS
         list_add_tail(&p->link, &rt->string_list);
 #endif

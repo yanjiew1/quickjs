@@ -333,7 +333,6 @@ static JSValue JS_ToNumberHintFree(JSContext *ctx, JSValue val,
             return JS_EXCEPTION;
         goto redo;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
         {
             const char *str;
             const char *p;

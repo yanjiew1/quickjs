@@ -151,7 +151,6 @@ static JSValue js_json_check(JSContext *ctx, JSONStringifyContext *jsc,
         if (JS_IsFunction(ctx, val))
             break;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
     case JS_TAG_INT:
     case JS_TAG_FLOAT64:
     case JS_TAG_BOOL:
@@ -334,7 +333,6 @@ static int js_json_to_str(JSContext *ctx, JSONStringifyContext *jsc,
  concat_primitive:
     switch (JS_VALUE_GET_NORM_TAG(val)) {
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
         return JS_ToQuotedStringFree(ctx, jsc->b, val);
     case JS_TAG_FLOAT64:
         if (!isfinite(JS_VALUE_GET_FLOAT64(val))) {

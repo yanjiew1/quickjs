@@ -106,7 +106,7 @@ const char *get_prop_string(JSContext *ctx, JSValueConst obj, JSAtom prop)
     if ((prs->flags & JS_PROP_TMASK) != JS_PROP_NORMAL)
         return NULL;
     val = pr->u.value;
-    if (JS_VALUE_GET_TAG(val) != JS_TAG_STRING)
+    if (!JS_IsFlatString(val))
         return NULL;
     return JS_ToCString(ctx, val);
 }

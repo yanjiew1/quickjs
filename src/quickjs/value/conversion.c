@@ -131,12 +131,6 @@ int JS_ToBoolFree(JSRuntime *rt, JSValue val)
             JS_FreeValueRT(rt, val);
             return ret;
         }
-    case JS_TAG_STRING_ROPE:
-        {
-            BOOL ret = JS_VALUE_GET_STRING_ROPE(val)->len != 0;
-            JS_FreeValueRT(rt, val);
-            return ret;
-        }
     case JS_TAG_SHORT_BIG_INT:
         return JS_VALUE_GET_SHORT_BIG_INT(val) != 0;
     case JS_TAG_BIG_INT:
@@ -191,9 +185,9 @@ static JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToP
     tag = JS_VALUE_GET_NORM_TAG(val);
     switch(tag) {
     case JS_TAG_STRING:
+        if (JS_VALUE_GET_STRING(val)->is_rope)
+            return js_linearize_string_rope(ctx, JS_DupValue(ctx, val));
         return JS_DupValue(ctx, val);
-    case JS_TAG_STRING_ROPE:
-        return js_linearize_string_rope(ctx, JS_DupValue(ctx, val));
     case JS_TAG_INT:
         {
             size_t len;
@@ -249,7 +243,7 @@ JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
 {
     JSValue ret;
     /* Rope inputs still need the normal flattening path. */
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING)
+    if (JS_IsFlatString(val))
         return val;
     ret = JS_ToString(ctx, val);
     JS_FreeValue(ctx, val);

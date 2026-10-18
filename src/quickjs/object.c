@@ -139,7 +139,6 @@ JSValue JS_ToObject(JSContext *ctx, JSValueConst val)
         obj = JS_NewObjectClass(ctx, JS_CLASS_NUMBER);
         goto set_value;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
         /* XXX: should call the string constructor */
         {
             JSValue str;
@@ -1023,8 +1022,7 @@ int JS_SetObjectData(JSContext *ctx, JSValueConst obj, JSValue val)
         case JS_CLASS_BIG_INT:
             JS_FreeValue(ctx, p->u.object_data);
             p->u.object_data = val; /* for JS_CLASS_STRING, 'val' must
-                                       be JS_TAG_STRING (and not a
-                                       rope) */
+                                       be a flat string */
             return 0;
         }
     }
@@ -1313,7 +1311,6 @@ static JSValueConst JS_GetPrototypePrimitive(JSContext *ctx, JSValueConst val)
         val = ctx->class_proto[JS_CLASS_BOOLEAN];
         break;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
         val = ctx->class_proto[JS_CLASS_STRING];
         break;
     case JS_TAG_SYMBOL:
@@ -1544,21 +1541,9 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                     uint32_t idx;
                     idx = __JS_AtomToUInt32(prop);
                     if (idx < p1->len) {
-                        return js_new_string_char(ctx, string_get(p1, idx));
-                    }
-                } else if (prop == JS_ATOM_length) {
-                    return JS_NewInt32(ctx, p1->len);
-                }
-            }
-            break;
-        case JS_TAG_STRING_ROPE:
-            {
-                JSStringRope *p1 = JS_VALUE_GET_STRING_ROPE(obj);
-                if (__JS_AtomIsTaggedInt(prop)) {
-                    uint32_t idx;
-                    idx = __JS_AtomToUInt32(prop);
-                    if (idx < p1->len) {
-                        return js_new_string_char(ctx, string_rope_get(obj, idx));
+                        return js_new_string_char(ctx, p1->is_rope ?
+                                                  string_rope_get(obj, idx) :
+                                                  string_get(p1, idx));
                     }
                 } else if (prop == JS_ATOM_length) {
                     return JS_NewInt32(ctx, p1->len);
@@ -4171,7 +4156,7 @@ static BOOL js_object_has_name(JSValueConst obj)
     if ((prs->flags & JS_PROP_TMASK) != JS_PROP_NORMAL)
         return TRUE;
     val = pr->u.value;
-    if (JS_VALUE_GET_TAG(val) != JS_TAG_STRING)
+    if (!JS_IsFlatString(val))
         return TRUE;
     p = JS_VALUE_GET_STRING(val);
     return (p->len != 0);

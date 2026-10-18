@@ -83,15 +83,9 @@ static void js_print_float64(JSPrintValueState *s, double d)
 
 static uint32_t js_string_get_length(JSValueConst val)
 {
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING) {
-        JSString *p = JS_VALUE_GET_STRING(val);
-        return p->len;
-    } else if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING_ROPE) {
-        JSStringRope *r = JS_VALUE_GET_PTR(val);
-        return r->len;
-    } else {
-        return 0;
-    }
+    if (JS_IsString(val))
+        return JS_VALUE_GET_STRING(val)->len;
+    return 0;
 }
 
 /* pretty print the first 'len' characters of 'p' */
@@ -155,14 +149,14 @@ static void js_print_string1(JSPrintValueState *s, JSString *p, int len, int sep
 static void js_print_string_rec(JSPrintValueState *s, JSValueConst val,
                                 int sep, uint32_t pos)
 {
-    if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING) {
+    if (JS_IsFlatString(val)) {
         JSString *p = JS_VALUE_GET_STRING(val);
         uint32_t len;
         if (pos < s->options.max_string_length) {
             len = min_uint32(p->len, s->options.max_string_length - pos);
             js_print_string1(s, p, len, sep);
         }
-    } else if (JS_VALUE_GET_TAG(val) == JS_TAG_STRING_ROPE) {
+    } else if (JS_IsStringRope(val)) {
         JSStringRope *r = JS_VALUE_GET_PTR(val);
         js_print_string_rec(s, r->left, sep, pos);
         js_print_string_rec(s, r->right, sep, pos + js_string_get_length(r->left));
@@ -174,7 +168,7 @@ static void js_print_string_rec(JSPrintValueState *s, JSValueConst val,
 static void js_print_string(JSPrintValueState *s, JSValueConst val)
 {
     int sep;
-    if (s->options.raw_dump && JS_VALUE_GET_TAG(val) == JS_TAG_STRING) {
+    if (s->options.raw_dump && JS_IsFlatString(val)) {
         JSString *p = JS_VALUE_GET_STRING(val);
         js_printf(s, "%d", js_rc(p)->ref_count);
         sep = (js_rc(p)->ref_count == 1) ? '\"' : '\'';
@@ -705,10 +699,9 @@ static void js_print_value(JSPrintValueState *s, JSValueConst val)
         }
         break;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
-        if (s->options.raw_dump && tag == JS_TAG_STRING_ROPE) {
+        if (s->options.raw_dump && JS_IsStringRope(val)) {
             JSStringRope *r = JS_VALUE_GET_STRING_ROPE(val);
-            js_printf(s, "[rope len=%d depth=%d]", r->len, r->depth);
+            js_printf(s, "[rope len=%d depth=%d]", r->str.len, r->depth);
         } else {
             js_print_string(s, val);
         }

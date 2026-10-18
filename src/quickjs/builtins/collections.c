@@ -209,9 +209,6 @@ static uint32_t map_hash_key(JSValueConst key, int hash_bits)
         h = map_hash32(JS_VALUE_GET_INT(key) ^ JS_TAG_BOOL, hash_bits);
         break;
     case JS_TAG_STRING:
-        h = map_hash32(hash_string(JS_VALUE_GET_STRING(key), 0) ^ JS_TAG_STRING, hash_bits);
-        break;
-    case JS_TAG_STRING_ROPE:
         h = map_hash32(hash_string_rope(key, 0) ^ JS_TAG_STRING, hash_bits);
         break;
     case JS_TAG_OBJECT:

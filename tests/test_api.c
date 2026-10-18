@@ -2129,7 +2129,7 @@ static void test_utf16_public_api(void)
     JS_FreeValue(ctx, value);
 
     value = utf16_api_eval(ctx, "'x'.repeat(10000) + '\\ud800\\u0000\\udc00'");
-    assert(JS_VALUE_GET_TAG(value) == JS_TAG_STRING_ROPE);
+    assert(JS_VALUE_GET_TAG(value) == JS_TAG_STRING);
     wide = JS_ToCStringLenUTF16(ctx, &length, value);
     assert(wide && length == 10003);
     for (i = 0; i < 10000; i++)
@@ -2219,7 +2219,7 @@ static void test_utf16_public_api_oom(void)
             assert(!JS_IsException(source));
         } else if (operation == 2) {
             source = utf16_api_eval(ctx, "'x'.repeat(10000) + 'y'.repeat(10000)");
-            assert(JS_VALUE_GET_TAG(source) == JS_TAG_STRING_ROPE);
+            assert(JS_VALUE_GET_TAG(source) == JS_TAG_STRING);
         }
         probe.attempts = 0;
         probe.failure_at = 1;
