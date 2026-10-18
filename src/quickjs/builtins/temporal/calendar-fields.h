@@ -15,18 +15,18 @@ typedef struct JSTemporalFields {
    success or failure; no input is consumed. Nonpartial undefined time fields
    become present defaults. Range narrowing happens after all field Gets. */
 int js_temporal_prepare_calendar_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, JSValueConst object,
+    QJSCalendarId calendar, JSValueConst object,
     unsigned calendar_names, unsigned non_calendar_names,
     unsigned required_names, BOOL partial, JSTemporalFields *result);
 int js_temporal_iso_date_to_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, QJSTemporalISODate date,
+    QJSCalendarId calendar, QJSTemporalISODate date,
     JSTemporalFields *result);
 /* Implemented by the Plain civil owner without observable property rereads. */
 int js_temporal_interpret_datetime_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, const JSTemporalFields *fields,
+    QJSCalendarId calendar, const JSTemporalFields *fields,
     QJSTemporalOverflow overflow, QJSTemporalISODateTime *result);
 void js_temporal_calendar_merge_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, const JSTemporalFields *original,
+    QJSCalendarId calendar, const JSTemporalFields *original,
     const JSTemporalFields *additional, JSTemporalFields *result);
 void js_temporal_fields_free(JSContext *ctx, JSTemporalFields *fields);
 int js_temporal_calendar_error(JSContext *ctx, int error);
@@ -67,15 +67,15 @@ int js_temporal_zoned_add_duration(JSContext *ctx,
     QJSTemporalEpochNs *result);
 int js_temporal_zoned_difference_raw(JSContext *ctx,
     QJSTemporalEpochNs start, QJSTemporalEpochNs end,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar,
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar,
     QJSTemporalUnit largest, QJSTemporalInternalDuration *result);
 int js_temporal_zoned_difference_round(JSContext *ctx,
     QJSTemporalEpochNs start, QJSTemporalEpochNs end,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar,
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar,
     const QJSTemporalDifferenceSettings *settings,
     QJSTemporalInternalDuration *result);
 int js_temporal_zoned_difference_total(JSContext *ctx,
     QJSTemporalEpochNs start, QJSTemporalEpochNs end,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar,
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar,
     QJSTemporalUnit unit, double *result);
 #endif
