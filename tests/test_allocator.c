@@ -30,6 +30,7 @@
 #include "../src/quickjs/internal/allocator.h"
 #include "../src/quickjs/internal/atom.h"
 #include "../src/quickjs/internal/error.h"
+#include "../src/quickjs/internal/global-environment.h"
 #include "../src/quickjs/internal/bigint.h"
 #include "../src/quickjs/internal/disposal.h"
 #include "../src/quickjs/builtins/array-from-async.h"
@@ -1889,6 +1890,109 @@ static void test_compiler_value_allocation_failure(void)
     }
 }
 
+static void test_vm_result_allocation_failures(void)
+{
+    static const char * const operations[] = {
+        "({ value: 1 });",
+        "let f = function() { return 1; }; f();",
+        "void arguments;",
+        "(function() { 'use strict'; return arguments; })(1);",
+        "((...args) => args)(1, 2, 3);",
+        "/abc/g;",
+        "for (let key in 'abcd') {}",
+        "for (let key in { 123456789: 1 }) {}",
+        "'a'.repeat(10000) + 'b'.repeat(10000);",
+        "let value = { toString() { return 'x'; } }; value + 'y';",
+        "class C { #x; get(obj) { return obj.#x; } } new C().get({});",
+        "(function() { with ({}) { eval('var x = 1'); } })();",
+    };
+    size_t kind, fail_at, allocations;
+
+    for (kind = 0; kind < countof(operations); kind++) {
+        allocations = 0;
+        for (fail_at = 0; fail_at <= allocations; fail_at++) {
+            OOMTestAllocator allocator;
+            PromiseAllocationFailure padding = { 0 };
+            JSRuntime *rt = oom_test_runtime(&allocator);
+            JSContext *ctx = JS_NewContext(rt);
+            JSValue func, result;
+            char source[1024];
+            void *ptr;
+            int32_t number;
+
+            assert(ctx);
+            snprintf(source, sizeof(source),
+                     "(function() { try { for (const value of [1]) { %s }"
+                     " return 42; } catch (error) { return 17; } })",
+                     operations[kind]);
+            func = JS_Eval(ctx, source, strlen(source), "vm-result-oom.js",
+                           JS_EVAL_TYPE_GLOBAL);
+            assert(!JS_IsException(func));
+            exhaust_pooled_free_blocks(rt, &padding);
+            oom_test_begin(&allocator, fail_at);
+            result = JS_Call(ctx, func, JS_UNDEFINED, 0, NULL);
+            oom_test_end(&allocator);
+            if (!fail_at) {
+                allocations = allocator.calls;
+                assert(allocations < 256);
+            } else {
+                assert(allocator.failures == 1);
+            }
+            if (JS_IsException(result)) {
+                oom_test_check_exception(ctx);
+            } else {
+                assert(!JS_HasException(ctx));
+                assert(JS_ToInt32(ctx, &number, result) == 0);
+                assert(number == 17 || number == 42);
+            }
+            JS_FreeValue(ctx, result);
+            JS_FreeValue(ctx, func);
+            while ((ptr = padding.padding) != NULL) {
+                memcpy(&padding.padding, ptr, sizeof(padding.padding));
+                js_free_rt(rt, ptr);
+            }
+            JS_FreeContext(ctx);
+            JS_FreeRuntime(rt);
+            assert(allocator.live == 0);
+        }
+    }
+}
+
+static void test_numeric_global_reference_allocation_failure(void)
+{
+    OOMTestAllocator allocator;
+    PromiseAllocationFailure padding = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue outputs[2] = { JS_UNDEFINED, JS_UNDEFINED };
+    JSAtom atom;
+    int ref_count, status;
+    void *ptr;
+
+    assert(ctx);
+    atom = JS_NewAtomUInt32(ctx, 123456789);
+    assert(atom != JS_ATOM_NULL);
+    assert(JS_DefinePropertyValue(ctx, ctx->global_obj, atom,
+                                 JS_NewInt32(ctx, 1), JS_PROP_C_W_E) >= 0);
+    exhaust_pooled_free_blocks(rt, &padding);
+    ref_count = js_rc(JS_VALUE_GET_PTR(ctx->global_var_obj))->ref_count;
+    oom_test_begin(&allocator, 1);
+    status = JS_GetGlobalVarRef(ctx, atom, outputs);
+    oom_test_end(&allocator);
+    assert(status == -1 && allocator.failures == 1);
+    assert(JS_IsUndefined(outputs[0]) && JS_IsUndefined(outputs[1]));
+    assert(js_rc(JS_VALUE_GET_PTR(ctx->global_var_obj))->ref_count == ref_count);
+    oom_test_check_exception(ctx);
+    while ((ptr = padding.padding) != NULL) {
+        memcpy(&padding.padding, ptr, sizeof(padding.padding));
+        js_free_rt(rt, ptr);
+    }
+    JS_FreeAtom(ctx, atom);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
 static void test_basic_object_allocation_failures(void)
 {
     size_t fail_at, allocations = 0;
@@ -1962,6 +2066,8 @@ static void test_shape_capacity_limits(void)
 
 int main(void)
 {
+    test_vm_result_allocation_failures();
+    test_numeric_global_reference_allocation_failure();
     test_shape_capacity_limits();
 #ifdef JS_MALLOC_USE_ITER
     test_allocation_iteration();

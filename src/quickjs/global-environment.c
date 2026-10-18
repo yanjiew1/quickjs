@@ -136,7 +136,13 @@ int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
         sp[1] = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING,
                                         ctx->rt->atom_array[prop]));
     } else {
-        sp[1] = JS_AtomToValue(ctx, prop);
+        JSValue name = JS_AtomToValue(ctx, prop);
+        if (JS_IsException(name)) {
+            JS_FreeValue(ctx, sp[0]);
+            sp[0] = JS_UNDEFINED;
+            return -1;
+        }
+        sp[1] = name;
     }
     return 0;
 }
