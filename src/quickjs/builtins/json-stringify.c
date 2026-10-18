@@ -157,7 +157,7 @@ static JSValue js_json_check(JSContext *ctx, JSONStringifyContext *jsc,
     case JS_TAG_NULL:
     case JS_TAG_SHORT_BIG_INT:
     case JS_TAG_BIG_INT:
-    case JS_TAG_EXCEPTION:
+    case JS_TAG_CONTROL:
         return val;
     default:
         break;

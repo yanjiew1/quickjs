@@ -31,10 +31,60 @@
 #include "../src/quickjs/internal/function.h"
 #include "../src/quickjs/internal/string.h"
 
-static void rope_print_write(void *opaque, const char *buf, size_t len)
+static void buffer_print_write(void *opaque, const char *buf, size_t len)
 {
     DynBuf *output = opaque;
     dbuf_put(output, (const uint8_t *)buf, len);
+}
+
+static void test_control_values(void)
+{
+    static const uint32_t offsets[] = { 0, 1, INT32_MAX };
+    static const uint32_t exception_payloads[] = {
+        UINT32_C(0x80000000), UINT32_C(0x80000001), UINT32_MAX,
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSPrintValueOptions options;
+    DynBuf output;
+    size_t i;
+
+    assert(rt);
+    assert(JS_IsException(JS_EXCEPTION));
+    assert(js_is_exception_sentinel(JS_EXCEPTION));
+    assert(!JS_IsException(JS_UNDEFINED));
+    assert(!JS_IsException(JS_MKVAL(JS_TAG_INT, -1)));
+    assert((uint32_t)JS_VALUE_GET_INT(JS_EXCEPTION) == UINT32_MAX);
+    JS_PrintValueSetDefaultOptions(&options);
+    options.raw_dump = TRUE;
+    for (i = 0; i < countof(offsets); i++) {
+        /* Deliberately inspect private stack values, not API results. */
+        JSValue marker = JS_MKVAL(JS_TAG_CONTROL, offsets[i]);
+        char expected[64];
+        assert(!js_is_exception_sentinel(marker));
+        assert((uint32_t)JS_VALUE_GET_INT(marker) == offsets[i]);
+        snprintf(expected, sizeof(expected), "[catch offset=%u]", offsets[i]);
+        dbuf_init(&output);
+        JS_PrintValueRT(rt, buffer_print_write, &output, marker, &options);
+        dbuf_putc(&output, 0);
+        assert(!dbuf_error(&output));
+        assert(!strcmp((const char *)output.buf, expected));
+        dbuf_free(&output);
+        JS_FreeValueRT(rt, marker);
+    }
+    for (i = 0; i < countof(exception_payloads); i++) {
+        JSValue value = JS_MKVAL(JS_TAG_CONTROL, exception_payloads[i]);
+        assert(JS_IsException(value));
+        assert(js_is_exception_sentinel(value));
+        assert((uint32_t)JS_VALUE_GET_INT(value) == exception_payloads[i]);
+        dbuf_init(&output);
+        JS_PrintValueRT(rt, buffer_print_write, &output, value, &options);
+        dbuf_putc(&output, 0);
+        assert(!dbuf_error(&output));
+        assert(!strcmp((const char *)output.buf, "exception"));
+        dbuf_free(&output);
+        JS_FreeValueRT(rt, value);
+    }
+    JS_FreeRuntime(rt);
 }
 
 /* The representation and binary API cannot be checked from JavaScript. */
@@ -60,7 +110,7 @@ static void test_rope_serialization(void)
     dbuf_init(&output);
     JS_PrintValueSetDefaultOptions(&options);
     options.raw_dump = TRUE;
-    JS_PrintValue(ctx, rope_print_write, &output, rope, &options);
+    JS_PrintValue(ctx, buffer_print_write, &output, rope, &options);
     dbuf_putc(&output, 0);
     assert(!dbuf_error(&output));
     assert(strstr((const char *)output.buf, "[rope len=10003 depth=1]"));
@@ -68,7 +118,7 @@ static void test_rope_serialization(void)
     dbuf_init(&output);
     options.raw_dump = FALSE;
     options.max_string_length = 3;
-    JS_PrintValue(ctx, rope_print_write, &output, rope, &options);
+    JS_PrintValue(ctx, buffer_print_write, &output, rope, &options);
     dbuf_putc(&output, 0);
     assert(!dbuf_error(&output));
     assert(strstr((const char *)output.buf, "aaa"));
@@ -76,7 +126,7 @@ static void test_rope_serialization(void)
     dbuf_free(&output);
     dbuf_init(&output);
     options.max_string_length = 10003;
-    JS_PrintValue(ctx, rope_print_write, &output, rope, &options);
+    JS_PrintValue(ctx, buffer_print_write, &output, rope, &options);
     dbuf_putc(&output, 0);
     assert(!dbuf_error(&output));
     assert(strstr((const char *)output.buf, "\xc4\x80\\u0000\\ud800"));
@@ -603,6 +653,7 @@ static void test_writer_allocation_failure(int kind)
 
 int main(void)
 {
+    test_control_values();
     test_rope_serialization();
     test_bytecode_roundtrip(
         "var fn = function self() {"

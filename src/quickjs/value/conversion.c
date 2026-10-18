@@ -123,7 +123,7 @@ int JS_ToBoolFree(JSRuntime *rt, JSValue val)
     case JS_TAG_NULL:
     case JS_TAG_UNDEFINED:
         return JS_VALUE_GET_INT(val);
-    case JS_TAG_EXCEPTION:
+    case JS_TAG_CONTROL:
         return -1;
     case JS_TAG_STRING:
         {
@@ -202,7 +202,7 @@ static JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToP
         return JS_AtomToString(ctx, JS_ATOM_null);
     case JS_TAG_UNDEFINED:
         return JS_AtomToString(ctx, JS_ATOM_undefined);
-    case JS_TAG_EXCEPTION:
+    case JS_TAG_CONTROL:
         return JS_EXCEPTION;
     case JS_TAG_OBJECT:
         {
