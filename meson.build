@@ -221,6 +221,39 @@ executable(
   override_options: ['b_lto=false', 'b_sanitize=none'],
   build_by_default: false,
 )
+# Native data views are derived by the same checked C reader used at runtime.
+# This executable always targets the build host, including in cross builds.
+timezone_describe = executable(
+  'timezone-describe',
+  [
+    'tools/timezone/describe.c',
+    'src/timezone/tzif.c',
+    'src/calendar/iso.c',
+  ],
+  native: true,
+  c_args: native_args,
+  include_directories: inc,
+  dependencies: native_deps,
+  override_options: ['b_lto=false', 'b_sanitize=none'],
+  build_by_default: false,
+)
+timezone_data = custom_target(
+  'native-timezone-data',
+  input: files('data/timezone/timezone-data.bin'),
+  output: 'timezone-data.c',
+  command: [
+    python,
+    files('tools/timezone/embed.py'),
+    '--input', '@INPUT@',
+    '--output', '@OUTPUT@',
+    '--describe', timezone_describe,
+  ],
+  depend_files: files(
+    'tools/timezone/acquire.py',
+    'tools/timezone/bundle.py',
+  ),
+  build_by_default: false,
+)
 subdir('src')
 
 shared_build = get_option('default_library') != 'static'
