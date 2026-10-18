@@ -14,4 +14,8 @@ int qjs_temporal_noniso_resolve(QJSCalendarId calendar,
                                 QJSTemporalISODate *result);
 int qjs_temporal_noniso_fields(QJSCalendarId calendar, QJSTemporalISODate date,
                                QJSTemporalCalendarDate *result);
+int qjs_temporal_noniso_month_day(QJSCalendarId calendar,
+                                  const QJSTemporalCalendarFields *input,
+                                  QJSTemporalOverflow overflow,
+                                  QJSTemporalISODate *result);
 #endif /* QUICKJS_TEMPORAL_NONISO_CALENDAR_H */
