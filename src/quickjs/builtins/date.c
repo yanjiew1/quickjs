@@ -685,14 +685,10 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
 }
 
 #ifdef CONFIG_TEMPORAL
-/* SystemUTCEpochMilliseconds floors the shared nanosecond host clock. */
+/* Floor and clamp the shared host clock directly to milliseconds. */
 static __exception int date_now(JSContext *ctx, int64_t *result)
 {
-    QJSTemporalEpochNs epoch;
-    int error = qjs_temporal_system_epoch(&epoch);
-    if (!error && qjs_temporal_epoch_ns_to_milliseconds(result, epoch))
-        error = QJS_TEMPORAL_ERROR_RANGE;
-    return date_backend_error(ctx, error);
+    return date_backend_error(ctx, qjs_temporal_system_milliseconds(result));
 }
 #else
 /* OS dependent: return the UTC time in ms since 1970. */
