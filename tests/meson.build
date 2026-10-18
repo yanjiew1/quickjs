@@ -324,6 +324,109 @@ endforeach
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
+if get_option('temporal')
+  standalone += {
+    'test_temporal_noniso_calendars': files(
+      'test_temporal_noniso_calendars.c',
+      '../src/calendar/astronomy.c',
+      '../src/calendar/calendar.c',
+      '../src/calendar/calendar-native.c',
+      '../src/calendar/data.c',
+      '../src/calendar/eras.c',
+      '../src/calendar/hebrew.c',
+      '../src/calendar/islamic.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/lunisolar.c',
+      '../src/calendar/native-months.c',
+      '../src/calendar/persian.c',
+      '../src/calendar/solar.c',
+      '../src/temporal/calendar.c',
+      '../src/temporal/civil.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/noniso-calendar.c',
+    ) + [calendar_data],
+    'test_temporal_clock': files(
+      'test_temporal_clock.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/clock.c',
+    ),
+    'test_temporal_zone_rules': files(
+      'test_temporal_zone_rules.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/parse.c',
+      '../src/temporal/format.c',
+      '../src/temporal/time-zone.c',
+      '../src/timezone/timezone.c',
+    ),
+    'test_temporal_relative': files(
+      'test_temporal_relative.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/civil.c',
+      '../src/temporal/calendar.c',
+      '../src/temporal/noniso-calendar.c',
+      '../src/temporal/duration.c',
+      '../src/temporal/options.c',
+      '../src/temporal/relative.c',
+      '../src/temporal/parse.c',
+      '../src/temporal/format.c',
+      '../src/temporal/time-zone.c',
+    ) + calendar_test_sources + timezone_test_sources,
+    'test_temporal_calendars': files(
+      'test_temporal_calendars.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/civil.c',
+      '../src/temporal/calendar.c',
+      '../src/temporal/noniso-calendar.c',
+    ) + calendar_test_sources,
+    'test_temporal_duration_math': files(
+      'test_temporal_duration_math.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/options.c',
+      '../src/temporal/duration.c',
+      '../src/temporal/time.c',
+    ),
+    'test_temporal_format': files(
+      'test_temporal_format.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/format.c',
+      '../src/temporal/options.c',
+    ),
+    'test_temporal_parse': files(
+      'test_temporal_parse.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/parse.c',
+    ),
+    'test_temporal_epoch': files(
+      'test_temporal_epoch.c',
+      '../src/temporal/epoch.c',
+    ),
+    'test_temporal_date_math': files(
+      'test_temporal_date_math.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+    ),
+    'test_temporal_civil': files(
+      'test_temporal_civil.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/civil.c',
+    ),
+  }
+endif
+
 if calendar_enabled
   standalone += {
     'test_calendar_native': files(
@@ -421,87 +524,6 @@ if native_timezones
       'test_tzif_decoder.c',
       '../src/calendar/iso.c',
       '../src/timezone/tzif.c',
-    ),
-  }
-endif
-
-if get_option('temporal')
-  standalone += {
-    'test_temporal_clock': files(
-      'test_temporal_clock.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/clock.c',
-    ),
-    'test_temporal_zone_rules': files(
-      'test_temporal_zone_rules.c',
-      '../src/calendar/iso.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/parse.c',
-      '../src/temporal/format.c',
-      '../src/temporal/time-zone.c',
-      '../src/timezone/timezone.c',
-    ),
-    'test_temporal_relative': files(
-      'test_temporal_relative.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/civil.c',
-      '../src/temporal/calendar.c',
-      '../src/temporal/duration.c',
-      '../src/temporal/options.c',
-      '../src/temporal/relative.c',
-      '../src/temporal/parse.c',
-      '../src/temporal/format.c',
-      '../src/temporal/time-zone.c',
-    ) + calendar_test_sources + timezone_test_sources,
-    'test_temporal_calendars': files(
-      'test_temporal_calendars.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/civil.c',
-      '../src/temporal/calendar.c',
-    ) + calendar_test_sources,
-    'test_temporal_duration_math': files(
-      'test_temporal_duration_math.c',
-      '../src/calendar/iso.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/options.c',
-      '../src/temporal/duration.c',
-      '../src/temporal/time.c',
-    ),
-    'test_temporal_format': files(
-      'test_temporal_format.c',
-      '../src/calendar/iso.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/format.c',
-      '../src/temporal/options.c',
-    ),
-    'test_temporal_parse': files(
-      'test_temporal_parse.c',
-      '../src/calendar/iso.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/parse.c',
-    ),
-    'test_temporal_epoch': files(
-      'test_temporal_epoch.c',
-      '../src/temporal/epoch.c',
-    ),
-    'test_temporal_date_math': files(
-      'test_temporal_date_math.c',
-      '../src/calendar/iso.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-    ),
-    'test_temporal_civil': files(
-      'test_temporal_civil.c',
-      '../src/calendar/iso.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/civil.c',
     ),
   }
 endif
