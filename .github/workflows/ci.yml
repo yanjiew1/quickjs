@@ -97,6 +97,99 @@ jobs:
           build-unicode/libunicode-table.c
           build-unicode/libunicode-table.h
 
+  temporal-configurations:
+    name: Temporal ${{ matrix.profile }} configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - profile: minimal
+          intl: disabled
+          temporal: 'true'
+          calendars: iso
+          timezone: minimal
+          policy: utc
+          library: static
+        - profile: disabled
+          intl: disabled
+          temporal: 'false'
+          calendars: iso
+          timezone: minimal
+          policy: utc
+          library: static
+        - profile: iso-named
+          intl: disabled
+          temporal: 'true'
+          calendars: iso
+          timezone: native
+          policy: utc
+          library: shared
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build
+    - name: Configure selected build
+      id: configure
+      run: |
+        meson setup build -Dwerror=true -Ddocumentation=disabled \
+           -Dtemporal=${{ matrix.temporal }} \
+           -Dtimezone_backend=${{ matrix.timezone }} \
+           -Ddefault_library=${{ matrix.library }}
+    - name: Compile selected build
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" 2>&1 | tee build/compile.log
+    - name: Run repository unit tests
+      id: repo-unit
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Run repository integration tests
+      id: repo-integration
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)" --timeout-multiplier 3
+    - name: Record source and runner identity
+      if: always()
+      run: |
+        git rev-parse HEAD > ci-identity.txt
+        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
+          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
+        uname -a >> ci-identity.txt
+        meson --version >> ci-identity.txt
+        python3 --version >> ci-identity.txt
+        if test -d test262/.git; then
+          printf 'test262=' >> ci-identity.txt
+          git -C test262 rev-parse HEAD >> ci-identity.txt
+        fi
+        if test -f build/.ninja_log; then
+          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
+          cp build/.ninja_log build/ninja-actions.log
+        fi
+    - name: Preserve configuration and test diagnostics
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: native-capability-${{ matrix.profile }}
+        path: |
+          build/meson-info/intro-buildoptions.json
+          build/meson-info/intro-tests.json
+          build/meson-info/intro-targets.json
+          build/compile_commands.json
+          build/compile.log
+          build/ninja-actions.log
+          build/meson-logs/
+          ci-identity.txt
+        if-no-files-found: ignore
   linux:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
@@ -151,7 +244,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=${{ matrix.library }} \
-           -Dtemporal=true
+           -Dtemporal=true  -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -267,7 +360,7 @@ jobs:
         fi
         meson setup build -Dwerror=true -Ddefault_library=shared -Db_lto=true \
           -Dbackend_max_links=2 -Db_lto_threads=2 "${lto_options[@]}" \
-          -Dtemporal=true
+          -Dtemporal=true  -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -327,6 +420,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true  -Dtemporal=true \
+           -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -521,7 +615,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=both  \
-          -Dtemporal=true
+          -Dtemporal=true  -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -644,6 +738,9 @@ jobs:
         - id: core-off
           intl: disabled
           temporal: 'false'
+        - id: temporal-native
+          intl: disabled
+          temporal: 'true'
     steps:
     - uses: actions/checkout@v7
     - name: Install diagnostic compiler and build tools
@@ -655,7 +752,8 @@ jobs:
       run: |
         CC=gcc meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dcheck_jsvalue=true \
-            \
+           -Dtemporal=${{ matrix.temporal }} \
+           -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -701,6 +799,7 @@ jobs:
       run: |
         meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
+           -Dtemporal=true  -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
