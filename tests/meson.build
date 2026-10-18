@@ -328,9 +328,10 @@ if calendar_enabled
     ) + [calendar_data],
     'test_calendar_islamic': files(
       'test_calendar_islamic.c',
+      '../src/calendar/data.c',
       '../src/calendar/iso.c',
       '../src/calendar/islamic.c',
-    ),
+    ) + [calendar_data],
     'test_calendar_hebrew': files(
       'test_calendar_hebrew.c',
       '../src/calendar/iso.c',
