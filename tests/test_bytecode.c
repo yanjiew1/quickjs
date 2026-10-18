@@ -87,6 +87,103 @@ static void test_control_values(void)
     JS_FreeRuntime(rt);
 }
 
+/* Native record kinds remain distinct when their JSValue tags are shared. */
+static void test_compiled_value_representation(int is_module, int is_rom)
+{
+    static const char *sources[] = {
+        "(() => { let object = {}; object.self = () => object; return object; })()",
+        "export const answer = 42; export function closure() { return answer; }",
+    };
+    JSRuntime *rt = JS_NewRuntime();
+    JSContext *ctx, *job_ctx;
+    JSValue compiled, loaded, result, value, called, exception;
+    JSModuleDef *m;
+    JSPrintValueOptions options;
+    DynBuf output;
+    const char *text;
+    uint8_t *buf, *rejected;
+    size_t len, rejected_len;
+    int ret, jobs = 0;
+
+    assert(rt);
+    ctx = JS_NewContext(rt);
+    assert(ctx);
+    compiled = JS_Compile(ctx, sources[is_module], strlen(sources[is_module]),
+                          "compiled-record.js", is_module ? JS_EVAL_TYPE_MODULE :
+                          JS_EVAL_TYPE_GLOBAL);
+    assert(!JS_IsException(compiled));
+    assert(JS_VALUE_GET_TAG(compiled) == JS_TAG_INTERNAL_GC);
+    assert(!!JS_IsModule(compiled) == is_module);
+    assert(!!JS_IsFunctionBytecode(compiled) == !is_module);
+    text = JS_ToCString(ctx, compiled);
+    assert(text && !strcmp(text, is_module ? "[unsupported type]" :
+                           "[function bytecode]"));
+    JS_FreeCString(ctx, text);
+    dbuf_init(&output);
+    JS_PrintValueSetDefaultOptions(&options);
+    options.raw_dump = TRUE;
+    JS_PrintValue(ctx, buffer_print_write, &output, compiled, &options);
+    dbuf_putc(&output, 0);
+    assert(!dbuf_error(&output));
+    if (is_module)
+        assert(!strcmp((const char *)output.buf, "[module]"));
+    else
+        assert(!strncmp((const char *)output.buf, "[bytecode ", 10));
+    dbuf_free(&output);
+
+    rejected = JS_WriteObject(ctx, &rejected_len, compiled, 0);
+    assert(!rejected && rejected_len == 0 && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
+    assert(buf && len);
+    JS_FreeValue(ctx, compiled);
+    loaded = JS_ReadObject(ctx, buf, len, 0);
+    assert(JS_IsException(loaded) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE |
+                           (is_rom ? JS_READ_OBJ_ROM_DATA : 0));
+    assert(!JS_IsException(loaded));
+    assert(JS_VALUE_GET_TAG(loaded) == JS_TAG_INTERNAL_GC);
+    assert(!!JS_IsModule(loaded) == is_module);
+    assert(!!JS_IsFunctionBytecode(loaded) == !is_module);
+    m = JS_GetModuleDef(loaded);
+    assert(!!m == is_module);
+    JS_RunGC(rt);
+    assert(JS_ResolveModule(ctx, loaded) == 0);
+    result = JS_EvalFunction(ctx, loaded);
+    assert(!JS_IsException(result));
+    if (is_module) {
+        while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+            assert(++jobs < 100);
+        assert(ret == 0 && JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+        JS_FreeValue(ctx, result);
+        result = JS_GetModuleNamespace(ctx, m);
+    }
+    value = JS_GetPropertyStr(ctx, result, is_module ? "closure" : "self");
+    assert(JS_IsFunction(ctx, value) && !JS_IsFunctionBytecode(value));
+    called = JS_Call(ctx, value, JS_UNDEFINED, 0, NULL);
+    assert(!JS_IsException(called));
+    if (is_module)
+        assert(JS_IsNumber(called) && JS_VALUE_GET_INT(called) == 42);
+    else
+        assert(JS_StrictEq(ctx, called, result));
+    JS_FreeValue(ctx, called);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, result);
+    JS_RunGC(rt);
+    result = JS_EvalFunction(ctx, JS_NewObject(ctx));
+    assert(JS_IsException(result) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeContext(ctx);
+    JS_RunGC(rt);
+    /* ROM bytecode borrows this storage through the final closure release. */
+    js_free_rt(rt, buf);
+    JS_FreeRuntime(rt);
+}
+
 /* The representation and binary API cannot be checked from JavaScript. */
 static void test_rope_serialization(void)
 {
@@ -655,6 +752,10 @@ int main(void)
 {
     test_control_values();
     test_rope_serialization();
+    test_compiled_value_representation(0, 0);
+    test_compiled_value_representation(0, 1);
+    test_compiled_value_representation(1, 0);
+    test_compiled_value_representation(1, 1);
     test_bytecode_roundtrip(
         "var fn = function self() {"
         " [self] = [0]; (() => { [self] = [1]; })(); return self; };"

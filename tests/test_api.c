@@ -2703,7 +2703,7 @@ static JSModuleDef *module_normalize_load(JSContext *ctx, const char *name,
                            JS_EVAL_TYPE_MODULE);
         if (JS_IsException(value))
             return NULL;
-        module = JS_VALUE_GET_PTR(value);
+        module = JS_GetModuleDef(value);
         JS_FreeValue(ctx, value);
         return module;
     }

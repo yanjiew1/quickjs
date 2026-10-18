@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "../internal/compiled-value.h"
 #include "../internal/vm.h"
 #include "../internal/base.h"
 #include "../internal/runtime.h"
@@ -40,15 +41,13 @@ static JSValue JS_EvalFunctionInternal(JSContext *ctx, JSValue fun_obj,
                                        JSVarRef **var_refs, JSStackFrame *sf)
 {
     JSValue ret_val;
-    uint32_t tag;
 
-    tag = JS_VALUE_GET_TAG(fun_obj);
-    if (tag == JS_TAG_FUNCTION_BYTECODE) {
+    if (js_is_bytecode_value(fun_obj)) {
         fun_obj = js_closure(ctx, fun_obj, var_refs, sf, TRUE);
         if (JS_IsException(fun_obj))
             return JS_EXCEPTION;
         ret_val = JS_CallFree(ctx, fun_obj, this_obj, 0, NULL);
-    } else if (tag == JS_TAG_MODULE) {
+    } else if (js_is_module_value(fun_obj)) {
         JSModuleDef *m;
         m = JS_VALUE_GET_PTR(fun_obj);
         /* the module refcount should be >= 2 */
@@ -192,7 +191,7 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
  fail1:
     /* XXX: should free all the unresolved dependencies */
     if (m)
-        JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+        JS_FreeValue(ctx, js_make_module_value(m));
     return JS_EXCEPTION;
 }
 

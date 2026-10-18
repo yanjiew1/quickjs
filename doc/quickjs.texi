@@ -902,7 +902,11 @@ module namespace objects. Use @code{JS_IsFunctionBytecode()} and
 @code{JS_GetModuleDef()} returns a borrowed module pointer, or @code{NULL} for
 any other value. An owning reference, such as the compiled value or the
 context's module registry, must keep the module alive while using that pointer.
-These three queries neither throw nor retain their argument.
+These three queries neither throw nor retain their argument. Bytecode and
+module records share @code{JS_TAG_INTERNAL_GC}; the former
+@code{JS_TAG_FUNCTION_BYTECODE} and @code{JS_TAG_MODULE} constants have been
+removed. Code that tested these tags must migrate to the queries and be
+recompiled. The serialized function and module record kinds remain distinct.
 
 If the script or module was compiled to bytecode with @code{qjsc}, it
 can be evaluated by calling @code{js_std_eval_binary()}. The advantage

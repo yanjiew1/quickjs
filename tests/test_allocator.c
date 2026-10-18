@@ -1759,7 +1759,7 @@ static void test_compiler_debug_allocation_failure(int nested)
             assert(!JS_HasException(ctx));
             if (nested) {
                 assert(b->cpool_count > 0);
-                assert(JS_VALUE_GET_TAG(b->cpool[0]) == JS_TAG_FUNCTION_BYTECODE);
+                assert(JS_IsFunctionBytecode(b->cpool[0]));
                 b = JS_VALUE_GET_PTR(b->cpool[0]);
             }
             assert(b->has_debug);

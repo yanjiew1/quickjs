@@ -23,6 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "../internal/compiled-value.h"
 #include "../internal/base.h"
 #include "../value/print.h"
 #include "../internal/runtime.h"
@@ -544,7 +545,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     js_rc(b)->ref_count = 1;
     add_gc_object(ctx->rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
 
-    obj = JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
+    obj = js_make_bytecode_value(b);
 
 #ifdef DUMP_READ_OBJECT
     bc_read_trace(s, "name: "); print_atom(s->ctx->rt, b->func_name); printf("\n");
@@ -769,7 +770,7 @@ static JSValue JS_ReadModule(BCReaderState *s)
     return obj;
  fail:
     if (m) {
-        JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+        JS_FreeValue(ctx, js_make_module_value(m));
     }
     return JS_EXCEPTION;
 }

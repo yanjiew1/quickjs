@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "../internal/compiled-value.h"
 #include "../internal/base.h"
 #include "../value/print.h"
 #include "../internal/runtime.h"
@@ -746,17 +747,18 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
             JS_FreeValue(s->ctx, str);
         }
         break;
-    case JS_TAG_FUNCTION_BYTECODE:
+    case JS_TAG_INTERNAL_GC:
         if (!s->allow_bytecode)
             goto invalid_tag;
-        if (JS_WriteFunctionTag(s, obj))
-            goto fail;
-        break;
-    case JS_TAG_MODULE:
-        if (!s->allow_bytecode)
+        if (js_is_bytecode_value(obj)) {
+            if (JS_WriteFunctionTag(s, obj))
+                goto fail;
+        } else if (js_is_module_value(obj)) {
+            if (JS_WriteModule(s, obj))
+                goto fail;
+        } else {
             goto invalid_tag;
-        if (JS_WriteModule(s, obj))
-            goto fail;
+        }
         break;
     case JS_TAG_OBJECT:
         {

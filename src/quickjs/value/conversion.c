@@ -23,6 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "../internal/compiled-value.h"
 #include "../internal/vm.h"
 #include "../internal/base.h"
 #include "../internal/runtime.h"
@@ -215,8 +216,9 @@ static JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToP
             return ret;
         }
         break;
-    case JS_TAG_FUNCTION_BYTECODE:
-        return js_new_string8(ctx, "[function bytecode]");
+    case JS_TAG_INTERNAL_GC:
+        return js_new_string8(ctx, js_is_bytecode_value(val) ?
+                              "[function bytecode]" : "[unsupported type]");
     case JS_TAG_SYMBOL:
         if (is_ToPropertyKey) {
             return JS_DupValue(ctx, val);

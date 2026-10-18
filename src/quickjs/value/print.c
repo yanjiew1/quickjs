@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "../internal/compiled-value.h"
 #include "../internal/class.h"
 #include "../internal/base.h"
 #include "libregexp.h"
@@ -710,12 +711,15 @@ static void js_print_value(JSPrintValueState *s, JSValueConst val)
             js_print_string(s, val);
         }
         break;
-    case JS_TAG_FUNCTION_BYTECODE:
-        {
+    case JS_TAG_INTERNAL_GC:
+        if (js_is_bytecode_value(val)) {
             JSFunctionBytecode *b = JS_VALUE_GET_PTR(val);
             js_puts(s, "[bytecode ");
             js_print_atom(s, b->func_name);
             js_putc(s, ']');
+        } else {
+            assert(js_is_module_value(val));
+            js_puts(s, "[module]");
         }
         break;
     case JS_TAG_OBJECT:
@@ -747,9 +751,6 @@ static void js_print_value(JSPrintValueState *s, JSValueConst val)
             js_print_atom(s, js_get_atom_index(s->rt, p));
             js_putc(s, ')');
         }
-        break;
-    case JS_TAG_MODULE:
-        js_puts(s, "[module]");
         break;
     default:
         js_printf(s, "[unknown tag %d]", tag);

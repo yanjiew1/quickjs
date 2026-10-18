@@ -23,6 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal/compiled-value.h"
 #include "internal/class.h"
 #include "internal/global-environment.h"
 #include "internal/base.h"
@@ -689,7 +690,7 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
 
     list_for_each(el, &ctx->loaded_modules) {
         JSModuleDef *m = list_entry(el, JSModuleDef, link);
-        JS_MarkValue(rt, JS_MKPTR(JS_TAG_MODULE, m), mark_func);
+        JS_MarkValue(rt, js_make_module_value(m), mark_func);
     }
     for (request = ctx->module_load_request; request; request = request->previous)
         JS_MarkValue(rt, request->attributes, mark_func);

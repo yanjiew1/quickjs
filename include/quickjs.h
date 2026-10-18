@@ -91,8 +91,7 @@ enum {
     JS_TAG_BIG_INT     = -9,
     JS_TAG_SYMBOL      = -8,
     JS_TAG_STRING      = -7,
-    JS_TAG_MODULE      = -3, /* used internally */
-    JS_TAG_FUNCTION_BYTECODE = -2, /* used internally */
+    JS_TAG_INTERNAL_GC = -2, /* opaque bytecode or module record */
     JS_TAG_OBJECT      = -1,
 
     JS_TAG_INT         = 0,
@@ -1187,8 +1186,8 @@ JS_EXTERN uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst o
 #define JS_READ_OBJ_REFERENCE (1 << 3) /* allow object references */
 JS_EXTERN JSValue JS_ReadObject(JSContext *ctx, const uint8_t *buf, size_t buf_len,
                                 int flags);
-/* instantiate and evaluate a bytecode function. Only used when
-   reading a script or module with JS_ReadObject() */
+/* Instantiate and evaluate a result of JS_Compile() or JS_ReadObject().
+   Consumes fun_obj on success and failure. */
 JS_EXTERN JSValue JS_EvalFunction(JSContext *ctx, JSValue fun_obj);
 /* load the dependencies of the module 'obj'. Useful when JS_ReadObject()
    returns a module. */

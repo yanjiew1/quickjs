@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal/compiled-value.h"
 #include "internal/class.h"
 #include "internal/base.h"
 #include "internal/runtime.h"
@@ -114,7 +115,7 @@ const uint16_t func_kind_to_class_id[] = {
 
 JS_BOOL JS_IsFunctionBytecode(JSValueConst val)
 {
-    return JS_VALUE_GET_TAG(val) == JS_TAG_FUNCTION_BYTECODE;
+    return js_is_bytecode_value(val);
 }
 
 /* return NULL without exception if not a function or no bytecode */
@@ -249,7 +250,7 @@ void js_bytecode_function_finalizer(JSRuntime *rt, JSValue val)
                 free_var_ref(rt, var_refs[i]);
             js_free_rt(rt, var_refs);
         }
-        JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b));
+        JS_FreeValueRT(rt, js_make_bytecode_value(b));
     }
 }
 
@@ -276,7 +277,7 @@ void js_bytecode_function_mark(JSRuntime *rt, JSValueConst val,
         }
         /* must mark the function bytecode because template objects may be
            part of a cycle */
-        JS_MarkValue(rt, JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b), mark_func);
+        JS_MarkValue(rt, js_make_bytecode_value(b), mark_func);
     }
 }
 

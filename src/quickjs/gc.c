@@ -172,8 +172,7 @@ void __JS_FreeValueRT(JSRuntime *rt, JSValue v)
         }
         break;
     case JS_TAG_OBJECT:
-    case JS_TAG_FUNCTION_BYTECODE:
-    case JS_TAG_MODULE:
+    case JS_TAG_INTERNAL_GC:
         {
             JSGCObjectHeader *p = JS_VALUE_GET_PTR(v);
             if (rt->gc_phase != JS_GC_PHASE_REMOVE_CYCLES) {
@@ -258,8 +257,7 @@ void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func)
     if (JS_VALUE_HAS_REF_COUNT(val)) {
         switch(JS_VALUE_GET_TAG(val)) {
         case JS_TAG_OBJECT:
-        case JS_TAG_FUNCTION_BYTECODE:
-        case JS_TAG_MODULE:
+        case JS_TAG_INTERNAL_GC:
             mark_func(rt, JS_VALUE_GET_PTR(val));
             break;
         default:

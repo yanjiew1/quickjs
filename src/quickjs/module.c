@@ -24,6 +24,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "internal/compiled-value.h"
 #include "internal/vm.h"
 #include "internal/base.h"
 #include "value/print.h"
@@ -52,7 +53,7 @@ void js_free_modules(JSContext *ctx, JSFreeModuleEnum flag)
             list_del(&m->link);
             m->link.prev = NULL;
             m->link.next = NULL;
-            JS_FreeValue(ctx, JS_MKPTR(JS_TAG_MODULE, m));
+            JS_FreeValue(ctx, js_make_module_value(m));
         }
     }
 }
@@ -1508,7 +1509,7 @@ JSValue js_import_meta(JSContext *ctx)
 
 JS_BOOL JS_IsModule(JSValueConst val)
 {
-    return JS_VALUE_GET_TAG(val) == JS_TAG_MODULE;
+    return js_is_module_value(val);
 }
 
 JSModuleDef *JS_GetModuleDef(JSValueConst val)
@@ -1518,7 +1519,7 @@ JSModuleDef *JS_GetModuleDef(JSValueConst val)
 
 JSValue JS_NewModuleValue(JSModuleDef *m)
 {
-    return __JS_DupValue(JS_MKPTR(JS_TAG_MODULE, m));
+    return __JS_DupValue(js_make_module_value(m));
 }
 
 static JSValue js_load_module_rejected(JSContext *ctx, JSValueConst this_val,
@@ -1762,7 +1763,7 @@ JSValue js_dynamic_import(JSContext *ctx, JSValueConst specifier, JSValueConst o
 
 int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
 {
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
+    if (js_is_module_value(obj)) {
         JSModuleDef *m = JS_VALUE_GET_PTR(obj);
         if (js_resolve_module(ctx, m) < 0) {
             js_free_modules(ctx, JS_FREE_MODULE_NOT_RESOLVED);

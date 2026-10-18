@@ -23,6 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "../internal/compiled-value.h"
 #include "../internal/base.h"
 #include "bytecode-dump.h"
 #include "../value/print.h"
@@ -3983,7 +3984,7 @@ JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
     }
 
     js_free(ctx, fd);
-    return JS_MKPTR(JS_TAG_FUNCTION_BYTECODE, b);
+    return js_make_bytecode_value(b);
  fail:
     js_free_function_def(rt, fd);
     return JS_EXCEPTION;
