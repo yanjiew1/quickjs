@@ -32,6 +32,8 @@ int qjs_tzif_parse(QJSTzifState *result, const unsigned char *bytes,
                    size_t length);
 int qjs_tzif_offset(const QJSTzifState *state, int64_t seconds,
                     int32_t *offset);
+int qjs_tzif_info(const QJSTzifState *state, int64_t seconds,
+                  QJSTimeZoneInfo *result);
 /* Raw rule lookup includes transitions just outside the Instant interval.
    Common Temporal code applies public Instant bounds after disambiguation. */
 int qjs_tzif_transition(const QJSTzifState *state, int64_t seconds, int next,
