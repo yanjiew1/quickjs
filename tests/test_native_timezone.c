@@ -81,7 +81,8 @@ static void test_embedded_records(void)
         assert(!strcmp(qjs_timezone_identifier(canonical), primary));
         assert(!strcmp(qjs_timezone_primary_identifier(canonical), primary));
         assert(canonical->rules == zone->rules);
-        primary_count += !strcmp(name, primary);
+        assert(qjs_timezone_is_primary(zone) == !strcmp(name, primary));
+        primary_count += qjs_timezone_is_primary(zone);
         if (i)
             assert(strcmp(qjs_timezone_identifier(qjs_timezone_at(i - 1)), name) < 0);
         utc_count += !strcmp(name, "UTC");
@@ -202,9 +203,42 @@ static void test_real_rules(void)
     assert(fixed == ny);
 }
 
+static void test_offset_information(void)
+{
+    const QJSTimeZone *ny = lookup("America/New_York");
+    const QJSTimeZone *dublin = lookup("Europe/Dublin");
+    const QJSTimeZone *utc = lookup("UTC");
+    QJSTimeZoneInfo info;
+    const int64_t epochs[] = {1704067200, 1719792000,
+                             INT64_C(1704067200) + 12622780800,
+                             INT64_C(1719792000) + 12622780800};
+    size_t i;
+
+    for (i = 0; i < sizeof(epochs) / sizeof(epochs[0]); i++) {
+        int summer = i % 2;
+
+        assert(!qjs_timezone_info(ny, epochs[i], &info));
+        assert(info.offset_seconds == (summer ? -14400 : -18000));
+        assert(info.is_dst == summer);
+        /* Ireland designates winter's negative adjustment as DST. */
+        assert(!qjs_timezone_info(dublin, epochs[i], &info));
+        assert(info.offset_seconds == (summer ? 3600 : 0));
+        assert(info.is_dst == !summer);
+        assert(!qjs_timezone_info(utc, epochs[i], &info));
+        assert(!info.offset_seconds && !info.is_dst);
+        assert(!qjs_timezone_info(lookup("Zulu"), epochs[i], &info));
+        assert(!info.offset_seconds && !info.is_dst);
+    }
+    info.offset_seconds = 123;
+    info.is_dst = 456;
+    assert(qjs_timezone_info(ny, QJS_TZ_OFFSET_LIMIT + 1, &info) == QJS_TZ_RANGE);
+    assert(info.offset_seconds == 123 && info.is_dst == 456);
+}
+
 int main(void)
 {
     test_embedded_records();
     test_real_rules();
+    test_offset_information();
     return 0;
 }
