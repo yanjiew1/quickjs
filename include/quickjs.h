@@ -430,7 +430,8 @@ JS_EXTERN JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id);
    TypeError. Raw contexts require base objects for exception construction. */
 JS_EXTERN int JS_SetDefaultTimeZone(JSContext *ctx, const char *time_zone);
 /* Return an owned identifier string. Before an explicit setting, snapshot
-   the backend's system default on first use (UTC with the minimal backend).
+   the discovered system default on first use, subject to the build's
+   timezone capabilities and UTC or current-host-offset fallback policy.
    Disabled builds throw TypeError. */
 JS_EXTERN JSValue JS_GetDefaultTimeZone(JSContext *ctx);
 
