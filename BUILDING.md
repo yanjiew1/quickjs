@@ -83,8 +83,11 @@ into the interpreter used by runtime tests.
 
 ## Temporal
 
-Temporal is enabled by default on this branch with the ISO calendar and embedded
-IANA timezone rules. It has no ICU or installed timezone-data dependency.
+Temporal is enabled by default on this branch with all standard native calendars
+and embedded IANA timezone rules. It has no ICU or installed timezone-data
+dependency. Use `-Dcalendars=iso` to omit non-ISO calendar implementations and
+their publication data. ISO arithmetic always remains in core; this option is
+independent of the timezone backend selection.
 Use `-Dtimezone_backend=minimal` for all Temporal classes with only core UTC
 and explicit numeric offsets; that backend contains no additional named zones.
 On Unix, the runtime discovers its default from `TZ`, including supported
@@ -105,7 +108,8 @@ IANA calculations always use the embedded pack.
 Use `-Dtemporal=false` to omit Temporal and retain Date's existing host policy.
 Temporal embedding entry points remain callable and report TypeError when the
 feature is disabled. `Temporal=auto` in the Test262 configuration follows the
-runner's build setting. Non-ISO calendars are a subsequent stage of the
+runner's build setting. Calendar publication coverage, algorithm sources and
+backend contracts are described in the
 [native Temporal design](doc/temporal-design.md).
 
 ## Static and shared libraries
