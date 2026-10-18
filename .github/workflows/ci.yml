@@ -36,6 +36,21 @@ on:
     - '*'
 
 jobs:
+  calendar-data:
+    name: Native calendar data regeneration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v7
+    - name: Reproduce normalized calendar publications offline
+      run: |
+        python3 tests/test_calendar_generator.py
+        python3 tools/calendar/normalize.py --output-dir "$RUNNER_TEMP/calendar"
+        cmp data/calendar/persian.json "$RUNNER_TEMP/calendar/persian.json"
+        cmp data/calendar/islamic-umalqura.json "$RUNNER_TEMP/calendar/islamic-umalqura.json"
+        python3 tools/calendar/generate.py --output "$RUNNER_TEMP/calendar-data.bin" --manifest "$RUNNER_TEMP/calendar-manifest.json"
+        cmp data/calendar/calendar-data.bin "$RUNNER_TEMP/calendar-data.bin"
+        cmp data/calendar/calendar-data-manifest.json "$RUNNER_TEMP/calendar-manifest.json"
   timezone-data:
     name: Native timezone data regeneration
     runs-on: ubuntu-latest
