@@ -34,7 +34,11 @@ timezone_test_sources = []
 system_timezone_test_sources = []
 if calendar_enabled
   calendar_test_sources = files(
+    '../src/calendar/calendar.c',
     '../src/calendar/iso.c',
+  )
+  calendar_test_sources += files(
+    '../src/calendar/calendar-minimal.c',
   )
   timezone_test_sources = files(
     '../src/timezone/timezone.c',
@@ -322,6 +326,12 @@ standalone = {
 }
 if calendar_enabled
   standalone += {
+    'test_calendar_core': files(
+      'test_calendar_core.c',
+      '../src/calendar/calendar.c',
+      '../src/calendar/calendar-minimal.c',
+      '../src/calendar/iso.c',
+    ),
     'test_calendar_lunisolar': files(
       'test_calendar_lunisolar.c',
       '../src/calendar/astronomy.c',
