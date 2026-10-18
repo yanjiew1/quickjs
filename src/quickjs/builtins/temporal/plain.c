@@ -26,7 +26,7 @@ static const char *const calendar_names[] = {
 
 typedef struct PlainValue {
     QJSTemporalISODateTime datetime;
-    QJSTemporalCalendar calendar;
+    QJSCalendarId calendar;
 } PlainValue;
 
 static JSValueConst argument(int argc, JSValueConst *argv, int index)
@@ -96,7 +96,7 @@ static JSValue create_plain(JSContext *ctx, JSValueConst new_target,
 
 JSValue js_temporal_create_plain_date(JSContext *ctx, JSValueConst target,
                                       QJSTemporalISODate date,
-                                      QJSTemporalCalendar calendar)
+                                      QJSCalendarId calendar)
 {
     PlainValue value = { { date, { 0, 0, 0, 0, 0, 0 } }, calendar };
     return create_plain(ctx, target, PLAIN_DATE, value);
@@ -104,7 +104,7 @@ JSValue js_temporal_create_plain_date(JSContext *ctx, JSValueConst target,
 
 JSValue js_temporal_create_plain_date_time(JSContext *ctx, JSValueConst target,
                                           QJSTemporalISODateTime datetime,
-                                          QJSTemporalCalendar calendar)
+                                          QJSCalendarId calendar)
 {
     PlainValue value = { datetime, calendar };
     return create_plain(ctx, target, PLAIN_DATETIME, value);
@@ -112,7 +112,7 @@ JSValue js_temporal_create_plain_date_time(JSContext *ctx, JSValueConst target,
 
 JSValue js_temporal_create_plain_year_month(JSContext *ctx, JSValueConst target,
                                            QJSTemporalISODate date,
-                                           QJSTemporalCalendar calendar)
+                                           QJSCalendarId calendar)
 {
     PlainValue value = { { date, { 0, 0, 0, 0, 0, 0 } }, calendar };
     return create_plain(ctx, target, PLAIN_YEAR_MONTH, value);
@@ -120,7 +120,7 @@ JSValue js_temporal_create_plain_year_month(JSContext *ctx, JSValueConst target,
 
 JSValue js_temporal_create_plain_month_day(JSContext *ctx, JSValueConst target,
                                           QJSTemporalISODate date,
-                                          QJSTemporalCalendar calendar)
+                                          QJSCalendarId calendar)
 {
     PlainValue value = { { date, { 0, 0, 0, 0, 0, 0 } }, calendar };
     return create_plain(ctx, target, PLAIN_MONTH_DAY, value);
@@ -191,7 +191,7 @@ static void restrict_fields(JSTemporalFields *fields, int kind)
 }
 
 static int resolve_fields(JSContext *ctx, int kind,
-                            QJSTemporalCalendar calendar,
+                            QJSCalendarId calendar,
                             const JSTemporalFields *fields,
                             QJSTemporalOverflow overflow, PlainValue *result)
 {
@@ -216,7 +216,7 @@ static int resolve_fields(JSContext *ctx, int kind,
 }
 
 int js_temporal_interpret_datetime_fields(JSContext *ctx,
-    QJSTemporalCalendar calendar, const JSTemporalFields *fields,
+    QJSCalendarId calendar, const JSTemporalFields *fields,
     QJSTemporalOverflow overflow, QJSTemporalISODateTime *result)
 {
     PlainValue value;
@@ -227,7 +227,7 @@ int js_temporal_interpret_datetime_fields(JSContext *ctx,
 }
 
 static int canonicalize_calendar(JSContext *ctx, JSValueConst value,
-                                 QJSTemporalCalendar *result)
+                                 QJSCalendarId *result)
 {
     const char *text;
     size_t length;
@@ -318,7 +318,7 @@ static JSValue to_plain(JSContext *ctx, JSValueConst item,
     if (error || get_overflow(ctx, options, &overflow))
         return JS_EXCEPTION;
     if (kind == PLAIN_MONTH_DAY &&
-        value.calendar == QJS_TEMPORAL_CAL_ISO8601) {
+        value.calendar == QJS_CAL_ISO8601) {
         value.datetime.date.year = 1972;
     } else if (kind == PLAIN_YEAR_MONTH || kind == PLAIN_MONTH_DAY) {
         BOOL valid = kind == PLAIN_YEAR_MONTH ?
@@ -357,7 +357,7 @@ static JSValue plain_constructor(JSContext *ctx, JSValueConst new_target,
                                   int argc, JSValueConst *argv, int kind)
 {
     PlainValue value = { { { 1972, 1, 1 }, { 0, 0, 0, 0, 0, 0 } },
-                          QJS_TEMPORAL_CAL_ISO8601 };
+                          QJS_CAL_ISO8601 };
     double date[3] = { 1972, 1, 1 }, time[6] = { 0, 0, 0, 0, 0, 0 };
     JSValueConst calendar;
     int i, count = kind == PLAIN_DATETIME || kind == PLAIN_DATE ? 3 : 2;
@@ -754,7 +754,7 @@ static JSValue plain_add(JSContext *ctx, JSValueConst this_val,
 
 int js_temporal_plain_datetime_difference_round(
     JSContext *ctx, QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar,
+    QJSCalendarId calendar,
     const QJSTemporalDifferenceSettings *settings,
     QJSTemporalInternalDuration *result)
 {
@@ -765,7 +765,7 @@ int js_temporal_plain_datetime_difference_round(
 
 int js_temporal_plain_datetime_difference_total(
     JSContext *ctx, QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar, QJSTemporalUnit unit, double *result)
+    QJSCalendarId calendar, QJSTemporalUnit unit, double *result)
 {
     return js_temporal_calendar_error(ctx,
         qjs_temporal_plain_datetime_difference_total(one, two, calendar,
@@ -1037,11 +1037,11 @@ static JSValue plain_string(JSContext *ctx, JSValueConst this_val,
     if (length < 0)
         return JS_ThrowRangeError(ctx, "invalid Temporal ISO date");
     if (kind == PLAIN_YEAR_MONTH && show != 1 && show != 3 &&
-        value.calendar == QJS_TEMPORAL_CAL_ISO8601) {
+        value.calendar == QJS_CAL_ISO8601) {
         length -= 3;
         buffer[length] = '\0';
     } else if (kind == PLAIN_MONTH_DAY && show != 1 && show != 3 &&
-               value.calendar == QJS_TEMPORAL_CAL_ISO8601) {
+               value.calendar == QJS_CAL_ISO8601) {
         memmove(buffer, buffer + length - 5, 5);
         length = 5;
         buffer[length] = '\0';
@@ -1056,7 +1056,7 @@ static JSValue plain_string(JSContext *ctx, JSValueConst this_val,
         buffer[length] = '\0';
     }
     if (show != 2 && (show != 0 ||
-                     value.calendar != QJS_TEMPORAL_CAL_ISO8601)) {
+                     value.calendar != QJS_CAL_ISO8601)) {
         int written = snprintf(buffer + length, sizeof(buffer) - length,
                     "[%su-ca=%s]", show == 3 ? "!" : "",
                     qjs_temporal_calendar_identifier(value.calendar));
