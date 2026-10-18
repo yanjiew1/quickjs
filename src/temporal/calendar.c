@@ -11,12 +11,12 @@
 #define RANGE QJS_TEMPORAL_ERROR_RANGE
 #define MISSING QJS_TEMPORAL_ERROR_MISSING
 
-const char *qjs_temporal_calendar_identifier(QJSTemporalCalendar calendar)
+const char *qjs_temporal_calendar_identifier(QJSCalendarId calendar)
 {
-    return calendar == QJS_TEMPORAL_CAL_ISO8601 ? "iso8601" : NULL;
+    return calendar == QJS_CAL_ISO8601 ? "iso8601" : NULL;
 }
 
-int qjs_temporal_calendar_from_identifier(QJSTemporalCalendar *result,
+int qjs_temporal_calendar_from_identifier(QJSCalendarId *result,
                                           const char *text, size_t length)
 {
     static const char identifier[] = "iso8601";
@@ -31,17 +31,17 @@ int qjs_temporal_calendar_from_identifier(QJSTemporalCalendar *result,
         if (c != (unsigned char)identifier[i])
             return RANGE;
     }
-    *result = QJS_TEMPORAL_CAL_ISO8601;
+    *result = QJS_CAL_ISO8601;
     return 0;
 }
 
-unsigned qjs_temporal_calendar_extra_fields(QJSTemporalCalendar calendar,
+unsigned qjs_temporal_calendar_extra_fields(QJSCalendarId calendar,
                                            unsigned requested)
 {
     return 0;
 }
 
-unsigned qjs_temporal_calendar_fields_to_ignore(QJSTemporalCalendar calendar,
+unsigned qjs_temporal_calendar_fields_to_ignore(QJSCalendarId calendar,
                                                unsigned additional)
 {
     if (additional & (QJS_TEMPORAL_FIELD_MONTH | QJS_TEMPORAL_FIELD_MONTH_CODE))
@@ -113,7 +113,7 @@ static int resolve(const QJSTemporalCalendarFields *fields, int type,
     return 0;
 }
 
-int qjs_temporal_calendar_date_from_fields(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_date_from_fields(QJSCalendarId calendar,
                                           const QJSTemporalCalendarFields *fields,
                                           QJSTemporalOverflow overflow,
                                           QJSTemporalISODate *result)
@@ -121,7 +121,7 @@ int qjs_temporal_calendar_date_from_fields(QJSTemporalCalendar calendar,
     QJSTemporalISODate date;
     int error;
 
-    if (calendar != QJS_TEMPORAL_CAL_ISO8601)
+    if (calendar != QJS_CAL_ISO8601)
         return QJS_TEMPORAL_ERROR_UNSUPPORTED;
     error = resolve(fields, 0, overflow, &date);
     if (error)
@@ -133,30 +133,30 @@ int qjs_temporal_calendar_date_from_fields(QJSTemporalCalendar calendar,
 }
 
 int qjs_temporal_calendar_year_month_from_fields(
-    QJSTemporalCalendar calendar, const QJSTemporalCalendarFields *fields,
+    QJSCalendarId calendar, const QJSTemporalCalendarFields *fields,
     QJSTemporalOverflow overflow, QJSTemporalISODate *result)
 {
-    if (calendar != QJS_TEMPORAL_CAL_ISO8601)
+    if (calendar != QJS_CAL_ISO8601)
         return QJS_TEMPORAL_ERROR_UNSUPPORTED;
     return resolve(fields, 1, overflow, result);
 }
 
 int qjs_temporal_calendar_month_day_from_fields(
-    QJSTemporalCalendar calendar, const QJSTemporalCalendarFields *fields,
+    QJSCalendarId calendar, const QJSTemporalCalendarFields *fields,
     QJSTemporalOverflow overflow, QJSTemporalISODate *result)
 {
-    if (calendar != QJS_TEMPORAL_CAL_ISO8601)
+    if (calendar != QJS_CAL_ISO8601)
         return QJS_TEMPORAL_ERROR_UNSUPPORTED;
     return resolve(fields, 2, overflow, result);
 }
 
-int qjs_temporal_calendar_fields(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_fields(QJSCalendarId calendar,
                                  QJSTemporalISODate date,
                                  QJSTemporalCalendarDate *result)
 {
     QJSTemporalCalendarDate fields = { 0 };
 
-    if (calendar != QJS_TEMPORAL_CAL_ISO8601)
+    if (calendar != QJS_CAL_ISO8601)
         return QJS_TEMPORAL_ERROR_UNSUPPORTED;
     if (!qjs_iso_date_is_valid(date))
         return RANGE;
@@ -179,7 +179,7 @@ int qjs_temporal_calendar_fields(QJSTemporalCalendar calendar,
     return 0;
 }
 
-int qjs_temporal_calendar_date_add(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_date_add(QJSCalendarId calendar,
                                    QJSTemporalISODate date,
                                    QJSTemporalDateDuration duration,
                                    QJSTemporalOverflow overflow,
@@ -187,7 +187,7 @@ int qjs_temporal_calendar_date_add(QJSTemporalCalendar calendar,
 {
     QJSTemporalISODate target;
 
-    if (calendar != QJS_TEMPORAL_CAL_ISO8601)
+    if (calendar != QJS_CAL_ISO8601)
         return QJS_TEMPORAL_ERROR_UNSUPPORTED;
     if (qjs_temporal_iso_date_add(&target, date, duration, overflow) ||
         !qjs_temporal_iso_date_within_limits(target))
@@ -196,13 +196,13 @@ int qjs_temporal_calendar_date_add(QJSTemporalCalendar calendar,
     return 0;
 }
 
-int qjs_temporal_calendar_date_until(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_date_until(QJSCalendarId calendar,
                                      QJSTemporalISODate start,
                                      QJSTemporalISODate end,
                                      QJSTemporalUnit largest,
                                      QJSTemporalDateDuration *result)
 {
-    if (calendar != QJS_TEMPORAL_CAL_ISO8601)
+    if (calendar != QJS_CAL_ISO8601)
         return QJS_TEMPORAL_ERROR_UNSUPPORTED;
     return qjs_temporal_iso_date_until(result, start, end, largest);
 }
