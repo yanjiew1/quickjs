@@ -268,16 +268,15 @@ static int year_events(const QJSTzifState *s, int64_t year, int64_t events[2])
          events[1] - events[0] < (365 + leap(year)) * INT64_C(86400));
 }
 
-static int32_t future_offset(const QJSTzifState *s, int64_t seconds)
+static int future_is_dst(const QJSTzifState *s, int64_t seconds)
 {
     int64_t year = epoch_year(seconds), latest = 0;
-    int32_t offset = s->standard_offset;
-    int adjustment, exists = 0;
+    int adjustment, exists = 0, is_dst = 0;
 
     if (s->future == 1)
-        return offset;
+        return 0;
     if (s->future == 3)
-        return s->daylight_offset;
+        return 1;
     /* Rule dates/times extend at most eight days beyond their nominal year
        after offset conversion. A complete Gregorian cycle also covers rare
        seasons combining a leap-year condition with a particular weekday. */
@@ -291,14 +290,19 @@ static int32_t future_offset(const QJSTzifState *s, int64_t seconds)
             if (events[i] <= seconds && (!exists || events[i] > latest)) {
                 latest = events[i];
                 exists = 1;
-                offset = i ? s->standard_offset : s->daylight_offset;
+                is_dst = !i;
             }
         }
         if (exists &&
             latest >= year_days(year + adjustment) * 86400 + 8 * 86400)
             break; /* Earlier nominal years cannot contain a later event. */
     }
-    return offset;
+    return is_dst;
+}
+
+static int32_t future_offset(const QJSTzifState *s, int64_t seconds)
+{
+    return future_is_dst(s, seconds) ? s->daylight_offset : s->standard_offset;
 }
 
 static int footer(QJSTzifState *s, const unsigned char *bytes, size_t length,
@@ -372,18 +376,10 @@ int qjs_tzif_parse(QJSTzifState *output, const unsigned char *bytes,
     return QJS_TZ_OK;
 }
 
-int qjs_tzif_offset(const QJSTzifState *s, int64_t seconds, int32_t *output)
+static uint32_t type_at(const QJSTzifState *s, int64_t seconds)
 {
-    uint32_t lo = 0, hi;
-    if (!s || !output)
-        return QJS_TZ_DATA;
-    if (seconds < -QJS_TZ_OFFSET_LIMIT || seconds > QJS_TZ_OFFSET_LIMIT)
-        return QJS_TZ_RANGE;
-    hi = s->time_count;
-    if (s->future && (!hi || seconds > transition_at(s, hi - 1))) {
-        *output = future_offset(s, seconds);
-        return QJS_TZ_OK;
-    }
+    uint32_t lo = 0, hi = s->time_count;
+
     while (lo < hi) {
         uint32_t middle = lo + (hi - lo) / 2;
         if (transition_at(s, middle) <= seconds)
@@ -391,7 +387,42 @@ int qjs_tzif_offset(const QJSTzifState *s, int64_t seconds, int32_t *output)
         else
             hi = middle;
     }
-    *output = type_offset(s, lo ? s->indices[lo - 1] : 0);
+    return lo ? s->indices[lo - 1] : 0;
+}
+
+int qjs_tzif_offset(const QJSTzifState *s, int64_t seconds, int32_t *output)
+{
+    if (!s || !output)
+        return QJS_TZ_DATA;
+    if (seconds < -QJS_TZ_OFFSET_LIMIT || seconds > QJS_TZ_OFFSET_LIMIT)
+        return QJS_TZ_RANGE;
+    if (s->future && (!s->time_count ||
+                      seconds > transition_at(s, s->time_count - 1)))
+        *output = future_offset(s, seconds);
+    else
+        *output = type_offset(s, type_at(s, seconds));
+    return QJS_TZ_OK;
+}
+
+int qjs_tzif_info(const QJSTzifState *s, int64_t seconds, QJSTimeZoneInfo *output)
+{
+    QJSTimeZoneInfo info;
+
+    if (!s || !output)
+        return QJS_TZ_DATA;
+    if (seconds < -QJS_TZ_OFFSET_LIMIT || seconds > QJS_TZ_OFFSET_LIMIT)
+        return QJS_TZ_RANGE;
+    if (s->future && (!s->time_count ||
+                      seconds > transition_at(s, s->time_count - 1))) {
+        info.is_dst = future_is_dst(s, seconds);
+        info.offset_seconds = info.is_dst ? s->daylight_offset : s->standard_offset;
+    } else {
+        uint32_t type = type_at(s, seconds);
+
+        info.offset_seconds = type_offset(s, type);
+        info.is_dst = s->types[type * 6 + 4];
+    }
+    *output = info;
     return QJS_TZ_OK;
 }
 
