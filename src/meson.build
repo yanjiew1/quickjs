@@ -88,3 +88,38 @@ support_sources = files(
 )
 
 support_sources += unicode_tables
+
+# The coordinator also provides disabled-build public API stubs.
+engine_sources += files(
+  'quickjs/builtins/temporal/common.c',
+  'quickjs/default-time-zone.c',
+)
+if get_option('temporal')
+  engine_sources += files(
+    'quickjs/builtins/temporal/calendar-fields.c',
+    'quickjs/builtins/temporal/duration.c',
+    'quickjs/builtins/temporal/instant.c',
+    'quickjs/builtins/temporal/now.c',
+    'quickjs/builtins/temporal/options.c',
+    'quickjs/builtins/temporal/plain-time.c',
+    'quickjs/builtins/temporal/plain.c',
+    'quickjs/builtins/temporal/zoned-arithmetic.c',
+    'quickjs/builtins/temporal/zoned-date-time.c',
+  )
+  support_sources += files(
+    'calendar/iso.c',
+    'temporal/calendar.c',
+    'temporal/civil.c',
+    'temporal/clock.c',
+    'temporal/duration.c',
+    'temporal/epoch.c',
+    'temporal/format.c',
+    'temporal/iso.c',
+    'temporal/options.c',
+    'temporal/parse.c',
+    'temporal/relative.c',
+    'temporal/time.c',
+    'temporal/time-zone.c',
+    'timezone/timezone-minimal.c',
+  )
+endif
