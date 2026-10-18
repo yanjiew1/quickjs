@@ -363,6 +363,7 @@ if get_option('temporal')
       '../src/temporal/epoch.c',
       '../src/temporal/iso.c',
       '../src/temporal/noniso-calendar.c',
+      '../src/temporal/noniso-arithmetic.c',
     ) + [calendar_data],
     'test_temporal_clock': files(
       'test_temporal_clock.c',
@@ -386,6 +387,7 @@ if get_option('temporal')
       '../src/temporal/civil.c',
       '../src/temporal/calendar.c',
       '../src/temporal/noniso-calendar.c',
+      '../src/temporal/noniso-arithmetic.c',
       '../src/temporal/duration.c',
       '../src/temporal/options.c',
       '../src/temporal/relative.c',
@@ -400,6 +402,7 @@ if get_option('temporal')
       '../src/temporal/civil.c',
       '../src/temporal/calendar.c',
       '../src/temporal/noniso-calendar.c',
+      '../src/temporal/noniso-arithmetic.c',
     ) + calendar_test_sources,
     'test_temporal_duration_math': files(
       'test_temporal_duration_math.c',
