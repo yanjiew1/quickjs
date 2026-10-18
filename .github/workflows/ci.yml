@@ -133,6 +133,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=${{ matrix.library }} \
+           -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -247,7 +248,8 @@ jobs:
             '-Dqjsc_cc=clang,-fuse-ld=lld')
         fi
         meson setup build -Dwerror=true -Ddefault_library=shared -Db_lto=true \
-          -Dbackend_max_links=2 -Db_lto_threads=2 "${lto_options[@]}"
+          -Dbackend_max_links=2 -Db_lto_threads=2 "${lto_options[@]}" \
+          -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -306,7 +308,7 @@ jobs:
     - name: Configure selected build
       id: configure
       run: |
-        meson setup build -Dwerror=true   \
+        meson setup build -Dwerror=true  -Dtemporal=true \
     - name: Compile selected build
       id: compile
       run: |
@@ -501,6 +503,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=both  \
+          -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -561,7 +564,7 @@ jobs:
       id: configure
       run: |
         meson setup build --prefix "$RUNNER_TEMP/quickjs-install" \
-          -Dwerror=true -Ddefault_library=shared
+          -Dwerror=true -Ddefault_library=shared  -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -584,7 +587,7 @@ jobs:
         meson install -C build
         prefix="$RUNNER_TEMP/quickjs-install"
         "$prefix/bin/qjs" -e 'if (6 * 7 !== 42) throw Error("installed qjs");'
-        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' n n '' libquickjs.so
+        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' n y '' libquickjs.so
         export PKG_CONFIG_PATH="$prefix/lib/x86_64-linux-gnu/pkgconfig:$prefix/lib64/pkgconfig:$prefix/lib/pkgconfig"
         libdir="$(pkg-config --variable=libdir quickjs)"
         cc tests/test_shared_api.c $(pkg-config --cflags --libs quickjs) \
