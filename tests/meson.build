@@ -831,6 +831,13 @@ test(
   workdir: test_workdir,
   timeout: 120,
 )
+test(
+  'test262-calendar-selection',
+  python,
+  args: files('test_temporal_test262_selection.py'),
+  suite: ['repo', 'tools'],
+  timeout: 120,
+)
 
 test(
   'calendar-boundary-export',
