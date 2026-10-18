@@ -30,10 +30,193 @@
       "role": "Unicode License V3 for ICU4X source and derived data",
       "vendored": true,
       "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2"
+    },
+    "pmo-calendar.js": {
+      "url": "https://pmo.cas.cn/images/calendar.js",
+      "sha256": "d9bda47311deb984d1c307406561ee5eb133e035c5c83645bd47534c70c303cd",
+      "role": "Factual lunarInfo words hosted and used by PMO; third-party widget by Jea Yang, code is not executed or redistributed",
+      "vendored": false
+    },
+    "kasi-month-01-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=01&dd=01&isLeap=0",
+      "sha256": "3610c5cf91ae67fa2738398c9c000afdaf5da8ef86b0ff5dd5fd32eef613bbe6",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-01-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=01&dd=01&isLeap=1",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-02-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=02&dd=01&isLeap=0",
+      "sha256": "1036c4fc5375b0bd24c7f8733c0258c588ea0bc228b88cab2882977c3dfac181",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-02-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=02&dd=01&isLeap=1",
+      "sha256": "78a73ed6a0b0b8fe1eb0b34ca563cd712a56da5727a0992a34a6e6b3223f9780",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-03-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=03&dd=01&isLeap=0",
+      "sha256": "7f627f60c27b37db3a4cdae6ced9fc330c13462143c676ea78749d8568b06483",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-03-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=03&dd=01&isLeap=1",
+      "sha256": "0e09f234f85e0a55756ccab9952a262f6a19542faca6bad56b926cedcdf524dc",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-04-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=04&dd=01&isLeap=0",
+      "sha256": "69d40806a40d5727cfd113f50272b2871192ff9553dcf7fbb510289b67a48cd1",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-04-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=04&dd=01&isLeap=1",
+      "sha256": "8a8d0080914fa3d7ae217c55b57397ce1d9a795ad0b2dfb5736eb49d7d87fe46",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-05-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=05&dd=01&isLeap=0",
+      "sha256": "8a0fbe11c106f3b01ca6432c23283fdae50bce06532c7a79493c726c19aacb82",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-05-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=05&dd=01&isLeap=1",
+      "sha256": "0df1e8353b71629544f7a0feee909b2c8961087d8cac332eee849db4263daca7",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-06-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=06&dd=01&isLeap=0",
+      "sha256": "a38b018ea41e386bd59172eaa457b3855642e1b013e4577c850754c4c7e80ca5",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-06-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=06&dd=01&isLeap=1",
+      "sha256": "d48bde48f859f5b431e19911b44309479aab40b271d6a2501b84a830dcaa33b1",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-07-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=07&dd=01&isLeap=0",
+      "sha256": "ff3877b52277ba5458747bb4d49e1a3a06803ba6b86e5bd20e47d36398777e71",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-07-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=07&dd=01&isLeap=1",
+      "sha256": "832c2e889ba6f4e8724e08563f5f704e109fbd26f621774e59f2da9ba608ca9f",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-08-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=08&dd=01&isLeap=0",
+      "sha256": "85e9d00e144b0fd3cc98faeabd6770b69ec9f64090edcde878f02eb779a7ef60",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-08-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=08&dd=01&isLeap=1",
+      "sha256": "5ce537e2dcb7a7fdf543118d6fc3ca1abe4d958e83555f4625295ffe1d7ef826",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-09-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=09&dd=01&isLeap=0",
+      "sha256": "fdc8863dde3c6a0bf12d1392c8077d5a611b295afec572f8c8471c8381ed9489",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-09-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=09&dd=01&isLeap=1",
+      "sha256": "2d3185c7afbccaea39efe1655909a5962724b689a189835033976c820fd199f1",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-10-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=10&dd=01&isLeap=0",
+      "sha256": "dfa8b97841ad4a8d30b86ff4a130ca34ee05cec1a0ec71299846ad50858ecd9d",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-10-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=10&dd=01&isLeap=1",
+      "sha256": "d488442a8130887e53b4e7d910f0fd912752f0a80caf2125af15d5f71af7c8cf",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-11-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=11&dd=01&isLeap=0",
+      "sha256": "a623bc25c2767108746ca9da5414486a97b92e576ba8f1d93ee5c243055260db",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-11-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=11&dd=01&isLeap=1",
+      "sha256": "4d48afb4b405adbae979181ad0c1ebf15f6ecc1ca440ee9614fe75e8ea18c32a",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-12-0.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=12&dd=01&isLeap=0",
+      "sha256": "5ed86b49572b2387b47c16aa5acd235920a382c0ff8bac3ccca103b66085890d",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "kasi-month-12-1.json": {
+      "url": "https://astro.kasi.re.kr/life/lunc/between?start_yyyy=1899&end_yyyy=2051&mm=12&dd=01&isLeap=1",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "role": "Official KASI normal/leap month-start response",
+      "vendored": false
+    },
+    "pmo-calendar-1900-2025.pdf": {
+      "url": "https://pmo.cas.cn/xwdt2019/kpdt2019/202203/P020250414456381274062.pdf",
+      "sha256": "dc7ed4cb5dae55c1de5a0bdc97f09256a7d6b6d7fe3c553a542e9f9f7758aba4",
+      "role": "PMO daily publication; PDF page 3 January 1900 supplies the preceding lunar M12",
+      "vendored": false
     }
   },
-  "binary_sha256": "b36e277c12c9005dec0efaab880d8ce50ab3dd4cc701e4ef2104e9716f4bc224",
-  "binary_size": 7288,
+  "normalized": {
+    "chinese.json": {
+      "sha256": "becb88163641497633818ac7a4c5f85a852b9569900fa8d3cfe03e3d57e69474",
+      "method": "tools/calendar/lunisolar.py from hash-pinned publications and explicit outside-window approximation"
+    },
+    "dangi.json": {
+      "sha256": "4d81286e32411a176ca6ae87d8bb7870c06cde69234c137a8cce038da29b4ad1",
+      "method": "tools/calendar/lunisolar.py from hash-pinned publications and explicit outside-window approximation"
+    }
+  },
+  "boundary_model": {
+    "algorithm_version": 1,
+    "role": "approximation outside mandatory Gregorian dates only",
+    "source_revision": "bf498cdcddd27bd38ec6d654f2460bffd8d9a145"
+  },
+  "boundary_months": [
+    {
+      "calendar": "chinese",
+      "year": 1899,
+      "month": 12,
+      "leap": 0,
+      "start": "1900-01-01",
+      "length": 30,
+      "source": "pmo-calendar-1900-2025.pdf",
+      "page": 3
+    }
+  ],
+  "binary_sha256": "c3a8a18595b5a6230fdb8d19679795bf589c3a33c353fe37e307032f9ee9813a",
+  "binary_size": 11672,
   "calendars": [
     {
       "calendar": "persian",
@@ -50,6 +233,22 @@
       "version": "icu4x-e078031999870d4f263635c319a79cb19543ccfc",
       "year_count": 301,
       "first_epoch_day": -31826
+    },
+    {
+      "calendar": "chinese",
+      "first_year": 1899,
+      "end_epoch_day": 47875,
+      "version": "chinese-publications-20261019-model1",
+      "year_count": 202,
+      "first_epoch_day": -25892
+    },
+    {
+      "calendar": "dangi",
+      "first_year": 1899,
+      "end_epoch_day": 29626,
+      "version": "dangi-publications-20261019-model1",
+      "year_count": 152,
+      "first_epoch_day": -25892
     }
   ]
 }
