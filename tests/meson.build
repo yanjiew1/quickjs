@@ -322,6 +322,12 @@ standalone = {
 }
 if calendar_enabled
   standalone += {
+    'test_calendar_persian': files(
+      'test_calendar_persian.c',
+      '../src/calendar/data.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/persian.c',
+    ) + [calendar_data],
     'test_calendar_data': files(
       'test_calendar_data.c',
       '../src/calendar/data.c',
