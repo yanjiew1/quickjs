@@ -24,7 +24,8 @@ network. Updating a release requires an explicit pin review.
 
 The cache contains `tz-2026e/` and its archive. Raw CLDR timezone metadata is
 versioned under `data/timezone/sources/cldr`, with the Unicode license. Acquisition verifies those
-vendored files without downloading duplicate cache copies. `timezone.json` supplies geographic alias groups; `windowsZones.json` supplies
+vendored files without downloading duplicate cache copies. `timezone.json`
+supplies geographic alias groups; `windowsZones.json` supplies
 Windows-key/territory mappings. These are generator inputs, never runtime
 JSON dependencies. The native backend's final data is a single binary pack.
 
@@ -62,3 +63,28 @@ pool deduplicates identical bytes while preserving separate identities.
 The validator checks canonical strings, bounds, ordering, primary relationships
 and exact payload coverage. It recognizes TZif framing; the C rule reader
 separately validates complete TZif contents before embedding or use.
+
+## Offline regeneration
+
+After acquisition, generate the checked-in pack and its audit manifest:
+
+```sh
+python3 tools/timezone/generate.py \
+  --cache /path/to/timezone-cache \
+  --output /path/to/build/timezone-data.bin \
+  --manifest /path/to/build/timezone-data-manifest.json
+cmp data/timezone/timezone-data.bin /path/to/build/timezone-data.bin
+cmp data/timezone/timezone-data-manifest.json /path/to/build/timezone-data-manifest.json
+```
+
+The generator compiles the pinned zic using `HOST_CC` or `cc`; use
+`--host-cc` to select another **build-host** C compiler. It does not use a
+cross compiler from `CC`, invoke target binaries, download inputs, or depend
+on the installed zic. `awk` and a host C toolchain are needed for regeneration.
+Temporary headers, executables and per-zone files stay under the selected
+cache and are removed after generation. Subprocesses have finite timeouts.
+
+The input tailoring retains `backzone` histories and `zone.tab` country
+identities. It applies no leap-second table or date-range truncation.
+The manifest contains fixed source identities and hashes, without host
+paths or changing timestamps. CI regenerates and compares both outputs.

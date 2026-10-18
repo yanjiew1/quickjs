@@ -231,6 +231,26 @@ class BundleTests(unittest.TestCase):
                                 records[0]['offset'] + records[0]['length']],
                          self.fixed(1172))
 
+    def test_published_pack_matches_source_pin_and_manifest(self):
+        data = ROOT / 'data' / 'timezone'
+        binary = (data / 'timezone-data.bin').read_bytes()
+        manifest = json.loads((data / 'timezone-data-manifest.json').read_text())
+        pin = json.loads((TOOLS / 'pin.json').read_text())
+        decoded = bundle.unpack(binary)
+        self.assertEqual(sha256(binary), manifest['data_sha256'])
+        self.assertEqual(len(binary), manifest['binary_size'])
+        self.assertEqual(decoded['tz_version'], pin['tz']['release'])
+        self.assertEqual(decoded['cldr_version'], pin['cldr']['release'])
+        self.assertEqual(decoded['records'], manifest['records'])
+        self.assertEqual(manifest['tz_commit'], pin['tz']['commit'])
+        self.assertEqual(manifest['cldr_commit'], pin['cldr']['commit'])
+        names = {r['identifier']: r for r in decoded['records']}
+        for name, expected in [('US/Eastern', 'America/New_York'),
+                               ('Pacific/Truk', 'Pacific/Chuuk'),
+                               ('Atlantic/Jan_Mayen', 'Arctic/Longyearbyen'),
+                               ('Etc/UTC', 'UTC')]:
+            self.assertEqual(names[name]['primary'], expected)
+
     def test_determinism_and_identifier_integrity(self):
         items = {'UTC': ('UTC', self.fixed()), 'Zulu': ('UTC', self.fixed())}
         self.assertEqual(bundle.pack(items, '2026e', '48.2.3'),
