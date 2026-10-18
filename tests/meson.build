@@ -179,6 +179,27 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_temporal_noniso_calendars': [
+    'test_temporal_noniso_calendars.c',
+    '../src/calendar/astronomy.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-native.c',
+    '../src/calendar/data.c',
+    '../src/calendar/eras.c',
+    '../src/calendar/hebrew.c',
+    '../src/calendar/islamic.c',
+    '../src/calendar/iso.c',
+    '../src/calendar/lunisolar.c',
+    '../src/calendar/native-months.c',
+    '../src/calendar/persian.c',
+    '../src/calendar/solar.c',
+    '../src/temporal/calendar.c',
+    '../src/temporal/civil.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/noniso-calendar.c',
+    calendar_data,
+  ],
   'test_calendar_native': [
     'test_calendar_native.c',
     '../src/calendar/astronomy.c',
@@ -290,11 +311,14 @@ standalone = {
   ],
   'test_temporal_relative': [
     'test_temporal_relative.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-minimal.c',
     '../src/calendar/iso.c',
     '../src/temporal/epoch.c',
     '../src/temporal/iso.c',
     '../src/temporal/civil.c',
     '../src/temporal/calendar.c',
+    '../src/temporal/noniso-calendar.c',
     '../src/temporal/duration.c',
     '../src/temporal/options.c',
     '../src/temporal/relative.c',
@@ -317,11 +341,14 @@ standalone = {
   ],
   'test_temporal_calendars': [
     'test_temporal_calendars.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-minimal.c',
     '../src/calendar/iso.c',
     '../src/temporal/epoch.c',
     '../src/temporal/iso.c',
     '../src/temporal/civil.c',
     '../src/temporal/calendar.c',
+    '../src/temporal/noniso-calendar.c',
   ],
   'test_temporal_duration_math': [
     'test_temporal_duration_math.c',
