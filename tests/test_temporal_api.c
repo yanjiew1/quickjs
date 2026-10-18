@@ -497,6 +497,18 @@ static void test_default_zone(void)
     second = JS_NewContext(rt);
     assert(first && second);
     assert_default_zone(first, "UTC");
+#ifdef CONFIG_TIMEZONE_NATIVE
+    assert(!JS_SetDefaultTimeZone(first, "us/eastern"));
+    assert_default_zone(second, "America/New_York");
+    value = embedding_eval(second,
+        "if (new Date('2024-01-01T00:00Z').getTimezoneOffset() !== 300 ||"
+        " new Date('2024-07-01T00:00Z').getTimezoneOffset() !== 240 ||"
+        " Temporal.Now.timeZoneId() !== 'America/New_York')"
+        " throw Error('named Date/Temporal default mismatch');");
+    assert(!JS_IsException(value));
+    JS_FreeValue(second, value);
+    assert(!JS_SetDefaultTimeZone(first, "UTC"));
+#endif
     assert(!JS_SetDefaultTimeZone(first, "+0530"));
     assert_default_zone(second, "+05:30");
     value = embedding_eval(second,
