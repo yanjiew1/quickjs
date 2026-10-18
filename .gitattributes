@@ -1,2 +1,4 @@
 # Preserve source receipts byte-for-byte, including on Windows checkouts.
 /data/timezone/sources/cldr/* -text
+/data/calendar/sources/* -text
+/data/calendar/*.json -text
