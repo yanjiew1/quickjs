@@ -31,7 +31,28 @@ int qjs_temporal_epoch_from_clock(QJSTemporalEpochNs *result,
     return 0;
 }
 
-int qjs_temporal_system_epoch(QJSTemporalEpochNs *result)
+int qjs_temporal_milliseconds_from_clock(int64_t *result,
+                                         int64_t seconds, int32_t nanoseconds)
+{
+    const int64_t limit = INT64_C(8640000000000000);
+    int64_t milliseconds;
+
+    if (nanoseconds < 0 || nanoseconds >= 1000000000)
+        return QJS_TEMPORAL_ERROR_BACKEND;
+    if (seconds < -limit / 1000)
+        milliseconds = -limit;
+    else if (seconds > limit / 1000)
+        milliseconds = limit;
+    else {
+        milliseconds = seconds * 1000 + nanoseconds / 1000000;
+        if (milliseconds > limit)
+            milliseconds = limit;
+    }
+    *result = milliseconds;
+    return 0;
+}
+
+static int system_clock(int64_t *epoch_seconds, int32_t *fraction)
 {
     int64_t seconds;
     int32_t nanoseconds;
@@ -61,5 +82,29 @@ int qjs_temporal_system_epoch(QJSTemporalEpochNs *result)
     nanoseconds = (int32_t)now.tv_usec * 1000;
 #endif
 #endif
+    *epoch_seconds = seconds;
+    *fraction = nanoseconds;
+    return 0;
+}
+
+int qjs_temporal_system_epoch(QJSTemporalEpochNs *result)
+{
+    int64_t seconds;
+    int32_t nanoseconds;
+    int error = system_clock(&seconds, &nanoseconds);
+
+    if (error)
+        return error;
     return qjs_temporal_epoch_from_clock(result, seconds, nanoseconds);
+}
+
+int qjs_temporal_system_milliseconds(int64_t *result)
+{
+    int64_t seconds;
+    int32_t nanoseconds;
+    int error = system_clock(&seconds, &nanoseconds);
+
+    if (error)
+        return error;
+    return qjs_temporal_milliseconds_from_clock(result, seconds, nanoseconds);
 }
