@@ -43,6 +43,17 @@ Recheck these revisions when implementation starts and record changes. Algorithm
 notes identify stable specification anchors, reference revisions, review dates,
 exact publication coverage and any permitted approximation.
 
+### Reviewed draft discrepancy
+
+The pinned Temporal PR contains a known off-by-one guard in
+ISODateTimeWithinLimits. Its description and the published proposal retain
+PlainDate's lower date of -271821-04-19, and PlainDateTime starts one
+nanosecond after that date's midnight. Keep those bounds, including when
+converting the minimum Instant with a negative offset. The
+[PR review identifying the lost day](https://redirect.github.com/tc39/ecma262/pull/3966#discussion_r4283470645)
+was checked on 2026-10-19. Test262's PlainDate and PlainDateTime limit tests
+agree with the wider range; they do not need a local patch.
+
 ## Code ownership and backend selection
 
 - JavaScript builtins own coercion and property access order, realms, exceptions,
