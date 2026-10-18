@@ -1,6 +1,7 @@
 /* Consumer limits and unchecked-input contracts, outside the JS surface. */
 #include "../src/temporal/calendar.h"
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <string.h>
 
@@ -201,6 +202,57 @@ int main(void)
             assert(!strcmp(metadata.month_code, fields.month_code));
             assert(metadata.day >= 6 && metadata.day <= 31);
         }
+    }
+    for (int id = QJS_CAL_BUDDHIST; id < QJS_CAL_COUNT; id++) {
+        QJSTemporalISODate endpoints[2] = {{2023, 1, 31}, {2025, 3, 25}};
+        QJSTemporalDateDuration duration;
+
+        for (int direction = 0; direction < 2; direction++) {
+            for (int unit = QJS_TEMPORAL_YEAR; unit <= QJS_TEMPORAL_DAY; unit++) {
+                assert(!qjs_temporal_calendar_date_until((QJSCalendarId)id,
+                        endpoints[direction], endpoints[1 - direction],
+                        (QJSTemporalUnit)unit, &duration));
+                assert(!qjs_temporal_calendar_date_add((QJSCalendarId)id,
+                        endpoints[direction], duration, constrain, &result));
+                assert(!memcmp(&result, &endpoints[1 - direction], sizeof(result)));
+            }
+        }
+    }
+    memset(&fields, 0, sizeof(fields));
+    fields.present = QJS_TEMPORAL_FIELD_YEAR | QJS_TEMPORAL_FIELD_MONTH_CODE |
+                     QJS_TEMPORAL_FIELD_DAY;
+    fields.year = 5784;
+    fields.day = 30;
+    strcpy(fields.month_code, "M05L");
+    assert(!qjs_temporal_calendar_date_from_fields(QJS_CAL_HEBREW, &fields, reject, &saved));
+    assert(!qjs_temporal_calendar_date_add(QJS_CAL_HEBREW, saved,
+            (QJSTemporalDateDuration){1, 0, 0, 0}, constrain, &result));
+    assert(!qjs_temporal_calendar_fields(QJS_CAL_HEBREW, result, &metadata));
+    assert(metadata.year == 5785 && !strcmp(metadata.month_code, "M06") && metadata.day == 29);
+    result = saved;
+    assert(qjs_temporal_calendar_date_add(QJS_CAL_HEBREW, saved,
+            (QJSTemporalDateDuration){1, 0, 0, 0}, reject, &result));
+    assert(!memcmp(&result, &saved, sizeof(result)));
+    {
+        QJSTemporalDateDuration huge[] = {
+            {INT64_MAX, 0, 0, 0}, {INT64_MIN, 0, 0, 0},
+            {0, INT64_MAX, 0, 0}, {0, INT64_MIN, 0, 0},
+            {0, 0, INT64_MAX, 0}, {0, 0, INT64_MIN, 0},
+            {0, 0, 0, INT64_MAX}, {0, 0, 0, INT64_MIN},
+        };
+        for (size_t i = 0; i < sizeof(huge) / sizeof(huge[0]); i++) {
+            assert(qjs_temporal_calendar_date_add(QJS_CAL_HEBREW, saved,
+                    huge[i], constrain, &result));
+            assert(!memcmp(&result, &saved, sizeof(result)));
+        }
+    }
+    for (int direction = 0; direction < 2; direction++) {
+        QJSTemporalISODate edge = direction ? (QJSTemporalISODate){275760, 9, 13} :
+                                             (QJSTemporalISODate){-271821, 4, 19};
+        result = saved;
+        assert(qjs_temporal_calendar_date_add(QJS_CAL_GREGORY, edge,
+                (QJSTemporalDateDuration){0, 0, 0, direction ? 1 : -1}, constrain, &result));
+        assert(!memcmp(&result, &saved, sizeof(result)));
     }
     return 0;
 }
