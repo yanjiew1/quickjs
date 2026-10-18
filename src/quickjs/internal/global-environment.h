@@ -38,7 +38,8 @@ typedef struct JSGlobalObject {
 #define DEFINE_GLOBAL_FUNC_VAR (1 << 6)
 
 int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags);
-int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp);
+/* Return an owned base, JS_UNDEFINED for an unresolved name, or JS_EXCEPTION. */
+JSValue JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop);
 int JS_DeleteGlobalVar(JSContext *ctx, JSAtom prop);
 JSVarRef *js_global_object_get_uninitialized_var(JSContext *ctx, JSObject *p,
                                                  JSAtom atom);
