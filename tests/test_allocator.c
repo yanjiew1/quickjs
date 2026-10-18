@@ -41,6 +41,7 @@
 #include "../src/quickjs/internal/runtime.h"
 #include "../src/quickjs/internal/object.h"
 #include "../src/quickjs/internal/string-buffer.h"
+#include "../src/quickjs/internal/string.h"
 #include "../src/quickjs/compiler/compiler-internal.h"
 #include "../src/quickjs/builtins/promise.h"
 
@@ -1891,6 +1892,83 @@ static void test_compiler_value_allocation_failure(void)
     }
 }
 
+static void test_rope_rebalance_allocation_failure(BOOL prepend)
+{
+    OOMTestAllocator allocator;
+    PromiseAllocationFailure padding = { 0 };
+    JSRuntime *rt = oom_test_runtime(&allocator);
+    JSContext *ctx = JS_NewContext(rt);
+    JSValue leaf, rope, result;
+    char buffer[513];
+    const char *text;
+    size_t len, i;
+    int rope_refs, leaf_refs;
+    void *reserve, *ptr;
+
+    assert(ctx);
+    memset(buffer, 'x', sizeof(buffer));
+    leaf = JS_NewStringLen(ctx, buffer, sizeof(buffer));
+    assert(!JS_IsException(leaf));
+    rope = JS_DupValue(ctx, leaf);
+    /* Stop immediately before the depth limit forces recursive rebalancing. */
+    for (i = 0; i < 60; i++) {
+        if (prepend)
+            rope = JS_ConcatString(ctx, JS_DupValue(ctx, leaf), rope);
+        else
+            rope = JS_ConcatString(ctx, rope, JS_DupValue(ctx, leaf));
+        assert(!JS_IsException(rope));
+    }
+    assert(JS_IsStringRope(rope));
+    assert(JS_VALUE_GET_STRING_ROPE(rope)->depth == 60);
+    rope_refs = js_rc(JS_VALUE_GET_PTR(rope))->ref_count;
+    leaf_refs = js_rc(JS_VALUE_GET_PTR(leaf))->ref_count;
+    reserve = js_malloc_rt(rt, sizeof(JSStringRope));
+    assert(reserve);
+    exhaust_pooled_free_blocks(rt, &padding);
+    /* Leave room for the outer node, then fail the first rebalance join. */
+    js_free_rt(rt, reserve);
+    oom_test_begin(&allocator, JS_MALLOC_LARGE_BLOCKS_ONLY ? 2 : 1);
+    if (prepend)
+        result = JS_ConcatString(ctx, JS_DupValue(ctx, leaf),
+                                 JS_DupValue(ctx, rope));
+    else
+        result = JS_ConcatString(ctx, JS_DupValue(ctx, rope),
+                                 JS_DupValue(ctx, leaf));
+    oom_test_end(&allocator);
+    assert(allocator.failures == 1);
+    if (!JS_IsException(result))
+        fprintf(stderr, "rebalance OOM returned a string of length %u (prepend=%d)\n",
+                JS_IsStringRope(result) ? JS_VALUE_GET_STRING_ROPE(result)->len :
+                    JS_VALUE_GET_STRING(result)->len, prepend);
+    assert(JS_IsException(result));
+    oom_test_check_exception(ctx);
+    assert(js_rc(JS_VALUE_GET_PTR(rope))->ref_count == rope_refs);
+    assert(js_rc(JS_VALUE_GET_PTR(leaf))->ref_count == leaf_refs);
+
+    if (prepend)
+        result = JS_ConcatString(ctx, JS_DupValue(ctx, leaf),
+                                 JS_DupValue(ctx, rope));
+    else
+        result = JS_ConcatString(ctx, JS_DupValue(ctx, rope),
+                                 JS_DupValue(ctx, leaf));
+    assert(!JS_IsException(result) && !JS_HasException(ctx));
+    text = JS_ToCStringLen(ctx, &len, result);
+    assert(text && len == 62 * sizeof(buffer));
+    for (i = 0; i < len; i++)
+        assert(text[i] == 'x');
+    JS_FreeCString(ctx, text);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, rope);
+    JS_FreeValue(ctx, leaf);
+    while ((ptr = padding.padding) != NULL) {
+        memcpy(&padding.padding, ptr, sizeof(padding.padding));
+        js_free_rt(rt, ptr);
+    }
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    assert(allocator.live == 0);
+}
+
 static void test_vm_result_allocation_failures(void)
 {
     static const char * const operations[] = {
@@ -2097,6 +2175,8 @@ static void test_shape_capacity_limits(void)
 
 int main(void)
 {
+    test_rope_rebalance_allocation_failure(FALSE);
+    test_rope_rebalance_allocation_failure(TRUE);
     test_vm_result_allocation_failures();
     test_numeric_global_reference_allocation_failure();
     test_shape_capacity_limits();
