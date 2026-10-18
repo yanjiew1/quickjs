@@ -79,5 +79,16 @@ int main(void)
     assert(qjs_calendar_month_ordinal(id, 2024, "M99", 0, &ordinal) == QJS_CAL_RANGE);
     assert(qjs_calendar_month_ordinal(id, 2024, "M13L", 1, &ordinal) == QJS_CAL_RANGE);
     assert(ordinal == 12);
+    {
+        const char *name = "unchanged";
+
+        assert(qjs_calendar_era_at(QJS_CAL_ISO8601, 0, &name) == QJS_CAL_UNSUPPORTED);
+        assert(!strcmp(name, "unchanged"));
+        assert(qjs_calendar_era_at(QJS_CAL_GREGORY, 0, &name) == QJS_CAL_UNSUPPORTED);
+        assert(!strcmp(name, "unchanged"));
+        assert(qjs_calendar_era_at(QJS_CAL_COUNT, 0, &name) == QJS_CAL_RANGE);
+        assert(!strcmp(name, "unchanged"));
+        assert(qjs_calendar_era_at(QJS_CAL_ISO8601, 0, NULL) == QJS_CAL_RANGE);
+    }
     return 0;
 }

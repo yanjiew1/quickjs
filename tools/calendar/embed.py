@@ -16,6 +16,7 @@ def render(binary):
              ' * Persian factual transcription is CC0; see tools/calendar/README.md.',
              ' * PMO/KASI factual records and explicit boundary approximations are',
              ' * documented in the same source manifest; source code is not embedded.',
+             ' * Japanese era data derives from CLDR; see data/calendar/sources/LICENSE-CLDR.',
              ' */', '#include "src/calendar/data.h"', '',
              'static const uint8_t calendar_bytes[] = {']
     for n in range(0, len(binary), 16):
