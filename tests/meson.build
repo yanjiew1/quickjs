@@ -290,6 +290,15 @@ endforeach
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
+standalone += {
+  'test_tzif_decoder': files(
+    'test_tzif_decoder.c',
+    '../src/calendar/iso.c',
+    '../src/timezone/tzif.c',
+  ),
+
+}
+
 if get_option('temporal')
   standalone += {
     'test_temporal_clock': files(
