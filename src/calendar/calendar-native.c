@@ -57,10 +57,10 @@ int qjs_cal_native_year(QJSCalendarId calendar, int32_t year,
         error = qjs_calendar_data_year(&qjs_native_calendar_data, calendar,
                                        year, &packed);
         if (error) {
-            /* Never replace a missing required publication year with a
-               whole-year approximation, including partial boundary years. */
+            /* Never replace a missing stored year with an approximation,
+               including publication boundaries and precomputed extensions. */
             if (error != QJS_CAL_RANGE ||
-                (year >= 1899 && year <= (calendar == QJS_CAL_CHINESE ? 2100 : 2050)))
+                (year >= 1899 && year <= 2100))
                 return error == QJS_CAL_RANGE ? QJS_CAL_BACKEND : error;
             error = qjs_cal_lunisolar_approximate_year(calendar, year, &packed);
             if (error)
