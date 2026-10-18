@@ -4,6 +4,7 @@
 #include "internal/runtime.h"
 #include "internal/default-time-zone.h"
 #include "../timezone/timezone.h"
+#include "../timezone/system-zone.h"
 
 #ifdef CONFIG_TEMPORAL
 /* Runtime host defaults use primary names. Explicit Temporal time-zone inputs continue
@@ -44,7 +45,17 @@ int js_default_time_zone_identifier(JSContext *ctx, const char **result)
     QJSTemporalZone zone;
     int error;
     if (!ctx->rt->default_time_zone) {
-        error = qjs_temporal_zone_parse(&zone, "UTC", 3);
+        char identifier[256];
+        int host_offset_fallback = 0;
+
+#ifdef CONFIG_TIMEZONE_HOST_OFFSET
+        host_offset_fallback = 1;
+#endif
+        error = qjs_timezone_system_default(identifier, sizeof(identifier),
+                                            host_offset_fallback);
+        if (error)
+            return QJS_TEMPORAL_ERROR_BACKEND;
+        error = qjs_temporal_zone_parse(&zone, identifier, strlen(identifier));
         if (!error)
             error = default_zone_primary(&zone);
         if (!error)
