@@ -257,6 +257,26 @@ timezone_data = custom_target(
   ),
   build_by_default: false,
 )
+windows_timezone_data = custom_target(
+  'windows-timezone-data',
+  input: files(
+    'data/timezone/sources/cldr/windowsZones.json',
+    'data/timezone/timezone-data.bin',
+  ),
+  output: 'windows-timezone-data.c',
+  command: [
+    python,
+    files('tools/timezone/windows.py'),
+    '--input', '@INPUT0@',
+    '--zones', '@INPUT1@',
+    '--output', '@OUTPUT@',
+  ],
+  depend_files: files(
+    'tools/timezone/acquire.py',
+    'tools/timezone/bundle.py',
+  ),
+  build_by_default: false,
+)
 subdir('src')
 
 shared_build = get_option('default_library') != 'static'
