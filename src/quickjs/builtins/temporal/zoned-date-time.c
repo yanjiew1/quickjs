@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "../../../calendar/calendar.h"
 #include <stdio.h>
 #include <string.h>
 #include "calendar-fields.h"
@@ -114,7 +115,7 @@ static int zdt_calendar_identifier(JSContext *ctx, const char *text,
                                     size_t length, QJSCalendarId *result)
 {
     return js_temporal_calendar_error(ctx,
-        qjs_temporal_calendar_from_identifier(result, text, length));
+        qjs_calendar_from_identifier(result, text, length));
 }
 
 static int zdt_conversion_options(JSContext *ctx, JSValueConst value,
