@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 #include "../include/quickjs.h"
 
@@ -485,6 +486,44 @@ static void assert_default_zone(JSContext *ctx, const char *expected)
     JS_FreeValue(ctx, value);
 }
 
+#if defined(CONFIG_TIMEZONE_NATIVE) && !defined(_WIN32)
+static void test_default_zone_snapshot(void)
+{
+    const char *original = getenv("TZ");
+    char *saved = original ? strdup(original) : NULL;
+    JSRuntime *rt, *other_rt;
+    JSContext *first, *second, *other;
+
+    assert(!original || saved);
+    assert(!setenv("TZ", ":US/Eastern", 1));
+    rt = JS_NewRuntime();
+    assert(rt);
+    first = JS_NewContext(rt);
+    second = JS_NewContext(rt);
+    assert(first && second);
+    assert_default_zone(first, "America/New_York");
+    assert(!setenv("TZ", "UTC-5:30", 1));
+    assert_default_zone(first, "America/New_York");
+    assert_default_zone(second, "America/New_York");
+    other_rt = JS_NewRuntime();
+    assert(other_rt);
+    other = JS_NewContext(other_rt);
+    assert(other);
+    assert_default_zone(other, "+05:30");
+    JS_FreeContext(other);
+    JS_FreeRuntime(other_rt);
+    JS_FreeContext(first);
+    JS_FreeContext(second);
+    JS_FreeRuntime(rt);
+    if (saved) {
+        assert(!setenv("TZ", saved, 1));
+        free(saved);
+    } else {
+        assert(!unsetenv("TZ"));
+    }
+}
+#endif
+
 static void test_default_zone(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -493,9 +532,22 @@ static void test_default_zone(void)
     void *padding = NULL, *next;
 
     assert(rt);
+#if defined(CONFIG_TIMEZONE_NATIVE) && !defined(_WIN32)
+    test_default_zone_snapshot();
+#endif
     first = JS_NewContext(rt);
     second = JS_NewContext(rt);
     assert(first && second);
+    value = JS_GetDefaultTimeZone(first);
+    assert(!JS_IsException(value) && JS_IsString(value));
+    {
+        const char *identifier = JS_ToCString(first, value);
+        assert(identifier);
+        assert_default_zone(second, identifier);
+        JS_FreeCString(first, identifier);
+    }
+    JS_FreeValue(first, value);
+    assert(!JS_SetDefaultTimeZone(first, "UTC"));
     assert_default_zone(first, "UTC");
 #ifdef CONFIG_TIMEZONE_NATIVE
     assert(!JS_SetDefaultTimeZone(first, "us/eastern"));
