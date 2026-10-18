@@ -43,12 +43,12 @@ typedef QJSTemporalISOTime JSTemporalPlainTimeData;
 
 typedef struct JSTemporalPlainDateData {
     QJSTemporalISODate date;
-    QJSTemporalCalendar calendar;
+    QJSCalendarId calendar;
 } JSTemporalPlainDateData;
 
 typedef struct JSTemporalPlainDateTimeData {
     QJSTemporalISODateTime datetime;
-    QJSTemporalCalendar calendar;
+    QJSCalendarId calendar;
 } JSTemporalPlainDateTimeData;
 
 /* Reference ISO dates are retained for YearMonth and MonthDay. */
@@ -68,7 +68,7 @@ typedef struct JSTemporalTimeZone {
 typedef struct JSTemporalZonedDateTimeData {
     QJSTemporalEpochNs epoch_nanoseconds;
     JSTemporalTimeZone time_zone;
-    QJSTemporalCalendar calendar;
+    QJSCalendarId calendar;
 } JSTemporalZonedDateTimeData;
 
 /* Options results are owned values. String / unit conversions perform
@@ -121,43 +121,43 @@ JSValue js_temporal_to_plain_time(JSContext *ctx, JSValueConst value,
                                  JSValueConst options);
 JSValue js_temporal_create_plain_date(JSContext *ctx, JSValueConst new_target,
                                      QJSTemporalISODate date,
-                                     QJSTemporalCalendar calendar);
+                                     QJSCalendarId calendar);
 JSValue js_temporal_to_plain_date(JSContext *ctx, JSValueConst value,
                                  JSValueConst options);
 JSValue js_temporal_create_plain_date_time(
     JSContext *ctx, JSValueConst new_target, QJSTemporalISODateTime datetime,
-    QJSTemporalCalendar calendar);
+    QJSCalendarId calendar);
 JSValue js_temporal_to_plain_date_time(JSContext *ctx, JSValueConst value,
                                       JSValueConst options);
 JSValue js_temporal_create_plain_year_month(
     JSContext *ctx, JSValueConst new_target, QJSTemporalISODate reference_date,
-    QJSTemporalCalendar calendar);
+    QJSCalendarId calendar);
 JSValue js_temporal_create_plain_month_day(
     JSContext *ctx, JSValueConst new_target, QJSTemporalISODate reference_date,
-    QJSTemporalCalendar calendar);
+    QJSCalendarId calendar);
 JSValue js_temporal_to_plain_year_month(JSContext *ctx, JSValueConst value,
                                       JSValueConst options);
 JSValue js_temporal_to_plain_month_day(JSContext *ctx, JSValueConst value,
                                      JSValueConst options);
 int js_temporal_calendar_date_add(
-    JSContext *ctx, QJSTemporalCalendar calendar, QJSTemporalISODate date,
+    JSContext *ctx, QJSCalendarId calendar, QJSTemporalISODate date,
     QJSTemporalDateDuration duration, QJSTemporalOverflow overflow,
     QJSTemporalISODate *result);
 int js_temporal_plain_datetime_difference_round(
     JSContext *ctx, QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar,
+    QJSCalendarId calendar,
     const QJSTemporalDifferenceSettings *settings,
     QJSTemporalInternalDuration *result);
 int js_temporal_plain_datetime_difference_total(
     JSContext *ctx, QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar, QJSTemporalUnit unit, double *result);
+    QJSCalendarId calendar, QJSTemporalUnit unit, double *result);
 
 /* Calendar identifiers and fields are handled by the calendar owner;
    unknown calendars throw rather than silently becoming ISO. */
 int js_temporal_to_calendar(JSContext *ctx, JSValueConst value,
-                            QJSTemporalCalendar *result);
+                            QJSCalendarId *result);
 int js_temporal_get_calendar(JSContext *ctx, JSValueConst object,
-                             QJSTemporalCalendar *result);
+                             QJSCalendarId *result);
 
 /* Resolve the runtime default zone through the common Date policy. */
 int js_temporal_get_system_zone(JSContext *ctx, QJSTemporalZone *result);
@@ -177,7 +177,7 @@ int js_temporal_time_zone_datetime(JSContext *ctx,
                                   QJSTemporalISODateTime *result);
 JSValue js_temporal_create_zoned_date_time(
     JSContext *ctx, JSValueConst new_target, QJSTemporalEpochNs epoch,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar);
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar);
 JSValue js_temporal_to_zoned_date_time(JSContext *ctx, JSValueConst value,
                                       JSValueConst options);
 
