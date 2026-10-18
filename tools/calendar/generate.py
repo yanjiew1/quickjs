@@ -9,6 +9,7 @@ from pathlib import Path
 from acquire import SOURCES, atomic_write, checked_sources, digest
 from bundle import pack, unpack
 from normalize import EPOCH, japanese_eras, persian, ummalqura
+from lunisolar import korea_precomputed
 
 
 def datasets():
@@ -44,12 +45,23 @@ def datasets():
         for year, nominal, leap, day, length in data['approximate_months']:
             if not (day + length <= required_first or day >= required_end):
                 raise ValueError('approximation enters mandatory calendar dates')
-        if [r[0] for r in data['rows']] != list(range(1899, (2100 if name == 'chinese' else 2050) + 1)):
+        if [r[0] for r in data['rows']] != list(range(1899, 2101)):
             raise ValueError('incomplete normalized calendar years')
+        version = name + '-publications-20261019-model1'
+        if name == 'dangi':
+            source = 'icu4x-korea-data.rs'
+            expected = korea_precomputed((SOURCES / source).read_text(encoding='utf-8'))
+            saved = {r[0]: r for r in data['rows']}
+            if (data.get('precomputed_source') != source or
+                    data.get('precomputed_span') != [end, data['end_epoch_day']] or
+                    data['approximate_months'] or
+                    any(saved[row[0]] != row for row in expected if row[0] <= 2100)):
+                raise ValueError('normalized Dangi differs from precomputed source')
+            version = 'dangi-kasi-icu4x-' + pin['sources'][source]['revision']
         years = [(day, months, leap) for year, day, months, leap in data['rows']]
         result.append({'calendar': name, 'first_year': data['first_year'],
                        'end_epoch_day': data['end_epoch_day'], 'years': years,
-                       'version': name + '-publications-20261019-model1'})
+                       'version': version})
     eras = japanese_eras((SOURCES / 'cldr-calendarData.json').read_text(encoding='utf-8'))
     if json.loads((SOURCES.parent / 'japanese.json').read_text()) != eras:
         raise ValueError('normalized Japanese eras differ from source')
