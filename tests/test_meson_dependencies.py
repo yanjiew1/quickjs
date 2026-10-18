@@ -69,6 +69,12 @@ def main():
     expected = {p.relative_to(source).as_posix() for directory in
                 ['src/quickjs', 'src/quickjs-libc']
                 for p in (source / directory).rglob('*.c')}
+    options = {item['name']: item['value'] for item in
+               json.loads((build / 'meson-info/intro-buildoptions.json').read_text())}
+    if not options['temporal']:
+        expected = {name for name in expected
+                    if not name.startswith('src/quickjs/builtins/temporal/') or
+                    name.endswith('/common.c')}
     expected.update('tools/' + name + '.c' for name in ['qjs', 'qjsc', 'run-test262'])
     assert expected <= checked, 'Missing JSValue checks: ' + repr(sorted(expected - checked))
     assert len(normal) == len(set(normal.values())), 'Different sources share an object output'

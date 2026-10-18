@@ -43,6 +43,20 @@ for slow emulators or instrumentation. The `threading` suite selects concurrency
 tests; `--repeat` can repeat a focused test. Compile-only `CONFIG_CHECK_JSVALUE`
 checks are included in every default build.
 
+## Temporal
+
+Temporal is enabled by default on this branch. The minimal configuration
+implements all Temporal classes with the ISO calendar, UTC and explicit
+numeric offset timezones. It has no ICU or installed timezone-data dependency.
+The runtime's initial default timezone is UTC; embedders can set a shared
+Date/Temporal default with `JS_SetDefaultTimeZone()`.
+
+Use `-Dtemporal=false` to omit Temporal and retain Date's existing host policy.
+Temporal embedding entry points remain callable and report TypeError when the
+feature is disabled. `Temporal=auto` in the Test262 configuration follows the
+runner's build setting. IANA zones and non-ISO calendars are subsequent stages
+of the [native Temporal design](doc/temporal-design.md).
+
 ## Static and shared libraries
 
 Use `-Ddefault_library=static` (the default), `shared`, or `both`. Shared builds
