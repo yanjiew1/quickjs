@@ -193,6 +193,53 @@ test(
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
+standalone += {
+  'test_tzif_decoder': files(
+    'test_tzif_decoder.c',
+    '../src/calendar/iso.c',
+    '../src/timezone/tzif.c',
+  ),
+  'test_cutils': files(
+    'test_cutils.c',
+    '../src/cutils/cutils.c',
+  ),
+  'test_dtoa': files(
+    'test_dtoa.c',
+    '../src/dtoa/dtoa.c',
+    '../src/cutils/cutils.c',
+  ),
+  'test_unicode': files(
+    'test_unicode.c',
+    '../src/unicode/libunicode.c',
+  ) + unicode_tables + files(
+    '../src/cutils/cutils.c',
+  ),
+  'test_unicode_oom': files(
+    'test_unicode_oom.c',
+    '../src/regexp/compile.c',
+    '../src/regexp/exec.c',
+    '../src/unicode/libunicode.c',
+  ) + unicode_tables + files(
+    '../src/cutils/cutils.c',
+  ),
+  'test_fuzz_regexp_timeout': files(
+    'test_fuzz_regexp_timeout.c',
+    '../src/regexp/compile.c',
+    '../src/regexp/exec.c',
+    '../src/unicode/libunicode.c',
+  ) + unicode_tables + files(
+    '../src/cutils/cutils.c',
+  ),
+  'test_unicode_gen': files(
+    'test_unicode_gen.c',
+    '../src/cutils/cutils.c',
+  ),
+  'test_wait_queue': files(
+    'test_wait_queue.c',
+    '../src/libwait/wait-queue.c',
+  ),
+}
+
 if get_option('temporal')
   standalone += {
     'test_temporal_clock': files(
@@ -284,48 +331,6 @@ if get_option('temporal')
     ),
   }
 endif
-
-standalone += {
-  'test_cutils': files(
-    'test_cutils.c',
-    '../src/cutils/cutils.c',
-  ),
-  'test_dtoa': files(
-    'test_dtoa.c',
-    '../src/dtoa/dtoa.c',
-    '../src/cutils/cutils.c',
-  ),
-  'test_unicode': files(
-    'test_unicode.c',
-    '../src/unicode/libunicode.c',
-  ) + unicode_tables + files(
-    '../src/cutils/cutils.c',
-  ),
-  'test_unicode_oom': files(
-    'test_unicode_oom.c',
-    '../src/regexp/compile.c',
-    '../src/regexp/exec.c',
-    '../src/unicode/libunicode.c',
-  ) + unicode_tables + files(
-    '../src/cutils/cutils.c',
-  ),
-  'test_fuzz_regexp_timeout': files(
-    'test_fuzz_regexp_timeout.c',
-    '../src/regexp/compile.c',
-    '../src/regexp/exec.c',
-    '../src/unicode/libunicode.c',
-  ) + unicode_tables + files(
-    '../src/cutils/cutils.c',
-  ),
-  'test_unicode_gen': files(
-    'test_unicode_gen.c',
-    '../src/cutils/cutils.c',
-  ),
-  'test_wait_queue': files(
-    'test_wait_queue.c',
-    '../src/libwait/wait-queue.c',
-  ),
-}
 
 foreach name, sources : standalone
   app = {
