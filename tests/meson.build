@@ -28,7 +28,7 @@ component_test_specs = []
 # remain available before their eventual build option is introduced.
 calendar_enabled = get_option('temporal')
 native_calendars = get_option('temporal')
-native_timezones = false
+native_timezones = get_option('temporal') and get_option('timezone_backend') == 'native'
 calendar_test_sources = []
 timezone_test_sources = []
 system_timezone_test_sources = []
@@ -39,9 +39,16 @@ if calendar_enabled
   timezone_test_sources = files(
     '../src/timezone/timezone.c',
   )
-  timezone_test_sources += files(
-    '../src/timezone/timezone-minimal.c',
-  )
+  if native_timezones
+    timezone_test_sources += files(
+      '../src/timezone/timezone-native.c',
+      '../src/timezone/tzif.c',
+    ) + [timezone_data]
+  else
+    timezone_test_sources += files(
+      '../src/timezone/timezone-minimal.c',
+    )
+  endif
 endif
 
 fixture_manifest = files('../tools/build/test-fixtures.list')
@@ -137,6 +144,17 @@ if get_option('temporal')
       timeout: 60,
     )
   endforeach
+  if get_option('timezone_backend') == 'native'
+    test(
+      'temporal-iana',
+      qjs,
+      args: ['--std', 'tests/test_temporal_iana.js'],
+      suite: ['repo', 'temporal', 'integration'],
+      workdir: test_workdir,
+      depends: fixtures,
+      timeout: 60,
+    )
+  endif
 endif
 
 # Tests that include an implementation need archive extraction, not link_whole.
@@ -290,21 +308,22 @@ endforeach
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
-standalone += {
-  'test_native_timezone': files(
-    'test_native_timezone.c',
-    '../src/calendar/iso.c',
-    '../src/timezone/timezone.c',
-    '../src/timezone/timezone-native.c',
-    '../src/timezone/tzif.c',
-  ) + [timezone_data],
-  'test_tzif_decoder': files(
-    'test_tzif_decoder.c',
-    '../src/calendar/iso.c',
-    '../src/timezone/tzif.c',
-  ),
-
-}
+if native_timezones
+  standalone += {
+    'test_native_timezone': files(
+      'test_native_timezone.c',
+      '../src/calendar/iso.c',
+      '../src/timezone/timezone.c',
+      '../src/timezone/timezone-native.c',
+      '../src/timezone/tzif.c',
+    ) + [timezone_data],
+    'test_tzif_decoder': files(
+      'test_tzif_decoder.c',
+      '../src/calendar/iso.c',
+      '../src/timezone/tzif.c',
+    ),
+  }
+endif
 
 if get_option('temporal')
   standalone += {
@@ -336,17 +355,6 @@ if get_option('temporal')
       '../src/temporal/format.c',
       '../src/temporal/time-zone.c',
     ) + calendar_test_sources + timezone_test_sources,
-    'test_temporal_minimal_zones': files(
-      'test_temporal_minimal_zones.c',
-      '../src/calendar/iso.c',
-      '../src/temporal/epoch.c',
-      '../src/temporal/iso.c',
-      '../src/temporal/parse.c',
-      '../src/temporal/format.c',
-      '../src/temporal/time-zone.c',
-      '../src/timezone/timezone.c',
-      '../src/timezone/timezone-minimal.c',
-    ),
     'test_temporal_calendars': files(
       'test_temporal_calendars.c',
       '../src/temporal/epoch.c',
@@ -394,6 +402,22 @@ if get_option('temporal')
       '../src/temporal/epoch.c',
       '../src/temporal/iso.c',
       '../src/temporal/civil.c',
+    ),
+  }
+endif
+
+if get_option('temporal') and not native_timezones
+  standalone += {
+    'test_temporal_minimal_zones': files(
+      'test_temporal_minimal_zones.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/parse.c',
+      '../src/temporal/format.c',
+      '../src/temporal/time-zone.c',
+      '../src/timezone/timezone.c',
+      '../src/timezone/timezone-minimal.c',
     ),
   }
 endif
@@ -783,13 +807,15 @@ test(
   timeout: 120,
 )
 
-test(
-  'timezone-generator',
-  python,
-  args: files('test_timezone_generator.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+if native_timezones
+  test(
+    'timezone-generator',
+    python,
+    args: files('test_timezone_generator.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+endif
 if not meson.is_cross_build() and host_machine.system() != 'windows'
   expected_flags = []
   if cc.sizeof('void *') == 4 and host_machine.cpu_family() in ['x86', 'x86_64']
