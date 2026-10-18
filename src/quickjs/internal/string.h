@@ -30,7 +30,7 @@
 
 static inline BOOL tag_is_string(uint32_t tag)
 {
-    return tag == JS_TAG_STRING || tag == JS_TAG_STRING_ROPE;
+    return tag == JS_TAG_STRING;
 }
 
 enum {
@@ -45,7 +45,8 @@ enum {
 #define JS_ATOM_HASH_PRIVATE JS_ATOM_HASH_MASK
 
 struct JSString {
-    uint32_t len : 31;
+    uint32_t len : 30; /* JS_STRING_LEN_MAX */
+    uint8_t is_rope : 1;
     uint8_t is_wide_char : 1; /* 0 = 8 bits, 1 = 16 bits characters */
     /* for JS_ATOM_TYPE_SYMBOL: hash = weakref_count, atom_type = 3,
        for JS_ATOM_TYPE_PRIVATE: hash = JS_ATOM_HASH_PRIVATE, atom_type = 3
@@ -63,15 +64,25 @@ struct JSString {
 };
 
 typedef struct JSStringRope {
-    uint32_t len;
-    uint8_t is_wide_char; /* 0 = 8 bits, 1 = 16 bits characters */
+    /* The initial member is the common header of every string value.
+       Its character storage, hash and atom fields are unused for ropes. */
+    JSString str;
     uint8_t depth; /* max depth of the rope tree */
-    /* XXX: could reduce memory usage by using a direct pointer with
-       bit 0 to select rope or string */
     JSValue left;
     JSValue right; /* might be the empty string */
 } JSStringRope;
 
+
+/* Check the tag before reading the common header of a string value. */
+static inline BOOL JS_IsStringRope(JSValueConst v)
+{
+    return JS_IsString(v) && JS_VALUE_GET_STRING(v)->is_rope;
+}
+
+static inline BOOL JS_IsFlatString(JSValueConst v)
+{
+    return JS_IsString(v) && !JS_VALUE_GET_STRING(v)->is_rope;
+}
 
 static inline int string_get(const JSString *p, int idx) {
     return p->is_wide_char ? p->u.str16[idx] : p->u.str8[idx];
@@ -97,7 +108,7 @@ int js_string_memcmp(const JSString *p1, int pos1, const JSString *p2,
 
 static inline BOOL JS_IsEmptyString(JSValueConst v)
 {
-    return JS_VALUE_GET_TAG(v) == JS_TAG_STRING && JS_VALUE_GET_STRING(v)->len == 0;
+    return JS_IsString(v) && JS_VALUE_GET_STRING(v)->len == 0;
 }
 
 

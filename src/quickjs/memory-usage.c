@@ -51,7 +51,13 @@ static void compute_value_size(JSValueConst val, JSMemoryUsage_helper *hp);
 
 static void compute_jsstring_size(JSString *str, JSMemoryUsage_helper *hp)
 {
-    if (!str->atom_type) {  /* atoms are handled separately */
+    if (str->is_rope) {
+        /* Count the node only: expanding shared children can make this
+           diagnostic proportional to logical length, not live storage. */
+        double s_ref_count = js_rc(str)->ref_count;
+        hp->str_count += 1 / s_ref_count;
+        hp->str_size += sizeof(JSStringRope) / s_ref_count;
+    } else if (!str->atom_type) {  /* atoms are handled separately */
         double s_ref_count = js_rc(str)->ref_count;
         hp->str_count += 1 / s_ref_count;
         hp->str_size += ((sizeof(*str) + (str->len << str->is_wide_char) +

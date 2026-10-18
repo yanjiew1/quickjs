@@ -54,11 +54,10 @@ BOOL js_strict_eq2(JSValueConst op1, JSValueConst op2,
         res = (tag1 == tag2);
         break;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
         {
             if (!tag_is_string(tag2)) {
                 res = FALSE;
-            } else if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) {
+            } else if (JS_IsFlatString(op1) && JS_IsFlatString(op2)) {
                 res = js_string_eq(JS_VALUE_GET_STRING(op1),
                                    JS_VALUE_GET_STRING(op2));
             } else {

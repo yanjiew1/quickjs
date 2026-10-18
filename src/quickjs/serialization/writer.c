@@ -734,21 +734,16 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
     case JS_TAG_STRING:
         {
             JSString *p = JS_VALUE_GET_STRING(obj);
+            JSValue str = JS_UNDEFINED;
+            if (p->is_rope) {
+                str = JS_ToString(s->ctx, obj);
+                if (JS_IsException(str))
+                    goto fail;
+                p = JS_VALUE_GET_STRING(str);
+            }
             bc_put_u8(s, BC_TAG_STRING);
             JS_WriteString(s, p);
-        }
-        break;
-    case JS_TAG_STRING_ROPE:
-        {
-            JSValue str;
-            int ret;
-            str = JS_ToString(s->ctx, obj);
-            if (JS_IsException(str))
-                goto fail;
-            ret = JS_WriteObjectRec(s, str);
             JS_FreeValue(s->ctx, str);
-            if (ret)
-                goto fail;
         }
         break;
     case JS_TAG_FUNCTION_BYTECODE:

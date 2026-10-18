@@ -150,8 +150,8 @@ JSValue JS_NewRegexp(JSContext *ctx, JSValue pattern, JSValue bc)
     JSRegExp *re;
 
     /* sanity check */
-    if (unlikely(JS_VALUE_GET_TAG(bc) != JS_TAG_STRING ||
-                 JS_VALUE_GET_TAG(pattern) != JS_TAG_STRING)) {
+    if (unlikely(!JS_IsFlatString(bc) ||
+                 !JS_IsFlatString(pattern))) {
         JS_ThrowTypeError(ctx, "string expected");
         goto fail;
     }
@@ -179,8 +179,8 @@ static JSValue js_regexp_set_internal(JSContext *ctx,
     JSRegExp *re;
 
     /* sanity check */
-    if (unlikely(JS_VALUE_GET_TAG(bc) != JS_TAG_STRING ||
-                 JS_VALUE_GET_TAG(pattern) != JS_TAG_STRING)) {
+    if (unlikely(!JS_IsFlatString(bc) ||
+                 !JS_IsFlatString(pattern))) {
         JS_ThrowTypeError(ctx, "string expected");
         JS_FreeValue(ctx, obj);
         JS_FreeValue(ctx, bc);

@@ -1596,7 +1596,6 @@ JSValue JS_ToBigIntFree(JSContext *ctx, JSValue val)
         val = __JS_NewShortBigInt(JS_VALUE_GET_INT(val));
         break;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
         val = JS_StringToBigIntErr(ctx, val);
         if (JS_IsException(val))
             return val;

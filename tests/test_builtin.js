@@ -4579,6 +4579,44 @@ function test_rope()
     rope_concat(100000, -1);
 }
 
+function test_rope_consumers()
+{
+    for (const tail of ["z", "\u0100\u0000\ud800"]) {
+        const prefix = "a".repeat(10000);
+        const rope = prefix + tail;
+        const other = prefix + tail;
+        const flat = [prefix, tail].join("");
+        assert(typeof rope, "string");
+        assert(Boolean(rope), true);
+        assert(rope.length, 10000 + tail.length);
+        assert(rope[9999], "a");
+        assert(rope[10000], tail[0]);
+        assert(rope === flat && flat === rope && rope === other);
+        assert(rope == flat && !(rope != flat));
+        assert(!(rope < flat) && rope <= flat && rope >= flat);
+        assert(rope < prefix + "\uffff");
+        const map = new Map([[rope, 1]]);
+        assert(map.get(flat), 1);
+        map.set(other, 2);
+        assert(map.size, 1);
+        assert(map.get(rope), 2);
+        assert(new Set([flat, rope, other]).size, 1);
+        const object = { [rope]: 3 };
+        assert(object[other], 3);
+        assert(Symbol.for(rope), Symbol.for(flat));
+        assert(Symbol(rope).description, flat);
+        assert(JSON.parse(JSON.stringify(rope)), flat);
+        assert(new String(rope).valueOf(), flat);
+        assert(Object(rope)[10000], tail[0]);
+        assert(rope.replace(/a+/, "b"), "b" + tail);
+        assert(new RegExp(rope).test(flat));
+        // Keep an owner alive while conversions cache a flattened value.
+        assert(String(rope), flat);
+        assert(rope[10000], tail[0]);
+        assert(new Map([[rope, 4]]).get(flat), 4);
+    }
+}
+
 function eval_error(eval_str, expected_error, level)
 {
     var err = false;
@@ -5811,6 +5849,7 @@ test_weak_ref();
 test_finalization_registry();
 test_generator();
 test_rope();
+test_rope_consumers();
 test_line_column_numbers();
 
 function test_iterator_callback_counters()

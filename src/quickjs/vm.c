@@ -970,7 +970,7 @@ static no_inline int js_relational_slow(JSContext *ctx, JSValue *sp,
     tag2 = JS_VALUE_GET_NORM_TAG(op2);
 
     if (tag_is_string(tag1) && tag_is_string(tag2)) {
-        if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) {
+        if (JS_IsFlatString(op1) && JS_IsFlatString(op2)) {
             res = js_string_compare(JS_VALUE_GET_STRING(op1),
                                     JS_VALUE_GET_STRING(op2));
         } else {
@@ -1369,7 +1369,6 @@ static __exception int js_operator_typeof(JSRuntime *rt, JSValueConst op1)
         atom = JS_ATOM_boolean;
         break;
     case JS_TAG_STRING:
-    case JS_TAG_STRING_ROPE:
         atom = JS_ATOM_string;
         break;
     case JS_TAG_OBJECT:
@@ -4239,10 +4238,13 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 get_array_el3_slow_path:
                     switch (JS_VALUE_GET_TAG(sp[-1])) {
                     case JS_TAG_INT:
-                    case JS_TAG_STRING:
                     case JS_TAG_SYMBOL:
                         /* undefined and null are tested in JS_GetPropertyValue() */
                         break;
+                    case JS_TAG_STRING:
+                        if (JS_IsFlatString(sp[-1]))
+                            break;
+                        /* fall through */
                     default:
                         /* must be tested before JS_ToPropertyKey */
                         if (unlikely(JS_IsUndefined(sp[-2]) || JS_IsNull(sp[-2]))) {
@@ -4641,8 +4643,8 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     *pv = __JS_NewFloat64(ctx, JS_VALUE_GET_FLOAT64(*pv) +
                                                JS_VALUE_GET_FLOAT64(op2));
                     sp--;
-                } else if (JS_VALUE_GET_TAG(*pv) == JS_TAG_STRING &&
-                           JS_VALUE_GET_TAG(op2) == JS_TAG_STRING) {
+                } else if (JS_IsFlatString(*pv) &&
+                           JS_IsFlatString(op2)) {
                     sp--;
                     sf->cur_pc = pc;
                     if (JS_ConcatStringInPlace(rt, JS_VALUE_GET_STRING(*pv), op2)) {
@@ -5196,7 +5198,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     } else {                                            \
                         goto slow_eq ## inv;                            \
                     }                                                   \
-                } else if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) { \
+                } else if (JS_IsFlatString(op1) && JS_IsFlatString(op2)) { \
                     res = js_string_eq(JS_VALUE_GET_STRING(op1),   \
                                        JS_VALUE_GET_STRING(op2));       \
                     JS_FreeValue(ctx, op1);                             \
@@ -5257,7 +5259,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 } else if (tag1 == JS_TAG_NULL || tag1 == JS_TAG_UNDEFINED) { \
                     res = (tag1 == tag2);                               \
                     JS_FreeValue(ctx, op2);                             \
-                } else if (tag1 == JS_TAG_STRING && tag2 == JS_TAG_STRING) { \
+                } else if (JS_IsFlatString(op1) && JS_IsFlatString(op2)) { \
                     res = js_string_eq(JS_VALUE_GET_STRING(op1),   \
                                        JS_VALUE_GET_STRING(op2));       \
                     JS_FreeValue(ctx, op1);                             \
@@ -5340,9 +5342,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         CASE(OP_to_propkey):
             switch (JS_VALUE_GET_TAG(sp[-1])) {
             case JS_TAG_INT:
-            case JS_TAG_STRING:
             case JS_TAG_SYMBOL:
                 break;
+            case JS_TAG_STRING:
+                if (JS_IsFlatString(sp[-1]))
+                    break;
+                /* fall through */
             default:
                 sf->cur_pc = pc;
                 ret_val = JS_ToPropertyKey(ctx, sp[-1]);

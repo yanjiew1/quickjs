@@ -262,8 +262,8 @@ int string_buffer_concat_value(StringBuffer *s, JSValueConst v)
         /* prevent exception overload */
         return -1;
     }
-    if (unlikely(JS_VALUE_GET_TAG(v) != JS_TAG_STRING)) {
-        if (JS_VALUE_GET_TAG(v) == JS_TAG_STRING_ROPE) {
+    if (unlikely(!JS_IsFlatString(v))) {
+        if (JS_IsStringRope(v)) {
             JSStringRope *r = JS_VALUE_GET_STRING_ROPE(v);
             /* recursion is acceptable because the rope depth is bounded */
             if (string_buffer_concat_value(s, r->left))
@@ -293,7 +293,7 @@ int string_buffer_concat_value_free(StringBuffer *s, JSValue v)
         JS_FreeValue(s->ctx, v);
         return -1;
     }
-    if (unlikely(JS_VALUE_GET_TAG(v) != JS_TAG_STRING)) {
+    if (unlikely(!JS_IsFlatString(v))) {
         v = JS_ToStringFree(s->ctx, v);
         if (JS_IsException(v))
             return string_buffer_set_error(s);

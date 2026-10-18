@@ -47,7 +47,7 @@ uint32_t js_string_obj_get_length(JSValueConst obj)
 
     /* This is a class exotic method: obj class_id is JS_CLASS_STRING */
     p = JS_VALUE_GET_OBJ(obj);
-    if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_STRING) {
+    if (JS_IsFlatString(p->u.object_data)) {
         JSString *p1 = JS_VALUE_GET_STRING(p->u.object_data);
         len = p1->len;
     }
@@ -65,7 +65,7 @@ static int js_string_get_own_property(JSContext *ctx,
     /* This is a class exotic method: obj class_id is JS_CLASS_STRING */
     if (__JS_AtomIsTaggedInt(prop)) {
         p = JS_VALUE_GET_OBJ(obj);
-        if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_STRING) {
+        if (JS_IsFlatString(p->u.object_data)) {
             p1 = JS_VALUE_GET_STRING(p->u.object_data);
             idx = __JS_AtomToUInt32(prop);
             if (idx < p1->len) {
@@ -96,7 +96,7 @@ static int js_string_define_own_property(JSContext *ctx,
     if (__JS_AtomIsTaggedInt(prop)) {
         idx = __JS_AtomToUInt32(prop);
         p = JS_VALUE_GET_OBJ(this_obj);
-        if (JS_VALUE_GET_TAG(p->u.object_data) != JS_TAG_STRING)
+        if (!JS_IsFlatString(p->u.object_data))
             goto def;
         p1 = JS_VALUE_GET_STRING(p->u.object_data);
         if (idx >= p1->len)
@@ -105,7 +105,7 @@ static int js_string_define_own_property(JSContext *ctx,
             goto fail;
         /* check that the same value is configured */
         if (flags & JS_PROP_HAS_VALUE) {
-            if (JS_VALUE_GET_TAG(val) != JS_TAG_STRING)
+            if (!JS_IsFlatString(val))
                 goto fail;
             p2 = JS_VALUE_GET_STRING(val);
             if (p2->len != 1)
@@ -177,14 +177,13 @@ JSValue js_string_constructor(JSContext *ctx, JSValueConst new_target,
 
 static JSValue js_thisStringValue(JSContext *ctx, JSValueConst this_val)
 {
-    if (JS_VALUE_GET_TAG(this_val) == JS_TAG_STRING ||
-        JS_VALUE_GET_TAG(this_val) == JS_TAG_STRING_ROPE)
+    if (JS_IsString(this_val))
         return JS_DupValue(ctx, this_val);
 
     if (JS_VALUE_GET_TAG(this_val) == JS_TAG_OBJECT) {
         JSObject *p = JS_VALUE_GET_OBJ(this_val);
         if (p->class_id == JS_CLASS_STRING) {
-            if (JS_VALUE_GET_TAG(p->u.object_data) == JS_TAG_STRING)
+            if (JS_IsFlatString(p->u.object_data))
                 return JS_DupValue(ctx, p->u.object_data);
         }
     }
@@ -757,7 +756,7 @@ int js_string_GetSubstitution(JSContext *ctx,
     int c, c1;
     JSString *rp;
 
-    if (JS_VALUE_GET_TAG(rep) != JS_TAG_STRING) {
+    if (!JS_IsFlatString(rep)) {
         JS_ThrowTypeError(ctx, "not a string");
         goto exception;
     }

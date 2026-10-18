@@ -155,7 +155,13 @@ void __JS_FreeValueRT(JSRuntime *rt, JSValue v)
     case JS_TAG_STRING:
         {
             JSString *p = JS_VALUE_GET_STRING(v);
-            if (p->atom_type) {
+            if (p->is_rope) {
+                /* Rope depth is bounded, so recursive release is safe. */
+                JSStringRope *rope = JS_VALUE_GET_STRING_ROPE(v);
+                JS_FreeValueRT(rt, rope->left);
+                JS_FreeValueRT(rt, rope->right);
+                js_free_rt(rt, rope);
+            } else if (p->atom_type) {
                 JS_FreeAtomStruct(rt, p);
             } else {
 #ifdef DUMP_LEAKS
@@ -163,15 +169,6 @@ void __JS_FreeValueRT(JSRuntime *rt, JSValue v)
 #endif
                 js_free_rt(rt, p);
             }
-        }
-        break;
-    case JS_TAG_STRING_ROPE:
-        /* Note: recursion is acceptable because the rope depth is bounded */
-        {
-            JSStringRope *p = JS_VALUE_GET_STRING_ROPE(v);
-            JS_FreeValueRT(rt, p->left);
-            JS_FreeValueRT(rt, p->right);
-            js_free_rt(rt, p);
         }
         break;
     case JS_TAG_OBJECT:
