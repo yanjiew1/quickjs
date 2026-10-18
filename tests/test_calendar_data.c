@@ -56,7 +56,7 @@ static void lunar_metadata(void)
     /* Synthetic 384-day years: Chinese year -1 repeats M02; Dangi year
        1000000 repeats M12. These are format fixtures, not published dates. */
     static const uint8_t binary[] = {
-        0x51, 0x4a, 0x43, 0x41, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x8c, 0x00, 0x00, 0x00, 0x02,
+        0x51, 0x4a, 0x43, 0x41, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x8c, 0x00, 0x00, 0x00, 0x02,
         0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00, 0x74, 0x00, 0x00, 0x00, 0x01,
         0x00, 0x00, 0x00, 0x1e, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x80,
         0x00, 0x00, 0x00, 0x74, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00, 0x00,
@@ -126,11 +126,35 @@ int main(void)
     assert(copy);
     lunar_metadata();
     assert(!qjs_calendar_data_open(&opened, compiled->bytes, compiled->size));
-    assert(opened.count == 4);
+    assert(opened.count == 5);
     check_years(&opened, QJS_CAL_PERSIAN, 1206, 1498, -52150, 54866);
     check_years(&opened, QJS_CAL_ISLAMIC_UMALQURA, 1300, 1600, -31826, 74839);
     published_lunar_years(&opened, QJS_CAL_CHINESE, 2100, 47875);
     published_lunar_years(&opened, QJS_CAL_DANGI, 2050, 29626);
+    {
+        QJSCalendarEra era, saved_era = {1, 2, "saved"};
+        size_t count = qjs_calendar_data_japanese_era_count(&opened);
+        uint32_t offset = u32(compiled->bytes + 32 + 4 * 32 + 16);
+
+        assert(count >= 5);
+        assert(!qjs_calendar_data_japanese_era(&opened, 0, &era));
+        assert(era.first_day == -35428 && era.year_offset == 1867);
+        assert(!strcmp(era.name, "meiji"));
+        assert(!qjs_calendar_data_japanese_era(&opened, 4, &era));
+        assert(era.first_day == 18017 && !strcmp(era.name, "reiwa"));
+        era = saved_era;
+        assert(qjs_calendar_data_japanese_era(&opened, SIZE_MAX, &era) == QJS_CAL_RANGE);
+        assert(era.first_day == 1 && era.year_offset == 2 && era.name == saved_era.name);
+        assert(qjs_calendar_data_year(&opened, QJS_CAL_JAPANESE, 2026, &result) == QJS_CAL_UNSUPPORTED);
+        for (i = 8; i < 40; i++) {
+            memcpy(copy, compiled->bytes, compiled->size);
+            copy[offset + i] = 255;
+            reject(copy, compiled->size);
+        }
+        memcpy(copy, compiled->bytes, compiled->size);
+        memcpy(copy + offset + 40, copy + offset, 40);
+        reject(copy, compiled->size);
+    }
     assert(!strcmp(qjs_calendar_data_version(&opened, QJS_CAL_PERSIAN), "tehran-1206-1498"));
     assert(!qjs_calendar_data_version(&opened, QJS_CAL_ISO8601));
     assert(qjs_calendar_data_year(&opened, QJS_CAL_ISO8601, 2026, &result) == QJS_CAL_UNSUPPORTED);
