@@ -226,10 +226,18 @@ standalone = {
     '../src/calendar/solar.c',
     calendar_data,
   ],
-  'test_calendar_eras': [
-    'test_calendar_eras.c',
+  'test_calendar_eras_future': [
+    'test_calendar_eras_future.c',
+    '../src/calendar/data.c',
     '../src/calendar/eras.c',
     '../src/calendar/iso.c',
+  ],
+  'test_calendar_eras': [
+    'test_calendar_eras.c',
+    '../src/calendar/data.c',
+    '../src/calendar/eras.c',
+    '../src/calendar/iso.c',
+    calendar_data,
   ],
   'test_calendar_core': [
     'test_calendar_core.c',

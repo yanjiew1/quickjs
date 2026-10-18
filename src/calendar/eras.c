@@ -2,30 +2,15 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license, see project LICENSE.
  */
 #include "eras.h"
+#include "data.h"
 #include <string.h>
-
-typedef struct JapaneseEra {
-    const char *name;
-    int32_t year_offset;
-    int32_t first_day;
-} JapaneseEra;
-
-/* Unix epoch days: Meiji 6 (1873-01-01), 1912-07-30, 1926-12-25,
-   1989-01-08 and 2019-05-01. Earlier dates use Gregorian eras. */
-static const JapaneseEra japanese_eras[] = {
-    {"meiji", 1867, -35428},
-    {"taisho", 1911, -20974},
-    {"showa", 1925, -15713},
-    {"heisei", 1988, 6947},
-    {"reiwa", 2018, 18017},
-};
 
 void qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
                      QJSCalendarDate *date)
 {
     const char *name = NULL;
     int32_t year = date->year, era_year = year;
-    int i;
+    size_t i;
 
     switch (calendar) {
     case QJS_CAL_BUDDHIST: name = "be"; break;
@@ -37,10 +22,14 @@ void qjs_cal_set_era(QJSCalendarId calendar, int64_t epoch_day,
             era_year += 5500;
         break;
     case QJS_CAL_JAPANESE:
-        for (i = 4; i >= 0; i--) {
-            if (epoch_day >= japanese_eras[i].first_day) {
-                name = japanese_eras[i].name;
-                era_year -= japanese_eras[i].year_offset;
+        i = qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+        while (i) {
+            QJSCalendarEra era;
+
+            if (!qjs_calendar_data_japanese_era(&qjs_native_calendar_data, --i, &era) &&
+                epoch_day >= era.first_day) {
+                name = era.name;
+                era_year -= era.year_offset;
                 break;
             }
         }
@@ -80,7 +69,7 @@ int qjs_cal_year_from_era(QJSCalendarId calendar, const char *era,
                          int32_t era_year, int32_t *result)
 {
     int64_t year = era_year;
-    int i;
+    size_t i, count;
 
     switch (calendar) {
     case QJS_CAL_BUDDHIST:
@@ -123,9 +112,13 @@ int qjs_cal_year_from_era(QJSCalendarId calendar, const char *era,
             return QJS_CAL_RANGE;
         break;
     case QJS_CAL_JAPANESE:
-        for (i = 0; i < 5; i++) {
-            if (!strcmp(era, japanese_eras[i].name)) {
-                year += japanese_eras[i].year_offset;
+        count = qjs_calendar_data_japanese_era_count(&qjs_native_calendar_data);
+        for (i = 0; i < count; i++) {
+            QJSCalendarEra record;
+
+            if (!qjs_calendar_data_japanese_era(&qjs_native_calendar_data, i, &record) &&
+                !strcmp(era, record.name)) {
+                year += record.year_offset;
                 goto resolved;
             }
         }
