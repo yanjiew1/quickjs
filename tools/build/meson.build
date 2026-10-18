@@ -84,6 +84,10 @@ if get_option('fuzzing')
   fuzz_args = host_args + ['-fsanitize=fuzzer-no-link']
   fuzz_sources = engine_sources + compiler_sources + support_sources
   fuzz_data_sources = data_sources
+  if host_machine.system() == 'windows'
+    fuzz_sources += windows_timezone_sources
+    fuzz_data_sources += windows_timezone_data_sources
+  endif
   fuzz_engine = static_library(
     'quickjs-fuzz',
     fuzz_sources,
