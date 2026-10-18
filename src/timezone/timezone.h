@@ -20,7 +20,10 @@ typedef enum QJSTimeZoneError {
 /* Handles and identifier strings borrow immutable core or backend data for the
    process lifetime. No caller frees them. Fallible calls preserve outputs.
    Seconds use the ECMAScript epoch, without leap-second corrections.
-   UTC offsets are integral seconds strictly between -86400 and +86400. */
+   UTC offsets are integral seconds strictly between -86400 and +86400.
+   Lookup is ASCII-case-insensitive and preserves canonical alias identity.
+   Enumeration includes all available names in lexicographic code-unit order;
+   identifier and primary correspond to ECMA-402 Time Zone Identifier Records. */
 int qjs_timezone_lookup(const QJSTimeZone **result,
                         const char *identifier, size_t length);
 const char *qjs_timezone_identifier(const QJSTimeZone *zone);
