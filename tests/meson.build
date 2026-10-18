@@ -129,6 +129,13 @@ standalone = {
     '../src/temporal/epoch.c',
     '../src/temporal/iso.c',
   ],
+  'test_temporal_civil': [
+    'test_temporal_civil.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/civil.c',
+  ],
   'test_cutils': [
     'test_cutils.c',
     '../src/cutils/cutils.c',

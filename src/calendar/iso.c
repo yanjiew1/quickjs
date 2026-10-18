@@ -28,7 +28,7 @@ static const uint8_t qjs_iso_month_days[12] = {
     31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
 };
 
-static int qjs_iso_leap_year(int64_t year)
+int qjs_iso_leap_year(int32_t year)
 {
     return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
 }
@@ -50,8 +50,10 @@ static int64_t qjs_iso_year_start(int64_t year)
         qjs_iso_floor_divide(previous, 400) - 4;
 }
 
-static int qjs_iso_days_in_month(int32_t year, int32_t month)
+int qjs_iso_days_in_month(int32_t year, int32_t month)
 {
+    if (month < 1 || month > 12)
+        return 0;
     return qjs_iso_month_days[month - 1] +
         (month == 2 && qjs_iso_leap_year(year));
 }
@@ -114,4 +116,3 @@ int qjs_iso_date_from_days(QJSISODate *result, int64_t days)
     *result = date;
     return 0;
 }
-
