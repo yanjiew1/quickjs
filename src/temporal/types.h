@@ -27,6 +27,15 @@
 #include "epoch.h"
 #include "iso.h"
 
+typedef enum QJSTemporalError {
+    QJS_TEMPORAL_OK = 0,
+    QJS_TEMPORAL_ERROR_RANGE = -1,
+    QJS_TEMPORAL_ERROR_MISSING = -2,
+    QJS_TEMPORAL_ERROR_UNSUPPORTED = -3,
+    QJS_TEMPORAL_ERROR_MEMORY = -4,
+    QJS_TEMPORAL_ERROR_BACKEND = -5,
+} QJSTemporalError;
+
 /* Ordered from the largest unit to the smallest unit. */
 typedef enum QJSTemporalUnit {
     QJS_TEMPORAL_YEAR,
