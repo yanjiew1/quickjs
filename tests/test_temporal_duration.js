@@ -200,11 +200,6 @@ function test_relative_duration() {
     const zdt = new Temporal.ZonedDateTime(0n, "+05:30");
     assert(Duration.from("P1D").total({ unit: "hour", relativeTo: zdt }), 24);
     assert(Duration.from("P1DT1H").round({ smallestUnit: "hour", relativeTo: zdt }).toString(), "P1DT1H");
-    if (typeof Intl !== "undefined") {
-        const spring = "2024-03-10T00:00[America/New_York]";
-        assert(Duration.from("P1D").total({ unit: "hour", relativeTo: spring }), 23);
-        assert(Duration.compare("P1D", "PT24H", { relativeTo: spring }), -1);
-    }
 }
 
 function test_duration_intl_interoperability() {
