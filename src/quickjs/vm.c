@@ -55,6 +55,14 @@
 #endif
 
 
+/* For internal diagnostics and VM cleanup assertions. Unlike a result-status
+   predicate, this identifies the exact sentinel representation. */
+static inline BOOL js_is_exception_sentinel(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_EXCEPTION &&
+           (uint32_t)JS_VALUE_GET_INT(v) == 0;
+}
+
 static inline BOOL is_strict_mode_sf(const JSStackFrame *sf)
 {
     return sf && (sf->js_mode & JS_MODE_STRICT);
@@ -628,9 +636,10 @@ static no_inline __exception int js_add_slow(JSContext *ctx, JSValue *sp)
     }
 
     if (tag_is_string(tag1) || tag_is_string(tag2)) {
-        sp[-2] = JS_ConcatString(ctx, op1, op2);
-        if (JS_IsException(sp[-2]))
+        op1 = JS_ConcatString(ctx, op1, op2);
+        if (JS_IsException(op1))
             goto exception;
+        sp[-2] = op1;
         return 0;
     }
 
@@ -1590,6 +1599,8 @@ static JSValue build_for_in_iterator(JSContext *ctx, JSValue obj)
     tag = JS_VALUE_GET_TAG(obj);
     if (tag != JS_TAG_OBJECT && tag != JS_TAG_NULL && tag != JS_TAG_UNDEFINED) {
         obj = JS_ToObjectFree(ctx, obj);
+        if (JS_IsException(obj))
+            return JS_EXCEPTION;
     }
 
     it = js_malloc(ctx, sizeof(*it));
@@ -1646,9 +1657,13 @@ static JSValue build_for_in_iterator(JSContext *ctx, JSValue obj)
 /* obj -> enum_obj */
 static __exception int js_for_in_start(JSContext *ctx, JSValue *sp)
 {
-    sp[-1] = build_for_in_iterator(ctx, sp[-1]);
-    if (JS_IsException(sp[-1]))
+    JSValue result = build_for_in_iterator(ctx, sp[-1]);
+    if (JS_IsException(result)) {
+        /* The iterator builder consumed the original operand. */
+        sp[-1] = JS_UNDEFINED;
         return -1;
+    }
+    sp[-1] = result;
     return 0;
 }
 
@@ -1799,8 +1814,13 @@ static __exception int js_for_in_next(JSContext *ctx, JSValue *sp)
                 break;
         }
     }
-    /* return the property */
-    sp[0] = JS_AtomToValue(ctx, prop);
+    /* Numeric atoms allocate their string representation. */
+    {
+        JSValue value = JS_AtomToValue(ctx, prop);
+        if (JS_IsException(value))
+            return -1;
+        sp[0] = value;
+    }
     sp[1] = JS_FALSE;
     return 0;
  done:
@@ -2639,17 +2659,21 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             *sp++ = JS_DupValue(ctx, b->cpool[*pc++]);
             BREAK;
         CASE(OP_fclosure8):
-            *sp++ = js_closure(ctx, JS_DupValue(ctx, b->cpool[*pc++]), var_refs, sf, FALSE);
-            if (unlikely(JS_IsException(sp[-1])))
+            ret_val = js_closure(ctx, JS_DupValue(ctx, b->cpool[*pc++]), var_refs, sf, FALSE);
+            if (unlikely(JS_IsException(ret_val)))
                 goto exception;
+            *sp++ = ret_val;
             BREAK;
         CASE(OP_push_empty_string):
             *sp++ = JS_AtomToString(ctx, JS_ATOM_empty_string);
             BREAK;
 #endif
         CASE(OP_push_atom_value):
-            *sp++ = JS_AtomToValue(ctx, get_u32(pc));
+            ret_val = JS_AtomToValue(ctx, get_u32(pc));
             pc += 4;
+            if (unlikely(JS_IsException(ret_val)))
+                goto exception;
+            *sp++ = ret_val;
             BREAK;
         CASE(OP_undefined):
             *sp++ = JS_UNDEFINED;
@@ -2686,24 +2710,28 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             *sp++ = JS_TRUE;
             BREAK;
         CASE(OP_object):
-            *sp++ = JS_NewObject(ctx);
-            if (unlikely(JS_IsException(sp[-1])))
+            ret_val = JS_NewObject(ctx);
+            if (unlikely(JS_IsException(ret_val)))
                 goto exception;
+            *sp++ = ret_val;
             BREAK;
         CASE(OP_special_object):
             {
                 int arg = *pc++;
                 switch(arg) {
                 case OP_SPECIAL_OBJECT_ARGUMENTS:
-                    *sp++ = js_build_arguments(ctx, argc, (JSValueConst *)argv);
-                    if (unlikely(JS_IsException(sp[-1])))
+                    ret_val = js_build_arguments(ctx, argc, (JSValueConst *)argv);
+                    if (unlikely(JS_IsException(ret_val)))
                         goto exception;
+                    *sp++ = ret_val;
                     break;
                 case OP_SPECIAL_OBJECT_MAPPED_ARGUMENTS:
-                    *sp++ = js_build_mapped_arguments(ctx, argc, (JSValueConst *)argv,
-                                                      sf, min_int(argc, b->arg_count));
-                    if (unlikely(JS_IsException(sp[-1])))
+                    ret_val = js_build_mapped_arguments(ctx, argc,
+                                                        (JSValueConst *)argv, sf,
+                                                        min_int(argc, b->arg_count));
+                    if (unlikely(JS_IsException(ret_val)))
                         goto exception;
+                    *sp++ = ret_val;
                     break;
                 case OP_SPECIAL_OBJECT_THIS_FUNC:
                     *sp++ = JS_DupValue(ctx, sf->cur_func);
@@ -2722,20 +2750,23 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     }
                     break;
                 case OP_SPECIAL_OBJECT_VAR_OBJECT:
-                    *sp++ = JS_NewObjectProto(ctx, JS_NULL);
-                    if (unlikely(JS_IsException(sp[-1])))
+                    ret_val = JS_NewObjectProto(ctx, JS_NULL);
+                    if (unlikely(JS_IsException(ret_val)))
                         goto exception;
+                    *sp++ = ret_val;
                     break;
                 case OP_SPECIAL_OBJECT_IMPORT_META:
-                    *sp++ = js_import_meta(ctx);
-                    if (unlikely(JS_IsException(sp[-1])))
+                    ret_val = js_import_meta(ctx);
+                    if (unlikely(JS_IsException(ret_val)))
                         goto exception;
+                    *sp++ = ret_val;
                     break;
                 case OP_SPECIAL_OBJECT_DISPOSABLE_RESOURCE_LIST:
                     sf->cur_pc = pc;
-                    *sp++ = js_new_disposable_resource_list(ctx);
-                    if (unlikely(JS_IsException(sp[-1])))
+                    ret_val = js_new_disposable_resource_list(ctx);
+                    if (unlikely(JS_IsException(ret_val)))
                         goto exception;
+                    *sp++ = ret_val;
                     break;
                 default:
                     abort();
@@ -2747,9 +2778,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 int first = get_u16(pc);
                 pc += 2;
                 first = min_int(first, argc);
-                *sp++ = js_create_array(ctx, argc - first, (JSValueConst *)(argv + first));
-                if (unlikely(JS_IsException(sp[-1])))
+                ret_val = js_create_array(ctx, argc - first, (JSValueConst *)(argv + first));
+                if (unlikely(JS_IsException(ret_val)))
                     goto exception;
+                *sp++ = ret_val;
             }
             BREAK;
 
@@ -2899,9 +2931,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             {
                 JSValue bfunc = JS_DupValue(ctx, b->cpool[get_u32(pc)]);
                 pc += 4;
-                *sp++ = js_closure(ctx, bfunc, var_refs, sf, FALSE);
-                if (unlikely(JS_IsException(sp[-1])))
+                ret_val = js_closure(ctx, bfunc, var_refs, sf, FALSE);
+                if (unlikely(JS_IsException(ret_val)))
                     goto exception;
+                *sp++ = ret_val;
             }
             BREAK;
 #if SHORT_OPCODES
@@ -3162,10 +3195,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 
         CASE(OP_regexp):
             {
-                sp[-2] = JS_NewRegexp(ctx, sp[-2], sp[-1]);
-                sp--;
-                if (JS_IsException(sp[-1]))
+                ret_val = JS_NewRegexp(ctx, sp[-2], sp[-1]);
+                /* Both operands were consumed, including on failure. */
+                sp -= 2;
+                if (JS_IsException(ret_val))
                     goto exception;
+                *sp++ = ret_val;
             }
             BREAK;
 
@@ -3232,12 +3267,13 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         goto exception;
                     } else {
                         sf->cur_pc = pc;
-                        sp[0] = JS_GetPropertyInternal(ctx, ctx->global_obj,
-                                                       cv->var_name,
-                                                       ctx->global_obj,
-                                                       opcode - OP_get_var_undef);
-                        if (JS_IsException(sp[0]))
+                        val = JS_GetPropertyInternal(ctx, ctx->global_obj,
+                                                     cv->var_name,
+                                                     ctx->global_obj,
+                                                     opcode - OP_get_var_undef);
+                        if (JS_IsException(val))
                             goto exception;
+                        sp[0] = val;
                     }
                 } else {
                     sp[0] = JS_DupValue(ctx, val);
@@ -3578,9 +3614,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     kind = JS_REFERENCE_LOCAL;
                 reference = ((uint32_t)kind << JS_REFERENCE_KIND_SHIFT) | idx;
                 *sp++ = JS_NewInt32(ctx, (int32_t)reference);
-                *sp++ = JS_AtomToValue(ctx, atom);
-                if (unlikely(JS_IsException(sp[-1])))
+                ret_val = JS_AtomToValue(ctx, atom);
+                if (unlikely(JS_IsException(ret_val)))
                     goto exception;
+                *sp++ = ret_val;
             }
             BREAK;
         CASE(OP_make_var_ref):
@@ -4028,10 +4065,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 val = JS_GetPrivateField(ctx, sp[-2], sp[-1]);
                 JS_FreeValue(ctx, sp[-1]);
                 JS_FreeValue(ctx, sp[-2]);
-                sp[-2] = val;
-                sp--;
+                sp -= 2;
                 if (unlikely(JS_IsException(val)))
                     goto exception;
+                *sp++ = val;
             }
             BREAK;
 
@@ -4616,10 +4653,11 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     sp[-2] = __JS_NewFloat64(ctx, d1 + d2);
                     sp--;
                 } else if (JS_IsString(op1) && JS_IsString(op2)) {
-                    sp[-2] = JS_ConcatString(ctx, op1, op2);
-                    sp--;
-                    if (JS_IsException(sp[-1]))
+                    ret_val = JS_ConcatString(ctx, op1, op2);
+                    sp -= 2;
+                    if (JS_IsException(ret_val))
                         goto exception;
+                    *sp++ = ret_val;
                 } else {
                 add_slow_case:
                     sf->cur_pc = pc;
@@ -5450,7 +5488,10 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                         break;
                     case OP_with_make_ref:
                         /* produce a pair object/propname on the stack */
-                        *sp++ = JS_AtomToValue(ctx, atom);
+                        ret_val = JS_AtomToValue(ctx, atom);
+                        if (unlikely(JS_IsException(ret_val)))
+                            goto exception;
+                        *sp++ = ret_val;
                         break;
                     case OP_with_get_ref:
                         /* produce a pair object/method on the stack */
@@ -5597,9 +5638,17 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         sf->cur_pc = pc;
         build_backtrace(ctx, rt->current_exception, NULL, 0, 0, 0);
     }
+#ifndef NDEBUG
+    if (rt->current_exception_is_uncatchable) {
+        /* These values can remain in a suspended generator frame. */
+        for (pval = stack_buf; pval < sp; pval++)
+            assert(!js_is_exception_sentinel(*pval));
+    }
+#endif
     if (!rt->current_exception_is_uncatchable) {
         while (sp > stack_buf) {
             JSValue val = *--sp;
+            assert(!js_is_exception_sentinel(val));
             JS_FreeValue(ctx, val);
             if (JS_VALUE_GET_TAG(val) == JS_TAG_CATCH_OFFSET) {
                 uint32_t pos = JS_VALUE_GET_INT(val);
@@ -5633,6 +5682,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         }
         /* free the local variables and stack */
         for(pval = local_buf; pval < sp; pval++) {
+            assert(!js_is_exception_sentinel(*pval));
             JS_FreeValue(ctx, *pval);
         }
     }
