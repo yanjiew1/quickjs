@@ -199,7 +199,7 @@ int qjs_temporal_calendar_date_add(QJSCalendarId calendar,
     QJSTemporalISODate target;
 
     if (calendar != QJS_CAL_ISO8601)
-        return QJS_TEMPORAL_ERROR_UNSUPPORTED;
+        return qjs_temporal_noniso_date_add(calendar, date, duration, overflow, result);
     if (qjs_temporal_iso_date_add(&target, date, duration, overflow) ||
         !qjs_temporal_iso_date_within_limits(target))
         return RANGE;
@@ -214,6 +214,6 @@ int qjs_temporal_calendar_date_until(QJSCalendarId calendar,
                                      QJSTemporalDateDuration *result)
 {
     if (calendar != QJS_CAL_ISO8601)
-        return QJS_TEMPORAL_ERROR_UNSUPPORTED;
+        return qjs_temporal_noniso_date_until(calendar, start, end, largest, result);
     return qjs_temporal_iso_date_until(result, start, end, largest);
 }
