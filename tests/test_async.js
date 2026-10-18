@@ -2172,3 +2172,58 @@ async function test_delegated_yield_result_shapes()
 }
 
 await test_delegated_yield_result_shapes();
+
+async function test_exception_operand_cleanup_async()
+{
+    const sentinel = {};
+    for (const rejectNext of [false, true]) {
+        let closed = 0, finalized = 0, caught = false;
+        const iterator = {
+            [Symbol.asyncIterator]() { return this; },
+            next() {
+                return rejectNext ? Promise.reject(sentinel) :
+                                    Promise.resolve({ value: 1, done: false });
+            },
+            return() { closed++; return Promise.reject(Error("close error")); },
+        };
+        try {
+            try {
+                for await (const value of iterator)
+                    await Promise.reject(sentinel);
+            } finally {
+                finalized++;
+            }
+        } catch (error) {
+            caught = true;
+            assert(error, sentinel);
+        }
+        assert(caught, true);
+        assert(closed, rejectNext ? 0 : 1);
+        assert(finalized, 1);
+    }
+
+    let closed = 0, finalized = 0;
+    const iterator = {
+        [Symbol.asyncIterator]() { return this; },
+        next() { return Promise.resolve({ value: 1, done: false }); },
+        return() { closed++; return Promise.resolve({}); },
+    };
+    const generator = (async function*() {
+        try {
+            for await (const value of iterator)
+                yield value;
+        } finally {
+            finalized++;
+        }
+    })();
+    assert((await generator.next()).value, 1);
+    std.gc();
+    let caught = false;
+    try { await generator.throw(sentinel); }
+    catch (error) { caught = true; assert(error, sentinel); }
+    assert(caught, true);
+    assert(closed, 1);
+    assert(finalized, 1);
+}
+
+await test_exception_operand_cleanup_async();
