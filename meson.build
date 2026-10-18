@@ -67,6 +67,9 @@ version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
+  if get_option('timezone_backend') == 'native'
+    common_args += '-DCONFIG_TIMEZONE_NATIVE'
+  endif
 endif
 if get_option('gc_stress')
   common_args += '-DFORCE_GC_AT_MALLOC'
@@ -683,6 +686,7 @@ summary(
 summary(
   {
     'Temporal API': get_option('temporal'),
+    'Named-zone backend': get_option('timezone_backend'),
   },
   section: 'Features',
   bool_yn: true,
