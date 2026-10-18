@@ -55,6 +55,13 @@ option(
   description: 'Build native Temporal with the selected calendar and timezone capabilities',
 )
 option(
+  'calendars',
+  type: 'combo',
+  choices: ['native', 'iso'],
+  value: 'native',
+  description: 'Calendar extensions: all standard native calendars or only core ISO',
+)
+option(
   'timezone_backend',
   type: 'combo',
   choices: ['native', 'minimal'],
