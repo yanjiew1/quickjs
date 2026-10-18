@@ -19,6 +19,7 @@ int main(void)
     int64_t ns;
     size_t count;
     int found, equal;
+    QJSTimeZoneInfo info;
 
     assert(!qjs_temporal_zone_parse(&utc, "uTc", 3));
     assert(!strcmp(utc.identifier, "UTC"));
@@ -28,6 +29,9 @@ int main(void)
     assert(qjs_timezone_at(0) == utc.named);
     assert(qjs_timezone_at(1) == NULL);
     assert(!strcmp(qjs_timezone_data_version(), "minimal"));
+    assert(qjs_timezone_is_primary(utc.named));
+    assert(!qjs_timezone_info(utc.named, 0, &info));
+    assert(!info.offset_seconds && !info.is_dst);
     saved = utc;
     assert(qjs_temporal_zone_parse(&utc, "Europe/Paris", 12));
     assert(!memcmp(&saved, &utc, sizeof(utc)));
