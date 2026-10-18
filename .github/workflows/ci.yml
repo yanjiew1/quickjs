@@ -36,6 +36,24 @@ on:
     - '*'
 
 jobs:
+  timezone-data:
+    name: Native timezone data regeneration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v7
+    - name: Acquire and verify released inputs
+      run: |
+        timeout 180s python3 tools/timezone/acquire.py \
+          --cache "$RUNNER_TEMP/timezone-cache"
+    - name: Regenerate the single binary pack
+      run: |
+        timeout 600s python3 tools/timezone/generate.py \
+          --cache "$RUNNER_TEMP/timezone-cache" \
+          --output "$RUNNER_TEMP/timezone-data.bin" \
+          --manifest "$RUNNER_TEMP/timezone-data-manifest.json"
+        cmp data/timezone/timezone-data.bin "$RUNNER_TEMP/timezone-data.bin"
+        cmp data/timezone/timezone-data-manifest.json "$RUNNER_TEMP/timezone-data-manifest.json"
   unicode:
     name: Unicode table regeneration
     runs-on: ubuntu-latest
