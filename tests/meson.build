@@ -12,6 +12,9 @@ calendar_test_sources = []
 timezone_test_sources = []
 system_timezone_test_sources = []
 if calendar_enabled
+  calendar_test_sources = files(
+    '../src/calendar/iso.c',
+  )
 endif
 
 fixture_manifest = files('../tools/build/test-fixtures.list')
@@ -140,6 +143,19 @@ standalone += {
   'test_temporal_epoch': files(
     'test_temporal_epoch.c',
     '../src/temporal/epoch.c',
+  ),
+  'test_temporal_date_math': files(
+    'test_temporal_date_math.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+  ),
+  'test_temporal_civil': files(
+    'test_temporal_civil.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/civil.c',
   ),
   'test_cutils': files(
     'test_cutils.c',
