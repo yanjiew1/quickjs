@@ -12,6 +12,18 @@ function test_identities() {
     assert(utcAlias.timeZoneId, "GMT");
     assert(utcAlias.equals(new ZDT(0n, "UTC")), true);
     assert(utcAlias.equals(new ZDT(0n, "+00:00")), false);
+    // tzdata 2026d restored these compatibility names as independent Zones.
+    for (const [name, formerTarget, offset] of [
+        ["CST6CDT", "America/Chicago", "-06:00"],
+        ["EST5EDT", "America/New_York", "-05:00"],
+        ["MST7MDT", "America/Denver", "-07:00"],
+        ["PST8PDT", "America/Los_Angeles", "-08:00"],
+    ]) {
+        const zone = new ZDT(0n, name);
+        assert(zone.timeZoneId, name);
+        assert(zone.equals(new ZDT(0n, formerTarget)), false);
+        assert(ZDT.from(`1880-01-01T00:00[${name}]`).offset, offset);
+    }
     assertThrows(RangeError, () => new ZDT(0n, "America/Not_A_Zone"));
     assertThrows(RangeError, () => new ZDT(0n, "America/New_York\0"));
 }
