@@ -90,6 +90,9 @@ static const FeatureEntry feature_list[] = {
 #define FE_MODULE_LOADER 9
     { "module-loader", NULL },
     { "weakref", "WeakRef" },
+#ifdef CONFIG_TEMPORAL
+    { "temporal", "Temporal" },
+#endif
 };
 
 void namelist_add(namelist_t *lp, const char *name, const char *short_name,
