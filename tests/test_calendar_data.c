@@ -85,6 +85,33 @@ static void lunar_metadata(void)
     reject(corrupt, sizeof(corrupt));
 }
 
+static void published_lunar_years(const QJSCalendarData *data,
+                                  QJSCalendarId calendar, int last, int end)
+{
+    int year, expected = -25892;
+    QJSCalendarYear result;
+
+    for (year = 1899; year <= last; year++) {
+        int month, length = 0;
+
+        assert(!qjs_calendar_data_year(data, calendar, year, &result));
+        assert(result.first_day == expected);
+        assert(result.months == 12 + (result.leap_month != 0));
+        for (month = 0; month < result.months; month++) {
+            int days = 29 + ((result.month_lengths >> (2 * month)) & 3);
+
+            assert(days == 29 || days == 30);
+            length += days;
+        }
+        assert(result.end_day - result.first_day == length);
+        expected = result.end_day;
+    }
+    assert(expected == end);
+    assert(!qjs_calendar_data_year(data, calendar, 2023, &result));
+    assert(result.first_day == 19379 && result.end_day == 19763);
+    assert(result.leap_month == 2);
+}
+
 int main(void)
 {
     const QJSCalendarData *compiled = &qjs_native_calendar_data;
@@ -99,9 +126,11 @@ int main(void)
     assert(copy);
     lunar_metadata();
     assert(!qjs_calendar_data_open(&opened, compiled->bytes, compiled->size));
-    assert(opened.count == 2);
+    assert(opened.count == 4);
     check_years(&opened, QJS_CAL_PERSIAN, 1206, 1498, -52150, 54866);
     check_years(&opened, QJS_CAL_ISLAMIC_UMALQURA, 1300, 1600, -31826, 74839);
+    published_lunar_years(&opened, QJS_CAL_CHINESE, 2100, 47875);
+    published_lunar_years(&opened, QJS_CAL_DANGI, 2050, 29626);
     assert(!strcmp(qjs_calendar_data_version(&opened, QJS_CAL_PERSIAN), "tehran-1206-1498"));
     assert(!qjs_calendar_data_version(&opened, QJS_CAL_ISO8601));
     assert(qjs_calendar_data_year(&opened, QJS_CAL_ISO8601, 2026, &result) == QJS_CAL_UNSUPPORTED);
@@ -122,6 +151,8 @@ int main(void)
     assert(!qjs_calendar_data_open(&unaligned, copy + 1, compiled->size));
     check_years(&unaligned, QJS_CAL_PERSIAN, 1206, 1498, -52150, 54866);
     check_years(&unaligned, QJS_CAL_ISLAMIC_UMALQURA, 1300, 1600, -31826, 74839);
+    published_lunar_years(&unaligned, QJS_CAL_CHINESE, 2100, 47875);
+    published_lunar_years(&unaligned, QJS_CAL_DANGI, 2050, 29626);
     free(copy);
     return 0;
 }
