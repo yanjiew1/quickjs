@@ -49,6 +49,9 @@ version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
+  if get_option('calendars') == 'native'
+    common_args += '-DCONFIG_CALENDAR_NATIVE'
+  endif
   if get_option('timezone_backend') == 'native'
     common_args += '-DCONFIG_TIMEZONE_NATIVE'
   endif
