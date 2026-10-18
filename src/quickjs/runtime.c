@@ -50,6 +50,7 @@
 #include "builtins/typed-array.h"
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
+#include "builtins/temporal.h"
 
 typedef struct JSRuntimeFinalizerState {
     struct JSRuntimeFinalizerState *next;
@@ -562,6 +563,10 @@ void JS_FreeRuntime(JSRuntime *rt)
     assert(list_empty(&rt->gc_obj_list));
     assert(list_empty(&rt->weakref_list));
 
+#ifdef CONFIG_TEMPORAL
+    js_free_rt(rt, rt->default_time_zone);
+#endif
+
     /* free the classes */
     for(i = 0; i < rt->class_count; i++) {
         JSClass *cl = &rt->class_array[i];
@@ -723,6 +728,9 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
     ctx->array_ctor = JS_NULL;
     ctx->iterator_ctor = JS_NULL;
     ctx->regexp_ctor = JS_NULL;
+#ifdef CONFIG_TEMPORAL
+    ctx->temporal_intrinsics = JS_UNDEFINED;
+#endif
     ctx->promise_ctor = JS_NULL;
     init_list_head(&ctx->loaded_modules);
     ctx->module_load_request = NULL;
@@ -744,6 +752,9 @@ JSContext *JS_NewContext(JSRuntime *rt)
 
     if (JS_AddIntrinsicBaseObjects(ctx) ||
         JS_AddIntrinsicDate(ctx) ||
+#ifdef CONFIG_TEMPORAL
+        JS_AddIntrinsicTemporal(ctx) ||
+#endif
         JS_AddIntrinsicEval(ctx) ||
         JS_AddIntrinsicStringNormalize(ctx) ||
         JS_AddIntrinsicRegExp(ctx) ||
@@ -808,6 +819,9 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
     JS_MarkValue(rt, ctx->promise_ctor, mark_func);
     JS_MarkValue(rt, ctx->array_ctor, mark_func);
     JS_MarkValue(rt, ctx->regexp_ctor, mark_func);
+#ifdef CONFIG_TEMPORAL
+    JS_MarkValue(rt, ctx->temporal_intrinsics, mark_func);
+#endif
     JS_MarkValue(rt, ctx->function_ctor, mark_func);
     JS_MarkValue(rt, ctx->function_proto, mark_func);
 
@@ -884,6 +898,9 @@ void JS_FreeContext(JSContext *ctx)
     JS_FreeValue(ctx, ctx->promise_ctor);
     JS_FreeValue(ctx, ctx->array_ctor);
     JS_FreeValue(ctx, ctx->regexp_ctor);
+#ifdef CONFIG_TEMPORAL
+    JS_FreeValue(ctx, ctx->temporal_intrinsics);
+#endif
     JS_FreeValue(ctx, ctx->function_ctor);
     JS_FreeValue(ctx, ctx->function_proto);
 
