@@ -47,6 +47,9 @@ _Static_assert(_Alignof(JSModuleNormalizeFunctions) == _Alignof(JSModuleNormaliz
 struct JSRuntime {
     JSMallocContext malloc_ctx;
     const char *rt_info;
+#ifdef CONFIG_TEMPORAL
+    char *default_time_zone;
+#endif
 
     int atom_hash_size; /* power of two */
     int atom_count;
@@ -210,6 +213,10 @@ struct JSContext {
     JSValue function_ctor;
     JSValue array_ctor;
     JSValue regexp_ctor;
+#ifdef CONFIG_TEMPORAL
+    JSValue temporal_intrinsics;
+    BOOL temporal_published;
+#endif
     JSValue promise_ctor;
     JSValue native_error_proto[JS_NATIVE_ERROR_COUNT];
     JSValue iterator_ctor;
