@@ -47,8 +47,8 @@
 #include "list.h"
 #include "quickjs.h"
 
-/* Generic internal diagnostics cannot infer whether a control value came
-   from a function result or a VM stack. Compare the sentinel payload too. */
+/* Generic diagnostics and stack assertions distinguish exception status by
+   payload bit 31. Public result checks rely on their value domain instead. */
 static inline BOOL js_is_exception_sentinel(JSValueConst v)
 {
 #ifdef CONFIG_CHECK_JSVALUE
@@ -56,7 +56,7 @@ static inline BOOL js_is_exception_sentinel(JSValueConst v)
     return v == JS_EXCEPTION;
 #else
     return JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL &&
-           (uint32_t)JS_VALUE_GET_INT(v) == UINT32_MAX;
+           ((uint32_t)JS_VALUE_GET_INT(v) & UINT32_C(0x80000000)) != 0;
 #endif
 }
 

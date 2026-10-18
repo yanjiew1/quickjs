@@ -55,8 +55,9 @@
 #endif
 
 
-/* Catch markers are confined to operand/suspended stacks. API failure
-   sentinels never enter those stacks, so both domains can use tag-only tests. */
+/* Catch offsets have payload bit 31 clear; exception results have it set.
+   Only catch markers may enter stacks, so stack decisions use the tag alone
+   and assertions validate the payload's domain. */
 static inline JSValue js_new_catch_offset(uint32_t offset)
 {
     assert(offset <= INT32_MAX);
@@ -3865,6 +3866,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                     JS_FreeValue(ctx, ret_val);
                     goto exception;
                 }
+                assert(!js_is_exception_sentinel(sp[-1]));
                 assert((uint32_t)JS_VALUE_GET_INT(sp[-1]) <= INT32_MAX);
                 sp[-1] = ret_val;
             }
