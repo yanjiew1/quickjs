@@ -1065,6 +1065,21 @@ the runtime's owning thread to temporarily chain and restore a handler.
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
 
+@subsection Default time zone
+
+Build with Temporal enabled to use these APIs. The default zone is shared
+by Date and Temporal across all realms in the runtime.
+@code{JS_SetDefaultTimeZone(ctx, identifier)} copies a supported identifier and
+returns zero on success. Failure returns @code{-1} with an exception and
+preserves the previous setting. @code{NULL} or an unsupported identifier throws
+@code{RangeError}; @code{NULL} is not a reset operation. Raw contexts need base
+objects for exception construction.
+
+@code{JS_GetDefaultTimeZone(ctx)} returns an owned JavaScript string, released
+normally with @code{JS_FreeValue}. Before an explicit setting, first use
+snapshots the backend's system default (UTC with the minimal backend).
+Both APIs throw @code{TypeError} when Temporal is disabled.
+
 @subsection Native callback captures
 
 @code{JS_NewCFunctionData} borrows and duplicates each supplied captured value;
