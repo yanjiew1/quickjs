@@ -227,7 +227,25 @@ executable(
   override_options: ['b_lto=false', 'b_sanitize=none'],
   build_by_default: false,
 )
-# Native data views are derived by the same checked C reader used at runtime.
+# A validated byte pack has one C owner, generated without target execution.
+calendar_data = custom_target(
+  'native-calendar-data',
+  input: files('data/calendar/calendar-data.bin'),
+  output: 'calendar-data.c',
+  command: [
+    python,
+    files('tools/calendar/embed.py'),
+    '--input', '@INPUT@',
+    '--output', '@OUTPUT@',
+  ],
+  depend_files: files(
+    'tools/calendar/acquire.py',
+    'tools/calendar/bundle.py',
+  ),
+  build_by_default: false,
+)
+
+# Native timezone views are derived by the checked C runtime reader.
 # This executable always targets the build host, including in cross builds.
 timezone_describe = executable(
   'timezone-describe',
