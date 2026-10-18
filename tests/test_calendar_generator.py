@@ -26,7 +26,8 @@ with mock.patch.dict(sys.modules, {'acquire': acquire}):
     normalize = load_tool('normalize')
     lunisolar = load_tool('lunisolar')
 bundle = load_tool('bundle')
-with mock.patch.dict(sys.modules, {'acquire': acquire, 'normalize': normalize, 'bundle': bundle}):
+with mock.patch.dict(sys.modules, {'acquire': acquire, 'normalize': normalize,
+                                  'bundle': bundle, 'lunisolar': lunisolar}):
     generate = load_tool('generate')
     embed = load_tool('embed')
 
@@ -251,18 +252,52 @@ class LunisolarTests(unittest.TestCase):
         for name in ('chinese', 'dangi'):
             data = json.loads((ROOT / ('data/calendar/' + name + '.json')).read_text())
             approximate = [tuple(r) for r in data['approximate_months']]
-            primary = [row for row in self.rows(data) if row not in approximate]
+            primary = [row for row in self.rows(data)
+                       if data['primary_span'][0] <= row[3] < data['primary_span'][1]]
+            boundary = approximate
+            if name == 'dangi':
+                boundary = [row for row in self.rows(data)
+                            if row[0] == 2050 and row[3] >= data['primary_span'][1]]
             saved = dict(data)
             del saved['boundary_model']
-            self.assertEqual(lunisolar.merge(name, primary, approximate), saved)
-            self.assertEqual(len(approximate), 11 if name == 'chinese' else 1)
+            actual = lunisolar.merge(name, primary, boundary)
+            if name == 'dangi':
+                actual = lunisolar.extend_dangi(actual,
+                    (acquire.SOURCES / 'icu4x-korea-data.rs').read_text())
+            self.assertEqual(actual, saved)
+            self.assertEqual(len(approximate), 11 if name == 'chinese' else 0)
             with self.assertRaises(ValueError):
-                lunisolar.merge(name, primary[:20] + primary[21:], approximate)
-            changed = list(approximate)
+                lunisolar.merge(name, primary[:20] + primary[21:], boundary)
+            changed = list(boundary)
             year, month, leap, day, length = changed[0]
             changed[0] = (year, month, leap, day + 1, length)
             with self.assertRaises(ValueError):
                 lunisolar.merge(name, primary, changed)
+
+    def test_korean_precomputed_coverage_and_conflict_rejection(self):
+        source = (acquire.SOURCES / 'icu4x-korea-data.rs').read_text()
+        rows = lunisolar.korea_precomputed(source)
+        self.assertEqual([r[0] for r in rows], list(range(1912, 2103)))
+        data = json.loads((ROOT / 'data/calendar/dangi.json').read_text())
+        self.assertEqual(len(data['rows']), 202)
+        self.assertEqual(data['end_epoch_day'], 47875)
+        self.assertEqual(data['required_span'], [-25567, 29585])
+        self.assertEqual(data['primary_span'], [-25892, 29597])
+        self.assertEqual(data['precomputed_span'], [29597, 47875])
+        saved = {r[0]: r for r in data['rows']}
+        for row in rows:
+            if row[0] <= 2100:
+                self.assertEqual(saved[row[0]], row)
+        bad = dict(data, rows=[list(r) for r in data['rows'] if r[0] <= 2050])
+        bad['rows'][-1][1] += 1
+        with self.assertRaises(ValueError):
+            lunisolar.extend_dangi(bad, source)
+        for text in (source.replace('new(2051,', 'new(2052,'),
+                     source.replace('gregorian(2051, 2, 11)', 'gregorian(2051, 2, 12)'),
+                     source.replace('Some(3)', 'Some(1)', 1),
+                     source.replace('new(2102,', 'new(2103,')):
+            with self.assertRaises(ValueError):
+                lunisolar.korea_precomputed(text)
 
     def test_pmo_literal_grammar_and_expected_record(self):
         data = json.loads((ROOT / 'data/calendar/chinese.json').read_text())
