@@ -144,6 +144,7 @@ if get_option('temporal')
     'temporal/epoch.c',
     'temporal/format.c',
     'temporal/iso.c',
+    'temporal/noniso-arithmetic.c',
     'temporal/noniso-calendar.c',
     'temporal/options.c',
     'temporal/parse.c',
