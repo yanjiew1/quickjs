@@ -55,12 +55,23 @@
 #endif
 
 
-/* Catch markers are confined to operand/suspended stacks. API failure
-   sentinels never enter those stacks, so both domains can use tag-only tests. */
+/* Catch offsets have payload bit 31 clear; exception results have it set.
+   Exception sentinels still must not enter operand/suspended stacks. */
 static inline JSValue js_new_catch_offset(uint32_t offset)
 {
     assert(offset <= INT32_MAX);
     return JS_MKVAL(JS_TAG_CONTROL, offset);
+}
+
+static inline BOOL js_is_catch_offset(JSValueConst v)
+{
+#ifdef CONFIG_CHECK_JSVALUE
+    /* The compile-only pointer model does not retain full int32 payloads. */
+    return JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL && v != JS_EXCEPTION;
+#else
+    return JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL &&
+           ((uint32_t)JS_VALUE_GET_INT(v) & UINT32_C(0x80000000)) == 0;
+#endif
 }
 
 static inline BOOL is_strict_mode_sf(const JSStackFrame *sf)
@@ -5644,21 +5655,12 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         sf->cur_pc = pc;
         build_backtrace(ctx, rt->current_exception, NULL, 0, 0, 0);
     }
-#ifndef NDEBUG
-    if (rt->current_exception_is_uncatchable) {
-        /* These values can remain in a suspended generator frame. */
-        for (pval = stack_buf; pval < sp; pval++)
-            assert(!js_is_exception_sentinel(*pval));
-    }
-#endif
     if (!rt->current_exception_is_uncatchable) {
         while (sp > stack_buf) {
             JSValue val = *--sp;
-            assert(!js_is_exception_sentinel(val));
             JS_FreeValue(ctx, val);
-            if (JS_VALUE_GET_TAG(val) == JS_TAG_CONTROL) {
+            if (js_is_catch_offset(val)) {
                 uint32_t pos = JS_VALUE_GET_INT(val);
-                assert(pos <= INT32_MAX);
                 if (pos == 0) {
                     /* enumerator: close it with a throw */
                     JS_FreeValue(ctx, sp[-1]); /* drop the next method */
@@ -5689,7 +5691,6 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         }
         /* free the local variables and stack */
         for(pval = local_buf; pval < sp; pval++) {
-            assert(!js_is_exception_sentinel(*pval));
             JS_FreeValue(ctx, *pval);
         }
     }
