@@ -27,6 +27,8 @@ size_t qjs_timezone_backend_count(void);
 const QJSTimeZone *qjs_timezone_backend_at(size_t index);
 int qjs_timezone_backend_offset(const QJSTimeZoneRules *rules, int64_t seconds,
                                 int32_t *offset);
+int qjs_timezone_backend_info(const QJSTimeZoneRules *rules, int64_t seconds,
+                              QJSTimeZoneInfo *result);
 int qjs_timezone_backend_candidates(const QJSTimeZoneRules *rules, int64_t wall,
                                     QJSTimeZoneVisit *visit, void *opaque,
                                     size_t *count, int32_t *gap_before,
