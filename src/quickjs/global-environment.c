@@ -101,7 +101,7 @@ int JS_CheckDefineGlobalVar(JSContext *ctx, JSAtom prop, int flags)
 
 /* The private lexical object also identifies the Global Environment
    Record. Select its current subrecord when the reference is used. */
-int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
+JSValue JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop)
 {
     JSObject *p;
     JSShapeProperty *prs;
@@ -111,7 +111,7 @@ int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
     p = JS_VALUE_GET_OBJ(ctx->global_var_obj);
     prs = find_own_property(&pr, p, prop);
     if (prs) {
-        sp[0] = JS_DupValue(ctx, ctx->global_var_obj);
+        return JS_DupValue(ctx, ctx->global_var_obj);
     } else {
         int ret;
         p = JS_VALUE_GET_OBJ(ctx->global_obj);
@@ -123,22 +123,14 @@ int JS_GetGlobalVarRef(JSContext *ctx, JSAtom prop, JSValue *sp)
         } else {
             ret = JS_HasProperty(ctx, ctx->global_obj, prop);
             if (ret < 0)
-                return -1;
+                return JS_EXCEPTION;
         }
         if (ret) {
-            sp[0] = JS_DupValue(ctx, ctx->global_var_obj);
+            return JS_DupValue(ctx, ctx->global_var_obj);
         } else {
-            sp[0] = JS_UNDEFINED;
+            return JS_UNDEFINED;
         }
     }
-    if (!__JS_AtomIsTaggedInt(prop) &&
-        ctx->rt->atom_array[prop]->atom_type == JS_ATOM_TYPE_STRING) {
-        sp[1] = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING,
-                                        ctx->rt->atom_array[prop]));
-    } else {
-        sp[1] = JS_AtomToValue(ctx, prop);
-    }
-    return 0;
 }
 
 /* return -1, FALSE or TRUE */
