@@ -32,6 +32,12 @@ int qjs_timezone_backend_offset(const QJSTimeZoneRules *rules, int64_t seconds,
     return QJS_TZ_DATA;
 }
 
+int qjs_timezone_backend_info(const QJSTimeZoneRules *rules, int64_t seconds,
+                              QJSTimeZoneInfo *result)
+{
+    return QJS_TZ_DATA;
+}
+
 int qjs_timezone_backend_candidates(const QJSTimeZoneRules *rules, int64_t wall,
                                     QJSTimeZoneVisit *visit, void *opaque,
                                     size_t *count, int32_t *gap_before,
