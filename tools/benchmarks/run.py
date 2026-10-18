@@ -222,11 +222,12 @@ def workload_command(suite, binary, detail, case, v8=None, zoo=None):
     raise ValueError("Unknown suite")
 
 
-def checked_process(command, cwd, log, timeout):
+def checked_process(command, cwd, log, timeout, env=None):
     started = time.perf_counter()
     with log.open("x") as output:
         process = subprocess.Popen(command, cwd=cwd, stdout=output,
                                    stderr=subprocess.STDOUT,
+                                   env=env,
                                    start_new_session=os.name == "posix")
         try:
             returncode = process.wait(timeout=timeout)
@@ -269,6 +270,13 @@ def require_pristine_build(source):
                          "untouched: " + ", ".join(stale))
 
 
+def require_assertions_disabled(commands):
+    for command in commands:
+        words = shlex.split(command)
+        if "-DNDEBUG" not in words or "-UNDEBUG" in words:
+            raise ValueError("Every compiled runtime object must disable assertions with -DNDEBUG")
+
+
 def build(source, compiler, output, jobs, suite="core"):
     require_pristine_build(source)
     if (source / "meson.build").is_file():
@@ -279,7 +287,10 @@ def build(source, compiler, output, jobs, suite="core"):
     config = feature_config(suite)
     command.extend(f"{name}={value}" for name, value in config.items())
     command.append("qjs")
-    elapsed = checked_process(command, source, output / "build.log", 1200)
+    build_env = os.environ.copy()
+    build_env["CFLAGS"] = (build_env.get("CFLAGS", "") + " -DNDEBUG").strip()
+    elapsed = checked_process(command, source, output / "build.log", 1200,
+                              env=build_env)
     text = (output / "build.log").read_text()
     if "-flto" in text or "-fsanitize=" in text:
         raise ValueError("Unexpected LTO or sanitizer build")
@@ -291,13 +302,16 @@ def build(source, compiler, output, jobs, suite="core"):
     if any(re.search(r"(?:^|\s)-O(?:[013szg]|fast)(?:\s|$)", line)
            for line in compiler_lines):
         raise ValueError("Unexpected optimization level in runtime build")
+    require_assertions_disabled(compiler_lines)
     binary = source / "qjs"
     if not binary.is_file():
         raise ValueError("Build did not produce qjs")
     return {"command": command, "seconds": elapsed, "binary": str(binary),
             "binary_sha256": sha256(binary), "build_log_sha256": sha256(output / "build.log"),
             "actual_compile_commands": compiler_lines, "feature_config": config,
-            "flags": "Makefile defaults with -O2, non-LTO, no sanitizers, Werror"}
+            "build_environment": {"CFLAGS": build_env["CFLAGS"]},
+            "assertions_enabled": False,
+            "flags": "Makefile defaults with -O2, -DNDEBUG, non-LTO, no sanitizers, Werror"}
 
 
 def build_meson(source, compiler, output, jobs, suite):
@@ -306,7 +320,7 @@ def build_meson(source, compiler, output, jobs, suite):
     native_file.write_text("[binaries]\nc = [" + repr(compiler) + "]\n")
     configure = ["meson", "setup", str(build_dir), str(source.resolve()),
                  "--native-file", str(native_file), "-Dbuildtype=debugoptimized",
-                 "-Doptimization=2", "-Db_lto=false", "-Db_sanitize=none",
+                 "-Doptimization=2", "-Db_ndebug=true", "-Db_lto=false", "-Db_sanitize=none",
                  "-Dwerror=true", "-Ddefault_library=static",
                  "-Dtests=false", "-Dexamples=false"]
     elapsed = checked_process(configure, source, output / "configure.log", 1200)
@@ -333,6 +347,7 @@ def build_meson(source, compiler, output, jobs, suite):
     for line in compiler_lines:
         if re.search(r"(?:^|\s)(?:-flto\S*|-fsanitize=\S*|-O(?:[013szg]|fast))(?:\s|$)", line):
             raise ValueError("Unexpected optimization, LTO or sanitizer build")
+    require_assertions_disabled(compiler_lines)
     binary = build_dir / "qjs"
     if not binary.is_file():
         raise ValueError("Build did not produce qjs")
@@ -343,7 +358,8 @@ def build_meson(source, compiler, output, jobs, suite):
             "build_log_sha256": sha256(output / "build.log"),
             "actual_compile_commands": compiler_lines,
             "feature_config": feature_config(suite),
-            "flags": "Meson -O2, non-LTO, no sanitizers, Werror"}
+            "assertions_enabled": False,
+            "flags": "Meson -O2, -DNDEBUG, non-LTO, no sanitizers, Werror"}
 
 
 def fetch_zoo(manifest, output):
@@ -412,7 +428,7 @@ def markdown(report, state, observed=None):
             f"Candidate: `{state['candidate_revision']}`.",
             f"Immediate parent: `{state['parent_revision']}`.",
             f"Tooling: `{state.get('tooling_revision') or 'unprovided local checkout'}`. Runner SHA-256: `{state.get('runner_sha256', 'unprovided')}`.", "",
-            "Both engines use identical frozen workloads, fresh processes per case, -O2, and no LTO.", "",
+            "Both engines use identical frozen workloads, fresh processes per case, -O2, assertions disabled (-DNDEBUG), and no LTO.", "",
             "Build feature configuration: `" + json.dumps(state.get("feature_config", {}), sort_keys=True) + "`.", "",
             "The environment JSON records CPU/topology, affinity, frequency/Turbo availability, virtualization, memory, OS/kernel, compilers/linker, and timing clocks.", ""]
     if observed:
