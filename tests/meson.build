@@ -179,6 +179,11 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_calendar_astronomy': [
+    'test_calendar_astronomy.c',
+    '../src/calendar/astronomy.c',
+    '../src/calendar/iso.c',
+  ],
   'test_calendar_persian': [
     'test_calendar_persian.c',
     '../src/calendar/data.c',
