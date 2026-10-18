@@ -11,12 +11,8 @@
  * C adaptation copyright (c) 2026 Yan-Jie Wang, MIT, project LICENSE.
  */
 #include "arithmetic.h"
+#include "arithmetic-internal.h"
 #include "iso.h"
-
-static int64_t floor_divide(int64_t value, int64_t divisor)
-{
-    return value / divisor - (value % divisor < 0);
-}
 
 static int gregorian_year(QJSCalendarId calendar, int32_t year, int32_t *result)
 {
@@ -43,13 +39,13 @@ int qjs_cal_solar_year_start(QJSCalendarId calendar, int32_t year, int64_t *resu
         return QJS_CAL_RANGE;
     switch (calendar) {
     case QJS_CAL_COPTIC:
-        day = INT64_C(1824665) - 2440588 + 365LL * year + floor_divide(year, 4);
+        day = INT64_C(1824665) - 2440588 + 365LL * year + qjs_cal_floor_divide(year, 4);
         break;
     case QJS_CAL_ETHIOPIC:
-        day = INT64_C(1723856) - 2440588 + 365LL * year + floor_divide(year, 4);
+        day = INT64_C(1723856) - 2440588 + 365LL * year + qjs_cal_floor_divide(year, 4);
         break;
     case QJS_CAL_ETHIOAA:
-        day = -INT64_C(285019) - 2440588 + 365LL * year + floor_divide(year, 4);
+        day = -INT64_C(285019) - 2440588 + 365LL * year + qjs_cal_floor_divide(year, 4);
         break;
     default:
         if (gregorian_year(calendar, year, &gyear))
@@ -77,7 +73,7 @@ int qjs_cal_solar_month_length(QJSCalendarId calendar, int32_t year, int month)
     case QJS_CAL_COPTIC: case QJS_CAL_ETHIOPIC: case QJS_CAL_ETHIOAA:
         if (month > 13)
             return 0;
-        return month <= 12 ? 30 : 5 + ((year % 4 + 4) % 4 == 3);
+        return month <= 12 ? 30 : 5 + (qjs_cal_floor_modulo(year, 4) == 3);
     default:
         if (month > 12 || gregorian_year(calendar, year, &gyear))
             return 0;
