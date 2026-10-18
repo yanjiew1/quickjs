@@ -7,8 +7,12 @@ The `benchmarks` workflow compares the exact candidate commit with its actual
 immediate first parent. The runner independently verifies this relationship.
 GCC and Clang each build both
 revisions using their own checked out build definitions (Meson, or Make for
-historical parents) with `-O2`, no LTO, and no
-sanitizers. Complete build commands, compiler flags, binary checksums, and
+historical parents) with `-O2`, assertions disabled (`-DNDEBUG`), no LTO, and no
+sanitizers. Meson uses `-Db_ndebug=true`; historical Make builds append
+`-DNDEBUG` to the environment's `CFLAGS`, preserving the Makefile's defaults.
+The driver verifies that every produced runtime object's compile command
+contains `-DNDEBUG` and does not undefine it. Complete build commands,
+compiler flags, binary checksums, and
 compiler/linker versions are retained with the measurements. Compiler
 versions come from the selected Ubuntu runner image and are reported.
 

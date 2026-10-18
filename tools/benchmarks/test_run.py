@@ -169,7 +169,7 @@ class BenchmarkToolTests(unittest.TestCase):
                     (build / "engine.o").write_bytes(b"object")
                     (build / "qjs").write_bytes(b"executable")
                     commands = [dict(directory=str(build), file="engine.c",
-                                     command="cc -O2 -c engine.c -o engine.o"),
+                                     command="cc -O2 -DNDEBUG -c engine.c -o engine.o"),
                                 dict(directory=str(build), file="unbuilt.c",
                                      command="cc -O0 -c unbuilt.c -o unbuilt.o")]
                     (build / "compile_commands.json").write_text(json.dumps(commands))
@@ -183,8 +183,38 @@ class BenchmarkToolTests(unittest.TestCase):
             self.assertEqual(len(result["actual_compile_commands"]), 1)
             self.assertEqual(process.call_count, 2)
             self.assertIn("-Db_sanitize=none", result["configure_command"])
+            self.assertIn("-Db_ndebug=true", result["configure_command"])
+            self.assertFalse(result["assertions_enabled"])
             self.assertEqual(result["actual_build_commands"], ["cc -o qjs engine.o"])
             self.assertTrue(Path(result["binary"]).is_file())
+
+    def test_benchmark_rejects_assertion_enabled_compile_commands(self):
+        run.require_assertions_disabled(["cc -O2 -DNDEBUG -c engine.c"])
+        for command in ["cc -O2 -c engine.c",
+                        "cc -O2 -DNDEBUG -UNDEBUG -c engine.c"]:
+            with self.subTest(command=command):
+                with self.assertRaisesRegex(ValueError, "disable assertions"):
+                    run.require_assertions_disabled([command])
+
+    def test_make_build_preserves_flags_and_disables_assertions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, output = root / "source", root / "output"
+            source.mkdir()
+            output.mkdir()
+
+            def execute(command, cwd, log, timeout, env):
+                self.assertEqual(env["CFLAGS"], "-g -DNDEBUG")
+                log.write_text("gcc -g -DNDEBUG -O2 -c engine.c -o engine.o\n")
+                (source / "qjs").write_bytes(b"executable")
+                return 0.1
+
+            with patch.dict(run.os.environ, {"CFLAGS": "-g"}), \
+                 patch.object(run.subprocess, "check_output", return_value=b""), \
+                 patch.object(run, "checked_process", side_effect=execute):
+                result = run.build(source, "gcc", output, 2)
+            self.assertFalse(result["assertions_enabled"])
+            self.assertEqual(result["build_environment"]["CFLAGS"], "-g -DNDEBUG")
 
     def test_meson_link_only_instrumentation_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
