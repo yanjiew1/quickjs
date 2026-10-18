@@ -88,3 +88,24 @@ The input tailoring retains `backzone` histories and `zone.tab` country
 identities. It applies no leap-second table or date-range truncation.
 The manifest contains fixed source identities and hashes, without host
 paths or changing timestamps. CI regenerates and compares both outputs.
+
+## Runtime embedding
+
+Meson builds `timezone-describe` for the build host, even when cross compiling.
+`embed.py` uses that checked C reader to validate every distinct TZif payload
+and emits one C data owner plus immutable rule descriptors. Runtime queries
+borrow those views; they do not allocate, reparse the pack or load files.
+Canonical UTC belongs to the common timezone layer. The native backend retains
+UTC aliases as distinct identifiers, with their primary identity set to UTC.
+
+The metadata follows ECMA-402's AvailableNamedTimeZoneIdentifiers and
+GetAvailableNamedTimeZoneIdentifier contracts. Names retain canonical spelling,
+lookup ignores ASCII case, and all mappings/rules remain stable for the process
+lifetime. The IANA release review must check new Zone renames and their
+recommended waiting period before changing primary identities. No active
+rename waiting override is needed for the pinned 2026e snapshot.
+
+`tests/test_native_timezone.c` reparses every compiled payload and compares its
+view with the generated descriptor. It also checks all identifiers, aliases,
+ordering and case variants, plus real historical offsets, negative DST,
+date-line gaps and distant future recurrence. The test uses only embedded data.
