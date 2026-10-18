@@ -43,29 +43,29 @@ typedef struct QJSTemporalCalendarDate {
 } QJSTemporalCalendarDate;
 /* Inputs are borrowed. Fallible operations leave their result unchanged.
    Only ISO is available in the minimal configuration. */
-const char *qjs_temporal_calendar_identifier(QJSTemporalCalendar calendar);
-int qjs_temporal_calendar_from_identifier(QJSTemporalCalendar *result,
+const char *qjs_temporal_calendar_identifier(QJSCalendarId calendar);
+int qjs_temporal_calendar_from_identifier(QJSCalendarId *result,
                                           const char *text, size_t length);
-unsigned qjs_temporal_calendar_extra_fields(QJSTemporalCalendar calendar,
+unsigned qjs_temporal_calendar_extra_fields(QJSCalendarId calendar,
                                             unsigned requested);
-unsigned qjs_temporal_calendar_fields_to_ignore(QJSTemporalCalendar calendar,
+unsigned qjs_temporal_calendar_fields_to_ignore(QJSCalendarId calendar,
                                                 unsigned additional);
-int qjs_temporal_calendar_fields(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_fields(QJSCalendarId calendar,
                                  QJSTemporalISODate date,
                                  QJSTemporalCalendarDate *result);
-int qjs_temporal_calendar_date_from_fields(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_date_from_fields(QJSCalendarId calendar,
                                            const QJSTemporalCalendarFields *fields,
                                            QJSTemporalOverflow overflow, QJSTemporalISODate *result);
-int qjs_temporal_calendar_year_month_from_fields(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_year_month_from_fields(QJSCalendarId calendar,
                                                  const QJSTemporalCalendarFields *fields,
                                                  QJSTemporalOverflow overflow, QJSTemporalISODate *result);
-int qjs_temporal_calendar_month_day_from_fields(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_month_day_from_fields(QJSCalendarId calendar,
                                                 const QJSTemporalCalendarFields *fields,
                                                 QJSTemporalOverflow overflow, QJSTemporalISODate *result);
-int qjs_temporal_calendar_date_add(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_date_add(QJSCalendarId calendar,
                                    QJSTemporalISODate date, QJSTemporalDateDuration duration,
                                    QJSTemporalOverflow overflow, QJSTemporalISODate *result);
-int qjs_temporal_calendar_date_until(QJSTemporalCalendar calendar,
+int qjs_temporal_calendar_date_until(QJSCalendarId calendar,
                                      QJSTemporalISODate start, QJSTemporalISODate end,
                                      QJSTemporalUnit largest, QJSTemporalDateDuration *result);
 #endif /* QUICKJS_TEMPORAL_CALENDAR_H */
