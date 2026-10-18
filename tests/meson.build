@@ -322,6 +322,10 @@ standalone = {
 }
 if calendar_enabled
   standalone += {
+    'test_calendar_data': files(
+      'test_calendar_data.c',
+      '../src/calendar/data.c',
+    ) + [calendar_data],
     'test_calendar_islamic': files(
       'test_calendar_islamic.c',
       '../src/calendar/iso.c',
@@ -847,6 +851,16 @@ test(
   workdir: test_workdir,
   timeout: 120,
 )
+
+if calendar_enabled
+  test(
+    'calendar-generator',
+    python,
+    args: files('test_calendar_generator.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+endif
 
 if native_timezones
   test(
