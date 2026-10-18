@@ -3,6 +3,7 @@
  */
 #ifndef QUICKJS_CALENDAR_TYPES_H
 #define QUICKJS_CALENDAR_TYPES_H
+#include <stdint.h>
 
 typedef enum QJSCalendarId {
     QJS_CAL_ISO8601,
@@ -23,5 +24,23 @@ typedef enum QJSCalendarId {
     QJS_CAL_ROC,
     QJS_CAL_COUNT,
 } QJSCalendarId;
+
+#define QJS_CAL_MIN_YEAR (-1000000)
+#define QJS_CAL_MAX_YEAR 1000000
+
+enum {
+    QJS_CAL_OK = 0,
+    QJS_CAL_RANGE = -1,
+    QJS_CAL_UNSUPPORTED = -3,
+    QJS_CAL_MEMORY = -4,
+    QJS_CAL_BACKEND = -5,
+};
+
+typedef struct QJSCalendarDate {
+    int32_t year, month, day, era_year;
+    char month_code[5], era[32];
+    int32_t day_of_year, days_in_month, days_in_year, months_in_year;
+    int has_era, in_leap_year;
+} QJSCalendarDate;
 
 #endif /* QUICKJS_CALENDAR_TYPES_H */
