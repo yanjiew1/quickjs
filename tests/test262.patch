@@ -115,3 +115,22 @@ diff --git a/test/annexB/language/function-code/block-decl-func-skip-arguments.j
 +  { function arguments() {} }
 +  assert.sameValue(arguments, 42);
 +}(42));
+
+diff --git a/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js b/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
+index 6413d385c..28c097560 100644
+--- a/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
++++ b/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
+@@ -6,3 +6,3 @@ esid: sec-temporal.zoneddatetime.from
+ description: Time zone identifiers are case-normalized
+-features: [Temporal, canonical-tz]
++features: [Temporal, canonical-tz, Intl-enumeration]
+ ---*/
+diff --git a/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js b/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
+index ef13c2383..bdcb608d5 100644
+--- a/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
++++ b/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
+@@ -6,3 +6,3 @@ esid: sec-temporal.zoneddatetime
+ description: Time zone names are case-normalized
+-features: [Temporal, canonical-tz]
++features: [Temporal, canonical-tz, Intl-enumeration]
+ ---*/
