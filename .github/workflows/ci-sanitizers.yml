@@ -110,6 +110,9 @@ jobs:
           python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
             --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
           cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+          python3 tools/ci/audit_temporal_test262.py test262_timings.jsonl \
+            --markdown test262_selection.md || report_status=$?
+          cat test262_selection.md >> "$GITHUB_STEP_SUMMARY"
           exit "$report_status"
         fi
     - name: Preserve Test262 diagnostics
@@ -339,6 +342,9 @@ jobs:
           python3 tools/ci/report_test262_timings.py test262_timings.jsonl \
             --csv test262_timings.csv --markdown test262_timings.md || report_status=$?
           cat test262_timings.md >> "$GITHUB_STEP_SUMMARY"
+          python3 tools/ci/audit_temporal_test262.py test262_timings.jsonl \
+            --markdown test262_selection.md || report_status=$?
+          cat test262_selection.md >> "$GITHUB_STEP_SUMMARY"
           exit "$report_status"
         fi
     - name: Preserve Test262 diagnostics
