@@ -16,6 +16,11 @@ const char *qjs_calendar_identifier(QJSCalendarId calendar);
 int qjs_calendar_is_supported(QJSCalendarId calendar);
 int qjs_calendar_from_identifier(QJSCalendarId *result, const char *text,
                                  size_t length);
+/* Enumerate canonical era codes that this arithmetic can emit, not localized
+   labels or every accepted lenient input alias. Zero-based indexes; return
+   UNSUPPORTED for unavailable calendars, no eras, or the end. ISO has no eras.
+   Borrow immutable data for process lifetime; preserve output on failure. */
+int qjs_calendar_era_at(QJSCalendarId calendar, size_t index, const char **out);
 
 /* Arithmetic years include zero and are bounded by QJS_CAL_{MIN,MAX}_YEAR.
    Epoch day zero is 1970-01-01. Temporal/Date limits are consumer policy,
