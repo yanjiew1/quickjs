@@ -105,6 +105,12 @@ lifetime. The IANA release review must check new Zone renames and their
 recommended waiting period before changing primary identities. No active
 rename waiting override is needed for the pinned 2026e snapshot.
 
+Common consumers can filter `qjs_timezone_at()` with `qjs_timezone_is_primary()`
+to obtain AvailablePrimaryTimeZoneIdentifiers, preserving sorted order.
+`qjs_timezone_info()` supplies both the UTC offset and actual DST designation
+for ECMA-402 ToLocalTime. Negative DST and equal-offset designation changes
+are retained; DST is never inferred by comparing numeric offsets.
+
 `tests/test_native_timezone.c` reparses every compiled payload and compares its
 view with the generated descriptor. It also checks all identifiers, aliases,
 ordering and case variants, plus real historical offsets, negative DST,
