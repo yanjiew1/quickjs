@@ -322,6 +322,17 @@ standalone = {
 }
 if calendar_enabled
   standalone += {
+    'test_calendar_lunisolar': files(
+      'test_calendar_lunisolar.c',
+      '../src/calendar/astronomy.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/lunisolar.c',
+    ),
+    'test_calendar_astronomy': files(
+      'test_calendar_astronomy.c',
+      '../src/calendar/astronomy.c',
+      '../src/calendar/iso.c',
+    ),
     'test_calendar_persian': files(
       'test_calendar_persian.c',
       '../src/calendar/data.c',
@@ -858,6 +869,17 @@ test(
   workdir: test_workdir,
   timeout: 120,
 )
+
+if calendar_enabled
+  test(
+    'calendar-boundary-export',
+    python,
+    args: [files('test_calendar_boundary.py'), calendar_boundary],
+    depends: calendar_boundary,
+    suite: ['repo', 'native', 'unit'],
+    timeout: 60,
+  )
+endif
 
 if calendar_enabled
   test(
