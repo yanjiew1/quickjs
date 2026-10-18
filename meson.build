@@ -70,6 +70,9 @@ if get_option('temporal')
   if get_option('timezone_backend') == 'native'
     common_args += '-DCONFIG_TIMEZONE_NATIVE'
   endif
+  if get_option('system_timezone_policy') == 'host-offset'
+    common_args += '-DCONFIG_TIMEZONE_HOST_OFFSET'
+  endif
 endif
 if get_option('gc_stress')
   common_args += '-DFORCE_GC_AT_MALLOC'
@@ -393,9 +396,16 @@ foreach variant : variants
     gnu_symbol_visibility: 'hidden',
     override_options: overrides,
   )
+  variant_support_sources = support_sources
+  variant_data_sources = data_sources
+  variant_system = native ? build_machine.system() : host_machine.system()
+  if variant_system == 'windows'
+    variant_support_sources += windows_timezone_sources
+    variant_data_sources += windows_timezone_data_sources
+  endif
   support_objects = static_library(
     'quickjs-support-' + tag,
-    support_sources,
+    variant_support_sources,
     native: native,
     c_args: args,
     include_directories: inc,
@@ -413,7 +423,7 @@ foreach variant : variants
   endif
   data_objects = static_library(
     'quickjs-data-' + tag,
-    data_sources,
+    variant_data_sources,
     native: native,
     c_args: args,
     include_directories: inc,
@@ -706,6 +716,7 @@ summary(
   {
     'Temporal API': get_option('temporal'),
     'Named-zone backend': get_option('timezone_backend'),
+    'Default-zone fallback': get_option('system_timezone_policy'),
   },
   section: 'Features',
   bool_yn: true,
