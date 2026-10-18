@@ -82,6 +82,13 @@ option(
   description: 'Enable the Temporal JavaScript API',
 )
 option(
+  'calendars',
+  type: 'combo',
+  choices: ['native', 'iso'],
+  value: 'native',
+  description: 'Calendar arithmetic: core ISO only, or native calendar extensions',
+)
+option(
   'timezone_backend',
   type: 'combo',
   choices: ['native', 'minimal'],
