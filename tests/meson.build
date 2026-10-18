@@ -119,6 +119,25 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_temporal_zone_rules': [
+    'test_temporal_zone_rules.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/parse.c',
+    '../src/temporal/format.c',
+    '../src/temporal/time-zone.c',
+  ],
+  'test_temporal_minimal_zones': [
+    'test_temporal_minimal_zones.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/parse.c',
+    '../src/temporal/format.c',
+    '../src/temporal/time-zone.c',
+    '../src/timezone/timezone-minimal.c',
+  ],
   'test_temporal_calendars': [
     'test_temporal_calendars.c',
     '../src/calendar/iso.c',
