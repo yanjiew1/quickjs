@@ -23,6 +23,16 @@ Temporal proposal specification. If these still do not settle a question,
 choose a reasonable interpretation and record the reasoning and focused tests.
 Do not silently treat a reference implementation as normative.
 
+[Calendrica 4.0 by Reingold and Dershowitz](https://github.com/EdReingold/calendar-code2/tree/9afc1f3277b839db1a70c2350d6c708ac83df78f)
+is an additional algorithm reference, reviewed on 2026-10-19. Its Apache-2.0
+Lisp implementation provides useful alternative arithmetic formulations.
+Adapt its Rata Die epoch, mathematical floor division, year-zero conventions
+and rounding explicitly before comparing with C. Its 2820-year Persian model
+does not match all required official leap flags; its astronomical models have
+limited demonstrated ranges. Neither replaces mandatory publication data or
+establishes accuracy across Temporal's full domain. Preserve its authors and
+license if code is adapted.
+
 An implementation's newer release does not establish conformance. Check the
 chosen model, published data, negative years, division, range and overflow
 semantics against the specification. Review reusable QuickJS and QuickJS-NG
