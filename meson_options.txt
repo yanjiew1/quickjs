@@ -61,3 +61,10 @@ option(
   value: 'native',
   description: 'Additional named zones: embedded IANA rules or an empty backend',
 )
+option(
+  'system_timezone_policy',
+  type: 'combo',
+  choices: ['utc', 'host-offset'],
+  value: 'utc',
+  description: 'Fallback when the host timezone cannot be mapped to a supported name',
+)
