@@ -136,7 +136,6 @@ if get_option('temporal')
   )
   support_sources += files(
     'calendar/calendar.c',
-    'calendar/calendar-minimal.c',
     'calendar/iso.c',
     'temporal/calendar.c',
     'temporal/civil.c',
@@ -155,6 +154,23 @@ if get_option('temporal')
     'timezone/system-zone.c',
     'timezone/timezone.c',
   )
+  if get_option('calendars') == 'native'
+    support_sources += files(
+      'calendar/astronomy.c',
+      'calendar/calendar-native.c',
+      'calendar/data.c',
+      'calendar/eras.c',
+      'calendar/hebrew.c',
+      'calendar/islamic.c',
+      'calendar/lunisolar.c',
+      'calendar/native-months.c',
+      'calendar/persian.c',
+      'calendar/solar.c',
+    )
+    data_sources += calendar_data
+  else
+    support_sources += files('calendar/calendar-minimal.c')
+  endif
   if get_option('timezone_backend') == 'native'
     support_sources += files(
       'timezone/timezone-native.c',
