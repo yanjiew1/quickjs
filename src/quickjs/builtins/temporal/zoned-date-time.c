@@ -64,7 +64,7 @@ static const JSClassDef js_temporal_zoned_class = {
 
 JSValue js_temporal_create_zoned_date_time(JSContext *ctx,
     JSValueConst new_target, QJSTemporalEpochNs epoch,
-    const JSTemporalTimeZone *zone, QJSTemporalCalendar calendar)
+    const JSTemporalTimeZone *zone, QJSCalendarId calendar)
 {
     JSTemporalZonedDateTimeData *s;
     JSValue object;
@@ -111,7 +111,7 @@ static int zdt_zone_identifier(JSContext *ctx, const char *text, size_t length,
 }
 
 static int zdt_calendar_identifier(JSContext *ctx, const char *text,
-                                    size_t length, QJSTemporalCalendar *result)
+                                    size_t length, QJSCalendarId *result)
 {
     return js_temporal_calendar_error(ctx,
         qjs_temporal_calendar_from_identifier(result, text, length));
@@ -177,7 +177,7 @@ JSValue js_temporal_to_zoned_date_time(JSContext *ctx, JSValueConst item,
     JSTemporalTimeZone zone;
     QJSTemporalParsedISO parsed;
     QJSTemporalISODateTime datetime;
-    QJSTemporalCalendar calendar;
+    QJSCalendarId calendar;
     QJSTemporalDisambiguation disambiguation;
     JSTemporalOffsetOption offset_option;
     QJSTemporalOverflow overflow;
@@ -267,7 +267,7 @@ static JSValue js_temporal_zoned_constructor(JSContext *ctx, JSValueConst new_ta
                                               int argc, JSValueConst *argv)
 {
     QJSTemporalEpochNs epoch;
-    QJSTemporalCalendar calendar = QJS_TEMPORAL_CAL_ISO8601;
+    QJSCalendarId calendar = QJS_CAL_ISO8601;
     JSTemporalTimeZone zone;
     JSValueConst zone_value, calendar_value;
     JSValue result;
@@ -572,7 +572,7 @@ static JSValue js_temporal_zoned_with_calendar(JSContext *ctx, JSValueConst this
                                                int argc, JSValueConst *argv)
 {
     JSTemporalZonedDateTimeData *s;
-    QJSTemporalCalendar calendar;
+    QJSCalendarId calendar;
 
     s = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_ZONED_DATE_TIME);
     if (!s)
@@ -851,7 +851,7 @@ static JSValue zdt_format(JSContext *ctx, const JSTemporalZonedDateTimeData *s,
         if (length < 0 || length >= (int)sizeof(zone_text))
             return JS_ThrowRangeError(ctx, "Temporal zone identifier is too long");
     }
-    if (show_calendar != 2 && (show_calendar || s->calendar != QJS_TEMPORAL_CAL_ISO8601)) {
+    if (show_calendar != 2 && (show_calendar || s->calendar != QJS_CAL_ISO8601)) {
         calendar = qjs_temporal_calendar_identifier(s->calendar);
         length = snprintf(calendar_text, sizeof(calendar_text), "[%su-ca=%s]",
                             show_calendar == 3 ? "!" : "", calendar);
