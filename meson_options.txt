@@ -79,5 +79,12 @@ option(
   'temporal',
   type: 'boolean',
   value: true,
-  description: 'Build native Temporal with ISO and core UTC, without additional timezone data',
+  description: 'Enable the Temporal JavaScript API',
+)
+option(
+  'timezone_backend',
+  type: 'combo',
+  choices: ['native', 'minimal'],
+  value: 'native',
+  description: 'Named-zone backend: native IANA rules or minimal; UTC and offsets remain in core',
 )
