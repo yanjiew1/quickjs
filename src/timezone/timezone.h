@@ -9,6 +9,11 @@
 
 typedef struct QJSTimeZone QJSTimeZone;
 
+typedef struct QJSTimeZoneInfo {
+    int32_t offset_seconds;
+    int is_dst;
+} QJSTimeZoneInfo;
+
 typedef enum QJSTimeZoneError {
     QJS_TZ_OK = 0,
     QJS_TZ_RANGE = -1,
@@ -28,11 +33,18 @@ int qjs_timezone_lookup(const QJSTimeZone **result,
                         const char *identifier, size_t length);
 const char *qjs_timezone_identifier(const QJSTimeZone *zone);
 const char *qjs_timezone_primary_identifier(const QJSTimeZone *zone);
+/* Filter the sorted named enumeration with this predicate to implement
+   ECMA-402 AvailablePrimaryTimeZoneIdentifiers without returning aliases. */
+int qjs_timezone_is_primary(const QJSTimeZone *zone);
 const char *qjs_timezone_data_version(void);
 size_t qjs_timezone_count(void);
 const QJSTimeZone *qjs_timezone_at(size_t index);
 int qjs_timezone_offset(const QJSTimeZone *zone, int64_t epoch_seconds,
                         int32_t *offset_seconds);
+/* DST is the rule's designation, not a comparison with another offset;
+   it can denote a negative adjustment or a change with equal offsets. */
+int qjs_timezone_info(const QJSTimeZone *zone, int64_t epoch_seconds,
+                      QJSTimeZoneInfo *result);
 
 /* Visit every candidate in ascending epoch order, without assuming at most
    two. Local seconds retain the caller's fractional nanoseconds. For a gap,
