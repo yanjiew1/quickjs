@@ -24,6 +24,7 @@ def load_tool(name):
 acquire = load_tool('acquire')
 with mock.patch.dict(sys.modules, {'acquire': acquire}):
     normalize = load_tool('normalize')
+    lunisolar = load_tool('lunisolar')
 bundle = load_tool('bundle')
 with mock.patch.dict(sys.modules, {'acquire': acquire, 'normalize': normalize, 'bundle': bundle}):
     generate = load_tool('generate')
@@ -197,6 +198,74 @@ class BinaryTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 embed.generate(source, output)
             self.assertEqual(output.read_bytes(), b'existing')
+
+
+class LunisolarTests(unittest.TestCase):
+    @staticmethod
+    def rows(data):
+        result = []
+        for year, day, months, leap in data['rows']:
+            for ordinal, length in enumerate(months, 1):
+                is_leap = bool(leap and ordinal == leap + 1)
+                nominal = ordinal - bool(leap and ordinal > leap)
+                result.append((year, nominal, int(is_leap), day, length))
+                day += length
+        return result
+
+    def test_complete_primary_coverage_and_boundary_isolation(self):
+        for name in ('chinese', 'dangi'):
+            data = json.loads((ROOT / ('data/calendar/' + name + '.json')).read_text())
+            approximate = [tuple(r) for r in data['approximate_months']]
+            primary = [row for row in self.rows(data) if row not in approximate]
+            saved = dict(data)
+            del saved['boundary_model']
+            self.assertEqual(lunisolar.merge(name, primary, approximate), saved)
+            self.assertEqual(len(approximate), 11 if name == 'chinese' else 1)
+            with self.assertRaises(ValueError):
+                lunisolar.merge(name, primary[:20] + primary[21:], approximate)
+            changed = list(approximate)
+            year, month, leap, day, length = changed[0]
+            changed[0] = (year, month, leap, day + 1, length)
+            with self.assertRaises(ValueError):
+                lunisolar.merge(name, primary, changed)
+
+    def test_pmo_literal_grammar_and_expected_record(self):
+        data = json.loads((ROOT / 'data/calendar/chinese.json').read_text())
+        words = []
+        for year, first, lengths, leap in data['rows'][1:]:
+            word = leap
+            for ordinal, length in enumerate(lengths, 1):
+                is_leap = leap and ordinal == leap + 1
+                nominal = ordinal - bool(leap and ordinal > leap)
+                if length == 30:
+                    word |= 0x10000 if is_leap else 0x10000 >> nominal
+            words.append('0x%x' % word)
+        source = 'lunarInfo:[' + ','.join(words) + ']'
+        rows = lunisolar.pmo(source)
+        self.assertEqual(rows[0], (1900, 1, 0, -25537, 29))
+        self.assertEqual(rows, self.rows(data)[12:])
+        for invalid in (source + source, source.replace('0x4bd8', '0x4bd8+0'),
+                        source.replace('0x4bd8', '0x4bdf')):
+            with self.assertRaises(ValueError):
+                lunisolar.pmo(invalid)
+
+    def test_kasi_consumed_fields_and_duplicate_keys(self):
+        row = {'LUNC_YYYY': '1899', 'LUNC_MM': '01', 'LUNC_DD': '01',
+               'LUNC_LEAP_MM': '평', 'SOLC_YYYY': '1899', 'SOLC_MM': '02',
+               'SOLC_DD': '10', 'SOLC_JD': '2414696', 'SOLC_WEEK': '금',
+               'SOLC_LEAP_YYYY': '평', 'LUNC_EN_DD': '30'}
+        def raw(value):
+            return json.dumps(value).encode('ascii')
+        self.assertEqual(lunisolar.kasi(raw([row]), 1, 0), [(1899, 1, 0, -25892, 30)])
+        for field in ('SOLC_JD', 'SOLC_WEEK', 'LUNC_MM', 'LUNC_EN_DD'):
+            bad = dict(row)
+            bad[field] = 'invalid'
+            with self.assertRaises(ValueError):
+                lunisolar.kasi(raw([bad]), 1, 0)
+        with self.assertRaises(ValueError):
+            lunisolar.kasi(raw([row, row]), 1, 0)
+        with self.assertRaises(ValueError):
+            lunisolar.kasi(b'[{"LUNC_YYYY":"1899","LUNC_YYYY":"1900"}]', 1, 0)
 
 
 if __name__ == '__main__':
