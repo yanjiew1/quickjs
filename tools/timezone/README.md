@@ -43,3 +43,22 @@ Run the fast offline acquisition contracts with:
 ```sh
 python3 tests/test_timezone_generator.py
 ```
+
+## Primary identities and the binary format
+
+`primary.py` applies ECMA-402's primary-identifier rules. It preserves
+`zone.tab` country-zone exceptions and cross-country historical links rather
+than treating every alias as the final linked Zone. CLDR supplies geographic
+alias groups, not an alternative primary-identifier policy.
+
+`bundle.py` writes one endian-independent QJTZ version 2 container. Its
+48-byte header and 16-byte index records use big-endian 32-bit integers.
+The header records total size, section offsets, source-version string offsets
+and algorithm compatibility version 1. Reserved fields must be zero.
+Each index record contains identifier and primary string offsets plus a TZif
+payload extent. Names are ordered by canonical ASCII spelling; the payload
+pool deduplicates identical bytes while preserving separate identities.
+
+The validator checks canonical strings, bounds, ordering, primary relationships
+and exact payload coverage. It recognizes TZif framing; the C rule reader
+separately validates complete TZif contents before embedding or use.
