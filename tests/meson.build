@@ -161,6 +161,14 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_native_timezone': [
+    'test_native_timezone.c',
+    '../src/calendar/iso.c',
+    '../src/timezone/timezone.c',
+    '../src/timezone/timezone-native.c',
+    '../src/timezone/tzif.c',
+    timezone_data,
+  ],
   'test_tzif_decoder': [
     'test_tzif_decoder.c',
     '../src/calendar/iso.c',
