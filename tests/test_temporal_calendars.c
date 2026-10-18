@@ -1,6 +1,7 @@
 /* Pure calendar regression coverage without JS allocation. */
 #include <assert.h>
 #include <string.h>
+#include "../src/calendar/calendar.h"
 #include "../src/temporal/calendar.h"
 
 int main(void)
@@ -27,14 +28,22 @@ int main(void)
     assert(!qjs_temporal_calendar_month_day_from_fields(QJS_CAL_ISO8601,
         &input, QJS_TEMPORAL_OVERFLOW_CONSTRAIN, &target));
     assert(target.year == 1972 && target.day == 29);
-    assert(qjs_temporal_calendar_from_identifier(&calendar, "islamic", 7));
-    assert(!qjs_temporal_calendar_from_identifier(&calendar, "IsO8601", 7));
+    assert(qjs_calendar_from_identifier(&calendar, "islamic", 7));
+    assert(!qjs_calendar_from_identifier(&calendar, "IsO8601", 7));
     assert(calendar == QJS_CAL_ISO8601);
-    assert(qjs_temporal_calendar_from_identifier(&calendar, "gregory", 7));
-    assert(calendar == QJS_CAL_ISO8601);
-    assert(qjs_temporal_calendar_identifier(QJS_CAL_GREGORY) == NULL);
-    assert(qjs_temporal_calendar_fields(QJS_CAL_GREGORY, leap,
-        &fields) == QJS_TEMPORAL_ERROR_UNSUPPORTED);
+    if (qjs_calendar_is_supported(QJS_CAL_GREGORY)) {
+        assert(!qjs_calendar_from_identifier(&calendar, "gregory", 7));
+        assert(calendar == QJS_CAL_GREGORY);
+        assert(!strcmp(qjs_temporal_calendar_identifier(calendar), "gregory"));
+        assert(!qjs_temporal_calendar_fields(calendar, leap, &fields));
+        assert(fields.year == 2024 && fields.month == 2 && fields.day == 29);
+    } else {
+        assert(qjs_calendar_from_identifier(&calendar, "gregory", 7));
+        assert(calendar == QJS_CAL_ISO8601);
+        assert(qjs_temporal_calendar_identifier(QJS_CAL_GREGORY) == NULL);
+        assert(qjs_temporal_calendar_fields(QJS_CAL_GREGORY, leap,
+            &fields) == QJS_TEMPORAL_ERROR_UNSUPPORTED);
+    }
     input.year = 275761;
     target = leap;
     assert(qjs_temporal_calendar_date_from_fields(QJS_CAL_ISO8601,
