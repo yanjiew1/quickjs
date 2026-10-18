@@ -972,6 +972,13 @@ test(
   workdir: test_workdir,
   timeout: 120,
 )
+test(
+  'test262-calendar-selection',
+  python,
+  args: files('test_temporal_test262_selection.py'),
+  suite: ['repo', 'tools', 'unit'],
+  timeout: 120,
+)
 
 if native_calendars
   test(

@@ -371,3 +371,76 @@ index 610d65d01..59e44e4f9 100644
 +} else {
 +  assert.sameValue(dataView.byteOffset, expected, "following grow (back into bounds)");
 +}
+
+
+diff --git a/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js b/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
+index 6413d385c..28c097560 100644
+--- a/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
++++ b/test/intl402/Temporal/ZonedDateTime/from/timezone-case-insensitive.js
+@@ -6,3 +6,3 @@ esid: sec-temporal.zoneddatetime.from
+ description: Time zone identifiers are case-normalized
+-features: [Temporal, canonical-tz]
++features: [Temporal, canonical-tz, Intl-enumeration]
+ ---*/
+diff --git a/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js b/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
+index ef13c2383..bdcb608d5 100644
+--- a/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
++++ b/test/intl402/Temporal/ZonedDateTime/timezone-case-insensitive.js
+@@ -6,3 +6,3 @@ esid: sec-temporal.zoneddatetime
+ description: Time zone names are case-normalized
+-features: [Temporal, canonical-tz]
++features: [Temporal, canonical-tz, Intl-enumeration]
+ ---*/
+diff --git a/test/intl402/Temporal/ZonedDateTime/links.js b/test/intl402/Temporal/ZonedDateTime/links.js
+--- a/test/intl402/Temporal/ZonedDateTime/links.js
++++ b/test/intl402/Temporal/ZonedDateTime/links.js
+@@ -214,7 +214,6 @@
+   "Brazil/East": "America/Sao_Paulo",
+   "Brazil/West": "America/Manaus",
+   "CET": "Europe/Brussels",
+-  "CST6CDT": "America/Chicago",
+   "Canada/Atlantic": "America/Halifax",
+   "Canada/Central": "America/Winnipeg",
+   "Canada/Eastern": "America/Toronto",
+@@ -228,7 +227,6 @@
+   "Cuba": "America/Havana",
+   "EET": "Europe/Athens",
+   "EST": "America/Panama",
+-  "EST5EDT": "America/New_York",
+   "Egypt": "Africa/Cairo",
+   "Eire": "Europe/Dublin",
+   "Etc/GMT": "UTC",
+@@ -258,7 +256,6 @@
+   "Libya": "Africa/Tripoli",
+   "MET": "Europe/Brussels",
+   "MST": "America/Phoenix",
+-  "MST7MDT": "America/Denver",
+   "Mexico/BajaNorte": "America/Tijuana",
+   "Mexico/BajaSur": "America/Mazatlan",
+   "Mexico/General": "America/Mexico_City",
+@@ -266,7 +263,6 @@
+   "NZ-CHAT": "Pacific/Chatham",
+   "Navajo": "America/Denver",
+   "PRC": "Asia/Shanghai",
+-  "PST8PDT": "America/Los_Angeles",
+   "Poland": "Europe/Warsaw",
+   "Portugal": "Europe/Lisbon",
+   "ROC": "Asia/Taipei",
+@@ -332,3 +328,17 @@
+     }
+   }
+ }
++
++// tzdata 2026d restored these as independent Zones, not Links.
++const independentZoneTestCases = {
++  "CST6CDT": "America/Chicago",
++  "EST5EDT": "America/New_York",
++  "MST7MDT": "America/Denver",
++  "PST8PDT": "America/Los_Angeles",
++};
++
++for (const [zone, formerTarget] of Object.entries(independentZoneTestCases)) {
++  const instance = new Temporal.ZonedDateTime(0n, zone);
++  assert.sameValue(instance.timeZoneId, zone);
++  assert.sameValue(instance.equals(new Temporal.ZonedDateTime(0n, formerTarget)), false);
++}
