@@ -162,3 +162,15 @@ tests/test_wait_async_worker_overflow_module.js
 tests/test_worker.js
 tests/test_worker_module.js
 tests/test_host_loop_worker.js
+tests/test_temporal_instant.js
+tests/test_temporal_duration.js
+tests/test_temporal_plain_time.js
+tests/test_temporal_plain.js
+tests/test_temporal_realm.js
+tests/test_temporal_now.js
+tests/test_temporal_zoned.js
+tests/test_temporal_offset_wall_date_boundaries.js
+tests/test_temporal_year_month_date_boundaries.js
+tests/test_temporal_zero_zoned_duration_boundaries.js
+tests/test_temporal_plain_date_duration_balance.js
+tests/test_date_temporal_bridge.js
