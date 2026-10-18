@@ -123,6 +123,12 @@ standalone = {
     'test_temporal_epoch.c',
     '../src/temporal/epoch.c',
   ],
+  'test_temporal_date_math': [
+    'test_temporal_date_math.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+  ],
   'test_cutils': [
     'test_cutils.c',
     '../src/cutils/cutils.c',
