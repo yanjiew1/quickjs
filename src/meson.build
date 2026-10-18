@@ -111,6 +111,8 @@ if get_option('temporal')
     'quickjs/builtins/temporal/zoned-date-time.c',
   )
   support_sources += files(
+    'calendar/calendar.c',
+    'calendar/calendar-minimal.c',
     'calendar/iso.c',
     'temporal/calendar.c',
     'temporal/civil.c',
@@ -119,6 +121,7 @@ if get_option('temporal')
     'temporal/epoch.c',
     'temporal/format.c',
     'temporal/iso.c',
+    'temporal/noniso-calendar.c',
     'temporal/options.c',
     'temporal/parse.c',
     'temporal/relative.c',
