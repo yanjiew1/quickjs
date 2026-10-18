@@ -115,3 +115,19 @@ are retained; DST is never inferred by comparing numeric offsets.
 view with the generated descriptor. It also checks all identifiers, aliases,
 ordering and case variants, plus real historical offsets, negative DST,
 date-line gaps and distant future recurrence. The test uses only embedded data.
+
+## Windows host mappings
+
+`windows.py` converts the released `windowsZones.json` into a compact WTZ1
+binary table with interned strings and 16-bit indices. Meson emits that binary
+as its own C translation unit; runtime code never parses JSON. This host
+identity table is separate from the single QJTZ rule pack and requires no
+additional runtime data file. Every IANA target is checked against the pack.
+
+The lookup uses the stable Windows timezone key and the user's ISO country,
+preferring an exact territory row and then `001`. It preserves CLDR's target
+order and selects the first target. Windows discovery uses
+`GetDynamicTimeZoneInformation`, `GetUserGeoID` and `GetGeoInfoW(GEO_ISO2)`;
+localized display names are not used as keys. The discovery API requires Vista
+or newer. Custom Windows rules or disabled dynamic daylight settings can differ
+from the selected IANA zone's rules.
