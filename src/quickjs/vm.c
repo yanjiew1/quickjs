@@ -3590,9 +3590,20 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                 pc += 4;
                 sf->cur_pc = pc;
 
-                if (JS_GetGlobalVarRef(ctx, atom, sp))
+                ret_val = JS_GetGlobalVarRef(ctx, atom);
+                if (unlikely(JS_IsException(ret_val)))
                     goto exception;
-                sp += 2;
+                *sp++ = ret_val;
+                if (!__JS_AtomIsTaggedInt(atom) &&
+                    rt->atom_array[atom]->atom_type == JS_ATOM_TYPE_STRING) {
+                    *sp++ = JS_DupValue(ctx, JS_MKPTR(JS_TAG_STRING,
+                                                    rt->atom_array[atom]));
+                } else {
+                    ret_val = JS_AtomToValue(ctx, atom);
+                    if (unlikely(JS_IsException(ret_val)))
+                        goto exception;
+                    *sp++ = ret_val;
+                }
             }
             BREAK;
 
