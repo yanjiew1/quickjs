@@ -80,3 +80,11 @@ test_identities();
 test_gap_and_overlap();
 test_day_arithmetic();
 test_history_and_transitions();
+
+if (scriptArgs.includes("--default-ny")) {
+    assert(Temporal.Now.timeZoneId(), "America/New_York");
+    assert(new Date("2024-01-01T00:00Z").getTimezoneOffset(), 300);
+    assert(new Date("2024-07-01T00:00Z").getTimezoneOffset(), 240);
+    assert(new Date(2024, 2, 10, 2, 30).getTime(),
+           Number(ZDT.from("2024-03-10T02:30[America/New_York]").epochMilliseconds));
+}
