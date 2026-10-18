@@ -742,6 +742,14 @@ test(
 )
 
 test(
+  'calendar-generator',
+  python,
+  args: files('test_calendar_generator.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'timezone-generator',
   python,
   args: files('test_timezone_generator.py'),
