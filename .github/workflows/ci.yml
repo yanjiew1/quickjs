@@ -314,10 +314,19 @@ jobs:
           --threads "$(getconf _NPROCESSORS_ONLN)" \
           --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
           2>&1 | tee test262_runtime.log
-    - name: Report Test262 timings
+    - name: Report Test262 timings and core Temporal selection
       if: always()
       run: |
-        sh tools/ci/report_test262_summaries.sh test262 test262_intl
+        report_status=0
+        sh tools/ci/report_test262_summaries.sh test262 test262_intl || report_status=$?
+        # This audit matches the core configuration's explicit non-Intl selection,
+        # including when the same executable also supplies a separate Intl run.
+        if test -f test262_timings.jsonl; then
+          python3 tools/ci/audit_temporal_test262.py test262_timings.jsonl \
+            --markdown test262_selection.md || report_status=$?
+          cat test262_selection.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+        exit "$report_status"
     - name: Record source and runner identity
       if: always()
       run: |
@@ -486,10 +495,19 @@ jobs:
           --threads "$(getconf _NPROCESSORS_ONLN)" \
           --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
           2>&1 | tee test262_runtime.log
-    - name: Report Test262 timings
+    - name: Report Test262 timings and core Temporal selection
       if: always()
       run: |
-        sh tools/ci/report_test262_summaries.sh test262 test262_intl
+        report_status=0
+        sh tools/ci/report_test262_summaries.sh test262 test262_intl || report_status=$?
+        # This audit matches the core configuration's explicit non-Intl selection,
+        # including when the same executable also supplies a separate Intl run.
+        if test -f test262_timings.jsonl; then
+          python3 tools/ci/audit_temporal_test262.py test262_timings.jsonl \
+            --markdown test262_selection.md || report_status=$?
+          cat test262_selection.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+        exit "$report_status"
     - name: Record source and runner identity
       if: always()
       run: |
