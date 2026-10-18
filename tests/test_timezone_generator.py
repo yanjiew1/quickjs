@@ -32,6 +32,7 @@ primary = load_tool('primary')
 bundle = load_tool('bundle')
 with mock.patch.dict('sys.modules', {'acquire': acquire, 'bundle': bundle}):
     embed = load_tool('embed')
+    windows = load_tool('windows')
 
 
 def sha256(data):
@@ -169,6 +170,30 @@ class EmbeddingTests(unittest.TestCase):
                     with self.assertRaises(type(failure)):
                         embed.generate(source, output, Path(directory) / 'reader')
                 self.assertEqual(output.read_bytes(), b'previous complete output')
+
+
+class WindowsMappingTests(unittest.TestCase):
+    def source(self, rows):
+        return json.dumps({'supplemental': {'windowsZones': {'mapTimezones': [
+            {'mapZone': {'_other': key, '_territory': country, '_type': targets}}
+            for key, country, targets in rows]}}})
+
+    def test_deterministic_mapping_and_available_targets(self):
+        rows = [('Example Time', '001', 'Area/A'), ('Example Time', 'AA', 'Area/A Area/B')]
+        first = windows.pack(self.source(rows), {'Area/A', 'Area/B'})
+        self.assertEqual(first, windows.pack(self.source(rows[::-1]), {'Area/A', 'Area/B'}))
+        spaced = [('Example Time', '001', 'Area/A '),
+                  ('Example Time', 'AA', 'Area/A  Area/B\n')]
+        self.assertEqual(first, windows.pack(self.source(spaced), {'Area/A', 'Area/B'}))
+        with self.assertRaisesRegex(ValueError, 'absent from IANA'):
+            windows.pack(self.source(rows), {'Area/A'})
+
+    def test_rejects_missing_fallback_duplicate_and_bad_names(self):
+        for rows in ([('Example Time', 'AA', 'Area/A')],
+                     [('Example Time', '001', 'Area/A')] * 2,
+                     [('Example Time', '001', 'Area/A ?')]):
+            with self.assertRaises(ValueError):
+                windows.pack(self.source(rows))
 
 
 class PrimaryTests(unittest.TestCase):
