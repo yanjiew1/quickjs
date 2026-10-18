@@ -41,14 +41,14 @@ static JSValue js_temporal_now_iso(JSContext *ctx, JSValueConst this_val,
     if (js_temporal_calendar_error(ctx, qjs_temporal_system_epoch(&epoch))) goto done;
     if (!magic) {
         result = js_temporal_create_zoned_date_time(ctx, JS_UNDEFINED, epoch,
-                                                   &zone, QJS_TEMPORAL_CAL_ISO8601);
+                                                   &zone, QJS_CAL_ISO8601);
         goto done;
     }
     if (js_temporal_time_zone_datetime(ctx, &zone, epoch, &local)) goto done;
     if (magic == 1) result = js_temporal_create_plain_date_time(ctx, JS_UNDEFINED,
-                                                              local, QJS_TEMPORAL_CAL_ISO8601);
+                                                              local, QJS_CAL_ISO8601);
     else if (magic == 2) result = js_temporal_create_plain_date(ctx, JS_UNDEFINED,
-                                                              local.date, QJS_TEMPORAL_CAL_ISO8601);
+                                                              local.date, QJS_CAL_ISO8601);
     else result = js_temporal_create_plain_time(ctx, JS_UNDEFINED, local.time);
  done:
     js_temporal_free_time_zone(ctx, &zone);
