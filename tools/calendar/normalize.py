@@ -14,6 +14,37 @@ from acquire import SOURCES, atomic_write, checked_sources, digest
 EPOCH = datetime.date(1970, 1, 1)
 
 
+def japanese_eras(text):
+    """Keep the current and future modern eras; 1873 is an ECMA boundary."""
+    eras = json.loads(text)['supplemental']['calendarData']['japanese']['eras']
+    cutoff = datetime.date(1873, 1, 1)
+    starts = []
+    for era in eras.values():
+        # Earlier Japanese starts can use the pre-Gregorian calendar, whose
+        # day/month combinations are not necessarily valid Gregorian dates.
+        parts = tuple(map(int, era['_start'].split('-')))
+        if len(parts) != 3:
+            raise ValueError('invalid Japanese era start')
+        starts.append((parts, era.get('_code')))
+    starts.sort(key=lambda row: row[0])
+    prior = [i for i, (date, code) in enumerate(starts)
+             if date <= (cutoff.year, cutoff.month, cutoff.day)]
+    if not prior:
+        raise ValueError('missing Japanese era at Gregorian adoption')
+    rows, names = [], {'ce', 'bce', 'ad', 'bc'}
+    previous = None
+    for parts, name in starts[prior[-1]:]:
+        start = datetime.date(*parts)
+        if (not isinstance(name, str) or
+                not re.fullmatch(r'[a-z][a-z0-9-]{0,30}', name) or name in names or
+                previous is not None and start <= previous):
+            raise ValueError('invalid or duplicate Japanese era code')
+        names.add(name)
+        previous = start
+        rows.append([name, max(start, cutoff).isoformat(), start.year - 1])
+    return {'schema': 1, 'calendar': 'japanese', 'eras': rows}
+
+
 def persian(text):
     rows = []
     for line in text.splitlines():
@@ -116,6 +147,9 @@ def main():
         text = json.dumps(data, indent=2)[:-2] + ',\n  "rows": [\n'
         text += ',\n'.join('    ' + json.dumps(row) for row in rows) + '\n  ]\n}\n'
         atomic_write(args.output_dir / (data['calendar'] + '.json'), text.encode('ascii'))
+    eras = japanese_eras((SOURCES / 'cldr-calendarData.json').read_text(encoding='utf-8'))
+    atomic_write(args.output_dir / 'japanese.json',
+                 (json.dumps(eras, indent=2) + '\n').encode('ascii'))
 
 
 if __name__ == '__main__':
