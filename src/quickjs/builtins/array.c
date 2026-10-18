@@ -1570,13 +1570,12 @@ static JSValue js_array_splice(JSContext *ctx, JSValueConst this_val,
 static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
                                   int argc, JSValueConst *argv)
 {
-    JSValue arr, obj, ret, *arrp, *pval, *last;
+    JSValue arr, obj, ret, *arrp, *pval;
     JSObject *p;
     int64_t i, j, len, newlen, start, add, del;
     uint32_t count32;
 
     pval = NULL;
-    last = NULL;
     ret = JS_EXCEPTION;
     arr = JS_UNDEFINED;
 
@@ -1615,7 +1614,6 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
 
     p = JS_VALUE_GET_OBJ(arr);
     pval = &p->u.array.u.values[0];
-    last = &p->u.array.u.values[newlen];
 
     if (js_get_fast_array(obj, &arrp, &count32) && count32 == len) {
         for (i = 0; i < start; i++, pval++)
@@ -1635,7 +1633,7 @@ static JSValue js_array_toSpliced(JSContext *ctx, JSValueConst this_val,
                 goto exception;
     }
 
-    assert(pval == last);
+    assert(pval == &p->u.array.u.values[newlen]);
 
 done:
     ret = arr;
