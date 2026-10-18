@@ -38,6 +38,29 @@ the required Islamic civil fallback continuously.
 
 [Pinned ICU4X source and its ICU4C provenance](https://github.com/unicode-org/icu4x/blob/e078031999870d4f263635c319a79cb19543ccfc/components/calendar/src/cal/hijri/ummalqura_data.rs)
 
+## Japanese eras
+
+`sources/cldr-calendarData.json` is the released CLDR 48.2.3 calendar data,
+pinned to `91c267402229a59e3ef2774544f001bf959e8809`. Its modern era codes and
+Gregorian start dates agree with ECMA-402's Japanese government era rules.
+The Unicode License V3 receipt is `sources/LICENSE-CLDR`.
+
+Normalization selects the era active on 1873-01-01 and every later era. It
+does not require a fixed count or a C list of era names. ECMAScript uses
+Gregorian eras before that date, so Meiji's lookup start is clamped to
+1873-01-01, while its year offset still comes from its original start year:
+1868 minus one. Thus 1873 remains Meiji 6. Earlier CLDR dates may be in the
+old Japanese calendar and are not interpreted as Gregorian dates.
+
+To update eras, review a new released CLDR source against the government
+announcement and specification, replace the vendored source/license, and
+update their revision and byte hashes in `pin.json`. Then run normalization
+and generation below, and commit the source, `japanese.json`, binary and
+manifest together. No C lookup change is needed for another era. CI compares
+the regenerated JSON and binary; a synthetic sixth-era test verifies lookup
+and year resolution with additional data. Updates require rebuilding the
+embedded snapshot; runtime data loading is not introduced.
+
 ## Acquisition and offline normalization
 
 Download the hash-pinned publications into a selected cache:
@@ -53,6 +76,7 @@ Reproduce normalized records offline, then compare them with the repository:
 python3 tools/calendar/normalize.py --output-dir /path/to/build/calendar
 cmp data/calendar/persian.json /path/to/build/calendar/persian.json
 cmp data/calendar/islamic-umalqura.json /path/to/build/calendar/islamic-umalqura.json
+cmp data/calendar/japanese.json /path/to/build/calendar/japanese.json
 ```
 
 To independently compare all official PDF leap markers, install `pdftotext`
@@ -112,7 +136,7 @@ above separately reproduces those records from the acquired source receipts.
 ## Single binary pack
 
 `generate.py` checks normalized records and their source identities, then emits
-one `calendar-data.bin` plus a provenance manifest. QJCA version 1 uses big-endian
+one `calendar-data.bin` plus a provenance manifest. QJCA version 2 uses big-endian
 integers: a 32-byte header, 32-byte dataset indices, source-version strings and
 12-byte year records. Each year stores its first epoch day, two bits per month
 for lengths 29 through 31, the month count and the nominal month repeated by
@@ -120,13 +144,22 @@ the inserted leap month (zero when absent). Indices
 store contiguous year coverage and the separately derived terminal boundary.
 Calendar kinds are stable format identifiers, independent of C enum values.
 
+Japanese eras use kind 50 in the same pack. Its index has zero first-year and
+terminal-day fields, an era count, and a payload extent of 40 bytes per era:
+signed 32-bit first epoch day, signed 32-bit year offset, and a 32-byte
+NUL-terminated canonical ASCII name with a zero-filled tail. Names are unique,
+dates strictly increase, and records are bounded to 1,024 eras. The reader
+exposes borrowed immutable names and rejects malformed encodings. Other
+calendar kinds retain their 12-byte year records; v1 packs are rejected.
+
 Both the Python generator and C reader validate bounds, reserved bits, ordering,
 calendar-specific month shapes and every adjacent/terminal boundary. Year lookup
 indexes directly into immutable records, avoiding repeated cumulative scans.
 `embed.py` validates the pack and creates one C data owner in the build directory.
 The C reader also accepts an immutable byte span for a future external loader;
 current builds do not load calendar files at runtime. No compression library is
-required. The four publication datasets together currently occupy 11,672 bytes.
+required. The four year datasets and Japanese era dataset share this single
+pack; the manifest records its exact size and hash.
 
 ```sh
 python3 tools/calendar/generate.py \
