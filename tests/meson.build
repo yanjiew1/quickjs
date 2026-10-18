@@ -49,6 +49,11 @@ if calendar_enabled
       '../src/timezone/timezone-minimal.c',
     )
   endif
+  if native_timezones
+    system_timezone_test_sources = files(
+      '../src/timezone/windows-zone.c',
+    ) + [windows_timezone_data]
+  endif
 endif
 
 fixture_manifest = files('../tools/build/test-fixtures.list')
@@ -310,6 +315,10 @@ standalone = {
 }
 if native_timezones
   standalone += {
+    'test_windows_timezone': files(
+      'test_windows_timezone.c',
+      '../src/timezone/windows-zone.c',
+    ) + [windows_timezone_data],
     'test_native_timezone': files(
       'test_native_timezone.c',
       '../src/calendar/iso.c',
