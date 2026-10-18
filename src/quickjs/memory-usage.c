@@ -24,6 +24,7 @@
  */
 #include "internal/class.h"
 #include "internal/base.h"
+#include "builtins/temporal.h"
 #include "internal/c-function.h"
 #include "internal/runtime.h"
 #include "internal/atom.h"
@@ -133,6 +134,12 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
 
     s->memory_used_count = 2; /* rt + rt->class_array */
     s->memory_used_size = sizeof(JSRuntime) + sizeof(JSValue) * rt->class_count;
+#ifdef CONFIG_TEMPORAL
+    if (rt->default_time_zone) {
+        s->memory_used_count++;
+        s->memory_used_size += strlen(rt->default_time_zone) + 1;
+    }
+#endif
 
     if (rt->kept_objects) {
         s->memory_used_count++;
@@ -302,6 +309,27 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
                 s->memory_used_size += sizeof(*bf) + bf->argc * sizeof(*bf->argv);
             }
             break;
+#ifdef CONFIG_TEMPORAL
+        case JS_CLASS_TEMPORAL_INSTANT:
+        case JS_CLASS_TEMPORAL_DURATION:
+        case JS_CLASS_TEMPORAL_PLAIN_DATE:
+        case JS_CLASS_TEMPORAL_PLAIN_TIME:
+        case JS_CLASS_TEMPORAL_PLAIN_DATE_TIME:
+        case JS_CLASS_TEMPORAL_PLAIN_YEAR_MONTH:
+        case JS_CLASS_TEMPORAL_PLAIN_MONTH_DAY:
+        case JS_CLASS_TEMPORAL_ZONED_DATE_TIME:
+            {
+                JSValue owned_value;
+                size_t payload_size = js_temporal_memory_usage(
+                    JS_MKPTR(JS_TAG_OBJECT, p), &owned_value);
+                if (payload_size) {
+                    s->memory_used_count++;
+                    s->memory_used_size += payload_size;
+                    compute_value_size(owned_value, hp);
+                }
+            }
+            break;
+#endif
         case JS_CLASS_C_FUNCTION_DATA:   /* u.c_function_data_record */
             {
                 JSCFunctionDataRecord *fd = p->u.c_function_data_record;
