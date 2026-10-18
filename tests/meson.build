@@ -26,8 +26,8 @@ component_test_specs = []
 
 # Stage-local test capabilities follow the selected runtime. Foundation tests
 # remain available before their eventual build option is introduced.
-calendar_enabled = true
-native_calendars = true
+calendar_enabled = get_option('temporal')
+native_calendars = get_option('temporal')
 native_timezones = false
 calendar_test_sources = []
 timezone_test_sources = []
@@ -98,10 +98,51 @@ public_native_test_names = [
   'test_promise_oom',
   'test_qjsc_json_preload',
 ]
+temporal_api_test = executable(
+  'test_temporal_api',
+  'test_temporal_api.c',
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: engine_dep,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'temporal-api',
+  temporal_api_test,
+  suite: ['repo', 'embedding', 'integration'],
+  timeout: 120,
+)
+if get_option('temporal')
+  foreach name : [
+    'test_temporal_instant',
+    'test_temporal_duration',
+    'test_temporal_plain_time',
+    'test_temporal_plain',
+    'test_temporal_realm',
+    'test_temporal_now',
+    'test_temporal_zoned',
+    'test_temporal_offset_wall_date_boundaries',
+    'test_temporal_year_month_date_boundaries',
+    'test_temporal_zero_zoned_duration_boundaries',
+    'test_temporal_plain_date_duration_balance',
+    'test_date_temporal_bridge',
+  ]
+    test(
+      name,
+      qjs,
+      args: ['--std', 'tests/' + name + '.js'],
+      suite: ['repo', 'temporal', 'integration'],
+      workdir: test_workdir,
+      depends: fixtures,
+      timeout: 60,
+    )
+  endforeach
+endif
 
 # Tests that include an implementation need archive extraction, not link_whole.
 native_test_names = [
   'test_api',
+  'test_temporal_oom',
   'test_builtin_brands',
   'test_embedding_helpers',
   'test_c_function_data',
@@ -134,6 +175,12 @@ native_test_names = [
 ]
 foreach name : native_test_names
   public_consumer = name in public_native_test_names
+  if name == 'test_temporal_oom' and not get_option('temporal')
+    continue
+  endif
+  if name == 'test_duration_record' and not calendar_enabled
+    continue
+  endif
   app = executable(
     name,
     name + '.c',
@@ -243,97 +290,98 @@ endforeach
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
-standalone += {
-  'test_temporal_clock': files(
-    'test_temporal_clock.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/clock.c',
-  ),
-  'test_temporal_zone_rules': files(
-    'test_temporal_zone_rules.c',
-    '../src/calendar/iso.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/parse.c',
-    '../src/temporal/format.c',
-    '../src/temporal/time-zone.c',
-    '../src/timezone/timezone.c',
-  ),
-  'test_temporal_relative': files(
-    'test_temporal_relative.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/civil.c',
-    '../src/temporal/calendar.c',
-    '../src/temporal/duration.c',
-    '../src/temporal/options.c',
-    '../src/temporal/relative.c',
-    '../src/temporal/parse.c',
-    '../src/temporal/format.c',
-    '../src/temporal/time-zone.c',
-  ) + calendar_test_sources + timezone_test_sources,
-  'test_temporal_minimal_zones': files(
-    'test_temporal_minimal_zones.c',
-    '../src/calendar/iso.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/parse.c',
-    '../src/temporal/format.c',
-    '../src/temporal/time-zone.c',
-    '../src/timezone/timezone.c',
-    '../src/timezone/timezone-minimal.c',
-  ),
-  'test_temporal_calendars': files(
-    'test_temporal_calendars.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/civil.c',
-    '../src/temporal/calendar.c',
-  ) + calendar_test_sources,
-  'test_temporal_duration_math': files(
-    'test_temporal_duration_math.c',
-    '../src/calendar/iso.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/options.c',
-    '../src/temporal/duration.c',
-    '../src/temporal/time.c',
-  ),
-  'test_temporal_format': files(
-    'test_temporal_format.c',
-    '../src/calendar/iso.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/format.c',
-    '../src/temporal/options.c',
-  ),
-  'test_temporal_parse': files(
-    'test_temporal_parse.c',
-    '../src/calendar/iso.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/parse.c',
-  ),
-  'test_temporal_epoch': files(
-    'test_temporal_epoch.c',
-    '../src/temporal/epoch.c',
-  ),
-  'test_temporal_date_math': files(
-    'test_temporal_date_math.c',
-    '../src/calendar/iso.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-  ),
-  'test_temporal_civil': files(
-    'test_temporal_civil.c',
-    '../src/calendar/iso.c',
-    '../src/temporal/epoch.c',
-    '../src/temporal/iso.c',
-    '../src/temporal/civil.c',
-  ),
+if get_option('temporal')
+  standalone += {
+    'test_temporal_clock': files(
+      'test_temporal_clock.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/clock.c',
+    ),
+    'test_temporal_zone_rules': files(
+      'test_temporal_zone_rules.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/parse.c',
+      '../src/temporal/format.c',
+      '../src/temporal/time-zone.c',
+      '../src/timezone/timezone.c',
+    ),
+    'test_temporal_relative': files(
+      'test_temporal_relative.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/civil.c',
+      '../src/temporal/calendar.c',
+      '../src/temporal/duration.c',
+      '../src/temporal/options.c',
+      '../src/temporal/relative.c',
+      '../src/temporal/parse.c',
+      '../src/temporal/format.c',
+      '../src/temporal/time-zone.c',
+    ) + calendar_test_sources + timezone_test_sources,
+    'test_temporal_minimal_zones': files(
+      'test_temporal_minimal_zones.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/parse.c',
+      '../src/temporal/format.c',
+      '../src/temporal/time-zone.c',
+      '../src/timezone/timezone.c',
+      '../src/timezone/timezone-minimal.c',
+    ),
+    'test_temporal_calendars': files(
+      'test_temporal_calendars.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/civil.c',
+      '../src/temporal/calendar.c',
+    ) + calendar_test_sources,
+    'test_temporal_duration_math': files(
+      'test_temporal_duration_math.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/options.c',
+      '../src/temporal/duration.c',
+      '../src/temporal/time.c',
+    ),
+    'test_temporal_format': files(
+      'test_temporal_format.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/format.c',
+      '../src/temporal/options.c',
+    ),
+    'test_temporal_parse': files(
+      'test_temporal_parse.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/parse.c',
+    ),
+    'test_temporal_epoch': files(
+      'test_temporal_epoch.c',
+      '../src/temporal/epoch.c',
+    ),
+    'test_temporal_date_math': files(
+      'test_temporal_date_math.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+    ),
+    'test_temporal_civil': files(
+      'test_temporal_civil.c',
+      '../src/calendar/iso.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/iso.c',
+      '../src/temporal/civil.c',
+    ),
+  }
+endif
 
-
-}
 
 foreach name, sources : standalone
   app = {
@@ -702,7 +750,11 @@ test(
 test(
   'test262-runner',
   sh,
-  args: [files('test_run_test262.sh'), run_test262],
+  args: [
+    files('test_run_test262.sh'),
+    run_test262,
+    get_option('temporal') ? 'y' : 'n',
+  ],
   suite: ['repo', 'tools', 'integration'],
   workdir: test_workdir,
   depends: fixtures,
@@ -739,7 +791,7 @@ if not meson.is_cross_build() and host_machine.system() != 'windows'
       qjsc,
       ' '.join(expected_flags),
       'n',
-      'n',
+      get_option('temporal') ? 'y' : 'n',
       get_option('b_lto') ? lto_flag : '',
       'libquickjs' + library_suffix,
     ],

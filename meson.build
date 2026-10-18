@@ -65,6 +65,9 @@ inc = include_directories(
 )
 version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
+if get_option('temporal')
+  common_args += '-DCONFIG_TEMPORAL'
+endif
 if get_option('gc_stress')
   common_args += '-DFORCE_GC_AT_MALLOC'
 endif
@@ -641,6 +644,14 @@ summary(
     'Unicode tables': get_option('unicode_data') == '' ? 'bundled' : 'generated',
   },
   section: 'Build',
+  bool_yn: true,
+)
+
+summary(
+  {
+    'Temporal API': get_option('temporal'),
+  },
+  section: 'Features',
   bool_yn: true,
 )
 summary(
