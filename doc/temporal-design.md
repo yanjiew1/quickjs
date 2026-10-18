@@ -97,7 +97,7 @@ may span many translation units with its own private header. There is no runtime
 backend registration, loading, replacement or dispatch table. Runtime selection
 of a calendar or timezone identifier remains available within that backend.
 
-Proposed build profiles:
+Build profiles:
 
 | Option | Meaning |
 | --- | --- |
@@ -109,8 +109,7 @@ Proposed build profiles:
 | `system_timezone_policy=utc` | UTC fallback for unresolved default discovery |
 | `system_timezone_policy=host-offset` | Current host offset fallback, then UTC |
 
-These names are design targets, not a statement that existing Meson options
-already implement them. Future ICU backends implement the same private
+Future ICU backends implement the same private
 contracts and supply their own data and algorithms. They are not required for
 the native implementation. Disabling Temporal does not remove Date's timezone
 requirements; build dependencies must remain explicit.
