@@ -147,6 +147,14 @@ if get_option('temporal')
     'temporal/time.c',
     'temporal/time-zone.c',
     'timezone/timezone.c',
-    'timezone/timezone-minimal.c',
   )
+  if get_option('timezone_backend') == 'native'
+    support_sources += files(
+      'timezone/timezone-native.c',
+      'timezone/tzif.c',
+    )
+    data_sources += timezone_data
+  else
+    support_sources += files('timezone/timezone-minimal.c')
+  endif
 endif
