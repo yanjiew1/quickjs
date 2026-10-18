@@ -27,7 +27,7 @@ component_test_specs = []
 # Stage-local test capabilities follow the selected runtime. Foundation tests
 # remain available before their eventual build option is introduced.
 calendar_enabled = get_option('temporal')
-native_calendars = get_option('temporal')
+native_calendars = get_option('temporal') and get_option('calendars') == 'native'
 native_timezones = get_option('temporal') and get_option('timezone_backend') == 'native'
 calendar_test_sources = []
 timezone_test_sources = []
@@ -37,9 +37,24 @@ if calendar_enabled
     '../src/calendar/calendar.c',
     '../src/calendar/iso.c',
   )
-  calendar_test_sources += files(
-    '../src/calendar/calendar-minimal.c',
-  )
+  if native_calendars
+    calendar_test_sources += files(
+      '../src/calendar/astronomy.c',
+      '../src/calendar/calendar-native.c',
+      '../src/calendar/data.c',
+      '../src/calendar/eras.c',
+      '../src/calendar/hebrew.c',
+      '../src/calendar/islamic.c',
+      '../src/calendar/lunisolar.c',
+      '../src/calendar/native-months.c',
+      '../src/calendar/persian.c',
+      '../src/calendar/solar.c',
+    ) + [calendar_data]
+  else
+    calendar_test_sources += files(
+      '../src/calendar/calendar-minimal.c',
+    )
+  endif
   timezone_test_sources = files(
     '../src/timezone/timezone.c',
   )
@@ -129,6 +144,15 @@ test(
   timeout: 120,
 )
 if get_option('temporal')
+  test(
+    'temporal-calendar-profile',
+    qjs,
+    args: ['--std', 'tests/test_temporal_calendars.js', get_option('calendars')],
+    suite: ['repo', 'temporal', 'integration'],
+    workdir: test_workdir,
+    depends: fixtures,
+    timeout: 60,
+  )
   foreach name : [
     'test_temporal_instant',
     'test_temporal_duration',
@@ -324,7 +348,7 @@ endforeach
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
-if get_option('temporal')
+if get_option('temporal') and native_calendars
   standalone += {
     'test_temporal_noniso_calendars': files(
       'test_temporal_noniso_calendars.c',
@@ -347,6 +371,122 @@ if get_option('temporal')
       '../src/temporal/noniso-calendar.c',
       '../src/temporal/noniso-arithmetic.c',
     ) + [calendar_data],
+  }
+endif
+
+if native_calendars
+  standalone += {
+    'test_calendar_native': files(
+      'test_calendar_native.c',
+      '../src/calendar/astronomy.c',
+      '../src/calendar/calendar.c',
+      '../src/calendar/calendar-native.c',
+      '../src/calendar/data.c',
+      '../src/calendar/eras.c',
+      '../src/calendar/hebrew.c',
+      '../src/calendar/islamic.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/lunisolar.c',
+      '../src/calendar/native-months.c',
+      '../src/calendar/persian.c',
+      '../src/calendar/solar.c',
+    ) + [calendar_data],
+    'test_calendar_eras_future': files(
+      'test_calendar_eras_future.c',
+      '../src/calendar/data.c',
+      '../src/calendar/eras.c',
+      '../src/calendar/iso.c',
+    ),
+    'test_calendar_eras': files(
+      'test_calendar_eras.c',
+      '../src/calendar/data.c',
+      '../src/calendar/eras.c',
+      '../src/calendar/iso.c',
+    ) + [calendar_data],
+    'test_calendar_lunisolar': files(
+      'test_calendar_lunisolar.c',
+      '../src/calendar/astronomy.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/lunisolar.c',
+    ),
+    'test_calendar_astronomy': files(
+      'test_calendar_astronomy.c',
+      '../src/calendar/astronomy.c',
+      '../src/calendar/iso.c',
+    ),
+    'test_calendar_persian': files(
+      'test_calendar_persian.c',
+      '../src/calendar/data.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/persian.c',
+    ) + [calendar_data],
+    'test_calendar_data': files(
+      'test_calendar_data.c',
+      '../src/calendar/data.c',
+    ) + [calendar_data],
+    'test_calendar_islamic': files(
+      'test_calendar_islamic.c',
+      '../src/calendar/data.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/islamic.c',
+    ) + [calendar_data],
+    'test_calendar_hebrew': files(
+      'test_calendar_hebrew.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/hebrew.c',
+    ),
+    'test_calendar_solar': files(
+      'test_calendar_solar.c',
+      '../src/calendar/iso.c',
+      '../src/calendar/solar.c',
+    ),
+  }
+endif
+
+if calendar_enabled and not native_calendars
+  standalone += {
+    'test_calendar_core': files(
+      'test_calendar_core.c',
+      '../src/calendar/calendar.c',
+      '../src/calendar/calendar-minimal.c',
+      '../src/calendar/iso.c',
+    ),
+  }
+endif
+
+if calendar_enabled
+  standalone += {
+    'test_system_timezone': files(
+      'test_system_timezone.c',
+      '../src/calendar/iso.c',
+      '../src/timezone/system-zone.c',
+    ) + timezone_test_sources + system_timezone_test_sources,
+  }
+endif
+
+if native_timezones
+  standalone += {
+    'test_windows_timezone': files(
+      'test_windows_timezone.c',
+      '../src/timezone/windows-zone.c',
+    ) + [windows_timezone_data],
+    'test_native_timezone': files(
+      'test_native_timezone.c',
+      '../src/calendar/iso.c',
+      '../src/timezone/timezone.c',
+      '../src/timezone/timezone-native.c',
+      '../src/timezone/tzif.c',
+    ) + [timezone_data],
+    'test_tzif_decoder': files(
+      'test_tzif_decoder.c',
+      '../src/calendar/iso.c',
+      '../src/timezone/tzif.c',
+    ),
+  }
+endif
+
+if get_option('temporal')
+  standalone += {
     'test_temporal_clock': files(
       'test_temporal_clock.c',
       '../src/temporal/epoch.c',
@@ -426,107 +566,6 @@ if get_option('temporal')
       '../src/temporal/epoch.c',
       '../src/temporal/iso.c',
       '../src/temporal/civil.c',
-    ),
-  }
-endif
-
-if calendar_enabled
-  standalone += {
-    'test_calendar_native': files(
-      'test_calendar_native.c',
-      '../src/calendar/astronomy.c',
-      '../src/calendar/calendar.c',
-      '../src/calendar/calendar-native.c',
-      '../src/calendar/data.c',
-      '../src/calendar/eras.c',
-      '../src/calendar/hebrew.c',
-      '../src/calendar/islamic.c',
-      '../src/calendar/iso.c',
-      '../src/calendar/lunisolar.c',
-      '../src/calendar/native-months.c',
-      '../src/calendar/persian.c',
-      '../src/calendar/solar.c',
-    ) + [calendar_data],
-    'test_calendar_eras_future': files(
-      'test_calendar_eras_future.c',
-      '../src/calendar/data.c',
-      '../src/calendar/eras.c',
-      '../src/calendar/iso.c',
-    ),
-    'test_calendar_eras': files(
-      'test_calendar_eras.c',
-      '../src/calendar/data.c',
-      '../src/calendar/eras.c',
-      '../src/calendar/iso.c',
-    ) + [calendar_data],
-    'test_calendar_core': files(
-      'test_calendar_core.c',
-      '../src/calendar/calendar.c',
-      '../src/calendar/calendar-minimal.c',
-      '../src/calendar/iso.c',
-    ),
-    'test_calendar_lunisolar': files(
-      'test_calendar_lunisolar.c',
-      '../src/calendar/astronomy.c',
-      '../src/calendar/iso.c',
-      '../src/calendar/lunisolar.c',
-    ),
-    'test_calendar_astronomy': files(
-      'test_calendar_astronomy.c',
-      '../src/calendar/astronomy.c',
-      '../src/calendar/iso.c',
-    ),
-    'test_calendar_persian': files(
-      'test_calendar_persian.c',
-      '../src/calendar/data.c',
-      '../src/calendar/iso.c',
-      '../src/calendar/persian.c',
-    ) + [calendar_data],
-    'test_calendar_data': files(
-      'test_calendar_data.c',
-      '../src/calendar/data.c',
-    ) + [calendar_data],
-    'test_calendar_islamic': files(
-      'test_calendar_islamic.c',
-      '../src/calendar/data.c',
-      '../src/calendar/iso.c',
-      '../src/calendar/islamic.c',
-    ) + [calendar_data],
-    'test_calendar_hebrew': files(
-      'test_calendar_hebrew.c',
-      '../src/calendar/iso.c',
-      '../src/calendar/hebrew.c',
-    ),
-    'test_calendar_solar': files(
-      'test_calendar_solar.c',
-      '../src/calendar/iso.c',
-      '../src/calendar/solar.c',
-    ),
-    'test_system_timezone': files(
-      'test_system_timezone.c',
-      '../src/calendar/iso.c',
-      '../src/timezone/system-zone.c',
-    ) + timezone_test_sources + system_timezone_test_sources,
-  }
-endif
-
-if native_timezones
-  standalone += {
-    'test_windows_timezone': files(
-      'test_windows_timezone.c',
-      '../src/timezone/windows-zone.c',
-    ) + [windows_timezone_data],
-    'test_native_timezone': files(
-      'test_native_timezone.c',
-      '../src/calendar/iso.c',
-      '../src/timezone/timezone.c',
-      '../src/timezone/timezone-native.c',
-      '../src/timezone/tzif.c',
-    ) + [timezone_data],
-    'test_tzif_decoder': files(
-      'test_tzif_decoder.c',
-      '../src/calendar/iso.c',
-      '../src/timezone/tzif.c',
     ),
   }
 endif
@@ -932,7 +971,7 @@ test(
   timeout: 120,
 )
 
-if calendar_enabled
+if native_calendars
   test(
     'calendar-boundary-export',
     python,
@@ -943,7 +982,7 @@ if calendar_enabled
   )
 endif
 
-if calendar_enabled
+if native_calendars
   test(
     'calendar-generator',
     python,
