@@ -130,7 +130,7 @@ int main(void)
     check_years(&opened, QJS_CAL_PERSIAN, 1206, 1498, -52150, 54866);
     check_years(&opened, QJS_CAL_ISLAMIC_UMALQURA, 1300, 1600, -31826, 74839);
     published_lunar_years(&opened, QJS_CAL_CHINESE, 2100, 47875);
-    published_lunar_years(&opened, QJS_CAL_DANGI, 2050, 29626);
+    published_lunar_years(&opened, QJS_CAL_DANGI, 2100, 47875);
     {
         QJSCalendarEra era, saved_era = {1, 2, "saved"};
         size_t count = qjs_calendar_data_japanese_era_count(&opened);
@@ -176,7 +176,7 @@ int main(void)
     check_years(&unaligned, QJS_CAL_PERSIAN, 1206, 1498, -52150, 54866);
     check_years(&unaligned, QJS_CAL_ISLAMIC_UMALQURA, 1300, 1600, -31826, 74839);
     published_lunar_years(&unaligned, QJS_CAL_CHINESE, 2100, 47875);
-    published_lunar_years(&unaligned, QJS_CAL_DANGI, 2050, 29626);
+    published_lunar_years(&unaligned, QJS_CAL_DANGI, 2100, 47875);
     free(copy);
     return 0;
 }
