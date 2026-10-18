@@ -1294,13 +1294,13 @@ static JSModuleDef *js_module_loader_test(JSContext *ctx,
     } else {
         JSValue func_val;
         /* compile the module */
-        func_val = JS_Eval(ctx, (char *)buf, buf_len, module_name,
-                           JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        func_val = JS_Compile(ctx, (char *)buf, buf_len, module_name,
+                              JS_EVAL_TYPE_MODULE);
         js_free(ctx, buf);
         if (JS_IsException(func_val))
             return NULL;
         /* the module is already referenced, so we must free it */
-        m = JS_VALUE_GET_PTR(func_val);
+        m = JS_GetModuleDef(func_val);
         JS_FreeValue(ctx, func_val);
     }
     return m;

@@ -78,7 +78,8 @@ JSValue JS_EvalFunction(JSContext *ctx, JSValue fun_obj)
 static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
                                 const char *input, size_t input_len,
                                 const char *filename, int flags, int scope_idx,
-                                const JSFunctionConstructorParse *ctor)
+                                const JSFunctionConstructorParse *ctor,
+                                BOOL compile_only)
 {
     JSParseState s1, *s = &s1;
     int err, js_mode, eval_type;
@@ -182,7 +183,7 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
             goto fail1;
         fun_obj = JS_NewModuleValue(m);
     }
-    if (flags & JS_EVAL_FLAG_COMPILE_ONLY) {
+    if (compile_only) {
         ret_val = fun_obj;
     } else {
         ret_val = JS_EvalFunctionInternal(ctx, fun_obj, this_obj, var_refs, sf);
@@ -197,10 +198,11 @@ static JSValue JS_EvalInternal2(JSContext *ctx, JSValueConst this_obj,
 
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
                           const char *input, size_t input_len,
-                          const char *filename, int flags, int scope_idx)
+                          const char *filename, int flags, int scope_idx,
+                          BOOL compile_only)
 {
     return JS_EvalInternal2(ctx, this_obj, input, input_len, filename,
-                            flags, scope_idx, NULL);
+                            flags, scope_idx, NULL, compile_only);
 }
 
 JSValue JS_EvalFunctionConstructor(JSContext *ctx, JSValueConst parameters,
@@ -246,7 +248,8 @@ JSValue JS_EvalFunctionConstructor(JSContext *ctx, JSValueConst parameters,
         ctor.body_end = buf.buf + body_end;
         result = JS_EvalInternal2(ctx, ctx->global_obj,
                                   (const char *)buf.buf, buf.size - 1,
-                                  "<input>", JS_EVAL_TYPE_INDIRECT, -1, &ctor);
+                                  "<input>", JS_EVAL_TYPE_INDIRECT, -1, &ctor,
+                                  FALSE);
     }
     dbuf_free(&buf);
     return result;
@@ -255,7 +258,8 @@ JSValue JS_EvalFunctionConstructor(JSContext *ctx, JSValueConst parameters,
 /* the indirection is needed to make 'eval' optional */
 static JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
                                const char *input, size_t input_len,
-                               const char *filename, int flags, int scope_idx)
+                               const char *filename, int flags, int scope_idx,
+                               BOOL compile_only)
 {
     BOOL backtrace_barrier = ((flags & JS_EVAL_FLAG_BACKTRACE_BARRIER) != 0);
     int saved_js_mode = 0;
@@ -269,7 +273,7 @@ static JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
         ctx->rt->current_stack_frame->js_mode |= JS_MODE_BACKTRACE_BARRIER;
     }
     ret = ctx->eval_internal(ctx, this_obj, input, input_len, filename,
-                             flags, scope_idx);
+                             flags, scope_idx, compile_only);
     if (backtrace_barrier && ctx->rt->current_stack_frame)
         ctx->rt->current_stack_frame->js_mode = saved_js_mode;
     return ret;
@@ -287,7 +291,8 @@ JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
     str = JS_ToCStringLen(ctx, &len, val);
     if (!str)
         return JS_EXCEPTION;
-    ret = JS_EvalInternal(ctx, this_obj, str, len, "<input>", flags, scope_idx);
+    ret = JS_EvalInternal(ctx, this_obj, str, len, "<input>", flags,
+                          scope_idx, FALSE);
     JS_FreeCString(ctx, str);
     return ret;
 }
@@ -301,7 +306,7 @@ JSValue JS_EvalThis(JSContext *ctx, JSValueConst this_obj,
     assert((eval_flags & JS_EVAL_TYPE_MASK) == JS_EVAL_TYPE_GLOBAL ||
            (eval_flags & JS_EVAL_TYPE_MASK) == JS_EVAL_TYPE_MODULE);
     ret = JS_EvalInternal(ctx, this_obj, input, input_len, filename,
-                          eval_flags, -1);
+                          eval_flags, -1, FALSE);
     return ret;
 }
 
@@ -310,4 +315,13 @@ JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
 {
     return JS_EvalThis(ctx, ctx->global_obj, input, input_len, filename,
                        eval_flags);
+}
+
+JSValue JS_Compile(JSContext *ctx, const char *input, size_t input_len,
+                   const char *filename, int eval_flags)
+{
+    assert((eval_flags & JS_EVAL_TYPE_MASK) == JS_EVAL_TYPE_GLOBAL ||
+           (eval_flags & JS_EVAL_TYPE_MASK) == JS_EVAL_TYPE_MODULE);
+    return JS_EvalInternal(ctx, ctx->global_obj, input, input_len, filename,
+                           eval_flags, -1, TRUE);
 }

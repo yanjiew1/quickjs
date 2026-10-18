@@ -229,7 +229,8 @@ struct JSContext {
     /* if NULL, eval is not supported */
     JSValue (*eval_internal)(JSContext *ctx, JSValueConst this_obj,
                              const char *input, size_t input_len,
-                             const char *filename, int flags, int scope_idx);
+                             const char *filename, int flags, int scope_idx,
+                             BOOL compile_only);
     void *user_opaque;
 };
 

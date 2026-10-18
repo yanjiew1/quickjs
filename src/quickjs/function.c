@@ -112,6 +112,11 @@ const uint16_t func_kind_to_class_id[] = {
     [JS_FUNC_ASYNC_GENERATOR] = JS_CLASS_ASYNC_GENERATOR_FUNCTION,
 };
 
+JS_BOOL JS_IsFunctionBytecode(JSValueConst val)
+{
+    return JS_VALUE_GET_TAG(val) == JS_TAG_FUNCTION_BYTECODE;
+}
+
 /* return NULL without exception if not a function or no bytecode */
 JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val)
 {

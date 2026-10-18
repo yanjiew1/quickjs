@@ -39,8 +39,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     
     const char* simple_script = "({ a: 1, b: 'test', c: function() { return 42; } })";
     
-    JSValue bytecode = JS_Eval(ctx, simple_script, strlen(simple_script),
-                                "<compile>", JS_EVAL_FLAG_COMPILE_ONLY);
+    JSValue bytecode = JS_Compile(ctx, simple_script, strlen(simple_script),
+                                  "<compile>", JS_EVAL_TYPE_GLOBAL);
     
     if (!JS_IsException(bytecode)) {
         size_t bytecode_len;
@@ -104,9 +104,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
     
     const char* module_script = "export default 42; export const x = 123;";
-    JSValue module_bytecode = JS_Eval(ctx, module_script, strlen(module_script),
-                                       "<module-compile>", 
-                                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    JSValue module_bytecode = JS_Compile(ctx, module_script, strlen(module_script),
+                                         "<module-compile>",
+                                         JS_EVAL_TYPE_MODULE);
     
     if (!JS_IsException(module_bytecode)) {
         size_t mod_bc_len;

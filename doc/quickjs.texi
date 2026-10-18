@@ -880,7 +880,29 @@ private to the VM and must not be returned by native callbacks.
 
 @subsection Script evaluation
 
-Use @code{JS_Eval()} to evaluate a script or module source.
+Use @code{JS_Eval()} to evaluate a script or module source, or
+@code{JS_EvalThis()} to supply an explicit @code{this} value.
+
+Use @code{JS_Compile()} to compile without executing the source. Its arguments
+are the same as @code{JS_Eval()}; select @code{JS_EVAL_TYPE_GLOBAL} or
+@code{JS_EVAL_TYPE_MODULE}, with the applicable evaluation flags. The source
+must have a zero byte at @code{input[input_len]}. Module compilation resolves
+imports and may invoke the module loader, but does not execute module bodies.
+This API replaces the former public @code{JS_EVAL_FLAG_COMPILE_ONLY} flag.
+
+On success, @code{JS_Compile()} returns an owned compiled value; on failure it
+returns @code{JS_EXCEPTION}. Test the result before using it. Pass a successful
+result to @code{JS_EvalFunction()}, which consumes it on success and failure,
+or serialize it with @code{JS_WriteObject()} and @code{JS_WRITE_OBJ_BYTECODE}.
+Free an unused result with @code{JS_FreeValue()}.
+
+Compiled values are opaque internal records, not callable function objects or
+module namespace objects. Use @code{JS_IsFunctionBytecode()} and
+@code{JS_IsModule()} to distinguish them without inspecting their tags.
+@code{JS_GetModuleDef()} returns a borrowed module pointer, or @code{NULL} for
+any other value. An owning reference, such as the compiled value or the
+context's module registry, must keep the module alive while using that pointer.
+These three queries neither throw nor retain their argument.
 
 If the script or module was compiled to bytecode with @code{qjsc}, it
 can be evaluated by calling @code{js_std_eval_binary()}. The advantage

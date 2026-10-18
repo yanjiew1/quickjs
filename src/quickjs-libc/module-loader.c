@@ -108,8 +108,8 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
     JSAtom module_name_atom;
     const char *module_name;
 
-    assert(JS_VALUE_GET_TAG(func_val) == JS_TAG_MODULE);
-    m = JS_VALUE_GET_PTR(func_val);
+    m = JS_GetModuleDef(func_val);
+    assert(m);
 
     module_name_atom = JS_GetModuleName(ctx, m);
     module_name = JS_AtomToCString(ctx, module_name_atom);
@@ -290,15 +290,15 @@ JSModuleDef *js_module_loader(JSContext *ctx,
         } else {
             JSValue func_val;
             /* compile the module */
-            func_val = JS_Eval(ctx, (char *)buf, buf_len, module_name,
-                               JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+            func_val = JS_Compile(ctx, (char *)buf, buf_len, module_name,
+                                  JS_EVAL_TYPE_MODULE);
             js_free(ctx, buf);
             if (JS_IsException(func_val))
                 return NULL;
             /* XXX: could propagate the exception */
             js_module_set_import_meta(ctx, func_val, TRUE, FALSE);
             /* the module is already referenced, so we must free it */
-            m = JS_VALUE_GET_PTR(func_val);
+            m = JS_GetModuleDef(func_val);
             JS_FreeValue(ctx, func_val);
         }
     }

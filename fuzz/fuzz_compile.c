@@ -44,7 +44,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     memcpy(null_terminated_data, data, size);
     null_terminated_data[size] = 0;
 
-    JSValue obj = JS_Eval(ctx, (const char *)null_terminated_data, size, "<none>", JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_MODULE);
+    JSValue obj = JS_Compile(ctx, (const char *)null_terminated_data, size, "<none>", JS_EVAL_TYPE_MODULE);
     free(null_terminated_data);
     //TODO target with JS_ParseJSON
     if (JS_IsException(obj)) {
@@ -78,7 +78,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
      * modified so as not to exit on JS exception
      */
     JSValue val;
-    if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
+    if (JS_IsModule(obj)) {
         if (JS_ResolveModule(ctx, obj) < 0) {
             JS_FreeValue(ctx, obj);
             js_std_free_handlers(rt);

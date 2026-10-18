@@ -339,7 +339,7 @@ static inline JSValue __JS_NewShortBigInt(int64_t d)
 #define JS_DEFAULT_STACK_SIZE (1024 * 1024)
 #endif
 
-/* JS_Eval() flags */
+/* JS_Eval() and JS_Compile() flags */
 #define JS_EVAL_TYPE_GLOBAL   (0 << 0) /* global code (default) */
 #define JS_EVAL_TYPE_MODULE   (1 << 0) /* module code */
 #define JS_EVAL_TYPE_DIRECT   (2 << 0) /* direct call (internal use) */
@@ -347,10 +347,6 @@ static inline JSValue __JS_NewShortBigInt(int64_t d)
 #define JS_EVAL_TYPE_MASK     (3 << 0)
 
 #define JS_EVAL_FLAG_STRICT   (1 << 3) /* force 'strict' mode */
-/* compile but do not run. The result is an object with a
-   JS_TAG_FUNCTION_BYTECODE or JS_TAG_MODULE tag. It can be executed
-   with JS_EvalFunction(). */
-#define JS_EVAL_FLAG_COMPILE_ONLY (1 << 5)
 /* don't include the stack frames before this eval in the Error() backtraces */
 #define JS_EVAL_FLAG_BACKTRACE_BARRIER (1 << 6)
 /* allow top-level await in normal script. JS_Eval() returns a
@@ -952,6 +948,11 @@ JS_EXTERN JS_BOOL JS_DetectModule(const char *input, size_t input_len);
 /* 'input' must be zero terminated i.e. input[input_len] = '\0'. */
 JS_EXTERN JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
                           const char *filename, int eval_flags);
+/* Compile without executing the source. Returns an owned compiled value for
+   JS_EvalFunction() or JS_WriteObject(), or JS_EXCEPTION. The input and flags
+   follow JS_Eval(); only GLOBAL and MODULE evaluation types are allowed. */
+JS_EXTERN JSValue JS_Compile(JSContext *ctx, const char *input, size_t input_len,
+                             const char *filename, int eval_flags);
 /* same as JS_Eval() but with an explicit 'this_obj' parameter */
 JS_EXTERN JSValue JS_EvalThis(JSContext *ctx, JSValueConst this_obj,
                               const char *input, size_t input_len,
@@ -1087,6 +1088,14 @@ JS_EXTERN int JS_GetStripInfo(JSRuntime *rt);
 JS_EXTERN void JS_SetIsHTMLDDA(JSContext *ctx, JSValueConst obj);
 
 typedef struct JSModuleDef JSModuleDef;
+
+/* Compiled bytecode and module records are internal values, not callable
+   function objects or module namespace objects. These queries do not throw.
+   JS_GetModuleDef returns a borrowed pointer, or NULL for a non-module value;
+   an owning reference (the value or its context) must keep the module alive. */
+JS_EXTERN JS_BOOL JS_IsFunctionBytecode(JSValueConst val);
+JS_EXTERN JS_BOOL JS_IsModule(JSValueConst val);
+JS_EXTERN JSModuleDef *JS_GetModuleDef(JSValueConst val);
 
 /* return the module specifier (allocated with js_malloc()) or NULL if
    exception */

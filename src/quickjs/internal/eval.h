@@ -33,6 +33,7 @@ JSValue JS_EvalFunctionConstructor(JSContext *ctx, JSValueConst parameters,
                                     JSValueConst body, int func_kind);
 JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
                           const char *input, size_t input_len,
-                          const char *filename, int flags, int scope_idx);
+                          const char *filename, int flags, int scope_idx,
+                          BOOL compile_only);
 
 #endif

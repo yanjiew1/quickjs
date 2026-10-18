@@ -372,8 +372,8 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
             JSValue func_val;
 
             /* compile the module */
-            func_val = JS_Eval(ctx, (char *)buf, buf_len, module_name,
-                               JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+            func_val = JS_Compile(ctx, (char *)buf, buf_len, module_name,
+                                  JS_EVAL_TYPE_MODULE);
             js_free(ctx, buf);
             if (JS_IsException(func_val))
                 return NULL;
@@ -384,7 +384,7 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
             output_object_code(ctx, outfile, func_val, cname, CNAME_TYPE_MODULE);
             
             /* the module is already referenced, so we must free it */
-            m = JS_VALUE_GET_PTR(func_val);
+            m = JS_GetModuleDef(func_val);
             JS_FreeValue(ctx, func_val);
         }
     }
@@ -407,7 +407,7 @@ static void compile_file(JSContext *ctx, FILE *fo,
         fprintf(stderr, "Could not load '%s'\n", filename);
         exit(1);
     }
-    eval_flags = JS_EVAL_FLAG_COMPILE_ONLY;
+    eval_flags = JS_EVAL_TYPE_GLOBAL;
     if (module < 0) {
         module = (has_suffix(filename, ".mjs") ||
                   JS_DetectModule((const char *)buf, buf_len));
@@ -416,7 +416,7 @@ static void compile_file(JSContext *ctx, FILE *fo,
         eval_flags |= JS_EVAL_TYPE_MODULE;
     else
         eval_flags |= JS_EVAL_TYPE_GLOBAL;
-    obj = JS_Eval(ctx, (const char *)buf, buf_len, filename, eval_flags);
+    obj = JS_Compile(ctx, (const char *)buf, buf_len, filename, eval_flags);
     if (JS_IsException(obj)) {
         js_std_dump_error(ctx);
         exit(1);

@@ -144,8 +144,8 @@ static void test_preload_identity(int flags)
     JS_FreeValue(ctx, attributes);
     JS_RunGC(rt);
 
-    compiled = JS_Eval(ctx, source, sizeof(source) - 1, "preload-main.js",
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, sizeof(source) - 1, "preload-main.js",
+                          JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(compiled));
     assert(JS_ResolveModule(ctx, compiled) == 0);
     result = JS_EvalFunction(ctx, compiled);
@@ -164,8 +164,8 @@ static void test_preload_identity(int flags)
     JS_FreeValue(ctx, global);
 
     /* Embedded NUL is significant; a shorter string must not match. */
-    compiled = JS_Eval(ctx, missing, sizeof(missing) - 1, "preload-missing.js",
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, missing, sizeof(missing) - 1, "preload-missing.js",
+                          JS_EVAL_TYPE_MODULE);
     assert(JS_IsException(compiled));
     assert(missing_calls == 1 && JS_HasException(ctx));
     exception = JS_GetException(ctx);
@@ -225,8 +225,8 @@ static JSModuleDef *active_loader(JSContext *ctx, const char *name,
              state->calls);
     JS_FreeCString(ctx, flavor);
     JS_FreeValue(ctx, flavor_value);
-    probe = JS_Eval(ctx, probe_source, strlen(probe_source), probe_name,
-                    JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    probe = JS_Compile(ctx, probe_source, strlen(probe_source), probe_name,
+                       JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(probe));
     JS_FreeValue(ctx, probe);
     state->in_loader = 0;
@@ -241,8 +241,8 @@ static void eval_contract_module(JSContext *ctx, const char *source,
     JSValue compiled, result;
     int jobs = 0, ret;
 
-    compiled = JS_Eval(ctx, source, strlen(source), filename,
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, strlen(source), filename,
+                          JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(compiled));
     assert(JS_ResolveModule(ctx, compiled) == 0);
     JS_RunGC(rt);

@@ -55,8 +55,8 @@ static void check_virtual_import_meta(JSContext *ctx)
     JSModuleDef *m;
     const char *text;
 
-    module = JS_Eval(ctx, "", 0, filename,
-                     JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    module = JS_Compile(ctx, "", 0, filename,
+                        JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(module));
     assert(js_module_set_import_meta(ctx, module, 0, 1) == 0);
     m = JS_VALUE_GET_PTR(module);

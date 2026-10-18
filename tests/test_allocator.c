@@ -846,8 +846,8 @@ static void check_lvalue_label_oom(const char *name, const char *assignment)
     assert(state.atom != JS_ATOM_NULL);
     assert(js_rc(rt->atom_array[state.atom])->ref_count == 1);
     state.armed = 1;
-    result = JS_Eval(ctx, source, strlen(source), "lvalue-label-oom",
-                     JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    result = JS_Compile(ctx, source, strlen(source), "lvalue-label-oom",
+                        JS_EVAL_TYPE_GLOBAL);
     assert(state.failures == 1 && !state.armed);
     assert(JS_IsException(result));
     exception = JS_GetException(ctx);
@@ -1742,8 +1742,8 @@ static void test_compiler_debug_allocation_failure(int nested)
         assert(ctx);
         JS_SetStripInfo(rt, 0);
         oom_test_begin(&allocator, fail_at);
-        result = JS_Eval(ctx, source, length, "compiler-oom.js",
-                         JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+        result = JS_Compile(ctx, source, length, "compiler-oom.js",
+                            JS_EVAL_TYPE_GLOBAL);
         oom_test_end(&allocator);
         if (!fail_at) {
             allocations = allocator.calls;
@@ -1863,8 +1863,8 @@ static void test_compiler_value_allocation_failure(void)
             assert(ctx);
             exhaust_pooled_free_blocks(rt, &padding);
             oom_test_begin(&allocator, fail_at);
-            result = JS_Eval(ctx, source, strlen(source), "value-oom.js",
-                             JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+            result = JS_Compile(ctx, source, strlen(source), "value-oom.js",
+                                JS_EVAL_TYPE_GLOBAL);
             oom_test_end(&allocator);
             if (!fail_at) {
                 allocations = allocator.calls;

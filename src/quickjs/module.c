@@ -1506,6 +1506,16 @@ JSValue js_import_meta(JSContext *ctx)
     return JS_GetImportMeta(ctx, m);
 }
 
+JS_BOOL JS_IsModule(JSValueConst val)
+{
+    return JS_VALUE_GET_TAG(val) == JS_TAG_MODULE;
+}
+
+JSModuleDef *JS_GetModuleDef(JSValueConst val)
+{
+    return JS_IsModule(val) ? JS_VALUE_GET_PTR(val) : NULL;
+}
+
 JSValue JS_NewModuleValue(JSModuleDef *m)
 {
     return __JS_DupValue(JS_MKPTR(JS_TAG_MODULE, m));

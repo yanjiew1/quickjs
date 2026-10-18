@@ -23,6 +23,8 @@ int main(void)
 
     object = JS_NewObject(ctx);
     assert(!JS_IsException(object));
+    assert(!JS_IsModule(object) && !JS_IsFunctionBytecode(object));
+    assert(JS_GetModuleDef(object) == NULL);
     atom = JS_NewAtom(ctx, "answer");
     assert(atom != JS_ATOM_NULL);
     assert(JS_SetProperty(ctx, object, atom, JS_NewInt32(ctx, 42)) >= 0);
@@ -32,7 +34,9 @@ int main(void)
     JS_FreeAtom(ctx, atom);
     JS_FreeValue(ctx, object);
 
-    value = JS_Eval(ctx, "6 * 7", 5, "<shared-api>", JS_EVAL_TYPE_GLOBAL);
+    value = JS_Compile(ctx, "6 * 7", 5, "<shared-api>", JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsFunctionBytecode(value));
+    value = JS_EvalFunction(ctx, value);
     assert(JS_ToInt32(ctx, &result, value) == 0 && result == 42);
     JS_FreeValue(ctx, value);
     retained = JS_NewString(ctx, "runtime-owned");

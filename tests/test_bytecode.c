@@ -182,8 +182,8 @@ static void test_bytecode_roundtrip(const char *source)
     JS_SetStripInfo(rt, 0);
     ctx = JS_NewContext(rt);
     assert(ctx);
-    compiled = JS_Eval(ctx, source, strlen(source), "roundtrip.js",
-                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, strlen(source), "roundtrip.js",
+                          JS_EVAL_TYPE_GLOBAL);
     assert(!JS_IsException(compiled));
     buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
     assert(buf && len > 0);
@@ -222,9 +222,9 @@ static void test_import_bytecode_roundtrip(void)
     JS_SetStripInfo(rt, 0);
     compile_ctx = JS_NewContext(rt);
     assert(compile_ctx);
-    compiled = JS_Eval(compile_ctx, source, sizeof(source) - 1,
-                       "roundtrip-module.js",
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(compile_ctx, source, sizeof(source) - 1,
+                          "roundtrip-module.js",
+                          JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(compiled));
     buf = JS_WriteObject(compile_ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
     assert(buf && len > 0);
@@ -266,11 +266,11 @@ static JSModuleDef *module_names_loader(JSContext *ctx, const char *module_name,
     JSValue compiled;
 
     assert(strcmp(module_name, "module-names-source") == 0);
-    compiled = JS_Eval(ctx, source, sizeof(source) - 1, module_name,
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, sizeof(source) - 1, module_name,
+                          JS_EVAL_TYPE_MODULE);
     if (JS_IsException(compiled))
         return NULL;
-    loader->source = JS_VALUE_GET_PTR(compiled);
+    loader->source = JS_GetModuleDef(compiled);
     JS_FreeValue(ctx, compiled);
     return loader->source;
 }
@@ -302,9 +302,9 @@ static void test_module_names_bytecode_roundtrip(void)
     compile_ctx = JS_NewContext(rt);
     assert(compile_ctx);
     JS_SetModuleLoaderFunc(rt, NULL, module_names_loader, &compile_loader);
-    compiled = JS_Eval(compile_ctx, source, sizeof(source) - 1,
-                       "module-names-roundtrip",
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(compile_ctx, source, sizeof(source) - 1,
+                          "module-names-roundtrip",
+                          JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(compiled));
     assert(compile_loader.source);
     buf = JS_WriteObject(compile_ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
@@ -322,7 +322,7 @@ static void test_module_names_bytecode_roundtrip(void)
     loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE);
     js_free(compile_ctx, buf);
     assert(!JS_IsException(loaded));
-    module = JS_VALUE_GET_PTR(loaded);
+    module = JS_GetModuleDef(loaded);
     assert(JS_ResolveModule(ctx, loaded) == 0);
     result = JS_EvalFunction(ctx, loaded);
     assert(!JS_IsException(result));
@@ -402,9 +402,9 @@ static void test_module_names_invalid_export_kind(void)
     JS_SetStripInfo(rt, 0);
     ctx = JS_NewContext(rt);
     assert(ctx);
-    compiled = JS_Eval(ctx, source, sizeof(source) - 1,
-                       "module-invalid-export-kind",
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, sizeof(source) - 1,
+                          "module-invalid-export-kind",
+                          JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(compiled));
     buf = JS_WriteObject(ctx, &len, compiled, JS_WRITE_OBJ_BYTECODE);
     assert(buf && len > 0);
@@ -441,7 +441,7 @@ static void test_module_names_invalid_export_kind(void)
     loaded = JS_ReadObject(ctx, buf, len, JS_READ_OBJ_BYTECODE);
     js_free(ctx, buf);
     assert(!JS_IsException(loaded));
-    module = JS_VALUE_GET_PTR(loaded);
+    module = JS_GetModuleDef(loaded);
     assert(JS_ResolveModule(ctx, loaded) == 0);
     result = JS_EvalFunction(ctx, loaded);
     assert(!JS_IsException(result));
@@ -471,8 +471,8 @@ static void test_class_strict_region_bytecode(const char *source, int expected)
     assert(rt);
     ctx = JS_NewContext(rt);
     assert(ctx);
-    compiled = JS_Eval(ctx, source, strlen(source), "strict-region.js",
-                       JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, strlen(source), "strict-region.js",
+                          JS_EVAL_TYPE_GLOBAL);
     assert(!JS_IsException(compiled));
     b = JS_VALUE_GET_PTR(compiled);
     for (pos = 0; pos < b->byte_code_len;) {
@@ -607,8 +607,8 @@ static void test_writer_allocation_failure(int kind)
                         JS_NewInt32(ctx, 42), JS_PROP_C_W_E) == 1);
         } else {
             const char *source = "(() => { let value = 40; return value + 2; })()";
-            input = JS_Eval(ctx, source, strlen(source), "writer-oom.js",
-                            JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+            input = JS_Compile(ctx, source, strlen(source), "writer-oom.js",
+                               JS_EVAL_TYPE_GLOBAL);
         }
         assert(!JS_IsException(input));
         oom_test_begin(&allocator, fail_at);

@@ -46,8 +46,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     char script[8192];
     snprintf(script, sizeof(script), export_patterns[pattern_idx], input);
     
-    JSValue result = JS_Eval(ctx, script, strlen(script), "<input>",
-                               JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    JSValue result = JS_Compile(ctx, script, strlen(script), "<input>",
+                                JS_EVAL_TYPE_MODULE);
     
     if (!JS_IsException(result)) {
         JS_FreeValue(ctx, result);
@@ -55,7 +55,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         JS_FreeValue(ctx, JS_GetException(ctx));
     }
     
-    JSValue result2 = JS_Eval(ctx, input, size, "<input>", JS_EVAL_FLAG_COMPILE_ONLY);
+    JSValue result2 = JS_Compile(ctx, input, size, "<input>", JS_EVAL_TYPE_GLOBAL);
     if (!JS_IsException(result2)) {
         JS_FreeValue(ctx, result2);
     } else {
@@ -86,8 +86,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         
         snprintf(import_script, sizeof(import_script), import_patterns[import_idx], sanitized);
         
-        JSValue import_result = JS_Eval(ctx, import_script, strlen(import_script), "<input>",
-                                         JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        JSValue import_result = JS_Compile(ctx, import_script, strlen(import_script), "<input>",
+                                           JS_EVAL_TYPE_MODULE);
         if (!JS_IsException(import_result)) {
             JS_FreeValue(ctx, import_result);
         } else {

@@ -2301,7 +2301,7 @@ static JSModuleDef *module_attribute_identity_load(JSContext *ctx,
         /* Active nested loader frames must keep their owned values alive. */
         JS_RunGC(JS_GetRuntime(ctx));
         compiled = module_attribute_identity_compile_named(ctx, filename, name);
-        module = JS_VALUE_GET_PTR(compiled);
+        module = JS_GetModuleDef(compiled);
         JS_FreeValue(ctx, compiled);
         return module;
     }
@@ -2337,10 +2337,10 @@ static JSModuleDef *module_attribute_identity_load(JSContext *ctx,
         }
         JS_FreeValue(ctx, kind);
     }
-    compiled = JS_Eval(ctx, source, strlen(source), name,
-                        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, strlen(source), name,
+                          JS_EVAL_TYPE_MODULE);
     assert(!JS_IsException(compiled));
-    module = JS_VALUE_GET_PTR(compiled);
+    module = JS_GetModuleDef(compiled);
     JS_FreeValue(ctx, compiled);
     if (strcmp(name, "attribute-shared") == 0)
         state->shared = module;
@@ -2366,8 +2366,8 @@ static JSValue module_attribute_identity_compile_named(JSContext *ctx,
     assert(fread(source, 1, (size_t)length, file) == (size_t)length);
     assert(fclose(file) == 0);
     source[length] = '\0';
-    compiled = JS_Eval(ctx, source, (size_t)length, module_name,
-                        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    compiled = JS_Compile(ctx, source, (size_t)length, module_name,
+                          JS_EVAL_TYPE_MODULE);
     free(source);
     assert(!JS_IsException(compiled));
     return compiled;
@@ -2699,8 +2699,8 @@ static JSModuleDef *module_normalize_load(JSContext *ctx, const char *name,
     strcpy(state->last_name, name);
     if (state->source_text) {
         static const char source[] = "export default 'source-text';";
-        value = JS_Eval(ctx, source, sizeof(source) - 1, name,
-                        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        value = JS_Compile(ctx, source, sizeof(source) - 1, name,
+                           JS_EVAL_TYPE_MODULE);
         if (JS_IsException(value))
             return NULL;
         module = JS_VALUE_GET_PTR(value);
@@ -3012,9 +3012,9 @@ static void test_module_normalize_bytecode(void)
         JS_SetModuleLoaderFunc2(rt, NULL, module_normalize_loader2,
                                 module_normalize_check_attributes, &compile_state);
         JS_SetModuleNormalizeFunc2(rt, module_normalize_with_attributes);
-        compiled = JS_Eval(compile_ctx, cases[i].source, strlen(cases[i].source),
-                           "normalizer-bytecode.js",
-                           JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+        compiled = JS_Compile(compile_ctx, cases[i].source, strlen(cases[i].source),
+                              "normalizer-bytecode.js",
+                              JS_EVAL_TYPE_MODULE);
         assert(!JS_IsException(compiled));
         bytecode = JS_WriteObject(compile_ctx, &bytecode_size, compiled,
                                    JS_WRITE_OBJ_BYTECODE);
@@ -3740,8 +3740,8 @@ static void test_function_property_oom(void)
             if (operation != 0) {
                 const char *source = operation == 1 ?
                     "(function named() {})" : "(function* named() {})";
-                compiled = JS_Eval(ctx, source, strlen(source), "function-oom.js",
-                                   JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+                compiled = JS_Compile(ctx, source, strlen(source), "function-oom.js",
+                                      JS_EVAL_TYPE_GLOBAL);
                 assert(!JS_IsException(compiled));
             }
             expected = JS_NewString(ctx, operation == 0 ? "123" : "named");

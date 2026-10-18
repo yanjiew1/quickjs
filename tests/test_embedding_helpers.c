@@ -104,6 +104,127 @@ static void test_to_number(JSContext *ctx)
     }
 }
 
+static void test_compiled_values(JSContext *ctx)
+{
+    const char *script = "globalThis.compile_count++; 42";
+    const char *module = "globalThis.compile_count++; export const answer = 42;";
+    const char *ordinary[] = { "null", "undefined", "0", "0.5", "'text'",
+                               "1n", "Symbol()", "({})", "(() => 0)" };
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    JSContext *job_ctx;
+    JSValue compiled, result, namespace, value, exception;
+    JSModuleDef *m;
+    size_t i;
+    int jobs = 0, ret;
+
+    value = eval(ctx, "globalThis.compile_count = 0");
+    JS_FreeValue(ctx, value);
+    compiled = JS_Compile(ctx, script, strlen(script), "<compile-script>",
+                          JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsFunctionBytecode(compiled) && !JS_IsModule(compiled));
+    assert(!JS_IsObject(compiled) && !JS_IsFunction(ctx, compiled));
+    assert(JS_GetModuleDef(compiled) == NULL);
+    value = eval(ctx, "compile_count");
+    assert(JS_VALUE_GET_INT(value) == 0);
+    JS_FreeValue(ctx, value);
+    result = JS_EvalFunction(ctx, JS_DupValue(ctx, compiled));
+    assert(JS_IsNumber(result) && JS_VALUE_GET_INT(result) == 42);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, compiled);
+    value = eval(ctx, "compile_count");
+    assert(JS_VALUE_GET_INT(value) == 1);
+    JS_FreeValue(ctx, value);
+
+    compiled = JS_Compile(ctx, module, strlen(module), "<compile-module>",
+                          JS_EVAL_TYPE_MODULE);
+    assert(!JS_IsException(compiled));
+    assert(JS_IsModule(compiled) && !JS_IsFunctionBytecode(compiled));
+    assert(!JS_IsObject(compiled) && !JS_IsFunction(ctx, compiled));
+    m = JS_GetModuleDef(compiled);
+    assert(m);
+    value = eval(ctx, "compile_count");
+    assert(JS_VALUE_GET_INT(value) == 1);
+    JS_FreeValue(ctx, value);
+    JS_RunGC(rt);
+    result = JS_EvalFunction(ctx, JS_DupValue(ctx, compiled));
+    assert(!JS_IsException(result));
+    while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        assert(++jobs < 100);
+    assert(ret == 0 && JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+    JS_FreeValue(ctx, result);
+    value = eval(ctx, "compile_count");
+    assert(JS_VALUE_GET_INT(value) == 2);
+    JS_FreeValue(ctx, value);
+    namespace = JS_GetModuleNamespace(ctx, m);
+    assert(JS_IsObject(namespace) && !JS_IsModule(namespace));
+    assert(!JS_IsFunctionBytecode(namespace));
+    assert(JS_GetModuleDef(namespace) == NULL);
+    value = JS_GetPropertyStr(ctx, namespace, "answer");
+    assert(JS_IsNumber(value) && JS_VALUE_GET_INT(value) == 42);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, namespace);
+    JS_FreeValue(ctx, compiled);
+
+    for (i = 0; i < sizeof(ordinary) / sizeof(ordinary[0]); i++) {
+        value = eval(ctx, ordinary[i]);
+        assert(!JS_IsModule(value) && !JS_IsFunctionBytecode(value));
+        assert(JS_GetModuleDef(value) == NULL);
+        JS_FreeValue(ctx, value);
+    }
+    /* Queries preserve a pending exception and accept result sentinels. */
+    value = JS_Throw(ctx, JS_NewInt32(ctx, 17));
+    assert(!JS_IsModule(value) && !JS_IsFunctionBytecode(value));
+    assert(JS_GetModuleDef(value) == NULL && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    assert(JS_IsNumber(exception) && JS_VALUE_GET_INT(exception) == 17);
+    JS_FreeValue(ctx, exception);
+
+    compiled = JS_Compile(ctx, "let = ;", 7, "<compile-error>",
+                          JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsException(compiled) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    assert(JS_IsError(ctx, exception));
+    JS_FreeValue(ctx, exception);
+    script = "compile_missing = 1";
+    compiled = JS_Compile(ctx, script, strlen(script), "<compile-strict>",
+                          JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
+    assert(JS_IsFunctionBytecode(compiled));
+    result = JS_EvalFunction(ctx, compiled);
+    assert(JS_IsException(result) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    assert(JS_IsError(ctx, exception));
+    JS_FreeValue(ctx, exception);
+    script = "await 1; 42";
+    compiled = JS_Compile(ctx, script, strlen(script), "<compile-async>",
+                          JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_ASYNC);
+    assert(JS_IsFunctionBytecode(compiled));
+    result = JS_EvalFunction(ctx, compiled);
+    assert(!JS_IsException(result));
+    while ((ret = JS_ExecutePendingJob(rt, &job_ctx)) > 0)
+        assert(++jobs < 100);
+    assert(ret == 0 && JS_PromiseState(ctx, result) == JS_PROMISE_FULFILLED);
+    value = JS_PromiseResult(ctx, result);
+    assert(JS_IsObject(value));
+    exception = JS_GetPropertyStr(ctx, value, "value");
+    assert(JS_IsNumber(exception) && JS_VALUE_GET_INT(exception) == 42);
+    JS_FreeValue(ctx, exception);
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, result);
+}
+
+static void test_compile_without_eval(JSRuntime *rt)
+{
+    JSContext *ctx = JS_NewContextRaw(rt);
+    JSValue compiled, exception;
+
+    assert(ctx);
+    compiled = JS_Compile(ctx, "42", 2, "<compile-disabled>", JS_EVAL_TYPE_GLOBAL);
+    assert(JS_IsException(compiled) && JS_HasException(ctx));
+    exception = JS_GetException(ctx);
+    JS_FreeValue(ctx, exception);
+    JS_FreeContext(ctx);
+}
+
 int main(void)
 {
     JSRuntime *rt = JS_NewRuntime();
@@ -119,6 +240,8 @@ int main(void)
     assert(JS_GetGCThreshold(rt) == (size_t)-1);
     test_class_names(ctx);
     test_to_number(ctx);
+    test_compiled_values(ctx);
+    test_compile_without_eval(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     return 0;
