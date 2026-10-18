@@ -2,6 +2,18 @@ fs = import('fs')
 
 # Component declarations capture their selected fixture and compile context.
 component_test_specs = []
+
+# Stage-local test capabilities follow the selected runtime. Foundation tests
+# remain available before their eventual build option is introduced.
+calendar_enabled = true
+native_calendars = true
+native_timezones = false
+calendar_test_sources = []
+timezone_test_sources = []
+system_timezone_test_sources = []
+if calendar_enabled
+endif
+
 fixture_manifest = files('../tools/build/test-fixtures.list')
 fixture_inputs = []
 foreach name : fs.read(fixture_manifest[0]).strip().split('\n')
@@ -121,7 +133,14 @@ test(
 )
 
 # Build engine-independent library tests against their actual owners.
+# Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
+}
+standalone += {
+  'test_temporal_epoch': files(
+    'test_temporal_epoch.c',
+    '../src/temporal/epoch.c',
+  ),
   'test_cutils': files(
     'test_cutils.c',
     '../src/cutils/cutils.c',
@@ -162,6 +181,7 @@ standalone = {
     '../src/libwait/wait-queue.c',
   ),
 }
+
 foreach name, sources : standalone
   app = {
     'name': name,
