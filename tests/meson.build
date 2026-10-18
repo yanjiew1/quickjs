@@ -238,6 +238,14 @@ endforeach
 standalone = {
 }
 standalone += {
+  'test_temporal_format': files(
+    'test_temporal_format.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/format.c',
+    '../src/temporal/options.c',
+  ),
   'test_temporal_parse': files(
     'test_temporal_parse.c',
     '../src/calendar/iso.c',
