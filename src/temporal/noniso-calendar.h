@@ -18,4 +18,13 @@ int qjs_temporal_noniso_month_day(QJSCalendarId calendar,
                                   const QJSTemporalCalendarFields *input,
                                   QJSTemporalOverflow overflow,
                                   QJSTemporalISODate *result);
+int qjs_temporal_noniso_date_add(QJSCalendarId calendar, QJSTemporalISODate date,
+                                 QJSTemporalDateDuration duration,
+                                 QJSTemporalOverflow overflow,
+                                 QJSTemporalISODate *result);
+int qjs_temporal_noniso_date_until(QJSCalendarId calendar,
+                                   QJSTemporalISODate start,
+                                   QJSTemporalISODate end,
+                                   QJSTemporalUnit largest,
+                                   QJSTemporalDateDuration *result);
 #endif /* QUICKJS_TEMPORAL_NONISO_CALENDAR_H */
