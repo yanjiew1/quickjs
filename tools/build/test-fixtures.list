@@ -165,6 +165,7 @@ tests/test_temporal_instant.js
 tests/test_temporal_duration.js
 tests/test_temporal_plain_time.js
 tests/test_temporal_plain.js
+tests/test_temporal_calendars.js
 tests/test_temporal_realm.js
 tests/test_temporal_now.js
 tests/test_temporal_zoned.js

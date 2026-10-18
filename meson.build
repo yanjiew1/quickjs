@@ -67,6 +67,9 @@ version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
+  if get_option('calendars') == 'native'
+    common_args += '-DCONFIG_CALENDAR_NATIVE'
+  endif
   if get_option('timezone_backend') == 'native'
     common_args += '-DCONFIG_TIMEZONE_NATIVE'
   endif
@@ -241,7 +244,7 @@ calendar_boundary = executable(
   include_directories: inc,
   dependencies: native_deps,
   override_options: ['b_lto=false', 'b_sanitize=none'],
-  build_by_default: get_option('tests') and (get_option('temporal')),
+  build_by_default: get_option('tests') and (get_option('temporal') and get_option('calendars') == 'native'),
 )
 
 # A validated byte pack has one C owner, generated without target execution.
@@ -750,6 +753,7 @@ summary(
 summary(
   {
     'Temporal API': get_option('temporal'),
+    'Calendar arithmetic': get_option('calendars'),
     'Named-zone backend': get_option('timezone_backend'),
     'Default-zone fallback': get_option('system_timezone_policy'),
   },
