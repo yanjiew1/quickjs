@@ -179,6 +179,12 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_calendar_lunisolar': [
+    'test_calendar_lunisolar.c',
+    '../src/calendar/astronomy.c',
+    '../src/calendar/iso.c',
+    '../src/calendar/lunisolar.c',
+  ],
   'test_calendar_astronomy': [
     'test_calendar_astronomy.c',
     '../src/calendar/astronomy.c',
@@ -758,6 +764,15 @@ test(
   suite: ['repo', 'tools'],
   workdir: test_workdir,
   timeout: 120,
+)
+
+test(
+  'calendar-boundary-export',
+  python,
+  args: [files('test_calendar_boundary.py'), calendar_boundary],
+  depends: calendar_boundary,
+  suite: ['repo', 'native'],
+  timeout: 60,
 )
 
 test(
