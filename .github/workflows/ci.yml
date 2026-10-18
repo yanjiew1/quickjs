@@ -115,6 +115,13 @@ jobs:
           timezone: minimal
           policy: utc
           library: static
+        - profile: host-offset
+          intl: disabled
+          temporal: 'true'
+          calendars: native
+          timezone: minimal
+          policy: host-offset
+          library: static
         - profile: disabled
           intl: disabled
           temporal: 'false'
@@ -141,7 +148,7 @@ jobs:
         meson setup build -Dwerror=true -Ddocumentation=disabled \
            -Dtemporal=${{ matrix.temporal }} \
            -Dtimezone_backend=${{ matrix.timezone }} \
-           -Ddefault_library=${{ matrix.library }}
+          -Dsystem_timezone_policy=${{ matrix.policy }} -Ddefault_library=${{ matrix.library }}
     - name: Compile selected build
       id: compile
       run: |
