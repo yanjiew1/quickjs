@@ -200,6 +200,13 @@
       "role": "Unicode License V3 for CLDR source and derived era data",
       "vendored": true,
       "sha256": "220ba0e1c43b99530d2d5bdb892a99dca0989414f51ab695ecd90163eaa1ec3b"
+    },
+    "icu4x-korea-data.rs": {
+      "url": "https://raw.githubusercontent.com/unicode-org/icu4x/e078031999870d4f263635c319a79cb19543ccfc/components/calendar/src/cal/east_asian_traditional/korea_data.rs",
+      "revision": "e078031999870d4f263635c319a79cb19543ccfc",
+      "role": "ICU4X precomputed Korean calendar years; supplement after KASI coverage through 2100, not an official KASI publication",
+      "vendored": true,
+      "sha256": "109acbffe1cf64ce20bf483752f5c1d2f6b8cae07b6a75e17e79e0f2a20eb69f"
     }
   },
   "boundary_months": [
@@ -225,8 +232,8 @@
       "method": "tools/calendar/lunisolar.py from hash-pinned publications and explicit outside-window approximation"
     },
     "dangi.json": {
-      "sha256": "4d81286e32411a176ca6ae87d8bb7870c06cde69234c137a8cce038da29b4ad1",
-      "method": "tools/calendar/lunisolar.py from hash-pinned publications and explicit outside-window approximation"
+      "sha256": "090d078e1c3afe0d759e8f7a92229b2d8c338fb32074d582d263030b2112efb7",
+      "method": "tools/calendar/lunisolar.py from hash-pinned KASI publications, extended after primary coverage with pinned ICU4X precomputed Korean data through 2100"
     }
   }
 }
