@@ -1,6 +1,6 @@
 {
   "format": "QJCA",
-  "format_version": 1,
+  "format_version": 2,
   "algorithm_version": 1,
   "spec_commit": "d026068ed653130a37d79a95c0122ecf5319f1a4",
   "sources": {
@@ -186,6 +186,21 @@
       "sha256": "dc7ed4cb5dae55c1de5a0bdc97f09256a7d6b6d7fe3c553a542e9f9f7758aba4",
       "role": "PMO daily publication; PDF page 3 January 1900 supplies the preceding lunar M12",
       "vendored": false
+    },
+    "cldr-calendarData.json": {
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/cldr-json/cldr-core/supplemental/calendarData.json",
+      "revision": "91c267402229a59e3ef2774544f001bf959e8809",
+      "release": "48.2.3",
+      "role": "Released CLDR Japanese era codes and Gregorian start dates; pre-1873 eras remain Gregorian under ECMA-402",
+      "vendored": true,
+      "sha256": "c65445d268975fabb15c0a356d2a22dbe0e80c123979408583903f5b2afd386d"
+    },
+    "LICENSE-CLDR": {
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/LICENSE",
+      "revision": "91c267402229a59e3ef2774544f001bf959e8809",
+      "role": "Unicode License V3 for CLDR source and derived era data",
+      "vendored": true,
+      "sha256": "220ba0e1c43b99530d2d5bdb892a99dca0989414f51ab695ecd90163eaa1ec3b"
     }
   },
   "normalized": {
@@ -215,8 +230,8 @@
       "page": 3
     }
   ],
-  "binary_sha256": "c3a8a18595b5a6230fdb8d19679795bf589c3a33c353fe37e307032f9ee9813a",
-  "binary_size": 11672,
+  "binary_sha256": "24d8c8560a7e4be9d0300f58d448dc15f2e6a600a83f502d6937936b146bfba3",
+  "binary_size": 11952,
   "calendars": [
     {
       "calendar": "persian",
@@ -249,6 +264,38 @@
       "version": "dangi-publications-20261019-model1",
       "year_count": 152,
       "first_epoch_day": -25892
+    },
+    {
+      "calendar": "japanese",
+      "version": "cldr-91c267402229a59e3ef2774544f001bf959e8809",
+      "era_count": 5,
+      "eras": [
+        {
+          "first_epoch_day": -35428,
+          "year_offset": 1867,
+          "name": "meiji"
+        },
+        {
+          "first_epoch_day": -20974,
+          "year_offset": 1911,
+          "name": "taisho"
+        },
+        {
+          "first_epoch_day": -15713,
+          "year_offset": 1925,
+          "name": "showa"
+        },
+        {
+          "first_epoch_day": 6947,
+          "year_offset": 1988,
+          "name": "heisei"
+        },
+        {
+          "first_epoch_day": 18017,
+          "year_offset": 2018,
+          "name": "reiwa"
+        }
+      ]
     }
   ]
 }
