@@ -424,11 +424,25 @@ JS_EXTERN JSRuntime *JS_GetRuntime(JSContext *ctx);
 JS_EXTERN void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj);
 JS_EXTERN JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id);
 
+/* Set this runtime's shared Date/Temporal default zone. The identifier is
+   copied; failure preserves the old setting and reports an exception.
+   A NULL or unsupported identifier throws RangeError. Disabled builds throw
+   TypeError. Raw contexts require base objects for exception construction. */
+JS_EXTERN int JS_SetDefaultTimeZone(JSContext *ctx, const char *time_zone);
+/* Return an owned identifier string. Before an explicit setting, snapshot
+   the backend's system default on first use (UTC with the minimal backend).
+   Disabled builds throw TypeError. */
+JS_EXTERN JSValue JS_GetDefaultTimeZone(JSContext *ctx);
+
 /* the following functions are used to select the intrinsic object to
    save memory */
 JS_EXTERN JSContext *JS_NewContextRaw(JSRuntime *rt);
 JS_EXTERN int JS_AddIntrinsicBaseObjects(JSContext *ctx);
 JS_EXTERN int JS_AddIntrinsicDate(JSContext *ctx);
+/* Initialize native Temporal intrinsics and publish the namespace. Raw
+   contexts require base objects. Idempotent; returns -1 with an exception
+   on failure, including TypeError in a disabled build. */
+JS_EXTERN int JS_AddIntrinsicTemporal(JSContext *ctx);
 JS_EXTERN int JS_AddIntrinsicEval(JSContext *ctx);
 JS_EXTERN int JS_AddIntrinsicStringNormalize(JSContext *ctx);
 JS_EXTERN void JS_AddIntrinsicRegExpCompiler(JSContext *ctx);
@@ -900,6 +914,18 @@ JS_EXTERN JSValue JS_NewArray(JSContext *ctx);
 JS_EXTERN int JS_IsArray(JSContext *ctx, JSValueConst val);
 
 JS_EXTERN JSValue JS_NewDate(JSContext *ctx, double epoch_ms);
+/* Exact signed two's-complement epoch nanoseconds, low word first as in
+   JS_NewBigInt128. Creates an owned Instant without global property access.
+   Raw contexts require base objects. RangeError for an invalid epoch;
+   disabled builds throw TypeError. Private intrinsics initialize on demand. */
+JS_EXTERN JSValue JS_NewTemporalInstant(JSContext *ctx, uint64_t low, uint64_t high);
+/* Borrow a branded Instant from this runtime; no coercion or allocation on
+   success. Output pointers must be distinct and non-NULL. Failure preserves
+   both outputs and throws TypeError, also in disabled builds. */
+JS_EXTERN int JS_GetTemporalInstantEpochNanoseconds(JSContext *ctx,
+                                                   JSValueConst value,
+                                                   uint64_t *plow,
+                                                   uint64_t *phigh);
 JS_EXTERN int JS_ThisDateValue(JSContext *ctx, double *valp, JSValueConst this_val);
 
 JS_EXTERN JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
