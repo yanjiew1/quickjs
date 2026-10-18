@@ -24,6 +24,10 @@ def load_tool(name):
 acquire = load_tool('acquire')
 with mock.patch.dict(sys.modules, {'acquire': acquire}):
     normalize = load_tool('normalize')
+bundle = load_tool('bundle')
+with mock.patch.dict(sys.modules, {'acquire': acquire, 'normalize': normalize, 'bundle': bundle}):
+    generate = load_tool('generate')
+    embed = load_tool('embed')
 
 
 class AcquisitionTests(unittest.TestCase):
@@ -125,6 +129,74 @@ class NormalizationTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     normalize.verify_publication(path, pin, {})
                 converter.assert_not_called()
+
+
+class BinaryTests(unittest.TestCase):
+    def test_synthetic_leap_metadata_and_signed_years(self):
+        rows = []
+        for name, first, leap in (('chinese', -1, 2), ('dangi', 1000000, 12)):
+            rows.append({'calendar': name, 'first_year': first, 'end_epoch_day': 384,
+                         'version': 'synthetic', 'years': [(0, [30, 29] * 6 + [30], leap)]})
+        self.assertEqual(bundle.unpack(bundle.pack(rows)), rows)
+        rows[1]['first_year'] = 1000001
+        with self.assertRaises(ValueError):
+            bundle.pack(rows)
+        rows[1]['first_year'] = 1000000
+        for leap in (0, 13):
+            rows[0]['years'][0] = (0, [30, 29] * 6 + [30], leap)
+            with self.assertRaises(ValueError):
+                bundle.pack(rows)
+
+    def test_reproducible_pack_and_all_year_boundaries(self):
+        datasets, pin = generate.datasets()
+        binary = bundle.pack(datasets)
+        self.assertEqual(binary, bundle.pack(list(reversed(datasets))))
+        self.assertEqual(bundle.unpack(binary), datasets)
+        self.assertEqual(binary, (ROOT / 'data/calendar/calendar-data.bin').read_bytes())
+        with tempfile.TemporaryDirectory() as directory:
+            out, manifest = Path(directory) / 'data.bin', Path(directory) / 'manifest.json'
+            generate.generate(out, manifest)
+            self.assertEqual(out.read_bytes(), binary)
+            self.assertEqual(manifest.read_bytes(), (ROOT / 'data/calendar/calendar-data-manifest.json').read_bytes())
+        self.assertIn('qjs_native_calendar_data', embed.render(binary))
+
+    def test_pack_rejects_gap_duplicate_and_invalid_month(self):
+        for change in ('gap', 'duplicate', 'month', 'leap', 'end'):
+            datasets, pin = generate.datasets()
+            if change == 'gap':
+                first = datasets[0]['years'][0]
+                datasets[0]['years'][0] = (first[0] + 1, first[1], first[2])
+            elif change == 'duplicate':
+                datasets.append(datasets[0])
+            elif change == 'month':
+                datasets[1]['years'][0][1][0] = 31
+            elif change == 'leap':
+                first = datasets[0]['years'][0]
+                datasets[0]['years'][0] = (first[0], first[1], 1)
+            else:
+                datasets[1]['end_epoch_day'] += 1
+            with self.assertRaises(ValueError):
+                bundle.pack(datasets)
+
+    def test_reader_rejects_malformed_header_index_and_year(self):
+        binary = (ROOT / 'data/calendar/calendar-data.bin').read_bytes()
+        for offset in list(range(0, 64, 4)) + [bundle.INDEX.unpack_from(binary, 32)[4] + i for i in range(12)]:
+            corrupt = bytearray(binary)
+            corrupt[offset] ^= 0x80
+            with self.assertRaises(ValueError):
+                bundle.unpack(corrupt)
+        for length in (0, 31, len(binary) - 1):
+            with self.assertRaises(ValueError):
+                bundle.unpack(binary[:length])
+
+    def test_embedding_failure_preserves_existing_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = Path(directory) / 'data.bin', Path(directory) / 'data.c'
+            source.write_bytes(b'invalid')
+            output.write_bytes(b'existing')
+            with self.assertRaises(ValueError):
+                embed.generate(source, output)
+            self.assertEqual(output.read_bytes(), b'existing')
 
 
 if __name__ == '__main__':

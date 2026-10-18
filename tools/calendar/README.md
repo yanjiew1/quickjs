@@ -62,3 +62,30 @@ the exact pinned PDF. Downloaded publications are never runtime dependencies.
 
 Run the fast offline generator tests with
 `python3 tests/test_calendar_generator.py`.
+
+## Single binary pack
+
+`generate.py` checks normalized records against their source receipts and emits
+one `calendar-data.bin` plus a provenance manifest. QJCA version 1 uses big-endian
+integers: a 32-byte header, 32-byte dataset indices, source-version strings and
+12-byte year records. Each year stores its first epoch day, two bits per month
+for lengths 29 through 31, the month count and the nominal month repeated by
+the inserted leap month (zero when absent). Indices
+store contiguous year coverage and the separately derived terminal boundary.
+Calendar kinds are stable format identifiers, independent of C enum values.
+
+Both the Python generator and C reader validate bounds, reserved bits, ordering,
+calendar-specific month shapes and every adjacent/terminal boundary. Year lookup
+indexes directly into immutable records, avoiding repeated cumulative scans.
+`embed.py` validates the pack and creates one C data owner in the build directory.
+The C reader also accepts an immutable byte span for a future external loader;
+current builds do not load calendar files at runtime. No compression library is
+required. Persian and Umm data together currently occupy 7288 bytes.
+
+```sh
+python3 tools/calendar/generate.py \
+  --output /path/to/build/calendar-data.bin \
+  --manifest /path/to/build/calendar-data-manifest.json
+cmp data/calendar/calendar-data.bin /path/to/build/calendar-data.bin
+cmp data/calendar/calendar-data-manifest.json /path/to/build/calendar-data-manifest.json
+```
