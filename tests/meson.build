@@ -119,6 +119,14 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_temporal_format': [
+    'test_temporal_format.c',
+    '../src/calendar/iso.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/iso.c',
+    '../src/temporal/format.c',
+    '../src/temporal/options.c',
+  ],
   'test_temporal_parse': [
     'test_temporal_parse.c',
     '../src/calendar/iso.c',
