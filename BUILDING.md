@@ -81,6 +81,20 @@ meson compile -C build-value-check quickjs-value-check
 This separate representation is checked at compile time; it is never linked
 into the interpreter used by runtime tests.
 
+## Temporal
+
+Temporal is enabled by default on this branch. The minimal configuration
+implements all Temporal classes with the ISO calendar, UTC and explicit
+numeric offset timezones. It has no ICU or installed timezone-data dependency.
+The runtime's initial default timezone is UTC; embedders can set a shared
+Date/Temporal default with `JS_SetDefaultTimeZone()`.
+
+Use `-Dtemporal=false` to omit Temporal and retain Date's existing host policy.
+Temporal embedding entry points remain callable and report TypeError when the
+feature is disabled. `Temporal=auto` in the Test262 configuration follows the
+runner's build setting. IANA zones and non-ISO calendars are subsequent stages
+of the [native Temporal design](doc/temporal-design.md).
+
 ## Static and shared libraries
 
 Use `-Ddefault_library=static` (the default), `shared`, or `both`. Shared builds
