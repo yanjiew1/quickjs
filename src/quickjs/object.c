@@ -1874,6 +1874,8 @@ static int num_keys_cmp(const void *p1, const void *p2, void *opaque)
     atom1_is_integer = JS_AtomIsArrayIndex(rt, &v1, atom1);
     atom2_is_integer = JS_AtomIsArrayIndex(rt, &v2, atom2);
     assert(atom1_is_integer && atom2_is_integer);
+    (void)atom1_is_integer;
+    (void)atom2_is_integer;
     if (v1 < v2)
         return -1;
     else if (v1 == v2)
