@@ -24,6 +24,15 @@ int qjs_calendar_is_supported(QJSCalendarId calendar)
            (calendar == QJS_CAL_ISO8601 || qjs_calendar_backend_is_supported(calendar));
 }
 
+int qjs_calendar_era_at(QJSCalendarId calendar, size_t index, const char **out)
+{
+    if (!out || (unsigned int)calendar >= QJS_CAL_COUNT)
+        return QJS_CAL_RANGE;
+    if (calendar == QJS_CAL_ISO8601 || !qjs_calendar_is_supported(calendar))
+        return QJS_CAL_UNSUPPORTED;
+    return qjs_calendar_backend_era_at(calendar, index, out);
+}
+
 static int identifier_equal(const char *text, size_t length, const char *name)
 {
     size_t i;
