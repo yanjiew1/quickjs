@@ -33,6 +33,9 @@ typedef struct QJSISODate {
 } QJSISODate;
 
 int qjs_iso_date_is_valid(QJSISODate date);
+int qjs_iso_leap_year(int32_t year);
+/* Return zero for a month outside 1 through 12. */
+int qjs_iso_days_in_month(int32_t year, int32_t month);
 
 /* Gregorian conversion covers the complete int32_t year interval. Days are
    measured from 1970-01-01. Invalid inputs return -1 and preserve the required
