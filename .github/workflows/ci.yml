@@ -33,10 +33,13 @@ jobs:
         run: |
           enabled=true
           backend=minimal
+          calendars=native
           policy=utc
+          if test '${{ matrix.profile }}' = minimal; then calendars=iso; fi
           if test '${{ matrix.profile }}' = disabled; then enabled=false; backend=native; fi
           if test '${{ matrix.profile }}' = host-offset; then policy=host-offset; fi
           meson setup build -Dwerror=true -Dtemporal="$enabled" \
+            -Dcalendars="$calendars" \
             -Dtimezone_backend="$backend" -Dsystem_timezone_policy="$policy"
           meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
           meson test -C build --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"

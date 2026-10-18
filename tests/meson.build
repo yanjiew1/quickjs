@@ -50,6 +50,15 @@ test(
   timeout: 120,
 )
 if get_option('temporal')
+  test(
+    'temporal-calendar-profile',
+    qjs,
+    args: ['--std', 'tests/test_temporal_calendars.js', get_option('calendars')],
+    suite: ['repo', 'temporal'],
+    workdir: test_workdir,
+    depends: test_deps,
+    timeout: 60,
+  )
   foreach name : [
     'test_temporal_instant',
     'test_temporal_duration',
