@@ -74,6 +74,17 @@ if get_option('temporal')
       timeout: 60,
     )
   endforeach
+  if get_option('timezone_backend') == 'native'
+    test(
+      'temporal-iana',
+      qjs,
+      args: ['--std', 'tests/test_temporal_iana.js'],
+      suite: ['repo', 'temporal'],
+      workdir: test_workdir,
+      depends: test_deps,
+      timeout: 60,
+    )
+  endif
 endif
 
 # Tests that include an implementation need archive extraction, not link_whole.

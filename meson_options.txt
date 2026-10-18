@@ -52,5 +52,12 @@ option(
   'temporal',
   type: 'boolean',
   value: true,
-  description: 'Build native Temporal with ISO and core UTC, without additional timezone data',
+  description: 'Build native Temporal with the selected calendar and timezone capabilities',
+)
+option(
+  'timezone_backend',
+  type: 'combo',
+  choices: ['native', 'minimal'],
+  value: 'native',
+  description: 'Additional named zones: embedded IANA rules or an empty backend',
 )
