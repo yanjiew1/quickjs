@@ -87,8 +87,20 @@ Temporal is enabled by default on this branch with the ISO calendar and embedded
 IANA timezone rules. It has no ICU or installed timezone-data dependency.
 Use `-Dtimezone_backend=minimal` for all Temporal classes with only core UTC
 and explicit numeric offsets; that backend contains no additional named zones.
-The runtime's initial default timezone is UTC; embedders can set a shared
-Date/Temporal default with `JS_SetDefaultTimeZone()`.
+On Unix, the runtime discovers its default from `TZ`, including supported
+names, an optional leading colon, and fixed POSIX offset forms such as
+`UTC-5:30` (meaning `+05:30`). General POSIX DST expressions and zoneinfo paths
+are not used as rule sources. On Windows, CLDR maps the stable Windows key and
+the user's country to an IANA identifier. The first default lookup snapshots
+the selected identifier for the runtime; Date and Temporal share it.
+Embedders can override it with `JS_SetDefaultTimeZone()`.
+
+`-Dsystem_timezone_policy=utc` (the default) uses UTC when discovery cannot
+resolve a supported name. `-Dsystem_timezone_policy=host-offset` samples the
+current host offset instead, falling back to UTC if it is not representable
+as a minute-aligned timezone. This fixed offset has no DST or historical rules.
+On Unix, that explicit fallback may use libc's installed host data; native
+IANA calculations always use the embedded pack.
 
 Use `-Dtemporal=false` to omit Temporal and retain Date's existing host policy.
 Temporal embedding entry points remain callable and report TypeError when the
