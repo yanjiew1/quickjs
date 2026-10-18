@@ -74,3 +74,10 @@ option(
   value: 'auto',
   description: 'Documentation targets: enabled, disabled, or auto-detected (PDF optional)',
 )
+
+option(
+  'temporal',
+  type: 'boolean',
+  value: true,
+  description: 'Build native Temporal with ISO and core UTC, without additional timezone data',
+)
