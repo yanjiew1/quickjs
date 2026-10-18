@@ -9,6 +9,7 @@
    arithmetic-year, borrowing and failure-output contracts. No runtime vtable,
    backend loading or replacement is required; one backend may span many TUs. */
 int qjs_calendar_backend_is_supported(QJSCalendarId calendar);
+int qjs_calendar_backend_era_at(QJSCalendarId calendar, size_t index, const char **out);
 int qjs_calendar_backend_from_epoch_day(QJSCalendarId calendar, int64_t day,
                                         QJSCalendarDate *result);
 int qjs_calendar_backend_to_epoch_day(QJSCalendarId calendar, int32_t year,
