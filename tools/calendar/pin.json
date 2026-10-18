@@ -185,6 +185,21 @@
       "sha256": "dc7ed4cb5dae55c1de5a0bdc97f09256a7d6b6d7fe3c553a542e9f9f7758aba4",
       "role": "PMO daily publication; PDF page 3 January 1900 supplies the preceding lunar M12",
       "vendored": false
+    },
+    "cldr-calendarData.json": {
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/cldr-json/cldr-core/supplemental/calendarData.json",
+      "revision": "91c267402229a59e3ef2774544f001bf959e8809",
+      "release": "48.2.3",
+      "role": "Released CLDR Japanese era codes and Gregorian start dates; pre-1873 eras remain Gregorian under ECMA-402",
+      "vendored": true,
+      "sha256": "c65445d268975fabb15c0a356d2a22dbe0e80c123979408583903f5b2afd386d"
+    },
+    "LICENSE-CLDR": {
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/91c267402229a59e3ef2774544f001bf959e8809/LICENSE",
+      "revision": "91c267402229a59e3ef2774544f001bf959e8809",
+      "role": "Unicode License V3 for CLDR source and derived era data",
+      "vendored": true,
+      "sha256": "220ba0e1c43b99530d2d5bdb892a99dca0989414f51ab695ecd90163eaa1ec3b"
     }
   },
   "boundary_months": [
