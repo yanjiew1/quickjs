@@ -62,6 +62,11 @@ identifier/primary mappings directly; do not reproduce that invalid field
 access or dereference an empty cached result. Source: temporal/timezone.emu
 at the pinned PR head, reviewed 2026-10-19.
 
+GetTemporalUnitValuedOption in the pinned PR also spells millisecond and
+milliseconds with three consecutive l characters. Retain the correctly
+spelled unit names used throughout the rest of Temporal and by Test262.
+Source: temporal/abstractops.emu, reviewed 2026-10-19.
+
 ## Code ownership and backend selection
 
 - JavaScript builtins own coercion and property access order, realms, exceptions,
