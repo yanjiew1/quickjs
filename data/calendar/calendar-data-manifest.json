@@ -1,0 +1,55 @@
+{
+  "format": "QJCA",
+  "format_version": 1,
+  "algorithm_version": 1,
+  "spec_commit": "d026068ed653130a37d79a95c0122ecf5319f1a4",
+  "sources": {
+    "persian-official.pdf": {
+      "url": "https://calendar.ut.ac.ir/documents/2139738/7092644/Kabise+Shamsi+1206-1498.pdf",
+      "role": "University of Tehran published leap markers; Gregorian columns contain inconsistencies",
+      "vendored": false,
+      "sha256": "d897b960b46992226502a21e24c604db9f87cf68fa43f8df368316bee386475e"
+    },
+    "kabise.txt": {
+      "url": "https://raw.githubusercontent.com/roozbehp/persiancalendar/bc1a519a68b5b0cc78c1d74b6fdb41825c677a65/kabise.txt",
+      "revision": "bc1a519a68b5b0cc78c1d74b6fdb41825c677a65",
+      "role": "CC0 transcription, leap markers checked against official PDF; corrected Gregorian anchors",
+      "vendored": true,
+      "sha256": "39e85faf0235c1c60087c27be92fae9d6571b83261b9690c76e90f49899500a8"
+    },
+    "ummalqura_data.rs": {
+      "url": "https://raw.githubusercontent.com/unicode-org/icu4x/e078031999870d4f263635c319a79cb19543ccfc/components/calendar/src/cal/hijri/ummalqura_data.rs",
+      "revision": "e078031999870d4f263635c319a79cb19543ccfc",
+      "role": "Umm al-Qura 1300..1600 AH month data via ICU4X, itself derived from ICU4C; not direct KACST capture",
+      "vendored": true,
+      "sha256": "15118990b415f15ebf5d63502bebc0d6a99a5e021e14d87da4beb6fb136fdfa0"
+    },
+    "LICENSE-ICU4X": {
+      "url": "https://raw.githubusercontent.com/unicode-org/icu4x/e078031999870d4f263635c319a79cb19543ccfc/LICENSE",
+      "revision": "e078031999870d4f263635c319a79cb19543ccfc",
+      "role": "Unicode License V3 for ICU4X source and derived data",
+      "vendored": true,
+      "sha256": "f367c1b8e1aa262435251e442901da4607b4650e0e63a026f5044473ecfb90f2"
+    }
+  },
+  "binary_sha256": "b36e277c12c9005dec0efaab880d8ce50ab3dd4cc701e4ef2104e9716f4bc224",
+  "binary_size": 7288,
+  "calendars": [
+    {
+      "calendar": "persian",
+      "first_year": 1206,
+      "end_epoch_day": 54866,
+      "version": "tehran-1206-1498",
+      "year_count": 293,
+      "first_epoch_day": -52150
+    },
+    {
+      "calendar": "islamic-umalqura",
+      "first_year": 1300,
+      "end_epoch_day": 74839,
+      "version": "icu4x-e078031999870d4f263635c319a79cb19543ccfc",
+      "year_count": 301,
+      "first_epoch_day": -31826
+    }
+  ]
+}
