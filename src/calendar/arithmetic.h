@@ -22,4 +22,10 @@ enum {
 int qjs_cal_solar_year_start(QJSCalendarId calendar, int32_t year, int64_t *result);
 /* Return zero for invalid/unsupported inputs, including out-of-range years. */
 int qjs_cal_solar_month_length(QJSCalendarId calendar, int32_t year, int month);
+
+int qjs_cal_hebrew_year_start(int32_t year, int64_t *result);
+int qjs_cal_hebrew_month_length(int32_t year, int month);
+/* These wide-arithmetic helpers accept the complete int32_t year interval. */
+int qjs_cal_hebrew_leap(int32_t year);
+int64_t qjs_cal_hebrew_months_before_year(int32_t year);
 #endif /* QUICKJS_CALENDAR_ARITHMETIC_H */
