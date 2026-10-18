@@ -35,9 +35,51 @@ if shared_modules
   test_deps += [bjson_module, point_module]
 endif
 
+temporal_api_test = executable(
+  'test_temporal_api',
+  'test_temporal_api.c',
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: engine_dep,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'temporal-api',
+  temporal_api_test,
+  suite: ['repo', 'embedding'],
+  timeout: 120,
+)
+if get_option('temporal')
+  foreach name : [
+    'test_temporal_instant',
+    'test_temporal_duration',
+    'test_temporal_plain_time',
+    'test_temporal_plain',
+    'test_temporal_realm',
+    'test_temporal_now',
+    'test_temporal_zoned',
+    'test_temporal_offset_wall_date_boundaries',
+    'test_temporal_year_month_date_boundaries',
+    'test_temporal_zero_zoned_duration_boundaries',
+    'test_temporal_plain_date_duration_balance',
+    'test_date_temporal_bridge',
+  ]
+    test(
+      name,
+      qjs,
+      args: ['--std', 'tests/' + name + '.js'],
+      suite: ['repo', 'temporal'],
+      workdir: test_workdir,
+      depends: test_deps,
+      timeout: 60,
+    )
+  endforeach
+endif
+
 # Tests that include an implementation need archive extraction, not link_whole.
 native_test_names = [
   'test_api',
+  'test_temporal_oom',
   'test_builtin_brands',
   'test_embedding_helpers',
   'test_c_function_data',
@@ -619,7 +661,12 @@ test(
 test(
   'test262-runner',
   sh,
-  args: [files('test_run_test262.sh'), runner_prefix, run_test262],
+  args: [
+    files('test_run_test262.sh'),
+    runner_prefix,
+    run_test262,
+    get_option('temporal') ? 'y' : 'n',
+  ],
   suite: ['repo', 'tools'],
   workdir: test_workdir,
   depends: test_deps,
@@ -657,7 +704,7 @@ if not meson.is_cross_build() and host_machine.system() != 'windows'
       '',
       ' '.join(expected_flags),
       'n',
-      'n',
+      get_option('temporal') ? 'y' : 'n',
       get_option('b_lto') ? lto_flag : '',
     ],
     suite: ['repo', 'compiler'],

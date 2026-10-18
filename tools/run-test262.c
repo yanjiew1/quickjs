@@ -1526,10 +1526,20 @@ void load_config(const char *filename, const char *ignore)
             namelist_add(&exclude_list, base_name, p);
             break;
         case SECTION_FEATURES:
-            if (!q || str_equal(q, "yes"))
-                str_append(&harness_features, " ", p);
-            else
-                str_append(&harness_skip_features, " ", p);
+            {
+                BOOL enabled = !q || str_equal(q, "yes");
+                if (q && str_equal(q, "auto") && str_equal(p, "Temporal")) {
+#ifdef CONFIG_TEMPORAL
+                    enabled = TRUE;
+#else
+                    enabled = FALSE;
+#endif
+                }
+                if (enabled)
+                    str_append(&harness_features, " ", p);
+                else
+                    str_append(&harness_skip_features, " ", p);
+            }
             break;
         case SECTION_TESTS:
             namelist_add(&test_list, base_name, p);
