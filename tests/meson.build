@@ -198,6 +198,7 @@ standalone = {
     '../src/temporal/epoch.c',
     '../src/temporal/iso.c',
     '../src/temporal/noniso-calendar.c',
+    '../src/temporal/noniso-arithmetic.c',
     calendar_data,
   ],
   'test_calendar_native': [
@@ -327,6 +328,7 @@ standalone = {
     '../src/temporal/civil.c',
     '../src/temporal/calendar.c',
     '../src/temporal/noniso-calendar.c',
+    '../src/temporal/noniso-arithmetic.c',
     '../src/temporal/duration.c',
     '../src/temporal/options.c',
     '../src/temporal/relative.c',
@@ -357,6 +359,7 @@ standalone = {
     '../src/temporal/civil.c',
     '../src/temporal/calendar.c',
     '../src/temporal/noniso-calendar.c',
+    '../src/temporal/noniso-arithmetic.c',
   ],
   'test_temporal_duration_math': [
     'test_temporal_duration_math.c',
