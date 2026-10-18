@@ -55,12 +55,17 @@
 #endif
 
 
-/* Catch markers are confined to operand/suspended stacks. API failure
-   sentinels never enter those stacks, so both domains can use tag-only tests. */
+/* Catch offsets have payload bit 31 clear; exception results have it set.
+   Exception sentinels still must not enter operand/suspended stacks. */
 static inline JSValue js_new_catch_offset(uint32_t offset)
 {
     assert(offset <= INT32_MAX);
     return JS_MKVAL(JS_TAG_CONTROL, offset);
+}
+
+static inline BOOL js_is_catch_offset(JSValueConst v)
+{
+    return JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL && !JS_IsException(v);
 }
 
 static inline BOOL is_strict_mode_sf(const JSStackFrame *sf)
@@ -5656,7 +5661,7 @@ JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             JSValue val = *--sp;
             assert(!js_is_exception_sentinel(val));
             JS_FreeValue(ctx, val);
-            if (JS_VALUE_GET_TAG(val) == JS_TAG_CONTROL) {
+            if (js_is_catch_offset(val)) {
                 uint32_t pos = JS_VALUE_GET_INT(val);
                 assert(pos <= INT32_MAX);
                 if (pos == 0) {

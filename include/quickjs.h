@@ -658,11 +658,17 @@ static inline JS_BOOL JS_IsUndefined(JSValueConst v)
     return JS_VALUE_GET_TAG(v) == JS_TAG_UNDEFINED;
 }
 
-/* Tests a public value or API result. Catch markers sharing this tag are
-   private VM state, never ordinary values, arguments or callback results. */
+/* A control payload's high bit identifies exception status; its lower
+   31 bits do not affect the kind. Private catch offsets keep the bit clear. */
 static inline JS_BOOL JS_IsException(JSValueConst v)
 {
-    return js_unlikely(JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL);
+#ifdef CONFIG_CHECK_JSVALUE
+    /* The compile-only pointer model does not retain full int32 payloads. */
+    return js_unlikely(v == JS_EXCEPTION);
+#else
+    return js_unlikely(JS_VALUE_GET_TAG(v) == JS_TAG_CONTROL &&
+                       ((uint32_t)JS_VALUE_GET_INT(v) & UINT32_C(0x80000000)) != 0);
+#endif
 }
 
 static inline JS_BOOL JS_IsUninitialized(JSValueConst v)

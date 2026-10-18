@@ -40,6 +40,9 @@ static void buffer_print_write(void *opaque, const char *buf, size_t len)
 static void test_control_values(void)
 {
     static const uint32_t offsets[] = { 0, 1, INT32_MAX };
+    static const uint32_t exception_payloads[] = {
+        UINT32_C(0x80000000), UINT32_C(0x80000001), UINT32_MAX,
+    };
     JSRuntime *rt = JS_NewRuntime();
     JSPrintValueOptions options;
     DynBuf output;
@@ -57,6 +60,7 @@ static void test_control_values(void)
         /* Deliberately inspect private stack values, not API results. */
         JSValue marker = JS_MKVAL(JS_TAG_CONTROL, offsets[i]);
         char expected[64];
+        assert(!JS_IsException(marker));
         assert(!js_is_exception_sentinel(marker));
         assert((uint32_t)JS_VALUE_GET_INT(marker) == offsets[i]);
         snprintf(expected, sizeof(expected), "[catch offset=%u]", offsets[i]);
@@ -68,12 +72,19 @@ static void test_control_values(void)
         dbuf_free(&output);
         JS_FreeValueRT(rt, marker);
     }
-    dbuf_init(&output);
-    JS_PrintValueRT(rt, buffer_print_write, &output, JS_EXCEPTION, &options);
-    dbuf_putc(&output, 0);
-    assert(!dbuf_error(&output));
-    assert(!strcmp((const char *)output.buf, "exception"));
-    dbuf_free(&output);
+    for (i = 0; i < countof(exception_payloads); i++) {
+        JSValue value = JS_MKVAL(JS_TAG_CONTROL, exception_payloads[i]);
+        assert(JS_IsException(value));
+        assert(js_is_exception_sentinel(value));
+        assert((uint32_t)JS_VALUE_GET_INT(value) == exception_payloads[i]);
+        dbuf_init(&output);
+        JS_PrintValueRT(rt, buffer_print_write, &output, value, &options);
+        dbuf_putc(&output, 0);
+        assert(!dbuf_error(&output));
+        assert(!strcmp((const char *)output.buf, "exception"));
+        dbuf_free(&output);
+        JS_FreeValueRT(rt, value);
+    }
     JS_FreeRuntime(rt);
 }
 
