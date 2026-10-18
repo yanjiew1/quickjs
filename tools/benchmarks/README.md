@@ -15,6 +15,10 @@ contains `-DNDEBUG` and does not undefine it. Complete build commands,
 compiler flags, binary checksums, and
 compiler/linker versions are retained with the measurements. Compiler
 versions come from the selected Ubuntu runner image and are reported.
+Feature defines are reported separately for parent and candidate from their
+actual compile commands. Meson builds retain each revision's defaults; the
+legacy Make feature request is recorded separately and is not evidence of a
+Meson build's configuration.
 
 On `main`, routine benchmarks run when a push crosses a multiple of 25
 first-parent commits, and earlier when changed runtime, build, or workload
