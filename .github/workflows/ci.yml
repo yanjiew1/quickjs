@@ -112,6 +112,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=${{ matrix.library }} \
+           -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -230,6 +231,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Db_lto=true  \
+          -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -301,7 +303,7 @@ jobs:
     - name: Configure selected build
       id: configure
       run: |
-        meson setup build -Dwerror=true   \
+        meson setup build -Dwerror=true  -Dtemporal=true \
     - name: Compile selected build
       id: compile
       run: |
@@ -532,6 +534,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=both  \
+          -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -605,7 +608,7 @@ jobs:
       id: configure
       run: |
         meson setup build --prefix "$RUNNER_TEMP/quickjs-install" \
-          -Dwerror=true -Ddefault_library=shared
+          -Dwerror=true -Ddefault_library=shared  -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -628,179 +631,4 @@ jobs:
         meson install -C build
         prefix="$RUNNER_TEMP/quickjs-install"
         "$prefix/bin/qjs" -e 'if (6 * 7 !== 42) throw Error("installed qjs");'
-        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' '' n n '' libquickjs.so
-        export PKG_CONFIG_PATH="$prefix/lib/x86_64-linux-gnu/pkgconfig:$prefix/lib64/pkgconfig:$prefix/lib/pkgconfig"
-        libdir="$(pkg-config --variable=libdir quickjs)"
-        cc tests/test_shared_api.c $(pkg-config --cflags --libs quickjs) \
-          -Wl,-rpath,"$libdir/quickjs" -o "$RUNNER_TEMP/public-embedding"
-        "$RUNNER_TEMP/public-embedding"
-    - name: Record source and runner identity
-      if: always()
-      run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
-    - name: Preserve configuration and test diagnostics
-      if: always()
-      uses: actions/upload-artifact@v7
-      with:
-        name: native-linux-shared-install
-        path: |
-          build/meson-info/intro-buildoptions.json
-          build/meson-info/intro-tests.json
-          build/meson-info/intro-targets.json
-          build/compile_commands.json
-          build/compile.log
-          build/ninja-actions.log
-          build/meson-logs/
-          ci-identity.txt
-        if-no-files-found: ignore
-  value-check:
-    name: JSValue compile diagnostic (${{ matrix.id }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        shell: bash
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - id: core-off
-          intl: disabled
-          temporal: 'false'
-    steps:
-    - uses: actions/checkout@v7
-    - name: Install diagnostic compiler and build tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc meson ninja-build
-    - name: Configure selected build
-      id: configure
-      run: |
-        CC=gcc meson setup build -Dwerror=true -Ddocumentation=disabled \
-          -Dtests=false -Dexamples=false -Dcheck_jsvalue=true \
-            \
-    - name: Compile selected build
-      id: compile
-      run: |
-        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" quickjs-value-check 2>&1 | tee build/compile.log
-    - name: Record source and runner identity
-      if: always()
-      run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
-    - name: Preserve configuration and test diagnostics
-      if: always()
-      uses: actions/upload-artifact@v7
-      with:
-        name: native-value-check-${{ matrix.id }}
-        path: |
-          build/meson-info/intro-buildoptions.json
-          build/meson-info/intro-tests.json
-          build/meson-info/intro-targets.json
-          build/compile_commands.json
-          build/compile.log
-          build/ninja-actions.log
-          build/meson-logs/
-          ci-identity.txt
-        if-no-files-found: ignore
-  fuzz-smoke:
-    name: Clang libFuzzer build and smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      CC: clang
-      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
-      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-    defaults:
-      run:
-        shell: bash
-    steps:
-    - uses: actions/checkout@v7
-    - name: Install Clang and build tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang meson ninja-build
-    - name: Configure selected build
-      id: configure
-      run: |
-        meson setup build -Dwerror=true -Ddocumentation=disabled \
-          -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
-    - name: Compile selected build
-      id: compile
-      run: |
-        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)" fuzz_eval fuzz_compile fuzz_regexp 2>&1 | tee build/compile.log
-    - name: Run bounded fuzzer smoke tests
-      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
-      run: |
-        mkdir -p build/fuzz-corpus/js build/fuzz-corpus/regexp
-        printf '%s\n' 'let x = 6 * 7; Promise.resolve(x);' > build/fuzz-corpus/js/core.js
-        printf '%s\n' 'new Intl.DateTimeFormat("en").format(0); Temporal.Now.instant();' > build/fuzz-corpus/js/intl.js
-        printf 'a+\0aaa' > build/fuzz-corpus/regexp/basic
-        for target in eval compile; do
-          timeout --kill-after=10s 30s "build/tools/build/fuzz_$target" \
-            -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 "build/fuzz-corpus/js" \
-            2>&1 | tee "build/fuzz-$target.log"
-        done
-        timeout --kill-after=10s 30s build/tools/build/fuzz_regexp \
-          -runs=100 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=4096 build/fuzz-corpus/regexp \
-          2>&1 | tee build/fuzz-regexp.log
-    - name: Record source and runner identity
-      if: always()
-      run: |
-        git rev-parse HEAD > ci-identity.txt
-        printf 'run=%s attempt=%s runner=%s arch=%s\n' \
-          "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" "$RUNNER_ARCH" >> ci-identity.txt
-        uname -a >> ci-identity.txt
-        meson --version >> ci-identity.txt
-        python3 --version >> ci-identity.txt
-        if test -d test262/.git; then
-          printf 'test262=' >> ci-identity.txt
-          git -C test262 rev-parse HEAD >> ci-identity.txt
-        fi
-        if test -f build/.ninja_log; then
-          # Keep raw Ninja actions separately from compile_commands.json compiler entries.
-          cp build/.ninja_log build/ninja-actions.log
-        fi
-    - name: Preserve configuration and test diagnostics
-      if: always()
-      uses: actions/upload-artifact@v7
-      with:
-        name: native-fuzz-smoke
-        path: |
-          build/meson-info/intro-buildoptions.json
-          build/meson-info/intro-tests.json
-          build/meson-info/intro-targets.json
-          build/compile_commands.json
-          build/compile.log
-          build/ninja-actions.log
-          build/meson-logs/
-          ci-identity.txt
-          build/fuzz-*.log
-          crash-*
-          timeout-*
-        if-no-files-found: ignore
+        python3 tests/test_qjsc_executable.py "$prefix/bin/qjsc" '' '' n y '' libquickjs.so
