@@ -142,7 +142,7 @@ jobs:
       run: |
         meson setup build -Dwerror=true -Ddocumentation=disabled \
            -Dtemporal=${{ matrix.temporal }} \
-           -Dtimezone_backend=${{ matrix.timezone }} \
+          -Dcalendars=${{ matrix.calendars }} -Dtimezone_backend=${{ matrix.timezone }} \
           -Dsystem_timezone_policy=${{ matrix.policy }} -Ddefault_library=${{ matrix.library }}
     - name: Compile selected build
       id: compile
@@ -246,7 +246,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=${{ matrix.library }} \
-           -Dtemporal=true  -Dtimezone_backend=native
+           -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -365,7 +365,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Db_lto=true  \
-          -Dtemporal=true  -Dtimezone_backend=native
+          -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -438,7 +438,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true  -Dtemporal=true \
-           -Dtimezone_backend=native
+          -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -669,7 +669,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=both  \
-          -Dtemporal=true  -Dtimezone_backend=native
+          -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -833,7 +833,7 @@ jobs:
         CC=gcc meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dcheck_jsvalue=true \
            -Dtemporal=${{ matrix.temporal }} \
-           -Dtimezone_backend=native
+          -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -892,7 +892,7 @@ jobs:
       run: |
         meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
-           -Dtemporal=true  -Dtimezone_backend=native
+           -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
