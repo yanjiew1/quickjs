@@ -123,6 +123,13 @@ offset-at-instant, local-time candidates and gap boundaries, strict next and
 previous offset transitions, and data-version queries. Common Temporal code
 applies earlier, later, compatible and reject disambiguation policies.
 
+The same facade serves future Intl consumers under ECMA-402's IANA contracts.
+It preserves canonical Identifier and PrimaryIdentifier records, sorted named
+enumeration and ASCII-case-insensitive lookup. Primary-only enumeration filters
+records whose two identifiers match. Offset information also retains the
+actual DST designation for ToLocalTime, including negative DST and equal-offset
+designation changes. Data and mappings remain immutable for an agent's lifetime.
+
 Preserve historical second-level offsets, behavior before the first transition,
 future recurrence rules, negative fractional instants and the entire Temporal
 domain. Exact instant arithmetic must not narrow epoch nanoseconds to int64.
