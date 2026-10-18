@@ -179,6 +179,35 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_calendar_native': [
+    'test_calendar_native.c',
+    '../src/calendar/astronomy.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-native.c',
+    '../src/calendar/data.c',
+    '../src/calendar/eras.c',
+    '../src/calendar/hebrew.c',
+    '../src/calendar/islamic.c',
+    '../src/calendar/iso.c',
+    '../src/calendar/lunisolar.c',
+    '../src/calendar/native-months.c',
+    '../src/calendar/persian.c',
+    '../src/calendar/solar.c',
+    calendar_data,
+  ],
+  'test_calendar_eras_future': [
+    'test_calendar_eras_future.c',
+    '../src/calendar/data.c',
+    '../src/calendar/eras.c',
+    '../src/calendar/iso.c',
+  ],
+  'test_calendar_eras': [
+    'test_calendar_eras.c',
+    '../src/calendar/data.c',
+    '../src/calendar/eras.c',
+    '../src/calendar/iso.c',
+    calendar_data,
+  ],
   'test_calendar_core': [
     'test_calendar_core.c',
     '../src/calendar/calendar.c',
