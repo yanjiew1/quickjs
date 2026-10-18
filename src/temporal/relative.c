@@ -55,7 +55,7 @@ static int truncate_days(QJSTemporalEpochNs value, int64_t *result)
 
 int qjs_temporal_plain_datetime_difference(
     QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar, QJSTemporalUnit largest,
+    QJSCalendarId calendar, QJSTemporalUnit largest,
     QJSTemporalInternalDuration *result)
 {
     QJSTemporalEpochNs a, b;
@@ -98,7 +98,7 @@ typedef struct NudgeWindow {
 
 static int date_epoch(QJSTemporalEpochNs *result,
                        QJSTemporalISODateTime origin,
-                       QJSTemporalCalendar calendar, const QJSTemporalZone *zone,
+                       QJSCalendarId calendar, const QJSTemporalZone *zone,
                        QJSTemporalDateDuration duration)
 {
     QJSTemporalISODateTime value = origin;
@@ -115,7 +115,7 @@ static int nudge_window(NudgeWindow *result, int sign,
                          QJSTemporalInternalDuration duration,
                          QJSTemporalEpochNs origin_ns,
                          QJSTemporalISODateTime origin,
-                         QJSTemporalCalendar calendar, const QJSTemporalZone *zone,
+                         QJSCalendarId calendar, const QJSTemporalZone *zone,
                          uint32_t increment, QJSTemporalUnit unit, int shift)
 {
     NudgeWindow w;
@@ -216,7 +216,7 @@ static int choose_end(NudgeWindow w, QJSTemporalEpochNs dest,
 static int bubble(QJSTemporalInternalDuration *duration,
                     QJSTemporalEpochNs nudged,
                     QJSTemporalISODateTime origin,
-                    QJSTemporalCalendar calendar, const QJSTemporalZone *zone,
+                    QJSCalendarId calendar, const QJSTemporalZone *zone,
                     QJSTemporalUnit largest, QJSTemporalUnit smallest, int sign)
 {
     int unit, error;
@@ -252,7 +252,7 @@ int qjs_temporal_relative_round(
     QJSTemporalInternalDuration duration,
     QJSTemporalEpochNs origin, QJSTemporalEpochNs dest,
     QJSTemporalISODateTime one, const QJSTemporalZone *zone,
-    QJSTemporalCalendar calendar,
+    QJSCalendarId calendar,
     const QJSTemporalDifferenceSettings *settings,
     QJSTemporalInternalDuration *result)
 {
@@ -366,7 +366,7 @@ int qjs_temporal_relative_round(
 
 int qjs_temporal_plain_relative_round(
     QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar, QJSTemporalInternalDuration duration,
+    QJSCalendarId calendar, QJSTemporalInternalDuration duration,
     const QJSTemporalDifferenceSettings *settings,
     QJSTemporalInternalDuration *result)
 {
@@ -380,7 +380,7 @@ int qjs_temporal_plain_relative_round(
 
 int qjs_temporal_plain_datetime_difference_round(
     QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar,
+    QJSCalendarId calendar,
     const QJSTemporalDifferenceSettings *settings,
     QJSTemporalInternalDuration *result)
 {
@@ -402,7 +402,7 @@ int qjs_temporal_relative_total(
     QJSTemporalInternalDuration diff,
     QJSTemporalEpochNs origin, QJSTemporalEpochNs dest,
     QJSTemporalISODateTime one, const QJSTemporalZone *zone,
-    QJSTemporalCalendar calendar, QJSTemporalUnit unit, double *result)
+    QJSCalendarId calendar, QJSTemporalUnit unit, double *result)
 {
     QJSTemporalEpochNs numerator, denominator;
     int error, sign;
@@ -452,7 +452,7 @@ int qjs_temporal_relative_total(
 
 int qjs_temporal_plain_datetime_difference_total(
     QJSTemporalISODateTime one, QJSTemporalISODateTime two,
-    QJSTemporalCalendar calendar, QJSTemporalUnit unit, double *result)
+    QJSCalendarId calendar, QJSTemporalUnit unit, double *result)
 {
     QJSTemporalInternalDuration difference;
     QJSTemporalEpochNs origin, dest;
