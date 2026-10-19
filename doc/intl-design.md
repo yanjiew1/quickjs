@@ -282,8 +282,9 @@ Shared contract families are:
 - Explicit invalid-input, unsupported, allocation, data and provider errors.
   Binding code maps them to the correct JS exception; OOM is never a fallback.
 
-Open returns either a complete handle or failure. Fallible operations preserve
-outputs until success, using temporary clearable storage internally. Close/clear
+Open returns either a complete handle or failure. Queries preserve existing
+outputs until success, using temporary storage internally. Builders require a
+fresh output and leave it empty and clearable on failure. Close/clear
 functions are safe for empty state and release only their own allocations.
 Each handle documents thread/reentrancy rules; immutable configuration does not
 make mutable result scratch buffers shareable. Do not hold borrowed pointers
