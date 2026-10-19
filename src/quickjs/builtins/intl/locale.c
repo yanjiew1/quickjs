@@ -399,6 +399,46 @@ static JSValue locale_likely(JSContext *ctx, JSValueConst this_val, int argc,
     return result;
 }
 
+static JSValue locale_numbering_systems(JSContext *ctx, JSValueConst this_val,
+                                       int argc, JSValueConst *argv)
+{
+    JSIntlLocale *locale = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_LOCALE);
+    QJSIntlBytes system = {"latn", 4};
+    JSValue result, value;
+    if (!locale)
+        return JS_EXCEPTION;
+    if (locale->slots[SLOT_NU]) {
+        system = (QJSIntlBytes){locale->slots[SLOT_NU], strlen(locale->slots[SLOT_NU])};
+    } else {
+        QJSIntlNumberService *service = js_intl_number_service(ctx);
+        const QJSIntlBytes *available;
+        QJSIntlBytes tag = {locale->tag, strlen(locale->tag)};
+        QJSIntlLocaleMatch match;
+        size_t count;
+        if (!service || js_intl_error(ctx, qjs_intl_number_available(service, &available, &count),
+                                      "number locales") ||
+            js_intl_error(ctx, qjs_intl_lookup_matching_locale(available, count, &tag, 1, &match),
+                          "locale numbering systems"))
+            return JS_EXCEPTION;
+        /* NumberingSystemsOfLocale uses latn for an unmatched request, not the
+           runtime's default locale. Do not use general ResolveLocale fallback. */
+        if (match.found && js_intl_error(ctx,
+                qjs_intl_number_default_system(service, match.available_index, &system),
+                "default numbering system"))
+            return JS_EXCEPTION;
+    }
+    result = JS_NewArray(ctx);
+    if (JS_IsException(result))
+        return result;
+    value = JS_NewStringLen(ctx, system.data, system.length);
+    if (JS_IsException(value) ||
+        JS_DefinePropertyValueUint32(ctx, result, 0, value, JS_PROP_C_W_E | JS_PROP_THROW) < 0) {
+        JS_FreeValue(ctx, result);
+        return JS_EXCEPTION;
+    }
+    return result;
+}
+
 enum { INFO_WEEK, INFO_TEXT, INFO_HOURS };
 
 static JSValue locale_info(JSContext *ctx, JSValueConst this_val, int argc,
@@ -518,6 +558,7 @@ static const JSCFunctionListEntry locale_properties[] = {
     JS_CFUNC_MAGIC_DEF("getWeekInfo", 0, locale_info, INFO_WEEK),
     JS_CFUNC_MAGIC_DEF("getTextInfo", 0, locale_info, INFO_TEXT),
     JS_CFUNC_MAGIC_DEF("getHourCycles", 0, locale_info, INFO_HOURS),
+    JS_CFUNC_DEF("getNumberingSystems", 0, locale_numbering_systems),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Intl.Locale",
                        JS_PROP_CONFIGURABLE),
 };
