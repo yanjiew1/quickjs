@@ -34,6 +34,7 @@ enum {
 typedef struct QJSIntlCurrencyText {
     QJSIntlBytes text;
     unsigned int state;
+    unsigned int from_root; /* Counted name originated at root, including markers. */
 } QJSIntlCurrencyText;
 
 typedef struct QJSIntlCurrencyFractions {
@@ -64,8 +65,9 @@ QJSIntlStatus qjs_intl_currency_code_find(const QJSIntlCurrencyData *, QJSIntlBy
                                           uint32_t *index);
 
 /* Exact shared locale/code indexes. Missing vectors return ABSENT. Empty and
-   blocked fields have zeroed text slices, distinct from VALUE. Returned VALUE
-   slices borrow the unchanged owner; no lookup allocates. */
+   blocked fields have zeroed text slices, distinct from VALUE. from_root marks
+   counted names for the consumer's root-excluding fallback; other fields use 0.
+   Returned VALUE slices borrow the unchanged owner; no lookup allocates. */
 QJSIntlStatus qjs_intl_currency_field_at(const QJSIntlCurrencyData *, uint32_t locale,
                                          uint32_t code, QJSIntlCurrencyField,
                                          QJSIntlCurrencyText *);
