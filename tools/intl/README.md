@@ -240,6 +240,14 @@ map without allocation or locale fallback. Authored and real-profile tests
 cover unaligned input, exact category data, missing/empty distinctions, grammar
 and schema corruption, output reset and allocation failure/retry.
 
+The native engine selects the first matching category from an unchanged
+validated rule view, retaining exact operands and visible zeros. It allocates
+nothing and holds no state. Range selection uses an explicit pair result or
+CLDR 49's end-category default; the service remains responsible for equal
+formatted strings, mathematical-value coercion, rounding and notation expansion.
+Authored and real-profile witnesses cover cardinal/ordinal selection, Arabic
+categories, large coefficients, all sparse fallback pairs and error outputs.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
