@@ -1491,6 +1491,62 @@ code canonicalization and locale availability belong to later consumers.
 Authored tests cover all groups, exact text, alternative identities, metadata,
 markers, source aliases, cycles and rejected ambiguous structures.
 
+`display_tables.py` encodes these facts in section 26. Six header words contain
+schema version 1 and the counts of shared locale rows, maps, nodes, entries and
+lookup keys. One row index per locale selects seven group heads. A zero head
+means no source layer; other heads and parent references are one-based. Maps
+have contiguous entry spans. Nodes contain pooled source locale, group, map and
+parent, ordered by depth and then by those four fields. Identical suffixes and
+locale rows are shared; every row, map and node must be reachable.
+
+Each six-word entry contains normalized code, `alt`, `menu`, `scope`, original
+source code and text. The first four fields determine lookup order and uniqueness.
+Identifier groups use lowercase ASCII and hyphens in the lookup column; pattern
+and bracket keys retain exact spelling. Original spelling remains available for
+provenance. Normalization collisions within one source layer are rejected;
+overrides across child and parent layers remain valid. Empty text is a present
+value; `0xfffffffe` encodes an explicit block, and missing keys have no entry.
+
+A sorted group/code inventory covers all reachable entries, including blocked
+and alternate-only facts. It supports later bounded compound-name lookup and
+does not advertise service availability. Projection prunes unused layers while
+retaining alias origins outside the selected locale profile. Codec tests cover
+canonical roundtrips, shared raw maps with different group normalization,
+projection, normalization collisions, empty profiles and malformed sections.
+Both prepared profiles include the section. Minimal limits display locales to
+English and its fallback chain while retaining every code in those layers;
+native retains all CLDR display locales. Neither profile's source inventory
+alone establishes DisplayNames service availability.
+
+`src/intl/display/data.c` validates section 26 and exposes borrowed layer heads,
+node identity, exact entry lookup and the sorted group/code inventory. Validation
+checks canonical depth order, group-consistent heads and parents, complete
+reachability, normalized/raw agreement and exact inventory coverage. Temporary
+depth, coverage and source-locale scratch is freed on all paths. Queries allocate
+nothing and do not walk parents, normalize caller codes or apply style/fallback
+policy. An absent entry returns `UNSUPPORTED`; blocked and empty values return
+distinct successful entries. Authored and empty-profile C tests cover provenance,
+corruption, unaligned packs, argument resets and allocation failure/retry.
+Prepared-profile C tests open both complete bundles, traverse every locale/group
+chain and query the exact English language name. Generator tests verify English
+facts, profile projection and deterministic authored output; manifests identify
+the names section and authenticated inputs alongside the other shared tables.
+
+`src/intl/display/select.c` applies native label policy separately from raw data
+validation. For language, region, calendar and embedded script names, short and
+narrow try `alt=short` then the ordinary label within each layer. Long uses the
+ordinary label. Standalone scripts instead try stand-alone then ordinary for
+long, and short, stand-alone, ordinary for short/narrow; that three-way priority
+is an explicit native policy. Variants, patterns and bracket replacements use
+their ordinary fields. Menu/scope variants and `alt=long` are not selected.
+
+Only after trying a layer's alternatives does lookup follow its parent. An
+explicit block masks that exact alternative in later layers, leaving the other
+alternatives available. Empty and code-identical labels remain present. Selection
+returns borrowed text and source locale without allocating or applying API code
+fallback. Authored tests distinguish child ordinary/standalone names from parent
+short names and cover independent blocks, empty values and equal child provenance.
+
 ## Shared date-field labels
 
 `date_field_names.py` owns the twelve ECMA-402 date-field labels across long,
