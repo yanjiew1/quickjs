@@ -1387,6 +1387,53 @@ function intl_duration_parts(n)
     return n * 100;
 }
 
+function intl_display_construct(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.DisplayNames("en", { type: "language" });
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_display_language(n)
+{
+    var formatter = new Intl.DisplayNames("en", { type: "language" });
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.of("en-Latn-US-fonipa");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_display_calendar(n)
+{
+    var formatter = new Intl.DisplayNames("en", { type: "calendar" });
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.of("ethioaa");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_display_currency(n)
+{
+    var formatter = new Intl.DisplayNames("en", { type: "currency" });
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.of("USD");
+        global_res = result;
+    }
+    return n * 100;
+}
+
 // Contrast common short normalization with a disordered nonstarter run.
 // Cache source strings per case; fresh JavaScript processes reset the cache.
 function string_normalize_short(n)
@@ -2095,6 +2142,12 @@ function main(argc, argv, g)
         test_list.push(intl_duration_text);
         test_list.push(intl_duration_digital);
         test_list.push(intl_duration_parts);
+    }
+    if (typeof Intl === "object" && typeof Intl.DisplayNames === "function") {
+        test_list.push(intl_display_construct);
+        test_list.push(intl_display_language);
+        test_list.push(intl_display_calendar);
+        test_list.push(intl_display_currency);
     }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")
