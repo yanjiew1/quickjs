@@ -25,6 +25,7 @@ def render():
     en = ("'#{}'#,##,##0.00##", '0.000E+000', '% 0', "¤'#' 0;¤'#' 0-", '¤0;(¤0)',
           BLOCK, BLOCK, '', '')
     patterns = {'systems': ('latn', 'mathbold'), 'fields': number_patterns.FIELDS,
+                'overrides': ("#,##0.###", "0.00 ¤¤", "¤'legacy'0.0;¤'legacy'0.0-"),
                 'grouping': (('en', 2), ('root', 1)),
                 'rows': tuple((tag, system, en if tag == 'en' else root)
                               for tag in tags for system in ('latn', 'mathbold'))}
