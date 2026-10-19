@@ -193,6 +193,19 @@ Standalone authored and real-profile tests cover exact text, empty values,
 optional states, unaligned storage, allocation failure/retry, invalid references,
 noncanonical records and malformed section dimensions.
 
+## Exact plural relations
+
+`src/intl/plural/rules.c` evaluates one CLDR relation over an unsigned plain
+decimal without allocation or binary floating point. It retains visible
+fractional zeros and evaluates integer operands, fractional operands, modulo,
+integer/continuous ranges, lists and logical precedence exactly. Callers pass
+the decimal after expanding any notation exponent; the separate exponent
+supplies the `c` and `e` operands. Source sample annotations are handled by the
+collector, not the evaluator. Pattern whitespace and adjacent grammar tokens
+are accepted; malformed arms are rejected even when their truth value cannot
+change the result. Repository witnesses include values beyond 64-bit integers,
+fractional modulo, exponent boundaries, malformed input and output reset.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
