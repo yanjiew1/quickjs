@@ -275,6 +275,7 @@ native_test_names = [
   'test_intl_list_oom',
   'test_intl_plural_oom',
   'test_intl_number_oom',
+  'test_intl_relative_oom',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -1937,6 +1938,7 @@ if intl_enabled
     'intl-list-format': ['-m', 'tests/test_intl_list_format.js'],
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
+    'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
   }
 endif
 if shared_modules
