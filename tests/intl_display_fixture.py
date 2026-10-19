@@ -18,7 +18,7 @@ from test_intl_display_names import Sources
 from test_intl_list_patterns import graph
 
 
-def pack(empty=False, selection=False, language=False):
+def pack(empty=False, selection=False, language=False, render=False):
     sources = Sources()
     if not empty:
         sources.set('root', '''<languages><language type="en">English</language>
@@ -68,7 +68,7 @@ def pack(empty=False, selection=False, language=False):
         scripts = ET.SubElement(root.find('./localeDisplayNames'), 'scripts')
         ET.SubElement(scripts, 'script', type='Latn').text = 'British Latin'
         sources.files['common/main/en_GB.xml'] = ET.tostring(root, encoding='utf-8')
-    if language:
+    if language or render:
         root = ET.fromstring(sources.files['common/main/root.xml'])
         names = root.find('./localeDisplayNames/languages')
         for code, text in (('nl', 'Dutch'), ('nl_BE', 'Flemish'),
@@ -90,9 +90,43 @@ def pack(empty=False, selection=False, language=False):
         ET.SubElement(names, 'language', type='fr_CA').text = BLOCK
         ET.SubElement(names, 'language', type='pt').text = 'Child Portuguese'
         sources.files['common/main/en.xml'] = ET.tostring(root, encoding='utf-8')
-    inheritance = ParentGraph(graph().tags + ('en-1901-1996',), {}, {},
+    if render:
+        root = ET.fromstring(sources.files['common/main/root.xml'])
+        root.find('./localeDisplayNames/languages/language[@type="en"]').text = 'English (base)'
+        root.find('./localeDisplayNames/scripts/script').text = 'Latin (script)'
+        root.find('./localeDisplayNames/territories/territory').text = 'United States (region)'
+        ET.SubElement(root.find('./localeDisplayNames/territories'), 'territory', type='AQ').text = ''
+        ET.SubElement(root.find('./localeDisplayNames/territories'), 'territory', type='CA').text = 'Region 😀'
+        root.find('./localeDisplayNames/variants/variant').text = 'Valencian (variant)'
+        chars = root.find('./characters')
+        ET.SubElement(chars, 'nestedBracketReplacement', bracket=')').text = ']'
+        ET.SubElement(chars, 'nestedBracketReplacement', bracket='（').text = '［'
+        ET.SubElement(chars, 'nestedBracketReplacement', bracket='）').text = '］'
+        ET.SubElement(root.find('./localeDisplayNames/scripts'), 'script', type='Cyrl').text = 'Cyrillic （script）'
+        sources.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
+        for tag, outer, separator in (
+                ('en', '{0} ({1})', 'P{0}S{1}Z'),
+                ('en_GB', "O'{1}'M{0}E", 'P{1}S{0}Z'),
+                ('de', '{0}（{1}）', '{0}, {1}')):
+            root = ET.fromstring(sources.files['common/main/' + tag + '.xml'])
+            if tag == 'en_GB':
+                root.find('./localeDisplayNames/languages/language[@type="en"]').text = 'English (base)'
+            patterns = ET.SubElement(root.find('./localeDisplayNames'), 'localeDisplayPattern')
+            ET.SubElement(patterns, 'localePattern').text = outer
+            ET.SubElement(patterns, 'localeSeparator').text = separator
+            sources.files['common/main/' + tag + '.xml'] = ET.tostring(root, encoding='utf-8')
+        sources.set('en_1901_1996', '''<localeDisplayPattern>
+            <localePattern>{0}</localePattern></localeDisplayPattern>''')
+        sources.set('en_1901', '<localeDisplayPattern><localePattern>' + BLOCK +
+                    '</localePattern></localeDisplayPattern>')
+        sources.set('en_1996', '''<localeDisplayPattern>
+            <localeSeparator>{2}</localeSeparator></localeDisplayPattern>''',
+            '<nestedBracketReplacement bracket="(">bad</nestedBracketReplacement>')
+    inheritance = ParentGraph(graph().tags + ('en-1901-1996',) + (('en-1901', 'en-1996') if render else ()), {}, {},
                               {'und': 'en-Latn-US'}, (), False)
     tags = ('de', 'en', 'en-GB', 'root')
+    if render:
+        tags = tuple(sorted(tags + ('en-1901', 'en-1901-1996', 'en-1996')))
     data = display_tables.select(display_names.collect(sources, inheritance), tags)
     pool = tuple(sorted(display_tables.strings(data) | set(tags) |
                         {BLOCK, INHERIT, 'En', 'en-us', 'bad_tag', 'en-1901-1901', 'WRONG'},
@@ -113,5 +147,6 @@ if __name__ == '__main__':
     modes.add_argument('--empty', action='store_true')
     modes.add_argument('--selection', action='store_true')
     modes.add_argument('--language', action='store_true')
+    modes.add_argument('--render', action='store_true')
     args = parser.parse_args()
-    atomic_write(args.output, embed.render(pack(args.empty, args.selection, args.language)).encode('ascii'))
+    atomic_write(args.output, embed.render(pack(args.empty, args.selection, args.language, args.render)).encode('ascii'))

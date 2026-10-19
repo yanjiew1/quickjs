@@ -1589,6 +1589,24 @@ lists. Prepared-profile tests check actual names rather than assuming that every
 conditional example in TR35 exists in the pinned CLDR source. Composition of
 remaining qualifiers and API fallback remain separate operations.
 
+`src/intl/display/language-format.c` composes the matched base with unconsumed
+script, region and variant labels, using canonical input subtags for missing
+qualifiers. It preserves present empty names and requires an actual localized
+base independently of API fallback. The result owns bounded UTF-16 text and
+retains no source or input pointers.
+
+The two-operand literal parser now belongs to `common/pair-pattern`, shared with
+unit division templates. Language composition applies the source's outer pattern
+and left-folded separator in either operand order. Iterative emission measures
+then writes the exact result without recursion or repeatedly copied intermediate
+strings. Only consulted templates are parsed. Native bracket substitution affects
+qualifier labels, leaves the base name and pattern literals untouched, and uses
+exact scalar replacement facts when the same bracket occurs in outer literals.
+This follows native locale-pattern conventions rather than implementing a general
+Unicode bracket-nesting algorithm. Tests distinguish ASCII/fullwidth brackets,
+literal apostrophes, both fold orders, empty labels, malformed/absent templates,
+supplementary characters, output bounds, allocation failures and result lifetime.
+
 ## Shared date-field labels
 
 `date_field_names.py` owns the twelve ECMA-402 date-field labels across long,
