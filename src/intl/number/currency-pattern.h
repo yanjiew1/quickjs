@@ -1,4 +1,4 @@
-/* Currency pattern-family selection and legacy spacing policy.
+/* Currency pattern families, name placement and legacy spacing policy.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_NUMBER_CURRENCY_PATTERN_H
 #define QJS_INTL_NUMBER_CURRENCY_PATTERN_H
@@ -6,6 +6,7 @@
 #include "../currency/data.h"
 #include "../currency/boundary.h"
 #include "layout-data.h"
+#include "../plural/rules.h"
 
 typedef struct QJSIntlCurrencyPattern {
     QJSIntlNumberPattern pattern;
@@ -35,4 +36,11 @@ QJSIntlStatus qjs_intl_number_currency_pattern(const QJSIntlNumberPatternData *,
 QJSIntlStatus qjs_intl_number_currency_spacing(const QJSIntlNumberLayouts *,
                                               const QJSIntlCurrencyBoundary *,
                                               QJSIntlBytes *before, QJSIntlBytes *after);
+/* Select a currency-name placement template independently of name fallback.
+   Require locale-level projections from currency_unit_layouts_at. Exact and
+   selected-category forms exclude root; OTHER may include root. An absent or
+   blocked OTHER returns UNSUPPORTED; explicit empty text succeeds. Borrow all
+   text, allocate nothing, and reset disjoint non-NULL output on error. */
+QJSIntlStatus qjs_intl_currency_unit_pattern(const QJSIntlCurrencyUnitLayouts *,
+                                              QJSIntlPluralCategory, int exact, QJSIntlBytes *);
 #endif
