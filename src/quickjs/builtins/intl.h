@@ -5,6 +5,7 @@
 #include "../internal/base.h"
 #ifdef CONFIG_INTL
 #include "../../intl/locale/locale.h"
+#include "../../intl/list/list.h"
 
 typedef struct JSIntlLocaleList {
     char **items;
@@ -16,6 +17,19 @@ const char *js_intl_default_locale(JSContext *ctx);
 QJSIntlAllocator js_intl_allocator(JSRuntime *rt);
 int js_intl_ensure_intrinsics(JSContext *ctx);
 int js_intl_init_locale(JSContext *ctx, JSValueConst namespace_object);
+int js_intl_init_list_format(JSContext *ctx, JSValueConst namespace_object);
+JSValue js_intl_create_from_constructor(JSContext *ctx, JSValueConst new_target,
+                                        JSClassID class_id);
+JSValue js_intl_options_object(JSContext *ctx, JSValueConst value, BOOL coerce);
+int js_intl_string_option(JSContext *ctx, JSValueConst object, const char *name,
+                          const char *const *choices, size_t count, int fallback);
+int js_intl_locale_matcher(JSContext *ctx, JSValueConst options);
+int js_intl_resolve_locale_index(JSContext *ctx, const QJSIntlBytes *available,
+                                 size_t count, const JSIntlLocaleList *requested,
+                                 size_t *out);
+JSValue js_intl_filter_locales(JSContext *ctx, const QJSIntlBytes *available,
+                                size_t count, JSValueConst locales,
+                                JSValueConst options_value);
 const char *js_intl_locale_tag(JSValueConst value);
 int js_intl_error(JSContext *ctx, QJSIntlStatus status, const char *operation);
 int js_intl_canonicalize_locale_list(JSContext *ctx, JSValueConst locales,
