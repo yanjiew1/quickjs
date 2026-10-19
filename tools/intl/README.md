@@ -473,6 +473,17 @@ notation only for plural exponent metadata. The compact formatter must select
 its pattern family before supplying thresholds; this helper does not perform
 plural lookup or choose currency/unit affixes.
 
+`src/intl/number/affix.c` composes a decoded typed pattern around a numeric
+body, retaining its text and part boundaries. Literal affixes and the selected
+sign, percent and currency text are decoded from scalar UTF-8. Currency display
+selection and boundary spacing belong to the caller; every currency placeholder
+uses that resolved text. Sign selection follows GetNumberFormatPattern over
+the rounded value, treating NaN as positive zero and preserving negative zero.
+If positive sign display requires a sign but the LDML
+variant contains no plus token, the operation can insert one before the pattern.
+Empty replacements remain distinct parts. Complete UTF-16 sizing precedes
+allocation and the output bound covers affixes and body together.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
