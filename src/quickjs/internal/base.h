@@ -210,6 +210,7 @@ enum {
     JS_CLASS_INTL_PLURAL_RULES,
     JS_CLASS_INTL_NUMBER_FORMAT,
     JS_CLASS_INTL_RELATIVE_TIME_FORMAT,
+    JS_CLASS_INTL_DURATION_FORMAT,
 #endif
     JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
 };
