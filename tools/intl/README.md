@@ -1466,3 +1466,27 @@ options and method descriptors directly. The minimal profile
 excludes only two Duration cases that require unsupported German/Serbian/Chinese
 locales; English array-like locale arguments are covered in the repository tests.
 The native profile keeps both cases.
+
+## Display-name source facts
+
+`display_names.py` collects language, script, territory, variant and calendar
+names, locale composition patterns and nested-bracket replacements. It retains
+all source `alt`, `menu` and `scope` selectors independently; CLDR's `alt="long"`
+is not an ECMA-402 style selection. Calendar `scope="core"` names coexist with
+unscoped names, and script stand-alone names remain distinct from names used
+inside a language description. Currency names already have a shared owner; date
+field names have separate typed fields.
+
+The collector returns `groups`, deduplicated `maps`, child-first `nodes` and
+locale/group `rows`. A map entry is `(code, alt, menu, scope, text)`, keeping LDML
+code spelling. A node is `(source_locale, group, map_index, parent_node)`. Node
+references are one-based, with zero denoting no layer. Empty strings and explicit
+blocking markers remain values; inheritance markers do not create a local
+override. Whole-group aliases retain source identity and child overlays.
+
+Retaining layers lets a consumer choose lateral alternatives at one source
+locale before walking to its parent. It also distinguishes an explicit child
+name from an inherited identical string. API fallback, language composition,
+code canonicalization and locale availability belong to later consumers.
+Authored tests cover all groups, exact text, alternative identities, metadata,
+markers, source aliases, cycles and rejected ambiguous structures.
