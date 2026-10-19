@@ -154,6 +154,10 @@ numeric formatting, automatic literals and parts. These guarded live workloads
 are available only in builds with the service enabled and also leave the frozen
 historical catalog unchanged.
 
+The guarded `intl_duration` cases cover DurationFormat construction, text units,
+exact fractional digital output and typed parts. They also use live feature
+detection and leave the frozen historical comparison catalog unchanged.
+
 ## Running locally
 
 Use two clean, distinct source checkouts and a new output directory:
