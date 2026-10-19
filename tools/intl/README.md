@@ -154,6 +154,15 @@ inventory. Each service establishes its own supported records before calling
 this helper. Default-locale policy, best-fit matching and option/extension
 resolution are separate operations.
 
+`availability.py` completes the formatter registry with the scriptless
+language-region fallbacks required for language-script-region entries. These
+generated identities reuse complete source records, preferring the region's
+likely script, then the language's likely script and a stable source identity.
+Existing source entries retain precedence. Source filenames and parent graphs
+are unchanged; generated aliases and this selection policy are recorded in the
+prepared manifest. The registry still establishes no service capability until
+the corresponding patterns and algorithms are validated by their owner.
+
 ## Native list pattern engine
 
 `src/intl/list/native-engine.c` expands checked pair/start/middle/end templates
