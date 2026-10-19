@@ -582,6 +582,7 @@ intl_number_compact_test = executable(
     '../src/intl/number/body.c',
     '../src/intl/number/compact-data.c',
     '../src/intl/number/compact-format.c',
+    '../src/intl/common/format-builder.c',
     '../src/intl/number/compact-family.c',
   ) + [intl_compact_fixture],
   c_args: host_args,
@@ -1129,6 +1130,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/number/body.c',
       '../src/intl/number/compact-data.c',
       '../src/intl/number/compact-format.c',
+      '../src/intl/common/format-builder.c',
       '../src/intl/number/compact-family.c',
       '../src/intl/number/currency-format.c',
       '../src/intl/number/currency-pattern.c',
@@ -1260,6 +1262,12 @@ standalone = {
   'test_intl_unit_identifier': [
     'test_intl_unit_identifier.c',
     '../src/intl/unit/identifier.c',
+  ],
+  'test_intl_unit_format': [
+    'test_intl_unit_format.c',
+    '../src/intl/unit/format.c',
+    '../src/intl/common/format-builder.c',
+    '../src/cutils/cutils.c',
   ],
   'test_intl_locale_system': [
     'test_intl_locale_system.c',

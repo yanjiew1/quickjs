@@ -555,6 +555,15 @@ decimal-pattern quoting. Selection allocates nothing and returns borrowed
 source/selector provenance. Unit rendering and the NumberFormat binding remain
 separate requirements.
 
+`src/intl/unit/format.c` composes the selected prefix/suffix around a complete
+numeric body, preserving its sign, exponent and compact parts. Nonspace affixes
+become unit parts, with outer Unicode White_Space separated as literal parts;
+internal spaces stay within a unit part. A bare or whitespace-only template
+retains an empty unit part. The complete UTF-16 result is independently owned,
+with exact output bounds and allocation-failure cleanup. The compact and unit
+renderers share the private bounded UTF-16 builder; unit/plural/sign selection
+remains outside that writer. This does not register JavaScript NumberFormat.
+
 ## Localized numeric bodies
 
 `src/intl/number/body.c` renders an already rounded unsigned plain decimal as
