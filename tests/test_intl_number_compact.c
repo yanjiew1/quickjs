@@ -59,7 +59,8 @@ static void expected(const QJSIntlFormatted *result, const char *text)
     for (i = 0; i < result->part_count; i++) {
         assert(result->parts[i].start == part_end);
         part_end = result->parts[i].end;
-        assert(part_end > result->parts[i].start && part_end <= pos);
+        assert(part_end >= result->parts[i].start && part_end <= pos);
+        assert(part_end > result->parts[i].start || result->parts[i].type == QJS_INTL_PART_CURRENCY);
     }
     assert(part_end == pos);
 }
@@ -82,8 +83,9 @@ static QJSIntlStatus format(const QJSIntlAllocator *allocator, const QJSIntlComp
                             size_t limit, QJSIntlFormatted *out)
 {
     /* A multi-scalar minus symbol also exercises UTF-16 length accounting. */
-    return qjs_intl_number_compact_format(allocator, data, pattern, bytes("؜-"), bytes("+"), body,
-                                          limit, out);
+    QJSIntlNumberAffixSymbols symbols = {.minus = bytes("؜-"), .plus = bytes("+"),
+                                          .currency = bytes("USD")};
+    return qjs_intl_number_compact_format(allocator, data, pattern, &symbols, body, limit, out);
 }
 
 int main(void)
@@ -148,8 +150,69 @@ int main(void)
         assert(!memcmp(&result, &zero, sizeof(result)) && !state.live);
     }
     state.fail_at = 0;
-    selected = pattern(&data, QJS_INTL_COMPACT_CURRENCY_SHORT, 3, QJS_INTL_COMPACT_OTHER);
-    assert(format(&allocator, &data, &selected, &body, 100, &result) == QJS_INTL_INVALID_ARGUMENT);
+    {
+        QJSIntlCompactMap map;
+        QJSIntlNumberAffixSymbols symbols = {0};
+        uint32_t latin;
+        assert(!qjs_intl_numbering_system_find(&data.numbering, bytes("latn"), &latin));
+        assert(!qjs_intl_compact_map_at(&data, 1, latin, QJS_INTL_COMPACT_CURRENCY_SHORT, &map));
+        assert(!qjs_intl_compact_pattern_find(&data, &map, 3, QJS_INTL_COMPACT_OTHER,
+                                              QJS_INTL_COMPACT_STANDARD, &selected));
+        assert(!format(&allocator, &data, &selected, &body, 100, &result));
+        expected(&result, "USD1.2K");
+        assert(result.parts[0].type == QJS_INTL_PART_CURRENCY && result.parts[0].end == 3);
+        assert(result.parts[4].type == QJS_INTL_PART_COMPACT);
+        qjs_intl_number_body_clear(&allocator, &result);
+        assert(format(&allocator, &data, &selected, &body, 6, &result) == QJS_INTL_OVERFLOW);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+        assert(!qjs_intl_number_compact_format(&allocator, &data, &selected, &symbols, &body, 100, &result));
+        expected(&result, "1.2K");
+        assert(result.parts[0].type == QJS_INTL_PART_CURRENCY && !result.parts[0].end);
+        qjs_intl_number_body_clear(&allocator, &result);
+        symbols.currency = bytes("\xed\xa0\x80");
+        assert(qjs_intl_number_compact_format(&allocator, &data, &selected, &symbols, &body, 100, &result) == QJS_INTL_DATA_ERROR);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+        symbols.currency = bytes("USD");
+        symbols.after_currency = bytes("~");
+        assert(!qjs_intl_number_compact_format(&allocator, &data, &selected, &symbols, &body, 100, &result));
+        expected(&result, "USD~1.2K");
+        assert(result.parts[1].type == QJS_INTL_PART_LITERAL);
+        qjs_intl_number_body_clear(&allocator, &result);
+        for (i = 1; i <= 2; i++) {
+            state.fail_at = state.calls + i;
+            assert(format(&allocator, &data, &selected, &body, 100, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && !state.live);
+        }
+        state.fail_at = 0;
+        symbols.before_currency = bytes("_");
+        assert(!qjs_intl_compact_pattern_find(&data, &map, 6, QJS_INTL_COMPACT_OTHER,
+                                              QJS_INTL_COMPACT_STANDARD, &selected));
+        assert(!qjs_intl_number_compact_format(&allocator, &data, &selected, &symbols,
+                                                &body, 100, &result));
+        expected(&result, "1.2_USDK");
+        assert(result.parts[3].type == QJS_INTL_PART_LITERAL);
+        qjs_intl_number_body_clear(&allocator, &result);
+        symbols.currency = bytes("");
+        assert(!qjs_intl_number_compact_format(&allocator, &data, &selected, &symbols,
+                                                &body, 100, &result));
+        expected(&result, "1.2K");
+        assert(result.parts[3].type == QJS_INTL_PART_CURRENCY && result.parts[3].start == 3 &&
+               result.parts[3].end == 3);
+        qjs_intl_number_body_clear(&allocator, &result);
+        symbols.currency = bytes("USD");
+        assert(!qjs_intl_compact_pattern_find(&data, &map, 9, QJS_INTL_COMPACT_OTHER,
+                                              QJS_INTL_COMPACT_STANDARD, &selected));
+        assert(!qjs_intl_number_compact_format(&allocator, &data, &selected, &symbols,
+                                                &body, 100, &result));
+        expected(&result, "1.2K USD");
+        qjs_intl_number_body_clear(&allocator, &result);
+        assert(!qjs_intl_compact_pattern_find(&data, &map, 12, QJS_INTL_COMPACT_OTHER,
+                                              QJS_INTL_COMPACT_STANDARD, &selected));
+        assert(!qjs_intl_number_compact_format(&allocator, &data, &selected, &symbols,
+                                                &body, 100, &result));
+        expected(&result, "USD 1.2K");
+        qjs_intl_number_body_clear(&allocator, &result);
+    }
     assert(!state.live);
     return 0;
 }

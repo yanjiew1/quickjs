@@ -618,6 +618,24 @@ only leading/trailing Unicode White_Space becomes `literal` parts. This includes
 hyphens inside the pinned yrl long names. Sign display remains an outer-style
 operation, not a selection of the compact pattern's negative form.
 
+The positive compact renderer also emits resolved currency tokens as separate
+`currency` parts, including explicit empty text. It preserves compact-name
+boundaries and emits caller-filtered currency gaps only at directly adjacent
+number/currency tokens. Currency selection, scalar predicates and alpha-family
+policy belong to the native service, not this renderer.
+
+`sign-affix.c` provides allocation-free sign-envelope projection for wrapping
+that complete compact currency body. It compares each signed affix against the
+positive form on each side of the number and removes maximal common prefix
+and suffix context. Literal comparisons operate on Unicode scalars, so partial
+UTF-8 code-point matches cannot corrupt the retained slices. Accounting
+parentheses, signs and signed-only controls remain; unsigned spaces and bidi
+controls are not emitted twice. Residual currency/percent tokens are rejected.
+Projection is an explicit native composition policy, not an LDML pattern
+rewrite. Its input token arrays are disjoint; the selected array is compacted
+in place and still borrows immutable literal storage. Compact currency service
+selection and integration remain pending.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
 Compact currency, unit styles, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default

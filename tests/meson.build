@@ -1206,6 +1206,8 @@ standalone = {
   'test_intl_number_affix': [
     'test_intl_number_affix.c',
     '../src/intl/number/affix.c',
+    '../src/intl/number/sign-affix.c',
+    '../src/cutils/cutils.c',
     '../src/intl/number/body.c',
   ],
   'test_intl_number_round': [

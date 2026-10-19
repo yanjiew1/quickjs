@@ -718,8 +718,8 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
     }
     if (!status && has_compact) {
         status = qjs_intl_number_compact_format(
-            &formatter->allocator, &formatter->compact, &compact, formatter->symbols.minus,
-            formatter->symbols.plus, &body, formatter->body.maximum_output_length, &notation_body);
+            &formatter->allocator, &formatter->compact, &compact, &formatter->symbols, &body,
+            formatter->body.maximum_output_length, &notation_body);
         if (!status) {
             qjs_intl_number_body_clear(&formatter->allocator, &body);
             body = notation_body;
