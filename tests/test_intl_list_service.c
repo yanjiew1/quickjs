@@ -116,7 +116,7 @@ int main(void)
     assert(qjs_intl_list_open(&allocator, &service) == QJS_INTL_OK);
     calls = state.calls;
     assert(qjs_intl_list_available(service, &locales, &count) == QJS_INTL_OK);
-    assert(TEST_INTL_PROFILE ? count > 1000 : count == 1);
+    assert(TEST_INTL_PROFILE ? count > 1000 : count == 2);
     for (i = 0; i < count; i++) {
         assert(locales[i].length &&
                !(locales[i].length == 4 && !memcmp(locales[i].data, "root", 4)));
