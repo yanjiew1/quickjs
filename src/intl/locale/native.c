@@ -3,6 +3,8 @@
 #include "locale.h"
 #include "native-id.h"
 #include "preference-data.h"
+#include "matching.h"
+#include <string.h>
 
 struct QJSIntlLocaleService {
     QJSIntlAllocator allocator;
@@ -52,6 +54,47 @@ void qjs_intl_locale_result_free(const QJSIntlLocaleService *service, char *resu
 {
     if (result)
         service->allocator.free(service->allocator.opaque, result);
+}
+
+QJSIntlStatus qjs_intl_locale_profile_match(const QJSIntlLocaleService *service,
+                                          QJSIntlBytes request, QJSIntlBytes *out)
+{
+    const QJSIntlData *data;
+    QJSIntlBytes *available;
+    QJSIntlLocaleMatch match;
+    QJSIntlStatus status;
+    size_t count = 0;
+    uint32_t i;
+
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!service || !out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    data = &service->metadata.data;
+    if (data->locales.count < 2)
+        return QJS_INTL_DATA_ERROR;
+    if (sizeof(*available) > SIZE_MAX / (data->locales.count - 1))
+        return QJS_INTL_OVERFLOW;
+    available = service->allocator.malloc(service->allocator.opaque,
+                                           (size_t)(data->locales.count - 1) * sizeof(*available));
+    if (!available)
+        return QJS_INTL_NO_MEMORY;
+    for (i = 0; i < data->locales.count; i++) {
+        QJSIntlBytes tag;
+        uint32_t parent;
+        qjs_intl_data_locale(data, i, &tag, &parent);
+        if (parent != UINT32_MAX)
+            available[count++] = tag;
+    }
+    status = qjs_intl_lookup_matching_locale(available, count, &request, 1, &match);
+    if (!status) {
+        if (match.found)
+            *out = available[match.available_index];
+        else
+            status = QJS_INTL_UNSUPPORTED;
+    }
+    service->allocator.free(service->allocator.opaque, available);
+    return status;
 }
 
 QJSIntlStatus qjs_intl_locale_week_data(const QJSIntlLocaleService *service,
