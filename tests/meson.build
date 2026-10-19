@@ -346,6 +346,61 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_list_test = executable(
+    'test_intl_list_service_' + profile,
+    [
+      'test_intl_list_service.c',
+      '../src/intl/list/native.c',
+      '../src/intl/list/native-engine.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/unicode/libunicode.c',
+      '../src/cutils/cutils.c',
+      unicode_tables,
+      intl_fixture,
+    ],
+    c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-list-service-' + profile,
+    intl_list_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_inventory_test = executable(
+    'test_intl_locale_inventory_' + profile,
+    [
+      'test_intl_locale_inventory.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/locale/identifier.c',
+      '../src/intl/locale/native-id.c',
+      '../src/intl/locale/native-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      intl_fixture,
+    ],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  intl_inventory_env = environment()
+  if host_machine.cpu_family() == 'aarch64' and cc.get_id() == 'gcc' and get_option('b_sanitize').contains('address')
+    # GCC ARM64 fake-stack scanning dominates this exhaustive data-only pass.
+    # Functional and allocation-failure tests retain use-after-return checks,
+    # as do Clang and the other platforms' full inventory checks.
+    intl_inventory_env.append('ASAN_OPTIONS', 'detect_stack_use_after_return=0', separator: ':')
+  endif
+  test(
+    'intl-locale-inventory-' + profile,
+    intl_inventory_test,
+    suite: ['repo', 'native'],
+    env: intl_inventory_env,
+    timeout: 30,
+  )
 endforeach
 
 standalone = {
