@@ -1203,6 +1203,93 @@ function intl_plural_range(n)
     return n * 100;
 }
 
+function intl_number_construct(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.NumberFormat("en");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_number_format(n)
+{
+    var format = new Intl.NumberFormat("en").format;
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = format(i + 1234.125);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_number_decimal(n)
+{
+    var format = new Intl.NumberFormat("en").format;
+    var input = "123456789012345678901234567890.125";
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = format(input);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_number_bigint(n)
+{
+    var format = new Intl.NumberFormat("en").format;
+    var input = 123456789012345678901234567890n;
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = format(input);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_number_parts(n)
+{
+    var formatter = new Intl.NumberFormat("en", { style: "currency", currency: "USD" });
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatToParts(i + 1234.125);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_number_range(n)
+{
+    var formatter = new Intl.NumberFormat("en");
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatRange(i + 0.125, i + 0.875);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_number_unit(n)
+{
+    var format = new Intl.NumberFormat("en", {
+        style: "unit", unit: "meter-per-second", unitDisplay: "long", notation: "compact"
+    }).format;
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = format(i + 1234.125);
+        global_res = result;
+    }
+    return n * 100;
+}
+
 // Contrast common short normalization with a disordered nonstarter run.
 // Cache source strings per case; fresh JavaScript processes reset the cache.
 function string_normalize_short(n)
@@ -1889,6 +1976,16 @@ function main(argc, argv, g)
         test_list.push(intl_plural_select);
         test_list.push(intl_plural_decimal);
         test_list.push(intl_plural_range);
+    }
+    if (typeof Intl === "object" && typeof Intl.NumberFormat === "function") {
+        test_list.push(intl_number_construct);
+        test_list.push(intl_number_format);
+        test_list.push(intl_number_decimal);
+        if (typeof BigInt === "function")
+            test_list.push(intl_number_bigint);
+        test_list.push(intl_number_parts);
+        test_list.push(intl_number_range);
+        test_list.push(intl_number_unit);
     }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")
