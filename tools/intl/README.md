@@ -350,6 +350,49 @@ referenced. Projection prunes unused maps; global fraction facts remain intact.
 The decoder checks defaults, ordering, extents and references before resolving
 semantic fields. No code-name text or plural-name fallback is synthesized.
 
+`src/intl/currency/data.c` validates that schema against an unchanged open
+data view and exposes borrowed exact code/field queries. It also returns the
+stored default fraction facts for well-formed codes without a specific row,
+including unknown display codes. Queries allocate no memory. Temporary open
+validation memory is released on every path. The data owner does not select
+plural fallback, currency availability, display style or formatter behavior.
+
+## Number range and currency layouts
+
+`number_layout.py` resolves miscellaneous range/approximation/at-least/at-most
+templates, currency-name unit templates, currency-spacing match sets/insertion
+text and legacy ISO append patterns. They are distinct from numeric skeletons
+and per-currency display fields. Alias interpretation is typed and limited to
+the reviewed group/spacing paths, with requesting-locale and explicit-source
+semantics. Text and UnicodeSet expressions remain exact source facts.
+
+Miscellaneous templates and currency boundaries are required for each numeric
+system. Currency-name selectors and the ISO append pattern may be absent,
+blocked or explicitly empty. In particular, root `arab` has spacing but lacks
+currency-name templates; this collector does not invent a cross-system fallback.
+Selecting plural/currency-name fallback and interpreting spacing predicates
+belong to later consumers. CI audits the authenticated full source inventory;
+this collector or its packed records establish no formatter capability.
+
+Section 20 has the shared locale count in its directory and four little-endian
+header words: schema version 1, numeric-system count, shared vector count and
+shared row count. Exact numeric numbering-definition indexes follow, then one
+shared-row index per locale. Each sorted unique row has one vector index per
+numeric system. Each sorted unique vector has nineteen string references in
+collector field order. Absent and blocked optional fields use `0xffffffff` and
+`0xfffffffe`; explicitly empty text uses string index zero. Required templates
+and match predicates cannot be absent, blocked or empty; required insertion
+text can be empty. Ordinary pooled references cannot contain inheritance or
+block markers. Validation checks complete shared-row/vector coverage and exact
+locale/numeric-system coverage before exposing semantic fields.
+
+`src/intl/number/layout-data.c` validates section 20 against the shared numbering
+inventory and exposes allocation-free exact locale/system queries. Strings
+borrow immutable pack storage; empty VALUE text differs from absent/blocked
+fields. Open releases its validation scratch on success and failure. Parsing
+templates, evaluating UnicodeSet predicates and selecting formatter fallback
+are separate consumer responsibilities.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
