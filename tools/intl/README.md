@@ -1607,6 +1607,24 @@ Unicode bracket-nesting algorithm. Tests distinguish ASCII/fullwidth brackets,
 literal apostrophes, both fold orders, empty labels, malformed/absent templates,
 supplementary characters, output bounds, allocation failures and result lifetime.
 
+`display/display.h` is the backend-neutral DisplayNames service contract. The
+native implementation composes the shared names, currency, date-field and locale
+metadata readers; it does not open other Intl formatting services. Its available
+locale list contains prepared non-root locale records and stays independent of
+the raw code inventories. Admitted locales have usable inherited language-name
+composition templates. A valid code need not have a localized field.
+
+Formatters copy resolved options and immutable compiled-data views. Calendar
+formatters additionally own their derived calendar-name projection, so all
+formatters can outlive the creating service. Native queries return owned UTF-16
+plus a distinct presence flag. Core code canonicalization and API code/none
+fallback remain outside the backend. Currency uses its uncounted name at every
+width, including present empty/code-identical names. Date-field queries use the
+exact requested width and ordinary alternate. Simple label conversion and result
+cleanup belong to `display/text`, shared with language composition. Repository
+tests cover both profiles, all six kinds, all twelve date fields at three widths,
+standard/dialect dispatch, numeric regions, limits, allocator failures and lifetimes.
+
 ## Shared date-field labels
 
 `date_field_names.py` owns the twelve ECMA-402 date-field labels across long,
