@@ -113,6 +113,7 @@ native_test_names = [
   'test_intl_number_oom',
   'test_intl_relative_oom',
   'test_intl_duration_oom',
+  'test_intl_display_oom',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -1430,6 +1431,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/datetime/field-data.c',
       '../src/intl/display/calendar-names.c',
       '../src/intl/display/native.c',
+      '../src/intl/datetime/field.c',
       '../src/intl/locale/native-data.c',
     ),
     c_args: host_args,
@@ -2320,6 +2322,7 @@ if intl_enabled
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
     'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
+    'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],
   }
 endif
 if shared_modules

@@ -221,35 +221,21 @@ static QJSIntlStatus currency_name(const QJSIntlDisplayFormatter *formatter, QJS
 static QJSIntlStatus date_name(const QJSIntlDisplayFormatter *formatter, QJSIntlBytes code,
                                QJSIntlBytes *text, int *found)
 {
-    static const struct {
-        const char *code;
-        QJSIntlDateField field;
-    } fields[] = {
-        {"era", QJS_INTL_DATE_ERA}, {"year", QJS_INTL_DATE_YEAR},
-        {"quarter", QJS_INTL_DATE_QUARTER}, {"month", QJS_INTL_DATE_MONTH},
-        {"weekOfYear", QJS_INTL_DATE_WEEK_OF_YEAR}, {"weekday", QJS_INTL_DATE_WEEKDAY},
-        {"day", QJS_INTL_DATE_DAY}, {"dayPeriod", QJS_INTL_DATE_DAY_PERIOD},
-        {"hour", QJS_INTL_DATE_HOUR}, {"minute", QJS_INTL_DATE_MINUTE},
-        {"second", QJS_INTL_DATE_SECOND}, {"timeZoneName", QJS_INTL_DATE_TIME_ZONE_NAME}
-    };
     static const QJSIntlDateFieldWidth widths[] = {
         QJS_INTL_DATE_FIELD_LONG, QJS_INTL_DATE_FIELD_SHORT, QJS_INTL_DATE_FIELD_NARROW
     };
-    size_t i;
-    for (i = 0; i < sizeof(fields) / sizeof(*fields); i++) {
-        if (code.length == strlen(fields[i].code) && !memcmp(code.data, fields[i].code, code.length)) {
-            QJSIntlDateFieldLabel label;
-            QJSIntlStatus status = qjs_intl_date_field_label_at(&formatter->date, formatter->locale,
-                                                               fields[i].field,
-                                                               widths[formatter->options.style], 0, &label);
-            if (!status && label.state == QJS_INTL_DATE_FIELD_VALUE) {
-                *found = 1;
-                *text = label.text;
-            }
-            return status;
-        }
+    QJSIntlDateField field;
+    QJSIntlDateFieldLabel label;
+    QJSIntlStatus status = qjs_intl_date_field_from_code(code, &field);
+    if (status)
+        return status;
+    status = qjs_intl_date_field_label_at(&formatter->date, formatter->locale, field,
+                                         widths[formatter->options.style], 0, &label);
+    if (!status && label.state == QJS_INTL_DATE_FIELD_VALUE) {
+        *found = 1;
+        *text = label.text;
     }
-    return QJS_INTL_INVALID_ARGUMENT;
+    return status;
 }
 
 QJSIntlStatus qjs_intl_display_format(const QJSIntlDisplayFormatter *formatter, QJSIntlBytes code,
