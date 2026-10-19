@@ -13,6 +13,9 @@ typedef struct QJSIntlLocaleService QJSIntlLocaleService;
 QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator,
                                    QJSIntlLocaleService **out);
 void qjs_intl_locale_close(QJSIntlLocaleService *service);
+/* Syntax failure is OK with *well_formed=0; resource failures remain errors. */
+QJSIntlStatus qjs_intl_locale_validate(const QJSIntlLocaleService *service,
+                                      QJSIntlBytes input, int *well_formed);
 
 /* Length-bearing Unicode locale input. On success, return a separately owned
    NUL-terminated string, released using the supplied allocator's free callback.

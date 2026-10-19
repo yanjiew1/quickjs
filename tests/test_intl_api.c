@@ -4,6 +4,13 @@
 
 #ifdef CONFIG_INTL
 #include "pool-padding.h"
+static JSValue call_operation(JSContext *ctx, JSValueConst function,
+                               JSValueConst argument, int operation)
+{
+    return operation == 3 ? JS_CallConstructor(ctx, function, 1, &argument) :
+                            JS_Call(ctx, function, JS_UNDEFINED, 1, &argument);
+}
+
 static void test_failures(int operation)
 {
     size_t step, allocations = 0, samples = 0, failed = 0;
@@ -23,11 +30,14 @@ static void test_failures(int operation)
         if (operation) {
             assert(JS_AddIntrinsicIntl(ctx) == 0);
             object = JS_GetPropertyStr(ctx, global, "Intl");
-            function = JS_GetPropertyStr(ctx, object, "getCanonicalLocales");
-            argument = JS_NewString(ctx, "iw-Qaai-BU");
+            function = JS_GetPropertyStr(ctx, object,
+                                          operation == 3 ? "Locale" : "getCanonicalLocales");
+            argument = JS_NewString(ctx, operation == 3 ?
+                "iw-Qaai-BU-u-ca-islamicc-co-foobar-fw-sun-hc-h23-kf-upper-kn-nu-arab" :
+                "iw-Qaai-BU");
             assert(!JS_IsException(argument) && JS_IsFunction(ctx, function));
-            if (operation == 2) {
-                result = JS_Call(ctx, function, JS_UNDEFINED, 1, &argument);
+            if (operation >= 2) {
+                result = call_operation(ctx, function, argument, operation);
                 assert(!JS_IsException(result));
                 JS_FreeValue(ctx, result);
                 result = JS_UNDEFINED;
@@ -39,7 +49,7 @@ static void test_failures(int operation)
                 1 + (allocations - 1) * (step - 1) / (samples - 1);
         oom_test_begin(&allocator, fail_at);
         if (operation) {
-            result = JS_Call(ctx, function, JS_UNDEFINED, 1, &argument);
+            result = call_operation(ctx, function, argument, operation);
             status = JS_IsException(result) ? -1 : 0;
         } else {
             status = JS_AddIntrinsicIntl(ctx);
@@ -60,7 +70,7 @@ static void test_failures(int operation)
             failed++;
             oom_test_check_exception(ctx);
             if (operation) {
-                result = JS_Call(ctx, function, JS_UNDEFINED, 1, &argument);
+                result = call_operation(ctx, function, argument, operation);
                 assert(!JS_IsException(result));
             } else {
                 JSValue absent = JS_GetPropertyStr(ctx, global, "Intl");
@@ -73,7 +83,12 @@ static void test_failures(int operation)
             assert(!JS_HasException(ctx));
         }
         assert(JS_AddIntrinsicIntl(ctx) == 0);
-        if (operation) {
+        if (operation == 3) {
+            const char *text = JS_ToCString(ctx, result);
+            assert(text && !strcmp(text,
+                "he-Zinh-MM-u-ca-islamic-civil-co-foobar-fw-sun-hc-h23-kf-upper-kn-nu-arab"));
+            JS_FreeCString(ctx, text);
+        } else if (operation) {
             JSValue length = JS_GetPropertyStr(ctx, result, "length");
             JSValue first = JS_GetPropertyUint32(ctx, result, 0);
             const char *text = JS_ToCString(ctx, first);
@@ -142,6 +157,7 @@ int main(void)
     test_failures(0);
     test_failures(1);
     test_failures(2);
+    test_failures(3);
 #endif
     return 0;
 }
