@@ -6,6 +6,7 @@
 #ifdef CONFIG_INTL
 #include "../../intl/locale/locale.h"
 #include "../../intl/list/list.h"
+#include "../../intl/plural/plural.h"
 
 typedef struct JSIntlLocaleList {
     char **items;
@@ -18,6 +19,7 @@ QJSIntlAllocator js_intl_allocator(JSRuntime *rt);
 int js_intl_ensure_intrinsics(JSContext *ctx);
 int js_intl_init_locale(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_list_format(JSContext *ctx, JSValueConst namespace_object);
+int js_intl_init_plural_rules(JSContext *ctx, JSValueConst namespace_object);
 JSValue js_intl_create_from_constructor(JSContext *ctx, JSValueConst new_target,
                                         JSClassID class_id);
 JSValue js_intl_options_object(JSContext *ctx, JSValueConst value, BOOL coerce);
