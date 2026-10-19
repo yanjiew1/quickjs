@@ -207,6 +207,7 @@ enum {
 #ifdef CONFIG_INTL
     JS_CLASS_INTL_LOCALE,
     JS_CLASS_INTL_LIST_FORMAT,
+    JS_CLASS_INTL_PLURAL_RULES,
 #endif
     JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
 };
