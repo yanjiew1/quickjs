@@ -181,6 +181,8 @@ if intl_enabled
     'intl/plural/native-engine.c',
     'intl/plural/rules.c',
     'intl/relative/data.c',
+    'intl/relative/format.c',
+    'intl/relative/native.c',
     'intl/unit/identifier.c',
     'intl/unit/data.c',
     'intl/unit/format.c',
