@@ -1314,3 +1314,16 @@ Inspect a verified source cache without changing prepared packs:
 ```sh
 python3 tools/intl/duration_patterns.py --sources path/to/cldr-49-beta4
 ```
+
+`src/quickjs/builtins/duration-value.[ch]` provides the shared JavaScript-to-record
+conversion needed by DurationFormat and Temporal. It copies branded duration
+slots when available, or reads object fields in alphabetical order, or parses
+a duration string. It preserves exact integral binary64 fields, including time
+components outside the signed 64-bit range, and validates their combined bound.
+Failures leave the caller's output record unchanged.
+
+This conversion does not create a Temporal object, initialize its intrinsics,
+or require Temporal constructors to be enabled. Temporal's existing conversion
+then creates its result object from the validated record. The native duration,
+epoch and unit arithmetic sources are shared when either feature is enabled;
+calendar and time-zone implementations are not pulled into Intl-only builds.
