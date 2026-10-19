@@ -4,6 +4,9 @@
 #include "number.h"
 #include "affix.h"
 #include "body.h"
+#include "compact-data.h"
+#include "compact-format.h"
+#include "../plural/native-engine.h"
 #include "symbol-data.h"
 #include "../../cutils/cutils.h"
 #include <limits.h>
@@ -16,6 +19,8 @@ struct QJSIntlNumberService {
     QJSIntlNumberingData numbering;
     QJSIntlNumberPatternData patterns;
     QJSIntlNumberSymbolData symbols;
+    QJSIntlCompactData compact;
+    QJSIntlPluralData plurals;
     QJSIntlBytes *available;
     uint32_t root;
 };
@@ -29,6 +34,10 @@ struct QJSIntlNumberFormatter {
     QJSIntlNumberPatternToken *tokens;
     size_t offsets[SCIENTIFIC_FORM + 1], counts[SCIENTIFIC_FORM + 1];
     QJSIntlUTF16 exponent_separator, exponent_minus;
+    QJSIntlCompactData compact;
+    QJSIntlCompactMap compact_map;
+    QJSIntlPluralRuleSet cardinal;
+    QJSIntlCompactScale *scales;
 };
 
 void qjs_intl_number_close(QJSIntlNumberService *service)
@@ -67,6 +76,12 @@ QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *allocator, QJSIntlNum
     if (status)
         goto fail;
     status = qjs_intl_number_symbol_data_open(&service->numbering, allocator, &service->symbols);
+    if (status)
+        goto fail;
+    status = qjs_intl_compact_data_open(&service->numbering, allocator, &service->compact);
+    if (status)
+        goto fail;
+    status = qjs_intl_plural_data_open(&data, allocator, &service->plurals);
     if (status)
         goto fail;
     if (data.locales.count < 2) {
@@ -151,6 +166,8 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
                 allocator.free(allocator.opaque, (void *)owned[i]);
         if (formatter->tokens)
             allocator.free(allocator.opaque, formatter->tokens);
+        if (formatter->scales)
+            allocator.free(allocator.opaque, formatter->scales);
         allocator.free(allocator.opaque, formatter);
     }
 }
@@ -209,12 +226,12 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         (unsigned int)options->notation > QJS_INTL_NUMBER_COMPACT ||
         (unsigned int)options->grouping > QJS_INTL_NUMBER_GROUP_MIN2 ||
         (unsigned int)options->sign_display > QJS_INTL_NUMBER_SIGN_NEGATIVE ||
-        !options->maximum_output_length || qjs_intl_decimal_options_validate(&options->digits) ||
+        options->compact_long > 1 || !options->maximum_output_length ||
+        qjs_intl_decimal_options_validate(&options->digits) ||
         (!system_name.data && system_name.length))
         return QJS_INTL_INVALID_ARGUMENT;
-    if (options->notation == QJS_INTL_NUMBER_COMPACT)
-        return QJS_INTL_UNSUPPORTED;
-    has_scientific = options->notation != QJS_INTL_NUMBER_STANDARD;
+    has_scientific = options->notation == QJS_INTL_NUMBER_SCIENTIFIC ||
+                     options->notation == QJS_INTL_NUMBER_ENGINEERING;
     if (!system_name.length) {
         status = qjs_intl_number_default_system(service, locale, &system_name);
         if (status)
@@ -343,6 +360,45 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     if (!status && has_scientific)
         status = decode(&service->allocator, symbols.fields[QJS_INTL_SYMBOL_MINUS].text,
                         &formatter->exponent_minus);
+    if (!status && options->notation == QJS_INTL_NUMBER_COMPACT) {
+        QJSIntlCompactPattern entry;
+        uint32_t j;
+        size_t count = 0;
+        formatter->compact = service->compact;
+        status = qjs_intl_compact_map_at(&service->compact, source, index,
+                                         options->compact_long ? QJS_INTL_COMPACT_DECIMAL_LONG
+                                                               : QJS_INTL_COMPACT_DECIMAL_SHORT,
+                                         &formatter->compact_map);
+        if (status)
+            goto fail;
+        status = qjs_intl_plural_rules_at(&service->plurals, source, QJS_INTL_PLURAL_CARDINAL,
+                                          &formatter->cardinal);
+        if (status)
+            goto fail;
+        for (j = 0; j < formatter->compact_map.count; j++) {
+            qjs_intl_compact_pattern_at(&service->compact, &formatter->compact_map, j, &entry);
+            if (entry.count == QJS_INTL_COMPACT_OTHER && entry.variant == QJS_INTL_COMPACT_STANDARD)
+                count++;
+        }
+        if (!count || count > SIZE_MAX / sizeof(*formatter->scales)) {
+            status = QJS_INTL_DATA_ERROR;
+            goto fail;
+        }
+        formatter->scales = service->allocator.malloc(service->allocator.opaque,
+                                                      count * sizeof(*formatter->scales));
+        if (!formatter->scales) {
+            status = QJS_INTL_NO_MEMORY;
+            goto fail;
+        }
+        count = 0;
+        for (j = 0; j < formatter->compact_map.count; j++) {
+            qjs_intl_compact_pattern_at(&service->compact, &formatter->compact_map, j, &entry);
+            if (entry.count == QJS_INTL_COMPACT_OTHER && entry.variant == QJS_INTL_COMPACT_STANDARD)
+                formatter->scales[count++] = (QJSIntlCompactScale){entry.magnitude, entry.exponent};
+        }
+        formatter->rounding.compact = formatter->scales;
+        formatter->rounding.compact_count = count;
+    }
     if (status)
         goto fail;
     *out = formatter;
@@ -425,13 +481,88 @@ static QJSIntlStatus append_exponent(const QJSIntlNumberFormatter *formatter,
     return QJS_INTL_OK;
 }
 
+static int is_one(const QJSIntlDecimal *number)
+{
+    size_t i;
+    if (number->digits[0] != '1' || (int64_t)number->length + number->exponent != 1)
+        return 0;
+    for (i = 1; i < number->length; i++)
+        if (number->digits[i] != '0')
+            return 0;
+    return 1;
+}
+
+static int compact_candidate(const QJSIntlNumberFormatter *formatter, uint32_t magnitude,
+                             QJSIntlCompactCount count, const QJSIntlCompactPattern *baseline,
+                             QJSIntlCompactPattern *out)
+{
+    QJSIntlStatus status =
+        qjs_intl_compact_pattern_find(&formatter->compact, &formatter->compact_map, magnitude,
+                                      count, QJS_INTL_COMPACT_STANDARD, out);
+    /* CLDR requires a common divisor for one threshold/family. Some pinned
+       inherited forms disagree (e.g. vec's count-one raw "0"). Keep the
+       selected scale: incompatible or unavailable forms use OTHER rather
+       than dropping the magnitude or rounding at a second scale. */
+    return !status && out->state == QJS_INTL_NUMBER_PATTERN_VALUE &&
+           out->exponent == baseline->exponent;
+}
+
+static QJSIntlStatus compact_pattern(const QJSIntlNumberFormatter *formatter,
+                                   const QJSIntlRoundedNumber *number,
+                                   QJSIntlCompactPattern *out)
+{
+    size_t lo = 0, hi = formatter->rounding.compact_count;
+    QJSIntlCompactPattern baseline, pattern;
+    QJSIntlPluralOperands operands;
+    QJSIntlPluralCategory category;
+    QJSIntlStatus status;
+    uint32_t magnitude;
+    int exact = -1;
+    if (!number->exponent)
+        return QJS_INTL_UNSUPPORTED; /* No notation affix at exponent zero. */
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        if (number->notation_magnitude >= 0 &&
+            formatter->scales[mid].magnitude <= (uint64_t)number->notation_magnitude)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    if (!lo)
+        return QJS_INTL_DATA_ERROR;
+    magnitude = formatter->scales[lo - 1].magnitude;
+    qjs_intl_compact_pattern_find(&formatter->compact, &formatter->compact_map, magnitude,
+                                  QJS_INTL_COMPACT_OTHER, QJS_INTL_COMPACT_STANDARD, &baseline);
+    if (baseline.mode == QJS_INTL_COMPACT_FALLBACK)
+        return QJS_INTL_UNSUPPORTED;
+    if (number->number.rounded.length == 1 && number->number.rounded.digits[0] == '0')
+        exact = QJS_INTL_COMPACT_EXACT_ZERO;
+    else if (is_one(&number->number.rounded))
+        exact = QJS_INTL_COMPACT_EXACT_ONE;
+    if (exact < 0 || !compact_candidate(formatter, magnitude, exact, &baseline, &pattern)) {
+        /* This plural context chooses the compact affix from the visible
+           rounded mantissa, not the expanded quantity used for outer units. */
+        operands = (QJSIntlPluralOperands){number->number.text, number->number.length, 0};
+        status = qjs_intl_native_plural_select(&formatter->cardinal, &operands, &category);
+        if (status)
+            return status;
+        if (!compact_candidate(formatter, magnitude, category + QJS_INTL_COMPACT_ZERO, &baseline,
+                               &pattern))
+            pattern = baseline;
+    }
+    *out = pattern;
+    return QJS_INTL_OK;
+}
+
 QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                                      const QJSIntlMathematicalValue *value, QJSIntlFormatted *out)
 {
     QJSIntlRoundedNumber rounded = {0};
     QJSIntlFormatted body = {0}, exponent_body = {0}, notation_body = {0};
+    QJSIntlCompactPattern compact = {0};
     QJSIntlStatus status;
     unsigned int form;
+    int has_compact = 0;
     if (out)
         memset(out, 0, sizeof(*out));
     if (!out || !formatter || !value)
@@ -439,11 +570,22 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
     status = qjs_intl_number_round(&formatter->allocator, &formatter->rounding, value, &rounded);
     if (!status)
         status = qjs_intl_number_sign_pattern(formatter->sign_display, &rounded, &form);
-    if (!status)
+    if (!status && formatter->rounding.notation == QJS_INTL_NUMBER_COMPACT &&
+        (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO)) {
+        status = compact_pattern(formatter, &rounded, &compact);
+        has_compact = status == QJS_INTL_OK;
+        if (status == QJS_INTL_UNSUPPORTED)
+            status = QJS_INTL_OK;
+    }
+    /* Literal compact forms omit the numeric body entirely (e.g. "mille").
+       Its unused padded/localized digits must not consume the output bound. */
+    if (!status && (!has_compact || compact.mode != QJS_INTL_COMPACT_LITERAL))
         status = qjs_intl_number_body_format(
             &formatter->allocator, &formatter->body, rounded.kind,
             (QJSIntlBytes){rounded.number.text, rounded.number.length}, &body);
-    if (!status && formatter->rounding.notation != QJS_INTL_NUMBER_STANDARD &&
+    if (!status &&
+        (formatter->rounding.notation == QJS_INTL_NUMBER_SCIENTIFIC ||
+         formatter->rounding.notation == QJS_INTL_NUMBER_ENGINEERING) &&
         (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO)) {
         status = append_exponent(formatter, &body, rounded.exponent, &exponent_body);
         if (!status)
@@ -451,6 +593,16 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                 &formatter->allocator, formatter->tokens + formatter->offsets[SCIENTIFIC_FORM],
                 formatter->counts[SCIENTIFIC_FORM], &formatter->symbols, &exponent_body, 0,
                 formatter->body.maximum_output_length, &notation_body);
+        if (!status) {
+            qjs_intl_number_body_clear(&formatter->allocator, &body);
+            body = notation_body;
+            memset(&notation_body, 0, sizeof(notation_body));
+        }
+    }
+    if (!status && has_compact) {
+        status = qjs_intl_number_compact_format(
+            &formatter->allocator, &formatter->compact, &compact, formatter->symbols.minus,
+            formatter->symbols.plus, &body, formatter->body.maximum_output_length, &notation_body);
         if (!status) {
             qjs_intl_number_body_clear(&formatter->allocator, &body);
             body = notation_body;
