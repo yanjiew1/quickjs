@@ -570,6 +570,7 @@ void JS_FreeRuntime(JSRuntime *rt)
 #ifdef CONFIG_INTL
     qjs_intl_locale_close(rt->intl_locale);
     qjs_intl_list_close(rt->intl_list);
+    qjs_intl_plural_close(rt->intl_plural);
     js_free_rt(rt, rt->intl_default_locale);
 #endif
 

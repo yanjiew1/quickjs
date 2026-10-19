@@ -178,4 +178,5 @@ tests/test_date_temporal_bridge.js
 tests/test_intl_locale.js
 tests/test_intl_locale_object.js
 tests/test_intl_list_format.js
+tests/test_intl_plural_rules.js
 tests/test_intl_locale_preferences.js
