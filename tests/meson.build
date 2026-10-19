@@ -849,6 +849,38 @@ if intl_enabled
     },
   }]
 
+  intl_relative_owner_sources = files(
+    'test_intl_relative_data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    '../src/intl/relative/data.c',
+  )
+  intl_relative_fixture = custom_target(
+    'intl-relative-authored-fixture',
+    output: 'intl-relative-authored-fixture.c',
+    command: [python, files('intl_relative_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_list_patterns.py',
+      'test_intl_relative_patterns.py',
+    ),
+  )
+  intl_relative_authored = {
+    'name': 'test_intl_relative_authored',
+    'sources': intl_relative_owner_sources + [intl_relative_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_AUTHORED=1']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_relative_authored,
+    'name': 'intl-relative-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_unit_owner_sources = files(
     'test_intl_unit_data.c',
     '../src/intl/common/locale-grammar.c',
@@ -1344,6 +1376,21 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_native_number_test,
       'name': ('intl-native-number-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_relative_test = {
+      'name': ('test_intl_relative_data_' + profile),
+      'sources': intl_relative_owner_sources,
+      'c_args': (host_args + ['-DTEST_INTL_AUTHORED=0']),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_relative_test,
+      'name': ('intl-relative-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2046,6 +2093,21 @@ if intl_enabled
     timeout: 30,
   )
 
+  test(
+    'intl-relative-patterns',
+    python,
+    args: files('test_intl_relative_patterns.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-relative-tables',
+    python,
+    args: files('test_intl_relative_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
   test(
     'intl-unit-tables',
