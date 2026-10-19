@@ -147,3 +147,22 @@ text slices. Temporary graph-validation memory is freed before return, including
 on errors. Separate C repository tests consume both real prepared profiles, so
 the Python encoder and C reader are checked together on every test platform.
 The reader does not authenticate data or provide BCP47 canonicalization.
+
+## Locale metadata audit
+
+```sh
+python3 tools/intl/locale_metadata.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+Collect language, script, territory, variant and subdivision aliases, preserving
+regional replacement priority; named-zone aliases stay with the timezone owner.
+Likely subtags and BCP47 key/type records are separate typed collections. Apply
+LDML's semantic defaults for omitted extension (`u`) and value type (`single`),
+which the DTD itself does not provide. Preserve preferred/deprecated metadata
+and detect cycles or missing preferred targets within the appropriate key.
+Indirect schema names such as `REORDER_CODE` stay distinct from literal types.
+IANA-name and region labels on timezone types are retained as metadata; actual
+zone rules and primary-identifier policy remain with the timezone service.
+Unsupported root-level additions fail explicitly rather than disappearing.
+Legacy alias spellings remain data; they do not widen runtime locale syntax.
+Registry membership does not establish installed service capabilities.

@@ -926,6 +926,14 @@ test(
 )
 
 test(
+  'intl-locale-metadata',
+  python,
+  args: files('test_intl_locale_metadata.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-typed-tables',
   python,
   args: files('test_intl_tables.py'),
