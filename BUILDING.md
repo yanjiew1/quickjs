@@ -89,9 +89,11 @@ CLDR locale-data profiles. Both use the same algorithms and complete locale
 identity metadata. They require no ICU, source-data download or runtime XML
 parser. Prepared CLDR 49 beta 4 data is embedded in one compilation unit.
 
-The current JavaScript entry point is `Intl.getCanonicalLocales()`; the
-constructors and other services are still being implemented. Setup warns about
-this development status. These options do not imply complete Intl conformance.
+Current JavaScript APIs are `Intl.getCanonicalLocales()` and `Intl.Locale`
+construction, getters, `toString()`, `maximize()` and `minimize()`. Locale
+preference methods and formatting services are still being implemented. Setup
+warns about this development status. These options do not imply complete Intl
+conformance.
 Intl can be enabled independently of `-Dtemporal=false`. The embedding entry
 point `JS_AddIntrinsicIntl()` publishes a realm's namespace in a raw context
 after base objects are initialized. It is idempotent, reports exceptions on
