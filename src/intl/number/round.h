@@ -22,6 +22,8 @@ typedef struct QJSIntlNumberRounding {
 
 typedef struct QJSIntlRoundedNumber {
     QJSIntlMathematicalKind kind;
+    /* Final ComputeExponentForMagnitude input; zero when no lookup occurs. */
+    int64_t notation_magnitude;
     int32_t exponent;            /* Notation exponent; does not include percent scaling. */
     QJSIntlDecimalResult number; /* Owned; zeroed for NaN and infinities. */
 } QJSIntlRoundedNumber;
