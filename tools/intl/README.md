@@ -1474,6 +1474,19 @@ excludes only two Duration cases that require unsupported German/Serbian/Chinese
 locales; English array-like locale arguments are covered in the repository tests.
 The native profile keeps both cases.
 
+## Locale numbering-system information
+
+`Locale.prototype.getNumberingSystems()` returns the explicit numbering-system
+slot, including an unknown or empty value. Otherwise it uses prefix matching
+against NumberFormat's available locales and returns that locale's default system
+as a singleton. An unmatched locale returns `latn`, independently of the host
+default. This follows the pinned NumberingSystemsOfLocale algorithm, which does
+not enumerate all supported digit repertoires. Binding-level orchestration shares
+the runtime's Number service; the locale identity backend has no NumberFormat
+dependency. Repository checks include a Unix Bengali host-default environment,
+branding, foreign-realm arrays, fresh results and inherited index setters. The
+corresponding Locale Test262 group is enabled in CI.
+
 ## DisplayNames JavaScript binding
 
 Both enabled profiles expose `Intl.DisplayNames`, `supportedLocalesOf`, `of`
