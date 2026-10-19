@@ -813,9 +813,9 @@ heads borrow immutable owners; rendering needs at most four fragments per
 affix and allocates only the final text and parts arrays.
 
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Ranges and the JS binding remain required
-before registration. Repository tests exercise every prepared locale's default
-numeric system and allocation failure at every service/open/format allocation.
+The JS binding remains required before registration. Repository tests exercise
+every prepared locale's default numeric system and allocation failure at every
+service/open/format allocation.
 
 ### Number range rendering
 
@@ -833,6 +833,14 @@ to implement TR35's sign-slot placement. Modern approximation uses the selected
 numeric symbols' `approximatelySign`, not the obsolete miscellaneous
 approximately pattern. Endpoint formatting and NaN rejection belong to the
 service; this rendering prerequisite does not register the JavaScript API.
+
+The native service caches the selected locale/numbering system's borrowed range
+separator and modern approximation symbol in the formatter. It rejects either
+NaN endpoint before formatting, then formats both endpoints independently and
+clears both intermediate results on every path. Descending ranges are allowed.
+Identical inputs, equal infinities and distinct values with equal displayed
+text all use approximation. Combined output bounds include the separator/sign.
+Cached text survives service closure; final text/parts survive formatter closure.
 
 Range parts have their own source-bearing record; ordinary result parts remain
 unchanged. The shared scalar text writer supplies UTF-16 encoding and bounds,

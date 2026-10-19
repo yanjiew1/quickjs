@@ -948,6 +948,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/number/currency-pattern.c',
       '../src/intl/number/layout-data.c',
       '../src/intl/number/native.c',
+      '../src/intl/number/range.c',
       '../src/intl/number/unit.c',
       '../src/intl/unit/data.c',
       '../src/intl/unit/grammar-data.c',
