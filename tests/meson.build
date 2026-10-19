@@ -108,6 +108,7 @@ native_test_names = [
   'test_intl_api',
   'test_intl_defaults',
   'test_intl_list_oom',
+  'test_intl_plural_oom',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -1409,6 +1410,7 @@ if intl_enabled
     'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
     'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
     'intl-list-format': ['-m', 'tests/test_intl_list_format.js'],
+    'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
   }
 endif
 if shared_modules

@@ -365,6 +365,17 @@ formatter, bounded-output errors and allocation failures throughout opening,
 individual selection and range selection. This C facade alone does not publish
 a JavaScript constructor.
 
+The binding in `src/quickjs/builtins/intl/plural-rules.c` publishes PluralRules
+with constructor/subclass realms, exact mathematical coercion, category arrays,
+digit options and select/selectRange. Formatter ownership belongs to the JS
+instance; the native service is initialized lazily and belongs to its runtime.
+Repository JS tests cover observable behavior and C allocation-failure tests
+cover partial construction, resolved objects and selection retries. CI runs the
+whole PluralRules Test262 directory for native. English-only minimal excludes
+two unconditional multilingual-data expectations; its API behavior remains
+covered in the repository suite. Optional microbenchmarks measure construction,
+Number selection, exact decimal selection and ranges.
+
 `plural_rules.py` reads cardinal, ordinal and range supplemental data through
 the checked DTD and source reader. Conditions exclude sample annotations and
 normalize Pattern_White_Space; runtime tokens and integer bounds are checked
