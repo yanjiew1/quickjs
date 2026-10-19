@@ -36,6 +36,27 @@ on:
     - '*'
 
 jobs:
+  intl-source-data:
+    name: Pinned native Intl source data
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v7
+    - name: Verify offline acquisition contracts
+      run: |
+        python3 tests/test_intl_sources.py
+    - name: Acquire and authenticate pinned CLDR data
+      run: |
+        timeout 180s python3 tools/intl/acquire.py \
+          --cache "$RUNNER_TEMP/intl-cache"
+    - name: Audit pinned XML documents and DTD attribute schema
+      run: |
+        timeout 120s python3 tools/intl/cldr_xml.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit locale inheritance graphs
+      run: |
+        timeout 60s python3 tools/intl/parents.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
   calendar-data:
     name: Native calendar data regeneration
     runs-on: ubuntu-latest
