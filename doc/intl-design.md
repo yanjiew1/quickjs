@@ -455,6 +455,12 @@ uses its own bundled versions; never combine newer native alias/plural data
 silently into an otherwise ICU4C profile. Record Unicode, CLDR, tzdb and model
 versions individually, since their release/version numbers are not interchangeable.
 
+The built-in data uses the CLDR 49 production common ZIP, published
+2026-10-22, from `release-49` commit
+`96e54b273d2da4ec6fbad350ba19ff23fa24a588`. The separate full-Git pin
+is available when generating data for additional locales. Upgrades require
+regeneration and validation of the selected source distribution.
+
 ## CLDR XML collection and resolution
 
 Read released CLDR XML using Python's standard-library ElementTree, one input
