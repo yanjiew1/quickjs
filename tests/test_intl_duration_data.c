@@ -1,6 +1,7 @@
 /* Immutable digital-duration facts, exact queries, corruption and allocation failure.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/duration/data.h"
+#include "../src/intl/duration/native-digital.h"
 #include "../src/intl/native/wire.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -168,6 +169,20 @@ static void check_queries(const QJSIntlDurationData *owner)
     assert(qjs_intl_duration_pattern_at(owner, 0, 0, NULL) == QJS_INTL_INVALID_ARGUMENT);
 }
 
+static void check_projection(const QJSIntlDurationData *owner, const QJSIntlAllocator *allocator)
+{
+    uint32_t locale;
+    for (locale = 0; locale < owner->section.count; locale++) {
+        QJSIntlDurationPattern pattern;
+        QJSIntlNativeDurationDigital digital;
+        assert(!qjs_intl_duration_pattern_at(owner, locale, QJS_INTL_DURATION_HMS, &pattern));
+        assert(pattern.state == QJS_INTL_DURATION_PATTERN_VALUE);
+        assert(!qjs_intl_duration_native_digital(allocator, pattern.text, &digital));
+        assert(digital.hour_width == 1 || digital.hour_width == 2);
+        qjs_intl_duration_native_digital_clear(allocator, &digital);
+    }
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -184,6 +199,7 @@ int main(void)
     assert(calls);
     check_queries(&owner);
     assert(state.calls == calls); /* Every query is allocation-free. */
+    check_projection(&owner, &allocator);
 #if TEST_INTL_AUTHORED
     assert(calls >= 2); /* Validation scratch and multi-variant origin scratch. */
     check_corruption(&owner, &allocator);
