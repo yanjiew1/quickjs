@@ -89,6 +89,9 @@ static const FeatureEntry feature_list[] = {
 #ifdef CONFIG_TEMPORAL
     { "temporal", "Temporal" },
 #endif
+#ifdef CONFIG_INTL
+    { "intl", "Intl" },
+#endif
 };
 
 void namelist_add(namelist_t *lp, const char *name, const char *short_name,

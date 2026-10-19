@@ -81,6 +81,23 @@ meson compile -C build-value-check quickjs-value-check
 This separate representation is checked at compile time; it is never linked
 into the interpreter used by runtime tests.
 
+## Intl development profiles
+
+Intl is currently incomplete and disabled by default. `-Dintl=minimal` and
+`-Dintl=native` enable the native implementation with English/root or full
+CLDR locale-data profiles. Both use the same algorithms and complete locale
+identity metadata. They require no ICU, source-data download or runtime XML
+parser. Prepared CLDR 49 beta 4 data is embedded in one compilation unit.
+
+The current JavaScript entry point is `Intl.getCanonicalLocales()`; the
+constructors and other services are still being implemented. Setup warns about
+this development status. These options do not imply complete Intl conformance.
+Intl can be enabled independently of `-Dtemporal=false`. The embedding entry
+point `JS_AddIntrinsicIntl()` publishes a realm's namespace in a raw context
+after base objects are initialized. It is idempotent, reports exceptions on
+failure and throws TypeError in a disabled build. Normal `JS_NewContext()`
+contexts initialize the compiled feature automatically.
+
 ## Temporal
 
 Temporal is enabled by default on this branch with all standard native calendars

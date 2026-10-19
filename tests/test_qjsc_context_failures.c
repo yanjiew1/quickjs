@@ -89,12 +89,22 @@ static int fault_add_temporal(JSContext *ctx)
 }
 #endif
 #ifdef CONFIG_INTL
+#include "pool-padding.h"
 static int fault_add_intl(JSContext *ctx)
 {
     int result;
+    JSRuntime *rt = JS_GetRuntime(ctx);
+    void *padding = selected_failure == FAIL_INTL ? test_pool_padding(rt) : NULL;
+
+    /* Keep the simulated shortage active: an optional cache allocation can
+       consume the first failed request before a mandatory allocation occurs. */
+    if (selected_failure == FAIL_INTL)
+        JS_SetMemoryLimit(rt, 0);
     arm_failure(FAIL_INTL);
     result = JS_AddIntrinsicIntl(ctx);
     allocation.failure_at = 0;
+    JS_SetMemoryLimit(rt, (size_t)-1);
+    test_pool_padding_free(rt, padding);
     return result;
 }
 #endif

@@ -26,9 +26,9 @@ component_test_specs = []
 
 # Stage-local test capabilities follow the selected runtime. Foundation tests
 # remain available before their eventual build option is introduced.
-calendar_enabled = get_option('temporal')
-native_calendars = get_option('temporal') and get_option('calendars') == 'native'
-native_timezones = get_option('temporal') and get_option('timezone_backend') == 'native'
+calendar_enabled = (get_option('temporal') or intl_enabled)
+native_calendars = (get_option('temporal') or intl_enabled) and get_option('calendars') == 'native'
+native_timezones = (get_option('temporal') or intl_enabled) and get_option('timezone_backend') == 'native'
 calendar_test_sources = []
 timezone_test_sources = []
 system_timezone_test_sources = []
@@ -270,6 +270,7 @@ endif
 # Tests that include an implementation need archive extraction, not link_whole.
 native_test_names = [
   'test_duration_record',
+  'test_intl_api',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -304,6 +305,9 @@ native_test_names = [
 ]
 foreach name : native_test_names
   public_consumer = name in public_native_test_names
+  if name.startswith('test_intl_') and name not in ['test_intl_api', 'test_intl_defaults'] and not intl_enabled
+    continue
+  endif
   if name == 'test_temporal_oom' and not get_option('temporal')
     continue
   endif
@@ -486,33 +490,11 @@ endforeach
 
 
 # Build engine-independent library tests against their actual owners.
-intl_locale_fixture = custom_target(
-  'intl-locale-authored-fixture',
-  output: 'intl-locale-authored-fixture.c',
-  command: [python, files('intl_locale_fixture.py'), '--output', '@OUTPUT@'],
-  depend_files: files(
-    '../tools/intl/acquire.py',
-    '../tools/intl/bundle.py',
-    '../tools/intl/cldr_xml.py',
-    '../tools/intl/list_patterns.py',
-    '../tools/intl/locale_metadata.py',
-    '../tools/intl/locale_tables.py',
-    '../tools/intl/parents.py',
-    '../tools/intl/resolve.py',
-    '../tools/intl/tables.py',
-  ),
-)
-foreach profile : ['minimal', 'native']
-  intl_fixture = custom_target(
-    'intl-prepared-' + profile,
-    input: files('../data/intl/' + profile + '.bin'),
-    output: 'intl-prepared-' + profile + '.c',
-    command: [
-      python,
-      files('../tools/intl/embed.py'),
-      '--input', '@INPUT@',
-      '--output', '@OUTPUT@',
-    ],
+if intl_enabled
+  intl_locale_fixture = custom_target(
+    'intl-locale-authored-fixture',
+    output: 'intl-locale-authored-fixture.c',
+    command: [python, files('intl_locale_fixture.py'), '--output', '@OUTPUT@'],
     depend_files: files(
       '../tools/intl/acquire.py',
       '../tools/intl/bundle.py',
@@ -525,82 +507,111 @@ foreach profile : ['minimal', 'native']
       '../tools/intl/tables.py',
     ),
   )
-  intl_data_test = {
-    'name': ('test_intl_data_' + profile),
-    'sources': files(
-      'test_intl_data.c',
-      '../src/intl/native/data.c',
-      '../src/intl/native/pack.c',
-      '../src/intl/locale/native-data.c',
-      '../src/intl/common/locale-grammar.c',
-    ) + [intl_fixture],
-    'c_args': (host_args + [
-      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
-    ]),
-    'override_options': ['b_ndebug=false'],
-  }
-  component_test_specs += [{
-    'target': intl_data_test,
-    'name': ('intl-prepared-' + profile),
-    'options': {
-      'suite': ['repo', 'native'],
-      'timeout': 30,
-    },
-  }]
-  intl_locale_test = {
-    'name': ('test_intl_locale_id_' + profile),
-    'sources': files(
-      'test_intl_native_locale_id.c',
+  foreach profile : [get_option('intl')]
+    intl_fixture = custom_target(
+      'intl-prepared-' + profile,
+      input: files('../data/intl/' + profile + '.bin'),
+      output: 'intl-prepared-' + profile + '.c',
+      command: [
+        python,
+        files('../tools/intl/embed.py'),
+        '--input', '@INPUT@',
+        '--output', '@OUTPUT@',
+      ],
+      depend_files: files(
+        '../tools/intl/acquire.py',
+        '../tools/intl/bundle.py',
+        '../tools/intl/cldr_xml.py',
+        '../tools/intl/list_patterns.py',
+        '../tools/intl/locale_metadata.py',
+        '../tools/intl/locale_tables.py',
+        '../tools/intl/parents.py',
+        '../tools/intl/resolve.py',
+        '../tools/intl/tables.py',
+      ),
+    )
+    intl_data_test = {
+      'name': ('test_intl_data_' + profile),
+      'sources': files(
+        'test_intl_data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+        '../src/intl/locale/native-data.c',
+        '../src/intl/common/locale-grammar.c',
+      ) + [intl_fixture],
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_data_test,
+      'name': ('intl-prepared-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_locale_test = {
+      'name': ('test_intl_locale_id_' + profile),
+      'sources': files(
+        'test_intl_native_locale_id.c',
+        '../src/intl/locale/native.c',
+        '../src/intl/locale/native-id.c',
+        '../src/intl/locale/native-data.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+      ) + [intl_fixture],
+      'c_args': host_args,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_locale_test,
+      'name': ('intl-locale-id-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+  endforeach
+endif
+
+# Preserve authored synthetic providers; ordinary tests use the selected sources.
+standalone = {
+}
+if intl_enabled
+  standalone += {
+    'test_intl_locale_data': files(
+      'test_intl_locale_data.c',
       '../src/intl/locale/native-id.c',
       '../src/intl/locale/native-data.c',
       '../src/intl/common/locale-grammar.c',
       '../src/intl/native/data.c',
       '../src/intl/native/pack.c',
-    ) + [intl_fixture],
-    'c_args': host_args,
-    'override_options': ['b_ndebug=false'],
+    ) + [intl_locale_fixture],
+    'test_intl_pack': files(
+      'test_intl_pack.c',
+      '../src/intl/native/pack.c',
+    ),
+    'test_intl_locale_grammar': files(
+      'test_intl_locale_grammar.c',
+      '../src/intl/common/locale-grammar.c',
+    ),
+    'test_intl_number_decimal': files(
+      'test_intl_number_decimal.c',
+      '../src/intl/common/decimal.c',
+      '../src/intl/common/number-decimal.c',
+      '../src/dtoa/dtoa.c',
+      '../src/cutils/cutils.c',
+    ),
+    'test_intl_decimal': files(
+      'test_intl_decimal.c',
+      '../src/intl/common/decimal.c',
+    ),
   }
-  component_test_specs += [{
-    'target': intl_locale_test,
-    'name': ('intl-locale-id-' + profile),
-    'options': {
-      'suite': ['repo', 'native'],
-      'timeout': 30,
-    },
-  }]
-endforeach
-
-# Preserve authored synthetic providers; ordinary tests use the selected sources.
-standalone = {
-}
+endif
 standalone += {
-  'test_intl_locale_data': files(
-    'test_intl_locale_data.c',
-    '../src/intl/locale/native-id.c',
-    '../src/intl/locale/native-data.c',
-    '../src/intl/common/locale-grammar.c',
-    '../src/intl/native/data.c',
-    '../src/intl/native/pack.c',
-  ) + [intl_locale_fixture],
-  'test_intl_pack': files(
-    'test_intl_pack.c',
-    '../src/intl/native/pack.c',
-  ),
-  'test_intl_locale_grammar': files(
-    'test_intl_locale_grammar.c',
-    '../src/intl/common/locale-grammar.c',
-  ),
-  'test_intl_number_decimal': files(
-    'test_intl_number_decimal.c',
-    '../src/intl/common/decimal.c',
-    '../src/intl/common/number-decimal.c',
-    '../src/dtoa/dtoa.c',
-    '../src/cutils/cutils.c',
-  ),
-  'test_intl_decimal': files(
-    'test_intl_decimal.c',
-    '../src/intl/common/decimal.c',
-  ),
 
 }
 
@@ -921,6 +932,11 @@ else
     'rw-handler': ['tests/test_rw_handler.js'],
   }
 endif
+if intl_enabled
+  js_tests += {
+    'intl-locale': ['-m', 'tests/test_intl_locale.js'],
+  }
+endif
 if shared_modules
   js_tests += {
     'bjson': ['tests/test_bjson.js'],
@@ -1051,69 +1067,71 @@ if native_calendars
   )
 endif
 
-test(
-  'intl-locale-metadata',
-  python,
-  args: files('test_intl_locale_metadata.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+if intl_enabled
+  test(
+    'intl-locale-metadata',
+    python,
+    args: files('test_intl_locale_metadata.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
-test(
-  'intl-typed-tables',
-  python,
-  args: files('test_intl_tables.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+  test(
+    'intl-typed-tables',
+    python,
+    args: files('test_intl_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
-test(
-  'intl-binary-envelope',
-  python,
-  args: files('test_intl_bundle.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+  test(
+    'intl-binary-envelope',
+    python,
+    args: files('test_intl_bundle.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
-test(
-  'intl-list-patterns',
-  python,
-  args: files('test_intl_list_patterns.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+  test(
+    'intl-list-patterns',
+    python,
+    args: files('test_intl_list_patterns.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
-test(
-  'intl-record-resolution',
-  python,
-  args: files('test_intl_resolution.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+  test(
+    'intl-record-resolution',
+    python,
+    args: files('test_intl_resolution.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
-test(
-  'intl-locale-inheritance',
-  python,
-  args: files('test_intl_parents.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+  test(
+    'intl-locale-inheritance',
+    python,
+    args: files('test_intl_parents.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
-test(
-  'intl-xml-schema',
-  python,
-  args: files('test_intl_xml.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+  test(
+    'intl-xml-schema',
+    python,
+    args: files('test_intl_xml.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
 
-test(
-  'intl-source-acquisition',
-  python,
-  args: files('test_intl_sources.py'),
-  suite: ['repo', 'native', 'unit'],
-  timeout: 30,
-)
+  test(
+    'intl-source-acquisition',
+    python,
+    args: files('test_intl_sources.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+endif
 
 if native_timezones
   test(
@@ -1146,7 +1164,7 @@ if not meson.is_cross_build() and host_machine.system() != 'windows'
       files('test_qjsc_executable.py'),
       qjsc,
       ' '.join(expected_flags),
-      'n',
+      intl_enabled ? 'y' : 'n',
       get_option('temporal') ? 'y' : 'n',
       get_option('b_lto') ? lto_flag : '',
       'libquickjs' + library_suffix,
