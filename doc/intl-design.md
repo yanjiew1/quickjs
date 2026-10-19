@@ -455,6 +455,15 @@ uses its own bundled versions; never combine newer native alias/plural data
 silently into an otherwise ICU4C profile. Record Unicode, CLDR, tzdb and model
 versions individually, since their release/version numbers are not interchangeable.
 
+For this first implementation, the user selected CLDR 49 beta to align with
+Unicode 18. Pin `release-49-beta4` (published 2026-10-12), commit
+`7cdeb9e7fac52c59f22fc7248b05f989ee5689c2`, reviewed 2026-10-19.
+This is an explicit prerelease exception to the normal release policy. Record
+the beta qualifier in generated provenance; upgrading to the final release
+requires regeneration and validation rather than silently changing the inputs.
+Use the complete release-tag source tree, since production ZIPs may omit
+records before our service collectors apply their documented selection policy.
+
 ## CLDR XML collection and resolution
 
 Read released CLDR XML using Python's standard-library ElementTree, one input
