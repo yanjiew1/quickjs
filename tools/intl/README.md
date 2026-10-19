@@ -151,6 +151,16 @@ order, numeric scalar uniqueness, rule syntax and mandatory Latin/root data.
 Both profiles retain complete numbering metadata, including synthetic regional
 fallbacks. Rule references are not formatter support declarations.
 
+`src/intl/locale/numbering-data.c` owns the C schema validation and borrowed
+definition/preference queries. It checks exact-key ordering, Unicode digit
+repertoires and rule syntax before publishing a view. Source locale grammar
+and casing are checked without alias inference; duplicate variant detection
+uses checked temporary storage and sorting for long keys. Accessors allocate
+nothing and apply no implicit locale fallback. Real-profile and authored C
+tests cover astral digits, unaligned storage, optional states, allocation
+failure/retry, long keys, malformed fields and section shapes. These queries
+are metadata infrastructure; future number services select actual capabilities.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
