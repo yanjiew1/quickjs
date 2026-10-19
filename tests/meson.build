@@ -1175,6 +1175,36 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_duration_service_test = executable(
+    'test_intl_duration_service_' + profile,
+    intl_number_service_sources + [
+      'test_intl_duration_service.c',
+      '../src/intl/duration/data.c',
+      '../src/intl/duration/decimal.c',
+      '../src/intl/duration/format.c',
+      '../src/intl/duration/native-digital.c',
+      '../src/intl/duration/native.c',
+      '../src/intl/duration/options.c',
+      '../src/intl/list/data.c',
+      '../src/intl/list/native.c',
+      '../src/intl/list/native-engine.c',
+      '../src/temporal/duration.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/options.c',
+      '../src/unicode/libunicode.c',
+    ],
+    c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-duration-service-' + profile,
+    intl_duration_service_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_relative_service_test = executable(
     'test_intl_relative_service_' + profile,
     intl_number_service_sources + [

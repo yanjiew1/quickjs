@@ -31,18 +31,17 @@ static size_t literal(char *out, QJSIntlBytes pattern, size_t start, size_t end)
     return count;
 }
 
-QJSIntlStatus qjs_intl_duration_native_digital(const QJSIntlAllocator *allocator, QJSIntlBytes pattern,
-                                             QJSIntlNativeDurationDigital *out)
+typedef struct DigitalPattern {
+    size_t starts[3], ends[3];
+} DigitalPattern;
+
+static QJSIntlStatus parse(QJSIntlBytes pattern, DigitalPattern *layout)
 {
-    QJSIntlNativeDurationDigital result = {0};
     QJSIntlFormatBuilder validation = {0};
     QJSIntlStatus status;
     size_t at = 0, starts[3], ends[3], fields = 0;
     int quoted = 0;
-    if (out)
-        memset(out, 0, sizeof(*out));
-    if (!out || !allocator || !allocator->malloc || !allocator->free ||
-        (!pattern.data && pattern.length))
+    if (!pattern.data && pattern.length)
         return QJS_INTL_INVALID_ARGUMENT;
     validation.limit = SIZE_MAX;
     status = qjs_intl_format_builder_text(&validation, pattern, NULL, NULL);
@@ -73,16 +72,40 @@ QJSIntlStatus qjs_intl_duration_native_digital(const QJSIntlAllocator *allocator
     }
     if (quoted || fields != 3)
         return QJS_INTL_DATA_ERROR;
+    memcpy(layout->starts, starts, sizeof(starts));
+    memcpy(layout->ends, ends, sizeof(ends));
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_duration_native_digital_validate(QJSIntlBytes pattern)
+{
+    DigitalPattern layout;
+    return parse(pattern, &layout);
+}
+
+QJSIntlStatus qjs_intl_duration_native_digital(const QJSIntlAllocator *allocator, QJSIntlBytes pattern,
+                                             QJSIntlNativeDurationDigital *out)
+{
+    QJSIntlNativeDurationDigital result = {0};
+    DigitalPattern layout;
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !allocator || !allocator->malloc || !allocator->free)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = parse(pattern, &layout);
+    if (status)
+        return status;
     /* Dequoting cannot expand the two nonoverlapping literal slices. */
     result.storage = allocator->malloc(allocator->opaque, pattern.length);
     if (!result.storage)
         return QJS_INTL_NO_MEMORY;
     result.hour_minute.data = result.storage;
-    result.hour_minute.length = literal(result.storage, pattern, ends[0], starts[1]);
+    result.hour_minute.length = literal(result.storage, pattern, layout.ends[0], layout.starts[1]);
     result.minute_second.data = result.storage + result.hour_minute.length;
     result.minute_second.length = literal(result.storage + result.hour_minute.length,
-                                          pattern, ends[1], starts[2]);
-    result.hour_width = (unsigned int)(ends[0] - starts[0]);
+                                          pattern, layout.ends[1], layout.starts[2]);
+    result.hour_width = (unsigned int)(layout.ends[0] - layout.starts[0]);
     *out = result;
     return QJS_INTL_OK;
 }
