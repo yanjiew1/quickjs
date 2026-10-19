@@ -608,6 +608,12 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_locale_matching': files(
+      'test_intl_locale_matching.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/locale/identifier.c',
+      '../src/intl/locale/matching.c',
+    ),
     'test_intl_locale_identifier': files(
       'test_intl_locale_identifier.c',
       '../src/intl/common/locale-grammar.c',
