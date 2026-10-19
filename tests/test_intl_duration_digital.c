@@ -46,6 +46,7 @@ int main(void)
                                       "h:ss:mm", "h:'mm:ss", "'h:mm:ss'", "h:mm:\xffss"};
     char mutable[] = "hh.mm:ss";
     size_t i;
+    assert(!qjs_intl_duration_native_digital_validate(bytes("hh.mm:ss")));
     check(&allocator, "h:mm:ss", ":", ":", 1);
     check(&allocator, "h.mm:ss", ".", ":", 1);
     check(&allocator, "hh.mm.ss", ".", ".", 2);
@@ -56,6 +57,7 @@ int main(void)
     check(&allocator, "h時mm分ss", "時", "分", 1);
     check(&allocator, "hmmss", "", "", 1);
     for (i = 0; i < sizeof(bad) / sizeof(*bad); i++) {
+        assert(qjs_intl_duration_native_digital_validate(bytes(bad[i])) == QJS_INTL_DATA_ERROR);
         memset(&result, 0xff, sizeof(result));
         assert(qjs_intl_duration_native_digital(&allocator, bytes(bad[i]), &result) == QJS_INTL_DATA_ERROR);
         assert(!memcmp(&result, &zero, sizeof(result)));
