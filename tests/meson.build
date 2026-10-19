@@ -948,6 +948,74 @@ if intl_enabled
     },
   }]
 
+  intl_language_match_support_sources = files(
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/display/data.c',
+    '../src/intl/display/language-match.c',
+    '../src/intl/display/select.c',
+    '../src/intl/locale/identifier.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  intl_language_match_sources = intl_language_match_support_sources + files(
+    'test_intl_language_match.c',
+  )
+  intl_language_match_fixture = custom_target(
+    'intl-language-match-fixture',
+    output: 'intl-language-match-fixture.c',
+    command: [python, files('intl_display_fixture.py'), '--language', '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_display_names.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_language_match_test = {
+    'name': 'test_intl_language_match',
+    'sources': intl_language_match_sources + [intl_language_match_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_LANGUAGE_MATCH_PREPARED=0']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_language_match_test,
+    'name': 'intl-language-match',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_language_format_sources = intl_language_match_support_sources + files(
+    'test_intl_language_format.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/common/format-builder.c',
+    '../src/intl/common/pair-pattern.c',
+    '../src/intl/display/language-format.c',
+  )
+  intl_language_format_fixture = custom_target(
+    'intl-language-format-fixture',
+    output: 'intl-language-format-fixture.c',
+    command: [python, files('intl_display_fixture.py'), '--render', '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_display_names.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_language_format_test = {
+    'name': 'test_intl_language_format',
+    'sources': intl_language_format_sources + [intl_language_format_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_LANGUAGE_FORMAT_PREPARED=0']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_language_format_test,
+    'name': 'intl-language-format',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_calendar_name_sources = files(
     'test_intl_calendar_names.c',
     '../src/intl/common/locale-grammar.c',
@@ -1235,6 +1303,7 @@ if intl_enabled
     'name': 'test_intl_unit_pattern',
     'sources': files(
       'test_intl_unit_pattern.c',
+      '../src/intl/common/pair-pattern.c',
       '../src/intl/unit/pattern.c',
       '../src/cutils/cutils.c',
       '../src/intl/unit/data.c',
@@ -1273,6 +1342,7 @@ if intl_enabled
       '../src/intl/unit/format.c',
       '../src/intl/unit/grammar-data.c',
       '../src/intl/unit/identifier.c',
+      '../src/intl/common/pair-pattern.c',
       '../src/intl/unit/pattern.c',
     ) + [intl_unit_fixture],
     'c_args': host_args,
@@ -1313,6 +1383,7 @@ if intl_enabled
     '../src/intl/unit/data.c',
     '../src/intl/unit/grammar-data.c',
     '../src/intl/unit/identifier.c',
+    '../src/intl/common/pair-pattern.c',
     '../src/intl/unit/pattern.c',
     '../src/intl/unit/format.c',
     '../src/intl/number/pattern-data.c',
@@ -1780,6 +1851,36 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_calendar_name_test,
       'name': ('intl-calendar-names-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_language_match_test = {
+      'name': ('test_intl_language_match_' + profile),
+      'sources': intl_language_match_sources,
+      'c_args': (host_args + ['-DTEST_INTL_LANGUAGE_MATCH_PREPARED=1']),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_language_match_test,
+      'name': ('intl-language-match-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_language_format_test = {
+      'name': ('test_intl_language_format_' + profile),
+      'sources': intl_language_format_sources,
+      'c_args': (host_args + ['-DTEST_INTL_LANGUAGE_FORMAT_PREPARED=1']),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_language_format_test,
+      'name': ('intl-language-format-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
