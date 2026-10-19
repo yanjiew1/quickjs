@@ -102,6 +102,45 @@ Unknown relevant structures, mixed aliases, duplicate fields and missing or
 blocked required templates are errors. These templates do not alone implement
 context-sensitive list behavior or install a JavaScript formatter.
 
+## Relative-time source records
+
+```sh
+python3 tools/intl/relative_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The collector resolves the eight RelativeTimeFormat units in long, short and
+narrow widths. It retains terminal locale/unit/width origins, restarts inherited
+field aliases in the requesting locale, and distinguishes missing, blocked and
+explicitly empty values. Default containers are selected before duplicate checks;
+unsupported scoped records and whole-container aliases fail explicitly.
+
+Counted past/future patterns may contain zero or one `{0}` placeholder. Auto
+relative literals preserve braces as text, and retain every discovered canonical
+integer key rather than assuming only yesterday/today/tomorrow. Authored tests
+cover alias inheritance, container selection, markers, malformed source and key
+boundaries. These records are source facts; collecting them does not install RelativeTimeFormat.
+
+Section 23 reserves the resolved relative-time wire schema. It uses little-endian
+words: version, literal-key count, locale-row count, map count and entry count;
+then pooled literal keys, per-locale row indexes, shared 24-column rows, contiguous
+map start/count pairs, and four-word entries. Columns use the collector's unit
+order, then long/short/narrow width. Selectors 0–11 are past/future plural counts;
+12 and above index the sorted literal keys. Entries retain selector, text string
+(or `0xfffffffe` for blocked), source locale string and source unit/width column.
+Missing selectors are absent; pooled empty text remains a value.
+
+The codec checks exact coverage, canonical sharing/order, contiguous extents,
+source identities, integer keys and required long `other` forms. Profile
+projection prunes unused maps/keys but keeps external source identities. The production generator emits this section in both prepared profiles. It is
+not advertised as a RelativeTimeFormat capability until a complete service exists.
+
+`src/intl/relative/data.c` validates the schema in C before exposing immutable
+maps and allocation-free exact pattern/literal queries. It borrows the shared
+pack, releases validation scratch on success and failure, and retains no heap
+state. Source identities may lie outside the selected locale registry. Authored
+and both prepared-profile tests cover queries, unaligned storage, malformed
+records and every reached validation allocation failure.
+
 ## Region and script preferences
 
 ```sh
