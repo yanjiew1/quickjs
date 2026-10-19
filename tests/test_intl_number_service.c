@@ -3,6 +3,7 @@
 #include "../src/intl/number/number.h"
 #include "../src/intl/number/currency-format.h"
 #include "../src/intl/number/currency-pattern.h"
+#include "../src/intl/locale/numbering-data.h"
 #include "../src/intl/unit/identifier.h"
 #include "../src/cutils/cutils.h"
 #include <assert.h>
@@ -115,6 +116,69 @@ static void check(const QJSIntlAllocator *allocator, const QJSIntlNumberService 
     expected(&result, text);
     qjs_intl_number_result_clear(allocator, &result);
     qjs_intl_number_result_clear(allocator, &result);
+}
+
+static void test_system_capabilities(const QJSIntlAllocator *allocator,
+                                     const QJSIntlNumberService *service, size_t en, size_t count)
+{
+    static const char *const unsupported[] = {
+        "", "native", "traditio", "finance", "foobar", "LATN", "latn-extra"};
+    QJSIntlData data;
+    QJSIntlNumberingData numbering;
+    QJSIntlNumberOptions settings = options();
+    QJSIntlMathematicalValue input = value("1234.5");
+    Allocation *state = allocator->opaque;
+    size_t i, before;
+    int supported;
+    assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &data));
+    assert(!qjs_intl_numbering_data_open(&data, allocator, &numbering));
+    for (i = 0; i < numbering.systems.count; i++) {
+        QJSIntlNumberingSystem system;
+        QJSIntlNumberFormatter *formatter;
+        QJSIntlFormatted result;
+        assert(!qjs_intl_numbering_system_at(&numbering, i, &system));
+        before = state->calls;
+        state->fail_at = before + 1;
+        assert(!qjs_intl_number_system_supported(service, en, system.name, &supported));
+        assert(state->calls == before);
+        state->fail_at = 0;
+        assert(supported == (system.kind == QJS_INTL_NUMBERING_NUMERIC));
+        if (!supported)
+            continue;
+        assert(!qjs_intl_number_formatter_open(service, en, system.name, &settings, &formatter));
+        assert(!qjs_intl_number_format(formatter, &input, &result));
+        assert(result.length && result.part_count);
+        qjs_intl_number_result_clear(allocator, &result);
+        qjs_intl_number_formatter_close(formatter);
+    }
+    before = state->calls;
+    for (i = 0; i < count; i++) {
+        QJSIntlBytes system;
+        assert(!qjs_intl_number_default_system(service, i, &system));
+        assert(!qjs_intl_number_system_supported(service, i, system, &supported) && supported);
+    }
+    for (i = 0; i < countof(unsupported); i++) {
+        supported = 1;
+        assert(!qjs_intl_number_system_supported(service, en, bytes(unsupported[i]), &supported));
+        assert(!supported);
+    }
+    assert(!qjs_intl_number_system_supported(service, en, (QJSIntlBytes){0}, &supported));
+    assert(!supported);
+    assert(!qjs_intl_number_system_supported(service, en,
+                                              (QJSIntlBytes){"latn\0arab", 9}, &supported));
+    assert(!supported);
+    supported = 1;
+    assert(qjs_intl_number_system_supported(NULL, en, bytes("latn"), &supported) ==
+           QJS_INTL_INVALID_ARGUMENT && !supported);
+    supported = 1;
+    assert(qjs_intl_number_system_supported(service, count, bytes("latn"), &supported) ==
+           QJS_INTL_INVALID_ARGUMENT && !supported);
+    supported = 1;
+    assert(qjs_intl_number_system_supported(service, en, (QJSIntlBytes){NULL, 1}, &supported) ==
+           QJS_INTL_INVALID_ARGUMENT && !supported);
+    assert(qjs_intl_number_system_supported(service, en, bytes("latn"), NULL) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(state->calls == before);
 }
 
 static void range_expected(const QJSIntlFormattedRange *result, const char *text, int approximate)
@@ -1380,6 +1444,7 @@ int main(void)
     assert(!qjs_intl_number_available(service, &tags, &count));
     assert(count == (TEST_INTL_PROFILE ? 1211 : 2));
     en = find(tags, count, "en");
+    test_system_capabilities(&allocator, service, en, count);
     test_formats(&allocator, service, tags, count);
     test_ranges(&allocator, service, tags, count);
     test_exponent_parts(&allocator, service, en);
