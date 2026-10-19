@@ -37,6 +37,86 @@ class SparseMapTests(unittest.TestCase):
         records.alias('de', ('b',), ('a',), 'en')
         self.assertEqual(records.resolve('de', ('b',), {}), {('value',): 'English'})
 
+    def test_local_overlay_order_and_exact_flattening(self):
+        records = self.records()
+        records.add('root', ('a',), ('one', 'genitive'), 'parent one genitive')
+        records.add('root', ('a',), ('one', ''), 'parent one')
+        records.add('en', ('a',), ('other', ''), 'local other')
+        records.add('en', ('a',), ('one', 'genitive'), INHERIT)
+        records.add('en', ('a',), ('blocked', ''), BLOCK)
+        records.add('en', ('a',), ('empty', ''), '')
+        cache = {}
+        head = records.overlays('en-GB', ('a',), cache)
+        self.assertEqual((head.locale, head.group), ('en', ('a',)))
+        self.assertEqual(head.fields, {('other', ''): 'local other',
+                                        ('blocked', ''): BLOCK, ('empty', ''): ''})
+        self.assertIsNot(head.fields, records.values[('en', ('a',))])
+        self.assertEqual(head.parent.locale, 'root')
+        self.assertEqual(head.parent.fields[('one', 'genitive')], 'parent one genitive')
+        self.assertIsNone(head.parent.parent)
+        self.assertIs(head, records.overlays('en-GB', ('a',), cache))
+        # The raw exact-leaf view remains unchanged. Lateral consumers can
+        # now inspect child OTHER before considering an inherited parent ONE.
+        layers = []
+        while head is not None:
+            layers.append(head.fields)
+            head = head.parent
+        flattened = {}
+        for fields in reversed(layers):
+            flattened.update(fields)
+        self.assertEqual(flattened, records.resolve('en-GB', ('a',), {}))
+
+    def test_overlay_alias_restart_order_and_shared_suffix(self):
+        records = self.records()
+        records.add('root', ('a',), ('one',), 'root one')
+        records.add('en', ('a',), ('other',), 'English other')
+        records.add('en-GB', ('a',), ('one',), INHERIT)
+        records.add('en-GB', ('b',), ('other',), 'British other')
+        records.alias('root', ('b',), ('a',), None)
+        cache = {}
+        head = records.overlays('en-GB', ('b',), cache)
+        self.assertEqual((head.locale, head.group, head.fields),
+                         ('en-GB', ('b',), {('other',): 'British other'}))
+        self.assertIs(head.parent, records.overlays('en-GB', ('a',), cache))
+        self.assertEqual(head.parent.fields, {('other',): 'English other'})
+        self.assertEqual(head.parent.parent.fields, {('one',): 'root one'})
+        self.assertIsNone(head.parent.parent.parent)
+
+    def test_overlay_explicit_source_resets_requester_and_empty_cache(self):
+        records = self.records()
+        cache = {}
+        self.assertIsNone(records.overlays('en', ('a',), cache))
+        self.assertTrue(cache and all(value is None for value in cache.values()))
+        self.assertIsNone(records.overlays('en', ('a',), cache))
+        records = SparseMaps(graph(), (('a',), ('b',), ('c',)), 'authored')
+        records.add('en', ('a',), ('value',), 'English')
+        records.add('de', ('a',), ('value',), 'German')
+        records.alias('de', ('c',), ('b',), 'en')
+        records.alias('root', ('b',), ('a',), None)
+        head = records.overlays('de', ('c',), {})
+        self.assertEqual((head.locale, head.group, head.fields),
+                         ('en', ('a',), {('value',): 'English'}))
+        self.assertIsNone(head.parent)
+
+    def test_deep_overlay_chain_without_recursion(self):
+        class DeepGraph:
+            tags = tuple('level%d' % i for i in range(2200))
+
+            def parent(self, locale):
+                index = int(locale[5:])
+                return 'level%d' % (index - 1) if index else None
+
+        records = SparseMaps(DeepGraph(), (('a',),), 'deep')
+        for i in range(2200):
+            records.add('level%d' % i, ('a',), ('value',), str(i))
+        head = records.overlays('level2199', ('a',), {})
+        count = 0
+        while head is not None:
+            self.assertEqual(head.fields[('value',)], str(2199 - count))
+            head = head.parent
+            count += 1
+        self.assertEqual(count, 2200)
+
     def test_unknown_duplicate_mixed_and_cyclic_states(self):
         records = self.records()
         for locale, key in (('unknown', ('a',)), ('en', ('unknown',))):
@@ -44,6 +124,8 @@ class SparseMapTests(unittest.TestCase):
                 records.add(locale, key, ('value',), '')
             with self.assertRaises(DataError):
                 records.resolve(locale, key, {})
+            with self.assertRaises(DataError):
+                records.overlays(locale, key, {})
         records.add('en', ('a',), ('value',), '')
         with self.assertRaises(DataError):
             records.add('en', ('a',), ('value',), '')
@@ -59,6 +141,8 @@ class SparseMapTests(unittest.TestCase):
         records.alias('root', ('b',), ('a',), None)
         with self.assertRaisesRegex(DataError, 'alias/parent cycle'):
             records.resolve('en', ('a',), {})
+        with self.assertRaisesRegex(DataError, 'alias/parent cycle'):
+            records.overlays('en', ('a',), {})
 
 
 if __name__ == '__main__':
