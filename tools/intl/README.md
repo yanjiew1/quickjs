@@ -102,6 +102,25 @@ Unknown relevant structures, mixed aliases, duplicate fields and missing or
 blocked required templates are errors. These templates do not alone implement
 context-sensitive list behavior or install a JavaScript formatter.
 
+## Relative-time source records
+
+```sh
+python3 tools/intl/relative_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The collector resolves the eight RelativeTimeFormat units in long, short and
+narrow widths. It retains terminal locale/unit/width origins, restarts inherited
+field aliases in the requesting locale, and distinguishes missing, blocked and
+explicitly empty values. Default containers are selected before duplicate checks;
+unsupported scoped records and whole-container aliases fail explicitly.
+
+Counted past/future patterns may contain zero or one `{0}` placeholder. Auto
+relative literals preserve braces as text, and retain every discovered canonical
+integer key rather than assuming only yesterday/today/tomorrow. Authored tests
+cover alias inheritance, container selection, markers, malformed source and key
+boundaries. This stage collects source facts; it neither adds a prepared binary
+section nor installs RelativeTimeFormat.
+
 ## Region and script preferences
 
 ```sh
