@@ -57,6 +57,39 @@ def graph():
 
 
 class ListPatternTests(unittest.TestCase):
+    def test_contextual_replacements_require_matching_individual_templates(self):
+        cases = (
+            ('es-MX', 'standard', ('{0} y {1}', '{0}{1}', '{0}{1}', '{0} & {1}'),
+             (1, '{0} e {1}', '{0} & {1}')),
+            ('es', 'unit', ('{0} & {1}', '{0}{1}', '{0}{1}', '{0} y {1}'),
+             (1, '{0} & {1}', '{0} e {1}')),
+            ('es', 'or', ('{0} o {1}', '{0}{1}', '{0}{1}', '{0} o {1}'),
+             (2, '{0} u {1}', '{0} u {1}')),
+            ('he-IL', 'standard', ('{0} ו{1}', '{0}{1}', '{0}{1}', '{0} ו{1}'),
+             (3, '{0} ו-{1}', '{0} ו-{1}')),
+            ('es', 'standard-narrow', ('{0}, {1}',) * 4, (0, '', '')),
+            ('es', 'or', ('{0} y {1}',) * 4, (0, '', '')),
+            ('en', 'standard', ('{0} y {1}',) * 4, (0, '', '')),
+            ('he', 'or', ('{0} או {1}',) * 4, (0, '', '')),
+        )
+        for locale, variant, values, expected in cases:
+            self.assertEqual(lists.context(locale, variant, values), expected)
+
+    def test_resolved_contexts_follow_inherited_request_locale_patterns(self):
+        sources = Sources()
+        sources.set('es', ET.fromstring('''<ldml><listPatterns><listPattern>
+            <listPatternPart type="2">{0} y {1}</listPatternPart>
+        </listPattern></listPatterns></ldml>'''))
+        sources.set('es_MX', ET.Element('ldml'))
+        expanded = ParentGraph(graph().tags + ('es', 'es-MX'), {}, {},
+                               {'und': 'en-Latn-US'}, (), False)
+        result = lists.collect(sources, expanded)
+        contexts = {(locale, variant): (kind, pair, end)
+                    for locale, variant, kind, pair, end in result['contexts']}
+        self.assertEqual(contexts[('es-MX', 'standard')], (1, '{0} e {1}', ' {0}\u00a0& {1} '))
+        self.assertEqual(contexts[('es-MX', 'unit')], (1, '{0} e {1}', ' {0}\u00a0& {1} '))
+        self.assertEqual(contexts[('es-MX', 'or')], (0, '', ''))
+
     def test_alias_uses_requested_locale_and_exact_text(self):
         sources = Sources()
         sources.set('en', ET.fromstring('''<ldml><listPatterns><listPattern>
