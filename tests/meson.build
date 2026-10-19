@@ -779,6 +779,7 @@ if intl_enabled
     '../src/intl/native/data.c',
     '../src/intl/native/pack.c',
     '../src/intl/unit/data.c',
+    '../src/intl/unit/identifier.c',
   )
   intl_unit_grammar_sources = files(
     'test_intl_unit_grammar_data.c',
@@ -842,6 +843,7 @@ if intl_enabled
     'sources': files(
       'test_intl_unit_pattern.c',
       '../src/intl/unit/pattern.c',
+      '../src/cutils/cutils.c',
       '../src/intl/unit/data.c',
       '../src/intl/common/locale-grammar.c',
       '../src/intl/common/source-locale.c',
@@ -854,6 +856,38 @@ if intl_enabled
   component_test_specs += [{
     'target': intl_unit_pattern_test,
     'name': 'intl-unit-pattern',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_number_unit_test = {
+    'name': 'test_intl_number_unit',
+    'sources': files(
+      'test_intl_number_unit.c',
+      '../src/cutils/cutils.c',
+      '../src/intl/common/format-builder.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/intl/number/unit.c',
+      '../src/intl/plural/data.c',
+      '../src/intl/plural/native-engine.c',
+      '../src/intl/plural/rules.c',
+      '../src/intl/unit/data.c',
+      '../src/intl/unit/format.c',
+      '../src/intl/unit/grammar-data.c',
+      '../src/intl/unit/identifier.c',
+      '../src/intl/unit/pattern.c',
+    ) + [intl_unit_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_number_unit_test,
+    'name': 'intl-number-unit',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
@@ -1178,6 +1212,7 @@ if intl_enabled
         '../src/intl/number/native.c',
         '../src/intl/number/unit.c',
         '../src/intl/unit/data.c',
+        '../src/intl/unit/grammar-data.c',
         '../src/intl/unit/identifier.c',
         '../src/intl/unit/pattern.c',
         '../src/intl/unit/format.c',
