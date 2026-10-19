@@ -582,6 +582,11 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_locale_identifier': files(
+      'test_intl_locale_identifier.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/locale/identifier.c',
+    ),
     'test_intl_locale_data': files(
       'test_intl_locale_data.c',
       '../src/intl/locale/native-id.c',
@@ -937,6 +942,7 @@ endif
 if intl_enabled
   js_tests += {
     'intl-locale': ['-m', 'tests/test_intl_locale.js'],
+    'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
   }
 endif
 if shared_modules

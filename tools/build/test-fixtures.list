@@ -176,3 +176,4 @@ tests/test_temporal_zero_zoned_duration_boundaries.js
 tests/test_temporal_plain_date_duration_balance.js
 tests/test_date_temporal_bridge.js
 tests/test_intl_locale.js
+tests/test_intl_locale_object.js

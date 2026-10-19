@@ -204,6 +204,9 @@ enum {
     JS_CLASS_TEMPORAL_ZONED_DATE_TIME,
 #endif
 
+#ifdef CONFIG_INTL
+    JS_CLASS_INTL_LOCALE,
+#endif
     JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
 };
 
