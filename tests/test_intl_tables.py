@@ -31,6 +31,7 @@ from test_intl_currencies import Sources as CurrencySources
 from test_intl_number_layout import Sources as LayoutSources
 from test_intl_unit_patterns import Sources as UnitSources
 from test_intl_unit_grammar import Sources as GrammarSources
+from test_intl_relative_patterns import Sources as RelativeSources
 import number_patterns
 import number_pattern_syntax
 from resolve import BLOCK
@@ -128,6 +129,11 @@ class VerifiedFixture(Sources):
         self.files['common/dtd/ldmlSupplemental.dtd'] += (
             b'<!ELEMENT currencyData' + currency_source.files[
                 'common/dtd/ldmlSupplemental.dtd'].split(b'<!ELEMENT currencyData', 1)[1])
+        relative_source = RelativeSources()
+        relative_dtd = re.sub(br'<!ATTLIST alias (?:source|path|alt) [^>]*>',
+                              b'', relative_source.files['common/dtd/ldml.dtd'])
+        self.files['common/dtd/ldml.dtd'] += relative_dtd
+        root.append(ET.fromstring(relative_source.files['common/main/root.xml']).find('dates'))
         self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
         plural_source = PluralSources()
         self.files['common/dtd/ldmlSupplemental.dtd'] += (
