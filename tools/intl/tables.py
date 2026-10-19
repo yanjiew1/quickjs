@@ -10,6 +10,7 @@ import unit_grammar_tables
 import relative_tables
 import duration_tables
 import date_field_tables
+import display_tables
 import locale_tables
 import numbering_tables
 import number_symbol_tables
@@ -230,4 +231,5 @@ def validate(binary):
             'unit_grammar': unit_grammar_tables.decode(sections.get(bundle.UNIT_GRAMMAR), strings, tags),
             'relative_patterns': relative_tables.decode(sections.get(bundle.RELATIVE_PATTERNS), strings, tags),
             'duration_patterns': duration_tables.decode(sections.get(bundle.DURATION_PATTERNS), strings, tags),
-            'date_field_names': date_field_tables.decode(sections.get(bundle.DATE_FIELD_NAMES), strings, tags)}
+            'date_field_names': date_field_tables.decode(sections.get(bundle.DATE_FIELD_NAMES), strings, tags),
+            'display_names': display_tables.decode(sections.get(bundle.DISPLAY_NAMES), strings, tags)}

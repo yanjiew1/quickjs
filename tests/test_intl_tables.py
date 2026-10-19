@@ -141,6 +141,13 @@ class VerifiedFixture(Sources):
                               b'', relative_source.files['common/dtd/ldml.dtd'])
         self.files['common/dtd/ldml.dtd'] += relative_dtd
         root.append(ET.fromstring(relative_source.files['common/main/root.xml']).find('dates'))
+        self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT localeDisplayNames ANY>
+          <!ELEMENT languages ANY><!ELEMENT language (#PCDATA)>
+          <!ATTLIST language type NMTOKEN #REQUIRED>'''
+        display = ET.SubElement(root, 'localeDisplayNames')
+        languages = ET.SubElement(display, 'languages')
+        ET.SubElement(languages, 'language', type='en').text = 'English'
+        ET.SubElement(languages, 'language', type='zh_Hant').text = 'Traditional Chinese'
         self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
         plural_source = PluralSources()
         self.files['common/dtd/ldmlSupplemental.dtd'] += (
@@ -205,6 +212,12 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
             date_fields = view['date_field_names']
+            names = view['display_names']
+            self.assertEqual(len(names['rows']), len(view['locales']) * len(names['groups']))
+            head = next(head for tag, group, head in names['rows']
+                        if (tag, group) == ('en', 'language'))
+            locale, group, index, parent = names['nodes'][head - 1]
+            self.assertIn(('en', '', '', '', 'English'), names['maps'][index])
             self.assertIsNotNone(date_fields)
             self.assertEqual(date_fields['alternates'], ('', 'variant'))
             date_labels = {row[:4]: row[4:] for row in date_fields['rows']}
