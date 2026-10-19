@@ -537,6 +537,24 @@ grammatical/plural/width fallback and formatter capability belong to consumers.
 Overlay queries additionally expose each borrowed local map and its source
 locale, width/group and next ID, without allocating or performing fallback.
 
+`src/intl/unit/pattern.c` adapts these chains to number-bearing single-unit
+patterns. Within one layer, exact numeric 0/1 precedes the source's cardinal
+category and OTHER; each count tries requested case, nominative and absent
+case. Empty case requests mean grammatical nominative. Numeric callers retain
+their rounded visible operands in a source-rule callback; fixed category mode
+serves grammatical component counts and nonfinite OTHER. Missing source rules
+propagate failure instead of silently substituting requester rules.
+
+The native adapter skips valid literal-only and explicitly empty forms while
+preserving them as raw data. BLOCK and ineligible values suppress their exact
+parent path, not unrelated alternatives. A bounded shadow mask also remembers
+locally present categories that a later source might select differently. A
+consulted malformed template is a data error. The prefix/suffix parser supports
+one `{0}` with literal apostrophes and possibly empty affixes; it does not import
+decimal-pattern quoting. Selection allocates nothing and returns borrowed
+source/selector provenance. Unit rendering and the NumberFormat binding remain
+separate requirements.
+
 ## Localized numeric bodies
 
 `src/intl/number/body.c` renders an already rounded unsigned plain decimal as
