@@ -375,11 +375,11 @@ static void test_formats(const QJSIntlAllocator *allocator, QJSIntlNumberService
           (QJSIntlMathematicalValue){QJS_INTL_POSITIVE_INFINITY, {0}}, "∞");
     check(allocator, service, en, (QJSIntlBytes){0}, &settings,
           (QJSIntlMathematicalValue){QJS_INTL_NAN, {0}}, "NaN");
-    check(allocator, service, en, bytes("arab"), &settings, value("1234"), "١٫٢٣اس3");
-    check(allocator, service, en, bytes("mathbold"), &settings, value("1234"), "𝟏.𝟐𝟑E3");
-    check(allocator, service, en, bytes("arab"), &settings, value("0"), "٠اس0");
-    check(allocator, service, en, bytes("mathbold"), &settings, value("0"), "𝟎E0");
-    check(allocator, service, en, bytes("arab"), &settings, value("1e-25"), "١اس؜-25");
+    check(allocator, service, en, bytes("arab"), &settings, value("1234"), "١٫٢٣اس٣");
+    check(allocator, service, en, bytes("mathbold"), &settings, value("1234"), "𝟏.𝟐𝟑E𝟑");
+    check(allocator, service, en, bytes("arab"), &settings, value("0"), "٠اس٠");
+    check(allocator, service, en, bytes("mathbold"), &settings, value("0"), "𝟎E𝟎");
+    check(allocator, service, en, bytes("arab"), &settings, value("1e-25"), "١اس؜-٢٥");
     settings.digits.minimum_integer_digits = 4;
     settings.grouping = QJS_INTL_NUMBER_GROUP_ALWAYS;
     check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1234"), "0001.23E3");
@@ -664,7 +664,7 @@ static void test_exponent_parts(const QJSIntlAllocator *allocator,
 {
     QJSIntlNumberOptions settings = options();
     QJSIntlNumberFormatter *formatter;
-    QJSIntlFormatted result;
+    QJSIntlFormatted result, zero = {0};
     QJSIntlMathematicalValue input = value("0.00012345");
     static const QJSIntlPartType types[] = {
         QJS_INTL_PART_INTEGER,
@@ -690,7 +690,7 @@ static void test_exponent_parts(const QJSIntlAllocator *allocator,
     settings.notation = QJS_INTL_NUMBER_SCIENTIFIC;
     assert(!qjs_intl_number_formatter_open(service, en, bytes("arab"), &settings, &formatter));
     assert(!qjs_intl_number_format(formatter, &input, &result));
-    expected(&result, "١٫٢٣اس؜-4");
+    expected(&result, "١٫٢٣اس؜-٤");
     assert(result.part_count == sizeof(types) / sizeof(types[0]));
     for (i = 0; i < result.part_count; i++)
         assert(result.parts[i].type == types[i]);
@@ -698,8 +698,35 @@ static void test_exponent_parts(const QJSIntlAllocator *allocator,
     assert(result.parts[4].end - result.parts[4].start == 2);
     assert(result.text[result.parts[4].start] == 0x061c);
     assert(result.parts[5].end - result.parts[5].start == 1);
+    assert(result.text[result.parts[5].start] == 0x0664);
     qjs_intl_number_result_clear(allocator, &result);
     qjs_intl_number_formatter_close(formatter);
+
+    /* Supplementary exponent digits belong to one part spanning UTF-16 units,
+       and count toward the same output bound as the mantissa and separator. */
+    input = value("1e25");
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("mathbold"), &settings, &formatter));
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    expected(&result, "𝟏E𝟐𝟓");
+    assert(result.part_count == 3);
+    assert(result.parts[2].type == QJS_INTL_PART_EXPONENT_INTEGER);
+    assert(result.parts[2].start == 3 && result.parts[2].end == 7);
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+
+    input = value("0");
+    for (i = 4; i <= 5; i++) {
+        settings.maximum_output_length = i;
+        assert(!qjs_intl_number_formatter_open(service, en, bytes("mathbold"), &settings, &formatter));
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_number_format(formatter, &input, &result) == (i == 4 ? QJS_INTL_OVERFLOW : QJS_INTL_OK));
+        if (i == 4)
+            assert(!memcmp(&result, &zero, sizeof(result)));
+        else
+            expected(&result, "𝟎E𝟎");
+        qjs_intl_number_result_clear(allocator, &result);
+        qjs_intl_number_formatter_close(formatter);
+    }
 }
 
 static void test_compound_units(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
