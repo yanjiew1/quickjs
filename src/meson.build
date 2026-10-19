@@ -129,6 +129,7 @@ engine_sources += files(
 )
 if intl_enabled
   engine_sources += files(
+    'quickjs/builtins/intl/duration-format.c',
     'quickjs/builtins/intl/locale.c',
     'quickjs/builtins/intl/locale-list.c',
     'quickjs/builtins/intl/list-format.c',
