@@ -1474,6 +1474,33 @@ excludes only two Duration cases that require unsupported German/Serbian/Chinese
 locales; English array-like locale arguments are covered in the repository tests.
 The native profile keeps both cases.
 
+## DisplayNames JavaScript binding
+
+Both enabled profiles expose `Intl.DisplayNames`, `supportedLocalesOf`, `of`
+and `resolvedOptions` for all six standard types. Constructor options are
+required objects and the `type` option is mandatory. Read style, type, fallback
+and languageDisplay in specification order after locale resolution; validate
+languageDisplay even for nonlanguage types, but report it only for language.
+
+The binding owns CanonicalCodeForDisplayNames: canonicalize language aliases,
+reject extensions/private use and duplicate variants, and apply only the specified
+case regularization for other types. Preserve that API code independently of
+backend lookup aliases. A missing field returns its canonical code or undefined
+according to fallback; present empty/code-identical labels remain successful.
+Fixed date-field identities and exact code parsing now live in `datetime/field`,
+shared by the binding and native adapter without relying on binary table layout.
+
+Formatter objects retain native handles and owned locale text, with runtime
+service teardown and partial-intrinsic cleanup. JavaScript tests cover option
+and code coercion order, abrupt completion, canonical fallback, descriptors,
+subclasses, cross-realm behavior and GC reentrancy. Binding OOM tests reuse warmed
+runtime services with fresh realm objects and retry every reached failure point.
+CI admits both DisplayNames Test262 feature flags. One branding case also
+constructs the undelivered DateTimeFormat and remains deferred until that
+constructor lands; repository checks cover every currently delivered Intl receiver.
+Microbenchmarks cover construction, composed language names, calendar aliases
+and currency-name queries.
+
 ## Display-name source facts
 
 `display_names.py` collects language, script, territory, variant and calendar
@@ -1607,6 +1634,24 @@ This follows native locale-pattern conventions rather than implementing a genera
 Unicode bracket-nesting algorithm. Tests distinguish ASCII/fullwidth brackets,
 literal apostrophes, both fold orders, empty labels, malformed/absent templates,
 supplementary characters, output bounds, allocation failures and result lifetime.
+
+`display/display.h` is the backend-neutral DisplayNames service contract. The
+native implementation composes the shared names, currency, date-field and locale
+metadata readers; it does not open other Intl formatting services. Its available
+locale list contains prepared non-root locale records and stays independent of
+the raw code inventories. Admitted locales have usable inherited language-name
+composition templates. A valid code need not have a localized field.
+
+Formatters copy resolved options and immutable compiled-data views. Calendar
+formatters additionally own their derived calendar-name projection, so all
+formatters can outlive the creating service. Native queries return owned UTF-16
+plus a distinct presence flag. Core code canonicalization and API code/none
+fallback remain outside the backend. Currency uses its uncounted name at every
+width, including present empty/code-identical names. Date-field queries use the
+exact requested width and ordinary alternate. Simple label conversion and result
+cleanup belong to `display/text`, shared with language composition. Repository
+tests cover both profiles, all six kinds, all twelve date fields at three widths,
+standard/dialect dispatch, numeric regions, limits, allocator failures and lifetimes.
 
 ## Shared date-field labels
 
