@@ -196,6 +196,96 @@ static void test_formats(const QJSIntlAllocator *allocator, QJSIntlNumberService
     }
 }
 
+static void test_compact(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
+                         const QJSIntlBytes *tags, size_t count)
+{
+    QJSIntlNumberOptions settings = options();
+    size_t en = find(tags, count, "en");
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormatted result;
+    QJSIntlMathematicalValue input = value("9876");
+    settings.notation = QJS_INTL_NUMBER_COMPACT;
+    settings.grouping = QJS_INTL_NUMBER_GROUP_MIN2;
+    settings.digits.rounding_type = QJS_INTL_ROUND_MORE_PRECISION;
+    settings.digits.minimum_significant_digits = 1;
+    settings.digits.maximum_significant_digits = 2;
+    settings.digits.maximum_fraction_digits = 0;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("987654321"), "988M");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("98765432"), "99M");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("98765"), "99K");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("9876"), "9.9K");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("15.9"), "16");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("0.00159"), "0.0016");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("999500"), "1M");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NAN, {0}}, "NaN");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_INFINITY, {0}}, "-∞");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_ZERO, {0}}, "-0");
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    expected(&result, "9.9K");
+    assert(result.part_count == 4 && result.parts[3].type == QJS_INTL_PART_COMPACT);
+    assert(result.parts[3].start == 3 && result.parts[3].end == 4);
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+    settings.compact_long = 1;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    expected(&result, "9.9 thousand");
+    assert(result.part_count == 5 && result.parts[3].type == QJS_INTL_PART_LITERAL);
+    assert(result.parts[4].type == QJS_INTL_PART_COMPACT);
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+    settings.digits = options().digits;
+    settings.digits.maximum_fraction_digits = 0;
+    settings.digits.rounding_mode = QJS_INTL_ROUND_CEIL;
+    settings.compact_long = 0;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-0K");
+    settings.digits.rounding_mode = QJS_INTL_ROUND_FLOOR;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-999.9"), "-1000");
+    settings.digits = options().digits;
+    if (TEST_INTL_PROFILE) {
+        size_t fr = find(tags, count, "fr"), vec = find(tags, count, "vec");
+        settings.compact_long = 1;
+        check(allocator, service, fr, (QJSIntlBytes){0}, &settings, value("1000"), "mille");
+        check(allocator, service, fr, (QJSIntlBytes){0}, &settings, value("1000000"), "1 million");
+        check(allocator, service, fr, (QJSIntlBytes){0}, &settings, value("2000000"), "2 millions");
+        settings.digits.minimum_fraction_digits = 2;
+        check(allocator, service, fr, (QJSIntlBytes){0}, &settings, value("1000"), "mille");
+        check(allocator, service, fr, (QJSIntlBytes){0}, &settings, value("1200000"),
+              "1,20 million");
+        settings.digits.minimum_integer_digits = 21;
+        settings.maximum_output_length = 5;
+        check(allocator, service, fr, bytes("mathbold"), &settings, value("1000"), "mille");
+        assert(!qjs_intl_number_formatter_open(service, fr, bytes("mathbold"), &settings,
+                                               &formatter));
+        input = value("-1000");
+        assert(qjs_intl_number_format(formatter, &input, &result) == QJS_INTL_OVERFLOW);
+        assert(!result.text && !result.parts);
+        qjs_intl_number_formatter_close(formatter);
+        settings.digits = options().digits;
+        settings.maximum_output_length = 1000;
+        check(allocator, service, find(tags, count, "yrl"), (QJSIntlBytes){0}, &settings,
+              value("1000000"), "1 miliãu-ita");
+        check(allocator, service, find(tags, count, "yrl"), bytes("arab"), &settings,
+              value("1000000"), "١ miliãu؜-ita");
+        assert(!qjs_intl_number_formatter_open(service, find(tags, count, "yrl"), bytes("arab"),
+                                               &settings, &formatter));
+        input = value("1000000");
+        assert(!qjs_intl_number_format(formatter, &input, &result));
+        assert(result.part_count == 3 && result.parts[2].type == QJS_INTL_PART_COMPACT);
+        qjs_intl_number_result_clear(allocator, &result);
+        qjs_intl_number_formatter_close(formatter);
+        settings.compact_long = 0;
+        settings.digits.minimum_fraction_digits = 0;
+        check(allocator, service, vec, (QJSIntlBytes){0}, &settings, value("1000"), "1 mila");
+        check(allocator, service, find(tags, count, "zh"), (QJSIntlBytes){0}, &settings,
+              value("12345"), "1.23万");
+    }
+}
+
 static void test_exponent_parts(const QJSIntlAllocator *allocator,
                                 const QJSIntlNumberService *service, size_t en)
 {
@@ -266,10 +356,6 @@ static void test_failures(const QJSIntlAllocator *allocator, QJSIntlNumberServic
                QJS_INTL_UNSUPPORTED &&
            !formatter);
     invalid = settings;
-    invalid.notation = QJS_INTL_NUMBER_COMPACT;
-    assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &invalid, &formatter) ==
-               QJS_INTL_UNSUPPORTED &&
-           !formatter);
     invalid.notation = -1;
     assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &invalid, &formatter) ==
                QJS_INTL_INVALID_ARGUMENT &&
@@ -365,8 +451,10 @@ int main(void)
     en = find(tags, count, "en");
     test_formats(&allocator, service, tags, count);
     test_exponent_parts(&allocator, service, en);
+    test_compact(&allocator, service, tags, count);
     test_failures(&allocator, service, en, count, QJS_INTL_NUMBER_STANDARD);
     test_failures(&allocator, service, en, count, QJS_INTL_NUMBER_SCIENTIFIC);
+    test_failures(&allocator, service, en, count, QJS_INTL_NUMBER_COMPACT);
     for (i = 0; i < count; i++) {
         assert(!qjs_intl_number_default_system(service, i, &system) && system.length);
         assert(!qjs_intl_number_formatter_open(service, i, system, &settings, &formatter));
