@@ -1,8 +1,8 @@
 {
-  "bytes": 9933048,
+  "bytes": 10080380,
   "complete_services": [],
   "format": 1,
-  "generation": "a20dff3f8581b94727d715bbc4b1d0775e0d856184af0971fa95681b28b571e4",
+  "generation": "52f5d990da4dd4a7c48fa149ff323201d33941a74ff5c3521369f712fb8cb520",
   "inputs": {
     "cldr": {
       "archive": {
@@ -299,7 +299,7 @@
       },
       "19": {
         "count": 1212,
-        "sha256": "79a4bfe334c396b3c27ffda49512a5acb7b7926d50a006498b292b026477125c"
+        "sha256": "82ba9c912a9e2ff28bb3a53aa45d5fd2da0be63b97bcbff34572ff7d1657e8e0"
       },
       "2": {
         "count": 1212,
@@ -307,7 +307,7 @@
       },
       "20": {
         "count": 1212,
-        "sha256": "3b679de48c7899d6b3bb2b1e56c9a5ea6c5e954d7624b1644e2f075b84e8c305"
+        "sha256": "e7c1dfd4421a2a040f7d9a1a04aaf7146366a40295fe7ecd9c361309c3e0c100"
       },
       "21": {
         "count": 1212,
@@ -1522,6 +1522,6 @@
   },
   "locales": 1212,
   "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "c7e8db7031e39b149ff51ff9f48f250d35164b78738b0a9c75b963d4bceaec27",
+  "sha256": "2f778913ce864489c0bc7a84a9e5a0d3bfc3611b2e83f41374d36deab38bfe38",
   "strings": 161560
 }
