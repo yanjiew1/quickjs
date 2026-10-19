@@ -3,6 +3,8 @@ import struct
 
 import bundle
 import locale_tables
+import numbering_tables
+import number_symbol_tables
 import preference_tables
 from list_patterns import PARTS, VARIANTS, pattern
 from parents import locale_id
@@ -199,6 +201,10 @@ def validate(binary):
         if lists is None:
             raise ValueError('Intl list contexts lack base templates')
         contexts = decode_contexts(sections[bundle.LIST_CONTEXTS], strings, len(tags))
+    numbering = numbering_tables.decode(sections, strings)
     return {'envelope': result, 'strings': strings, 'locales': tags,
             'parents': parents, 'lists': lists, 'locale_metadata': locale_tables.decode(sections, strings),
-            'preferences': preference_tables.decode(sections, strings), 'list_contexts': contexts}
+            'preferences': preference_tables.decode(sections, strings), 'list_contexts': contexts,
+            'numbering': numbering,
+            'number_symbols': number_symbol_tables.decode(sections.get(bundle.NUMBER_SYMBOLS),
+                                                          strings, tags, numbering)}
