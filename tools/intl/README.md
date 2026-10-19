@@ -1519,5 +1519,18 @@ width and alternate indexes. The missing record is all zeroes. Present empty
 text and blocked records retain their terminal identity. Projection retains
 source locales outside the selected display-locale profile. Codec tests cover
 roundtrips through the generic pack validator, projection, bad dimensions,
-references, ordering, unused entries and noncanonical missing records. Prepared
-packs gain the section when the corresponding native C owner is integrated.
+references, ordering, unused entries and noncanonical missing records. Both prepared
+profiles include the section.
+
+`src/intl/datetime/field-data.c` owns validation and borrowed queries for section
+25. It checks bounded spans, canonical sharing, alternate spelling, source
+identities and all references. Temporary validation and source-variant scratch
+is released before return, including allocation failures. Label and alternate
+queries allocate nothing, retaining exact state and terminal provenance.
+
+Authored C tests cover requesting-context width aliases, alternate labels, empty
+and blocked values, external multi-variant origins, corruption, output reset,
+unaligned input and every reached allocation failure/retry. Prepared-profile
+tests query all field/width/alternate combinations; generator tests check English
+labels and the alternate AM/PM form. The shared owner establishes no service
+locale availability and applies no consumer formatting fallback.
