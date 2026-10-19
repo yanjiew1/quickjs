@@ -347,6 +347,8 @@ if intl_enabled
       'tools/intl/locale_metadata.py',
       'tools/intl/locale_tables.py',
       'tools/intl/parents.py',
+      'tools/intl/preferences.py',
+      'tools/intl/preference_tables.py',
       'tools/intl/resolve.py',
       'tools/intl/tables.py',
     ),
