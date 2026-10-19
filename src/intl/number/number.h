@@ -63,16 +63,16 @@ typedef struct QJSIntlNumberOptions {
     QJSIntlBytes currency; /* Canonical uppercase code; copied when used. */
     QJSIntlNumberCurrencyDisplay currency_display;
     QJSIntlNumberCurrencySign currency_sign;
-    QJSIntlBytes unit; /* Sanctioned single identifier; not retained. */
+    QJSIntlBytes unit; /* Sanctioned single/division identifier; not retained. */
     QJSIntlNumberUnitDisplay unit_display;
 } QJSIntlNumberOptions;
 
 typedef struct QJSIntlNumberService QJSIntlNumberService;
 typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
-/* This internal service implements decimal/percent/currency/single-unit formatting
-   with standard, scientific, engineering and compact notation. Compound units and
-   ranges are still required before the complete Intl.NumberFormat binding can register.
+/* This internal service implements decimal/percent/currency and sanctioned units
+   with standard, scientific, engineering and compact notation. Ranges are still
+   required before the complete Intl.NumberFormat binding can register.
    Bindings must not register NumberFormat on the strength of this subset.
 
    Copy the allocator; malloc/free required, realloc unused. Its callbacks and

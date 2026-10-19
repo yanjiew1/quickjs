@@ -10,6 +10,8 @@ import bundle
 from parents import ParentGraph
 from resolve import BLOCK, INHERIT
 import tables
+import plural_tables
+import unit_grammar_tables
 import unit_patterns
 import unit_tables
 from test_intl_list_patterns import graph
@@ -142,6 +144,73 @@ def selector_pack():
     return binary
 
 
+def composition_pack(projected=False):
+    source = Sources()
+    inheritance = graph()
+    tags = inheritance.tags
+    names = {'volume-liter': 'ROOT_L', 'volume-fluid-ounce': 'ROOT_F',
+             'duration-hour': 'ROOT_H', 'length-meter': 'ROOT_M',
+             'duration-second': 'ROOT_S', 'speed-meter-per-second': 'ROOT_FULL'}
+    content = ''.join('<unit type="' + name + '"><unitPattern count="other">{0} ' + text +
+                      '</unitPattern></unit>' for name, text in sorted(names.items()))
+    content += '<compoundUnit type="per"><compoundUnitPattern>{0} ROOT_DIV {1}</compoundUnitPattern></compoundUnit>'
+    source.set('root', '<unitLength type="long">' + content + '</unitLength>'
+               '<unitLength type="short">' + content + '</unitLength>'
+               '<unitLength type="narrow">' + content + '</unitLength>')
+    source.set('en', '''<unitLength type="long">
+      <unit type="volume-liter"><unitPattern count="1">{0} EXACT_L</unitPattern>
+        <unitPattern count="one">{0} EN_ONE</unitPattern><unitPattern count="other">{0} EN_OTHER</unitPattern></unit>
+      <unit type="volume-fluid-ounce"><unitPattern count="1">{0} EXACT_F</unitPattern>
+        <unitPattern count="one" case="accusative">{0} ACC_ONE</unitPattern>
+        <unitPattern count="two" case="accusative">{0} ACC_TWO</unitPattern>
+        <unitPattern count="other">{0} EN_F_OTHER</unitPattern></unit>
+      <unit type="duration-hour"><unitPattern count="one">BAD {1}</unitPattern>
+        <perUnitPattern>EN_PER_H {0}</perUnitPattern></unit>
+      <unit type="length-meter"><unitPattern count="other">BAD {1}</unitPattern></unit>
+      <unit type="duration-second"><unitPattern count="other">BAD {1}</unitPattern></unit>
+      <unit type="speed-meter-per-second"><unitPattern count="other">{0} EN_FULL</unitPattern></unit>
+      <compoundUnit type="per"><compoundUnitPattern>{1} CHILD_DIV {0}</compoundUnitPattern></compoundUnit>
+      </unitLength>''')
+    source.set('en_GB', '''<unitLength type="long"><unit type="volume-fluid-ounce">
+      <unitPattern count="one">{0} LOCAL_ONE</unitPattern></unit></unitLength>
+      <unitLength type="short"><compoundUnit type="per"><compoundUnitPattern>{2}</compoundUnitPattern></compoundUnit></unitLength>
+      <unitLength type="narrow"><unit type="volume-fluid-ounce">
+        <unitPattern count="other">BEGIN {0} END</unitPattern></unit></unitLength>''')
+    source.set('de', '''<unitLength type="long"><unit type="volume-liter">
+      <unitPattern count="one">{0} DE_ONE</unitPattern><unitPattern count="other">{0} DE_OTHER</unitPattern></unit>
+      <unit type="volume-fluid-ounce"><unitPattern count="one">{0} DE_NOM</unitPattern>
+        <unitPattern count="one" case="accusative">{0} DE_ACC</unitPattern></unit>
+      <compoundUnit type="per"><compoundUnitPattern>{0} DE_DIV {1}</compoundUnitPattern></compoundUnit></unitLength>''')
+    units = unit_patterns.collect(source, inheritance)
+    grammar_rows, plural_rows = [], []
+    for locale in tags:
+        origin = 'en' if locale in ('en', 'en-GB') else locale
+        grammar_rows.append((locale, 'plural', origin) +
+                            (('one', 'compound') if origin == 'en' else ('compound', 'one')))
+        grammar_rows.append((locale, 'case', origin, 'compound',
+                             'nominative' if locale == 'root' else 'accusative'))
+        rules = ((1, 'i = 1 and v = 0'), (2, 'i = 2 and v = 0'), (5, '')) if locale in ('en', 'de') else ((5, ''),)
+        plural_rows.extend(((locale, 0, rules, ()), (locale, 1, ((5, ''),), ())))
+    grammar = {'features': ('plural', 'case'), 'rows': tuple(grammar_rows)}
+    plurals = {'rows': tuple(plural_rows)}
+    if projected:
+        tags = ('en-GB', 'root')
+        units = unit_tables.select(units, tags)
+        grammar = unit_grammar_tables.select(grammar, tags)
+        plurals = {'rows': tuple(row for row in plural_rows if row[0] in tags)}
+        inheritance = ParentGraph(tags, {'en-GB': 'root'}, {}, {'und': 'en-Latn-US'}, (), False)
+    pool = tuple(sorted(unit_tables.strings(units) | unit_grammar_tables.strings(grammar) |
+                        plural_tables.strings(plurals) | set(tags), key=lambda text: text.encode('utf-8')))
+    ids = {text: i for i, text in enumerate(pool)}
+    binary = bundle.pack({bundle.STRINGS: tables.encode_strings(pool),
+                          bundle.LOCALES: tables.encode_locales(tags, inheritance, ids),
+                          bundle.UNIT_PATTERNS: unit_tables.encode(units, tags, ids),
+                          bundle.UNIT_GRAMMAR: unit_grammar_tables.encode(grammar, tags, ids),
+                          bundle.PLURALS: plural_tables.encode(plurals, tags, ids)}, bytes(32), 'minimal')
+    tables.validate(binary)
+    return binary
+
+
 def render():
     lines = ['/* Authored records; no downloaded source data. */',
              '#include <stddef.h>', '#include <stdint.h>']
@@ -152,6 +221,8 @@ def render():
     records = [(name, pack(empty, projected, variant))
                for name, empty, projected, variant in profiles]
     records.append(('qjs_intl_unit_selector', selector_pack()))
+    records.append(('qjs_intl_unit_composition', composition_pack()))
+    records.append(('qjs_intl_unit_composition_projected', composition_pack(True)))
     for name, binary in records:
         lines.append('const uint8_t %s_bytes[] = {' % name)
         for at in range(0, len(binary), 16):

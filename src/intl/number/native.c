@@ -35,6 +35,7 @@ struct QJSIntlNumberService {
     QJSIntlCurrencyData currencies;
     QJSIntlNumberLayoutData layouts;
     QJSIntlUnitData units;
+    QJSIntlUnitGrammarData unit_grammar;
     QJSIntlBytes *available;
     uint32_t root;
 };
@@ -113,6 +114,9 @@ QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *allocator, QJSIntlNum
     if (status)
         goto fail;
     status = qjs_intl_unit_data_open(&data, allocator, &service->units);
+    if (status)
+        goto fail;
+    status = qjs_intl_unit_grammar_data_open(&data, allocator, &service->unit_grammar);
     if (status)
         goto fail;
     if (data.locales.count < 2) {
@@ -489,7 +493,8 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
                                     ? QJS_INTL_UNIT_LONG
                                 : options->unit_display == QJS_INTL_NUMBER_UNIT_NARROW
                                     ? QJS_INTL_UNIT_NARROW : QJS_INTL_UNIT_SHORT;
-        status = qjs_intl_number_unit_open(&service->units, &service->plurals, source, width,
+        status = qjs_intl_number_unit_open(&service->units, &service->plurals, &service->unit_grammar,
+                                            source, service->root, width,
                                             options->unit, &formatter->unit);
         if (status)
             goto fail;
@@ -908,7 +913,7 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
             &formatter->allocator, formatter->tokens + formatter->offsets[affix_form],
             formatter->counts[affix_form], &symbols, &body,
             form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length,
-            formatter->currency_name || formatter->unit.head ? &signed_body : out);
+            formatter->currency_name || formatter->unit.active ? &signed_body : out);
     }
     if (!status && formatter->currency_name) {
         QJSIntlPluralCategory category = QJS_INTL_PLURAL_OTHER;
@@ -932,7 +937,7 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                                                            &signed_body,
                                                            formatter->body.maximum_output_length, out);
     }
-    if (!status && formatter->unit.head) {
+    if (!status && formatter->unit.active) {
         QJSIntlPluralOperands operands = {0};
         uint32_t shift = 0;
         int exact = -1;

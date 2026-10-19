@@ -785,7 +785,7 @@ pattern. Empty currency maps, raw `0`, small values and nonfinite inputs use
 ordinary currency formatting. Caller-filtered legacy gaps test the actual
 numeric-body edge, and literal-only forms omit unused numeric allocation.
 
-Single-unit style accepts every sanctioned single identifier and all three
+Unit style accepts every sanctioned single/division identifier and all three
 display widths in standard, scientific, engineering and compact notation.
 `number/unit.c` resolves each source layer's cardinal rules, selects its
 number-bearing form and renders it around the signed notation body. Compact
@@ -795,8 +795,25 @@ OTHER without exact selectors. A unit named `percent` does not apply percent
 style's multiplication. Formatter state borrows immutable source/plural views,
 does not retain the caller's identifier and survives service closure.
 
+Division formatting prefers a complete precomposed unit pattern, followed by
+the denominator's `perUnitPattern`, then a generic division layout and derived
+component nouns. Supplemental plural/case derivations retain independent source
+provenance; each numeric component still uses its candidate text source's own
+cardinal rules. A fixed grammatical count never selects exact numeric `0`/`1`.
+Per-unit phrases do not additionally select denominator nouns. Generic layouts
+retain their actual operand order, including denominator-first languages.
+
+If a localized expression cannot be composed (for example, a component's
+number placeholder lies inside its noun), retry the entire unit expression
+using root data while retaining the localized numeric body. This follows
+TR35's component extraction restriction without fabricating a noun or dropping
+part of it. Malformed consulted templates remain errors, and selection never
+hides unavailable source cardinal rules with a root retry. Cached local/root
+heads borrow immutable owners; rendering needs at most four fragments per
+affix and allocates only the final text and parts arrays.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Compound-unit composition, ranges and the JS binding remain required
+Ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
