@@ -356,9 +356,6 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         status = qjs_intl_currency_code_find(&service->currencies, options->currency, &code);
         if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
             return status;
-        if (options->notation == QJS_INTL_NUMBER_COMPACT &&
-            options->currency_display == QJS_INTL_NUMBER_CURRENCY_NAME)
-            return QJS_INTL_UNSUPPORTED;
     }
     has_scientific = options->notation == QJS_INTL_NUMBER_SCIENTIFIC ||
                      options->notation == QJS_INTL_NUMBER_ENGINEERING;
@@ -687,10 +684,11 @@ static QJSIntlStatus append_exponent(const QJSIntlNumberFormatter *formatter,
     return QJS_INTL_OK;
 }
 
-static int is_one(const QJSIntlDecimal *number)
+static int is_one(const QJSIntlDecimal *number, uint32_t shift)
 {
+    int64_t exponent = (int64_t)number->exponent + shift;
     size_t i;
-    if (number->digits[0] != '1' || (int64_t)number->length + number->exponent != 1)
+    if (number->digits[0] != '1' || exponent > 0 || (uint64_t)number->length != (uint64_t)(1 - exponent))
         return 0;
     for (i = 1; i < number->length; i++)
         if (number->digits[i] != '0')
@@ -738,7 +736,7 @@ static QJSIntlStatus compact_pattern(const QJSIntlNumberFormatter *formatter,
         return QJS_INTL_DATA_ERROR;
     if (number->number.rounded.length == 1 && number->number.rounded.digits[0] == '0')
         exact = QJS_INTL_COMPACT_EXACT_ZERO;
-    else if (is_one(&number->number.rounded))
+    else if (is_one(&number->number.rounded, 0))
         exact = QJS_INTL_COMPACT_EXACT_ONE;
     status = exact < 0 ? QJS_INTL_UNSUPPORTED
              : qjs_intl_compact_family_pattern(&formatter->compact, &formatter->compact_map,
@@ -884,14 +882,18 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         QJSIntlBytes name, pattern;
         int exact = -1;
         if (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO) {
-            /* ECMA-402 passes the final scaled rounded value to currency
-               name selection. Scientific/engineering exponents are not CLDR
-               compact operands c/e; retain the visible mantissa and c=e=0. */
-            QJSIntlPluralOperands operands = {rounded.number.text, rounded.number.length, 0};
-            status = qjs_intl_native_plural_select(&formatter->cardinal, &operands, &category);
+            /* Currency text is ILD. Native CLDR policy expands compact c/e
+               for outer names, preserving remaining visible fraction zeros.
+               The inner compact affix still uses the mantissa. Scientific/
+               engineering names retain their visible mantissa and c=e=0. */
+            uint32_t shift = formatter->rounding.notation == QJS_INTL_NUMBER_COMPACT
+                                 ? (uint32_t)rounded.exponent : 0;
+            QJSIntlPluralOperands operands = {rounded.number.text, rounded.number.length, shift};
+            status = qjs_intl_native_plural_select_shifted(&formatter->cardinal, &operands,
+                                                            shift, &category);
             if (rounded.number.rounded.length == 1 && rounded.number.rounded.digits[0] == '0')
                 exact = 0;
-            else if (is_one(&rounded.number.rounded))
+            else if (is_one(&rounded.number.rounded, shift))
                 exact = 1;
         }
         if (!status)
