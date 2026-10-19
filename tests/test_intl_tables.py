@@ -32,6 +32,7 @@ from test_intl_number_layout import Sources as LayoutSources
 from test_intl_unit_patterns import Sources as UnitSources
 import number_patterns
 import number_pattern_syntax
+from resolve import BLOCK
 
 
 class VerifiedFixture(Sources):
@@ -150,6 +151,26 @@ class VerifiedFixture(Sources):
 
 
 class TableTests(unittest.TestCase):
+    def test_currency_override_compilation_follows_profile_projection(self):
+        source = VerifiedFixture()
+        name = 'common/main/de.xml'
+        root = ET.fromstring(source.files[name])
+        numbers = root.find('numbers')
+        if numbers is None:
+            numbers = ET.SubElement(root, 'numbers')
+        currencies = ET.SubElement(numbers, 'currencies')
+        currency = ET.SubElement(currencies, 'currency', type='USD')
+        raw = "¤'German-only'0.00"
+        ET.SubElement(currency, 'pattern').text = raw
+        source.files[name] = ET.tostring(root, encoding='utf-8')
+        source.manifest['files'][name] = acquire.digest(source.files[name])
+        full, _ = generate.generate(source, 'native')
+        minimal, _ = generate.generate(source, 'minimal')
+        full_patterns = tables.validate(full)['number_patterns']['overrides']
+        minimal_patterns = tables.validate(minimal)['number_patterns']['overrides']
+        self.assertIn((raw, number_pattern_syntax.compile_pattern(raw)), full_patterns)
+        self.assertNotIn(raw, {value for value, compiled in minimal_patterns})
+
     def test_prepared_profiles_and_manifest_identity(self):
         root = Path(__file__).resolve().parents[1] / 'data' / 'intl'
         for profile in ('minimal', 'native'):
@@ -173,6 +194,11 @@ class TableTests(unittest.TestCase):
             currency_rows = dict(currency['rows'])
             english = {(code, field, count): text for code, field, count, text
                        in currency['maps'][currency_rows['en']]}
+            raw_overrides = {text for records in currency['maps']
+                             for code, field, count, text in records
+                             if field == 'pattern' and text not in ('', BLOCK)}
+            self.assertEqual({raw for raw, compiled in view['number_patterns']['overrides']},
+                             raw_overrides)
             self.assertEqual(english[('USD', 'symbol', '')], '$')
             self.assertEqual(english[('USD', 'narrow', '')], '$')
             layouts = view['number_layouts']
