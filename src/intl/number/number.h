@@ -29,8 +29,21 @@ typedef enum QJSIntlNumberNotation {
 
 typedef enum QJSIntlNumberStyle {
     QJS_INTL_NUMBER_DECIMAL,
-    QJS_INTL_NUMBER_PERCENT
+    QJS_INTL_NUMBER_PERCENT,
+    QJS_INTL_NUMBER_CURRENCY
 } QJSIntlNumberStyle;
+
+typedef enum QJSIntlNumberCurrencyDisplay {
+    QJS_INTL_NUMBER_CURRENCY_SYMBOL,
+    QJS_INTL_NUMBER_CURRENCY_NARROW,
+    QJS_INTL_NUMBER_CURRENCY_CODE,
+    QJS_INTL_NUMBER_CURRENCY_NAME
+} QJSIntlNumberCurrencyDisplay;
+
+typedef enum QJSIntlNumberCurrencySign {
+    QJS_INTL_NUMBER_CURRENCY_STANDARD,
+    QJS_INTL_NUMBER_CURRENCY_ACCOUNTING
+} QJSIntlNumberCurrencySign;
 
 typedef struct QJSIntlNumberOptions {
     QJSIntlNumberStyle style;
@@ -40,13 +53,17 @@ typedef struct QJSIntlNumberOptions {
     unsigned int compact_long;
     QJSIntlDecimalOptions digits;
     size_t maximum_output_length;
+    QJSIntlBytes currency; /* Canonical uppercase code; copied when used. */
+    QJSIntlNumberCurrencyDisplay currency_display;
+    QJSIntlNumberCurrencySign currency_sign;
 } QJSIntlNumberOptions;
 
 typedef struct QJSIntlNumberService QJSIntlNumberService;
 typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
 /* This internal service implements decimal/percent formatting with standard,
-   scientific, engineering and compact notation. Other styles and ranges are
+   scientific, engineering and compact notation, plus standard-notation
+   currency names. Other currency forms/notations, units and ranges are
    still required before the complete Intl.NumberFormat binding can register.
    Bindings must not register NumberFormat on the strength of this subset.
 
@@ -63,6 +80,12 @@ QJSIntlStatus qjs_intl_number_available(const QJSIntlNumberService *, const QJSI
    Borrow the default numeric system name from immutable compiled storage. */
 QJSIntlStatus qjs_intl_number_default_system(const QJSIntlNumberService *, size_t locale,
                                              QJSIntlBytes *out);
+/* CurrencyDigits for a canonical uppercase code, including unknown codes.
+   Return regular fraction digits, never cash digits or a rounding increment.
+   The frontend uses this to resolve digit options before formatter_open.
+   Allocation-free; failure resets output to zero. */
+QJSIntlStatus qjs_intl_number_currency_digits(const QJSIntlNumberService *, QJSIntlBytes code,
+                                              uint32_t *out);
 /* Empty system chooses the locale default. An explicit system is exact;
    absent/algorithmic definitions return UNSUPPORTED, without fallback. The
    frontend resolves defaults, options and Unicode extensions before opening.
