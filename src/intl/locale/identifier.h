@@ -19,9 +19,10 @@ typedef struct QJSIntlLocaleKeyword {
     QJSIntlBytes value;
 } QJSIntlLocaleKeyword;
 
-/* Input is a well-formed, canonical locale ID from the locale service. These
-   are component operations, not syntax validators. Borrow slices from input;
-   absent components have NULL data. Output storage must not overlap input.
+/* Input is a well-formed Unicode locale ID with lowercase extension singletons
+   and keys, as produced by the identity service or base replacement below.
+   These are component operations, not syntax validators. Results borrow input
+   slices; absent components have NULL data. Output storage must not overlap input.
    No allocation, alias resolution or likely-subtag inference is performed. */
 QJSIntlStatus qjs_intl_locale_components(QJSIntlBytes tag,
                                          QJSIntlLocaleComponents *out);

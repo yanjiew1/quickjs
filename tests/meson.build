@@ -866,6 +866,7 @@ endif
 if intl_enabled
   js_tests += {
     'intl-locale': ['-m', 'tests/test_intl_locale.js'],
+    'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
   }
 endif
 if shared_modules
