@@ -175,6 +175,12 @@ records contain first weekday, minimum week days and a seven-bit weekend set.
 Ordered calendar/hour lists share pooled strings with checked token counts.
 Script directions use a distinct unknown value. The preference owner validates
 these schemas separately from the common envelope and locale identity tables.
+The C owner in `src/intl/locale/preference-data.c` checks all four required
+tables before publishing a borrowed view. Shared lists are validated once per
+table, including token uniqueness; exact-key lookups use binary search and
+distinguish absent data from malformed input and allocation failure. Tests for
+both prepared profiles cover corruption, unaligned input and every temporary
+allocation failure.
 
 ## Locale metadata audit
 

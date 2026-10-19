@@ -252,6 +252,26 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_preference_test = executable(
+    'test_intl_preferences_' + profile,
+    [
+      'test_intl_preferences.c',
+      '../src/intl/locale/preference-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      intl_fixture,
+    ],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-preferences-' + profile,
+    intl_preference_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_locale_test = executable(
     'test_intl_locale_id_' + profile,
     [
