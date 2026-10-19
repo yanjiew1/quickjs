@@ -3,7 +3,7 @@
 #include "../native/wire.h"
 #include <string.h>
 
-#define HEADER_WORDS 7
+#define HEADER_WORDS 8
 #define NUMERIC_WORDS 9
 #define PATTERN_WORDS (NUMERIC_WORDS + QJS_INTL_NUMBER_PATTERN_FORM_COUNT)
 #define OPTIONAL_EMPTY UINT32_C(0xfffffffd)
@@ -78,7 +78,7 @@ QJSIntlStatus qjs_intl_number_pattern_data_open(const QJSIntlNumberingData *numb
                               &result.section) ||
         result.section.count != numbering->data.locales.count || !result.section.count ||
         result.section.length < HEADER_WORDS * 4 || result.section.length % 4 ||
-        word(result.section.bytes, 0) != 1)
+        word(result.section.bytes, 0) != 2)
         return status;
     result.system_count = word(result.section.bytes, 1);
     result.vector_count = word(result.section.bytes, 2);
@@ -86,6 +86,7 @@ QJSIntlStatus qjs_intl_number_pattern_data_open(const QJSIntlNumberingData *numb
     result.pattern_count = word(result.section.bytes, 4);
     result.affix_count = word(result.section.bytes, 5);
     result.token_count = word(result.section.bytes, 6);
+    result.override_count = word(result.section.bytes, 7);
     if (!result.system_count || !result.vector_count || !result.row_count ||
         !result.pattern_count || !result.affix_count || !result.token_count ||
         result.row_count > result.section.count ||
@@ -94,6 +95,7 @@ QJSIntlStatus qjs_intl_number_pattern_data_open(const QJSIntlNumberingData *numb
         !take(&result.section, &at, result.row_count, result.system_count, &result.rows) ||
         !take(&result.section, &at, result.vector_count, QJS_INTL_NUMBER_PATTERN_FIELD_COUNT,
               &result.vectors) ||
+        !take(&result.section, &at, result.override_count, 2, &result.overrides) ||
         !take(&result.section, &at, result.pattern_count, PATTERN_WORDS, &result.patterns) ||
         !take(&result.section, &at, result.affix_count, 2, &result.affixes) ||
         !take(&result.section, &at, result.token_count, 2, &result.tokens) ||
@@ -147,6 +149,16 @@ QJSIntlStatus qjs_intl_number_pattern_data_open(const QJSIntlNumberingData *numb
                      QJS_INTL_PATTERN_CURRENCY_STANDARD_ALPHA ||
                  pattern < OPTIONAL_EMPTY)
             goto done;
+    }
+    for (i = 0; i < result.override_count; i++) {
+        uint32_t raw = word(result.overrides, i * 2);
+        uint32_t pattern = word(result.overrides, i * 2 + 1);
+        QJSIntlBytes text;
+        if (!raw || (i && raw <= word(result.overrides, (i - 1) * 2)) ||
+            pattern >= result.pattern_count || qjs_intl_data_string(&numbering->data, raw, &text) ||
+            !text.length || (text.length == 9 && !memcmp(text.data, "∅∅∅", 9)))
+            goto done;
+        used_patterns[pattern] = 1;
     }
     for (i = 0; i < result.pattern_count; i++) {
         const uint8_t *pattern = result.patterns + i * PATTERN_WORDS * 4;
@@ -203,13 +215,32 @@ done:
     return status;
 }
 
+static void read_pattern(const QJSIntlNumberPatternData *data, uint32_t reference,
+                         QJSIntlNumberPattern *out)
+{
+    const uint8_t *pattern = data->patterns + (size_t)reference * PATTERN_WORDS * 4;
+    unsigned int i;
+    out->primary_grouping = word(pattern, 0);
+    out->secondary_grouping = word(pattern, 1);
+    out->minimum_integer_digits = word(pattern, 2);
+    out->integer_placeholders = word(pattern, 3);
+    out->minimum_fraction_digits = word(pattern, 4);
+    out->maximum_fraction_digits = word(pattern, 5);
+    out->decimal_point = word(pattern, 6);
+    out->exponent_digits = word(pattern, 7);
+    out->exponent_plus = word(pattern, 8);
+    for (i = 0; i < QJS_INTL_NUMBER_PATTERN_FORM_COUNT; i++) {
+        uint32_t index = word(pattern, NUMERIC_WORDS + i);
+        out->forms[i].tokens = data->tokens + (size_t)word(data->affixes, (size_t)index * 2) * 8;
+        out->forms[i].count = word(data->affixes, (size_t)index * 2 + 1);
+    }
+}
+
 QJSIntlStatus qjs_intl_number_pattern_at(const QJSIntlNumberPatternData *data, uint32_t locale,
                                          uint32_t system, QJSIntlNumberPatternField field,
                                          QJSIntlNumberPattern *out)
 {
     uint32_t lo = 0, hi, row, vector, reference;
-    const uint8_t *pattern;
-    unsigned int i;
     if (out)
         memset(out, 0, sizeof(*out));
     if (!out || !data || !data->section.bytes || locale >= data->section.count ||
@@ -236,22 +267,39 @@ QJSIntlStatus qjs_intl_number_pattern_at(const QJSIntlNumberPatternData *data, u
                                                               : QJS_INTL_NUMBER_PATTERN_BLOCKED;
         return QJS_INTL_OK;
     }
-    pattern = data->patterns + (size_t)reference * PATTERN_WORDS * 4;
-    out->primary_grouping = word(pattern, 0);
-    out->secondary_grouping = word(pattern, 1);
-    out->minimum_integer_digits = word(pattern, 2);
-    out->integer_placeholders = word(pattern, 3);
-    out->minimum_fraction_digits = word(pattern, 4);
-    out->maximum_fraction_digits = word(pattern, 5);
-    out->decimal_point = word(pattern, 6);
-    out->exponent_digits = word(pattern, 7);
-    out->exponent_plus = word(pattern, 8);
-    for (i = 0; i < QJS_INTL_NUMBER_PATTERN_FORM_COUNT; i++) {
-        uint32_t index = word(pattern, NUMERIC_WORDS + i);
-        out->forms[i].tokens = data->tokens + (size_t)word(data->affixes, (size_t)index * 2) * 8;
-        out->forms[i].count = word(data->affixes, (size_t)index * 2 + 1);
-    }
+    read_pattern(data, reference, out);
     return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_number_pattern_override(const QJSIntlNumberPatternData *data,
+                                               QJSIntlBytes raw, QJSIntlNumberPattern *out)
+{
+    uint32_t lo = 0, hi;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !data || !data->section.bytes || !raw.data || !raw.length)
+        return QJS_INTL_INVALID_ARGUMENT;
+    hi = data->override_count;
+    while (lo < hi) {
+        uint32_t mid = lo + (hi - lo) / 2;
+        QJSIntlBytes candidate;
+        int cmp;
+        qjs_intl_data_string(&data->numbering.data, word(data->overrides, (size_t)mid * 2),
+                             &candidate);
+        cmp = memcmp(candidate.data, raw.data,
+                     candidate.length < raw.length ? candidate.length : raw.length);
+        if (!cmp)
+            cmp = candidate.length < raw.length ? -1 : candidate.length > raw.length;
+        if (!cmp) {
+            read_pattern(data, word(data->overrides, (size_t)mid * 2 + 1), out);
+            return QJS_INTL_OK;
+        }
+        if (cmp < 0)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    return QJS_INTL_UNSUPPORTED;
 }
 
 QJSIntlStatus qjs_intl_number_pattern_token_at(const QJSIntlNumberPatternData *data,
