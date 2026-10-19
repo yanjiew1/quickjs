@@ -1,0 +1,18 @@
+{
+  "cldr": {
+    "archive": {
+      "format": "zip",
+      "sha256": "78403d8d6fb1fed6e208bf9001bf5be00bb5abfd9f8110dae062bf49309d6a89",
+      "url": "https://unicode.org/Public/cldr/49/cldr-common-49.zip"
+    },
+    "commit": "96e54b273d2da4ec6fbad350ba19ff23fa24a588",
+    "distribution": "common",
+    "manifest_sha256": "f3f262e9260d5a91855e3c0b64cf6e9258498d39ae9184028c956a5b26ba14cf",
+    "prerelease": false,
+    "published": "2026-10-22",
+    "release": "49",
+    "tag": "release-49"
+  },
+  "format": 1,
+  "reviewed": "2026-10-23"
+}
