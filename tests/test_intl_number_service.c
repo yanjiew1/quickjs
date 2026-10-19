@@ -521,6 +521,46 @@ static void test_currency_names(const QJSIntlAllocator *allocator, const QJSIntl
     }
 }
 
+static void test_currency_name_notation(const QJSIntlAllocator *allocator,
+                                       const QJSIntlNumberService *service,
+                                       const QJSIntlBytes *tags, size_t count)
+{
+    QJSIntlNumberOptions settings = options();
+    size_t en = find(tags, count, "en");
+    settings.style = QJS_INTL_NUMBER_CURRENCY;
+    settings.currency_display = QJS_INTL_NUMBER_CURRENCY_NAME;
+    settings.currency = bytes("USD");
+    settings.notation = QJS_INTL_NUMBER_SCIENTIFIC;
+    settings.digits.maximum_fraction_digits = 0;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1E3 US dollar");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("2000"), "2E3 US dollars");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("0.001"), "1E-3 US dollar");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1e1000000000"),
+          "1E1000000000 US dollar");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1e-1000000000"),
+          "1E-1000000000 US dollar");
+    settings.currency_sign = QJS_INTL_NUMBER_CURRENCY_ACCOUNTING;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-1000"), "-1E3 US dollar");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_ZERO, {0}}, "-0E0 US dollars");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_INFINITY, {0}}, "-∞ US dollars");
+    settings.digits.minimum_fraction_digits = settings.digits.maximum_fraction_digits = 2;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1.00E3 US dollars");
+    settings.digits.trailing_zero_display = QJS_INTL_TRAILING_ZERO_STRIP_IF_INTEGER;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1E3 US dollar");
+    settings.digits = options().digits;
+    settings.notation = QJS_INTL_NUMBER_ENGINEERING;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("12345"), "12.35E3 US dollars");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1E3 US dollar");
+    if (TEST_INTL_PROFILE) {
+        settings.notation = QJS_INTL_NUMBER_SCIENTIFIC;
+        settings.digits.maximum_fraction_digits = 0;
+        check(allocator, service, find(tags, count, "fr"), (QJSIntlBytes){0}, &settings,
+              value("1000000"), "1E6 dollar des États-Unis");
+    }
+}
+
 static void test_currency_formats(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
                                   const QJSIntlBytes *tags, size_t count)
 {
@@ -744,6 +784,7 @@ int main(void)
     test_compact(&allocator, service, tags, count);
     test_currency_names(&allocator, service, tags, count);
     test_currency_formats(&allocator, service, tags, count);
+    test_currency_name_notation(&allocator, service, tags, count);
     test_currency_patterns(&allocator);
     test_name_templates(&allocator);
     test_failures(&allocator, service, en, count, QJS_INTL_NUMBER_STANDARD);
