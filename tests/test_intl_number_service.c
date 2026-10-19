@@ -2,6 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/number/number.h"
 #include "../src/intl/number/currency-format.h"
+#include "../src/intl/number/currency-pattern.h"
 #include "../src/cutils/cutils.h"
 #include <assert.h>
 #include <stdio.h>
@@ -520,6 +521,178 @@ static void test_currency_names(const QJSIntlAllocator *allocator, const QJSIntl
     }
 }
 
+static void test_currency_formats(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
+                                  const QJSIntlBytes *tags, size_t count)
+{
+    QJSIntlNumberOptions settings = options();
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormatted result, zero = {0};
+    QJSIntlMathematicalValue input = value("-1.2");
+    Allocation *state = allocator->opaque;
+    size_t en = find(tags, count, "en"), i, calls, live;
+    char code[] = "ZZZ";
+    settings.style = QJS_INTL_NUMBER_CURRENCY;
+    settings.currency = bytes("USD");
+    settings.digits.minimum_fraction_digits = settings.digits.maximum_fraction_digits = 2;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1.2"), "$1.20");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input, "-$1.20");
+    settings.currency_display = QJS_INTL_NUMBER_CURRENCY_CODE;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1.2"), "USD 1.20");
+    settings.currency_sign = QJS_INTL_NUMBER_CURRENCY_ACCOUNTING;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input, "(USD 1.20)");
+    settings.sign_display = QJS_INTL_NUMBER_SIGN_ALWAYS;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1.2"), "+USD 1.20");
+    settings.sign_display = QJS_INTL_NUMBER_SIGN_NEVER;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input, "USD 1.20");
+    settings.sign_display = QJS_INTL_NUMBER_SIGN_AUTO;
+    settings.currency_sign = QJS_INTL_NUMBER_CURRENCY_STANDARD;
+    settings.currency_display = QJS_INTL_NUMBER_CURRENCY_SYMBOL;
+    settings.currency = bytes("CAD");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1.2"), "CA$1.20");
+    settings.currency_display = QJS_INTL_NUMBER_CURRENCY_NARROW;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1.2"), "$1.20");
+    settings.currency = bytes(code);
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    memcpy(code, "USD", 3);
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    expected(&result, "-ZZZ 1.20");
+    qjs_intl_number_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+    settings.currency = bytes("USD");
+    settings.currency_display = QJS_INTL_NUMBER_CURRENCY_CODE;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NAN, {0}}, "USD NaN");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_INFINITY, {0}}, "-USD ∞");
+    settings.notation = QJS_INTL_NUMBER_SCIENTIFIC;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1234"), "USD 1.23E3");
+    settings.notation = QJS_INTL_NUMBER_ENGINEERING;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("12345"), "USD 12.35E3");
+    settings.notation = QJS_INTL_NUMBER_STANDARD;
+    live = state->live;
+    calls = state->calls;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    calls = state->calls - calls;
+    qjs_intl_number_formatter_close(formatter);
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter) ==
+               QJS_INTL_NO_MEMORY);
+        assert(!formatter && state->live == live);
+    }
+    state->fail_at = 0;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    live = state->live;
+    calls = state->calls;
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    calls = state->calls - calls;
+    qjs_intl_number_result_clear(allocator, &result);
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_format(formatter, &input, &result) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&result, &zero, sizeof(result)) && state->live == live);
+    }
+    state->fail_at = 0;
+    qjs_intl_number_formatter_close(formatter);
+    if (TEST_INTL_PROFILE) {
+        settings.currency_display = QJS_INTL_NUMBER_CURRENCY_SYMBOL;
+        check(allocator, service, find(tags, count, "fr"), (QJSIntlBytes){0}, &settings,
+              value("1.2"), "1,20 $US");
+        settings.currency = bytes("CVE");
+        check(allocator, service, find(tags, count, "pt-CV"), (QJSIntlBytes){0}, &settings,
+              value("12345.5"), "12 345$50 \u200b");
+        settings.currency = bytes("TRY");
+        check(allocator, service, find(tags, count, "tr"), (QJSIntlBytes){0}, &settings,
+              value("1.2"), "₺1,20");
+        settings.currency_display = QJS_INTL_NUMBER_CURRENCY_CODE;
+        check(allocator, service, find(tags, count, "tr"), (QJSIntlBytes){0}, &settings,
+              value("1.2"), "TRY 1,20");
+        check(allocator, service, find(tags, count, "tr"), bytes("mathdbl"), &settings,
+              value("1.2"), "TRY 𝟙,𝟚𝟘");
+        check(allocator, service, find(tags, count, "tr"), bytes("hanidec"), &settings,
+              value("1.2"), "TRY一,二〇");
+        check(allocator, service, find(tags, count, "tr"), (QJSIntlBytes){0}, &settings,
+              (QJSIntlMathematicalValue){QJS_INTL_NAN, {0}}, "TRYNaN");
+        settings.currency_sign = QJS_INTL_NUMBER_CURRENCY_ACCOUNTING;
+        settings.currency_display = QJS_INTL_NUMBER_CURRENCY_SYMBOL;
+        check(allocator, service, find(tags, count, "tr"), (QJSIntlBytes){0}, &settings,
+              value("1.2"), "₺1,20");
+        check(allocator, service, find(tags, count, "tr"), (QJSIntlBytes){0}, &settings,
+              value("-1.2"), "(₺1,20)");
+    }
+}
+
+static void test_currency_patterns(const QJSIntlAllocator *allocator)
+{
+    QJSIntlData data;
+    QJSIntlNumberingData numbering;
+    QJSIntlNumberPatternData patterns;
+    QJSIntlCurrencyData currencies;
+    QJSIntlNumberLayoutData layouts;
+    QJSIntlCurrencyPattern result, zero = {0};
+    QJSIntlNumberPatternToken token;
+    QJSIntlBytes tag;
+    uint32_t en = UINT32_MAX, parent, system, i;
+    assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &data));
+    assert(!qjs_intl_numbering_data_open(&data, allocator, &numbering));
+    assert(!qjs_intl_number_pattern_data_open(&numbering, allocator, &patterns));
+    assert(!qjs_intl_currency_data_open(&data, allocator, &currencies));
+    assert(!qjs_intl_number_layout_data_open(&numbering, allocator, &layouts));
+    assert(!qjs_intl_numbering_system_find(&numbering, bytes("latn"), &system));
+    for (i = 0; i < data.locales.count; i++) {
+        assert(!qjs_intl_data_locale(&data, i, &tag, &parent));
+        if (tag.length == 2 && !memcmp(tag.data, "en", 2))
+            en = i;
+    }
+    assert(en != UINT32_MAX);
+    /* Standard alpha tests the closest scalar, not the compact L M* rule.
+       An alpha-capable family suppresses legacy spacing for ordinary Fr. */
+    assert(!qjs_intl_number_currency_pattern(&patterns, &currencies, &layouts, en, system,
+                                             bytes("ZZZ"), bytes("Fr."), 0, &result));
+    assert(result.pattern.forms[0].count == 2);
+    assert(!result.before_currency.length && !result.after_currency.length);
+    assert(!qjs_intl_number_currency_pattern(&patterns, &currencies, &layouts, en, system,
+                                             bytes("ZZZ"), bytes("Á"), 0, &result));
+    assert(result.pattern.forms[0].count == 2 && !result.after_currency.length);
+    assert(!qjs_intl_number_currency_pattern(&patterns, &currencies, &layouts, en, system,
+                                             bytes("ZZZ"), bytes("USD"), 0, &result));
+    assert(result.pattern.forms[0].count == 3);
+    assert(!qjs_intl_number_pattern_token_at(&patterns, &result.pattern.forms[0], 1, &token));
+    assert(token.kind == QJS_INTL_NUMBER_TOKEN_LITERAL && token.text.length == 2 &&
+           !memcmp(token.text.data, " ", 2));
+    assert(!result.before_currency.length && !result.after_currency.length);
+    assert(!qjs_intl_number_currency_pattern(&patterns, &currencies, &layouts, en, system,
+                                             bytes("ZZZ"), bytes(""), 0, &result));
+    assert(result.pattern.forms[0].count == 2 && !result.after_currency.length);
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_number_currency_pattern(&patterns, &currencies, &layouts, en, system,
+                                            bytes("usd"), bytes("USD"), 0, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    assert(qjs_intl_number_currency_pattern(&patterns, &currencies, &layouts, en, system,
+                                            bytes("USD"), bytes("USD"), 2, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_currency_pattern(NULL, &currencies, &layouts, en, system,
+                                            bytes("USD"), bytes("USD"), 0, &result) == QJS_INTL_INVALID_ARGUMENT);
+    if (TEST_INTL_PROFILE) {
+        QJSIntlNumberPattern generic;
+        uint32_t tr = UINT32_MAX;
+        for (i = 0; i < data.locales.count; i++) {
+            assert(!qjs_intl_data_locale(&data, i, &tag, &parent));
+            if (tag.length == 2 && !memcmp(tag.data, "tr", 2))
+                tr = i;
+        }
+        assert(tr != UINT32_MAX);
+        assert(!qjs_intl_number_currency_pattern(&patterns, &currencies, &layouts, tr, system,
+                                                 bytes("TRY"), bytes("₺"), 1, &result));
+        assert(!qjs_intl_number_pattern_at(&patterns, tr, system,
+                                            QJS_INTL_PATTERN_CURRENCY_ACCOUNTING, &generic));
+        for (i = 0; i < QJS_INTL_NUMBER_PATTERN_FORM_COUNT; i++) {
+            assert(result.pattern.forms[i].tokens == generic.forms[i].tokens);
+            assert(result.pattern.forms[i].count == generic.forms[i].count);
+        }
+        assert(!result.before_currency.length && !result.after_currency.length);
+    }
+}
+
 static void test_name_templates(const QJSIntlAllocator *allocator)
 {
     uint16_t digits[] = {'-', '2'};
@@ -570,6 +743,8 @@ int main(void)
     test_exponent_parts(&allocator, service, en);
     test_compact(&allocator, service, tags, count);
     test_currency_names(&allocator, service, tags, count);
+    test_currency_formats(&allocator, service, tags, count);
+    test_currency_patterns(&allocator);
     test_name_templates(&allocator);
     test_failures(&allocator, service, en, count, QJS_INTL_NUMBER_STANDARD);
     test_failures(&allocator, service, en, count, QJS_INTL_NUMBER_SCIENTIFIC);
@@ -590,6 +765,15 @@ int main(void)
         assert(result.length && result.part_count);
         qjs_intl_number_result_clear(&allocator, &result);
         qjs_intl_number_formatter_close(formatter);
+        for (currency_settings.currency_display = QJS_INTL_NUMBER_CURRENCY_SYMBOL;
+             currency_settings.currency_display < QJS_INTL_NUMBER_CURRENCY_NAME;
+             currency_settings.currency_display++) {
+            assert(!qjs_intl_number_formatter_open(service, i, system, &currency_settings, &formatter));
+            assert(!qjs_intl_number_format(formatter, &input, &result));
+            assert(result.length && result.part_count);
+            qjs_intl_number_result_clear(&allocator, &result);
+            qjs_intl_number_formatter_close(formatter);
+        }
     }
     assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
     settings.style = QJS_INTL_NUMBER_CURRENCY;
