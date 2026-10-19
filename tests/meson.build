@@ -547,6 +547,27 @@ foreach profile : ['minimal', 'native']
       'timeout': 30,
     },
   }]
+  intl_locale_test = {
+    'name': ('test_intl_locale_id_' + profile),
+    'sources': files(
+      'test_intl_native_locale_id.c',
+      '../src/intl/locale/native-id.c',
+      '../src/intl/locale/native-data.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_locale_test,
+    'name': ('intl-locale-id-' + profile),
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
 endforeach
 
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
@@ -555,6 +576,7 @@ standalone = {
 standalone += {
   'test_intl_locale_data': files(
     'test_intl_locale_data.c',
+    '../src/intl/locale/native-id.c',
     '../src/intl/locale/native-data.c',
     '../src/intl/common/locale-grammar.c',
     '../src/intl/native/data.c',
