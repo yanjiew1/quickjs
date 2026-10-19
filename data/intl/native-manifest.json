@@ -1,8 +1,8 @@
 {
-  "bytes": 389544,
+  "bytes": 468100,
   "complete_services": [],
   "format": 1,
-  "generation": "646442ce7e4565007dbe4a3d92c6391909f54ee7e0988baf3ad23c9cbb9f6558",
+  "generation": "9a80a64d0211fe43ad1d9d58026e2834e11d5e82722fd3c3cac78a0fad64b855",
   "inputs": {
     "cldr": {
       "archive": {
@@ -240,52 +240,64 @@
     ],
     "sections": {
       "1": {
-        "count": 19777,
-        "sha256": "93aa69ee15650904004ac84a087582f9a77191c06c1a1b1d092c6afb3ca3efdd"
+        "count": 19974,
+        "sha256": "cc65311087b68ddf9f87f1dd46dd27e4437e589ea1d7ff96be4774a9615840ff"
       },
       "10": {
         "count": 1184,
-        "sha256": "c6758dd3090717394d3874e464563f3a136d41c0b4813eaf87fa884053678fbc"
+        "sha256": "32cf3d20cdccfae0baf49da77b00a2c0b5cd6e008bea10aa4b62772183f0f90c"
       },
       "11": {
         "count": 184,
-        "sha256": "3c3efbe30b6b4e9928c7612152d1729211bf62b3e90309d857bb2845a8c338bb"
+        "sha256": "d9e2f38f0b5a3a1efcd7cad0825d1a67dd457f2b01550f49d7c7fb2bf4e1c836"
       },
       "12": {
         "count": 1184,
-        "sha256": "b54f71e9d6fcc92f62f0dcf06845526c5d9d0b2e4b148772cb254ecc774accb7"
+        "sha256": "87da8d7936a7c4c8d8e85d419927719a261f58bf5374159a5285b377776528fb"
+      },
+      "13": {
+        "count": 97,
+        "sha256": "48340d8b5222f2b0268476833f4ce435b13e684973b3dc9f7a599da170af42f9"
+      },
+      "14": {
+        "count": 1184,
+        "sha256": "2f17fc0e679435fb3ad47bc28731a9508fca9ab4d8f2ae4c95ee0a51d784edc3"
+      },
+      "15": {
+        "count": 1184,
+        "sha256": "bf6f3877c879fa39fc5667163586167760c97fa126293284c0a62e5e69c9c3c5"
       },
       "2": {
         "count": 1184,
-        "sha256": "636b47b2edcda7042585aa84b0b433d7865042d30d118d99e46559e99b1b0bc4"
+        "sha256": "4cfcd06876312bac652edbfeea813e0510960c507b52d039038c178a7aba45aa"
       },
       "3": {
         "count": 1292,
-        "sha256": "19d190d7de959a149bf1e8a4ae810c23ffa54bedc753b06ab473ff0985ea03db"
+        "sha256": "20bd2060209ad55492028977629e28df7343a339c242c52d08ca068dba1a168e"
       },
       "4": {
         "count": 7868,
-        "sha256": "2640b3fc7405a21070aaea72a9697f8ad80262469f78fa3d356417be45755ef9"
+        "sha256": "2c3eb5a603b32ced9bee8322169a4849cb11ffd622fac5441b95bc97e81a50e9"
       },
       "5": {
         "count": 37,
-        "sha256": "b00657d5c45671be0fe22b5e0d63411d501d7dd1b04237fff443358934fb2279"
+        "sha256": "1de44d1f83d370a18a06e95aaad797be6bdddd95ac0dd20fea3687d059f1b940"
       },
       "6": {
         "count": 1080,
-        "sha256": "8f2ce364fe6f67426489a27c46bf4647049cde3f183080176a79c1f364ff47ef"
+        "sha256": "70a6bd144474ca8cae68a830bfad8087671de9296efd5cb8ea7a7ee69e46e0c1"
       },
       "7": {
         "count": 156,
-        "sha256": "c1847a5730884d27dc0901593584426cbdd65671f942c43d1a71397cd9b31152"
+        "sha256": "1bdb645b3678c29378edc488acbd4082172a1e051168f80c1665209e055fb323"
       },
       "8": {
         "count": 52,
-        "sha256": "64136bdf56a57e084ae84ad5f2adb9fa1142571b4b5c1ffc4f9a1a3b5201a38f"
+        "sha256": "4203dfc77415c85fefee643d58b5f3b5e5ec4b5f45c953cb460e18f69b4c2977"
       },
       "9": {
         "count": 277,
-        "sha256": "841c1dac1dac5993db1c07aa220c622f1b98817ca705c32c0bf6b2845fca3f0f"
+        "sha256": "ff38ee8969679728aa697884bb78fa55764ab404d71daaa5ec0bc40da21dcd06"
       }
     },
     "sources": {
@@ -1239,12 +1251,13 @@
       "common/main/zu_ZA.xml": "521e535cb23efe4c64f59fecf3b4e3e16b69e5741e2935cef8b3a3cd106ef413",
       "common/properties/scriptMetadata.txt": "bb9e789af929c5db67ffcd3e47e3a58f6187686fe4c72fb8203cbe7098715a56",
       "common/supplemental/likelySubtags.xml": "114019e183cffd98262c8c137d40d215124f80d9ba474a594d6ffa1b551b0a96",
+      "common/supplemental/numberingSystems.xml": "c5b9b208c6fe7bd3ce4e1c6cbb8f3337480aca620c9cf703ef3b6c74d4258c16",
       "common/supplemental/supplementalData.xml": "745150ec1408d50e1a272b65654a5dd645f3e60f5cc2898b576f725b28538d1a",
       "common/supplemental/supplementalMetadata.xml": "b06614fc2c9aab3b9a9f7e8bf9328f4f7a95d89b2d2dbb300d0caff0f885c164"
     }
   },
   "locales": 1184,
-  "note": "Prepared locale metadata, preferences and list templates; not formatter capability or full Intl coverage.",
-  "sha256": "f2c286dc8ef5841f554bb7aaf3aa18f9a3a4536c986ddd66febde6139b291493",
-  "strings": 19777
+  "note": "Prepared locale metadata, preferences, list templates and numeric symbols; not formatter capability or full Intl coverage.",
+  "sha256": "b2870011e1ba6e5e1300f99b50a1675d67c4fc13f4e78828f2f6dd2ab653c01b",
+  "strings": 19974
 }
