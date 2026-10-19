@@ -189,6 +189,25 @@ class TableTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 tables.decode_lists(section, strings, 2)
 
+    def test_list_context_table_fields_and_canonical_sets(self):
+        strings = ('', '{0} e {1}', '{0} y {1}', 'invalid')
+        vector = [1, 1, 2] + [0] * 24
+        valid = (2, tables.words([1, 0, 0] + vector))
+        expected = ((1, strings[1], strings[2]),) + ((0, '', ''),) * 8
+        self.assertEqual(tables.decode_contexts(valid, strings, 2), (expected,) * 2)
+        invalid = ((1, valid[1]), (2, valid[1][:-1]),
+                   (2, tables.words([1, 0, 1] + vector)),
+                   (2, tables.words([1, 0, 0, 4, 1, 2] + [0] * 24)),
+                   (2, tables.words([1, 0, 0, 0, 1, 2] + [0] * 24)),
+                   (2, tables.words([1, 0, 0, 1, 0, 2] + [0] * 24)),
+                   (2, tables.words([1, 0, 0, 1, 3, 2] + [0] * 24)),
+                   (2, tables.words([1, 0, 0, 1, 4, 2] + [0] * 24)),
+                   (2, tables.words([2, 0, 1] + vector * 2)),
+                   (2, tables.words([2, 0, 0] + vector + [0] * 27)))
+        for section in invalid:
+            with self.assertRaises(ValueError):
+                tables.decode_contexts(section, strings, 2)
+
     def test_locale_metadata_roundtrip_and_invalid_wire_rows(self):
         metadata = locale_metadata.collect(VerifiedFixture())
         pool = tuple(sorted(locale_tables.strings(metadata) | {'unknown', 'bad\talias', 'abcd-Latn-US'},
