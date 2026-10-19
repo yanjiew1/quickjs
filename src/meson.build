@@ -149,6 +149,7 @@ if intl_enabled
     'intl/currency/boundary.c',
     'intl/currency/data.c',
     'intl/currency/display.c',
+    'intl/duration/data.c',
     'intl/locale/identifier.c',
     'intl/locale/matching.c',
     'intl/locale/native.c',
