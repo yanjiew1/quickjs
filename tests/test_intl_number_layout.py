@@ -128,6 +128,69 @@ class NumberLayoutTests(unittest.TestCase):
         self.assertEqual(rows[('en', 'latn')]['currency-unit-other'],
                          rows[('de', 'mathbold')]['currency-unit-other'])
 
+    def test_currency_template_projection_uses_each_parent_default(self):
+        source = Sources()
+        source.set('en', '''<ldml><numbers><defaultNumberingSystem>mathbold</defaultNumberingSystem>
+          <currencyFormats numberSystem="mathbold"><unitPattern count="one">M {0} {1}</unitPattern>
+          </currencyFormats><currencyFormats numberSystem="latn">
+          <unitPattern count="one">L {0} {1}</unitPattern></currencyFormats></numbers></ldml>''')
+        source.set('en_GB', '''<ldml><numbers><defaultNumberingSystem>latn</defaultNumberingSystem>
+          <currencyFormats numberSystem="latn"><unitPattern count="one">''' + INHERIT +
+          '''</unitPattern></currencyFormats></numbers></ldml>''')
+        rows = {locale: (dict(zip(layout.COUNTS, values)), mask)
+                for locale, values, mask in layout.collect(source, graph())['currency_units']}
+        self.assertEqual(rows['en-GB'][0]['one'], 'M {0} {1}')
+        self.assertEqual(rows['en-GB'][0]['other'], '{0} {1}')
+        self.assertFalse(rows['en-GB'][1] & (1 << layout.COUNTS.index('one')))
+        self.assertTrue(rows['en-GB'][1] & (1 << layout.COUNTS.index('other')))
+        self.assertEqual(self.rows(source)[('en-GB', 'latn')]['currency-unit-one'], 'L {0} {1}')
+        before = layout.collect(source, graph())
+        source.set('en_GB', '''<ldml><numbers><defaultNumberingSystem>latn</defaultNumberingSystem>
+          <currencyFormats numberSystem="latn"><unitPattern count="one">L {0} {1}</unitPattern>
+          </currencyFormats></numbers></ldml>''')
+        after = layout.collect(source, graph())
+        self.assertEqual(before['rows'], after['rows'])
+        self.assertEqual(before['root_fields'], after['root_fields'])
+        self.assertNotEqual(before['currency_units'], after['currency_units'])
+
+    def test_currency_projection_aliases_keep_the_requesting_locale(self):
+        source = Sources()
+        source.set('en', '''<ldml><numbers><defaultNumberingSystem>mathbold</defaultNumberingSystem>
+          <currencyFormats numberSystem="mathbold"><alias source="locale"
+          path="../currencyFormats[@numberSystem='latn']"/></currencyFormats>
+          <currencyFormats numberSystem="latn"><unitPattern count="one">parent {0} {1}</unitPattern>
+          </currencyFormats></numbers></ldml>''')
+        source.set('en_GB', '''<ldml><numbers><currencyFormats numberSystem="latn">
+          <unitPattern count="one">child {0} {1}</unitPattern></currencyFormats></numbers></ldml>''')
+        source.set('de', '''<ldml><numbers><defaultNumberingSystem>mathbold</defaultNumberingSystem>
+          <currencyFormats numberSystem="mathbold"><alias source="root"
+          path="../currencyFormats[@numberSystem='latn']"/></currencyFormats></numbers></ldml>''')
+        rows = {locale: (dict(zip(layout.COUNTS, values)), mask)
+                for locale, values, mask in layout.collect(source, graph())['currency_units']}
+        self.assertEqual(rows['en-GB'][0]['one'], 'child {0} {1}')
+        self.assertEqual(rows['de'][0]['other'], '{0} {1}')
+        self.assertTrue(rows['de'][1] & (1 << layout.COUNTS.index('other')))
+
+    def test_currency_projection_root_alias_cannot_capture_child_raw_override(self):
+        source = Sources()
+        root = ET.fromstring(source.files['common/main/root.xml'])
+        currency = root.find("numbers/currencyFormats[@numberSystem='latn']")
+        ET.SubElement(currency, 'unitPattern', count='one').text = 'root {0} {1}'
+        source.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
+        source.set('en', '''<ldml><numbers><defaultNumberingSystem>mathbold</defaultNumberingSystem>
+          <currencyFormats numberSystem="mathbold"><alias source="root"
+          path="../currencyFormats[@numberSystem='latn']"/></currencyFormats></numbers></ldml>''')
+        source.set('en_GB', '''<ldml><numbers><currencyFormats numberSystem="latn">
+          <unitPattern count="one">child raw {0} {1}</unitPattern></currencyFormats>
+          <currencyFormats numberSystem="mathbold"><unitPattern count="other">child {0} {1}</unitPattern>
+          </currencyFormats></numbers></ldml>''')
+        rows = {locale: (dict(zip(layout.COUNTS, values)), mask)
+                for locale, values, mask in layout.collect(source, graph())['currency_units']}
+        self.assertEqual(rows['en-GB'][0]['one'], 'root {0} {1}')
+        self.assertTrue(rows['en-GB'][1] & (1 << layout.COUNTS.index('one')))
+        self.assertEqual(rows['en-GB'][0]['other'], 'child {0} {1}')
+        self.assertFalse(rows['en-GB'][1] & (1 << layout.COUNTS.index('other')))
+
     def test_required_fields_reject_missing_blocked_and_empty_matches(self):
         for value in ('', BLOCK):
             source = Sources()
