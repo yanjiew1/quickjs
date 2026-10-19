@@ -80,3 +80,70 @@ Graph nodes and source XML filenames are not advertised service availability.
 Each collector still establishes its own complete records and capabilities.
 `tests/test_intl_parents.py` checks authored graphs, including exceptions,
 component independence and rules outside the listed migration examples.
+
+## Typed fields and list templates
+
+```sh
+python3 tools/intl/list_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+`resolve.Records` resolves a finite inventory of typed fields, including explicit
+inheritance and empty-override markers. An inherited `source="locale"` alias
+restarts lookup at the requesting locale; an explicit locale alias changes
+that lookup anchor. Cycles, unknown keys and mixed records fail explicitly.
+Collectors translate supported XPath forms into field mappings rather than
+retaining XML trees or expanding arbitrary paths during resolution.
+
+The list collector reads all source locales and resolves each of the nine
+standard type/style combinations and four template parts. It selects standard
+records without `alt`, admits all published draft states, and reports omitted
+alternates. Text is preserved exactly and both placeholders must occur once.
+Unknown relevant structures, mixed aliases, duplicate fields and missing or
+blocked required templates are errors. These templates do not alone implement
+context-sensitive list behavior or install a JavaScript formatter.
+
+## Binary envelope
+
+`bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.
+Integers are little-endian and decoded bytewise, including on unaligned inputs.
+The 64-byte header contains the total size, section count, 32-byte generation
+identity, minimal/native profile and zeroed reserved fields. Each sorted
+16-byte directory entry contains an ID, offset, byte length and record count.
+Sections are contiguous except for zero padding to four-byte boundaries.
+The envelope is bounded to 256 MiB and 128 sections.
+
+The allocation-free reader borrows immutable storage; opening it validates only
+the envelope. Section owners must check their own record schemas, references
+and required dependencies before use. Unknown optional sections establish no
+service capabilities. A generation identity is not a cryptographic check of
+the contents; source acquisition and prepared-pack manifests provide hashes.
+
+## Prepare typed records
+
+```sh
+python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
+  --profile native --output /path/to/native.bin --manifest /path/to/native.json
+```
+
+The initial sections contain sorted UTF-8 strings, a checked locale-parent
+registry, and deduplicated sets of resolved list templates. `--profile minimal`
+selects English and its parents; `native` retains the full graph. Section IDs
+and string IDs are stable within a generation, not across source upgrades.
+The manifest records exact source reads, policy, pin and section hashes. These
+inputs determine the generation identity without local paths or timestamps.
+Its `complete_services` remains empty until full service behavior is delivered.
+Normal engine builds do not invoke these collectors or parse source XML.
+
+Prepared files are in `data/intl/{minimal,native}.bin` with matching manifests
+and the CLDR license. The repository suite checks their hashes and typed tables
+offline. CI additionally rebuilds both packs from the authenticated archive and
+compares every byte of the binaries and manifests. These initial files contain
+only the sections documented above, not yet the complete Intl data inventory.
+
+`embed.py` validates a prepared pack and emits one immutable C array in the
+build directory. The typed C reader validates UTF-8/string ordering, record
+extents, references, the parent graph and list templates before exposing borrowed
+text slices. Temporary graph-validation memory is freed before return, including
+on errors. Separate C repository tests consume both real prepared profiles, so
+the Python encoder and C reader are checked together on every test platform.
+The reader does not authenticate data or provide BCP47 canonicalization.
