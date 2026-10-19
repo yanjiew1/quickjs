@@ -10,7 +10,7 @@ from cldr_xml import DataError, Schema, read_xml
 from number_patterns import GROUP_ALIAS
 import numbering
 import parents
-from resolve import INHERIT
+from resolve import SparseMaps
 
 KINDS = (('decimal', 'short'), ('decimal', 'long'), ('currency', 'short'))
 COUNTS = ('0', '1', 'zero', 'one', 'two', 'few', 'many', 'other')
@@ -18,79 +18,13 @@ VARIANTS = ('standard', 'alphaNextToNumber', 'noCurrency')
 LENGTH_ALIAS = re.compile(r"\.\./([a-z]+)FormatLength\[@type=(['\"])(short|long)\2\]")
 
 
-class Maps:
-    """Typed whole-group aliases over sparse leaves, with requesting context.
-
-    Each state has one parent/alias dependency. Resolve it iteratively to
-    avoid a Python recursion cap. Empty overlays and aliases share dictionaries;
-    a genuine leaf override copies its inherited map before modification.
-    """
-    def __init__(self, graph, systems):
-        self.graph = graph
-        self.locales = frozenset(graph.tags)
-        self.keys = frozenset((system, style, width) for system in systems for style, width in KINDS)
-        self.values, self.aliases = {}, {}
-
-    def state(self, locale, key):
-        if locale not in self.locales or key not in self.keys:
-            raise DataError('unknown compact locale/group')
-        return locale, key
-
-    def add(self, locale, group, key, value):
-        state = self.state(locale, group)
-        if state in self.aliases:
-            raise DataError('mixed compact alias/leaves')
-        fields = self.values.setdefault(state, {})
-        if key in fields:
-            raise DataError('repeated compact pattern')
-        fields[key] = value
-
-    def alias(self, locale, group, target, source):
-        state = self.state(locale, group)
-        self.state(locale if source is None else source, target)
-        if state in self.aliases or state in self.values:
-            raise DataError('mixed/repeated compact alias')
-        self.aliases[state] = target, source
-
-    def resolve(self, locale, group, cache):
-        start = (locale, locale, group)
-        state, path, active = start, [], set()
-        while state not in cache:
-            if state in active:
-                raise DataError('compact alias/parent cycle')
-            active.add(state)
-            path.append(state)
-            anchor, current, key = state
-            alias = self.aliases.get((current, key))
-            if alias is not None:
-                target, source = alias
-                anchor = anchor if source is None else source
-                state = anchor, anchor, target
-            else:
-                parent = self.graph.parent(current)
-                if parent is None:
-                    base = {}
-                    break
-                state = anchor, parent, key
-        else:
-            base = cache[state]
-        for state in reversed(path):
-            anchor, current, key = state
-            fields = self.values.get((current, key), {})
-            overrides = {key: value for key, value in fields.items() if value != INHERIT}
-            if overrides:
-                base = base.copy()
-                base.update(overrides)
-            cache[state] = base
-        return cache[start]
-
-
 def collect(sources, graph=None):
     graph = parents.load(sources) if graph is None else graph
     systems = tuple(sorted(name for name, (kind, value) in numbering.definitions(sources).items()
                            if kind == 'numeric'))
     schema = Schema(sources.read('common/dtd/ldml.dtd'))
-    records = Maps(graph, systems)
+    records = SparseMaps(graph, ((system, style, width) for system in systems
+                                 for style, width in KINDS), 'compact')
     skipped = 0
 
     def children(node, currency_patterns=False):
