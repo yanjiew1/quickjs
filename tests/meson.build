@@ -106,6 +106,7 @@ endif
 # Tests that include an implementation need archive extraction, not link_whole.
 native_test_names = [
   'test_intl_api',
+  'test_intl_defaults',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -279,6 +280,7 @@ foreach profile : ['minimal', 'native']
     [
       'test_intl_native_locale_id.c',
       '../src/intl/locale/identifier.c',
+      '../src/intl/locale/matching.c',
       '../src/intl/locale/native.c',
       '../src/intl/locale/native-id.c',
       '../src/intl/locale/native-data.c',
@@ -327,6 +329,10 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_locale_system': [
+    'test_intl_locale_system.c',
+    '../src/intl/locale/system.c',
+  ],
   'test_intl_list_engine': [
     'test_intl_list_engine.c',
     '../src/intl/list/native-engine.c',
