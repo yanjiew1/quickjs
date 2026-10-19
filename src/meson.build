@@ -132,10 +132,13 @@ if intl_enabled
     'quickjs/builtins/intl/locale-list.c',
     'quickjs/builtins/intl/list-format.c',
     'quickjs/builtins/intl/number-options.c',
+    'quickjs/builtins/intl/number-value.c',
     'quickjs/builtins/intl/options.c',
   )
   support_sources += files(
+    'intl/common/decimal.c',
     'intl/common/locale-grammar.c',
+    'intl/common/number-decimal.c',
     'intl/locale/identifier.c',
     'intl/locale/matching.c',
     'intl/locale/native.c',
