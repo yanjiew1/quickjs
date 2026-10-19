@@ -356,6 +356,8 @@ if intl_enabled
       'tools/intl/compact_patterns.py',
       'tools/intl/compact_pattern_syntax.py',
       'tools/intl/compact_tables.py',
+      'tools/intl/currencies.py',
+      'tools/intl/currency_tables.py',
       'tools/intl/plural_rules.py',
       'tools/intl/plural_tables.py',
       'tools/intl/parents.py',
