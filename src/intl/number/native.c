@@ -189,6 +189,57 @@ QJSIntlStatus qjs_intl_number_default_system(const QJSIntlNumberService *service
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_number_system_supported(const QJSIntlNumberService *service, size_t locale,
+                                               QJSIntlBytes name, int *supported)
+{
+    QJSIntlNumberingSystem system;
+    QJSIntlNumberSymbols symbols;
+    QJSIntlNumberLayouts layouts;
+    QJSIntlBytes separator;
+    QJSIntlStatus status;
+    uint32_t index, source;
+    if (supported)
+        *supported = 0;
+    if (!supported || !service || locale >= service->numbering.data.locales.count - 1 ||
+        (!name.data && name.length))
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (!name.length ||
+        (name.length == 6 && !memcmp(name.data, "native", 6)) ||
+        (name.length == 8 && !memcmp(name.data, "traditio", 8)) ||
+        (name.length == 7 && !memcmp(name.data, "finance", 7)))
+        return QJS_INTL_OK;
+    status = qjs_intl_numbering_system_find(&service->numbering, name, &index);
+    if (status == QJS_INTL_UNSUPPORTED)
+        return QJS_INTL_OK;
+    if (status)
+        return status;
+    status = qjs_intl_numbering_system_at(&service->numbering, index, &system);
+    if (status)
+        return status;
+    if (system.kind != QJS_INTL_NUMBERING_NUMERIC)
+        return QJS_INTL_OK;
+    /* Opened pattern/symbol/layout owners require a complete matrix for every
+       numeric system. The formatter implements those digit repertoires; only
+       its range syntax imposes an additional data capability requirement. */
+    source = (uint32_t)locale + (locale >= service->root);
+    status = qjs_intl_number_symbols_at(&service->symbols, source, index, &symbols);
+    if (status)
+        return status;
+    status = qjs_intl_number_layouts_at(&service->layouts, source, index, &layouts);
+    if (status)
+        return status;
+    if (layouts.fields[QJS_INTL_LAYOUT_RANGE].state != QJS_INTL_LAYOUT_VALUE ||
+        symbols.fields[QJS_INTL_SYMBOL_APPROXIMATELY].state != QJS_INTL_SYMBOL_VALUE)
+        return QJS_INTL_OK;
+    status = qjs_intl_number_range_separator(layouts.fields[QJS_INTL_LAYOUT_RANGE].text, &separator);
+    if (status == QJS_INTL_UNSUPPORTED)
+        return QJS_INTL_OK;
+    if (status)
+        return status;
+    *supported = 1;
+    return QJS_INTL_OK;
+}
+
 void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
 {
     if (formatter) {
