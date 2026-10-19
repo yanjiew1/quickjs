@@ -1435,3 +1435,30 @@ projection. Formatter ownership, all reached allocation failures, large exact
 fractions, numeric/text grouping, negative zero, parts and representative digital
 locales have focused C tests; this milestone does not yet expose the JavaScript
 DurationFormat constructor.
+
+## DurationFormat JavaScript binding
+
+The enabled profiles now expose `Intl.DurationFormat`, its locale query,
+resolved options, ordinary `format` and `formatToParts` methods. Constructor
+options use `GetOptionsObject`, so nonobject primitives are rejected. Unit
+style and display properties are read/coerced in specification order; transition
+errors occur after the current display option and before the next unit.
+Formatting accepts duration-like objects, strings and branded Temporal.Duration
+slots through the shared converter, without allocating an intermediate Temporal
+object. The Intl-only profile does not enable Temporal constructors.
+
+With both features enabled, `Temporal.Duration.prototype.toLocaleString` uses
+its realm's captured intrinsic DurationFormat constructor and native formatting,
+independently of mutable global properties or prototype methods. The context
+marks/releases that constructor; partial initialization resets its class
+prototype and state. Formatter objects own only native handles and strings.
+Runtime service caches close after object finalizers have released those handles.
+
+Focused JavaScript tests cover options/input getter and coercion order, abrupt
+completion, branding, parts, exact fractions, negative zero, numbering systems,
+subclasses, realms and GC. Native tests cover reached binding allocation failures
+and successful retries. The focused CI Test262 configuration admits DurationFormat
+and Temporal.Duration locale formatting (`Temporal=auto`). The minimal profile
+excludes only three Duration cases that assume unsupported German/Serbian/Chinese
+or Spanish locales; English array-like locale arguments are covered in the
+repository tests. The native profile keeps all those cases.
