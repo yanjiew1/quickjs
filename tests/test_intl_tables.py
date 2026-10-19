@@ -28,6 +28,7 @@ from test_intl_plural_rules import Sources as PluralSources
 from test_intl_number_patterns import Sources as PatternSources
 from test_intl_compact_patterns import Sources as CompactSources
 from test_intl_currencies import Sources as CurrencySources
+from test_intl_number_layout import Sources as LayoutSources
 import number_patterns
 import number_pattern_syntax
 
@@ -100,6 +101,15 @@ class VerifiedFixture(Sources):
                                    if node.tag == style + 'FormatLength' and
                                    node.get('type') in ('short', 'long'))
         currency_source = CurrencySources()
+        layout_source = LayoutSources()
+        layout_root = ET.fromstring(layout_source.files['common/main/root.xml'])
+        root.find('numbers').extend(layout_root.findall('./numbers/miscPatterns'))
+        root.find("./numbers/currencyFormats[@numberSystem='latn']").extend(
+            node for node in layout_root.find("./numbers/currencyFormats[@numberSystem='latn']")
+            if node.tag in ('unitPattern', 'currencySpacing', 'currencyPatternAppendISO'))
+        self.files['common/dtd/ldml.dtd'] += (
+            b'<!ELEMENT miscPatterns' + layout_source.files['common/dtd/ldml.dtd'].split(
+                b'<!ELEMENT miscPatterns', 1)[1])
         root.find('numbers').append(ET.fromstring(
             currency_source.files['common/main/root.xml']).find('./numbers/currencies'))
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT currencies ANY>
@@ -158,6 +168,15 @@ class TableTests(unittest.TestCase):
                        in currency['maps'][currency_rows['en']]}
             self.assertEqual(english[('USD', 'symbol', '')], '$')
             self.assertEqual(english[('USD', 'narrow', '')], '$')
+            layouts = view['number_layouts']
+            self.assertEqual(len(layouts['rows']), len(view['locales']) * 78)
+            layout_rows = {(locale, system): dict(zip(layouts['fields'], values))
+                           for locale, system, values in layouts['rows']}
+            self.assertEqual(layout_rows[('en', 'latn')]['range'], '{0}–{1}')
+            self.assertEqual(layout_rows[('en', 'latn')]['approximately'], '~{0}')
+            self.assertEqual(layout_rows[('en', 'latn')]['currency-unit-other'], '{0} {1}')
+            self.assertIsNone(layout_rows[('root', 'arab')]['currency-unit-other'])
+            self.assertEqual(layout_rows[('root', 'arab')]['afterCurrency-insertBetween'], ' ')
             self.assertIn(('latn', 'numeric', '0123456789'), view['numbering']['systems'])
             self.assertIn('root', {row[0] for row in view['numbering']['locales']})
             symbols = view['number_symbols']
@@ -186,6 +205,7 @@ class TableTests(unittest.TestCase):
             self.assertIn(3, {pattern[1] for magnitude, count, variant, pattern in compact_map
                               if magnitude == 3 and count == 'other' and variant == 'standard'})
             if profile == 'native':
+                self.assertEqual(layout_rows[('fr', 'latn')]['approximately'], '≈{0}')
                 self.assertEqual(fields[('ar', 'arab')]['decimal'], '\u066b')
                 self.assertEqual(fields[('fr', 'latn')]['group'], '\u202f')
                 self.assertEqual(fields[('en', 'mathbold')], fields[('en', 'latn')])
@@ -257,6 +277,9 @@ class TableTests(unittest.TestCase):
         self.assertEqual(full_view['number_symbols']['systems'], ('latn', 'mathbold'))
         self.assertEqual(minimal_view['number_symbols']['rows'],
                          tuple(row for row in full_view['number_symbols']['rows']
+                               if row[0] in minimal_view['locales']))
+        self.assertEqual(minimal_view['number_layouts']['rows'],
+                         tuple(row for row in full_view['number_layouts']['rows']
                                if row[0] in minimal_view['locales']))
         self.assertEqual(minimal_view['plurals']['rows'],
                          tuple(row for row in full_view['plurals']['rows']
