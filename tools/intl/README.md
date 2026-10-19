@@ -247,6 +247,9 @@ Every set is referenced. The decoder checks this structure and template syntax;
 selection of the appropriate language, variant and exact-default replacement
 belongs to the authenticated-source collector. A structurally valid pack alone
 does not prove these linguistic rules or advertise a complete ListFormat service.
+The C reader additionally checks every locale/variant against its base templates
+and these exact-default rules before exposing the contextual records. Unknown
+optional sections remain distinct from validated contextual capability.
 
 `src/intl/locale/preferences.c` applies the fixed ECMA-402 rules above the
 selected backend's exact data queries. Region selection preserves explicit
