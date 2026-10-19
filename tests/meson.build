@@ -486,10 +486,57 @@ endforeach
 
 
 # Build engine-independent library tests against their actual owners.
+foreach profile : ['minimal', 'native']
+  intl_fixture = custom_target(
+    'intl-prepared-' + profile,
+    input: files('../data/intl/' + profile + '.bin'),
+    output: 'intl-prepared-' + profile + '.c',
+    command: [
+      python,
+      files('../tools/intl/embed.py'),
+      '--input', '@INPUT@',
+      '--output', '@OUTPUT@',
+    ],
+    depend_files: files(
+      '../tools/intl/acquire.py',
+      '../tools/intl/bundle.py',
+      '../tools/intl/cldr_xml.py',
+      '../tools/intl/list_patterns.py',
+      '../tools/intl/parents.py',
+      '../tools/intl/resolve.py',
+      '../tools/intl/tables.py',
+    ),
+  )
+  intl_data_test = {
+    'name': ('test_intl_data_' + profile),
+    'sources': files(
+      'test_intl_data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_fixture],
+    'c_args': (host_args + [
+      ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+    ]),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_data_test,
+    'name': ('intl-prepared-' + profile),
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+endforeach
+
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
 standalone = {
 }
 standalone += {
+  'test_intl_pack': files(
+    'test_intl_pack.c',
+    '../src/intl/native/pack.c',
+  ),
   'test_intl_locale_grammar': files(
     'test_intl_locale_grammar.c',
     '../src/intl/common/locale-grammar.c',
@@ -955,6 +1002,38 @@ if native_calendars
     timeout: 30,
   )
 endif
+
+test(
+  'intl-typed-tables',
+  python,
+  args: files('test_intl_tables.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
+
+test(
+  'intl-binary-envelope',
+  python,
+  args: files('test_intl_bundle.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
+
+test(
+  'intl-list-patterns',
+  python,
+  args: files('test_intl_list_patterns.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
+
+test(
+  'intl-record-resolution',
+  python,
+  args: files('test_intl_resolution.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
 
 test(
   'intl-locale-inheritance',
