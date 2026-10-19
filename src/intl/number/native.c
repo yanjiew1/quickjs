@@ -11,6 +11,7 @@
 #include "currency-format.h"
 #include "currency-pattern.h"
 #include "unit.h"
+#include "range.h"
 #include "../currency/display.h"
 #include "../plural/native-engine.h"
 #include "symbol-data.h"
@@ -61,6 +62,7 @@ struct QJSIntlNumberFormatter {
     char currency_code[3];
     unsigned int currency_name, compact_currency;
     QJSIntlNumberUnit unit;
+    QJSIntlBytes range_separator, approximately;
 };
 
 void qjs_intl_number_close(QJSIntlNumberService *service)
@@ -343,6 +345,8 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     QJSIntlCurrencyPattern currency_pattern = {0};
     QJSIntlBytes currency_text = {0};
     QJSIntlNumberSymbols symbols;
+    QJSIntlNumberLayouts layouts;
+    QJSIntlBytes range_separator;
     QJSIntlStatus status;
     uint32_t index, source;
     size_t i, total = 0, position = 0;
@@ -447,6 +451,15 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     status = qjs_intl_number_symbols_at(&service->symbols, source, index, &symbols);
     if (status)
         return status;
+    status = qjs_intl_number_layouts_at(&service->layouts, source, index, &layouts);
+    if (status)
+        return status;
+    if (layouts.fields[QJS_INTL_LAYOUT_RANGE].state != QJS_INTL_LAYOUT_VALUE ||
+        symbols.fields[QJS_INTL_SYMBOL_APPROXIMATELY].state != QJS_INTL_SYMBOL_VALUE)
+        return QJS_INTL_UNSUPPORTED;
+    status = qjs_intl_number_range_separator(layouts.fields[QJS_INTL_LAYOUT_RANGE].text, &range_separator);
+    if (status)
+        return status;
     if (options->style == QJS_INTL_NUMBER_CURRENCY) {
         const QJSIntlCurrencyField fields[] = {QJS_INTL_CURRENCY_DECIMAL, QJS_INTL_CURRENCY_GROUP};
         const unsigned int regular[] = {QJS_INTL_SYMBOL_DECIMAL, QJS_INTL_SYMBOL_GROUP};
@@ -487,6 +500,8 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         return QJS_INTL_NO_MEMORY;
     memset(formatter, 0, sizeof(*formatter));
     formatter->allocator = service->allocator;
+    formatter->range_separator = range_separator;
+    formatter->approximately = symbols.fields[QJS_INTL_SYMBOL_APPROXIMATELY].text;
     formatter->compact_currency = compact_currency;
     if (options->style == QJS_INTL_NUMBER_UNIT) {
         QJSIntlUnitWidth width = options->unit_display == QJS_INTL_NUMBER_UNIT_LONG
@@ -953,6 +968,30 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
     qjs_intl_number_body_clear(&formatter->allocator, &notation_body);
     qjs_intl_number_body_clear(&formatter->allocator, &signed_body);
     qjs_intl_number_round_clear(&formatter->allocator, &rounded);
+    return status;
+}
+
+QJSIntlStatus qjs_intl_number_format_range(const QJSIntlNumberFormatter *formatter,
+                                         const QJSIntlMathematicalValue *start,
+                                         const QJSIntlMathematicalValue *end,
+                                         QJSIntlFormattedRange *out)
+{
+    QJSIntlFormatted first = {0}, last = {0};
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !formatter || !start || !end ||
+        start->kind == QJS_INTL_NAN || end->kind == QJS_INTL_NAN)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_number_format(formatter, start, &first);
+    if (!status)
+        status = qjs_intl_number_format(formatter, end, &last);
+    if (!status)
+        status = qjs_intl_number_range_compose(&formatter->allocator, formatter->range_separator,
+                                              formatter->approximately, &first, &last,
+                                              formatter->body.maximum_output_length, out);
+    qjs_intl_number_result_clear(&formatter->allocator, &first);
+    qjs_intl_number_result_clear(&formatter->allocator, &last);
     return status;
 }
 
