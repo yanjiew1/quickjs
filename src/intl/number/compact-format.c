@@ -5,85 +5,13 @@
  */
 #include "compact-format.h"
 #include "body.h"
-#include "../../cutils/cutils.h"
-#include <limits.h>
+#include "../common/format-builder.h"
 #include <string.h>
 
-typedef struct Builder {
-    QJSIntlFormatted result;
-    size_t length, count, limit;
-} Builder;
-
-static int next(QJSIntlBytes text, size_t *at)
-{
-    const uint8_t *end;
-    int c;
-    if (*at == text.length || text.length - *at > INT_MAX)
-        return -1;
-    c = unicode_from_utf8((const uint8_t *)text.data + *at, (int)(text.length - *at), &end);
-    if (c <= 0 || c > 0x10ffff || (c >= 0xd800 && c <= 0xdfff))
-        return -1;
-    *at = (const char *)end - text.data;
-    return c;
-}
-
-static int white_space(int c)
-{
-    return c == 0x20 || (c >= 0x9 && c <= 0xd) || c == 0x85 || c == 0xa0 || c == 0x1680 ||
-           (c >= 0x2000 && c <= 0x200a) || c == 0x2028 || c == 0x2029 || c == 0x202f ||
-           c == 0x205f || c == 0x3000;
-}
-
-static QJSIntlStatus add_part(Builder *builder, size_t start, size_t end, QJSIntlPartType type)
-{
-    if (start == end)
-        return QJS_INTL_OK;
-    if (builder->count == SIZE_MAX / sizeof(QJSIntlPart))
-        return QJS_INTL_OVERFLOW;
-    if (builder->result.parts)
-        builder->result.parts[builder->count] = (QJSIntlPart){start, end, type};
-    builder->count++;
-    return QJS_INTL_OK;
-}
-
-/* Append scalar text; optionally track nonspace boundaries for compact
-   affix classification. The same writer handles standalone currency text. */
-static QJSIntlStatus add_text(Builder *builder, QJSIntlBytes text, size_t *first, size_t *last)
-{
-    size_t at = 0;
-    if (!text.data && text.length)
-        return QJS_INTL_INVALID_ARGUMENT;
-    while (at < text.length) {
-        int c = next(text, &at);
-        size_t width;
-        if (c < 0)
-            return QJS_INTL_DATA_ERROR;
-        width = c > 0xffff ? 2 : 1;
-        if (width > builder->limit - builder->length)
-            return QJS_INTL_OVERFLOW;
-        if (first && !white_space(c)) {
-            if (*first == SIZE_MAX)
-                *first = builder->length;
-            *last = builder->length + width;
-        }
-        if (builder->result.text) {
-            uint16_t *out = builder->result.text + builder->length;
-            if (c > 0xffff) {
-                c -= 0x10000;
-                out[0] = 0xd800 + (c >> 10);
-                out[1] = 0xdc00 + (c & 1023);
-            } else
-                out[0] = c;
-        }
-        builder->length += width;
-    }
-    return QJS_INTL_OK;
-}
-
-static QJSIntlStatus add_currency(Builder *builder, QJSIntlBytes text)
+static QJSIntlStatus add_currency(QJSIntlFormatBuilder *builder, QJSIntlBytes text)
 {
     size_t start = builder->length;
-    QJSIntlStatus status = add_text(builder, text, NULL, NULL);
+    QJSIntlStatus status = qjs_intl_format_builder_text(builder, text, NULL, NULL);
     if (status)
         return status;
     /* An explicit empty symbol still has a currency part. */
@@ -96,7 +24,7 @@ static QJSIntlStatus add_currency(Builder *builder, QJSIntlBytes text)
     return QJS_INTL_OK;
 }
 
-static QJSIntlStatus add_affix(Builder *builder, const QJSIntlCompactData *data,
+static QJSIntlStatus add_affix(QJSIntlFormatBuilder *builder, const QJSIntlCompactData *data,
                                const QJSIntlNumberAffix *affix, uint32_t first_token,
                                uint32_t end_token, QJSIntlBytes minus, QJSIntlBytes plus)
 {
@@ -122,42 +50,21 @@ static QJSIntlStatus add_affix(Builder *builder, const QJSIntlCompactData *data,
             return QJS_INTL_DATA_ERROR;
         if (!text.data || !text.length)
             return QJS_INTL_INVALID_ARGUMENT;
-        status = add_text(builder, text, &first, &last);
+        status = qjs_intl_format_builder_text(builder, text, &first, &last);
         if (status)
             return status;
     }
     if (first == SIZE_MAX)
-        return add_part(builder, start, builder->length, QJS_INTL_PART_LITERAL);
-    status = add_part(builder, start, first, QJS_INTL_PART_LITERAL);
+        return qjs_intl_format_builder_part(builder, start, builder->length, QJS_INTL_PART_LITERAL, 0);
+    status = qjs_intl_format_builder_part(builder, start, first, QJS_INTL_PART_LITERAL, 0);
     if (!status)
-        status = add_part(builder, first, last, QJS_INTL_PART_COMPACT);
+        status = qjs_intl_format_builder_part(builder, first, last, QJS_INTL_PART_COMPACT, 0);
     if (status)
         return status;
-    return add_part(builder, last, builder->length, QJS_INTL_PART_LITERAL);
+    return qjs_intl_format_builder_part(builder, last, builder->length, QJS_INTL_PART_LITERAL, 0);
 }
 
-static QJSIntlStatus add_body(Builder *builder, const QJSIntlFormatted *body)
-{
-    size_t i;
-    if (body->length > builder->limit - builder->length ||
-        body->part_count > SIZE_MAX / sizeof(QJSIntlPart) - builder->count)
-        return QJS_INTL_OVERFLOW;
-    if (builder->result.text)
-        memcpy(builder->result.text + builder->length, body->text, body->length * sizeof(uint16_t));
-    if (builder->result.parts) {
-        for (i = 0; i < body->part_count; i++) {
-            QJSIntlPart *part = &builder->result.parts[builder->count + i];
-            *part = body->parts[i];
-            part->start += builder->length;
-            part->end += builder->length;
-        }
-    }
-    builder->length += body->length;
-    builder->count += body->part_count;
-    return QJS_INTL_OK;
-}
-
-static QJSIntlStatus emit(Builder *builder, const QJSIntlCompactData *data,
+static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlCompactData *data,
                           const QJSIntlCompactPattern *pattern,
                           const QJSIntlNumberAffixSymbols *symbols, const QJSIntlFormatted *body)
 {
@@ -189,15 +96,15 @@ static QJSIntlStatus emit(Builder *builder, const QJSIntlCompactData *data,
                     gap = symbols->before_currency;
             }
             gap_start = builder->length;
-            status = add_text(builder, gap, NULL, NULL);
+            status = qjs_intl_format_builder_text(builder, gap, NULL, NULL);
             if (!status)
-                status = add_part(builder, gap_start, builder->length, QJS_INTL_PART_LITERAL);
+                status = qjs_intl_format_builder_part(builder, gap_start, builder->length, QJS_INTL_PART_LITERAL, 0);
             if (status)
                 return status;
             if (token.kind == QJS_INTL_NUMBER_TOKEN_NUMBER) {
                 if (pattern->mode != QJS_INTL_COMPACT_SCALED || numbers++)
                     return QJS_INTL_DATA_ERROR;
-                status = add_body(builder, body);
+                status = qjs_intl_format_builder_body(builder, body);
             } else
                 status = add_currency(builder, symbols->currency);
             if (status)
@@ -218,7 +125,7 @@ QJSIntlStatus qjs_intl_number_compact_format(const QJSIntlAllocator *allocator,
                                              const QJSIntlFormatted *body, size_t limit,
                                              QJSIntlFormatted *out)
 {
-    Builder builder = {0};
+    QJSIntlFormatBuilder builder = {0};
     QJSIntlStatus status;
     size_t i, at = 0;
     if (out)
