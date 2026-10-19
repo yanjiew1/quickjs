@@ -76,6 +76,28 @@ static void test_canonicalization_oom(void)
     }
 }
 
+static void test_script_oom(const char *name, int is_ext)
+{
+    Allocator a = { 0, 0, 0 };
+    CharRange cr;
+    int calls, fail;
+
+    cr_init(&cr, &a, alloc);
+    assert(unicode_script(&cr, name, is_ext) == 0);
+    calls = a.calls;
+    assert(calls > 0 && cr.len > 0);
+    cr_free(&cr);
+    assert(!a.live);
+    for (fail = 1; fail <= calls; fail++) {
+        a.calls = 0;
+        a.fail_at = fail;
+        cr_init(&cr, &a, alloc);
+        assert(unicode_script(&cr, name, is_ext) == -1);
+        cr_free(&cr);
+        assert(!a.live);
+    }
+}
+
 void *lre_realloc(void *opaque, void *ptr, size_t size)
 {
     return alloc(opaque, ptr, size);
@@ -162,6 +184,11 @@ int main(void)
 {
     test_normalization_oom();
     test_canonicalization_oom();
+    test_script_oom("Hebrew", 0);
+    test_script_oom("Hebrew", 1);
+    test_script_oom("Common", 1);
+    test_compile_failures("\\p{Script=Hebrew}", LRE_FLAG_UNICODE);
+    test_compile_failures("\\p{Script_Extensions=Hebrew}", LRE_FLAG_UNICODE);
     test_compile_failures("a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p", 0);
     test_compile_failures("(?<=ab|cd)(?:ef|gh){2,4}", 0);
     test_compile_failures(
