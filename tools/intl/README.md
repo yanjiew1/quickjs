@@ -161,6 +161,16 @@ tests cover astral digits, unaligned storage, optional states, allocation
 failure/retry, long keys, malformed fields and section shapes. These queries
 are metadata infrastructure; future number services select actual capabilities.
 
+`number_symbols.py` collects the 13 common numeric symbols and two optional
+currency separators for every numeric system and source locale. It checks
+whole-group aliases, restarts `source="locale"` aliases at the requesting
+locale, and preserves exact text, explicit empty values and inheritance.
+Optional absence and explicit blocks remain distinct for downstream LDML
+fallback rules. Standard containers/fields are selected before duplicate checks;
+unsupported alias paths or numbering scopes fail explicitly. The standalone
+audit runs against authenticated CLDR sources in CI; these records are not yet
+packed or consumed by NumberFormat.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's

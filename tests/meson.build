@@ -1152,6 +1152,14 @@ test(
 )
 
 test(
+  'intl-number-symbols',
+  python,
+  args: files('test_intl_number_symbols.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-numbering-tables',
   python,
   args: files('test_intl_numbering_tables.py'),
