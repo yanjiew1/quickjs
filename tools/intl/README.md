@@ -552,8 +552,8 @@ locally present categories that a later source might select differently. A
 consulted malformed template is a data error. The prefix/suffix parser supports
 one `{0}` with literal apostrophes and possibly empty affixes; it does not import
 decimal-pattern quoting. Selection allocates nothing and returns borrowed
-source/selector provenance. Unit rendering and the NumberFormat binding remain
-separate requirements.
+source/selector provenance. Rendering and the NumberFormat binding have separate
+owners.
 
 `src/intl/unit/format.c` composes the selected prefix/suffix around a complete
 numeric body, preserving its sign, exponent and compact parts. Nonspace affixes
@@ -723,8 +723,18 @@ pattern. Empty currency maps, raw `0`, small values and nonfinite inputs use
 ordinary currency formatting. Caller-filtered legacy gaps test the actual
 numeric-body edge, and literal-only forms omit unused numeric allocation.
 
+Single-unit style accepts every sanctioned single identifier and all three
+display widths in standard, scientific, engineering and compact notation.
+`number/unit.c` resolves each source layer's cardinal rules, selects its
+number-bearing form and renders it around the signed notation body. Compact
+outer quantities use the same virtual expansion as currency names; scientific
+and engineering units use their final visible mantissa. Nonfinite inputs use
+OTHER without exact selectors. A unit named `percent` does not apply percent
+style's multiplication. Formatter state borrows immutable source/plural views,
+does not retain the caller's identifier and survives service closure.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Unit styles, ranges and the JS binding remain required
+Compound-unit composition, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
