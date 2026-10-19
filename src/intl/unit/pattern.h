@@ -16,6 +16,27 @@ typedef struct QJSIntlUnitPattern {
    Allocate nothing, retain nothing, and reset non-NULL output on failure. */
 QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes, QJSIntlUnitPattern *);
 
+typedef struct QJSIntlUnitDivisionPattern {
+    QJSIntlBytes prefix, separator, suffix;
+    unsigned int first; /* 0: numerator precedes denominator; 1: reverse order. */
+} QJSIntlUnitDivisionPattern;
+
+/* Borrow literal fragments around exactly one {0} and one {1}, in either
+   order. Missing operands return UNSUPPORTED; invalid/repeated placeholders
+   return DATA_ERROR. Apostrophes are literal. Input comes from scalar UTF-8
+   data; this parser only checks template syntax. Allocate/retain nothing,
+   require disjoint output and reset non-NULL output on failure. */
+QJSIntlStatus qjs_intl_unit_division_pattern_parse(QJSIntlBytes, QJSIntlUnitDivisionPattern *);
+
+/* Extract one borrowed noun from a unitPattern for a grammatical component.
+   Accept literal-only text or a single {0} at a nonspace edge. Remove numeric
+   separator whitespace, retaining noun-internal spaces/punctuation. Empty or
+   middle-placeholder forms return UNSUPPORTED, malformed scalar text or
+   placeholders return DATA_ERROR. Fixed grammatical count selection belongs
+   to the caller and must not enable exact numeric selectors. No allocation;
+   require disjoint output and reset non-NULL output on failure. */
+QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes, QJSIntlBytes *);
+
 typedef QJSIntlStatus (*QJSIntlUnitCategoryResolver)(void *opaque, QJSIntlBytes source_locale,
                                                    QJSIntlUnitCount *category);
 

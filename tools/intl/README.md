@@ -590,6 +590,15 @@ decimal-pattern quoting. Selection allocates nothing and returns borrowed
 source/selector provenance. Rendering and the NumberFormat binding have separate
 owners.
 
+The division-template parser retains literal prefix/separator/suffix slices and
+which operand appears first. Both `{0}` and `{1}` must occur once; reversed
+patterns such as `每{1}{0}` are supported. The noun adapter accepts literal-only
+unit forms or strips one numeric placeholder at a nonspace edge, removing
+outer Unicode White_Space while preserving internal text. A middle placeholder
+with noun text on both sides is ineligible for compound-name extraction, as in
+TR35's composition algorithm; it is not silently joined. These helpers borrow
+their inputs and do not select locale/plural/case fallback.
+
 `src/intl/unit/format.c` composes the selected prefix/suffix around a complete
 numeric body, preserving its sign, exponent and compact parts. Nonspace affixes
 become unit parts, with outer Unicode White_Space separated as literal parts;

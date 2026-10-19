@@ -114,6 +114,79 @@ static void parser(void)
     assert(qjs_intl_unit_pattern_parse(bytes("{0}"), NULL) == QJS_INTL_INVALID_ARGUMENT);
 }
 
+static void division_parser(void)
+{
+    QJSIntlUnitDivisionPattern result, zero = {0};
+    static const char *invalid[] = {"{", "}", "{2}", "{00}", "{0}{0}", "{1}{1}",
+                                     "{0}{1}{0}", "{0}{1}}", "{{0}}{1}"};
+    static const char *missing[] = {"", "per", "{0} per", "every {1}"};
+    size_t i;
+    assert(!qjs_intl_unit_division_pattern_parse(bytes("prefix {0} per {1} suffix"), &result));
+    assert(!result.first && equal(result.prefix, "prefix ") && equal(result.separator, " per ") &&
+           equal(result.suffix, " suffix"));
+    assert(!qjs_intl_unit_division_pattern_parse(bytes("每{1}{0}"), &result));
+    assert(result.first == 1 && equal(result.prefix, "每") && !result.separator.length &&
+           !result.suffix.length);
+    assert(!qjs_intl_unit_division_pattern_parse(bytes("'{1}'당 {0}!"), &result));
+    assert(result.first == 1 && equal(result.prefix, "'") && equal(result.separator, "'당 ") &&
+           equal(result.suffix, "!"));
+    for (i = 0; i < sizeof(invalid) / sizeof(*invalid); i++) {
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_unit_division_pattern_parse(bytes(invalid[i]), &result) == QJS_INTL_DATA_ERROR);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+    }
+    for (i = 0; i < sizeof(missing) / sizeof(*missing); i++) {
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_unit_division_pattern_parse(bytes(missing[i]), &result) == QJS_INTL_UNSUPPORTED);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+    }
+    assert(qjs_intl_unit_division_pattern_parse((QJSIntlBytes){NULL, 1}, &result) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_unit_division_pattern_parse((QJSIntlBytes){"x", SIZE_MAX}, &result) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_unit_division_pattern_parse(bytes("{0}/{1}"), NULL) == QJS_INTL_INVALID_ARGUMENT);
+}
+
+static void noun_parser(void)
+{
+    static const char *eligible[][2] = {
+        {"{0} per second", "per second"},
+        {" second {0}", "second"},
+        {"ألف", "ألف"},
+        {" \t{0}\xc2\xa0kilowatt hours\xe3\x80\x80", "kilowatt hours"},
+        {"\xc2\x85{0} m/s\xc2\xa0", "m/s"},
+        {"'seconds' {0}", "'seconds'"},
+        {"\xef\xbb\xbf{0}", "\xef\xbb\xbf"}, /* BOM is not Unicode White_Space. */
+    };
+    static const char *unsupported[] = {"", " \t\xc2\xa0", "{0}", " {0} ",
+                                         "摂氏 {0} 度", "ounce {0} na ruwa"};
+    static const char *malformed[] = {"{1}", "a{0}{0}", "{0}}", "\xed\xa0\x80",
+                                       "{0} \xf4\x90\x80\x80", "\xc0\xaf{0}", "{0}\xe3\x80"};
+    QJSIntlBytes result, zero = {0};
+    size_t i;
+    for (i = 0; i < sizeof(eligible) / sizeof(*eligible); i++) {
+        assert(!qjs_intl_unit_noun_parse(bytes(eligible[i][0]), &result));
+        assert(equal(result, eligible[i][1]));
+        assert(result.data >= eligible[i][0] &&
+               result.data + result.length <= eligible[i][0] + strlen(eligible[i][0]));
+    }
+    for (i = 0; i < sizeof(unsupported) / sizeof(*unsupported); i++) {
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_unit_noun_parse(bytes(unsupported[i]), &result) == QJS_INTL_UNSUPPORTED);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+    }
+    for (i = 0; i < sizeof(malformed) / sizeof(*malformed); i++) {
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_unit_noun_parse(bytes(malformed[i]), &result) == QJS_INTL_DATA_ERROR);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+    }
+    assert(qjs_intl_unit_noun_parse((QJSIntlBytes){NULL, 1}, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_unit_noun_parse((QJSIntlBytes){"x", SIZE_MAX}, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_unit_noun_parse((QJSIntlBytes){NULL, 0}, &result) == QJS_INTL_UNSUPPORTED);
+    assert(qjs_intl_unit_noun_parse((QJSIntlBytes){"a\0b", 3}, &result) == QJS_INTL_DATA_ERROR);
+    assert(qjs_intl_unit_noun_parse(bytes("noun"), NULL) == QJS_INTL_INVALID_ARGUMENT);
+}
+
 int main(void)
 {
     QJSIntlAllocator allocator = {NULL, allocate, NULL, release};
@@ -124,6 +197,8 @@ int main(void)
     uint32_t head, compound;
     unsigned int calls;
     parser();
+    division_parser();
+    noun_parser();
     assert(!qjs_intl_data_open(qjs_intl_unit_selector_bytes, qjs_intl_unit_selector_length,
                                &allocator, &shared));
     assert(!qjs_intl_unit_data_open(&shared, &allocator, &data));

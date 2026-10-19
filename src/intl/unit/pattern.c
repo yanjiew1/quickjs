@@ -3,6 +3,8 @@
  * TR35 Lateral Inheritance / Empty Override and Unit Elements.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "pattern.h"
+#include "../common/text.h"
+#include "../../cutils/cutils.h"
 #include <string.h>
 
 QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes text, QJSIntlUnitPattern *out)
@@ -28,6 +30,91 @@ QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes text, QJSIntlUnitPattern 
         return QJS_INTL_UNSUPPORTED;
     out->prefix = (QJSIntlBytes){text.data, number};
     out->suffix = (QJSIntlBytes){text.data + number + 3, text.length - number - 3};
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_unit_division_pattern_parse(QJSIntlBytes text,
+                                                  QJSIntlUnitDivisionPattern *out)
+{
+    size_t i, positions[2] = {0};
+    unsigned int seen = 0, first = 0;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || (!text.data && text.length) || text.length > PTRDIFF_MAX)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (i = 0; i < text.length; i++) {
+        unsigned int operand;
+        if (text.data[i] == '}')
+            return QJS_INTL_DATA_ERROR;
+        if (text.data[i] != '{')
+            continue;
+        if (text.length - i < 3 || text.data[i + 2] != '}' ||
+            (text.data[i + 1] != '0' && text.data[i + 1] != '1'))
+            return QJS_INTL_DATA_ERROR;
+        operand = text.data[i + 1] - '0';
+        if (seen & (1u << operand))
+            return QJS_INTL_DATA_ERROR;
+        if (!seen)
+            first = operand;
+        seen |= 1u << operand;
+        positions[operand] = i;
+        i += 2;
+    }
+    if (seen != 3)
+        return QJS_INTL_UNSUPPORTED;
+    out->prefix = (QJSIntlBytes){text.data, positions[first]};
+    out->separator = (QJSIntlBytes){text.data + positions[first] + 3,
+                                    positions[1 - first] - positions[first] - 3};
+    out->suffix = (QJSIntlBytes){text.data + positions[1 - first] + 3,
+                                 text.length - positions[1 - first] - 3};
+    out->first = first;
+    return QJS_INTL_OK;
+}
+
+static QJSIntlStatus noun_trim(QJSIntlBytes text, QJSIntlBytes *out)
+{
+    size_t at = 0, first = text.length, last = 0;
+    while (at < text.length) {
+        const uint8_t *end;
+        size_t start = at, remaining = text.length - at;
+        int c = unicode_from_utf8((const uint8_t *)text.data + at,
+                                   remaining < 4 ? (int)remaining : 4, &end);
+        if (c <= 0 || c > 0x10ffff || (c >= 0xd800 && c <= 0xdfff))
+            return QJS_INTL_DATA_ERROR;
+        at = (const char *)end - text.data;
+        if (!qjs_intl_text_is_white_space(c)) {
+            if (!last)
+                first = start;
+            last = at;
+        }
+    }
+    *out = last ? (QJSIntlBytes){text.data + first, last - first} : (QJSIntlBytes){0};
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes text, QJSIntlBytes *out)
+{
+    QJSIntlUnitPattern pattern;
+    QJSIntlBytes prefix, suffix;
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_unit_pattern_parse(text, &pattern);
+    if (status == QJS_INTL_UNSUPPORTED) {
+        status = noun_trim(text, &suffix);
+        prefix = (QJSIntlBytes){0};
+    } else if (!status) {
+        status = noun_trim(pattern.prefix, &prefix);
+        if (!status)
+            status = noun_trim(pattern.suffix, &suffix);
+    }
+    if (status)
+        return status;
+    if (!!prefix.length == !!suffix.length)
+        return QJS_INTL_UNSUPPORTED;
+    *out = prefix.length ? prefix : suffix;
     return QJS_INTL_OK;
 }
 

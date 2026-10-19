@@ -586,6 +586,7 @@ intl_unit_pattern_test = executable(
   [
     'test_intl_unit_pattern.c',
     '../src/intl/unit/pattern.c',
+    '../src/cutils/cutils.c',
     '../src/intl/unit/data.c',
     '../src/intl/common/locale-grammar.c',
     '../src/intl/common/source-locale.c',
