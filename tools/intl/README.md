@@ -505,6 +505,21 @@ style's sign is outside it. Nonfinite values omit the exponent and notation
 wrappers. Source fraction defaults, exponent plus signs and zero-padding do
 not override the resolved ECMA-402 options and exponent rules.
 
+Compact decimal notation uses the selected standard-`other` divisor before
+rounding, then chooses an exact `0`/`1` or plural affix from the visible rounded
+mantissa. This plural context has `c = e = 0`; it is distinct from the expanded
+quantity used by an outer currency or unit name. Retain the final magnitude
+lookup across a carry or signed-zero result instead of recovering it from the
+divisor. An incompatible inherited plural divisor falls back to `other` without
+rescaling, and a raw `0` baseline omits compact notation entirely.
+
+Literal-only compact forms such as French `mille` omit the numeric body,
+including its integer padding and localized digit allocation. Compact names
+remain one `compact` part across internal spaces and localized sign tokens;
+only leading/trailing Unicode White_Space becomes `literal` parts. This includes
+hyphens inside the pinned yrl long names. Sign display remains an outer-style
+operation, not a selection of the compact pattern's negative form.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
 Currency/unit styles, compact notation, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
