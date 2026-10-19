@@ -628,6 +628,7 @@ intl_number_compact_test = executable(
     '../src/intl/number/body.c',
     '../src/intl/number/compact-data.c',
     '../src/intl/number/compact-format.c',
+    '../src/intl/common/format-builder.c',
     '../src/intl/number/compact-family.c',
   ) + [intl_compact_fixture],
   c_args: host_args,
@@ -834,6 +835,30 @@ intl_unit_authored = executable(
 test(
   'intl-unit-authored',
   intl_unit_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_unit_pattern_test = executable(
+  'test_intl_unit_pattern',
+  [
+    'test_intl_unit_pattern.c',
+    '../src/intl/unit/pattern.c',
+    '../src/intl/unit/data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    intl_unit_fixture,
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-unit-pattern',
+  intl_unit_pattern_test,
   suite: ['repo', 'native'],
   timeout: 30,
 )
@@ -1151,11 +1176,17 @@ foreach profile : ['minimal', 'native']
       '../src/intl/number/body.c',
       '../src/intl/number/compact-data.c',
       '../src/intl/number/compact-format.c',
+      '../src/intl/common/format-builder.c',
       '../src/intl/number/compact-family.c',
       '../src/intl/number/currency-format.c',
       '../src/intl/number/currency-pattern.c',
       '../src/intl/number/layout-data.c',
       '../src/intl/number/native.c',
+      '../src/intl/number/unit.c',
+      '../src/intl/unit/data.c',
+      '../src/intl/unit/identifier.c',
+      '../src/intl/unit/pattern.c',
+      '../src/intl/unit/format.c',
       '../src/intl/number/pattern-data.c',
       '../src/intl/number/round.c',
       '../src/intl/number/sign-affix.c',
@@ -1282,6 +1313,12 @@ standalone = {
   'test_intl_unit_identifier': [
     'test_intl_unit_identifier.c',
     '../src/intl/unit/identifier.c',
+  ],
+  'test_intl_unit_format': [
+    'test_intl_unit_format.c',
+    '../src/intl/unit/format.c',
+    '../src/intl/common/format-builder.c',
+    '../src/cutils/cutils.c',
   ],
   'test_intl_locale_system': [
     'test_intl_locale_system.c',
