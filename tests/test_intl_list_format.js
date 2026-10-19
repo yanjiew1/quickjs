@@ -125,3 +125,171 @@ fallback.prototype = null;
 assert(Object.getPrototypeOf(Reflect.construct(List, ["en"], fallback)), foreign.prototype);
 std.gc();
 assert(instance.resolvedOptions().locale, "en");
+
+// Formatting consumes string iterables without coercing their yielded values.
+const formatter = new List("en");
+assert(formatter.format(), "");
+assert(formatter.format([]), "");
+assert(formatter.format([""]), "");
+assert(formatter.format(["one"]), "one");
+assert(formatter.format(["one", "two"]), "one and two");
+assert(formatter.format(["one", "two", "three"]), "one, two, and three");
+assert(formatter.format("abc"), "a, b, and c");
+assert(formatter.format("\ud83e\udd8aA"), "\ud83e\udd8a and A");
+assert(JSON.stringify(formatter.formatToParts()), "[]");
+assert(JSON.stringify(formatter.formatToParts([""])),
+       '[{"type":"element","value":""}]');
+for (const name of ["format", "formatToParts"]) {
+    const descriptor = Object.getOwnPropertyDescriptor(List.prototype, name);
+    assert(descriptor.writable && descriptor.configurable && !descriptor.enumerable);
+    assert(descriptor.value.name, name);
+    assert(descriptor.value.length, 1);
+    assertThrows(TypeError, () => new descriptor.value());
+    for (const value of [null, false, 0, 1n, Symbol(), {}])
+        assertThrows(TypeError, () => formatter[name](value));
+    for (const value of [null, undefined, List.prototype, {}, new Proxy(formatter, {})]) {
+        assertThrows(TypeError, () => descriptor.value.call(value, {
+            get [Symbol.iterator]() { throw Error("brand must be checked first"); }
+        }));
+    }
+}
+
+let rope = "";
+for (let i = 0; i < 64; i++) rope += "abcdefgh";
+const strings = ["\0x", "\ud800", "\udc00", "\ud83e\udd8a", rope, ""];
+const parts = formatter.formatToParts(strings);
+assert(parts.map(part => part.value).join(""), formatter.format(strings));
+assert(JSON.stringify(parts.filter(part => part.type === "element").map(part => part.value)),
+       JSON.stringify(strings));
+assert(parts.every(part => Object.getPrototypeOf(part) === Object.prototype));
+for (const part of parts) {
+    assert(Object.keys(part).join(","), "type,value");
+    for (const key of ["type", "value"]) {
+        const descriptor = Object.getOwnPropertyDescriptor(part, key);
+        assert(descriptor.writable && descriptor.enumerable && descriptor.configurable);
+    }
+}
+
+// IteratorStepValue abrupt completions do not invoke return; a non-string does.
+for (const name of ["format", "formatToParts"]) {
+    for (const stage of ["next-get", "next-call", "done", "value", "result"]) {
+        let closed = 0, caught;
+        const marker = {};
+        const iterator = {
+            get next() {
+                if (stage === "next-get") throw marker;
+                return function () {
+                    if (stage === "next-call") throw marker;
+                    if (stage === "result") return 0;
+                    return {
+                        get done() { if (stage === "done") throw marker; return false; },
+                        get value() { throw marker; }
+                    };
+                };
+            },
+            return() { closed++; return {}; }
+        };
+        try { formatter[name]({ [Symbol.iterator]() { return iterator; } }); }
+        catch (error) { caught = error; }
+        if (stage === "result") assert(caught instanceof TypeError);
+        else assert(caught, marker);
+        assert(closed, 0);
+    }
+    for (const value of [1, undefined, null, Symbol(), new String("x"), {
+        toString() { throw Error("no string coercion permitted"); }
+    }]) {
+        let closed = 0;
+        const iterable = {
+            [Symbol.iterator]() {
+                return {
+                    next() { return { value, done: false }; },
+                    get return() { closed++; throw Error("preserve original TypeError"); }
+                };
+            }
+        };
+        assertThrows(TypeError, () => formatter[name](iterable));
+        assert(closed, 1);
+    }
+    let reads = 0, steps = 0, closed = 0;
+    const iterable = {
+        [Symbol.iterator]() {
+            return {
+                get next() {
+                    reads++;
+                    return function () {
+                        assert(formatter.format(["nested"]), "nested");
+                        return steps++ < 2 ? { value: "x", done: false }
+                                           : { get value() { throw Error("done value"); }, done: true };
+                    };
+                },
+                return() { closed++; return {}; }
+            };
+        }
+    };
+    const formatted = formatter[name](iterable);
+    assert(name === "format" ? formatted : formatted.map(p => p.value).join(""), "x and x");
+    assert(reads, 1);
+    assert(steps, 3);
+    assert(closed, 0);
+}
+
+// Built-in result creation bypasses inherited setters and uses the method realm.
+for (const key of ["type", "value"])
+    Object.defineProperty(Object.prototype, key, {
+        configurable: true, set() { throw Error("inherited part setter"); }
+    });
+let ownParts;
+try { ownParts = formatter.formatToParts(["a", "b"]); }
+finally {
+    delete Object.prototype.type;
+    delete Object.prototype.value;
+}
+assert(ownParts.map(p => p.value).join(""), "a and b");
+Object.defineProperty(Array.prototype, "0", {
+    configurable: true, set() { throw Error("inherited array setter"); }
+});
+try { ownParts = formatter.formatToParts(["a", "b"]); }
+finally { delete Array.prototype[0]; }
+assert(ownParts[0].value, "a");
+const formattingRealm = std.createRealm();
+const foreignFormatParts = formattingRealm.evalScript("Intl.ListFormat.prototype.formatToParts");
+const foreignParts = foreignFormatParts.call(formatter, ["a", "b"]);
+assert(Object.getPrototypeOf(foreignParts), formattingRealm.evalScript("Array.prototype"));
+assert(Object.getPrototypeOf(foreignParts[0]), formattingRealm.evalScript("Object.prototype"));
+
+if (List.supportedLocalesOf("es").length) {
+    assert(new List("es").format(["uno", "isla"]), "uno e isla");
+    assert(new List("es", { type: "disjunction" }).format(["uno", "11.000,92"]),
+           "uno u 11.000,92");
+    assert(new List("es", { type: "disjunction" }).format(["uno", "110"]), "uno o 110");
+}
+if (List.supportedLocalesOf("he").length) {
+    assert(new List("he").format(["a", "b"]), "a ו-b");
+    assert(new List("he").format(["a", "בית"]), "a ובית");
+}
+const many = Array.from({ length: 256 }, (_, i) => String(i));
+assert(formatter.formatToParts(many).filter(part => part.type === "element").length, 256);
+std.gc();
+assert(formatter.format(["still", "alive"]), "still and alive");
+
+for (const name of ["format", "formatToParts"]) {
+    assertThrows(TypeError, () => formatter[name]({ [Symbol.iterator]: 1 }));
+    assertThrows(TypeError, () => formatter[name]({ [Symbol.iterator]() { return 1; } }));
+    let closed = 0;
+    assertThrows(TypeError, () => formatter[name]({
+        [Symbol.iterator]() {
+            return { next: 0, return() { closed++; return {}; } };
+        }
+    }));
+    assert(closed, 0);
+}
+function* collectedStrings() {
+    let value = "";
+    for (let i = 0; i < 64; i++) value += "rope";
+    yield value;
+    value = null;
+    std.gc();
+    yield "end";
+    std.gc();
+}
+assert(formatter.format(collectedStrings()), "rope".repeat(64) + " and end");
