@@ -1503,6 +1503,13 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_currency_boundary': files(
+      'test_intl_currency_boundary.c',
+      '../src/intl/currency/boundary.c',
+      '../src/unicode/category.c',
+    ) + unicode_tables + files(
+      '../src/cutils/cutils.c',
+    ),
     'test_intl_number_affix': files(
       'test_intl_number_affix.c',
       '../src/intl/number/affix.c',
@@ -1570,7 +1577,6 @@ if intl_enabled
   }
 endif
 standalone += {
-
 }
 
 if get_option('temporal') and native_calendars
