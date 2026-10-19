@@ -618,8 +618,44 @@ only leading/trailing Unicode White_Space becomes `literal` parts. This includes
 hyphens inside the pinned yrl long names. Sign display remains an outer-style
 operation, not a selection of the compact pattern's negative form.
 
+The positive compact renderer also emits resolved currency tokens as separate
+`currency` parts, including explicit empty text. It preserves compact-name
+boundaries and emits caller-filtered currency gaps only at directly adjacent
+number/currency tokens. Currency selection, scalar predicates and alpha-family
+policy belong to the native service, not this renderer.
+
+`sign-affix.c` provides allocation-free sign-envelope projection for wrapping
+that complete compact currency body. It compares each signed affix against the
+positive form on each side of the number and removes maximal common prefix
+and suffix context. Literal comparisons operate on Unicode scalars, so partial
+UTF-8 code-point matches cannot corrupt the retained slices. Accounting
+parentheses, signs and signed-only controls remain; unsigned spaces and bidi
+controls are not emitted twice. Residual currency/percent tokens are rejected.
+Projection is an explicit native composition policy, not an LDML pattern
+rewrite. Its input token arrays are disjoint; the selected array is compacted
+in place and still borrows immutable literal storage.
+
+Compact symbol, narrow-symbol and code display uses the currency-short map,
+regardless of `compactDisplay`. `compact-family.c` selects the divisor before
+rounding: raw `0` ends compact selection before considering alpha variants;
+otherwise direct currency/number adjacency and the compact L M* / initial-L
+boundary facts choose a usable alpha `other` when available. Sparse alpha
+count leaves may still be selected without an alpha `other`, but every selected
+count retains the chosen divisor. A threshold with any usable alpha leaf
+suppresses legacy spacing even when its ordinary form is selected. This
+per-threshold modern/legacy compatibility policy is native formatter policy;
+TR35 does not specify that fallback granularity.
+
+The service caches those families and separate sign envelopes alongside its
+ordinary currency forms. A complete compact currency body receives only the
+projected sign envelope, so the currency and unsigned decoration occur once.
+Forms without a currency placeholder retain the ordinary outer currency
+pattern. Empty currency maps, raw `0`, small values and nonfinite inputs use
+ordinary currency formatting. Caller-filtered legacy gaps test the actual
+numeric-body edge, and literal-only forms omit unused numeric allocation.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Compact currency, unit styles, ranges and the JS binding remain required
+Compact currency names, unit styles, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
