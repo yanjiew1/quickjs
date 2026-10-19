@@ -691,6 +691,49 @@ test(
   timeout: 30,
 )
 
+intl_calendar_name_sources = files(
+  'test_intl_calendar_names.c',
+  '../src/intl/common/locale-grammar.c',
+  '../src/intl/common/source-locale.c',
+  '../src/intl/display/calendar-names.c',
+  '../src/intl/display/data.c',
+  '../src/intl/display/select.c',
+  '../src/intl/locale/native-data.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+)
+intl_calendar_name_modes = {
+  'regular': '0',
+  'ambiguous': '1',
+  'conflicting': '2',
+  'empty': '3',
+}
+foreach mode, number : intl_calendar_name_modes
+  intl_calendar_name_fixture = custom_target(
+    'intl-calendar-names-' + mode + '-fixture',
+    output: 'intl-calendar-names-' + mode + '-fixture.c',
+    command: [python, files('intl_calendar_name_fixture.py'), '--mode', mode, '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_display_names.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_calendar_name_test = executable(
+    'test_intl_calendar_names_' + mode,
+    intl_calendar_name_sources + [intl_calendar_name_fixture],
+    c_args: host_args + ['-DTEST_INTL_CALENDAR_NAME_MODE=' + number],
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-calendar-names-' + mode,
+    intl_calendar_name_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+endforeach
+
 intl_display_selection_fixture = custom_target(
   'intl-display-selection-fixture',
   output: 'intl-display-selection-fixture.c',
@@ -1449,6 +1492,21 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-display-data-' + profile,
     intl_display_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_calendar_name_test = executable(
+    'test_intl_calendar_names_' + profile,
+    intl_calendar_name_sources,
+    c_args: host_args + ['-DTEST_INTL_CALENDAR_NAME_MODE=4'],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-calendar-names-' + profile,
+    intl_calendar_name_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
