@@ -2274,6 +2274,14 @@ test(
 )
 
 test(
+  'intl-display-tables',
+  python,
+  args: files('test_intl_display_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-display-names',
   python,
   args: files('test_intl_display_names.py'),

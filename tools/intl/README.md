@@ -1490,6 +1490,31 @@ code canonicalization and locale availability belong to later consumers.
 Authored tests cover all groups, exact text, alternative identities, metadata,
 markers, source aliases, cycles and rejected ambiguous structures.
 
+`display_tables.py` encodes these facts in section 26. Six header words contain
+schema version 1 and the counts of shared locale rows, maps, nodes, entries and
+lookup keys. One row index per locale selects seven group heads. A zero head
+means no source layer; other heads and parent references are one-based. Maps
+have contiguous entry spans. Nodes contain pooled source locale, group, map and
+parent, ordered by depth and then by those four fields. Identical suffixes and
+locale rows are shared; every row, map and node must be reachable.
+
+Each six-word entry contains normalized code, `alt`, `menu`, `scope`, original
+source code and text. The first four fields determine lookup order and uniqueness.
+Identifier groups use lowercase ASCII and hyphens in the lookup column; pattern
+and bracket keys retain exact spelling. Original spelling remains available for
+provenance. Normalization collisions within one source layer are rejected;
+overrides across child and parent layers remain valid. Empty text is a present
+value; `0xfffffffe` encodes an explicit block, and missing keys have no entry.
+
+A sorted group/code inventory covers all reachable entries, including blocked
+and alternate-only facts. It supports later bounded compound-name lookup and
+does not advertise service availability. Projection prunes unused layers while
+retaining alias origins outside the selected locale profile. Codec tests cover
+canonical roundtrips, shared raw maps with different group normalization,
+projection, normalization collisions, empty profiles and malformed sections.
+The section is not yet included in prepared profiles; the C data owner and
+service policy are separate implementation steps.
+
 ## Shared date-field labels
 
 `date_field_names.py` owns the twelve ECMA-402 date-field labels across long,
