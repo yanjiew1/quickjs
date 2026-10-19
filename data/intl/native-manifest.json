@@ -1,8 +1,8 @@
 {
-  "bytes": 391532,
+  "bytes": 392856,
   "complete_services": [],
   "format": 1,
-  "generation": "0e96152ecb76513f48ed1370db3c7a104997fc39f0b981dba7efb20a11be1533",
+  "generation": "194d5a98292de0519a7e4e400cf2daa80319759b8b8e6eb3c4fda284bf551666",
   "inputs": {
     "cldr": {
       "archive": {
@@ -16,7 +16,241 @@
       "release": "49-beta4",
       "tag": "release-49-beta4"
     },
-    "policy": "standard variants; all published draft states; exact text; checked alias/parent resolution; CLDR ListPatterns context policy 1",
+    "formatter_fallbacks": [
+      [
+        "az-AZ",
+        "az-Latn-AZ"
+      ],
+      [
+        "az-IQ",
+        "az-Arab-IQ"
+      ],
+      [
+        "az-IR",
+        "az-Arab-IR"
+      ],
+      [
+        "az-TR",
+        "az-Arab-TR"
+      ],
+      [
+        "bal-PK",
+        "bal-Arab-PK"
+      ],
+      [
+        "bs-BA",
+        "bs-Latn-BA"
+      ],
+      [
+        "ff-BF",
+        "ff-Latn-BF"
+      ],
+      [
+        "ff-CM",
+        "ff-Latn-CM"
+      ],
+      [
+        "ff-GH",
+        "ff-Latn-GH"
+      ],
+      [
+        "ff-GM",
+        "ff-Latn-GM"
+      ],
+      [
+        "ff-GN",
+        "ff-Latn-GN"
+      ],
+      [
+        "ff-GW",
+        "ff-Latn-GW"
+      ],
+      [
+        "ff-LR",
+        "ff-Latn-LR"
+      ],
+      [
+        "ff-MR",
+        "ff-Latn-MR"
+      ],
+      [
+        "ff-NE",
+        "ff-Latn-NE"
+      ],
+      [
+        "ff-NG",
+        "ff-Latn-NG"
+      ],
+      [
+        "ff-SL",
+        "ff-Latn-SL"
+      ],
+      [
+        "ff-SN",
+        "ff-Latn-SN"
+      ],
+      [
+        "ha-SD",
+        "ha-Arab-SD"
+      ],
+      [
+        "hnj-US",
+        "hnj-Hmnp-US"
+      ],
+      [
+        "isv-001",
+        "isv-Latn-001"
+      ],
+      [
+        "kaa-UZ",
+        "kaa-Cyrl-UZ"
+      ],
+      [
+        "kk-CN",
+        "kk-Arab-CN"
+      ],
+      [
+        "kok-IN",
+        "kok-Deva-IN"
+      ],
+      [
+        "ks-IN",
+        "ks-Arab-IN"
+      ],
+      [
+        "ku-IQ",
+        "ku-Arab-IQ"
+      ],
+      [
+        "ku-IR",
+        "ku-Arab-IR"
+      ],
+      [
+        "ku-SY",
+        "ku-Latn-SY"
+      ],
+      [
+        "kxv-IN",
+        "kxv-Latn-IN"
+      ],
+      [
+        "mn-CN",
+        "mn-Mong-CN"
+      ],
+      [
+        "mni-IN",
+        "mni-Beng-IN"
+      ],
+      [
+        "mww-US",
+        "mww-Hmnp-US"
+      ],
+      [
+        "pa-IN",
+        "pa-Guru-IN"
+      ],
+      [
+        "pa-PK",
+        "pa-Arab-PK"
+      ],
+      [
+        "pi-GB",
+        "pi-Latn-GB"
+      ],
+      [
+        "rhg-BD",
+        "rhg-Rohg-BD"
+      ],
+      [
+        "rhg-MM",
+        "rhg-Rohg-MM"
+      ],
+      [
+        "sat-IN",
+        "sat-Olck-IN"
+      ],
+      [
+        "sd-IN",
+        "sd-Deva-IN"
+      ],
+      [
+        "sd-PK",
+        "sd-Arab-PK"
+      ],
+      [
+        "shi-MA",
+        "shi-Tfng-MA"
+      ],
+      [
+        "sr-BA",
+        "sr-Cyrl-BA"
+      ],
+      [
+        "sr-ME",
+        "sr-Latn-ME"
+      ],
+      [
+        "sr-RS",
+        "sr-Cyrl-RS"
+      ],
+      [
+        "sr-XK",
+        "sr-Cyrl-XK"
+      ],
+      [
+        "su-ID",
+        "su-Latn-ID"
+      ],
+      [
+        "suz-NP",
+        "suz-Deva-NP"
+      ],
+      [
+        "uz-AF",
+        "uz-Arab-AF"
+      ],
+      [
+        "uz-UZ",
+        "uz-Latn-UZ"
+      ],
+      [
+        "vai-LR",
+        "vai-Vaii-LR"
+      ],
+      [
+        "yue-HK",
+        "yue-Hant-HK"
+      ],
+      [
+        "yue-MO",
+        "yue-Hant-MO"
+      ],
+      [
+        "zh-CN",
+        "zh-Hans-CN"
+      ],
+      [
+        "zh-HK",
+        "zh-Hant-HK"
+      ],
+      [
+        "zh-MO",
+        "zh-Hant-MO"
+      ],
+      [
+        "zh-MY",
+        "zh-Hans-MY"
+      ],
+      [
+        "zh-SG",
+        "zh-Hans-SG"
+      ],
+      [
+        "zh-TW",
+        "zh-Hant-TW"
+      ]
+    ],
+    "policy": "standard variants; all published draft states; exact text; checked alias/parent resolution; CLDR ListPatterns context policy 1; formatter fallback registry policy 1",
     "profile": "native",
     "schema": [
       1,
@@ -24,40 +258,40 @@
     ],
     "sections": {
       "1": {
-        "count": 19777,
-        "sha256": "cae62417cdc99b6cb92eb7fcb31d09dac3cf906f0444ac486147e30f2287b44c"
+        "count": 19819,
+        "sha256": "9af3bb07b04f62f189606f22059ed298a1edcb6cfbbf38c6fa54716e1df75feb"
       },
       "10": {
-        "count": 1154,
-        "sha256": "d296b86f87abaeb8365e37526cf14da237a715a1f8f9bd6857448eec1c507271"
+        "count": 1212,
+        "sha256": "cf1d669c98548412f44ef302ce62f7d330fb07ee1a33a9d821d5325c6bd03d03"
       },
       "11": {
         "count": 184,
         "sha256": "3c3efbe30b6b4e9928c7612152d1729211bf62b3e90309d857bb2845a8c338bb"
       },
       "12": {
-        "count": 1154,
-        "sha256": "a8dc0c01c06a0f4eee937908b5543cf5f9183f45b8bf2ea79d699b5885064c92"
+        "count": 1212,
+        "sha256": "be9025515451566b75c58c3b3263d1cc7edcd1cc0a0753dfbfc869ae1072a314"
       },
       "2": {
-        "count": 1154,
-        "sha256": "385b2e92c98030c0909d18575f704b751a3ae385c08816af21072a1cfeb8b95c"
+        "count": 1212,
+        "sha256": "ba0593f7f254d88d423a57ba8627b5bfa98fa0ff2b772f4999d4ba465d07fba1"
       },
       "3": {
         "count": 1292,
-        "sha256": "606c221a0779b81654b4c42dac97fb94828918d48acef804ab3a8b9203f13757"
+        "sha256": "016bbffcceffeaa090b81f35ad3d26d02bdef49728e44c50be51d98c582f4a47"
       },
       "4": {
         "count": 7868,
-        "sha256": "c24fcd97fc4c8b19d248d71087808d06a09f319fca0d0ee1c940c137136f2d43"
+        "sha256": "6f5aa3adf34a45cffd2ec23dc9d266be8b2a7f0999a93b23f3947d3c4352ffcc"
       },
       "5": {
         "count": 37,
-        "sha256": "2c97390b9ab25d20c9941018b9b577e2dedf7d1eb2cde3f03e0dee43392061d3"
+        "sha256": "5b61a71606f7f5cd5579adddb11ce1be6e7a792cf78f5402a81969857100ebb2"
       },
       "6": {
         "count": 1080,
-        "sha256": "0d85e766ca16f641cba94b0fd3c8ea98546602bf0cddc850ed16fbdc5a90c3ec"
+        "sha256": "ad6267048f7821b3343b0d72c9153662c2afdb73c8a8bfd3f3a0c1417c3c73b6"
       },
       "7": {
         "count": 156,
@@ -65,11 +299,11 @@
       },
       "8": {
         "count": 52,
-        "sha256": "7950cdcfd504471377f9a4ea07df3707e096096ed433f6886a3db428a9589ecb"
+        "sha256": "a606619ebc4a49aca40af748804bd1f4d643dd5ea1fd7781460a4cb7b4198342"
       },
       "9": {
         "count": 277,
-        "sha256": "becd5fd58c0c487baa151d667e4f9d094c41bd29380a14f054e5f08d57183ae8"
+        "sha256": "f405efc08b7e8c1d3655b8beb9de413f849d7324334aea64f5f09f91265f6da8"
       }
     },
     "sources": {
@@ -1246,8 +1480,8 @@
       "common/supplemental/supplementalMetadata.xml": "b06614fc2c9aab3b9a9f7e8bf9328f4f7a95d89b2d2dbb300d0caff0f885c164"
     }
   },
-  "locales": 1154,
+  "locales": 1212,
   "note": "Prepared locale metadata, preferences and list templates; not formatter capability or full Intl coverage.",
-  "sha256": "9c0344e6bfe266b51a7eb0f363fff02028378eedf4e0cde4d633f5a8bbe4c56d",
-  "strings": 19777
+  "sha256": "5bd80b218639f418fc159fb63f0dac9bce412f1c1c389ddf51522848942db47e",
+  "strings": 19819
 }
