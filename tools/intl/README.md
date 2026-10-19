@@ -590,7 +590,12 @@ internal spaces stay within a unit part. A bare or whitespace-only template
 retains an empty unit part. The complete UTF-16 result is independently owned,
 with exact output bounds and allocation-failure cleanup. The compact and unit
 renderers share the private bounded UTF-16 builder; unit/plural/sign selection
-remains outside that writer. This does not register JavaScript NumberFormat.
+remains outside that writer. Borrowed prefix/suffix fragment lists can compose
+compound affixes without intermediate text allocations. Part boundaries are
+assigned after measuring all fragments: internal spaces remain in one unit part
+per affix, and only outer whitespace becomes literal. Every fragment must end
+on a UTF-8 scalar boundary. The single-pattern entry point delegates to this
+renderer. This does not register JavaScript NumberFormat.
 
 ## Localized numeric bodies
 
