@@ -76,6 +76,13 @@ option(
 )
 
 option(
+  'intl',
+  type: 'combo',
+  choices: ['disabled', 'minimal', 'native'],
+  value: 'disabled',
+  description: 'Intl support: disabled, minimal English data, or native locale data',
+)
+option(
   'temporal',
   type: 'boolean',
   value: true,
