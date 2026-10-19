@@ -27,6 +27,18 @@ typedef enum QJSIntlNumberLayoutField {
     QJS_INTL_LAYOUT_FIELD_COUNT
 } QJSIntlNumberLayoutField;
 
+typedef enum QJSIntlCurrencyUnitCount {
+    QJS_INTL_CURRENCY_UNIT_EXACT_ZERO,
+    QJS_INTL_CURRENCY_UNIT_EXACT_ONE,
+    QJS_INTL_CURRENCY_UNIT_ZERO,
+    QJS_INTL_CURRENCY_UNIT_ONE,
+    QJS_INTL_CURRENCY_UNIT_TWO,
+    QJS_INTL_CURRENCY_UNIT_FEW,
+    QJS_INTL_CURRENCY_UNIT_MANY,
+    QJS_INTL_CURRENCY_UNIT_OTHER,
+    QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT
+} QJSIntlCurrencyUnitCount;
+
 enum { QJS_INTL_LAYOUT_VALUE, QJS_INTL_LAYOUT_ABSENT, QJS_INTL_LAYOUT_BLOCKED };
 
 typedef struct QJSIntlNumberLayoutText {
@@ -39,11 +51,18 @@ typedef struct QJSIntlNumberLayouts {
     QJSIntlNumberLayoutText fields[QJS_INTL_LAYOUT_FIELD_COUNT];
 } QJSIntlNumberLayouts;
 
+typedef struct QJSIntlCurrencyUnitLayouts {
+    /* Exact zero/one, then zero/one/two/few/many/other. */
+    QJSIntlNumberLayoutText fields[QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT];
+} QJSIntlCurrencyUnitLayouts;
+
 typedef struct QJSIntlNumberLayoutData {
     QJSIntlNumberingData numbering;
     QJSIntlSection section;
     const uint8_t *systems, *locale_rows, *rows, *vectors;
+    const uint8_t *currency_locale_vectors, *currency_vectors;
     uint32_t system_count, row_count, vector_count;
+    uint32_t currency_vector_count;
 } QJSIntlNumberLayoutData;
 
 /* Require an unchanged validated numbering view. Borrow immutable storage;
@@ -62,4 +81,12 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *,
    Returned strings borrow the same unchanged owner. */
 QJSIntlStatus qjs_intl_number_layouts_at(const QJSIntlNumberLayoutData *, uint32_t locale,
                                          uint32_t system, QJSIntlNumberLayouts *);
+
+/* Locale-level currency-name placement templates. Each parent's local data
+   was selected with its own default numbering system before inheritance;
+   requested numeric digits do not select these templates. Aliases retain
+   their terminal root provenance. No count fallback or parsing is performed.
+   Allocation-free; strings borrow the unchanged owner, errors reset output. */
+QJSIntlStatus qjs_intl_currency_unit_layouts_at(const QJSIntlNumberLayoutData *, uint32_t locale,
+                                                QJSIntlCurrencyUnitLayouts *);
 #endif
