@@ -130,6 +130,7 @@ if intl_enabled
     'quickjs/builtins/intl/locale.c',
     'quickjs/builtins/intl/locale-list.c',
     'quickjs/builtins/intl/list-format.c',
+    'quickjs/builtins/intl/number-options.c',
     'quickjs/builtins/intl/options.c',
   )
   support_sources += files(
