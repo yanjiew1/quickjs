@@ -40,7 +40,13 @@ def generate(sources, profile):
     locale_data = locale_metadata.collect(inputs_read, graph)
     preference_data = preferences.collect(inputs_read)
     lists = list_patterns.collect(inputs_read, graph)
-    tags = graph.tags if profile == 'native' else tuple(sorted(graph.chain('en')))
+    if profile == 'native':
+        tags = graph.tags
+    else:
+        # Retain the explicit US identifier as well as generic English. Sparse
+        # authored source fixtures need not contain every production seed.
+        seeds = (locale for locale in ('en', 'en-US') if locale in graph.tags)
+        tags = tuple(sorted({tag for locale in seeds for tag in graph.chain(locale)}))
     selected_tags = set(tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
     contexts = [row for row in lists['contexts'] if row[0] in selected_tags]
