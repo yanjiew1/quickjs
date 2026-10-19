@@ -251,7 +251,68 @@ unsupported by this numeric owner. Authored and real-profile C tests cover
 scientific affixes, quotes, suffix signs, grouping, unaligned data, corruption,
 allocation failure/retry and output reset.
 
-## Exact plural relations
+## Compact number source maps
+
+`compact_patterns.py` resolves decimal short/long and currency short patterns.
+Sparse maps retain magnitude, plural/exact selectors and currency alternates;
+missing selectors do not silently become `other`. Explicit block, inheritance
+and empty text remain distinct. A typed, iterative map resolver follows whole
+numbering-group and length aliases with the requesting locale intact, including
+explicit-source context changes. Empty overlays and aliases share immutable
+resolved maps instead of expanding every plural leaf for every numbering system.
+Final maps are deduplicated and canonically ordered.
+
+Decimal maps are required. An absent currency compact map remains empty:
+CLDR root Arabic currency data has standard patterns but no compact patterns.
+Any specified formatter composition/fallback belongs to the consuming engine,
+not XML resolution. `compact_pattern_syntax.py` compiles consecutive zero
+placeholders into exact scale exponents and typed sign forms. Literal-only
+plural/exact forms borrow their variant family's `other` divisor; the exact
+pattern `0` retains its ordinary-format fallback mode. Each numeric variant keeps its own divisor,
+including inherited alternates that differ from the baseline. The consuming
+formatter must choose a coherent notation policy; data compilation does not
+silently change source patterns or conflate fallback with a scaled placeholder.
+Optional blocks and empty values remain distinct. These maps do not advertise
+NumberFormat support. Authored tests and the authenticated
+source audit cover resolution and syntax independently of formatter execution.
+
+Section 18 stores compact maps as little-endian words. Its directory count is
+the shared locale count. Eight header words contain schema version 1 and counts
+for numeric systems, locale rows, maps, entries, patterns, affixes and tokens.
+Sorted numeric definition indexes precede one row index per locale. Each shared
+row contains three map references per numeric system: decimal short, decimal
+long and currency short. Decimal maps must be nonempty; currency maps may be
+empty. Profile projection prunes unused maps before packing.
+
+Map descriptors contain contiguous entry offsets/counts. An entry contains
+magnitude, count selector, variant selector and pattern reference. Count order is
+`0`, `1`, `zero`, `one`, `two`, `few`, `many`, `other`; variant order is
+`standard`, `alphaNextToNumber`, `noCurrency`. Entries sort by these three
+numeric keys. Blocked and explicitly empty patterns use `0xfffffffe` and
+`0xfffffffd`; a missing selector has no entry. Each magnitude requires a usable
+standard `other` pattern. A literal form requires a usable `other` in its own
+variant family, with the same divisor.
+
+Patterns contain mode (scaled, literal or ordinary fallback), divisor exponent,
+zero-placeholder count and three affix indexes. Scaled exponents plus zero count
+equal magnitude plus one. Literal forms have no number token. Ordinary fallback
+has exponent zero, one zero placeholder and unadorned number/sign forms. Affix
+descriptors and typed token pairs follow section 17's representation, excluding
+percent/per-mille scaling tokens. Rows, maps, patterns and affixes are shared,
+canonically ordered and fully referenced; decoders validate those invariants
+and all record extents before returning semantic data.
+
+`src/intl/number/compact-data.c` validates and borrows section 18 against the
+unchanged numbering view. Temporary coverage/placeholder memory is released
+before return, including errors. Queries allocate nothing: exact locale/system/
+kind map lookup, indexed or exact magnitude/count/variant lookup, and typed
+affix-token access. Missing selectors return unsupported; blocked/empty entries
+retain their states. The consumer chooses currency families, plural/exact-count
+fallback and rounding policy. Authored and real-profile C tests cover literal
+forms, distinct alternate divisors, empty currency maps, sparse selectors,
+unaligned storage, corruption, output reset and allocation failure/retry.
+
+## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
 SetNumberFormatDigitOptions operation. It reads the four raw digit properties
