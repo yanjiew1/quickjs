@@ -372,7 +372,19 @@ blocked or explicitly empty. In particular, root `arab` has spacing but lacks
 currency-name templates; this collector does not invent a cross-system fallback.
 Selecting plural/currency-name fallback and interpreting spacing predicates
 belong to later consumers. CI audits the authenticated full source inventory;
-this source collector alone establishes no formatter capability.
+this collector or its packed records establish no formatter capability.
+
+Section 20 has the shared locale count in its directory and four little-endian
+header words: schema version 1, numeric-system count, shared vector count and
+shared row count. Exact numeric numbering-definition indexes follow, then one
+shared-row index per locale. Each sorted unique row has one vector index per
+numeric system. Each sorted unique vector has nineteen string references in
+collector field order. Absent and blocked optional fields use `0xffffffff` and
+`0xfffffffe`; explicitly empty text uses string index zero. Required templates
+and match predicates cannot be absent, blocked or empty; required insertion
+text can be empty. Ordinary pooled references cannot contain inheritance or
+block markers. Validation checks complete shared-row/vector coverage and exact
+locale/numeric-system coverage before exposing semantic fields.
 
 ## Numeric options and exact plural relations
 
