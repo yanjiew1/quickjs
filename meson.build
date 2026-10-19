@@ -350,6 +350,8 @@ if intl_enabled
       'tools/intl/numbering_tables.py',
       'tools/intl/number_symbols.py',
       'tools/intl/number_symbol_tables.py',
+      'tools/intl/plural_rules.py',
+      'tools/intl/plural_tables.py',
       'tools/intl/parents.py',
       'tools/intl/preferences.py',
       'tools/intl/preference_tables.py',
