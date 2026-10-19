@@ -2,6 +2,7 @@
 import struct
 
 import bundle
+import compact_tables
 import locale_tables
 import numbering_tables
 import number_symbol_tables
@@ -212,4 +213,6 @@ def validate(binary):
                                                           strings, tags, numbering),
             'plurals': plural_tables.decode(sections.get(bundle.PLURALS), strings, tags),
             'number_patterns': number_pattern_tables.decode(sections.get(bundle.NUMBER_PATTERNS),
-                                                            strings, tags, numbering)}
+                                                            strings, tags, numbering),
+            'compact_patterns': compact_tables.decode(sections.get(bundle.COMPACT_PATTERNS),
+                                                       strings, tags, numbering)}
