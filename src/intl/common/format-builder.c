@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "format-builder.h"
+#include "text.h"
 #include "../../cutils/cutils.h"
 #include <limits.h>
 
@@ -14,13 +15,6 @@ static int next(QJSIntlBytes text, size_t *at)
         return -1;
     *at = (const char *)end - text.data;
     return c;
-}
-
-static int white_space(int c)
-{
-    return c == 0x20 || (c >= 0x9 && c <= 0xd) || c == 0x85 || c == 0xa0 || c == 0x1680 ||
-           (c >= 0x2000 && c <= 0x200a) || c == 0x2028 || c == 0x2029 || c == 0x202f ||
-           c == 0x205f || c == 0x3000;
 }
 
 /* Append scalar text, optionally tracking Unicode nonspace boundaries for
@@ -39,7 +33,7 @@ QJSIntlStatus qjs_intl_format_builder_text(QJSIntlFormatBuilder *builder, QJSInt
         width = c > 0xffff ? 2 : 1;
         if (width > builder->limit - builder->length)
             return QJS_INTL_OVERFLOW;
-        if (first && !white_space(c)) {
+        if (first && !qjs_intl_text_is_white_space(c)) {
             if (*first == SIZE_MAX)
                 *first = builder->length;
             *last = builder->length + width;
