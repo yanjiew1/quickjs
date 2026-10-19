@@ -101,6 +101,8 @@ if intl_enabled
   engine_sources += files(
     'quickjs/builtins/intl/locale.c',
     'quickjs/builtins/intl/locale-list.c',
+    'quickjs/builtins/intl/list-format.c',
+    'quickjs/builtins/intl/options.c',
   )
   support_sources += files(
     'intl/common/locale-grammar.c',
@@ -114,6 +116,8 @@ if intl_enabled
     'intl/locale/system.c',
     'intl/native/data.c',
     'intl/native/pack.c',
+    'intl/list/native.c',
+    'intl/list/native-engine.c',
   )
   support_sources += intl_data
 endif
