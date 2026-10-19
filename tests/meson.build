@@ -671,7 +671,8 @@ foreach fixture : ['authored', 'empty']
   intl_display_test = executable(
     'test_intl_display_' + fixture,
     intl_display_owner_sources + [intl_display_fixture],
-    c_args: host_args + ['-DTEST_INTL_EMPTY=' + (fixture == 'empty' ? '1' : '0')],
+    c_args: host_args + ['-DTEST_INTL_PREPARED=0',
+                        '-DTEST_INTL_EMPTY=' + (fixture == 'empty' ? '1' : '0')],
     include_directories: inc,
     dependencies: host_deps,
     override_options: ['b_ndebug=false'],
@@ -1356,6 +1357,21 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-date-field-data-' + profile,
     intl_date_field_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_display_test = executable(
+    'test_intl_display_data_' + profile,
+    intl_display_owner_sources,
+    c_args: host_args + ['-DTEST_INTL_PREPARED=1', '-DTEST_INTL_EMPTY=0'],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-display-data-' + profile,
+    intl_display_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )

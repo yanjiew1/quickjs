@@ -55,6 +55,7 @@ static uint32_t locale_id(const QJSIntlData *data, const char *name)
     abort();
 }
 
+#if !TEST_INTL_PREPARED
 static uint32_t string_id(const QJSIntlData *data, const char *name)
 {
     uint32_t i;
@@ -144,6 +145,7 @@ static void check_corruption(const QJSIntlNameData *owner, const QJSIntlAllocato
     (void)string_id; /* The empty profile still carries corruption strings. */
 #endif
 }
+#endif
 
 static void check_queries(const QJSIntlNameData *owner)
 {
@@ -168,7 +170,12 @@ static void check_queries(const QJSIntlNameData *owner)
         assert(!qjs_intl_name_key_at(owner, index, &group, &text));
         assert(group < QJS_INTL_NAME_GROUP_COUNT && text.length);
     }
-#if TEST_INTL_EMPTY
+#if TEST_INTL_PREPARED
+    assert(owner->node_count && owner->map_count && owner->entry_count && owner->key_count);
+    assert(!qjs_intl_name_head(owner, locale_id(&owner->data, "en"), QJS_INTL_NAME_LANGUAGE, &head));
+    assert(!qjs_intl_name_lookup(owner, head, bytes("en"), empty, empty, empty, &entry));
+    assert(!entry.blocked && equal(entry.text, "English"));
+#elif TEST_INTL_EMPTY
     assert(!owner->node_count && !owner->map_count && !owner->entry_count && !owner->key_count);
     assert(!qjs_intl_name_head(owner, locale_id(&owner->data, "en"), QJS_INTL_NAME_LANGUAGE, &head));
     assert(!head);
@@ -265,7 +272,9 @@ int main(void)
     assert(calls);
     check_queries(&owner);
     assert(state.calls == calls);
+#if !TEST_INTL_PREPARED
     check_corruption(&owner, &allocator);
+#endif
     for (step = 1; step <= calls; step++) {
         state.calls = 0;
         state.fail_at = step;
