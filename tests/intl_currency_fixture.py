@@ -32,24 +32,57 @@ def pack(empty):
             'codes': ('JPY', 'USD'),
             'fractions': (('CHF', 2, 0, 2, 5), ('DEFAULT', 2, 0, 2, 0), ('JPY', 0, 0, 0, 0)),
             'maps': ((),) if empty else (english, entries),
+            'root_names': () if empty else (('root', (('USD', 'other'),)),),
             'rows': (('en', 0), ('root', 0 if empty else 1))}
+    return encode(data, tags, {'en': 'root', 'root': None})
+
+
+def encode(data, tags, parents):
     pool = tuple(sorted(currency_tables.strings(data) | set(tags) | {'', BLOCK, INHERIT},
                         key=lambda text: text.encode('utf-8')))
     ids = {text: index for index, text in enumerate(pool)}
     sections = {bundle.STRINGS: tables.encode_strings(pool),
-                bundle.LOCALES: (2, tables.LOCALE.pack(ids['en'], 1) +
-                                 tables.LOCALE.pack(ids['root'], tables.ROOT)),
+                bundle.LOCALES: (len(tags), b''.join(tables.LOCALE.pack(ids[tag], tables.ROOT if
+                                 parents[tag] is None else tags.index(parents[tag])) for tag in tags)),
                 bundle.CURRENCIES: currency_tables.encode(data, tags, ids)}
     binary = bundle.pack(sections, bytes(32), 'minimal')
     tables.validate(binary)
     return binary
 
 
+def display_pack():
+    from test_intl_currencies import Sources
+    from test_intl_list_patterns import graph
+    source = Sources()
+    source.set('root', '''<currency type="USD"><displayName>root dollar</displayName>
+      <displayName count="one">root one dollar</displayName>
+      <displayName count="other">root dollars</displayName><symbol>$</symbol>
+      <symbol alt="narrow">$</symbol></currency>
+      <currency type="EUR"><displayName>root euro</displayName>
+      <displayName count="0"/><displayName count="1">root exact euro</displayName>
+      <displayName count="one">root one euro</displayName>
+      <displayName count="other">root euros</displayName><symbol>€</symbol></currency>
+      <currency type="GBP"><displayName>root pound</displayName><symbol>£</symbol></currency>
+      <currency type="JPY"><symbol>¥</symbol></currency>''')
+    source.set('en', '''<currency type="USD"><displayName count="one">dollar</displayName>
+      <displayName count="other">''' + BLOCK + '''</displayName><symbol/></currency>
+      <currency type="EUR"><displayName count="0"/><displayName count="1">exact euro</displayName>
+      <displayName count="one">euro</displayName><displayName count="other">euros</displayName>
+      <symbol alt="narrow">''' + BLOCK + '''</symbol></currency>
+      <currency type="GBP"><displayName count="one"/><symbol>''' + BLOCK + '''</symbol></currency>''')
+    source.set('en_GB', '''<currency type="USD"><displayName count="other">child dollars</displayName>
+      </currency><currency type="EUR"><displayName count="1">''' + BLOCK + '''</displayName></currency>''')
+    parents = graph()
+    return encode(currencies.collect(source, parents), parents.tags,
+                  {tag: parents.parent(tag) for tag in parents.tags})
+
+
 def render():
     lines = ['/* Authored records; no downloaded source data. */',
              '#include <stddef.h>', '#include <stdint.h>']
-    for name, empty in (('qjs_intl_native', False), ('qjs_intl_currency_empty', True)):
-        binary = pack(empty)
+    for name, binary in (('qjs_intl_native', pack(False)),
+                         ('qjs_intl_currency_empty', pack(True)),
+                         ('qjs_intl_currency_display', display_pack())):
         lines.append('const uint8_t %s_bytes[] = {' % name)
         for at in range(0, len(binary), 16):
             lines.append('    ' + ', '.join('0x%02x' % byte for byte in binary[at:at + 16]) + ',')
