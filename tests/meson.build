@@ -188,6 +188,13 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_intl_number_decimal': [
+    'test_intl_number_decimal.c',
+    '../src/intl/common/decimal.c',
+    '../src/intl/common/number-decimal.c',
+    '../src/dtoa/dtoa.c',
+    '../src/cutils/cutils.c',
+  ],
   'test_intl_decimal': [
     'test_intl_decimal.c',
     '../src/intl/common/decimal.c',
