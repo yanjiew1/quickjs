@@ -870,6 +870,24 @@ if intl_enabled
     },
   }]
 
+  intl_duration_options_test = {
+    'name': 'test_intl_duration_options',
+    'sources': files(
+      'test_intl_duration_options.c',
+      '../src/intl/duration/options.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_duration_options_test,
+    'name': 'intl-duration-options',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_duration_decimal_test = {
     'name': 'test_intl_duration_decimal',
     'sources': files(
@@ -1462,6 +1480,38 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_number_service_test,
       'name': ('intl-number-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_duration_service_test = {
+      'name': ('test_intl_duration_service_' + profile),
+      'sources': intl_number_service_sources + files(
+        'test_intl_duration_service.c',
+        '../src/intl/duration/data.c',
+        '../src/intl/duration/decimal.c',
+        '../src/intl/duration/format.c',
+        '../src/intl/duration/native-digital.c',
+        '../src/intl/duration/native.c',
+        '../src/intl/duration/options.c',
+        '../src/intl/list/data.c',
+        '../src/intl/list/native.c',
+        '../src/intl/list/native-engine.c',
+        '../src/temporal/duration.c',
+        '../src/temporal/epoch.c',
+        '../src/temporal/options.c',
+        '../src/unicode/libunicode.c',
+      ),
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_duration_service_test,
+      'name': ('intl-duration-service-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
