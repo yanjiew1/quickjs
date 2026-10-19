@@ -1078,6 +1078,11 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_number_round': [
+    'test_intl_number_round.c',
+    '../src/intl/number/round.c',
+    '../src/intl/common/decimal.c',
+  ],
   'test_intl_number_body': [
     'test_intl_number_body.c',
     '../src/intl/number/body.c',
