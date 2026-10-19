@@ -6,6 +6,7 @@ import re
 import struct
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 import acquire
@@ -20,6 +21,9 @@ from test_intl_list_patterns import Sources, graph
 from test_intl_parents import DTD as PARENT_DTD
 from test_intl_locale_metadata import Sources as MetadataSources
 from test_intl_preferences import Sources as PreferenceSources
+from test_intl_numbering import Sources as NumberingSources
+from test_intl_number_symbols import Sources as SymbolSources
+from number_symbols import FIELDS as SYMBOL_FIELDS
 
 
 class VerifiedFixture(Sources):
@@ -44,6 +48,26 @@ class VerifiedFixture(Sources):
         self.files['common/dtd/ldmlSupplemental.dtd'] += preference_source.files['common/dtd/ldmlSupplemental.dtd']
         for name in ('common/supplemental/supplementalData.xml', 'common/properties/scriptMetadata.txt'):
             self.files[name] = preference_source.files[name]
+        numbering_source = NumberingSources()
+        for name in ('common/dtd/ldmlSupplemental.dtd', 'common/dtd/ldml.dtd'):
+            # The list fixture already declares the common alias attributes.
+            self.files[name] += numbering_source.files[name].split(b'<!ELEMENT alias')[0]
+        name = 'common/supplemental/numberingSystems.xml'
+        self.files[name] = numbering_source.files[name]
+        for name in numbering_source.paths('common/main/'):
+            numbers = ET.fromstring(numbering_source.files[name]).find('numbers')
+            if numbers is not None:
+                root = ET.fromstring(self.files[name])
+                root.append(numbers)
+                self.files[name] = ET.tostring(root, encoding='utf-8')
+        self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT symbols ANY>
+          <!ATTLIST symbols numberSystem CDATA #IMPLIED>'''
+        for field in SYMBOL_FIELDS:
+            self.files['common/dtd/ldml.dtd'] += ('<!ELEMENT ' + field + ' (#PCDATA)>').encode('ascii')
+        symbol_root = ET.fromstring(SymbolSources().files['common/main/root.xml'])
+        root = ET.fromstring(self.files['common/main/root.xml'])
+        root.find('numbers').extend(symbol_root.findall('./numbers/symbols'))
+        self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
         self.consumed = set()
         self.pin = {'release': 'authored-fixture', 'commit': '0' * 40,
                     'archive': {'sha256': '0' * 64}}
@@ -70,6 +94,19 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['locales'], len(view['locales']))
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
+            self.assertIn(('latn', 'numeric', '0123456789'), view['numbering']['systems'])
+            self.assertIn('root', {row[0] for row in view['numbering']['locales']})
+            symbols = view['number_symbols']
+            self.assertEqual(len(symbols['systems']), 78)
+            self.assertEqual(len(symbols['rows']), len(view['locales']) * 78)
+            fields = {(locale, system): dict(zip(symbols['fields'], values))
+                      for locale, system, values in symbols['rows']}
+            self.assertEqual(fields[('en', 'latn')]['decimal'], '.')
+            self.assertEqual(fields[('en', 'latn')]['group'], ',')
+            if profile == 'native':
+                self.assertEqual(fields[('ar', 'arab')]['decimal'], '\u066b')
+                self.assertEqual(fields[('fr', 'latn')]['group'], '\u202f')
+                self.assertEqual(fields[('en', 'mathbold')], fields[('en', 'latn')])
             tags = set(view['locales'])
             self.assertTrue({'en', 'en-US', 'root'} <= tags)
             for tag in tags:
@@ -132,10 +169,15 @@ class TableTests(unittest.TestCase):
         minimal, minimal_manifest = generate.generate(VerifiedFixture(), 'minimal')
         minimal_view = tables.validate(minimal)
         self.assertEqual(minimal_view['locales'], ('en', 'root'))
+        self.assertEqual(full_view['number_symbols']['systems'], ('latn', 'mathbold'))
+        self.assertEqual(minimal_view['number_symbols']['rows'],
+                         tuple(row for row in full_view['number_symbols']['rows']
+                               if row[0] in minimal_view['locales']))
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
         self.assertEqual(full_view['preferences'], minimal_view['preferences'])
+        self.assertEqual(full_view['numbering'], minimal_view['numbering'])
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
         changed = VerifiedFixture()
@@ -145,7 +187,7 @@ class TableTests(unittest.TestCase):
         original = acquire.json_bytes(manifest)
         source.pin['archive']['sha256'] = '2' * 64
         self.assertEqual(acquire.json_bytes(manifest), original)
-        for name in ('supplementalData', 'supplementalMetadata', 'likelySubtags'):
+        for name in ('supplementalData', 'supplementalMetadata', 'likelySubtags', 'numberingSystems'):
             self.assertIn('common/supplemental/' + name + '.xml', manifest['inputs']['sources'])
 
     def test_preference_wire_roundtrip_and_invalid_fields(self):
