@@ -1958,6 +1958,14 @@ test(
 )
 
 test(
+  'intl-relative-tables',
+  python,
+  args: files('test_intl_relative_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-unit-tables',
   python,
   args: files('test_intl_unit_tables.py'),

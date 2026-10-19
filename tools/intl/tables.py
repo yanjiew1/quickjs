@@ -7,6 +7,7 @@ import currency_tables
 import number_layout_tables
 import unit_tables
 import unit_grammar_tables
+import relative_tables
 import locale_tables
 import numbering_tables
 import number_symbol_tables
@@ -224,4 +225,5 @@ def validate(binary):
             'number_layouts': number_layout_tables.decode(sections.get(bundle.NUMBER_LAYOUTS),
                                                         strings, tags, numbering),
             'unit_patterns': unit_tables.decode(sections.get(bundle.UNIT_PATTERNS), strings, tags),
-            'unit_grammar': unit_grammar_tables.decode(sections.get(bundle.UNIT_GRAMMAR), strings, tags)}
+            'unit_grammar': unit_grammar_tables.decode(sections.get(bundle.UNIT_GRAMMAR), strings, tags),
+            'relative_patterns': relative_tables.decode(sections.get(bundle.RELATIVE_PATTERNS), strings, tags)}
