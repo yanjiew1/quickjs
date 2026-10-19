@@ -1065,6 +1065,25 @@ the runtime's owning thread to temporarily chain and restore a handler.
 It is used by the command line interpreter to implement a
 @code{Ctrl-C} handler.
 
+@subsection Intl default locale
+
+Build with @code{-Dintl=minimal} or @code{-Dintl=native} to enable Intl.
+@code{JS_SetIntlDefaultLocale(ctx, locale)} canonicalizes a locale request and
+selects a supported prefix from the compiled profile. Extensions are removed.
+Malformed or unsupported requests throw @code{RangeError}; allocation failure
+preserves the previous setting. The default is shared by all realms in the
+runtime. Raw contexts need base objects for exception construction.
+
+@code{JS_GetIntlDefaultLocale(ctx)} returns an owned JavaScript string.
+Before an explicit setting, first use snapshots the host default. Unix checks
+the first nonempty @code{LC_ALL}, @code{LC_MESSAGES}, then @code{LANG}; encoding
+and modifier suffixes are ignored and underscores become hyphens. Windows
+queries the user's locale name. Missing, invalid or unsupported host settings
+fall back to English. No process-global libc locale is changed.
+
+Passing @code{NULL} to the setter clears the snapshot so the next use discovers
+it again. Both APIs throw @code{TypeError} when Intl is disabled.
+
 @subsection Default time zone
 
 Build with Temporal enabled to use these APIs. The default zone is shared

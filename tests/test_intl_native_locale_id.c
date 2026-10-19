@@ -153,6 +153,20 @@ static void test_service(void)
     calls = state.calls;
     assert(state.live == 1);
     test_preferences(service, &state);
+    {
+        QJSIntlBytes selected;
+        assert(qjs_intl_locale_profile_match(service, bytes("en-u-nu-arab-x-private"),
+                                              &selected) == QJS_INTL_OK);
+        assert(selected.length == 2 && !memcmp(selected.data, "en", 2));
+        assert(qjs_intl_locale_profile_match(service, bytes("zz-ZZ"), &selected) == QJS_INTL_UNSUPPORTED);
+        assert(!selected.data && !selected.length);
+        state.fail_at = state.calls + 1;
+        assert(qjs_intl_locale_profile_match(service, bytes("en"), &selected) == QJS_INTL_NO_MEMORY);
+        assert(!selected.data && !selected.length && state.live == 1);
+        state.fail_at = 0;
+        assert(qjs_intl_locale_profile_match(NULL, bytes("en"), &selected) == QJS_INTL_INVALID_ARGUMENT);
+        assert(qjs_intl_locale_profile_match(service, bytes("en"), NULL) == QJS_INTL_INVALID_ARGUMENT);
+    }
     assert(qjs_intl_locale_canonicalize(service, bytes("SH"), &output) ==
            QJS_INTL_OK);
     assert(!strcmp(output, "sr-Latn"));
