@@ -408,15 +408,17 @@ semantics. Text and UnicodeSet expressions remain exact source facts.
 Miscellaneous templates and currency boundaries are required for each numeric
 system. Currency-name selectors and the ISO append pattern may be absent,
 blocked or explicitly empty. In particular, root `arab` has spacing but lacks
-currency-name templates; this collector does not invent a cross-system fallback.
+currency-name templates. Raw rows preserve that absence; the separate locale-level
+projection below follows default-system inheritance.
 Selecting plural/currency-name fallback and interpreting spacing predicates
 belong to later consumers. CI audits the authenticated full source inventory;
 this collector or its packed records establish no formatter capability.
 
-Section 20 has the shared locale count in its directory and four little-endian
-header words: schema version 2, numeric-system count, shared vector count and
-shared row count. Exact numeric numbering-definition indexes follow, then one
-shared-row index per locale. Each sorted unique row has one vector index per
+Section 20 has the shared locale count in its directory and five little-endian
+header words: schema version 3, numeric-system count, shared vector count,
+shared row count and projected currency-vector count. Exact numeric
+numbering-definition indexes follow, then one shared-row index per locale.
+Each sorted unique row has one vector index per
 numeric system. Each sorted unique vector has nineteen string references in
 collector field order, followed by one root-origin mask word. Only currency-unit
 field bits 4 through 11 are valid, and absent fields cannot carry origin. Alias
@@ -429,12 +431,32 @@ text can be empty. Ordinary pooled references cannot contain inheritance or
 block markers. Validation checks complete shared-row/vector coverage and exact
 locale/numeric-system coverage before exposing semantic fields.
 
+The raw vectors are followed by one projected currency-vector index per locale,
+then sorted unique vectors containing eight selector references (exact zero/one,
+zero/one/two/few/many/other) and an eight-bit terminal-root mask in one word.
+All projected vectors must be referenced. Their absent/blocked/empty states
+use the same representation as raw layout fields.
+
+Currency-name templates are locale-level data: only local leaves under the
+locale's resolved default numbering system enter this projection. Missing leaves
+and inheritance markers follow the parent's projection, which used that parent's
+own default. Selected-group aliases retain their raw target paths and requesting
+locale/explicit-source behavior. This can differ from fully resolved raw data
+even when the raw text and root masks are identical. Projection happens before
+profile filtering; it introduces no runtime XML parser or numbering-system guess.
+
 `src/intl/number/layout-data.c` validates section 20 against the shared numbering
 inventory and exposes allocation-free exact locale/system queries. Strings
 borrow immutable pack storage; empty VALUE text differs from absent/blocked
 fields. Open releases its validation scratch on success and failure. Parsing
 templates, evaluating UnicodeSet predicates and selecting formatter fallback
 are separate consumer responsibilities.
+
+`qjs_intl_currency_unit_layouts_at` exposes the locale-level projection without a
+numbering-system argument. The currency display consumer independently tries
+exact/category templates excluding root, then `other` including root, without
+changing the name's selector. Requested numeric `nu` still controls digits,
+numeric symbols and decimal patterns.
 
 ## Sanctioned measurement-unit identifiers
 
@@ -531,6 +553,21 @@ caches decoded body symbols and typed pattern tokens in each formatter.
 Explicit numbering-system selection is exact; negotiation belongs to bindings.
 A formatter may outlive its service, and results may outlive both.
 
+Standard-notation currency-name formatting uses the decimal pattern's complete
+signed number as the numeric argument of the selected locale-level unit template.
+It selects currency names and placement templates independently after rounding,
+including exact zero/one and root-cutoff rules. NaN and infinities use `other`.
+Monetary decimal/group symbols apply, with per-currency overrides taking
+precedence; currency symbol/accounting patterns do not replace decimal affixes.
+The `CurrencyDigits` service query exposes regular digits for frontend defaults,
+without enabling cash rounding. Currency codes are copied into formatter state.
+
+`currency-format.c` substitutes `{0}` and `{1}` once each, preserving the signed
+number's parts and emitting the complete name as one `currency` part. Prefix
+templates therefore place the name before the numeric sign. Apostrophes remain
+literal. Invalid templates fail before result allocation; the complete output
+bound includes names, separators and numeric text.
+
 Scientific/engineering output applies the exact scale-before-round operation,
 then emits localized exponent separator/sign and ASCII decimal exponent digits
 with explicit part types, following the pinned PartitionNotationSubPattern.
@@ -558,7 +595,7 @@ hyphens inside the pinned yrl long names. Sign display remains an outer-style
 operation, not a selection of the compact pattern's negative form.
 
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Currency/unit styles, compact notation, ranges and the JS binding remain required
+Other currency displays and notations, unit styles, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
