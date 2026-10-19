@@ -140,6 +140,7 @@ if intl_enabled
   support_sources += files(
     'intl/common/decimal.c',
     'intl/common/locale-grammar.c',
+    'intl/common/source-locale.c',
     'intl/common/number-decimal.c',
     'intl/locale/identifier.c',
     'intl/locale/matching.c',
