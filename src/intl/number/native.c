@@ -10,6 +10,7 @@
 #include "sign-affix.h"
 #include "currency-format.h"
 #include "currency-pattern.h"
+#include "unit.h"
 #include "../currency/display.h"
 #include "../plural/native-engine.h"
 #include "symbol-data.h"
@@ -33,6 +34,7 @@ struct QJSIntlNumberService {
     QJSIntlPluralData plurals;
     QJSIntlCurrencyData currencies;
     QJSIntlNumberLayoutData layouts;
+    QJSIntlUnitData units;
     QJSIntlBytes *available;
     uint32_t root;
 };
@@ -57,6 +59,7 @@ struct QJSIntlNumberFormatter {
     uint32_t locale;
     char currency_code[3];
     unsigned int currency_name, compact_currency;
+    QJSIntlNumberUnit unit;
 };
 
 void qjs_intl_number_close(QJSIntlNumberService *service)
@@ -107,6 +110,9 @@ QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *allocator, QJSIntlNum
     if (status)
         goto fail;
     status = qjs_intl_number_layout_data_open(&service->numbering, allocator, &service->layouts);
+    if (status)
+        goto fail;
+    status = qjs_intl_unit_data_open(&data, allocator, &service->units);
     if (status)
         goto fail;
     if (data.locales.count < 2) {
@@ -341,13 +347,14 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     if (out)
         *out = NULL;
     if (!out || !service || !options || locale >= service->numbering.data.locales.count - 1 ||
-        (unsigned int)options->style > QJS_INTL_NUMBER_CURRENCY ||
+        (unsigned int)options->style > QJS_INTL_NUMBER_UNIT ||
         (unsigned int)options->notation > QJS_INTL_NUMBER_COMPACT ||
         (unsigned int)options->grouping > QJS_INTL_NUMBER_GROUP_MIN2 ||
         (unsigned int)options->sign_display > QJS_INTL_NUMBER_SIGN_NEGATIVE ||
         options->compact_long > 1 || !options->maximum_output_length ||
         (unsigned int)options->currency_display > QJS_INTL_NUMBER_CURRENCY_NAME ||
         (unsigned int)options->currency_sign > QJS_INTL_NUMBER_CURRENCY_ACCOUNTING ||
+        (unsigned int)options->unit_display > QJS_INTL_NUMBER_UNIT_LONG ||
         qjs_intl_decimal_options_validate(&options->digits) ||
         (!system_name.data && system_name.length))
         return QJS_INTL_INVALID_ARGUMENT;
@@ -477,6 +484,16 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     memset(formatter, 0, sizeof(*formatter));
     formatter->allocator = service->allocator;
     formatter->compact_currency = compact_currency;
+    if (options->style == QJS_INTL_NUMBER_UNIT) {
+        QJSIntlUnitWidth width = options->unit_display == QJS_INTL_NUMBER_UNIT_LONG
+                                    ? QJS_INTL_UNIT_LONG
+                                : options->unit_display == QJS_INTL_NUMBER_UNIT_NARROW
+                                    ? QJS_INTL_UNIT_NARROW : QJS_INTL_UNIT_SHORT;
+        status = qjs_intl_number_unit_open(&service->units, &service->plurals, source, width,
+                                            options->unit, &formatter->unit);
+        if (status)
+            goto fail;
+    }
     if (options->style == QJS_INTL_NUMBER_CURRENCY) {
         memcpy(formatter->currency_code, options->currency.data, 3);
         if (currency_text.data == options->currency.data)
@@ -696,6 +713,22 @@ static int is_one(const QJSIntlDecimal *number, uint32_t shift)
     return 1;
 }
 
+/* Outer native names expand compact quantities while inner compact affixes
+   retain visible mantissa operands. Scientific/engineering names use their
+   final visible mantissa, with c=e=0. Preserve remaining visible zeros. */
+static QJSIntlPluralOperands outer_operands(const QJSIntlNumberFormatter *formatter,
+                                            const QJSIntlRoundedNumber *rounded,
+                                            uint32_t *shift, int *exact)
+{
+    *shift = formatter->rounding.notation == QJS_INTL_NUMBER_COMPACT ? (uint32_t)rounded->exponent : 0;
+    *exact = -1;
+    if (rounded->number.rounded.length == 1 && rounded->number.rounded.digits[0] == '0')
+        *exact = 0;
+    else if (is_one(&rounded->number.rounded, *shift))
+        *exact = 1;
+    return (QJSIntlPluralOperands){rounded->number.text, rounded->number.length, *shift};
+}
+
 static QJSIntlStatus compact_pattern(const QJSIntlNumberFormatter *formatter,
                                    const QJSIntlRoundedNumber *number,
                                    QJSIntlCompactPattern *out, unsigned int *legacy_spacing)
@@ -875,26 +908,17 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
             &formatter->allocator, formatter->tokens + formatter->offsets[affix_form],
             formatter->counts[affix_form], &symbols, &body,
             form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length,
-            formatter->currency_name ? &signed_body : out);
+            formatter->currency_name || formatter->unit.head ? &signed_body : out);
     }
     if (!status && formatter->currency_name) {
         QJSIntlPluralCategory category = QJS_INTL_PLURAL_OTHER;
         QJSIntlBytes name, pattern;
         int exact = -1;
         if (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO) {
-            /* Currency text is ILD. Native CLDR policy expands compact c/e
-               for outer names, preserving remaining visible fraction zeros.
-               The inner compact affix still uses the mantissa. Scientific/
-               engineering names retain their visible mantissa and c=e=0. */
-            uint32_t shift = formatter->rounding.notation == QJS_INTL_NUMBER_COMPACT
-                                 ? (uint32_t)rounded.exponent : 0;
-            QJSIntlPluralOperands operands = {rounded.number.text, rounded.number.length, shift};
+            uint32_t shift;
+            QJSIntlPluralOperands operands = outer_operands(formatter, &rounded, &shift, &exact);
             status = qjs_intl_native_plural_select_shifted(&formatter->cardinal, &operands,
                                                             shift, &category);
-            if (rounded.number.rounded.length == 1 && rounded.number.rounded.digits[0] == '0')
-                exact = 0;
-            else if (is_one(&rounded.number.rounded, shift))
-                exact = 1;
         }
         if (!status)
             status = qjs_intl_currency_name(&formatter->currencies, formatter->locale,
@@ -907,6 +931,17 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
             status = qjs_intl_number_currency_name_format(&formatter->allocator, pattern, name,
                                                            &signed_body,
                                                            formatter->body.maximum_output_length, out);
+    }
+    if (!status && formatter->unit.head) {
+        QJSIntlPluralOperands operands = {0};
+        uint32_t shift = 0;
+        int exact = -1;
+        int finite = rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO;
+        if (finite)
+            operands = outer_operands(formatter, &rounded, &shift, &exact);
+        status = qjs_intl_number_unit_format(&formatter->unit, &formatter->allocator,
+                                               finite ? &operands : NULL, shift, exact, &signed_body,
+                                               formatter->body.maximum_output_length, out);
     }
     qjs_intl_number_body_clear(&formatter->allocator, &body);
     qjs_intl_number_body_clear(&formatter->allocator, &exponent_body);
