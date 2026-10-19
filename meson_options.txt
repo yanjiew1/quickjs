@@ -49,6 +49,13 @@ option(
 )
 
 option(
+  'intl',
+  type: 'combo',
+  choices: ['disabled', 'minimal', 'native'],
+  value: 'disabled',
+  description: 'Incomplete development Intl implementation: disabled or native algorithms with minimal/full locale data',
+)
+option(
   'temporal',
   type: 'boolean',
   value: true,
