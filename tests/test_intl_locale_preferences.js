@@ -45,8 +45,26 @@ assert(new Intl.Locale("en-u-hc-foobar").getHourCycles().join(","), "foobar");
 assert(new Intl.Locale("en-u-hc").getHourCycles().length, 1);
 assert(new Intl.Locale("en-u-hc").getHourCycles()[0], "");
 
+for (const tag of ["en", "en-US", "en-US-1996", "ar", "fa", "bn", "th", "zh-Hant"]) {
+    const locale = new Intl.Locale(tag);
+    const expected = Intl.NumberFormat.supportedLocalesOf(tag).length
+        ? new Intl.NumberFormat(tag).resolvedOptions().numberingSystem : "latn";
+    assert(locale.getNumberingSystems().join(","), expected);
+}
+assert(new Intl.Locale("zz").getNumberingSystems().join(","), "latn");
+assert(new Intl.Locale("zz-ZZ").getNumberingSystems().join(","), "latn");
+for (const numberingSystem of ["arab", "foobar", "latn"]) {
+    assert(new Intl.Locale("en", {numberingSystem}).getNumberingSystems().join(","), numberingSystem);
+    assert(new Intl.Locale("zz-u-nu-" + numberingSystem).getNumberingSystems().join(","), numberingSystem);
+}
+assert(new Intl.Locale("en-u-nu").getNumberingSystems().length, 1);
+assert(new Intl.Locale("en-u-nu").getNumberingSystems()[0], "");
+const numbers = new Intl.Locale("en").getNumberingSystems();
+numbers[0] = "foobar";
+assert(new Intl.Locale("en").getNumberingSystems().join(","), "latn");
+
 const locale = new Intl.Locale("ar");
-for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles"]) {
+for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumberingSystems"]) {
     const method = Intl.Locale.prototype[name];
     assert(method.name, name);
     assert(method.length, 0);
@@ -62,7 +80,7 @@ for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles"]) {
     const foreign = std.createRealm();
     const foreignMethod = foreign.global.Intl.Locale.prototype[name];
     const result = foreignMethod.call(locale);
-    assert(Object.getPrototypeOf(result), name === "getHourCycles"
+    assert(Object.getPrototypeOf(result), name === "getHourCycles" || name === "getNumberingSystems"
         ? foreign.global.Array.prototype : foreign.global.Object.prototype);
 }
 const first = locale.getWeekInfo();
@@ -77,6 +95,7 @@ try {
     assert(locale.getTextInfo().direction, "rtl");
     assert(locale.getWeekInfo().firstDay, 6);
     assert(locale.getHourCycles().length > 0);
+    assert(locale.getNumberingSystems().length, 1);
 } finally {
     for (const key of ["direction", "firstDay", "weekend", "0"])
         delete Object.prototype[key];
