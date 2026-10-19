@@ -277,6 +277,7 @@ native_test_names = [
   'test_intl_number_oom',
   'test_intl_relative_oom',
   'test_intl_duration_oom',
+  'test_intl_display_oom',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -985,12 +986,15 @@ if intl_enabled
     },
   }]
 
-  intl_language_format_sources = intl_language_match_support_sources + files(
-    'test_intl_language_format.c',
+  intl_language_format_support_sources = intl_language_match_support_sources + files(
     '../src/cutils/cutils.c',
     '../src/intl/common/format-builder.c',
     '../src/intl/common/pair-pattern.c',
     '../src/intl/display/language-format.c',
+    '../src/intl/display/text.c',
+  )
+  intl_language_format_sources = intl_language_format_support_sources + files(
+    'test_intl_language_format.c',
   )
   intl_language_format_fixture = custom_target(
     'intl-language-format-fixture',
@@ -1739,6 +1743,29 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_display_service_test = {
+      'name': ('test_intl_display_service_' + profile),
+      'sources': intl_language_format_support_sources + files(
+        'test_intl_display_service.c',
+        '../src/intl/currency/data.c',
+        '../src/intl/datetime/field-data.c',
+        '../src/intl/display/calendar-names.c',
+        '../src/intl/display/native.c',
+        '../src/intl/datetime/field.c',
+        '../src/intl/locale/native-data.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_display_service_test,
+      'name': ('intl-display-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 60,
+      },
+    }]
     intl_relative_service_test = {
       'name': ('test_intl_relative_service_' + profile),
       'sources': intl_number_service_sources + files(
@@ -2394,6 +2421,7 @@ if intl_enabled
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
     'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
+    'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],
   }
 endif
 if shared_modules
