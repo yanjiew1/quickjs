@@ -70,6 +70,7 @@ int main(void)
     QJSIntlAllocator allocator = {&calls, allocate, NULL, release};
     QJSIntlData data;
     QJSIntlCurrencyData currency;
+    QJSIntlCurrencyUnitLayouts layouts;
     QJSIntlBytes out, unknown = bytes("ZZZ");
     uint32_t en;
     unsigned int i;
@@ -102,6 +103,43 @@ int main(void)
     name(&currency, "en", "ZZZ", QJS_INTL_PLURAL_OTHER, -1, "ZZZ");
     assert(!qjs_intl_currency_symbol(&currency, en, unknown, 0, &out));
     assert(out.data == unknown.data); /* Code fallback borrows the caller. */
+    memset(&layouts, 0, sizeof(layouts));
+    for (i = 0; i < QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT; i++)
+        layouts.fields[i].state = QJS_INTL_LAYOUT_ABSENT;
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_ONE] =
+        (QJSIntlNumberLayoutText){bytes("{0} one {1}"), QJS_INTL_LAYOUT_VALUE, 0};
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_OTHER] =
+        (QJSIntlNumberLayoutText){bytes("{0} root {1}"), QJS_INTL_LAYOUT_VALUE, 1};
+    /* Exact-one names do not force a template without an exact-one selector. */
+    assert(!qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, 1, &out));
+    assert(equal(out, "{0} one {1}"));
+    name(&currency, "en", "EUR", QJS_INTL_PLURAL_ONE, 1, "exact euro");
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_EXACT_ONE] =
+        (QJSIntlNumberLayoutText){bytes("exact {0} {1}"), QJS_INTL_LAYOUT_VALUE, 0};
+    assert(!qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, 1, &out));
+    assert(equal(out, "exact {0} {1}"));
+    name(&currency, "en", "USD", QJS_INTL_PLURAL_ONE, 1, "dollar");
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_EXACT_ONE].from_root = 1;
+    assert(!qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, 1, &out));
+    assert(equal(out, "{0} one {1}"));
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_ONE].from_root = 1;
+    assert(!qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, 1, &out));
+    assert(equal(out, "{0} root {1}"));
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_ONE] =
+        (QJSIntlNumberLayoutText){{NULL, 0}, QJS_INTL_LAYOUT_VALUE, 0};
+    assert(!qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, -1, &out));
+    assert(!out.length);
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_ONE].state = QJS_INTL_LAYOUT_BLOCKED;
+    layouts.fields[QJS_INTL_CURRENCY_UNIT_OTHER].state = QJS_INTL_LAYOUT_ABSENT;
+    assert(qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, -1, &out) ==
+           QJS_INTL_UNSUPPORTED);
+    assert(!out.data && !out.length);
+    assert(qjs_intl_currency_unit_pattern(NULL, QJS_INTL_PLURAL_ONE, -1, &out) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, -1, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_CATEGORY_COUNT, -1, &out) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, 2, &out) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_currency_unit_pattern(&layouts, QJS_INTL_PLURAL_ONE, -2, &out) == QJS_INTL_INVALID_ARGUMENT);
     for (i = 0; i < 3; i++) {
         const char *bad[] = {"US", "usd", "US1"};
         assert(qjs_intl_currency_symbol(&currency, en, bytes(bad[i]), 0, &out) ==
