@@ -347,6 +347,12 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_locale_matching': [
+    'test_intl_locale_matching.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/locale/identifier.c',
+    '../src/intl/locale/matching.c',
+  ],
   'test_intl_locale_identifier': [
     'test_intl_locale_identifier.c',
     '../src/intl/common/locale-grammar.c',
