@@ -1489,3 +1489,20 @@ name from an inherited identical string. API fallback, language composition,
 code canonicalization and locale availability belong to later consumers.
 Authored tests cover all groups, exact text, alternative identities, metadata,
 markers, source aliases, cycles and rejected ambiguous structures.
+
+## Shared date-field labels
+
+`date_field_names.py` owns the twelve ECMA-402 date-field labels across long,
+short and narrow widths. It maps `weekOfYear`, `dayPeriod` and `timeZoneName`
+to LDML `week`, `dayperiod` and `zone`, retaining default and alternate labels
+separately. Relative literals and counted relative-time patterns remain with
+`relative_patterns.py`; this collector supplies data for consumers such as
+DisplayNames and DateTimeFormat.
+
+Rows contain requesting locale, field, width, alternate, state, exact text and
+terminal source locale/field/width/alternate. Missing, blocked and explicitly
+empty labels remain distinguishable. Typed field aliases restart at the
+requesting locale for `source="locale"`, so an inherited narrow-to-short-to-long
+alias can resolve the child's long label. There is no automatic width or
+alternate substitution beyond source aliases. Authored tests cover every code,
+widths, alternate labels, aliases, provenance, markers and structural rejection.

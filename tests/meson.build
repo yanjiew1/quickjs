@@ -2211,6 +2211,14 @@ test(
 )
 
 test(
+  'intl-date-field-names',
+  python,
+  args: files('test_intl_date_field_names.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-display-names',
   python,
   args: files('test_intl_display_names.py'),
