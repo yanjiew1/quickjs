@@ -117,6 +117,155 @@ static void check(const QJSIntlAllocator *allocator, const QJSIntlNumberService 
     qjs_intl_number_result_clear(allocator, &result);
 }
 
+static void range_expected(const QJSIntlFormattedRange *result, const char *text, int approximate)
+{
+    QJSIntlPart span = {0, result->length, QJS_INTL_PART_LITERAL};
+    QJSIntlFormatted view = {result->text, result->length, &span, 1};
+    size_t i, at = 0, starts = 0, ends = 0, signs = 0;
+    expected(&view, text);
+    for (i = 0; i < result->part_count; i++) {
+        const QJSIntlRangePart *part = &result->parts[i];
+        assert(part->start == at && part->end >= at && part->end <= result->length);
+        assert((unsigned int)part->type < QJS_INTL_PART_COUNT);
+        assert((unsigned int)part->source <= QJS_INTL_RANGE_END);
+        at = part->end;
+        starts += part->source == QJS_INTL_RANGE_START;
+        ends += part->source == QJS_INTL_RANGE_END;
+        signs += part->type == QJS_INTL_PART_APPROXIMATELY_SIGN;
+        if (approximate)
+            assert(part->source == QJS_INTL_RANGE_SHARED);
+    }
+    assert(at == result->length);
+    assert(approximate ? signs == 1 : starts && ends && !signs);
+}
+
+static void check_range(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
+                        size_t locale, const QJSIntlNumberOptions *settings,
+                        QJSIntlMathematicalValue start, QJSIntlMathematicalValue end,
+                        const char *text, int approximate)
+{
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormattedRange result;
+    assert(!qjs_intl_number_formatter_open(service, locale, (QJSIntlBytes){0}, settings, &formatter));
+    assert(!qjs_intl_number_format_range(formatter, &start, &end, &result));
+    qjs_intl_number_formatter_close(formatter);
+    range_expected(&result, text, approximate);
+    qjs_intl_number_range_result_clear(allocator, &result);
+    qjs_intl_number_range_result_clear(allocator, &result);
+}
+
+static void test_ranges(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
+                        const QJSIntlBytes *tags, size_t count)
+{
+    QJSIntlNumberOptions settings = options();
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormattedRange result, zero = {0};
+    QJSIntlMathematicalValue first = value("1"), last = value("2");
+    QJSIntlMathematicalValue nan = {QJS_INTL_NAN, {0}}, positive = {QJS_INTL_POSITIVE_INFINITY, {0}};
+    QJSIntlMathematicalValue negative = {QJS_INTL_NEGATIVE_INFINITY, {0}};
+    QJSIntlMathematicalValue negative_zero = {QJS_INTL_NEGATIVE_ZERO, {0}};
+    Allocation *state = allocator->opaque;
+    size_t en = find(tags, count, "en"), calls, i, live;
+    check_range(allocator, service, en, &settings, first, last, "1–2", 0);
+    check_range(allocator, service, en, &settings, last, first, "2–1", 0);
+    check_range(allocator, service, en, &settings, first, first, "~1", 1);
+    check_range(allocator, service, en, &settings, value("1.234"), value("1.231"), "~1.23", 1);
+    check_range(allocator, service, en, &settings, positive, positive, "~∞", 1);
+    check_range(allocator, service, en, &settings, negative, negative, "~-∞", 1);
+    check_range(allocator, service, en, &settings, negative, positive, "-∞–∞", 0);
+    check_range(allocator, service, en, &settings, negative_zero, value("0"), "-0–0", 0);
+    settings.sign_display = QJS_INTL_NUMBER_SIGN_ALWAYS;
+    check_range(allocator, service, en, &settings, negative_zero, value("0"), "-0–+0", 0);
+    settings.sign_display = QJS_INTL_NUMBER_SIGN_NEVER;
+    check_range(allocator, service, en, &settings, value("-1"), first, "~1", 1);
+    check_range(allocator, service, en, &settings, negative_zero, value("0"), "~0", 1);
+    settings.sign_display = QJS_INTL_NUMBER_SIGN_NEGATIVE;
+    check_range(allocator, service, en, &settings, negative_zero, value("0"), "~0", 1);
+    settings.sign_display = QJS_INTL_NUMBER_SIGN_EXCEPT_ZERO;
+    check_range(allocator, service, en, &settings, negative_zero, value("0"), "~0", 1);
+    settings = options();
+    settings.grouping = QJS_INTL_NUMBER_GROUP_OFF;
+    check_range(allocator, service, en, &settings, value("9007199254740992"), value("9007199254740993"),
+                "9007199254740992–9007199254740993", 0);
+    settings.style = QJS_INTL_NUMBER_PERCENT;
+    check_range(allocator, service, en, &settings, value("0.1"), value("0.2"), "10%–20%", 0);
+    settings.style = QJS_INTL_NUMBER_CURRENCY;
+    settings.currency = bytes("USD");
+    settings.digits.minimum_fraction_digits = settings.digits.maximum_fraction_digits = 2;
+    check_range(allocator, service, en, &settings, first, last, "$1.00–$2.00", 0);
+    settings.currency_sign = QJS_INTL_NUMBER_CURRENCY_ACCOUNTING;
+    check_range(allocator, service, en, &settings, value("-1"), value("-1"), "~($1.00)", 1);
+    settings.currency_sign = QJS_INTL_NUMBER_CURRENCY_STANDARD;
+    settings.currency_display = QJS_INTL_NUMBER_CURRENCY_NAME;
+    settings.digits = options().digits;
+    check_range(allocator, service, en, &settings, first, last, "1 US dollar–2 US dollars", 0);
+    settings.style = QJS_INTL_NUMBER_UNIT;
+    settings.unit = bytes("liter-per-hour");
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    check_range(allocator, service, en, &settings, first, last, "1 liter per hour–2 liters per hour", 0);
+    settings = options();
+    settings.notation = QJS_INTL_NUMBER_SCIENTIFIC;
+    check_range(allocator, service, en, &settings, value("1000"), value("2000"), "1E3–2E3", 0);
+    settings.notation = QJS_INTL_NUMBER_COMPACT;
+    check_range(allocator, service, en, &settings, value("1000"), value("2000"), "1K–2K", 0);
+    check_range(allocator, service, en, &settings, value("1000"), value("1001"), "~1K", 1);
+    settings = options();
+    if (TEST_INTL_PROFILE) {
+        check_range(allocator, service, find(tags, count, "ja"), &settings, first, last, "1～2", 0);
+        check_range(allocator, service, find(tags, count, "ja"), &settings, first, first, "約1", 1);
+        check_range(allocator, service, find(tags, count, "ko"), &settings, first, last, "1~2", 0);
+        check_range(allocator, service, find(tags, count, "de"), &settings, first, first, "≈1", 1);
+    }
+    settings.maximum_output_length = 3;
+    check_range(allocator, service, en, &settings, first, last, "1–2", 0);
+    settings.maximum_output_length = 2;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_number_format_range(formatter, &first, &last, &result) == QJS_INTL_OVERFLOW);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    qjs_intl_number_formatter_close(formatter);
+    settings.maximum_output_length = 1;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    assert(qjs_intl_number_format_range(formatter, &first, &first, &result) == QJS_INTL_OVERFLOW);
+    qjs_intl_number_formatter_close(formatter);
+    settings = options();
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    live = state->live;
+    calls = state->calls;
+    assert(!qjs_intl_number_format_range(formatter, &first, &last, &result));
+    calls = state->calls - calls;
+    qjs_intl_number_range_result_clear(allocator, &result);
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_number_format_range(formatter, &first, &last, &result) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&result, &zero, sizeof(result)) && state->live == live);
+    }
+    state->fail_at = 0;
+    calls = state->calls;
+    assert(qjs_intl_number_format_range(formatter, &first, &nan, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_format_range(formatter, &nan, &last, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(state->calls == calls && !memcmp(&result, &zero, sizeof(result)));
+    {
+        QJSIntlMathematicalValue invalid = value("bad");
+        assert(qjs_intl_number_format_range(formatter, &first, &invalid, &result) == QJS_INTL_INVALID_ARGUMENT);
+        assert(!memcmp(&result, &zero, sizeof(result)) && state->live == live);
+    }
+    assert(qjs_intl_number_format_range(NULL, &first, &last, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_format_range(formatter, NULL, &last, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_format_range(formatter, &first, NULL, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_format_range(formatter, &first, &last, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    qjs_intl_number_formatter_close(formatter);
+    assert(!qjs_intl_number_formatter_open(service, en, bytes("mathbold"), &settings, &formatter));
+    assert(!qjs_intl_number_format_range(formatter, &first, &last, &result));
+    range_expected(&result, "𝟏–𝟐", 0);
+    qjs_intl_number_range_result_clear(allocator, &result);
+    assert(!qjs_intl_number_format_range(formatter, &first, &first, &result));
+    range_expected(&result, "~𝟏", 1);
+    qjs_intl_number_range_result_clear(allocator, &result);
+    qjs_intl_number_formatter_close(formatter);
+}
+
 static void test_formats(const QJSIntlAllocator *allocator, QJSIntlNumberService *service,
                          const QJSIntlBytes *tags, size_t count)
 {
@@ -1223,6 +1372,7 @@ int main(void)
     QJSIntlNumberOptions settings = options();
     QJSIntlMathematicalValue input = value("1234.5");
     QJSIntlFormatted result;
+    QJSIntlFormattedRange range_result;
     QJSIntlBytes system;
     const QJSIntlBytes *tags;
     size_t count, i, en;
@@ -1231,6 +1381,7 @@ int main(void)
     assert(count == (TEST_INTL_PROFILE ? 1211 : 2));
     en = find(tags, count, "en");
     test_formats(&allocator, service, tags, count);
+    test_ranges(&allocator, service, tags, count);
     test_exponent_parts(&allocator, service, en);
     test_compact(&allocator, service, tags, count);
     test_units(&allocator, service, tags, count);
@@ -1252,6 +1403,17 @@ int main(void)
         assert(!qjs_intl_number_format(formatter, &input, &result));
         assert(result.length && result.part_count);
         qjs_intl_number_result_clear(&allocator, &result);
+        {
+            QJSIntlMathematicalValue upper = value("2345.6");
+            size_t part, starts = 0, ends = 0;
+            assert(!qjs_intl_number_format_range(formatter, &input, &upper, &range_result));
+            for (part = 0; part < range_result.part_count; part++) {
+                starts += range_result.parts[part].source == QJS_INTL_RANGE_START;
+                ends += range_result.parts[part].source == QJS_INTL_RANGE_END;
+            }
+            assert(range_result.length && starts && ends);
+            qjs_intl_number_range_result_clear(&allocator, &range_result);
+        }
         qjs_intl_number_formatter_close(formatter);
         currency_settings.style = QJS_INTL_NUMBER_CURRENCY;
         currency_settings.currency = bytes("USD");
@@ -1348,9 +1510,12 @@ int main(void)
     assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &compound_formatter));
     qjs_intl_number_close(service);
     assert(!qjs_intl_number_format(formatter, &input, &result));
+    assert(!qjs_intl_number_format_range(formatter, &input, &input, &range_result));
     qjs_intl_number_formatter_close(formatter);
     expected(&result, "1,234.5");
     qjs_intl_number_result_clear(&allocator, &result);
+    range_expected(&range_result, "~1,234.5", 1);
+    qjs_intl_number_range_result_clear(&allocator, &range_result);
     assert(!qjs_intl_number_format(currency_formatter, &input, &result));
     qjs_intl_number_formatter_close(currency_formatter);
     expected(&result, "1,234.5 US dollars");
