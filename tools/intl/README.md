@@ -144,9 +144,11 @@ python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
   --profile native --output /path/to/native.bin --manifest /path/to/native.json
 ```
 
-The initial sections contain sorted UTF-8 strings, a checked locale-parent
-registry, and deduplicated sets of resolved list templates. `--profile minimal`
-selects English and its parents; `native` retains the full graph. Section IDs
+The sections contain sorted UTF-8 strings, a checked locale-parent registry,
+locale identity metadata, regional/script preferences, and deduplicated sets
+of resolved list templates. Both profiles retain all identity and preference
+metadata. `--profile minimal` selects English and its parents for formatter
+records; `native` retains the full graph. Section IDs
 and string IDs are stable within a generation, not across source upgrades.
 The manifest records exact source reads, policy, pin and section hashes. These
 inputs determine the generation identity without local paths or timestamps.
@@ -166,6 +168,13 @@ text slices. Temporary graph-validation memory is freed before return, including
 on errors. Separate C repository tests consume both real prepared profiles, so
 the Python encoder and C reader are checked together on every test platform.
 The reader does not authenticate data or provide BCP47 canonicalization.
+
+Preference sections 7, 8, 9 and 11 hold regional week records, calendar orders,
+hour-cycle orders and script directions. Tables use sorted pooled keys; week
+records contain first weekday, minimum week days and a seven-bit weekend set.
+Ordered calendar/hour lists share pooled strings with checked token counts.
+Script directions use a distinct unknown value. The preference owner validates
+these schemas separately from the common envelope and locale identity tables.
 
 ## Locale metadata audit
 
