@@ -65,11 +65,18 @@ inc = include_directories(
 )
 version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
+intl_enabled = get_option('intl') != 'disabled'
+if intl_enabled
+  common_args += '-DCONFIG_INTL'
+  warning('Intl is under development; only the documented completed APIs are available')
+endif
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
-  if get_option('calendars') == 'native'
-    common_args += '-DCONFIG_CALENDAR_NATIVE'
-  endif
+endif
+if (get_option('temporal') or intl_enabled) and get_option('calendars') == 'native'
+  common_args += '-DCONFIG_CALENDAR_NATIVE'
+endif
+if get_option('temporal') or intl_enabled
   if get_option('timezone_backend') == 'native'
     common_args += '-DCONFIG_TIMEZONE_NATIVE'
   endif
@@ -244,7 +251,7 @@ calendar_boundary = executable(
   include_directories: inc,
   dependencies: native_deps,
   override_options: ['b_lto=false', 'b_sanitize=none'],
-  build_by_default: get_option('tests') and (get_option('temporal') and get_option('calendars') == 'native'),
+  build_by_default: get_option('tests') and ((get_option('temporal') or intl_enabled) and get_option('calendars') == 'native'),
 )
 
 # A validated byte pack has one C owner, generated without target execution.
@@ -321,6 +328,30 @@ windows_timezone_data = custom_target(
   ),
   build_by_default: false,
 )
+if intl_enabled
+  intl_data = custom_target(
+    'native-intl-data',
+    input: files('data/intl/' + get_option('intl') + '.bin'),
+    output: 'intl-data.c',
+    command: [
+      python,
+      files('tools/intl/embed.py'),
+      '--input', '@INPUT@',
+      '--output', '@OUTPUT@',
+    ],
+    depend_files: files(
+      'tools/intl/acquire.py',
+      'tools/intl/bundle.py',
+      'tools/intl/cldr_xml.py',
+      'tools/intl/list_patterns.py',
+      'tools/intl/locale_metadata.py',
+      'tools/intl/locale_tables.py',
+      'tools/intl/parents.py',
+      'tools/intl/resolve.py',
+      'tools/intl/tables.py',
+    ),
+  )
+endif
 subdir('src')
 
 shared_build = get_option('default_library') != 'static'
@@ -754,16 +785,18 @@ summary(
   bool_yn: true,
 )
 
-summary(
-  {
-    'Temporal API': get_option('temporal'),
+features = {
+  'Temporal API': get_option('temporal'),
+  'Intl profile': get_option('intl'),
+}
+if get_option('temporal') or intl_enabled
+  features += {
     'Calendar arithmetic': get_option('calendars'),
     'Named-zone backend': get_option('timezone_backend'),
     'Default-zone fallback': get_option('system_timezone_policy'),
-  },
-  section: 'Features',
-  bool_yn: true,
-)
+  }
+endif
+summary(features, section: 'Features', bool_yn: true)
 summary(
   {
     'GC stress': get_option('gc_stress'),

@@ -55,6 +55,9 @@ typedef struct JSJobEntry {
 struct JSRuntime {
     JSMallocContext malloc_ctx;
     const char *rt_info;
+#ifdef CONFIG_INTL
+    struct QJSIntlLocaleService *intl_locale;
+#endif
 #ifdef CONFIG_TEMPORAL
     char *default_time_zone;
 #endif
@@ -221,6 +224,9 @@ struct JSContext {
     JSValue function_ctor;
     JSValue array_ctor;
     JSValue regexp_ctor;
+#ifdef CONFIG_INTL
+    JSValue intl_intrinsics;
+#endif
 #ifdef CONFIG_TEMPORAL
     JSValue temporal_intrinsics;
     BOOL temporal_published;

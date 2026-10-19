@@ -37,6 +37,100 @@ on:
     - '*'
 
 jobs:
+  intl-locale:
+    name: Native Intl APIs (${{ matrix.profile }}, Temporal ${{ matrix.temporal }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - profile: minimal
+          temporal: 'false'
+        - profile: native
+          temporal: 'true'
+        - profile: minimal
+          temporal: 'true'
+        - profile: native
+          temporal: 'false'
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson ninja-build clang
+    - name: Configure enabled Intl with sanitizers
+      env:
+        CC: clang
+      run: |
+        meson setup build -Dwerror=true -Ddocumentation=disabled \
+          -Dintl=${{ matrix.profile }} -Dtemporal=${{ matrix.temporal }} \
+          -Dcalendars=native -Dtimezone_backend=native -Dsystem_timezone_policy=utc \
+          -Ddefault_library=both -Db_sanitize=address,undefined
+    - name: Compile selected targets
+      id: compile
+      run: |
+        meson compile -C build -j "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository unit tests
+      run: |
+        meson test -C build --no-rebuild --suite unit --logbase repo-unit \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+    - name: Run repository integration tests
+      if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+      run: |
+        meson test -C build --no-rebuild --suite integration --logbase repo-integration \
+          --print-errorlogs --num-processes "$(getconf _NPROCESSORS_ONLN)"
+    - name: Install pinned Test262
+      run: |
+        python3 tools/build/test262.py bootstrap
+    - name: Check all Intl entry points against Test262
+      run: |
+        profile_config=()
+        if test '${{ matrix.profile }}' = minimal && test -f tests/intl-minimal-test262.conf; then
+          profile_config=(-c tests/intl-minimal-test262.conf)
+        fi
+        # Include wrappers and Temporal integration as well as constructors.
+        # Keep the complete selection bounded and report every test's time.
+        timeout --kill-after=30s 900s build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+          -t -m -c tests/intl-locale-test262.conf \
+          "${profile_config[@]}" \
+          --timing-log test262_intl_timings.jsonl \
+          --progress-log test262_intl_progress.jsonl
+    - name: Report repository test results
+      if: always()
+      run: |
+        for stage in repo-unit repo-integration; do
+          log="build/meson-logs/$stage.txt"
+          if test -f "$log"; then
+            printf '### %s\n\n```text\n' "$stage" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 20 "$log" >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+        done
+    - name: Report per-test timings
+      if: always()
+      run: |
+        if test -f test262_intl_timings.jsonl; then
+          python3 tools/ci/report_test262_timings.py test262_intl_timings.jsonl \
+            --csv test262_intl_timings.csv --markdown test262_intl_timings.md
+          cat test262_intl_timings.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+    - name: Upload locale API timing reports
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: test262-intl-locale-${{ matrix.profile }}-temporal-${{ matrix.temporal }}
+        path: |
+          test262_intl_timings.jsonl
+          test262_intl_timings.csv
+          test262_intl_timings.md
+          test262_intl_progress.jsonl
+          build/meson-logs/repo-unit.*
+          build/meson-logs/repo-integration.*
+        if-no-files-found: ignore
   linux-sanitizers:
     name: Linux ${{ matrix.arch }} ${{ matrix.compiler }} ${{ matrix.sanitizer }}
     runs-on: ${{ matrix.runner }}
