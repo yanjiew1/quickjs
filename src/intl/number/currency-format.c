@@ -11,7 +11,7 @@ QJSIntlStatus qjs_intl_number_currency_name_format(const QJSIntlAllocator *alloc
                                                     QJSIntlFormatted *out)
 {
     QJSIntlNumberPatternToken tokens[5];
-    QJSIntlNumberAffixSymbols symbols = {{0}, {0}, {0}, {0}, name};
+    QJSIntlNumberAffixSymbols symbols = {.currency = name};
     size_t i, start = 0, count = 0;
     unsigned int seen = 0;
     if (out)
