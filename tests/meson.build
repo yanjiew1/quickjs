@@ -568,6 +568,7 @@ intl_unit_owner_sources = files(
   '../src/intl/native/data.c',
   '../src/intl/native/pack.c',
   '../src/intl/unit/data.c',
+  '../src/intl/unit/identifier.c',
 )
 intl_unit_grammar_sources = files(
   'test_intl_unit_grammar_data.c',
@@ -631,6 +632,7 @@ intl_unit_pattern_test = executable(
   [
     'test_intl_unit_pattern.c',
     '../src/intl/unit/pattern.c',
+    '../src/cutils/cutils.c',
     '../src/intl/unit/data.c',
     '../src/intl/common/locale-grammar.c',
     '../src/intl/common/source-locale.c',
@@ -646,6 +648,39 @@ intl_unit_pattern_test = executable(
 test(
   'intl-unit-pattern',
   intl_unit_pattern_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_number_unit_test = executable(
+  'test_intl_number_unit',
+  [
+    'test_intl_number_unit.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/common/format-builder.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    '../src/intl/number/unit.c',
+    '../src/intl/plural/data.c',
+    '../src/intl/plural/native-engine.c',
+    '../src/intl/plural/rules.c',
+    '../src/intl/unit/data.c',
+    '../src/intl/unit/format.c',
+    '../src/intl/unit/grammar-data.c',
+    '../src/intl/unit/identifier.c',
+    '../src/intl/unit/pattern.c',
+    intl_unit_fixture,
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-number-unit',
+  intl_number_unit_test,
   suite: ['repo', 'native'],
   timeout: 30,
 )
@@ -961,6 +996,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/number/native.c',
       '../src/intl/number/unit.c',
       '../src/intl/unit/data.c',
+      '../src/intl/unit/grammar-data.c',
       '../src/intl/unit/identifier.c',
       '../src/intl/unit/pattern.c',
       '../src/intl/unit/format.c',
