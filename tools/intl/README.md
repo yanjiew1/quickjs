@@ -329,7 +329,26 @@ in NumberFormat. The collected code inventory also includes historical codes;
 it is not the available-currency inventory for supportedValuesOf. Formatting,
 DisplayNames fallback and currency capability selection have separate consumers.
 The authored tests and authenticated CI audit exercise this source-only slice;
-it is not yet packed and does not publish a NumberFormat constructor.
+collecting or packing these facts does not publish a NumberFormat constructor.
+
+Section 19 stores little-endian currency facts. Its directory count is the
+shared locale count. Nine header words contain schema version 1, code count,
+fraction-row count, vector count, map count and four default fraction values
+(regular digits/rounding, cash digits/rounding). Sorted code string references
+follow; the inventory includes supplemental-only codes as well as display data.
+Fraction rows contain a code index and four values, sorted by code index.
+
+One shared-map index per locale precedes fixed-width maps with one vector
+reference per currency code. `0xffffffff` means no fields for that code.
+Sorted shared vectors contain sixteen fields: nine name-count forms in
+collector count order, then standard/narrow/formal/variant symbol, decimal,
+group and pattern. References distinguish absent (`0xffffffff`), blocked
+(`0xfffffffe`), explicitly empty (`0xfffffffd`) and nonempty pooled text.
+Inheritance/block markers cannot be encoded as ordinary text; all-absent
+vectors are redundant and rejected. Maps/vectors are canonical and completely
+referenced. Projection prunes unused maps; global fraction facts remain intact.
+The decoder checks defaults, ordering, extents and references before resolving
+semantic fields. No code-name text or plural-name fallback is synthesized.
 
 ## Numeric options and exact plural relations
 
