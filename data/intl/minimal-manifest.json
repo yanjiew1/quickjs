@@ -1,8 +1,8 @@
 {
-  "bytes": 493764,
+  "bytes": 495320,
   "complete_services": [],
   "format": 1,
-  "generation": "ea99ecbb4c099e5d744baf7de4b691a4aeff0976d36811356b72bd171d183119",
+  "generation": "cabc0eb61aa2269c777c56559eb4437ff842f6fc9588d21c53849667194fcd85",
   "inputs": {
     "cldr": {
       "archive": {
@@ -68,7 +68,7 @@
       },
       "19": {
         "count": 3,
-        "sha256": "73f53603cef0fe003aa7a32bda80bf479c286b61f332def67b62f66e3c46b889"
+        "sha256": "0769b4e933ce759cecd63a9c041f0af82a1962cf67d849906cfca6451071df4d"
       },
       "2": {
         "count": 3,
@@ -76,7 +76,7 @@
       },
       "20": {
         "count": 3,
-        "sha256": "e89ed9c1d770b59b9b5e2e98c31c82903b9d7cffec0ca2656749d58d9fcc9244"
+        "sha256": "e63d5e729f95ba3aad03385304649d4af6dd9577a814db58db459e45f8fb63f3"
       },
       "21": {
         "count": 3,
@@ -1072,6 +1072,6 @@
   },
   "locales": 3,
   "note": "Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts and plural rules; not formatter capability or full Intl coverage.",
-  "sha256": "e9dcaecb6f6f72f742935692dcf821e3f02798dabcc9a305b0de7b99670751d0",
+  "sha256": "41b39cb341d2c4c403a0494dc66caab7a63e789607878e3efacaa68c2f4d4deb",
   "strings": 22520
 }
