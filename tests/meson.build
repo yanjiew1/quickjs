@@ -568,11 +568,73 @@ test(
   timeout: 30,
 )
 
+intl_duration_decimal_test = executable(
+  'test_intl_duration_decimal',
+  [
+    'test_intl_duration_decimal.c',
+    '../src/intl/duration/decimal.c',
+    '../src/temporal/duration.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/options.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-duration-decimal',
+  intl_duration_decimal_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_duration_digital_test = executable(
+  'test_intl_duration_digital',
+  [
+    'test_intl_duration_digital.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/common/format-builder.c',
+    '../src/intl/duration/native-digital.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-duration-digital',
+  intl_duration_digital_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_duration_format_test = executable(
+  'test_intl_duration_format',
+  [
+    'test_intl_duration_format.c',
+    '../src/intl/duration/format.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-duration-format',
+  intl_duration_format_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_duration_owner_sources = files(
   'test_intl_duration_data.c',
+  '../src/cutils/cutils.c',
+  '../src/intl/common/format-builder.c',
   '../src/intl/common/locale-grammar.c',
   '../src/intl/common/source-locale.c',
   '../src/intl/duration/data.c',
+  '../src/intl/duration/native-digital.c',
   '../src/intl/native/data.c',
   '../src/intl/native/pack.c',
 )
