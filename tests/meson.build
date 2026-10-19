@@ -1323,6 +1323,14 @@ test(
 )
 
 test(
+  'intl-number-patterns',
+  python,
+  args: files('test_intl_number_patterns.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-plural-sources',
   python,
   args: files('test_intl_plural_rules.py'),

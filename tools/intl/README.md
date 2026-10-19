@@ -193,6 +193,23 @@ Standalone authored and real-profile tests cover exact text, empty values,
 optional states, unaligned storage, allocation failure/retry, invalid references,
 noncanonical records and malformed section dimensions.
 
+## Standard number patterns
+
+`number_patterns.py` resolves standard decimal, scientific, percent and currency
+patterns for every numeric system and source locale. Currency accounting and
+the optional `alphaNextToNumber`/`noCurrency` variants retain separate keys.
+Typed aliases follow the requesting-locale rules; alternate aliases cannot
+replace baseline records. Required patterns must be present and nonempty;
+optional absent, blocked and explicitly empty values stay distinct. Minimum
+grouping digits resolve independently as positive unsigned integers.
+
+The collector preserves the exact pattern language, quoting and scientific
+affixes. Compact patterns, currency names/spacing, unit patterns and range
+patterns have separate owners. This is source collection: the records are not
+yet packed or compiled, and do not advertise a NumberFormat capability. CI
+audits the authenticated CLDR sources; authored tests cover aliases, inheritance,
+alternate selection and malformed records.
+
 ## Exact plural relations
 
 `src/intl/plural/rules.c` evaluates one CLDR relation over an unsigned plain
