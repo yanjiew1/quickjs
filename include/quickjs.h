@@ -440,6 +440,10 @@ JS_EXTERN JSValue JS_GetDefaultTimeZone(JSContext *ctx);
 JS_EXTERN JSContext *JS_NewContextRaw(JSRuntime *rt);
 JS_EXTERN int JS_AddIntrinsicBaseObjects(JSContext *ctx);
 JS_EXTERN int JS_AddIntrinsicDate(JSContext *ctx);
+/* Publish this realm's compiled Intl intrinsics. Raw contexts require base
+   objects. Idempotent; returns -1 with an exception on failure, including
+   TypeError when Intl is disabled. */
+JS_EXTERN int JS_AddIntrinsicIntl(JSContext *ctx);
 /* Initialize native Temporal intrinsics and publish the namespace. Raw
    contexts require base objects. Idempotent; returns -1 with an exception
    on failure, including TypeError in a disabled build. */
