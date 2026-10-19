@@ -265,9 +265,16 @@ Final maps are deduplicated and canonically ordered.
 Decimal maps are required. An absent currency compact map remains empty:
 CLDR root Arabic currency data has standard patterns but no compact patterns.
 Any specified formatter composition/fallback belongs to the consuming engine,
-not XML resolution. This collector does not yet pack maps, compile compact
-patterns or advertise NumberFormat support. Authored tests and the authenticated
-source audit cover source resolution independently of formatter execution.
+not XML resolution. `compact_pattern_syntax.py` compiles consecutive zero
+placeholders into exact scale exponents and typed sign forms. Literal-only
+plural/exact forms borrow their variant family's `other` divisor; the exact
+pattern `0` retains its ordinary-format fallback mode. Each numeric variant keeps its own divisor,
+including inherited alternates that differ from the baseline. The consuming
+formatter must choose a coherent notation policy; data compilation does not
+silently change source patterns or conflate fallback with a scaled placeholder.
+Optional blocks and empty values remain distinct. These maps are not yet packed
+and do not advertise NumberFormat support. Authored tests and the authenticated
+source audit cover resolution and syntax independently of formatter execution.
 
 ## Numeric options and exact plural relations
 

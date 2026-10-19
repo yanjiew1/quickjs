@@ -1423,6 +1423,14 @@ test(
 )
 
 test(
+  'intl-compact-pattern-syntax',
+  python,
+  args: files('test_intl_compact_pattern_syntax.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-compact-patterns',
   python,
   args: files('test_intl_compact_patterns.py'),
