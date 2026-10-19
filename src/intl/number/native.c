@@ -6,6 +6,8 @@
 #include "body.h"
 #include "compact-data.h"
 #include "compact-format.h"
+#include "compact-family.h"
+#include "sign-affix.h"
 #include "currency-format.h"
 #include "currency-pattern.h"
 #include "../currency/display.h"
@@ -16,7 +18,11 @@
 #include <limits.h>
 #include <string.h>
 
-enum { SCIENTIFIC_FORM = QJS_INTL_NUMBER_PATTERN_FORM_COUNT };
+enum {
+    SCIENTIFIC_FORM = QJS_INTL_NUMBER_PATTERN_FORM_COUNT,
+    COMPACT_SIGN_FORM,
+    FORMATTER_FORM_COUNT = COMPACT_SIGN_FORM + QJS_INTL_NUMBER_PATTERN_FORM_COUNT
+};
 
 struct QJSIntlNumberService {
     QJSIntlAllocator allocator;
@@ -38,17 +44,19 @@ struct QJSIntlNumberFormatter {
     QJSIntlNumberBody body;
     QJSIntlNumberAffixSymbols symbols;
     QJSIntlNumberPatternToken *tokens;
-    size_t offsets[SCIENTIFIC_FORM + 1], counts[SCIENTIFIC_FORM + 1];
+    size_t offsets[FORMATTER_FORM_COUNT], counts[FORMATTER_FORM_COUNT];
     QJSIntlUTF16 exponent_separator, exponent_minus;
     QJSIntlCompactData compact;
     QJSIntlCompactMap compact_map;
     QJSIntlPluralRuleSet cardinal;
     QJSIntlCompactScale *scales;
+    QJSIntlCompactFamily *families;
+    QJSIntlBytes compact_before_currency, compact_after_currency;
     QJSIntlCurrencyData currencies;
     QJSIntlCurrencyUnitLayouts currency_layouts;
     uint32_t locale;
     char currency_code[3];
-    unsigned int currency_name;
+    unsigned int currency_name, compact_currency;
 };
 
 void qjs_intl_number_close(QJSIntlNumberService *service)
@@ -185,6 +193,8 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
             allocator.free(allocator.opaque, formatter->tokens);
         if (formatter->scales)
             allocator.free(allocator.opaque, formatter->scales);
+        if (formatter->families)
+            allocator.free(allocator.opaque, formatter->families);
         allocator.free(allocator.opaque, formatter);
     }
 }
@@ -237,6 +247,81 @@ static QJSIntlStatus decode(const QJSIntlAllocator *allocator, QJSIntlBytes text
     return QJS_INTL_OK;
 }
 
+static QJSIntlStatus open_compact(QJSIntlNumberFormatter *formatter,
+                                  const QJSIntlNumberService *service, uint32_t locale,
+                                  uint32_t system, unsigned int long_display)
+{
+    QJSIntlCompactPattern entry;
+    QJSIntlCurrencyBoundary boundary;
+    QJSIntlStatus status;
+    uint32_t j;
+    size_t count = 0;
+    formatter->compact = service->compact;
+    status = qjs_intl_compact_map_at(&service->compact, locale, system,
+                                     formatter->compact_currency ? QJS_INTL_COMPACT_CURRENCY_SHORT
+                                     : long_display ? QJS_INTL_COMPACT_DECIMAL_LONG
+                                                    : QJS_INTL_COMPACT_DECIMAL_SHORT,
+                                     &formatter->compact_map);
+    if (status)
+        return status;
+    if (!formatter->compact_map.count)
+        return formatter->compact_currency ? QJS_INTL_OK : QJS_INTL_DATA_ERROR;
+    status = qjs_intl_plural_rules_at(&service->plurals, locale, QJS_INTL_PLURAL_CARDINAL,
+                                      &formatter->cardinal);
+    if (status)
+        return status;
+    if (formatter->compact_currency) {
+        QJSIntlNumberLayouts layouts;
+        status = qjs_intl_currency_boundary(formatter->symbols.currency, &boundary);
+        if (!status)
+            status = qjs_intl_number_layouts_at(&service->layouts, locale, system, &layouts);
+        if (!status)
+            status = qjs_intl_number_currency_spacing(&layouts, &boundary,
+                                                       &formatter->compact_before_currency,
+                                                       &formatter->compact_after_currency);
+        if (status)
+            return status;
+    }
+    for (j = 0; j < formatter->compact_map.count; j++) {
+        qjs_intl_compact_pattern_at(&service->compact, &formatter->compact_map, j, &entry);
+        if (entry.count == QJS_INTL_COMPACT_OTHER && entry.variant == QJS_INTL_COMPACT_STANDARD)
+            count++;
+    }
+    if (!count)
+        return QJS_INTL_DATA_ERROR;
+    if (count > SIZE_MAX / sizeof(*formatter->scales) ||
+        (formatter->compact_currency && count > SIZE_MAX / sizeof(*formatter->families)))
+        return QJS_INTL_OVERFLOW;
+    formatter->scales = formatter->allocator.malloc(formatter->allocator.opaque,
+                                                     count * sizeof(*formatter->scales));
+    if (!formatter->scales)
+        return QJS_INTL_NO_MEMORY;
+    if (formatter->compact_currency) {
+        formatter->families = formatter->allocator.malloc(formatter->allocator.opaque,
+                                                           count * sizeof(*formatter->families));
+        if (!formatter->families)
+            return QJS_INTL_NO_MEMORY;
+    }
+    count = 0;
+    for (j = 0; j < formatter->compact_map.count; j++) {
+        qjs_intl_compact_pattern_at(&service->compact, &formatter->compact_map, j, &entry);
+        if (entry.count == QJS_INTL_COMPACT_OTHER && entry.variant == QJS_INTL_COMPACT_STANDARD) {
+            if (formatter->compact_currency) {
+                QJSIntlCompactFamily *family = &formatter->families[count];
+                status = qjs_intl_compact_family_at(&formatter->compact, &formatter->compact_map,
+                                                    entry.magnitude, &boundary, family);
+                if (status)
+                    return status;
+                entry = family->baseline;
+            }
+            formatter->scales[count++] = (QJSIntlCompactScale){entry.magnitude, entry.exponent};
+        }
+    }
+    formatter->rounding.compact = formatter->scales;
+    formatter->rounding.compact_count = count;
+    return QJS_INTL_OK;
+}
+
 QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service, size_t locale,
                                              QJSIntlBytes system_name,
                                              const QJSIntlNumberOptions *options,
@@ -244,14 +329,14 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
 {
     QJSIntlNumberFormatter *formatter;
     QJSIntlNumberingSystem system;
-    QJSIntlNumberPattern pattern, scientific = {0};
+    QJSIntlNumberPattern pattern, scientific = {0}, sign_pattern = {0};
     QJSIntlCurrencyPattern currency_pattern = {0};
     QJSIntlBytes currency_text = {0};
     QJSIntlNumberSymbols symbols;
     QJSIntlStatus status;
     uint32_t index, source;
     size_t i, total = 0, position = 0;
-    int has_scientific, currency_affix;
+    int has_scientific, currency_affix, compact_currency, has_compact_forms = 0;
     const uint8_t *at, *end, *next;
     if (out)
         *out = NULL;
@@ -271,7 +356,8 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         status = qjs_intl_currency_code_find(&service->currencies, options->currency, &code);
         if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
             return status;
-        if (options->notation == QJS_INTL_NUMBER_COMPACT)
+        if (options->notation == QJS_INTL_NUMBER_COMPACT &&
+            options->currency_display == QJS_INTL_NUMBER_CURRENCY_NAME)
             return QJS_INTL_UNSUPPORTED;
     }
     has_scientific = options->notation == QJS_INTL_NUMBER_SCIENTIFIC ||
@@ -290,6 +376,7 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     source = (uint32_t)locale + (locale >= service->root);
     currency_affix = options->style == QJS_INTL_NUMBER_CURRENCY &&
                      options->currency_display != QJS_INTL_NUMBER_CURRENCY_NAME;
+    compact_currency = currency_affix && options->notation == QJS_INTL_NUMBER_COMPACT;
     if (currency_affix) {
         if (options->currency_display == QJS_INTL_NUMBER_CURRENCY_CODE)
             currency_text = options->currency;
@@ -317,6 +404,30 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         return status;
     if (pattern.state != QJS_INTL_NUMBER_PATTERN_VALUE)
         return QJS_INTL_DATA_ERROR;
+    if (compact_currency) {
+        QJSIntlCompactMap map;
+        status = qjs_intl_compact_map_at(&service->compact, source, index,
+                                         QJS_INTL_COMPACT_CURRENCY_SHORT, &map);
+        if (status)
+            return status;
+        has_compact_forms = map.count != 0;
+    }
+    if (has_compact_forms) {
+        int accounting = options->currency_sign == QJS_INTL_NUMBER_CURRENCY_ACCOUNTING;
+        status = qjs_intl_number_pattern_at(&service->patterns, source, index,
+                                            accounting ? QJS_INTL_PATTERN_CURRENCY_ACCOUNTING_NONE
+                                                       : QJS_INTL_PATTERN_CURRENCY_STANDARD_NONE,
+                                            &sign_pattern);
+        if (!status && sign_pattern.state != QJS_INTL_NUMBER_PATTERN_VALUE)
+            status = qjs_intl_number_pattern_at(&service->patterns, source, index,
+                                                accounting ? QJS_INTL_PATTERN_CURRENCY_ACCOUNTING
+                                                           : QJS_INTL_PATTERN_CURRENCY_STANDARD,
+                                                &sign_pattern);
+        if (status)
+            return status;
+        if (sign_pattern.state != QJS_INTL_NUMBER_PATTERN_VALUE)
+            return QJS_INTL_UNSUPPORTED;
+    }
     if (has_scientific) {
         status = qjs_intl_number_pattern_at(&service->patterns, source, index,
                                             QJS_INTL_PATTERN_SCIENTIFIC, &scientific);
@@ -356,11 +467,19 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
             return QJS_INTL_OVERFLOW;
         total += scientific.forms[QJS_INTL_NUMBER_PATTERN_POSITIVE].count;
     }
+    if (has_compact_forms) {
+        for (i = 0; i < QJS_INTL_NUMBER_PATTERN_FORM_COUNT; i++) {
+            if (sign_pattern.forms[i].count > SIZE_MAX / sizeof(*formatter->tokens) - total)
+                return QJS_INTL_OVERFLOW;
+            total += sign_pattern.forms[i].count;
+        }
+    }
     formatter = service->allocator.malloc(service->allocator.opaque, sizeof(*formatter));
     if (!formatter)
         return QJS_INTL_NO_MEMORY;
     memset(formatter, 0, sizeof(*formatter));
     formatter->allocator = service->allocator;
+    formatter->compact_currency = compact_currency;
     if (options->style == QJS_INTL_NUMBER_CURRENCY) {
         memcpy(formatter->currency_code, options->currency.data, 3);
         if (currency_text.data == options->currency.data)
@@ -428,6 +547,30 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
             }
         }
     }
+    if (has_compact_forms) {
+        const QJSIntlNumberPatternToken *positive;
+        for (i = 0; i < QJS_INTL_NUMBER_PATTERN_FORM_COUNT; i++) {
+            uint32_t j;
+            unsigned int form = COMPACT_SIGN_FORM + i;
+            formatter->offsets[form] = position;
+            formatter->counts[form] = sign_pattern.forms[i].count;
+            for (j = 0; j < sign_pattern.forms[i].count; j++)
+                qjs_intl_number_pattern_token_at(&service->patterns, &sign_pattern.forms[i], j,
+                                                 &formatter->tokens[position++]);
+        }
+        positive = formatter->tokens + formatter->offsets[COMPACT_SIGN_FORM];
+        for (i = QJS_INTL_NUMBER_PATTERN_NEGATIVE; i < QJS_INTL_NUMBER_PATTERN_FORM_COUNT; i++) {
+            unsigned int form = COMPACT_SIGN_FORM + i;
+            status = qjs_intl_number_sign_affix(positive, formatter->counts[COMPACT_SIGN_FORM],
+                                                formatter->tokens + formatter->offsets[form],
+                                                formatter->counts[form], &formatter->counts[form]);
+            if (status)
+                goto fail;
+        }
+        formatter->tokens[formatter->offsets[COMPACT_SIGN_FORM]] =
+            (QJSIntlNumberPatternToken){QJS_INTL_NUMBER_TOKEN_NUMBER, {0}};
+        formatter->counts[COMPACT_SIGN_FORM] = 1;
+    }
     at = (const uint8_t *)system.value.data;
     end = at + system.value.length;
     for (i = 0; i < 10; i++) {
@@ -460,45 +603,8 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     if (!status && has_scientific)
         status = decode(&service->allocator, symbols.fields[QJS_INTL_SYMBOL_MINUS].text,
                         &formatter->exponent_minus);
-    if (!status && options->notation == QJS_INTL_NUMBER_COMPACT) {
-        QJSIntlCompactPattern entry;
-        uint32_t j;
-        size_t count = 0;
-        formatter->compact = service->compact;
-        status = qjs_intl_compact_map_at(&service->compact, source, index,
-                                         options->compact_long ? QJS_INTL_COMPACT_DECIMAL_LONG
-                                                               : QJS_INTL_COMPACT_DECIMAL_SHORT,
-                                         &formatter->compact_map);
-        if (status)
-            goto fail;
-        status = qjs_intl_plural_rules_at(&service->plurals, source, QJS_INTL_PLURAL_CARDINAL,
-                                          &formatter->cardinal);
-        if (status)
-            goto fail;
-        for (j = 0; j < formatter->compact_map.count; j++) {
-            qjs_intl_compact_pattern_at(&service->compact, &formatter->compact_map, j, &entry);
-            if (entry.count == QJS_INTL_COMPACT_OTHER && entry.variant == QJS_INTL_COMPACT_STANDARD)
-                count++;
-        }
-        if (!count || count > SIZE_MAX / sizeof(*formatter->scales)) {
-            status = QJS_INTL_DATA_ERROR;
-            goto fail;
-        }
-        formatter->scales = service->allocator.malloc(service->allocator.opaque,
-                                                      count * sizeof(*formatter->scales));
-        if (!formatter->scales) {
-            status = QJS_INTL_NO_MEMORY;
-            goto fail;
-        }
-        count = 0;
-        for (j = 0; j < formatter->compact_map.count; j++) {
-            qjs_intl_compact_pattern_at(&service->compact, &formatter->compact_map, j, &entry);
-            if (entry.count == QJS_INTL_COMPACT_OTHER && entry.variant == QJS_INTL_COMPACT_STANDARD)
-                formatter->scales[count++] = (QJSIntlCompactScale){entry.magnitude, entry.exponent};
-        }
-        formatter->rounding.compact = formatter->scales;
-        formatter->rounding.compact_count = count;
-    }
+    if (!status && options->notation == QJS_INTL_NUMBER_COMPACT)
+        status = open_compact(formatter, service, source, index, options->compact_long);
     if (status)
         goto fail;
     *out = formatter;
@@ -592,32 +698,19 @@ static int is_one(const QJSIntlDecimal *number)
     return 1;
 }
 
-static int compact_candidate(const QJSIntlNumberFormatter *formatter, uint32_t magnitude,
-                             QJSIntlCompactCount count, const QJSIntlCompactPattern *baseline,
-                             QJSIntlCompactPattern *out)
-{
-    QJSIntlStatus status =
-        qjs_intl_compact_pattern_find(&formatter->compact, &formatter->compact_map, magnitude,
-                                      count, QJS_INTL_COMPACT_STANDARD, out);
-    /* CLDR requires a common divisor for one threshold/family. Some pinned
-       inherited forms disagree (e.g. vec's count-one raw "0"). Keep the
-       selected scale: incompatible or unavailable forms use OTHER rather
-       than dropping the magnitude or rounding at a second scale. */
-    return !status && out->state == QJS_INTL_NUMBER_PATTERN_VALUE &&
-           out->exponent == baseline->exponent;
-}
-
 static QJSIntlStatus compact_pattern(const QJSIntlNumberFormatter *formatter,
                                    const QJSIntlRoundedNumber *number,
-                                   QJSIntlCompactPattern *out)
+                                   QJSIntlCompactPattern *out, unsigned int *legacy_spacing)
 {
     size_t lo = 0, hi = formatter->rounding.compact_count;
-    QJSIntlCompactPattern baseline, pattern;
+    QJSIntlCompactFamily family = {0};
+    QJSIntlCompactPattern pattern;
     QJSIntlPluralOperands operands;
     QJSIntlPluralCategory category;
     QJSIntlStatus status;
     uint32_t magnitude;
     int exact = -1;
+    *legacy_spacing = 0;
     if (!number->exponent)
         return QJS_INTL_UNSUPPORTED; /* No notation affix at exponent zero. */
     while (lo < hi) {
@@ -631,27 +724,59 @@ static QJSIntlStatus compact_pattern(const QJSIntlNumberFormatter *formatter,
     if (!lo)
         return QJS_INTL_DATA_ERROR;
     magnitude = formatter->scales[lo - 1].magnitude;
-    qjs_intl_compact_pattern_find(&formatter->compact, &formatter->compact_map, magnitude,
-                                  QJS_INTL_COMPACT_OTHER, QJS_INTL_COMPACT_STANDARD, &baseline);
-    if (baseline.mode == QJS_INTL_COMPACT_FALLBACK)
+    if (formatter->compact_currency)
+        family = formatter->families[lo - 1];
+    else {
+        status = qjs_intl_compact_family_at(&formatter->compact, &formatter->compact_map,
+                                            magnitude, NULL, &family);
+        if (status)
+            return status;
+    }
+    if (family.baseline.mode == QJS_INTL_COMPACT_FALLBACK)
         return QJS_INTL_UNSUPPORTED;
+    if (family.baseline.exponent != (uint32_t)number->exponent)
+        return QJS_INTL_DATA_ERROR;
     if (number->number.rounded.length == 1 && number->number.rounded.digits[0] == '0')
         exact = QJS_INTL_COMPACT_EXACT_ZERO;
     else if (is_one(&number->number.rounded))
         exact = QJS_INTL_COMPACT_EXACT_ONE;
-    if (exact < 0 || !compact_candidate(formatter, magnitude, exact, &baseline, &pattern)) {
+    status = exact < 0 ? QJS_INTL_UNSUPPORTED
+             : qjs_intl_compact_family_pattern(&formatter->compact, &formatter->compact_map,
+                                                &family, exact, &pattern);
+    if (status == QJS_INTL_UNSUPPORTED) {
         /* This plural context chooses the compact affix from the visible
            rounded mantissa, not the expanded quantity used for outer units. */
         operands = (QJSIntlPluralOperands){number->number.text, number->number.length, 0};
         status = qjs_intl_native_plural_select(&formatter->cardinal, &operands, &category);
         if (status)
             return status;
-        if (!compact_candidate(formatter, magnitude, category + QJS_INTL_COMPACT_ZERO, &baseline,
-                               &pattern))
-            pattern = baseline;
+        status = qjs_intl_compact_family_pattern(&formatter->compact, &formatter->compact_map,
+                                                 &family, category + QJS_INTL_COMPACT_ZERO, &pattern);
+        if (status == QJS_INTL_UNSUPPORTED) {
+            pattern = family.baseline;
+            status = QJS_INTL_OK;
+        }
     }
+    if (status)
+        return status;
+    *legacy_spacing = !family.alpha_available && pattern.variant != QJS_INTL_COMPACT_ALPHA;
     *out = pattern;
     return QJS_INTL_OK;
+}
+
+static int compact_has_currency(const QJSIntlNumberFormatter *formatter,
+                                const QJSIntlCompactPattern *pattern)
+{
+    const QJSIntlNumberAffix *form = &pattern->forms[QJS_INTL_NUMBER_PATTERN_POSITIVE];
+    QJSIntlNumberPatternToken token;
+    uint32_t i;
+    for (i = 0; i < form->count; i++) {
+        qjs_intl_compact_token_at(&formatter->compact, form, i, &token);
+        if (token.kind >= QJS_INTL_NUMBER_TOKEN_CURRENCY &&
+            token.kind <= QJS_INTL_NUMBER_TOKEN_CURRENCY_NARROW)
+            return 1;
+    }
+    return 0;
 }
 
 /* Numeric bodies can contain supplementary numbering digits or notation
@@ -670,6 +795,14 @@ static uint32_t body_edge(const QJSIntlFormatted *body, int last)
     return c;
 }
 
+static void filter_spacing(QJSIntlNumberAffixSymbols *symbols, const QJSIntlFormatted *body)
+{
+    if (!body->length || (symbols->before_currency.length && !lre_is_decimal_digit(body_edge(body, 1))))
+        symbols->before_currency = (QJSIntlBytes){0};
+    if (!body->length || (symbols->after_currency.length && !lre_is_decimal_digit(body_edge(body, 0))))
+        symbols->after_currency = (QJSIntlBytes){0};
+}
+
 QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                                      const QJSIntlMathematicalValue *value, QJSIntlFormatted *out)
 {
@@ -678,8 +811,8 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
     QJSIntlCompactPattern compact = {0};
     QJSIntlNumberAffixSymbols symbols;
     QJSIntlStatus status;
-    unsigned int form;
-    int has_compact = 0;
+    unsigned int form, legacy_spacing = 0;
+    int has_compact = 0, complete_currency = 0;
     if (out)
         memset(out, 0, sizeof(*out));
     if (!out || !formatter || !value)
@@ -689,7 +822,7 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         status = qjs_intl_number_sign_pattern(formatter->sign_display, &rounded, &form);
     if (!status && formatter->rounding.notation == QJS_INTL_NUMBER_COMPACT &&
         (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO)) {
-        status = compact_pattern(formatter, &rounded, &compact);
+        status = compact_pattern(formatter, &rounded, &compact, &legacy_spacing);
         has_compact = status == QJS_INTL_OK;
         if (status == QJS_INTL_UNSUPPORTED)
             status = QJS_INTL_OK;
@@ -717,9 +850,16 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         }
     }
     if (!status && has_compact) {
+        symbols = formatter->symbols;
+        if (formatter->compact_currency) {
+            complete_currency = compact_has_currency(formatter, &compact);
+            symbols.before_currency = legacy_spacing ? formatter->compact_before_currency : (QJSIntlBytes){0};
+            symbols.after_currency = legacy_spacing ? formatter->compact_after_currency : (QJSIntlBytes){0};
+            filter_spacing(&symbols, &body);
+        }
         status = qjs_intl_number_compact_format(
-            &formatter->allocator, &formatter->compact, &compact, formatter->symbols.minus,
-            formatter->symbols.plus, &body, formatter->body.maximum_output_length, &notation_body);
+            &formatter->allocator, &formatter->compact, &compact, &symbols, &body,
+            formatter->body.maximum_output_length, &notation_body);
         if (!status) {
             qjs_intl_number_body_clear(&formatter->allocator, &body);
             body = notation_body;
@@ -727,14 +867,15 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         }
     }
     if (!status) {
+        unsigned int affix_form = complete_currency ? COMPACT_SIGN_FORM + form : form;
         symbols = formatter->symbols;
-        if (symbols.before_currency.length && !lre_is_decimal_digit(body_edge(&body, 1)))
-            symbols.before_currency = (QJSIntlBytes){0};
-        if (symbols.after_currency.length && !lre_is_decimal_digit(body_edge(&body, 0)))
-            symbols.after_currency = (QJSIntlBytes){0};
+        if (complete_currency)
+            symbols.before_currency = symbols.after_currency = (QJSIntlBytes){0};
+        else
+            filter_spacing(&symbols, &body);
         status = qjs_intl_number_affix_format(
-            &formatter->allocator, formatter->tokens + formatter->offsets[form],
-            formatter->counts[form], &symbols, &body,
+            &formatter->allocator, formatter->tokens + formatter->offsets[affix_form],
+            formatter->counts[affix_form], &symbols, &body,
             form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length,
             formatter->currency_name ? &signed_body : out);
     }
