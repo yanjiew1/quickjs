@@ -66,8 +66,12 @@ def main():
     temporal = options.get('temporal', False)
     calendars = temporal or intl != 'disabled'
     prepared = {row['name'] for row in targets
-                if row['name'].startswith('intl-fixture-data-')}
-    expected = {'intl-fixture-data-' + intl} if intl != 'disabled' else set()
+                if row['name'].startswith('intl-prepared-')}
+    if 'intl' in options:
+        expected = {'intl-prepared-' + intl} if intl != 'disabled' else set()
+    else:
+        # Prepared library tests precede the selectable JavaScript feature.
+        expected = {'intl-prepared-' + profile for profile in ('minimal', 'native')}
     assert prepared == expected, (prepared, expected)
     if 'intl' in options and intl == 'disabled':
         # The public disabled-API contract remains tested; real components and
