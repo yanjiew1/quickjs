@@ -323,6 +323,17 @@ publish only on success; owned temporary JS values are released on every path.
 The focused repository JS suite uses a private C driver to test getter/coercion
 order without advertising a constructor before its backend is complete.
 
+`src/quickjs/builtins/intl/number-value.c` owns ToIntlMathematicalValue coercion.
+It performs one number-hint ToPrimitive, preserves exact finite decimal/radix
+strings and BigInts, and uses shortest decimal text for Numbers. The engine's
+StringNumericLiteral conversion validates string grammar and identifies the
+specified RoundMVResult infinity/zero boundaries; a finite nonzero result does
+not replace the original exact text. BigInts bypass those string boundaries.
+Owned decimal/text results use the runtime allocator and reset on exceptions.
+Focused JS cases cover precision, coercion order, whitespace, radix grammar,
+special values and overflow/underflow boundaries; the C driver checks allocation
+failure and retry with buffers larger than allocator pools.
+
 `src/intl/plural/rules.c` evaluates one CLDR relation over an unsigned plain
 decimal without allocation or binary floating point. It retains visible
 fractional zeros and evaluates integer operands, fractional operands, modulo,
