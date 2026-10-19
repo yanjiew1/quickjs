@@ -22,7 +22,8 @@ def main():
         'types': (('u', 'ca', 'foo', ('legacy', 'oldlegacy'), '', False, False, '', ''),),
     }
     bad = ('EN', 'en-u-ca-gregory', 'en-x-foo', 'en-latn',
-           'sl-rozaj-rozaj', 'ru ru', 'legacy legacy', 'en-', 'en--US')
+           'sl-rozaj-rozaj', 'ru ru', 'legacy legacy', 'en-', 'en--US',
+           'latn', 'abcdefghijklmnop')
     strings = tuple(sorted(locale_tables.strings(metadata) | set(bad) | {'root'},
                            key=lambda value: value.encode('utf-8')))
     ids = {value: index for index, value in enumerate(strings)}
