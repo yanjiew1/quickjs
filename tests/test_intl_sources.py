@@ -127,6 +127,8 @@ class SourceTests(unittest.TestCase):
             acquire.materialize(archive, root, pin)
             before = (root / 'source-manifest.json').read_bytes()
             sources = acquire.Sources(root, pin)
+            pin['archive']['url'] = 'https://example.invalid/changed'
+            self.assertEqual(sources.pin['archive']['url'], 'https://example.invalid/cldr.tar.gz')
             self.assertEqual(sources.paths('common/main/'), ('common/main/en.xml',))
             self.assertEqual(sources.read('common/main/en.xml'), b'<ldml><identity/></ldml>')
             self.assertEqual(sources.consumed, {'common/main/en.xml'})
