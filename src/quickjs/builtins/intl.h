@@ -11,6 +11,7 @@
 #include "../../intl/number/number.h"
 #include "../../intl/relative/relative.h"
 #include "../../intl/duration/duration.h"
+#include "../../intl/display/display.h"
 
 typedef struct JSIntlLocaleList {
     char **items;
@@ -27,6 +28,7 @@ int js_intl_init_plural_rules(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_number_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_relative_time_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_duration_format(JSContext *ctx, JSValueConst namespace_object);
+int js_intl_init_display_names(JSContext *ctx, JSValueConst namespace_object);
 /* value is a validated Temporal.Duration receiver; use the intrinsic ctor. */
 JSValue js_intl_format_duration(JSContext *ctx, JSValueConst value, int argc, JSValueConst *argv);
 /* Intrinsic Number/BigInt locale formatting. value is a validated primitive;
