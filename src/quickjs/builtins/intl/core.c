@@ -20,6 +20,11 @@ static void intl_free(void *opaque, void *ptr)
     js_free_rt(opaque, ptr);
 }
 
+QJSIntlAllocator js_intl_allocator(JSRuntime *rt)
+{
+    return (QJSIntlAllocator){rt, intl_malloc, intl_realloc, intl_free};
+}
+
 int js_intl_error(JSContext *ctx, QJSIntlStatus status, const char *operation)
 {
     switch (status) {
@@ -45,12 +50,7 @@ QJSIntlLocaleService *js_intl_locale_service(JSContext *ctx)
     JSRuntime *rt = ctx->rt;
 
     if (!rt->intl_locale) {
-        QJSIntlAllocator allocator = {
-            rt,
-            intl_malloc,
-            intl_realloc,
-            intl_free,
-        };
+        QJSIntlAllocator allocator = js_intl_allocator(rt);
         QJSIntlLocaleService *service;
         QJSIntlStatus status = qjs_intl_locale_open(&allocator, &service);
 
@@ -65,7 +65,17 @@ static const JSCFunctionListEntry intl_functions[] = {
     JS_CFUNC_DEF("getCanonicalLocales", 1, js_intl_get_canonical_locales),
 };
 
-int JS_AddIntrinsicIntl(JSContext *ctx)
+static void clear_intrinsics(JSContext *ctx)
+{
+    JS_FreeValue(ctx, ctx->intl_intrinsics);
+    ctx->intl_intrinsics = JS_UNDEFINED;
+    JS_FreeValue(ctx, ctx->intl_locale_ctor);
+    ctx->intl_locale_ctor = JS_UNDEFINED;
+    ctx->intl_published = FALSE;
+    JS_SetClassProto(ctx, JS_CLASS_INTL_LOCALE, JS_NULL);
+}
+
+int js_intl_ensure_intrinsics(JSContext *ctx)
 {
     JSValue object, tag;
 
@@ -82,16 +92,36 @@ int JS_AddIntrinsicIntl(JSContext *ctx)
         goto fail;
     if (JS_DefinePropertyValue(ctx, object, JS_ATOM_Symbol_toStringTag, tag,
                                JS_PROP_CONFIGURABLE | JS_PROP_THROW) < 0 ||
-        JS_DefinePropertyValueStr(
-            ctx, ctx->global_obj, "Intl", JS_DupValue(ctx, object),
-            JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_THROW) < 0) {
+        js_intl_init_locale(ctx, object)) {
         goto fail;
     }
     ctx->intl_intrinsics = object;
     return 0;
 fail:
     JS_FreeValue(ctx, object);
+    clear_intrinsics(ctx);
     return -1;
+}
+
+int JS_AddIntrinsicIntl(JSContext *ctx)
+{
+    BOOL had_intrinsics;
+
+    if (ctx->intl_published)
+        return 0;
+    had_intrinsics = JS_IsObject(ctx->intl_intrinsics);
+    if (js_intl_ensure_intrinsics(ctx))
+        return -1;
+    if (JS_DefinePropertyValueStr(ctx, ctx->global_obj, "Intl",
+                                  JS_DupValue(ctx, ctx->intl_intrinsics),
+                                  JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE |
+                                  JS_PROP_THROW) < 0) {
+        if (!had_intrinsics)
+            clear_intrinsics(ctx);
+        return -1;
+    }
+    ctx->intl_published = TRUE;
+    return 0;
 }
 #else
 int JS_AddIntrinsicIntl(JSContext *ctx)
