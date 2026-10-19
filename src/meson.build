@@ -152,6 +152,8 @@ if intl_enabled
     'intl/duration/decimal.c',
     'intl/duration/format.c',
     'intl/duration/native-digital.c',
+    'intl/duration/native.c',
+    'intl/duration/options.c',
     'intl/locale/identifier.c',
     'intl/locale/matching.c',
     'intl/locale/native.c',
