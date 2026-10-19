@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_UNIT_PATTERN_H
 #define QJS_INTL_UNIT_PATTERN_H
 #include "data.h"
+#include "../common/pair-pattern.h"
 
 typedef struct QJSIntlUnitPattern {
     QJSIntlBytes prefix, suffix;
@@ -15,18 +16,6 @@ typedef struct QJSIntlUnitPattern {
    number-bearing adapter's grammar, not a claim about all CLDR templates.
    Allocate nothing, retain nothing, and reset non-NULL output on failure. */
 QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes, QJSIntlUnitPattern *);
-
-typedef struct QJSIntlUnitDivisionPattern {
-    QJSIntlBytes prefix, separator, suffix;
-    unsigned int first; /* 0: numerator precedes denominator; 1: reverse order. */
-} QJSIntlUnitDivisionPattern;
-
-/* Borrow literal fragments around exactly one {0} and one {1}, in either
-   order. Missing operands return UNSUPPORTED; invalid/repeated placeholders
-   return DATA_ERROR. Apostrophes are literal. Input comes from scalar UTF-8
-   data; this parser only checks template syntax. Allocate/retain nothing,
-   require disjoint output and reset non-NULL output on failure. */
-QJSIntlStatus qjs_intl_unit_division_pattern_parse(QJSIntlBytes, QJSIntlUnitDivisionPattern *);
 
 /* Extract one borrowed noun from a unitPattern for a grammatical component.
    Accept literal-only text or a single {0} at a nonspace edge. Remove numeric
@@ -95,7 +84,7 @@ QJSIntlStatus qjs_intl_unit_noun_select(const QJSIntlUnitData *, uint32_t head,
 typedef struct QJSIntlSelectedUnitTemplate {
     union {
         QJSIntlUnitPattern per_unit;
-        QJSIntlUnitDivisionPattern division;
+        QJSIntlPairPattern division;
     } pattern;
     QJSIntlUnitForm form;
     QJSIntlBytes locale;
