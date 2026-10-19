@@ -10,6 +10,9 @@ typedef struct QJSIntlNativeDurationDigital {
     unsigned int hour_width; /* Raw CLDR preference, not an option override. */
 } QJSIntlNativeDurationDigital;
 
+/* Allocation-free syntax/scalar validation for backend locale admission. */
+QJSIntlStatus qjs_intl_duration_native_digital_validate(QJSIntlBytes pattern);
+
 /* Project the authoritative scalar UTF-8 hms pattern's inter-field literals.
    Recognize ordered h/m/s runs of width 1 or 2 with LDML apostrophe quoting.
    Outer literals cannot be represented by DigitalFormat and are not emitted.
