@@ -379,6 +379,17 @@ including unknown display codes. Queries allocate no memory. Temporary open
 validation memory is released on every path. The data owner does not select
 plural fallback, currency availability, display style or formatter behavior.
 
+`src/intl/currency/display.c` consumes those facts without allocation. Regular
+symbols fall back to the canonical supplied code; narrow symbols try the regular
+symbol first. Explicit empty strings succeed, while blocks allow the next field
+fallback without resurrecting the same field from a parent. After rounding,
+names try an applicable exact 0/1 selector, the supplied cardinal category,
+`other`, an uncounted name and finally the code. Counted names exclude terminal
+root sources; uncounted names may include them. Template selection is a separate
+consumer: a name's fallback does not change the template's category. Returned
+text borrows the immutable data or the caller's code; no currency availability
+decision or NumberFormat registration is implied by this helper.
+
 ## Number range and currency layouts
 
 `resolve.SparseMaps` handles typed whole-group aliases over sparse field maps.
