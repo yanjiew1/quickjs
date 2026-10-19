@@ -39,4 +39,14 @@ typedef struct QJSIntlPluralOperands {
    -> DATA_ERROR. Even short-circuited logical arms are syntax-checked. */
 QJSIntlStatus qjs_intl_plural_rule_evaluate(QJSIntlBytes rule, const QJSIntlPluralOperands *number,
                                             int *matches);
+
+/* As above, but shift the supplied decimal right by decimal_shift places
+   before computing n/i/v/w/f/t. Unlike the struct's ordinary contract, pass
+   the visible unexpanded mantissa here; exponent still sets c/e independently.
+   For 1.20050c3, pass "1.20050", exponent 3 and decimal_shift 3. No expanded
+   string or allocation: work is bounded by actual input/rule lengths and
+   logarithmically by decimal_shift, including UINT32_MAX. */
+QJSIntlStatus qjs_intl_plural_rule_evaluate_shifted(QJSIntlBytes rule,
+                                                    const QJSIntlPluralOperands *number,
+                                                    uint32_t decimal_shift, int *matches);
 #endif
