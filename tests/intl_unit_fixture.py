@@ -57,14 +57,76 @@ def pack(empty, projected=False, variant=False):
     return binary
 
 
+def selector_pack():
+    source = Sources()
+    root, parent, child = {}, {}, {}
+    for name in ('child', 'case', 'case-shadow', 'order', 'exact', 'exact-shadow', 'block', 'literal', 'empty',
+                 'source-category', 'unselected', 'malformed', 'denominator', 'alternative'):
+        root[name] = '<unitPattern count="other">ROOT {0}</unitPattern>'
+    root['child'] += '<unitPattern count="one">ROOT_ONE {0}</unitPattern>'
+    parent['child'] = '<unitPattern count="one">PARENT_ONE {0}</unitPattern>'
+    child['child'] = '<unitPattern count="other">CHILD_OTHER {0}</unitPattern>'
+    parent['case'] = '<unitPattern count="one" case="genitive">PARENT_GENITIVE {0}</unitPattern>'
+    child['case'] = '<unitPattern count="one">CHILD_DEFAULT {0}</unitPattern>'
+    parent['case-shadow'] = '''<unitPattern count="one" case="genitive">PARENT_GENITIVE {0}</unitPattern>
+      <unitPattern count="one" case="nominative">PARENT_NOMINATIVE {0}</unitPattern>'''
+    child['case-shadow'] = '<unitPattern count="one" case="genitive">' + BLOCK + '</unitPattern>'
+    child['order'] = '''<unitPattern count="one" case="genitive">ONE_GENITIVE {0}</unitPattern>
+      <unitPattern count="one" case="nominative">ONE_NOMINATIVE {0}</unitPattern>
+      <unitPattern count="one">ONE_DEFAULT {0}</unitPattern>
+      <unitPattern count="other" case="accusative">OTHER_ACCUSATIVE {0}</unitPattern>'''
+    child['exact'] = '''<unitPattern count="1">EXACT_ONE {0}</unitPattern>
+      <unitPattern count="0">EXACT_ZERO {0}</unitPattern>
+      <unitPattern count="one">CATEGORY_ONE {0}</unitPattern>'''
+    parent['exact-shadow'] = '<unitPattern count="1">PARENT_EXACT_ONE {0}</unitPattern>'
+    child['exact-shadow'] = '<unitPattern count="1">one meter</unitPattern>'
+    for name, text in (('block', BLOCK), ('literal', 'one meter'), ('empty', '')):
+        parent[name] = '<unitPattern count="one">PARENT_ONE {0}</unitPattern>'
+        child[name] = ('<unitPattern count="one">' + text + '</unitPattern>'
+                       '<unitPattern count="other">other meters</unitPattern>')
+    parent['unselected'] = '<unitPattern count="two">PARENT_TWO {0}</unitPattern>'
+    child['unselected'] = ('<unitPattern count="one">one meter</unitPattern>'
+                           '<unitPattern count="two">' + BLOCK + '</unitPattern>')
+    parent['source-category'] = '<unitPattern count="two">PARENT_TWO {0}</unitPattern>'
+    child['source-category'] = '<unitPattern count="one">one meter</unitPattern>'
+    child['malformed'] = '<unitPattern count="one">bad {1}</unitPattern>'
+    child['denominator'] = '''<unitPattern count="one">DENOMINATOR_ONE {0}</unitPattern>
+      <unitPattern count="other">DENOMINATOR_OTHER {0}</unitPattern>'''
+    child['alternative'] = ('<unitPattern count="one">' + BLOCK + '</unitPattern>'
+                            '<unitPattern count="other">ALTERNATIVE {0}</unitPattern>')
+    for locale, fields in (('root', root), ('en', parent), ('en_GB', child)):
+        content = ''.join('<unit type="length-' + name + '">' + text + '</unit>'
+                          for name, text in sorted(fields.items()))
+        if locale == 'root':
+            content += '<compoundUnit type="per"><compoundUnitPattern>{0}/{1}</compoundUnitPattern></compoundUnit>'
+        source.set(locale, '<unitLength type="long">' + content + '</unitLength>')
+    source.set('de', '''<unitLength type="long"><unit type="length-child">
+      <alias source="en_GB" path="../unit[@type='length-child']"/></unit></unitLength>''')
+    tags = ('de', 'en-GB', 'root')
+    data = unit_tables.select(unit_patterns.collect(source, graph()), tags)
+    pool = tuple(sorted(unit_tables.strings(data) | set(tags), key=lambda value: value.encode('utf-8')))
+    ids = {text: index for index, text in enumerate(pool)}
+    # Use a source graph whose selected rows are closed under locale parents;
+    # source overlay dependencies intentionally retain unadvertised en origins.
+    selected_graph = ParentGraph(tags, {'en-GB': 'root'}, {}, {'und': 'en-Latn-US'}, (), False)
+    binary = bundle.pack({bundle.STRINGS: tables.encode_strings(pool),
+                          bundle.LOCALES: tables.encode_locales(tags, selected_graph, ids),
+                          bundle.UNIT_PATTERNS: unit_tables.encode(data, tags, ids)}, bytes(32), 'minimal')
+    tables.validate(binary)
+    return binary
+
+
 def render():
     lines = ['/* Authored records; no downloaded source data. */',
              '#include <stddef.h>', '#include <stdint.h>']
-    for name, empty, projected, variant in (('qjs_intl_native', False, False, False),
-                                            ('qjs_intl_unit_empty', True, False, False),
-                                            ('qjs_intl_unit_projected', False, True, False),
-                                            ('qjs_intl_unit_variant', False, True, True)):
-        binary = pack(empty, projected, variant)
+    profiles = (('qjs_intl_native', False, False, False),
+                ('qjs_intl_unit_empty', True, False, False),
+                ('qjs_intl_unit_projected', False, True, False),
+                ('qjs_intl_unit_variant', False, True, True))
+    records = [(name, pack(empty, projected, variant))
+               for name, empty, projected, variant in profiles]
+    records.append(('qjs_intl_unit_selector', selector_pack()))
+    for name, binary in records:
         lines.append('const uint8_t %s_bytes[] = {' % name)
         for at in range(0, len(binary), 16):
             lines.append('    ' + ', '.join('0x%02x' % byte for byte in binary[at:at + 16]) + ',')
