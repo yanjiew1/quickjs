@@ -88,6 +88,12 @@ QJSIntlStatus qjs_intl_number_available(const QJSIntlNumberService *, const QJSI
    Borrow the default numeric system name from immutable compiled storage. */
 QJSIntlStatus qjs_intl_number_default_system(const QJSIntlNumberService *, size_t locale,
                                              QJSIntlBytes *out);
+/* Test an exact canonical system identifier against this service's capabilities,
+   not merely numbering metadata. No allocation or fallback; unknown, reserved
+   (native/traditio/finance) and algorithmic systems produce supported=0, OK.
+   Empty names are unsupported. Reset supported on failure. */
+QJSIntlStatus qjs_intl_number_system_supported(const QJSIntlNumberService *, size_t locale,
+                                               QJSIntlBytes name, int *supported);
 /* CurrencyDigits for a canonical uppercase code, including unknown codes.
    Return regular fraction digits, never cash digits or a rounding increment.
    The frontend uses this to resolve digit options before formatter_open.
