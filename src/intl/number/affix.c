@@ -4,6 +4,7 @@
  */
 #include "affix.h"
 #include "body.h"
+#include "../common/format-builder.h"
 #include <string.h>
 
 QJSIntlStatus qjs_intl_number_sign_pattern(QJSIntlNumberSign mode,
@@ -46,99 +47,14 @@ QJSIntlStatus qjs_intl_number_sign_pattern(QJSIntlNumberSign mode,
     return QJS_INTL_OK;
 }
 
-typedef struct Builder {
-    QJSIntlFormatted value;
-    size_t length, count, limit;
-} Builder;
-
-static int scalar(QJSIntlBytes text, size_t *at, uint32_t *out)
+static QJSIntlStatus text_part(QJSIntlFormatBuilder *builder, QJSIntlBytes text, QJSIntlPartType type)
 {
-    const uint8_t *bytes = (const uint8_t *)text.data;
-    size_t i = *at, extra;
-    uint32_t c, minimum;
-    if (i == text.length)
-        return 0;
-    c = bytes[i++];
-    if (c < 0x80) {
-        extra = 0;
-        minimum = 0;
-    } else if (c >= 0xc2 && c <= 0xdf) {
-        c &= 31;
-        extra = 1;
-        minimum = 0x80;
-    } else if (c >= 0xe0 && c <= 0xef) {
-        c &= 15;
-        extra = 2;
-        minimum = 0x800;
-    } else if (c >= 0xf0 && c <= 0xf4) {
-        c &= 7;
-        extra = 3;
-        minimum = 0x10000;
-    } else
-        return -1;
-    if (extra > text.length - i)
-        return -1;
-    while (extra--) {
-        if ((bytes[i] & 0xc0) != 0x80)
-            return -1;
-        c = c << 6 | (bytes[i++] & 63);
-    }
-    if (!c || c < minimum || c > 0x10ffff || (c >= 0xd800 && c <= 0xdfff))
-        return -1;
-    *at = i;
-    *out = c;
-    return 1;
-}
-
-static QJSIntlStatus text_part(Builder *builder, QJSIntlBytes text, QJSIntlPartType type)
-{
-    size_t at = 0, start = builder->length;
-    uint32_t c;
-    int result;
-    while ((result = scalar(text, &at, &c)) > 0) {
-        size_t width = c > 0xffff ? 2 : 1;
-        if (width > builder->limit - builder->length)
-            return QJS_INTL_OVERFLOW;
-        if (builder->value.text) {
-            uint16_t *out = builder->value.text + builder->length;
-            if (width == 2) {
-                c -= 0x10000;
-                out[0] = 0xd800 + (c >> 10);
-                out[1] = 0xdc00 + (c & 1023);
-            } else
-                out[0] = c;
-        }
-        builder->length += width;
-    }
-    if (result < 0)
-        return QJS_INTL_DATA_ERROR;
-    if (builder->count == SIZE_MAX / sizeof(QJSIntlPart))
-        return QJS_INTL_OVERFLOW;
-    if (builder->value.parts)
-        builder->value.parts[builder->count] = (QJSIntlPart){start, builder->length, type};
-    builder->count++;
-    return QJS_INTL_OK;
-}
-
-static QJSIntlStatus body_part(Builder *builder, const QJSIntlFormatted *body)
-{
-    size_t i;
-    if (body->length > builder->limit - builder->length ||
-        body->part_count > SIZE_MAX / sizeof(QJSIntlPart) - builder->count)
-        return QJS_INTL_OVERFLOW;
-    if (builder->value.text)
-        memcpy(builder->value.text + builder->length, body->text, body->length * sizeof(uint16_t));
-    if (builder->value.parts) {
-        for (i = 0; i < body->part_count; i++) {
-            QJSIntlPart *part = &builder->value.parts[builder->count + i];
-            *part = body->parts[i];
-            part->start += builder->length;
-            part->end += builder->length;
-        }
-    }
-    builder->length += body->length;
-    builder->count += body->part_count;
-    return QJS_INTL_OK;
+    size_t start = builder->length;
+    QJSIntlStatus status = qjs_intl_format_builder_text(builder, text, NULL, NULL);
+    if (status)
+        return status;
+    /* Even an empty symbol contributes its specified part record. */
+    return qjs_intl_format_builder_part(builder, start, builder->length, type, 1);
 }
 
 static int is_currency(QJSIntlNumberTokenKind kind)
@@ -146,7 +62,7 @@ static int is_currency(QJSIntlNumberTokenKind kind)
     return kind >= QJS_INTL_NUMBER_TOKEN_CURRENCY && kind <= QJS_INTL_NUMBER_TOKEN_CURRENCY_NARROW;
 }
 
-static QJSIntlStatus emit(Builder *builder, const QJSIntlNumberPatternToken *tokens, size_t count,
+static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlNumberPatternToken *tokens, size_t count,
                           const QJSIntlNumberAffixSymbols *symbols, const QJSIntlFormatted *body,
                           unsigned int prefix_plus)
 {
@@ -176,7 +92,7 @@ static QJSIntlStatus emit(Builder *builder, const QJSIntlNumberPatternToken *tok
         }
         switch (tokens[i].kind) {
         case QJS_INTL_NUMBER_TOKEN_NUMBER:
-            status = body_part(builder, body);
+            status = qjs_intl_format_builder_body(builder, body);
             if (status)
                 return status;
             continue;
@@ -223,7 +139,7 @@ QJSIntlStatus qjs_intl_number_affix_format(const QJSIntlAllocator *allocator,
                                            const QJSIntlFormatted *body, unsigned int ensure_plus,
                                            size_t maximum_output_length, QJSIntlFormatted *out)
 {
-    Builder builder = {0};
+    QJSIntlFormatBuilder builder = {0};
     size_t i, at = 0, numbers = 0;
     int has_plus = 0;
     QJSIntlStatus status;
@@ -258,22 +174,22 @@ QJSIntlStatus qjs_intl_number_affix_format(const QJSIntlAllocator *allocator,
         return status;
     if (builder.length > SIZE_MAX / sizeof(uint16_t))
         return QJS_INTL_OVERFLOW;
-    builder.value.length = builder.length;
-    builder.value.part_count = builder.count;
-    builder.value.text = allocator->malloc(allocator->opaque, builder.length * sizeof(uint16_t));
-    if (!builder.value.text)
+    builder.result.length = builder.length;
+    builder.result.part_count = builder.count;
+    builder.result.text = allocator->malloc(allocator->opaque, builder.length * sizeof(uint16_t));
+    if (!builder.result.text)
         return QJS_INTL_NO_MEMORY;
-    builder.value.parts = allocator->malloc(allocator->opaque, builder.count * sizeof(QJSIntlPart));
-    if (!builder.value.parts) {
-        qjs_intl_number_body_clear(allocator, &builder.value);
+    builder.result.parts = allocator->malloc(allocator->opaque, builder.count * sizeof(QJSIntlPart));
+    if (!builder.result.parts) {
+        qjs_intl_number_body_clear(allocator, &builder.result);
         return QJS_INTL_NO_MEMORY;
     }
     builder.length = builder.count = 0;
     status = emit(&builder, tokens, count, symbols, body, ensure_plus && !has_plus);
     if (status) {
-        qjs_intl_number_body_clear(allocator, &builder.value);
+        qjs_intl_number_body_clear(allocator, &builder.result);
         return status;
     }
-    *out = builder.value;
+    *out = builder.result;
     return QJS_INTL_OK;
 }
