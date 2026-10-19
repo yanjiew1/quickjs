@@ -1512,8 +1512,18 @@ does not advertise service availability. Projection prunes unused layers while
 retaining alias origins outside the selected locale profile. Codec tests cover
 canonical roundtrips, shared raw maps with different group normalization,
 projection, normalization collisions, empty profiles and malformed sections.
-The section is not yet included in prepared profiles; the C data owner and
+The section is not yet included in prepared profiles; prepared integration and
 service policy are separate implementation steps.
+
+`src/intl/display/data.c` validates section 26 and exposes borrowed layer heads,
+node identity, exact entry lookup and the sorted group/code inventory. Validation
+checks canonical depth order, group-consistent heads and parents, complete
+reachability, normalized/raw agreement and exact inventory coverage. Temporary
+depth, coverage and source-locale scratch is freed on all paths. Queries allocate
+nothing and do not walk parents, normalize caller codes or apply style/fallback
+policy. An absent entry returns `UNSUPPORTED`; blocked and empty values return
+distinct successful entries. Authored and empty-profile C tests cover provenance,
+corruption, unaligned packs, argument resets and allocation failure/retry.
 
 ## Shared date-field labels
 
