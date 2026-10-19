@@ -568,6 +568,23 @@ templates therefore place the name before the numeric sign. Apostrophes remain
 literal. Invalid templates fail before result allocation; the complete output
 bound includes names, separators and numeric text.
 
+Currency symbol, narrow-symbol and code display are implemented for standard,
+scientific and engineering notation. Standard currency signs honor compiled
+per-currency pattern overrides; accounting selects its own generic family.
+Within a generic family, `alphaNextToNumber` is selected from the closest
+currency scalar's General_Category L. Compact prefix selection has a distinct
+L-followed-by-marks rule. An alpha-capable family replaces legacy spacing even
+when the ordinary form is selected, avoiding an unintended hybrid policy.
+
+Families without an alpha variant, including legacy per-currency overrides,
+use the pinned `currencySpacing` predicates `[[:^S:]&[:^Z:]]` and `[:digit:]`.
+Other predicate syntax returns unsupported instead of silently approximating
+UnicodeSet semantics. Insertions require direct currency/number tokens and
+an actual adjacent Nd scalar: supplementary digits qualify, hanidec characters,
+NaN/infinity and notation literals do not. Inserted text is a literal part;
+empty currency replacements never create a gap. Formatter state owns fallback
+codes and otherwise borrows only immutable compiled metadata.
+
 Scientific/engineering output applies the exact scale-before-round operation,
 then emits localized exponent separator/sign and ASCII decimal exponent digits
 with explicit part types, following the pinned PartitionNotationSubPattern.
@@ -595,7 +612,7 @@ hyphens inside the pinned yrl long names. Sign display remains an outer-style
 operation, not a selection of the compact pattern's negative form.
 
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Other currency displays and notations, unit styles, ranges and the JS binding remain required
+Compact currency and nonstandard currency names, unit styles, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
