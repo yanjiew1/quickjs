@@ -96,8 +96,12 @@ def main():
         expected = {name for name in expected
                     if not name.startswith('src/quickjs/builtins/temporal/') or
                     name.endswith('/common.c')}
-    if not options['temporal']:
-        expected.discard('src/quickjs/builtins/duration-value.c')
+    if options['intl'] == 'disabled':
+        expected = {name for name in expected
+                    if not name.startswith('src/quickjs/builtins/intl/') or
+                    name.endswith('/core.c')}
+        if not options['temporal']:
+            expected.discard('src/quickjs/builtins/duration-value.c')
     expected.update('tools/' + name + '.c' for name in ['qjs', 'qjsc', 'run-test262'])
     if options['check_jsvalue']:
         assert expected <= checked, 'Missing JSValue checks: ' + repr(sorted(expected - checked))
