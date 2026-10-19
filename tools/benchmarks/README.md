@@ -149,6 +149,11 @@ and does not download or import Zoo's Python dependencies. It reproduces
 the pinned harness's named-score parsing and median convention rather
 than presenting its report as an official Zoo harness invocation.
 
+The `intl_relative` prefix similarly selects RelativeTimeFormat construction,
+numeric formatting, automatic literals and parts. These guarded live workloads
+are available only in builds with the service enabled and also leave the frozen
+historical catalog unchanged.
+
 ## Running locally
 
 Use two clean, distinct source checkouts and a new output directory:
