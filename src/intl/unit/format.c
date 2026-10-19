@@ -5,12 +5,15 @@
 #include "../common/format-builder.h"
 #include <string.h>
 
-static QJSIntlStatus affix(QJSIntlFormatBuilder *builder, QJSIntlBytes text, int *has_unit)
+static QJSIntlStatus affix(QJSIntlFormatBuilder *builder, const QJSIntlUnitAffix *text, int *has_unit)
 {
-    size_t start = builder->length, first = SIZE_MAX, last = 0;
-    QJSIntlStatus status = qjs_intl_format_builder_text(builder, text, &first, &last);
-    if (status)
-        return status;
+    size_t i, start = builder->length, first = SIZE_MAX, last = 0;
+    QJSIntlStatus status;
+    for (i = 0; i < text->count; i++) {
+        status = qjs_intl_format_builder_text(builder, text->spans[i], &first, &last);
+        if (status)
+            return status;
+    }
     if (first == SIZE_MAX)
         return qjs_intl_format_builder_part(builder, start, builder->length, QJS_INTL_PART_LITERAL, 0);
     status = qjs_intl_format_builder_part(builder, start, first, QJS_INTL_PART_LITERAL, 0);
@@ -22,15 +25,16 @@ static QJSIntlStatus affix(QJSIntlFormatBuilder *builder, QJSIntlBytes text, int
     return status;
 }
 
-static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlUnitPattern *pattern,
+static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlUnitAffix *prefix,
+                          const QJSIntlUnitAffix *suffix,
                           const QJSIntlFormatted *body)
 {
     int has_unit = 0;
-    QJSIntlStatus status = affix(builder, pattern->prefix, &has_unit);
+    QJSIntlStatus status = affix(builder, prefix, &has_unit);
     if (!status)
         status = qjs_intl_format_builder_body(builder, body);
     if (!status)
-        status = affix(builder, pattern->suffix, &has_unit);
+        status = affix(builder, suffix, &has_unit);
     if (!status && !has_unit)
         status = qjs_intl_format_builder_part(builder, builder->length, builder->length,
                                               QJS_INTL_PART_UNIT, 1);
@@ -42,8 +46,9 @@ void qjs_intl_unit_format_clear(const QJSIntlAllocator *allocator, QJSIntlFormat
     qjs_intl_formatted_clear(allocator, out);
 }
 
-QJSIntlStatus qjs_intl_unit_pattern_format(const QJSIntlAllocator *allocator,
-                                           const QJSIntlUnitPattern *pattern,
+QJSIntlStatus qjs_intl_unit_affixes_format(const QJSIntlAllocator *allocator,
+                                           const QJSIntlUnitAffix *prefix,
+                                           const QJSIntlUnitAffix *suffix,
                                            const QJSIntlFormatted *body, size_t limit,
                                            QJSIntlFormatted *out)
 {
@@ -52,7 +57,10 @@ QJSIntlStatus qjs_intl_unit_pattern_format(const QJSIntlAllocator *allocator,
     size_t i, at = 0;
     if (out)
         memset(out, 0, sizeof(*out));
-    if (!out || !allocator || !allocator->malloc || !allocator->free || !pattern || !body ||
+    if (!out || !allocator || !allocator->malloc || !allocator->free || !prefix || !suffix ||
+        (!prefix->spans && prefix->count) || (!suffix->spans && suffix->count) ||
+        prefix->count > SIZE_MAX / sizeof(*prefix->spans) ||
+        suffix->count > SIZE_MAX / sizeof(*suffix->spans) || !body ||
         !body->text || !body->length || !body->parts || !body->part_count || !limit ||
         body->part_count > SIZE_MAX / sizeof(QJSIntlPart))
         return QJS_INTL_INVALID_ARGUMENT;
@@ -66,7 +74,7 @@ QJSIntlStatus qjs_intl_unit_pattern_format(const QJSIntlAllocator *allocator,
     if (at != body->length)
         return QJS_INTL_INVALID_ARGUMENT;
     builder.limit = limit;
-    status = emit(&builder, pattern, body);
+    status = emit(&builder, prefix, suffix, body);
     if (status)
         return status;
     if (builder.length > SIZE_MAX / sizeof(uint16_t))
@@ -82,11 +90,27 @@ QJSIntlStatus qjs_intl_unit_pattern_format(const QJSIntlAllocator *allocator,
         return QJS_INTL_NO_MEMORY;
     }
     builder.length = builder.count = 0;
-    status = emit(&builder, pattern, body);
+    status = emit(&builder, prefix, suffix, body);
     if (status) {
         qjs_intl_unit_format_clear(allocator, &builder.result);
         return status;
     }
     *out = builder.result;
     return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_unit_pattern_format(const QJSIntlAllocator *allocator,
+                                           const QJSIntlUnitPattern *pattern,
+                                           const QJSIntlFormatted *body, size_t limit,
+                                           QJSIntlFormatted *out)
+{
+    QJSIntlUnitAffix prefix, suffix;
+    if (!pattern) {
+        if (out)
+            memset(out, 0, sizeof(*out));
+        return QJS_INTL_INVALID_ARGUMENT;
+    }
+    prefix = (QJSIntlUnitAffix){&pattern->prefix, 1};
+    suffix = (QJSIntlUnitAffix){&pattern->suffix, 1};
+    return qjs_intl_unit_affixes_format(allocator, &prefix, &suffix, body, limit, out);
 }
