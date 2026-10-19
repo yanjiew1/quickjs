@@ -15,6 +15,7 @@ intl_tool_dependencies = files(
   'date_field_names.py',
   'date_field_tables.py',
   'display_names.py',
+  'display_tables.py',
   'duration_patterns.py',
   'duration_tables.py',
   'embed.py',
