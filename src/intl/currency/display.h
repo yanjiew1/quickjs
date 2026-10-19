@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_CURRENCY_DISPLAY_H
 #define QJS_INTL_CURRENCY_DISPLAY_H
 #include "data.h"
+#include "../number/layout-data.h"
 #include "../plural/rules.h"
 
 /* Require unchanged open data and its exact locale index. The code is three
@@ -24,4 +25,12 @@ QJSIntlStatus qjs_intl_currency_symbol(const QJSIntlCurrencyData *, uint32_t loc
 QJSIntlStatus qjs_intl_currency_name(const QJSIntlCurrencyData *, uint32_t locale,
                                       QJSIntlBytes code, QJSIntlPluralCategory, int exact,
                                       QJSIntlBytes *);
+
+/* Require locale-level projected layouts from currency_unit_layouts_at.
+   Select exact/category independently of name fallback; selected counts
+   exclude root but the OTHER fallback includes it. An absent/blocked OTHER
+   returns UNSUPPORTED. Explicit empty text succeeds. Borrowed/no-allocation
+   and error-reset contracts match the display operations above. */
+QJSIntlStatus qjs_intl_currency_unit_pattern(const QJSIntlCurrencyUnitLayouts *,
+                                              QJSIntlPluralCategory, int exact, QJSIntlBytes *);
 #endif
