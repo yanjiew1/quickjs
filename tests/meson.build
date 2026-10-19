@@ -523,6 +523,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/plural_rules.py',
       '../tools/intl/plural_tables.py',
@@ -572,6 +574,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/plural_rules.py',
       '../tools/intl/plural_tables.py',
       '../tools/intl/parents.py',
@@ -613,6 +617,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/plural_rules.py',
       '../tools/intl/plural_tables.py',
       '../tools/intl/parents.py',
@@ -669,6 +675,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/plural_rules.py',
       '../tools/intl/plural_tables.py',
       '../tools/intl/parents.py',
@@ -725,6 +733,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/plural_rules.py',
       '../tools/intl/plural_tables.py',
@@ -772,6 +782,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/list_patterns.py',
       '../tools/intl/locale_tables.py',
       '../tools/intl/numbering.py',
@@ -823,6 +835,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/list_patterns.py',
       '../tools/intl/locale_tables.py',
       '../tools/intl/numbering.py',
@@ -880,6 +894,8 @@ if intl_enabled
       '../tools/intl/currency_tables.py',
       '../tools/intl/number_layout.py',
       '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
       '../tools/intl/list_patterns.py',
       '../tools/intl/locale_tables.py',
       '../tools/intl/numbering.py',
@@ -904,6 +920,64 @@ if intl_enabled
   component_test_specs += [{
     'target': intl_number_layout_authored,
     'name': 'intl-number-layout-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_unit_owner_sources = files(
+    'test_intl_unit_data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    '../src/intl/unit/data.c',
+  )
+  intl_unit_fixture = custom_target(
+    'intl-unit-authored-fixture',
+    output: 'intl-unit-authored-fixture.c',
+    command: [python, files('intl_unit_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: files(
+      'test_intl_list_patterns.py',
+      'test_intl_numbering.py',
+      'test_intl_number_patterns.py',
+      'test_intl_number_layout.py',
+      'test_intl_unit_patterns.py',
+      '../tools/intl/acquire.py',
+      '../tools/intl/bundle.py',
+      '../tools/intl/cldr_xml.py',
+      '../tools/intl/compact_patterns.py',
+      '../tools/intl/compact_pattern_syntax.py',
+      '../tools/intl/compact_tables.py',
+      '../tools/intl/currencies.py',
+      '../tools/intl/currency_tables.py',
+      '../tools/intl/number_layout.py',
+      '../tools/intl/number_layout_tables.py',
+      '../tools/intl/unit_patterns.py',
+      '../tools/intl/unit_tables.py',
+      '../tools/intl/list_patterns.py',
+      '../tools/intl/locale_tables.py',
+      '../tools/intl/numbering.py',
+      '../tools/intl/numbering_tables.py',
+      '../tools/intl/number_patterns.py',
+      '../tools/intl/number_pattern_syntax.py',
+      '../tools/intl/number_pattern_tables.py',
+      '../tools/intl/number_symbol_tables.py',
+      '../tools/intl/parents.py',
+      '../tools/intl/plural_tables.py',
+      '../tools/intl/preference_tables.py',
+      '../tools/intl/resolve.py',
+      '../tools/intl/tables.py',
+    ),
+  )
+  intl_unit_authored = {
+    'name': 'test_intl_unit_authored',
+    'sources': intl_unit_owner_sources + [intl_unit_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_AUTHORED=1', '-DTEST_INTL_PROFILE=0']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_unit_authored,
+    'name': 'intl-unit-authored',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
@@ -943,6 +1017,8 @@ if intl_enabled
         '../tools/intl/currency_tables.py',
         '../tools/intl/number_layout.py',
         '../tools/intl/number_layout_tables.py',
+        '../tools/intl/unit_patterns.py',
+        '../tools/intl/unit_tables.py',
         '../tools/intl/plural_rules.py',
         '../tools/intl/plural_tables.py',
         '../tools/intl/parents.py',
@@ -1202,6 +1278,24 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_list_test,
       'name': ('intl-list-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_unit_test = {
+      'name': ('test_intl_unit_data_' + profile),
+      'sources': intl_unit_owner_sources,
+      'c_args': (host_args + [
+        '-DTEST_INTL_AUTHORED=0',
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_unit_test,
+      'name': ('intl-unit-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -1811,6 +1905,23 @@ if intl_enabled
     'intl-sparse-maps',
     python,
     args: files('test_intl_sparse_maps.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-unit-patterns',
+    python,
+    args: files('test_intl_unit_patterns.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+
+  test(
+    'intl-unit-tables',
+    python,
+    args: files('test_intl_unit_tables.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
