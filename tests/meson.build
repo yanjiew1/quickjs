@@ -843,6 +843,26 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_list_data_test = executable(
+    'test_intl_list_data_' + profile,
+    files(
+      'test_intl_list_data.c',
+      '../src/intl/list/data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ),
+    c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-list-data-' + profile,
+    intl_list_data_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_preference_test = executable(
     'test_intl_preferences_' + profile,
     [
@@ -894,6 +914,7 @@ foreach profile : ['minimal', 'native']
     'test_intl_list_service_' + profile,
     [
       'test_intl_list_service.c',
+      '../src/intl/list/data.c',
       '../src/intl/list/native.c',
       '../src/intl/list/native-engine.c',
       '../src/intl/native/data.c',
