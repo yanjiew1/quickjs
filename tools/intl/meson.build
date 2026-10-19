@@ -31,6 +31,8 @@ intl_tool_dependencies = files(
   'plural_tables.py',
   'preference_tables.py',
   'preferences.py',
+  'relative_patterns.py',
+  'relative_tables.py',
   'resolve.py',
   'tables.py',
   'unit_grammar.py',
