@@ -69,6 +69,52 @@ static uint32_t string_id(const QJSIntlData *data, const char *text)
     abort();
 }
 
+static QJSIntlBytes bytes(const char *text)
+{
+    QJSIntlBytes result = {text, strlen(text)};
+    return result;
+}
+
+static int equal(QJSIntlBytes text, const char *expected)
+{
+    return text.length == strlen(expected) &&
+           (!text.length || !memcmp(text.data, expected, text.length));
+}
+
+static void check_types(const QJSIntlLocaleMetadata *metadata)
+{
+    QJSIntlLocaleType type, zero = {0};
+    QJSIntlBytes empty = {0}, invalid = {NULL, 1};
+    uint32_t index = UINT32_MAX;
+    assert(!qjs_intl_locale_type_find(metadata, bytes("u"), bytes("ca"), bytes("foo"), &index));
+    assert(!qjs_intl_locale_type_at(metadata, index, &type));
+    assert(equal(type.extension, "u") && equal(type.key, "ca") && equal(type.name, "foo"));
+    assert(equal(type.aliases, "legacy oldlegacy") && !type.preferred.length);
+    assert(!type.deprecated && !type.variable && !type.iana.length && !type.region.length);
+    assert(!qjs_intl_locale_type_find(metadata, bytes("u"), bytes("ca"), bytes("zoo"), &index));
+    assert(!qjs_intl_locale_type_at(metadata, index, &type));
+    assert(type.deprecated && !type.variable && equal(type.name, "zoo") && equal(type.preferred, "foo"));
+    assert(!qjs_intl_locale_type_find(metadata, bytes("u"), bytes("tz"), bytes("ustest"), &index));
+    assert(!qjs_intl_locale_type_at(metadata, index, &type));
+    assert(equal(type.iana, "America/Detroit") && equal(type.region, "US"));
+    assert(!qjs_intl_locale_type_find(metadata, bytes("u"), bytes("zz"), bytes("CODEPOINTS"), &index));
+    assert(!qjs_intl_locale_type_at(metadata, index, &type) && type.variable && !type.deprecated);
+    assert(qjs_intl_locale_type_find(metadata, bytes("u"), bytes("ca"), bytes("legacy"), &index) ==
+           QJS_INTL_UNSUPPORTED && !index); /* Exact facts do not resolve aliases. */
+    assert(qjs_intl_locale_type_find(metadata, empty, empty, empty, &index) == QJS_INTL_UNSUPPORTED);
+    assert(qjs_intl_locale_type_find(metadata, invalid, bytes("ca"), bytes("foo"), &index) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_locale_type_find(NULL, bytes("u"), bytes("ca"), bytes("foo"), &index) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_locale_type_find(metadata, bytes("u"), bytes("ca"), bytes("foo"), NULL) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    memset(&type, 0xff, sizeof(type));
+    assert(qjs_intl_locale_type_at(metadata, metadata->types.count, &type) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!memcmp(&type, &zero, sizeof(type)));
+    assert(qjs_intl_locale_type_at(NULL, 0, &type) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_locale_type_at(metadata, 0, NULL) == QJS_INTL_INVALID_ARGUMENT);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -104,6 +150,8 @@ int main(void)
            QJS_INTL_OK);
     calls = state.calls;
     assert(calls >= 4 && !state.live);
+    check_types(&metadata);
+    assert(state.calls == calls && !state.live);
     for (i = 1; i <= calls; i++) {
         state.calls = 0;
         state.fail_at = i;
