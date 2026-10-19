@@ -271,9 +271,7 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         status = qjs_intl_currency_code_find(&service->currencies, options->currency, &code);
         if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
             return status;
-        if (options->notation == QJS_INTL_NUMBER_COMPACT ||
-            (options->currency_display == QJS_INTL_NUMBER_CURRENCY_NAME &&
-             options->notation != QJS_INTL_NUMBER_STANDARD))
+        if (options->notation == QJS_INTL_NUMBER_COMPACT)
             return QJS_INTL_UNSUPPORTED;
     }
     has_scientific = options->notation == QJS_INTL_NUMBER_SCIENTIFIC ||
@@ -745,6 +743,9 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         QJSIntlBytes name, pattern;
         int exact = -1;
         if (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO) {
+            /* ECMA-402 passes the final scaled rounded value to currency
+               name selection. Scientific/engineering exponents are not CLDR
+               compact operands c/e; retain the visible mantissa and c=e=0. */
             QJSIntlPluralOperands operands = {rounded.number.text, rounded.number.length, 0};
             status = qjs_intl_native_plural_select(&formatter->cardinal, &operands, &category);
             if (rounded.number.rounded.length == 1 && rounded.number.rounded.digits[0] == '0')
