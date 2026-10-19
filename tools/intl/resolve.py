@@ -7,6 +7,7 @@ INHERIT = '\u2191\u2191\u2191'
 BLOCK = '\u2205\u2205\u2205'
 Alias = namedtuple('Alias', 'target source')
 Resolution = namedtuple('Resolution', 'value locale key blocked')
+Overlay = namedtuple('Overlay', 'locale group fields parent')
 
 
 class Records:
@@ -92,6 +93,11 @@ class SparseMaps:
     Each state has one parent/alias dependency. Resolve it iteratively to
     avoid a Python recursion cap. Empty overlays and aliases share dictionaries;
     a genuine leaf override copies its inherited map before modification.
+    overlays instead preserves local fields in a persistent child-first chain
+    for consumers requiring lateral alternatives before parent lookup.
+
+    Keep records and graph unchanged while reusing a cache. resolve and
+    overlays require separate caches; treat their returned data as immutable.
     """
     def __init__(self, graph, keys, label):
         self.graph, self.label = graph, label
@@ -120,7 +126,7 @@ class SparseMaps:
             raise DataError('mixed/repeated {} alias'.format(self.label))
         self.aliases[state] = target, source
 
-    def resolve(self, locale, group, cache):
+    def _dependency_path(self, locale, group, cache):
         self.state(locale, group)
         start = (locale, locale, group)
         state, path, active = start, [], set()
@@ -138,11 +144,17 @@ class SparseMaps:
             else:
                 parent = self.graph.parent(current)
                 if parent is None:
-                    base = {}
+                    base = None
                     break
                 state = anchor, parent, key
         else:
             base = cache[state]
+        return start, path, base
+
+    def resolve(self, locale, group, cache):
+        start, path, base = self._dependency_path(locale, group, cache)
+        if base is None:
+            base = {}
         for state in reversed(path):
             anchor, current, key = state
             fields = self.values.get((current, key), {})
@@ -150,5 +162,25 @@ class SparseMaps:
             if overrides:
                 base = base.copy()
                 base.update(overrides)
+            cache[state] = base
+        return cache[start]
+
+    def overlays(self, locale, group, cache):
+        """Return local field snapshots in lookup order, or None if absent.
+
+        Group aliases preserve requesting/source context, including original
+        child overrides preceding an inherited alias's restarted target chain.
+        Skip empty and INHERIT-only layers, not BLOCK or explicit empty leaves.
+        Nodes share suffixes; walk iteratively rather than recursively hashing,
+        comparing or serializing the linked namedtuples. No fallback among
+        selectors is performed here. Use a separate cache from resolve.
+        """
+        start, path, base = self._dependency_path(locale, group, cache)
+        for state in reversed(path):
+            anchor, current, key = state
+            fields = self.values.get((current, key), {})
+            overrides = {key: value for key, value in fields.items() if value != INHERIT}
+            if overrides:
+                base = Overlay(current, key, overrides, base)
             cache[state] = base
         return cache[start]
