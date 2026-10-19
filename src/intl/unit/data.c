@@ -1,9 +1,10 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "data.h"
+#include "../common/source-locale.h"
 #include "../native/wire.h"
 #include <string.h>
 
-#define HEADER_WORDS 6
+#define HEADER_WORDS 8
 #define BLOCKED UINT32_C(0xfffffffe)
 
 static uint32_t word(const uint8_t *bytes, size_t index)
@@ -90,7 +91,7 @@ QJSIntlStatus qjs_intl_unit_data_open(const QJSIntlData *data, const QJSIntlAllo
     QJSIntlBytes empty;
     size_t at = HEADER_WORDS, scratch, i, end = 0;
     uint32_t row_width;
-    uint8_t *used, *used_maps, *used_cases, *families;
+    uint8_t *used, *used_overlays, *used_nodes, *used_maps, *used_cases, *families, *sources;
     if (out)
         memset(out, 0, sizeof(*out));
     if (!out || !data || !data->pack.bytes || !data->strings.bytes || !allocator ||
@@ -100,16 +101,19 @@ QJSIntlStatus qjs_intl_unit_data_open(const QJSIntlData *data, const QJSIntlAllo
     if (qjs_intl_pack_section(&data->pack, QJS_INTL_SECTION_UNIT_PATTERNS, &result.section) ||
         !result.section.count || result.section.count != data->locales.count ||
         result.section.length % 4 || result.section.length < HEADER_WORDS * 4 ||
-        word(result.section.bytes, 0) != 1)
+        word(result.section.bytes, 0) != 2)
         return status;
     result.group_count = word(result.section.bytes, 1);
     result.case_count = word(result.section.bytes, 2);
     result.row_count = word(result.section.bytes, 3);
     result.map_count = word(result.section.bytes, 4);
     result.entry_count = word(result.section.bytes, 5);
+    result.overlay_row_count = word(result.section.bytes, 6);
+    result.node_count = word(result.section.bytes, 7);
     if (result.group_count < 2 || result.group_count > UINT32_MAX / QJS_INTL_UNIT_WIDTH_COUNT ||
         !result.case_count || result.case_count > 65536 || !result.row_count ||
-        result.row_count > result.section.count || !result.map_count ||
+        result.row_count > result.section.count || !result.overlay_row_count ||
+        result.overlay_row_count > result.section.count || !result.map_count ||
         qjs_intl_data_string(data, 0, &empty) || empty.length)
         return status;
     row_width = result.group_count * QJS_INTL_UNIT_WIDTH_COUNT;
@@ -117,9 +121,13 @@ QJSIntlStatus qjs_intl_unit_data_open(const QJSIntlData *data, const QJSIntlAllo
         !take(&result.section, &at, result.case_count, 1, &result.cases) ||
         !take(&result.section, &at, result.section.count, 1, &result.locale_rows) ||
         !take(&result.section, &at, result.row_count, row_width, &result.rows) ||
+        !take(&result.section, &at, result.section.count, 1, &result.overlay_locales) ||
+        !take(&result.section, &at, result.overlay_row_count, row_width, &result.overlay_rows) ||
+        !take(&result.section, &at, result.node_count, 4, &result.nodes) ||
         !take(&result.section, &at, result.map_count, 2, &result.maps) ||
         !take(&result.section, &at, result.entry_count, 2, &result.entries) ||
-        at != result.section.length / 4 || result.map_count > (size_t)result.row_count * row_width)
+        at != result.section.length / 4 ||
+        result.map_count > (size_t)result.row_count * row_width + result.node_count)
         return status;
     for (i = 0; i < result.group_count; i++) {
         uint32_t kind = word(result.groups, i * 2), name = word(result.groups, i * 2 + 1);
@@ -144,22 +152,35 @@ QJSIntlStatus qjs_intl_unit_data_open(const QJSIntlData *data, const QJSIntlAllo
         if (compare_words(previous, row_width, previous + (size_t)row_width * 4, row_width) >= 0)
             return status;
     }
-    /* Every count fits a disjoint validated word range. Map descriptors hold
-       two words each, bounding the extra one-byte family flag per map too. */
-    scratch = (size_t)result.row_count + result.map_count + result.case_count + result.map_count;
+    for (i = 1; i < result.overlay_row_count; i++) {
+        const uint8_t *previous = result.overlay_rows + (i - 1) * (size_t)row_width * 4;
+        if (compare_words(previous, row_width, previous + (size_t)row_width * 4, row_width) >= 0)
+            return status;
+    }
+    /* Counts fit disjoint validated word spans, including the shared string
+       index. Two descriptor words per map also bound its family scratch. */
+    scratch = (size_t)result.row_count + result.overlay_row_count + result.node_count +
+              result.map_count + result.case_count + result.map_count + data->strings.count;
     used = allocator->malloc(allocator->opaque, scratch);
     if (!used)
         return QJS_INTL_NO_MEMORY;
     memset(used, 0, scratch);
-    used_maps = used + result.row_count;
+    used_overlays = used + result.row_count;
+    used_nodes = used_overlays + result.overlay_row_count;
+    used_maps = used_nodes + result.node_count;
     used_cases = used_maps + result.map_count;
     families = used_cases + result.case_count;
+    sources = families + result.map_count;
     used_cases[0] = 1;
     for (i = 0; i < result.section.count; i++) {
         uint32_t index = word(result.locale_rows, i);
         if (index >= result.row_count)
             goto done;
         used[index] = 1;
+        index = word(result.overlay_locales, i);
+        if (index >= result.overlay_row_count)
+            goto done;
+        used_overlays[index] = 1;
     }
     for (i = 0; i < (size_t)result.row_count * row_width; i++) {
         uint32_t index = word(result.rows, i);
@@ -201,14 +222,66 @@ QJSIntlStatus qjs_intl_unit_data_open(const QJSIntlData *data, const QJSIntlAllo
     }
     if (end != result.entry_count)
         goto done;
-    for (i = 0; i < scratch - result.map_count; i++) {
-        if (!used[i])
+    for (i = 0; i < result.node_count; i++) {
+        const uint8_t *node = result.nodes + i * 16;
+        uint32_t origin = word(node, 0), column = word(node, 1);
+        uint32_t index = word(node, 2), tail = word(node, 3), kind;
+        QJSIntlBytes locale;
+        if (origin >= data->strings.count || column >= row_width || index >= result.map_count ||
+            tail > i || !word(result.maps, (size_t)index * 2 + 1))
             goto done;
+        if (i) {
+            const uint8_t *previous = node - 16;
+            uint32_t parent = word(previous, 3);
+            if (tail < parent ||
+                (tail == parent && compare_words(previous, 3, node, 3) >= 0))
+                goto done;
+        }
+        if (!sources[origin]) {
+            QJSIntlStatus valid;
+            qjs_intl_data_string(data, origin, &locale);
+            valid = qjs_intl_source_locale_validate(allocator, locale);
+            if (valid) {
+                status = valid;
+                goto done;
+            }
+            sources[origin] = 1;
+        }
+        kind = word(result.groups, (size_t)(column % result.group_count) * 2);
+        if (families[index] != (kind == QJS_INTL_UNIT_GROUP_COMPOUND ? 2 : 1) ||
+            (tail && kind != word(result.groups,
+                                 (size_t)(word(result.nodes, (size_t)(tail - 1) * 4 + 1) %
+                                          result.group_count) * 2)))
+            goto done;
+        used_maps[index] = 1;
     }
     for (i = 0; i < (size_t)result.row_count * row_width; i++) {
         uint32_t index = word(result.rows, i);
         uint32_t kind = word(result.groups, (i % result.group_count) * 2);
         if (families[index] && families[index] != (kind == QJS_INTL_UNIT_GROUP_COMPOUND ? 2 : 1))
+            goto done;
+    }
+    for (i = 0; i < (size_t)result.overlay_row_count * row_width; i++) {
+        uint32_t head = word(result.overlay_rows, i), column, kind;
+        if (head > result.node_count)
+            goto done;
+        if (!head)
+            continue;
+        column = word(result.nodes, (size_t)(head - 1) * 4 + 1);
+        kind = word(result.groups, (i % result.group_count) * 2);
+        if (kind != word(result.groups, (size_t)(column % result.group_count) * 2))
+            goto done;
+        used_nodes[head - 1] = 1;
+    }
+    /* Parent IDs precede children, so one reverse sweep establishes complete
+       reachability without walking every head's entire chain again. */
+    for (i = result.node_count; i > 0; i--) {
+        uint32_t tail = word(result.nodes, (i - 1) * 4 + 3);
+        if (used_nodes[i - 1] && tail)
+            used_nodes[tail - 1] = 1;
+    }
+    for (i = 0; i < scratch - result.map_count - data->strings.count; i++) {
+        if (!used[i])
             goto done;
     }
     *out = result;
@@ -272,6 +345,40 @@ QJSIntlStatus qjs_intl_unit_map_at(const QJSIntlUnitData *data, uint32_t locale,
     index = word(data->rows,
                  ((size_t)row * QJS_INTL_UNIT_WIDTH_COUNT + width) * data->group_count + group);
     *out = map_at(data, index);
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_unit_overlay_head(const QJSIntlUnitData *data, uint32_t locale,
+                                        QJSIntlUnitWidth width, uint32_t group, uint32_t *out)
+{
+    uint32_t row;
+    if (out)
+        *out = 0;
+    if (!out || !data || !data->section.bytes || locale >= data->section.count ||
+        (unsigned int)width >= QJS_INTL_UNIT_WIDTH_COUNT || group >= data->group_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    row = word(data->overlay_locales, locale);
+    *out = word(data->overlay_rows,
+                ((size_t)row * QJS_INTL_UNIT_WIDTH_COUNT + width) * data->group_count + group);
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_unit_overlay_at(const QJSIntlUnitData *data, uint32_t id,
+                                      QJSIntlUnitOverlay *out)
+{
+    const uint8_t *node;
+    uint32_t column;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !data || !data->section.bytes || !id || id > data->node_count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    node = data->nodes + (size_t)(id - 1) * 16;
+    column = word(node, 1);
+    qjs_intl_data_string(&data->data, word(node, 0), &out->locale);
+    out->width = column / data->group_count;
+    out->group = column % data->group_count;
+    out->map = map_at(data, word(node, 2));
+    out->next = word(node, 3);
     return QJS_INTL_OK;
 }
 
