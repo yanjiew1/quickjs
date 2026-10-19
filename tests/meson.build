@@ -207,6 +207,51 @@ test(
   suite: ['repo', 'native'],
   timeout: 30,
 )
+intl_plural_owner_sources = files(
+  'test_intl_plural_data.c',
+  '../src/intl/plural/data.c',
+  '../src/intl/plural/rules.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+)
+intl_plural_fixture = custom_target(
+  'intl-plural-authored-fixture',
+  output: 'intl-plural-authored-fixture.c',
+  command: [python, files('intl_plural_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: files(
+    '../tools/intl/acquire.py',
+    '../tools/intl/bundle.py',
+    '../tools/intl/cldr_xml.py',
+    '../tools/intl/list_patterns.py',
+    '../tools/intl/locale_metadata.py',
+    '../tools/intl/locale_tables.py',
+    '../tools/intl/numbering.py',
+    '../tools/intl/numbering_tables.py',
+    '../tools/intl/number_symbols.py',
+    '../tools/intl/number_symbol_tables.py',
+    '../tools/intl/parents.py',
+    '../tools/intl/plural_rules.py',
+    '../tools/intl/plural_tables.py',
+    '../tools/intl/preferences.py',
+    '../tools/intl/preference_tables.py',
+    '../tools/intl/resolve.py',
+    '../tools/intl/tables.py',
+  ),
+)
+intl_plural_authored = executable(
+  'test_intl_plural_authored',
+  intl_plural_owner_sources + [intl_plural_fixture],
+  c_args: host_args + ['-DTEST_INTL_AUTHORED=1', '-DTEST_INTL_PROFILE=0'],
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-plural-authored',
+  intl_plural_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
 intl_locale_fixture = custom_target(
   'intl-locale-authored-fixture',
   output: 'intl-locale-authored-fixture.c',
@@ -398,6 +443,23 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-number-symbols-' + profile,
     intl_number_symbol_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_plural_data_test = executable(
+    'test_intl_plural_data_' + profile,
+    intl_plural_owner_sources + [intl_fixture],
+    c_args: host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      '-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0'),
+    ],
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-plural-data-' + profile,
+    intl_plural_data_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )

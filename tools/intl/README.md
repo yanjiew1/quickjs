@@ -232,6 +232,14 @@ extents, references, grammar and canonical records. Missing pairs stay explicit
 until the consumer applies its range policy. The packed data establishes no
 PluralRules capability by itself.
 
+`src/intl/plural/data.c` owns the C view for section 16. It validates all maps,
+category and range vectors, and each distinct condition string before opening.
+Temporary coverage and grammar-cache storage is released on every path. Queries
+return borrowed condition slices, a category-presence mask and the sparse range
+map without allocation or locale fallback. Authored and real-profile tests
+cover unaligned input, exact category data, missing/empty distinctions, grammar
+and schema corruption, output reset and allocation failure/retry.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
