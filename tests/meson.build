@@ -256,6 +256,7 @@ test(
 intl_plural_owner_sources = files(
   'test_intl_plural_data.c',
   '../src/intl/plural/data.c',
+  '../src/intl/plural/native-engine.c',
   '../src/intl/plural/rules.c',
   '../src/intl/native/data.c',
   '../src/intl/native/pack.c',
