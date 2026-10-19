@@ -18,8 +18,13 @@ def main():
     metadata = {
         'aliases': (('territory', 'su', ('ru', 'am')),),
         'likely': (('sl-1994-rozaj', 'sl-Latn-SI'), ('und', 'en-Latn-US')),
-        'keys': (('u', 'ca', 'single', ('calendar', 'oldcalendar'), '', False),),
-        'types': (('u', 'ca', 'foo', ('legacy', 'oldlegacy'), '', False, False, '', ''),),
+        'keys': (('u', 'ca', 'single', ('calendar', 'oldcalendar'), '', False),
+                 ('u', 'tz', 'single', (), '', False),
+                 ('u', 'zz', 'single', (), '', False)),
+        'types': (('u', 'ca', 'foo', ('legacy', 'oldlegacy'), '', False, False, '', ''),
+                  ('u', 'ca', 'zoo', (), 'foo', True, False, '', ''),
+                  ('u', 'tz', 'ustest', (), '', False, False, 'America/Detroit', 'US'),
+                  ('u', 'zz', 'CODEPOINTS', (), '', False, True, '', '')),
     }
     bad = ('EN', 'en-u-ca-gregory', 'en-x-foo', 'en-latn',
            'sl-rozaj-rozaj', 'ru ru', 'legacy legacy', 'en-', 'en--US',
