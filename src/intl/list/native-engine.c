@@ -48,15 +48,7 @@ static int allocator_valid(const QJSIntlAllocator *a)
 }
 void qjs_intl_native_list_result_clear(const QJSIntlAllocator *a, QJSIntlFormatted *out)
 {
-    if (!out)
-        return;
-    if (allocator_valid(a)) {
-        if (out->text)
-            a->free(a->opaque, out->text);
-        if (out->parts)
-            a->free(a->opaque, out->parts);
-    }
-    memset(out, 0, sizeof(*out));
+    qjs_intl_formatted_clear(allocator_valid(a) ? a : NULL, out);
 }
 void qjs_intl_native_list_close(QJSIntlNativeList *list)
 {
