@@ -21,9 +21,60 @@
 
 fs = import('fs')
 
+# Component declarations capture their selected fixture and compile context.
+component_test_specs = []
+
+# Stage-local test capabilities follow the selected runtime. Foundation tests
+# remain available before their eventual build option is introduced.
 calendar_enabled = get_option('temporal')
-native_calendars = calendar_enabled and get_option('calendars') == 'native'
-native_timezones = calendar_enabled and get_option('timezone_backend') == 'native'
+native_calendars = get_option('temporal') and get_option('calendars') == 'native'
+native_timezones = get_option('temporal') and get_option('timezone_backend') == 'native'
+calendar_test_sources = []
+timezone_test_sources = []
+system_timezone_test_sources = []
+if calendar_enabled
+  calendar_test_sources = files(
+    '../src/calendar/calendar.c',
+    '../src/calendar/iso.c',
+  )
+  if native_calendars
+    calendar_test_sources += files(
+      '../src/calendar/astronomy.c',
+      '../src/calendar/calendar-native.c',
+      '../src/calendar/data.c',
+      '../src/calendar/eras.c',
+      '../src/calendar/hebrew.c',
+      '../src/calendar/islamic.c',
+      '../src/calendar/lunisolar.c',
+      '../src/calendar/native-months.c',
+      '../src/calendar/persian.c',
+      '../src/calendar/solar.c',
+    ) + [calendar_data]
+  else
+    calendar_test_sources += files(
+      '../src/calendar/calendar-minimal.c',
+    )
+  endif
+  timezone_test_sources = files(
+    '../src/timezone/timezone.c',
+    '../src/timezone/identifier.c',
+  )
+  if native_timezones
+    timezone_test_sources += files(
+      '../src/timezone/timezone-native.c',
+      '../src/timezone/tzif.c',
+    ) + [timezone_data]
+  else
+    timezone_test_sources += files(
+      '../src/timezone/timezone-minimal.c',
+    )
+  endif
+  if native_timezones
+    system_timezone_test_sources = files(
+      '../src/timezone/windows-zone.c',
+    ) + [windows_timezone_data]
+  endif
+endif
 
 fixture_manifest = files('../tools/build/test-fixtures.list')
 fixture_inputs = []
@@ -348,9 +399,11 @@ endforeach
 # Drivers use ordinary archive extraction: synthetic era data and complete
 # synthetic zone backends in the driver keep their production peers unextracted.
 component_tests = []
+if get_option('temporal') and native_calendars
+  component_tests += 'test_temporal_noniso_calendars'
+endif
 if native_calendars
   component_tests += [
-    'test_temporal_noniso_calendars',
     'test_calendar_native',
     'test_calendar_eras_future',
     'test_calendar_eras',
@@ -429,6 +482,83 @@ foreach name : component_tests
     workdir: test_workdir,
     timeout: 120,
   )
+endforeach
+
+
+# Build engine-independent library tests against their actual owners.
+# Preserve authored synthetic providers; ordinary tests use the selected sources.
+standalone = {
+}
+standalone += {
+  'test_intl_number_decimal': files(
+    'test_intl_number_decimal.c',
+    '../src/intl/common/decimal.c',
+    '../src/intl/common/number-decimal.c',
+    '../src/dtoa/dtoa.c',
+    '../src/cutils/cutils.c',
+  ),
+  'test_intl_decimal': files(
+    'test_intl_decimal.c',
+    '../src/intl/common/decimal.c',
+  ),
+
+}
+
+if get_option('temporal') and native_calendars
+  standalone += {
+  }
+endif
+
+if native_calendars
+  standalone += {
+  }
+endif
+
+if calendar_enabled and not native_calendars
+  standalone += {
+  }
+endif
+
+if calendar_enabled
+  standalone += {
+  }
+endif
+
+if native_timezones
+  standalone += {
+  }
+endif
+
+if get_option('temporal')
+  standalone += {
+  }
+endif
+
+if get_option('temporal') and not native_timezones
+  standalone += {
+  }
+endif
+
+foreach name, sources : standalone
+  app = {
+    'name': name,
+    'sources': sources,
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  suites = ['repo', 'native']
+  if name == 'test_wait_queue'
+    suites += 'threading'
+  endif
+  component_test_specs += [{
+    'target': app,
+    'name': name,
+    'options': {
+      'suite': suites,
+      'workdir': test_workdir,
+      'timeout': 120,
+    },
+  }]
 endforeach
 
 context_c = custom_target(
@@ -958,6 +1088,89 @@ test(
   suite: ['repo', 'build', 'unit'],
   timeout: 30,
 )
+
+# Share only identical component translation units within this configuration.
+# Component declarations use the same host compiler, include directories and
+# dependencies; source identity, ordered flags and overrides distinguish keys.
+component_object_keys = []
+component_object_libraries = []
+component_objects_by_context = {}
+component_target_builds = []
+component_target_names = []
+component_targets = []
+foreach spec : component_test_specs
+  build = spec['target']
+  target_index = -1
+  foreach index : range(component_target_names.length())
+    if component_target_names[index] == build['name']
+      assert(component_target_builds[index] == build, 'Conflicting component target: ' + build['name'])
+      target_index = index
+      break
+    endif
+  endforeach
+  if target_index == -1
+    compile_args = build.get('c_args', [])
+    overrides = build.get('override_options', [])
+    # A context bucket avoids a quadratic interpreter loop over unrelated
+    # compile settings. Full keys are still checked, so this hint cannot merge
+    # sources or flag lists even if two joined strings happen to coincide.
+    context = '\n'.join(compile_args + overrides)
+    objects = []
+    selected_objects = []
+    foreach source : build['sources']
+      key = [source, compile_args, overrides]
+      object_index = -1
+      candidates = component_objects_by_context.get(context, [])
+      foreach index : candidates
+        if component_object_keys[index] == key
+          object_index = index
+          break
+        endif
+      endforeach
+      if object_index == -1
+        object_index = component_object_keys.length()
+        owner = static_library(
+          'test-object-' + object_index.to_string(),
+          source,
+          c_args: compile_args,
+          include_directories: inc,
+          dependencies: host_deps,
+          override_options: overrides,
+          pic: false,
+          install: false,
+          build_by_default: false,
+        )
+        component_object_keys += [key]
+        component_object_libraries += [owner]
+        component_objects_by_context += {context: candidates + [object_index]}
+      endif
+      if object_index not in selected_objects
+        objects += component_object_libraries[object_index].extract_all_objects(recursive: false)
+        selected_objects += [object_index]
+      endif
+    endforeach
+    target = executable(
+      build['name'],
+      objects: objects,
+      c_args: compile_args,
+      include_directories: inc,
+      dependencies: host_deps,
+      override_options: overrides,
+      link_with: build.get('link_with', []),
+      link_language: 'c',
+    )
+    component_target_builds += [build]
+    component_target_names += [build['name']]
+    component_targets += [target]
+    target_index = component_targets.length() - 1
+  endif
+  options = spec['options']
+  suites = options.get('suite', [])
+  if 'unit' not in suites
+    options += {'suite': suites + ['unit']}
+  endif
+  test(spec['name'], component_targets[target_index], kwargs: options)
+endforeach
 
 # Check that separate CI phases partition the selected repository suite.
 test(
