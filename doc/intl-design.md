@@ -180,6 +180,21 @@ See [CanonicalizeUnicodeLocaleId](https://tc39.es/ecma402/#sec-canonicalizeunico
 [ToRawFixed](https://tc39.es/ecma402/#sec-torawfixed) and
 [Unicode normalization](https://unicode.org/reports/tr15/).
 
+Native scientific/engineering exponents use the selected numbering system's
+digits, including zero and supplementary characters, matching ICU/CLDR
+presentation. This is an intentional interoperability policy: ECMA-402's
+[PartitionNotationSubPattern](https://tc39.es/ecma402/#sec-partitionnotationsubpattern)
+still emits ASCII exponent digits without transliteration. Reviewed living
+draft `730ca2b88c305862db7be2f83c510dcca33ab48c` on 2026-10-22
+(Asia/Taipei); [issue 627](https://redirect.github.com/tc39/ecma402/issues/627)
+tracks the discrepancy, without an adopted correction. The reference behavior
+is CLDR 49-beta4's
+[number patterns](https://github.com/unicode-org/cldr/blob/7cdeb9e7fac52c59f22fc7248b05f989ee5689c2/docs/ldml/tr35-numbers.md#Number_Patterns)
+and ICU's
+[scientific formatter](https://github.com/unicode-org/icu/blob/ad484f3d6c036ba06193ac7c3bc2233a53ab68b8/icu4c/source/i18n/number_scientific.cpp).
+This choice changes glyph selection only; exponent calculation, rounding,
+signs, separators and part types retain their existing rules.
+
 ## Service dependencies and equal backend implementations
 
 | Service or entry point | Required composition or coordination |
