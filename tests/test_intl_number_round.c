@@ -182,6 +182,36 @@ static void rejected(const QJSIntlAllocator *allocator, const QJSIntlNumberRound
     assert(!memcmp(&result, &zero, sizeof(result)) && !state->live);
 }
 
+static void test_threshold_metadata(const QJSIntlAllocator *allocator)
+{
+    static const QJSIntlCompactScale scales[] = {{3, 3}, {4, 3}, {5, 3}, {6, 6}};
+    QJSIntlNumberRounding settings = options();
+    QJSIntlMathematicalValue input = value("-999.9");
+    QJSIntlRoundedNumber rounded;
+    settings.notation = QJS_INTL_NUMBER_COMPACT;
+    settings.compact = scales;
+    settings.compact_count = sizeof(scales) / sizeof(scales[0]);
+    settings.digits.maximum_fraction_digits = 0;
+    settings.digits.rounding_mode = QJS_INTL_ROUND_CEIL;
+    assert(!qjs_intl_number_round(allocator, &settings, &input, &rounded));
+    assert(rounded.notation_magnitude == 3 && rounded.exponent == 3);
+    assert(rounded.kind == QJS_INTL_NEGATIVE_ZERO);
+    qjs_intl_number_round_clear(allocator, &rounded);
+    settings.digits.rounding_mode = QJS_INTL_ROUND_FLOOR;
+    assert(!qjs_intl_number_round(allocator, &settings, &input, &rounded));
+    assert(rounded.notation_magnitude == 2 && !rounded.exponent);
+    assert(!strcmp(rounded.number.text, "1000"));
+    qjs_intl_number_round_clear(allocator, &rounded);
+    input = value("12345");
+    assert(!qjs_intl_number_round(allocator, &settings, &input, &rounded));
+    assert(rounded.notation_magnitude == 4 && rounded.exponent == 3);
+    qjs_intl_number_round_clear(allocator, &rounded);
+    input = value("123456");
+    assert(!qjs_intl_number_round(allocator, &settings, &input, &rounded));
+    assert(rounded.notation_magnitude == 5 && rounded.exponent == 3);
+    qjs_intl_number_round_clear(allocator, &rounded);
+}
+
 static void test_errors(const QJSIntlAllocator *allocator)
 {
     QJSIntlNumberRounding settings = options(), invalid;
@@ -196,7 +226,8 @@ static void test_errors(const QJSIntlAllocator *allocator)
         calls = state->calls;
         nonfinite.kind = kind;
         assert(!qjs_intl_number_round(allocator, &settings, &nonfinite, &result));
-        assert(result.kind == (QJSIntlMathematicalKind)kind && !result.exponent && !result.number.text);
+        assert(result.kind == (QJSIntlMathematicalKind)kind && !result.exponent &&
+               !result.number.text);
         assert(calls == state->calls);
         qjs_intl_number_round_clear(allocator, &result);
     }
@@ -268,6 +299,7 @@ int main(void)
     QJSIntlAllocator allocator = {&state, allocate, NULL, release};
     test_notations(&allocator);
     test_modes(&allocator);
+    test_threshold_metadata(&allocator);
     test_errors(&allocator);
     assert(!state.live);
     return 0;
