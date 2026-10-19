@@ -27,7 +27,11 @@ def render():
              (3, 'other', 'alphaNextToNumber', '¤ 0K'),
              (3, 'other', 'noCurrency', '')),
             ((3, 'other', 'standard', '0K'),
-             (6, 'other', 'standard', '0M')),
+             (6, 'other', 'standard', '0M'),
+             (9, 'other', 'standard', ' 0 giga name '),
+             (12, 'other', 'standard', '0💯'),
+             (15, 'other', 'standard', '0 name-part end'),
+             (18, 'other', 'standard', '0\t\n\r\u0085\u1680\u2000\u2028\u2029\u202f\u205f\u3000')),
             ((3, 'other', 'standard', '¤0K'),
              (3, 'one', 'alphaNextToNumber', BLOCK)))
     source = {'systems': ('latn', 'mathbold'), 'kinds': compact_patterns.KINDS,
