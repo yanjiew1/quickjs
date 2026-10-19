@@ -1095,6 +1095,56 @@ function regexp_replace(n)
     return n * 1000;
 }
 
+function intl_list_construct(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.ListFormat("en");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_list_ascii(n)
+{
+    var formatter = new Intl.ListFormat("en");
+    var items = ["alpha", "beta", "gamma"];
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.format(items);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_list_utf16(n)
+{
+    var formatter = new Intl.ListFormat("en");
+    var items = ["\u0100\0", "\ud800", "\ud83e\udd8a"];
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.format(items);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_list_parts(n)
+{
+    var formatter = new Intl.ListFormat("en");
+    var items = ["alpha", "beta", "gamma"];
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatToParts(items);
+        global_res = result;
+    }
+    return n * 100;
+}
+
 // Contrast common short normalization with a disordered nonstarter run.
 // Cache source strings per case; fresh JavaScript processes reset the cache.
 function string_normalize_short(n)
@@ -1770,6 +1820,12 @@ function main(argc, argv, g)
     test_list.push(sort_bench);
 
     /* Additional feature cases do not change the frozen comparison suite. */
+    if (typeof Intl === "object" && typeof Intl.ListFormat === "function") {
+        test_list.push(intl_list_construct);
+        test_list.push(intl_list_ascii);
+        test_list.push(intl_list_utf16);
+        test_list.push(intl_list_parts);
+    }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")
             test_list.push(iterator_map);
