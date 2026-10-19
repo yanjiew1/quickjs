@@ -20,6 +20,13 @@ typedef enum QJSIntlNumberSign {
     QJS_INTL_NUMBER_SIGN_NEGATIVE
 } QJSIntlNumberSign;
 
+typedef enum QJSIntlNumberNotation {
+    QJS_INTL_NUMBER_STANDARD,
+    QJS_INTL_NUMBER_SCIENTIFIC,
+    QJS_INTL_NUMBER_ENGINEERING,
+    QJS_INTL_NUMBER_COMPACT
+} QJSIntlNumberNotation;
+
 typedef enum QJSIntlNumberStyle {
     QJS_INTL_NUMBER_DECIMAL,
     QJS_INTL_NUMBER_PERCENT
@@ -27,6 +34,7 @@ typedef enum QJSIntlNumberStyle {
 
 typedef struct QJSIntlNumberOptions {
     QJSIntlNumberStyle style;
+    QJSIntlNumberNotation notation;
     QJSIntlNumberGrouping grouping;
     QJSIntlNumberSign sign_display;
     QJSIntlDecimalOptions digits;
@@ -36,8 +44,9 @@ typedef struct QJSIntlNumberOptions {
 typedef struct QJSIntlNumberService QJSIntlNumberService;
 typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
-/* This initial internal service implements standard decimal/percent formatting;
-   it does not yet implement all Intl.NumberFormat styles, notation or ranges.
+/* This internal service implements decimal/percent formatting with standard,
+   scientific and engineering notation. Compact, other styles and ranges are
+   still required before the complete Intl.NumberFormat binding can register.
    Bindings must not register NumberFormat on the strength of this subset.
 
    Copy the allocator; malloc/free required, realloc unused. Its callbacks and
@@ -61,8 +70,8 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *, size_
                                              QJSIntlBytes system, const QJSIntlNumberOptions *,
                                              QJSIntlNumberFormatter **out);
 void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *);
-/* Borrow an already coerced exact mathematical value. Round once at standard
-   scale (after percent multiplication), select sign from the rounded value,
+/* Borrow an already coerced exact mathematical value. Round once at the final
+   notation scale (after percent multiplication), select sign from the rounded value,
    localize the numeric body, and apply its selected outer pattern.
    Fresh, disjoint output required; failures reset it. Results own text/parts
    and survive formatter/service close. Clear using the creating allocator. */
