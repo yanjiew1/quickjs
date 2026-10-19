@@ -1363,3 +1363,31 @@ before allocating the owned text and parts; identical text and empty elements
 remain distinct by position. Borrowed UTF-16 may contain NUL or lone surrogates.
 The unit enum comes from the shared native duration record definitions, without
 linking Temporal constructors or backend implementations.
+
+`duration/native-digital.[ch]` projects the native backend's inherited `hms`
+pattern into two separate inter-field literals and its raw hour width. It
+validates scalar UTF-8, ordered `h`/`m`/`s` runs and apostrophe quoting, and owns
+the dequoted separators independently of source storage. Outer literal text
+is retained in the raw data but cannot be represented by DigitalFormat's two
+separator fields. `hm`/`ms` padding does not override this `hms` projection.
+Malformed data is an error, rather than an implicit colon fallback.
+
+Do not replace colon characters with numeric `timeSeparator`: the
+[TR35 number-symbol text](https://unicode.org/reports/tr35/tr35-numbers.html#timeseparator)
+withdraws that pattern-character interpretation. The initial native projection
+retains the same source separators across numbering systems; the Number
+service localizes the digits. Authored syntax/OOM fixtures and every prepared
+locale's `hms` pattern exercise this projection.
+
+The raw hour width is deliberately separate from an effective
+`TwoDigitHours` option policy. Both ECMA-402 revision
+`730ca2b88c305862db7be2f83c510dcca33ab48c` and PR 1044 revision
+`d026068ed653130a37d79a95c0122ecf5319f1a4` describe that flag as numeric-hour
+padding, yet their `GetDurationUnitOptions` step unconditionally overrides the
+hour style. [Proposal issue 161](https://github.com/tc39/proposal-intl-duration-format/issues/161)
+discusses digital preferences and unresolved outer prefixes; the
+[PR 188 review](https://redirect.github.com/tc39/proposal-intl-duration-format/pull/188#discussion_r1570697492)
+explicitly objects to the style override. Its merge
+`835300f1ee7a0a739ee2205dea2bae2657e67983` did not add a guard. The projection
+preserves source facts without silently resolving that observable option-policy
+contradiction. References reviewed 2026-10-19.
