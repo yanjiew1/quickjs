@@ -2,10 +2,12 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "locale.h"
 #include "native-id.h"
+#include "preference-data.h"
 
 struct QJSIntlLocaleService {
     QJSIntlAllocator allocator;
     QJSIntlLocaleMetadata metadata;
+    QJSIntlLocalePreferences preferences;
 };
 
 QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator,
@@ -29,6 +31,9 @@ QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator,
     if (!status)
         status =
             qjs_intl_locale_metadata_open(&data, allocator, &service->metadata);
+    if (!status)
+        status = qjs_intl_locale_preferences_open(&data, allocator,
+                                                 &service->preferences);
     if (status) {
         allocator->free(allocator->opaque, service);
         return status;
@@ -41,6 +46,34 @@ void qjs_intl_locale_close(QJSIntlLocaleService *service)
 {
     if (service)
         service->allocator.free(service->allocator.opaque, service);
+}
+
+void qjs_intl_locale_result_free(const QJSIntlLocaleService *service, char *result)
+{
+    if (result)
+        service->allocator.free(service->allocator.opaque, result);
+}
+
+QJSIntlStatus qjs_intl_locale_week_data(const QJSIntlLocaleService *service,
+                                        QJSIntlBytes region, QJSIntlWeekInfo *out)
+{
+    return qjs_intl_preference_week(service ? &service->preferences : NULL, region,
+                                    out);
+}
+
+QJSIntlStatus qjs_intl_locale_hour_data(const QJSIntlLocaleService *service,
+                                        QJSIntlBytes key, QJSIntlBytes *out,
+                                        uint32_t *count)
+{
+    return qjs_intl_preference_list(service ? &service->preferences : NULL, 1, key, out,
+                                    count);
+}
+
+QJSIntlStatus qjs_intl_locale_script_direction(const QJSIntlLocaleService *service,
+                                               QJSIntlBytes script, unsigned int *out)
+{
+    return qjs_intl_preference_direction(service ? &service->preferences : NULL, script,
+                                         out);
 }
 
 QJSIntlStatus qjs_intl_locale_validate(const QJSIntlLocaleService *service,
