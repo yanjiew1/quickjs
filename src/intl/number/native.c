@@ -1,4 +1,4 @@
-/* Native decimal/percent and currency NumberFormat service.
+/* Native decimal/percent/currency/unit NumberFormat service and ranges.
  * ECMA-402 730ca2b88c305862db7be2f83c510dcca33ab48c, reviewed 2026-10-19.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "number.h"
@@ -701,9 +701,9 @@ fail:
 
 /* Append the scientific separator and exponent before applying any positive
    notation literals (for example Hindi's brackets). The style's sign belongs
-   outside that complete notation body. PartitionNotationSubPattern specifies
-   ASCII decimal exponent text, including its explicit "0" case; the open
-   ECMA-402 issue 627 tracks missing transliteration. Source E+000 padding
+   outside that complete notation body. Use the selected digit repertoire for
+   ICU/CLDR interoperability; the current PartitionNotationSubPattern text
+   omits exponent transliteration (open ECMA-402 issue 627). Source E+000 padding
    does not override the specification's exponent rules. */
 static QJSIntlStatus append_exponent(const QJSIntlNumberFormatter *formatter,
                                      const QJSIntlFormatted *body, int32_t exponent,
@@ -716,7 +716,7 @@ static QJSIntlStatus append_exponent(const QJSIntlNumberFormatter *formatter,
     size_t count = 0, digit_length = 0, length = body->length, i, at, part;
     size_t extra_parts = exponent < 0 ? 3 : 2;
     do {
-        uint32_t c = '0' + magnitude % 10;
+        uint32_t c = formatter->body.digits[magnitude % 10];
         reversed[count++] = c;
         digit_length += c > 0xffff ? 2 : 1;
         magnitude /= 10;
