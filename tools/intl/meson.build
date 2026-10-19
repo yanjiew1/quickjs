@@ -13,6 +13,7 @@ intl_tool_dependencies = files(
   'currencies.py',
   'currency_tables.py',
   'duration_patterns.py',
+  'duration_tables.py',
   'embed.py',
   'generate.py',
   'list_patterns.py',
