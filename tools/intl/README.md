@@ -204,11 +204,22 @@ optional absent, blocked and explicitly empty values stay distinct. Minimum
 grouping digits resolve independently as positive unsigned integers.
 
 The collector preserves the exact pattern language, quoting and scientific
-affixes. Compact patterns, currency names/spacing, unit patterns and range
-patterns have separate owners. This is source collection: the records are not
-yet packed or compiled, and do not advertise a NumberFormat capability. CI
-audits the authenticated CLDR sources; authored tests cover aliases, inheritance,
-alternate selection and malformed records.
+affixes. `number_pattern_syntax.py` compiles standard fixed/scientific skeletons
+into grouping and digit metadata plus typed positive, negative and explicit-plus
+token sequences. Literal braces/apostrophes remain literal text; currency widths
+and localized signs stay semantic tokens. Negative subpatterns supply affixes
+only, without overriding positive digit settings. When negative affixes contain
+no minus token, LDML leaves the explicit-plus variant equal to positive;
+inserting any further sign for ECMA-402 signDisplay belongs to the service.
+This is not an arbitrary
+DecimalFormat pattern API: unsupported padding, significant-digit and rounding
+increment skeletons fail explicitly. ECMA-402 options govern actual rounding.
+
+Compact patterns, currency names/spacing, unit patterns and range patterns have
+separate owners. The records are not yet packed and do not advertise a
+NumberFormat capability. CI compiles all distinct patterns from authenticated
+CLDR sources; authored tests cover aliases, inheritance, alternate selection,
+quoted text, scientific affixes, suffix signs and malformed records.
 
 ## Exact plural relations
 

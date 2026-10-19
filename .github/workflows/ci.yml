@@ -53,7 +53,7 @@ jobs:
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
       - name: Audit standard number patterns
         run: |
-          timeout 120s python3 tools/intl/number_patterns.py \
+          timeout 120s python3 tools/intl/number_pattern_syntax.py \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
       - name: Reproduce prepared native and minimal Intl sections
         run: |
