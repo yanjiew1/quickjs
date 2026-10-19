@@ -140,6 +140,20 @@ These records prepare number-service data. They do not advertise NumberFormat
 available locales or supported numbering systems. Authored tests cover scalar
 repertoires, inheritance, explicit markers and malformed/conflicting records.
 
+## Locale lookup
+
+`src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
+validated available-locale inventory and a canonical language priority list.
+It preserves request order, removes only the Unicode extension, and drops
+singleton extension boundaries during prefix truncation. A borrowed two-slice
+view avoids allocating a temporary tag. The result identifies the requested
+and available entries and retains the original Unicode extension.
+
+An identity or source-locale registry is not automatically an available-locale
+inventory. Each service establishes its own supported records before calling
+this helper. Default-locale policy, best-fit matching and option/extension
+resolution are separate operations.
+
 ## Binary envelope
 
 `bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.
