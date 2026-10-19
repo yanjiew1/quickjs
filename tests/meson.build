@@ -2259,6 +2259,14 @@ test(
 )
 
 test(
+  'intl-display-names',
+  python,
+  args: files('test_intl_display_names.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-duration-patterns',
   python,
   args: files('test_intl_duration_patterns.py'),
