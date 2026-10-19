@@ -96,6 +96,22 @@ static void check_corruption(const QJSIntlNumberLayoutData *owner,
         corrupt(allocator, header + i * 4, 0);
         corrupt(allocator, header + i * 4, UINT32_MAX);
     }
+    corrupt(allocator, header, 1);
+    corrupt(allocator, vectors + QJS_INTL_LAYOUT_FIELD_COUNT * 4, 1);
+    for (i = 0; i < owner->vector_count; i++) {
+        unsigned int field;
+        const uint8_t *vector = owner->vectors + i * (QJS_INTL_LAYOUT_FIELD_COUNT + 1) * 4;
+        for (field = QJS_INTL_LAYOUT_CURRENCY_UNIT_EXACT_ZERO;
+             field <= QJS_INTL_LAYOUT_CURRENCY_UNIT_OTHER; field++) {
+            if (qjs_intl_read_u32(vector + field * 4) == UINT32_MAX) {
+                corrupt(allocator, vector - data->pack.bytes + QJS_INTL_LAYOUT_FIELD_COUNT * 4,
+                        qjs_intl_read_u32(vector + QJS_INTL_LAYOUT_FIELD_COUNT * 4) | (UINT32_C(1) << field));
+                break;
+            }
+        }
+        if (field <= QJS_INTL_LAYOUT_CURRENCY_UNIT_OTHER)
+            break;
+    }
     corrupt(allocator, owner->systems - data->pack.bytes, owner->numbering.systems.count);
     corrupt(allocator, locales, owner->row_count);
     corrupt(allocator, maps, owner->vector_count);
@@ -106,7 +122,7 @@ static void check_corruption(const QJSIntlNumberLayoutData *owner,
     assert(copy && owner->row_count > 1 && owner->vector_count > 1);
     for (i = 0; i < 2; i++) {
         size_t start = i ? vectors : maps;
-        size_t width = (i ? QJS_INTL_LAYOUT_FIELD_COUNT : owner->system_count) * 4;
+        size_t width = (i ? QJS_INTL_LAYOUT_FIELD_COUNT + 1 : owner->system_count) * 4;
         memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
         memcpy(copy + start + width, copy + start, width);
         invalid_blob(allocator, copy, qjs_intl_native_length);
@@ -116,8 +132,9 @@ static void check_corruption(const QJSIntlNumberLayoutData *owner,
         put_u32(copy + locales + i * 4, 0);
     invalid_blob(allocator, copy, qjs_intl_native_length);
     free(copy);
-    for (i = 0; i < (size_t)owner->vector_count * QJS_INTL_LAYOUT_FIELD_COUNT; i++) {
-        if (qjs_intl_read_u32(owner->vectors + i * 4) < data->strings.count)
+    for (i = 0; i < (size_t)owner->vector_count * (QJS_INTL_LAYOUT_FIELD_COUNT + 1); i++) {
+        if (i % (QJS_INTL_LAYOUT_FIELD_COUNT + 1) != QJS_INTL_LAYOUT_FIELD_COUNT &&
+            qjs_intl_read_u32(owner->vectors + i * 4) < data->strings.count)
             last = i;
     }
     corrupt(allocator, vectors + last * 4, data->strings.count);
@@ -182,6 +199,9 @@ int main(void)
     assert(!qjs_intl_number_layouts_at(&owner, en, latin, &values));
     assert(equal(values.fields[QJS_INTL_LAYOUT_APPROXIMATELY].text, "~{0}"));
     if (TEST_INTL_AUTHORED) {
+        assert(values.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_OTHER].from_root);
+        assert(!values.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_ONE].from_root);
+        assert(!values.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_TWO].from_root);
         assert(
             equal(values.fields[QJS_INTL_LAYOUT_RANGE].text, "\xe2\x80\x8e{0} à {1}\xe2\x80\x8e"));
         assert(values.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_ONE].state == QJS_INTL_LAYOUT_BLOCKED);
