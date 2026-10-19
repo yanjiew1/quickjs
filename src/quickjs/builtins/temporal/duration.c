@@ -24,13 +24,9 @@
 #include <math.h>
 #include "temporal-internal.h"
 #include "calendar-fields.h"
+#include "../duration-value.h"
 #include "../../../temporal/duration.h"
 #include "../../../temporal/time.h"
-
-static const char *const js_temporal_duration_fields[] = {
-    "years", "months", "weeks", "days", "hours", "minutes", "seconds",
-    "milliseconds", "microseconds", "nanoseconds",
-};
 
 static void js_temporal_duration_finalizer(JSRuntime *rt, JSValue value)
 {
@@ -42,15 +38,14 @@ static const JSClassDef js_temporal_duration_class = {
     .finalizer = js_temporal_duration_finalizer,
 };
 
-JSValue js_temporal_create_duration(JSContext *ctx, JSValueConst new_target,
-                                    const QJSTemporalDuration *duration)
+/* Caller has validated every slot and the combined time magnitude. */
+static JSValue js_temporal_create_valid_duration(JSContext *ctx, JSValueConst new_target,
+                                                 const QJSTemporalDuration *duration)
 {
     JSTemporalDurationData *data;
     JSValue result;
     int i;
 
-    if (!qjs_temporal_duration_is_valid(duration))
-        return JS_ThrowRangeError(ctx, "invalid Temporal.Duration fields");
     result = js_temporal_create_from_ctor(ctx, new_target, JS_CLASS_TEMPORAL_DURATION);
     if (JS_IsException(result))
         return result;
@@ -68,86 +63,21 @@ JSValue js_temporal_create_duration(JSContext *ctx, JSValueConst new_target,
     return result;
 }
 
-static int js_temporal_to_integral_duration_field(JSContext *ctx,
-                                                  JSValueConst value,
-                                                  double *result)
+JSValue js_temporal_create_duration(JSContext *ctx, JSValueConst new_target,
+                                    const QJSTemporalDuration *duration)
 {
-    double number;
-
-    if (JS_ToFloat64(ctx, &number, value))
-        return -1;
-    if (!isfinite(number) || trunc(number) != number) {
-        JS_ThrowRangeError(ctx, "Temporal.Duration fields must be integral");
-        return -1;
-    }
-    *result = number == 0 ? 0 : number;
-    return 0;
-}
-
-/* Fields starts with either all zeros or the receiver's existing fields.
-   Undefined properties leave it unchanged. Every recognized property is
-   read in the spec's alphabetical order, including after a nonzero field. */
-static int js_temporal_duration_partial_fields(JSContext *ctx,
-                                               JSValueConst object,
-                                               QJSTemporalDuration *fields)
-{
-    static const unsigned order[] = { 3, 4, 8, 7, 5, 1, 9, 6, 2, 0 };
-    JSValue value;
-    int i, index, any = 0, ret;
-
-    if (!JS_IsObject(object)) {
-        JS_ThrowTypeError(ctx, "Temporal duration input must be an object");
-        return -1;
-    }
-    for (i = 0; i < QJS_TEMPORAL_UNIT_COUNT; i++) {
-        index = order[i];
-        value = JS_GetPropertyStr(ctx, object, js_temporal_duration_fields[index]);
-        if (JS_IsException(value))
-            return -1;
-        if (!JS_IsUndefined(value)) {
-            any = 1;
-            ret = js_temporal_to_integral_duration_field(ctx, value,
-                                                        &fields->fields[index]);
-            JS_FreeValue(ctx, value);
-            if (ret)
-                return -1;
-        } else {
-            JS_FreeValue(ctx, value);
-        }
-    }
-    if (!any) {
-        JS_ThrowTypeError(ctx, "Temporal duration input has no duration fields");
-        return -1;
-    }
-    return 0;
+    if (!qjs_temporal_duration_is_valid(duration))
+        return JS_ThrowRangeError(ctx, "invalid Temporal.Duration fields");
+    return js_temporal_create_valid_duration(ctx, new_target, duration);
 }
 
 JSValue js_temporal_to_duration(JSContext *ctx, JSValueConst value)
 {
-    JSTemporalDurationData *data;
-    QJSTemporalDuration result = { { 0 } };
-    const char *text;
-    size_t length;
-    int ret;
+    QJSTemporalDuration result;
 
-    if (JS_IsObject(value)) {
-        data = JS_GetOpaque(value, JS_CLASS_TEMPORAL_DURATION);
-        if (data)
-            return js_temporal_create_duration(ctx, JS_UNDEFINED, data);
-        if (js_temporal_duration_partial_fields(ctx, value, &result))
-            return JS_EXCEPTION;
-    } else {
-        if (!JS_IsString(value))
-            return JS_ThrowTypeError(ctx, "Temporal duration input must be a string");
-        text = JS_ToCStringLen(ctx, &length, value);
-        if (!text)
-            return JS_EXCEPTION;
-        ret = qjs_temporal_parse_duration(&result, text, length);
-        JS_FreeCString(ctx, text);
-        if (ret)
-            return JS_ThrowRangeError(ctx, "invalid Temporal duration string");
-    }
-    return js_temporal_create_duration(ctx, JS_UNDEFINED, &result);
+    if (js_duration_to_record(ctx, value, &result))
+        return JS_EXCEPTION;
+    return js_temporal_create_valid_duration(ctx, JS_UNDEFINED, &result);
 }
 
 static JSValue js_temporal_duration_constructor(JSContext *ctx,
@@ -162,8 +92,8 @@ static JSValue js_temporal_duration_constructor(JSContext *ctx,
         return JS_ThrowTypeError(ctx, "Temporal.Duration requires new");
     for (i = 0; i < QJS_TEMPORAL_UNIT_COUNT; i++) {
         if (i < argc && !JS_IsUndefined(argv[i]) &&
-            js_temporal_to_integral_duration_field(ctx, argv[i],
-                                                    &fields.fields[i]))
+            js_duration_to_integral_field(ctx, argv[i],
+                                          &fields.fields[i]))
             return JS_EXCEPTION;
     }
     return js_temporal_create_duration(ctx, new_target, &fields);
@@ -202,7 +132,7 @@ static JSValue js_temporal_duration_with(JSContext *ctx, JSValueConst this_val,
     if (!data)
         return JS_EXCEPTION;
     result = *data;
-    if (js_temporal_duration_partial_fields(ctx, argv[0], &result))
+    if (js_duration_partial_fields(ctx, argv[0], &result))
         return JS_EXCEPTION;
     return js_temporal_create_duration(ctx, JS_UNDEFINED, &result);
 }
