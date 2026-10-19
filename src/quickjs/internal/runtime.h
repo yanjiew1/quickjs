@@ -53,6 +53,7 @@ struct JSRuntime {
     struct QJSIntlPluralService *intl_plural;
     struct QJSIntlNumberService *intl_number;
     struct QJSIntlRelativeService *intl_relative;
+    struct QJSIntlDurationService *intl_duration;
     char *intl_default_locale;
 #endif
 #ifdef CONFIG_TEMPORAL
@@ -221,6 +222,7 @@ struct JSContext {
     JSValue intl_intrinsics;
     JSValue intl_locale_ctor;
     JSValue intl_number_ctor;
+    JSValue intl_duration_ctor;
     JSValue intl_fallback_symbol;
     BOOL intl_published;
 #endif
