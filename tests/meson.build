@@ -443,6 +443,7 @@ if intl_enabled
     command: [python, files('intl_locale_fixture.py'), '--output', '@OUTPUT@'],
     depend_files: files(
       '../tools/intl/acquire.py',
+      '../tools/intl/availability.py',
       '../tools/intl/bundle.py',
       '../tools/intl/cldr_xml.py',
       '../tools/intl/list_patterns.py',
@@ -468,6 +469,7 @@ if intl_enabled
       ],
       depend_files: files(
         '../tools/intl/acquire.py',
+        '../tools/intl/availability.py',
         '../tools/intl/bundle.py',
         '../tools/intl/cldr_xml.py',
         '../tools/intl/list_patterns.py',
@@ -1092,6 +1094,14 @@ if intl_enabled
     'intl-typed-tables',
     python,
     args: files('test_intl_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-available-locales',
+    python,
+    args: files('test_intl_availability.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
