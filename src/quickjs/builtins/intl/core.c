@@ -95,6 +95,8 @@ static void clear_intrinsics(JSContext *ctx)
     ctx->intl_locale_ctor = JS_UNDEFINED;
     JS_FreeValue(ctx, ctx->intl_number_ctor);
     ctx->intl_number_ctor = JS_UNDEFINED;
+    JS_FreeValue(ctx, ctx->intl_duration_ctor);
+    ctx->intl_duration_ctor = JS_UNDEFINED;
     JS_FreeValue(ctx, ctx->intl_fallback_symbol);
     ctx->intl_fallback_symbol = JS_UNDEFINED;
     ctx->intl_published = FALSE;
@@ -103,6 +105,7 @@ static void clear_intrinsics(JSContext *ctx)
     JS_SetClassProto(ctx, JS_CLASS_INTL_PLURAL_RULES, JS_NULL);
     JS_SetClassProto(ctx, JS_CLASS_INTL_NUMBER_FORMAT, JS_NULL);
     JS_SetClassProto(ctx, JS_CLASS_INTL_RELATIVE_TIME_FORMAT, JS_NULL);
+    JS_SetClassProto(ctx, JS_CLASS_INTL_DURATION_FORMAT, JS_NULL);
 }
 
 int js_intl_ensure_intrinsics(JSContext *ctx)
@@ -124,7 +127,7 @@ int js_intl_ensure_intrinsics(JSContext *ctx)
                                JS_PROP_CONFIGURABLE | JS_PROP_THROW) < 0 ||
         js_intl_init_locale(ctx, object) || js_intl_init_list_format(ctx, object) ||
         js_intl_init_plural_rules(ctx, object) || js_intl_init_number_format(ctx, object) ||
-        js_intl_init_relative_time_format(ctx, object)) {
+        js_intl_init_relative_time_format(ctx, object) || js_intl_init_duration_format(ctx, object)) {
         goto fail;
     }
     ctx->intl_intrinsics = object;
