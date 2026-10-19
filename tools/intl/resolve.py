@@ -84,3 +84,71 @@ class Records:
         if result is None or result.blocked:
             raise DataError('missing/blocked required collector field: ' + repr((locale, key)))
         return result
+
+
+class SparseMaps:
+    """Typed whole-group aliases over sparse leaves, with requesting context.
+
+    Each state has one parent/alias dependency. Resolve it iteratively to
+    avoid a Python recursion cap. Empty overlays and aliases share dictionaries;
+    a genuine leaf override copies its inherited map before modification.
+    """
+    def __init__(self, graph, keys, label):
+        self.graph, self.label = graph, label
+        self.locales = frozenset(graph.tags)
+        self.keys = frozenset(keys)
+        self.values, self.aliases = {}, {}
+
+    def state(self, locale, key):
+        if locale not in self.locales or key not in self.keys:
+            raise DataError('unknown {} locale/group'.format(self.label))
+        return locale, key
+
+    def add(self, locale, group, key, value):
+        state = self.state(locale, group)
+        if state in self.aliases:
+            raise DataError('mixed {} alias/leaves'.format(self.label))
+        fields = self.values.setdefault(state, {})
+        if key in fields:
+            raise DataError('repeated {} field'.format(self.label))
+        fields[key] = value
+
+    def alias(self, locale, group, target, source):
+        state = self.state(locale, group)
+        self.state(locale if source is None else source, target)
+        if state in self.aliases or state in self.values:
+            raise DataError('mixed/repeated {} alias'.format(self.label))
+        self.aliases[state] = target, source
+
+    def resolve(self, locale, group, cache):
+        self.state(locale, group)
+        start = (locale, locale, group)
+        state, path, active = start, [], set()
+        while state not in cache:
+            if state in active:
+                raise DataError('{} alias/parent cycle'.format(self.label))
+            active.add(state)
+            path.append(state)
+            anchor, current, key = state
+            alias = self.aliases.get((current, key))
+            if alias is not None:
+                target, source = alias
+                anchor = anchor if source is None else source
+                state = anchor, anchor, target
+            else:
+                parent = self.graph.parent(current)
+                if parent is None:
+                    base = {}
+                    break
+                state = anchor, parent, key
+        else:
+            base = cache[state]
+        for state in reversed(path):
+            anchor, current, key = state
+            fields = self.values.get((current, key), {})
+            overrides = {key: value for key, value in fields.items() if value != INHERIT}
+            if overrides:
+                base = base.copy()
+                base.update(overrides)
+            cache[state] = base
+        return cache[start]
