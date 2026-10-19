@@ -398,6 +398,16 @@ resolves iteratively and shares immutable inherited maps. Collectors own their
 group/field inventories and XPath interpretation; the resolver does not inspect
 XML. Compact patterns and unit data share the same alias semantics.
 
+`overlays` exposes an alternative persistent chain of local field snapshots,
+ordered before their parent/source dependencies. This retains the context
+needed to try lateral plural/case alternatives locally before moving to a
+parent. Inherited group aliases restart in their requesting or explicit-source
+locale, after any genuine original-child overrides. Empty and inheritance-only
+layers are omitted; blocked and explicitly empty fields remain. Walk linked
+nodes iteratively and treat them as immutable. Use separate `resolve` and
+`overlays` caches, with unchanged records/parent graphs. This operation performs
+no selector fallback and does not change the existing flattened maps or packs.
+
 `number_layout.py` resolves miscellaneous range/approximation/at-least/at-most
 templates, currency-name unit templates, currency-spacing match sets/insertion
 text and legacy ISO append patterns. They are distinct from numeric skeletons
