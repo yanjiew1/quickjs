@@ -130,6 +130,8 @@ static void check(Data *data, const char *tag, const char *system, QJSIntlNumber
         symbols.fields[QJS_INTL_SYMBOL_PERCENT].text,
         symbols.fields[QJS_INTL_SYMBOL_PER_MILLE].text,
         bytes(currency),
+        {0},
+        {0},
     };
     assert(!qjs_intl_number_round(&data->allocator, rounding, &value, &rounded));
     assert(!rounded.exponent);
