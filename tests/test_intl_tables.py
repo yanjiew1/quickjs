@@ -24,6 +24,7 @@ from test_intl_preferences import Sources as PreferenceSources
 from test_intl_numbering import Sources as NumberingSources
 from test_intl_number_symbols import Sources as SymbolSources
 from number_symbols import FIELDS as SYMBOL_FIELDS
+from test_intl_plural_rules import Sources as PluralSources
 
 
 class VerifiedFixture(Sources):
@@ -68,6 +69,17 @@ class VerifiedFixture(Sources):
         root = ET.fromstring(self.files['common/main/root.xml'])
         root.find('numbers').extend(symbol_root.findall('./numbers/symbols'))
         self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
+        plural_source = PluralSources()
+        self.files['common/dtd/ldmlSupplemental.dtd'] += (
+            b'<!ELEMENT plurals' +
+            plural_source.files['common/dtd/ldmlSupplemental.dtd'].split(b'<!ELEMENT plurals', 1)[1])
+        for name in plural_source.files:
+            if name != 'common/dtd/ldmlSupplemental.dtd':
+                self.files[name] = plural_source.files[name]
+        name = 'common/supplemental/supplementalData.xml'
+        supplemental = ET.fromstring(self.files[name])
+        ET.SubElement(supplemental, 'parentLocales', component='plurals')
+        self.files[name] = ET.tostring(supplemental, encoding='utf-8')
         self.consumed = set()
         self.pin = {'release': 'authored-fixture', 'commit': '0' * 40,
                     'archive': {'sha256': '0' * 64}}
@@ -103,6 +115,13 @@ class TableTests(unittest.TestCase):
                       for locale, system, values in symbols['rows']}
             self.assertEqual(fields[('en', 'latn')]['decimal'], '.')
             self.assertEqual(fields[('en', 'latn')]['group'], ',')
+            plurals = view['plurals']['rows']
+            self.assertEqual(len(plurals), len(view['locales']) * 2)
+            cardinal = next(rules for locale, kind, rules, ranges in plurals
+                            if locale == 'en' and kind == 0)
+            self.assertIn((1, 'i = 1 and v = 0'), cardinal)
+            self.assertEqual(next(rules for locale, kind, rules, ranges in plurals
+                                  if locale == 'root' and kind == 0), ((5, ''),))
             if profile == 'native':
                 self.assertEqual(fields[('ar', 'arab')]['decimal'], '\u066b')
                 self.assertEqual(fields[('fr', 'latn')]['group'], '\u202f')
@@ -172,6 +191,9 @@ class TableTests(unittest.TestCase):
         self.assertEqual(full_view['number_symbols']['systems'], ('latn', 'mathbold'))
         self.assertEqual(minimal_view['number_symbols']['rows'],
                          tuple(row for row in full_view['number_symbols']['rows']
+                               if row[0] in minimal_view['locales']))
+        self.assertEqual(minimal_view['plurals']['rows'],
+                         tuple(row for row in full_view['plurals']['rows']
                                if row[0] in minimal_view['locales']))
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
