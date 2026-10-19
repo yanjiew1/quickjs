@@ -2,6 +2,7 @@
 """Typed Intl pack sections and deterministic authored generation fixtures."""
 from pathlib import Path
 import json
+import re
 import struct
 import sys
 import unittest
@@ -69,6 +70,17 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['locales'], len(view['locales']))
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
+            tags = set(view['locales'])
+            for tag in tags:
+                parts = tag.split('-')
+                if (len(parts) >= 3 and re.fullmatch('[A-Z][a-z]{3}', parts[1]) and
+                        re.fullmatch(r'(?:[A-Z]{2}|[0-9]{3})', parts[2])):
+                    self.assertIn(parts[0] + '-' + parts[2], tags)
+            aliases = manifest['inputs']['formatter_fallbacks']
+            self.assertEqual(bool(aliases), profile == 'native')
+            for target, source in aliases:
+                at = view['locales'].index(target)
+                self.assertEqual(view['locales'][view['parents'][at]], source)
             for identity, (count, data) in view['envelope']['sections'].items():
                 self.assertEqual(manifest['inputs']['sections'][str(identity)],
                                  {'count': count, 'sha256': acquire.digest(data)})
