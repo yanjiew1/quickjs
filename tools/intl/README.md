@@ -176,7 +176,7 @@ There are two relevant inconsistencies in ECMA-402 revision
   can make Number `1.0005` display `1` with the plural word `days`.
 
 The source, renderer and service layers do not implement observable JavaScript
-coercion, options or branding. Those belong to the later engine binding.
+coercion, options or branding. Those belong to the engine binding described below.
 
 ## Region and script preferences
 
@@ -1271,3 +1271,25 @@ constructor mode. Minimal excludes exact strings for unadvertised locales.
 Three exact range-output tests prescribe collapse/spacing choices beyond the
 current draft's ILND/no-collapse contract; their explicit exclusions cite that
 policy. Repository tests retain coercion, rounding, equality, parts and sources.
+
+## RelativeTimeFormat JavaScript binding
+
+`src/quickjs/builtins/intl/relative-time-format.c` owns constructor/prototype
+behavior and result conversion. It resolves `nu` with the shared locale-key
+helper, reads style/numeric options in order, and checks receiver branding
+before `ToNumber(value)` and `ToString(unit)`. Unit coercion still occurs for
+nonfinite values; conversion errors precede later range checks.
+
+The runtime owns the lazy relative service. Each object owns its formatter and
+resolved strings, with no retained JS references requiring a mark callback.
+The ordinary format methods use their own function realm for results/errors;
+they are not cached bound functions. Parts have `type`, `value` and, for inserted
+number spans, `unit` in that property order.
+
+Focused repository tests cover descriptors, options/getter order, singular and
+plural units, signed zero, exact internal rounding, auto lookup, numbering-system
+precedence, subclasses, cross-realm behavior, reentrant coercion and GC. C tests
+inject allocation failure in constructor, format, formatToParts, resolvedOptions
+and supportedLocalesOf with fresh realm objects and warmed immutable services.
+The focused Test262 configuration includes RelativeTimeFormat; the English-only
+profile explicitly excludes seven cases requiring unavailable German/Polish data.
