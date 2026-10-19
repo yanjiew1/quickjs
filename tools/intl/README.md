@@ -117,3 +117,25 @@ the envelope. Section owners must check their own record schemas, references
 and required dependencies before use. Unknown optional sections establish no
 service capabilities. A generation identity is not a cryptographic check of
 the contents; source acquisition and prepared-pack manifests provide hashes.
+
+## Prepare typed records
+
+```sh
+python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
+  --profile native --output /path/to/native.bin --manifest /path/to/native.json
+```
+
+The initial sections contain sorted UTF-8 strings, a checked locale-parent
+registry, and deduplicated sets of resolved list templates. `--profile minimal`
+selects English and its parents; `native` retains the full graph. Section IDs
+and string IDs are stable within a generation, not across source upgrades.
+The manifest records exact source reads, policy, pin and section hashes. These
+inputs determine the generation identity without local paths or timestamps.
+Its `complete_services` remains empty until full service behavior is delivered.
+Normal engine builds do not invoke these collectors or parse source XML.
+
+Prepared files are in `data/intl/{minimal,native}.bin` with matching manifests
+and the CLDR license. The repository suite checks their hashes and typed tables
+offline. CI additionally rebuilds both packs from the authenticated archive and
+compares every byte of the binaries and manifests. These initial files contain
+only the sections documented above, not yet the complete Intl data inventory.

@@ -884,6 +884,14 @@ test(
 )
 
 test(
+  'intl-typed-tables',
+  python,
+  args: files('test_intl_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-binary-envelope',
   python,
   args: files('test_intl_bundle.py'),
