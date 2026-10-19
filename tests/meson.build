@@ -276,6 +276,7 @@ native_test_names = [
   'test_intl_plural_oom',
   'test_intl_number_oom',
   'test_intl_relative_oom',
+  'test_intl_duration_oom',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -2096,6 +2097,7 @@ if intl_enabled
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
+    'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
   }
 endif
 if shared_modules
