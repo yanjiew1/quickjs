@@ -193,6 +193,64 @@ Standalone authored and real-profile tests cover exact text, empty values,
 optional states, unaligned storage, allocation failure/retry, invalid references,
 noncanonical records and malformed section dimensions.
 
+## Standard number patterns
+
+`number_patterns.py` resolves standard decimal, scientific, percent and currency
+patterns for every numeric system and source locale. Currency accounting and
+the optional `alphaNextToNumber`/`noCurrency` variants retain separate keys.
+Typed aliases follow the requesting-locale rules; alternate aliases cannot
+replace baseline records. Required patterns must be present and nonempty;
+optional absent, blocked and explicitly empty values stay distinct. Minimum
+grouping digits resolve independently as positive unsigned integers.
+
+The collector preserves the exact pattern language, quoting and scientific
+affixes. `number_pattern_syntax.py` compiles standard fixed/scientific skeletons
+into grouping and digit metadata plus typed positive, negative and explicit-plus
+token sequences. Literal braces/apostrophes remain literal text; currency widths
+and localized signs stay semantic tokens. Negative subpatterns supply affixes
+only, without overriding positive digit settings. When negative affixes contain
+no minus token, LDML leaves the explicit-plus variant equal to positive;
+inserting any further sign for ECMA-402 signDisplay belongs to the service.
+This is not an arbitrary
+DecimalFormat pattern API: unsupported padding, significant-digit and rounding
+increment skeletons fail explicitly. ECMA-402 options govern actual rounding.
+
+Compact patterns, currency names/spacing, unit patterns and range patterns have
+separate owners. These prepared records do not advertise a NumberFormat
+capability. CI compiles all distinct patterns from authenticated CLDR sources;
+authored tests cover aliases, inheritance, alternate selection, quoted text,
+scientific affixes, suffix signs and malformed records.
+
+Section 17 stores compiled patterns as little-endian words. Its directory count
+is the shared locale count. Seven header words contain schema version 1 and
+the numeric-system, vector, row, pattern, affix and token counts. Sorted numeric
+definition indexes follow, then one (minimum grouping digits, row index) pair
+per locale. Shared locale rows contain one vector index per numeric system;
+each vector contains nine pattern references in collector field order. Optional
+references use `0xffffffff` for absent, `0xfffffffe` for blocked and `0xfffffffd`
+for explicitly empty. The five required patterns accept none of these markers.
+
+Each pattern has nine numeric words: primary/secondary grouping, minimum
+integer digits, integer placeholder count, minimum/maximum fraction digits,
+decimal-point presence, minimum exponent digits and exponent-plus presence.
+Three affix indexes follow for positive, negative and explicit-plus forms.
+An affix descriptor gives its offset/count in the final token array. Tokens
+are (kind, pooled string index) pairs; nonliteral tokens require string zero,
+literal tokens require nonempty text, and each affix contains exactly one
+number token. Adjacent literals merge. The decoder checks all extents,
+references, canonical ordering, numeric constraints and complete record use.
+Sharing whole locale maps, pattern vectors and typed affixes avoids duplicating
+patterns across numeric systems without a compression dependency.
+
+`src/intl/number/pattern-data.c` validates section 17 against the unchanged
+numbering view, including complete record use and typed affix canonicality.
+It borrows immutable storage, releases validation scratch on every path and
+provides allocation-free exact-index pattern/token queries. Absent, blocked
+and empty optional patterns remain distinct; algorithmic systems are explicitly
+unsupported by this numeric owner. Authored and real-profile C tests cover
+scientific affixes, quotes, suffix signs, grouping, unaligned data, corruption,
+allocation failure/retry and output reset.
+
 ## Exact plural relations
 
 `src/intl/plural/rules.c` evaluates one CLDR relation over an unsigned plain
