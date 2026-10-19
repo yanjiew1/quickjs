@@ -498,6 +498,18 @@ Digital duration layouts, coordinate formatting and arbitrary product/power
 composition have separate consumers. CI audits all authenticated relevant unit
 records; collecting those source facts does not publish unit formatter support.
 
+`unit_grammar.py` separately collects the supplemental `deriveComponent` rules
+for division-unit plural and case. Resolve each feature along the separate
+`grammaticalFeatures` parent chain independently, retaining the rule's source
+locale and both component values. `compound` passes through the requested
+feature; fixed plural categories and case names remain distinct data tokens.
+Thus a French plural override does
+not erase the root case rule, while German denominator case comes from its own
+rule. Require complete root defaults, reject duplicate/unsupported records and
+validate the source DTD attributes. Other known structures and compound gender
+rules are checked but not included in division output. This source collector
+does not yet add grammar to the prepared pack or enable compound formatting.
+
 Section 21 stores those sparse unit forms. Its directory count is the shared
 locale count. Eight little-endian header words contain schema version 2, group,
 case, raw shared-row, shared-map, entry, overlay shared-row and node counts.

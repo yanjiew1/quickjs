@@ -2057,6 +2057,14 @@ test(
 )
 
 test(
+  'intl-unit-grammar',
+  python,
+  args: files('test_intl_unit_grammar.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-unit-patterns',
   python,
   args: files('test_intl_unit_patterns.py'),
