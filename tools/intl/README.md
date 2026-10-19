@@ -1572,6 +1572,42 @@ Authored and prepared-profile tests cover preferred chains, alias agreement,
 uppercase aliases, unknown source names, missing fields, ambiguity, empty data,
 allocation failures and lookup after releasing the metadata blob.
 
+`src/intl/display/language-match.c` selects the longest available dialect name
+from actual source candidates for the input's primary language. Candidates must
+contain ordered input subtags; ties prefer earlier input positions, then the
+alphabetical source key. Each candidate resolves its style and inherited label
+before ranking, so an inherited compound can beat a local generic name. Standard
+mode selects only the primary language. Input is a validated canonical Unicode
+Language ID without extensions or private use; canonicalization belongs to the
+caller.
+
+Matching allocates nothing and scans existing candidates rather than enumerating
+variant subsets. Its result borrows the selected label, source locale and
+normalized matched key. Empty and code-identical labels remain present. Authored
+tests cover partial variant compounds, specificity/ties, primary boundaries,
+blocked/menu-only candidates, inherited short-only compounds and long variant
+lists. Prepared-profile tests check actual names rather than assuming that every
+conditional example in TR35 exists in the pinned CLDR source. Composition of
+remaining qualifiers and API fallback remain separate operations.
+
+`src/intl/display/language-format.c` composes the matched base with unconsumed
+script, region and variant labels, using canonical input subtags for missing
+qualifiers. It preserves present empty names and requires an actual localized
+base independently of API fallback. The result owns bounded UTF-16 text and
+retains no source or input pointers.
+
+The two-operand literal parser now belongs to `common/pair-pattern`, shared with
+unit division templates. Language composition applies the source's outer pattern
+and left-folded separator in either operand order. Iterative emission measures
+then writes the exact result without recursion or repeatedly copied intermediate
+strings. Only consulted templates are parsed. Native bracket substitution affects
+qualifier labels, leaves the base name and pattern literals untouched, and uses
+exact scalar replacement facts when the same bracket occurs in outer literals.
+This follows native locale-pattern conventions rather than implementing a general
+Unicode bracket-nesting algorithm. Tests distinguish ASCII/fullwidth brackets,
+literal apostrophes, both fold orders, empty labels, malformed/absent templates,
+supplementary characters, output bounds, allocation failures and result lifetime.
+
 ## Shared date-field labels
 
 `date_field_names.py` owns the twelve ECMA-402 date-field labels across long,
