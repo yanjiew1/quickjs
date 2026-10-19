@@ -110,6 +110,24 @@ class NumberLayoutTests(unittest.TestCase):
         self.assertEqual(data['skipped_alternates'], 5)
         self.assertEqual(self.rows(source)[('en', 'mathbold')]['range'], '{0}–{1}')
 
+    def test_template_origin_tracks_terminal_alias_leaf(self):
+        source = Sources()
+        source.set('en', '''<ldml><numbers><currencyFormats numberSystem="latn">
+          <unitPattern count="other">{0} {1}</unitPattern></currencyFormats></numbers></ldml>''')
+        source.set('de', '''<ldml><numbers><currencyFormats numberSystem="mathbold">
+          <alias source="root" path="../currencyFormats[@numberSystem='latn']"/>
+          </currencyFormats></numbers></ldml>''')
+        data = layout.collect(source, graph())
+        roots = {(locale, system): mask for locale, system, mask in data['root_fields']}
+        other = 1 << layout.FIELDS.index('currency-unit-other')
+        self.assertFalse(roots.get(('en', 'latn'), 0) & other)
+        self.assertFalse(roots.get(('en', 'mathbold'), 0) & other)
+        self.assertFalse(roots.get(('en-GB', 'mathbold'), 0) & other)
+        self.assertTrue(roots[('de', 'mathbold')] & other)
+        rows = self.rows(source)
+        self.assertEqual(rows[('en', 'latn')]['currency-unit-other'],
+                         rows[('de', 'mathbold')]['currency-unit-other'])
+
     def test_required_fields_reject_missing_blocked_and_empty_matches(self):
         for value in ('', BLOCK):
             source = Sources()

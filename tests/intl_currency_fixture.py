@@ -32,6 +32,7 @@ def pack(empty):
             'codes': ('JPY', 'USD'),
             'fractions': (('CHF', 2, 0, 2, 5), ('DEFAULT', 2, 0, 2, 0), ('JPY', 0, 0, 0, 0)),
             'maps': ((),) if empty else (english, entries),
+            'root_names': () if empty else (('root', (('USD', 'other'),)),),
             'rows': (('en', 0), ('root', 0 if empty else 1))}
     pool = tuple(sorted(currency_tables.strings(data) | set(tags) | {'', BLOCK, INHERIT},
                         key=lambda text: text.encode('utf-8')))
