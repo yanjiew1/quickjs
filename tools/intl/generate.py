@@ -20,6 +20,8 @@ import number_symbols
 import number_symbol_tables
 import number_patterns
 import number_pattern_tables
+import number_layout
+import number_layout_tables
 import parents
 import preferences
 import preference_tables
@@ -56,6 +58,7 @@ def generate(sources, profile):
     pattern_data = number_patterns.collect(inputs_read, graph)
     compact_data = compact_patterns.collect(inputs_read, graph)
     currency_data = currencies.collect(inputs_read, graph)
+    layout_data = number_layout.collect(inputs_read, graph)
     plural_data = plural_rules.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     if profile == 'native':
@@ -72,6 +75,7 @@ def generate(sources, profile):
     compact_data = compact_tables.select(compact_data, tags)
     compact_prepared = compact_tables.prepare(compact_data, tags, numbering_data)
     currency_data = currency_tables.select(currency_data, tags)
+    layout_data['rows'] = tuple(row for row in layout_data['rows'] if row[0] in selected_tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
     contexts = [row for row in lists['contexts'] if row[0] in selected_tags]
@@ -84,6 +88,7 @@ def generate(sources, profile):
     pool_strings.update(number_pattern_tables.strings(pattern_data))
     pool_strings.update(compact_tables.strings(compact_prepared))
     pool_strings.update(currency_tables.strings(currency_data))
+    pool_strings.update(number_layout_tables.strings(layout_data))
     pool_strings.update(plural_tables.strings(plural_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
@@ -104,6 +109,8 @@ def generate(sources, profile):
                                                                  numbering_data, string_ids)
     sections[bundle.COMPACT_PATTERNS] = compact_tables.encode(compact_prepared, string_ids)
     sections[bundle.CURRENCIES] = currency_tables.encode(currency_data, tags, string_ids)
+    sections[bundle.NUMBER_LAYOUTS] = number_layout_tables.encode(layout_data, tags,
+                                                               numbering_data, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
               'sources': {name: sources.manifest['files'][name] for name in sorted(inputs_read.consumed)},
@@ -118,7 +125,7 @@ def generate(sources, profile):
                 'sha256': acquire.digest(binary), 'bytes': len(binary),
                 'locales': len(tags), 'strings': len(strings),
                 'complete_services': [],
-                'note': 'Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency facts and plural rules; not formatter capability or full Intl coverage.'}
+                'note': 'Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout facts and plural rules; not formatter capability or full Intl coverage.'}
     return binary, manifest
 
 
