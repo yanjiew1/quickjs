@@ -29,6 +29,7 @@ from test_intl_number_patterns import Sources as PatternSources
 from test_intl_compact_patterns import Sources as CompactSources
 from test_intl_currencies import Sources as CurrencySources
 from test_intl_number_layout import Sources as LayoutSources
+from test_intl_unit_patterns import Sources as UnitSources
 import number_patterns
 import number_pattern_syntax
 
@@ -110,6 +111,12 @@ class VerifiedFixture(Sources):
         self.files['common/dtd/ldml.dtd'] += (
             b'<!ELEMENT miscPatterns' + layout_source.files['common/dtd/ldml.dtd'].split(
                 b'<!ELEMENT miscPatterns', 1)[1])
+        unit_source = UnitSources()
+        root.append(ET.fromstring(unit_source.files['common/main/root.xml']).find('units'))
+        # The composed fixture already declares aliases and shared unitPattern selectors.
+        unit_dtd = re.sub(br'<!ATTLIST (?:alias (?:source|path)|unitPattern (?:count|case|alt)) [^>]*>',
+                          b'', unit_source.files['common/dtd/ldml.dtd'])
+        self.files['common/dtd/ldml.dtd'] += unit_dtd
         root.find('numbers').append(ET.fromstring(
             currency_source.files['common/main/root.xml']).find('./numbers/currencies'))
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT currencies ANY>
@@ -177,6 +184,13 @@ class TableTests(unittest.TestCase):
             self.assertEqual(layout_rows[('en', 'latn')]['currency-unit-other'], '{0} {1}')
             self.assertIsNone(layout_rows[('root', 'arab')]['currency-unit-other'])
             self.assertEqual(layout_rows[('root', 'arab')]['afterCurrency-insertBetween'], ' ')
+            units = view['unit_patterns']
+            self.assertIsNotNone(units)
+            self.assertEqual(len(units['groups']), 239)
+            self.assertEqual(len(units['rows']), len(view['locales']) * 3 * len(units['groups']))
+            meter = next(index for locale, width, kind, name, index in units['rows']
+                         if (locale, width, kind, name) == ('en', 'long', 'unit', 'length-meter'))
+            self.assertIn(('unitPattern', 'one', '', '{0} meter'), units['maps'][meter])
             self.assertIn(('latn', 'numeric', '0123456789'), view['numbering']['systems'])
             self.assertIn('root', {row[0] for row in view['numbering']['locales']})
             symbols = view['number_symbols']
@@ -301,6 +315,12 @@ class TableTests(unittest.TestCase):
         self.assertEqual(currency_maps(minimal_view),
                          {key: value for key, value in currency_maps(full_view).items()
                           if key in minimal_view['locales']})
+        def unit_maps(view):
+            units = view['unit_patterns']
+            return {row[:-1]: units['maps'][row[-1]] for row in units['rows']}
+        self.assertEqual(unit_maps(minimal_view),
+                         {key: value for key, value in unit_maps(full_view).items()
+                          if key[0] in minimal_view['locales']})
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
