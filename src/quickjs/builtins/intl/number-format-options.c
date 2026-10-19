@@ -99,3 +99,86 @@ done:
     JS_FreeCString(ctx, owned_unit);
     return ret;
 }
+
+static int grouping_option(JSContext *ctx, JSValueConst options, int fallback)
+{
+    static const char *const names[] = {"auto", "always", "min2", "true", "false"};
+    JSValue value = JS_GetPropertyStr(ctx, options, "useGrouping");
+    const char *text;
+    size_t length, i;
+    if (JS_IsException(value))
+        return -1;
+    if (JS_IsUndefined(value))
+        return fallback;
+    if (JS_IsBool(value) && JS_ToBool(ctx, value))
+        return QJS_INTL_NUMBER_GROUP_ALWAYS;
+    if (!JS_ToBool(ctx, value)) {
+        JS_FreeValue(ctx, value);
+        return QJS_INTL_NUMBER_GROUP_OFF;
+    }
+    text = JS_ToCStringLen(ctx, &length, value);
+    JS_FreeValue(ctx, value);
+    if (!text)
+        return -1;
+    for (i = 0; i < countof(names); i++) {
+        if (length == strlen(names[i]) && !memcmp(text, names[i], length))
+            break;
+    }
+    JS_FreeCString(ctx, text);
+    if (i == countof(names)) {
+        JS_ThrowRangeError(ctx, "invalid Intl useGrouping");
+        return -1;
+    }
+    return i >= 3 ? fallback : (int)i + QJS_INTL_NUMBER_GROUP_AUTO;
+}
+
+int js_intl_number_format_options(JSContext *ctx, JSValueConst options,
+                                   const QJSIntlNumberService *service,
+                                   JSIntlNumberFormatOptions *out)
+{
+    static const char *const notations[] = {"standard", "scientific", "engineering", "compact"};
+    static const char *const compact_displays[] = {"short", "long"};
+    static const char *const signs[] = {"auto", "never", "always", "exceptZero", "negative"};
+    JSIntlNumberFormatOptions result = {0};
+    int notation, compact, grouping, sign, minimum = 0, maximum = 3;
+    assert(service && out && JS_IsObject(options));
+    memset(out, 0, sizeof(*out));
+    if (js_intl_number_unit_options(ctx, options, &result.unit))
+        return -1;
+    notation = js_intl_string_option(ctx, options, "notation", notations, countof(notations), 0);
+    if (notation < 0)
+        goto fail;
+    if (result.unit.style == QJS_INTL_NUMBER_CURRENCY && notation == QJS_INTL_NUMBER_STANDARD) {
+        uint32_t digits;
+        if (js_intl_error(ctx, qjs_intl_number_currency_digits(service,
+                                  (QJSIntlBytes){result.unit.currency, 3}, &digits), "currency digits"))
+            goto fail;
+        minimum = maximum = digits;
+    } else if (result.unit.style == QJS_INTL_NUMBER_PERCENT) {
+        maximum = 0;
+    }
+    if (js_intl_set_digit_options(ctx, options, minimum, maximum,
+                                    notation == QJS_INTL_NUMBER_COMPACT, &result.digits))
+        goto fail;
+    compact = js_intl_string_option(ctx, options, "compactDisplay", compact_displays,
+                                      countof(compact_displays), 0);
+    if (compact < 0)
+        goto fail;
+    grouping = grouping_option(ctx, options, notation == QJS_INTL_NUMBER_COMPACT
+                                               ? QJS_INTL_NUMBER_GROUP_MIN2
+                                               : QJS_INTL_NUMBER_GROUP_AUTO);
+    if (grouping < 0)
+        goto fail;
+    sign = js_intl_string_option(ctx, options, "signDisplay", signs, countof(signs), 0);
+    if (sign < 0)
+        goto fail;
+    result.notation = notation;
+    result.compact_long = notation == QJS_INTL_NUMBER_COMPACT ? compact : 0;
+    result.grouping = grouping;
+    result.sign_display = sign;
+    *out = result;
+    return 0;
+fail:
+    js_free(ctx, result.unit.unit);
+    return -1;
+}

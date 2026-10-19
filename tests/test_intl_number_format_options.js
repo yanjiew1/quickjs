@@ -91,3 +91,79 @@ for (const [options, seen] of [
 }
 // A later operation remains valid after all abrupt paths.
 assert(read({style: 'currency', currency: 'jpy'}).currency, 'JPY');
+
+const full = readNumberFormatOptions;
+function fields(actual, expected) {
+    for (const key of Object.keys(expected)) assert(actual[key], expected[key]);
+}
+fields(full({}), {notation: 0, useGrouping: 1, signDisplay: 0, compactDisplay: 0,
+    minimumIntegerDigits: 1, minimumFractionDigits: 0, maximumFractionDigits: 3,
+    minimumSignificantDigits: undefined, maximumSignificantDigits: undefined});
+for (const [currency, digits] of [['USD', 2], ['JPY', 0], ['KWD', 3], ['XXX', 2]])
+    fields(full({style: 'currency', currency}), {
+        minimumFractionDigits: digits, maximumFractionDigits: digits});
+for (const notation of ['scientific', 'engineering']) {
+    fields(full({style: 'currency', currency: 'KWD', notation}), {
+        minimumFractionDigits: 0, maximumFractionDigits: 3});
+    fields(full({style: 'percent', notation}), {
+        minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
+fields(full({notation: 'compact', compactDisplay: 'long'}), {notation: 3,
+    compactDisplay: 1, useGrouping: 3, minimumFractionDigits: 0, maximumFractionDigits: 0,
+    minimumSignificantDigits: 1, maximumSignificantDigits: 2, roundingPriority: 1});
+fields(full({style: 'currency', currency: 'KWD', notation: 'compact', maximumFractionDigits: 3}),
+    {minimumFractionDigits: 0, maximumFractionDigits: 3,
+        minimumSignificantDigits: undefined, maximumSignificantDigits: undefined});
+assert(full({compactDisplay: 'long'}).compactDisplay, 0);
+fields(full({maximumSignificantDigits: 4}), {minimumFractionDigits: undefined,
+    maximumFractionDigits: undefined, minimumSignificantDigits: 1, maximumSignificantDigits: 4});
+for (const notation of ['standard', 'compact']) {
+    const fallback = notation === 'compact' ? 3 : 1;
+    for (const [useGrouping, expected] of [[undefined, fallback], [true, 2], [false, 0],
+        [null, 0], [0, 0], [-0, 0], [NaN, 0], [0n, 0], ['', 0], ['auto', 1],
+        ['always', 2], ['min2', 3], ['true', fallback], ['false', fallback],
+        [new Boolean(false), fallback]])
+        assert(full({notation, useGrouping}).useGrouping, expected);
+    for (const useGrouping of [1, 1n, '0', 'ALWAYS', 'always\0', {}])
+        throws(RangeError, () => full({notation, useGrouping}));
+    throws(TypeError, () => full({notation, useGrouping: Symbol()}));
+}
+{
+    const log = [];
+    assert(full({useGrouping: {[Symbol.toPrimitive](hint) {
+        log.push(hint); return 'min2';
+    }}}).useGrouping, 3);
+    assert(log.join(), 'string');
+}
+for (const [index, notation] of ['standard', 'scientific', 'engineering', 'compact'].entries())
+    assert(full({notation}).notation, index);
+for (const [index, signDisplay] of ['auto', 'never', 'always', 'exceptZero', 'negative'].entries())
+    assert(full({signDisplay}).signDisplay, index);
+for (const key of ['notation', 'compactDisplay', 'signDisplay']) {
+    throws(RangeError, () => full({[key]: 'invalid'}));
+    throws(TypeError, () => full({[key]: Symbol()}));
+}
+throws(RangeError, () => full({minimumFractionDigits: 5, maximumFractionDigits: 2}));
+throws(TypeError, () => full({roundingIncrement: 5, maximumSignificantDigits: 3}));
+throws(RangeError, () => full({style: 'unit', unit: 'meter', roundingMode: 'invalid'}));
+const fullKeys = [...keys, 'notation', 'minimumIntegerDigits', 'minimumFractionDigits',
+    'maximumFractionDigits', 'minimumSignificantDigits', 'maximumSignificantDigits',
+    'roundingIncrement', 'roundingMode', 'roundingPriority', 'trailingZeroDisplay',
+    'compactDisplay', 'useGrouping', 'signDisplay'];
+{
+    const log = [];
+    full(new Proxy({}, {get(target, key) {log.push(key);}}));
+    assert(log.join(), fullKeys.join());
+}
+for (const fail of fullKeys) {
+    const log = [];
+    throws(Error, () => full(new Proxy({}, {get(target, key) {
+        log.push(key); if (key === fail) throw witness;
+    }})), witness);
+    assert(log.join(), fullKeys.slice(0, fullKeys.indexOf(fail) + 1).join());
+}
+for (const key of ['notation', 'compactDisplay', 'useGrouping', 'signDisplay'])
+    throws(Error, () => full({style: 'unit', unit: 'meter', [key]: {
+        [Symbol.toPrimitive]() {throw witness;}
+    }}), witness);
+fields(full({}), {minimumFractionDigits: 0, maximumFractionDigits: 3});
