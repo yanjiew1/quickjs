@@ -226,6 +226,8 @@ struct JSContext {
     JSValue regexp_ctor;
 #ifdef CONFIG_INTL
     JSValue intl_intrinsics;
+    JSValue intl_locale_ctor;
+    BOOL intl_published;
 #endif
 #ifdef CONFIG_TEMPORAL
     JSValue temporal_intrinsics;
