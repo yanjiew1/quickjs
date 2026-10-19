@@ -484,6 +484,20 @@ variant contains no plus token, the operation can insert one before the pattern.
 Empty replacements remain distinct parts. Complete UTF-16 sizing precedes
 allocation and the output bound covers affixes and body together.
 
+`src/intl/number/native.c` assembles those operations behind the compile-time
+number-service contract. The initial internal formatter supports standard
+notation with decimal/percent styles, all numeric digit repertoires, resolved
+grouping/sign settings and exact rounding options. It validates the selected
+profile once per service, excludes root from locale matching inventory, and
+caches decoded body symbols and typed pattern tokens in each formatter.
+Explicit numbering-system selection is exact; negotiation belongs to bindings.
+A formatter may outlive its service, and results may outlive both.
+
+This is a staged internal implementation, not complete Intl.NumberFormat.
+Currency/unit styles, other notations, ranges and the JS binding remain required
+before registration. Repository tests exercise every prepared locale's default
+numeric system and allocation failure at every service/open/format allocation.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side

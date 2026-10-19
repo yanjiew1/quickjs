@@ -2,17 +2,9 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_NUMBER_AFFIX_H
 #define QJS_INTL_NUMBER_AFFIX_H
-#include "../common/format.h"
+#include "number.h"
 #include "pattern-data.h"
 #include "round.h"
-
-typedef enum QJSIntlNumberSign {
-    QJS_INTL_NUMBER_SIGN_AUTO,
-    QJS_INTL_NUMBER_SIGN_NEVER,
-    QJS_INTL_NUMBER_SIGN_ALWAYS,
-    QJS_INTL_NUMBER_SIGN_EXCEPT_ZERO,
-    QJS_INTL_NUMBER_SIGN_NEGATIVE
-} QJSIntlNumberSign;
 
 /* GetNumberFormatPattern sign selection. Require the unchanged successful
    rounded result. NaN is positive-zero for this decision; signed infinities
