@@ -234,6 +234,10 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_intl_locale_grammar': [
+    'test_intl_locale_grammar.c',
+    '../src/intl/common/locale-grammar.c',
+  ],
   'test_intl_number_decimal': [
     'test_intl_number_decimal.c',
     '../src/intl/common/decimal.c',
