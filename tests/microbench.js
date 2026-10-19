@@ -1290,6 +1290,53 @@ function intl_number_unit(n)
     return n * 100;
 }
 
+function intl_relative_construct(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.RelativeTimeFormat("en");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_relative_numeric(n)
+{
+    var formatter = new Intl.RelativeTimeFormat("en");
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.format(i + 1234.125, "day");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_relative_auto(n)
+{
+    var formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.format(i % 3 - 1, "day");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_relative_parts(n)
+{
+    var formatter = new Intl.RelativeTimeFormat("en");
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatToParts(i + 1234.125, "day");
+        global_res = result;
+    }
+    return n * 100;
+}
+
 // Contrast common short normalization with a disordered nonstarter run.
 // Cache source strings per case; fresh JavaScript processes reset the cache.
 function string_normalize_short(n)
@@ -1986,6 +2033,12 @@ function main(argc, argv, g)
         test_list.push(intl_number_parts);
         test_list.push(intl_number_range);
         test_list.push(intl_number_unit);
+    }
+    if (typeof Intl === "object" && typeof Intl.RelativeTimeFormat === "function") {
+        test_list.push(intl_relative_construct);
+        test_list.push(intl_relative_numeric);
+        test_list.push(intl_relative_auto);
+        test_list.push(intl_relative_parts);
     }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")
