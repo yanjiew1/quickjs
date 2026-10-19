@@ -16,6 +16,12 @@ void qjs_intl_locale_close(QJSIntlLocaleService *service);
 /* Release an owned identity result with the service's original allocator.
    Passing NULL output is safe; a non-NULL output requires its live service. */
 void qjs_intl_locale_result_free(const QJSIntlLocaleService *service, char *result);
+/* Match a canonical request against the compiled profile's default-locale
+   candidates, excluding root. Return a borrowed extension-free identifier or
+   UNSUPPORTED. This is default policy input, not a substitute for each service's
+   own capability inventory. All services must admit the selected default. */
+QJSIntlStatus qjs_intl_locale_profile_match(const QJSIntlLocaleService *service,
+                                          QJSIntlBytes request, QJSIntlBytes *out);
 /* Syntax failure is OK with *well_formed=0; resource failures remain errors. */
 QJSIntlStatus qjs_intl_locale_validate(const QJSIntlLocaleService *service,
                                       QJSIntlBytes input, int *well_formed);
