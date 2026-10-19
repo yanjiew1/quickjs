@@ -118,8 +118,7 @@ Counted past/future patterns may contain zero or one `{0}` placeholder. Auto
 relative literals preserve braces as text, and retain every discovered canonical
 integer key rather than assuming only yesterday/today/tomorrow. Authored tests
 cover alias inheritance, container selection, markers, malformed source and key
-boundaries. This stage collects source facts; it neither adds a prepared binary
-section nor installs RelativeTimeFormat.
+boundaries. These records are source facts; collecting them does not install RelativeTimeFormat.
 
 Section 23 reserves the resolved relative-time wire schema. It uses little-endian
 words: version, literal-key count, locale-row count, map count and entry count;
@@ -132,9 +131,15 @@ Missing selectors are absent; pooled empty text remains a value.
 
 The codec checks exact coverage, canonical sharing/order, contiguous extents,
 source identities, integer keys and required long `other` forms. Profile
-projection prunes unused maps/keys but keeps external source identities. This
-schema is not yet emitted by the production generator or advertised as a
-RelativeTimeFormat capability.
+projection prunes unused maps/keys but keeps external source identities. The production generator emits this section in both prepared profiles. It is
+not advertised as a RelativeTimeFormat capability until a complete service exists.
+
+`src/intl/relative/data.c` validates the schema in C before exposing immutable
+maps and allocation-free exact pattern/literal queries. It borrows the shared
+pack, releases validation scratch on success and failure, and retains no heap
+state. Source identities may lie outside the selected locale registry. Authored
+and both prepared-profile tests cover queries, unaligned storage, malformed
+records and every reached validation allocation failure.
 
 ## Region and script preferences
 
