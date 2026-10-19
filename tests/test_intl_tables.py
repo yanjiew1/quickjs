@@ -10,9 +10,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 import acquire
 import bundle
 import generate
+import locale_metadata
+import locale_tables
 import tables
 from test_intl_list_patterns import Sources, graph
 from test_intl_parents import DTD as PARENT_DTD
+from test_intl_locale_metadata import Sources as MetadataSources
 
 
 class VerifiedFixture(Sources):
@@ -27,6 +30,12 @@ class VerifiedFixture(Sources):
               <likelySubtag from="und" to="en_Latn_US"/>
             </likelySubtags></supplementalData>''',
         })
+        metadata = MetadataSources()
+        for name, value in metadata.files.items():
+            if name.startswith('common/bcp47/') or name in (
+                    'common/dtd/ldmlBCP47.dtd', 'common/dtd/ldmlSupplemental.dtd',
+                    'common/supplemental/supplementalMetadata.xml'):
+                self.files[name] = value
         self.consumed = set()
         self.pin = {'release': 'authored-fixture', 'commit': '0' * 40,
                     'archive': {'sha256': '0' * 64}}
@@ -105,6 +114,7 @@ class TableTests(unittest.TestCase):
         self.assertEqual(minimal_view['locales'], ('en', 'root'))
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
+        self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
         changed = VerifiedFixture()
@@ -130,6 +140,58 @@ class TableTests(unittest.TestCase):
         for section in invalid:
             with self.assertRaises(ValueError):
                 tables.decode_lists(section, strings, 2)
+
+    def test_locale_metadata_roundtrip_and_invalid_wire_rows(self):
+        metadata = locale_metadata.collect(VerifiedFixture())
+        pool = tuple(sorted(locale_tables.strings(metadata) | {'unknown', 'bad\talias', 'abcd-Latn-US'},
+                            key=lambda s: s.encode('utf-8')))
+        ids = {text: index for index, text in enumerate(pool)}
+        sections = locale_tables.encode(metadata, ids)
+        self.assertEqual(locale_tables.decode(sections, pool), metadata)
+        self.assertIsNone(locale_tables.decode({}, pool))
+        missing = dict(sections)
+        del missing[bundle.KEYS]
+        with self.assertRaises(ValueError):
+            locale_tables.decode(missing, pool)
+        changes = ((bundle.ALIASES, 0, 5), (bundle.ALIASES, 1, len(pool)),
+                   (bundle.ALIASES, 3, 0), (bundle.LIKELY, 0, 0),
+                   (bundle.LIKELY, 1, ids['abcd-Latn-US']),
+                   (bundle.KEYS, 2, 4), (bundle.KEYS, 4, ids['unknown']),
+                   (bundle.KEYS, 3, ids['bad\talias']),
+                   (bundle.TYPES, 1, ids['unknown']), (bundle.TYPES, 5, 4),
+                   (bundle.TYPES, 3, ids['bad\talias']),
+                   (bundle.TYPES, 5, 0), (bundle.TYPES, 4, ids['unknown']))
+        for identity, word, value in changes:
+            changed = dict(sections)
+            count, data = sections[identity]
+            values = list(tables.read_words(data))
+            values[word] = value
+            changed[identity] = count, tables.words(values)
+            with self.assertRaises(ValueError, msg=repr((identity, word, value))):
+                locale_tables.decode(changed, pool)
+        changed = dict(sections)
+        count, data = changed[bundle.TYPES]
+        changed[bundle.TYPES] = count, data[:-1]
+        with self.assertRaises(ValueError):
+            locale_tables.decode(changed, pool)
+        for identity, width, target in ((bundle.ALIASES, 4, None),
+                                         (bundle.KEYS, 6, 1), (bundle.TYPES, 8, 2)):
+            changed = dict(sections)
+            count, data = sections[identity]
+            values = list(tables.read_words(data))
+            if target is None:
+                values[width:width * 2] = values[:width]
+            else:
+                values[4] = values[target]  # preferred name is its own identity
+            changed[identity] = count, tables.words(values)
+            with self.assertRaises(ValueError):
+                locale_tables.decode(changed, pool)
+        changed = dict(sections)
+        count, data = sections[bundle.LIKELY]
+        rows = [row for row in struct.iter_unpack('<II', data) if pool[row[0]] != 'und']
+        changed[bundle.LIKELY] = len(rows), tables.words([word for row in rows for word in row])
+        with self.assertRaises(ValueError):
+            locale_tables.decode(changed, pool)
 
 
 if __name__ == '__main__':
