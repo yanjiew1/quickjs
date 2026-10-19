@@ -90,8 +90,9 @@ identity metadata. They require no ICU, source-data download or runtime XML
 parser. Prepared CLDR 49 beta 4 data is embedded in one compilation unit.
 
 Current JavaScript APIs are `Intl.getCanonicalLocales()` and `Intl.Locale`
-construction, getters, `toString()`, `maximize()` and `minimize()`. Locale
-preference methods and formatting services are still being implemented. Setup
+construction, getters, `toString()`, `maximize()`, `minimize()`, `getWeekInfo()`,
+`getTextInfo()` and `getHourCycles()`. Other locale preference methods and
+formatting services are still being implemented. Setup
 warns about this development status. These options do not imply complete Intl
 conformance.
 Intl can be enabled independently of `-Dtemporal=false`. The embedding entry
