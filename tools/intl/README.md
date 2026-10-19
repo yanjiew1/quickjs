@@ -180,9 +180,19 @@ each individual pair or end template exactly matches the CLDR default. A
 different pair template does not suppress a matching end replacement, or the
 reverse. Hebrew uses the ASCII hyphen shown in the pinned CLDR rules.
 
-This is an engine-independent formatter component, not yet the JavaScript
-ListFormat service. Its tests cover output partitions, unusual UTF-16, ownership,
+The engine-independent component's tests cover output partitions, unusual UTF-16, ownership,
 long lists, malformed templates, overflow and allocation failure.
+
+The JavaScript binding in `src/quickjs/builtins/intl/list-format.c` supplies
+constructor/option ordering, locale resolution, branding and result realms.
+`format()` and `formatToParts()` consume string iterables, retaining exact
+UTF-16 values. Iterator stepping failures propagate directly; non-string
+elements trigger iterator closing with the original TypeError preserved.
+Ropes flatten after iteration, and narrow strings widen into one temporary
+buffer. Part objects and their result array use own data properties.
+Repository tests cover reentrancy, GC, cross-realm calls and failures during
+flattening, widening, formatting and partial result creation. Optional
+`intl_list_*` microbenchmarks cover construction, ASCII/wide formatting and parts.
 
 `src/intl/list/list.h` is the backend-neutral list service contract. Its native
 implementation admits the compiled profile's complete template/context records,
