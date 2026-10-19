@@ -68,9 +68,10 @@ typedef struct QJSIntlNumberPatternData {
     QJSIntlNumberingData numbering;
     QJSIntlSection section;
     const uint8_t *systems, *locale_rows, *rows, *vectors;
-    const uint8_t *patterns, *affixes, *tokens;
+    const uint8_t *overrides, *patterns, *affixes, *tokens;
     uint32_t system_count, vector_count, row_count;
     uint32_t pattern_count, affix_count, token_count;
+    uint32_t override_count;
 } QJSIntlNumberPatternData;
 
 /* Require an unchanged, validated numbering view. Borrow its immutable pack;
@@ -89,6 +90,13 @@ QJSIntlStatus qjs_intl_number_pattern_data_open(const QJSIntlNumberingData *,
 QJSIntlStatus qjs_intl_number_pattern_at(const QJSIntlNumberPatternData *, uint32_t locale,
                                          uint32_t system, QJSIntlNumberPatternField,
                                          QJSIntlNumberPattern *);
+
+/* Exact raw per-currency pattern returned by the currency metadata owner.
+   Look up its precompiled representation; this is not a runtime pattern
+   parser. No allocation or locale fallback. The caller supplies the owning
+   locale's minimum-grouping preference when applying the result. */
+QJSIntlStatus qjs_intl_number_pattern_override(const QJSIntlNumberPatternData *, QJSIntlBytes raw,
+                                               QJSIntlNumberPattern *);
 
 /* Require an affix returned by this same unchanged open view. No allocation;
    non-NULL output is reset on errors. Affix/token/string storage is borrowed. */
