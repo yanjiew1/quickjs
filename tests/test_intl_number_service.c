@@ -418,8 +418,7 @@ static void test_units(const QJSIntlAllocator *allocator, const QJSIntlNumberSer
     settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
     settings.notation = QJS_INTL_NUMBER_STANDARD;
     settings.unit = bytes("meter-per-second");
-    assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter) ==
-           QJS_INTL_UNSUPPORTED && !formatter);
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("2"), "2 meters per second");
     settings.unit = bytes("Meter");
     assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter) ==
            QJS_INTL_INVALID_ARGUMENT && !formatter);
@@ -488,6 +487,120 @@ static void test_exponent_parts(const QJSIntlAllocator *allocator,
     assert(result.parts[5].end - result.parts[5].start == 1);
     qjs_intl_number_result_clear(allocator, &result);
     qjs_intl_number_formatter_close(formatter);
+}
+
+static void test_compound_units(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
+                                const QJSIntlBytes *tags, size_t count)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlNumberOptions settings = options();
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormatted result, zero = {0};
+    QJSIntlMathematicalValue input = value("2");
+    size_t en = find(tags, count, "en"), i, j, calls, live;
+    char copied[] = "liter-per-hour";
+    settings.style = QJS_INTL_NUMBER_UNIT;
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    settings.unit = bytes("liter-per-hour");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input, "2 liters per hour");
+    settings.unit = bytes("celsius-per-fluid-ounce");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input,
+          "2 degrees Celsius per fluid ounce");
+    settings.unit = bytes("meter-per-meter");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input, "2 meters per meter");
+    settings.unit = bytes("percent-per-percent");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input, "2 percent per percent");
+    settings.unit = bytes("meter-per-second");
+    settings.notation = QJS_INTL_NUMBER_SCIENTIFIC;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1E3 meter per second");
+    settings.notation = QJS_INTL_NUMBER_ENGINEERING;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("12000"), "12E3 meters per second");
+    settings.notation = QJS_INTL_NUMBER_COMPACT;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1K meters per second");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NAN, {0}}, "NaN meters per second");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_INFINITY, {0}}, "-∞ meters per second");
+    settings.unit = bytes(copied);
+    settings.notation = QJS_INTL_NUMBER_STANDARD;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    memset(copied, '?', sizeof(copied) - 1);
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    expected(&result, "2 liters per hour");
+    live = state->live;
+    calls = state->calls;
+    {
+        QJSIntlFormatted other;
+        assert(!qjs_intl_number_format(formatter, &input, &other));
+        calls = state->calls - calls;
+        qjs_intl_number_result_clear(allocator, &other);
+    }
+    for (i = 1; i <= calls; i++) {
+        QJSIntlFormatted failed;
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_format(formatter, &input, &failed) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&failed, &zero, sizeof(failed)) && state->live == live);
+    }
+    state->fail_at = 0;
+    qjs_intl_number_formatter_close(formatter);
+    expected(&result, "2 liters per hour");
+    qjs_intl_number_result_clear(allocator, &result);
+    settings.unit = bytes("liter-per-hour");
+    settings.maximum_output_length = 17;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, input, "2 liters per hour");
+    settings.maximum_output_length = 16;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_number_format(formatter, &input, &result) == QJS_INTL_OVERFLOW);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    qjs_intl_number_formatter_close(formatter);
+    settings.maximum_output_length = options().maximum_output_length;
+    if (TEST_INTL_PROFILE) {
+        settings.unit = bytes("liter-per-fluid-ounce");
+        check(allocator, service, find(tags, count, "zh"), bytes("latn"), &settings, input,
+              "每液盎司2升");
+        check(allocator, service, find(tags, count, "ko"), bytes("latn"), &settings, input,
+              "액량 온스당 2리터");
+        check(allocator, service, find(tags, count, "de"), bytes("latn"), &settings, input,
+              "2 Liter pro Flüssigunze");
+        check(allocator, service, find(tags, count, "ar"), bytes("latn"), &settings, input,
+              "2 لتر لكل أونصة سائلة");
+        settings.unit = bytes("liter-per-second");
+        check(allocator, service, find(tags, count, "ko"), bytes("latn"), &settings, input,
+              "초당 2리터");
+        settings.unit = bytes("liter-per-pound");
+        check(allocator, service, find(tags, count, "zh"), bytes("latn"), &settings, input,
+              "每磅2升");
+        /* Middle placeholders cannot provide component nouns. Retry the
+           complete unit expression from root, retaining the numeric body. */
+        settings.unit = bytes("liter-per-celsius");
+        check(allocator, service, find(tags, count, "ja"), bytes("latn"), &settings, input,
+              "2 l/°C");
+        settings.unit = bytes("celsius-per-second");
+        check(allocator, service, find(tags, count, "ja"), bytes("latn"), &settings, input,
+              "2°C/s");
+        settings.unit = bytes("liter-per-fluid-ounce");
+        check(allocator, service, find(tags, count, "ha"), bytes("latn"), &settings, input,
+              "2 l/fl oz US");
+    }
+    for (i = 0; i < qjs_intl_unit_definition_count(); i++) {
+        for (j = 0; j < qjs_intl_unit_definition_count(); j++) {
+            char identifier[96];
+            int length = snprintf(identifier, sizeof(identifier), "%s-per-%s",
+                                  qjs_intl_unit_definition_at(i)->identifier,
+                                  qjs_intl_unit_definition_at(j)->identifier);
+            assert(length > 0 && (size_t)length < sizeof(identifier));
+            settings.unit = bytes(identifier);
+            for (settings.unit_display = QJS_INTL_NUMBER_UNIT_SHORT;
+                 settings.unit_display <= QJS_INTL_NUMBER_UNIT_LONG; settings.unit_display++) {
+                assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+                assert(!qjs_intl_number_format(formatter, &input, &result));
+                assert(result.length && result.parts[result.part_count - 1].type == QJS_INTL_PART_UNIT);
+                qjs_intl_number_result_clear(allocator, &result);
+                qjs_intl_number_formatter_close(formatter);
+            }
+        }
+    }
 }
 
 static void test_failures(const QJSIntlAllocator *allocator, QJSIntlNumberService *service,
@@ -1106,7 +1219,7 @@ int main(void)
     Allocation state = {0};
     QJSIntlAllocator allocator = {&state, allocate, NULL, release};
     QJSIntlNumberService *service;
-    QJSIntlNumberFormatter *formatter, *currency_formatter, *unit_formatter;
+    QJSIntlNumberFormatter *formatter, *currency_formatter, *unit_formatter, *compound_formatter;
     QJSIntlNumberOptions settings = options();
     QJSIntlMathematicalValue input = value("1234.5");
     QJSIntlFormatted result;
@@ -1121,6 +1234,7 @@ int main(void)
     test_exponent_parts(&allocator, service, en);
     test_compact(&allocator, service, tags, count);
     test_units(&allocator, service, tags, count);
+    test_compound_units(&allocator, service, tags, count);
     test_currency_names(&allocator, service, tags, count);
     test_currency_formats(&allocator, service, tags, count);
     test_currency_name_notation(&allocator, service, tags, count);
@@ -1203,6 +1317,22 @@ int main(void)
                 qjs_intl_number_result_clear(&allocator, &result);
                 qjs_intl_number_formatter_close(formatter);
             }
+            unit_settings.unit = bytes("meter-per-fluid-ounce");
+            for (unit_settings.unit_display = QJS_INTL_NUMBER_UNIT_SHORT;
+                 unit_settings.unit_display <= QJS_INTL_NUMBER_UNIT_LONG; unit_settings.unit_display++) {
+                for (unit_settings.notation = QJS_INTL_NUMBER_STANDARD;
+                     unit_settings.notation <= QJS_INTL_NUMBER_COMPACT;
+                     unit_settings.notation += QJS_INTL_NUMBER_COMPACT) {
+                    size_t part, unit_parts = 0;
+                    assert(!qjs_intl_number_formatter_open(service, i, system, &unit_settings, &formatter));
+                    assert(!qjs_intl_number_format(formatter, &input, &result));
+                    for (part = 0; part < result.part_count; part++)
+                        unit_parts += result.parts[part].type == QJS_INTL_PART_UNIT;
+                    assert(result.length && unit_parts);
+                    qjs_intl_number_result_clear(&allocator, &result);
+                    qjs_intl_number_formatter_close(formatter);
+                }
+            }
         }
     }
     assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
@@ -1214,6 +1344,8 @@ int main(void)
     settings.unit = bytes("meter");
     settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
     assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &unit_formatter));
+    settings.unit = bytes("liter-per-fluid-ounce");
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &compound_formatter));
     qjs_intl_number_close(service);
     assert(!qjs_intl_number_format(formatter, &input, &result));
     qjs_intl_number_formatter_close(formatter);
@@ -1226,6 +1358,10 @@ int main(void)
     assert(!qjs_intl_number_format(unit_formatter, &input, &result));
     qjs_intl_number_formatter_close(unit_formatter);
     expected(&result, "1,234.5 meters");
+    qjs_intl_number_result_clear(&allocator, &result);
+    assert(!qjs_intl_number_format(compound_formatter, &input, &result));
+    qjs_intl_number_formatter_close(compound_formatter);
+    expected(&result, "1,234.5 liters per fluid ounce");
     qjs_intl_number_result_clear(&allocator, &result);
     qjs_intl_number_close(NULL);
     qjs_intl_number_formatter_close(NULL);
