@@ -1337,6 +1337,67 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_number_service_test = {
+      'name': ('test_intl_number_service_' + profile),
+      'sources': files(
+        'test_intl_number_service.c',
+        '../src/cutils/cutils.c',
+        '../src/intl/common/decimal.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/locale/numbering-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+        '../src/intl/number/affix.c',
+        '../src/intl/number/body.c',
+        '../src/intl/number/native.c',
+        '../src/intl/number/pattern-data.c',
+        '../src/intl/number/round.c',
+        '../src/intl/number/symbol-data.c',
+      ),
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_number_service_test,
+      'name': ('intl-number-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_native_number_test = {
+      'name': ('test_intl_native_number_' + profile),
+      'sources': files(
+        'test_intl_native_number.c',
+        '../src/cutils/cutils.c',
+        '../src/intl/common/decimal.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/locale/numbering-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+        '../src/intl/number/affix.c',
+        '../src/intl/number/body.c',
+        '../src/intl/number/pattern-data.c',
+        '../src/intl/number/round.c',
+        '../src/intl/number/symbol-data.c',
+      ),
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_native_number_test,
+      'name': ('intl-native-number-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_unit_test = {
       'name': ('test_intl_unit_data_' + profile),
       'sources': intl_unit_owner_sources,
@@ -1394,6 +1455,11 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_number_affix': files(
+      'test_intl_number_affix.c',
+      '../src/intl/number/affix.c',
+      '../src/intl/number/body.c',
+    ),
     'test_intl_number_round': files(
       'test_intl_number_round.c',
       '../src/intl/number/round.c',
