@@ -129,11 +129,52 @@ static void test_case_folding(void)
     }
 }
 
+static int category_contains(const CharRange *range, uint32_t code)
+{
+    int i;
+    for (i = 0; i < range->len; i += 2)
+        if (code >= range->points[i] && code < range->points[i + 1])
+            return 1;
+    return 0;
+}
+
+static void test_category_points(void)
+{
+    const char *names[] = {"L", "M"};
+    int (*predicates[])(uint32_t) = {lre_is_letter, lre_is_mark};
+    int kind, i, delta;
+    for (kind = 0; kind < 2; kind++) {
+        CharRange range;
+        cr_init(&range, NULL, test_realloc);
+        assert(!unicode_general_category(&range, names[kind]));
+        for (i = 0; i < range.len; i++) {
+            /* Every category boundary and its immediate neighbours, including
+               supplementary ranges and alternating Lu/Ll table runs. */
+            for (delta = -1; delta <= 1; delta++) {
+                int64_t code = (int64_t)range.points[i] + delta;
+                if (code >= 0 && code <= 0x10ffff)
+                    assert(predicates[kind](code) == category_contains(&range, code));
+            }
+        }
+        for (i = 0; i < 128; i++)
+            assert(predicates[kind](i) == category_contains(&range, i));
+        assert(!predicates[kind](0xd800) && !predicates[kind](0x10ffff));
+        assert(!predicates[kind](0x110000) && !predicates[kind](UINT32_MAX));
+        cr_free(&range);
+    }
+    assert(lre_is_letter(0x02b0)); /* Modifier letter. */
+    assert(lre_is_letter(0x10400)); /* Supplementary capital letter. */
+    assert(!lre_is_letter(0x2160)); /* Letter number is not General_Category L. */
+    assert(lre_is_mark(0x0345) && !lre_is_letter(0x0345));
+    assert(lre_is_mark(0x0903) && lre_is_mark(0x20dd));
+}
+
 int main(void)
 {
     test_range_capacity_limits();
     test_default_range_allocator();
     test_empty_range();
     test_case_folding();
+    test_category_points();
     return 0;
 }
