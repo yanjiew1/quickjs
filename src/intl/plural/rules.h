@@ -4,6 +4,21 @@
 #define QJS_INTL_PLURAL_RULES_H
 #include "../common/types.h"
 
+typedef enum QJSIntlPluralCategory {
+    QJS_INTL_PLURAL_ZERO,
+    QJS_INTL_PLURAL_ONE,
+    QJS_INTL_PLURAL_TWO,
+    QJS_INTL_PLURAL_FEW,
+    QJS_INTL_PLURAL_MANY,
+    QJS_INTL_PLURAL_OTHER,
+    QJS_INTL_PLURAL_CATEGORY_COUNT
+} QJSIntlPluralCategory;
+
+typedef enum QJSIntlPluralType {
+    QJS_INTL_PLURAL_CARDINAL,
+    QJS_INTL_PLURAL_ORDINAL
+} QJSIntlPluralType;
+
 typedef struct QJSIntlPluralOperands {
     /* Borrowed unsigned plain decimal, already expanded by the notation
        exponent. For source 1.2005c3, pass "1200.5" and exponent 3. Retain

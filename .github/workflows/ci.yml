@@ -69,6 +69,10 @@ jobs:
       run: |
         timeout 120s python3 tools/intl/number_symbols.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit plural rules and range records
+      run: |
+        timeout 60s python3 tools/intl/plural_rules.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Reproduce prepared native and minimal Intl sections
       run: |
         for profile in minimal native; do
