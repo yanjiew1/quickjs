@@ -81,4 +81,37 @@ typedef enum {
     DECOMP_TYPE_LS2_UL,
 } DecompTypeEnum;
 
+/* Compressed range encoding:
+   initial byte:
+   bits 0..4: category number (special case 31)
+   bits 5..7: range length (add 1)
+   special case bits 5..7 == 7: read an extra byte
+   - 00..7F: range length (add 7 + 1)
+   - 80..BF: 6-bits plus extra byte for range length (add 7 + 128)
+   - C0..FF: 6-bits plus 2 extra bytes for range length (add 7 + 128 + 16384)
+ */
+/* Decode into distinct local variables: pointer p, byte b, encoded length n
+   (range length minus one), category v. Keep the original statement sequence:
+   outlining/restructuring it changes Clang's range-builder code generation. */
+#define UNICODE_GC_READ(p, b, n, v) do {                                       \
+    (b) = *(p)++;                                                              \
+    (n) = (b) >> 5;                                                            \
+    (v) = (b) & 0x1f;                                                          \
+    if ((n) == 7) {                                                            \
+        (n) = *(p)++;                                                          \
+        if ((n) < 128) {                                                       \
+            (n) += 7;                                                          \
+        } else if ((n) < 128 + 64) {                                           \
+            (n) = ((n) - 128) << 8;                                            \
+            (n) |= *(p)++;                                                     \
+            (n) += 7 + 128;                                                    \
+        } else {                                                               \
+            (n) = ((n) - 128 - 64) << 16;                                      \
+            (n) |= *(p)++ << 8;                                                \
+            (n) |= *(p)++;                                                     \
+            (n) += 7 + 128 + (1 << 14);                                        \
+        }                                                                      \
+    }                                                                          \
+} while (0)
+
 #endif

@@ -322,6 +322,14 @@ unaligned storage, corruption, output reset and allocation failure/retry.
 
 ## Currency source records
 
+`src/intl/currency/boundary.c` classifies the currency-symbol boundary for
+`alphaNextToNumber`: a prefix must end in a letter followed by zero or more
+combining marks, while a suffix must begin with a letter. These are Unicode
+General_Category `L` and `M`, not the broader `Alphabetic` property. Formatting
+characters and spaces are significant boundaries. Allocation-free predicates
+in the Unicode library use its existing category table; no duplicate Unicode
+table is compiled into the currency service.
+
 `currencies.py` collects exact plain/plural names, standard/narrow/formal/variant
 symbols and legacy per-currency decimal/group/pattern overrides. Sparse maps
 inherit by the main locale graph and share unchanged parents. Explicit

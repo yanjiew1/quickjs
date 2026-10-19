@@ -78,6 +78,7 @@ support_sources = files(
   'regexp/compile.c',
   'regexp/exec.c',
   'unicode/libunicode.c',
+  'unicode/category.c',
   'cutils/cutils.c',
   'quickjs-libc/event-loop.c',
   'quickjs-libc/host.c',
