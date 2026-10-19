@@ -111,6 +111,23 @@ static void check_corruption(const QJSIntlCurrencyData *data, const QJSIntlAlloc
     uint8_t *copy;
     for (i = 0; i < 5; i++)
         corrupt(allocator, header + i * 4, i == 0 ? 0 : UINT32_MAX);
+    corrupt(allocator, header, 1);
+    corrupt(allocator, data->vectors - data->data.pack.bytes + QJS_INTL_CURRENCY_FIELD_COUNT * 4, 1);
+    corrupt(allocator, data->vectors - data->data.pack.bytes + QJS_INTL_CURRENCY_FIELD_COUNT * 4,
+            UINT32_C(1) << QJS_INTL_CURRENCY_SYMBOL);
+    for (i = 0; i < data->vector_count; i++) {
+        unsigned int field;
+        const uint8_t *vector = data->vectors + i * (QJS_INTL_CURRENCY_FIELD_COUNT + 1) * 4;
+        for (field = QJS_INTL_CURRENCY_NAME_EXACT_ZERO; field <= QJS_INTL_CURRENCY_NAME_OTHER; field++) {
+            if (qjs_intl_read_u32(vector + field * 4) == UINT32_MAX) {
+                corrupt(allocator, vector - data->data.pack.bytes + QJS_INTL_CURRENCY_FIELD_COUNT * 4,
+                        qjs_intl_read_u32(vector + QJS_INTL_CURRENCY_FIELD_COUNT * 4) | (UINT32_C(1) << field));
+                break;
+            }
+        }
+        if (field <= QJS_INTL_CURRENCY_NAME_OTHER)
+            break;
+    }
     corrupt(allocator, header + 5 * 4, 101);
     corrupt(allocator, header + 7 * 4, 101);
     corrupt(allocator, data->codes - data->data.pack.bytes, data->data.strings.count);
@@ -128,17 +145,20 @@ static void check_corruption(const QJSIntlCurrencyData *data, const QJSIntlAlloc
            (size_t)data->code_count * 4);
     invalid_blob(allocator, copy);
     memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
-    memcpy(copy + (data->vectors - data->data.pack.bytes) + QJS_INTL_CURRENCY_FIELD_COUNT * 4,
-           data->vectors, QJS_INTL_CURRENCY_FIELD_COUNT * 4);
+    memcpy(copy + (data->vectors - data->data.pack.bytes) + (QJS_INTL_CURRENCY_FIELD_COUNT + 1) * 4,
+           data->vectors, (QJS_INTL_CURRENCY_FIELD_COUNT + 1) * 4);
     invalid_blob(allocator, copy);
     memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
     memset(copy + (data->vectors - data->data.pack.bytes) +
-               (size_t)(data->vector_count - 1) * QJS_INTL_CURRENCY_FIELD_COUNT * 4,
-           0xff, QJS_INTL_CURRENCY_FIELD_COUNT * 4);
+               (size_t)(data->vector_count - 1) * (QJS_INTL_CURRENCY_FIELD_COUNT + 1) * 4,
+           0xff, (QJS_INTL_CURRENCY_FIELD_COUNT + 1) * 4);
     invalid_blob(allocator, copy);
     free(copy);
-    for (i = 0; i < (size_t)data->vector_count * QJS_INTL_CURRENCY_FIELD_COUNT; i++) {
-        uint32_t ref = qjs_intl_read_u32(data->vectors + i * 4);
+    for (i = 0; i < (size_t)data->vector_count * (QJS_INTL_CURRENCY_FIELD_COUNT + 1); i++) {
+        uint32_t ref;
+        if (i % (QJS_INTL_CURRENCY_FIELD_COUNT + 1) == QJS_INTL_CURRENCY_FIELD_COUNT)
+            continue;
+        ref = qjs_intl_read_u32(data->vectors + i * 4);
         if (ref < data->data.strings.count && ref)
             last = i;
     }
@@ -184,6 +204,12 @@ int main(void)
     check_fractions(&owner, "ZZZ", 2, 2, 0);
     en = locale_id(&data, "en");
     if (TEST_INTL_AUTHORED) {
+        assert(!qjs_intl_currency_code_find(&owner, text("USD"), &index));
+        assert(!qjs_intl_currency_field_at(&owner, locale_id(&data, "root"), index,
+                                            QJS_INTL_CURRENCY_NAME_OTHER, &field));
+        assert(field.from_root);
+        assert(!qjs_intl_currency_field_at(&owner, en, index, QJS_INTL_CURRENCY_NAME_OTHER, &field));
+        assert(!field.from_root && field.state == QJS_INTL_CURRENCY_BLOCKED);
         check_field(&owner, "en", "USD", QJS_INTL_CURRENCY_NAME_ONE, QJS_INTL_CURRENCY_VALUE,
                     "dollar");
         check_field(&owner, "en", "USD", QJS_INTL_CURRENCY_NAME_OTHER, QJS_INTL_CURRENCY_BLOCKED,
