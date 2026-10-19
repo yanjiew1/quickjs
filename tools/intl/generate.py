@@ -10,6 +10,8 @@ import list_patterns
 import locale_metadata
 import locale_tables
 import parents
+import preferences
+import preference_tables
 import tables
 
 
@@ -35,11 +37,12 @@ def generate(sources, profile):
     inputs_read.read('LICENSE')
     graph = parents.load(inputs_read)
     locale_data = locale_metadata.collect(inputs_read, graph)
+    preference_data = preferences.collect(inputs_read)
     lists = list_patterns.collect(inputs_read, graph)
     tags = graph.tags if profile == 'native' else tuple(sorted(graph.chain('en')))
     selected_tags = set(tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
-    strings = tuple(sorted(locale_tables.strings(locale_data) | set(('',) + tags + tuple(
+    strings = tuple(sorted(locale_tables.strings(locale_data) | preference_tables.strings(preference_data) | set(('',) + tags + tuple(
         text for locale, variant, values in selected for text in values)),
         key=lambda text: text.encode('utf-8')))
     string_ids = {text: index for index, text in enumerate(strings)}
@@ -47,6 +50,7 @@ def generate(sources, profile):
                 bundle.LOCALES: tables.encode_locales(tags, graph, string_ids),
                 bundle.LISTS: tables.encode_lists(selected, tags, string_ids)}
     sections.update(locale_tables.encode(locale_data, string_ids))
+    sections.update(preference_tables.encode(preference_data, string_ids))
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
               'sources': {name: sources.manifest['files'][name] for name in sorted(inputs_read.consumed)},
@@ -60,7 +64,7 @@ def generate(sources, profile):
                 'sha256': acquire.digest(binary), 'bytes': len(binary),
                 'locales': len(tags), 'strings': len(strings),
                 'complete_services': [],
-                'note': 'Prepared locale metadata and list templates; not formatter capability or full Intl coverage.'}
+                'note': 'Prepared locale metadata, preferences and list templates; not formatter capability or full Intl coverage.'}
     return binary, manifest
 
 
