@@ -69,3 +69,33 @@ QJSIntlStatus qjs_intl_unit_identifier_parse(QJSIntlBytes input, QJSIntlUnitIden
     }
     return QJS_INTL_INVALID_ARGUMENT;
 }
+
+const char *qjs_intl_unit_identifier_cldr(const QJSIntlUnitIdentifier *unit)
+{
+    /* CLDR release-49-beta4, TR35 Unit Identifiers / Precomposed Compound Units.
+       The legacy grouping prefix is not necessarily the numerator's category:
+       liter is volume-liter, but liter-per-kilometer has a consumption prefix. */
+    static const struct {
+        const char *first, *second, *identifier;
+    } compounds[] = {
+        {"kilometer", "hour", "speed-kilometer-per-hour"},
+        {"liter", "kilometer", "consumption-liter-per-kilometer"},
+        {"meter", "second", "speed-meter-per-second"},
+        {"mile", "gallon", "consumption-mile-per-gallon"},
+        {"mile", "hour", "speed-mile-per-hour"},
+    };
+    const QJSIntlUnitDefinition *first, *second;
+    size_t i;
+    if (!unit || !(first = qjs_intl_unit_definition_at(unit->numerator)))
+        return NULL;
+    if (unit->denominator == QJS_INTL_NO_UNIT)
+        return first->cldr_identifier;
+    if (!(second = qjs_intl_unit_definition_at(unit->denominator)))
+        return NULL;
+    for (i = 0; i < sizeof(compounds) / sizeof(compounds[0]); i++) {
+        if (!strcmp(first->identifier, compounds[i].first) &&
+            !strcmp(second->identifier, compounds[i].second))
+            return compounds[i].identifier;
+    }
+    return NULL;
+}
