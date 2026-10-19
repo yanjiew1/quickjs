@@ -3,6 +3,7 @@
 #include "../src/intl/number/number.h"
 #include "../src/intl/number/currency-format.h"
 #include "../src/intl/number/currency-pattern.h"
+#include "../src/intl/unit/identifier.h"
 #include "../src/cutils/cutils.h"
 #include <assert.h>
 #include <stdio.h>
@@ -290,6 +291,160 @@ static void test_compact(const QJSIntlAllocator *allocator, const QJSIntlNumberS
         check(allocator, service, find(tags, count, "zh"), (QJSIntlBytes){0}, &settings,
               value("12345"), "1.23万");
     }
+}
+
+static void unit_part(const QJSIntlFormatted *result, const char *name)
+{
+    size_t i, count = 0;
+    for (i = 0; i < result->part_count; i++) {
+        const QJSIntlPart *part = &result->parts[i];
+        if (part->type == QJS_INTL_PART_UNIT) {
+            QJSIntlPart span = {0, part->end - part->start, QJS_INTL_PART_UNIT};
+            QJSIntlFormatted view = {result->text + part->start, span.end, &span, 1};
+            expected(&view, name);
+            count++;
+        }
+    }
+    assert(count == 1);
+}
+
+static void test_units(const QJSIntlAllocator *allocator, const QJSIntlNumberService *service,
+                       const QJSIntlBytes *tags, size_t count)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlNumberOptions settings = options();
+    QJSIntlNumberFormatter *formatter;
+    QJSIntlFormatted result, zero = {0};
+    QJSIntlMathematicalValue input = value("-1200");
+    size_t en = find(tags, count, "en"), i, calls, live;
+    char name[] = "meter";
+    settings.style = QJS_INTL_NUMBER_UNIT;
+    settings.unit = bytes("meter");
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1"), "1 meter");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("2"), "2 meters");
+    check(allocator, service, en, bytes("arab"), &settings, value("2"), "٢ meters");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-0.001"), "-0 meters");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NAN, {0}}, "NaN meters");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings,
+          (QJSIntlMathematicalValue){QJS_INTL_NEGATIVE_INFINITY, {0}}, "-∞ meters");
+    settings.digits.minimum_fraction_digits = 2;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1"), "1.00 meters");
+    settings.digits.minimum_fraction_digits = 0;
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_SHORT;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1"), "1 m");
+    settings.unit = bytes("percent");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("5"), "5%");
+    settings.unit = bytes("meter");
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_NARROW;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1"), "1m");
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    settings.notation = QJS_INTL_NUMBER_SCIENTIFIC;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1E3 meter");
+    settings.notation = QJS_INTL_NUMBER_ENGINEERING;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("12000"), "12E3 meters");
+    settings.notation = QJS_INTL_NUMBER_COMPACT;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1000"), "1K meters");
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("-1200"), "-1.2K meters");
+    settings.compact_long = 1;
+    check(allocator, service, en, (QJSIntlBytes){0}, &settings, value("1200000"), "1.2 million meters");
+    settings.compact_long = 0;
+    if (TEST_INTL_PROFILE) {
+        size_t cs = find(tags, count, "cs");
+        settings.notation = QJS_INTL_NUMBER_STANDARD;
+        check(allocator, service, cs, (QJSIntlBytes){0}, &settings, value("1"), "1 metr");
+        settings.digits.minimum_fraction_digits = 2;
+        check(allocator, service, cs, (QJSIntlBytes){0}, &settings, value("1"), "1,00 metru");
+        settings.notation = QJS_INTL_NUMBER_COMPACT;
+        settings.digits.minimum_fraction_digits = settings.digits.maximum_fraction_digits = 5;
+        assert(!qjs_intl_number_formatter_open(service, cs, (QJSIntlBytes){0}, &settings, &formatter));
+        input = value("1200");
+        assert(!qjs_intl_number_format(formatter, &input, &result));
+        unit_part(&result, "metru"); /* 1.20000c3 -> 1200.00, retaining v=2. */
+        qjs_intl_number_result_clear(allocator, &result);
+        qjs_intl_number_formatter_close(formatter);
+        settings.digits.minimum_fraction_digits = 0;
+        settings.digits.maximum_fraction_digits = 2;
+        assert(!qjs_intl_number_formatter_open(service, cs, (QJSIntlBytes){0}, &settings, &formatter));
+        assert(!qjs_intl_number_format(formatter, &input, &result));
+        unit_part(&result, "metrů");
+        qjs_intl_number_result_clear(allocator, &result);
+        qjs_intl_number_formatter_close(formatter);
+        settings.notation = QJS_INTL_NUMBER_STANDARD;
+        settings.unit = bytes("degree");
+        check(allocator, service, find(tags, count, "he"), bytes("latn"), &settings,
+              value("1"), "1 מעלות");
+        settings.unit = bytes("second");
+        check(allocator, service, find(tags, count, "ar"), bytes("latn"), &settings,
+              value("1"), "1 ثانية");
+    }
+    settings.notation = QJS_INTL_NUMBER_COMPACT;
+    settings.unit = bytes(name);
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    memset(name, '?', sizeof(name) - 1);
+    input = value("-1200");
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    expected(&result, "-1.2K meters");
+    qjs_intl_number_result_clear(allocator, &result);
+    live = state->live;
+    calls = state->calls;
+    assert(!qjs_intl_number_format(formatter, &input, &result));
+    calls = state->calls - calls;
+    qjs_intl_number_result_clear(allocator, &result);
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_format(formatter, &input, &result) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&result, &zero, sizeof(result)) && state->live == live);
+    }
+    state->fail_at = 0;
+    qjs_intl_number_formatter_close(formatter);
+    settings.unit = bytes("meter");
+    for (i = 0; i < qjs_intl_unit_definition_count(); i++) {
+        const QJSIntlUnitDefinition *definition = qjs_intl_unit_definition_at(i);
+        settings.unit = bytes(definition->identifier);
+        for (settings.unit_display = QJS_INTL_NUMBER_UNIT_SHORT;
+             settings.unit_display <= QJS_INTL_NUMBER_UNIT_LONG; settings.unit_display++) {
+            for (settings.notation = QJS_INTL_NUMBER_STANDARD;
+                 settings.notation <= QJS_INTL_NUMBER_COMPACT; settings.notation++) {
+                assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+                assert(!qjs_intl_number_format(formatter, &input, &result));
+                assert(result.length && result.parts[result.part_count - 1].type == QJS_INTL_PART_UNIT);
+                qjs_intl_number_result_clear(allocator, &result);
+                qjs_intl_number_formatter_close(formatter);
+            }
+        }
+    }
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    settings.notation = QJS_INTL_NUMBER_STANDARD;
+    settings.unit = bytes("meter-per-second");
+    assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter) ==
+           QJS_INTL_UNSUPPORTED && !formatter);
+    settings.unit = bytes("Meter");
+    assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter) ==
+           QJS_INTL_INVALID_ARGUMENT && !formatter);
+    settings.unit = bytes("meter");
+    settings.unit_display = -1;
+    assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter) ==
+           QJS_INTL_INVALID_ARGUMENT && !formatter);
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    settings.maximum_output_length = 4;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    assert(qjs_intl_number_format(formatter, &input, &result) == QJS_INTL_OVERFLOW);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    qjs_intl_number_formatter_close(formatter);
+    settings.maximum_output_length = 1000;
+    live = state->live;
+    calls = state->calls;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
+    calls = state->calls - calls;
+    qjs_intl_number_formatter_close(formatter);
+    for (i = 1; i <= calls; i++) {
+        state->fail_at = state->calls + i;
+        assert(qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter) ==
+               QJS_INTL_NO_MEMORY && !formatter && state->live == live);
+    }
+    state->fail_at = 0;
 }
 
 static void test_exponent_parts(const QJSIntlAllocator *allocator,
@@ -951,7 +1106,7 @@ int main(void)
     Allocation state = {0};
     QJSIntlAllocator allocator = {&state, allocate, NULL, release};
     QJSIntlNumberService *service;
-    QJSIntlNumberFormatter *formatter, *currency_formatter;
+    QJSIntlNumberFormatter *formatter, *currency_formatter, *unit_formatter;
     QJSIntlNumberOptions settings = options();
     QJSIntlMathematicalValue input = value("1234.5");
     QJSIntlFormatted result;
@@ -965,6 +1120,7 @@ int main(void)
     test_formats(&allocator, service, tags, count);
     test_exponent_parts(&allocator, service, en);
     test_compact(&allocator, service, tags, count);
+    test_units(&allocator, service, tags, count);
     test_currency_names(&allocator, service, tags, count);
     test_currency_formats(&allocator, service, tags, count);
     test_currency_name_notation(&allocator, service, tags, count);
@@ -1033,12 +1189,31 @@ int main(void)
             currency_settings.sign_display = QJS_INTL_NUMBER_SIGN_AUTO;
             currency_settings.notation = QJS_INTL_NUMBER_STANDARD;
         }
+        {
+            QJSIntlNumberOptions unit_settings = settings;
+            unit_settings.style = QJS_INTL_NUMBER_UNIT;
+            unit_settings.unit = bytes("meter");
+            unit_settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+            for (unit_settings.notation = QJS_INTL_NUMBER_STANDARD;
+                 unit_settings.notation <= QJS_INTL_NUMBER_COMPACT;
+                 unit_settings.notation += QJS_INTL_NUMBER_COMPACT) {
+                assert(!qjs_intl_number_formatter_open(service, i, system, &unit_settings, &formatter));
+                assert(!qjs_intl_number_format(formatter, &input, &result));
+                assert(result.length && result.part_count);
+                qjs_intl_number_result_clear(&allocator, &result);
+                qjs_intl_number_formatter_close(formatter);
+            }
+        }
     }
     assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &formatter));
     settings.style = QJS_INTL_NUMBER_CURRENCY;
     settings.currency_display = QJS_INTL_NUMBER_CURRENCY_NAME;
     settings.currency = bytes("USD");
     assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &currency_formatter));
+    settings.style = QJS_INTL_NUMBER_UNIT;
+    settings.unit = bytes("meter");
+    settings.unit_display = QJS_INTL_NUMBER_UNIT_LONG;
+    assert(!qjs_intl_number_formatter_open(service, en, (QJSIntlBytes){0}, &settings, &unit_formatter));
     qjs_intl_number_close(service);
     assert(!qjs_intl_number_format(formatter, &input, &result));
     qjs_intl_number_formatter_close(formatter);
@@ -1047,6 +1222,10 @@ int main(void)
     assert(!qjs_intl_number_format(currency_formatter, &input, &result));
     qjs_intl_number_formatter_close(currency_formatter);
     expected(&result, "1,234.5 US dollars");
+    qjs_intl_number_result_clear(&allocator, &result);
+    assert(!qjs_intl_number_format(unit_formatter, &input, &result));
+    qjs_intl_number_formatter_close(unit_formatter);
+    expected(&result, "1,234.5 meters");
     qjs_intl_number_result_clear(&allocator, &result);
     qjs_intl_number_close(NULL);
     qjs_intl_number_formatter_close(NULL);
