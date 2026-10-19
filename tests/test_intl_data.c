@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/native/data.h"
+#include "../src/intl/locale/native-data.h"
 #include "../src/intl/native/wire.h"
 #include <assert.h>
 #include <stdio.h>
@@ -51,6 +52,49 @@ static void corrupt_word(const QJSIntlAllocator *allocator, size_t offset, uint3
     free(copy);
 }
 
+static void corrupt_metadata(const QJSIntlAllocator *allocator, size_t offset, uint32_t value)
+{
+    QJSIntlData data;
+    QJSIntlLocaleMetadata metadata;
+    uint8_t *copy = malloc(qjs_intl_native_length);
+    assert(copy && offset <= qjs_intl_native_length - 4);
+    memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
+    put_u32(copy + offset, value);
+    assert(qjs_intl_data_open(copy, qjs_intl_native_length, allocator, &data) == QJS_INTL_OK);
+    assert(qjs_intl_locale_metadata_open(&data, allocator, &metadata) == QJS_INTL_DATA_ERROR);
+    assert(!metadata.data.pack.bytes && !metadata.aliases.bytes);
+    free(copy);
+}
+
+static void test_metadata(const QJSIntlData *data, const QJSIntlAllocator *allocator)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlLocaleMetadata metadata;
+    size_t aliases, likely, keys, types;
+
+    state->fail = 1;
+    assert(qjs_intl_locale_metadata_open(data, allocator, &metadata) == QJS_INTL_NO_MEMORY);
+    assert(!metadata.data.pack.bytes && !state->live);
+    state->fail = 0;
+    assert(qjs_intl_locale_metadata_open(data, allocator, &metadata) == QJS_INTL_OK);
+    assert(metadata.aliases.count >= 1200 && metadata.likely.count >= 7000);
+    assert(metadata.keys.count >= 30 && metadata.types.count >= 1000 && !state->live);
+    aliases = metadata.aliases.bytes - data->pack.bytes;
+    likely = metadata.likely.bytes - data->pack.bytes;
+    keys = metadata.keys.bytes - data->pack.bytes;
+    types = metadata.types.bytes - data->pack.bytes;
+    corrupt_metadata(allocator, aliases, 5);
+    corrupt_metadata(allocator, aliases + 4, data->strings.count);
+    corrupt_metadata(allocator, aliases + 12, 0);
+    corrupt_metadata(allocator, likely, 0);
+    corrupt_metadata(allocator, keys + 8, 4);
+    corrupt_metadata(allocator, types + 20, 4);
+    corrupt_metadata(allocator, types + 16, qjs_intl_read_u32(metadata.types.bytes + 8));
+    assert(qjs_intl_locale_metadata_open(NULL, allocator, &metadata) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_locale_metadata_open(data, NULL, &metadata) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_locale_metadata_open(data, allocator, NULL) == QJS_INTL_INVALID_ARGUMENT);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -64,6 +108,7 @@ int main(void)
     assert(qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
                               &allocator, &data) == QJS_INTL_OK);
     assert(!state.live);
+    test_metadata(&data, &allocator);
     assert(data.pack.profile == TEST_INTL_PROFILE);
     assert(TEST_INTL_PROFILE ? data.locales.count > 1000 : data.locales.count == 2);
     for (index = 0; index < data.strings.count; index++)
@@ -108,8 +153,14 @@ int main(void)
     assert(qjs_intl_data_open(copy, qjs_intl_native_length, &allocator, &data) == QJS_INTL_DATA_ERROR);
     assert(!data.pack.bytes && !state.live);
     memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
-    /* The fixture's third directory entry is the optional list section. */
-    put_u32(copy + 96, 11);
+    for (index = 0; index < qjs_intl_read_u32(copy + 12); index++) {
+        size_t entry = 64 + (size_t)index * 16;
+        if (qjs_intl_read_u32(copy + entry) == QJS_INTL_SECTION_LISTS) {
+            put_u32(copy + entry, QJS_INTL_SECTION_LISTS + 1);
+            break;
+        }
+    }
+    assert(index < qjs_intl_read_u32(copy + 12));
     assert(qjs_intl_data_open(copy, qjs_intl_native_length, &allocator, &data) == QJS_INTL_OK);
     assert(qjs_intl_data_list_template(&data, english, 0, 0, &text) == QJS_INTL_UNSUPPORTED);
     assert(!text.data);
