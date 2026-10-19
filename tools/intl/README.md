@@ -553,10 +553,17 @@ caches decoded body symbols and typed pattern tokens in each formatter.
 Explicit numbering-system selection is exact; negotiation belongs to bindings.
 A formatter may outlive its service, and results may outlive both.
 
-Standard-notation currency-name formatting uses the decimal pattern's complete
-signed number as the numeric argument of the selected locale-level unit template.
+Standard/scientific/engineering currency-name formatting uses the decimal
+pattern's complete signed number as the numeric argument of the selected
+locale-level unit template.
 It selects currency names and placement templates independently after rounding,
 including exact zero/one and root-cutoff rules. NaN and infinities use `other`.
+Scientific/engineering names use the final visible rounded mantissa, with c=e=0:
+ECMA-402 passes this scaled value into currency-name selection, while CLDR
+notation operands c/e are compact-only. Thus a zero-fraction-digit English
+`1E3 US dollar` follows this native policy, unlike ICU's `1E3 US dollars`.
+Visible fraction zeros and trailingZeroDisplay still affect plural selection.
+No expansion of a large scientific exponent is needed for name selection.
 Monetary decimal/group symbols apply, with per-currency overrides taking
 precedence; currency symbol/accounting patterns do not replace decimal affixes.
 The `CurrencyDigits` service query exposes regular digits for frontend defaults,
@@ -612,7 +619,7 @@ hyphens inside the pinned yrl long names. Sign display remains an outer-style
 operation, not a selection of the compact pattern's negative form.
 
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Compact currency and nonstandard currency names, unit styles, ranges and the JS binding remain required
+Compact currency, unit styles, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
