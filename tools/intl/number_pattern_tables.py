@@ -6,17 +6,28 @@ from number_patterns import FIELDS
 import number_pattern_syntax as syntax
 from resolve import BLOCK
 
-VERSION = 1
+VERSION = 2
 ABSENT, BLOCKED, EMPTY = 0xffffffff, 0xfffffffe, 0xfffffffd
-HEADER = 7
+HEADER = 8
 WIDTH = len(FIELDS)
 NUMERIC_WIDTH = 9
 PATTERN_WIDTH = NUMERIC_WIDTH + 3
 
 
+def compile_patterns(data):
+    overrides = data.get('overrides', ())
+    if (any(not isinstance(value, str) or value in ('', BLOCK) for value in overrides) or
+            tuple(overrides) != tuple(sorted(set(overrides)))):
+        raise ValueError('invalid/repeated currency pattern override')
+    compiled = syntax.compile_inventory(data)
+    compiled.update((value, syntax.compile_pattern(value)) for value in overrides)
+    return compiled
+
+
 def strings(data):
-    return {text for pattern in syntax.compile_inventory(data).values()
-            for affix in pattern[1:] for kind, text in affix}
+    return set(data.get('overrides', ())) | {
+        text for pattern in compile_patterns(data).values()
+        for affix in pattern[1:] for kind, text in affix}
 
 
 def encode(data, tags, numbering, ids):
@@ -37,7 +48,7 @@ def encode(data, tags, numbering, ids):
         if not bundle.uint32(value):
             raise ValueError('zero minimum grouping digits')
 
-    compiled = syntax.compile_inventory(data)
+    compiled = compile_patterns(data)
     affixes = tuple(sorted({tuple((kind, ids[text]) for kind, text in affix)
                             for pattern in compiled.values() for affix in pattern[1:]}))
     affix_ids = {affix: index for index, affix in enumerate(affixes)}
@@ -65,12 +76,14 @@ def encode(data, tags, numbering, ids):
     row_ids = {row: index for index, row in enumerate(rows)}
     token_count = sum(len(affix) for affix in affixes)
     words = [VERSION, len(systems), len(unique), len(rows), len(unique_patterns),
-             len(affixes), token_count]
+             len(affixes), token_count, len(data.get('overrides', ()))]
     words.extend(index for index, name in systems)
     words.extend(value for locale, row in zip(tags, locale_rows)
                  for value in (grouping[locale], row_ids[row]))
     words.extend(value for row in rows for value in row)
     words.extend(value for vector in unique for value in vector)
+    words.extend(value for raw in data.get('overrides', ())
+                 for value in (ids[raw], pattern_ids[patterns[raw]]))
     words.extend(value for pattern in unique_patterns for value in pattern)
     offset = 0
     for affix in affixes:
@@ -97,14 +110,14 @@ def decode(section, pool, tags, numbering):
     if count != len(tags) or not count or len(raw) < HEADER * 4 or len(raw) % 4:
         raise ValueError('invalid Intl pattern locale count/extent')
     words = tuple(value[0] for value in struct.iter_unpack('<I', raw))
-    version, system_count, vector_count, row_count, pattern_count, affix_count, token_count = words[:HEADER]
+    version, system_count, vector_count, row_count, pattern_count, affix_count, token_count, override_count = words[:HEADER]
     systems = tuple(index for index, (name, kind, value) in enumerate(numbering['systems'])
                     if kind == 'numeric')
     size = (HEADER + system_count + 2 * count + row_count * system_count + vector_count * WIDTH +
-            pattern_count * PATTERN_WIDTH + 2 * affix_count + 2 * token_count)
+            2 * override_count + pattern_count * PATTERN_WIDTH + 2 * affix_count + 2 * token_count)
     if (version != VERSION or not systems or system_count != len(systems) or
             not 1 <= row_count <= count or not 1 <= vector_count <= row_count * system_count or
-            not 1 <= pattern_count <= vector_count * WIDTH or
+            not 1 <= pattern_count <= vector_count * WIDTH + override_count or
             not 1 <= affix_count <= pattern_count * 3 or not affix_count <= token_count or
             len(words) != size or not pool or pool[0] != ''):
         raise ValueError('invalid Intl pattern dimensions/version')
@@ -136,6 +149,17 @@ def decode(section, pool, tags, numbering):
                 referenced.add(value)
             elif index < 5 or value not in (ABSENT, BLOCKED, EMPTY):
                 raise ValueError('invalid Intl pattern reference/marker')
+    overrides = []
+    previous = -1
+    for i in range(override_count):
+        raw, pattern = words[start:start + 2]
+        start += 2
+        if (not 0 < raw < len(pool) or raw <= previous or not pool[raw] or
+                pool[raw] == BLOCK or pattern >= pattern_count):
+            raise ValueError('invalid currency override reference/order')
+        overrides.append((pool[raw], pattern))
+        referenced.add(pattern)
+        previous = raw
     if referenced != set(range(pattern_count)):
         raise ValueError('unused Intl number pattern')
     patterns = vectors(PATTERN_WIDTH, pattern_count)
@@ -172,6 +196,7 @@ def decode(section, pool, tags, numbering):
                                   for value in row) for row in records)
     names = tuple(numbering['systems'][index][0] for index in systems)
     return {'systems': names, 'fields': FIELDS,
+            'overrides': tuple((raw, decoded_patterns[index]) for raw, index in overrides),
             'grouping': tuple(zip(tags, grouping)),
             'rows': tuple((locale, name, decoded_records[rows[locale_rows[i]][j]])
                           for i, locale in enumerate(tags) for j, name in enumerate(names))}
