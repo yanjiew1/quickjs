@@ -194,6 +194,7 @@ intl_locale_fixture = custom_target(
   command: [python, files('intl_locale_fixture.py'), '--output', '@OUTPUT@'],
   depend_files: files(
     '../tools/intl/acquire.py',
+    '../tools/intl/availability.py',
     '../tools/intl/bundle.py',
     '../tools/intl/cldr_xml.py',
     '../tools/intl/list_patterns.py',
@@ -219,6 +220,7 @@ foreach profile : ['minimal', 'native']
     ],
     depend_files: files(
       '../tools/intl/acquire.py',
+      '../tools/intl/availability.py',
       '../tools/intl/bundle.py',
       '../tools/intl/cldr_xml.py',
       '../tools/intl/list_patterns.py',
@@ -1055,6 +1057,14 @@ test(
   'intl-typed-tables',
   python,
   args: files('test_intl_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-available-locales',
+  python,
+  args: files('test_intl_availability.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )
