@@ -271,6 +271,7 @@ endif
 native_test_names = [
   'test_duration_record',
   'test_intl_api',
+  'test_intl_defaults',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -585,6 +586,7 @@ if intl_enabled
       'sources': files(
         'test_intl_native_locale_id.c',
         '../src/intl/locale/identifier.c',
+        '../src/intl/locale/matching.c',
         '../src/intl/locale/native.c',
         '../src/intl/locale/native-id.c',
         '../src/intl/locale/native-data.c',
@@ -667,6 +669,10 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_locale_system': files(
+      'test_intl_locale_system.c',
+      '../src/intl/locale/system.c',
+    ),
     'test_intl_list_engine': files(
       'test_intl_list_engine.c',
       '../src/intl/list/native-engine.c',
