@@ -8,6 +8,7 @@
 #include "../../intl/locale/matching.h"
 #include "../../intl/list/list.h"
 #include "../../intl/plural/plural.h"
+#include "../../intl/number/number.h"
 
 typedef struct JSIntlLocaleList {
     char **items;
@@ -21,6 +22,10 @@ int js_intl_ensure_intrinsics(JSContext *ctx);
 int js_intl_init_locale(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_list_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_plural_rules(JSContext *ctx, JSValueConst namespace_object);
+int js_intl_init_number_format(JSContext *ctx, JSValueConst namespace_object);
+/* Intrinsic Number/BigInt locale formatting. value is a validated primitive;
+   argc/argv supply locales/options. Never consult mutable global properties. */
+JSValue js_intl_format_number(JSContext *ctx, JSValueConst value, int argc, JSValueConst *argv);
 JSValue js_intl_create_from_constructor(JSContext *ctx, JSValueConst new_target,
                                         JSClassID class_id);
 JSValue js_intl_options_object(JSContext *ctx, JSValueConst value, BOOL coerce);
