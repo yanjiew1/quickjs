@@ -40,3 +40,26 @@ and binary encoding are separate layers described in
 Tests in `tests/test_intl_sources.py` use small authored archives and perform no
 network access. CI also acquires the real pinned archive. These checks establish
 source reproducibility; they do not establish formatter or locale coverage.
+
+## XML and attribute schema audit
+
+```sh
+python3 tools/intl/cldr_xml.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The shared XML layer accepts UTF-8, preserves element text and child order,
+does not fetch external DTDs, and rejects internal entity declarations. Its
+restricted DTD reader supplies declared attribute defaults and distinguishes
+identity, value and metadata attributes. Consumed nodes reject unknown,
+missing required, changed fixed and invalid enumerated attributes.
+
+This is not general DTD validation: each typed collector checks its consumed
+child structure, identifier/number grammar, draft/alternate policy, aliases
+and inheritance. CDATA whitespace is preserved; token attributes collapse
+U+0020 after XML parsing and preserve character-reference whitespace.
+Collation rules and other ordered children must retain
+their semantic order instead of being sorted by an unordered record key.
+
+The audit checks the three pinned attribute schemas and well-formedness of
+main, BCP47 and supplemental XML. It reports counts separately from service
+coverage. `tests/test_intl_xml.py` exercises authored schema/XML fixtures.

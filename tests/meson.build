@@ -880,6 +880,14 @@ test(
 )
 
 test(
+  'intl-xml-schema',
+  python,
+  args: files('test_intl_xml.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-source-acquisition',
   python,
   args: files('test_intl_sources.py'),
