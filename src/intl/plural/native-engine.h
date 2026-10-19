@@ -10,6 +10,12 @@
 QJSIntlStatus qjs_intl_native_plural_select(const QJSIntlPluralRuleSet *rules,
                                             const QJSIntlPluralOperands *number,
                                             QJSIntlPluralCategory *out);
+/* Same selection with a virtual right shift of the visible mantissa. c/e
+   remain number->exponent; see rule_evaluate_shifted's operand contract. */
+QJSIntlStatus qjs_intl_native_plural_select_shifted(const QJSIntlPluralRuleSet *rules,
+                                                    const QJSIntlPluralOperands *number,
+                                                    uint32_t decimal_shift,
+                                                    QJSIntlPluralCategory *out);
 /* Select an explicit range result, or the end category when the pair is
    absent, as specified by pinned CLDR 49. The service handles equal formatted
    strings before calling this operation. */
