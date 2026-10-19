@@ -592,6 +592,26 @@ test(
   timeout: 30,
 )
 
+intl_relative_format_test = executable(
+  'test_intl_relative_format',
+  [
+    'test_intl_relative_format.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/relative/format.c',
+    '../src/intl/common/format-builder.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-relative-format',
+  intl_relative_format_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_relative_owner_sources = files(
   'test_intl_relative_data.c',
   '../src/intl/common/locale-grammar.c',
@@ -747,6 +767,45 @@ test(
   suite: ['repo', 'native'],
   timeout: 30,
 )
+
+intl_number_service_sources = [
+  '../src/cutils/cutils.c',
+  '../src/intl/common/decimal.c',
+  '../src/intl/common/locale-grammar.c',
+  '../src/intl/currency/boundary.c',
+  '../src/intl/currency/data.c',
+  '../src/intl/currency/display.c',
+  '../src/intl/locale/numbering-data.c',
+  '../src/intl/common/source-locale.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+  '../src/intl/number/affix.c',
+  '../src/intl/number/body.c',
+  '../src/intl/number/compact-data.c',
+  '../src/intl/number/compact-format.c',
+  '../src/intl/common/format-builder.c',
+  '../src/intl/number/compact-family.c',
+  '../src/intl/number/currency-format.c',
+  '../src/intl/number/currency-pattern.c',
+  '../src/intl/number/layout-data.c',
+  '../src/intl/number/native.c',
+  '../src/intl/number/range.c',
+  '../src/intl/number/unit.c',
+  '../src/intl/unit/data.c',
+  '../src/intl/unit/grammar-data.c',
+  '../src/intl/unit/identifier.c',
+  '../src/intl/unit/pattern.c',
+  '../src/intl/unit/format.c',
+  '../src/intl/number/pattern-data.c',
+  '../src/intl/number/round.c',
+  '../src/intl/number/sign-affix.c',
+  '../src/intl/number/symbol-data.c',
+  '../src/intl/plural/data.c',
+  '../src/intl/plural/native-engine.c',
+  '../src/intl/plural/rules.c',
+  '../src/unicode/category.c',
+  unicode_tables,
+]
 
 foreach profile : ['minimal', 'native']
   intl_fixture = custom_target(
@@ -1035,45 +1094,7 @@ foreach profile : ['minimal', 'native']
   )
   intl_number_service_test = executable(
     'test_intl_number_service_' + profile,
-    [
-      'test_intl_number_service.c',
-      '../src/cutils/cutils.c',
-      '../src/intl/common/decimal.c',
-      '../src/intl/common/locale-grammar.c',
-      '../src/intl/currency/boundary.c',
-      '../src/intl/currency/data.c',
-      '../src/intl/currency/display.c',
-      '../src/intl/locale/numbering-data.c',
-      '../src/intl/common/source-locale.c',
-      '../src/intl/native/data.c',
-      '../src/intl/native/pack.c',
-      '../src/intl/number/affix.c',
-      '../src/intl/number/body.c',
-      '../src/intl/number/compact-data.c',
-      '../src/intl/number/compact-format.c',
-      '../src/intl/common/format-builder.c',
-      '../src/intl/number/compact-family.c',
-      '../src/intl/number/currency-format.c',
-      '../src/intl/number/currency-pattern.c',
-      '../src/intl/number/layout-data.c',
-      '../src/intl/number/native.c',
-      '../src/intl/number/range.c',
-      '../src/intl/number/unit.c',
-      '../src/intl/unit/data.c',
-      '../src/intl/unit/grammar-data.c',
-      '../src/intl/unit/identifier.c',
-      '../src/intl/unit/pattern.c',
-      '../src/intl/unit/format.c',
-      '../src/intl/number/pattern-data.c',
-      '../src/intl/number/round.c',
-      '../src/intl/number/sign-affix.c',
-      '../src/intl/number/symbol-data.c',
-      '../src/intl/plural/data.c',
-      '../src/intl/plural/native-engine.c',
-      '../src/intl/plural/rules.c',
-      '../src/unicode/category.c',
-      unicode_tables,
-    ],
+    ['test_intl_number_service.c'] + intl_number_service_sources,
     c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
     include_directories: inc,
     dependencies: host_deps,
@@ -1083,6 +1104,29 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-number-service-' + profile,
     intl_number_service_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_relative_service_test = executable(
+    'test_intl_relative_service_' + profile,
+    intl_number_service_sources + [
+      'test_intl_relative_service.c',
+      '../src/dtoa/dtoa.c',
+      '../src/intl/common/number-decimal.c',
+      '../src/intl/plural/native.c',
+      '../src/intl/relative/data.c',
+      '../src/intl/relative/format.c',
+      '../src/intl/relative/native.c',
+    ],
+    c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-relative-service-' + profile,
+    intl_relative_service_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
