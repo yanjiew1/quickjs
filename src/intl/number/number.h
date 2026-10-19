@@ -72,8 +72,8 @@ typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
 /* This internal service implements decimal/percent/currency and sanctioned units
    with standard, scientific, engineering and compact notation, including ranges.
-   The complete Intl.NumberFormat binding remains separate work.
-   Bindings must not register NumberFormat on the strength of this subset.
+   Observable constructor/options/coercion, JS result conversion and bound
+   function ownership belong to the engine binding.
 
    Copy the allocator; malloc/free required, realloc unused. Its callbacks and
    opaque state outlive corresponding formatters and result clearing. Opening
