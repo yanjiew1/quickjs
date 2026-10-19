@@ -439,6 +439,12 @@ or be assigned to the wrong group family. Rows/maps and non-default cases must
 all be referenced. Projection removes unused maps/cases while preserving the
 global source group inventory; that inventory is not API availability.
 
+`src/intl/unit/data.c` validates section 21 against the unchanged shared data
+view, including selector identities, map families, complete ownership and
+canonical ordering. Indexed and exact queries borrow immutable storage and
+allocate nothing. They preserve missing, blocked and explicitly empty forms;
+grammatical/plural/width fallback and formatter capability belong to consumers.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
