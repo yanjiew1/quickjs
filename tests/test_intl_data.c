@@ -205,7 +205,7 @@ int main(void)
     test_contexts(&data, &allocator);
     test_context_dependency(&data, &allocator);
     assert(data.pack.profile == TEST_INTL_PROFILE);
-    assert(TEST_INTL_PROFILE ? data.locales.count > 1000 : data.locales.count == 2);
+    assert(TEST_INTL_PROFILE ? data.locales.count > 1000 : data.locales.count == 3);
     for (index = 0; index < data.strings.count; index++)
         assert(qjs_intl_data_string(&data, index, &text) == QJS_INTL_OK);
     assert(qjs_intl_data_string(&data, data.strings.count, &text) == QJS_INTL_INVALID_ARGUMENT);
