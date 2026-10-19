@@ -15,15 +15,7 @@ typedef struct Builder {
 
 void qjs_intl_number_body_clear(const QJSIntlAllocator *allocator, QJSIntlFormatted *out)
 {
-    if (!out)
-        return;
-    if (allocator && allocator->free) {
-        if (out->text)
-            allocator->free(allocator->opaque, out->text);
-        if (out->parts)
-            allocator->free(allocator->opaque, out->parts);
-    }
-    memset(out, 0, sizeof(*out));
+    qjs_intl_formatted_clear(allocator, out);
 }
 
 static int slice_valid(QJSIntlUTF16 text)
