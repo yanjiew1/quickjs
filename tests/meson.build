@@ -2043,6 +2043,14 @@ test(
 )
 
 test(
+  'intl-duration-patterns',
+  python,
+  args: files('test_intl_duration_patterns.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-relative-patterns',
   python,
   args: files('test_intl_relative_patterns.py'),
