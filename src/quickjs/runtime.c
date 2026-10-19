@@ -571,6 +571,7 @@ void JS_FreeRuntime(JSRuntime *rt)
     qjs_intl_locale_close(rt->intl_locale);
     qjs_intl_list_close(rt->intl_list);
     qjs_intl_plural_close(rt->intl_plural);
+    qjs_intl_number_close(rt->intl_number);
     js_free_rt(rt, rt->intl_default_locale);
 #endif
 
@@ -741,6 +742,8 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
 #ifdef CONFIG_INTL
     ctx->intl_intrinsics = JS_UNDEFINED;
     ctx->intl_locale_ctor = JS_UNDEFINED;
+    ctx->intl_number_ctor = JS_UNDEFINED;
+    ctx->intl_fallback_symbol = JS_UNDEFINED;
 #endif
     ctx->promise_ctor = JS_NULL;
     init_list_head(&ctx->loaded_modules);
@@ -839,6 +842,8 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
 #ifdef CONFIG_INTL
     JS_MarkValue(rt, ctx->intl_intrinsics, mark_func);
     JS_MarkValue(rt, ctx->intl_locale_ctor, mark_func);
+    JS_MarkValue(rt, ctx->intl_number_ctor, mark_func);
+    JS_MarkValue(rt, ctx->intl_fallback_symbol, mark_func);
 #endif
     JS_MarkValue(rt, ctx->function_ctor, mark_func);
     JS_MarkValue(rt, ctx->function_proto, mark_func);
@@ -922,6 +927,8 @@ void JS_FreeContext(JSContext *ctx)
 #ifdef CONFIG_INTL
     JS_FreeValue(ctx, ctx->intl_intrinsics);
     JS_FreeValue(ctx, ctx->intl_locale_ctor);
+    JS_FreeValue(ctx, ctx->intl_number_ctor);
+    JS_FreeValue(ctx, ctx->intl_fallback_symbol);
 #endif
     JS_FreeValue(ctx, ctx->function_ctor);
     JS_FreeValue(ctx, ctx->function_proto);
