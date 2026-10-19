@@ -96,6 +96,7 @@ static void clear_intrinsics(JSContext *ctx)
     ctx->intl_published = FALSE;
     JS_SetClassProto(ctx, JS_CLASS_INTL_LOCALE, JS_NULL);
     JS_SetClassProto(ctx, JS_CLASS_INTL_LIST_FORMAT, JS_NULL);
+    JS_SetClassProto(ctx, JS_CLASS_INTL_PLURAL_RULES, JS_NULL);
 }
 
 int js_intl_ensure_intrinsics(JSContext *ctx)
@@ -115,7 +116,8 @@ int js_intl_ensure_intrinsics(JSContext *ctx)
         goto fail;
     if (JS_DefinePropertyValue(ctx, object, JS_ATOM_Symbol_toStringTag, tag,
                                JS_PROP_CONFIGURABLE | JS_PROP_THROW) < 0 ||
-        js_intl_init_locale(ctx, object) || js_intl_init_list_format(ctx, object)) {
+        js_intl_init_locale(ctx, object) || js_intl_init_list_format(ctx, object) ||
+        js_intl_init_plural_rules(ctx, object)) {
         goto fail;
     }
     ctx->intl_intrinsics = object;

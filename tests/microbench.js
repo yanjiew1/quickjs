@@ -1145,6 +1145,54 @@ function intl_list_parts(n)
     return n * 100;
 }
 
+function intl_plural_construct(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.PluralRules("en");
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_plural_select(n)
+{
+    var formatter = new Intl.PluralRules("en");
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.select(i + 0.125);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_plural_decimal(n)
+{
+    var formatter = new Intl.PluralRules("en");
+    var input = "123456789012345678901234567890.125";
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.select(input);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_plural_range(n)
+{
+    var formatter = new Intl.PluralRules("en");
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.selectRange(i + 0.125, i + 0.875);
+        global_res = result;
+    }
+    return n * 100;
+}
+
 // Contrast common short normalization with a disordered nonstarter run.
 // Cache source strings per case; fresh JavaScript processes reset the cache.
 function string_normalize_short(n)
@@ -1825,6 +1873,12 @@ function main(argc, argv, g)
         test_list.push(intl_list_ascii);
         test_list.push(intl_list_utf16);
         test_list.push(intl_list_parts);
+    }
+    if (typeof Intl === "object" && typeof Intl.PluralRules === "function") {
+        test_list.push(intl_plural_construct);
+        test_list.push(intl_plural_select);
+        test_list.push(intl_plural_decimal);
+        test_list.push(intl_plural_range);
     }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")

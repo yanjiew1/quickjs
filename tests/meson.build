@@ -273,6 +273,7 @@ native_test_names = [
   'test_intl_api',
   'test_intl_defaults',
   'test_intl_list_oom',
+  'test_intl_plural_oom',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -948,6 +949,34 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_plural_service_test = {
+      'name': ('test_intl_plural_service_' + profile),
+      'sources': files(
+        'test_intl_plural_service.c',
+        '../src/intl/common/decimal.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/locale/numbering-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+        '../src/intl/number/compact-data.c',
+        '../src/intl/plural/data.c',
+        '../src/intl/plural/native.c',
+        '../src/intl/plural/native-engine.c',
+        '../src/intl/plural/rules.c',
+      ) + [intl_fixture],
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_plural_service_test,
+      'name': ('intl-plural-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_plural_data_test = {
       'name': ('test_intl_plural_data_' + profile),
       'sources': intl_plural_owner_sources + [intl_fixture],
@@ -1457,6 +1486,7 @@ if intl_enabled
     'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
     'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
     'intl-list-format': ['-m', 'tests/test_intl_list_format.js'],
+    'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
   }
 endif
 if shared_modules
