@@ -59,6 +59,11 @@ static QJSIntlNumberService *number_service(JSContext *ctx)
     return rt->intl_number;
 }
 
+QJSIntlNumberService *js_intl_number_service(JSContext *ctx)
+{
+    return number_service(ctx);
+}
+
 static void number_finalizer(JSRuntime *rt, JSValue value)
 {
     JSIntlNumberFormat *state = JS_GetOpaque(value, JS_CLASS_INTL_NUMBER_FORMAT);
