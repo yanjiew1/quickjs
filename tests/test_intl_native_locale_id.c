@@ -3,6 +3,7 @@
  * they are not inferred from the optional ICU backend. */
 #include "../src/intl/locale/native-id.h"
 #include "../src/intl/locale/locale.h"
+#include "../src/intl/locale/preferences.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -88,6 +89,58 @@ static void test_long_variant_list(QJSIntlAllocator *allocator,
     free(expected);
 }
 
+static QJSIntlStatus preference_operation(QJSIntlLocaleService *service, int operation)
+{
+    QJSIntlStatus status;
+    if (operation == 0) {
+        QJSIntlWeekInfo week;
+        status = qjs_intl_locale_week_info(service, bytes("fa-u-rg-afzzzz-sd-inka"),
+                                           (QJSIntlBytes){NULL, 0}, &week);
+        if (!status)
+            assert(week.first_day == 6 && week.weekend == 24);
+        else
+            assert(!week.first_day && !week.weekend);
+    } else if (operation == 1) {
+        QJSIntlBytes list;
+        uint32_t count;
+        status = qjs_intl_locale_hour_cycles(service, bytes("en-u-rg-jpzzzz-sd-inka"),
+                                             &list, &count);
+        if (!status) {
+            assert(count == 3 && list.length == 11);
+            assert(!memcmp(list.data, "h23 h11 h12", 11));
+        } else {
+            assert(!list.data && !count);
+        }
+    } else {
+        unsigned int direction;
+        status = qjs_intl_locale_text_direction(service, bytes("ar"), &direction);
+        if (!status)
+            assert(direction == QJS_INTL_DIRECTION_RTL);
+        else
+            assert(direction == QJS_INTL_DIRECTION_UNKNOWN);
+    }
+    return status;
+}
+
+static void test_preferences(QJSIntlLocaleService *service, AllocationState *state)
+{
+    int operation;
+    for (operation = 0; operation < 3; operation++) {
+        size_t i, calls;
+        state->calls = 0;
+        assert(!preference_operation(service, operation));
+        calls = state->calls;
+        assert(calls && state->live == 1);
+        for (i = 1; i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            assert(preference_operation(service, operation) == QJS_INTL_NO_MEMORY);
+            assert(state->live == 1);
+        }
+        state->fail_at = 0;
+    }
+}
+
 static void test_service(void)
 {
     AllocationState state = {0};
@@ -99,6 +152,7 @@ static void test_service(void)
     assert(qjs_intl_locale_open(&allocator, &service) == QJS_INTL_OK);
     calls = state.calls;
     assert(state.live == 1);
+    test_preferences(service, &state);
     assert(qjs_intl_locale_canonicalize(service, bytes("SH"), &output) ==
            QJS_INTL_OK);
     assert(!strcmp(output, "sr-Latn"));
