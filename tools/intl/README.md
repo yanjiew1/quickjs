@@ -359,6 +359,12 @@ plural fallback, currency availability, display style or formatter behavior.
 
 ## Number range and currency layouts
 
+`resolve.SparseMaps` handles typed whole-group aliases over sparse field maps.
+It keeps the requesting locale separate from the current parent/source state,
+resolves iteratively and shares immutable inherited maps. Collectors own their
+group/field inventories and XPath interpretation; the resolver does not inspect
+XML. Compact patterns use it, and unit data can reuse the same alias semantics.
+
 `number_layout.py` resolves miscellaneous range/approximation/at-least/at-most
 templates, currency-name unit templates, currency-spacing match sets/insertion
 text and legacy ISO append patterns. They are distinct from numeric skeletons
