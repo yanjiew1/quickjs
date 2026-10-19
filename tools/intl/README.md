@@ -184,6 +184,16 @@ This is an engine-independent formatter component, not yet the JavaScript
 ListFormat service. Its tests cover output partitions, unusual UTF-16, ownership,
 long lists, malformed templates, overflow and allocation failure.
 
+`src/intl/list/list.h` is the backend-neutral list service contract. Its native
+implementation admits the compiled profile's complete template/context records,
+excludes `root` from the available-locale inventory, and maps inventory entries
+back to their checked data rows. A formatter copies its resolved patterns, so it
+can outlive the service. Results likewise outlive either handle and are cleared
+with the original allocator. Hebrew contexts query the existing Unicode Script
+owner; they do not duplicate tables or approximate scripts by block boundaries.
+Tests cover all available locales and nine variants, canonical inventory IDs,
+post-root indexing, contextual output and service/formatter allocation failures.
+
 ## Binary envelope
 
 `bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.
