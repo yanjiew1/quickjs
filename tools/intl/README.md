@@ -564,6 +564,15 @@ notation operands c/e are compact-only. Thus a zero-fraction-digit English
 `1E3 US dollar` follows this native policy, unlike ICU's `1E3 US dollars`.
 Visible fraction zeros and trailingZeroDisplay still affect plural selection.
 No expansion of a large scientific exponent is needed for name selection.
+Compact names instead use the decimal-short/long notation body and choose the
+outer name/template from the expanded rounded compact quantity, with c/e set
+to its final compact exponent. This is this backend's CLDR locale-data policy
+for ECMA-402's implementation-dependent currency text. The shifted plural
+operation avoids constructing an expanded string and retains fraction zeros
+left after shifting: `1.20000c3` supplies `1200.00`, while `1.20c3` supplies
+`1200`. Exact zero/one selectors test that expanded numeric value. The inner
+compact affix still uses the visible mantissa with c/e=0; scientific and
+engineering names retain their separate mantissa policy described above.
 Monetary decimal/group symbols apply, with per-currency overrides taking
 precedence; currency symbol/accounting patterns do not replace decimal affixes.
 The `CurrencyDigits` service query exposes regular digits for frontend defaults,
@@ -655,7 +664,7 @@ ordinary currency formatting. Caller-filtered legacy gaps test the actual
 numeric-body edge, and literal-only forms omit unused numeric allocation.
 
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Compact currency names, unit styles, ranges and the JS binding remain required
+Unit styles, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
@@ -691,6 +700,20 @@ collector, not the evaluator. Pattern whitespace and adjacent grammar tokens
 are accepted; malformed arms are rejected even when their truth value cannot
 change the result. Repository witnesses include values beyond 64-bit integers,
 fractional modulo, exponent boundaries, malformed input and output reset.
+
+The separate `qjs_intl_plural_rule_evaluate_shifted` entry point accepts a
+visible mantissa and a nonnegative decimal shift, independently of its `c/e`
+metadata. For `1.20050c3`, a shift of three gives the operands of `1200.50`,
+including `v=2`, `w=1`, `f=50` and `t=5`. Two borrowed integer spans and a
+virtual zero tail avoid exponent-sized storage. Modulo uses exponentiation
+by squaring for that tail, while comparisons inspect significant length and
+at most ten digits. An all-zero coefficient stays zero even at `UINT32_MAX`.
+The native category selector exposes the same shifted operation. Both paths
+share one rule grammar; compile-time specialization keeps virtual-digit
+classification out of ordinary relation handlers. Repository tests compare
+bounded explicit expansions and cover huge shifts, fractional remainders,
+visible zeros and independent signed `c/e` metadata. Compact currency-name
+formatting uses this operation for its outer name and placement template.
 
 `src/intl/plural/plural.h` is the engine-independent plural service contract;
 `native.c` implements it with the selected compiled pack. Available locales
