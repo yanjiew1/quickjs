@@ -490,6 +490,10 @@ endforeach
 standalone = {
 }
 standalone += {
+  'test_intl_locale_grammar': files(
+    'test_intl_locale_grammar.c',
+    '../src/intl/common/locale-grammar.c',
+  ),
   'test_intl_number_decimal': files(
     'test_intl_number_decimal.c',
     '../src/intl/common/decimal.c',
