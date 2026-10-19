@@ -345,6 +345,37 @@ are accepted; malformed arms are rejected even when their truth value cannot
 change the result. Repository witnesses include values beyond 64-bit integers,
 fractional modulo, exponent boundaries, malformed input and output reset.
 
+`src/intl/plural/plural.h` is the engine-independent plural service contract;
+`native.c` implements it with the selected compiled pack. Available locales
+exclude root, and formatter handles can outlive their service. ResolvePlural
+rounds the original signed mathematical value once, retaining its unsigned
+plain text for plural operands and range equality. It does not invoke
+NumberFormat's scale/round pipeline. Nonfinite values select `other`; a NaN
+range is an error. Equal rounded strings return the individual category before
+looking up CLDR range rules.
+
+Native notation policy attaches exponent metadata without changing that rounded
+text: zero for standard/zero/ordinary fallback, rounded decimal magnitude for
+scientific, its mathematical floor to a multiple of three for engineering,
+and the selected locale's standard `other` compact divisor for compact. Literal
+display-affix selection is distinct from public PluralRules category selection.
+Tests cover unscaled Polish rounding, French compact exponents, negative
+engineering exponents, signed rounding, range equality, every locale's compact
+formatter, bounded-output errors and allocation failures throughout opening,
+individual selection and range selection. This C facade alone does not publish
+a JavaScript constructor.
+
+The binding in `src/quickjs/builtins/intl/plural-rules.c` publishes PluralRules
+with constructor/subclass realms, exact mathematical coercion, category arrays,
+digit options and select/selectRange. Formatter ownership belongs to the JS
+instance; the native service is initialized lazily and belongs to its runtime.
+Repository JS tests cover observable behavior and C allocation-failure tests
+cover partial construction, resolved objects and selection retries. CI runs the
+whole PluralRules Test262 directory for native. English-only minimal excludes
+two unconditional multilingual-data expectations; its API behavior remains
+covered in the repository suite. Optional microbenchmarks measure construction,
+Number selection, exact decimal selection and ranges.
+
 `plural_rules.py` reads cardinal, ordinal and range supplemental data through
 the checked DTD and source reader. Conditions exclude sample annotations and
 normalize Pattern_White_Space; runtime tokens and integer bounds are checked
