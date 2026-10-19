@@ -222,13 +222,21 @@ authored tests cover aliases, inheritance, alternate selection, quoted text,
 scientific affixes, suffix signs and malformed records.
 
 Section 17 stores compiled patterns as little-endian words. Its directory count
-is the shared locale count. Seven header words contain schema version 1 and
+is the shared locale count. Eight header words contain schema version 2 and
 the numeric-system, vector, row, pattern, affix and token counts. Sorted numeric
 definition indexes follow, then one (minimum grouping digits, row index) pair
 per locale. Shared locale rows contain one vector index per numeric system;
 each vector contains nine pattern references in collector field order. Optional
 references use `0xffffffff` for absent, `0xfffffffe` for blocked and `0xfffffffd`
 for explicitly empty. The five required patterns accept none of these markers.
+
+The eighth header word counts legacy per-currency overrides. After the vectors,
+sorted pairs map raw pooled pattern strings to compiled pattern indexes. These
+overrides come from the profile's currency metadata, use the same data compiler,
+and share typed numeric metadata/affixes with ordinary locale patterns. They do
+not require a runtime LDML parser. The raw currency record remains available;
+the consuming formatter decides precedence and supplies the locale's grouping
+preference. This lookup does not choose a currency display or rounding policy.
 
 Each pattern has nine numeric words: primary/secondary grouping, minimum
 integer digits, integer placeholder count, minimum/maximum fraction digits,
@@ -313,6 +321,14 @@ forms, distinct alternate divisors, empty currency maps, sparse selectors,
 unaligned storage, corruption, output reset and allocation failure/retry.
 
 ## Currency source records
+
+`src/intl/currency/boundary.c` classifies the currency-symbol boundary for
+`alphaNextToNumber`: a prefix must end in a letter followed by zero or more
+combining marks, while a suffix must begin with a letter. These are Unicode
+General_Category `L` and `M`, not the broader `Alphabetic` property. Formatting
+characters and spaces are significant boundaries. Allocation-free predicates
+in the Unicode library use its existing category table; no duplicate Unicode
+table is compiled into the currency service.
 
 `currencies.py` collects exact plain/plural names, standard/narrow/formal/variant
 symbols and legacy per-currency decimal/group/pattern overrides. Sparse maps
