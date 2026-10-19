@@ -393,6 +393,15 @@ fields. Open releases its validation scratch on success and failure. Parsing
 templates, evaluating UnicodeSet predicates and selecting formatter fallback
 are separate consumer responsibilities.
 
+## Sanctioned measurement-unit identifiers
+
+`src/intl/unit/identifiers.def` is the common inventory of the forty-five
+ECMA-402 sanctioned single units and their CLDR data identifiers. The private
+C identifier helper performs exact case-sensitive lookup and accepts either
+one sanctioned unit or precisely two joined by `-per-`. It does not accept
+arbitrary CLDR units, aliases, multiplication or localized names. The helper
+allocates nothing; source collection and formatting remain separate work.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
