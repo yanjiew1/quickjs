@@ -123,6 +123,7 @@ if intl_enabled
     'intl/currency/display.c',
     'intl/datetime/field-data.c',
     'intl/display/data.c',
+    'intl/display/select.c',
     'intl/duration/data.c',
     'intl/duration/decimal.c',
     'intl/duration/format.c',

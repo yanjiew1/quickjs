@@ -646,6 +646,38 @@ test(
   timeout: 30,
 )
 
+intl_display_selection_fixture = custom_target(
+  'intl-display-selection-fixture',
+  output: 'intl-display-selection-fixture.c',
+  command: [python, files('intl_display_fixture.py'), '--selection', '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_display_names.py',
+    'test_intl_list_patterns.py',
+  ),
+)
+intl_display_selection_test = executable(
+  'test_intl_display_selection',
+  files(
+    'test_intl_display_selection.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/display/data.c',
+    '../src/intl/display/select.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_display_selection_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-display-selection',
+  intl_display_selection_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_display_owner_sources = files(
   'test_intl_display_data.c',
   '../src/intl/common/locale-grammar.c',

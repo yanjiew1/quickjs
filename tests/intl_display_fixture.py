@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 import sys
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
 from acquire import atomic_write
@@ -17,7 +18,7 @@ from test_intl_display_names import Sources
 from test_intl_list_patterns import graph
 
 
-def pack(empty=False):
+def pack(empty=False, selection=False):
     sources = Sources()
     if not empty:
         sources.set('root', '''<languages><language type="en">English</language>
@@ -39,6 +40,34 @@ def pack(empty=False):
             </territories>''')
         sources.set('de', '''<languages><alias source="en" path="../languages"/></languages>
             <territories><alias source="en_1901_1996" path="../territories"/></territories>''')
+    if selection:
+        root = ET.fromstring(sources.files['common/main/root.xml'])
+        names = root.find('./localeDisplayNames/languages')
+        for code, alt, text in (('en', 'short', 'Root EN'), ('en', 'long', 'Wrong long alternative'),
+                                ('de', '', 'German'),
+                                ('de', 'short', 'Germ.'), ('it', '', 'Italian'),
+                                ('it', 'short', 'IT'), ('es', 'short', 'ES'), ('xy', '', 'xy')):
+            fields = {'type': code}
+            if alt:
+                fields['alt'] = alt
+            ET.SubElement(names, 'language', fields).text = text
+        scripts = root.find('./localeDisplayNames/scripts')
+        ET.SubElement(scripts, 'script', type='Latn', alt='stand-alone').text = 'Standalone Latin'
+        ET.SubElement(scripts, 'script', type='Latn', alt='short').text = 'Lat.'
+        ET.SubElement(root.find('./localeDisplayNames/localeDisplayPattern'),
+                      'localePattern', alt='long').text = 'Wrong pattern alternative'
+        sources.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
+        root = ET.fromstring(sources.files['common/main/en.xml'])
+        names = root.find('./localeDisplayNames/languages')
+        ET.SubElement(names, 'language', type='it', alt='short').text = BLOCK
+        ET.SubElement(names, 'language', type='es').text = ''
+        scripts = ET.SubElement(root.find('./localeDisplayNames'), 'scripts')
+        ET.SubElement(scripts, 'script', type='Latn', alt='stand-alone').text = 'Child standalone Latin'
+        sources.files['common/main/en.xml'] = ET.tostring(root, encoding='utf-8')
+        root = ET.fromstring(sources.files['common/main/en_GB.xml'])
+        scripts = ET.SubElement(root.find('./localeDisplayNames'), 'scripts')
+        ET.SubElement(scripts, 'script', type='Latn').text = 'British Latin'
+        sources.files['common/main/en_GB.xml'] = ET.tostring(root, encoding='utf-8')
     inheritance = ParentGraph(graph().tags + ('en-1901-1996',), {}, {},
                               {'und': 'en-Latn-US'}, (), False)
     tags = ('de', 'en', 'en-GB', 'root')
@@ -58,6 +87,8 @@ def pack(empty=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--empty', action='store_true')
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--empty', action='store_true')
+    modes.add_argument('--selection', action='store_true')
     args = parser.parse_args()
-    atomic_write(args.output, embed.render(pack(args.empty)).encode('ascii'))
+    atomic_write(args.output, embed.render(pack(args.empty, args.selection)).encode('ascii'))

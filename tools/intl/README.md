@@ -1531,6 +1531,21 @@ chain and query the exact English language name. Generator tests verify English
 facts, profile projection and deterministic authored output; manifests identify
 the names section and authenticated inputs alongside the other shared tables.
 
+`src/intl/display/select.c` applies native label policy separately from raw data
+validation. For language, region, calendar and embedded script names, short and
+narrow try `alt=short` then the ordinary label within each layer. Long uses the
+ordinary label. Standalone scripts instead try stand-alone then ordinary for
+long, and short, stand-alone, ordinary for short/narrow; that three-way priority
+is an explicit native policy. Variants, patterns and bracket replacements use
+their ordinary fields. Menu/scope variants and `alt=long` are not selected.
+
+Only after trying a layer's alternatives does lookup follow its parent. An
+explicit block masks that exact alternative in later layers, leaving the other
+alternatives available. Empty and code-identical labels remain present. Selection
+returns borrowed text and source locale without allocating or applying API code
+fallback. Authored tests distinguish child ordinary/standalone names from parent
+short names and cover independent blocks, empty values and equal child provenance.
+
 ## Shared date-field labels
 
 `date_field_names.py` owns the twelve ECMA-402 date-field labels across long,
