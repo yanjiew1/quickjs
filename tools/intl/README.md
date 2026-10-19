@@ -1342,3 +1342,49 @@ Authored C fixtures cover missing, blocked, empty and unequal-separator patterns
 external alias origins, malformed wire fields, every opening allocation failure
 and retry. Both prepared profiles are opened and queried independently, including
 unaligned input. The composed generator fixture also includes digital patterns.
+
+`src/intl/duration/format.[ch]` implements the pure `ListFormatParts` composition
+step. It replaces each ListFormat element with the next component's typed parts,
+preserving every number-origin unit, including literal parts. List and digital
+separators have no unit. Complete partitions and exact element text are checked
+before allocating the owned text and parts; identical text and empty elements
+remain distinct by position. Borrowed UTF-16 may contain NUL or lone surrogates.
+The unit enum comes from the shared native duration record definitions, without
+linking Temporal constructors or backend implementations.
+
+`duration/native-digital.[ch]` projects the native backend's inherited `hms`
+pattern into two separate inter-field literals and its raw hour width. It
+validates scalar UTF-8, ordered `h`/`m`/`s` runs and apostrophe quoting, and owns
+the dequoted separators independently of source storage. Outer literal text
+is retained in the raw data but cannot be represented by DigitalFormat's two
+separator fields. `hm`/`ms` padding does not override this `hms` projection.
+Malformed data is an error, rather than an implicit colon fallback.
+
+Do not replace colon characters with numeric `timeSeparator`: the
+[TR35 number-symbol text](https://unicode.org/reports/tr35/tr35-numbers.html#timeseparator)
+withdraws that pattern-character interpretation. The initial native projection
+retains the same source separators across numbering systems; the Number
+service localizes the digits. Authored syntax/OOM fixtures and every prepared
+locale's `hms` pattern exercise this projection.
+
+The raw hour width is deliberately separate from an effective
+`TwoDigitHours` option policy. Both ECMA-402 revision
+`730ca2b88c305862db7be2f83c510dcca33ab48c` and PR 1044 revision
+`d026068ed653130a37d79a95c0122ecf5319f1a4` describe that flag as numeric-hour
+padding, yet their `GetDurationUnitOptions` step unconditionally overrides the
+hour style. [Proposal issue 161](https://github.com/tc39/proposal-intl-duration-format/issues/161)
+discusses digital preferences and unresolved outer prefixes; the
+[PR 188 review](https://redirect.github.com/tc39/proposal-intl-duration-format/pull/188#discussion_r1570697492)
+explicitly objects to the style override. Its merge
+`835300f1ee7a0a739ee2205dea2bae2657e67983` did not add a guard. The projection
+preserves source facts without silently resolving that observable option-policy
+contradiction. References reviewed 2026-10-19.
+
+`duration/decimal.[ch]` converts a validated duration component into an exact
+mathematical decimal for NumberFormat. It combines fractional second fields
+using checked portable 128-bit integers before inserting the decimal point;
+it never adds or divides them as binary64 values. This preserves nanoseconds
+next to large seconds and integral field magnitudes beyond `int64_t`.
+The helper allocates nothing and leaves rounding, visible fractional precision
+and displayed-negative-zero policy to its consumer. Its shared native duration
+arithmetic does not require Temporal JavaScript constructors.
