@@ -157,6 +157,38 @@ static void check_patterns(const QJSIntlNumberPatternData *data, uint32_t en, ui
         check_token(data, &pattern.forms[0], 0, QJS_INTL_NUMBER_TOKEN_LITERAL, "[");
         check_token(data, &pattern.forms[0], 2, QJS_INTL_NUMBER_TOKEN_LITERAL, "]");
     }
+    if (TEST_INTL_AUTHORED) {
+        assert(data->override_count == 3);
+        assert(!qjs_intl_number_pattern_at(data, root, latin, QJS_INTL_PATTERN_DECIMAL, &other));
+        assert(!qjs_intl_number_pattern_override(data, (QJSIntlBytes){"#,##0.###", 9}, &pattern));
+        assert(pattern.forms[0].tokens == other.forms[0].tokens);
+        assert(!qjs_intl_number_pattern_override(
+            data, (QJSIntlBytes){"0.00 ¤¤", sizeof("0.00 ¤¤") - 1}, &pattern));
+        assert(pattern.minimum_fraction_digits == 2 && pattern.maximum_fraction_digits == 2);
+        assert(!pattern.minimum_grouping_digits && !pattern.primary_grouping);
+        check_token(data, &pattern.forms[0], 2, QJS_INTL_NUMBER_TOKEN_CURRENCY_ISO, NULL);
+        assert(!qjs_intl_number_pattern_override(
+            data,
+            (QJSIntlBytes){"¤'legacy'0.0;¤'legacy'0.0-", sizeof("¤'legacy'0.0;¤'legacy'0.0-") - 1},
+            &pattern));
+        check_token(data, &pattern.forms[0], 1, QJS_INTL_NUMBER_TOKEN_LITERAL, "legacy");
+        check_token(data, &pattern.forms[1], 3, QJS_INTL_NUMBER_TOKEN_MINUS, NULL);
+    }
+    if (TEST_INTL_PROFILE) {
+        assert(data->override_count);
+        assert(!qjs_intl_number_pattern_override(
+            data, (QJSIntlBytes){"#,##0.00 ¤", sizeof("#,##0.00 ¤") - 1}, &pattern));
+        assert(pattern.primary_grouping == 3);
+    }
+    assert(qjs_intl_number_pattern_override(data, (QJSIntlBytes){"not a source pattern", 20},
+                                            &pattern) == QJS_INTL_UNSUPPORTED);
+    assert(!pattern.forms[0].tokens && !pattern.minimum_grouping_digits);
+    assert(qjs_intl_number_pattern_override(data, (QJSIntlBytes){0}, &pattern) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_pattern_override(NULL, (QJSIntlBytes){"0", 1}, &pattern) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_number_pattern_override(data, (QJSIntlBytes){"0", 1}, NULL) ==
+           QJS_INTL_INVALID_ARGUMENT);
     /* Every field is available as either a typed pattern or a distinct marker,
        and every number pattern has one numeric placeholder per sign form. */
     for (i = 0; i < QJS_INTL_NUMBER_PATTERN_FIELD_COUNT; i++) {
@@ -247,8 +279,16 @@ int main(void)
     patterns = owner.patterns - data.pack.bytes;
     affixes = owner.affixes - data.pack.bytes;
     tokens = owner.tokens - data.pack.bytes;
-    for (i = 0; i < 7; i++)
+    for (i = 0; i < 8; i++)
         corrupt(&allocator, header + i * 4, UINT32_MAX);
+    if (owner.override_count) {
+        size_t overrides = owner.overrides - data.pack.bytes;
+        corrupt(&allocator, overrides, 0);
+        corrupt(&allocator, overrides, data.strings.count);
+        corrupt(&allocator, overrides + 4, owner.pattern_count);
+        if (owner.override_count > 1)
+            corrupt(&allocator, overrides + 8, qjs_intl_read_u32(owner.overrides));
+    }
     corrupt(&allocator, header, 0);
     corrupt(&allocator, maps, 0);
     corrupt(&allocator, maps + 4, owner.row_count);
