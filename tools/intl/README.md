@@ -1354,3 +1354,12 @@ or require Temporal constructors to be enabled. Temporal's existing conversion
 then creates its result object from the validated record. The native duration,
 epoch and unit arithmetic sources are shared when either feature is enabled;
 calendar and time-zone implementations are not pulled into Intl-only builds.
+
+`src/intl/duration/format.[ch]` implements the pure `ListFormatParts` composition
+step. It replaces each ListFormat element with the next component's typed parts,
+preserving every number-origin unit, including literal parts. List and digital
+separators have no unit. Complete partitions and exact element text are checked
+before allocating the owned text and parts; identical text and empty elements
+remain distinct by position. Borrowed UTF-16 may contain NUL or lone surrogates.
+The unit enum comes from the shared native duration record definitions, without
+linking Temporal constructors or backend implementations.

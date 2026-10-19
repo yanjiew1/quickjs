@@ -568,6 +568,24 @@ test(
   timeout: 30,
 )
 
+intl_duration_format_test = executable(
+  'test_intl_duration_format',
+  [
+    'test_intl_duration_format.c',
+    '../src/intl/duration/format.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-duration-format',
+  intl_duration_format_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_duration_owner_sources = files(
   'test_intl_duration_data.c',
   '../src/intl/common/locale-grammar.c',
