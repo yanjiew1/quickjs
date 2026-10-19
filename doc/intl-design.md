@@ -655,6 +655,13 @@ Available formats, intervals, names and combination templates remain subsequent
 collection stages. These host-side facts do not imply prepared runtime data or
 advertised formatting-calendar support.
 
+The optional style section 27 pools source records and complete locale rows,
+retaining independent pattern/skeleton values and numbering overrides. Its
+calendar and alternate registries describe raw source identities. Profile
+projection preserves external source provenance; runtime formatters must still
+establish arithmetic and formatting capabilities independently. Validate the C
+owner before adding this section to prepared production profiles.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is

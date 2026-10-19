@@ -150,6 +150,22 @@ section or a formatter capability. Raw CLDR calendar IDs include data-only
 Authored repository tests cover inheritance, aliases, provenance, overrides,
 markers and invalid data. CI additionally resolves the pinned production source.
 
+Section 27 reserves the optional style wire schema. Its little-endian words begin
+with version, calendar count, alternate count, shared-row count and shared-record
+count. Calendar/alternate string references precede one row index per locale.
+Shared rows use calendar, date/time family, full/long/medium/short width,
+pattern/skeleton field and alternate as nested column selectors. Nine-word
+records contain state, text, numbering override, source locale, and source
+calendar/family/width/field/alternate indices. Missing records are all zero;
+blocked records retain provenance with empty text and numbering override.
+
+`date_style_tables.py` pools identical records and locale rows canonically and
+validates exact coverage, ordering, reachability, dimensions and references.
+Profile projection retains source identities outside the selected locale list.
+This optional codec is not yet emitted in the prepared production profiles;
+the C owner and runtime integration follow separately. Pattern text and numbering
+overrides remain source facts for the later date-format compiler to interpret.
+
 ## Relative-time source records
 
 ```sh

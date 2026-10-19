@@ -2547,6 +2547,14 @@ test(
 )
 
 test(
+  'intl-date-style-tables',
+  python,
+  args: files('test_intl_date_style_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-date-patterns',
   python,
   args: files('test_intl_date_patterns.py'),
