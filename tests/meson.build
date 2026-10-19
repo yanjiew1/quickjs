@@ -2425,6 +2425,18 @@ if intl_enabled
     'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],
   }
 endif
+if intl_enabled
+  test(
+    'intl-locale-numbering-fallback',
+    qjs,
+    args: ['-m', 'tests/test_intl_locale_preferences.js'],
+    env: ['LC_ALL=bn_BD.UTF-8'],
+    suite: ['repo', 'javascript', 'integration'],
+    workdir: test_workdir,
+    depends: fixtures,
+    timeout: 60,
+  )
+endif
 if shared_modules
   js_tests += {
     'bjson': ['tests/test_bjson.js'],
