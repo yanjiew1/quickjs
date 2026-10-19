@@ -357,6 +357,23 @@ including unknown display codes. Queries allocate no memory. Temporary open
 validation memory is released on every path. The data owner does not select
 plural fallback, currency availability, display style or formatter behavior.
 
+## Number range and currency layouts
+
+`number_layout.py` resolves miscellaneous range/approximation/at-least/at-most
+templates, currency-name unit templates, currency-spacing match sets/insertion
+text and legacy ISO append patterns. They are distinct from numeric skeletons
+and per-currency display fields. Alias interpretation is typed and limited to
+the reviewed group/spacing paths, with requesting-locale and explicit-source
+semantics. Text and UnicodeSet expressions remain exact source facts.
+
+Miscellaneous templates and currency boundaries are required for each numeric
+system. Currency-name selectors and the ISO append pattern may be absent,
+blocked or explicitly empty. In particular, root `arab` has spacing but lacks
+currency-name templates; this collector does not invent a cross-system fallback.
+Selecting plural/currency-name fallback and interpreting spacing predicates
+belong to later consumers. CI audits the authenticated full source inventory;
+this source collector alone establishes no formatter capability.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
