@@ -12,4 +12,15 @@
 int qjs_intl_unicode_locale_well_formed(const char *tag, size_t length);
 int qjs_intl_unicode_type_well_formed(const char *type, size_t length);
 
+typedef enum QJSIntlLocaleSubtagKind {
+    QJS_INTL_LANGUAGE_SUBTAG,
+    QJS_INTL_SCRIPT_SUBTAG,
+    QJS_INTL_REGION_SUBTAG,
+    QJS_INTL_VARIANT_SUBTAG
+} QJSIntlLocaleSubtagKind;
+
+/* One subtag, not a hyphenated sequence. No alias or casing requirement. */
+int qjs_intl_unicode_subtag_well_formed(QJSIntlLocaleSubtagKind kind,
+                                      const char *text, size_t length);
+
 #endif
