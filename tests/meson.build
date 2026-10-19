@@ -486,6 +486,22 @@ endforeach
 
 
 # Build engine-independent library tests against their actual owners.
+intl_locale_fixture = custom_target(
+  'intl-locale-authored-fixture',
+  output: 'intl-locale-authored-fixture.c',
+  command: [python, files('intl_locale_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: files(
+    '../tools/intl/acquire.py',
+    '../tools/intl/bundle.py',
+    '../tools/intl/cldr_xml.py',
+    '../tools/intl/list_patterns.py',
+    '../tools/intl/locale_metadata.py',
+    '../tools/intl/locale_tables.py',
+    '../tools/intl/parents.py',
+    '../tools/intl/resolve.py',
+    '../tools/intl/tables.py',
+  ),
+)
 foreach profile : ['minimal', 'native']
   intl_fixture = custom_target(
     'intl-prepared-' + profile,
@@ -502,6 +518,8 @@ foreach profile : ['minimal', 'native']
       '../tools/intl/bundle.py',
       '../tools/intl/cldr_xml.py',
       '../tools/intl/list_patterns.py',
+      '../tools/intl/locale_metadata.py',
+      '../tools/intl/locale_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/resolve.py',
       '../tools/intl/tables.py',
@@ -513,6 +531,8 @@ foreach profile : ['minimal', 'native']
       'test_intl_data.c',
       '../src/intl/native/data.c',
       '../src/intl/native/pack.c',
+      '../src/intl/locale/native-data.c',
+      '../src/intl/common/locale-grammar.c',
     ) + [intl_fixture],
     'c_args': (host_args + [
       ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
@@ -533,6 +553,13 @@ endforeach
 standalone = {
 }
 standalone += {
+  'test_intl_locale_data': files(
+    'test_intl_locale_data.c',
+    '../src/intl/locale/native-data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_locale_fixture],
   'test_intl_pack': files(
     'test_intl_pack.c',
     '../src/intl/native/pack.c',
@@ -1003,6 +1030,14 @@ if native_calendars
     timeout: 30,
   )
 endif
+
+test(
+  'intl-locale-metadata',
+  python,
+  args: files('test_intl_locale_metadata.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
 
 test(
   'intl-typed-tables',
