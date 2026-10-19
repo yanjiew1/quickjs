@@ -253,6 +253,15 @@ allocation failure/retry and output reset.
 
 ## Exact plural relations
 
+`src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
+SetNumberFormatDigitOptions operation. It reads the four raw digit properties
+before rounding options, defers their conversions until precision selection,
+and keeps absent fraction/significant slots distinct from effective defaults.
+Compact defaults and increment/priority restrictions follow ECMA-402. Results
+publish only on success; owned temporary JS values are released on every path.
+The focused repository JS suite uses a private C driver to test getter/coercion
+order without advertising a constructor before its backend is complete.
+
 `src/intl/plural/rules.c` evaluates one CLDR relation over an unsigned plain
 decimal without allocation or binary floating point. It retains visible
 fractional zeros and evaluates integer operands, fractional operands, modulo,

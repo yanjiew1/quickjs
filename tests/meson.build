@@ -493,6 +493,24 @@ endforeach
 
 # Build engine-independent library tests against their actual owners.
 if intl_enabled
+  intl_digit_options_test = executable(
+    'test_intl_digit_options',
+    'test_intl_digit_options.c',
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: test_engine_dep,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-digit-options',
+    intl_digit_options_test,
+    args: files('test_intl_digit_options.js'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+endif
+
+if intl_enabled
   intl_plural_rules_test = {
     'name': 'test_intl_plural_rules',
     'sources': files(
