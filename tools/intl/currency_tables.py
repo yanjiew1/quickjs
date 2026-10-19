@@ -14,6 +14,12 @@ def codes(data):
     return tuple(sorted(set(data['codes']) | {row[0] for row in data['fractions'] if row[0] != 'DEFAULT'}))
 
 
+def patterns(data):
+    """Legacy per-currency overrides share the typed standard-pattern owner."""
+    return tuple(sorted({text for entries in data['maps'] for code, field, count, text in entries
+                         if field == 'pattern' and text not in ('', BLOCK)}))
+
+
 def select(data, tags):
     selected = set(tags)
     rows = tuple(row for row in data['rows'] if row[0] in selected)
