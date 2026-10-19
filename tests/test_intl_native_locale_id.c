@@ -220,6 +220,18 @@ int main(void)
     assert(qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, &a,
                               &data) == QJS_INTL_OK);
     assert(qjs_intl_locale_metadata_open(&data, &a, &v) == QJS_INTL_OK);
+    /* Prepared formatter inventories must be canonical matching candidates,
+       rather than merely structurally valid source locale identities. */
+    for (i = 0; i < data.locales.count; i++) {
+        QJSIntlBytes tag;
+        uint32_t parent;
+        assert(qjs_intl_data_locale(&data, i, &tag, &parent) == QJS_INTL_OK);
+        if (parent == UINT32_MAX)
+            continue;
+        assert(qjs_intl_native_locale_canonicalize(&a, &v, tag, &out) == QJS_INTL_OK);
+        assert(strlen(out) == tag.length && !memcmp(out, tag.data, tag.length));
+        test_free(&state, out);
+    }
     for (i = 0; i < sizeof(invalid) / sizeof(*invalid); i++) {
         assert(qjs_intl_native_locale_validate(&a, bytes(invalid[i]),
                                                &well_formed) == QJS_INTL_OK);
