@@ -108,8 +108,14 @@ int main(void)
     assert(qjs_intl_data_open(copy, qjs_intl_native_length, &allocator, &data) == QJS_INTL_DATA_ERROR);
     assert(!data.pack.bytes && !state.live);
     memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
-    /* The fixture's third directory entry is the optional list section. */
-    put_u32(copy + 96, 11);
+    for (index = 0; index < qjs_intl_read_u32(copy + 12); index++) {
+        size_t entry = 64 + (size_t)index * 16;
+        if (qjs_intl_read_u32(copy + entry) == QJS_INTL_SECTION_LISTS) {
+            put_u32(copy + entry, QJS_INTL_SECTION_LISTS + 1);
+            break;
+        }
+    }
+    assert(index < qjs_intl_read_u32(copy + 12));
     assert(qjs_intl_data_open(copy, qjs_intl_native_length, &allocator, &data) == QJS_INTL_OK);
     assert(qjs_intl_data_list_template(&data, english, 0, 0, &text) == QJS_INTL_UNSUPPORTED);
     assert(!text.data);

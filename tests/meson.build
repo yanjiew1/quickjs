@@ -203,6 +203,8 @@ foreach profile : ['minimal', 'native']
       '../tools/intl/bundle.py',
       '../tools/intl/cldr_xml.py',
       '../tools/intl/list_patterns.py',
+      '../tools/intl/locale_metadata.py',
+      '../tools/intl/locale_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/resolve.py',
       '../tools/intl/tables.py',

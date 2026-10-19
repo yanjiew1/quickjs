@@ -166,3 +166,10 @@ zone rules and primary-identifier policy remain with the timezone service.
 Unsupported root-level additions fail explicitly rather than disappearing.
 Legacy alias spellings remain data; they do not widen runtime locale syntax.
 Registry membership does not establish installed service capabilities.
+
+Both prepared profiles retain the same complete locale identity metadata, even
+though their formatter locale selections differ. Aliases, likely subtags,
+extension keys and extension types are an atomic group of sections (3–6).
+Python checks their schemas, references, ordering and preferred-name chains.
+The C shared-table reader currently handles sections 1, 2 and 10; the locale
+owner must validate sections 3–6 before a runtime locale service uses them.
