@@ -1300,6 +1300,10 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_unit_identifier': files(
+      'test_intl_unit_identifier.c',
+      '../src/intl/unit/identifier.c',
+    ),
     'test_intl_locale_system': files(
       'test_intl_locale_system.c',
       '../src/intl/locale/system.c',
