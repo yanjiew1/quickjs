@@ -724,11 +724,12 @@ empty currency replacements never create a gap. Formatter state owns fallback
 codes and otherwise borrows only immutable compiled metadata.
 
 Scientific/engineering output applies the exact scale-before-round operation,
-then emits localized exponent separator/sign and ASCII decimal exponent digits
-with explicit part types, following the pinned PartitionNotationSubPattern.
-Its explicit `"0"` exponent and missing transliteration differ from established
-ICU behavior; the open [ECMA-402 issue 627](https://redirect.github.com/tc39/ecma402/issues/627)
-tracks that specification gap. Mantissa digits still use the selected repertoire.
+then emits the localized exponent separator/sign and uses the selected digit
+repertoire for both mantissa and exponent, including zero. This follows ICU/CLDR
+presentation rather than the pinned PartitionNotationSubPattern's ASCII
+exponent text. The open [ECMA-402 issue 627](https://redirect.github.com/tc39/ecma402/issues/627)
+tracks the missing exponent transliteration; it is not an adopted spec correction.
+Part spans and output bounds count UTF-16 units, including supplementary digits.
 Positive scientific-pattern literals wrap the complete notation body; the
 style's sign is outside it. Nonfinite values omit the exponent and notation
 wrappers. Source fraction defaults, exponent plus signs and zero-padding do
@@ -812,10 +813,10 @@ hides unavailable source cardinal rules with a root retry. Cached local/root
 heads borrow immutable owners; rendering needs at most four fragments per
 affix and allocates only the final text and parts arrays.
 
-This is a staged internal implementation, not complete Intl.NumberFormat.
-The JS binding remains required before registration. Repository tests exercise
-every prepared locale's default numeric system and allocation failure at every
-service/open/format allocation.
+The engine binding exposes Intl.NumberFormat on this service. Repository
+tests exercise every prepared locale's default numeric system and allocation
+failure at every service/open/format allocation. JavaScript tests cover the
+observable constructor, exact inputs, options, bound functions, parts and ranges.
 
 ### Number range rendering
 
@@ -832,7 +833,7 @@ part. This is the native adapter's initial ILND placement policy, not a claim
 to implement TR35's sign-slot placement. Modern approximation uses the selected
 numeric symbols' `approximatelySign`, not the obsolete miscellaneous
 approximately pattern. Endpoint formatting and NaN rejection belong to the
-service; this rendering prerequisite does not register the JavaScript API.
+service; the engine binding owns JavaScript API registration.
 
 The native service caches the selected locale/numbering system's borrowed range
 separator and modern approximation symbol in the formatter. It rejects either
@@ -1164,3 +1165,33 @@ before bounded language/script/region storage is used. Tests cover both prepared
 profiles, nonterminated and embedded-NUL input, competing aliases, extension
 ordering, unknown likely subtags, malformed replacement data and failure at every
 allocation in canonicalize/maximize/minimize.
+
+## NumberFormat JavaScript binding
+
+`src/quickjs/builtins/intl/number-format.c` owns constructor/prototype behavior,
+legacy chaining, cached bound functions, result conversion and JS object state.
+The runtime owns a lazily opened number service; formatters have independent
+native handles. The realm retains its intrinsic constructor and fallback symbol
+so overwriting the public namespace does not alter intrinsic operations.
+
+`number-format-options.c` reads non-locale options in specification order and
+retains absent digit slots for resolvedOptions. Shared locale-key resolution
+retains accepted `nu` extensions and canonicalizes explicit option values before
+service capability checks. Numbering metadata alone never advertises support.
+
+The cached `format` function captures its formatter and the getter realm's
+intrinsic constructor. Both captures are marked, and the formatter class marks
+its cached function so their cycle can be collected. Data callbacks do not
+otherwise enter their creation realm; the constructor capture anchors that
+realm for conversion errors, including borrowed getters. Ordinary native
+methods retain their normal function-realm behavior.
+
+Number/BigInt `toLocaleString` validate their receiver before reading locale or
+option arguments, then use an intrinsic formatter without observing public
+constructor/format replacements. Intl-off behavior remains the ECMA-262 path.
+
+The focused Test262 profile now includes NumberFormat and its normative optional
+constructor mode. Minimal excludes exact strings for unadvertised locales.
+Three exact range-output tests prescribe collapse/spacing choices beyond the
+current draft's ILND/no-collapse contract; their explicit exclusions cite that
+policy. Repository tests retain coercion, rounding, equality, parts and sources.
