@@ -246,6 +246,81 @@ static void noun_selection(const QJSIntlUnitData *data)
            QJS_INTL_INVALID_ARGUMENT);
 }
 
+static uint32_t template_head(const QJSIntlUnitData *data, const char *locale, QJSIntlUnitWidth width,
+                               QJSIntlUnitField field, const char *group)
+{
+    uint32_t index, head;
+    assert(!qjs_intl_unit_group_find(data, field == QJS_INTL_UNIT_PER_PATTERN
+                                            ? QJS_INTL_UNIT_GROUP_SINGLE : QJS_INTL_UNIT_GROUP_COMPOUND,
+                                      bytes(group), &index));
+    assert(!qjs_intl_unit_overlay_head(data, locale_id(&data->data, locale), width, index, &head));
+    return head;
+}
+
+static void template_failed(const QJSIntlUnitData *data, uint32_t head, QJSIntlUnitField field,
+                            QJSIntlBytes case_name, QJSIntlStatus status)
+{
+    QJSIntlSelectedUnitTemplate result, zero = {0};
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_unit_template_select(data, head, field, case_name, &result) == status);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+}
+
+static void template_selection(const QJSIntlUnitData *data)
+{
+    QJSIntlSelectedUnitTemplate result;
+    QJSIntlUnitField field = QJS_INTL_UNIT_PER_PATTERN;
+    const char *ineligible[] = {"length-per-block", "length-per-empty", "length-per-literal"};
+    uint32_t head = template_head(data, "en-GB", QJS_INTL_UNIT_LONG, field, "length-per-local");
+    size_t i;
+    assert(!qjs_intl_unit_template_select(data, head, field, bytes(""), &result));
+    assert(equal(result.form.text, "{0} child per") && equal(result.locale, "en-GB"));
+    assert(!result.pattern.per_unit.prefix.length && equal(result.pattern.per_unit.suffix, " child per"));
+    assert(result.form.field == field && result.form.count == QJS_INTL_UNIT_COUNT_NONE);
+    assert(!qjs_intl_unit_template_select(data,
+             template_head(data, "de", QJS_INTL_UNIT_LONG, field, "length-per-alias"),
+             field, bytes(""), &result));
+    assert(equal(result.locale, "en-GB") && equal(result.pattern.per_unit.suffix, " child per"));
+    assert(!qjs_intl_unit_template_select(data,
+             template_head(data, "en-GB", QJS_INTL_UNIT_LONG, field, "length-per-parent"),
+             field, bytes(""), &result));
+    assert(equal(result.locale, "en") && equal(result.pattern.per_unit.prefix, "PARENT_PER "));
+    assert(!qjs_intl_unit_template_select(data,
+             template_head(data, "en-GB", QJS_INTL_UNIT_LONG, field, "length-per-bare"),
+             field, bytes(""), &result));
+    assert(!result.pattern.per_unit.prefix.length && !result.pattern.per_unit.suffix.length);
+    for (i = 0; i < sizeof(ineligible) / sizeof(*ineligible); i++)
+        template_failed(data, template_head(data, "en-GB", QJS_INTL_UNIT_LONG, field, ineligible[i]),
+                         field, bytes(""), QJS_INTL_UNSUPPORTED);
+    template_failed(data, template_head(data, "en-GB", QJS_INTL_UNIT_LONG, field, "length-per-malformed"),
+                     field, bytes(""), QJS_INTL_DATA_ERROR);
+    template_failed(data, head, field, bytes("nominative"), QJS_INTL_INVALID_ARGUMENT);
+    template_failed(NULL, head, field, bytes(""), QJS_INTL_INVALID_ARGUMENT);
+    template_failed(data, data->node_count + 1, field, bytes(""), QJS_INTL_INVALID_ARGUMENT);
+    template_failed(data, 0, field, bytes(""), QJS_INTL_UNSUPPORTED);
+    assert(qjs_intl_unit_template_select(data, head, field, bytes(""), NULL) == QJS_INTL_INVALID_ARGUMENT);
+    template_failed(data, head, QJS_INTL_UNIT_PATTERN, bytes(""), QJS_INTL_INVALID_ARGUMENT);
+    template_failed(data, head, QJS_INTL_UNIT_COMPOUND_PATTERN, bytes(""), QJS_INTL_INVALID_ARGUMENT);
+    field = QJS_INTL_UNIT_COMPOUND_PATTERN;
+    head = template_head(data, "en-GB", QJS_INTL_UNIT_LONG, field, "per");
+    assert(!qjs_intl_unit_template_select(data, head, field, bytes("genitive"), &result));
+    assert(equal(result.locale, "en-GB") && result.pattern.division.first == 1 &&
+           !result.pattern.division.prefix.length && equal(result.pattern.division.separator, " child ") &&
+           !result.pattern.division.suffix.length && !result.form.case_name.length);
+    assert(!qjs_intl_unit_template_select(data,
+             template_head(data, "de", QJS_INTL_UNIT_LONG, field, "per"),
+             field, bytes(""), &result));
+    assert(equal(result.locale, "en-GB") && result.pattern.division.first == 1);
+    template_failed(data, head, field, bytes("instrumental"), QJS_INTL_DATA_ERROR);
+    template_failed(data, head, field, bytes("GENITIVE"), QJS_INTL_INVALID_ARGUMENT);
+    template_failed(data, head, field, (QJSIntlBytes){NULL, 1}, QJS_INTL_INVALID_ARGUMENT);
+    template_failed(data, head, QJS_INTL_UNIT_PER_PATTERN, bytes(""), QJS_INTL_INVALID_ARGUMENT);
+    template_failed(data, template_head(data, "en-GB", QJS_INTL_UNIT_SHORT, field, "per"),
+                     field, bytes(""), QJS_INTL_UNSUPPORTED);
+    template_failed(data, template_head(data, "en-GB", QJS_INTL_UNIT_NARROW, field, "per"),
+                     field, bytes(""), QJS_INTL_UNSUPPORTED);
+}
+
 int main(void)
 {
     QJSIntlAllocator allocator = {NULL, allocate, NULL, release};
@@ -263,6 +338,7 @@ int main(void)
     assert(!qjs_intl_unit_data_open(&shared, &allocator, &data));
     calls = allocations;
     noun_selection(&data);
+    template_selection(&data);
     expect(&data, head_for(&data, "en-GB", "length-child"), &request, "CHILD_OTHER {0}", "en-GB");
     expect(&data, head_for(&data, "de", "length-child"), &request, "CHILD_OTHER {0}", "en-GB");
     request.case_name = bytes("genitive");

@@ -97,14 +97,37 @@ def selector_pack():
                             '<unitPattern count="other">ALTERNATIVE {0}</unitPattern>')
     parent['noun-middle'] = '<unitPattern count="one">PARENT_ONE {0}</unitPattern>'
     child['noun-middle'] = '<unitPattern count="one">noun {0} tail</unitPattern>'
+    for name, text in (('local', '{0} child per'), ('block', BLOCK), ('empty', ''),
+                       ('literal', 'per second'), ('malformed', '{1}'), ('bare', '{0}'),
+                       ('parent', None)):
+        root['per-' + name] = '<perUnitPattern>{0} ROOT_PER</perUnitPattern>'
+        if text is not None:
+            child['per-' + name] = '<perUnitPattern>' + text + '</perUnitPattern>'
+    parent['per-parent'] = '<perUnitPattern>PARENT_PER {0}</perUnitPattern>'
     for locale, fields in (('root', root), ('en', parent), ('en_GB', child)):
         content = ''.join('<unit type="length-' + name + '">' + text + '</unit>'
                           for name, text in sorted(fields.items()))
         if locale == 'root':
             content += '<compoundUnit type="per"><compoundUnitPattern>{0}/{1}</compoundUnitPattern></compoundUnit>'
-        source.set(locale, '<unitLength type="long">' + content + '</unitLength>')
+        elif locale == 'en':
+            content += '<compoundUnit type="per"><compoundUnitPattern>PARENT {0}/{1}</compoundUnitPattern></compoundUnit>'
+        else:
+            content += ('<compoundUnit type="per"><compoundUnitPattern>{1} child {0}</compoundUnitPattern>'
+                        '<compoundUnitPattern case="genitive">' + BLOCK + '</compoundUnitPattern>'
+                        '<compoundUnitPattern case="instrumental">{2}</compoundUnitPattern></compoundUnit>')
+        extra = ''
+        for width in ('short', 'narrow'):
+            text = '' if locale == 'en_GB' and width == 'short' else (
+                BLOCK if locale == 'en_GB' else '{0} ' + locale + '/' + width + ' {1}')
+            extra += ('<unitLength type="' + width + '"><compoundUnit type="per">'
+                      '<compoundUnitPattern>' + text + '</compoundUnitPattern>'
+                      '</compoundUnit></unitLength>')
+        source.set(locale, '<unitLength type="long">' + content + '</unitLength>' + extra)
     source.set('de', '''<unitLength type="long"><unit type="length-child">
-      <alias source="en_GB" path="../unit[@type='length-child']"/></unit></unitLength>''')
+      <alias source="en_GB" path="../unit[@type='length-child']"/></unit>
+      <unit type="length-per-alias"><alias source="en_GB" path="../unit[@type='length-per-local']"/></unit>
+      <compoundUnit type="per"><alias source="en_GB" path="../compoundUnit[@type='per']"/></compoundUnit>
+      </unitLength>''')
     tags = ('de', 'en-GB', 'root')
     data = unit_tables.select(unit_patterns.collect(source, graph()), tags)
     pool = tuple(sorted(unit_tables.strings(data) | set(tags), key=lambda value: value.encode('utf-8')))

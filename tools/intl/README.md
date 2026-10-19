@@ -603,6 +603,12 @@ path shadows, with its own noun eligibility rules. Its count is a fixed
 grammatical category; it never tries exact numeric `0`/`1` selectors. It returns
 the noun and source/form provenance without allocating, including alias origins
 outside the prepared locale registry.
+Uncounted template selection separately handles a denominator's `perUnitPattern`
+and generic division layouts. It applies local case alternatives before parent
+layers, honors blocked/empty/missing-operand path shadows, and returns parsed
+template fragments with their actual source. Per-unit templates have no case
+selector; generic division layouts support case alternatives. Neither lookup
+performs plural selection or invents a width fallback.
 
 `src/intl/unit/format.c` composes the selected prefix/suffix around a complete
 numeric body, preserving its sign, exponent and compact parts. Nonspace affixes

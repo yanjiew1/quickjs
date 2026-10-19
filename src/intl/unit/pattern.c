@@ -123,6 +123,24 @@ static int equal(QJSIntlBytes a, QJSIntlBytes b)
     return a.length == b.length && (!a.length || !memcmp(a.data, b.data, a.length));
 }
 
+static QJSIntlStatus case_choices(QJSIntlBytes requested, QJSIntlBytes *cases, unsigned int *count)
+{
+    QJSIntlBytes nominative = {"nominative", 10};
+    size_t i;
+    *count = 0;
+    if (!requested.data && requested.length)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (i = 0; i < requested.length; i++) {
+        if (requested.data[i] < 'a' || requested.data[i] > 'z')
+            return QJS_INTL_INVALID_ARGUMENT;
+    }
+    if (requested.length && !equal(requested, nominative))
+        cases[(*count)++] = requested;
+    cases[(*count)++] = nominative;
+    cases[(*count)++] = (QJSIntlBytes){0};
+    return QJS_INTL_OK;
+}
+
 static int category_valid(QJSIntlUnitCount category)
 {
     return category >= QJS_INTL_UNIT_COUNT_ZERO && category <= QJS_INTL_UNIT_COUNT_OTHER;
@@ -171,7 +189,7 @@ static QJSIntlStatus select_pattern(const QJSIntlUnitData *data, uint32_t head,
                                      const QJSIntlUnitPatternRequest *request, int noun,
                                      Selection *out)
 {
-    QJSIntlBytes cases[3], nominative = {"nominative", 10};
+    QJSIntlBytes cases[3];
     unsigned int case_count = 0;
     uint32_t shadow = 0;
     size_t i;
@@ -183,14 +201,8 @@ static QJSIntlStatus select_pattern(const QJSIntlUnitData *data, uint32_t head,
                                request->exact < -1 || request->exact > 1
                          : !category_valid(request->category) || request->exact != -1))
         return QJS_INTL_INVALID_ARGUMENT;
-    for (i = 0; i < request->case_name.length; i++) {
-        if (request->case_name.data[i] < 'a' || request->case_name.data[i] > 'z')
-            return QJS_INTL_INVALID_ARGUMENT;
-    }
-    if (request->case_name.length && !equal(request->case_name, nominative))
-        cases[case_count++] = request->case_name;
-    cases[case_count++] = nominative;
-    cases[case_count++] = (QJSIntlBytes){0};
+    if (case_choices(request->case_name, cases, &case_count))
+        return QJS_INTL_INVALID_ARGUMENT;
     while (head) {
         QJSIntlUnitOverlay layer;
         QJSIntlUnitGroup group;
@@ -274,4 +286,64 @@ QJSIntlStatus qjs_intl_unit_noun_select(const QJSIntlUnitData *data, uint32_t he
                                          source->width, source->group};
     }
     return status;
+}
+
+QJSIntlStatus qjs_intl_unit_template_select(const QJSIntlUnitData *data, uint32_t head,
+                                            QJSIntlUnitField field, QJSIntlBytes case_name,
+                                            QJSIntlSelectedUnitTemplate *out)
+{
+    QJSIntlBytes cases[3];
+    unsigned int case_count = 0, shadow = 0;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !data || !data->section.bytes || head > data->node_count ||
+        (field != QJS_INTL_UNIT_PER_PATTERN && field != QJS_INTL_UNIT_COMPOUND_PATTERN) ||
+        (field == QJS_INTL_UNIT_PER_PATTERN && case_name.length) ||
+        case_choices(case_name, cases, &case_count))
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (field == QJS_INTL_UNIT_PER_PATTERN) {
+        cases[0] = (QJSIntlBytes){0};
+        case_count = 1;
+    }
+    while (head) {
+        QJSIntlUnitOverlay layer;
+        QJSIntlUnitGroup group;
+        unsigned int i;
+        qjs_intl_unit_overlay_at(data, head, &layer);
+        qjs_intl_unit_group_at(data, layer.group, &group);
+        if (group.kind != (field == QJS_INTL_UNIT_PER_PATTERN ? QJS_INTL_UNIT_GROUP_SINGLE
+                                                              : QJS_INTL_UNIT_GROUP_COMPOUND))
+            return QJS_INTL_INVALID_ARGUMENT;
+        for (i = 0; i < case_count; i++) {
+            QJSIntlSelectedUnitTemplate selected = {0};
+            QJSIntlUnitForm form;
+            QJSIntlStatus status;
+            if (shadow & (1u << i))
+                continue;
+            status = qjs_intl_unit_form_find(data, &layer.map, field, QJS_INTL_UNIT_COUNT_NONE,
+                                             cases[i], &form);
+            if (status == QJS_INTL_UNSUPPORTED)
+                continue;
+            if (status)
+                return status;
+            shadow |= 1u << i;
+            if (form.state == QJS_INTL_UNIT_FORM_BLOCKED)
+                continue;
+            status = field == QJS_INTL_UNIT_PER_PATTERN
+                         ? qjs_intl_unit_pattern_parse(form.text, &selected.pattern.per_unit)
+                         : qjs_intl_unit_division_pattern_parse(form.text, &selected.pattern.division);
+            if (status == QJS_INTL_UNSUPPORTED)
+                continue;
+            if (status)
+                return status;
+            selected.form = form;
+            selected.locale = layer.locale;
+            selected.width = layer.width;
+            selected.group = layer.group;
+            *out = selected;
+            return QJS_INTL_OK;
+        }
+        head = layer.next;
+    }
+    return QJS_INTL_UNSUPPORTED;
 }

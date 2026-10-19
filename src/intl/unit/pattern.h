@@ -90,4 +90,26 @@ typedef struct QJSIntlSelectedUnitNoun {
 QJSIntlStatus qjs_intl_unit_noun_select(const QJSIntlUnitData *, uint32_t head,
                                         QJSIntlBytes case_name, QJSIntlUnitCount category,
                                         QJSIntlSelectedUnitNoun *);
+
+typedef struct QJSIntlSelectedUnitTemplate {
+    union {
+        QJSIntlUnitPattern per_unit;
+        QJSIntlUnitDivisionPattern division;
+    } pattern;
+    QJSIntlUnitForm form;
+    QJSIntlBytes locale;
+    QJSIntlUnitWidth width;
+    uint32_t group;
+} QJSIntlSelectedUnitTemplate;
+
+/* Select PER_PATTERN from a single group (empty case_name required), or
+   COMPOUND_PATTERN from a division group with requested/nominative/absent
+   case alternatives. Local alternatives precede parents; empty, blocked or
+   missing-operand forms shadow their exact inherited path. Malformed consulted
+   templates fail. The active pattern member follows form.field. Require the
+   unchanged owner/head contract; borrow all text and reset disjoint output.
+   No allocation, plural selection or cross-width fallback. */
+QJSIntlStatus qjs_intl_unit_template_select(const QJSIntlUnitData *, uint32_t head,
+                                            QJSIntlUnitField, QJSIntlBytes case_name,
+                                            QJSIntlSelectedUnitTemplate *);
 #endif
