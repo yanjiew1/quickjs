@@ -1388,3 +1388,38 @@ next to large seconds and integral field magnitudes beyond `int64_t`.
 The helper allocates nothing and leaves rounding, visible fractional precision
 and displayed-negative-zero policy to its consumer. Its shared native duration
 arithmetic does not require Temporal JavaScript constructors.
+
+`duration/options.[ch]` owns the pure duration-unit option algorithm over
+already-coerced requests. The binding retains observable property access and
+coercion order; it resolves each unit before reading the next unit's options.
+The helper handles digital defaults, numeric/fractional transitions, display
+defaults and forced minute/second widths. A separate resolved-record validator
+protects the C formatter boundary. Effective `TwoDigitHours` is an explicit
+input, rather than being inferred from raw pattern width inside this algorithm.
+
+`duration/duration.h` is the compile-time service boundary. The native owner
+maps its locale inventory into Number and List by canonical tag, rather than
+assuming their indexes agree. It validates inherited digital syntax without
+allocating per locale. Each formatter owns its separators, a unit List formatter
+and Number formatters for displayed/suppressed signs, and may outlive its factory.
+It retains no caller string or options storage. Allocation callbacks, including
+the `realloc` required by List, outlive all corresponding handles and results.
+
+Native duration composition uses the common Number and List interfaces:
+mathematical fractional values remain exact, rounding truncates at the requested
+fractional precision, only the first displayed component gets a sign, and zero
+minutes bridge displayed hours and seconds. Digital separators carry no unit;
+all Number-origin records, including literals, carry their component's unit.
+The outer List parts preserve that metadata by element position. Intermediate
+results are bounded and released on every failure; final results own their text
+and parts independently of all formatter and factory handles.
+
+The initial native effective `TwoDigitHours` policy is `false`, independently
+of the raw CLDR hour width. This keeps the normative option algorithm and
+explicit text-hour requests intact while the inconsistency described above
+remains unresolved. Explicit `hours: "2-digit"` still pads. The policy does not
+claim that raw `hh` preferences were absent: those facts remain in the data and
+projection. Formatter ownership, all reached allocation failures, large exact
+fractions, numeric/text grouping, negative zero, parts and representative digital
+locales have focused C tests; this milestone does not yet expose the JavaScript
+DurationFormat constructor.
