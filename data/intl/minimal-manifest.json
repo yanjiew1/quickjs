@@ -1,8 +1,8 @@
 {
-  "bytes": 332380,
+  "bytes": 369128,
   "complete_services": [],
   "format": 1,
-  "generation": "8807b86f765af64592e58de5ffc1f74d52f7145ebc152ee30e36a2d17cfe039d",
+  "generation": "a6ada3a8c71c83330387de5c885e94166a701ac2d79feccb3101ee103254a73a",
   "inputs": {
     "cldr": {
       "archive": {
@@ -27,52 +27,64 @@
     ],
     "sections": {
       "1": {
-        "count": 18704,
-        "sha256": "6db25c4161ed55f8244b306a5c2c690d3d8373c5fc1a2fddec60d5388d0f8f1a"
+        "count": 19575,
+        "sha256": "83995175c9830a0ecb5cdd10d86d744cfdaa74ad5b7293bb5c3b2b2a40c5e0a1"
       },
       "10": {
         "count": 3,
-        "sha256": "f4334d10139c2e49451f1e3f796c7d2fd8a18c0f2b8bdb99cca2c6281aab0c5f"
+        "sha256": "42b2a5e68cdff3b97df859c9f2d4c2aa623ade390116b389e9cd591ce92b4b08"
       },
       "11": {
         "count": 184,
-        "sha256": "3c3efbe30b6b4e9928c7612152d1729211bf62b3e90309d857bb2845a8c338bb"
+        "sha256": "e9e02eddb9987b1e9337a5682666cfeaae5a3c0b793ed74e85f0efd622813004"
       },
       "12": {
         "count": 3,
         "sha256": "b9cb714ec7dbafb23431de6fa707e7eecd1643dd3b7be659dbfd71029adfdab8"
       },
+      "13": {
+        "count": 97,
+        "sha256": "566a0f27fb958f137549a404b83d5a96d6d831c7984eeb73ac97e86a9bda868f"
+      },
+      "14": {
+        "count": 1184,
+        "sha256": "5975ede9a11181787bbc89bb190f39a488294d835283473c7ea93baee31cf06a"
+      },
+      "15": {
+        "count": 3,
+        "sha256": "ef8c56e376aec8a8be3a2aaee10aecd5f4bf79628a4e379f8dd1ebe977dff79f"
+      },
       "2": {
         "count": 3,
-        "sha256": "ea7fa1f99a5052bbd0e01acbabf511988b2689c9bcf5ec08a3edffea79f5fbe9"
+        "sha256": "b7d462ed6f2f357664b2f8bcce4b976e4d8d0a668dc773410aa2c67e84b69900"
       },
       "3": {
         "count": 1292,
-        "sha256": "832cbbac0629f415908007669b923b7c63d18f7c298c1011a1dc5c49bb22dfd6"
+        "sha256": "6ad1bdc758688d1e1b862e7aee51de85d44de86698760e72ccb52710a3488c9d"
       },
       "4": {
         "count": 7868,
-        "sha256": "e8e14af254c303d6853a7e5daa16f6acb515f519df4c3f0790836a1a660ec26f"
+        "sha256": "522e9faac1de476ee179576addb3cec709a073a6d1f21d864fbb4b2aa984ea9f"
       },
       "5": {
         "count": 37,
-        "sha256": "9e5ac39eec8503c85016532ae3c2e506a900faa94af730baaea8008b73dd2a2a"
+        "sha256": "8bb5ea9bd397fdcd9d223fdad48d5741ca623c85a23442e70970b105634d3f67"
       },
       "6": {
         "count": 1080,
-        "sha256": "e3fb209296520ff3ef241b1f41031f10e1f5126383c1c5d4662344171e59a8a0"
+        "sha256": "ce092a521a04607702df8c7889965d7aefe9fa4cb92a122c3367766b46421b8f"
       },
       "7": {
         "count": 156,
-        "sha256": "c1847a5730884d27dc0901593584426cbdd65671f942c43d1a71397cd9b31152"
+        "sha256": "de574b700cc55742c620b2ee098f6ca6cb2d01f8816c3fca14ec508f00412045"
       },
       "8": {
         "count": 52,
-        "sha256": "fdadafe54eea4713f4e5382d95ccaf3a9931d91999b378c560b00c11a63dc02d"
+        "sha256": "160d3c17c54a0b16c0a2d983783c8f1e25a0692d5ecdfebc8ec54d03f7f80c20"
       },
       "9": {
         "count": 277,
-        "sha256": "503d34fa6a16200d5626c76059177f8d1ceea9dee65c0c37404b36c7984b4a37"
+        "sha256": "f0975eef971c5703f4d7bee53cf81e40acf4ac3009c93e998c3520bb4c05c731"
       }
     },
     "sources": {
@@ -1026,12 +1038,13 @@
       "common/main/zu_ZA.xml": "521e535cb23efe4c64f59fecf3b4e3e16b69e5741e2935cef8b3a3cd106ef413",
       "common/properties/scriptMetadata.txt": "bb9e789af929c5db67ffcd3e47e3a58f6187686fe4c72fb8203cbe7098715a56",
       "common/supplemental/likelySubtags.xml": "114019e183cffd98262c8c137d40d215124f80d9ba474a594d6ffa1b551b0a96",
+      "common/supplemental/numberingSystems.xml": "c5b9b208c6fe7bd3ce4e1c6cbb8f3337480aca620c9cf703ef3b6c74d4258c16",
       "common/supplemental/supplementalData.xml": "745150ec1408d50e1a272b65654a5dd645f3e60f5cc2898b576f725b28538d1a",
       "common/supplemental/supplementalMetadata.xml": "b06614fc2c9aab3b9a9f7e8bf9328f4f7a95d89b2d2dbb300d0caff0f885c164"
     }
   },
   "locales": 3,
-  "note": "Prepared locale metadata, preferences and list templates; not formatter capability or full Intl coverage.",
-  "sha256": "1f68f918a077bd468b351201b933117168b7cf87d4a684a501084ef7665f1244",
-  "strings": 18704
+  "note": "Prepared locale metadata, preferences, list templates and numeric symbols; not formatter capability or full Intl coverage.",
+  "sha256": "4c46082fa2d78a106b0100411132a6301bfe583ecc7c333a1c3f5d9497b1c49d",
+  "strings": 19575
 }
