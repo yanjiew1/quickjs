@@ -4,6 +4,7 @@
 #define QJS_INTL_NUMBER_CURRENCY_PATTERN_H
 #include "pattern-data.h"
 #include "../currency/data.h"
+#include "../currency/boundary.h"
 #include "layout-data.h"
 
 typedef struct QJSIntlCurrencyPattern {
@@ -27,4 +28,11 @@ QJSIntlStatus qjs_intl_number_currency_pattern(const QJSIntlNumberPatternData *,
                                               uint32_t locale, uint32_t system, QJSIntlBytes code,
                                               QJSIntlBytes symbol, unsigned int accounting,
                                               QJSIntlCurrencyPattern *);
+/* Legacy currency-edge filtering for a resolved numbering-system layout.
+   Return borrowed before/after insertions; the caller still tests numeric Nd
+   and direct token adjacency. Supports pinned predicates only. No allocation;
+   disjoint outputs are both reset on error. */
+QJSIntlStatus qjs_intl_number_currency_spacing(const QJSIntlNumberLayouts *,
+                                              const QJSIntlCurrencyBoundary *,
+                                              QJSIntlBytes *before, QJSIntlBytes *after);
 #endif
