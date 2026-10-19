@@ -15,6 +15,7 @@ QJSIntlStatus qjs_intl_number_sign_pattern(QJSIntlNumberSign, const QJSIntlRound
 
 typedef struct QJSIntlNumberAffixSymbols {
     QJSIntlBytes minus, plus, percent, per_mille, currency;
+    QJSIntlBytes before_currency, after_currency;
 } QJSIntlNumberAffixSymbols;
 
 /* Tokens are decoded from the selected native outer standard pattern.
@@ -28,6 +29,9 @@ typedef struct QJSIntlNumberAffixSymbols {
 
    ensure_plus inserts a leading plus if no PLUS token exists, for positive
    signDisplay when the LDML positive variant lacks a sign (e.g. accounting).
+   Optional before_currency/after_currency insert literal parts only at direct
+   NUMBER/CURRENCY token boundaries. Callers already checked the currency and
+   numeric scalar predicates; no gap is emitted for an empty currency.
    Pattern selection, currency spacing and plural/style policy are callers'
    responsibilities. No localized string is invented by this operation.
 

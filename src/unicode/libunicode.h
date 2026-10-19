@@ -107,9 +107,11 @@ int unicode_normalize(uint32_t **pdst, const uint32_t *src, int src_len,
 
 int unicode_script(CharRange *cr, const char *script_name, int is_ext);
 int unicode_general_category(CharRange *cr, const char *gc_name);
-/* Allocation-free General_Category L/M predicates, not Alphabetic. */
+/* Allocation-free General_Category predicates (L, M, Nd, S/Z), not Alphabetic. */
 int lre_is_letter(uint32_t c);
 int lre_is_mark(uint32_t c);
+int lre_is_decimal_digit(uint32_t c);
+int lre_is_symbol_or_separator(uint32_t c);
 int unicode_prop(CharRange *cr, const char *prop_name);
 /* Strict ECMAScript property names, independent of private UCD helpers. */
 int lre_unicode_property_allowed(const char *name);
