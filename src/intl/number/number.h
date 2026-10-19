@@ -1,0 +1,72 @@
+/* Compile-time number service, independent of engine values and JS coercion.
+ * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
+#ifndef QJS_INTL_NUMBER_SERVICE_H
+#define QJS_INTL_NUMBER_SERVICE_H
+#include "../common/decimal.h"
+#include "../common/format.h"
+
+typedef enum QJSIntlNumberGrouping {
+    QJS_INTL_NUMBER_GROUP_OFF,
+    QJS_INTL_NUMBER_GROUP_AUTO,
+    QJS_INTL_NUMBER_GROUP_ALWAYS,
+    QJS_INTL_NUMBER_GROUP_MIN2
+} QJSIntlNumberGrouping;
+
+typedef enum QJSIntlNumberSign {
+    QJS_INTL_NUMBER_SIGN_AUTO,
+    QJS_INTL_NUMBER_SIGN_NEVER,
+    QJS_INTL_NUMBER_SIGN_ALWAYS,
+    QJS_INTL_NUMBER_SIGN_EXCEPT_ZERO,
+    QJS_INTL_NUMBER_SIGN_NEGATIVE
+} QJSIntlNumberSign;
+
+typedef enum QJSIntlNumberStyle {
+    QJS_INTL_NUMBER_DECIMAL,
+    QJS_INTL_NUMBER_PERCENT
+} QJSIntlNumberStyle;
+
+typedef struct QJSIntlNumberOptions {
+    QJSIntlNumberStyle style;
+    QJSIntlNumberGrouping grouping;
+    QJSIntlNumberSign sign_display;
+    QJSIntlDecimalOptions digits;
+    size_t maximum_output_length;
+} QJSIntlNumberOptions;
+
+typedef struct QJSIntlNumberService QJSIntlNumberService;
+typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
+
+/* This initial internal service implements standard decimal/percent formatting;
+   it does not yet implement all Intl.NumberFormat styles, notation or ranges.
+   Bindings must not register NumberFormat on the strength of this subset.
+
+   Copy the allocator; malloc/free required, realloc unused. Its callbacks and
+   opaque state outlive corresponding formatters and result clearing. Opening
+   validates the selected immutable profile. Errors clear *out; NULL closes. */
+QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *, QJSIntlNumberService **out);
+void qjs_intl_number_close(QJSIntlNumberService *);
+/* Borrow canonical sorted extension-free tags, excluding root, until close.
+   No locale matching occurs. Failure clears both outputs. */
+QJSIntlStatus qjs_intl_number_available(const QJSIntlNumberService *, const QJSIntlBytes **,
+                                        size_t *count);
+/* Exact available-locale index; no matching or Unicode extension negotiation.
+   Borrow the default numeric system name from immutable compiled storage. */
+QJSIntlStatus qjs_intl_number_default_system(const QJSIntlNumberService *, size_t locale,
+                                             QJSIntlBytes *out);
+/* Empty system chooses the locale default. An explicit system is exact;
+   absent/algorithmic definitions return UNSUPPORTED, without fallback. The
+   frontend resolves defaults, options and Unicode extensions before opening.
+   A formatter may outlive its service; it retains no service-owned arrays. */
+QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *, size_t locale,
+                                             QJSIntlBytes system, const QJSIntlNumberOptions *,
+                                             QJSIntlNumberFormatter **out);
+void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *);
+/* Borrow an already coerced exact mathematical value. Round once at standard
+   scale (after percent multiplication), select sign from the rounded value,
+   localize the numeric body, and apply its selected outer pattern.
+   Fresh, disjoint output required; failures reset it. Results own text/parts
+   and survive formatter/service close. Clear using the creating allocator. */
+QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *,
+                                     const QJSIntlMathematicalValue *, QJSIntlFormatted *);
+void qjs_intl_number_result_clear(const QJSIntlAllocator *, QJSIntlFormatted *);
+#endif
