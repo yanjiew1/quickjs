@@ -4,12 +4,6 @@
 #define QJS_INTL_DISPLAY_LANGUAGE_FORMAT_H
 #include "language-match.h"
 
-typedef struct QJSIntlNameText {
-    uint16_t *text; /* Owned UTF-16, explicit length, no terminator required. */
-    size_t length;
-    unsigned int found; /* Empty localized text is still present. */
-} QJSIntlNameText;
-
 /* Input follows language-match.h's validated canonical Language ID contract.
    Compose unconsumed script/region/variants using source patterns and nested
    bracket replacements. Missing qualifiers use their canonical input subtags;
@@ -23,5 +17,4 @@ QJSIntlStatus qjs_intl_language_name_format(const QJSIntlNameData *, uint32_t lo
                                           QJSIntlBytes canonical,
                                           const QJSIntlAllocator *, size_t limit,
                                           QJSIntlNameText *);
-void qjs_intl_name_text_clear(const QJSIntlAllocator *, QJSIntlNameText *);
 #endif
