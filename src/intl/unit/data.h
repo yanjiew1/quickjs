@@ -1,0 +1,93 @@
+/* Sparse native unit forms; no formatter fallback or API availability policy.
+ * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
+#ifndef QJS_INTL_UNIT_DATA_H
+#define QJS_INTL_UNIT_DATA_H
+#include "../native/data.h"
+
+typedef enum QJSIntlUnitWidth {
+    QJS_INTL_UNIT_LONG,
+    QJS_INTL_UNIT_SHORT,
+    QJS_INTL_UNIT_NARROW,
+    QJS_INTL_UNIT_WIDTH_COUNT
+} QJSIntlUnitWidth;
+
+typedef enum QJSIntlUnitGroupKind {
+    QJS_INTL_UNIT_GROUP_COMPOUND,
+    QJS_INTL_UNIT_GROUP_SINGLE
+} QJSIntlUnitGroupKind;
+
+typedef enum QJSIntlUnitField {
+    QJS_INTL_UNIT_DISPLAY_NAME,
+    QJS_INTL_UNIT_PATTERN,
+    QJS_INTL_UNIT_PER_PATTERN,
+    QJS_INTL_UNIT_GENDER,
+    QJS_INTL_UNIT_COMPOUND_PATTERN,
+    QJS_INTL_UNIT_FIELD_COUNT
+} QJSIntlUnitField;
+
+typedef enum QJSIntlUnitCount {
+    QJS_INTL_UNIT_COUNT_NONE,
+    QJS_INTL_UNIT_COUNT_EXACT_ZERO,
+    QJS_INTL_UNIT_COUNT_EXACT_ONE,
+    QJS_INTL_UNIT_COUNT_ZERO,
+    QJS_INTL_UNIT_COUNT_ONE,
+    QJS_INTL_UNIT_COUNT_TWO,
+    QJS_INTL_UNIT_COUNT_FEW,
+    QJS_INTL_UNIT_COUNT_MANY,
+    QJS_INTL_UNIT_COUNT_OTHER,
+    QJS_INTL_UNIT_COUNT_COUNT
+} QJSIntlUnitCount;
+
+enum { QJS_INTL_UNIT_FORM_VALUE, QJS_INTL_UNIT_FORM_BLOCKED };
+
+typedef struct QJSIntlUnitGroup {
+    QJSIntlUnitGroupKind kind;
+    QJSIntlBytes name;
+} QJSIntlUnitGroup;
+
+typedef struct QJSIntlUnitMap {
+    const uint8_t *entries;
+    uint32_t count;
+} QJSIntlUnitMap;
+
+typedef struct QJSIntlUnitForm {
+    QJSIntlUnitField field;
+    QJSIntlUnitCount count;
+    QJSIntlBytes case_name, text;
+    unsigned int state;
+} QJSIntlUnitForm;
+
+typedef struct QJSIntlUnitData {
+    QJSIntlData data;
+    QJSIntlSection section;
+    const uint8_t *groups, *cases, *locale_rows, *rows, *maps, *entries;
+    uint32_t group_count, case_count, row_count, map_count, entry_count;
+} QJSIntlUnitData;
+
+/* Require an unchanged validated data view. Borrow its immutable storage;
+   temporary validation memory is released on every path. Follow pack.h's
+   disjoint output contract; non-NULL outputs are reset on failure. Template
+   syntax, grammatical fallback and sanctioned API identifiers have other owners. */
+QJSIntlStatus qjs_intl_unit_data_open(const QJSIntlData *, const QJSIntlAllocator *,
+                                      QJSIntlUnitData *);
+
+/* Source group inventory includes unsanctioned identifiers. Indexed/exact
+   queries allocate nothing and borrow the unchanged owner. A well-formed
+   missing name returns UNSUPPORTED. Only "per" is a compound group in v1. */
+QJSIntlStatus qjs_intl_unit_group_at(const QJSIntlUnitData *, uint32_t index, QJSIntlUnitGroup *);
+QJSIntlStatus qjs_intl_unit_group_find(const QJSIntlUnitData *, QJSIntlUnitGroupKind,
+                                       QJSIntlBytes name, uint32_t *index);
+QJSIntlStatus qjs_intl_unit_map_at(const QJSIntlUnitData *, uint32_t locale, QJSIntlUnitWidth,
+                                   uint32_t group, QJSIntlUnitMap *);
+
+/* Require a map returned by this unchanged owner. No plural/case/width
+   fallback is performed. Find returns UNSUPPORTED for an absent selector;
+   explicit empty text is VALUE with length zero, distinct from BLOCKED.
+   Indexed forms use field/count/case order.
+   An empty case_name slice denotes the default case and may have NULL data. */
+QJSIntlStatus qjs_intl_unit_form_at(const QJSIntlUnitData *, const QJSIntlUnitMap *, uint32_t index,
+                                    QJSIntlUnitForm *);
+QJSIntlStatus qjs_intl_unit_form_find(const QJSIntlUnitData *, const QJSIntlUnitMap *,
+                                      QJSIntlUnitField, QJSIntlUnitCount, QJSIntlBytes case_name,
+                                      QJSIntlUnitForm *);
+#endif
