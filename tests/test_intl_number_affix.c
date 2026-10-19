@@ -1,6 +1,7 @@
 /* Typed affix composition: literals, signs, body parts, UTF-8 and failures.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/number/affix.h"
+#include "../src/intl/number/sign-affix.h"
 #include "../src/intl/number/body.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -138,6 +139,88 @@ static void test_forms(const QJSIntlAllocator *allocator)
     result = format(allocator, tokens, 2, &signs, 0, "'quoted' {0}1,234.50");
     assert(result.parts[0].type == QJS_INTL_PART_LITERAL);
     qjs_intl_number_body_clear(allocator, &result);
+}
+
+static void sign_tokens(const QJSIntlNumberPatternToken *positive, size_t p_count,
+                        QJSIntlNumberPatternToken *selected, size_t s_count,
+                        const QJSIntlNumberPatternToken *expected, size_t expected_count)
+{
+    size_t count = SIZE_MAX, i;
+    assert(!qjs_intl_number_sign_affix(positive, p_count, selected, s_count, &count));
+    assert(count == expected_count);
+    for (i = 0; i < count; i++) {
+        assert(selected[i].kind == expected[i].kind);
+        assert(selected[i].text.length == expected[i].text.length);
+        if (selected[i].text.length)
+            assert(!memcmp(selected[i].text.data, expected[i].text.data, selected[i].text.length));
+    }
+}
+
+static void test_sign_projection(void)
+{
+    QJSIntlNumberPatternToken positive[4], selected[6], expected[4];
+    size_t count;
+    positive[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "‏");
+    positive[1] = token(QJS_INTL_NUMBER_TOKEN_NUMBER, "");
+    positive[2] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, " ‏");
+    selected[0] = positive[0];
+    selected[1] = token(QJS_INTL_NUMBER_TOKEN_MINUS, "");
+    selected[2] = positive[1];
+    selected[3] = positive[2];
+    expected[0] = selected[1];
+    expected[1] = positive[1];
+    sign_tokens(positive, 3, selected, 4, expected, 2);
+    /* Accounting punctuation survives even when merged with shared context. */
+    selected[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "(‏");
+    selected[1] = positive[1];
+    selected[2] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, " ‏)");
+    expected[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "(");
+    expected[1] = positive[1];
+    expected[2] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, ")");
+    sign_tokens(positive, 3, selected, 3, expected, 3);
+    /* Negative-only controls and trailing signs are retained. */
+    selected[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "؜‏");
+    selected[1] = positive[1];
+    selected[2] = positive[2];
+    selected[3] = token(QJS_INTL_NUMBER_TOKEN_MINUS, "");
+    expected[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "؜");
+    expected[1] = positive[1];
+    expected[2] = selected[3];
+    sign_tokens(positive, 3, selected, 4, expected, 3);
+    /* Scalar matching must not subtract a common UTF-8 byte prefix. */
+    positive[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "😀");
+    selected[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "😁");
+    selected[1] = positive[1];
+    expected[0] = selected[0];
+    expected[1] = positive[1];
+    sign_tokens(positive, 2, selected, 2, expected, 2);
+    /* Equivalent unsigned context can cross different literal token splits. */
+    positive[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "A😀");
+    positive[1] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "B");
+    positive[2] = token(QJS_INTL_NUMBER_TOKEN_NUMBER, "");
+    selected[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "A");
+    selected[1] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "😀B");
+    selected[2] = token(QJS_INTL_NUMBER_TOKEN_MINUS, "");
+    selected[3] = positive[2];
+    expected[0] = selected[2];
+    expected[1] = selected[3];
+    sign_tokens(positive, 3, selected, 4, expected, 2);
+    positive[0] = token(QJS_INTL_NUMBER_TOKEN_CURRENCY, "");
+    positive[1] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, " ");
+    positive[2] = token(QJS_INTL_NUMBER_TOKEN_NUMBER, "");
+    selected[0] = token(QJS_INTL_NUMBER_TOKEN_PLUS, "");
+    memcpy(selected + 1, positive, 3 * sizeof(*positive));
+    expected[0] = selected[0];
+    expected[1] = positive[2];
+    sign_tokens(positive, 3, selected, 4, expected, 2);
+    /* Residual currency cannot be emitted around a complete currency body. */
+    selected[0] = positive[2];
+    selected[1] = positive[0];
+    assert(qjs_intl_number_sign_affix(positive, 3, selected, 2, &count) == QJS_INTL_UNSUPPORTED);
+    assert(!count);
+    assert(qjs_intl_number_sign_affix(NULL, 3, selected, 2, &count) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!count);
+    assert(qjs_intl_number_sign_affix(positive, 3, selected, 2, NULL) == QJS_INTL_INVALID_ARGUMENT);
 }
 
 static void test_spacing(const QJSIntlAllocator *allocator)
@@ -291,6 +374,7 @@ int main(void)
     test_signs();
     test_forms(&allocator);
     test_spacing(&allocator);
+    test_sign_projection();
     test_errors(&allocator);
     assert(!state.live);
     return 0;
