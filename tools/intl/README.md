@@ -121,6 +121,25 @@ apply locale region/subdivision precedence, calendar aliases and supported
 calendar/formatter capabilities. Tests use authored fixtures and need no
 network access.
 
+## Numbering metadata
+
+```sh
+python3 tools/intl/numbering.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The numbering collector checks numeric systems as ten distinct Unicode scalar
+values, including supplementary-plane digits. Algorithmic systems retain
+their rule references; collecting a reference does not implement that rule.
+The locale graph resolves default, native, traditional and financial numbering
+preferences without substituting an arbitrary system for missing data.
+Optional preferences distinguish absent records (`null`) from explicit empty
+override markers (`""`). Required defaults must resolve. Standard entries are
+selected without alternates, with all published draft states admitted.
+
+These records prepare number-service data. They do not advertise NumberFormat
+available locales or supported numbering systems. Authored tests cover scalar
+repertoires, inheritance, explicit markers and malformed/conflicting records.
+
 ## Binary envelope
 
 `bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.
