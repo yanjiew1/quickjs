@@ -16,6 +16,27 @@ typedef struct QJSIntlUnitPattern {
    Allocate nothing, retain nothing, and reset non-NULL output on failure. */
 QJSIntlStatus qjs_intl_unit_pattern_parse(QJSIntlBytes, QJSIntlUnitPattern *);
 
+typedef struct QJSIntlUnitDivisionPattern {
+    QJSIntlBytes prefix, separator, suffix;
+    unsigned int first; /* 0: numerator precedes denominator; 1: reverse order. */
+} QJSIntlUnitDivisionPattern;
+
+/* Borrow literal fragments around exactly one {0} and one {1}, in either
+   order. Missing operands return UNSUPPORTED; invalid/repeated placeholders
+   return DATA_ERROR. Apostrophes are literal. Input comes from scalar UTF-8
+   data; this parser only checks template syntax. Allocate/retain nothing,
+   require disjoint output and reset non-NULL output on failure. */
+QJSIntlStatus qjs_intl_unit_division_pattern_parse(QJSIntlBytes, QJSIntlUnitDivisionPattern *);
+
+/* Extract one borrowed noun from a unitPattern for a grammatical component.
+   Accept literal-only text or a single {0} at a nonspace edge. Remove numeric
+   separator whitespace, retaining noun-internal spaces/punctuation. Empty or
+   middle-placeholder forms return UNSUPPORTED, malformed scalar text or
+   placeholders return DATA_ERROR. Fixed grammatical count selection belongs
+   to the caller and must not enable exact numeric selectors. No allocation;
+   require disjoint output and reset non-NULL output on failure. */
+QJSIntlStatus qjs_intl_unit_noun_parse(QJSIntlBytes, QJSIntlBytes *);
+
 typedef QJSIntlStatus (*QJSIntlUnitCategoryResolver)(void *opaque, QJSIntlBytes source_locale,
                                                    QJSIntlUnitCount *category);
 
@@ -52,4 +73,44 @@ typedef struct QJSIntlSelectedUnitPattern {
 QJSIntlStatus qjs_intl_unit_pattern_select(const QJSIntlUnitData *, uint32_t head,
                                            const QJSIntlUnitPatternRequest *,
                                            QJSIntlSelectedUnitPattern *);
+
+typedef struct QJSIntlSelectedUnitNoun {
+    QJSIntlBytes noun;
+    QJSIntlUnitForm form;
+    QJSIntlBytes locale;
+    QJSIntlUnitWidth width;
+    uint32_t group;
+} QJSIntlSelectedUnitNoun;
+
+/* Select a noun using fixed categories or a source-rule callback as in
+   pattern_select, but require exact -1: grammatical components never select
+   exact numeric 0/1. Try requested/nominative/absent case before OTHER and each parent layer.
+   Literal-only nouns are eligible; empty/blocked/middle-placeholder forms
+   shadow their exact path. Require the same unchanged owner/head contract as
+   pattern_select. Borrow all text, allocate nothing, reset disjoint output. */
+QJSIntlStatus qjs_intl_unit_noun_select(const QJSIntlUnitData *, uint32_t head,
+                                        const QJSIntlUnitPatternRequest *,
+                                        QJSIntlSelectedUnitNoun *);
+
+typedef struct QJSIntlSelectedUnitTemplate {
+    union {
+        QJSIntlUnitPattern per_unit;
+        QJSIntlUnitDivisionPattern division;
+    } pattern;
+    QJSIntlUnitForm form;
+    QJSIntlBytes locale;
+    QJSIntlUnitWidth width;
+    uint32_t group;
+} QJSIntlSelectedUnitTemplate;
+
+/* Select PER_PATTERN from a single group (empty case_name required), or
+   COMPOUND_PATTERN from a division group with requested/nominative/absent
+   case alternatives. Local alternatives precede parents; empty, blocked or
+   missing-operand forms shadow their exact inherited path. Malformed consulted
+   templates fail. The active pattern member follows form.field. Require the
+   unchanged owner/head contract; borrow all text and reset disjoint output.
+   No allocation, plural selection or cross-width fallback. */
+QJSIntlStatus qjs_intl_unit_template_select(const QJSIntlUnitData *, uint32_t head,
+                                            QJSIntlUnitField, QJSIntlBytes case_name,
+                                            QJSIntlSelectedUnitTemplate *);
 #endif
