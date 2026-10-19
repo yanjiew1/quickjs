@@ -25,6 +25,9 @@ from test_intl_numbering import Sources as NumberingSources
 from test_intl_number_symbols import Sources as SymbolSources
 from number_symbols import FIELDS as SYMBOL_FIELDS
 from test_intl_plural_rules import Sources as PluralSources
+from test_intl_number_patterns import Sources as PatternSources
+import number_patterns
+import number_pattern_syntax
 
 
 class VerifiedFixture(Sources):
@@ -68,6 +71,25 @@ class VerifiedFixture(Sources):
         symbol_root = ET.fromstring(SymbolSources().files['common/main/root.xml'])
         root = ET.fromstring(self.files['common/main/root.xml'])
         root.find('numbers').extend(symbol_root.findall('./numbers/symbols'))
+        self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
+        pattern_source = PatternSources()
+        self.files['common/dtd/ldml.dtd'] += b'<!ELEMENT minimumGroupingDigits (#PCDATA)>'
+        self.files['common/dtd/ldml.dtd'] += b'<!ELEMENT pattern (#PCDATA)>'
+        self.files['common/dtd/ldml.dtd'] += b'<!ATTLIST pattern type NMTOKEN "standard">'
+        for style in number_patterns.STYLES:
+            for suffix, attributes in (('Formats', ('numberSystem',)),
+                                       ('FormatLength', ('type',)), ('Format', ())):
+                tag = style + suffix
+                self.files['common/dtd/ldml.dtd'] += ('<!ELEMENT ' + tag + ' ANY>').encode('ascii')
+                for attribute in attributes:
+                    self.files['common/dtd/ldml.dtd'] += (
+                        '<!ATTLIST ' + tag + ' ' + attribute + ' NMTOKEN #IMPLIED>').encode('ascii')
+            self.files['common/dtd/ldml.dtd'] += (
+                '<!ATTLIST ' + style + 'Format type NMTOKEN "standard">').encode('ascii')
+        names = {style + 'Formats' for style in number_patterns.STYLES} | {'minimumGroupingDigits'}
+        root = ET.fromstring(self.files['common/main/root.xml'])
+        root.find('numbers').extend(node for node in ET.fromstring(
+            pattern_source.files['common/main/root.xml']).find('numbers') if node.tag in names)
         self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
         plural_source = PluralSources()
         self.files['common/dtd/ldmlSupplemental.dtd'] += (
@@ -122,6 +144,11 @@ class TableTests(unittest.TestCase):
             self.assertIn((1, 'i = 1 and v = 0'), cardinal)
             self.assertEqual(next(rules for locale, kind, rules, ranges in plurals
                                   if locale == 'root' and kind == 0), ((5, ''),))
+            patterns = view['number_patterns']
+            self.assertEqual(len(patterns['rows']), len(view['locales']) * 78)
+            standard = next(values for locale, system, values in patterns['rows']
+                            if locale == 'en' and system == 'latn')
+            self.assertEqual(standard[0], number_pattern_syntax.compile_pattern('#,##0.###'))
             if profile == 'native':
                 self.assertEqual(fields[('ar', 'arab')]['decimal'], '\u066b')
                 self.assertEqual(fields[('fr', 'latn')]['group'], '\u202f')
@@ -195,6 +222,10 @@ class TableTests(unittest.TestCase):
         self.assertEqual(minimal_view['plurals']['rows'],
                          tuple(row for row in full_view['plurals']['rows']
                                if row[0] in minimal_view['locales']))
+        for field in ('rows', 'grouping'):
+            self.assertEqual(minimal_view['number_patterns'][field],
+                             tuple(row for row in full_view['number_patterns'][field]
+                                   if row[0] in minimal_view['locales']))
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
