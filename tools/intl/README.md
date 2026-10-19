@@ -272,9 +272,35 @@ pattern `0` retains its ordinary-format fallback mode. Each numeric variant keep
 including inherited alternates that differ from the baseline. The consuming
 formatter must choose a coherent notation policy; data compilation does not
 silently change source patterns or conflate fallback with a scaled placeholder.
-Optional blocks and empty values remain distinct. These maps are not yet packed
-and do not advertise NumberFormat support. Authored tests and the authenticated
+Optional blocks and empty values remain distinct. These maps do not advertise
+NumberFormat support. Authored tests and the authenticated
 source audit cover resolution and syntax independently of formatter execution.
+
+Section 18 stores compact maps as little-endian words. Its directory count is
+the shared locale count. Eight header words contain schema version 1 and counts
+for numeric systems, locale rows, maps, entries, patterns, affixes and tokens.
+Sorted numeric definition indexes precede one row index per locale. Each shared
+row contains three map references per numeric system: decimal short, decimal
+long and currency short. Decimal maps must be nonempty; currency maps may be
+empty. Profile projection prunes unused maps before packing.
+
+Map descriptors contain contiguous entry offsets/counts. An entry contains
+magnitude, count selector, variant selector and pattern reference. Count order is
+`0`, `1`, `zero`, `one`, `two`, `few`, `many`, `other`; variant order is
+`standard`, `alphaNextToNumber`, `noCurrency`. Entries sort by these three
+numeric keys. Blocked and explicitly empty patterns use `0xfffffffe` and
+`0xfffffffd`; a missing selector has no entry. Each magnitude requires a usable
+standard `other` pattern. A literal form requires a usable `other` in its own
+variant family, with the same divisor.
+
+Patterns contain mode (scaled, literal or ordinary fallback), divisor exponent,
+zero-placeholder count and three affix indexes. Scaled exponents plus zero count
+equal magnitude plus one. Literal forms have no number token. Ordinary fallback
+has exponent zero, one zero placeholder and unadorned number/sign forms. Affix
+descriptors and typed token pairs follow section 17's representation, excluding
+percent/per-mille scaling tokens. Rows, maps, patterns and affixes are shared,
+canonically ordered and fully referenced; decoders validate those invariants
+and all record extents before returning semantic data.
 
 ## Numeric options and exact plural relations
 
