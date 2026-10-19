@@ -956,6 +956,30 @@ if native_calendars
   )
 endif
 
+test(
+  'intl-locale-inheritance',
+  python,
+  args: files('test_intl_parents.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
+
+test(
+  'intl-xml-schema',
+  python,
+  args: files('test_intl_xml.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
+
+test(
+  'intl-source-acquisition',
+  python,
+  args: files('test_intl_sources.py'),
+  suite: ['repo', 'native', 'unit'],
+  timeout: 30,
+)
+
 if native_timezones
   test(
     'timezone-generator',
