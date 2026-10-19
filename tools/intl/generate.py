@@ -30,6 +30,8 @@ import plural_tables
 import tables
 import unit_patterns
 import unit_tables
+import unit_grammar
+import unit_grammar_tables
 
 
 class Inputs:
@@ -62,6 +64,7 @@ def generate(sources, profile):
     currency_data = currencies.collect(inputs_read, graph)
     layout_data = number_layout.collect(inputs_read, graph, numbering_data)
     unit_data = unit_patterns.collect(inputs_read, graph)
+    grammar_data = unit_grammar.collect(inputs_read, graph)
     plural_data = plural_rules.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     if profile == 'native':
@@ -83,6 +86,7 @@ def generate(sources, profile):
     layout_data['root_fields'] = tuple(row for row in layout_data['root_fields'] if row[0] in selected_tags)
     layout_data['currency_units'] = tuple(row for row in layout_data['currency_units'] if row[0] in selected_tags)
     unit_data = unit_tables.select(unit_data, tags)
+    grammar_data = unit_grammar_tables.select(grammar_data, tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
     contexts = [row for row in lists['contexts'] if row[0] in selected_tags]
@@ -97,6 +101,7 @@ def generate(sources, profile):
     pool_strings.update(currency_tables.strings(currency_data))
     pool_strings.update(number_layout_tables.strings(layout_data))
     pool_strings.update(unit_tables.strings(unit_data))
+    pool_strings.update(unit_grammar_tables.strings(grammar_data))
     pool_strings.update(plural_tables.strings(plural_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
@@ -120,6 +125,7 @@ def generate(sources, profile):
     sections[bundle.NUMBER_LAYOUTS] = number_layout_tables.encode(layout_data, tags,
                                                                numbering_data, string_ids)
     sections[bundle.UNIT_PATTERNS] = unit_tables.encode(unit_data, tags, string_ids)
+    sections[bundle.UNIT_GRAMMAR] = unit_grammar_tables.encode(grammar_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
               'sources': {name: sources.manifest['files'][name] for name in sorted(inputs_read.consumed)},
@@ -134,7 +140,7 @@ def generate(sources, profile):
                 'sha256': acquire.digest(binary), 'bytes': len(binary),
                 'locales': len(tags), 'strings': len(strings),
                 'complete_services': [],
-                'note': 'Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts and plural rules; not formatter capability or full Intl coverage.'}
+                'note': 'Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar and plural rules; not formatter capability or full Intl coverage.'}
     return binary, manifest
 
 
