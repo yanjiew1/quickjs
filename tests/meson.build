@@ -190,6 +190,23 @@ test(
 )
 
 # Build engine-independent library tests against their actual owners.
+intl_plural_rules_test = executable(
+  'test_intl_plural_rules',
+  [
+    'test_intl_plural_rules.c',
+    '../src/intl/plural/rules.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-plural-rules',
+  intl_plural_rules_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
 intl_locale_fixture = custom_target(
   'intl-locale-authored-fixture',
   output: 'intl-locale-authored-fixture.c',
