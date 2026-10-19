@@ -1,6 +1,7 @@
 /* Currency selection fallback, provenance and borrowed-storage contracts.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/currency/display.h"
+#include "../src/intl/number/currency-pattern.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
