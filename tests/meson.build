@@ -493,6 +493,23 @@ endforeach
 
 # Build engine-independent library tests against their actual owners.
 if intl_enabled
+  intl_plural_rules_test = {
+    'name': 'test_intl_plural_rules',
+    'sources': files(
+      'test_intl_plural_rules.c',
+      '../src/intl/plural/rules.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_plural_rules_test,
+    'name': 'intl-plural-rules',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
   intl_locale_fixture = custom_target(
     'intl-locale-authored-fixture',
     output: 'intl-locale-authored-fixture.c',
