@@ -350,6 +350,13 @@ referenced. Projection prunes unused maps; global fraction facts remain intact.
 The decoder checks defaults, ordering, extents and references before resolving
 semantic fields. No code-name text or plural-name fallback is synthesized.
 
+`src/intl/currency/data.c` validates that schema against an unchanged open
+data view and exposes borrowed exact code/field queries. It also returns the
+stored default fraction facts for well-formed codes without a specific row,
+including unknown display codes. Queries allocate no memory. Temporary open
+validation memory is released on every path. The data owner does not select
+plural fallback, currency availability, display style or formatter behavior.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
