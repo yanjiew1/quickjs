@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_LIST_NATIVE_ENGINE_H
 #define QJS_INTL_LIST_NATIVE_ENGINE_H
-#include "../common/format.h"
+#include "list.h"
 
 /* Alternate predicates follow CLDR, cross-checked with ICU4X and ICU78.3.
  * Hebrew Script ranges come from Unicode data, never guessed block ranges. */
@@ -12,13 +12,12 @@ typedef enum QJSIntlListContext {
     QJS_INTL_LIST_CONTEXT_HEBREW_AND = 3
 } QJSIntlListContext;
 
-typedef struct QJSIntlNativeList QJSIntlNativeList;
 typedef struct QJSIntlListScriptRange {
     uint32_t first, last; /* inclusive Unicode scalar range */
 } QJSIntlListScriptRange;
 typedef struct QJSIntlListTemplates {
     QJSIntlBytes base[4];
-    QJSIntlBytes alternate[4]; /* required for nonzero context */
+    QJSIntlBytes alternate[2]; /* pair, end; required for nonzero context */
     QJSIntlListContext context;
     const QJSIntlListScriptRange *hebrew_script;
     size_t hebrew_script_count; /* required for Hebrew context */
@@ -32,20 +31,5 @@ typedef struct QJSIntlListTemplates {
  */
 QJSIntlStatus qjs_intl_native_list_open(const QJSIntlAllocator *,
                                         const QJSIntlListTemplates *,
-                                        QJSIntlNativeList **out);
-void qjs_intl_native_list_close(QJSIntlNativeList *);
-/* JS conversion/iterator operations remain in the frontend. This operation
- * borrows exact UTF16 slices for this call and owns the returned text/parts.
- * Every element is emitted once, including zero-length strings. Literal
- * pieces remain separate, matching DeconstructPattern. Output must start
- * empty and must not overlap inputs; every failure resets it to all-zero.
- * No trailing NUL is promised. Inputs remain unchanged for the call.
- */
-QJSIntlStatus qjs_intl_native_list_format(const QJSIntlNativeList *,
-                                          const QJSIntlUTF16 *items, size_t count,
-                                          QJSIntlFormatted *out);
-/* Results survive handle close; clear with the same allocator callbacks and
- * opaque used by open. Accepts NULL result; repeat clear is harmless.
- */
-void qjs_intl_native_list_result_clear(const QJSIntlAllocator *, QJSIntlFormatted *);
+                                        QJSIntlListFormatter **out);
 #endif
