@@ -1473,6 +1473,33 @@ excludes only two Duration cases that require unsupported German/Serbian/Chinese
 locales; English array-like locale arguments are covered in the repository tests.
 The native profile keeps both cases.
 
+## DisplayNames JavaScript binding
+
+Both enabled profiles expose `Intl.DisplayNames`, `supportedLocalesOf`, `of`
+and `resolvedOptions` for all six standard types. Constructor options are
+required objects and the `type` option is mandatory. Read style, type, fallback
+and languageDisplay in specification order after locale resolution; validate
+languageDisplay even for nonlanguage types, but report it only for language.
+
+The binding owns CanonicalCodeForDisplayNames: canonicalize language aliases,
+reject extensions/private use and duplicate variants, and apply only the specified
+case regularization for other types. Preserve that API code independently of
+backend lookup aliases. A missing field returns its canonical code or undefined
+according to fallback; present empty/code-identical labels remain successful.
+Fixed date-field identities and exact code parsing now live in `datetime/field`,
+shared by the binding and native adapter without relying on binary table layout.
+
+Formatter objects retain native handles and owned locale text, with runtime
+service teardown and partial-intrinsic cleanup. JavaScript tests cover option
+and code coercion order, abrupt completion, canonical fallback, descriptors,
+subclasses, cross-realm behavior and GC reentrancy. Binding OOM tests reuse warmed
+runtime services with fresh realm objects and retry every reached failure point.
+CI admits both DisplayNames Test262 feature flags. One branding case also
+constructs the undelivered DateTimeFormat and remains deferred until that
+constructor lands; repository checks cover every currently delivered Intl receiver.
+Microbenchmarks cover construction, composed language names, calendar aliases
+and currency-name queries.
+
 ## Display-name source facts
 
 `display_names.py` collects language, script, territory, variant and calendar
