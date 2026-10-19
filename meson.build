@@ -315,6 +315,8 @@ if intl_enabled
       'tools/intl/list_patterns.py',
       'tools/intl/locale_metadata.py',
       'tools/intl/locale_tables.py',
+      'tools/intl/numbering.py',
+      'tools/intl/numbering_tables.py',
       'tools/intl/parents.py',
       'tools/intl/preferences.py',
       'tools/intl/preference_tables.py',

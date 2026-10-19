@@ -140,6 +140,17 @@ These records prepare number-service data. They do not advertise NumberFormat
 available locales or supported numbering systems. Authored tests cover scalar
 repertoires, inheritance, explicit markers and malformed/conflicting records.
 
+Prepared section 13 stores sorted three-word definition records: pooled system
+identifier, kind (0 numeric / 1 algorithmic), and pooled repertoire/rule string.
+Section 14 stores sorted five-word records: pooled source locale followed by
+definition indexes for default, native, traditional and financial preferences.
+For the last two fields, `0xffffffff` means absent and `0xfffffffe` means
+explicitly blocked. Required fields cannot use either sentinel. All words are
+little-endian. The decoder checks both sections together, including canonical
+order, numeric scalar uniqueness, rule syntax and mandatory Latin/root data.
+Both profiles retain complete numbering metadata, including synthetic regional
+fallbacks. Rule references are not formatter support declarations.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
