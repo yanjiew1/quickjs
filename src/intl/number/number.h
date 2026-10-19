@@ -37,6 +37,7 @@ typedef struct QJSIntlNumberOptions {
     QJSIntlNumberNotation notation;
     QJSIntlNumberGrouping grouping;
     QJSIntlNumberSign sign_display;
+    unsigned int compact_long;
     QJSIntlDecimalOptions digits;
     size_t maximum_output_length;
 } QJSIntlNumberOptions;
@@ -45,7 +46,7 @@ typedef struct QJSIntlNumberService QJSIntlNumberService;
 typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
 /* This internal service implements decimal/percent formatting with standard,
-   scientific and engineering notation. Compact, other styles and ranges are
+   scientific, engineering and compact notation. Other styles and ranges are
    still required before the complete Intl.NumberFormat binding can register.
    Bindings must not register NumberFormat on the strength of this subset.
 
