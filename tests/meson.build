@@ -613,6 +613,38 @@ test(
   timeout: 30,
 )
 
+intl_duration_owner_sources = files(
+  'test_intl_duration_data.c',
+  '../src/intl/common/locale-grammar.c',
+  '../src/intl/common/source-locale.c',
+  '../src/intl/duration/data.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+)
+intl_duration_fixture = custom_target(
+  'intl-duration-authored-fixture',
+  output: 'intl-duration-authored-fixture.c',
+  command: [python, files('intl_duration_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_duration_patterns.py',
+    'test_intl_list_patterns.py',
+  ),
+)
+intl_duration_authored = executable(
+  'test_intl_duration_authored',
+  intl_duration_owner_sources + [intl_duration_fixture],
+  c_args: host_args + ['-DTEST_INTL_AUTHORED=1'],
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-duration-authored',
+  intl_duration_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_relative_owner_sources = files(
   'test_intl_relative_data.c',
   '../src/intl/common/locale-grammar.c',
@@ -1173,6 +1205,21 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-relative-data-' + profile,
     intl_relative_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_duration_test = executable(
+    'test_intl_duration_data_' + profile,
+    intl_duration_owner_sources,
+    c_args: host_args + ['-DTEST_INTL_AUTHORED=0'],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-duration-data-' + profile,
+    intl_duration_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
@@ -2087,6 +2134,14 @@ test(
   'intl-unit-patterns',
   python,
   args: files('test_intl_unit_patterns.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-duration-tables',
+  python,
+  args: files('test_intl_duration_tables.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )
