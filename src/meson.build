@@ -103,6 +103,7 @@ if intl_enabled
     'quickjs/builtins/intl/locale.c',
     'quickjs/builtins/intl/locale-list.c',
     'quickjs/builtins/intl/list-format.c',
+    'quickjs/builtins/intl/number-format-options.c',
     'quickjs/builtins/intl/number-options.c',
     'quickjs/builtins/intl/number-value.c',
     'quickjs/builtins/intl/options.c',
@@ -132,6 +133,7 @@ if intl_enabled
     'intl/plural/native.c',
     'intl/plural/native-engine.c',
     'intl/plural/rules.c',
+    'intl/unit/identifier.c',
   )
   support_sources += intl_data
 endif

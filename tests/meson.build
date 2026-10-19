@@ -192,6 +192,21 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 if intl_enabled
+  intl_number_format_options_test = executable(
+    'test_intl_number_format_options',
+    'test_intl_number_format_options.c',
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: test_engine_dep,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-number-format-options',
+    intl_number_format_options_test,
+    args: files('test_intl_number_format_options.js'),
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_locale_options_test = executable(
     'test_intl_locale_options',
     'test_intl_locale_options.c',
