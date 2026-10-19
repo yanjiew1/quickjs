@@ -30,11 +30,12 @@ class LayoutTableTests(unittest.TestCase):
         data, systems, pool, ids = self.fixture()
         section = wire.encode(data, graph().tags, systems, ids)
         self.assertEqual(wire.decode(section, pool, graph().tags, systems),
-                         {key: data[key] for key in ('systems', 'fields', 'rows', 'root_fields')})
+                         {key: data[key] for key in ('systems', 'fields', 'rows', 'root_fields', 'currency_units')})
         self.assertIsNone(wire.decode(None, pool, graph().tags, systems))
         tags = ('en', 'root')
         data = dict(data, rows=tuple(row for row in data['rows'] if row[0] in tags),
-                    root_fields=tuple(row for row in data['root_fields'] if row[0] in tags))
+                    root_fields=tuple(row for row in data['root_fields'] if row[0] in tags),
+                    currency_units=tuple(row for row in data['currency_units'] if row[0] in tags))
         result = wire.decode(wire.encode(data, tags, systems, ids), pool, tags, systems)
         self.assertEqual(result['rows'], data['rows'])
         english = dict(zip(result['fields'], result['rows'][0][2]))
@@ -122,6 +123,33 @@ class LayoutTableTests(unittest.TestCase):
                       (('en', 'latn', 1 << 4),), (('en', 'latn', 0),)):
             with self.assertRaises(ValueError):
                 wire.encode(dict(data, root_fields=roots), graph().tags, systems, ids)
+
+    def test_projected_currency_vectors_and_masks(self):
+        data, systems, pool, ids = self.fixture()
+        count, raw = wire.encode(data, graph().tags, systems, ids)
+        _, system_count, vectors, rows, currency_count = struct.unpack_from('<5I', raw)
+        indices = wire.HEADER + system_count + count + rows * system_count + vectors * wire.VECTOR_WIDTH
+        start = indices + count
+        for field, value in ((4, 0), (4, count + 1), (indices, currency_count),
+                             (start, len(pool)), (start + len(wire.COUNTS), 1 << len(wire.COUNTS)),
+                             (start + len(wire.COUNTS), 1)):
+            changed = bytearray(raw)
+            struct.pack_into('<I', changed, field * 4, value)
+            with self.assertRaises(ValueError, msg=str((field, value))):
+                wire.decode((count, bytes(changed)), pool, graph().tags, systems)
+        self.assertGreater(currency_count, 1)
+        changed = bytearray(raw)
+        changed[(start + wire.CURRENCY_WIDTH) * 4:(start + 2 * wire.CURRENCY_WIDTH) * 4] = \
+            changed[start * 4:(start + wire.CURRENCY_WIDTH) * 4]
+        with self.assertRaises(ValueError):
+            wire.decode((count, bytes(changed)), pool, graph().tags, systems)
+        for change in (data['currency_units'][:-1],
+                       data['currency_units'] + data['currency_units'][:1],
+                       tuple((locale, values, True) for locale, values, mask in data['currency_units']),
+                       tuple((locale, values, 1) for locale, values, mask in data['currency_units']),
+                       tuple((locale, values, 256) for locale, values, mask in data['currency_units'])):
+            with self.assertRaises(ValueError):
+                wire.encode(dict(data, currency_units=change), graph().tags, systems, ids)
 
 
 if __name__ == '__main__':
