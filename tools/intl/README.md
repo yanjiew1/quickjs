@@ -1400,3 +1400,11 @@ next to large seconds and integral field magnitudes beyond `int64_t`.
 The helper allocates nothing and leaves rounding, visible fractional precision
 and displayed-negative-zero policy to its consumer. Its shared native duration
 arithmetic does not require Temporal JavaScript constructors.
+
+`duration/options.[ch]` owns the pure duration-unit option algorithm over
+already-coerced requests. The binding retains observable property access and
+coercion order; it resolves each unit before reading the next unit's options.
+The helper handles digital defaults, numeric/fractional transitions, display
+defaults and forced minute/second widths. A separate resolved-record validator
+protects the C formatter boundary. Effective `TwoDigitHours` is an explicit
+input, rather than being inferred from raw pattern width inside this algorithm.

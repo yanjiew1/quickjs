@@ -568,6 +568,24 @@ test(
   timeout: 30,
 )
 
+intl_duration_options_test = executable(
+  'test_intl_duration_options',
+  [
+    'test_intl_duration_options.c',
+    '../src/intl/duration/options.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-duration-options',
+  intl_duration_options_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_duration_decimal_test = executable(
   'test_intl_duration_decimal',
   [
