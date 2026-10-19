@@ -187,6 +187,48 @@ test(
 )
 
 # Build engine-independent library tests against their actual owners.
+foreach profile : ['minimal', 'native']
+  intl_fixture = custom_target(
+    'intl-prepared-' + profile,
+    input: files('../data/intl/' + profile + '.bin'),
+    output: 'intl-prepared-' + profile + '.c',
+    command: [
+      python,
+      files('../tools/intl/embed.py'),
+      '--input', '@INPUT@',
+      '--output', '@OUTPUT@',
+    ],
+    depend_files: files(
+      '../tools/intl/acquire.py',
+      '../tools/intl/bundle.py',
+      '../tools/intl/cldr_xml.py',
+      '../tools/intl/list_patterns.py',
+      '../tools/intl/parents.py',
+      '../tools/intl/resolve.py',
+      '../tools/intl/tables.py',
+    ),
+  )
+  intl_data_test = executable(
+    'test_intl_data_' + profile,
+    [
+      'test_intl_data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      intl_fixture,
+    ],
+    c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-prepared-' + profile,
+    intl_data_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+endforeach
+
 standalone = {
   'test_intl_pack': [
     'test_intl_pack.c',

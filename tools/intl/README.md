@@ -139,3 +139,11 @@ and the CLDR license. The repository suite checks their hashes and typed tables
 offline. CI additionally rebuilds both packs from the authenticated archive and
 compares every byte of the binaries and manifests. These initial files contain
 only the sections documented above, not yet the complete Intl data inventory.
+
+`embed.py` validates a prepared pack and emits one immutable C array in the
+build directory. The typed C reader validates UTF-8/string ordering, record
+extents, references, the parent graph and list templates before exposing borrowed
+text slices. Temporary graph-validation memory is freed before return, including
+on errors. Separate C repository tests consume both real prepared profiles, so
+the Python encoder and C reader are checked together on every test platform.
+The reader does not authenticate data or provide BCP47 canonicalization.

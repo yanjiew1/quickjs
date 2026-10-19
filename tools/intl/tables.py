@@ -119,14 +119,16 @@ def decode_lists(section, strings, locale_count):
     indices = values[1:1 + count]
     if set(indices) != set(range(sets)):
         raise ValueError('invalid or unused Intl list set')
-    vectors, previous = [], None
+    vectors, previous, checked = [], None, set()
     for offset in range(1 + count, len(values), LIST_WIDTH):
         vector = values[offset:offset + LIST_WIDTH]
         if any(value >= len(strings) for value in vector) or previous is not None and vector <= previous:
             raise ValueError('invalid/noncanonical Intl list string references')
         for value in vector:
-            if pattern(strings[value]) != strings[value] or strings[value] in (INHERIT, BLOCK):
-                raise ValueError('unresolved Intl list template')
+            if value not in checked:
+                if pattern(strings[value]) != strings[value] or strings[value] in (INHERIT, BLOCK):
+                    raise ValueError('unresolved Intl list template')
+                checked.add(value)
         previous = vector
         vectors.append(tuple(strings[value] for value in vector))
     return tuple(vectors[index] for index in indices)
