@@ -840,11 +840,17 @@ function bigint_to_string_large(n)
 function bigint_to_locale_string(n)
 {
     var j, result, value = BigInt(255);
+    if (bigint_to_locale_string.expected === undefined) {
+        // Keep the measured call unchanged when Intl localizes its output.
+        bigint_to_locale_string.expected = typeof Intl !== "undefined" &&
+            typeof Intl.NumberFormat === "function" ?
+            new Intl.NumberFormat().format(value) : String(value);
+    }
     for(j = 0; j < n; j++) {
         result = value.toLocaleString();
     }
     global_res = result;
-    if (result !== "255")
+    if (result !== bigint_to_locale_string.expected)
         throw Error("incorrect BigInt locale fallback");
     return n;
 }
@@ -855,7 +861,11 @@ function bigint_to_locale_string_large(n)
     if (value === undefined) {
         value = (BigInt(1) << BigInt(4096)) - BigInt(1);
         bigint_to_locale_string_large.value = value;
-        bigint_to_locale_string_large.expected = String(value);
+        // ECMA-402 formats this through the default NumberFormat, whose
+        // grouping and digits can differ from the locale-independent string.
+        bigint_to_locale_string_large.expected = typeof Intl !== "undefined" &&
+            typeof Intl.NumberFormat === "function" ?
+            new Intl.NumberFormat().format(value) : String(value);
     }
     for(j = 0; j < n; j++) {
         result = value.toLocaleString();
