@@ -1224,6 +1224,13 @@ The locale owner uses
 `qjs_intl_locale_metadata_open()` to check sections 3–6, including scoped
 preferred-name graphs, before a runtime locale service can consume them.
 
+The same owner exposes allocation-free typed extension-type queries and exact
+extension/key/name lookup. Returned aliases, preferred identity, flags and
+timezone labels remain borrowed source facts. Queries neither substitute aliases
+nor advertise service capabilities. This lets native consumers share metadata
+without decoding locale-owned wire columns themselves. Authored tests cover
+legacy aliases, preferred/deprecated records, indirect types, timezone labels,
+missing lookups and invalid-argument resets.
 
 ## Native locale identity operations
 
@@ -1546,6 +1553,24 @@ alternatives available. Empty and code-identical labels remain present. Selectio
 returns borrowed text and source locale without allocating or applying API code
 fallback. Authored tests distinguish child ordinary/standalone names from parent
 short names and cover independent blocks, empty values and equal child provenance.
+
+`src/intl/display/calendar-names.c` derives calendar display identities from the
+existing BCP47 metadata and normalized calendar-name inventory. It follows
+preferred chains and source aliases, retaining original API identities such as
+`islamicc` while selecting the `islamic-civil` source field. `gregory` and
+`ethioaa` similarly reach their CLDR source names without a second alias dataset.
+Well-formed source identities and alias API keys remain available independently
+of arithmetic-calendar support. Invalid legacy spellings are source candidates,
+not additional accepted API syntax.
+
+The projection owns one sorted key/record allocation. Metadata is needed only
+during construction; source lookup keys borrow the names blob. Exact lookups
+allocate nothing and apply no alias substitution to API input. Genuinely distinct
+source candidates or conflicting API-key mappings fail rather than choose an
+arbitrary name; case/separator variants of one normalized source do not conflict.
+Authored and prepared-profile tests cover preferred chains, alias agreement,
+uppercase aliases, unknown source names, missing fields, ambiguity, empty data,
+allocation failures and lookup after releasing the metadata blob.
 
 ## Shared date-field labels
 
