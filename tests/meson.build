@@ -868,6 +868,31 @@ if intl_enabled
     },
   }]
 
+  intl_number_compact_test = {
+    'name': 'test_intl_number_compact',
+    'sources': files(
+      'test_intl_number_compact.c',
+      '../src/cutils/cutils.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/locale/numbering-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/intl/number/body.c',
+      '../src/intl/number/compact-data.c',
+      '../src/intl/number/compact-format.c',
+    ) + [intl_compact_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_number_compact_test,
+    'name': 'intl-number-compact',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_currency_owner_sources = files(
     'test_intl_currency_data.c',
     '../src/intl/currency/data.c',
@@ -1349,10 +1374,15 @@ if intl_enabled
         '../src/intl/native/pack.c',
         '../src/intl/number/affix.c',
         '../src/intl/number/body.c',
+        '../src/intl/number/compact-data.c',
+        '../src/intl/number/compact-format.c',
         '../src/intl/number/native.c',
         '../src/intl/number/pattern-data.c',
         '../src/intl/number/round.c',
         '../src/intl/number/symbol-data.c',
+        '../src/intl/plural/data.c',
+        '../src/intl/plural/native-engine.c',
+        '../src/intl/plural/rules.c',
       ),
       'c_args': (host_args + [
         ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
