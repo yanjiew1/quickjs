@@ -8,6 +8,8 @@
 #define ABSENT UINT32_C(0xffffffff)
 #define BLOCKED UINT32_C(0xfffffffe)
 #define EMPTY UINT32_C(0xfffffffd)
+#define VECTOR_WORDS (QJS_INTL_CURRENCY_FIELD_COUNT + 1)
+#define ROOT_NAME_MASK ((UINT32_C(1) << (QJS_INTL_CURRENCY_NAME_OTHER + 1)) - 2)
 
 static uint32_t word(const uint8_t *bytes, size_t index)
 {
@@ -89,7 +91,7 @@ QJSIntlStatus qjs_intl_currency_data_open(const QJSIntlData *data,
     if (qjs_intl_pack_section(&data->pack, QJS_INTL_SECTION_CURRENCIES, &result.section) ||
         !result.section.count || result.section.count != data->locales.count ||
         result.section.length % 4 || result.section.length < HEADER_WORDS * 4 ||
-        word(result.section.bytes, 0) != 1)
+        word(result.section.bytes, 0) != 2)
         return status;
     result.code_count = word(result.section.bytes, 1);
     result.fraction_count = word(result.section.bytes, 2);
@@ -103,7 +105,7 @@ QJSIntlStatus qjs_intl_currency_data_open(const QJSIntlData *data,
         !take(&result.section, &at, result.fraction_count, FRACTION_WORDS, &result.fractions) ||
         !take(&result.section, &at, result.section.count, 1, &result.locale_maps) ||
         !take(&result.section, &at, result.map_count, result.code_count, &result.maps) ||
-        !take(&result.section, &at, result.vector_count, QJS_INTL_CURRENCY_FIELD_COUNT,
+        !take(&result.section, &at, result.vector_count, VECTOR_WORDS,
               &result.vectors) ||
         at != result.section.length / 4 ||
         result.vector_count > (size_t)result.map_count * result.code_count)
@@ -122,7 +124,7 @@ QJSIntlStatus qjs_intl_currency_data_open(const QJSIntlData *data,
             return status;
     }
     if (!ordered(result.maps, result.map_count, result.code_count) ||
-        !ordered(result.vectors, result.vector_count, QJS_INTL_CURRENCY_FIELD_COUNT))
+        !ordered(result.vectors, result.vector_count, VECTOR_WORDS))
         return status;
     /* Counts occupy disjoint nonempty word ranges, bounding their sum. */
     scratch = (size_t)result.map_count + result.vector_count;
@@ -150,9 +152,14 @@ QJSIntlStatus qjs_intl_currency_data_open(const QJSIntlData *data,
     }
     for (i = 0; i < result.vector_count; i++) {
         unsigned int j, present = 0;
+        uint32_t mask = word(result.vectors, i * VECTOR_WORDS + QJS_INTL_CURRENCY_FIELD_COUNT);
+        if (mask & ~ROOT_NAME_MASK)
+            goto done;
         for (j = 0; j < QJS_INTL_CURRENCY_FIELD_COUNT; j++) {
-            uint32_t index = word(result.vectors, i * QJS_INTL_CURRENCY_FIELD_COUNT + j);
+            uint32_t index = word(result.vectors, i * VECTOR_WORDS + j);
             QJSIntlBytes text;
+            if ((mask & (UINT32_C(1) << j)) && index == ABSENT)
+                goto done;
             present |= index != ABSENT;
             if (index == ABSENT || index == BLOCKED || index == EMPTY)
                 continue;
@@ -223,7 +230,10 @@ QJSIntlStatus qjs_intl_currency_field_at(const QJSIntlCurrencyData *data, uint32
     vector = word(data->maps, (size_t)map * data->code_count + code);
     value = vector == ABSENT
                 ? ABSENT
-                : word(data->vectors, (size_t)vector * QJS_INTL_CURRENCY_FIELD_COUNT + field);
+                : word(data->vectors, (size_t)vector * VECTOR_WORDS + field);
+    if (vector != ABSENT)
+        out->from_root = (word(data->vectors, (size_t)vector * VECTOR_WORDS +
+                                             QJS_INTL_CURRENCY_FIELD_COUNT) >> field) & 1;
     if (value == ABSENT)
         out->state = QJS_INTL_CURRENCY_ABSENT;
     else if (value == BLOCKED)
