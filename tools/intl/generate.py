@@ -78,6 +78,7 @@ def generate(sources, profile):
     compact_data = compact_tables.select(compact_data, tags)
     compact_prepared = compact_tables.prepare(compact_data, tags, numbering_data)
     currency_data = currency_tables.select(currency_data, tags)
+    pattern_data['overrides'] = currency_tables.patterns(currency_data)
     layout_data['rows'] = tuple(row for row in layout_data['rows'] if row[0] in selected_tags)
     unit_data = unit_tables.select(unit_data, tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
