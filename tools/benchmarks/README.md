@@ -132,6 +132,13 @@ updated script on both engines; these cases do not change the frozen 72-case
 catalog. Already ordered and ASCII inputs are useful additional controls when
 evaluating changes to canonical ordering.
 
+The live repository microbenchmark additionally offers the `intl_number`
+prefix for constructor, bound numeric formatting, exact decimal/BigInt inputs,
+currency parts, ranges and compact division-unit formatting. These optional
+cases require NumberFormat and do not modify the frozen 72-case comparison
+fixture. For example, run `build/qjs --std tests/microbench.js intl_number` from
+the source directory using an unsanitized build with assertions disabled.
+
 Zoo's self-contained files are fetched only when requested, from the
 exact `ivankra/javascript-zoo` revision in the manifest. Every download
 has a SHA-256 check before execution. The original source notices remain
