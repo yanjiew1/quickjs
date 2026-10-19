@@ -2,6 +2,8 @@
  * ECMA402 730ca2b88c305862db7be2f83c510dcca33ab48c, reviewed 2026-10-19.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../../../intl/locale/matching.h"
+#include "../../../intl/locale/identifier.h"
+#include "../../../intl/common/locale-grammar.h"
 #include "../../internal/object.h"
 #include "../../internal/runtime.h"
 #include "../intl.h"
@@ -59,20 +61,22 @@ static int match_one(JSContext *ctx, const QJSIntlBytes *available, size_t count
         "locale matching");
 }
 
-int js_intl_resolve_locale_index(JSContext *ctx, const QJSIntlBytes *available,
+int js_intl_resolve_locale_match(JSContext *ctx, const QJSIntlBytes *available,
                                  size_t count, const JSIntlLocaleList *requested,
-                                 size_t *out)
+                                 QJSIntlLocaleMatch *out)
 {
     QJSIntlLocaleMatch match;
     const char *locale;
     size_t i;
+    memset(out, 0, sizeof(*out));
     /* Best fit currently uses the same prefix algorithm as lookup. This is
        an implementation-defined matching choice, not a capability fallback. */
     for (i = 0; i < requested->count; i++) {
         if (match_one(ctx, available, count, requested->items[i], &match))
             return -1;
         if (match.found) {
-            *out = match.available_index;
+            match.requested_index = i;
+            *out = match;
             return 0;
         }
     }
@@ -84,8 +88,136 @@ int js_intl_resolve_locale_index(JSContext *ctx, const QJSIntlBytes *available,
         JS_ThrowInternalError(ctx, "Intl service does not admit the default locale");
         return -1;
     }
+    match.requested_index = SIZE_MAX;
+    match.extension = (QJSIntlBytes){0};
+    *out = match;
+    return 0;
+}
+
+int js_intl_resolve_locale_index(JSContext *ctx, const QJSIntlBytes *available,
+                                 size_t count, const JSIntlLocaleList *requested,
+                                 size_t *out)
+{
+    QJSIntlLocaleMatch match;
+    if (js_intl_resolve_locale_match(ctx, available, count, requested, &match))
+        return -1;
     *out = match.available_index;
     return 0;
+}
+
+int js_intl_unicode_type_option(JSContext *ctx, JSValueConst options, const char *name,
+                                 QJSIntlBytes *out, const char **owned)
+{
+    JSValue value;
+    const char *text;
+    size_t length;
+    memset(out, 0, sizeof(*out));
+    *owned = NULL;
+    value = JS_GetPropertyStr(ctx, options, name);
+    if (JS_IsException(value))
+        return -1;
+    if (JS_IsUndefined(value))
+        return 0;
+    text = JS_ToCStringLen(ctx, &length, value);
+    JS_FreeValue(ctx, value);
+    if (!text)
+        return -1;
+    if (!qjs_intl_unicode_type_well_formed(text, length)) {
+        JS_FreeCString(ctx, text);
+        JS_ThrowRangeError(ctx, "invalid Intl %s", name);
+        return -1;
+    }
+    *out = (QJSIntlBytes){text, length};
+    *owned = text;
+    return 0;
+}
+
+static int same_bytes(QJSIntlBytes first, QJSIntlBytes last)
+{
+    return first.length == last.length &&
+           (!first.length || !memcmp(first.data, last.data, first.length));
+}
+
+int js_intl_resolve_locale_key(JSContext *ctx, QJSIntlBytes base, QJSIntlBytes extension,
+                               const char key[2], QJSIntlBytes default_value, QJSIntlBytes option,
+                               JSIntlLocaleValueSupported *supported, void *opaque,
+                               JSIntlResolvedKeyword *out)
+{
+    QJSIntlLocaleComponents components = {0};
+    QJSIntlBytes requested, value = default_value;
+    QJSIntlLocaleService *identity = NULL;
+    QJSIntlAllocator allocator = js_intl_allocator(ctx->rt);
+    JSIntlResolvedKeyword result = {0};
+    char *canonical_option = NULL, *with_key = NULL;
+    QJSIntlStatus status;
+    int accepted, retain = 0;
+    memset(out, 0, sizeof(*out));
+    components.unicode_extension = extension;
+    requested = qjs_intl_locale_keyword(&components, key);
+    if (requested.data && requested.length) {
+        if (js_intl_error(ctx, supported(opaque, requested, &accepted), "locale keyword"))
+            goto fail;
+        if (accepted) {
+            value = requested;
+            retain = 1;
+        }
+    } else if (requested.data) {
+        QJSIntlBytes truth = {"true", 4};
+        if (js_intl_error(ctx, supported(opaque, truth, &accepted), "locale keyword"))
+            goto fail;
+        if (accepted) {
+            value = truth;
+            retain = 1;
+        }
+    }
+    if (option.data) {
+        identity = js_intl_locale_service(ctx);
+        if (!identity || js_intl_error(ctx,
+                qjs_intl_locale_canonicalize_uvalue(identity, (QJSIntlBytes){key, 2},
+                                                      option, &canonical_option),
+                "locale keyword canonicalization"))
+            goto fail;
+        option = canonical_option[0] ? (QJSIntlBytes){canonical_option, strlen(canonical_option)}
+                                    : (QJSIntlBytes){"true", 4};
+        if (!same_bytes(option, value)) {
+            if (js_intl_error(ctx, supported(opaque, option, &accepted), "locale keyword"))
+                goto fail;
+            if (accepted) {
+                value = option;
+                retain = 0;
+            }
+        }
+    }
+    result.value = js_strndup(ctx, value.data, value.length);
+    if (!result.value)
+        goto fail;
+    if (retain) {
+        QJSIntlLocaleKeyword keyword = {{key[0], key[1]}, requested};
+        if (!identity)
+            identity = js_intl_locale_service(ctx);
+        if (!identity)
+            goto fail;
+        status = qjs_intl_locale_replace_keywords(&allocator, base, &keyword, 1, &with_key);
+        if (js_intl_error(ctx, status, "locale keyword insertion") ||
+            js_intl_error(ctx, qjs_intl_locale_canonicalize(identity,
+                              (QJSIntlBytes){with_key, strlen(with_key)}, &result.locale),
+                            "locale keyword insertion"))
+            goto fail;
+    } else {
+        result.locale = js_strndup(ctx, base.data, base.length);
+        if (!result.locale)
+            goto fail;
+    }
+    js_free(ctx, with_key);
+    js_free(ctx, canonical_option);
+    *out = result;
+    return 0;
+fail:
+    js_free(ctx, with_key);
+    js_free(ctx, canonical_option);
+    js_free(ctx, result.value);
+    js_free(ctx, result.locale);
+    return -1;
 }
 
 JSValue js_intl_filter_locales(JSContext *ctx, const QJSIntlBytes *available,
