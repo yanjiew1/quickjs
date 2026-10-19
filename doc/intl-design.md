@@ -99,6 +99,15 @@ Use three layers:
 3. **Selected backends** own versioned data and replaceable computation. Native
    and ICU4C implement the same contracts and may use different internal paths.
 
+API names do not define module boundaries. A binding or operation coordinator
+may query several functional modules without making those modules depend on
+one another. For example, an Intl.Locale information method may combine locale
+preferences with a formatter's capability inventory; the locale foundation must
+not open that formatter service to perform the query. Each service owns its
+actual supported locales and options. A functional module may also serve other
+modules: plural evaluation remains in `plural/`, rather than moving into a
+generic common directory merely because several formatters use it.
+
 ECMAScript-defined semantics belong to the common contract. Fixed pure
 algorithms normally have a shared implementation. A service operation may
 delegate a complete calculation to its backend when the observable behavior
