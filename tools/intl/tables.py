@@ -5,6 +5,7 @@ import bundle
 import locale_tables
 import numbering_tables
 import number_symbol_tables
+import number_pattern_tables
 import preference_tables
 import plural_tables
 from list_patterns import PARTS, VARIANTS, pattern
@@ -209,4 +210,6 @@ def validate(binary):
             'numbering': numbering,
             'number_symbols': number_symbol_tables.decode(sections.get(bundle.NUMBER_SYMBOLS),
                                                           strings, tags, numbering),
-            'plurals': plural_tables.decode(sections.get(bundle.PLURALS), strings, tags)}
+            'plurals': plural_tables.decode(sections.get(bundle.PLURALS), strings, tags),
+            'number_patterns': number_pattern_tables.decode(sections.get(bundle.NUMBER_PATTERNS),
+                                                            strings, tags, numbering)}
