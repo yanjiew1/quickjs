@@ -142,8 +142,35 @@ def collect(sources, graph=None):
         for kind, name in groups:
             records.alias(locale, (width, kind, name), (other, kind, name), origin)
     rows, maps, indices = [], [], {}
+    overlay_rows, overlay_maps, overlay_nodes, overlay_ids = [], {}, [], {}
+
+    def freeze_overlays(head, frozen):
+        # The caller's overlay cache retains nodes for this requesting locale,
+        # so identity keys remain valid while sharing already frozen suffixes.
+        path = []
+        while head is not None and id(head) not in frozen:
+            path.append(head)
+            head = head.parent
+        tail = 0 if head is None else frozen[id(head)]
+        for node in reversed(path):
+            value = tuple(key + (node.fields[key],) for key in sorted(node.fields))
+            index = overlay_maps.get(value)
+            if index is None:
+                index = len(overlay_maps)
+                overlay_maps[value] = index
+            # Keep source identity for later locale-sensitive selector policy;
+            # identical text from different source locales is not one layer.
+            pair = node.locale, node.group, index, tail
+            tail = overlay_ids.get(pair)
+            if tail is None:
+                overlay_nodes.append(pair)
+                tail = len(overlay_nodes)
+                overlay_ids[pair] = tail
+            frozen[id(node)] = tail
+        return tail
+
     for locale in graph.tags:
-        cache, frozen = {}, {}
+        cache, frozen, overlay_cache, frozen_overlays = {}, {}, {}, {}
         for width in WIDTHS:
             for kind, name in groups:
                 resolved = records.resolve(locale, (width, kind, name), cache)
@@ -155,11 +182,19 @@ def collect(sources, graph=None):
                     indices[value] = len(maps)
                     maps.append(value)
                 rows.append((locale, width, kind, name, indices[value]))
+                head = records.overlays(locale, (width, kind, name), overlay_cache)
+                overlay_rows.append((locale, width, kind, name, freeze_overlays(head, frozen_overlays)))
     ordered = tuple(sorted(maps))
     remap = {indices[value]: index for index, value in enumerate(ordered)}
+    ordered_overlays = tuple(sorted(overlay_maps))
+    overlay_remap = {overlay_maps[value]: index for index, value in enumerate(ordered_overlays)}
     return {'widths': WIDTHS, 'groups': groups, 'fields': FIELDS, 'counts': COUNTS, 'maps': ordered,
             'rows': tuple((locale, width, kind, name, remap[index])
                           for locale, width, kind, name, index in rows),
+            'overlay_maps': ordered_overlays,
+            'overlay_nodes': tuple((locale,) + group + (overlay_remap[index], tail)
+                                   for locale, group, index, tail in overlay_nodes),
+            'overlay_rows': tuple(overlay_rows),
             'source_records': len(raw), 'source_aliases': len(aliases) + len(length_aliases),
             'alias_fields': len(records.aliases), 'skipped_alternates': skipped}
 
@@ -172,6 +207,7 @@ if __name__ == '__main__':
     data = collect(sources)
     print(json.dumps({'release': sources.manifest['release'], 'rows': len(data['rows']),
                       'groups': len(data['groups']), 'maps': len(data['maps']),
+                      'overlay_maps': len(data['overlay_maps']), 'overlay_nodes': len(data['overlay_nodes']),
                       'source_records': data['source_records'], 'source_aliases': data['source_aliases'],
                       'alias_fields': data['alias_fields'],
                       'skipped_alternates': data['skipped_alternates']}, sort_keys=True, indent=2))
