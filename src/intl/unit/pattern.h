@@ -73,4 +73,21 @@ typedef struct QJSIntlSelectedUnitPattern {
 QJSIntlStatus qjs_intl_unit_pattern_select(const QJSIntlUnitData *, uint32_t head,
                                            const QJSIntlUnitPatternRequest *,
                                            QJSIntlSelectedUnitPattern *);
+
+typedef struct QJSIntlSelectedUnitNoun {
+    QJSIntlBytes noun;
+    QJSIntlUnitForm form;
+    QJSIntlBytes locale;
+    QJSIntlUnitWidth width;
+    uint32_t group;
+} QJSIntlSelectedUnitNoun;
+
+/* Select a fixed grammatical category (ZERO..OTHER, not exact numeric 0/1),
+   trying requested/nominative/absent case before OTHER and each parent layer.
+   Literal-only nouns are eligible; empty/blocked/middle-placeholder forms
+   shadow their exact path. Require the same unchanged owner/head contract as
+   pattern_select. Borrow all text, allocate nothing, reset disjoint output. */
+QJSIntlStatus qjs_intl_unit_noun_select(const QJSIntlUnitData *, uint32_t head,
+                                        QJSIntlBytes case_name, QJSIntlUnitCount category,
+                                        QJSIntlSelectedUnitNoun *);
 #endif

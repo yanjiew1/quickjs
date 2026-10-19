@@ -187,6 +187,65 @@ static void noun_parser(void)
     assert(qjs_intl_unit_noun_parse(bytes("noun"), NULL) == QJS_INTL_INVALID_ARGUMENT);
 }
 
+static void expect_noun(const QJSIntlUnitData *data, const char *locale, const char *group,
+                        const char *case_name, QJSIntlUnitCount category,
+                        const char *noun, const char *source, QJSIntlUnitCount selected_count)
+{
+    QJSIntlSelectedUnitNoun result;
+    assert(!qjs_intl_unit_noun_select(data, head_for(data, locale, group), bytes(case_name),
+                                      category, &result));
+    assert(equal(result.noun, noun) && equal(result.locale, source));
+    assert(result.form.field == QJS_INTL_UNIT_PATTERN && result.form.count == selected_count);
+    assert(result.width == QJS_INTL_UNIT_LONG);
+}
+
+static void noun_selection(const QJSIntlUnitData *data)
+{
+    QJSIntlSelectedUnitNoun result, zero = {0};
+    uint32_t head = head_for(data, "en-GB", "length-denominator"), compound;
+    expect_noun(data, "en-GB", "length-denominator", "", QJS_INTL_UNIT_COUNT_ONE,
+                "DENOMINATOR_ONE", "en-GB", QJS_INTL_UNIT_COUNT_ONE);
+    expect_noun(data, "en-GB", "length-exact", "", QJS_INTL_UNIT_COUNT_ONE,
+                "CATEGORY_ONE", "en-GB", QJS_INTL_UNIT_COUNT_ONE);
+    expect_noun(data, "en-GB", "length-literal", "", QJS_INTL_UNIT_COUNT_ONE,
+                "one meter", "en-GB", QJS_INTL_UNIT_COUNT_ONE);
+    expect_noun(data, "en-GB", "length-block", "", QJS_INTL_UNIT_COUNT_ONE,
+                "other meters", "en-GB", QJS_INTL_UNIT_COUNT_OTHER);
+    expect_noun(data, "en-GB", "length-empty", "", QJS_INTL_UNIT_COUNT_ONE,
+                "other meters", "en-GB", QJS_INTL_UNIT_COUNT_OTHER);
+    expect_noun(data, "en-GB", "length-case", "genitive", QJS_INTL_UNIT_COUNT_ONE,
+                "CHILD_DEFAULT", "en-GB", QJS_INTL_UNIT_COUNT_ONE);
+    expect_noun(data, "en-GB", "length-case-shadow", "genitive", QJS_INTL_UNIT_COUNT_ONE,
+                "PARENT_NOMINATIVE", "en", QJS_INTL_UNIT_COUNT_ONE);
+    expect_noun(data, "en-GB", "length-noun-middle", "", QJS_INTL_UNIT_COUNT_ONE,
+                "ROOT", "root", QJS_INTL_UNIT_COUNT_OTHER);
+    expect_noun(data, "de", "length-child", "", QJS_INTL_UNIT_COUNT_ONE,
+                "CHILD_OTHER", "en-GB", QJS_INTL_UNIT_COUNT_OTHER);
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_unit_noun_select(data, head_for(data, "en-GB", "length-malformed"), bytes(""),
+                                      QJS_INTL_UNIT_COUNT_ONE, &result) == QJS_INTL_DATA_ERROR);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    assert(qjs_intl_unit_noun_select(data, head, bytes(""), QJS_INTL_UNIT_COUNT_EXACT_ONE, &result) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    assert(qjs_intl_unit_noun_select(data, head, bytes("GENITIVE"), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_unit_noun_select(NULL, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_unit_noun_select(data, data->node_count + 1, bytes(""), QJS_INTL_UNIT_COUNT_ONE,
+                                      &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_unit_noun_select(data, 0, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+           QJS_INTL_UNSUPPORTED);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    assert(qjs_intl_unit_noun_select(data, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, NULL) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(!qjs_intl_unit_group_find(data, QJS_INTL_UNIT_GROUP_COMPOUND, bytes("per"), &compound));
+    assert(!qjs_intl_unit_overlay_head(data, locale_id(&data->data, "root"), QJS_INTL_UNIT_LONG,
+                                       compound, &head));
+    assert(qjs_intl_unit_noun_select(data, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+           QJS_INTL_INVALID_ARGUMENT);
+}
+
 int main(void)
 {
     QJSIntlAllocator allocator = {NULL, allocate, NULL, release};
@@ -203,6 +262,7 @@ int main(void)
                                &allocator, &shared));
     assert(!qjs_intl_unit_data_open(&shared, &allocator, &data));
     calls = allocations;
+    noun_selection(&data);
     expect(&data, head_for(&data, "en-GB", "length-child"), &request, "CHILD_OTHER {0}", "en-GB");
     expect(&data, head_for(&data, "de", "length-child"), &request, "CHILD_OTHER {0}", "en-GB");
     request.case_name = bytes("genitive");

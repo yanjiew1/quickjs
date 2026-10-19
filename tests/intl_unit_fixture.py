@@ -61,7 +61,8 @@ def selector_pack():
     source = Sources()
     root, parent, child = {}, {}, {}
     for name in ('child', 'case', 'case-shadow', 'order', 'exact', 'exact-shadow', 'block', 'literal', 'empty',
-                 'source-category', 'unselected', 'malformed', 'denominator', 'alternative'):
+                 'source-category', 'unselected', 'malformed', 'denominator', 'alternative',
+                 'noun-middle'):
         root[name] = '<unitPattern count="other">ROOT {0}</unitPattern>'
     root['child'] += '<unitPattern count="one">ROOT_ONE {0}</unitPattern>'
     parent['child'] = '<unitPattern count="one">PARENT_ONE {0}</unitPattern>'
@@ -94,6 +95,8 @@ def selector_pack():
       <unitPattern count="other">DENOMINATOR_OTHER {0}</unitPattern>'''
     child['alternative'] = ('<unitPattern count="one">' + BLOCK + '</unitPattern>'
                             '<unitPattern count="other">ALTERNATIVE {0}</unitPattern>')
+    parent['noun-middle'] = '<unitPattern count="one">PARENT_ONE {0}</unitPattern>'
+    child['noun-middle'] = '<unitPattern count="one">noun {0} tail</unitPattern>'
     for locale, fields in (('root', root), ('en', parent), ('en_GB', child)):
         content = ''.join('<unit type="length-' + name + '">' + text + '</unit>'
                           for name, text in sorted(fields.items()))

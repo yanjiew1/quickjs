@@ -598,6 +598,11 @@ outer Unicode White_Space while preserving internal text. A middle placeholder
 with noun text on both sides is ineligible for compound-name extraction, as in
 TR35's composition algorithm; it is not silently joined. These helpers borrow
 their inputs and do not select locale/plural/case fallback.
+The noun selector reuses the numeric selector's ordered layer/case traversal and
+path shadows, with its own noun eligibility rules. Its count is a fixed
+grammatical category; it never tries exact numeric `0`/`1` selectors. It returns
+the noun and source/form provenance without allocating, including alias origins
+outside the prepared locale registry.
 
 `src/intl/unit/format.c` composes the selected prefix/suffix around a complete
 numeric body, preserving its sign, exponent and compact parts. Nonspace affixes
