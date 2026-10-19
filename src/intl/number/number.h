@@ -71,8 +71,8 @@ typedef struct QJSIntlNumberService QJSIntlNumberService;
 typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
 /* This internal service implements decimal/percent/currency and sanctioned units
-   with standard, scientific, engineering and compact notation. Ranges are still
-   required before the complete Intl.NumberFormat binding can register.
+   with standard, scientific, engineering and compact notation, including ranges.
+   The complete Intl.NumberFormat binding remains separate work.
    Bindings must not register NumberFormat on the strength of this subset.
 
    Copy the allocator; malloc/free required, realloc unused. Its callbacks and
@@ -110,4 +110,17 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *);
 QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *,
                                      const QJSIntlMathematicalValue *, QJSIntlFormatted *);
 void qjs_intl_number_result_clear(const QJSIntlAllocator *, QJSIntlFormatted *);
+/* Format both already-coerced endpoints independently. NaN is INVALID_ARGUMENT
+   (the binding throws RangeError); descending ranges are allowed. Displayed
+   text equality, including equal inputs/infinities, uses approximation with
+   shared sources. Other results preserve both endpoints without collapsing
+   parts. Native prefix approximation is an ILND policy; see range.h.
+   Ownership, bounds and result lifetime follow format's disjoint contract. */
+QJSIntlStatus qjs_intl_number_format_range(const QJSIntlNumberFormatter *,
+                                         const QJSIntlMathematicalValue *start,
+                                         const QJSIntlMathematicalValue *end,
+                                         QJSIntlFormattedRange *);
+/* Range results own text and source-tagged parts. Clear with the creating
+   allocator; NULL and already-cleared results are harmless. */
+void qjs_intl_number_range_result_clear(const QJSIntlAllocator *, QJSIntlFormattedRange *);
 #endif
