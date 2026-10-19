@@ -6,6 +6,9 @@
 #define HEADER_WORDS 4
 #define ABSENT UINT32_C(0xffffffff)
 #define BLOCKED UINT32_C(0xfffffffe)
+#define VECTOR_WORDS (QJS_INTL_LAYOUT_FIELD_COUNT + 1)
+#define ROOT_UNIT_MASK ((UINT32_C(1) << (QJS_INTL_LAYOUT_CURRENCY_UNIT_OTHER + 1)) - \
+                        (UINT32_C(1) << QJS_INTL_LAYOUT_CURRENCY_UNIT_EXACT_ZERO))
 
 static uint32_t word(const uint8_t *bytes, size_t index)
 {
@@ -73,7 +76,7 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
                               &result.section) ||
         !result.section.count || result.section.count != numbering->data.locales.count ||
         result.section.length % 4 || result.section.length < HEADER_WORDS * 4 ||
-        word(result.section.bytes, 0) != 1)
+        word(result.section.bytes, 0) != 2)
         return status;
     result.system_count = word(result.section.bytes, 1);
     result.vector_count = word(result.section.bytes, 2);
@@ -83,7 +86,7 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
         !take(&result.section, &at, result.system_count, 1, &result.systems) ||
         !take(&result.section, &at, result.section.count, 1, &result.locale_rows) ||
         !take(&result.section, &at, result.row_count, result.system_count, &result.rows) ||
-        !take(&result.section, &at, result.vector_count, QJS_INTL_LAYOUT_FIELD_COUNT,
+        !take(&result.section, &at, result.vector_count, VECTOR_WORDS,
               &result.vectors) ||
         at != result.section.length / 4 ||
         result.vector_count > (size_t)result.row_count * result.system_count)
@@ -100,7 +103,7 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
     }
     if (numeric != result.system_count ||
         !ordered(result.rows, result.row_count, result.system_count) ||
-        !ordered(result.vectors, result.vector_count, QJS_INTL_LAYOUT_FIELD_COUNT))
+        !ordered(result.vectors, result.vector_count, VECTOR_WORDS))
         return status;
     /* The two counts fit disjoint word ranges already bounded above. */
     scratch = (size_t)result.row_count + result.vector_count;
@@ -124,19 +127,26 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
         if (!used[i])
             goto done;
     }
-    for (i = 0; i < (size_t)result.vector_count * QJS_INTL_LAYOUT_FIELD_COUNT; i++) {
-        unsigned int field = i % QJS_INTL_LAYOUT_FIELD_COUNT;
-        uint32_t reference = word(result.vectors, i);
-        QJSIntlBytes text;
-        if (reference == ABSENT || reference == BLOCKED) {
-            if (required(field))
-                goto done;
-            continue;
-        }
-        if (qjs_intl_data_string(&numbering->data, reference, &text) || unresolved(text) ||
-            (!text.length && required(field) && field != QJS_INTL_LAYOUT_CURRENCY_BEFORE_INSERT &&
-             field != QJS_INTL_LAYOUT_CURRENCY_AFTER_INSERT))
+    for (i = 0; i < result.vector_count; i++) {
+        unsigned int field;
+        uint32_t mask = word(result.vectors, i * VECTOR_WORDS + QJS_INTL_LAYOUT_FIELD_COUNT);
+        if (mask & ~ROOT_UNIT_MASK)
             goto done;
+        for (field = 0; field < QJS_INTL_LAYOUT_FIELD_COUNT; field++) {
+            uint32_t reference = word(result.vectors, i * VECTOR_WORDS + field);
+            QJSIntlBytes text;
+            if ((mask & (UINT32_C(1) << field)) && reference == ABSENT)
+                goto done;
+            if (reference == ABSENT || reference == BLOCKED) {
+                if (required(field))
+                    goto done;
+                continue;
+            }
+            if (qjs_intl_data_string(&numbering->data, reference, &text) || unresolved(text) ||
+                (!text.length && required(field) && field != QJS_INTL_LAYOUT_CURRENCY_BEFORE_INSERT &&
+                 field != QJS_INTL_LAYOUT_CURRENCY_AFTER_INSERT))
+                goto done;
+        }
     }
     *out = result;
     status = QJS_INTL_OK;
@@ -168,7 +178,9 @@ QJSIntlStatus qjs_intl_number_layouts_at(const QJSIntlNumberLayoutData *data, ui
     row = word(data->locale_rows, locale);
     vector = word(data->rows, (size_t)row * data->system_count + lo);
     for (i = 0; i < QJS_INTL_LAYOUT_FIELD_COUNT; i++) {
-        uint32_t value = word(data->vectors, (size_t)vector * QJS_INTL_LAYOUT_FIELD_COUNT + i);
+        uint32_t value = word(data->vectors, (size_t)vector * VECTOR_WORDS + i);
+        out->fields[i].from_root =
+            (word(data->vectors, (size_t)vector * VECTOR_WORDS + QJS_INTL_LAYOUT_FIELD_COUNT) >> i) & 1;
         if (value == ABSENT)
             out->fields[i].state = QJS_INTL_LAYOUT_ABSENT;
         else if (value == BLOCKED)
