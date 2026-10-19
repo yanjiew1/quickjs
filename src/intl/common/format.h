@@ -30,6 +30,7 @@ typedef enum QJSIntlPartType {
     QJS_INTL_PART_EXPONENT_INTEGER,
     QJS_INTL_PART_COMPACT,
     QJS_INTL_PART_UNIT,
+    QJS_INTL_PART_APPROXIMATELY_SIGN,
     QJS_INTL_PART_COUNT
 } QJSIntlPartType;
 
@@ -44,6 +45,27 @@ typedef struct QJSIntlFormatted {
     QJSIntlPart *parts; /* Owned spans partition text, including empty elements. */
     size_t part_count;
 } QJSIntlFormatted;
+
+typedef enum QJSIntlRangeSource {
+    QJS_INTL_RANGE_SHARED,
+    QJS_INTL_RANGE_START,
+    QJS_INTL_RANGE_END
+} QJSIntlRangeSource;
+
+/* Range formatting has its own part record; ordinary results need no source
+   field. Number/DateTime range policies decide which spans are shared. */
+typedef struct QJSIntlRangePart {
+    size_t start, end;
+    QJSIntlPartType type;
+    QJSIntlRangeSource source;
+} QJSIntlRangePart;
+
+typedef struct QJSIntlFormattedRange {
+    uint16_t *text;
+    size_t length;
+    QJSIntlRangePart *parts;
+    size_t part_count;
+} QJSIntlFormattedRange;
 
 /* Clear owned result buffers with the creating allocator. A live result
    requires its original free callback and opaque; never clear borrowed input
