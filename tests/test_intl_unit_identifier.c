@@ -41,6 +41,7 @@ int main(void)
             assert(strcmp(qjs_intl_unit_definition_at(i - 1)->identifier, unit->identifier) < 0);
         assert(!qjs_intl_unit_identifier_parse(bytes(unit->identifier), &result));
         assert(result.numerator == i && result.denominator == QJS_INTL_NO_UNIT);
+        assert(!strcmp(qjs_intl_unit_identifier_cldr(&result), unit->cldr_identifier));
         for (j = 0; j < count; j++) {
             char compound[96];
             int length = snprintf(compound, sizeof(compound), "%s-per-%s", unit->identifier,
@@ -74,5 +75,16 @@ int main(void)
            QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_unit_identifier_parse(bytes("meter"), NULL) == QJS_INTL_INVALID_ARGUMENT);
     assert(!qjs_intl_unit_definition_at(UINT32_MAX));
+    assert(!qjs_intl_unit_identifier_cldr(NULL));
+    result = (QJSIntlUnitIdentifier){count, QJS_INTL_NO_UNIT};
+    assert(!qjs_intl_unit_identifier_cldr(&result));
+    result = (QJSIntlUnitIdentifier){meter, count};
+    assert(!qjs_intl_unit_identifier_cldr(&result));
+    assert(!qjs_intl_unit_identifier_parse(bytes("liter-per-kilometer"), &result));
+    assert(!strcmp(qjs_intl_unit_identifier_cldr(&result), "consumption-liter-per-kilometer"));
+    assert(!qjs_intl_unit_identifier_parse(bytes("meter-per-second"), &result));
+    assert(!strcmp(qjs_intl_unit_identifier_cldr(&result), "speed-meter-per-second"));
+    assert(!qjs_intl_unit_identifier_parse(bytes("meter-per-meter"), &result));
+    assert(!qjs_intl_unit_identifier_cldr(&result));
     return 0;
 }
