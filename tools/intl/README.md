@@ -140,6 +140,59 @@ These records prepare number-service data. They do not advertise NumberFormat
 available locales or supported numbering systems. Authored tests cover scalar
 repertoires, inheritance, explicit markers and malformed/conflicting records.
 
+Prepared section 13 stores sorted three-word definition records: pooled system
+identifier, kind (0 numeric / 1 algorithmic), and pooled repertoire/rule string.
+Section 14 stores sorted five-word records: pooled source locale followed by
+definition indexes for default, native, traditional and financial preferences.
+For the last two fields, `0xffffffff` means absent and `0xfffffffe` means
+explicitly blocked. Required fields cannot use either sentinel. All words are
+little-endian. The decoder checks both sections together, including canonical
+order, numeric scalar uniqueness, rule syntax and mandatory Latin/root data.
+Both profiles retain complete numbering metadata, including synthetic regional
+fallbacks. Rule references are not formatter support declarations.
+
+`src/intl/locale/numbering-data.c` owns the C schema validation and borrowed
+definition/preference queries. It checks exact-key ordering, Unicode digit
+repertoires and rule syntax before publishing a view. Source locale grammar
+and casing are checked without alias inference; duplicate variant detection
+uses checked temporary storage and sorting for long keys. Accessors allocate
+nothing and apply no implicit locale fallback. Real-profile and authored C
+tests cover astral digits, unaligned storage, optional states, allocation
+failure/retry, long keys, malformed fields and section shapes. These queries
+are metadata infrastructure; future number services select actual capabilities.
+
+`number_symbols.py` collects the 13 common numeric symbols and two optional
+currency separators for every numeric system and source locale. It checks
+whole-group aliases, restarts `source="locale"` aliases at the requesting
+locale, and preserves exact text, explicit empty values and inheritance.
+Optional absence and explicit blocks remain distinct for downstream LDML
+fallback rules. Standard containers/fields are selected before duplicate checks;
+unsupported alias paths or numbering scopes fail explicitly. The standalone
+audit runs against authenticated CLDR sources in CI. The collected records are
+packed for each prepared profile; they are not yet consumed by NumberFormat.
+
+Section 15 stores these symbol records as little-endian words. Its directory
+count is the shared locale count. Three header words give the numeric-system,
+symbol-vector and locale-row counts. Next come sorted numeric definition
+indexes, a row index for each shared locale, fixed-width locale rows (one
+vector index per numeric system), and 15-word symbol vectors in collector field
+order. Unique rows and vectors are sorted and all must be referenced. This
+shares both whole locale maps and symbol sets across numbering systems without
+compression. Optional currency fields use `0xffffffff` for absent and
+`0xfffffffe` for blocked; all other entries are pooled string indexes. Empty
+text remains different from absence. The decoder checks extents, complete
+numeric-system coverage, references, canonical order and resolved text.
+
+`src/intl/number/symbol-data.c` owns validation and borrowed C queries for
+section 15. It opens against validated numbering metadata, checks all shared
+maps and vectors, then releases its temporary coverage bitmap. Queries use
+shared-locale and numbering-definition indexes, allocate nothing, and preserve
+the three symbol states. Algorithmic definitions return unsupported; this
+owner executes no numbering rule and applies no locale or currency fallback.
+Standalone authored and real-profile tests cover exact text, empty values,
+optional states, unaligned storage, allocation failure/retry, invalid references,
+noncanonical records and malformed section dimensions.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
