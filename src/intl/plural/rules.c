@@ -22,19 +22,29 @@
  * THE SOFTWARE.
  */
 #include "rules.h"
+#include "../../cutils/cutils.h"
 #include <string.h>
 
-/* A digit slice represents an arbitrarily large nonnegative integer. */
+/* Keep ordinary digit slices small; only shifted integer operands carry
+   the extra context for a second borrowed span and a virtual zero tail. */
 typedef struct PluralValue {
-    const char *digits, *fraction;
+    const char *digits;
+    const struct PluralShift *shifted;
     size_t length, fraction_length;
     uint64_t small;
-    int is_small, negative;
+    int is_small, negative; /* is_small < 0 denotes a shifted digit slice. */
 } PluralValue;
+
+typedef struct PluralShift {
+    const char *suffix;
+    size_t length;
+    uint32_t zeros;
+} PluralShift;
 
 typedef struct PluralDecimal {
     const char *integer, *fraction;
     size_t integer_length, fraction_length, trimmed_fraction;
+    const PluralShift *shifted;
     int32_t exponent;
 } PluralDecimal;
 
@@ -44,7 +54,7 @@ typedef struct PluralParser {
     int error;
 } PluralParser;
 
-static int plural_decimal(const QJSIntlPluralOperands *number, PluralDecimal *decimal)
+static force_inline int plural_decimal(const QJSIntlPluralOperands *number, PluralDecimal *decimal)
 {
     const char *point;
     size_t integer, fraction;
@@ -68,21 +78,25 @@ static int plural_decimal(const QJSIntlPluralOperands *number, PluralDecimal *de
     while (fraction && decimal->fraction[fraction - 1] == '0')
         fraction--;
     decimal->trimmed_fraction = fraction;
+    decimal->shifted = NULL;
     decimal->exponent = number->exponent;
     return 0;
 }
 
-static PluralValue plural_operand(const PluralDecimal *number, char operand)
+static force_inline PluralValue plural_operand(const PluralDecimal *number, char operand, int shifted)
 {
     PluralValue value = {0};
     switch (operand) {
     case 'n':
-        value.fraction = number->fraction;
         value.fraction_length = number->trimmed_fraction;
         /* fall through */
     case 'i':
         value.digits = number->integer;
         value.length = number->integer_length;
+        if (shifted) {
+            value.shifted = number->shifted;
+            value.is_small = -1;
+        }
         break;
     case 'f':
     case 't':
@@ -104,7 +118,29 @@ static PluralValue plural_operand(const PluralDecimal *number, char operand)
     return value;
 }
 
-static void plural_modulo(PluralValue *value, uint32_t modulus)
+/* Keep the uncommon virtual-tail machinery out of ordinary relation code. */
+static no_inline uint64_t shifted_modulo(const PluralShift *number, uint64_t remainder,
+                                         uint32_t modulus)
+{
+    uint32_t zeros = number->zeros;
+    for (size_t i = 0; i < number->length; i++)
+        remainder = (remainder * 10 + number->suffix[i] - '0') % modulus;
+    /* Modular products are below (UINT32_MAX - 1)^2. Never iterate over
+       an exponent-sized tail, even for a zero coefficient. */
+    if (zeros && remainder) {
+        uint64_t power = 10 % modulus;
+        do {
+            if (zeros & 1)
+                remainder = remainder * power % modulus;
+            zeros >>= 1;
+            if (zeros)
+                power = power * power % modulus;
+        } while (zeros);
+    }
+    return remainder;
+}
+
+static force_inline void plural_modulo(PluralValue *value, uint32_t modulus)
 {
     uint64_t remainder = 0;
     if (value->is_small) {
@@ -117,6 +153,55 @@ static void plural_modulo(PluralValue *value, uint32_t modulus)
     value->small = remainder;
     if (!remainder)
         value->negative = 0;
+}
+
+static void plural_modulo_shifted(PluralValue *value, uint32_t modulus)
+{
+    int shifted = value->is_small < 0;
+    if (shifted)
+        value->is_small = 0;
+    plural_modulo(value, modulus);
+    if (shifted)
+        value->small = shifted_modulo(value->shifted, value->small, modulus);
+}
+
+static no_inline int shifted_integer_compare(const PluralValue *value, uint32_t constant)
+{
+    const PluralShift *number = value->shifted;
+    const char *first = value->digits, *suffix = number->suffix;
+    size_t length = value->length, suffix_length = number->length;
+    char digits[10];
+    size_t count = 0;
+    uint64_t significant;
+    uint32_t n = constant;
+    do {
+        digits[count++] = '0' + n % 10;
+        n /= 10;
+    } while (n);
+    while (length && *first == '0') {
+        first++;
+        length--;
+    }
+    if (!length) {
+        while (suffix_length && *suffix == '0') {
+            suffix++;
+            suffix_length--;
+        }
+    }
+    significant = (uint64_t)length + suffix_length;
+    if (!significant)
+        return constant ? -1 : 0;
+    significant += number->zeros;
+    if (significant != count)
+        return significant < count ? -1 : 1;
+    for (size_t i = 0; i < count; i++) {
+        char left = i < length ? first[i]
+                    : i - length < suffix_length ? suffix[i - length] : '0';
+        char right = digits[count - i - 1];
+        if (left != right)
+            return left < right ? -1 : 1;
+    }
+    return 0;
 }
 
 static int plural_compare(const PluralValue *value, uint32_t constant)
@@ -154,6 +239,15 @@ static int plural_compare(const PluralValue *value, uint32_t constant)
     if (!relation && value->fraction_length)
         return 1;
     return relation;
+}
+
+static int plural_compare_shifted(const PluralValue *value, uint32_t constant)
+{
+    int relation;
+    if (value->is_small >= 0)
+        return plural_compare(value, constant);
+    relation = shifted_integer_compare(value, constant);
+    return !relation && value->fraction_length ? 1 : relation;
 }
 
 static void plural_space(PluralParser *parser)
@@ -207,7 +301,9 @@ static int plural_uint(PluralParser *parser, uint32_t *value)
     return 0;
 }
 
-static int plural_relation(PluralParser *parser)
+/* Specialize the numeric operations, keeping one grammar implementation and
+   no virtual-digit classification in the ordinary relation handler. */
+static force_inline int plural_relation_impl(PluralParser *parser, int shifted)
 {
     PluralValue value;
     uint32_t modulus, lower, upper;
@@ -217,7 +313,7 @@ static int plural_relation(PluralParser *parser)
     if (parser->at == parser->end || (!*parser->at || !strchr("nivwftce", *parser->at)))
         goto invalid;
     operand = *parser->at++;
-    value = plural_operand(parser->decimal, operand);
+    value = plural_operand(parser->decimal, operand, shifted);
     plural_space(parser);
     if (parser->at < parser->end && *parser->at == '%') {
         parser->at++;
@@ -228,7 +324,10 @@ static int plural_relation(PluralParser *parser)
     if (has_mod) {
         if (plural_uint(parser, &modulus) < 0 || !modulus)
             goto invalid;
-        plural_modulo(&value, modulus);
+        if (shifted)
+            plural_modulo_shifted(&value, modulus);
+        else
+            plural_modulo(&value, modulus);
     }
     plural_space(parser);
     if (parser->at < parser->end && *parser->at == '=') {
@@ -259,7 +358,8 @@ static int plural_relation(PluralParser *parser)
             if (plural_uint(parser, &upper) < 0 || lower > upper)
                 goto invalid;
         }
-        if (plural_compare(&value, lower) >= 0 && plural_compare(&value, upper) <= 0)
+        if ((shifted ? plural_compare_shifted(&value, lower) : plural_compare(&value, lower)) >= 0 &&
+            (shifted ? plural_compare_shifted(&value, upper) : plural_compare(&value, upper)) <= 0)
             result = 1;
         plural_space(parser);
         if (single || parser->at == parser->end || *parser->at != ',')
@@ -274,38 +374,54 @@ invalid:
     return 0;
 }
 
-static int plural_conjunction(PluralParser *parser)
+static int plural_relation(PluralParser *parser)
 {
-    int result = plural_relation(parser);
+    return plural_relation_impl(parser, 0);
+}
+
+static int plural_relation_shifted(PluralParser *parser)
+{
+    return plural_relation_impl(parser, 1);
+}
+
+static force_inline int plural_conjunction_impl(PluralParser *parser,
+                                                int (*relation)(PluralParser *))
+{
+    int result = relation(parser);
     while (!parser->error && plural_word(parser, "and")) {
-        int next = plural_relation(parser);
+        int next = relation(parser);
         result = result && next;
     }
     return result;
 }
 
-QJSIntlStatus qjs_intl_plural_rule_evaluate(QJSIntlBytes rule, const QJSIntlPluralOperands *number,
-                                            int *matches)
+static int plural_conjunction(PluralParser *parser)
 {
-    PluralDecimal decimal;
+    return plural_conjunction_impl(parser, plural_relation);
+}
+
+static int plural_conjunction_shifted(PluralParser *parser)
+{
+    return plural_conjunction_impl(parser, plural_relation_shifted);
+}
+
+static force_inline QJSIntlStatus plural_evaluate(QJSIntlBytes rule, const PluralDecimal *decimal,
+                                                  int (*conjunction)(PluralParser *), int *matches)
+{
     PluralParser parser;
     int result;
-    if (matches)
-        *matches = 0;
-    if (!rule.data || !matches || rule.length > PTRDIFF_MAX || plural_decimal(number, &decimal) < 0)
-        return QJS_INTL_INVALID_ARGUMENT;
     parser.at = rule.data;
     parser.end = rule.data + rule.length;
-    parser.decimal = &decimal;
+    parser.decimal = decimal;
     parser.error = 0;
     plural_space(&parser);
     if (parser.at == parser.end) {
         *matches = 1;
         return QJS_INTL_OK;
     }
-    result = plural_conjunction(&parser);
+    result = conjunction(&parser);
     while (!parser.error && plural_word(&parser, "or")) {
-        int next = plural_conjunction(&parser);
+        int next = conjunction(&parser);
         result = result || next;
     }
     plural_space(&parser);
@@ -313,4 +429,38 @@ QJSIntlStatus qjs_intl_plural_rule_evaluate(QJSIntlBytes rule, const QJSIntlPlur
         return QJS_INTL_DATA_ERROR;
     *matches = result;
     return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_plural_rule_evaluate(QJSIntlBytes rule, const QJSIntlPluralOperands *number,
+                                            int *matches)
+{
+    PluralDecimal decimal;
+    if (matches)
+        *matches = 0;
+    if (!rule.data || !matches || rule.length > PTRDIFF_MAX || plural_decimal(number, &decimal) < 0)
+        return QJS_INTL_INVALID_ARGUMENT;
+    return plural_evaluate(rule, &decimal, plural_conjunction, matches);
+}
+
+QJSIntlStatus qjs_intl_plural_rule_evaluate_shifted(QJSIntlBytes rule,
+                                                    const QJSIntlPluralOperands *number,
+                                                    uint32_t decimal_shift, int *matches)
+{
+    PluralDecimal decimal;
+    PluralShift shift;
+    if (!decimal_shift)
+        return qjs_intl_plural_rule_evaluate(rule, number, matches);
+    if (matches)
+        *matches = 0;
+    if (!rule.data || !matches || rule.length > PTRDIFF_MAX || plural_decimal(number, &decimal) < 0)
+        return QJS_INTL_INVALID_ARGUMENT;
+    shift.suffix = decimal.fraction;
+    shift.length = decimal.fraction_length < decimal_shift ? decimal.fraction_length : decimal_shift;
+    shift.zeros = decimal_shift - shift.length;
+    decimal.fraction += shift.length;
+    decimal.fraction_length -= shift.length;
+    decimal.trimmed_fraction = decimal.trimmed_fraction > shift.length
+                                  ? decimal.trimmed_fraction - shift.length : 0;
+    decimal.shifted = &shift;
+    return plural_evaluate(rule, &decimal, plural_conjunction_shifted, matches);
 }

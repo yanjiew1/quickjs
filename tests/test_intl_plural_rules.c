@@ -157,11 +157,92 @@ static void test_invalid(void)
            QJS_INTL_INVALID_ARGUMENT);
 }
 
+static void shifted(const char *rule, const char *text, uint32_t shift, int32_t exponent,
+                    int expected)
+{
+    QJSIntlPluralOperands operands = {text, strlen(text), exponent};
+    int matches = -1;
+    assert(!qjs_intl_plural_rule_evaluate_shifted((QJSIntlBytes){rule, strlen(rule)}, &operands,
+                                                 shift, &matches));
+    assert(matches == expected);
+}
+
+static void test_shifted_operands(void)
+{
+    static const char *const inputs[] = {"0", "1", "000", "0001.0000", "0.00100",
+                                         "1.20050", "000.00001", "4294967295.00100",
+                                         "10000000000000000000001.500", "1234.5678900"};
+    static const char *const rules[] = {
+        "n = 0", "n = 1", "n in 0..100", "n within 0..100", "i % 10 = 0",
+        "i % 97 in 0..50", "n % 10 within 0..1", "n % 10 in 0..1",
+        "i % 4294967295 within 100..4294967295", "i within 100..4294967295",
+        "f % 97 in 0..50", "t % 97 in 0..50", "v = 0", "v = 1..3", "w = 1..3",
+        "i = 1 and v = 0 or e = 6", "n is not 0", "f = 0 and t = 0", "e = 3 and c = 3"};
+    shifted("n = 1200 and i = 1200 and v = 2 and w = 1 and f = 50 and t = 5",
+            "1.20050", 3, 3, 0); /* n also includes the remaining .50. */
+    shifted("n within 1200..1201 and i = 1200 and v = 2 and w = 1 and f = 50 and t = 5",
+            "1.20050", 3, 3, 1);
+    shifted("n % 10 within 0..1 and n % 10 not in 0..1", "1.20050", 3, 3, 1);
+    shifted("i = 1 and v = 2 and w = 0 and f = 0 and t = 0", "0.00100", 3, 3, 1);
+    shifted("n = 0 and v = 0 and f = 0 and t = 0", "000.000", UINT32_MAX, 3, 1);
+    shifted("i % 7 = 6 and n % 7 = 6", "1", UINT32_MAX, 3, 1);
+    shifted("i not in 0..4294967295 and i % 4294967295 = 944892805", "1", UINT32_MAX, 0, 1);
+    shifted("i % 7 = 1 and v = 0 and c not in 0..3", "0.1200", UINT32_MAX, -3, 1);
+    /* Independently materialize bounded decimal expansions and compare every
+       relation against the ordinary evaluator, retaining visible zeros. */
+    for (size_t input = 0; input < sizeof(inputs) / sizeof(inputs[0]); input++) {
+        for (uint32_t shift = 0; shift < 12; shift++) {
+            char digits[96], expanded[96];
+            size_t used = 0, pos = 0, integer = strlen(inputs[input]), point;
+            const char *at = inputs[input];
+            for (size_t i = 0; at[i]; i++) {
+                if (at[i] == '.')
+                    integer = i;
+                else
+                    digits[used++] = at[i];
+            }
+            point = integer + shift;
+            for (size_t i = 0; i < used || i < point; i++) {
+                if (i == point)
+                    expanded[pos++] = '.';
+                expanded[pos++] = i < used ? digits[i] : '0';
+            }
+            expanded[pos] = 0;
+            assert(pos < sizeof(expanded));
+            for (size_t i = 0; i < sizeof(rules) / sizeof(rules[0]); i++) {
+                QJSIntlPluralOperands number = {expanded, pos, 3};
+                int expected;
+                assert(!qjs_intl_plural_rule_evaluate((QJSIntlBytes){rules[i], strlen(rules[i])},
+                                                      &number, &expected));
+                shifted(rules[i], inputs[input], shift, 3, expected);
+            }
+        }
+    }
+    {
+        QJSIntlPluralOperands number = {"1", 1, 0};
+        int matches = 42;
+        assert(qjs_intl_plural_rule_evaluate_shifted((QJSIntlBytes){"i > 0", 5}, &number, 3,
+                                                     &matches) == QJS_INTL_DATA_ERROR);
+        assert(!matches);
+        number.decimal = "1..0";
+        number.length = 4;
+        matches = 42;
+        assert(qjs_intl_plural_rule_evaluate_shifted((QJSIntlBytes){"", 0}, &number, UINT32_MAX,
+                                                     &matches) == QJS_INTL_INVALID_ARGUMENT);
+        assert(!matches);
+        assert(qjs_intl_plural_rule_evaluate_shifted((QJSIntlBytes){"", 0}, NULL, 3,
+                                                     &matches) == QJS_INTL_INVALID_ARGUMENT);
+        assert(qjs_intl_plural_rule_evaluate_shifted((QJSIntlBytes){"", 0}, &number, 3,
+                                                     NULL) == QJS_INTL_INVALID_ARGUMENT);
+    }
+}
+
 int main(void)
 {
     test_decimal_relations();
     test_operands();
     test_invalid();
+    test_shifted_operands();
     puts("exact Intl plural tests passed");
     return 0;
 }
