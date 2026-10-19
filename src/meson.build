@@ -138,6 +138,7 @@ if intl_enabled
     'quickjs/builtins/intl/number-value.c',
     'quickjs/builtins/intl/options.c',
     'quickjs/builtins/intl/plural-rules.c',
+    'quickjs/builtins/intl/relative-time-format.c',
   )
   support_sources += files(
     'intl/common/decimal.c',
