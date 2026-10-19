@@ -43,3 +43,15 @@ int lre_is_mark(uint32_t c)
     return unicode_gc_contains(c, M(Mn) | M(Mc) | M(Me));
 }
 
+
+int lre_is_decimal_digit(uint32_t c)
+{
+    if (c < 128)
+        return c >= '0' && c <= '9';
+    return unicode_gc_contains(c, M(Nd));
+}
+
+int lre_is_symbol_or_separator(uint32_t c)
+{
+    return unicode_gc_contains(c, M(Sm) | M(Sc) | M(Sk) | M(So) | M(Zs) | M(Zl) | M(Zp));
+}
