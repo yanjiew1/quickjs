@@ -57,11 +57,20 @@ typedef struct QJSIntlUnitForm {
     unsigned int state;
 } QJSIntlUnitForm;
 
+typedef struct QJSIntlUnitOverlay {
+    QJSIntlBytes locale;
+    QJSIntlUnitWidth width;
+    uint32_t group, next; /* Group is the source group, which aliases may change. */
+    QJSIntlUnitMap map;
+} QJSIntlUnitOverlay;
+
 typedef struct QJSIntlUnitData {
     QJSIntlData data;
     QJSIntlSection section;
     const uint8_t *groups, *cases, *locale_rows, *rows, *maps, *entries;
+    const uint8_t *overlay_locales, *overlay_rows, *nodes;
     uint32_t group_count, case_count, row_count, map_count, entry_count;
+    uint32_t overlay_row_count, node_count;
 } QJSIntlUnitData;
 
 /* Require an unchanged validated data view. Borrow its immutable storage;
@@ -79,6 +88,16 @@ QJSIntlStatus qjs_intl_unit_group_find(const QJSIntlUnitData *, QJSIntlUnitGroup
                                        QJSIntlBytes name, uint32_t *index);
 QJSIntlStatus qjs_intl_unit_map_at(const QJSIntlUnitData *, uint32_t locale, QJSIntlUnitWidth,
                                    uint32_t group, QJSIntlUnitMap *);
+
+/* Ordered local source layers retain alias origins, before exact-leaf merging.
+   Head/next IDs are one-based; zero ends an empty/exhausted chain. A nonzero
+   next ID is smaller than its child, so traversal is bounded. Nodes contain
+   nonempty maps, including blocked and empty leaves. Queries borrow storage
+   and perform no selector fallback. Origin locales need not be in the selected
+   profile's locale inventory. Require IDs returned by this unchanged owner. */
+QJSIntlStatus qjs_intl_unit_overlay_head(const QJSIntlUnitData *, uint32_t locale,
+                                        QJSIntlUnitWidth, uint32_t group, uint32_t *);
+QJSIntlStatus qjs_intl_unit_overlay_at(const QJSIntlUnitData *, uint32_t id, QJSIntlUnitOverlay *);
 
 /* Require a map returned by this unchanged owner. No plural/case/width
    fallback is performed. Find returns UNSUPPORTED for an absent selector;
