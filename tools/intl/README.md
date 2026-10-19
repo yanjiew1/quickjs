@@ -302,6 +302,16 @@ percent/per-mille scaling tokens. Rows, maps, patterns and affixes are shared,
 canonically ordered and fully referenced; decoders validate those invariants
 and all record extents before returning semantic data.
 
+`src/intl/number/compact-data.c` validates and borrows section 18 against the
+unchanged numbering view. Temporary coverage/placeholder memory is released
+before return, including errors. Queries allocate nothing: exact locale/system/
+kind map lookup, indexed or exact magnitude/count/variant lookup, and typed
+affix-token access. Missing selectors return unsupported; blocked/empty entries
+retain their states. The consumer chooses currency families, plural/exact-count
+fallback and rounding policy. Authored and real-profile C tests cover literal
+forms, distinct alternate divisors, empty currency maps, sparse selectors,
+unaligned storage, corruption, output reset and allocation failure/retry.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
