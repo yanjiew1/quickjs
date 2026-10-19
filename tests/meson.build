@@ -1165,6 +1165,13 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_currency_boundary': [
+    'test_intl_currency_boundary.c',
+    '../src/intl/currency/boundary.c',
+    '../src/unicode/category.c',
+    unicode_tables,
+    '../src/cutils/cutils.c',
+  ],
   'test_intl_number_affix': [
     'test_intl_number_affix.c',
     '../src/intl/number/affix.c',
@@ -1464,6 +1471,7 @@ standalone = {
   ],
   'test_unicode': [
     'test_unicode.c',
+    '../src/unicode/category.c',
     '../src/unicode/libunicode.c',
     unicode_tables,
     '../src/cutils/cutils.c',
