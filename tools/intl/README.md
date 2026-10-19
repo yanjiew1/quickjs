@@ -216,10 +216,31 @@ DecimalFormat pattern API: unsupported padding, significant-digit and rounding
 increment skeletons fail explicitly. ECMA-402 options govern actual rounding.
 
 Compact patterns, currency names/spacing, unit patterns and range patterns have
-separate owners. The records are not yet packed and do not advertise a
-NumberFormat capability. CI compiles all distinct patterns from authenticated
-CLDR sources; authored tests cover aliases, inheritance, alternate selection,
-quoted text, scientific affixes, suffix signs and malformed records.
+separate owners. These prepared records do not advertise a NumberFormat
+capability. CI compiles all distinct patterns from authenticated CLDR sources;
+authored tests cover aliases, inheritance, alternate selection, quoted text,
+scientific affixes, suffix signs and malformed records.
+
+Section 17 stores compiled patterns as little-endian words. Its directory count
+is the shared locale count. Seven header words contain schema version 1 and
+the numeric-system, vector, row, pattern, affix and token counts. Sorted numeric
+definition indexes follow, then one (minimum grouping digits, row index) pair
+per locale. Shared locale rows contain one vector index per numeric system;
+each vector contains nine pattern references in collector field order. Optional
+references use `0xffffffff` for absent, `0xfffffffe` for blocked and `0xfffffffd`
+for explicitly empty. The five required patterns accept none of these markers.
+
+Each pattern has nine numeric words: primary/secondary grouping, minimum
+integer digits, integer placeholder count, minimum/maximum fraction digits,
+decimal-point presence, minimum exponent digits and exponent-plus presence.
+Three affix indexes follow for positive, negative and explicit-plus forms.
+An affix descriptor gives its offset/count in the final token array. Tokens
+are (kind, pooled string index) pairs; nonliteral tokens require string zero,
+literal tokens require nonempty text, and each affix contains exactly one
+number token. Adjacent literals merge. The decoder checks all extents,
+references, canonical ordering, numeric constraints and complete record use.
+Sharing whole locale maps, pattern vectors and typed affixes avoids duplicating
+patterns across numeric systems without a compression dependency.
 
 ## Exact plural relations
 
