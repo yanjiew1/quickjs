@@ -123,6 +123,7 @@ if intl_enabled
     'intl/locale/system.c',
     'intl/native/data.c',
     'intl/native/pack.c',
+    'intl/list/data.c',
     'intl/list/native.c',
     'intl/list/native-engine.c',
     'intl/locale/numbering-data.c',
