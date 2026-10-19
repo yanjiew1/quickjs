@@ -256,11 +256,24 @@ JSValue JS_ToStringFree(JSContext *ctx, JSValue val)
     return ret;
 }
 
-JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val)
+JSValue JS_ToLocaleStringFree(JSContext *ctx, JSValue val, int argc,
+                              JSValueConst *argv)
 {
     if (JS_IsUndefined(val) || JS_IsNull(val))
         return JS_ToStringFree(ctx, val);
+#ifdef CONFIG_INTL
+    {
+        /* ECMA-402 forwards exactly two arguments, even when omitted. Do not
+           coerce them here: each element's method owns locale negotiation. */
+        JSValueConst args[2] = {
+            argc > 0 ? argv[0] : JS_UNDEFINED,
+            argc > 1 ? argv[1] : JS_UNDEFINED
+        };
+        return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 2, args);
+    }
+#else
     return JS_InvokeFree(ctx, val, JS_ATOM_toLocaleString, 0, NULL);
+#endif
 }
 
 JSValue JS_ToPropertyKey(JSContext *ctx, JSValueConst val)
