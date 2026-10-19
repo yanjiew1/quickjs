@@ -1,0 +1,47 @@
+/* NumberFormat scale-before-round policy; PluralRules uses its own policy.
+ * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
+#ifndef QJS_INTL_NUMBER_ROUND_H
+#define QJS_INTL_NUMBER_ROUND_H
+#include "../common/decimal.h"
+
+typedef enum QJSIntlNumberNotation {
+    QJS_INTL_NUMBER_STANDARD,
+    QJS_INTL_NUMBER_SCIENTIFIC,
+    QJS_INTL_NUMBER_ENGINEERING,
+    QJS_INTL_NUMBER_COMPACT
+} QJSIntlNumberNotation;
+
+typedef struct QJSIntlCompactScale {
+    uint32_t magnitude, exponent;
+} QJSIntlCompactScale;
+
+typedef struct QJSIntlNumberRounding {
+    QJSIntlDecimalOptions digits;
+    QJSIntlNumberNotation notation;
+    unsigned int percent; /* Scale the mathematical input by 100 first. */
+    /* COMPACT only: increasing thresholds selected by the native formatter
+       from the chosen standard/alpha family before scaling. Exponent zero
+       retains an explicit CLDR "0" fallback. Below the first threshold, or
+       with no thresholds, use exponent zero. No plural selection happens here. */
+    const QJSIntlCompactScale *compact;
+    size_t compact_count;
+} QJSIntlNumberRounding;
+
+typedef struct QJSIntlRoundedNumber {
+    QJSIntlMathematicalKind kind;
+    int32_t exponent;            /* Notation exponent; does not include percent scaling. */
+    QJSIntlDecimalResult number; /* Owned; zeroed for NaN and infinities. */
+} QJSIntlRoundedNumber;
+
+/* PartitionNumberPattern and ComputeExponent/ForMagnitude over exact values.
+   ComputeExponent probes the positive magnitude, then actual signed rounding
+   applies to the original value at the final scale. This distinction matters
+   for directed rounding. Preserve negative zero, including rounded zero.
+
+   Borrow inputs unchanged; fresh, disjoint output required. Errors reset it;
+   clear using the creating malloc/free allocator. No binary floating point,
+   JS coercion, digit-option defaults, localized text or plural selection. */
+QJSIntlStatus qjs_intl_number_round(const QJSIntlAllocator *, const QJSIntlNumberRounding *,
+                                    const QJSIntlMathematicalValue *, QJSIntlRoundedNumber *);
+void qjs_intl_number_round_clear(const QJSIntlAllocator *, QJSIntlRoundedNumber *);
+#endif
