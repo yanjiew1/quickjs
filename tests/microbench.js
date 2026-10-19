@@ -1337,6 +1337,56 @@ function intl_relative_parts(n)
     return n * 100;
 }
 
+function intl_duration_construct(n)
+{
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = new Intl.DurationFormat("en", { style: "digital" });
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_duration_text(n)
+{
+    var formatter = new Intl.DurationFormat("en", { style: "long" });
+    var value = { days: 2, hours: 3, minutes: 4, seconds: 5 };
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.format(value);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_duration_digital(n)
+{
+    var formatter = new Intl.DurationFormat("en", { style: "digital" });
+    var value = { hours: 1, minutes: 2, seconds: 3, nanoseconds: 123456789 };
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.format(value);
+        global_res = result;
+    }
+    return n * 100;
+}
+
+function intl_duration_parts(n)
+{
+    var formatter = new Intl.DurationFormat("en", { style: "digital" });
+    var value = { years: 1, hours: 2, minutes: 3, seconds: 4, nanoseconds: 1 };
+    var i, j, result;
+    for (j = 0; j < n; j++) {
+        for (i = 0; i < 100; i++)
+            result = formatter.formatToParts(value);
+        global_res = result;
+    }
+    return n * 100;
+}
+
 // Contrast common short normalization with a disordered nonstarter run.
 // Cache source strings per case; fresh JavaScript processes reset the cache.
 function string_normalize_short(n)
@@ -2039,6 +2089,12 @@ function main(argc, argv, g)
         test_list.push(intl_relative_numeric);
         test_list.push(intl_relative_auto);
         test_list.push(intl_relative_parts);
+    }
+    if (typeof Intl === "object" && typeof Intl.DurationFormat === "function") {
+        test_list.push(intl_duration_construct);
+        test_list.push(intl_duration_text);
+        test_list.push(intl_duration_digital);
+        test_list.push(intl_duration_parts);
     }
     if (typeof Iterator === "function") {
         if (typeof Iterator.prototype.map === "function")
