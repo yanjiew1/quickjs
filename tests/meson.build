@@ -870,11 +870,73 @@ if intl_enabled
     },
   }]
 
+  intl_duration_decimal_test = {
+    'name': 'test_intl_duration_decimal',
+    'sources': files(
+      'test_intl_duration_decimal.c',
+      '../src/intl/duration/decimal.c',
+      '../src/temporal/duration.c',
+      '../src/temporal/epoch.c',
+      '../src/temporal/options.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_duration_decimal_test,
+    'name': 'intl-duration-decimal',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_duration_digital_test = {
+    'name': 'test_intl_duration_digital',
+    'sources': files(
+      'test_intl_duration_digital.c',
+      '../src/cutils/cutils.c',
+      '../src/intl/common/format-builder.c',
+      '../src/intl/duration/native-digital.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_duration_digital_test,
+    'name': 'intl-duration-digital',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_duration_format_test = {
+    'name': 'test_intl_duration_format',
+    'sources': files(
+      'test_intl_duration_format.c',
+      '../src/intl/duration/format.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_duration_format_test,
+    'name': 'intl-duration-format',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_duration_owner_sources = files(
     'test_intl_duration_data.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/common/format-builder.c',
     '../src/intl/common/locale-grammar.c',
     '../src/intl/common/source-locale.c',
     '../src/intl/duration/data.c',
+    '../src/intl/duration/native-digital.c',
     '../src/intl/native/data.c',
     '../src/intl/native/pack.c',
   )
