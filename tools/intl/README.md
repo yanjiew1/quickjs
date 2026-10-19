@@ -485,16 +485,28 @@ Empty replacements remain distinct parts. Complete UTF-16 sizing precedes
 allocation and the output bound covers affixes and body together.
 
 `src/intl/number/native.c` assembles those operations behind the compile-time
-number-service contract. The initial internal formatter supports standard
-notation with decimal/percent styles, all numeric digit repertoires, resolved
+number-service contract. The internal formatter supports standard,
+scientific and engineering notation with decimal/percent styles, numeric digit
+repertoires, resolved
 grouping/sign settings and exact rounding options. It validates the selected
 profile once per service, excludes root from locale matching inventory, and
 caches decoded body symbols and typed pattern tokens in each formatter.
 Explicit numbering-system selection is exact; negotiation belongs to bindings.
 A formatter may outlive its service, and results may outlive both.
 
+Scientific/engineering output applies the exact scale-before-round operation,
+then emits localized exponent separator/sign and ASCII decimal exponent digits
+with explicit part types, following the pinned PartitionNotationSubPattern.
+Its explicit `"0"` exponent and missing transliteration differ from established
+ICU behavior; the open [ECMA-402 issue 627](https://redirect.github.com/tc39/ecma402/issues/627)
+tracks that specification gap. Mantissa digits still use the selected repertoire.
+Positive scientific-pattern literals wrap the complete notation body; the
+style's sign is outside it. Nonfinite values omit the exponent and notation
+wrappers. Source fraction defaults, exponent plus signs and zero-padding do
+not override the resolved ECMA-402 options and exponent rules.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Currency/unit styles, other notations, ranges and the JS binding remain required
+Currency/unit styles, compact notation, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
