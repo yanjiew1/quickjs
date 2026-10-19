@@ -80,6 +80,7 @@ def generate(sources, profile):
     currency_data = currency_tables.select(currency_data, tags)
     pattern_data['overrides'] = currency_tables.patterns(currency_data)
     layout_data['rows'] = tuple(row for row in layout_data['rows'] if row[0] in selected_tags)
+    layout_data['root_fields'] = tuple(row for row in layout_data['root_fields'] if row[0] in selected_tags)
     unit_data = unit_tables.select(unit_data, tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
