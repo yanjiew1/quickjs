@@ -141,6 +141,43 @@ state. Source identities may lie outside the selected locale registry. Authored
 and both prepared-profile tests cover queries, unaligned storage, malformed
 records and every reached validation allocation failure.
 
+The relative renderer in `src/intl/relative/format.c` implements `MakePartsList`
+without choosing locale, tense or plural category. Its dedicated part records
+attach a unit to every inserted number span, including number-origin literal
+spans; surrounding template text has no unit. Automatic literals bypass template
+parsing and always have one part, even when empty. Counted patterns may omit the
+number entirely. Output owns its UTF-16 text and parts, with explicit bounds,
+allocation-failure cleanup and no retained input storage.
+
+`src/intl/relative/native.c` composes the Number and Plural service interfaces.
+It maps canonical locale tags across their inventories explicitly, validates
+all unit/style groups, and delegates numeric-system capabilities to Number.
+Formatters own their dependency handles and survive service closure. Auto
+literal lookup precedes rounding; negative zero keeps the past tense for numeric
+output. Plural-category misses use the CLDR `other` form, while an absent entire
+style uses long data. Operational and malformed-data errors are not fallback.
+
+There are two relevant inconsistencies in ECMA-402 revision
+`730ca2b88c305862db7be2f83c510dcca33ab48c` (reviewed 2026-10-19):
+
+- `PartitionRelativeTimePattern` passes signed `real(value)` to number formatting
+  without taking its magnitude, despite past/future expressing the direction.
+  Native output inserts unsigned magnitude, matching established RelativeTimeFormat
+  behavior and the corresponding Test262 negative-value cases.
+- Its `ResolvePlural` call still passes a Number, although that operation now
+  takes an Intl mathematical value. [The PluralRules change](https://redirect.github.com/tc39/ecma402/pull/1026),
+  merged as `7344f4219a54dad6ecfe261d121f7463e016726c` on 2025-12-05,
+  removed the old internal `real(n)` conversion and added a different conversion
+  at public `select`/`selectRange` boundaries, without updating this caller.
+  Relative's internal number and plural formatting therefore share the exact
+  real magnitude, preserving the pre-change algorithm. This is a conservative
+  interpretation of the stale call, not an explicit editor clarification.
+  Converting only the plural input through public `select`'s shortest decimal
+  can make Number `1.0005` display `1` with the plural word `days`.
+
+The source, renderer and service layers do not implement observable JavaScript
+coercion, options or branding. Those belong to the later engine binding.
+
 ## Region and script preferences
 
 ```sh
