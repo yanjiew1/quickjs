@@ -129,6 +129,7 @@ engine_sources += files(
 )
 if intl_enabled
   engine_sources += files(
+    'quickjs/builtins/intl/display-names.c',
     'quickjs/builtins/intl/duration-format.c',
     'quickjs/builtins/intl/locale.c',
     'quickjs/builtins/intl/locale-list.c',
@@ -152,11 +153,14 @@ if intl_enabled
     'intl/currency/data.c',
     'intl/currency/display.c',
     'intl/datetime/field-data.c',
+    'intl/datetime/field.c',
     'intl/display/calendar-names.c',
     'intl/display/data.c',
     'intl/display/language-format.c',
     'intl/display/language-match.c',
+    'intl/display/native.c',
     'intl/display/select.c',
+    'intl/display/text.c',
     'intl/duration/data.c',
     'intl/duration/decimal.c',
     'intl/duration/format.c',
