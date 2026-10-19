@@ -139,20 +139,28 @@ def collect(sources, graph=None):
             current = graph.parent(current)
         base = {} if current is None else resolved[current]
         for current in reversed(path):
-            overrides = {key: value for key, value in values.get(current, {}).items()
-                         if value != INHERIT and base.get(key) != value}
+            # Preserve origin even when a child explicitly repeats root text.
+            # Counted display names have a consumer fallback that excludes root;
+            # uncounted names and symbols retain ordinary inheritance.
+            candidates = {key: (value, current == 'root' and key[1] == 'name' and bool(key[2]))
+                          for key, value in values.get(current, {}).items() if value != INHERIT}
+            overrides = {key: value for key, value in candidates.items() if base.get(key) != value}
             if overrides:
                 base = dict(base)
                 base.update(overrides)
             resolved[current] = base
     # Sort each shared map only once, then deduplicate by semantic contents.
-    converted = {id(value): tuple(key + (value[key],) for key in sorted(value))
+    converted = {id(value): tuple(key + (value[key][0],) for key in sorted(value))
                  for value in {id(value): value for value in resolved.values()}.values()}
+    root_names = {id(value): tuple((key[0], key[2]) for key in sorted(value) if value[key][1])
+                  for value in {id(value): value for value in resolved.values()}.values()}
     maps = tuple(sorted(set(converted.values())))
     indices = {value: index for index, value in enumerate(maps)}
     return {'codes': tuple(sorted(codes)), 'fields': FIELDS, 'counts': COUNTS,
             'fractions': fraction_data(sources), 'maps': maps,
             'rows': tuple((locale, indices[converted[id(resolved[locale])]]) for locale in graph.tags),
+            'root_names': tuple((locale, root_names[id(resolved[locale])]) for locale in graph.tags
+                                if root_names[id(resolved[locale])]),
             'source_records': records, 'skipped_alternates': skipped}
 
 
