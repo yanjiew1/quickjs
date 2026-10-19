@@ -1343,6 +1343,19 @@ external alias origins, malformed wire fields, every opening allocation failure
 and retry. Both prepared profiles are opened and queried independently, including
 unaligned input. The composed generator fixture also includes digital patterns.
 
+`src/quickjs/builtins/duration-value.[ch]` provides the shared JavaScript-to-record
+conversion needed by DurationFormat and Temporal. It copies branded duration
+slots when available, or reads object fields in alphabetical order, or parses
+a duration string. It preserves exact integral binary64 fields, including time
+components outside the signed 64-bit range, and validates their combined bound.
+Failures leave the caller's output record unchanged.
+
+This conversion does not create a Temporal object, initialize its intrinsics,
+or require Temporal constructors to be enabled. Temporal's existing conversion
+then creates its result object from the validated record. The native duration,
+epoch and unit arithmetic sources are shared when either feature is enabled;
+calendar and time-zone implementations are not pulled into Intl-only builds.
+
 `src/intl/duration/format.[ch]` implements the pure `ListFormatParts` composition
 step. It replaces each ListFormat element with the next component's typed parts,
 preserving every number-origin unit, including literal parts. List and digital
@@ -1421,5 +1434,35 @@ remains unresolved. Explicit `hours: "2-digit"` still pads. The policy does not
 claim that raw `hh` preferences were absent: those facts remain in the data and
 projection. Formatter ownership, all reached allocation failures, large exact
 fractions, numeric/text grouping, negative zero, parts and representative digital
-locales have focused C tests; this milestone does not yet expose the JavaScript
-DurationFormat constructor.
+locales have focused C tests. The observable JavaScript surface is described
+below.
+
+## DurationFormat JavaScript binding
+
+The enabled profiles now expose `Intl.DurationFormat`, its locale query,
+resolved options, ordinary `format` and `formatToParts` methods. Constructor
+options use `GetOptionsObject`, so nonobject primitives are rejected. Unit
+style and display properties are read/coerced in specification order; transition
+errors occur after the current display option and before the next unit.
+Formatting accepts duration-like objects, strings and branded Temporal.Duration
+slots through the shared converter, without allocating an intermediate Temporal
+object. The Intl-only profile does not enable Temporal constructors.
+
+With both features enabled, `Temporal.Duration.prototype.toLocaleString` uses
+its realm's captured intrinsic DurationFormat constructor and native formatting,
+independently of mutable global properties or prototype methods. The context
+marks/releases that constructor; partial initialization resets its class
+prototype and state. Formatter objects own only native handles and strings.
+Runtime service caches close after object finalizers have released those handles.
+
+Focused JavaScript tests cover options/input getter and coercion order, abrupt
+completion, branding, parts, exact fractions, negative zero, numbering systems,
+subclasses, realms and GC. Native tests cover reached binding allocation failures
+and successful retries. The focused CI Test262 configuration admits DurationFormat
+and Temporal.Duration locale formatting (`Temporal=auto`). Two tests also call
+not-yet-delivered `supportedValuesOf` or DateTimeFormat APIs and remain deferred
+until those dependencies land; repository checks cover Duration's numeric-system
+options and method descriptors directly. The minimal profile
+excludes only two Duration cases that require unsupported German/Serbian/Chinese
+locales; English array-like locale arguments are covered in the repository tests.
+The native profile keeps both cases.
