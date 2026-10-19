@@ -1,4 +1,4 @@
-/* Native decimal/percent and currency NumberFormat service.
+/* Native decimal/percent/currency/unit NumberFormat service and ranges.
  * ECMA-402 730ca2b88c305862db7be2f83c510dcca33ab48c, reviewed 2026-10-19.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "number.h"
