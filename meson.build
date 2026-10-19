@@ -47,6 +47,11 @@ inc = include_directories(
 )
 version_arg = '-DCONFIG_VERSION="' + meson.project_version() + '"'
 common_args = ['-D_GNU_SOURCE', version_arg, '-fwrapv']
+intl_enabled = get_option('intl') != 'disabled'
+if intl_enabled
+  common_args += '-DCONFIG_INTL'
+  warning('Intl is under development; only the documented completed APIs are available')
+endif
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
   if get_option('calendars') == 'native'
@@ -292,6 +297,30 @@ windows_timezone_data = custom_target(
   ),
   build_by_default: false,
 )
+if intl_enabled
+  intl_data = custom_target(
+    'native-intl-data',
+    input: files('data/intl/' + get_option('intl') + '.bin'),
+    output: 'intl-data.c',
+    command: [
+      python,
+      files('tools/intl/embed.py'),
+      '--input', '@INPUT@',
+      '--output', '@OUTPUT@',
+    ],
+    depend_files: files(
+      'tools/intl/acquire.py',
+      'tools/intl/bundle.py',
+      'tools/intl/cldr_xml.py',
+      'tools/intl/list_patterns.py',
+      'tools/intl/locale_metadata.py',
+      'tools/intl/locale_tables.py',
+      'tools/intl/parents.py',
+      'tools/intl/resolve.py',
+      'tools/intl/tables.py',
+    ),
+  )
+endif
 subdir('src')
 
 shared_build = get_option('default_library') != 'static'
@@ -707,6 +736,7 @@ summary(
     'Forced GC': get_option('gc_stress'),
     'Allocation iteration': get_option('malloc_iter'),
     'Sanitizers': get_option('b_sanitize'),
+    'Intl (incomplete)': get_option('intl'),
     'Native code generator': meson.is_cross_build(),
   },
 )

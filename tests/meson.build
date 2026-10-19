@@ -151,6 +151,7 @@ endif
 # Tests that include an implementation need archive extraction, not link_whole.
 native_test_names = [
   'test_duration_record',
+  'test_intl_api',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -297,6 +298,7 @@ foreach profile : ['minimal', 'native']
     'test_intl_locale_id_' + profile,
     [
       'test_intl_native_locale_id.c',
+      '../src/intl/locale/native.c',
       '../src/intl/locale/native-id.c',
       '../src/intl/locale/native-data.c',
       '../src/intl/common/locale-grammar.c',
@@ -905,6 +907,11 @@ else
     'rw-handler': ['tests/test_rw_handler.js'],
   }
 endif
+if intl_enabled
+  js_tests += {
+    'intl-locale': ['-m', 'tests/test_intl_locale.js'],
+  }
+endif
 if shared_modules
   js_tests += {
     'bjson': ['tests/test_bjson.js'],
@@ -1119,7 +1126,7 @@ if not meson.is_cross_build() and host_machine.system() != 'windows'
       qjsc,
       '',
       ' '.join(expected_flags),
-      'n',
+      intl_enabled ? 'y' : 'n',
       get_option('temporal') ? 'y' : 'n',
       get_option('b_lto') ? lto_flag : '',
     ],
