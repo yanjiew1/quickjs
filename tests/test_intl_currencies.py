@@ -77,6 +77,20 @@ class CurrencyTests(unittest.TestCase):
         self.assertNotIn(('USD', 'name', 'one'), values) # No invented plural fallback.
         self.assertNotIn(('JPY', 'name', ''), values) # No invented currency-code text.
 
+    def test_counted_name_origin_survives_equal_text_overrides(self):
+        source = Sources()
+        source.set('en', '<currency type="USD"><displayName count="other">US dollars</displayName></currency>')
+        source.set('en_GB', '<currency type="USD"><displayName count="other">' + INHERIT +
+                           '</displayName></currency>')
+        data = currencies.collect(source, graph())
+        self.assertEqual(len(data['maps']), 1)
+        self.assertEqual(dict(data['root_names']), {'de': (('USD', 'other'),),
+                                                   'root': (('USD', 'other'),)})
+        source.set('en', '<currency type="USD"><displayName count="other">' + INHERIT +
+                        '</displayName></currency>')
+        data = currencies.collect(source, graph())
+        self.assertEqual(set(dict(data['root_names'])), set(graph().tags))
+
     def test_inheritance_markers_empty_and_whitespace(self):
         source = Sources()
         source.set('en', '<currency type="USD"><displayName count="one"> dollar </displayName>'
