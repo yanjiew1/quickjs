@@ -9,7 +9,7 @@ import acquire
 from cldr_xml import DataError, Schema, read_xml
 import numbering
 import parents
-from resolve import BLOCK, Records
+from resolve import BLOCK, INHERIT, Records
 
 MISC = ('range', 'approximately', 'atLeast', 'atMost')
 COUNTS = ('0', '1', 'zero', 'one', 'two', 'few', 'many', 'other')
@@ -23,12 +23,15 @@ GROUP_ALIAS = re.compile(r"\.\./(currencyFormats|miscPatterns)\[@numberSystem=([
 SPACING_ALIAS = re.compile(r"\.\./\.\./currencyFormats\[@numberSystem=(['\"])([^'\"]+)\1\]/currencySpacing")
 
 
-def collect(sources, graph=None):
+def collect(sources, graph=None, numbering_data=None):
     graph = parents.load(sources) if graph is None else graph
     systems = tuple(sorted(name for name, (kind, value) in numbering.definitions(sources).items()
                            if kind == 'numeric'))
     schema = Schema(sources.read('common/dtd/ldml.dtd'))
-    records = Records(graph, [(system, field) for system in systems for field in FIELDS])
+    unit_fields = tuple('currency-unit-' + count for count in COUNTS)
+    projected = tuple(('currency-unit-default', field) for field in unit_fields)
+    records = Records(graph, [(system, field) for system in systems for field in FIELDS] +
+                      list(projected))
     skipped = 0
 
     def selected(node):
@@ -137,6 +140,32 @@ def collect(sources, graph=None):
                                 leaf(locale, system, side.tag + '-' + value.tag, value)
                     elif node.tag not in ('currencyFormatLength', 'default', 'special'):
                         raise DataError('unknown currency layout group child')
+    source_records, source_aliases = len(records.values), len(records.aliases)
+    # Project only local selected-default leaves into the locale-level view.
+    # Parent fallback then uses that parent's own default, not the child's.
+    # Aliases still target raw paths, retaining source="locale"'s requesting
+    # anchor and the terminal source needed for root-excluding count fallback.
+    if numbering_data is None:
+        numbering_data = numbering.collect(sources, graph)
+    defaults = {row[0]: row[1] for row in numbering_data['locales']}
+    for locale in graph.tags:
+        for key in projected:
+            raw = (defaults[locale], key[1])
+            state = (locale, raw)
+            if state in records.values and records.values[state] != INHERIT:
+                records.add(locale, key, records.values[state])
+            target = records.aliases.get(state)
+            if target is not None:
+                records.alias(locale, key, target.target, target.source)
+    currency_units = []
+    for locale in graph.tags:
+        values, root_mask = [], 0
+        for index, key in enumerate(projected):
+            result = records.resolve(locale, key)
+            values.append(None if result is None else BLOCK if result.blocked else result.value)
+            if result is not None and result.locale == 'root':
+                root_mask |= 1 << index
+        currency_units.append((locale, tuple(values), root_mask))
     rows, root_fields = [], []
     for locale in graph.tags:
         for system in systems:
@@ -157,7 +186,8 @@ def collect(sources, graph=None):
                 root_fields.append((locale, system, root_mask))
     return {'systems': systems, 'fields': FIELDS, 'rows': tuple(rows),
             'root_fields': tuple(root_fields),
-            'source_records': len(records.values), 'source_aliases': len(records.aliases),
+            'currency_units': tuple(currency_units),
+            'source_records': source_records, 'source_aliases': source_aliases,
             'skipped_alternates': skipped}
 
 
