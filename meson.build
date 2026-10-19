@@ -55,6 +55,7 @@ build_cc = meson.get_compiler(
   native: true,
 )
 python = find_program('python3', 'python')
+subdir('tools/intl')
 inc = include_directories(
   '.',
   'include',
@@ -339,39 +340,7 @@ if intl_enabled
       '--input', '@INPUT@',
       '--output', '@OUTPUT@',
     ],
-    depend_files: files(
-      'tools/intl/acquire.py',
-      'tools/intl/bundle.py',
-      'tools/intl/cldr_xml.py',
-      'tools/intl/list_patterns.py',
-      'tools/intl/locale_metadata.py',
-      'tools/intl/locale_tables.py',
-      'tools/intl/numbering.py',
-      'tools/intl/numbering_tables.py',
-      'tools/intl/number_symbols.py',
-      'tools/intl/number_symbol_tables.py',
-      'tools/intl/number_patterns.py',
-      'tools/intl/number_pattern_syntax.py',
-      'tools/intl/number_pattern_tables.py',
-      'tools/intl/compact_patterns.py',
-      'tools/intl/compact_pattern_syntax.py',
-      'tools/intl/compact_tables.py',
-      'tools/intl/currencies.py',
-      'tools/intl/currency_tables.py',
-      'tools/intl/number_layout.py',
-      'tools/intl/number_layout_tables.py',
-      'tools/intl/unit_patterns.py',
-      'tools/intl/unit_tables.py',
-      'tools/intl/unit_grammar.py',
-      'tools/intl/unit_grammar_tables.py',
-      'tools/intl/plural_rules.py',
-      'tools/intl/plural_tables.py',
-      'tools/intl/parents.py',
-      'tools/intl/preferences.py',
-      'tools/intl/preference_tables.py',
-      'tools/intl/resolve.py',
-      'tools/intl/tables.py',
-    ),
+    depend_files: intl_tool_dependencies,
   )
 endif
 subdir('src')
