@@ -1252,6 +1252,14 @@ test(
 )
 
 test(
+  'intl-plural-sources',
+  python,
+  args: files('test_intl_plural_rules.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-numbering-tables',
   python,
   args: files('test_intl_numbering_tables.py'),

@@ -206,6 +206,19 @@ are accepted; malformed arms are rejected even when their truth value cannot
 change the result. Repository witnesses include values beyond 64-bit integers,
 fractional modulo, exponent boundaries, malformed input and output reset.
 
+`plural_rules.py` reads cardinal, ordinal and range supplemental data through
+the checked DTD and source reader. Conditions exclude sample annotations and
+normalize Pattern_White_Space; runtime tokens and integer bounds are checked
+without changing their logical structure. It resolves the stand-alone
+`plurals` component parent chain, independently of main-component overrides,
+and retains source origins. Category/range records are unique and sorted;
+root rules are required. Explicit empty range maps stop inheritance, while
+missing range maps and pairs remain absent. The consumer applies the pinned
+LDML range policy (CLDR 49 specifies the end category for absent pairs).
+Endpoint-omitting range records require a reviewed mapping before admission;
+the pinned release contains explicit endpoints. These collected records are
+audited in CI but are not yet packed or advertised as PluralRules capability.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
