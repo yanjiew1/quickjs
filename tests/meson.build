@@ -924,6 +924,7 @@ foreach profile : ['minimal', 'native']
     [
       'test_intl_native_number.c',
       '../src/cutils/cutils.c',
+      '../src/intl/common/format-builder.c',
       '../src/intl/common/decimal.c',
       '../src/intl/common/locale-grammar.c',
       '../src/intl/locale/numbering-data.c',
@@ -1022,6 +1023,7 @@ standalone = {
   'test_intl_number_affix': [
     'test_intl_number_affix.c',
     '../src/intl/number/affix.c',
+    '../src/intl/common/format-builder.c',
     '../src/intl/number/sign-affix.c',
     '../src/cutils/cutils.c',
     '../src/intl/number/body.c',
