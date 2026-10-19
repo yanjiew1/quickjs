@@ -13,6 +13,9 @@ typedef struct QJSIntlLocaleService QJSIntlLocaleService;
 QJSIntlStatus qjs_intl_locale_open(const QJSIntlAllocator *allocator,
                                    QJSIntlLocaleService **out);
 void qjs_intl_locale_close(QJSIntlLocaleService *service);
+/* Release an owned identity result with the service's original allocator.
+   Passing NULL output is safe; a non-NULL output requires its live service. */
+void qjs_intl_locale_result_free(const QJSIntlLocaleService *service, char *result);
 /* Syntax failure is OK with *well_formed=0; resource failures remain errors. */
 QJSIntlStatus qjs_intl_locale_validate(const QJSIntlLocaleService *service,
                                       QJSIntlBytes input, int *well_formed);
