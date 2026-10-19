@@ -904,6 +904,8 @@ if intl_enabled
     output: 'intl-currency-authored-fixture.c',
     command: [python, files('intl_currency_fixture.py'), '--output', '@OUTPUT@'],
     depend_files: files(
+      'test_intl_currencies.py',
+      'test_intl_list_patterns.py',
       '../tools/intl/acquire.py',
       '../tools/intl/bundle.py',
       '../tools/intl/cldr_xml.py',
@@ -940,6 +942,27 @@ if intl_enabled
   component_test_specs += [{
     'target': intl_currency_authored,
     'name': 'intl-currency-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_currency_display_test = {
+    'name': 'test_intl_currency_display',
+    'sources': files(
+      'test_intl_currency_display.c',
+      '../src/intl/currency/data.c',
+      '../src/intl/currency/display.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_currency_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_currency_display_test,
+    'name': 'intl-currency-display',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
