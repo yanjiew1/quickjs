@@ -3,12 +3,7 @@
 #ifndef QJS_INTL_DISPLAY_SELECT_H
 #define QJS_INTL_DISPLAY_SELECT_H
 #include "data.h"
-
-typedef enum QJSIntlNameStyle {
-    QJS_INTL_NAME_LONG,
-    QJS_INTL_NAME_SHORT,
-    QJS_INTL_NAME_NARROW
-} QJSIntlNameStyle;
+#include "display.h"
 
 typedef struct QJSIntlNameLabel {
     QJSIntlNameEntry entry;
