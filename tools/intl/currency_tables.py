@@ -5,9 +5,11 @@ import bundle
 import currencies as source
 from resolve import BLOCK, INHERIT
 
-VERSION, HEADER = 1, 9
+VERSION, HEADER = 2, 9
 ABSENT, BLOCKED, EMPTY = 0xffffffff, 0xfffffffe, 0xfffffffd
 FIELD_COUNT = len(source.COUNTS) + len(source.FIELDS) - 1
+VECTOR_WIDTH = FIELD_COUNT + 1
+ROOT_MASK = (1 << len(source.COUNTS)) - 2
 
 
 def codes(data):
@@ -28,6 +30,7 @@ def select(data, tags):
         raise ValueError('invalid currency source map reference')
     indices = {old: new for new, old in enumerate(used)}
     return dict(data, maps=tuple(data['maps'][index] for index in used),
+                root_names=tuple(row for row in data.get('root_names', ()) if row[0] in selected),
                 rows=tuple((locale, indices[index]) for locale, index in rows))
 
 
@@ -73,18 +76,35 @@ def encode(data, tags, ids):
                 len(source.COUNTS) + source.FIELDS.index(field) - 1)
             vector[index] = BLOCKED if text == BLOCK else EMPTY if text == '' else ids[text]
         compiled.append({code: tuple(vector) for code, vector in fields.items()})
-    vectors = tuple(sorted({vector for fields in compiled for vector in fields.values()}))
+    roots = dict(data.get('root_names', ()))
+    if len(roots) != len(data.get('root_names', ())) or not set(roots) <= set(tags):
+        raise ValueError('invalid currency root-name locale coverage')
+    projected = {}
+    for locale in tags:
+        fields = compiled[records[locale]]
+        keys = roots.get(locale, ())
+        if tuple(keys) != tuple(sorted(set(keys))) or locale in roots and not keys:
+            raise ValueError('noncanonical currency root-name keys')
+        masks = {}
+        for code, count in keys:
+            if (code not in fields or count not in source.COUNTS[1:] or
+                    fields[code][source.COUNTS.index(count)] == ABSENT):
+                raise ValueError('invalid currency root-name reference')
+            masks[code] = masks.get(code, 0) | (1 << source.COUNTS.index(count))
+        projected[locale] = {code: vector + (masks.get(code, 0),)
+                             for code, vector in fields.items()}
+    vectors = tuple(sorted({vector for fields in projected.values() for vector in fields.values()}))
     vector_ids = {value: index for index, value in enumerate(vectors)}
-    raw_maps = tuple(tuple(vector_ids[fields[code]] if code in fields else ABSENT for code in inventory)
-                     for fields in compiled)
-    maps = tuple(sorted(set(raw_maps)))
+    raw_maps = {locale: tuple(vector_ids[fields[code]] if code in fields else ABSENT
+                              for code in inventory) for locale, fields in projected.items()}
+    maps = tuple(sorted(set(raw_maps.values())))
     map_ids = {value: index for index, value in enumerate(maps)}
     fraction_rows = tuple((code_ids[code],) + fractions[code] for code in sorted(fractions) if code != 'DEFAULT')
     words = [VERSION, len(inventory), len(fraction_rows), len(vectors), len(maps)]
     words.extend(fractions['DEFAULT'])
     words.extend(ids[code] for code in inventory)
     words.extend(value for row in fraction_rows for value in row)
-    words.extend(map_ids[raw_maps[records[locale]]] for locale in tags)
+    words.extend(map_ids[raw_maps[locale]] for locale in tags)
     words.extend(value for row in maps for value in row)
     words.extend(value for row in vectors for value in row)
     return len(tags), b''.join(struct.pack('<I', bundle.uint32(value)) for value in words)
@@ -99,7 +119,7 @@ def decode(section, pool, tags):
     words = tuple(value[0] for value in struct.iter_unpack('<I', raw))
     version, code_count, fraction_count, vector_count, map_count = words[:5]
     default = words[5:HEADER]
-    expected = HEADER + code_count + fraction_count * 5 + count + map_count * code_count + vector_count * FIELD_COUNT
+    expected = HEADER + code_count + fraction_count * 5 + count + map_count * code_count + vector_count * VECTOR_WIDTH
     if (version != VERSION or not code_count or fraction_count > code_count or
             not 1 <= map_count <= count or vector_count > map_count * code_count or
             expected != len(words) or not fraction_valid(default) or not pool or pool[0] != ''):
@@ -127,24 +147,28 @@ def decode(section, pool, tags):
     at += count
     maps = tuple(words[i:i + code_count] for i in range(at, at + map_count * code_count, code_count))
     at += map_count * code_count
-    vectors = tuple(words[i:i + FIELD_COUNT] for i in range(at, len(words), FIELD_COUNT))
+    vectors = tuple(words[i:i + VECTOR_WIDTH] for i in range(at, len(words), VECTOR_WIDTH))
     if (any(a >= b for rows in (maps, vectors) for a, b in zip(rows, rows[1:])) or
             {index for row in maps for index in row if index != ABSENT} != set(range(vector_count))):
         raise ValueError('invalid or unused currency vector/order')
     for vector in vectors:
-        if all(value == ABSENT for value in vector):
+        if all(value == ABSENT for value in vector[:FIELD_COUNT]):
             raise ValueError('redundant absent currency vector')
         if any(value not in (ABSENT, BLOCKED, EMPTY) and
                (not 0 < value < len(pool) or not pool[value] or pool[value] in (BLOCK, INHERIT))
-               for value in vector):
+               for value in vector[:FIELD_COUNT]):
             raise ValueError('invalid currency text reference')
+        mask = vector[FIELD_COUNT]
+        if mask & ~ROOT_MASK or any(mask & (1 << field) and vector[field] == ABSENT
+                                    for field in range(1, len(source.COUNTS))):
+            raise ValueError('invalid currency root-name mask')
     decoded_maps = []
     for row in maps:
         fields = []
         for code, index in zip(inventory, row):
             if index == ABSENT:
                 continue
-            for field, value in enumerate(vectors[index]):
+            for field, value in enumerate(vectors[index][:FIELD_COUNT]):
                 if value == ABSENT:
                     continue
                 name = 'name' if field < len(source.COUNTS) else source.FIELDS[field - len(source.COUNTS) + 1]
@@ -152,6 +176,14 @@ def decode(section, pool, tags):
                 text = BLOCK if value == BLOCKED else '' if value == EMPTY else pool[value]
                 fields.append((code, name, category, text))
         decoded_maps.append(tuple(sorted(fields)))
+    root_names = []
+    for locale, row_index in zip(tags, indices):
+        keys = tuple(sorted((code, source.COUNTS[field]) for code, index in zip(inventory, maps[row_index])
+                     if index != ABSENT for field in range(1, len(source.COUNTS))
+                     if vectors[index][FIELD_COUNT] & (1 << field)))
+        if keys:
+            root_names.append((locale, keys))
     return {'codes': tuple(inventory), 'fields': source.FIELDS, 'counts': source.COUNTS,
+            'root_names': tuple(root_names),
             'fractions': tuple(sorted(fractions)), 'maps': tuple(decoded_maps),
             'rows': tuple((locale, indices[i]) for i, locale in enumerate(tags))}
