@@ -57,6 +57,21 @@ jobs:
       run: |
         timeout 60s python3 tools/intl/parents.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit resolved native list templates
+      run: |
+        timeout 120s python3 tools/intl/list_patterns.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Reproduce prepared native and minimal Intl sections
+      run: |
+        for profile in minimal native; do
+          timeout 120s python3 tools/intl/generate.py \
+            --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
+            --profile "$profile" \
+            --output "$RUNNER_TEMP/intl-$profile.bin" \
+            --manifest "$RUNNER_TEMP/intl-$profile.json"
+          cmp "data/intl/$profile.bin" "$RUNNER_TEMP/intl-$profile.bin"
+          cmp "data/intl/$profile-manifest.json" "$RUNNER_TEMP/intl-$profile.json"
+        done
   calendar-data:
     name: Native calendar data regeneration
     runs-on: ubuntu-latest
