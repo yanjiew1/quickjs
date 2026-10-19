@@ -1223,6 +1223,13 @@ The locale owner uses
 `qjs_intl_locale_metadata_open()` to check sections 3–6, including scoped
 preferred-name graphs, before a runtime locale service can consume them.
 
+The same owner exposes allocation-free typed extension-type queries and exact
+extension/key/name lookup. Returned aliases, preferred identity, flags and
+timezone labels remain borrowed source facts. Queries neither substitute aliases
+nor advertise service capabilities. This lets native consumers share metadata
+without decoding locale-owned wire columns themselves. Authored tests cover
+legacy aliases, preferred/deprecated records, indirect types, timezone labels,
+missing lookups and invalid-argument resets.
 
 ## Native locale identity operations
 
