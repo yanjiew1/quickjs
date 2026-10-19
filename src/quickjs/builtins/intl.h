@@ -12,6 +12,7 @@ typedef struct JSIntlLocaleList {
 } JSIntlLocaleList;
 
 QJSIntlLocaleService *js_intl_locale_service(JSContext *ctx);
+const char *js_intl_default_locale(JSContext *ctx);
 QJSIntlAllocator js_intl_allocator(JSRuntime *rt);
 int js_intl_ensure_intrinsics(JSContext *ctx);
 int js_intl_init_locale(JSContext *ctx, JSValueConst namespace_object);

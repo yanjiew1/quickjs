@@ -444,6 +444,14 @@ JS_EXTERN int JS_AddIntrinsicDate(JSContext *ctx);
    objects. Idempotent; returns -1 with an exception on failure, including
    TypeError when Intl is disabled. */
 JS_EXTERN int JS_AddIntrinsicIntl(JSContext *ctx);
+/* Select this runtime's canonical, supported default locale by prefix lookup;
+   extensions are removed. Unsupported or malformed names throw RangeError.
+   Failure preserves the old setting. NULL resets lazy host discovery.
+   Raw contexts require base objects; Intl-disabled builds throw TypeError. */
+JS_EXTERN int JS_SetIntlDefaultLocale(JSContext *ctx, const char *locale);
+/* Return an owned string. Host discovery is snapshotted on first use and falls
+   back to English when missing, invalid or unsupported by the data profile. */
+JS_EXTERN JSValue JS_GetIntlDefaultLocale(JSContext *ctx);
 /* Initialize native Temporal intrinsics and publish the namespace. Raw
    contexts require base objects. Idempotent; returns -1 with an exception
    on failure, including TypeError in a disabled build. */
