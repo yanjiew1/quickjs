@@ -1542,6 +1542,14 @@ test(
 )
 
 test(
+  'intl-currencies',
+  python,
+  args: files('test_intl_currencies.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-number-symbol-tables',
   python,
   args: files('test_intl_number_symbol_tables.py'),

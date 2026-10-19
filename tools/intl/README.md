@@ -312,6 +312,25 @@ fallback and rounding policy. Authored and real-profile C tests cover literal
 forms, distinct alternate divisors, empty currency maps, sparse selectors,
 unaligned storage, corruption, output reset and allocation failure/retry.
 
+## Currency source records
+
+`currencies.py` collects exact plain/plural names, standard/narrow/formal/variant
+symbols and legacy per-currency decimal/group/pattern overrides. Sparse maps
+inherit by the main locale graph and share unchanged parents. Explicit
+inheritance follows the parent; absent leaves, blocked text and empty text
+stay distinct. It does not
+invent currency-code text or plural fallback. Unsupported aliases/selectors
+fail explicitly instead of discarding a selector and conflating records.
+
+Supplemental fraction records retain regular digits/rounding and cash metadata.
+LDML's regular defaults are 2/0; absent cash fields inherit their corresponding
+regular fields. These are source facts, not instructions to enable cash rounding
+in NumberFormat. The collected code inventory also includes historical codes;
+it is not the available-currency inventory for supportedValuesOf. Formatting,
+DisplayNames fallback and currency capability selection have separate consumers.
+The authored tests and authenticated CI audit exercise this source-only slice;
+it is not yet packed and does not publish a NumberFormat constructor.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
