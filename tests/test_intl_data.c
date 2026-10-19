@@ -1,0 +1,128 @@
+/* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
+#include "../src/intl/native/data.h"
+#include "../src/intl/native/wire.h"
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct Allocation {
+    int fail;
+    unsigned int live;
+} Allocation;
+
+static void *allocate(void *opaque, size_t size)
+{
+    Allocation *state = opaque;
+    void *result;
+    assert(size > 0);
+    if (state->fail)
+        return NULL;
+    result = malloc(size);
+    if (result)
+        state->live++;
+    return result;
+}
+
+static void release(void *opaque, void *ptr)
+{
+    Allocation *state = opaque;
+    assert(ptr && state->live);
+    state->live--;
+    free(ptr);
+}
+
+static void put_u32(uint8_t *bytes, uint32_t value)
+{
+    unsigned int i;
+    for (i = 0; i < 4; i++)
+        bytes[i] = value >> (i * 8);
+}
+
+static void corrupt_word(const QJSIntlAllocator *allocator, size_t offset, uint32_t value)
+{
+    QJSIntlData data;
+    uint8_t *copy = malloc(qjs_intl_native_length);
+    assert(copy && offset <= qjs_intl_native_length - 4);
+    memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
+    put_u32(copy + offset, value);
+    assert(qjs_intl_data_open(copy, qjs_intl_native_length, allocator, &data) == QJS_INTL_DATA_ERROR);
+    assert(!data.pack.bytes && !data.strings.bytes && !data.locales.bytes && !data.lists.bytes);
+    free(copy);
+}
+
+int main(void)
+{
+    Allocation state = {0};
+    QJSIntlAllocator allocator = {&state, allocate, NULL, release};
+    QJSIntlData data;
+    QJSIntlBytes text;
+    uint32_t index, parent, english = UINT32_MAX;
+    size_t strings_at, locales_at, lists_at, vectors_at;
+    uint8_t *copy;
+
+    assert(qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length,
+                              &allocator, &data) == QJS_INTL_OK);
+    assert(!state.live);
+    assert(data.pack.profile == TEST_INTL_PROFILE);
+    assert(TEST_INTL_PROFILE ? data.locales.count > 1000 : data.locales.count == 2);
+    for (index = 0; index < data.strings.count; index++)
+        assert(qjs_intl_data_string(&data, index, &text) == QJS_INTL_OK);
+    assert(qjs_intl_data_string(&data, data.strings.count, &text) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!text.data && !text.length);
+    for (index = 0; index < data.locales.count; index++) {
+        unsigned int variant, part;
+        assert(qjs_intl_data_locale(&data, index, &text, &parent) == QJS_INTL_OK);
+        assert(text.length && (parent == UINT32_MAX || parent < data.locales.count));
+        if (text.length == 2 && !memcmp(text.data, "en", 2))
+            english = index;
+        for (variant = 0; variant < 9; variant++) {
+            for (part = 0; part < 4; part++) {
+                assert(qjs_intl_data_list_template(&data, index, variant, part, &text) == QJS_INTL_OK);
+                assert(text.length >= 6);
+            }
+        }
+    }
+    assert(english != UINT32_MAX);
+    assert(qjs_intl_data_list_template(&data, english, 0, 0, &text) == QJS_INTL_OK);
+    assert(text.length == 11 && !memcmp(text.data, "{0} and {1}", 11));
+    strings_at = data.strings.bytes - data.pack.bytes;
+    locales_at = data.locales.bytes - data.pack.bytes;
+    lists_at = data.lists.bytes - data.pack.bytes;
+    vectors_at = lists_at + 4 + (size_t)data.lists.count * 4;
+    corrupt_word(&allocator, strings_at, 1);
+    corrupt_word(&allocator, strings_at + 8, 0);
+    corrupt_word(&allocator, locales_at, 0);
+    corrupt_word(&allocator, locales_at + 4, 0);
+    corrupt_word(&allocator, locales_at + 4, data.locales.count);
+    corrupt_word(&allocator, lists_at + 4, qjs_intl_read_u32(data.lists.bytes));
+    corrupt_word(&allocator, vectors_at, data.strings.count);
+    corrupt_word(&allocator, vectors_at, 0);
+    assert(qjs_intl_data_list_template(&data, english, 9, 0, &text) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!text.data);
+    assert(qjs_intl_data_locale(&data, data.locales.count, &text, &parent) == QJS_INTL_INVALID_ARGUMENT);
+    copy = malloc(qjs_intl_native_length + 1);
+    assert(copy);
+    memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
+    copy[strings_at + ((size_t)data.strings.count + 1) * 4] = 0xc0;
+    assert(qjs_intl_data_open(copy, qjs_intl_native_length, &allocator, &data) == QJS_INTL_DATA_ERROR);
+    assert(!data.pack.bytes && !state.live);
+    memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
+    /* The fixture's third directory entry is the optional list section. */
+    put_u32(copy + 96, 11);
+    assert(qjs_intl_data_open(copy, qjs_intl_native_length, &allocator, &data) == QJS_INTL_OK);
+    assert(qjs_intl_data_list_template(&data, english, 0, 0, &text) == QJS_INTL_UNSUPPORTED);
+    assert(!text.data);
+    memcpy(copy + 1, qjs_intl_native_bytes, qjs_intl_native_length);
+    assert(qjs_intl_data_open(copy + 1, qjs_intl_native_length, &allocator, &data) == QJS_INTL_OK);
+    state.fail = 1;
+    assert(qjs_intl_data_open(copy + 1, qjs_intl_native_length, &allocator, &data) == QJS_INTL_NO_MEMORY);
+    assert(!data.pack.bytes && !state.live);
+    state.fail = 0;
+    assert(qjs_intl_data_open(NULL, 0, &allocator, &data) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_data_open(copy, qjs_intl_native_length, NULL, &data) == QJS_INTL_INVALID_ARGUMENT);
+    free(copy);
+    assert(!state.live);
+    puts("Intl prepared data reader tests passed");
+    return 0;
+}
