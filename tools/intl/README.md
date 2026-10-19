@@ -124,6 +124,32 @@ establish locale coverage or install DateTimeFormat. Those operations belong to
 the subsequent typed collector/compiler and native service. Authored tests run
 in the repository suite; CI also audits the pinned CLDR source patterns.
 
+## Date/time style source records
+
+```sh
+python3 tools/intl/date_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+This typed collector resolves full/long/medium/short date and time styles for
+every source calendar. Pattern and `datetimeSkeleton` records inherit separately;
+each retains its own `numbers` override and alternate identity. Overrides remain
+source text for the subsequent data compiler to interpret. Metadata attributes
+do not create extra records, and all published draft states are admitted.
+
+Whole-calendar and date/time family aliases map typed keys, with inherited
+`source="locale"` aliases restarting at the requesting locale. Explicit-source
+aliases change that anchor. Missing, blocked, inherited and explicitly empty
+values remain distinct; terminal locale/calendar/family/width/field/alternate
+origins accompany resolved values. Duplicate fields, mixed aliases, cycles and
+unsupported consumed structures fail. Calendar names, available-format maps,
+intervals and combination templates have separate owners.
+
+The collector currently produces host-side resolved facts, not a prepared binary
+section or a formatter capability. Raw CLDR calendar IDs include data-only
+`generic`; they must not be advertised as supported arithmetic calendars.
+Authored repository tests cover inheritance, aliases, provenance, overrides,
+markers and invalid data. CI additionally resolves the pinned production source.
+
 ## Relative-time source records
 
 ```sh

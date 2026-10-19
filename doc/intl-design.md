@@ -648,6 +648,13 @@ numbering overrides, names, skeletons and intervals. Compilation must distinguis
 these date patterns from date-time combination templates; shared pair templates
 do not use the date-pattern apostrophe rules.
 
+`tools/intl/date_patterns.py` owns the first typed date/time style facts. It
+resolves length styles and their independent skeleton records across calendar
+and locale aliases, retaining numbering overrides and terminal provenance.
+Available formats, intervals, names and combination templates remain subsequent
+collection stages. These host-side facts do not imply prepared runtime data or
+advertised formatting-calendar support.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
