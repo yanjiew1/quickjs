@@ -1,8 +1,8 @@
 {
-  "bytes": 421792,
+  "bytes": 474404,
   "complete_services": [],
   "format": 1,
-  "generation": "b277fb5643594cb3d1eb027df4bec29c056c2e6a8c6ebe9a420b7cddf3415064",
+  "generation": "4d9431d0a35d5161808d4d88670bf1f8f8a9a373450465490e162a47dd078e4f",
   "inputs": {
     "cldr": {
       "archive": {
@@ -258,60 +258,64 @@
     ],
     "sections": {
       "1": {
-        "count": 19914,
-        "sha256": "e2ec38ddbf887104e7460dd3fae1eda11f5155babd8483e076f35893b1a28372"
+        "count": 20019,
+        "sha256": "19bec64d6bc75f4d6de41a341aeb099f4d12b2752ea15b9121692d0e3933bc6e"
       },
       "10": {
         "count": 1212,
-        "sha256": "ef1e7527f8466d7ad40d2960e763df53fa2e7c1c8858db0eb804e7551aef482d"
+        "sha256": "2b9439aad4310986f168b8d42a77299b13273431f642b2107cf6b7df2cf36ca2"
       },
       "11": {
         "count": 184,
-        "sha256": "491b0e2f481f07da22e67cb776a4e62716bb8455689368b990f454de75d83623"
+        "sha256": "54b96b372cb537f8abeb8f3ee4152088135f2edf1a59c4ca28b27590b28a7d33"
       },
       "12": {
         "count": 1212,
-        "sha256": "04eddfd4c2a28520a03a4eab034a8d49a5c446f170eb059ba86818a888eed750"
+        "sha256": "3d21a42f0f75bf8d63375b815a6bf67f7b1d673157fb1c9419015f9abf90643d"
       },
       "13": {
         "count": 97,
-        "sha256": "f2bac34de7c4842f1e9fe713777fba5b8c3283ec639ee95abe3ee6d27c3466fb"
+        "sha256": "6da1f73b54cc2accefa14945b1306617d633865ca60102853b52d7ca81915de0"
       },
       "14": {
         "count": 1212,
-        "sha256": "4ef6e73b1a1279fafd91f0687d2f08d2184eb5411e242a7f0eb8dd17df04acb6"
+        "sha256": "e712b250575592d6a53fe8748e9ed9d9e445f2773273ad49bceb08392190b3c2"
+      },
+      "15": {
+        "count": 1212,
+        "sha256": "c6eeba243fc3dfeff30ca15e83e701b644625c222aff571b155b724f9a54546f"
       },
       "2": {
         "count": 1212,
-        "sha256": "5ccce48688d7a266ac4a7824b60ab2002f4deff192b18b5a490a5d055aea6fc0"
+        "sha256": "7819ab1930efb69298720182a0d9c5b07ec85bfb8bcd967388354b6003591740"
       },
       "3": {
         "count": 1292,
-        "sha256": "c031f685a12e23fceb7900642b7a2482c5ee759d6e6cdc5f49e9ab9c2a988012"
+        "sha256": "d968b6a86e90e25d6473c673c616cab8c5e1397d90cd0e2c4938b306a16d8d1f"
       },
       "4": {
         "count": 7868,
-        "sha256": "2ba5924bedde05d34ea91d101c7b60f6460d284d7f394c371b1f7929b9bff6a8"
+        "sha256": "71ccdac791a90c8c12daeaf71fcdcd577d74c28e11b3ab07803fbd604daa373e"
       },
       "5": {
         "count": 37,
-        "sha256": "fa2372c35241c8420f006401cf0284b883e4f9fec5ccada42f0ccccf91511aaf"
+        "sha256": "57e072bff0320e71971e0426f1706d55e9323dda22b7eee76ffa42845d595229"
       },
       "6": {
         "count": 1080,
-        "sha256": "e76e65b167b9244891561a4dcc4481237f4694e302b0297548e96e0cd5e4179b"
+        "sha256": "bdb864714296ab337b771551802e8e3ec897a60d4948f2251b419d880a0d5c3a"
       },
       "7": {
         "count": 156,
-        "sha256": "fbb96254d93beedf98a50af5a160e8f088cc3d5bc4f59dba873336ebc329b57d"
+        "sha256": "f96085b965a81dad9043998f843136acb41977560e374ddd0f479e47c54f9c53"
       },
       "8": {
         "count": 52,
-        "sha256": "bf07f88c06681258ee9965a0694713cfad5e9837b9bdf78942591900edc70bbb"
+        "sha256": "04d2f9eed8db61a429ff04ec3788790336f188b31187270aa3f461a9f87d21b1"
       },
       "9": {
         "count": 277,
-        "sha256": "e8dac80cc4278e561a5a4f6bccc8c578384d55212418746d2811a8894d2e137a"
+        "sha256": "3fa9af930ce5c867dc62ab99c927dd7c82f2b0e8f1529c0ca41987a38934c24e"
       }
     },
     "sources": {
@@ -1490,7 +1494,7 @@
     }
   },
   "locales": 1212,
-  "note": "Prepared locale metadata, preferences and list templates; not formatter capability or full Intl coverage.",
-  "sha256": "fec8db8e747393a2f4f32f70f02566bbc546a03db54de34a3816cccea923094f",
-  "strings": 19914
+  "note": "Prepared locale metadata, preferences, list templates and numeric symbols; not formatter capability or full Intl coverage.",
+  "sha256": "c26515d521eb52edbf11b2da6686828eebdf81bddbfabc47f98243d909173137",
+  "strings": 20019
 }

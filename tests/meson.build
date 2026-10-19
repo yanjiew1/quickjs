@@ -204,6 +204,8 @@ intl_locale_fixture = custom_target(
     '../tools/intl/locale_tables.py',
     '../tools/intl/numbering.py',
     '../tools/intl/numbering_tables.py',
+    '../tools/intl/number_symbols.py',
+    '../tools/intl/number_symbol_tables.py',
     '../tools/intl/parents.py',
     '../tools/intl/preferences.py',
     '../tools/intl/preference_tables.py',
@@ -231,6 +233,8 @@ intl_numbering_fixture = custom_target(
     '../tools/intl/locale_tables.py',
     '../tools/intl/numbering.py',
     '../tools/intl/numbering_tables.py',
+    '../tools/intl/number_symbols.py',
+    '../tools/intl/number_symbol_tables.py',
     '../tools/intl/parents.py',
     '../tools/intl/preferences.py',
     '../tools/intl/preference_tables.py',
@@ -273,6 +277,8 @@ foreach profile : ['minimal', 'native']
       '../tools/intl/locale_tables.py',
       '../tools/intl/numbering.py',
       '../tools/intl/numbering_tables.py',
+      '../tools/intl/number_symbols.py',
+      '../tools/intl/number_symbol_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/preferences.py',
       '../tools/intl/preference_tables.py',
@@ -1155,6 +1161,14 @@ test(
   'intl-number-symbols',
   python,
   args: files('test_intl_number_symbols.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-number-symbol-tables',
+  python,
+  args: files('test_intl_number_symbol_tables.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )

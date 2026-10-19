@@ -168,8 +168,20 @@ locale, and preserves exact text, explicit empty values and inheritance.
 Optional absence and explicit blocks remain distinct for downstream LDML
 fallback rules. Standard containers/fields are selected before duplicate checks;
 unsupported alias paths or numbering scopes fail explicitly. The standalone
-audit runs against authenticated CLDR sources in CI; these records are not yet
-packed or consumed by NumberFormat.
+audit runs against authenticated CLDR sources in CI. The collected records are
+packed for each prepared profile; they are not yet consumed by NumberFormat.
+
+Section 15 stores these symbol records as little-endian words. Its directory
+count is the shared locale count. Three header words give the numeric-system,
+symbol-vector and locale-row counts. Next come sorted numeric definition
+indexes, a row index for each shared locale, fixed-width locale rows (one
+vector index per numeric system), and 15-word symbol vectors in collector field
+order. Unique rows and vectors are sorted and all must be referenced. This
+shares both whole locale maps and symbol sets across numbering systems without
+compression. Optional currency fields use `0xffffffff` for absent and
+`0xfffffffe` for blocked; all other entries are pooled string indexes. Empty
+text remains different from absence. The decoder checks extents, complete
+numeric-system coverage, references, canonical order and resolved text.
 
 ## Locale lookup
 

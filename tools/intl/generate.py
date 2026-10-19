@@ -12,6 +12,8 @@ import locale_metadata
 import locale_tables
 import numbering
 import numbering_tables
+import number_symbols
+import number_symbol_tables
 import parents
 import preferences
 import preference_tables
@@ -42,6 +44,7 @@ def generate(sources, profile):
     locale_data = locale_metadata.collect(inputs_read, graph)
     preference_data = preferences.collect(inputs_read)
     numbering_data = numbering.collect(inputs_read, graph)
+    symbol_data = number_symbols.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     if profile == 'native':
         tags = graph.tags
@@ -51,6 +54,7 @@ def generate(sources, profile):
         seeds = (locale for locale in ('en', 'en-US') if locale in graph.tags)
         tags = tuple(sorted({tag for locale in seeds for tag in graph.chain(locale)}))
     selected_tags = set(tags)
+    symbol_data['rows'] = tuple(row for row in symbol_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
     contexts = [row for row in lists['contexts'] if row[0] in selected_tags]
     pool_strings = {''}
@@ -58,6 +62,7 @@ def generate(sources, profile):
     pool_strings.update(locale_tables.strings(locale_data))
     pool_strings.update(preference_tables.strings(preference_data))
     pool_strings.update(numbering_tables.strings(numbering_data))
+    pool_strings.update(number_symbol_tables.strings(symbol_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
                         for text in (pair, end))
@@ -70,6 +75,8 @@ def generate(sources, profile):
     sections.update(locale_tables.encode(locale_data, string_ids))
     sections.update(preference_tables.encode(preference_data, string_ids))
     sections.update(numbering_tables.encode(numbering_data, string_ids))
+    sections[bundle.NUMBER_SYMBOLS] = number_symbol_tables.encode(symbol_data, tags,
+                                                               numbering_data, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
               'sources': {name: sources.manifest['files'][name] for name in sorted(inputs_read.consumed)},
@@ -84,7 +91,7 @@ def generate(sources, profile):
                 'sha256': acquire.digest(binary), 'bytes': len(binary),
                 'locales': len(tags), 'strings': len(strings),
                 'complete_services': [],
-                'note': 'Prepared locale metadata, preferences and list templates; not formatter capability or full Intl coverage.'}
+                'note': 'Prepared locale metadata, preferences, list templates and numeric symbols; not formatter capability or full Intl coverage.'}
     return binary, manifest
 
 
