@@ -184,3 +184,4 @@ tests/test_temporal_plain_date_duration_balance.js
 tests/test_date_temporal_bridge.js
 tests/test_intl_locale.js
 tests/test_intl_to_locale_string.js
+tests/test_intl_locale_object.js
