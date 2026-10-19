@@ -116,35 +116,35 @@ static void parser(void)
 
 static void division_parser(void)
 {
-    QJSIntlUnitDivisionPattern result, zero = {0};
+    QJSIntlPairPattern result, zero = {0};
     static const char *invalid[] = {"{", "}", "{2}", "{00}", "{0}{0}", "{1}{1}",
                                      "{0}{1}{0}", "{0}{1}}", "{{0}}{1}"};
     static const char *missing[] = {"", "per", "{0} per", "every {1}"};
     size_t i;
-    assert(!qjs_intl_unit_division_pattern_parse(bytes("prefix {0} per {1} suffix"), &result));
+    assert(!qjs_intl_pair_pattern_parse(bytes("prefix {0} per {1} suffix"), &result));
     assert(!result.first && equal(result.prefix, "prefix ") && equal(result.separator, " per ") &&
            equal(result.suffix, " suffix"));
-    assert(!qjs_intl_unit_division_pattern_parse(bytes("每{1}{0}"), &result));
+    assert(!qjs_intl_pair_pattern_parse(bytes("每{1}{0}"), &result));
     assert(result.first == 1 && equal(result.prefix, "每") && !result.separator.length &&
            !result.suffix.length);
-    assert(!qjs_intl_unit_division_pattern_parse(bytes("'{1}'당 {0}!"), &result));
+    assert(!qjs_intl_pair_pattern_parse(bytes("'{1}'당 {0}!"), &result));
     assert(result.first == 1 && equal(result.prefix, "'") && equal(result.separator, "'당 ") &&
            equal(result.suffix, "!"));
     for (i = 0; i < sizeof(invalid) / sizeof(*invalid); i++) {
         memset(&result, 0xff, sizeof(result));
-        assert(qjs_intl_unit_division_pattern_parse(bytes(invalid[i]), &result) == QJS_INTL_DATA_ERROR);
+        assert(qjs_intl_pair_pattern_parse(bytes(invalid[i]), &result) == QJS_INTL_DATA_ERROR);
         assert(!memcmp(&result, &zero, sizeof(result)));
     }
     for (i = 0; i < sizeof(missing) / sizeof(*missing); i++) {
         memset(&result, 0xff, sizeof(result));
-        assert(qjs_intl_unit_division_pattern_parse(bytes(missing[i]), &result) == QJS_INTL_UNSUPPORTED);
+        assert(qjs_intl_pair_pattern_parse(bytes(missing[i]), &result) == QJS_INTL_UNSUPPORTED);
         assert(!memcmp(&result, &zero, sizeof(result)));
     }
-    assert(qjs_intl_unit_division_pattern_parse((QJSIntlBytes){NULL, 1}, &result) ==
+    assert(qjs_intl_pair_pattern_parse((QJSIntlBytes){NULL, 1}, &result) ==
            QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_unit_division_pattern_parse((QJSIntlBytes){"x", SIZE_MAX}, &result) ==
+    assert(qjs_intl_pair_pattern_parse((QJSIntlBytes){"x", SIZE_MAX}, &result) ==
            QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_unit_division_pattern_parse(bytes("{0}/{1}"), NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_pair_pattern_parse(bytes("{0}/{1}"), NULL) == QJS_INTL_INVALID_ARGUMENT);
 }
 
 static void noun_parser(void)
