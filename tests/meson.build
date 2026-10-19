@@ -276,9 +276,12 @@ foreach profile : ['minimal', 'native']
     'test_intl_locale_id_' + profile,
     [
       'test_intl_native_locale_id.c',
+      '../src/intl/locale/identifier.c',
       '../src/intl/locale/native.c',
       '../src/intl/locale/native-id.c',
       '../src/intl/locale/native-data.c',
+      '../src/intl/locale/preference-data.c',
+      '../src/intl/locale/preferences.c',
       '../src/intl/common/locale-grammar.c',
       '../src/intl/native/data.c',
       '../src/intl/native/pack.c',
@@ -891,6 +894,7 @@ if intl_enabled
   js_tests += {
     'intl-locale': ['-m', 'tests/test_intl_locale.js'],
     'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
+    'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
   }
 endif
 if shared_modules

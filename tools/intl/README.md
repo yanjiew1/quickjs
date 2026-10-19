@@ -182,6 +182,13 @@ distinguish absent data from malformed input and allocation failure. Tests for
 both prepared profiles cover corruption, unaligned input and every temporary
 allocation failure.
 
+`src/intl/locale/preferences.c` applies the fixed ECMA-402 rules above the
+selected backend's exact data queries. Region selection preserves explicit
+regions, subdivision regions and likely-subtag fallback, with an independent
+`rg` override. Unknown scripts retain an undefined direction. The JavaScript
+binding supplies observable internal keyword slots and creates fresh result
+objects in the method's realm; it does not expose native wire views.
+
 ## Locale metadata audit
 
 ```sh

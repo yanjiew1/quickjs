@@ -3,19 +3,12 @@
 #ifndef QJS_INTL_LOCALE_PREFERENCE_DATA_H
 #define QJS_INTL_LOCALE_PREFERENCE_DATA_H
 #include "../native/data.h"
+#include "preferences.h"
 
 typedef struct QJSIntlLocalePreferences {
     QJSIntlData data;
     QJSIntlSection weeks, calendars, hours, scripts;
 } QJSIntlLocalePreferences;
-
-typedef struct QJSIntlWeekInfo {
-    unsigned int first_day;
-    unsigned int minimum_days;
-    unsigned int weekend; /* Bit zero is Monday; bit six is Sunday. */
-} QJSIntlWeekInfo;
-
-enum { QJS_INTL_DIRECTION_UNKNOWN, QJS_INTL_DIRECTION_LTR, QJS_INTL_DIRECTION_RTL };
 
 /* Validate all four owner schemas against an unchanged successfully opened
    shared view. Borrow immutable data, release all allocation scratch before
