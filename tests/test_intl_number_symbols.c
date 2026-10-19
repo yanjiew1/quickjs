@@ -215,14 +215,30 @@ int main(void)
         if (qjs_intl_read_u32(qjs_intl_native_bytes + directory) == QJS_INTL_SECTION_NUMBER_SYMBOLS) {
             uint8_t *copy = malloc(qjs_intl_native_length);
             assert(copy);
-            corrupt(&allocator, directory, QJS_INTL_SECTION_NUMBER_SYMBOLS + 1);
+            /* The isolated authored fixture ends at symbols. Renaming that
+               descriptor tests a missing section without colliding with the
+               plural section present in the real prepared profiles. */
+            if (TEST_INTL_AUTHORED) {
+                assert(i + 1 == data.pack.section_count);
+                corrupt(&allocator, directory, QJS_INTL_SECTION_NUMBER_SYMBOLS + 1);
+            }
             corrupt(&allocator, directory + 12, 0);
             corrupt(&allocator, directory + 12, symbols.section.count + 1);
-            /* Symbol data is last; preserve the envelope while truncating it. */
-            memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length - 4);
-            put_u32(copy + 8, qjs_intl_native_length - 4);
-            put_u32(copy + directory + 8, symbols.section.length - 4);
-            invalid_blob(&allocator, copy, qjs_intl_native_length - 4);
+            /* Delete one symbol word while preserving later sections and
+               the envelope, so the symbol owner diagnoses the truncation. */
+            {
+                size_t cut = section_at + symbols.section.length - 4;
+                uint32_t j;
+                memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
+                memmove(copy + cut, copy + cut + 4, qjs_intl_native_length - cut - 4);
+                put_u32(copy + 8, qjs_intl_native_length - 4);
+                put_u32(copy + directory + 8, symbols.section.length - 4);
+                for (j = i + 1; j < data.pack.section_count; j++) {
+                    size_t next = 64 + (size_t)j * 16 + 4;
+                    put_u32(copy + next, qjs_intl_read_u32(copy + next) - 4);
+                }
+                invalid_blob(&allocator, copy, qjs_intl_native_length - 4);
+            }
             free(copy);
         }
     }
