@@ -141,6 +141,25 @@ class VerifiedFixture(Sources):
                               b'', relative_source.files['common/dtd/ldml.dtd'])
         self.files['common/dtd/ldml.dtd'] += relative_dtd
         root.append(ET.fromstring(relative_source.files['common/main/root.xml']).find('dates'))
+        self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT calendars ANY>
+          <!ELEMENT calendar ANY><!ATTLIST calendar type NMTOKEN #REQUIRED>
+          <!ELEMENT dateFormats ANY><!ELEMENT timeFormats ANY>
+          <!ELEMENT dateFormatLength ANY><!ELEMENT timeFormatLength ANY>
+          <!ATTLIST dateFormatLength type NMTOKEN #REQUIRED>
+          <!ATTLIST timeFormatLength type NMTOKEN #REQUIRED>
+          <!ELEMENT dateFormat ANY><!ELEMENT timeFormat ANY>
+          <!ATTLIST dateFormat type NMTOKEN "standard">
+          <!ATTLIST timeFormat type NMTOKEN "standard">
+          <!ATTLIST pattern numbers CDATA #IMPLIED><!--@VALUE-->
+          <!ELEMENT datetimeSkeleton (#PCDATA)>'''
+        calendars = ET.SubElement(root.find('dates'), 'calendars')
+        calendar = ET.SubElement(calendars, 'calendar', type='gregorian')
+        for family in ('date', 'time'):
+            formats = ET.SubElement(calendar, family + 'Formats')
+            length = ET.SubElement(formats, family + 'FormatLength', type='long')
+            form = ET.SubElement(length, family + 'Format')
+            ET.SubElement(form, 'pattern', numbers='latn').text = 'y-MM-dd' if family == 'date' else 'HH:mm'
+            ET.SubElement(form, 'datetimeSkeleton').text = 'yMMdd' if family == 'date' else 'Hmm'
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT localeDisplayNames ANY>
           <!ELEMENT languages ANY><!ELEMENT language (#PCDATA)>
           <!ATTLIST language type NMTOKEN #REQUIRED>'''
@@ -212,6 +231,14 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
             date_fields = view['date_field_names']
+            styles = view['date_styles']
+            self.assertIsNotNone(styles)
+            self.assertIn('gregorian', styles['calendars'])
+            date_styles = {row[:6]: row[6:] for row in styles['rows']
+                           if row[:4] == ('en', 'gregorian', 'date', 'long') and not row[5]}
+            self.assertEqual(date_styles['en', 'gregorian', 'date', 'long', 'pattern', ''][:3],
+                             ('value', 'MMMM d, y', ''))
+            self.assertEqual(date_styles['en', 'gregorian', 'date', 'long', 'skeleton', ''][1], 'yMMMMd')
             names = view['display_names']
             self.assertEqual(len(names['rows']), len(view['locales']) * len(names['groups']))
             head = next(head for tag, group, head in names['rows']
