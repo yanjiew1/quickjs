@@ -251,7 +251,25 @@ unsupported by this numeric owner. Authored and real-profile C tests cover
 scientific affixes, quotes, suffix signs, grouping, unaligned data, corruption,
 allocation failure/retry and output reset.
 
-## Exact plural relations
+## Compact number source maps
+
+`compact_patterns.py` resolves decimal short/long and currency short patterns.
+Sparse maps retain magnitude, plural/exact selectors and currency alternates;
+missing selectors do not silently become `other`. Explicit block, inheritance
+and empty text remain distinct. A typed, iterative map resolver follows whole
+numbering-group and length aliases with the requesting locale intact, including
+explicit-source context changes. Empty overlays and aliases share immutable
+resolved maps instead of expanding every plural leaf for every numbering system.
+Final maps are deduplicated and canonically ordered.
+
+Decimal maps are required. An absent currency compact map remains empty:
+CLDR root Arabic currency data has standard patterns but no compact patterns.
+Any specified formatter composition/fallback belongs to the consuming engine,
+not XML resolution. This collector does not yet pack maps, compile compact
+patterns or advertise NumberFormat support. Authored tests and the authenticated
+source audit cover source resolution independently of formatter execution.
+
+## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
 SetNumberFormatDigitOptions operation. It reads the four raw digit properties

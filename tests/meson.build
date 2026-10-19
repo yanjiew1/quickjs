@@ -1423,6 +1423,14 @@ test(
 )
 
 test(
+  'intl-compact-patterns',
+  python,
+  args: files('test_intl_compact_patterns.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-number-pattern-tables',
   python,
   args: files('test_intl_number_pattern_tables.py'),
