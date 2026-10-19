@@ -692,6 +692,19 @@ are accepted; malformed arms are rejected even when their truth value cannot
 change the result. Repository witnesses include values beyond 64-bit integers,
 fractional modulo, exponent boundaries, malformed input and output reset.
 
+The separate `qjs_intl_plural_rule_evaluate_shifted` entry point accepts a
+visible mantissa and a nonnegative decimal shift, independently of its `c/e`
+metadata. For `1.20050c3`, a shift of three gives the operands of `1200.50`,
+including `v=2`, `w=1`, `f=50` and `t=5`. Two borrowed integer spans and a
+virtual zero tail avoid exponent-sized storage. Modulo uses exponentiation
+by squaring for that tail, while comparisons inspect significant length and
+at most ten digits. An all-zero coefficient stays zero even at `UINT32_MAX`.
+The native category selector exposes the same shifted operation. Both paths
+share one rule grammar; compile-time specialization keeps virtual-digit
+classification out of ordinary relation handlers. Repository tests compare
+bounded explicit expansions and cover huge shifts, fractional remainders,
+visible zeros and independent signed `c/e` metadata. Formatter use is separate.
+
 `src/intl/plural/plural.h` is the engine-independent plural service contract;
 `native.c` implements it with the selected compiled pack. Available locales
 exclude root, and formatter handles can outlive their service. ResolvePlural
