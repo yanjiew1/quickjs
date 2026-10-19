@@ -510,6 +510,51 @@ if intl_enabled
       'timeout': 30,
     },
   }]
+  intl_plural_owner_sources = files(
+    'test_intl_plural_data.c',
+    '../src/intl/plural/data.c',
+    '../src/intl/plural/rules.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  intl_plural_fixture = custom_target(
+    'intl-plural-authored-fixture',
+    output: 'intl-plural-authored-fixture.c',
+    command: [python, files('intl_plural_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: files(
+      '../tools/intl/acquire.py',
+      '../tools/intl/bundle.py',
+      '../tools/intl/cldr_xml.py',
+      '../tools/intl/list_patterns.py',
+      '../tools/intl/locale_metadata.py',
+      '../tools/intl/locale_tables.py',
+      '../tools/intl/numbering.py',
+      '../tools/intl/numbering_tables.py',
+      '../tools/intl/number_symbols.py',
+      '../tools/intl/number_symbol_tables.py',
+      '../tools/intl/parents.py',
+      '../tools/intl/plural_rules.py',
+      '../tools/intl/plural_tables.py',
+      '../tools/intl/preferences.py',
+      '../tools/intl/preference_tables.py',
+      '../tools/intl/resolve.py',
+      '../tools/intl/tables.py',
+    ),
+  )
+  intl_plural_authored = {
+    'name': 'test_intl_plural_authored',
+    'sources': intl_plural_owner_sources + [intl_plural_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_AUTHORED=1', '-DTEST_INTL_PROFILE=0']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_plural_authored,
+    'name': 'intl-plural-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
   intl_locale_fixture = custom_target(
     'intl-locale-authored-fixture',
     output: 'intl-locale-authored-fixture.c',
@@ -526,6 +571,8 @@ if intl_enabled
       '../tools/intl/numbering_tables.py',
       '../tools/intl/number_symbols.py',
       '../tools/intl/number_symbol_tables.py',
+      '../tools/intl/plural_rules.py',
+      '../tools/intl/plural_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/preferences.py',
       '../tools/intl/preference_tables.py',
@@ -555,6 +602,8 @@ if intl_enabled
       '../tools/intl/numbering_tables.py',
       '../tools/intl/number_symbols.py',
       '../tools/intl/number_symbol_tables.py',
+      '../tools/intl/plural_rules.py',
+      '../tools/intl/plural_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/preferences.py',
       '../tools/intl/preference_tables.py',
@@ -599,6 +648,8 @@ if intl_enabled
       '../tools/intl/numbering_tables.py',
       '../tools/intl/number_symbols.py',
       '../tools/intl/number_symbol_tables.py',
+      '../tools/intl/plural_rules.py',
+      '../tools/intl/plural_tables.py',
       '../tools/intl/parents.py',
       '../tools/intl/preferences.py',
       '../tools/intl/preference_tables.py',
@@ -643,6 +694,8 @@ if intl_enabled
         '../tools/intl/numbering_tables.py',
         '../tools/intl/number_symbols.py',
         '../tools/intl/number_symbol_tables.py',
+        '../tools/intl/plural_rules.py',
+        '../tools/intl/plural_tables.py',
         '../tools/intl/parents.py',
         '../tools/intl/preferences.py',
         '../tools/intl/preference_tables.py',
@@ -690,6 +743,23 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_number_symbol_test,
       'name': ('intl-number-symbols-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_plural_data_test = {
+      'name': ('test_intl_plural_data_' + profile),
+      'sources': intl_plural_owner_sources + [intl_fixture],
+      'c_args': (host_args + [
+        '-DTEST_INTL_AUTHORED=0',
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_plural_data_test,
+      'name': ('intl-plural-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -1331,6 +1401,22 @@ if intl_enabled
     'intl-number-symbol-tables',
     python,
     args: files('test_intl_number_symbol_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-plural-sources',
+    python,
+    args: files('test_intl_plural_rules.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-plural-tables',
+    python,
+    args: files('test_intl_plural_tables.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
