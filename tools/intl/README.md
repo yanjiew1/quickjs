@@ -537,6 +537,33 @@ grammatical/plural/width fallback and formatter capability belong to consumers.
 Overlay queries additionally expose each borrowed local map and its source
 locale, width/group and next ID, without allocating or performing fallback.
 
+`src/intl/unit/pattern.c` adapts these chains to number-bearing single-unit
+patterns. Within one layer, exact numeric 0/1 precedes the source's cardinal
+category and OTHER; each count tries requested case, nominative and absent
+case. Empty case requests mean grammatical nominative. Numeric callers retain
+their rounded visible operands in a source-rule callback; fixed category mode
+serves grammatical component counts and nonfinite OTHER. Missing source rules
+propagate failure instead of silently substituting requester rules.
+
+The native adapter skips valid literal-only and explicitly empty forms while
+preserving them as raw data. BLOCK and ineligible values suppress their exact
+parent path, not unrelated alternatives. A bounded shadow mask also remembers
+locally present categories that a later source might select differently. A
+consulted malformed template is a data error. The prefix/suffix parser supports
+one `{0}` with literal apostrophes and possibly empty affixes; it does not import
+decimal-pattern quoting. Selection allocates nothing and returns borrowed
+source/selector provenance. Rendering and the NumberFormat binding have separate
+owners.
+
+`src/intl/unit/format.c` composes the selected prefix/suffix around a complete
+numeric body, preserving its sign, exponent and compact parts. Nonspace affixes
+become unit parts, with outer Unicode White_Space separated as literal parts;
+internal spaces stay within a unit part. A bare or whitespace-only template
+retains an empty unit part. The complete UTF-16 result is independently owned,
+with exact output bounds and allocation-failure cleanup. The compact and unit
+renderers share the private bounded UTF-16 builder; unit/plural/sign selection
+remains outside that writer. This does not register JavaScript NumberFormat.
+
 ## Localized numeric bodies
 
 `src/intl/number/body.c` renders an already rounded unsigned plain decimal as
@@ -696,8 +723,18 @@ pattern. Empty currency maps, raw `0`, small values and nonfinite inputs use
 ordinary currency formatting. Caller-filtered legacy gaps test the actual
 numeric-body edge, and literal-only forms omit unused numeric allocation.
 
+Single-unit style accepts every sanctioned single identifier and all three
+display widths in standard, scientific, engineering and compact notation.
+`number/unit.c` resolves each source layer's cardinal rules, selects its
+number-bearing form and renders it around the signed notation body. Compact
+outer quantities use the same virtual expansion as currency names; scientific
+and engineering units use their final visible mantissa. Nonfinite inputs use
+OTHER without exact selectors. A unit named `percent` does not apply percent
+style's multiplication. Formatter state borrows immutable source/plural views,
+does not retain the caller's identifier and survives service closure.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Unit styles, ranges and the JS binding remain required
+Compound-unit composition, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
