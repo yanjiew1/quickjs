@@ -199,6 +199,7 @@ endif
 
 # Tests that include an implementation need archive extraction, not link_whole.
 native_test_names = [
+  'test_duration_record',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
