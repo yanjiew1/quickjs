@@ -39,13 +39,7 @@ static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlUnitPatter
 
 void qjs_intl_unit_format_clear(const QJSIntlAllocator *allocator, QJSIntlFormatted *out)
 {
-    if (!out)
-        return;
-    if (out->text)
-        allocator->free(allocator->opaque, out->text);
-    if (out->parts)
-        allocator->free(allocator->opaque, out->parts);
-    memset(out, 0, sizeof(*out));
+    qjs_intl_formatted_clear(allocator, out);
 }
 
 QJSIntlStatus qjs_intl_unit_pattern_format(const QJSIntlAllocator *allocator,
