@@ -13,7 +13,7 @@ does not change the engine or claim the proposed interfaces already exist.
 ## Scope and source baselines
 
 The implementation target is the latest ECMA-262 and ECMA-402 living drafts
-plus relevant unmerged Stage 4 specification text. Include every standard Intl
+plus all unmerged Stage 4 ECMA-402 specification text. Include every standard Intl
 service, its current methods, locale information, and integration with String,
 Number, BigInt, Date and Temporal. Native full-data mode supports every CLDR
 locale with the data relevant to those operations. Intermediate milestones may
@@ -34,6 +34,50 @@ and data revisions in source manifests and relevant commits. For missing
 algorithm details, consult the referenced Unicode/CLDR standards, then ICU4X,
 then ICU4C. Audit reusable QuickJS/QuickJS-NG work before writing replacements.
 Copied or adapted code/data retains its authors, licenses and exact provenance.
+
+### Stage 4 acceptance inventory
+
+Stage 4 is part of version one's required scope even before its specification
+PR merges. Do not defer such work to the ICU4C/ICU4X versions or treat the living
+draft alone as the complete acceptance target. For unmerged work, use the latest
+Stage 4 PR text first, its discussion for unresolved details, and the proposal
+specification as supporting provenance. Pin the actual reviewed revisions in
+implementation commits and refresh this inventory before final acceptance.
+
+Rechecked on 2026-10-19 against the
+[ECMA-402 finished-proposals inventory](https://github.com/tc39/proposals/blob/07002d4d999558b9c7326f98e5134e0222b13808/ecma402/finished-proposals.md)
+(revision `07002d4d999558b9c7326f98e5134e0222b13808`, 2026-10-14):
+
+| Work | Specification and acceptance requirements |
+| --- | --- |
+| Locale Info | Stage 4 and already in the pinned living draft; deliver every information method, not only the methods implemented so far. |
+| Intl Era and MonthCode | Unmerged Stage 4 text in [ECMA-402 PR 1044](https://redirect.github.com/tc39/ecma402/pull/1044), head `d026068ed653130a37d79a95c0122ecf5319f1a4`, updated 2026-06-17; include the calendar requirements and Temporal/DateTimeFormat integration. |
+| Time Zone Canonicalization | Stage 4, absorbed into Temporal and the same PR 1044; DateTimeFormat must retain the canonical-cased accepted named identifier, including aliases, rather than always store its primary identifier. Test alias spelling/identity separately from primary-zone enumeration. |
+
+PR 1044 acceptance must also explicitly cover:
+
+- DateTimeFormat's Temporal-specific records/defaults, all four formatting/range
+  methods, matching range input types and calendar-compatibility checks. Direct
+  ZonedDateTime formatting throws; its locale method uses the prescribed internal
+  route. Include style compatibility, adjusted/null format records and errors.
+- All eight Temporal locale methods: Duration, Instant, PlainDate, PlainDateTime,
+  PlainMonthDay, PlainTime, PlainYearMonth and ZonedDateTime.
+- The sanctioned calendar capability table and aliases, proleptic reckoning,
+  era/arithmetic-year behavior, leap month-code constraints and non-ISO calendar
+  operations. Audit the existing calendar implementation before adding code.
+  DateTimeFormat's CLDR `islamic` preference falls back to `islamic-tbla` where
+  prescribed; supportedValuesOf uses the sanctioned capability contract.
+- DurationFormat's ToTemporalDuration path, including Temporal.Duration,
+  accepted duration strings, object coercion and errors. Intl-on builds with
+  Temporal constructors disabled still need the shared conversion semantics.
+
+Earlier Stage 4 services and additions already merged into the living draft
+remain required through the full service checklist below. An open normative PR
+is not automatically a Stage 4 proposal. Track normative clarifications
+separately, including the multiple-numbering-system text in
+[PR 1074](https://redirect.github.com/tc39/ecma402/pull/1074), and verify approval
+of its latest text when implementing the affected operation; approval of an
+earlier revision does not establish approval of a substantial revision.
 
 Implementation starts on `intl`, copied from `temporal` at
 `a315958f6b6f69d456a48d0ad9c32e6956e5f5ba`. Calendar, timezone and Unicode
