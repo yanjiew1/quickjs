@@ -21,7 +21,7 @@ static int canonicalize_element(JSContext *ctx, JSValueConst value,
     QJSIntlLocaleService *service;
     QJSIntlStatus status;
     QJSIntlBytes input;
-    const char *text;
+    const char *text, *owned = NULL;
     char *canonical, **items;
     size_t i;
 
@@ -29,17 +29,22 @@ static int canonicalize_element(JSContext *ctx, JSValueConst value,
         JS_ThrowTypeError(ctx, "locale must be a string or object");
         return -1;
     }
-    text = JS_ToCStringLen(ctx, &input.length, value);
-    if (!text)
-        return -1;
+    text = js_intl_locale_tag(value);
+    if (text) {
+        input.length = strlen(text);
+    } else {
+        text = owned = JS_ToCStringLen(ctx, &input.length, value);
+        if (!text)
+            return -1;
+    }
     input.data = text;
     service = js_intl_locale_service(ctx);
     if (!service) {
-        JS_FreeCString(ctx, text);
+        JS_FreeCString(ctx, owned);
         return -1;
     }
     status = qjs_intl_locale_canonicalize(service, input, &canonical);
-    JS_FreeCString(ctx, text);
+    JS_FreeCString(ctx, owned);
     if (js_intl_error(ctx, status, "Unicode locale identifier"))
         return -1;
     for (i = 0; i < list->count; i++) {
@@ -77,7 +82,7 @@ int js_intl_canonicalize_locale_list(JSContext *ctx, JSValueConst locales,
     memset(out, 0, sizeof(*out));
     if (JS_IsUndefined(locales))
         return 0;
-    if (JS_IsString(locales))
+    if (JS_IsString(locales) || js_intl_locale_tag(locales))
         return canonicalize_element(ctx, locales, out);
     object = JS_ToObject(ctx, locales);
     if (JS_IsException(object))
