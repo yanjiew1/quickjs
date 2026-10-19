@@ -1392,6 +1392,7 @@ if intl_enabled
         '../src/cutils/cutils.c',
         '../src/intl/common/decimal.c',
         '../src/intl/common/locale-grammar.c',
+        '../src/intl/currency/boundary.c',
         '../src/intl/currency/data.c',
         '../src/intl/currency/display.c',
         '../src/intl/locale/numbering-data.c',
@@ -1402,6 +1403,7 @@ if intl_enabled
         '../src/intl/number/compact-data.c',
         '../src/intl/number/compact-format.c',
         '../src/intl/number/currency-format.c',
+        '../src/intl/number/currency-pattern.c',
         '../src/intl/number/layout-data.c',
         '../src/intl/number/native.c',
         '../src/intl/number/pattern-data.c',
@@ -1410,7 +1412,8 @@ if intl_enabled
         '../src/intl/plural/data.c',
         '../src/intl/plural/native-engine.c',
         '../src/intl/plural/rules.c',
-      ),
+        '../src/unicode/category.c',
+      ) + unicode_tables,
       'c_args': (host_args + [
         ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
       ]),
