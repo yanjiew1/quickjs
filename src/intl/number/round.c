@@ -108,6 +108,7 @@ QJSIntlStatus qjs_intl_number_round(const QJSIntlAllocator *allocator,
         input_exponent += 2;
     magnitude = (int64_t)input.length + input_exponent - 1;
     if (!zero(&input) && options->notation != QJS_INTL_NUMBER_STANDARD) {
+        result.notation_magnitude = magnitude;
         status = exponent_for_magnitude(options, magnitude, &exponent);
         if (status)
             goto done;
@@ -116,6 +117,7 @@ QJSIntlStatus qjs_intl_number_round(const QJSIntlAllocator *allocator,
             goto done;
         if (!zero(&probe.rounded) &&
             (int64_t)probe.rounded.length + probe.rounded.exponent - 1 != magnitude - exponent) {
+            result.notation_magnitude = magnitude + 1;
             status = exponent_for_magnitude(options, magnitude + 1, &exponent);
             if (status)
                 goto done;
