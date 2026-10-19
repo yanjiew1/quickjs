@@ -386,6 +386,13 @@ text can be empty. Ordinary pooled references cannot contain inheritance or
 block markers. Validation checks complete shared-row/vector coverage and exact
 locale/numeric-system coverage before exposing semantic fields.
 
+`src/intl/number/layout-data.c` validates section 20 against the shared numbering
+inventory and exposes allocation-free exact locale/system queries. Strings
+borrow immutable pack storage; empty VALUE text differs from absent/blocked
+fields. Open releases its validation scratch on success and failure. Parsing
+templates, evaluating UnicodeSet predicates and selecting formatter fallback
+are separate consumer responsibilities.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
