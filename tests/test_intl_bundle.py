@@ -26,8 +26,8 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(bundle.HEADER.size, 64)
 
     def test_empty_and_unknown_optional_sections(self):
-        binary = bundle.pack({23: (0, b'')}, bytes(32), 'minimal')
-        self.assertEqual(bundle.unpack(binary)['sections'], {23: (0, b'')})
+        binary = bundle.pack({123: (0, b'')}, bytes(32), 'minimal')
+        self.assertEqual(bundle.unpack(binary)['sections'], {123: (0, b'')})
 
     def test_bad_headers_directories_and_truncation(self):
         original = self.example()
