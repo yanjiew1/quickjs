@@ -242,6 +242,15 @@ references, canonical ordering, numeric constraints and complete record use.
 Sharing whole locale maps, pattern vectors and typed affixes avoids duplicating
 patterns across numeric systems without a compression dependency.
 
+`src/intl/number/pattern-data.c` validates section 17 against the unchanged
+numbering view, including complete record use and typed affix canonicality.
+It borrows immutable storage, releases validation scratch on every path and
+provides allocation-free exact-index pattern/token queries. Absent, blocked
+and empty optional patterns remain distinct; algorithmic systems are explicitly
+unsupported by this numeric owner. Authored and real-profile C tests cover
+scientific affixes, quotes, suffix signs, grouping, unaligned data, corruption,
+allocation failure/retry and output reset.
+
 ## Exact plural relations
 
 `src/intl/plural/rules.c` evaluates one CLDR relation over an unsigned plain
