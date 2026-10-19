@@ -1433,8 +1433,8 @@ remains unresolved. Explicit `hours: "2-digit"` still pads. The policy does not
 claim that raw `hh` preferences were absent: those facts remain in the data and
 projection. Formatter ownership, all reached allocation failures, large exact
 fractions, numeric/text grouping, negative zero, parts and representative digital
-locales have focused C tests; this milestone does not yet expose the JavaScript
-DurationFormat constructor.
+locales have focused C tests. The observable JavaScript surface is described
+below.
 
 ## DurationFormat JavaScript binding
 
