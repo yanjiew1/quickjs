@@ -6,6 +6,7 @@ import locale_tables
 import numbering_tables
 import number_symbol_tables
 import preference_tables
+import plural_tables
 from list_patterns import PARTS, VARIANTS, pattern
 from parents import locale_id
 from resolve import BLOCK, INHERIT
@@ -207,4 +208,5 @@ def validate(binary):
             'preferences': preference_tables.decode(sections, strings), 'list_contexts': contexts,
             'numbering': numbering,
             'number_symbols': number_symbol_tables.decode(sections.get(bundle.NUMBER_SYMBOLS),
-                                                          strings, tags, numbering)}
+                                                          strings, tags, numbering),
+            'plurals': plural_tables.decode(sections.get(bundle.PLURALS), strings, tags)}
