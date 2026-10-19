@@ -183,6 +183,16 @@ compression. Optional currency fields use `0xffffffff` for absent and
 text remains different from absence. The decoder checks extents, complete
 numeric-system coverage, references, canonical order and resolved text.
 
+`src/intl/number/symbol-data.c` owns validation and borrowed C queries for
+section 15. It opens against validated numbering metadata, checks all shared
+maps and vectors, then releases its temporary coverage bitmap. Queries use
+shared-locale and numbering-definition indexes, allocate nothing, and preserve
+the three symbol states. Algorithmic definitions return unsupported; this
+owner executes no numbering rule and applies no locale or currency fallback.
+Standalone authored and real-profile tests cover exact text, empty values,
+optional states, unaligned storage, allocation failure/retry, invalid references,
+noncanonical records and malformed section dimensions.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
