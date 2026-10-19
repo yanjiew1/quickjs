@@ -6,6 +6,7 @@ the DTDs, test data and license. Collectors consume verified individual files;
 they do not depend on a Git checkout or machine-specific source manifests.
 """
 import argparse
+import copy
 import hashlib
 import io
 import json
@@ -187,6 +188,7 @@ class Sources:
     def __init__(self, root, pin=None):
         self.root = Path(root)
         pin = load_pin() if pin is None else pin
+        self.pin = copy.deepcopy(pin)
         path = source_path(self.root, 'source-manifest.json')
         if not path.is_file() or path.stat().st_size > MAX_MANIFEST:
             raise ValueError('missing or oversized source manifest')
