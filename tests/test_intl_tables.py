@@ -204,6 +204,14 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['locales'], len(view['locales']))
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
+            date_fields = view['date_field_names']
+            self.assertIsNotNone(date_fields)
+            self.assertEqual(date_fields['alternates'], ('', 'variant'))
+            date_labels = {row[:4]: row[4:] for row in date_fields['rows']}
+            self.assertEqual(date_labels['en', 'year', 'long', ''],
+                             ('value', 'year', 'en', 'year', 'long', ''))
+            self.assertEqual(date_labels['en', 'dayPeriod', 'long', 'variant'],
+                             ('value', 'am/pm', 'en', 'dayPeriod', 'long', 'variant'))
             currency = view['currencies']
             self.assertIsNotNone(currency)
             self.assertEqual(len(currency['rows']), len(view['locales']))
