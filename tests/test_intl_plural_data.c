@@ -1,6 +1,7 @@
 /* Plural owner: real/authored records, borrowed views, corrupt data and OOM.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/plural/data.h"
+#include "../src/intl/plural/native-engine.h"
 #include "../src/intl/native/wire.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -88,6 +89,76 @@ static void corrupt(const QJSIntlAllocator *allocator, size_t offset, uint32_t v
     free(copy);
 }
 
+static void select_category(const QJSIntlPluralRuleSet *rules, const char *text,
+                            QJSIntlPluralCategory expected)
+{
+    QJSIntlPluralOperands number = {text, strlen(text), 0};
+    QJSIntlPluralCategory category;
+    assert(!qjs_intl_native_plural_select(rules, &number, &category));
+    assert(category == expected);
+}
+
+static void native_selection(const QJSIntlPluralData *data, uint32_t en, uint32_t root)
+{
+    QJSIntlPluralRuleSet rules;
+    QJSIntlPluralCategory category;
+    QJSIntlPluralOperands invalid = {"-1", 2, 0};
+    unsigned int start, end;
+    assert(!qjs_intl_plural_rules_at(data, en, QJS_INTL_PLURAL_CARDINAL, &rules));
+    select_category(&rules, "1", QJS_INTL_PLURAL_ONE);
+    select_category(&rules, "0001", QJS_INTL_PLURAL_ONE);
+    select_category(&rules, "1.0", QJS_INTL_PLURAL_OTHER);
+    select_category(&rules, "1.5", QJS_INTL_PLURAL_OTHER);
+    select_category(&rules, "100000000000000000000000000000000000001", QJS_INTL_PLURAL_OTHER);
+    assert(!qjs_intl_native_plural_range(&rules, QJS_INTL_PLURAL_ONE, QJS_INTL_PLURAL_OTHER,
+                                         &category));
+    assert(category == QJS_INTL_PLURAL_OTHER);
+    assert(!qjs_intl_plural_rules_at(data, en, QJS_INTL_PLURAL_ORDINAL, &rules));
+    select_category(&rules, "21", QJS_INTL_PLURAL_ONE);
+    select_category(&rules, "22", QJS_INTL_PLURAL_TWO);
+    select_category(&rules, "12", TEST_INTL_AUTHORED ? QJS_INTL_PLURAL_TWO : QJS_INTL_PLURAL_OTHER);
+    select_category(&rules, "23", TEST_INTL_AUTHORED ? QJS_INTL_PLURAL_OTHER : QJS_INTL_PLURAL_FEW);
+    if (TEST_INTL_PROFILE) {
+        assert(!qjs_intl_plural_rules_at(data, locale_id(&data->data, "ar"),
+                                         QJS_INTL_PLURAL_CARDINAL, &rules));
+        select_category(&rules, "0", QJS_INTL_PLURAL_ZERO);
+        select_category(&rules, "1.0", QJS_INTL_PLURAL_ONE);
+        select_category(&rules, "2", QJS_INTL_PLURAL_TWO);
+        select_category(&rules, "3", QJS_INTL_PLURAL_FEW);
+        select_category(&rules, "11", QJS_INTL_PLURAL_MANY);
+        select_category(&rules, "100", QJS_INTL_PLURAL_OTHER);
+        select_category(&rules, "1.001", QJS_INTL_PLURAL_OTHER);
+        assert(!qjs_intl_native_plural_range(&rules, QJS_INTL_PLURAL_ZERO,
+                                            QJS_INTL_PLURAL_ONE, &category));
+        assert(category == QJS_INTL_PLURAL_ZERO);
+        assert(!qjs_intl_native_plural_range(&rules, QJS_INTL_PLURAL_ONE,
+                                            QJS_INTL_PLURAL_TWO, &category));
+        assert(category == QJS_INTL_PLURAL_OTHER);
+    }
+    assert(!qjs_intl_plural_rules_at(data, root, QJS_INTL_PLURAL_CARDINAL, &rules));
+    select_category(&rules, "1.5000", QJS_INTL_PLURAL_OTHER);
+    for (start = 0; start < QJS_INTL_PLURAL_CATEGORY_COUNT; start++) {
+        for (end = 0; end < QJS_INTL_PLURAL_CATEGORY_COUNT; end++) {
+            assert(!qjs_intl_native_plural_range(&rules, start, end, &category));
+            assert((unsigned int)category == end);
+        }
+    }
+    category = QJS_INTL_PLURAL_ZERO;
+    assert(qjs_intl_native_plural_select(&rules, &invalid, &category) == QJS_INTL_INVALID_ARGUMENT);
+    assert(category == QJS_INTL_PLURAL_OTHER);
+    assert(qjs_intl_native_plural_select(&rules, NULL, &category) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_native_plural_select(NULL, &invalid, &category) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_native_plural_select(&rules, &invalid, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    category = QJS_INTL_PLURAL_ZERO;
+    assert(qjs_intl_native_plural_range(&rules, (QJSIntlPluralCategory)-1, QJS_INTL_PLURAL_ONE,
+                                        &category) == QJS_INTL_INVALID_ARGUMENT);
+    assert(category == QJS_INTL_PLURAL_OTHER);
+    assert(qjs_intl_native_plural_range(NULL, QJS_INTL_PLURAL_ONE, QJS_INTL_PLURAL_TWO,
+                                        &category) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_native_plural_range(&rules, QJS_INTL_PLURAL_ONE, QJS_INTL_PLURAL_TWO, NULL) ==
+           QJS_INTL_INVALID_ARGUMENT);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -107,6 +178,8 @@ int main(void)
     en = locale_id(&data, "en");
     root = locale_id(&data, "root");
     calls = state.calls;
+    native_selection(&owner, en, root);
+    assert(state.calls == calls);
     assert(!qjs_intl_plural_rules_at(&owner, en, QJS_INTL_PLURAL_CARDINAL, &rules));
     assert(rules.present == (1u << QJS_INTL_PLURAL_ONE | 1u << QJS_INTL_PLURAL_OTHER));
     assert(equal(rules.conditions[QJS_INTL_PLURAL_ONE], "i = 1 and v = 0"));
