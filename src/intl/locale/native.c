@@ -43,6 +43,13 @@ void qjs_intl_locale_close(QJSIntlLocaleService *service)
         service->allocator.free(service->allocator.opaque, service);
 }
 
+QJSIntlStatus qjs_intl_locale_validate(const QJSIntlLocaleService *service,
+                                      QJSIntlBytes input, int *well_formed)
+{
+    return qjs_intl_native_locale_validate(service ? &service->allocator : NULL,
+                                           input, well_formed);
+}
+
 QJSIntlStatus qjs_intl_locale_canonicalize(const QJSIntlLocaleService *service,
                                            QJSIntlBytes input, char **out)
 {
