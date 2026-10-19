@@ -13,6 +13,8 @@ import currencies
 import currency_tables
 import date_field_names
 import date_field_tables
+import date_patterns
+import date_style_tables
 import display_names
 import display_tables
 import list_patterns
@@ -77,6 +79,7 @@ def generate(sources, profile):
     relative_data = relative_patterns.collect(inputs_read, graph)
     duration_data = duration_patterns.collect(inputs_read, graph)
     date_field_data = date_field_names.collect(inputs_read, graph)
+    date_style_data = date_patterns.collect(inputs_read, graph)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     if profile == 'native':
@@ -102,6 +105,7 @@ def generate(sources, profile):
     relative_data = relative_tables.select(relative_data, tags)
     duration_data = duration_tables.select(duration_data, tags)
     date_field_data = date_field_tables.select(date_field_data, tags)
+    date_style_data = date_style_tables.select(date_style_data, tags)
     display_data = display_tables.select(display_data, tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
@@ -122,6 +126,7 @@ def generate(sources, profile):
     pool_strings.update(relative_tables.strings(relative_data))
     pool_strings.update(duration_tables.strings(duration_data))
     pool_strings.update(date_field_tables.strings(date_field_data))
+    pool_strings.update(date_style_tables.strings(date_style_data))
     pool_strings.update(display_tables.strings(display_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
@@ -149,6 +154,7 @@ def generate(sources, profile):
     sections[bundle.RELATIVE_PATTERNS] = relative_tables.encode(relative_data, tags, string_ids)
     sections[bundle.DURATION_PATTERNS] = duration_tables.encode(duration_data, tags, string_ids)
     sections[bundle.DATE_FIELD_NAMES] = date_field_tables.encode(date_field_data, tags, string_ids)
+    sections[bundle.DATE_STYLES] = date_style_tables.encode(date_style_data, tags, string_ids)
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
@@ -166,7 +172,7 @@ def generate(sources, profile):
                 'complete_services': [],
                 'note': ('Prepared locale metadata, preferences, list templates, numeric symbols/patterns, '
                          'compact maps, currency/layout/unit facts, division grammar, relative/duration '
-                         'source facts, date-field labels, layered display names and plural rules; '
+                         'source facts, date-field labels, date/time styles, layered display names and plural rules; '
                          'not formatter capability '
                          'or full Intl coverage.')}
     return binary, manifest
