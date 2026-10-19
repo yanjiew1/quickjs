@@ -60,7 +60,7 @@ def generate(sources, profile):
     pattern_data = number_patterns.collect(inputs_read, graph)
     compact_data = compact_patterns.collect(inputs_read, graph)
     currency_data = currencies.collect(inputs_read, graph)
-    layout_data = number_layout.collect(inputs_read, graph)
+    layout_data = number_layout.collect(inputs_read, graph, numbering_data)
     unit_data = unit_patterns.collect(inputs_read, graph)
     plural_data = plural_rules.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
@@ -81,6 +81,7 @@ def generate(sources, profile):
     pattern_data['overrides'] = currency_tables.patterns(currency_data)
     layout_data['rows'] = tuple(row for row in layout_data['rows'] if row[0] in selected_tags)
     layout_data['root_fields'] = tuple(row for row in layout_data['root_fields'] if row[0] in selected_tags)
+    layout_data['currency_units'] = tuple(row for row in layout_data['currency_units'] if row[0] in selected_tags)
     unit_data = unit_tables.select(unit_data, tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
