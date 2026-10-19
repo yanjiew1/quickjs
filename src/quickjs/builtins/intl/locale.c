@@ -4,7 +4,6 @@
 #include "../intl.h"
 #include "../../internal/runtime.h"
 #include "../../internal/object.h"
-#include "../../internal/function.h"
 #include "../../internal/atom.h"
 #include "../../../intl/locale/identifier.h"
 #include "../../../intl/locale/preferences.h"
@@ -66,27 +65,6 @@ static char *copy_slice(JSContext *ctx, QJSIntlBytes value)
         memcpy(copy, value.data, value.length);
     copy[value.length] = 0;
     return copy;
-}
-
-static JSValue create_from_constructor(JSContext *ctx, JSValueConst new_target)
-{
-    JSValue prototype, result;
-
-    prototype = JS_GetProperty(ctx, new_target, JS_ATOM_prototype);
-    if (JS_IsException(prototype))
-        return prototype;
-    if (!JS_IsObject(prototype)) {
-        JSContext *realm;
-
-        JS_FreeValue(ctx, prototype);
-        realm = JS_GetFunctionRealm(ctx, new_target);
-        if (!realm || js_intl_ensure_intrinsics(realm))
-            return JS_EXCEPTION;
-        prototype = JS_DupValue(ctx, realm->class_proto[JS_CLASS_INTL_LOCALE]);
-    }
-    result = JS_NewObjectProtoClass(ctx, prototype, JS_CLASS_INTL_LOCALE);
-    JS_FreeValue(ctx, prototype);
-    return result;
 }
 
 /* Retain the converted string until construction ends. Validation callers use
@@ -216,7 +194,7 @@ static JSValue locale_constructor(JSContext *ctx, JSValueConst new_target,
 
     if (JS_IsUndefined(new_target))
         return JS_ThrowTypeError(ctx, "Intl.Locale requires new");
-    object = create_from_constructor(ctx, new_target);
+    object = js_intl_create_from_constructor(ctx, new_target, JS_CLASS_INTL_LOCALE);
     if (JS_IsException(object))
         return object;
     if (!JS_IsString(tag_value) && !JS_IsObject(tag_value)) {

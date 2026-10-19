@@ -71,6 +71,7 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
             tags = set(view['locales'])
+            self.assertTrue({'en', 'en-US', 'root'} <= tags)
             for tag in tags:
                 parts = tag.split('-')
                 if (len(parts) >= 3 and re.fullmatch('[A-Z][a-z]{3}', parts[1]) and
