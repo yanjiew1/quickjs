@@ -18,7 +18,7 @@ from test_intl_display_names import Sources
 from test_intl_list_patterns import graph
 
 
-def pack(empty=False, selection=False):
+def pack(empty=False, selection=False, language=False):
     sources = Sources()
     if not empty:
         sources.set('root', '''<languages><language type="en">English</language>
@@ -68,6 +68,28 @@ def pack(empty=False, selection=False):
         scripts = ET.SubElement(root.find('./localeDisplayNames'), 'scripts')
         ET.SubElement(scripts, 'script', type='Latn').text = 'British Latin'
         sources.files['common/main/en_GB.xml'] = ET.tostring(root, encoding='utf-8')
+    if language:
+        root = ET.fromstring(sources.files['common/main/root.xml'])
+        names = root.find('./localeDisplayNames/languages')
+        for code, text in (('nl', 'Dutch'), ('nl_BE', 'Flemish'),
+                           ('az', 'Azerbaijani'), ('az_Cyrl', 'Cyrillic Azerbaijani'),
+                           ('az_AZ', 'Azerbaijan Azerbaijani'), ('ca', 'Catalan'),
+                           ('de', 'German'), ('de_1901', 'Traditional German'),
+                           ('de_1996', 'Reformed German'), ('fr', 'French'),
+                           ('fr_CA', 'Canadian French'), ('es', 'Spanish'), ('es_MX', ''),
+                           ('it', 'Italian'), ('sr', 'Serbian'), ('sr_Latn', 'Latin Serbian'),
+                           ('sr_Latn_RS', 'Serbia Latin Serbian'), ('ro', 'Romanian'),
+                           ('ro_MD', 'ro-MD'), ('eng', 'Wrong prefix')):
+            ET.SubElement(names, 'language', type=code).text = text
+        ET.SubElement(names, 'language', type='it_CH', menu='core').text = 'Menu Italian'
+        ET.SubElement(names, 'language', type='pt_BR', alt='short').text = 'Brazilian short'
+        sources.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
+        root = ET.fromstring(sources.files['common/main/en.xml'])
+        names = root.find('./localeDisplayNames/languages')
+        ET.SubElement(names, 'language', type='nl').text = 'Child Dutch'
+        ET.SubElement(names, 'language', type='fr_CA').text = BLOCK
+        ET.SubElement(names, 'language', type='pt').text = 'Child Portuguese'
+        sources.files['common/main/en.xml'] = ET.tostring(root, encoding='utf-8')
     inheritance = ParentGraph(graph().tags + ('en-1901-1996',), {}, {},
                               {'und': 'en-Latn-US'}, (), False)
     tags = ('de', 'en', 'en-GB', 'root')
@@ -90,5 +112,6 @@ if __name__ == '__main__':
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument('--empty', action='store_true')
     modes.add_argument('--selection', action='store_true')
+    modes.add_argument('--language', action='store_true')
     args = parser.parse_args()
-    atomic_write(args.output, embed.render(pack(args.empty, args.selection)).encode('ascii'))
+    atomic_write(args.output, embed.render(pack(args.empty, args.selection, args.language)).encode('ascii'))

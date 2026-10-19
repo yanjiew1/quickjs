@@ -124,6 +124,7 @@ if intl_enabled
     'intl/datetime/field-data.c',
     'intl/display/calendar-names.c',
     'intl/display/data.c',
+    'intl/display/language-match.c',
     'intl/display/select.c',
     'intl/duration/data.c',
     'intl/duration/decimal.c',
