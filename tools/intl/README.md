@@ -102,6 +102,78 @@ Unknown relevant structures, mixed aliases, duplicate fields and missing or
 blocked required templates are errors. These templates do not alone implement
 context-sensitive list behavior or install a JavaScript formatter.
 
+## Date/time pattern syntax
+
+```sh
+python3 tools/intl/date_pattern_syntax.py --pattern "yyyy-MM-dd 'at' HH:mm"
+python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The DateTimeFormat data compiler's lexical prerequisite decodes TR35 apostrophe
+quoting into immutable literal and field tokens. Fields retain their exact source
+symbol and run length; literals retain scalar text, whitespace and bidi controls.
+Repeated fields remain separate for interval patterns. Unassigned ASCII letters,
+input-skeleton-only `j`/`J`/`C`, unclosed quotes, NUL and non-scalar text fail.
+
+The source command audits all raw date/time length patterns, available-format
+values and greatest-difference interval values, across calendars and alternates.
+It reports inheritance/block markers separately and does not resolve aliases.
+Combination/append templates have their own grammar and are excluded. This audit
+does not validate field widths, interpret `numbers` overrides, select formats,
+establish locale coverage or install DateTimeFormat. Those operations belong to
+the subsequent typed collector/compiler and native service. Authored tests run
+in the repository suite; CI also audits the pinned CLDR source patterns.
+
+## Date/time style source records
+
+```sh
+python3 tools/intl/date_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+This typed collector resolves full/long/medium/short date and time styles for
+every source calendar. Pattern and `datetimeSkeleton` records inherit separately;
+each retains its own `numbers` override and alternate identity. Overrides remain
+source text for the subsequent data compiler to interpret. Metadata attributes
+do not create extra records, and all published draft states are admitted.
+
+Whole-calendar and date/time family aliases map typed keys, with inherited
+`source="locale"` aliases restarting at the requesting locale. Explicit-source
+aliases change that anchor. Missing, blocked, inherited and explicitly empty
+values remain distinct; terminal locale/calendar/family/width/field/alternate
+origins accompany resolved values. Duplicate fields, mixed aliases, cycles and
+unsupported consumed structures fail. Calendar names, available-format maps,
+intervals and combination templates have separate owners.
+
+The collector produces host-side resolved facts for the prepared style section;
+these facts do not establish formatter capability. Raw CLDR calendar IDs include
+data-only `generic`; they must not be advertised as supported arithmetic calendars.
+Authored repository tests cover inheritance, aliases, provenance, overrides,
+markers and invalid data. CI additionally resolves the pinned production source.
+
+Section 27 reserves the optional style wire schema. Its little-endian words begin
+with version, calendar count, alternate count, shared-row count and shared-record
+count. Calendar/alternate string references precede one row index per locale.
+Shared rows use calendar, date/time family, full/long/medium/short width,
+pattern/skeleton field and alternate as nested column selectors. Nine-word
+records contain state, text, numbering override, source locale, and source
+calendar/family/width/field/alternate indices. Missing records are all zero;
+blocked records retain provenance with empty text and numbering override.
+
+`date_style_tables.py` pools identical records and locale rows canonically and
+validates exact coverage, ordering, reachability, dimensions and references.
+Profile projection retains source identities outside the selected locale list.
+The generator emits this section in both prepared production profiles. Pattern
+text and numbering overrides remain source facts for the later date-format
+compiler to interpret.
+
+`src/intl/datetime/style-data.c` validates the optional section against an opened
+shared data owner. It checks bounded dimensions, calendar/alternate registries,
+canonical row/record sharing, reachability, states and source identities. Queries
+borrow immutable text, raw numbering overrides and provenance without allocating;
+opening retains no allocation and requires no teardown. Missing, blocked and
+empty values remain distinct. Authored C tests exercise every query selector,
+unaligned input, corrupt records/dimensions and allocation failure with retry.
+
 ## Relative-time source records
 
 ```sh
