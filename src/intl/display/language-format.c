@@ -216,15 +216,6 @@ static QJSIntlStatus render_name(Render *render)
     return literal(render, render->outer.suffix);
 }
 
-void qjs_intl_name_text_clear(const QJSIntlAllocator *allocator, QJSIntlNameText *out)
-{
-    if (!out)
-        return;
-    if (allocator && allocator->free && out->text)
-        allocator->free(allocator->opaque, out->text);
-    memset(out, 0, sizeof(*out));
-}
-
 QJSIntlStatus qjs_intl_language_name_format(const QJSIntlNameData *data, uint32_t locale,
                                           QJSIntlNameStyle style, int dialect,
                                           QJSIntlBytes input,
