@@ -25,6 +25,7 @@
 #include "temporal-internal.h"
 #include "calendar-fields.h"
 #include "../duration-value.h"
+#include "../intl.h"
 #include "../../../temporal/duration.h"
 #include "../../../temporal/time.h"
 
@@ -557,6 +558,10 @@ static JSValue js_temporal_duration_to_string(JSContext *ctx,
     data = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_DURATION);
     if (!data)
         return JS_EXCEPTION;
+#ifdef CONFIG_INTL
+    if (kind == 2)
+        return js_intl_format_duration(ctx, this_val, argc, argv);
+#endif
     rounded = *data;
     precision.precision = -1;
     if (kind == 0) {
