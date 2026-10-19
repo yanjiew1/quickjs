@@ -181,14 +181,17 @@ int main(void)
         uint8_t *copy = malloc(qjs_intl_native_length);
         assert(copy);
         memcpy(copy, qjs_intl_native_bytes, qjs_intl_native_length);
+        assert(!qjs_intl_pack_section(&data.pack, QJS_INTL_SECTION_UNIT_GRAMMAR, &section));
+        /* Keep the directory ordered when later sections are present, while
+           removing this identity from an otherwise valid shared pack. */
         for (index = 0; index < data.pack.section_count; index++) {
             uint8_t *entry = copy + 64 + index * 16;
-            if (qjs_intl_read_u32(entry) == QJS_INTL_SECTION_UNIT_GRAMMAR) {
-                put_u32(entry, QJS_INTL_SECTION_UNIT_GRAMMAR + 1);
-                break;
+            uint32_t identity = qjs_intl_read_u32(entry);
+            if (identity >= QJS_INTL_SECTION_UNIT_GRAMMAR) {
+                assert(identity < UINT32_MAX);
+                put_u32(entry, identity + 1);
             }
         }
-        assert(index < data.pack.section_count);
         assert(!qjs_intl_data_open(copy, qjs_intl_native_length, &allocator, &missing));
         assert(qjs_intl_pack_section(&missing.pack, QJS_INTL_SECTION_UNIT_GRAMMAR, &section));
         assert(qjs_intl_unit_grammar_data_open(&missing, &allocator, &result) == QJS_INTL_DATA_ERROR);
