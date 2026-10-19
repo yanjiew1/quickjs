@@ -5,7 +5,9 @@ import bundle
 from number_layout import FIELDS, REQUIRED
 from resolve import BLOCK, INHERIT
 
-VERSION, HEADER, WIDTH = 1, 4, len(FIELDS)
+VERSION, HEADER, WIDTH = 2, 4, len(FIELDS)
+VECTOR_WIDTH = WIDTH + 1
+ROOT_MASK = sum(1 << index for index, field in enumerate(FIELDS) if field.startswith('currency-unit-'))
 ABSENT, BLOCKED = 0xffffffff, 0xfffffffe
 
 
@@ -37,7 +39,14 @@ def encode(data, tags, numbering, ids):
     def reference(value):
         return ABSENT if value is None else BLOCKED if value == BLOCK else ids[value]
 
-    vectors = {key: tuple(reference(value) for value in values) for key, values in records.items()}
+    roots = {(locale, system): mask for locale, system, mask in data.get('root_fields', ())}
+    if (len(roots) != len(data.get('root_fields', ())) or not set(roots) <= set(records) or
+            any(type(mask) is not int or not mask or mask & ~ROOT_MASK or
+                any(mask & (1 << field) and records[key][field] is None for field in range(WIDTH))
+                for key, mask in roots.items())):
+        raise ValueError('invalid currency unit root-field mask')
+    vectors = {key: tuple(reference(value) for value in values) + (roots.get(key, 0),)
+               for key, values in records.items()}
     unique = tuple(sorted(set(vectors.values())))
     vector_ids = {values: index for index, values in enumerate(unique)}
     locale_rows = tuple(tuple(vector_ids[vectors[(tag, name)]] for index, name in systems)
@@ -66,7 +75,7 @@ def decode(section, pool, tags, numbering):
                     if kind == 'numeric')
     if (version != VERSION or not systems or system_count != len(systems) or
             not 1 <= row_count <= count or not 1 <= vector_count <= row_count * system_count or
-            len(words) != HEADER + system_count + count + row_count * system_count + vector_count * WIDTH or
+            len(words) != HEADER + system_count + count + row_count * system_count + vector_count * VECTOR_WIDTH or
             not pool or pool[0] != ''):
         raise ValueError('invalid number layout dimensions/version')
     at = HEADER
@@ -82,12 +91,16 @@ def decode(section, pool, tags, numbering):
     if (any(a >= b for a, b in zip(rows, rows[1:])) or
             {index for row in rows for index in row} != set(range(vector_count))):
         raise ValueError('invalid/unused number layout vector or row order')
-    vectors = tuple(words[i:i + WIDTH] for i in range(end, len(words), WIDTH))
+    vectors = tuple(words[i:i + VECTOR_WIDTH] for i in range(end, len(words), VECTOR_WIDTH))
     if any(a >= b for a, b in zip(vectors, vectors[1:])):
         raise ValueError('noncanonical number layout vector order')
     decoded = []
     for vector in vectors:
         values = []
+        mask = vector[WIDTH]
+        if mask & ~ROOT_MASK or any(mask & (1 << field) and vector[field] == ABSENT
+                                    for field in range(WIDTH)):
+            raise ValueError('invalid currency unit root-field mask')
         for field, reference in zip(FIELDS, vector):
             if reference in (ABSENT, BLOCKED):
                 value = None if reference == ABSENT else BLOCK
@@ -101,5 +114,8 @@ def decode(section, pool, tags, numbering):
         decoded.append(tuple(values))
     names = tuple(numbering['systems'][index][0] for index in systems)
     return {'systems': names, 'fields': FIELDS,
+            'root_fields': tuple((tag, name, vectors[rows[indices[i]][j]][WIDTH])
+                                 for i, tag in enumerate(tags) for j, name in enumerate(names)
+                                 if vectors[rows[indices[i]][j]][WIDTH]),
             'rows': tuple((tag, name, decoded[rows[indices[i]][j]])
                           for i, tag in enumerate(tags) for j, name in enumerate(names))}
