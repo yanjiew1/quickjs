@@ -3,6 +3,8 @@
 #include "../intl.h"
 #include "../../internal/runtime.h"
 #include "../../internal/atom.h"
+#include "../../internal/object.h"
+#include "../../internal/function.h"
 
 #ifdef CONFIG_INTL
 static void *intl_malloc(void *opaque, size_t size)
@@ -65,6 +67,26 @@ static const JSCFunctionListEntry intl_functions[] = {
     JS_CFUNC_DEF("getCanonicalLocales", 1, js_intl_get_canonical_locales),
 };
 
+JSValue js_intl_create_from_constructor(JSContext *ctx, JSValueConst new_target,
+                                        JSClassID class_id)
+{
+    JSValue prototype, result;
+    prototype = JS_GetProperty(ctx, new_target, JS_ATOM_prototype);
+    if (JS_IsException(prototype))
+        return prototype;
+    if (!JS_IsObject(prototype)) {
+        JSContext *realm;
+        JS_FreeValue(ctx, prototype);
+        realm = JS_GetFunctionRealm(ctx, new_target);
+        if (!realm || js_intl_ensure_intrinsics(realm))
+            return JS_EXCEPTION;
+        prototype = JS_DupValue(ctx, realm->class_proto[class_id]);
+    }
+    result = JS_NewObjectProtoClass(ctx, prototype, class_id);
+    JS_FreeValue(ctx, prototype);
+    return result;
+}
+
 static void clear_intrinsics(JSContext *ctx)
 {
     JS_FreeValue(ctx, ctx->intl_intrinsics);
@@ -73,6 +95,7 @@ static void clear_intrinsics(JSContext *ctx)
     ctx->intl_locale_ctor = JS_UNDEFINED;
     ctx->intl_published = FALSE;
     JS_SetClassProto(ctx, JS_CLASS_INTL_LOCALE, JS_NULL);
+    JS_SetClassProto(ctx, JS_CLASS_INTL_LIST_FORMAT, JS_NULL);
 }
 
 int js_intl_ensure_intrinsics(JSContext *ctx)
@@ -92,7 +115,7 @@ int js_intl_ensure_intrinsics(JSContext *ctx)
         goto fail;
     if (JS_DefinePropertyValue(ctx, object, JS_ATOM_Symbol_toStringTag, tag,
                                JS_PROP_CONFIGURABLE | JS_PROP_THROW) < 0 ||
-        js_intl_init_locale(ctx, object)) {
+        js_intl_init_locale(ctx, object) || js_intl_init_list_format(ctx, object)) {
         goto fail;
     }
     ctx->intl_intrinsics = object;
