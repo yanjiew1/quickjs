@@ -360,6 +360,8 @@ if intl_enabled
       'tools/intl/currency_tables.py',
       'tools/intl/number_layout.py',
       'tools/intl/number_layout_tables.py',
+      'tools/intl/unit_patterns.py',
+      'tools/intl/unit_tables.py',
       'tools/intl/plural_rules.py',
       'tools/intl/plural_tables.py',
       'tools/intl/parents.py',
