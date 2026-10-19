@@ -11,6 +11,8 @@ import compact_patterns
 import compact_tables
 import currencies
 import currency_tables
+import date_field_names
+import date_field_tables
 import list_patterns
 import locale_metadata
 import locale_tables
@@ -72,6 +74,7 @@ def generate(sources, profile):
     plural_data = plural_rules.collect(inputs_read, graph)
     relative_data = relative_patterns.collect(inputs_read, graph)
     duration_data = duration_patterns.collect(inputs_read, graph)
+    date_field_data = date_field_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     if profile == 'native':
         tags = graph.tags
@@ -95,6 +98,7 @@ def generate(sources, profile):
     grammar_data = unit_grammar_tables.select(grammar_data, tags)
     relative_data = relative_tables.select(relative_data, tags)
     duration_data = duration_tables.select(duration_data, tags)
+    date_field_data = date_field_tables.select(date_field_data, tags)
     plural_data['rows'] = tuple(row for row in plural_data['rows'] if row[0] in selected_tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
     contexts = [row for row in lists['contexts'] if row[0] in selected_tags]
@@ -113,6 +117,7 @@ def generate(sources, profile):
     pool_strings.update(plural_tables.strings(plural_data))
     pool_strings.update(relative_tables.strings(relative_data))
     pool_strings.update(duration_tables.strings(duration_data))
+    pool_strings.update(date_field_tables.strings(date_field_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
                         for text in (pair, end))
@@ -138,6 +143,7 @@ def generate(sources, profile):
     sections[bundle.UNIT_GRAMMAR] = unit_grammar_tables.encode(grammar_data, tags, string_ids)
     sections[bundle.RELATIVE_PATTERNS] = relative_tables.encode(relative_data, tags, string_ids)
     sections[bundle.DURATION_PATTERNS] = duration_tables.encode(duration_data, tags, string_ids)
+    sections[bundle.DATE_FIELD_NAMES] = date_field_tables.encode(date_field_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
               'sources': {name: sources.manifest['files'][name] for name in sorted(inputs_read.consumed)},
@@ -152,7 +158,10 @@ def generate(sources, profile):
                 'sha256': acquire.digest(binary), 'bytes': len(binary),
                 'locales': len(tags), 'strings': len(strings),
                 'complete_services': [],
-                'note': 'Prepared locale metadata, preferences, list templates, numeric symbols/patterns, compact maps, currency/layout/unit facts, division grammar, relative/duration source facts and plural rules; not formatter capability or full Intl coverage.'}
+                'note': ('Prepared locale metadata, preferences, list templates, numeric symbols/patterns, '
+                         'compact maps, currency/layout/unit facts, division grammar, relative/duration '
+                         'source facts, date-field labels and plural rules; not formatter capability '
+                         'or full Intl coverage.')}
     return binary, manifest
 
 
