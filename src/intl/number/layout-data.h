@@ -32,6 +32,7 @@ enum { QJS_INTL_LAYOUT_VALUE, QJS_INTL_LAYOUT_ABSENT, QJS_INTL_LAYOUT_BLOCKED };
 typedef struct QJSIntlNumberLayoutText {
     QJSIntlBytes text;
     unsigned int state;
+    unsigned int from_root; /* Currency unit template's terminal source was root. */
 } QJSIntlNumberLayoutText;
 
 typedef struct QJSIntlNumberLayouts {
@@ -56,6 +57,8 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *,
 /* Exact shared locale/numbering indexes, without allocation or fallback.
    Algorithmic numbering systems return UNSUPPORTED. VALUE text can be empty
    for insertions and optional layouts; absent/blocked slices are zeroed.
+   Currency unit templates retain from_root even for blocked/empty text, so the
+   consumer can exclude root for a selected count but allow its OTHER fallback.
    Returned strings borrow the same unchanged owner. */
 QJSIntlStatus qjs_intl_number_layouts_at(const QJSIntlNumberLayoutData *, uint32_t locale,
                                          uint32_t system, QJSIntlNumberLayouts *);
