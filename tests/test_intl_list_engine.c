@@ -73,30 +73,30 @@ static void generic(void)
     FailAllocator s = {0};
     QJSIntlAllocator a = allocator(&s);
     QJSIntlListTemplates t = simple("{0}P{1}", "S{0}/{1}s", "M{0}+{1}m", "E{0}&{1}e");
-    QJSIntlNativeList *list;
+    QJSIntlListFormatter *list;
     QJSIntlFormatted out;
     uint16_t letters[] = {'A', 'B', 'C', 'D'};
     QJSIntlUTF16 items[4] = {
         {letters, 1}, {letters + 1, 1}, {letters + 2, 1}, {letters + 3, 1}};
     assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_OK);
-    assert(qjs_intl_native_list_format(list, NULL, 0, &out) == QJS_INTL_OK);
+    assert(qjs_intl_list_format(list, NULL, 0, &out) == QJS_INTL_OK);
     assert(!out.text && !out.parts && !out.length && !out.part_count);
-    assert(qjs_intl_native_list_format(list, items, 1, &out) == QJS_INTL_OK);
+    assert(qjs_intl_list_format(list, items, 1, &out) == QJS_INTL_OK);
     text_is(&out, "A");
     assert(out.part_count == 1);
     partition(&out);
-    qjs_intl_native_list_result_clear(&a, &out);
-    assert(qjs_intl_native_list_format(list, items, 2, &out) == QJS_INTL_OK);
+    qjs_intl_list_result_clear(&a, &out);
+    assert(qjs_intl_list_format(list, items, 2, &out) == QJS_INTL_OK);
     text_is(&out, "APB");
     assert(out.part_count == 3);
     partition(&out);
-    qjs_intl_native_list_result_clear(&a, &out);
-    assert(qjs_intl_native_list_format(list, items, 4, &out) == QJS_INTL_OK);
+    qjs_intl_list_result_clear(&a, &out);
+    assert(qjs_intl_list_format(list, items, 4, &out) == QJS_INTL_OK);
     text_is(&out, "SA/MB+EC&Dems");
     assert(out.part_count == 13);
     partition(&out);
-    qjs_intl_native_list_result_clear(&a, &out);
-    qjs_intl_native_list_close(list);
+    qjs_intl_list_result_clear(&a, &out);
+    qjs_intl_list_formatter_close(list);
     assert(!s.live);
 }
 static void exact_elements(void)
@@ -104,12 +104,12 @@ static void exact_elements(void)
     FailAllocator s = {0};
     QJSIntlAllocator a = allocator(&s);
     QJSIntlListTemplates t = simple("{1}|{0}", "{1}/{0}", "{1}+{0}", "{1}&{0}");
-    QJSIntlNativeList *list;
+    QJSIntlListFormatter *list;
     QJSIntlFormatted out;
     uint16_t unusual[] = {0, 0xd800, 0xdc00, 0xdfff};
     QJSIntlUTF16 items[] = {{NULL, 0}, {unusual, 4}, {NULL, 0}};
     assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_OK);
-    assert(qjs_intl_native_list_format(list, items, 3, &out) == QJS_INTL_OK);
+    assert(qjs_intl_list_format(list, items, 3, &out) == QJS_INTL_OK);
     assert(out.length == 6 && out.part_count == 5);
     partition(&out);
     assert(out.parts[0].type == QJS_INTL_PART_ELEMENT &&
@@ -118,20 +118,20 @@ static void exact_elements(void)
            out.text[5] == '/');
     assert(out.parts[4].type == QJS_INTL_PART_ELEMENT &&
            out.parts[4].start == out.parts[4].end);
-    qjs_intl_native_list_result_clear(&a, &out);
-    assert(qjs_intl_native_list_format(list, items, 1, &out) == QJS_INTL_OK);
+    qjs_intl_list_result_clear(&a, &out);
+    assert(qjs_intl_list_format(list, items, 1, &out) == QJS_INTL_OK);
     assert(!out.text && out.part_count == 1 && out.parts[0].start == 0 &&
            out.parts[0].end == 0);
-    qjs_intl_native_list_result_clear(&a, &out);
-    qjs_intl_native_list_result_clear(&a, &out);
+    qjs_intl_list_result_clear(&a, &out);
+    qjs_intl_list_result_clear(&a, &out);
     items[0].length = SIZE_MAX;
-    assert(qjs_intl_native_list_format(list, items, 1, &out) ==
+    assert(qjs_intl_list_format(list, items, 1, &out) ==
            QJS_INTL_INVALID_ARGUMENT);
     items[0].data = unusual;
-    assert(qjs_intl_native_list_format(list, items, 1, &out) == QJS_INTL_OVERFLOW);
-    assert(qjs_intl_native_list_format(list, items, SIZE_MAX, &out) ==
+    assert(qjs_intl_list_format(list, items, 1, &out) == QJS_INTL_OVERFLOW);
+    assert(qjs_intl_list_format(list, items, SIZE_MAX, &out) ==
            QJS_INTL_OVERFLOW);
-    qjs_intl_native_list_close(list);
+    qjs_intl_list_formatter_close(list);
     assert(!s.live);
 }
 static void contexts(void)
@@ -153,7 +153,7 @@ static void contexts(void)
         {"xho", 0, 0}};
     FailAllocator s = {0};
     QJSIntlAllocator a = allocator(&s);
-    QJSIntlNativeList *list;
+    QJSIntlListFormatter *list;
     QJSIntlFormatted out;
     QJSIntlListTemplates t;
     QJSIntlUTF16 items[3] = {{first, 1}, {first, 1}, {NULL, 0}};
@@ -165,9 +165,7 @@ static void contexts(void)
         t.context = (QJSIntlListContext)context;
         if (context == 2)
             t.base[0] = t.base[3] = ascii("{0} o {1}");
-        for (i = 0; i < 4; i++)
-            t.alternate[i] = t.base[i];
-        t.alternate[0] = t.alternate[3] =
+        t.alternate[0] = t.alternate[1] =
             ascii(context == 1 ? "{0} e {1}" : "{0} u {1}");
         assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_OK);
         for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
@@ -178,24 +176,22 @@ static void contexts(void)
                 int alternate = context == 1 ? cases[i].e : cases[i].u;
                 items[count - 1].data = word;
                 items[count - 1].length = j;
-                assert(qjs_intl_native_list_format(list, items, count, &out) ==
+                assert(qjs_intl_list_format(list, items, count, &out) ==
                        QJS_INTL_OK);
                 assert(out.text[count == 2 ? 2 : 5] ==
                        (alternate ? (context == 1 ? 'e' : 'u')
                                   : (context == 1 ? 'y' : 'o')));
                 partition(&out);
-                qjs_intl_native_list_result_clear(&a, &out);
+                qjs_intl_list_result_clear(&a, &out);
                 items[1].data = first;
                 items[1].length = 1;
             }
         }
-        qjs_intl_native_list_close(list);
+        qjs_intl_list_formatter_close(list);
     }
     t = simple("{0} \xd7\x95{1}", "{0}, {1}", "{0}, {1}", "{0} \xd7\x95{1}");
     t.context = QJS_INTL_LIST_CONTEXT_HEBREW_AND;
-    for (i = 0; i < 4; i++)
-        t.alternate[i] = t.base[i];
-    t.alternate[0] = t.alternate[3] = ascii("{0} \xd7\x95-{1}");
+    t.alternate[0] = t.alternate[1] = ascii("{0} \xd7\x95-{1}");
     t.hebrew_script = ranges;
     t.hebrew_script_count = sizeof(ranges) / sizeof(ranges[0]);
     assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_OK);
@@ -204,27 +200,67 @@ static void contexts(void)
         for (i = 0; i < sizeof(starts) / sizeof(starts[0]); i++) {
             items[1].data = starts + i;
             items[1].length = 1;
-            assert(qjs_intl_native_list_format(list, items, 2, &out) == QJS_INTL_OK);
+            assert(qjs_intl_list_format(list, items, 2, &out) == QJS_INTL_OK);
             assert((out.text[3] == '-') == (i >= 4));
             partition(&out);
-            qjs_intl_native_list_result_clear(&a, &out);
+            qjs_intl_list_result_clear(&a, &out);
         }
     }
     items[1].data = NULL;
     items[1].length = 0;
-    assert(qjs_intl_native_list_format(list, items, 2, &out) == QJS_INTL_OK);
+    assert(qjs_intl_list_format(list, items, 2, &out) == QJS_INTL_OK);
     assert(out.length == 3);
-    qjs_intl_native_list_result_clear(&a, &out);
-    qjs_intl_native_list_close(list);
+    qjs_intl_list_result_clear(&a, &out);
+    qjs_intl_list_formatter_close(list);
     assert(!s.live);
 }
+static void contextual_chain(void)
+{
+    FailAllocator s = {0};
+    QJSIntlAllocator a = allocator(&s);
+    QJSIntlListTemplates t = simple("{0}P{1}", "S{0}/{1}s", "M{0}+{1}m", "E{0}&{1}e");
+    QJSIntlListFormatter *list;
+    QJSIntlFormatted out;
+    uint16_t letters[] = {'A', 'B', 'C', 'i'};
+    QJSIntlUTF16 items[] = {
+        {letters, 1}, {letters + 1, 1}, {letters + 2, 1}, {letters + 3, 1}};
+    size_t i;
+
+    t.context = QJS_INTL_LIST_CONTEXT_SPANISH_AND;
+    t.alternate[0] = ascii("{0}p{1}");
+    t.alternate[1] = ascii("X{0}!{1}x");
+    assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_OK);
+    {
+        QJSIntlUTF16 pair[] = {items[0], items[3]};
+        assert(qjs_intl_list_format(list, pair, 2, &out) == QJS_INTL_OK);
+        text_is(&out, "Api");
+        partition(&out);
+        qjs_intl_list_result_clear(&a, &out);
+    }
+    assert(qjs_intl_list_format(list, items, 4, &out) == QJS_INTL_OK);
+    text_is(&out, "SA/MB+XC!ixms");
+    partition(&out);
+    qjs_intl_list_formatter_close(list);
+    qjs_intl_list_result_clear(&a, &out);
+    assert(!s.live);
+
+    /* Either malformed contextual pattern must unwind partial construction. */
+    for (i = 0; i < 2; i++) {
+        QJSIntlBytes saved = t.alternate[i];
+        t.alternate[i] = ascii("{0}");
+        assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_DATA_ERROR);
+        assert(!list && !s.live);
+        t.alternate[i] = saved;
+    }
+}
+
 static void snapshot_and_long_list(void)
 {
     FailAllocator s = {0};
     QJSIntlAllocator a = allocator(&s);
     char pair[] = "\xf0\x9f\x98\x80{0}\xe2\x80\x8f{1}";
     QJSIntlListTemplates t = simple(pair, "{0}/{1}", "{0}+{1}", "{0}&{1}");
-    QJSIntlNativeList *list;
+    QJSIntlListFormatter *list;
     QJSIntlFormatted out;
     QJSIntlUTF16 *items;
     uint16_t letter = 'A';
@@ -237,38 +273,57 @@ static void snapshot_and_long_list(void)
         items[i].data = &letter;
         items[i].length = 1;
     }
-    assert(qjs_intl_native_list_format(list, items, 2, &out) == QJS_INTL_OK);
+    assert(qjs_intl_list_format(list, items, 2, &out) == QJS_INTL_OK);
     assert(out.length == 5 && out.text[0] == 0xd83d && out.text[1] == 0xde00 &&
            out.text[2] == 'A' && out.text[3] == 0x200f && out.text[4] == 'A');
-    qjs_intl_native_list_result_clear(&a, &out);
-    assert(qjs_intl_native_list_format(list, items, 4096, &out) == QJS_INTL_OK);
+    qjs_intl_list_result_clear(&a, &out);
+    assert(qjs_intl_list_format(list, items, 4096, &out) == QJS_INTL_OK);
     assert(out.length == 8191 && out.part_count == 8191);
     partition(&out);
     for (i = 0; i < out.part_count; i++)
         elements += out.parts[i].type == QJS_INTL_PART_ELEMENT;
     assert(elements == 4096);
-    qjs_intl_native_list_result_clear(&a, &out);
-    qjs_intl_native_list_close(list);
+    qjs_intl_list_result_clear(&a, &out);
+    qjs_intl_list_formatter_close(list);
     free(items);
     assert(!s.live);
 }
+/* Derive the sweep from a successful path so every allocation remains
+   covered when formatter representation or decoded patterns change. */
+static size_t allocation_count(const QJSIntlListTemplates *t,
+                                const QJSIntlUTF16 *items, size_t count)
+{
+    FailAllocator s = {0};
+    QJSIntlAllocator a = allocator(&s);
+    QJSIntlListFormatter *list;
+    QJSIntlFormatted out;
+
+    assert(qjs_intl_native_list_open(&a, t, &list) == QJS_INTL_OK);
+    assert(qjs_intl_list_format(list, items, count, &out) == QJS_INTL_OK);
+    qjs_intl_list_formatter_close(list);
+    qjs_intl_list_result_clear(&a, &out);
+    assert(!s.live);
+    return s.calls;
+}
+
 static void failures(void)
 {
     QJSIntlListTemplates t =
         simple("'{1}\xc2\xa0{0}'", "{0}/{1}", "{0}+{1}", "{0}&{1}");
     uint16_t letters[] = {'A', 'B'};
     QJSIntlUTF16 items[] = {{letters, 1}, {letters + 1, 1}};
-    size_t fail;
-    for (fail = 1; fail <= 10; fail++) {
+    size_t fail, calls = allocation_count(&t, items, 2);
+
+    for (fail = 1; fail <= calls + 1; fail++) {
         FailAllocator s = {0};
         QJSIntlAllocator a = allocator(&s);
-        QJSIntlNativeList *list = NULL;
+        QJSIntlListFormatter *list = NULL;
         QJSIntlFormatted out;
         QJSIntlStatus status;
         s.fail_at = fail;
         status = qjs_intl_native_list_open(&a, &t, &list);
         if (status == QJS_INTL_OK) {
-            status = qjs_intl_native_list_format(list, items, 2, &out);
+            status = qjs_intl_list_format(list, items, 2, &out);
             if (status == QJS_INTL_OK) {
                 assert(out.length == 5 && out.text[0] == '\'' && out.text[1] == 'B' &&
                        out.text[2] == 0xa0 && out.text[3] == 'A' &&
@@ -277,10 +332,11 @@ static void failures(void)
             } else
                 assert(status == QJS_INTL_NO_MEMORY && !out.text && !out.parts &&
                        !out.part_count);
-            qjs_intl_native_list_result_clear(&a, &out);
-            qjs_intl_native_list_close(list);
+            qjs_intl_list_result_clear(&a, &out);
+            qjs_intl_list_formatter_close(list);
         } else
             assert(status == QJS_INTL_NO_MEMORY && !list);
+        assert((status == QJS_INTL_OK) == (fail == calls + 1));
         assert(!s.live);
     }
     {
@@ -295,7 +351,7 @@ static void failures(void)
         for (fail = 0; fail < sizeof(bad) / sizeof(bad[0]); fail++) {
             FailAllocator s = {0};
             QJSIntlAllocator a = allocator(&s);
-            QJSIntlNativeList *list;
+            QJSIntlListFormatter *list;
             t.base[0] = ascii(bad[fail]);
             assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_DATA_ERROR &&
                    !list && !s.live);
@@ -304,7 +360,7 @@ static void failures(void)
     {
         FailAllocator s = {0};
         QJSIntlAllocator a = allocator(&s);
-        QJSIntlNativeList *list;
+        QJSIntlListFormatter *list;
         t.base[0].data = "{0}\0{1}";
         t.base[0].length = 7;
         assert(qjs_intl_native_list_open(&a, &t, &list) == QJS_INTL_DATA_ERROR &&
@@ -317,26 +373,26 @@ static void failures(void)
         size_t i;
         t.hebrew_script = ranges;
         t.hebrew_script_count = 2;
-        for (i = 0; i < 4; i++)
-            t.alternate[i] = t.base[i];
-        t.alternate[0] = t.alternate[3] = ascii("{0} \xd7\x95-{1}");
-        for (fail = 1; fail <= 15; fail++) {
+        t.alternate[0] = t.alternate[1] = ascii("{0} \xd7\x95-{1}");
+        calls = allocation_count(&t, items, 2);
+        for (fail = 1; fail <= calls + 1; fail++) {
             FailAllocator s = {0};
             QJSIntlAllocator a = allocator(&s);
-            QJSIntlNativeList *list = NULL;
+            QJSIntlListFormatter *list = NULL;
             QJSIntlFormatted out;
             QJSIntlStatus status;
             s.fail_at = fail;
             status = qjs_intl_native_list_open(&a, &t, &list);
             if (status == QJS_INTL_OK) {
-                status = qjs_intl_native_list_format(list, items, 2, &out);
+                status = qjs_intl_list_format(list, items, 2, &out);
                 if (status != QJS_INTL_OK)
                     assert(status == QJS_INTL_NO_MEMORY && !out.text && !out.parts);
-                qjs_intl_native_list_close(list);
+                qjs_intl_list_formatter_close(list);
                 /* The result owns its memory and survives handle close. */
-                qjs_intl_native_list_result_clear(&a, &out);
+                qjs_intl_list_result_clear(&a, &out);
             } else
                 assert(status == QJS_INTL_NO_MEMORY && !list);
+            assert((status == QJS_INTL_OK) == (fail == calls + 1));
             assert(!s.live);
         }
         {
@@ -348,7 +404,7 @@ static void failures(void)
             for (i = 0; i < sizeof(bad_ranges) / sizeof(bad_ranges[0]); i++) {
                 FailAllocator s = {0};
                 QJSIntlAllocator a = allocator(&s);
-                QJSIntlNativeList *list;
+                QJSIntlListFormatter *list;
                 t.hebrew_script = bad_ranges[i];
                 assert(qjs_intl_native_list_open(&a, &t, &list) ==
                            QJS_INTL_DATA_ERROR &&
@@ -362,6 +418,7 @@ int main(void)
     generic();
     exact_elements();
     contexts();
+    contextual_chain();
     snapshot_and_long_list();
     failures();
     return 0;
