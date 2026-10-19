@@ -52,6 +52,7 @@ struct JSRuntime {
     struct QJSIntlListService *intl_list;
     struct QJSIntlPluralService *intl_plural;
     struct QJSIntlNumberService *intl_number;
+    struct QJSIntlRelativeService *intl_relative;
     char *intl_default_locale;
 #endif
 #ifdef CONFIG_TEMPORAL
