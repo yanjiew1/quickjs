@@ -79,6 +79,8 @@ def main():
         expected = {name for name in expected
                     if not name.startswith('src/quickjs/builtins/intl/') or
                     name.endswith('/core.c')}
+        if not options['temporal']:
+            expected.discard('src/quickjs/builtins/duration-value.c')
     expected.update('tools/' + name + '.c' for name in ['qjs', 'qjsc', 'run-test262'])
     assert expected <= checked, 'Missing JSValue checks: ' + repr(sorted(expected - checked))
     assert len(normal) == len(set(normal.values())), 'Different sources share an object output'

@@ -164,6 +164,14 @@ if intl_enabled
   )
   support_sources += intl_data
 endif
+if get_option('temporal') or intl_enabled
+  engine_sources += files('quickjs/builtins/duration-value.c')
+  support_sources += files(
+    'temporal/duration.c',
+    'temporal/epoch.c',
+    'temporal/options.c',
+  )
+endif
 if get_option('temporal')
   engine_sources += files(
     'quickjs/builtins/temporal/calendar-fields.c',
@@ -182,13 +190,10 @@ if get_option('temporal')
     'temporal/calendar.c',
     'temporal/civil.c',
     'temporal/clock.c',
-    'temporal/duration.c',
-    'temporal/epoch.c',
     'temporal/format.c',
     'temporal/iso.c',
     'temporal/noniso-arithmetic.c',
     'temporal/noniso-calendar.c',
-    'temporal/options.c',
     'temporal/parse.c',
     'temporal/relative.c',
     'temporal/time.c',
