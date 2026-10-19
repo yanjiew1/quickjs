@@ -1,21 +1,19 @@
-/* CLDR 49 beta4 letter-grapheme boundary rule for alphaNextToNumber.
+/* CLDR standard, compact and legacy currency boundary predicates.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "boundary.h"
 #include "../../cutils/cutils.h"
 #include "../../unicode/libunicode.h"
 #include <limits.h>
+#include <string.h>
 
-QJSIntlStatus qjs_intl_currency_boundary(QJSIntlBytes symbol, unsigned int *before_number,
-                                       unsigned int *after_number)
+QJSIntlStatus qjs_intl_currency_boundary(QJSIntlBytes symbol, QJSIntlCurrencyBoundary *out)
 {
     const uint8_t *at, *end, *next;
-    unsigned int before = 0, after = 0;
-    if (before_number)
-        *before_number = 0;
-    if (after_number)
-        *after_number = 0;
-    if (!before_number || !after_number || (!symbol.data && symbol.length) ||
-        symbol.length > INT_MAX)
+    QJSIntlCurrencyBoundary result = {0};
+    uint32_t first = 0, last = 0;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || (!symbol.data && symbol.length) || symbol.length > INT_MAX)
         return QJS_INTL_INVALID_ARGUMENT;
     if (!symbol.length)
         return QJS_INTL_OK;
@@ -26,14 +24,18 @@ QJSIntlStatus qjs_intl_currency_boundary(QJSIntlBytes symbol, unsigned int *befo
         unsigned int letter;
         if (c <= 0 || c > 0x10ffff || (c >= 0xd800 && c <= 0xdfff))
             return QJS_INTL_INVALID_ARGUMENT;
-        letter = lre_is_letter(c);
         if (at == (const uint8_t *)symbol.data)
-            after = letter;
+            first = c;
+        last = c;
+        letter = lre_is_letter(c);
         if (letter || !lre_is_mark(c))
-            before = letter;
+            result.compact_before_number = letter;
         at = next;
     }
-    *before_number = before;
-    *after_number = after;
+    result.before_number = lre_is_letter(last);
+    result.after_number = lre_is_letter(first);
+    result.spacing_before_number = !lre_is_symbol_or_separator(last);
+    result.spacing_after_number = !lre_is_symbol_or_separator(first);
+    *out = result;
     return QJS_INTL_OK;
 }
