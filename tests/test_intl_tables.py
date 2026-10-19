@@ -30,6 +30,7 @@ from test_intl_compact_patterns import Sources as CompactSources
 from test_intl_currencies import Sources as CurrencySources
 from test_intl_number_layout import Sources as LayoutSources
 from test_intl_unit_patterns import Sources as UnitSources
+from test_intl_unit_grammar import Sources as GrammarSources
 import number_patterns
 import number_pattern_syntax
 from resolve import BLOCK
@@ -132,12 +133,16 @@ class VerifiedFixture(Sources):
         self.files['common/dtd/ldmlSupplemental.dtd'] += (
             b'<!ELEMENT plurals' +
             plural_source.files['common/dtd/ldmlSupplemental.dtd'].split(b'<!ELEMENT plurals', 1)[1])
+        grammar_source = GrammarSources()
+        self.files['common/dtd/ldmlSupplemental.dtd'] += grammar_source.files['common/dtd/ldmlSupplemental.dtd']
+        name = 'common/supplemental/grammaticalFeatures.xml'
+        self.files[name] = grammar_source.files[name]
         for name in plural_source.files:
             if name != 'common/dtd/ldmlSupplemental.dtd':
                 self.files[name] = plural_source.files[name]
         name = 'common/supplemental/supplementalData.xml'
         supplemental = ET.fromstring(self.files[name])
-        ET.SubElement(supplemental, 'parentLocales', component='plurals')
+        ET.SubElement(supplemental, 'parentLocales', component='plurals grammaticalFeatures')
         supplemental.append(ET.fromstring(currency_source.files[name]).find('currencyData'))
         self.files[name] = ET.tostring(supplemental, encoding='utf-8')
         self.consumed = set()
@@ -217,6 +222,13 @@ class TableTests(unittest.TestCase):
             meter = next(index for locale, width, kind, name, index in units['rows']
                          if (locale, width, kind, name) == ('en', 'long', 'unit', 'length-meter'))
             self.assertIn(('unitPattern', 'one', '', '{0} meter'), units['maps'][meter])
+            grammar = view['unit_grammar']
+            self.assertEqual(len(grammar['rows']), len(view['locales']) * 2)
+            grammar_rows = {row[:2]: row[2:] for row in grammar['rows']}
+            self.assertEqual(grammar_rows['en', 'plural'], ('root', 'compound', 'one'))
+            if profile == 'native':
+                self.assertEqual(grammar_rows['de', 'case'], ('de', 'compound', 'accusative'))
+                self.assertEqual(grammar_rows['fr', 'case'], ('root', 'compound', 'nominative'))
             self.assertIn(('latn', 'numeric', '0123456789'), view['numbering']['systems'])
             self.assertIn('root', {row[0] for row in view['numbering']['locales']})
             symbols = view['number_symbols']
@@ -361,7 +373,8 @@ class TableTests(unittest.TestCase):
         original = acquire.json_bytes(manifest)
         source.pin['archive']['sha256'] = '2' * 64
         self.assertEqual(acquire.json_bytes(manifest), original)
-        for name in ('supplementalData', 'supplementalMetadata', 'likelySubtags', 'numberingSystems'):
+        for name in ('supplementalData', 'supplementalMetadata', 'likelySubtags', 'numberingSystems',
+                     'grammaticalFeatures'):
             self.assertIn('common/supplemental/' + name + '.xml', manifest['inputs']['sources'])
 
     def test_preference_wire_roundtrip_and_invalid_fields(self):
