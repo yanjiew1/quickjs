@@ -507,8 +507,24 @@ Thus a French plural override does
 not erase the root case rule, while German denominator case comes from its own
 rule. Require complete root defaults, reject duplicate/unsupported records and
 validate the source DTD attributes. Other known structures and compound gender
-rules are checked but not included in division output. This source collector
-does not yet add grammar to the prepared pack or enable compound formatting.
+rules are checked but not included in division output. This collector does not
+enable compound formatting by itself.
+
+Section 22 stores these derivations independently of the unit-text section.
+Two little-endian header words contain schema version 1 and shared-row count.
+One shared-row index per locale precedes strictly sorted, unique six-word rows:
+the plural origin and its two component tokens, then the case origin and its
+two tokens. All six words reference the shared string pool. Every shared row
+must be referenced. Profile projection retains required origin/token strings,
+including origins outside the selected locale registry. Grammar origins are
+independent of localized unit-text origins and cardinal-rule origins.
+
+`unit/grammar-data` validates this section over the generic immutable data view,
+borrowing its storage without retaining the opener. Scratch bytes cache source
+and symbolic-token checks per string role; nested source-variant scratch is also
+released on failure. Queries return borrowed rules and allocate nothing. The
+owner validates symbolic case names, not membership in a grammatical inventory;
+the formatter applies the selected rules and owns any fallback decisions.
 
 Section 21 stores those sparse unit forms. Its directory count is the shared
 locale count. Eight little-endian header words contain schema version 2, group,
