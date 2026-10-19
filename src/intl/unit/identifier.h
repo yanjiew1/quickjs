@@ -27,4 +27,10 @@ uint32_t qjs_intl_unit_identifier_find(QJSIntlBytes);
    coercion belongs to the binding. Disjoint output is required; non-NULL
    output indexes become NO_UNIT on failure. */
 QJSIntlStatus qjs_intl_unit_identifier_parse(QJSIntlBytes, QJSIntlUnitIdentifier *);
+
+/* Static CLDR long identifier for a sanctioned single or a known precomposed
+   division. NULL means invalid indexes or no precomposed form; it does not
+   make an otherwise sanctioned division invalid. No locale lookup/fallback.
+   Do not derive the legacy CLDR grouping prefix from the numerator's group. */
+const char *qjs_intl_unit_identifier_cldr(const QJSIntlUnitIdentifier *);
 #endif
