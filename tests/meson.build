@@ -885,6 +885,7 @@ if intl_enabled
       '../src/intl/number/body.c',
       '../src/intl/number/compact-data.c',
       '../src/intl/number/compact-format.c',
+      '../src/intl/common/format-builder.c',
       '../src/intl/number/compact-family.c',
     ) + [intl_compact_fixture],
     'c_args': host_args,
@@ -1089,6 +1090,29 @@ if intl_enabled
   component_test_specs += [{
     'target': intl_unit_authored,
     'name': 'intl-unit-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_unit_pattern_test = {
+    'name': 'test_intl_unit_pattern',
+    'sources': files(
+      'test_intl_unit_pattern.c',
+      '../src/intl/unit/pattern.c',
+      '../src/intl/unit/data.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_unit_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_unit_pattern_test,
+    'name': 'intl-unit-pattern',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
@@ -1413,11 +1437,17 @@ if intl_enabled
         '../src/intl/number/body.c',
         '../src/intl/number/compact-data.c',
         '../src/intl/number/compact-format.c',
+        '../src/intl/common/format-builder.c',
         '../src/intl/number/compact-family.c',
         '../src/intl/number/currency-format.c',
         '../src/intl/number/currency-pattern.c',
         '../src/intl/number/layout-data.c',
         '../src/intl/number/native.c',
+        '../src/intl/number/unit.c',
+        '../src/intl/unit/data.c',
+        '../src/intl/unit/identifier.c',
+        '../src/intl/unit/pattern.c',
+        '../src/intl/unit/format.c',
         '../src/intl/number/pattern-data.c',
         '../src/intl/number/round.c',
         '../src/intl/number/sign-affix.c',
@@ -1555,6 +1585,12 @@ if intl_enabled
     'test_intl_unit_identifier': files(
       'test_intl_unit_identifier.c',
       '../src/intl/unit/identifier.c',
+    ),
+    'test_intl_unit_format': files(
+      'test_intl_unit_format.c',
+      '../src/intl/unit/format.c',
+      '../src/intl/common/format-builder.c',
+      '../src/cutils/cutils.c',
     ),
     'test_intl_locale_system': files(
       'test_intl_locale_system.c',
