@@ -153,6 +153,7 @@ if intl_enabled
     'intl/currency/display.c',
     'intl/datetime/field-data.c',
     'intl/datetime/field.c',
+    'intl/datetime/style-data.c',
     'intl/display/calendar-names.c',
     'intl/display/data.c',
     'intl/display/language-format.c',
