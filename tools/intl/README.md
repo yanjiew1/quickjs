@@ -101,3 +101,19 @@ alternates. Text is preserved exactly and both placeholders must occur once.
 Unknown relevant structures, mixed aliases, duplicate fields and missing or
 blocked required templates are errors. These templates do not alone implement
 context-sensitive list behavior or install a JavaScript formatter.
+
+## Binary envelope
+
+`bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.
+Integers are little-endian and decoded bytewise, including on unaligned inputs.
+The 64-byte header contains the total size, section count, 32-byte generation
+identity, minimal/native profile and zeroed reserved fields. Each sorted
+16-byte directory entry contains an ID, offset, byte length and record count.
+Sections are contiguous except for zero padding to four-byte boundaries.
+The envelope is bounded to 256 MiB and 128 sections.
+
+The allocation-free reader borrows immutable storage; opening it validates only
+the envelope. Section owners must check their own record schemas, references
+and required dependencies before use. Unknown optional sections establish no
+service capabilities. A generation identity is not a cryptographic check of
+the contents; source acquisition and prepared-pack manifests provide hashes.

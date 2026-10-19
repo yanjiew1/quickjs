@@ -188,6 +188,10 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_intl_pack': [
+    'test_intl_pack.c',
+    '../src/intl/native/pack.c',
+  ],
   'test_intl_locale_grammar': [
     'test_intl_locale_grammar.c',
     '../src/intl/common/locale-grammar.c',
@@ -875,6 +879,14 @@ test(
   'calendar-generator',
   python,
   args: files('test_calendar_generator.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-binary-envelope',
+  python,
+  args: files('test_intl_bundle.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )
