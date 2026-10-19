@@ -1033,6 +1033,10 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_unit_identifier': [
+    'test_intl_unit_identifier.c',
+    '../src/intl/unit/identifier.c',
+  ],
   'test_intl_locale_system': [
     'test_intl_locale_system.c',
     '../src/intl/locale/system.c',
