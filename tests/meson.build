@@ -849,6 +849,26 @@ if intl_enabled
     },
   }]
 
+  intl_relative_format_test = {
+    'name': 'test_intl_relative_format',
+    'sources': files(
+      'test_intl_relative_format.c',
+      '../src/cutils/cutils.c',
+      '../src/intl/relative/format.c',
+      '../src/intl/common/format-builder.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_relative_format_test,
+    'name': 'intl-relative-format',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_relative_owner_sources = files(
     'test_intl_relative_data.c',
     '../src/intl/common/locale-grammar.c',
@@ -1002,6 +1022,44 @@ if intl_enabled
       'timeout': 30,
     },
   }]
+
+  intl_number_service_sources = files(
+    '../src/cutils/cutils.c',
+    '../src/intl/common/decimal.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/currency/boundary.c',
+    '../src/intl/currency/data.c',
+    '../src/intl/currency/display.c',
+    '../src/intl/locale/numbering-data.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    '../src/intl/number/affix.c',
+    '../src/intl/number/body.c',
+    '../src/intl/number/compact-data.c',
+    '../src/intl/number/compact-format.c',
+    '../src/intl/common/format-builder.c',
+    '../src/intl/number/compact-family.c',
+    '../src/intl/number/currency-format.c',
+    '../src/intl/number/currency-pattern.c',
+    '../src/intl/number/layout-data.c',
+    '../src/intl/number/native.c',
+    '../src/intl/number/range.c',
+    '../src/intl/number/unit.c',
+    '../src/intl/unit/data.c',
+    '../src/intl/unit/grammar-data.c',
+    '../src/intl/unit/identifier.c',
+    '../src/intl/unit/pattern.c',
+    '../src/intl/unit/format.c',
+    '../src/intl/number/pattern-data.c',
+    '../src/intl/number/round.c',
+    '../src/intl/number/sign-affix.c',
+    '../src/intl/number/symbol-data.c',
+    '../src/intl/plural/data.c',
+    '../src/intl/plural/native-engine.c',
+    '../src/intl/plural/rules.c',
+    '../src/unicode/category.c',
+  ) + unicode_tables
 
   foreach profile : [get_option('intl')]
     intl_fixture = custom_target(
@@ -1299,42 +1357,7 @@ if intl_enabled
       'name': ('test_intl_number_service_' + profile),
       'sources': files(
         'test_intl_number_service.c',
-        '../src/cutils/cutils.c',
-        '../src/intl/common/decimal.c',
-        '../src/intl/common/locale-grammar.c',
-        '../src/intl/currency/boundary.c',
-        '../src/intl/currency/data.c',
-        '../src/intl/currency/display.c',
-        '../src/intl/locale/numbering-data.c',
-        '../src/intl/common/source-locale.c',
-        '../src/intl/native/data.c',
-        '../src/intl/native/pack.c',
-        '../src/intl/number/affix.c',
-        '../src/intl/number/body.c',
-        '../src/intl/number/compact-data.c',
-        '../src/intl/number/compact-format.c',
-        '../src/intl/common/format-builder.c',
-        '../src/intl/number/compact-family.c',
-        '../src/intl/number/currency-format.c',
-        '../src/intl/number/currency-pattern.c',
-        '../src/intl/number/layout-data.c',
-        '../src/intl/number/native.c',
-        '../src/intl/number/range.c',
-        '../src/intl/number/unit.c',
-        '../src/intl/unit/data.c',
-        '../src/intl/unit/grammar-data.c',
-        '../src/intl/unit/identifier.c',
-        '../src/intl/unit/pattern.c',
-        '../src/intl/unit/format.c',
-        '../src/intl/number/pattern-data.c',
-        '../src/intl/number/round.c',
-        '../src/intl/number/sign-affix.c',
-        '../src/intl/number/symbol-data.c',
-        '../src/intl/plural/data.c',
-        '../src/intl/plural/native-engine.c',
-        '../src/intl/plural/rules.c',
-        '../src/unicode/category.c',
-      ) + unicode_tables,
+      ) + intl_number_service_sources,
       'c_args': (host_args + [
         ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
       ]),
@@ -1344,6 +1367,31 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_number_service_test,
       'name': ('intl-number-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_relative_service_test = {
+      'name': ('test_intl_relative_service_' + profile),
+      'sources': intl_number_service_sources + files(
+        'test_intl_relative_service.c',
+        '../src/dtoa/dtoa.c',
+        '../src/intl/common/number-decimal.c',
+        '../src/intl/plural/native.c',
+        '../src/intl/relative/data.c',
+        '../src/intl/relative/format.c',
+        '../src/intl/relative/native.c',
+      ),
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_relative_service_test,
+      'name': ('intl-relative-service-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
