@@ -16,9 +16,10 @@ typedef struct ListPattern {
     QJSIntlUTF16 literal[3];
     unsigned char order[2];
 } ListPattern;
-struct QJSIntlNativeList {
+struct QJSIntlListFormatter {
     QJSIntlAllocator allocator;
-    ListPattern patterns[8];
+    /* Base pair/start/middle/end, then contextual pair/end only. */
+    ListPattern patterns[6];
     QJSIntlListContext context;
     QJSIntlListScriptRange *hebrew_script;
     size_t hebrew_script_count;
@@ -46,7 +47,7 @@ static int allocator_valid(const QJSIntlAllocator *a)
 {
     return a && a->malloc && a->free;
 }
-void qjs_intl_native_list_result_clear(const QJSIntlAllocator *a, QJSIntlFormatted *out)
+void qjs_intl_list_result_clear(const QJSIntlAllocator *a, QJSIntlFormatted *out)
 {
     if (!out)
         return;
@@ -58,14 +59,14 @@ void qjs_intl_native_list_result_clear(const QJSIntlAllocator *a, QJSIntlFormatt
     }
     memset(out, 0, sizeof(*out));
 }
-void qjs_intl_native_list_close(QJSIntlNativeList *list)
+void qjs_intl_list_formatter_close(QJSIntlListFormatter *list)
 {
     size_t i;
     QJSIntlAllocator a;
     if (!list)
         return;
     a = list->allocator;
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < sizeof(list->patterns) / sizeof(list->patterns[0]); i++)
         if (list->patterns[i].text)
             a.free(a.opaque, list->patterns[i].text);
     if (list->hebrew_script)
@@ -168,9 +169,9 @@ static QJSIntlStatus load_pattern(const QJSIntlAllocator *a, QJSIntlBytes input,
 }
 QJSIntlStatus qjs_intl_native_list_open(const QJSIntlAllocator *a,
                                         const QJSIntlListTemplates *templates,
-                                        QJSIntlNativeList **out)
+                                        QJSIntlListFormatter **out)
 {
-    QJSIntlNativeList *list;
+    QJSIntlListFormatter *list;
     QJSIntlStatus status;
     QJSIntlListContext context;
     size_t i, bytes = 0;
@@ -201,19 +202,19 @@ QJSIntlStatus qjs_intl_native_list_open(const QJSIntlAllocator *a,
     memset(list, 0, sizeof(*list));
     list->allocator = *a;
     list->context = context;
-    for (i = 0; i < (context ? 8u : 4u); i++) {
+    for (i = 0; i < (context ? 6u : 4u); i++) {
         status =
             load_pattern(a, i < 4 ? templates->base[i] : templates->alternate[i - 4],
                          &list->patterns[i]);
         if (status != QJS_INTL_OK) {
-            qjs_intl_native_list_close(list);
+            qjs_intl_list_formatter_close(list);
             return status;
         }
     }
     if (context == QJS_INTL_LIST_CONTEXT_HEBREW_AND) {
         list->hebrew_script = a->malloc(a->opaque, bytes);
         if (!list->hebrew_script) {
-            qjs_intl_native_list_close(list);
+            qjs_intl_list_formatter_close(list);
             return QJS_INTL_NO_MEMORY;
         }
         memcpy(list->hebrew_script, templates->hebrew_script, bytes);
@@ -282,7 +283,7 @@ static int eleven_prefix(QJSIntlUTF16 text)
     }
 }
 
-static int use_alternate(const QJSIntlNativeList *list, QJSIntlUTF16 next)
+static int use_alternate(const QJSIntlListFormatter *list, QJSIntlUTF16 next)
 {
     uint16_t first, second;
     uint32_t scalar;
@@ -320,7 +321,7 @@ static int use_alternate(const QJSIntlNativeList *list, QJSIntlUTF16 next)
  * recursion and repeated copies of already formatted tails. The measure and
  * write traversals are identical; allocation is checked between them.
  */
-static QJSIntlStatus traverse(const QJSIntlNativeList *list, const QJSIntlUTF16 *items,
+static QJSIntlStatus traverse(const QJSIntlListFormatter *list, const QJSIntlUTF16 *items,
                               size_t count, ListFrame *stack, QJSIntlFormatted *out,
                               size_t *length, size_t *parts, int write)
 {
@@ -348,7 +349,7 @@ static QJSIntlStatus traverse(const QJSIntlNativeList *list, const QJSIntlUTF16 
                                    : f->item == count - 2 ? 3
                                                           : 2;
             if (alternate && (pattern_index == 0 || pattern_index == 3))
-                pattern_index += 4;
+                pattern_index = pattern_index == 0 ? 4 : 5;
             p = &list->patterns[pattern_index];
         }
         step = f->step++;
@@ -376,7 +377,7 @@ static QJSIntlStatus traverse(const QJSIntlNativeList *list, const QJSIntlUTF16 
     }
     return QJS_INTL_OK;
 }
-QJSIntlStatus qjs_intl_native_list_format(const QJSIntlNativeList *list,
+QJSIntlStatus qjs_intl_list_format(const QJSIntlListFormatter *list,
                                           const QJSIntlUTF16 *items, size_t count,
                                           QJSIntlFormatted *out)
 {
@@ -435,6 +436,6 @@ QJSIntlStatus qjs_intl_native_list_format(const QJSIntlNativeList *list,
     return QJS_INTL_OK;
 fail:
     a->free(a->opaque, stack);
-    qjs_intl_native_list_result_clear(a, out);
+    qjs_intl_list_result_clear(a, out);
     return status;
 }
