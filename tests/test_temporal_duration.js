@@ -127,7 +127,7 @@ function test_duration_strings() {
     assertThrows(RangeError, () => duration.toString({ smallestUnit: "minute" }));
     assertThrows(RangeError, () => duration.toString({ smallestUnit: "auto" }));
     assert(duration.toJSON({ bad: 1 }), duration.toString());
-    if (typeof Intl === "undefined")
+    if (typeof Intl === "undefined" || typeof Intl.DurationFormat !== "function")
         assert(duration.toLocaleString(Symbol(), null), duration.toString());
 }
 
@@ -248,7 +248,7 @@ function test_relative_duration() {
 }
 
 function test_duration_intl_interoperability() {
-    if (typeof Intl === "undefined")
+    if (typeof Intl === "undefined" || typeof Intl.DurationFormat !== "function")
         return;
     const duration = Duration.from("PT1.5S");
     Object.defineProperty(duration, "seconds", {
