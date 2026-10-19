@@ -6,36 +6,6 @@
 #include <assert.h>
 #include <math.h>
 
-static int default_number_option(JSContext *ctx, JSValueConst value, int minimum, int maximum,
-                                 int fallback, int *out)
-{
-    double number;
-    if (JS_IsUndefined(value)) {
-        *out = fallback;
-        return 0;
-    }
-    if (JS_ToFloat64(ctx, &number, value))
-        return -1;
-    if (isnan(number) || number < minimum || number > maximum) {
-        JS_ThrowRangeError(ctx, "Intl numeric option outside range");
-        return -1;
-    }
-    *out = (int)floor(number);
-    return 0;
-}
-
-static int get_number_option(JSContext *ctx, JSValueConst options, const char *name, int minimum,
-                             int maximum, int fallback, int *out)
-{
-    JSValue value = JS_GetPropertyStr(ctx, options, name);
-    int status;
-    if (JS_IsException(value))
-        return -1;
-    status = default_number_option(ctx, value, minimum, maximum, fallback, out);
-    JS_FreeValue(ctx, value);
-    return status;
-}
-
 int js_intl_set_digit_options(JSContext *ctx, JSValueConst options, int minimum_fraction_default,
                               int maximum_fraction_default, BOOL compact, JSIntlDigitOptions *out)
 {
@@ -57,8 +27,8 @@ int js_intl_set_digit_options(JSContext *ctx, JSValueConst options, int minimum_
     memset(out, 0, sizeof(*out));
     result.minimum_fraction_digits = result.maximum_fraction_digits = -1;
     result.minimum_significant_digits = result.maximum_significant_digits = -1;
-    if (get_number_option(ctx, options, "minimumIntegerDigits", 1, 21, 1,
-                          &result.minimum_integer_digits))
+    if (js_intl_get_number_option(ctx, options, "minimumIntegerDigits", 1, 21, 1,
+                                  &result.minimum_integer_digits))
         goto done;
     /* Get all four raw values before reading rounding options or coercing
        fraction/significant values. Even unused options still have getters. */
@@ -74,8 +44,8 @@ int js_intl_set_digit_options(JSContext *ctx, JSValueConst options, int minimum_
     mxsd = JS_GetPropertyStr(ctx, options, "maximumSignificantDigits");
     if (JS_IsException(mxsd))
         goto done;
-    if (get_number_option(ctx, options, "roundingIncrement", 1, 5000, 1,
-                          &result.rounding_increment))
+    if (js_intl_get_number_option(ctx, options, "roundingIncrement", 1, 5000, 1,
+                                  &result.rounding_increment))
         goto done;
     for (i = 0; i < countof(increments); i++) {
         if (increments[i] == result.rounding_increment)
@@ -110,15 +80,15 @@ int js_intl_set_digit_options(JSContext *ctx, JSValueConst options, int minimum_
             need_fd = 0;
     }
     if (need_sd) {
-        if (default_number_option(ctx, mnsd, 1, 21, 1, &result.minimum_significant_digits) ||
-            default_number_option(ctx, mxsd, result.minimum_significant_digits, 21, 21,
-                                  &result.maximum_significant_digits))
+        if (js_intl_default_number_option(ctx, mnsd, 1, 21, 1, &result.minimum_significant_digits) ||
+            js_intl_default_number_option(ctx, mxsd, result.minimum_significant_digits, 21, 21,
+                                          &result.maximum_significant_digits))
             goto done;
     }
     if (need_fd) {
         if (has_fd) {
-            if (default_number_option(ctx, mnfd, 0, 100, -1, &result.minimum_fraction_digits) ||
-                default_number_option(ctx, mxfd, 0, 100, -1, &result.maximum_fraction_digits))
+            if (js_intl_default_number_option(ctx, mnfd, 0, 100, -1, &result.minimum_fraction_digits) ||
+                js_intl_default_number_option(ctx, mxfd, 0, 100, -1, &result.maximum_fraction_digits))
                 goto done;
             if (result.minimum_fraction_digits < 0)
                 result.minimum_fraction_digits =
