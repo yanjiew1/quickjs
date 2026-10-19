@@ -12,6 +12,7 @@ U32 = struct.Struct('<I')
 LOCALE = struct.Struct('<II')
 ROOT = 0xffffffff
 LIST_WIDTH = len(PARTS) * len(VARIANTS)
+CONTEXT_WIDTH = len(VARIANTS) * 3
 
 
 def words(values):
@@ -136,6 +137,53 @@ def decode_lists(section, strings, locale_count):
     return tuple(vectors[index] for index in indices)
 
 
+def encode_contexts(rows, tags, string_ids):
+    fields = {(locale, variant): (kind, string_ids[pair], string_ids[end])
+              for locale, variant, kind, pair, end in rows}
+    vectors = tuple(tuple(value for variant in VARIANTS for value in fields[(locale, variant)])
+                    for locale in tags)
+    unique = sorted(set(vectors))
+    indices = {vector: index for index, vector in enumerate(unique)}
+    return len(tags), words([len(unique)] + [indices[vector] for vector in vectors] +
+                            [value for vector in unique for value in vector])
+
+
+def decode_contexts(section, strings, locale_count):
+    count, data = section
+    if count != locale_count or len(data) < 4:
+        raise ValueError('invalid Intl list context locale count')
+    values = read_words(data)
+    sets = values[0]
+    if not 1 <= sets <= count or len(values) != 1 + count + sets * CONTEXT_WIDTH:
+        raise ValueError('invalid Intl list context set extent')
+    indices = values[1:1 + count]
+    if set(indices) != set(range(sets)):
+        raise ValueError('invalid or unused Intl list context set')
+    vectors, previous, checked = [], None, set()
+    for offset in range(1 + count, len(values), CONTEXT_WIDTH):
+        vector = values[offset:offset + CONTEXT_WIDTH]
+        if previous is not None and vector <= previous:
+            raise ValueError('noncanonical Intl list context order')
+        row = []
+        for i in range(0, CONTEXT_WIDTH, 3):
+            kind, pair, end = vector[i:i + 3]
+            if kind > 3 or pair >= len(strings) or end >= len(strings):
+                raise ValueError('invalid Intl list context fields')
+            if kind == 0:
+                if pair or end:
+                    raise ValueError('unused Intl list context templates')
+            else:
+                for value in (pair, end):
+                    if value not in checked:
+                        if pattern(strings[value]) != strings[value] or strings[value] in (INHERIT, BLOCK):
+                            raise ValueError('unresolved Intl context template')
+                        checked.add(value)
+            row.append((kind, strings[pair], strings[end]))
+        previous = vector
+        vectors.append(tuple(row))
+    return tuple(vectors[index] for index in indices)
+
+
 def validate(binary):
     result = bundle.unpack(binary)
     sections = result['sections']
@@ -146,6 +194,11 @@ def validate(binary):
     lists = None
     if bundle.LISTS in sections:
         lists = decode_lists(sections[bundle.LISTS], strings, len(tags))
+    contexts = None
+    if bundle.LIST_CONTEXTS in sections:
+        if lists is None:
+            raise ValueError('Intl list contexts lack base templates')
+        contexts = decode_contexts(sections[bundle.LIST_CONTEXTS], strings, len(tags))
     return {'envelope': result, 'strings': strings, 'locales': tags,
             'parents': parents, 'lists': lists, 'locale_metadata': locale_tables.decode(sections, strings),
-            'preferences': preference_tables.decode(sections, strings)}
+            'preferences': preference_tables.decode(sections, strings), 'list_contexts': contexts}
