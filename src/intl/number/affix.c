@@ -141,6 +141,11 @@ static QJSIntlStatus body_part(Builder *builder, const QJSIntlFormatted *body)
     return QJS_INTL_OK;
 }
 
+static int is_currency(QJSIntlNumberTokenKind kind)
+{
+    return kind >= QJS_INTL_NUMBER_TOKEN_CURRENCY && kind <= QJS_INTL_NUMBER_TOKEN_CURRENCY_NARROW;
+}
+
 static QJSIntlStatus emit(Builder *builder, const QJSIntlNumberPatternToken *tokens, size_t count,
                           const QJSIntlNumberAffixSymbols *symbols, const QJSIntlFormatted *body,
                           unsigned int prefix_plus)
@@ -155,6 +160,20 @@ static QJSIntlStatus emit(Builder *builder, const QJSIntlNumberPatternToken *tok
     for (i = 0; i < count; i++) {
         QJSIntlBytes text = tokens[i].text;
         QJSIntlPartType type = QJS_INTL_PART_LITERAL;
+        QJSIntlBytes gap = {0};
+        if (i && symbols->currency.length) {
+            if (tokens[i].kind == QJS_INTL_NUMBER_TOKEN_NUMBER && is_currency(tokens[i - 1].kind))
+                gap = symbols->after_currency;
+            else if (is_currency(tokens[i].kind) && tokens[i - 1].kind == QJS_INTL_NUMBER_TOKEN_NUMBER)
+                gap = symbols->before_currency;
+        }
+        if (gap.length) {
+            if (!gap.data)
+                return QJS_INTL_INVALID_ARGUMENT;
+            status = text_part(builder, gap, QJS_INTL_PART_LITERAL);
+            if (status)
+                return status;
+        }
         switch (tokens[i].kind) {
         case QJS_INTL_NUMBER_TOKEN_NUMBER:
             status = body_part(builder, body);
