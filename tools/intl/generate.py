@@ -42,13 +42,16 @@ def generate(sources, profile):
     tags = graph.tags if profile == 'native' else tuple(sorted(graph.chain('en')))
     selected_tags = set(tags)
     selected = [row for row in lists['rows'] if row[0] in selected_tags]
+    contexts = [row for row in lists['contexts'] if row[0] in selected_tags]
     strings = tuple(sorted(locale_tables.strings(locale_data) | preference_tables.strings(preference_data) | set(('',) + tags + tuple(
-        text for locale, variant, values in selected for text in values)),
+        text for locale, variant, values in selected for text in values) + tuple(
+        text for locale, variant, kind, pair, end in contexts for text in (pair, end))),
         key=lambda text: text.encode('utf-8')))
     string_ids = {text: index for index, text in enumerate(strings)}
     sections = {bundle.STRINGS: tables.encode_strings(strings),
                 bundle.LOCALES: tables.encode_locales(tags, graph, string_ids),
-                bundle.LISTS: tables.encode_lists(selected, tags, string_ids)}
+                bundle.LISTS: tables.encode_lists(selected, tags, string_ids),
+                bundle.LIST_CONTEXTS: tables.encode_contexts(contexts, tags, string_ids)}
     sections.update(locale_tables.encode(locale_data, string_ids))
     sections.update(preference_tables.encode(preference_data, string_ids))
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
