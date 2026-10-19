@@ -74,3 +74,7 @@ try { Array.prototype.toLocaleString.call(array, locales, options); }
 catch (error) { caught = error; }
 assert(caught === abrupt);
 assert(JSON.stringify(events), JSON.stringify(["get 0", "get method", "call", "convert"]));
+assert([1234.5].toLocaleString("en", {useGrouping: false, minimumFractionDigits: 2}), "1234.50");
+assert(new Float64Array([1234.5]).toLocaleString("en", {
+    useGrouping: false, minimumFractionDigits: 2
+}), "1234.50");
