@@ -608,6 +608,10 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_list_engine': files(
+      'test_intl_list_engine.c',
+      '../src/intl/list/native-engine.c',
+    ),
     'test_intl_locale_matching': files(
       'test_intl_locale_matching.c',
       '../src/intl/common/locale-grammar.c',
