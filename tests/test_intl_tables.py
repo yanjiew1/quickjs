@@ -26,6 +26,7 @@ from test_intl_number_symbols import Sources as SymbolSources
 from number_symbols import FIELDS as SYMBOL_FIELDS
 from test_intl_plural_rules import Sources as PluralSources
 from test_intl_number_patterns import Sources as PatternSources
+from test_intl_compact_patterns import Sources as CompactSources
 import number_patterns
 import number_pattern_syntax
 
@@ -76,6 +77,7 @@ class VerifiedFixture(Sources):
         self.files['common/dtd/ldml.dtd'] += b'<!ELEMENT minimumGroupingDigits (#PCDATA)>'
         self.files['common/dtd/ldml.dtd'] += b'<!ELEMENT pattern (#PCDATA)>'
         self.files['common/dtd/ldml.dtd'] += b'<!ATTLIST pattern type NMTOKEN "standard">'
+        self.files['common/dtd/ldml.dtd'] += b'<!ATTLIST pattern count NMTOKEN #IMPLIED>'
         for style in number_patterns.STYLES:
             for suffix, attributes in (('Formats', ('numberSystem',)),
                                        ('FormatLength', ('type',)), ('Format', ())):
@@ -90,6 +92,12 @@ class VerifiedFixture(Sources):
         root = ET.fromstring(self.files['common/main/root.xml'])
         root.find('numbers').extend(node for node in ET.fromstring(
             pattern_source.files['common/main/root.xml']).find('numbers') if node.tag in names)
+        compact_source = ET.fromstring(CompactSources().files['common/main/root.xml'])
+        for style in ('decimal', 'currency'):
+            path = './numbers/' + style + 'Formats[@numberSystem="latn"]'
+            root.find(path).extend(node for node in compact_source.find(path)
+                                   if node.tag == style + 'FormatLength' and
+                                   node.get('type') in ('short', 'long'))
         self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
         plural_source = PluralSources()
         self.files['common/dtd/ldmlSupplemental.dtd'] += (
@@ -149,6 +157,12 @@ class TableTests(unittest.TestCase):
             standard = next(values for locale, system, values in patterns['rows']
                             if locale == 'en' and system == 'latn')
             self.assertEqual(standard[0], number_pattern_syntax.compile_pattern('#,##0.###'))
+            compact = view['compact_patterns']
+            self.assertEqual(len(compact['rows']), len(view['locales']) * 78 * 3)
+            compact_map = next(compact['maps'][index] for locale, system, kind, index in compact['rows']
+                               if locale == 'en' and system == 'latn' and kind == 0)
+            self.assertIn(3, {pattern[1] for magnitude, count, variant, pattern in compact_map
+                              if magnitude == 3 and count == 'other' and variant == 'standard'})
             if profile == 'native':
                 self.assertEqual(fields[('ar', 'arab')]['decimal'], '\u066b')
                 self.assertEqual(fields[('fr', 'latn')]['group'], '\u202f')
@@ -226,6 +240,13 @@ class TableTests(unittest.TestCase):
             self.assertEqual(minimal_view['number_patterns'][field],
                              tuple(row for row in full_view['number_patterns'][field]
                                    if row[0] in minimal_view['locales']))
+        def compact_maps(view):
+            compact = view['compact_patterns']
+            return {(locale, system, kind): compact['maps'][index]
+                    for locale, system, kind, index in compact['rows']}
+        self.assertEqual(compact_maps(minimal_view),
+                         {key: value for key, value in compact_maps(full_view).items()
+                          if key[0] in minimal_view['locales']})
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
