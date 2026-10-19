@@ -348,7 +348,7 @@ The authored tests and authenticated CI audit exercise this source-only slice;
 collecting or packing these facts does not publish a NumberFormat constructor.
 
 Section 19 stores little-endian currency facts. Its directory count is the
-shared locale count. Nine header words contain schema version 1, code count,
+shared locale count. Nine header words contain schema version 2, code count,
 fraction-row count, vector count, map count and four default fraction values
 (regular digits/rounding, cash digits/rounding). Sorted code string references
 follow; the inventory includes supplemental-only codes as well as display data.
@@ -358,13 +358,19 @@ One shared-map index per locale precedes fixed-width maps with one vector
 reference per currency code. `0xffffffff` means no fields for that code.
 Sorted shared vectors contain sixteen fields: nine name-count forms in
 collector count order, then standard/narrow/formal/variant symbol, decimal,
-group and pattern. References distinguish absent (`0xffffffff`), blocked
+group and pattern, followed by one root-origin mask word. Only counted-name
+bits 1 through 8 are valid; a set bit requires a present field, including an
+explicit block or empty value. References distinguish absent (`0xffffffff`), blocked
 (`0xfffffffe`), explicitly empty (`0xfffffffd`) and nonempty pooled text.
 Inheritance/block markers cannot be encoded as ordinary text; all-absent
 vectors are redundant and rejected. Maps/vectors are canonical and completely
 referenced. Projection prunes unused maps; global fraction facts remain intact.
 The decoder checks defaults, ordering, extents and references before resolving
 semantic fields. No code-name text or plural-name fallback is synthesized.
+Origin participates in vector/map sharing and survives locale projection.
+Explicit child text clears root origin even when identical to inherited text;
+inheritance markers preserve it. This lets consumers exclude root for counted
+names while retaining root as a source for uncounted-name fallback.
 
 `src/intl/currency/data.c` validates that schema against an unchanged open
 data view and exposes borrowed exact code/field queries. It also returns the
@@ -372,6 +378,17 @@ stored default fraction facts for well-formed codes without a specific row,
 including unknown display codes. Queries allocate no memory. Temporary open
 validation memory is released on every path. The data owner does not select
 plural fallback, currency availability, display style or formatter behavior.
+
+`src/intl/currency/display.c` consumes those facts without allocation. Regular
+symbols fall back to the canonical supplied code; narrow symbols try the regular
+symbol first. Explicit empty strings succeed, while blocks allow the next field
+fallback without resurrecting the same field from a parent. After rounding,
+names try an applicable exact 0/1 selector, the supplied cardinal category,
+`other`, an uncounted name and finally the code. Counted names exclude terminal
+root sources; uncounted names may include them. Template selection is a separate
+consumer: a name's fallback does not change the template's category. Returned
+text borrows the immutable data or the caller's code; no currency availability
+decision or NumberFormat registration is implied by this helper.
 
 ## Number range and currency layouts
 
@@ -397,11 +414,15 @@ belong to later consumers. CI audits the authenticated full source inventory;
 this collector or its packed records establish no formatter capability.
 
 Section 20 has the shared locale count in its directory and four little-endian
-header words: schema version 1, numeric-system count, shared vector count and
+header words: schema version 2, numeric-system count, shared vector count and
 shared row count. Exact numeric numbering-definition indexes follow, then one
 shared-row index per locale. Each sorted unique row has one vector index per
 numeric system. Each sorted unique vector has nineteen string references in
-collector field order. Absent and blocked optional fields use `0xffffffff` and
+collector field order, followed by one root-origin mask word. Only currency-unit
+field bits 4 through 11 are valid, and absent fields cannot carry origin. Alias
+resolution records the terminal source locale; equal child overrides clear root
+origin. Selected-count template fallback can exclude root, while the `other`
+fallback can include it. Absent and blocked optional fields use `0xffffffff` and
 `0xfffffffe`; explicitly empty text uses string index zero. Required templates
 and match predicates cannot be absent, blocked or empty; required insertion
 text can be empty. Ordinary pooled references cannot contain inheritance or
