@@ -12,10 +12,13 @@ import bundle
 import generate
 import locale_metadata
 import locale_tables
+import preferences
+import preference_tables
 import tables
 from test_intl_list_patterns import Sources, graph
 from test_intl_parents import DTD as PARENT_DTD
 from test_intl_locale_metadata import Sources as MetadataSources
+from test_intl_preferences import Sources as PreferenceSources
 
 
 class VerifiedFixture(Sources):
@@ -36,6 +39,10 @@ class VerifiedFixture(Sources):
                     'common/dtd/ldmlBCP47.dtd', 'common/dtd/ldmlSupplemental.dtd',
                     'common/supplemental/supplementalMetadata.xml'):
                 self.files[name] = value
+        preference_source = PreferenceSources()
+        self.files['common/dtd/ldmlSupplemental.dtd'] += preference_source.files['common/dtd/ldmlSupplemental.dtd']
+        for name in ('common/supplemental/supplementalData.xml', 'common/properties/scriptMetadata.txt'):
+            self.files[name] = preference_source.files[name]
         self.consumed = set()
         self.pin = {'release': 'authored-fixture', 'commit': '0' * 40,
                     'archive': {'sha256': '0' * 64}}
@@ -115,6 +122,7 @@ class TableTests(unittest.TestCase):
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
+        self.assertEqual(full_view['preferences'], minimal_view['preferences'])
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
         changed = VerifiedFixture()
@@ -126,6 +134,46 @@ class TableTests(unittest.TestCase):
         self.assertEqual(acquire.json_bytes(manifest), original)
         for name in ('supplementalData', 'supplementalMetadata', 'likelySubtags'):
             self.assertIn('common/supplemental/' + name + '.xml', manifest['inputs']['sources'])
+
+    def test_preference_wire_roundtrip_and_invalid_fields(self):
+        value = preferences.collect(PreferenceSources())
+        pool = tuple(sorted(preference_tables.strings(value) |
+                            {'bad', 'h12 h12', 'gregorian gregorian', 'h99', 'abcd-Latn-US'}))
+        ids = {text: index for index, text in enumerate(pool)}
+        sections = preference_tables.encode(value, ids)
+        self.assertEqual(preference_tables.decode(sections, pool), value)
+        self.assertIsNone(preference_tables.decode({}, pool))
+        for identity in preference_tables.SECTIONS:
+            changed = dict(sections)
+            del changed[identity]
+            with self.assertRaises(ValueError):
+                preference_tables.decode(changed, pool)
+        changes = ((bundle.WEEKS, 0, ids['bad']), (bundle.WEEKS, 1, 0),
+                   (bundle.WEEKS, 2, 8), (bundle.WEEKS, 3, 0), (bundle.WEEKS, 3, 128),
+                   (bundle.CALENDAR_PREFERENCES, 0, ids['abcd-Latn-US']),
+                   (bundle.CALENDAR_PREFERENCES, 1, ids['gregorian gregorian']),
+                   (bundle.HOUR_PREFERENCES, 1, ids['h12 h12']),
+                   (bundle.HOUR_PREFERENCES, 1, ids['h99']),
+                   (bundle.HOUR_PREFERENCES, 2, 0),
+                   (bundle.SCRIPT_DIRECTIONS, 0, ids['bad']),
+                   (bundle.SCRIPT_DIRECTIONS, 1, 3))
+        for identity, word, replacement in changes:
+            changed = dict(sections)
+            count, raw = sections[identity]
+            values = list(tables.read_words(raw))
+            values[word] = replacement
+            changed[identity] = count, tables.words(values)
+            with self.assertRaises(ValueError, msg=repr((identity, word, replacement))):
+                preference_tables.decode(changed, pool)
+        for identity, width in ((bundle.WEEKS, 4), (bundle.CALENDAR_PREFERENCES, 3),
+                                 (bundle.HOUR_PREFERENCES, 3), (bundle.SCRIPT_DIRECTIONS, 2)):
+            count, raw = sections[identity]
+            for replacement in ((count, raw[:-1]), (count - 1, raw),
+                                (count, raw[:width * 4] * count)):
+                changed = dict(sections)
+                changed[identity] = replacement
+                with self.assertRaises(ValueError):
+                    preference_tables.decode(changed, pool)
 
     def test_list_table_extents_ids_patterns_and_canonical_sets(self):
         strings = ('', '{0} & {1}', '{0} + {1}', '{0} invalid {2}')
