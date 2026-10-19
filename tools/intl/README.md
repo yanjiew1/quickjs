@@ -817,6 +817,29 @@ Ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
+### Number range rendering
+
+`number/range.c` composes complete endpoint results without numeric comparison
+or JS coercion. Its strict native layout parser extracts the nonempty scalar
+separator from `{0}<separator>{1}`; other layouts are rejected explicitly.
+Unequal UTF-16 strings retain every endpoint part, with `startRange`/`endRange`
+sources and a shared literal separator. The initial collapse policy returns
+that sequence unchanged, as explicitly permitted by ECMA-402.
+
+Equal strings retain the first endpoint's part structure and receive the whole
+approximation sign as a prefix, with every source shared. An empty sign adds no
+part. This is the native adapter's initial ILND placement policy, not a claim
+to implement TR35's sign-slot placement. Modern approximation uses the selected
+numeric symbols' `approximatelySign`, not the obsolete miscellaneous
+approximately pattern. Endpoint formatting and NaN rejection belong to the
+service; this rendering prerequisite does not register the JavaScript API.
+
+Range parts have their own source-bearing record; ordinary result parts remain
+unchanged. The shared scalar text writer supplies UTF-16 encoding and bounds,
+while the number range owner assigns types/sources. Results own two final arrays,
+retain empty endpoint parts and survive input lifetimes. Both allocation errors
+reset the result and release partial storage.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side

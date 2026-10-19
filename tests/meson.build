@@ -1094,6 +1094,12 @@ standalone = {
     'test_intl_number_body.c',
     '../src/intl/number/body.c',
   ],
+  'test_intl_number_range': [
+    'test_intl_number_range.c',
+    '../src/intl/number/range.c',
+    '../src/intl/common/format-builder.c',
+    '../src/cutils/cutils.c',
+  ],
   'test_intl_unit_identifier': [
     'test_intl_unit_identifier.c',
     '../src/intl/unit/identifier.c',

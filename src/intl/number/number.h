@@ -110,4 +110,7 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *);
 QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *,
                                      const QJSIntlMathematicalValue *, QJSIntlFormatted *);
 void qjs_intl_number_result_clear(const QJSIntlAllocator *, QJSIntlFormatted *);
+/* Range results own text and source-tagged parts. Clear with the creating
+   allocator; NULL and already-cleared results are harmless. */
+void qjs_intl_number_range_result_clear(const QJSIntlAllocator *, QJSIntlFormattedRange *);
 #endif
