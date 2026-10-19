@@ -154,6 +154,23 @@ inventory. Each service establishes its own supported records before calling
 this helper. Default-locale policy, best-fit matching and option/extension
 resolution are separate operations.
 
+## Native list pattern engine
+
+`src/intl/list/native-engine.c` expands checked pair/start/middle/end templates
+into exact UTF-16 text and element/literal spans. It preserves empty elements,
+embedded NUL and unpaired surrogates. An iterative right-tail traversal avoids
+recursive expansion and repeated copies of already formatted tails.
+
+Context templates support Spanish conjunction/disjunction and Hebrew Script
+rules. The Spanish numeric-prefix scanner covers grouped thousands and decimal
+fractions from the CLDR rules, cross-checked against ICU4X. Context predicates
+adapted from ICU retain their attribution and the shipped `src/intl/LICENSE-ICU`.
+Data selection must enable replacements only for the matching pair/end template.
+
+This is an engine-independent formatter component, not yet the JavaScript
+ListFormat service. Its tests cover output partitions, unusual UTF-16, ownership,
+long lists, malformed templates, overflow and allocation failure.
+
 ## Binary envelope
 
 `bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.

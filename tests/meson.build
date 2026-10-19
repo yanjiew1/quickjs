@@ -301,6 +301,10 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_list_engine': [
+    'test_intl_list_engine.c',
+    '../src/intl/list/native-engine.c',
+  ],
   'test_intl_locale_matching': [
     'test_intl_locale_matching.c',
     '../src/intl/common/locale-grammar.c',
