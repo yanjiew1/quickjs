@@ -568,6 +568,27 @@ test(
   timeout: 30,
 )
 
+intl_duration_decimal_test = executable(
+  'test_intl_duration_decimal',
+  [
+    'test_intl_duration_decimal.c',
+    '../src/intl/duration/decimal.c',
+    '../src/temporal/duration.c',
+    '../src/temporal/epoch.c',
+    '../src/temporal/options.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-duration-decimal',
+  intl_duration_decimal_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_duration_digital_test = executable(
   'test_intl_duration_digital',
   [

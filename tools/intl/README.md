@@ -1391,3 +1391,12 @@ explicitly objects to the style override. Its merge
 `835300f1ee7a0a739ee2205dea2bae2657e67983` did not add a guard. The projection
 preserves source facts without silently resolving that observable option-policy
 contradiction. References reviewed 2026-10-19.
+
+`duration/decimal.[ch]` converts a validated duration component into an exact
+mathematical decimal for NumberFormat. It combines fractional second fields
+using checked portable 128-bit integers before inserting the decimal point;
+it never adds or divides them as binary64 values. This preserves nanoseconds
+next to large seconds and integral field magnitudes beyond `int64_t`.
+The helper allocates nothing and leaves rounding, visible fractional precision
+and displayed-negative-zero policy to its consumer. Its shared native duration
+arithmetic does not require Temporal JavaScript constructors.

@@ -121,6 +121,7 @@ if intl_enabled
     'intl/currency/data.c',
     'intl/currency/display.c',
     'intl/duration/data.c',
+    'intl/duration/decimal.c',
     'intl/duration/format.c',
     'intl/duration/native-digital.c',
     'intl/locale/identifier.c',
