@@ -50,6 +50,30 @@ static QJSIntlStatus spacing(const QJSIntlNumberLayouts *layouts, unsigned int s
     return QJS_INTL_OK;
 }
 
+QJSIntlStatus qjs_intl_number_currency_spacing(const QJSIntlNumberLayouts *layouts,
+                                              const QJSIntlCurrencyBoundary *boundary,
+                                              QJSIntlBytes *before, QJSIntlBytes *after)
+{
+    QJSIntlBytes before_text = {0}, after_text = {0};
+    QJSIntlStatus status;
+    if (before)
+        *before = before_text;
+    if (after)
+        *after = after_text;
+    if (!layouts || !boundary || !before || !after)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = spacing(layouts, QJS_INTL_LAYOUT_CURRENCY_BEFORE_MATCH,
+                     boundary->spacing_after_number, &before_text);
+    if (!status)
+        status = spacing(layouts, QJS_INTL_LAYOUT_CURRENCY_AFTER_MATCH,
+                         boundary->spacing_before_number, &after_text);
+    if (!status) {
+        *before = before_text;
+        *after = after_text;
+    }
+    return status;
+}
+
 QJSIntlStatus qjs_intl_number_currency_pattern(const QJSIntlNumberPatternData *patterns,
                                               const QJSIntlCurrencyData *currencies,
                                               const QJSIntlNumberLayoutData *layouts,
@@ -116,11 +140,8 @@ QJSIntlStatus qjs_intl_number_currency_pattern(const QJSIntlNumberPatternData *p
     }
     status = qjs_intl_number_layouts_at(layouts, locale, system, &spacing_layouts);
     if (!status)
-        status = spacing(&spacing_layouts, QJS_INTL_LAYOUT_CURRENCY_BEFORE_MATCH,
-                         boundary.spacing_after_number, &result.before_currency);
-    if (!status)
-        status = spacing(&spacing_layouts, QJS_INTL_LAYOUT_CURRENCY_AFTER_MATCH,
-                         boundary.spacing_before_number, &result.after_currency);
+        status = qjs_intl_number_currency_spacing(&spacing_layouts, &boundary,
+                                                   &result.before_currency, &result.after_currency);
     if (!status)
         *out = result;
     return status;
