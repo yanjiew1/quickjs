@@ -117,7 +117,9 @@ class CompactPatternTests(unittest.TestCase):
         general = {tags[i]: tags[i+1] for i in range(len(tags)-1)}
         general[tags[-1]] = 'root'
         parents = ParentGraph(tags + ('root',), general, {}, {'und': 'en-Latn-US'}, (), False)
-        records = compact.Maps(parents, ('latn', 'mathbold'))
+        records = compact.SparseMaps(parents,
+                                     ((system, style, width) for system in ('latn', 'mathbold')
+                                      for style, width in compact.KINDS), 'compact')
         key = ('latn', 'decimal', 'short')
         records.add('root', key, (3, 'other', 'standard'), '0K')
         records.alias('root', ('mathbold', 'decimal', 'short'), key, None)
