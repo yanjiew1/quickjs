@@ -37,12 +37,13 @@ class NumberPatternTableTests(unittest.TestCase):
         expected = dict(data, rows=tuple((locale, system, tuple(
             value if value in (None, BLOCK, '') else syntax.compile_pattern(value)
             for value in values)) for locale, system, values in data['rows']))
-        self.assertEqual(result, {key: expected[key] for key in ('systems', 'fields', 'rows', 'grouping')})
+        self.assertEqual(result, dict({key: expected[key] for key in ('systems', 'fields', 'rows', 'grouping')},
+                                      overrides=()))
         fields = {(locale, system): values for locale, system, values in result['rows']}
         self.assertEqual(fields[('en', 'latn')][5:], (BLOCK, BLOCK, '', ''))
         self.assertEqual(fields[('root', 'latn')][5:], (None,) * 4)
         self.assertEqual(fields[('en', 'latn')], fields[('en', 'mathbold')])
-        header = struct.unpack_from('<7I', section[1])
+        header = struct.unpack_from('<8I', section[1])
         self.assertEqual(header[:4], (wire.VERSION, 2, 2, 2))
         self.assertLess(header[4], len(data['rows']) * wire.WIDTH)
         self.assertIsNone(wire.decode(None, pool, graph().tags, definitions))
@@ -70,7 +71,7 @@ class NumberPatternTableTests(unittest.TestCase):
     def test_corrupt_dimensions_references_and_tokens(self):
         data, definitions, pool, ids = self.fixture()
         count, raw = wire.encode(data, graph().tags, definitions, ids)
-        version, systems, vectors, rows, patterns, affixes, tokens = struct.unpack_from('<7I', raw)
+        version, systems, vectors, rows, patterns, affixes, tokens, overrides = struct.unpack_from('<8I', raw)
         maps = wire.HEADER + systems
         row_start = maps + 2 * count
         vector_start = row_start + rows * systems
@@ -101,6 +102,28 @@ class NumberPatternTableTests(unittest.TestCase):
                         (count, bytes(wire.HEADER * 4 - 4))):
             with self.assertRaises(ValueError):
                 wire.decode(section, pool, graph().tags, definitions)
+
+    def test_legacy_currency_patterns_share_compiled_owner(self):
+        data, definitions, pool, ids = self.fixture()
+        raw_overrides = ("#,##0.###", "0.00 ¤¤", "¤'legacy'0.0;¤'legacy'0.0-")
+        data = dict(data, overrides=raw_overrides)
+        pool = tuple(sorted(wire.strings(data) | {''}, key=lambda s: s.encode('utf-8')))
+        ids = {text: index for index, text in enumerate(pool)}
+        count, raw = wire.encode(data, graph().tags, definitions, ids)
+        decoded = wire.decode((count, raw), pool, graph().tags, definitions)
+        self.assertEqual(decoded['overrides'], tuple((value, syntax.compile_pattern(value))
+                                                     for value in raw_overrides))
+        header = struct.unpack_from('<8I', raw)
+        start = wire.HEADER + header[1] + 2 * count + header[3] * header[1] + header[2] * wire.WIDTH
+        for at, value in ((7, 0), (7, 4), (start, 0), (start, len(pool)),
+                          (start + 1, header[4]), (start + 2, ids[raw_overrides[0]])):
+            changed = bytearray(raw)
+            struct.pack_into('<I', changed, at * 4, value)
+            with self.assertRaises(ValueError, msg=str((at, value))):
+                wire.decode((count, bytes(changed)), pool, graph().tags, definitions)
+        for values in ((raw_overrides[0],) * 2, tuple(reversed(raw_overrides)), ('',), (BLOCK,)):
+            with self.assertRaises(ValueError):
+                wire.strings(dict(data, overrides=values))
 
 
 if __name__ == '__main__':
