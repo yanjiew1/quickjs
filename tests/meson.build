@@ -1298,6 +1298,13 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_currency_boundary': files(
+      'test_intl_currency_boundary.c',
+      '../src/intl/currency/boundary.c',
+      '../src/unicode/category.c',
+    ) + unicode_tables + files(
+      '../src/cutils/cutils.c',
+    ),
     'test_intl_number_affix': files(
       'test_intl_number_affix.c',
       '../src/intl/number/affix.c',
@@ -1376,6 +1383,7 @@ standalone += {
   ),
   'test_unicode': files(
     'test_unicode.c',
+    '../src/unicode/category.c',
     '../src/unicode/libunicode.c',
   ) + unicode_tables + files(
     '../src/cutils/cutils.c',
