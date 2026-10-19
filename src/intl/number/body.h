@@ -2,14 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_NUMBER_BODY_H
 #define QJS_INTL_NUMBER_BODY_H
-#include "../common/format.h"
-
-typedef enum QJSIntlNumberGrouping {
-    QJS_INTL_NUMBER_GROUP_OFF,
-    QJS_INTL_NUMBER_GROUP_AUTO,
-    QJS_INTL_NUMBER_GROUP_ALWAYS,
-    QJS_INTL_NUMBER_GROUP_MIN2
-} QJSIntlNumberGrouping;
+#include "number.h"
 
 typedef struct QJSIntlNumberBody {
     uint32_t digits[10]; /* Distinct Unicode scalars for ASCII digits 0..9. */
