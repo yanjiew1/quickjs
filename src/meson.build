@@ -120,42 +120,32 @@ windows_timezone_data_sources = []
 
 # The coordinator also provides disabled-build public API stubs.
 engine_sources += files(
+  'quickjs/builtins/intl/core.c',
   'quickjs/builtins/temporal/common.c',
   'quickjs/default-time-zone.c',
 )
-if get_option('temporal')
-  engine_sources += files('quickjs/builtins/duration-value.c')
+if intl_enabled
   engine_sources += files(
-    'quickjs/builtins/temporal/calendar-fields.c',
-    'quickjs/builtins/temporal/duration.c',
-    'quickjs/builtins/temporal/instant.c',
-    'quickjs/builtins/temporal/now.c',
-    'quickjs/builtins/temporal/options.c',
-    'quickjs/builtins/temporal/plain-time.c',
-    'quickjs/builtins/temporal/plain.c',
-    'quickjs/builtins/temporal/zoned-arithmetic.c',
-    'quickjs/builtins/temporal/zoned-date-time.c',
+    'quickjs/builtins/intl/locale-list.c',
   )
+  support_sources += files(
+    'intl/common/locale-grammar.c',
+    'intl/locale/native.c',
+    'intl/locale/native-data.c',
+    'intl/locale/native-id.c',
+    'intl/native/data.c',
+    'intl/native/pack.c',
+  )
+  data_sources += intl_data
+endif
+if get_option('temporal') or intl_enabled
+  engine_sources += files('quickjs/builtins/duration-value.c')
   support_sources += files(
     'calendar/calendar.c',
     'calendar/iso.c',
-    'temporal/calendar.c',
-    'temporal/civil.c',
-    'temporal/clock.c',
     'temporal/duration.c',
     'temporal/epoch.c',
-    'temporal/format.c',
-    'temporal/iso.c',
-    'temporal/noniso-arithmetic.c',
-    'temporal/noniso-calendar.c',
     'temporal/options.c',
-    'temporal/parse.c',
-    'temporal/relative.c',
-    'temporal/time.c',
-    'temporal/time-zone.c',
-    'timezone/identifier.c',
-    'timezone/system-zone.c',
-    'timezone/timezone.c',
   )
   if get_option('calendars') == 'native'
     support_sources += files(
@@ -174,6 +164,39 @@ if get_option('temporal')
   else
     support_sources += files('calendar/calendar-minimal.c')
   endif
+endif
+if get_option('temporal')
+  engine_sources += files(
+    'quickjs/builtins/temporal/calendar-fields.c',
+    'quickjs/builtins/temporal/duration.c',
+    'quickjs/builtins/temporal/instant.c',
+    'quickjs/builtins/temporal/now.c',
+    'quickjs/builtins/temporal/options.c',
+    'quickjs/builtins/temporal/plain-time.c',
+    'quickjs/builtins/temporal/plain.c',
+    'quickjs/builtins/temporal/zoned-arithmetic.c',
+    'quickjs/builtins/temporal/zoned-date-time.c',
+  )
+  support_sources += files(
+    'temporal/calendar.c',
+    'temporal/civil.c',
+    'temporal/clock.c',
+    'temporal/format.c',
+    'temporal/iso.c',
+    'temporal/noniso-arithmetic.c',
+    'temporal/noniso-calendar.c',
+    'temporal/parse.c',
+    'temporal/relative.c',
+    'temporal/time.c',
+    'temporal/time-zone.c',
+  )
+endif
+if get_option('temporal') or intl_enabled
+  support_sources += files(
+    'timezone/identifier.c',
+    'timezone/system-zone.c',
+    'timezone/timezone.c',
+  )
   if get_option('timezone_backend') == 'native'
     support_sources += files(
       'timezone/timezone-native.c',
@@ -186,3 +209,4 @@ if get_option('temporal')
     support_sources += files('timezone/timezone-minimal.c')
   endif
 endif
+
