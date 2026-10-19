@@ -3,10 +3,12 @@
 #include "../native/wire.h"
 #include <string.h>
 
-#define HEADER_WORDS 4
+#define HEADER_WORDS 5
 #define ABSENT UINT32_C(0xffffffff)
 #define BLOCKED UINT32_C(0xfffffffe)
 #define VECTOR_WORDS (QJS_INTL_LAYOUT_FIELD_COUNT + 1)
+#define CURRENCY_WORDS (QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT + 1)
+#define CURRENCY_ROOT_MASK ((UINT32_C(1) << QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT) - 1)
 #define ROOT_UNIT_MASK ((UINT32_C(1) << (QJS_INTL_LAYOUT_CURRENCY_UNIT_OTHER + 1)) - \
                         (UINT32_C(1) << QJS_INTL_LAYOUT_CURRENCY_UNIT_EXACT_ZERO))
 
@@ -76,18 +78,23 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
                               &result.section) ||
         !result.section.count || result.section.count != numbering->data.locales.count ||
         result.section.length % 4 || result.section.length < HEADER_WORDS * 4 ||
-        word(result.section.bytes, 0) != 2)
+        word(result.section.bytes, 0) != 3)
         return status;
     result.system_count = word(result.section.bytes, 1);
     result.vector_count = word(result.section.bytes, 2);
     result.row_count = word(result.section.bytes, 3);
+    result.currency_vector_count = word(result.section.bytes, 4);
     if (!result.system_count || !result.row_count || result.row_count > result.section.count ||
+        !result.currency_vector_count || result.currency_vector_count > result.section.count ||
         !result.vector_count || qjs_intl_data_string(&numbering->data, 0, &empty) || empty.length ||
         !take(&result.section, &at, result.system_count, 1, &result.systems) ||
         !take(&result.section, &at, result.section.count, 1, &result.locale_rows) ||
         !take(&result.section, &at, result.row_count, result.system_count, &result.rows) ||
         !take(&result.section, &at, result.vector_count, VECTOR_WORDS,
               &result.vectors) ||
+        !take(&result.section, &at, result.section.count, 1, &result.currency_locale_vectors) ||
+        !take(&result.section, &at, result.currency_vector_count, CURRENCY_WORDS,
+              &result.currency_vectors) ||
         at != result.section.length / 4 ||
         result.vector_count > (size_t)result.row_count * result.system_count)
         return status;
@@ -103,10 +110,11 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
     }
     if (numeric != result.system_count ||
         !ordered(result.rows, result.row_count, result.system_count) ||
-        !ordered(result.vectors, result.vector_count, VECTOR_WORDS))
+        !ordered(result.vectors, result.vector_count, VECTOR_WORDS) ||
+        !ordered(result.currency_vectors, result.currency_vector_count, CURRENCY_WORDS))
         return status;
-    /* The two counts fit disjoint word ranges already bounded above. */
-    scratch = (size_t)result.row_count + result.vector_count;
+    /* All three counts fit disjoint word ranges already bounded above. */
+    scratch = (size_t)result.row_count + result.vector_count + result.currency_vector_count;
     used = allocator->malloc(allocator->opaque, scratch);
     if (!used)
         return QJS_INTL_NO_MEMORY;
@@ -116,6 +124,10 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
         if (index >= result.row_count)
             goto done;
         used[index] = 1;
+        index = word(result.currency_locale_vectors, i);
+        if (index >= result.currency_vector_count)
+            goto done;
+        used[(size_t)result.row_count + result.vector_count + index] = 1;
     }
     for (i = 0; i < (size_t)result.row_count * result.system_count; i++) {
         uint32_t index = word(result.rows, i);
@@ -145,6 +157,22 @@ QJSIntlStatus qjs_intl_number_layout_data_open(const QJSIntlNumberingData *numbe
             if (qjs_intl_data_string(&numbering->data, reference, &text) || unresolved(text) ||
                 (!text.length && required(field) && field != QJS_INTL_LAYOUT_CURRENCY_BEFORE_INSERT &&
                  field != QJS_INTL_LAYOUT_CURRENCY_AFTER_INSERT))
+                goto done;
+        }
+    }
+    for (i = 0; i < result.currency_vector_count; i++) {
+        unsigned int field;
+        uint32_t mask = word(result.currency_vectors,
+                             i * CURRENCY_WORDS + QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT);
+        if (mask & ~CURRENCY_ROOT_MASK)
+            goto done;
+        for (field = 0; field < QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT; field++) {
+            uint32_t reference = word(result.currency_vectors, i * CURRENCY_WORDS + field);
+            QJSIntlBytes text;
+            if ((mask & (UINT32_C(1) << field)) && reference == ABSENT)
+                goto done;
+            if (reference != ABSENT && reference != BLOCKED &&
+                (qjs_intl_data_string(&numbering->data, reference, &text) || unresolved(text)))
                 goto done;
         }
     }
@@ -187,6 +215,31 @@ QJSIntlStatus qjs_intl_number_layouts_at(const QJSIntlNumberLayoutData *data, ui
             out->fields[i].state = QJS_INTL_LAYOUT_BLOCKED;
         else
             qjs_intl_data_string(&data->numbering.data, value, &out->fields[i].text);
+    }
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_currency_unit_layouts_at(const QJSIntlNumberLayoutData *data, uint32_t locale,
+                                                QJSIntlCurrencyUnitLayouts *out)
+{
+    uint32_t vector, mask;
+    unsigned int i;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !data || !data->section.bytes || locale >= data->section.count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    vector = word(data->currency_locale_vectors, locale);
+    mask = word(data->currency_vectors, (size_t)vector * CURRENCY_WORDS +
+                                       QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT);
+    for (i = 0; i < QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT; i++) {
+        uint32_t reference = word(data->currency_vectors, (size_t)vector * CURRENCY_WORDS + i);
+        out->fields[i].from_root = (mask >> i) & 1;
+        if (reference == ABSENT)
+            out->fields[i].state = QJS_INTL_LAYOUT_ABSENT;
+        else if (reference == BLOCKED)
+            out->fields[i].state = QJS_INTL_LAYOUT_BLOCKED;
+        else
+            qjs_intl_data_string(&data->numbering.data, reference, &out->fields[i].text);
     }
     return QJS_INTL_OK;
 }
