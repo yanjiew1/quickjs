@@ -92,11 +92,29 @@ static void check_corruption(const QJSIntlNumberLayoutData *owner,
     size_t locales = owner->locale_rows - data->pack.bytes;
     size_t i, last = 0;
     uint8_t *copy;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < 5; i++) {
         corrupt(allocator, header + i * 4, 0);
         corrupt(allocator, header + i * 4, UINT32_MAX);
     }
     corrupt(allocator, header, 1);
+    corrupt(allocator, header, 2);
+    corrupt(allocator, owner->currency_locale_vectors - data->pack.bytes, owner->currency_vector_count);
+    corrupt(allocator, owner->currency_vectors - data->pack.bytes, data->strings.count);
+    corrupt(allocator, owner->currency_vectors - data->pack.bytes + QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT * 4,
+            UINT32_C(1) << QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT);
+    for (i = 0; i < owner->currency_vector_count; i++) {
+        unsigned int field;
+        const uint8_t *vector = owner->currency_vectors + i * (QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT + 1) * 4;
+        for (field = 0; field < QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT; field++) {
+            if (qjs_intl_read_u32(vector + field * 4) == UINT32_MAX) {
+                corrupt(allocator, vector - data->pack.bytes + QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT * 4,
+                        qjs_intl_read_u32(vector + QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT * 4) | (UINT32_C(1) << field));
+                break;
+            }
+        }
+        if (field < QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT)
+            break;
+    }
     corrupt(allocator, vectors + QJS_INTL_LAYOUT_FIELD_COUNT * 4, 1);
     for (i = 0; i < owner->vector_count; i++) {
         unsigned int field;
@@ -183,6 +201,7 @@ int main(void)
     QJSIntlNumberingData numbering;
     QJSIntlNumberLayoutData owner, retry;
     QJSIntlNumberLayouts values;
+    QJSIntlCurrencyUnitLayouts currency;
     uint32_t latin, mathbold, en, i;
     size_t calls;
     uint8_t *unaligned = malloc(qjs_intl_native_length + 1);
@@ -198,7 +217,15 @@ int main(void)
     calls = state.calls;
     assert(!qjs_intl_number_layouts_at(&owner, en, latin, &values));
     assert(equal(values.fields[QJS_INTL_LAYOUT_APPROXIMATELY].text, "~{0}"));
+    assert(!qjs_intl_currency_unit_layouts_at(&owner, en, &currency));
+    assert(equal(currency.fields[QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT - 1].text, "{0} {1}"));
     if (TEST_INTL_AUTHORED) {
+        assert(currency.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_ONE - QJS_INTL_LAYOUT_CURRENCY_UNIT_EXACT_ZERO].state ==
+               QJS_INTL_LAYOUT_BLOCKED);
+        assert(currency.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_TWO - QJS_INTL_LAYOUT_CURRENCY_UNIT_EXACT_ZERO].state ==
+               QJS_INTL_LAYOUT_VALUE);
+        assert(!currency.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_TWO - QJS_INTL_LAYOUT_CURRENCY_UNIT_EXACT_ZERO].text.length);
+        assert(currency.fields[QJS_INTL_CURRENCY_UNIT_LAYOUT_COUNT - 1].from_root);
         assert(values.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_OTHER].from_root);
         assert(!values.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_ONE].from_root);
         assert(!values.fields[QJS_INTL_LAYOUT_CURRENCY_UNIT_TWO].from_root);
@@ -247,6 +274,11 @@ int main(void)
            QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_number_layouts_at(NULL, en, latin, &values) == QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_number_layouts_at(&owner, en, latin, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    memset(&currency, 0xff, sizeof(currency));
+    assert(qjs_intl_currency_unit_layouts_at(&owner, data.locales.count, &currency) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!currency.fields[0].text.data && !currency.fields[0].from_root);
+    assert(qjs_intl_currency_unit_layouts_at(NULL, en, &currency) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_currency_unit_layouts_at(&owner, en, NULL) == QJS_INTL_INVALID_ARGUMENT);
     assert(state.calls == calls);
     state.fail_at = state.calls + 1;
     assert(qjs_intl_number_layout_data_open(&numbering, &allocator, &retry) == QJS_INTL_NO_MEMORY);
