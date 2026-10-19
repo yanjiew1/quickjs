@@ -990,6 +990,14 @@ test(
 )
 
 test(
+  'intl-locale-preferences',
+  python,
+  args: files('test_intl_preferences.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-locale-metadata',
   python,
   args: files('test_intl_locale_metadata.py'),

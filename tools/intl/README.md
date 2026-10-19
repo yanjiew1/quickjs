@@ -102,6 +102,25 @@ Unknown relevant structures, mixed aliases, duplicate fields and missing or
 blocked required templates are errors. These templates do not alone implement
 context-sensitive list behavior or install a JavaScript formatter.
 
+## Region and script preferences
+
+```sh
+python3 tools/intl/preferences.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The preference collector reads regional week boundaries, calendar orders,
+language/region hour-cycle overrides, and script direction metadata. World
+week defaults fill missing fields; wraparound weekends become sorted ISO
+weekday lists. Standard first-day records take precedence over alternate
+variants. Hour cycles retain the preferred cycle first and deduplicate the
+remaining allowed patterns without losing their preference order. Unknown
+script direction remains distinct from left-to-right.
+
+These source records do not establish formatter availability. Consumers still
+apply locale region/subdivision precedence, calendar aliases and supported
+calendar/formatter capabilities. Tests use authored fixtures and need no
+network access.
+
 ## Binary envelope
 
 `bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.
