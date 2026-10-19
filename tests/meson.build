@@ -880,6 +880,14 @@ test(
 )
 
 test(
+  'intl-locale-inheritance',
+  python,
+  args: files('test_intl_parents.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-xml-schema',
   python,
   args: files('test_intl_xml.py'),

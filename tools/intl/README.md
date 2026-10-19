@@ -63,3 +63,20 @@ their semantic order instead of being sorted by an unordered record key.
 The audit checks the three pinned attribute schemas and well-formedness of
 main, BCP47 and supplemental XML. It reports counts separately from service
 coverage. `tests/test_intl_xml.py` exercises authored schema/XML fixtures.
+
+## Locale inheritance graph
+
+```sh
+python3 tools/intl/parents.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The shared graph retains source locale identities, default-content locales,
+likely subtags and main/component parent overrides. Component maps stand alone,
+including empty maps. The `nonlikelyScript` rule applies to every matching
+language/script pair, rather than just its migration examples. Explicit parent
+exceptions take precedence. Parent chains must terminate at root without cycles.
+
+Graph nodes and source XML filenames are not advertised service availability.
+Each collector still establishes its own complete records and capabilities.
+`tests/test_intl_parents.py` checks authored graphs, including exceptions,
+component independence and rules outside the listed migration examples.
