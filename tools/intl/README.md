@@ -1506,3 +1506,18 @@ requesting locale for `source="locale"`, so an inherited narrow-to-short-to-long
 alias can resolve the child's long label. There is no automatic width or
 alternate substitution beyond source aliases. Authored tests cover every code,
 widths, alternate labels, aliases, provenance, markers and structural rejection.
+
+Section 25 stores these shared labels as little-endian words. Four header words
+contain schema version 1, alternate count, row count and record count, followed
+by pooled alternate identifiers and one row index per shared locale. A row has
+twelve fields × three widths × alternate-count record references in that order.
+Rows and six-word records are sorted and deduplicated, and every encoded row
+and record must be used.
+
+A record contains state, pooled text, pooled terminal locale, terminal field,
+width and alternate indexes. The missing record is all zeroes. Present empty
+text and blocked records retain their terminal identity. Projection retains
+source locales outside the selected display-locale profile. Codec tests cover
+roundtrips through the generic pack validator, projection, bad dimensions,
+references, ordering, unused entries and noncanonical missing records. Prepared
+packs gain the section when the corresponding native C owner is integrated.
