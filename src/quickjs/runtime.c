@@ -49,6 +49,7 @@
 #include "builtins/array-buffer.h"
 #include "builtins/string.h"
 #include "builtins/temporal.h"
+#include "builtins/intl.h"
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */
@@ -487,6 +488,9 @@ void JS_FreeRuntime(JSRuntime *rt)
 #ifdef CONFIG_TEMPORAL
     js_free_rt(rt, rt->default_time_zone);
 #endif
+#ifdef CONFIG_INTL
+    qjs_intl_locale_close(rt->intl_locale);
+#endif
 
     /* free the classes */
     for(i = 0; i < rt->class_count; i++) {
@@ -642,6 +646,9 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
 #ifdef CONFIG_TEMPORAL
     ctx->temporal_intrinsics = JS_UNDEFINED;
 #endif
+#ifdef CONFIG_INTL
+    ctx->intl_intrinsics = JS_UNDEFINED;
+#endif
     ctx->promise_ctor = JS_NULL;
     init_list_head(&ctx->loaded_modules);
     ctx->module_load_request = NULL;
@@ -663,6 +670,9 @@ JSContext *JS_NewContext(JSRuntime *rt)
 
     if (JS_AddIntrinsicBaseObjects(ctx) ||
         JS_AddIntrinsicDate(ctx) ||
+#ifdef CONFIG_INTL
+        JS_AddIntrinsicIntl(ctx) ||
+#endif
 #ifdef CONFIG_TEMPORAL
         JS_AddIntrinsicTemporal(ctx) ||
 #endif
@@ -732,6 +742,9 @@ void JS_MarkContext(JSRuntime *rt, JSContext *ctx,
     JS_MarkValue(rt, ctx->regexp_ctor, mark_func);
 #ifdef CONFIG_TEMPORAL
     JS_MarkValue(rt, ctx->temporal_intrinsics, mark_func);
+#endif
+#ifdef CONFIG_INTL
+    JS_MarkValue(rt, ctx->intl_intrinsics, mark_func);
 #endif
     JS_MarkValue(rt, ctx->function_ctor, mark_func);
     JS_MarkValue(rt, ctx->function_proto, mark_func);
@@ -811,6 +824,9 @@ void JS_FreeContext(JSContext *ctx)
     JS_FreeValue(ctx, ctx->regexp_ctor);
 #ifdef CONFIG_TEMPORAL
     JS_FreeValue(ctx, ctx->temporal_intrinsics);
+#endif
+#ifdef CONFIG_INTL
+    JS_FreeValue(ctx, ctx->intl_intrinsics);
 #endif
     JS_FreeValue(ctx, ctx->function_ctor);
     JS_FreeValue(ctx, ctx->function_proto);
