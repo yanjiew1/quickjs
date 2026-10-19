@@ -80,3 +80,24 @@ Graph nodes and source XML filenames are not advertised service availability.
 Each collector still establishes its own complete records and capabilities.
 `tests/test_intl_parents.py` checks authored graphs, including exceptions,
 component independence and rules outside the listed migration examples.
+
+## Typed fields and list templates
+
+```sh
+python3 tools/intl/list_patterns.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+`resolve.Records` resolves a finite inventory of typed fields, including explicit
+inheritance and empty-override markers. An inherited `source="locale"` alias
+restarts lookup at the requesting locale; an explicit locale alias changes
+that lookup anchor. Cycles, unknown keys and mixed records fail explicitly.
+Collectors translate supported XPath forms into field mappings rather than
+retaining XML trees or expanding arbitrary paths during resolution.
+
+The list collector reads all source locales and resolves each of the nine
+standard type/style combinations and four template parts. It selects standard
+records without `alt`, admits all published draft states, and reports omitted
+alternates. Text is preserved exactly and both placeholders must occur once.
+Unknown relevant structures, mixed aliases, duplicate fields and missing or
+blocked required templates are errors. These templates do not alone implement
+context-sensitive list behavior or install a JavaScript formatter.

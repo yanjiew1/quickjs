@@ -880,6 +880,22 @@ test(
 )
 
 test(
+  'intl-list-patterns',
+  python,
+  args: files('test_intl_list_patterns.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-record-resolution',
+  python,
+  args: files('test_intl_resolution.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-locale-inheritance',
   python,
   args: files('test_intl_parents.py'),
