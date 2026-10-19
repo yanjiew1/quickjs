@@ -639,6 +639,15 @@ while unrelated services proceed. Move dependency-free completed work forward
 when another service is blocked. Stages describe dependencies, not a demand to
 combine all their changes into one commit or defer an independent ready service.
 
+DateTimeFormat preparation starts with `tools/intl/date_pattern_syntax.py`, a
+host-side TR35 date-pattern tokenizer. It preserves field symbols/run lengths
+and decodes quoted literals independently of format selection or calendar
+calculation. Raw source auditing is separate from the next typed collection
+stage, which must resolve calendar aliases, retain source identities and handle
+numbering overrides, names, skeletons and intervals. Compilation must distinguish
+these date patterns from date-time combination templates; shared pair templates
+do not use the date-pattern apostrophe rules.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is

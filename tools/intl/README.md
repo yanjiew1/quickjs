@@ -102,6 +102,28 @@ Unknown relevant structures, mixed aliases, duplicate fields and missing or
 blocked required templates are errors. These templates do not alone implement
 context-sensitive list behavior or install a JavaScript formatter.
 
+## Date/time pattern syntax
+
+```sh
+python3 tools/intl/date_pattern_syntax.py --pattern "yyyy-MM-dd 'at' HH:mm"
+python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The DateTimeFormat data compiler's lexical prerequisite decodes TR35 apostrophe
+quoting into immutable literal and field tokens. Fields retain their exact source
+symbol and run length; literals retain scalar text, whitespace and bidi controls.
+Repeated fields remain separate for interval patterns. Unassigned ASCII letters,
+input-skeleton-only `j`/`J`/`C`, unclosed quotes, NUL and non-scalar text fail.
+
+The source command audits all raw date/time length patterns, available-format
+values and greatest-difference interval values, across calendars and alternates.
+It reports inheritance/block markers separately and does not resolve aliases.
+Combination/append templates have their own grammar and are excluded. This audit
+does not validate field widths, interpret `numbers` overrides, select formats,
+establish locale coverage or install DateTimeFormat. Those operations belong to
+the subsequent typed collector/compiler and native service. Authored tests run
+in the repository suite; CI also audits the pinned CLDR source patterns.
+
 ## Relative-time source records
 
 ```sh

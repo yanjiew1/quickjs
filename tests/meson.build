@@ -2547,6 +2547,14 @@ test(
 )
 
 test(
+  'intl-date-pattern-syntax',
+  python,
+  args: files('test_intl_date_pattern_syntax.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-date-field-names',
   python,
   args: files('test_intl_date_field_names.py'),
