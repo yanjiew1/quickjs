@@ -476,6 +476,13 @@ C identifier helper performs exact case-sensitive lookup and accepts either
 one sanctioned unit or precisely two joined by `-per-`. It does not accept
 arbitrary CLDR units, aliases, multiplication or localized names. The helper
 allocates nothing; source collection and formatting remain separate work.
+An exact adapter maps the five sanctioned divisions with precomposed CLDR names
+to their long data identifiers. Other sanctioned pairs require composition;
+they remain valid when no precomposed name exists. Never derive the grouping
+prefix from the numerator's category: `liter-per-kilometer`, for example, uses
+`consumption-liter-per-kilometer`, not a `volume-` prefix. Both prepared-profile
+tests check every sanctioned pair against the full source group inventory and
+reject missing, unexpected or ambiguous mappings.
 
 `unit_patterns.py` collects long/short/narrow display names, unit patterns with
 their exact plural/case selectors, grammatical gender, per-unit patterns and
@@ -583,6 +590,28 @@ decimal-pattern quoting. Selection allocates nothing and returns borrowed
 source/selector provenance. Rendering and the NumberFormat binding have separate
 owners.
 
+The division-template parser retains literal prefix/separator/suffix slices and
+which operand appears first. Both `{0}` and `{1}` must occur once; reversed
+patterns such as `每{1}{0}` are supported. The noun adapter accepts literal-only
+unit forms or strips one numeric placeholder at a nonspace edge, removing
+outer Unicode White_Space while preserving internal text. A middle placeholder
+with noun text on both sides is ineligible for compound-name extraction, as in
+TR35's composition algorithm; it is not silently joined. These helpers borrow
+their inputs and do not select locale/plural/case fallback.
+The noun selector reuses the numeric selector's ordered layer/case traversal and
+path shadows, with its own noun eligibility rules. A fixed grammatical count
+bypasses numeric rule evaluation; a pass-through `compound` derivation can use
+the rounded-quantity callback and each source's cardinal rules. Neither mode
+tries exact numeric `0`/`1` selectors. It returns
+the noun and source/form provenance without allocating, including alias origins
+outside the prepared locale registry.
+Uncounted template selection separately handles a denominator's `perUnitPattern`
+and generic division layouts. It applies local case alternatives before parent
+layers, honors blocked/empty/missing-operand path shadows, and returns parsed
+template fragments with their actual source. Per-unit templates have no case
+selector; generic division layouts support case alternatives. Neither lookup
+performs plural selection or invents a width fallback.
+
 `src/intl/unit/format.c` composes the selected prefix/suffix around a complete
 numeric body, preserving its sign, exponent and compact parts. Nonspace affixes
 become unit parts, with outer Unicode White_Space separated as literal parts;
@@ -590,7 +619,12 @@ internal spaces stay within a unit part. A bare or whitespace-only template
 retains an empty unit part. The complete UTF-16 result is independently owned,
 with exact output bounds and allocation-failure cleanup. The compact and unit
 renderers share the private bounded UTF-16 builder; unit/plural/sign selection
-remains outside that writer. This does not register JavaScript NumberFormat.
+remains outside that writer. Borrowed prefix/suffix fragment lists can compose
+compound affixes without intermediate text allocations. Part boundaries are
+assigned after measuring all fragments: internal spaces remain in one unit part
+per affix, and only outer whitespace becomes literal. Every fragment must end
+on a UTF-8 scalar boundary. The single-pattern entry point delegates to this
+renderer. This does not register JavaScript NumberFormat.
 
 ## Localized numeric bodies
 
@@ -751,7 +785,7 @@ pattern. Empty currency maps, raw `0`, small values and nonfinite inputs use
 ordinary currency formatting. Caller-filtered legacy gaps test the actual
 numeric-body edge, and literal-only forms omit unused numeric allocation.
 
-Single-unit style accepts every sanctioned single identifier and all three
+Unit style accepts every sanctioned single/division identifier and all three
 display widths in standard, scientific, engineering and compact notation.
 `number/unit.c` resolves each source layer's cardinal rules, selects its
 number-bearing form and renders it around the signed notation body. Compact
@@ -761,8 +795,25 @@ OTHER without exact selectors. A unit named `percent` does not apply percent
 style's multiplication. Formatter state borrows immutable source/plural views,
 does not retain the caller's identifier and survives service closure.
 
+Division formatting prefers a complete precomposed unit pattern, followed by
+the denominator's `perUnitPattern`, then a generic division layout and derived
+component nouns. Supplemental plural/case derivations retain independent source
+provenance; each numeric component still uses its candidate text source's own
+cardinal rules. A fixed grammatical count never selects exact numeric `0`/`1`.
+Per-unit phrases do not additionally select denominator nouns. Generic layouts
+retain their actual operand order, including denominator-first languages.
+
+If a localized expression cannot be composed (for example, a component's
+number placeholder lies inside its noun), retry the entire unit expression
+using root data while retaining the localized numeric body. This follows
+TR35's component extraction restriction without fabricating a noun or dropping
+part of it. Malformed consulted templates remain errors, and selection never
+hides unavailable source cardinal rules with a root retry. Cached local/root
+heads borrow immutable owners; rendering needs at most four fragments per
+affix and allocates only the final text and parts arrays.
+
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Compound-unit composition, ranges and the JS binding remain required
+Ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 

@@ -44,6 +44,78 @@ static void failed(const QJSIntlAllocator *allocator, const QJSIntlUnitPattern *
     assert(!memcmp(&result, &zero, sizeof(result)));
 }
 
+static void spans_failed(const QJSIntlAllocator *allocator, const QJSIntlUnitAffix *prefix,
+                          const QJSIntlUnitAffix *suffix, const QJSIntlFormatted *body,
+                          size_t limit, QJSIntlStatus status)
+{
+    QJSIntlFormatted result, zero = {0};
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_unit_affixes_format(allocator, prefix, suffix, body, limit, &result) == status);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+}
+
+static void test_spans(const QJSIntlAllocator *allocator, const QJSIntlFormatted *body)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlBytes first[] = {bytes(" "), bytes("every"), {NULL, 0}, bytes(" ")};
+    QJSIntlBytes last[] = {bytes(" m"), bytes(" / "), bytes("s ")};
+    QJSIntlUnitAffix prefix = {first, 4}, suffix = {last, 3}, empty = {0};
+    QJSIntlFormatted result;
+    size_t i, calls = state->calls;
+    assert(!qjs_intl_unit_affixes_format(allocator, &prefix, &suffix, body, 21, &result));
+    assert(state->calls == calls + 2); /* Only the final text and part arrays. */
+    assert(result.length == 21 && result.part_count == body->part_count + 6);
+    assert(result.parts[0].type == QJS_INTL_PART_LITERAL && result.parts[0].end == 1);
+    assert(result.parts[1].type == QJS_INTL_PART_UNIT && result.parts[1].end == 6);
+    assert(result.parts[2].type == QJS_INTL_PART_LITERAL && result.parts[2].end == 7);
+    assert(!memcmp(result.text + 7, body->text, body->length * sizeof(*body->text)));
+    for (i = 0; i < body->part_count; i++) {
+        assert(result.parts[i + 3].type == body->parts[i].type);
+        assert(result.parts[i + 3].start == body->parts[i].start + 7);
+        assert(result.parts[i + 3].end == body->parts[i].end + 7);
+    }
+    assert(result.parts[10].type == QJS_INTL_PART_LITERAL && result.parts[10].end == 15);
+    assert(result.parts[11].type == QJS_INTL_PART_UNIT && result.parts[11].start == 15 &&
+           result.parts[11].end == 20); /* Internal fragment spaces stay in the one unit part. */
+    assert(result.parts[12].type == QJS_INTL_PART_LITERAL && result.parts[12].end == 21);
+    first[1] = bytes("changed");
+    assert(result.text[1] == 'e');
+    first[1] = bytes("every");
+    qjs_intl_unit_format_clear(allocator, &result);
+    spans_failed(allocator, &prefix, &suffix, body, 20, QJS_INTL_OVERFLOW);
+    for (i = 1; i <= 2; i++) {
+        state->fail_at = state->calls + i;
+        spans_failed(allocator, &prefix, &suffix, body, 21, QJS_INTL_NO_MEMORY);
+        assert(!state->live);
+    }
+    state->fail_at = 0;
+    assert(!qjs_intl_unit_affixes_format(allocator, &empty, &empty, body, 7, &result));
+    assert(result.length == 7 && result.part_count == body->part_count + 1);
+    assert(result.parts[body->part_count].type == QJS_INTL_PART_UNIT &&
+           result.parts[body->part_count].start == 7 && result.parts[body->part_count].end == 7);
+    qjs_intl_unit_format_clear(allocator, &result);
+    first[0] = bytes("\xc2\xa0");
+    first[1] = bytes("\xf0\x9f\x8c\xa1");
+    first[3] = bytes("\xe3\x80\x80");
+    assert(!qjs_intl_unit_affixes_format(allocator, &prefix, &empty, body, 11, &result));
+    assert(result.length == 11 && result.parts[1].type == QJS_INTL_PART_UNIT &&
+           result.parts[1].start == 1 && result.parts[1].end == 3);
+    assert(result.text[1] == 0xd83c && result.text[2] == 0xdf21);
+    qjs_intl_unit_format_clear(allocator, &result);
+    calls = state->calls;
+    last[1] = bytes("\xed\xa0\x80");
+    spans_failed(allocator, &empty, &suffix, body, 30, QJS_INTL_DATA_ERROR);
+    first[0] = (QJSIntlBytes){NULL, 1};
+    spans_failed(allocator, &prefix, &empty, body, 30, QJS_INTL_INVALID_ARGUMENT);
+    prefix = (QJSIntlUnitAffix){NULL, 1};
+    spans_failed(allocator, &prefix, &empty, body, 30, QJS_INTL_INVALID_ARGUMENT);
+    prefix = (QJSIntlUnitAffix){first, SIZE_MAX};
+    spans_failed(allocator, &prefix, &empty, body, 30, QJS_INTL_INVALID_ARGUMENT);
+    spans_failed(allocator, NULL, &empty, body, 30, QJS_INTL_INVALID_ARGUMENT);
+    spans_failed(allocator, &empty, NULL, body, 30, QJS_INTL_INVALID_ARGUMENT);
+    assert(state->calls == calls && !state->live);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -56,6 +128,7 @@ int main(void)
     QJSIntlFormatted body = {text, 7, parts, 7}, result;
     QJSIntlUnitPattern pattern = {bytes(" about "), bytes("\xc2\xa0kilowatt hours ")};
     size_t i, calls;
+    test_spans(&allocator, &body);
     assert(!qjs_intl_unit_pattern_format(&allocator, &pattern, &body, 30, &result));
     assert(result.text != body.text && result.parts != body.parts);
     assert(result.length == 30 && result.part_count == 13);
