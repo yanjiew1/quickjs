@@ -1315,3 +1315,30 @@ Inspect a verified source cache without changing prepared packs:
 ```sh
 python3 tools/intl/duration_patterns.py --sources path/to/cldr-49-beta4
 ```
+
+Section 24, schema 1, stores these raw resolved records. Its three little-endian
+header words are version, shared-row count and source-record count. Each shared
+locale selects a three-word row (`hm`, `hms`, `ms` record indexes). Sorted unique
+four-word records contain state (`0` missing, `1` value, `2` blocked), pooled
+text, pooled terminal source locale and source skeleton (`0` hm, `1` hms, `2` ms).
+Missing is exactly four zero words. Blocked records have empty text but retain
+their source identity; a present empty pattern has state 1.
+
+Rows and records are canonically shared and all must be reachable. Decoding
+checks dimensions, complete extents, references, states and provenance before
+returning borrowed source facts. Profile projection preserves source identities
+outside the selected locale registry. The optional section is recognized by the
+Python shared-pack validator and emitted by the production generator in both
+prepared profiles. Its presence does not establish DurationFormat capability.
+
+`src/intl/duration/data.c` validates the C schema before exposing borrowed views.
+It checks every row and record, complete reachability, states, terminal source
+locale spelling and skeleton identities. All temporary validation memory is
+released before return, including multi-variant source-name scratch and failure
+paths. Exact locale/skeleton queries allocate nothing and perform no display or
+locale fallback. Raw LDML interpretation remains a separate service concern.
+
+Authored C fixtures cover missing, blocked, empty and unequal-separator patterns,
+external alias origins, malformed wire fields, every opening allocation failure
+and retry. Both prepared profiles are opened and queried independently, including
+unaligned input. The composed generator fixture also includes digital patterns.
