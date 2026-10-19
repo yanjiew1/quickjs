@@ -174,3 +174,21 @@ Python checks their schemas, references, ordering and preferred-name chains.
 The shared C table reader handles sections 1, 2 and 10. The locale owner uses
 `qjs_intl_locale_metadata_open()` to check sections 3–6, including scoped
 preferred-name graphs, before a runtime locale service can consume them.
+
+
+## Native locale identity operations
+
+`src/intl/locale/native-id.c` consumes a successfully opened metadata view.
+It canonicalizes Unicode locale IDs and extension values and implements Add
+Likely Subtags and Remove Likely Subtags (favorRegion). Syntax validation and
+canonicalization preserve allocator failures; inputs are length-bearing slices
+and successful outputs are separately owned strings. These operations establish
+identity only, not the locales installed for a formatter service.
+
+The parser grows lists geometrically and sorts variant/attribute lists instead
+of scanning an unbounded prefix for every item. It accepts long valid tags
+without an arbitrary subtag limit. Alias replacement components are validated
+before bounded language/script/region storage is used. Tests cover both prepared
+profiles, nonterminated and embedded-NUL input, competing aliases, extension
+ordering, unknown likely subtags, malformed replacement data and failure at every
+allocation in canonicalize/maximize/minimize.
