@@ -1,6 +1,7 @@
 /* Authored compact affixes: Unicode boundaries, symbols, parts and ownership.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/number/compact-format.h"
+#include "../src/intl/number/compact-family.h"
 #include "../src/intl/number/body.h"
 #include "../src/cutils/cutils.h"
 #include <assert.h>
@@ -88,6 +89,57 @@ static QJSIntlStatus format(const QJSIntlAllocator *allocator, const QJSIntlComp
     return qjs_intl_number_compact_format(allocator, data, pattern, &symbols, body, limit, out);
 }
 
+static void test_families(const QJSIntlCompactData *data)
+{
+    QJSIntlCompactFamily family, zero = {0};
+    QJSIntlCompactPattern selected, empty = {0};
+    QJSIntlCompactMap map;
+    QJSIntlCurrencyBoundary boundary = {1, 1, 1, 1, 1};
+    uint32_t latin;
+    assert(!qjs_intl_numbering_system_find(&data->numbering, bytes("latn"), &latin));
+    assert(!qjs_intl_compact_map_at(data, 0, latin, QJS_INTL_COMPACT_CURRENCY_SHORT, &map));
+    assert(!qjs_intl_compact_family_at(data, &map, 3, &boundary, &family));
+    assert(family.baseline.mode == QJS_INTL_COMPACT_FALLBACK && !family.baseline.exponent);
+    assert(family.requested == QJS_INTL_COMPACT_STANDARD && !family.alpha_available);
+    assert(qjs_intl_compact_family_pattern(data, &map, &family, QJS_INTL_COMPACT_ONE,
+                                            &selected) == QJS_INTL_UNSUPPORTED);
+    assert(!memcmp(&selected, &empty, sizeof(empty)));
+    assert(!qjs_intl_compact_map_at(data, 1, latin, QJS_INTL_COMPACT_CURRENCY_SHORT, &map));
+    assert(!qjs_intl_compact_family_at(data, &map, 15, &boundary, &family));
+    assert(family.requested == QJS_INTL_COMPACT_ALPHA && family.alpha_available);
+    assert(family.baseline.variant == QJS_INTL_COMPACT_ALPHA && family.baseline.exponent == 13);
+    assert(qjs_intl_compact_family_pattern(data, &map, &family, QJS_INTL_COMPACT_ONE,
+                                            &selected) == QJS_INTL_UNSUPPORTED);
+    assert(!memcmp(&selected, &empty, sizeof(empty)));
+    assert(!qjs_intl_compact_family_at(data, &map, 18, &boundary, &family));
+    assert(family.requested == QJS_INTL_COMPACT_ALPHA && family.alpha_available);
+    assert(family.baseline.variant == QJS_INTL_COMPACT_STANDARD && family.baseline.exponent == 18);
+    assert(!qjs_intl_compact_family_pattern(data, &map, &family, QJS_INTL_COMPACT_ONE, &selected));
+    assert(selected.variant == QJS_INTL_COMPACT_ALPHA && selected.exponent == 18);
+    /* A punctuation-ended symbol such as Fr. selects the ordinary pattern,
+       but its sparse alpha family still suppresses legacy currency spacing. */
+    boundary.compact_before_number = 0;
+    assert(!qjs_intl_compact_family_at(data, &map, 18, &boundary, &family));
+    assert(family.requested == QJS_INTL_COMPACT_STANDARD && family.alpha_available);
+    assert(family.baseline.exponent == 18);
+    assert(!qjs_intl_compact_family_pattern(data, &map, &family, QJS_INTL_COMPACT_OTHER, &selected));
+    assert(selected.variant == QJS_INTL_COMPACT_STANDARD);
+    boundary.compact_before_number = 1;
+    assert(!qjs_intl_compact_family_at(data, &map, 21, &boundary, &family));
+    assert(!family.alpha_available); /* An explicitly empty alpha is unusable. */
+    assert(!qjs_intl_compact_family_pattern(data, &map, &family, QJS_INTL_COMPACT_ONE, &selected));
+    assert(selected.variant == QJS_INTL_COMPACT_STANDARD && selected.exponent == 21);
+    assert(!qjs_intl_compact_family_at(data, &map, 24, &boundary, &family));
+    assert(family.requested == QJS_INTL_COMPACT_STANDARD && family.alpha_available);
+    assert(family.baseline.exponent == 24); /* Literal blocks compact adjacency. */
+    assert(!qjs_intl_compact_family_at(data, &map, 15, NULL, &family));
+    assert(family.requested == QJS_INTL_COMPACT_STANDARD && family.baseline.exponent == 15);
+    memset(&family, 0xff, sizeof(family));
+    assert(qjs_intl_compact_family_at(data, &map, 99, &boundary, &family) == QJS_INTL_UNSUPPORTED);
+    assert(!memcmp(&family, &zero, sizeof(zero)));
+    assert(qjs_intl_compact_family_at(data, &map, 3, &boundary, NULL) == QJS_INTL_INVALID_ARGUMENT);
+}
+
 int main(void)
 {
     Allocation state = {0};
@@ -106,6 +158,7 @@ int main(void)
     assert(!qjs_intl_numbering_data_open(&pack, &allocator, &numbering));
     assert(!qjs_intl_compact_data_open(&numbering, &allocator, &data));
     assert(!state.live);
+    test_families(&data);
     selected = pattern(&data, QJS_INTL_COMPACT_DECIMAL_LONG, 3, QJS_INTL_COMPACT_EXACT_ONE);
     assert(!format(&allocator, &data, &selected, NULL, 5, &result));
     expected(&result, "mille");

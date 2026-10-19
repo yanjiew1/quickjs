@@ -36,7 +36,17 @@ def render():
              (3, 'one', 'alphaNextToNumber', BLOCK),
              (6, 'other', 'standard', '0¤K'),
              (9, 'other', 'standard', '0K ¤'),
-             (12, 'other', 'standard', '¤ 0K')))
+             (12, 'other', 'standard', '¤ 0K'),
+             (15, 'other', 'standard', '¤0T'),
+             (15, 'other', 'alphaNextToNumber', '¤ 000T'),
+             (15, 'one', 'alphaNextToNumber', '¤ 0bad'),
+             (18, 'other', 'standard', '¤0Q'),
+             (18, 'one', 'alphaNextToNumber', '¤ 0Q'),
+             (21, 'other', 'standard', '¤0R'),
+             (21, 'one', 'standard', '¤0S'),
+             (21, 'one', 'alphaNextToNumber', ''),
+             (24, 'other', 'standard', '¤ 0Y'),
+             (24, 'other', 'alphaNextToNumber', '¤ 00Y')))
     source = {'systems': ('latn', 'mathbold'), 'kinds': compact_patterns.KINDS,
               'maps': maps,
               'rows': tuple((tag, system, kind,
