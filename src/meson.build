@@ -121,6 +121,7 @@ windows_timezone_data_sources = []
 # The coordinator also provides disabled-build public API stubs.
 engine_sources += files(
   'quickjs/builtins/intl/core.c',
+  'quickjs/builtins/intl/default-locale.c',
   'quickjs/builtins/temporal/common.c',
   'quickjs/default-time-zone.c',
 )
@@ -132,11 +133,13 @@ if intl_enabled
   support_sources += files(
     'intl/common/locale-grammar.c',
     'intl/locale/identifier.c',
+    'intl/locale/matching.c',
     'intl/locale/native.c',
     'intl/locale/native-data.c',
     'intl/locale/native-id.c',
     'intl/locale/preference-data.c',
     'intl/locale/preferences.c',
+    'intl/locale/system.c',
     'intl/native/data.c',
     'intl/native/pack.c',
   )
