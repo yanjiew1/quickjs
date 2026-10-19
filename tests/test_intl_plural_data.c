@@ -109,6 +109,16 @@ static void native_selection(const QJSIntlPluralData *data, uint32_t en, uint32_
     select_category(&rules, "0001", QJS_INTL_PLURAL_ONE);
     select_category(&rules, "1.0", QJS_INTL_PLURAL_OTHER);
     select_category(&rules, "1.5", QJS_INTL_PLURAL_OTHER);
+    {
+        QJSIntlPluralOperands number = {"0.00100", 7, 3};
+        assert(!qjs_intl_native_plural_select_shifted(&rules, &number, 3, &category));
+        assert(category == QJS_INTL_PLURAL_OTHER); /* Expanded 1.00 keeps v=2. */
+        assert(!qjs_intl_native_plural_select_shifted(&rules, &number, 5, &category));
+        assert(category == QJS_INTL_PLURAL_OTHER); /* Expanded 100. */
+        number = (QJSIntlPluralOperands){"0.001", 5, 3};
+        assert(!qjs_intl_native_plural_select_shifted(&rules, &number, 3, &category));
+        assert(category == QJS_INTL_PLURAL_ONE);
+    }
     select_category(&rules, "100000000000000000000000000000000000001", QJS_INTL_PLURAL_OTHER);
     assert(!qjs_intl_native_plural_range(&rules, QJS_INTL_PLURAL_ONE, QJS_INTL_PLURAL_OTHER,
                                          &category));
@@ -149,6 +159,9 @@ static void native_selection(const QJSIntlPluralData *data, uint32_t en, uint32_
     assert(qjs_intl_native_plural_select(&rules, NULL, &category) == QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_native_plural_select(NULL, &invalid, &category) == QJS_INTL_INVALID_ARGUMENT);
     assert(qjs_intl_native_plural_select(&rules, &invalid, NULL) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_native_plural_select_shifted(&rules, &invalid, 3, &category) ==
+           QJS_INTL_INVALID_ARGUMENT);
+    assert(category == QJS_INTL_PLURAL_OTHER);
     category = QJS_INTL_PLURAL_ZERO;
     assert(qjs_intl_native_plural_range(&rules, (QJSIntlPluralCategory)-1, QJS_INTL_PLURAL_ONE,
                                         &category) == QJS_INTL_INVALID_ARGUMENT);
