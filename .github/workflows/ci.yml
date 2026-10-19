@@ -202,6 +202,22 @@ jobs:
           timezone: native
           policy: utc
           library: shared
+        - profile: intl-iso-minimal
+          intl: native
+          temporal: 'true'
+          calendars: iso
+          timezone: minimal
+          policy: host-offset
+          library: shared
+        - profile: intl-native-minimal
+          intl: minimal
+          temporal: 'true'
+          calendars: native
+          timezone: minimal
+          policy: utc
+          library: static
+    # Limited backend rows validate selected capabilities through repository tests.
+    # Full native calendar/zone Test262 remains in the ordinary and sanitizer lanes.
     steps:
     - uses: actions/checkout@v7
     - name: Install build tools
@@ -212,7 +228,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddocumentation=disabled \
-           -Dtemporal=${{ matrix.temporal }} \
+          -Dintl=${{ matrix.intl }} -Dtemporal=${{ matrix.temporal }} \
           -Dcalendars=${{ matrix.calendars }} -Dtimezone_backend=${{ matrix.timezone }} \
           -Dsystem_timezone_policy=${{ matrix.policy }} -Ddefault_library=${{ matrix.library }}
     - name: Compile selected build
@@ -269,7 +285,7 @@ jobs:
     timeout-minutes: 60
     env:
       CC: ${{ matrix.cc }}
-      INTL_PROFILE: disabled
+      INTL_PROFILE: ${{ matrix.intl }}
     defaults:
       run:
         shell: bash
@@ -290,7 +306,7 @@ jobs:
           arch: arm64
           runner: ubuntu-24.04-arm
           cc: gcc
-          intl: disabled
+          intl: minimal
           library: both
           microbench: true
         - name: Linux 32bit
@@ -298,7 +314,7 @@ jobs:
           arch: x86
           runner: ubuntu-latest
           cc: gcc -m32
-          intl: disabled
+          intl: native
           library: static
           microbench: false
     steps:
@@ -317,7 +333,7 @@ jobs:
       id: configure
       run: |
         meson setup build -Dwerror=true -Ddefault_library=${{ matrix.library }} \
-           -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
+          -Dintl=${{ matrix.intl }} -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
@@ -364,6 +380,19 @@ jobs:
           --threads "$(getconf _NPROCESSORS_ONLN)" \
           --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
           2>&1 | tee test262_runtime.log
+    - name: Run selected-profile Intl Test262
+      id: test262-intl
+      if: ${{ !cancelled() && steps.bootstrap-test262.outcome == 'success' && matrix.intl != 'disabled' }}
+      timeout-minutes: 20
+      run: |
+        profile_config=()
+        if test "$INTL_PROFILE" = minimal && test -f tests/intl-minimal-test262.conf; then
+          profile_config=(-c tests/intl-minimal-test262.conf)
+        fi
+        build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+          -t -m -c tests/intl-locale-test262.conf "${profile_config[@]}" \
+          --timing-log test262_intl_timings.jsonl --progress-log test262_intl_progress.jsonl \
+          2>&1 | tee test262_intl_runtime.log
     - name: Report Test262 timings and core Temporal selection
       if: always()
       run: |
@@ -440,7 +469,7 @@ jobs:
           lto_options+=(-Db_lto_mode=thin -Db_thinlto_cache=true
             '-Dqjsc_cc=clang,-fuse-ld=lld')
         fi
-        meson setup build -Dwerror=true -Ddefault_library=shared -Db_lto=true \
+        meson setup build -Dwerror=true -Ddefault_library=shared -Db_lto=true -Dintl=native \
           -Dbackend_max_links=2 -Db_lto_threads=2 "${lto_options[@]}" \
           -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
@@ -487,7 +516,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     env:
-      INTL_PROFILE: disabled
+      INTL_PROFILE: minimal
     defaults:
       run:
         shell: bash
@@ -501,7 +530,7 @@ jobs:
     - name: Configure selected build
       id: configure
       run: |
-        meson setup build -Dwerror=true  -Dtemporal=true \
+        meson setup build -Dwerror=true -Dintl=minimal -Dtemporal=true \
           -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
@@ -545,6 +574,19 @@ jobs:
           --threads "$(getconf _NPROCESSORS_ONLN)" \
           --timing-log test262_timings.jsonl --progress-log test262_progress.jsonl \
           2>&1 | tee test262_runtime.log
+    - name: Run selected-profile Intl Test262
+      id: test262-intl
+      if: ${{ !cancelled() && steps.bootstrap-test262.outcome == 'success' }}
+      timeout-minutes: 20
+      run: |
+        profile_config=()
+        if test "$INTL_PROFILE" = minimal && test -f tests/intl-minimal-test262.conf; then
+          profile_config=(-c tests/intl-minimal-test262.conf)
+        fi
+        build/run-test262 -T "$(getconf _NPROCESSORS_ONLN)" \
+          -t -m -c tests/intl-locale-test262.conf "${profile_config[@]}" \
+          --timing-log test262_intl_timings.jsonl --progress-log test262_intl_progress.jsonl \
+          2>&1 | tee test262_intl_runtime.log
     - name: Report Test262 timings and core Temporal selection
       if: always()
       run: |
@@ -691,7 +733,7 @@ jobs:
     name: Windows MSYS2
     runs-on: windows-latest
     env:
-      INTL_PROFILE: disabled
+      INTL_PROFILE: native
     defaults:
       run:
         shell: msys2 {0}
@@ -705,7 +747,7 @@ jobs:
     - name: Configure selected build
       id: configure
       run: |
-        meson setup build -Dwerror=true -Ddefault_library=both  \
+        meson setup build -Dwerror=true -Ddefault_library=both -Dintl=native \
           -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
@@ -767,7 +809,7 @@ jobs:
       id: configure
       run: |
         meson setup build --prefix "$RUNNER_TEMP/quickjs-install" \
-          -Dwerror=true -Ddefault_library=shared  -Dtemporal=true
+          -Dwerror=true -Ddefault_library=shared -Dintl=disabled -Dtemporal=true
     - name: Compile selected build
       id: compile
       run: |
@@ -832,6 +874,9 @@ jobs:
         - id: temporal-native
           intl: disabled
           temporal: 'true'
+        - id: intl-native-temporal
+          intl: native
+          temporal: 'true'
     steps:
     - uses: actions/checkout@v7
     - name: Install diagnostic compiler and build tools
@@ -843,7 +888,7 @@ jobs:
       run: |
         CC=gcc meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dcheck_jsvalue=true \
-           -Dtemporal=${{ matrix.temporal }} \
+          -Dintl=${{ matrix.intl }} -Dtemporal=${{ matrix.temporal }} \
           -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
@@ -890,7 +935,7 @@ jobs:
       run: |
         meson setup build -Dwerror=true -Ddocumentation=disabled \
           -Dtests=false -Dexamples=false -Dfuzzing=true -Db_sanitize=address,undefined \
-           -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
+          -Dintl=native -Dtemporal=true -Dcalendars=native -Dtimezone_backend=native
     - name: Compile selected build
       id: compile
       run: |
