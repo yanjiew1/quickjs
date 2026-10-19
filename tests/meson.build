@@ -646,6 +646,72 @@ test(
   timeout: 30,
 )
 
+intl_language_match_support_sources = files(
+  '../src/intl/common/locale-grammar.c',
+  '../src/intl/common/source-locale.c',
+  '../src/intl/display/data.c',
+  '../src/intl/display/language-match.c',
+  '../src/intl/display/select.c',
+  '../src/intl/locale/identifier.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+)
+intl_language_match_sources = intl_language_match_support_sources + files('test_intl_language_match.c')
+intl_language_match_fixture = custom_target(
+  'intl-language-match-fixture',
+  output: 'intl-language-match-fixture.c',
+  command: [python, files('intl_display_fixture.py'), '--language', '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_display_names.py',
+    'test_intl_list_patterns.py',
+  ),
+)
+intl_language_match_test = executable(
+  'test_intl_language_match',
+  intl_language_match_sources + [intl_language_match_fixture],
+  c_args: host_args + ['-DTEST_INTL_LANGUAGE_MATCH_PREPARED=0'],
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-language-match',
+  intl_language_match_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_language_format_sources = intl_language_match_support_sources + files(
+  'test_intl_language_format.c',
+  '../src/cutils/cutils.c',
+  '../src/intl/common/format-builder.c',
+  '../src/intl/common/pair-pattern.c',
+  '../src/intl/display/language-format.c',
+)
+intl_language_format_fixture = custom_target(
+  'intl-language-format-fixture',
+  output: 'intl-language-format-fixture.c',
+  command: [python, files('intl_display_fixture.py'), '--render', '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_display_names.py',
+    'test_intl_list_patterns.py',
+  ),
+)
+intl_language_format_test = executable(
+  'test_intl_language_format',
+  intl_language_format_sources + [intl_language_format_fixture],
+  c_args: host_args + ['-DTEST_INTL_LANGUAGE_FORMAT_PREPARED=0'],
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-language-format',
+  intl_language_format_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_calendar_name_sources = files(
   'test_intl_calendar_names.c',
   '../src/intl/common/locale-grammar.c',
@@ -929,6 +995,7 @@ intl_unit_pattern_test = executable(
   'test_intl_unit_pattern',
   [
     'test_intl_unit_pattern.c',
+    '../src/intl/common/pair-pattern.c',
     '../src/intl/unit/pattern.c',
     '../src/cutils/cutils.c',
     '../src/intl/unit/data.c',
@@ -968,6 +1035,7 @@ intl_number_unit_test = executable(
     '../src/intl/unit/format.c',
     '../src/intl/unit/grammar-data.c',
     '../src/intl/unit/identifier.c',
+    '../src/intl/common/pair-pattern.c',
     '../src/intl/unit/pattern.c',
     intl_unit_fixture,
   ],
@@ -1009,6 +1077,7 @@ intl_number_service_sources = [
   '../src/intl/unit/data.c',
   '../src/intl/unit/grammar-data.c',
   '../src/intl/unit/identifier.c',
+  '../src/intl/common/pair-pattern.c',
   '../src/intl/unit/pattern.c',
   '../src/intl/unit/format.c',
   '../src/intl/number/pattern-data.c',
@@ -1462,6 +1531,36 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-calendar-names-' + profile,
     intl_calendar_name_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_language_match_test = executable(
+    'test_intl_language_match_' + profile,
+    intl_language_match_sources,
+    c_args: host_args + ['-DTEST_INTL_LANGUAGE_MATCH_PREPARED=1'],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-language-match-' + profile,
+    intl_language_match_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_language_format_test = executable(
+    'test_intl_language_format_' + profile,
+    intl_language_format_sources,
+    c_args: host_args + ['-DTEST_INTL_LANGUAGE_FORMAT_PREPARED=1'],
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-language-format-' + profile,
+    intl_language_format_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
