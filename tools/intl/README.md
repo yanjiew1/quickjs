@@ -206,6 +206,40 @@ are accepted; malformed arms are rejected even when their truth value cannot
 change the result. Repository witnesses include values beyond 64-bit integers,
 fractional modulo, exponent boundaries, malformed input and output reset.
 
+`plural_rules.py` reads cardinal, ordinal and range supplemental data through
+the checked DTD and source reader. Conditions exclude sample annotations and
+normalize Pattern_White_Space; runtime tokens and integer bounds are checked
+without changing their logical structure. It resolves the stand-alone
+`plurals` component parent chain, independently of main-component overrides,
+and retains source origins. Category/range records are unique and sorted;
+root rules are required. Explicit empty range maps stop inheritance, while
+missing range maps and pairs remain absent. The consumer applies the pinned
+LDML range policy (CLDR 49 specifies the end category for absent pairs).
+Endpoint-omitting range records require a reviewed mapping before admission;
+the pinned release contains explicit endpoints. These collected records are
+audited in CI and packed for both profiles without advertising PluralRules capability.
+
+Section 16 packs these records for each prepared profile. Its directory count
+is the shared locale count. Two little-endian header words give the condition
+and range vector counts. Each locale then has two pairs of word indexes
+(cardinal then ordinal), selecting a condition vector and a range vector.
+Condition vectors contain six pooled string indexes in category order, with
+`0xffffffff` marking absent categories; `other` is present and empty. Range
+vectors contain 36 bytes in start/end category order, with `0xff` marking
+absent pairs and values 0 through 5 naming the result category. Unique vectors
+are sorted and all must be referenced. The typed decoder validates coverage,
+extents, references, grammar and canonical records. Missing pairs stay explicit
+until the consumer applies its range policy. The packed data establishes no
+PluralRules capability by itself.
+
+`src/intl/plural/data.c` owns the C view for section 16. It validates all maps,
+category and range vectors, and each distinct condition string before opening.
+Temporary coverage and grammar-cache storage is released on every path. Queries
+return borrowed condition slices, a category-presence mask and the sparse range
+map without allocation or locale fallback. Authored and real-profile tests
+cover unaligned input, exact category data, missing/empty distinctions, grammar
+and schema corruption, output reset and allocation failure/retry.
+
 ## Locale lookup
 
 `src/intl/locale/matching.c` implements the fixed prefix lookup over a service's
