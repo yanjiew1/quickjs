@@ -141,6 +141,14 @@ state. Source identities may lie outside the selected locale registry. Authored
 and both prepared-profile tests cover queries, unaligned storage, malformed
 records and every reached validation allocation failure.
 
+The relative renderer in `src/intl/relative/format.c` implements `MakePartsList`
+without choosing locale, tense or plural category. Its dedicated part records
+attach a unit to every inserted number span, including number-origin literal
+spans; surrounding template text has no unit. Automatic literals bypass template
+parsing and always have one part, even when empty. Counted patterns may omit the
+number entirely. Output owns its UTF-16 text and parts, with explicit bounds,
+allocation-failure cleanup and no retained input storage.
+
 ## Region and script preferences
 
 ```sh

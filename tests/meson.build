@@ -546,6 +546,26 @@ test(
   timeout: 30,
 )
 
+intl_relative_format_test = executable(
+  'test_intl_relative_format',
+  [
+    'test_intl_relative_format.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/relative/format.c',
+    '../src/intl/common/format-builder.c',
+  ],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-relative-format',
+  intl_relative_format_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_relative_owner_sources = files(
   'test_intl_relative_data.c',
   '../src/intl/common/locale-grammar.c',
