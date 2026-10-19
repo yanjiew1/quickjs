@@ -133,6 +133,7 @@ if intl_enabled
     'quickjs/builtins/intl/number-options.c',
     'quickjs/builtins/intl/number-value.c',
     'quickjs/builtins/intl/options.c',
+    'quickjs/builtins/intl/plural-rules.c',
   )
   support_sources += files(
     'intl/common/decimal.c',
@@ -150,6 +151,12 @@ if intl_enabled
     'intl/native/pack.c',
     'intl/list/native.c',
     'intl/list/native-engine.c',
+    'intl/locale/numbering-data.c',
+    'intl/number/compact-data.c',
+    'intl/plural/data.c',
+    'intl/plural/native.c',
+    'intl/plural/native-engine.c',
+    'intl/plural/rules.c',
   )
   data_sources += intl_data
 endif
