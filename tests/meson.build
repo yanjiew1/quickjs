@@ -251,6 +251,9 @@ intl_plural_fixture = custom_target(
     '../tools/intl/number_patterns.py',
     '../tools/intl/number_pattern_syntax.py',
     '../tools/intl/number_pattern_tables.py',
+    '../tools/intl/compact_patterns.py',
+    '../tools/intl/compact_pattern_syntax.py',
+    '../tools/intl/compact_tables.py',
     '../tools/intl/parents.py',
     '../tools/intl/plural_rules.py',
     '../tools/intl/plural_tables.py',
@@ -293,6 +296,9 @@ intl_locale_fixture = custom_target(
     '../tools/intl/number_patterns.py',
     '../tools/intl/number_pattern_syntax.py',
     '../tools/intl/number_pattern_tables.py',
+    '../tools/intl/compact_patterns.py',
+    '../tools/intl/compact_pattern_syntax.py',
+    '../tools/intl/compact_tables.py',
     '../tools/intl/plural_rules.py',
     '../tools/intl/plural_tables.py',
     '../tools/intl/parents.py',
@@ -327,6 +333,9 @@ intl_numbering_fixture = custom_target(
     '../tools/intl/number_patterns.py',
     '../tools/intl/number_pattern_syntax.py',
     '../tools/intl/number_pattern_tables.py',
+    '../tools/intl/compact_patterns.py',
+    '../tools/intl/compact_pattern_syntax.py',
+    '../tools/intl/compact_tables.py',
     '../tools/intl/plural_rules.py',
     '../tools/intl/plural_tables.py',
     '../tools/intl/parents.py',
@@ -376,6 +385,9 @@ intl_number_symbol_fixture = custom_target(
     '../tools/intl/number_patterns.py',
     '../tools/intl/number_pattern_syntax.py',
     '../tools/intl/number_pattern_tables.py',
+    '../tools/intl/compact_patterns.py',
+    '../tools/intl/compact_pattern_syntax.py',
+    '../tools/intl/compact_tables.py',
     '../tools/intl/plural_rules.py',
     '../tools/intl/plural_tables.py',
     '../tools/intl/parents.py',
@@ -425,6 +437,9 @@ intl_number_pattern_fixture = custom_target(
     '../tools/intl/number_patterns.py',
     '../tools/intl/number_pattern_syntax.py',
     '../tools/intl/number_pattern_tables.py',
+    '../tools/intl/compact_patterns.py',
+    '../tools/intl/compact_pattern_syntax.py',
+    '../tools/intl/compact_tables.py',
     '../tools/intl/parents.py',
     '../tools/intl/plural_rules.py',
     '../tools/intl/plural_tables.py',
@@ -445,6 +460,55 @@ intl_number_pattern_authored = executable(
 test(
   'intl-number-patterns-authored',
   intl_number_pattern_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_compact_owner_sources = files(
+  'test_intl_compact_data.c',
+  '../src/intl/common/locale-grammar.c',
+  '../src/intl/locale/numbering-data.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+  '../src/intl/number/compact-data.c',
+)
+intl_compact_fixture = custom_target(
+  'intl-compact-authored-fixture',
+  output: 'intl-compact-authored-fixture.c',
+  command: [python, files('intl_compact_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: files(
+    '../tools/intl/acquire.py',
+    '../tools/intl/bundle.py',
+    '../tools/intl/cldr_xml.py',
+    '../tools/intl/compact_patterns.py',
+    '../tools/intl/compact_pattern_syntax.py',
+    '../tools/intl/compact_tables.py',
+    '../tools/intl/list_patterns.py',
+    '../tools/intl/locale_tables.py',
+    '../tools/intl/numbering.py',
+    '../tools/intl/numbering_tables.py',
+    '../tools/intl/number_patterns.py',
+    '../tools/intl/number_pattern_syntax.py',
+    '../tools/intl/number_pattern_tables.py',
+    '../tools/intl/number_symbol_tables.py',
+    '../tools/intl/parents.py',
+    '../tools/intl/plural_tables.py',
+    '../tools/intl/preference_tables.py',
+    '../tools/intl/resolve.py',
+    '../tools/intl/tables.py',
+  ),
+)
+intl_compact_authored = executable(
+  'test_intl_compact_authored',
+  intl_compact_owner_sources + [intl_compact_fixture],
+  c_args: host_args + ['-DTEST_INTL_AUTHORED=1', '-DTEST_INTL_PROFILE=0'],
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-compact-authored',
+  intl_compact_authored,
   suite: ['repo', 'native'],
   timeout: 30,
 )
@@ -475,6 +539,9 @@ foreach profile : ['minimal', 'native']
       '../tools/intl/number_patterns.py',
       '../tools/intl/number_pattern_syntax.py',
       '../tools/intl/number_pattern_tables.py',
+      '../tools/intl/compact_patterns.py',
+      '../tools/intl/compact_pattern_syntax.py',
+      '../tools/intl/compact_tables.py',
       '../tools/intl/plural_rules.py',
       '../tools/intl/plural_tables.py',
       '../tools/intl/parents.py',
@@ -544,6 +611,23 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-number-patterns-' + profile,
     intl_number_pattern_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_compact_test = executable(
+    'test_intl_compact_' + profile,
+    intl_compact_owner_sources + [intl_fixture],
+    c_args: host_args + [
+      '-DTEST_INTL_AUTHORED=0',
+      '-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0'),
+    ],
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-compact-' + profile,
+    intl_compact_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
@@ -1418,6 +1502,30 @@ test(
   'intl-number-symbol-tables',
   python,
   args: files('test_intl_number_symbol_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-compact-tables',
+  python,
+  args: files('test_intl_compact_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-compact-pattern-syntax',
+  python,
+  args: files('test_intl_compact_pattern_syntax.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-compact-patterns',
+  python,
+  args: files('test_intl_compact_patterns.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )
