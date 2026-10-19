@@ -27,6 +27,7 @@ from number_symbols import FIELDS as SYMBOL_FIELDS
 from test_intl_plural_rules import Sources as PluralSources
 from test_intl_number_patterns import Sources as PatternSources
 from test_intl_compact_patterns import Sources as CompactSources
+from test_intl_currencies import Sources as CurrencySources
 import number_patterns
 import number_pattern_syntax
 
@@ -98,6 +99,16 @@ class VerifiedFixture(Sources):
             root.find(path).extend(node for node in compact_source.find(path)
                                    if node.tag == style + 'FormatLength' and
                                    node.get('type') in ('short', 'long'))
+        currency_source = CurrencySources()
+        root.find('numbers').append(ET.fromstring(
+            currency_source.files['common/main/root.xml']).find('./numbers/currencies'))
+        self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT currencies ANY>
+          <!ELEMENT currency ANY><!ATTLIST currency type NMTOKEN #REQUIRED>
+          <!ELEMENT displayName (#PCDATA)><!ATTLIST displayName count CDATA #IMPLIED>
+          <!ELEMENT symbol (#PCDATA)><!ATTLIST symbol alt NMTOKENS #IMPLIED>'''
+        self.files['common/dtd/ldmlSupplemental.dtd'] += (
+            b'<!ELEMENT currencyData' + currency_source.files[
+                'common/dtd/ldmlSupplemental.dtd'].split(b'<!ELEMENT currencyData', 1)[1])
         self.files['common/main/root.xml'] = ET.tostring(root, encoding='utf-8')
         plural_source = PluralSources()
         self.files['common/dtd/ldmlSupplemental.dtd'] += (
@@ -109,6 +120,7 @@ class VerifiedFixture(Sources):
         name = 'common/supplemental/supplementalData.xml'
         supplemental = ET.fromstring(self.files[name])
         ET.SubElement(supplemental, 'parentLocales', component='plurals')
+        supplemental.append(ET.fromstring(currency_source.files[name]).find('currencyData'))
         self.files[name] = ET.tostring(supplemental, encoding='utf-8')
         self.consumed = set()
         self.pin = {'release': 'authored-fixture', 'commit': '0' * 40,
@@ -136,6 +148,16 @@ class TableTests(unittest.TestCase):
             self.assertEqual(manifest['locales'], len(view['locales']))
             self.assertEqual(manifest['strings'], len(view['strings']))
             self.assertEqual(manifest['complete_services'], [])
+            currency = view['currencies']
+            self.assertIsNotNone(currency)
+            self.assertEqual(len(currency['rows']), len(view['locales']))
+            self.assertIn(('JPY', 0, 0, 0, 0), currency['fractions'])
+            self.assertIn(('CHF', 2, 0, 2, 5), currency['fractions'])
+            currency_rows = dict(currency['rows'])
+            english = {(code, field, count): text for code, field, count, text
+                       in currency['maps'][currency_rows['en']]}
+            self.assertEqual(english[('USD', 'symbol', '')], '$')
+            self.assertEqual(english[('USD', 'narrow', '')], '$')
             self.assertIn(('latn', 'numeric', '0123456789'), view['numbering']['systems'])
             self.assertIn('root', {row[0] for row in view['numbering']['locales']})
             symbols = view['number_symbols']
@@ -225,6 +247,9 @@ class TableTests(unittest.TestCase):
         self.assertEqual(manifest['sha256'], acquire.digest(full))
         self.assertEqual(manifest['complete_services'], [])
         full_view = tables.validate(full)
+        self.assertIsNotNone(full_view['currencies'])
+        self.assertIn(('USD', 'name', '', 'US dollar'),
+                      full_view['currencies']['maps'][dict(full_view['currencies']['rows'])['en']])
         self.assertEqual(full_view['locales'], graph().tags)
         minimal, minimal_manifest = generate.generate(VerifiedFixture(), 'minimal')
         minimal_view = tables.validate(minimal)
@@ -247,6 +272,12 @@ class TableTests(unittest.TestCase):
         self.assertEqual(compact_maps(minimal_view),
                          {key: value for key, value in compact_maps(full_view).items()
                           if key[0] in minimal_view['locales']})
+        def currency_maps(view):
+            currency = view['currencies']
+            return {locale: currency['maps'][index] for locale, index in currency['rows']}
+        self.assertEqual(currency_maps(minimal_view),
+                         {key: value for key, value in currency_maps(full_view).items()
+                          if key in minimal_view['locales']})
         self.assertLess(len(minimal), len(full))
         self.assertNotEqual(manifest['generation'], minimal_manifest['generation'])
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
