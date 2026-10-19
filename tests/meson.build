@@ -108,6 +108,7 @@ native_test_names = [
   'test_intl_api',
   'test_intl_defaults',
   'test_intl_list_oom',
+  'test_intl_plural_oom',
   'test_api',
   'test_temporal_oom',
   'test_builtin_brands',
@@ -643,6 +644,32 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-compact-' + profile,
     intl_compact_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_plural_service_test = executable(
+    'test_intl_plural_service_' + profile,
+    files(
+      'test_intl_plural_service.c',
+      '../src/intl/common/decimal.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/locale/numbering-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/intl/number/compact-data.c',
+      '../src/intl/plural/data.c',
+      '../src/intl/plural/native.c',
+      '../src/intl/plural/native-engine.c',
+      '../src/intl/plural/rules.c',
+    ) + [intl_fixture],
+    c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
+    include_directories: inc,
+    dependencies: host_deps,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-plural-service-' + profile,
+    intl_plural_service_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
@@ -1383,6 +1410,7 @@ if intl_enabled
     'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
     'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
     'intl-list-format': ['-m', 'tests/test_intl_list_format.js'],
+    'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
   }
 endif
 if shared_modules
