@@ -553,6 +553,21 @@ caches decoded body symbols and typed pattern tokens in each formatter.
 Explicit numbering-system selection is exact; negotiation belongs to bindings.
 A formatter may outlive its service, and results may outlive both.
 
+Standard-notation currency-name formatting uses the decimal pattern's complete
+signed number as the numeric argument of the selected locale-level unit template.
+It selects currency names and placement templates independently after rounding,
+including exact zero/one and root-cutoff rules. NaN and infinities use `other`.
+Monetary decimal/group symbols apply, with per-currency overrides taking
+precedence; currency symbol/accounting patterns do not replace decimal affixes.
+The `CurrencyDigits` service query exposes regular digits for frontend defaults,
+without enabling cash rounding. Currency codes are copied into formatter state.
+
+`currency-format.c` substitutes `{0}` and `{1}` once each, preserving the signed
+number's parts and emitting the complete name as one `currency` part. Prefix
+templates therefore place the name before the numeric sign. Apostrophes remain
+literal. Invalid templates fail before result allocation; the complete output
+bound includes names, separators and numeric text.
+
 Scientific/engineering output applies the exact scale-before-round operation,
 then emits localized exponent separator/sign and ASCII decimal exponent digits
 with explicit part types, following the pinned PartitionNotationSubPattern.
@@ -580,7 +595,7 @@ hyphens inside the pinned yrl long names. Sign display remains an outer-style
 operation, not a selection of the compact pattern's negative form.
 
 This is a staged internal implementation, not complete Intl.NumberFormat.
-Currency/unit styles, compact notation, ranges and the JS binding remain required
+Other currency displays and notations, unit styles, ranges and the JS binding remain required
 before registration. Repository tests exercise every prepared locale's default
 numeric system and allocation failure at every service/open/format allocation.
 
