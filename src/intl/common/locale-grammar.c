@@ -101,6 +101,27 @@ static int is_variant(IntlSlice s)
            slice_all(s, alnum);
 }
 
+int qjs_intl_unicode_subtag_well_formed(QJSIntlLocaleSubtagKind kind,
+                                      const char *text, size_t length)
+{
+    IntlSlice value = {text, length};
+
+    if (!text)
+        return 0;
+    switch (kind) {
+    case QJS_INTL_LANGUAGE_SUBTAG:
+        return is_language(value);
+    case QJS_INTL_SCRIPT_SUBTAG:
+        return is_script(value);
+    case QJS_INTL_REGION_SUBTAG:
+        return is_region(value);
+    case QJS_INTL_VARIANT_SUBTAG:
+        return is_variant(value);
+    default:
+        return 0;
+    }
+}
+
 static int duplicate_variant(const char *start, const char *end, IntlSlice candidate)
 {
     while (start < end) {
