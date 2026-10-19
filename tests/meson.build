@@ -870,6 +870,38 @@ if intl_enabled
     },
   }]
 
+  intl_duration_owner_sources = files(
+    'test_intl_duration_data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/duration/data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  intl_duration_fixture = custom_target(
+    'intl-duration-authored-fixture',
+    output: 'intl-duration-authored-fixture.c',
+    command: [python, files('intl_duration_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_duration_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_duration_authored = {
+    'name': 'test_intl_duration_authored',
+    'sources': intl_duration_owner_sources + [intl_duration_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_AUTHORED=1']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_duration_authored,
+    'name': 'intl-duration-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_relative_owner_sources = files(
     'test_intl_relative_data.c',
     '../src/intl/common/locale-grammar.c',
@@ -1440,6 +1472,21 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_relative_test,
       'name': ('intl-relative-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_duration_test = {
+      'name': ('test_intl_duration_data_' + profile),
+      'sources': intl_duration_owner_sources,
+      'c_args': (host_args + ['-DTEST_INTL_AUTHORED=0']),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_duration_test,
+      'name': ('intl-duration-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2140,6 +2187,14 @@ if intl_enabled
     'intl-unit-patterns',
     python,
     args: files('test_intl_unit_patterns.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-duration-tables',
+    python,
+    args: files('test_intl_duration_tables.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
