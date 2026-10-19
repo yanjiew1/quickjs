@@ -485,6 +485,15 @@ resolve unit/width aliases in requesting-locale or explicit-source context.
 Absent fields, blocked fields, explicit empty text and inheritance remain
 distinct. No case/plural/width formatting fallback is invented by collection.
 
+The collector also retains ordered source overlays beside the exact resolved
+maps. Each row points to a persistent chain of nonempty local maps, with source
+locale and width/group identity retained on every node. Parent node IDs precede
+their children; zero ends a chain. Identical fields can share a map, but different
+source identities do not collapse into one node. This lets future consumers try
+local plural/case alternatives before inherited exact leaves without losing
+alias context. These source-only chains do not yet change section 21 or publish
+a formatter fallback policy.
+
 Digital duration layouts, coordinate formatting and arbitrary product/power
 composition have separate consumers. CI audits all authenticated relevant unit
 records; collecting those source facts does not publish unit formatter support.

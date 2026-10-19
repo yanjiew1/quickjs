@@ -62,6 +62,80 @@ class UnitPatternTests(unittest.TestCase):
                      if (tag, w, k, n) == (locale, width, kind, name))
         return {(field, count, case): text for field, count, case, text in data['maps'][index]}
 
+    def overlays(self, data, locale, width, kind, name):
+        head = next(index for tag, w, k, n, index in data['overlay_rows']
+                    if (tag, w, k, n) == (locale, width, kind, name))
+        result = []
+        while head:
+            origin, source_width, source_kind, source_name, index, tail = data['overlay_nodes'][head - 1]
+            self.assertIn((source_kind, source_name), data['groups'])
+            self.assertIn(source_width, units.WIDTHS)
+            self.assertLess(tail, head)
+            result.append({(field, count, case): text
+                           for field, count, case, text in data['overlay_maps'][index]})
+            head = tail
+        return result
+
+    def test_overlay_lateral_candidates_precede_inherited_exact_leaves(self):
+        source = Sources()
+        source.set('en', '''<unitLength type="long"><unit type="length-meter">
+          <unitPattern count="one">PARENT_ONE {0}</unitPattern>
+          <unitPattern count="one" case="genitive">PARENT_GENITIVE {0}</unitPattern>
+          </unit></unitLength>''')
+        source.set('en_GB', '''<unitLength type="long"><unit type="length-meter">
+          <unitPattern count="other">CHILD_OTHER {0}</unitPattern>
+          <unitPattern count="one" case="genitive">''' + INHERIT + '''</unitPattern>
+          <unitPattern count="two"/><unitPattern count="few">''' + BLOCK + '''</unitPattern>
+          </unit></unitLength>''')
+        data = units.collect(source, graph())
+        layers = self.overlays(data, 'en-GB', 'long', 'unit', 'length-meter')
+        self.assertEqual(layers[0], {('unitPattern', 'other', ''): 'CHILD_OTHER {0}',
+                                     ('unitPattern', 'two', ''): '', ('unitPattern', 'few', ''): BLOCK})
+        self.assertEqual(layers[1][('unitPattern', 'one', '')], 'PARENT_ONE {0}')
+        self.assertEqual(layers[1][('unitPattern', 'one', 'genitive')], 'PARENT_GENITIVE {0}')
+        for row in data['overlay_rows']:
+            flattened = {}
+            for layer in reversed(self.overlays(data, *row[:-1])):
+                flattened.update(layer)
+            self.assertEqual(flattened, self.values(data, *row[:-1]))
+        self.assertEqual(tuple(sorted(set(data['overlay_maps']))), data['overlay_maps'])
+        self.assertEqual(len(set(data['overlay_nodes'])), len(data['overlay_nodes']))
+
+    def test_overlay_aliases_preserve_original_child_before_restart(self):
+        source = Sources()
+        source.set('en', '''<unitLength type="short"><unit type="length-meter">
+          <unitPattern count="one">ENGLISH_SHORT {0}</unitPattern></unit></unitLength>''')
+        source.set('en_GB', '''<unitLength type="narrow"><unit type="length-meter">
+          <unitPattern count="other">BRITISH_NARROW {0}</unitPattern></unit></unitLength>''')
+        source.set('de', '''<unitLength type="narrow"><alias source="en"
+          path="../unitLength[@type='short']"/></unitLength>''')
+        data = units.collect(source, graph())
+        layers = self.overlays(data, 'en-GB', 'narrow', 'unit', 'length-meter')
+        self.assertEqual(layers[0], {('unitPattern', 'other', ''): 'BRITISH_NARROW {0}'})
+        self.assertEqual(layers[1], {('unitPattern', 'one', ''): 'ENGLISH_SHORT {0}'})
+        self.assertEqual(self.overlays(data, 'de', 'narrow', 'unit', 'length-meter'), layers[1:])
+        head = next(row[-1] for row in data['overlay_rows']
+                    if row[:-1] == ('en-GB', 'narrow', 'unit', 'length-meter'))
+        node = data['overlay_nodes'][head - 1]
+        self.assertEqual(node[:4], ('en-GB', 'narrow', 'unit', 'length-meter'))
+        self.assertEqual(data['overlay_nodes'][node[-1] - 1][:4],
+                         ('en', 'short', 'unit', 'length-meter'))
+
+    def test_overlay_deduplication_retains_identical_text_origins(self):
+        source = Sources()
+        content = '''<unitLength type="long"><unit type="length-meter">
+          <unitPattern count="other">IDENTICAL {0}</unitPattern></unit></unitLength>'''
+        source.set('en', content)
+        source.set('de', content)
+        data = units.collect(source, graph())
+        heads = [next(row[-1] for row in data['overlay_rows']
+                      if row[:-1] == (locale, 'long', 'unit', 'length-meter'))
+                 for locale in ('en', 'de')]
+        self.assertNotEqual(*heads)
+        nodes = [data['overlay_nodes'][head - 1] for head in heads]
+        self.assertEqual([node[0] for node in nodes], ['en', 'de'])
+        self.assertEqual(nodes[0][1:], nodes[1][1:])
+
     def test_plural_case_gender_division_and_exact_states(self):
         source = Sources()
         source.set('en', '''<unitLength type="long"><unit type="length-meter">
