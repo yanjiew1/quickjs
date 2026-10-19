@@ -61,9 +61,8 @@ typedef struct QJSIntlNumberOptions {
 typedef struct QJSIntlNumberService QJSIntlNumberService;
 typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
-/* This internal service implements decimal/percent formatting with standard,
-   scientific, engineering and compact notation, plus standard/scientific/
-   engineering currency names, symbols and codes. Compact currency, units and
+/* This internal service implements decimal/percent/currency formatting with
+   standard, scientific, engineering and compact notation. Units and
    ranges are still required before the complete Intl.NumberFormat binding can register.
    Bindings must not register NumberFormat on the strength of this subset.
 
