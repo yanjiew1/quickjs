@@ -1293,3 +1293,25 @@ inject allocation failure in constructor, format, formatToParts, resolvedOptions
 and supportedLocalesOf with fresh realm objects and warmed immutable services.
 The focused Test262 configuration includes RelativeTimeFormat; the English-only
 profile explicitly excludes seven cases requiring unavailable German/Polish data.
+
+## Digital-duration source patterns
+
+`duration_patterns.py` collects `units/durationUnit` patterns for `hm`, `hms`
+and `ms`. It uses the pinned DTD attribute roles and main-locale inheritance,
+selects default records before checking duplicates, and resolves typed group
+aliases in the requesting locale or an explicit source locale. Each result
+retains its terminal source locale and skeleton. Missing, blocked and explicit
+empty values remain distinct; unsupported scopes or structural aliases fail.
+
+The collector preserves raw LDML text. It does not yet select DurationFormat
+locales or project patterns into the service's two separator fields and hour
+padding preference. CLDR 49 beta 4 includes `h.mm:ss`, `hh:mm:ss`, quoted
+prefixes and unquoted text around fields; requiring one identical separator or
+discarding those distinctions during collection would lose source information.
+Textual unit forms remain owned by `unit_patterns.py`.
+
+Inspect a verified source cache without changing prepared packs:
+
+```sh
+python3 tools/intl/duration_patterns.py --sources path/to/cldr-49-beta4
+```
