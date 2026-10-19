@@ -1,8 +1,10 @@
 /* Native unit form views: sparse states, typed selectors, corruption and OOM.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/unit/data.h"
+#include "../src/intl/unit/identifier.h"
 #include "../src/intl/native/wire.h"
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -59,6 +61,38 @@ static uint32_t group_id(const QJSIntlUnitData *data, QJSIntlUnitGroupKind kind,
     uint32_t index;
     assert(!qjs_intl_unit_group_find(data, kind, bytes(name), &index));
     return index;
+}
+
+/* Check the adapter's exact map against the complete prepared source inventory,
+   including unknown/new matches. Suffix discovery is a test oracle, not the
+   runtime mapping policy. Ambiguous legacy group prefixes must be reviewed. */
+static void precomposed_inventory(const QJSIntlUnitData *data)
+{
+    uint32_t i, j, k, total = 0, count = qjs_intl_unit_definition_count();
+    for (i = 0; i < count; i++) {
+        for (j = 0; j < count; j++) {
+            QJSIntlUnitIdentifier unit = {i, j};
+            const char *mapped = qjs_intl_unit_identifier_cldr(&unit);
+            char suffix[96];
+            int length = snprintf(suffix, sizeof(suffix), "-%s-per-%s",
+                                  qjs_intl_unit_definition_at(i)->identifier,
+                                  qjs_intl_unit_definition_at(j)->identifier);
+            unsigned int matches = 0;
+            assert(length > 0 && (size_t)length < sizeof(suffix));
+            for (k = 0; k < data->group_count; k++) {
+                QJSIntlUnitGroup group;
+                assert(!qjs_intl_unit_group_at(data, k, &group));
+                if (group.kind == QJS_INTL_UNIT_GROUP_SINGLE && group.name.length > (size_t)length &&
+                    !memcmp(group.name.data + group.name.length - length, suffix, length)) {
+                    assert(mapped && equal(group.name, mapped));
+                    matches++;
+                }
+            }
+            assert(matches <= 1 && matches == !!mapped);
+            total += matches;
+        }
+    }
+    assert(total == 5);
 }
 
 static QJSIntlUnitForm lookup(const QJSIntlUnitData *data, uint32_t locale, QJSIntlUnitWidth width,
@@ -259,6 +293,8 @@ int main(void)
     assert(!qjs_intl_data_open(unaligned + 1, qjs_intl_native_length, &allocator, &data));
     assert(!qjs_intl_unit_data_open(&data, &allocator, &owner));
     assert(!state.live && owner.group_count == (TEST_INTL_AUTHORED ? 3 : 239));
+    if (!TEST_INTL_AUTHORED)
+        precomposed_inventory(&owner);
     en = locale_id(&data, "en");
     meter = group_id(&owner, QJS_INTL_UNIT_GROUP_SINGLE, "length-meter");
     per = group_id(&owner, QJS_INTL_UNIT_GROUP_COMPOUND, "per");
