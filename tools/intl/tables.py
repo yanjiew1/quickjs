@@ -3,6 +3,7 @@ import struct
 
 import bundle
 import locale_tables
+import preference_tables
 from list_patterns import PARTS, VARIANTS, pattern
 from parents import locale_id
 from resolve import BLOCK, INHERIT
@@ -146,4 +147,5 @@ def validate(binary):
     if bundle.LISTS in sections:
         lists = decode_lists(sections[bundle.LISTS], strings, len(tags))
     return {'envelope': result, 'strings': strings, 'locales': tags,
-            'parents': parents, 'lists': lists, 'locale_metadata': locale_tables.decode(sections, strings)}
+            'parents': parents, 'lists': lists, 'locale_metadata': locale_tables.decode(sections, strings),
+            'preferences': preference_tables.decode(sections, strings)}

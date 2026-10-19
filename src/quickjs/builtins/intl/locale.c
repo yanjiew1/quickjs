@@ -7,6 +7,7 @@
 #include "../../internal/function.h"
 #include "../../internal/atom.h"
 #include "../../../intl/locale/identifier.h"
+#include "../../../intl/locale/preferences.h"
 #include "../../../intl/common/locale-grammar.h"
 
 enum {
@@ -420,6 +421,106 @@ static JSValue locale_likely(JSContext *ctx, JSValueConst this_val, int argc,
     return result;
 }
 
+enum { INFO_WEEK, INFO_TEXT, INFO_HOURS };
+
+static JSValue locale_info(JSContext *ctx, JSValueConst this_val, int argc,
+                           JSValueConst *argv, int magic)
+{
+    JSIntlLocale *locale = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_LOCALE);
+    QJSIntlLocaleService *service;
+    QJSIntlBytes tag;
+    JSValue result, value = JS_UNDEFINED;
+
+    if (!locale)
+        return JS_EXCEPTION;
+    service = js_intl_locale_service(ctx);
+    if (!service)
+        return JS_EXCEPTION;
+    tag = (QJSIntlBytes){locale->tag, strlen(locale->tag)};
+    if (magic == INFO_HOURS) {
+        QJSIntlBytes cycles;
+        uint32_t count, i;
+        size_t start = 0;
+        result = JS_NewArray(ctx);
+        if (JS_IsException(result))
+            return result;
+        if (locale->slots[SLOT_HC]) {
+            value = JS_NewString(ctx, locale->slots[SLOT_HC]);
+            if (JS_IsException(value) ||
+                JS_DefinePropertyValueUint32(ctx, result, 0, value,
+                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+                goto fail;
+            return result;
+        }
+        if (js_intl_error(ctx,
+                          qjs_intl_locale_hour_cycles(service, tag, &cycles, &count),
+                          "locale hour cycles"))
+            goto fail;
+        for (i = 0; i < count; i++) {
+            size_t end = start;
+            while (end < cycles.length && cycles.data[end] != ' ')
+                end++;
+            value = JS_NewStringLen(ctx, cycles.data + start, end - start);
+            if (JS_IsException(value) ||
+                JS_DefinePropertyValueUint32(ctx, result, i, value,
+                                             JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+                goto fail;
+            start = end + 1;
+        }
+        return result;
+    }
+    result = JS_NewObject(ctx);
+    if (JS_IsException(result))
+        return result;
+    if (magic == INFO_TEXT) {
+        unsigned int direction;
+        if (js_intl_error(ctx, qjs_intl_locale_text_direction(service, tag, &direction),
+                          "locale text direction"))
+            goto fail;
+        if (direction != QJS_INTL_DIRECTION_UNKNOWN)
+            value =
+                JS_NewString(ctx, direction == QJS_INTL_DIRECTION_RTL ? "rtl" : "ltr");
+        if (JS_IsException(value) ||
+            JS_DefinePropertyValueStr(ctx, result, "direction", value,
+                                      JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    } else {
+        QJSIntlWeekInfo week;
+        unsigned int day, index = 0;
+        QJSIntlBytes first =
+            locale->slots[SLOT_FW]
+                ? (QJSIntlBytes){locale->slots[SLOT_FW], strlen(locale->slots[SLOT_FW])}
+                : (QJSIntlBytes){NULL, 0};
+        if (js_intl_error(ctx, qjs_intl_locale_week_info(service, tag, first, &week),
+                          "locale week information"))
+            goto fail;
+        if (JS_DefinePropertyValueStr(ctx, result, "firstDay",
+                                      JS_NewInt32(ctx, week.first_day),
+                                      JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+        value = JS_NewArray(ctx);
+        if (JS_IsException(value))
+            goto fail;
+        for (day = 1; day <= 7; day++) {
+            if ((week.weekend >> (day - 1)) & 1) {
+                if (JS_DefinePropertyValueUint32(ctx, value, index++,
+                                                 JS_NewInt32(ctx, day),
+                                                 JS_PROP_C_W_E | JS_PROP_THROW) < 0) {
+                    JS_FreeValue(ctx, value);
+                    goto fail;
+                }
+            }
+        }
+        if (JS_DefinePropertyValueStr(ctx, result, "weekend", value,
+                                      JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    }
+    return result;
+fail:
+    JS_FreeValue(ctx, result);
+    return JS_EXCEPTION;
+}
+
 static const JSCFunctionListEntry locale_properties[] = {
     JS_CGETSET_MAGIC_DEF("baseName", locale_getter, NULL, GET_BASE),
     JS_CGETSET_MAGIC_DEF("language", locale_getter, NULL, GET_LANGUAGE),
@@ -436,6 +537,9 @@ static const JSCFunctionListEntry locale_properties[] = {
     JS_CFUNC_DEF("toString", 0, locale_to_string),
     JS_CFUNC_MAGIC_DEF("maximize", 0, locale_likely, 0),
     JS_CFUNC_MAGIC_DEF("minimize", 0, locale_likely, 1),
+    JS_CFUNC_MAGIC_DEF("getWeekInfo", 0, locale_info, INFO_WEEK),
+    JS_CFUNC_MAGIC_DEF("getTextInfo", 0, locale_info, INFO_TEXT),
+    JS_CFUNC_MAGIC_DEF("getHourCycles", 0, locale_info, INFO_HOURS),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Intl.Locale",
                        JS_PROP_CONFIGURABLE),
 };
