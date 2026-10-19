@@ -574,6 +574,7 @@ void JS_FreeRuntime(JSRuntime *rt)
     qjs_intl_number_close(rt->intl_number);
     qjs_intl_relative_close(rt->intl_relative);
     qjs_intl_duration_close(rt->intl_duration);
+    qjs_intl_display_close(rt->intl_display);
     js_free_rt(rt, rt->intl_default_locale);
 #endif
 
