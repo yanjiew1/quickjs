@@ -1103,6 +1103,28 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_list_data_test = {
+      'name': ('test_intl_list_data_' + profile),
+      'sources': files(
+        'test_intl_list_data.c',
+        '../src/intl/list/data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+      ),
+      'c_args': (host_args + [
+        ('-DTEST_INTL_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_list_data_test,
+      'name': ('intl-list-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_preference_test = {
       'name': ('test_intl_preferences_' + profile),
       'sources': files(
@@ -1154,6 +1176,7 @@ if intl_enabled
       'name': ('test_intl_list_service_' + profile),
       'sources': files(
         'test_intl_list_service.c',
+        '../src/intl/list/data.c',
         '../src/intl/list/native.c',
         '../src/intl/list/native-engine.c',
         '../src/intl/native/data.c',
