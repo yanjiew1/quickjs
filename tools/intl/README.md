@@ -445,6 +445,34 @@ canonical ordering. Indexed and exact queries borrow immutable storage and
 allocate nothing. They preserve missing, blocked and explicitly empty forms;
 grammatical/plural/width fallback and formatter capability belong to consumers.
 
+## Localized numeric bodies
+
+`src/intl/number/body.c` renders an already rounded unsigned plain decimal as
+UTF-16 integer, group, decimal and fraction parts. It substitutes scalar digit
+repertoires, preserves integer padding and trailing fraction zeros, and applies
+primary/secondary grouping with auto/always/min2/disabled policy. NaN and
+infinities use the supplied localized symbols. Parts partition the owned text,
+including supplementary digits and multi-code-unit separators.
+
+The caller selects the locale, symbols and grouping preferences. Rounding,
+percent scaling, sign patterns and style/notation affixes remain separate
+NumberFormat steps; the body operation does not advertise a JS constructor.
+It sizes the complete result before allocating, enforces an explicit output
+bound, and frees partial results on allocation failure.
+
+`src/intl/number/round.c` implements NumberFormat's scale-before-round order:
+percent scaling, an unsigned ComputeExponent probe, and rounding the original
+signed value at the final notation exponent. Scientific and engineering use
+mathematical magnitudes; compact uses a caller-selected ordered threshold
+vector, including explicit exponent-zero fallback entries. A carry can choose
+the next notation scale before the final rounding. Zero and nonfinite inputs
+retain their distinct kinds, and negative rounded zero keeps its sign.
+
+This differs from PluralRules, which rounds the unscaled value once and uses
+notation only for plural exponent metadata. The compact formatter must select
+its pattern family before supplying thresholds; this helper does not perform
+plural lookup or choose currency/unit affixes.
+
 ## Numeric options and exact plural relations
 
 `src/quickjs/builtins/intl/number-options.c` implements the shared binding-side
