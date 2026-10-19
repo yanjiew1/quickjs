@@ -166,6 +166,10 @@ rules. The Spanish numeric-prefix scanner covers grouped thousands and decimal
 fractions from the CLDR rules, cross-checked against ICU4X. Context predicates
 adapted from ICU retain their attribution and the shipped `src/intl/LICENSE-ICU`.
 Data selection must enable replacements only for the matching pair/end template.
+The collector derives replacements after inheritance resolution and only when
+each individual pair or end template exactly matches the CLDR default. A
+different pair template does not suppress a matching end replacement, or the
+reverse. Hebrew uses the ASCII hyphen shown in the pinned CLDR rules.
 
 This is an engine-independent formatter component, not yet the JavaScript
 ListFormat service. Its tests cover output partitions, unusual UTF-16, ownership,
@@ -231,6 +235,18 @@ table, including token uniqueness; exact-key lookups use binary search and
 distinguish absent data from malformed input and allocation failure. Tests for
 both prepared profiles cover corruption, unaligned input and every temporary
 allocation failure.
+
+List context section 12 shares the locale order of section 2 and requires the
+base list templates in section 10. Its little-endian words contain a set count,
+one set index per locale, and sorted unique sets of nine triples in list variant
+order. Each triple contains a context kind and pooled pair/end template IDs.
+Kinds are 0 (disabled), 1 (Spanish conjunction), 2 (Spanish disjunction), and
+3 (Hebrew conjunction). Disabled triples are all zero; enabled triples retain
+the unchanged base template when only their other template needs replacement.
+Every set is referenced. The decoder checks this structure and template syntax;
+selection of the appropriate language, variant and exact-default replacement
+belongs to the authenticated-source collector. A structurally valid pack alone
+does not prove these linguistic rules or advertise a complete ListFormat service.
 
 `src/intl/locale/preferences.c` applies the fixed ECMA-402 rules above the
 selected backend's exact data queries. Region selection preserves explicit
