@@ -1416,34 +1416,8 @@ static int unicode_general_category1(CharRange *cr, uint32_t gc_mask)
     p = unicode_gc_table;
     p_end = unicode_gc_table + countof(unicode_gc_table);
     c = 0;
-    /* Compressed range encoding:
-       initial byte:
-       bits 0..4: category number (special case 31)
-       bits 5..7: range length (add 1)
-       special case bits 5..7 == 7: read an extra byte
-       - 00..7F: range length (add 7 + 1)
-       - 80..BF: 6-bits plus extra byte for range length (add 7 + 128)
-       - C0..FF: 6-bits plus 2 extra bytes for range length (add 7 + 128 + 16384)
-     */
     while (p < p_end) {
-        b = *p++;
-        n = b >> 5;
-        v = b & 0x1f;
-        if (n == 7) {
-            n = *p++;
-            if (n < 128) {
-                n += 7;
-            } else if (n < 128 + 64) {
-                n = (n - 128) << 8;
-                n |= *p++;
-                n += 7 + 128;
-            } else {
-                n = (n - 128 - 64) << 16;
-                n |= *p++ << 8;
-                n |= *p++;
-                n += 7 + 128 + (1 << 14);
-            }
-        }
+        UNICODE_GC_READ(p, b, n, v);
         c0 = c;
         c += n + 1;
         if (v == 31) {
