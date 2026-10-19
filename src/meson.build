@@ -150,6 +150,7 @@ if intl_enabled
     'intl/currency/data.c',
     'intl/currency/display.c',
     'intl/datetime/field-data.c',
+    'intl/display/calendar-names.c',
     'intl/display/data.c',
     'intl/display/select.c',
     'intl/duration/data.c',
