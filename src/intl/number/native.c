@@ -1,4 +1,4 @@
-/* Native standard decimal/percent NumberFormat service.
+/* Native decimal/percent and currency-name NumberFormat service.
  * ECMA-402 730ca2b88c305862db7be2f83c510dcca33ab48c, reviewed 2026-10-19.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "number.h"
@@ -6,6 +6,8 @@
 #include "body.h"
 #include "compact-data.h"
 #include "compact-format.h"
+#include "currency-format.h"
+#include "../currency/display.h"
 #include "../plural/native-engine.h"
 #include "symbol-data.h"
 #include "../../cutils/cutils.h"
@@ -21,6 +23,8 @@ struct QJSIntlNumberService {
     QJSIntlNumberSymbolData symbols;
     QJSIntlCompactData compact;
     QJSIntlPluralData plurals;
+    QJSIntlCurrencyData currencies;
+    QJSIntlNumberLayoutData layouts;
     QJSIntlBytes *available;
     uint32_t root;
 };
@@ -38,6 +42,11 @@ struct QJSIntlNumberFormatter {
     QJSIntlCompactMap compact_map;
     QJSIntlPluralRuleSet cardinal;
     QJSIntlCompactScale *scales;
+    QJSIntlCurrencyData currencies;
+    QJSIntlCurrencyUnitLayouts currency_layouts;
+    uint32_t locale;
+    char currency_code[3];
+    unsigned int currency_name;
 };
 
 void qjs_intl_number_close(QJSIntlNumberService *service)
@@ -82,6 +91,12 @@ QJSIntlStatus qjs_intl_number_open(const QJSIntlAllocator *allocator, QJSIntlNum
     if (status)
         goto fail;
     status = qjs_intl_plural_data_open(&data, allocator, &service->plurals);
+    if (status)
+        goto fail;
+    status = qjs_intl_currency_data_open(&data, allocator, &service->currencies);
+    if (status)
+        goto fail;
+    status = qjs_intl_number_layout_data_open(&service->numbering, allocator, &service->layouts);
     if (status)
         goto fail;
     if (data.locales.count < 2) {
@@ -172,6 +187,21 @@ void qjs_intl_number_formatter_close(QJSIntlNumberFormatter *formatter)
     }
 }
 
+QJSIntlStatus qjs_intl_number_currency_digits(const QJSIntlNumberService *service,
+                                              QJSIntlBytes code, uint32_t *out)
+{
+    QJSIntlCurrencyFractions fractions;
+    QJSIntlStatus status;
+    if (out)
+        *out = 0;
+    if (!out || !service)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_currency_fractions(&service->currencies, code, &fractions);
+    if (!status)
+        *out = fractions.digits;
+    return status;
+}
+
 /* The opened data owner already guarantees scalar UTF-8. Keep the bounded
    decoder here at the native-data boundary, outside the generic body engine. */
 static QJSIntlStatus decode(const QJSIntlAllocator *allocator, QJSIntlBytes text, QJSIntlUTF16 *out)
@@ -222,14 +252,25 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     if (out)
         *out = NULL;
     if (!out || !service || !options || locale >= service->numbering.data.locales.count - 1 ||
-        (unsigned int)options->style > QJS_INTL_NUMBER_PERCENT ||
+        (unsigned int)options->style > QJS_INTL_NUMBER_CURRENCY ||
         (unsigned int)options->notation > QJS_INTL_NUMBER_COMPACT ||
         (unsigned int)options->grouping > QJS_INTL_NUMBER_GROUP_MIN2 ||
         (unsigned int)options->sign_display > QJS_INTL_NUMBER_SIGN_NEGATIVE ||
         options->compact_long > 1 || !options->maximum_output_length ||
+        (unsigned int)options->currency_display > QJS_INTL_NUMBER_CURRENCY_NAME ||
+        (unsigned int)options->currency_sign > QJS_INTL_NUMBER_CURRENCY_ACCOUNTING ||
         qjs_intl_decimal_options_validate(&options->digits) ||
         (!system_name.data && system_name.length))
         return QJS_INTL_INVALID_ARGUMENT;
+    if (options->style == QJS_INTL_NUMBER_CURRENCY) {
+        uint32_t code;
+        status = qjs_intl_currency_code_find(&service->currencies, options->currency, &code);
+        if (status != QJS_INTL_OK && status != QJS_INTL_UNSUPPORTED)
+            return status;
+        if (options->currency_display != QJS_INTL_NUMBER_CURRENCY_NAME ||
+            options->notation != QJS_INTL_NUMBER_STANDARD)
+            return QJS_INTL_UNSUPPORTED;
+    }
     has_scientific = options->notation == QJS_INTL_NUMBER_SCIENTIFIC ||
                      options->notation == QJS_INTL_NUMBER_ENGINEERING;
     if (!system_name.length) {
@@ -264,6 +305,23 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
     status = qjs_intl_number_symbols_at(&service->symbols, source, index, &symbols);
     if (status)
         return status;
+    if (options->style == QJS_INTL_NUMBER_CURRENCY) {
+        const QJSIntlCurrencyField fields[] = {QJS_INTL_CURRENCY_DECIMAL, QJS_INTL_CURRENCY_GROUP};
+        const unsigned int regular[] = {QJS_INTL_SYMBOL_DECIMAL, QJS_INTL_SYMBOL_GROUP};
+        const unsigned int currency[] = {QJS_INTL_SYMBOL_CURRENCY_DECIMAL, QJS_INTL_SYMBOL_CURRENCY_GROUP};
+        uint32_t code;
+        int found = !qjs_intl_currency_code_find(&service->currencies, options->currency, &code);
+        for (i = 0; i < 2; i++) {
+            QJSIntlCurrencyText value;
+            if (symbols.fields[currency[i]].state == QJS_INTL_SYMBOL_VALUE)
+                symbols.fields[regular[i]] = symbols.fields[currency[i]];
+            if (found) {
+                qjs_intl_currency_field_at(&service->currencies, source, code, fields[i], &value);
+                if (value.state == QJS_INTL_CURRENCY_VALUE || value.state == QJS_INTL_CURRENCY_EMPTY)
+                    symbols.fields[regular[i]].text = value.text;
+            }
+        }
+    }
     for (i = 0; i < QJS_INTL_NUMBER_PATTERN_FORM_COUNT; i++) {
         if (pattern.forms[i].count > SIZE_MAX / sizeof(*formatter->tokens) - total)
             return QJS_INTL_OVERFLOW;
@@ -280,6 +338,19 @@ QJSIntlStatus qjs_intl_number_formatter_open(const QJSIntlNumberService *service
         return QJS_INTL_NO_MEMORY;
     memset(formatter, 0, sizeof(*formatter));
     formatter->allocator = service->allocator;
+    if (options->style == QJS_INTL_NUMBER_CURRENCY) {
+        formatter->currency_name = 1;
+        formatter->currencies = service->currencies;
+        formatter->locale = source;
+        memcpy(formatter->currency_code, options->currency.data, 3);
+        status = qjs_intl_currency_unit_layouts_at(&service->layouts, source, &formatter->currency_layouts);
+        if (status)
+            goto fail;
+        status = qjs_intl_plural_rules_at(&service->plurals, source, QJS_INTL_PLURAL_CARDINAL,
+                                          &formatter->cardinal);
+        if (status)
+            goto fail;
+    }
     formatter->rounding.digits = options->digits;
     formatter->rounding.notation = options->notation;
     formatter->rounding.percent = options->style == QJS_INTL_NUMBER_PERCENT;
@@ -558,7 +629,7 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
                                      const QJSIntlMathematicalValue *value, QJSIntlFormatted *out)
 {
     QJSIntlRoundedNumber rounded = {0};
-    QJSIntlFormatted body = {0}, exponent_body = {0}, notation_body = {0};
+    QJSIntlFormatted body = {0}, exponent_body = {0}, notation_body = {0}, signed_body = {0};
     QJSIntlCompactPattern compact = {0};
     QJSIntlStatus status;
     unsigned int form;
@@ -613,10 +684,36 @@ QJSIntlStatus qjs_intl_number_format(const QJSIntlNumberFormatter *formatter,
         status = qjs_intl_number_affix_format(
             &formatter->allocator, formatter->tokens + formatter->offsets[form],
             formatter->counts[form], &formatter->symbols, &body,
-            form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length, out);
+            form == QJS_INTL_NUMBER_PATTERN_PLUS, formatter->body.maximum_output_length,
+            formatter->currency_name ? &signed_body : out);
+    if (!status && formatter->currency_name) {
+        QJSIntlPluralCategory category = QJS_INTL_PLURAL_OTHER;
+        QJSIntlBytes name, pattern;
+        int exact = -1;
+        if (rounded.kind == QJS_INTL_FINITE || rounded.kind == QJS_INTL_NEGATIVE_ZERO) {
+            QJSIntlPluralOperands operands = {rounded.number.text, rounded.number.length, 0};
+            status = qjs_intl_native_plural_select(&formatter->cardinal, &operands, &category);
+            if (rounded.number.rounded.length == 1 && rounded.number.rounded.digits[0] == '0')
+                exact = 0;
+            else if (is_one(&rounded.number.rounded))
+                exact = 1;
+        }
+        if (!status)
+            status = qjs_intl_currency_name(&formatter->currencies, formatter->locale,
+                                             (QJSIntlBytes){formatter->currency_code, 3}, category,
+                                             exact, &name);
+        if (!status)
+            status = qjs_intl_currency_unit_pattern(&formatter->currency_layouts, category, exact,
+                                                     &pattern);
+        if (!status)
+            status = qjs_intl_number_currency_name_format(&formatter->allocator, pattern, name,
+                                                           &signed_body,
+                                                           formatter->body.maximum_output_length, out);
+    }
     qjs_intl_number_body_clear(&formatter->allocator, &body);
     qjs_intl_number_body_clear(&formatter->allocator, &exponent_body);
     qjs_intl_number_body_clear(&formatter->allocator, &notation_body);
+    qjs_intl_number_body_clear(&formatter->allocator, &signed_body);
     qjs_intl_number_round_clear(&formatter->allocator, &rounded);
     return status;
 }
