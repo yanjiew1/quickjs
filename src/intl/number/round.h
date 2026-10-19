@@ -2,14 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_NUMBER_ROUND_H
 #define QJS_INTL_NUMBER_ROUND_H
-#include "../common/decimal.h"
-
-typedef enum QJSIntlNumberNotation {
-    QJS_INTL_NUMBER_STANDARD,
-    QJS_INTL_NUMBER_SCIENTIFIC,
-    QJS_INTL_NUMBER_ENGINEERING,
-    QJS_INTL_NUMBER_COMPACT
-} QJSIntlNumberNotation;
+#include "number.h"
 
 typedef struct QJSIntlCompactScale {
     uint32_t magnitude, exponent;
