@@ -211,6 +211,7 @@ enum {
     JS_CLASS_INTL_NUMBER_FORMAT,
     JS_CLASS_INTL_RELATIVE_TIME_FORMAT,
     JS_CLASS_INTL_DURATION_FORMAT,
+    JS_CLASS_INTL_DISPLAY_NAMES,
 #endif
     JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
 };
