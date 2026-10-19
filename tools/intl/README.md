@@ -171,5 +171,6 @@ Both prepared profiles retain the same complete locale identity metadata, even
 though their formatter locale selections differ. Aliases, likely subtags,
 extension keys and extension types are an atomic group of sections (3–6).
 Python checks their schemas, references, ordering and preferred-name chains.
-The C shared-table reader currently handles sections 1, 2 and 10; the locale
-owner must validate sections 3–6 before a runtime locale service uses them.
+The shared C table reader handles sections 1, 2 and 10. The locale owner uses
+`qjs_intl_locale_metadata_open()` to check sections 3–6, including scoped
+preferred-name graphs, before a runtime locale service can consume them.

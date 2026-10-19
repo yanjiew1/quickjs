@@ -75,7 +75,7 @@ def decode(sections, pool):
     likely, identities = [], []
     for key, value in rows(bundle.LIKELY, 2):
         source, target = text(key), text(value)
-        if (locale_id(source) != source or not
+        if (locale_id(source) != source or locale_id(target) != target or not
                 re.fullmatch(r'[a-z]{2,8}-[A-Z][a-z]{3}-(?:[A-Z]{2}|[0-9]{3})', target)):
             raise ValueError('invalid Intl likely-subtag row')
         identities.append(key)

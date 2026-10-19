@@ -143,7 +143,7 @@ class TableTests(unittest.TestCase):
 
     def test_locale_metadata_roundtrip_and_invalid_wire_rows(self):
         metadata = locale_metadata.collect(VerifiedFixture())
-        pool = tuple(sorted(locale_tables.strings(metadata) | {'unknown', 'bad\talias'},
+        pool = tuple(sorted(locale_tables.strings(metadata) | {'unknown', 'bad\talias', 'abcd-Latn-US'},
                             key=lambda s: s.encode('utf-8')))
         ids = {text: index for index, text in enumerate(pool)}
         sections = locale_tables.encode(metadata, ids)
@@ -155,6 +155,7 @@ class TableTests(unittest.TestCase):
             locale_tables.decode(missing, pool)
         changes = ((bundle.ALIASES, 0, 5), (bundle.ALIASES, 1, len(pool)),
                    (bundle.ALIASES, 3, 0), (bundle.LIKELY, 0, 0),
+                   (bundle.LIKELY, 1, ids['abcd-Latn-US']),
                    (bundle.KEYS, 2, 4), (bundle.KEYS, 4, ids['unknown']),
                    (bundle.KEYS, 3, ids['bad\talias']),
                    (bundle.TYPES, 1, ids['unknown']), (bundle.TYPES, 5, 4),
