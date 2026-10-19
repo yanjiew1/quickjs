@@ -476,6 +476,13 @@ C identifier helper performs exact case-sensitive lookup and accepts either
 one sanctioned unit or precisely two joined by `-per-`. It does not accept
 arbitrary CLDR units, aliases, multiplication or localized names. The helper
 allocates nothing; source collection and formatting remain separate work.
+An exact adapter maps the five sanctioned divisions with precomposed CLDR names
+to their long data identifiers. Other sanctioned pairs require composition;
+they remain valid when no precomposed name exists. Never derive the grouping
+prefix from the numerator's category: `liter-per-kilometer`, for example, uses
+`consumption-liter-per-kilometer`, not a `volume-` prefix. Both prepared-profile
+tests check every sanctioned pair against the full source group inventory and
+reject missing, unexpected or ambiguous mappings.
 
 `unit_patterns.py` collects long/short/narrow display names, unit patterns with
 their exact plural/case selectors, grammatical gender, per-unit patterns and

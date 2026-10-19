@@ -522,6 +522,7 @@ intl_unit_owner_sources = files(
   '../src/intl/native/data.c',
   '../src/intl/native/pack.c',
   '../src/intl/unit/data.c',
+  '../src/intl/unit/identifier.c',
 )
 intl_unit_grammar_sources = files(
   'test_intl_unit_grammar_data.c',
