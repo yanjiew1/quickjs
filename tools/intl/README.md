@@ -1327,8 +1327,20 @@ Rows and records are canonically shared and all must be reachable. Decoding
 checks dimensions, complete extents, references, states and provenance before
 returning borrowed source facts. Profile projection preserves source identities
 outside the selected locale registry. The optional section is recognized by the
-Python shared-pack validator; prepared packs and runtime admission are unchanged
-until the C owner and generator integration are delivered.
+Python shared-pack validator and emitted by the production generator in both
+prepared profiles. Its presence does not establish DurationFormat capability.
+
+`src/intl/duration/data.c` validates the C schema before exposing borrowed views.
+It checks every row and record, complete reachability, states, terminal source
+locale spelling and skeleton identities. All temporary validation memory is
+released before return, including multi-variant source-name scratch and failure
+paths. Exact locale/skeleton queries allocate nothing and perform no display or
+locale fallback. Raw LDML interpretation remains a separate service concern.
+
+Authored C fixtures cover missing, blocked, empty and unequal-separator patterns,
+external alias origins, malformed wire fields, every opening allocation failure
+and retry. Both prepared profiles are opened and queried independently, including
+unaligned input. The composed generator fixture also includes digital patterns.
 
 `src/quickjs/builtins/duration-value.[ch]` provides the shared JavaScript-to-record
 conversion needed by DurationFormat and Temporal. It copies branded duration
