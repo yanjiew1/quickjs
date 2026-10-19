@@ -123,6 +123,7 @@ engine_sources += files(
   'quickjs/default-time-zone.c',
 )
 if get_option('temporal')
+  engine_sources += files('quickjs/builtins/duration-value.c')
   engine_sources += files(
     'quickjs/builtins/temporal/calendar-fields.c',
     'quickjs/builtins/temporal/duration.c',
