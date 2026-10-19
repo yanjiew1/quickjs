@@ -491,20 +491,31 @@ locale and width/group identity retained on every node. Parent node IDs precede
 their children; zero ends a chain. Identical fields can share a map, but different
 source identities do not collapse into one node. This lets future consumers try
 local plural/case alternatives before inherited exact leaves without losing
-alias context. These source-only chains do not yet change section 21 or publish
-a formatter fallback policy.
+alias context. These chains preserve source facts without selecting a formatter
+fallback policy.
 
 Digital duration layouts, coordinate formatting and arbitrary product/power
 composition have separate consumers. CI audits all authenticated relevant unit
 records; collecting those source facts does not publish unit formatter support.
 
 Section 21 stores those sparse unit forms. Its directory count is the shared
-locale count. Six little-endian header words contain schema version 1, group,
-case, shared-row, shared-map and entry counts. Group records contain kind
+locale count. Eight little-endian header words contain schema version 2, group,
+case, raw shared-row, shared-map, entry, overlay shared-row and node counts.
+Group records contain kind
 (`compound=0`, `unit=1`) and a name string reference; only division `per` is a
 compound group. Sorted case string references start with the empty default case.
 One row index per locale precedes sorted unique rows, each containing one map
-index for every width (long/short/narrow) and group combination.
+index for every width (long/short/narrow) and group combination. A second locale
+index table and sorted unique row table hold overlay heads for the same columns.
+Zero means no local layers; other heads are one-based node IDs.
+
+Four-word nodes contain origin locale string, origin width/group column,
+local-map index and parent ID. Alias origins may name locales outside the
+selected profile. Parents precede children, and nodes are strictly sorted by
+`(parent, origin locale string index, origin column, map index)`. This permits
+linear duplicate and reachability checks without repeatedly walking every
+chain. Local maps are nonempty; raw exact maps may be empty. Chains preserve
+unit-versus-compound kind even when aliases change width or unit name.
 
 Sorted unique maps have contiguous `(offset, count)` descriptors into two-word
 entries. An entry holds a selector and text reference. The selector's high eight
@@ -514,7 +525,8 @@ Entries are strictly sorted by selector. Absence means no entry; `0xfffffffe`
 is blocked text, and string index zero is explicitly empty. Inheritance/block
 markers cannot be ordinary pooled text. Unit and compound fields cannot mix
 or be assigned to the wrong group family. Rows/maps and non-default cases must
-all be referenced. Projection removes unused maps/cases while preserving the
+all be referenced by raw rows or reachable overlay nodes. Both map families
+share one pool. Projection removes unused maps/cases/nodes while preserving the
 global source group inventory; that inventory is not API availability.
 
 `src/intl/unit/data.c` validates section 21 against the unchanged shared data
@@ -522,6 +534,8 @@ view, including selector identities, map families, complete ownership and
 canonical ordering. Indexed and exact queries borrow immutable storage and
 allocate nothing. They preserve missing, blocked and explicitly empty forms;
 grammatical/plural/width fallback and formatter capability belong to consumers.
+Overlay queries additionally expose each borrowed local map and its source
+locale, width/group and next ID, without allocating or performing fallback.
 
 ## Localized numeric bodies
 
