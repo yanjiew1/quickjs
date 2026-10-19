@@ -457,6 +457,8 @@ if intl_enabled
       '../tools/intl/locale_metadata.py',
       '../tools/intl/locale_tables.py',
       '../tools/intl/parents.py',
+      '../tools/intl/preferences.py',
+      '../tools/intl/preference_tables.py',
       '../tools/intl/resolve.py',
       '../tools/intl/tables.py',
     ),
@@ -480,6 +482,8 @@ if intl_enabled
         '../tools/intl/locale_metadata.py',
         '../tools/intl/locale_tables.py',
         '../tools/intl/parents.py',
+        '../tools/intl/preferences.py',
+        '../tools/intl/preference_tables.py',
         '../tools/intl/resolve.py',
         '../tools/intl/tables.py',
       ),
@@ -506,13 +510,35 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_preference_test = {
+      'name': ('test_intl_preferences_' + profile),
+      'sources': files(
+        'test_intl_preferences.c',
+        '../src/intl/locale/preference-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+      ) + [intl_fixture],
+      'c_args': host_args,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_preference_test,
+      'name': ('intl-preferences-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_locale_test = {
       'name': ('test_intl_locale_id_' + profile),
       'sources': files(
         'test_intl_native_locale_id.c',
+        '../src/intl/locale/identifier.c',
         '../src/intl/locale/native.c',
         '../src/intl/locale/native-id.c',
         '../src/intl/locale/native-data.c',
+        '../src/intl/locale/preference-data.c',
+        '../src/intl/locale/preferences.c',
         '../src/intl/common/locale-grammar.c',
         '../src/intl/native/data.c',
         '../src/intl/native/pack.c',
@@ -907,6 +933,7 @@ if intl_enabled
   js_tests += {
     'intl-locale': ['-m', 'tests/test_intl_locale.js'],
     'intl-locale-object': ['-m', 'tests/test_intl_locale_object.js'],
+    'intl-locale-info': ['-m', 'tests/test_intl_locale_preferences.js'],
   }
 endif
 if shared_modules
@@ -1035,6 +1062,14 @@ if native_calendars
 endif
 
 if intl_enabled
+  test(
+    'intl-locale-preferences',
+    python,
+    args: files('test_intl_preferences.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
   test(
     'intl-locale-metadata',
     python,
