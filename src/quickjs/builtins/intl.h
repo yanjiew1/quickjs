@@ -5,6 +5,7 @@
 #include "../internal/base.h"
 #ifdef CONFIG_INTL
 #include "../../intl/locale/locale.h"
+#include "../../intl/locale/matching.h"
 #include "../../intl/list/list.h"
 #include "../../intl/plural/plural.h"
 
@@ -26,9 +27,34 @@ JSValue js_intl_options_object(JSContext *ctx, JSValueConst value, BOOL coerce);
 int js_intl_string_option(JSContext *ctx, JSValueConst object, const char *name,
                           const char *const *choices, size_t count, int fallback);
 int js_intl_locale_matcher(JSContext *ctx, JSValueConst options);
+/* Preserve the matched request's borrowed Unicode extension. The requested
+   list must outlive match use. Default fallback has no extension. */
+int js_intl_resolve_locale_match(JSContext *ctx, const QJSIntlBytes *available,
+                                 size_t count, const JSIntlLocaleList *requested,
+                                 QJSIntlLocaleMatch *out);
 int js_intl_resolve_locale_index(JSContext *ctx, const QJSIntlBytes *available,
                                  size_t count, const JSIntlLocaleList *requested,
                                  size_t *out);
+/* Read/coerce/validate a Unicode type option. Absent has NULL data; release
+   owned with JS_FreeCString, including after failure (which resets outputs). */
+int js_intl_unicode_type_option(JSContext *ctx, JSValueConst options, const char *name,
+                                 QJSIntlBytes *out, const char **owned);
+typedef QJSIntlStatus JSIntlLocaleValueSupported(void *opaque, QJSIntlBytes value, int *supported);
+typedef struct JSIntlResolvedKeyword {
+    char *locale, *value;
+} JSIntlResolvedKeyword;
+/* Fixed ResolveLocale policy for one relevant key. base is a canonical,
+   extension-free service locale; extension comes from resolve_locale_match.
+   default_value is supported, option is absent or a validated Unicode type.
+   supported queries the selected service/locale without executing user code;
+   OK with supported=0 means unsupported, non-OK means an operational error.
+   Returned strings use js_free; inputs and callbacks are borrowed. Reset out
+   on failure. Canonicalize option aliases before comparing/retaining a key.
+   Multi-key resolution and null defaults require additional orchestration. */
+int js_intl_resolve_locale_key(JSContext *ctx, QJSIntlBytes base, QJSIntlBytes extension,
+                               const char key[2], QJSIntlBytes default_value, QJSIntlBytes option,
+                               JSIntlLocaleValueSupported *supported, void *opaque,
+                               JSIntlResolvedKeyword *out);
 JSValue js_intl_filter_locales(JSContext *ctx, const QJSIntlBytes *available,
                                 size_t count, JSValueConst locales,
                                 JSValueConst options_value);
