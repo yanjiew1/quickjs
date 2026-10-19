@@ -62,3 +62,29 @@ QJSIntlStatus qjs_intl_currency_name(const QJSIntlCurrencyData *data, uint32_t l
     return QJS_INTL_OK;
 }
 
+static int unit_pattern(const QJSIntlCurrencyUnitLayouts *layouts, QJSIntlCurrencyUnitCount field,
+                        int allow_root, QJSIntlBytes *out)
+{
+    const QJSIntlNumberLayoutText *value = &layouts->fields[field];
+    if (value->state != QJS_INTL_LAYOUT_VALUE || (!allow_root && value->from_root))
+        return 0;
+    *out = value->text;
+    return 1;
+}
+
+QJSIntlStatus qjs_intl_currency_unit_pattern(const QJSIntlCurrencyUnitLayouts *layouts,
+                                              QJSIntlPluralCategory category, int exact,
+                                              QJSIntlBytes *out)
+{
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !layouts || (unsigned int)category >= QJS_INTL_PLURAL_CATEGORY_COUNT ||
+        exact < -1 || exact > 1)
+        return QJS_INTL_INVALID_ARGUMENT;
+    if ((exact >= 0 && unit_pattern(layouts, QJS_INTL_CURRENCY_UNIT_EXACT_ZERO + exact, 0, out)) ||
+        unit_pattern(layouts, QJS_INTL_CURRENCY_UNIT_ZERO + category, 0, out) ||
+        unit_pattern(layouts, QJS_INTL_CURRENCY_UNIT_OTHER, 1, out))
+        return QJS_INTL_OK;
+    return QJS_INTL_UNSUPPORTED;
+}
+
