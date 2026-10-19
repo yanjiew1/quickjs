@@ -33,6 +33,10 @@ JSValue js_intl_create_from_constructor(JSContext *ctx, JSValueConst new_target,
 JSValue js_intl_options_object(JSContext *ctx, JSValueConst value, BOOL coerce);
 int js_intl_string_option(JSContext *ctx, JSValueConst object, const char *name,
                           const char *const *choices, size_t count, int fallback);
+int js_intl_default_number_option(JSContext *ctx, JSValueConst value, int minimum,
+                                  int maximum, int fallback, int *out);
+int js_intl_get_number_option(JSContext *ctx, JSValueConst options, const char *name,
+                              int minimum, int maximum, int fallback, int *out);
 int js_intl_locale_matcher(JSContext *ctx, JSValueConst options);
 /* Preserve the matched request's borrowed Unicode extension. The requested
    list must outlive match use. Default fallback has no extension. */
