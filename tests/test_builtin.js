@@ -960,7 +960,8 @@ function test_bigint_to_locale_string()
         assert(property.configurable, true);
     }
 
-    /* Decimal formatting applies to primitive and boxed BigInts. */
+    /* Explicit English without grouping keeps this representation check valid
+       both with and without the optional Intl implementation. */
     const values = [
         [0n, "0"], [-0n, "0"], [1n, "1"], [-1n, "-1"],
         [255n, "255"], [-255n, "-255"],
@@ -970,9 +971,9 @@ function test_bigint_to_locale_string()
          "-12345678901234567890123456789012345678901234567890"],
     ];
     for (const [value, expected] of values) {
-        assert(toLocaleString.call(value), expected);
-        assert(value.toLocaleString(), expected);
-        assert(Object(value).toLocaleString(), expected);
+        assert(toLocaleString.call(value, "en", { useGrouping: false }), expected);
+        assert(value.toLocaleString("en", { useGrouping: false }), expected);
+        assert(Object(value).toLocaleString("en", { useGrouping: false }), expected);
     }
 
     let observed = 0;
@@ -1020,24 +1021,26 @@ function test_bigint_to_locale_string()
         [Symbol("locale"), Symbol("options")],
         [hostile, hostile], [proxy, proxy], [revoked.proxy, revoked.proxy],
     ];
-    for (const [locales, options] of arguments_list) {
-        assert(toLocaleString.call(255n, locales, options), "255");
-        assert(toLocaleString.call(Object(-255n), locales, options), "-255");
+    if (typeof Intl !== "object" || typeof Intl.NumberFormat !== "function") {
+        for (const [locales, options] of arguments_list) {
+            assert(toLocaleString.call(255n, locales, options), "255");
+            assert(toLocaleString.call(Object(-255n), locales, options), "-255");
+        }
     }
 
     /* Formatting must not look up an overridden toString property. */
     const boxed = Object(123456789n);
     boxed.toString = fail;
-    assert(boxed.toLocaleString(), "123456789");
+    assert(boxed.toLocaleString("en", { useGrouping: false }), "123456789");
     Object.defineProperty(boxed, "toString", { get: fail });
-    assert(boxed.toLocaleString(), "123456789");
+    assert(boxed.toLocaleString("en", { useGrouping: false }), "123456789");
     const saved = Object.getOwnPropertyDescriptor(BigInt.prototype, "toString");
     try {
         BigInt.prototype.toString = fail;
-        assert((123n).toLocaleString(), "123");
+        assert((123n).toLocaleString("en", { useGrouping: false }), "123");
         Object.defineProperty(BigInt.prototype, "toString", { get: fail });
-        assert((123n).toLocaleString(), "123");
-        assert(boxed.toLocaleString(), "123456789");
+        assert((123n).toLocaleString("en", { useGrouping: false }), "123");
+        assert(boxed.toLocaleString("en", { useGrouping: false }), "123456789");
     } finally {
         Object.defineProperty(BigInt.prototype, "toString", saved);
     }
