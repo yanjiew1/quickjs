@@ -31,6 +31,7 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "bigint.h"
+#include "intl.h"
 
 /* BigInt */
 
@@ -136,7 +137,16 @@ static JSValue js_bigint_toString(JSContext *ctx, JSValueConst this_val,
 static JSValue js_bigint_toLocaleString(JSContext *ctx, JSValueConst this_val,
                                         int argc, JSValueConst *argv)
 {
+#ifdef CONFIG_INTL
+    JSValue value = js_thisBigIntValue(ctx, this_val), result;
+    if (JS_IsException(value))
+        return value;
+    result = js_intl_format_number(ctx, value, argc, argv);
+    JS_FreeValue(ctx, value);
+    return result;
+#else
     return js_bigint_toString(ctx, this_val, 0, NULL);
+#endif
 }
 
 static JSValue js_bigint_valueOf(JSContext *ctx, JSValueConst this_val,
