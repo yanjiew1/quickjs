@@ -55,7 +55,7 @@ static QJSIntlFormatted body(void)
 static QJSIntlNumberAffixSymbols symbols(void)
 {
     return (QJSIntlNumberAffixSymbols){bytes("-"), bytes("+"), bytes("%"), bytes("‰"),
-                                       bytes("USD")};
+                                       bytes("USD"), {0}, {0}};
 }
 
 static QJSIntlFormatted format(const QJSIntlAllocator *allocator,
@@ -137,6 +137,27 @@ static void test_forms(const QJSIntlAllocator *allocator)
     tokens[0] = token(QJS_INTL_NUMBER_TOKEN_LITERAL, "'quoted' {0}");
     result = format(allocator, tokens, 2, &signs, 0, "'quoted' {0}1,234.50");
     assert(result.parts[0].type == QJS_INTL_PART_LITERAL);
+    qjs_intl_number_body_clear(allocator, &result);
+}
+
+static void test_spacing(const QJSIntlAllocator *allocator)
+{
+    QJSIntlNumberAffixSymbols signs = symbols();
+    QJSIntlNumberPatternToken tokens[] = {token(QJS_INTL_NUMBER_TOKEN_CURRENCY, ""),
+                                          token(QJS_INTL_NUMBER_TOKEN_NUMBER, "")};
+    QJSIntlFormatted result;
+    signs.before_currency = bytes("_");
+    signs.after_currency = bytes("~");
+    result = format(allocator, tokens, 2, &signs, 0, "USD~1,234.50");
+    assert(result.parts[1].type == QJS_INTL_PART_LITERAL && result.parts[1].start == 3);
+    qjs_intl_number_body_clear(allocator, &result);
+    tokens[0].kind = QJS_INTL_NUMBER_TOKEN_NUMBER;
+    tokens[1].kind = QJS_INTL_NUMBER_TOKEN_CURRENCY_ISO;
+    result = format(allocator, tokens, 2, &signs, 0, "1,234.50_USD");
+    assert(result.parts[5].type == QJS_INTL_PART_LITERAL && result.parts[5].start == 8);
+    qjs_intl_number_body_clear(allocator, &result);
+    signs.currency = (QJSIntlBytes){0};
+    result = format(allocator, tokens, 2, &signs, 0, "1,234.50");
     qjs_intl_number_body_clear(allocator, &result);
 }
 
@@ -269,6 +290,7 @@ int main(void)
     QJSIntlAllocator allocator = {&state, allocate, NULL, release};
     test_signs();
     test_forms(&allocator);
+    test_spacing(&allocator);
     test_errors(&allocator);
     assert(!state.live);
     return 0;
