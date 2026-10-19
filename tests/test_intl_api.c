@@ -117,6 +117,76 @@ static void test_failures(int operation)
     }
     assert(failed);
 }
+static void test_preference_failures(const char *method, const char *tag, int kind)
+{
+    size_t step, calls = 0, failed = 0;
+
+    for (step = 0; step <= calls; step++) {
+        OOMTestAllocator allocator;
+        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSContext *ctx = JS_NewContextRaw(rt);
+        JSValue global, object, constructor, argument, locale, function, result;
+        JSValueConst borrowed;
+        void *padding;
+
+        assert(ctx && JS_AddIntrinsicBaseObjects(ctx) == 0);
+        assert(JS_AddIntrinsicIntl(ctx) == 0);
+        global = JS_GetGlobalObject(ctx);
+        object = JS_GetPropertyStr(ctx, global, "Intl");
+        constructor = JS_GetPropertyStr(ctx, object, "Locale");
+        argument = JS_NewString(ctx, tag);
+        borrowed = argument;
+        locale = JS_CallConstructor(ctx, constructor, 1, &borrowed);
+        assert(!JS_IsException(locale));
+        function = JS_GetPropertyStr(ctx, locale, method);
+        assert(JS_IsFunction(ctx, function));
+        padding = test_pool_padding(rt);
+        oom_test_begin(&allocator, step);
+        result = JS_Call(ctx, function, locale, 0, NULL);
+        oom_test_end(&allocator);
+        test_pool_padding_free(rt, padding);
+        if (!step) {
+            calls = allocator.calls;
+            assert(calls && calls < 1024);
+        } else {
+            assert(allocator.failures == 1);
+        }
+        if (JS_IsException(result)) {
+            failed++;
+            oom_test_check_exception(ctx);
+            result = JS_Call(ctx, function, locale, 0, NULL);
+            assert(!JS_IsException(result));
+        }
+        assert(!JS_HasException(ctx));
+        if (kind == 0) {
+            JSValue first = JS_GetPropertyStr(ctx, result, "firstDay");
+            JSValue weekend = JS_GetPropertyStr(ctx, result, "weekend");
+            int32_t number;
+            assert(!JS_ToInt32(ctx, &number, first) && number == 6);
+            assert(JS_IsArray(ctx, weekend) == 1);
+            JS_FreeValue(ctx, first);
+            JS_FreeValue(ctx, weekend);
+        } else {
+            JSValue value = kind == 1 ? JS_GetPropertyStr(ctx, result, "direction")
+                                     : JS_GetPropertyUint32(ctx, result, 0);
+            const char *text = JS_ToCString(ctx, value);
+            assert(text && !strcmp(text, kind == 1 ? "rtl" : "h23"));
+            JS_FreeCString(ctx, text);
+            JS_FreeValue(ctx, value);
+        }
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, function);
+        JS_FreeValue(ctx, locale);
+        JS_FreeValue(ctx, argument);
+        JS_FreeValue(ctx, constructor);
+        JS_FreeValue(ctx, object);
+        JS_FreeValue(ctx, global);
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+        assert(!allocator.live);
+    }
+    assert(failed);
+}
 #endif
 
 int main(void)
@@ -158,6 +228,9 @@ int main(void)
     test_failures(1);
     test_failures(2);
     test_failures(3);
+    test_preference_failures("getWeekInfo", "fa-u-sd-inka-rg-afzzzz", 0);
+    test_preference_failures("getTextInfo", "ar", 1);
+    test_preference_failures("getHourCycles", "en-u-rg-jpzzzz", 2);
 #endif
     return 0;
 }
