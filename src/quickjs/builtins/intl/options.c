@@ -7,6 +7,7 @@
 #include "../../internal/object.h"
 #include "../../internal/runtime.h"
 #include "../intl.h"
+#include <math.h>
 
 JSValue js_intl_options_object(JSContext *ctx, JSValueConst value, BOOL coerce)
 {
@@ -44,6 +45,36 @@ int js_intl_string_option(JSContext *ctx, JSValueConst object, const char *name,
     if (result < 0)
         JS_ThrowRangeError(ctx, "invalid Intl %s", name);
     return result;
+}
+
+int js_intl_default_number_option(JSContext *ctx, JSValueConst value, int minimum, int maximum,
+                                  int fallback, int *out)
+{
+    double number;
+    if (JS_IsUndefined(value)) {
+        *out = fallback;
+        return 0;
+    }
+    if (JS_ToFloat64(ctx, &number, value))
+        return -1;
+    if (isnan(number) || number < minimum || number > maximum) {
+        JS_ThrowRangeError(ctx, "Intl numeric option outside range");
+        return -1;
+    }
+    *out = (int)floor(number);
+    return 0;
+}
+
+int js_intl_get_number_option(JSContext *ctx, JSValueConst options, const char *name, int minimum,
+                              int maximum, int fallback, int *out)
+{
+    JSValue value = JS_GetPropertyStr(ctx, options, name);
+    int status;
+    if (JS_IsException(value))
+        return -1;
+    status = js_intl_default_number_option(ctx, value, minimum, maximum, fallback, out);
+    JS_FreeValue(ctx, value);
+    return status;
 }
 
 int js_intl_locale_matcher(JSContext *ctx, JSValueConst options)
