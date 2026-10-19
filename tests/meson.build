@@ -1394,6 +1394,15 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_number_round': files(
+      'test_intl_number_round.c',
+      '../src/intl/number/round.c',
+      '../src/intl/common/decimal.c',
+    ),
+    'test_intl_number_body': files(
+      'test_intl_number_body.c',
+      '../src/intl/number/body.c',
+    ),
     'test_intl_unit_identifier': files(
       'test_intl_unit_identifier.c',
       '../src/intl/unit/identifier.c',
