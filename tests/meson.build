@@ -188,6 +188,10 @@ test(
 
 # Build engine-independent library tests against their actual owners.
 standalone = {
+  'test_intl_decimal': [
+    'test_intl_decimal.c',
+    '../src/intl/common/decimal.c',
+  ],
   'test_temporal_noniso_calendars': [
     'test_temporal_noniso_calendars.c',
     '../src/calendar/astronomy.c',
