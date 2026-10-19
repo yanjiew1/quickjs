@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_COMMON_FORMAT_H
 #define QJS_INTL_COMMON_FORMAT_H
 #include "types.h"
+#include <string.h>
 
 /* UTF-16 code units, preserving embedded NUL and unpaired surrogates.
    Input slices are borrowed and remain unchanged during a formatting call. */
@@ -43,4 +44,21 @@ typedef struct QJSIntlFormatted {
     QJSIntlPart *parts; /* Owned spans partition text, including empty elements. */
     size_t part_count;
 } QJSIntlFormatted;
+
+/* Clear owned result buffers with the creating allocator. A live result
+   requires its original free callback and opaque; never clear borrowed input
+   slices. NULL and already-zero results are harmless. Shared by independent
+   service clear operations, with no backend or formatting policy. */
+static inline void qjs_intl_formatted_clear(const QJSIntlAllocator *allocator, QJSIntlFormatted *out)
+{
+    if (!out)
+        return;
+    if (allocator && allocator->free) {
+        if (out->text)
+            allocator->free(allocator->opaque, out->text);
+        if (out->parts)
+            allocator->free(allocator->opaque, out->parts);
+    }
+    memset(out, 0, sizeof(*out));
+}
 #endif
