@@ -150,6 +150,7 @@ if intl_enabled
     'intl/currency/boundary.c',
     'intl/currency/data.c',
     'intl/currency/display.c',
+    'intl/datetime/field-data.c',
     'intl/duration/data.c',
     'intl/duration/decimal.c',
     'intl/duration/format.c',
