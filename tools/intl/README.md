@@ -599,8 +599,10 @@ with noun text on both sides is ineligible for compound-name extraction, as in
 TR35's composition algorithm; it is not silently joined. These helpers borrow
 their inputs and do not select locale/plural/case fallback.
 The noun selector reuses the numeric selector's ordered layer/case traversal and
-path shadows, with its own noun eligibility rules. Its count is a fixed
-grammatical category; it never tries exact numeric `0`/`1` selectors. It returns
+path shadows, with its own noun eligibility rules. A fixed grammatical count
+bypasses numeric rule evaluation; a pass-through `compound` derivation can use
+the rounded-quantity callback and each source's cardinal rules. Neither mode
+tries exact numeric `0`/`1` selectors. It returns
 the noun and source/form provenance without allocating, including alias origins
 outside the prepared locale registry.
 Uncounted template selection separately handles a denominator's `perUnitPattern`

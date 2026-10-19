@@ -269,17 +269,16 @@ QJSIntlStatus qjs_intl_unit_pattern_select(const QJSIntlUnitData *data, uint32_t
 }
 
 QJSIntlStatus qjs_intl_unit_noun_select(const QJSIntlUnitData *data, uint32_t head,
-                                        QJSIntlBytes case_name, QJSIntlUnitCount category,
+                                        const QJSIntlUnitPatternRequest *request,
                                         QJSIntlSelectedUnitNoun *out)
 {
-    QJSIntlUnitPatternRequest request = {case_name, NULL, NULL, category, -1};
     Selection selected;
     QJSIntlStatus status;
     if (out)
         memset(out, 0, sizeof(*out));
-    if (!out)
+    if (!out || !request || request->exact != -1)
         return QJS_INTL_INVALID_ARGUMENT;
-    status = select_pattern(data, head, &request, 1, &selected);
+    status = select_pattern(data, head, request, 1, &selected);
     if (!status) {
         const QJSIntlSelectedUnitPattern *source = &selected.selected;
         *out = (QJSIntlSelectedUnitNoun){selected.noun, source->form, source->locale,

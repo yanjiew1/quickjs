@@ -187,13 +187,19 @@ static void noun_parser(void)
     assert(qjs_intl_unit_noun_parse(bytes("noun"), NULL) == QJS_INTL_INVALID_ARGUMENT);
 }
 
+static QJSIntlStatus fixed_noun(const QJSIntlUnitData *data, uint32_t head, QJSIntlBytes case_name,
+                                QJSIntlUnitCount category, QJSIntlSelectedUnitNoun *out)
+{
+    QJSIntlUnitPatternRequest request = {case_name, NULL, NULL, category, -1};
+    return qjs_intl_unit_noun_select(data, head, &request, out);
+}
+
 static void expect_noun(const QJSIntlUnitData *data, const char *locale, const char *group,
                         const char *case_name, QJSIntlUnitCount category,
                         const char *noun, const char *source, QJSIntlUnitCount selected_count)
 {
     QJSIntlSelectedUnitNoun result;
-    assert(!qjs_intl_unit_noun_select(data, head_for(data, locale, group), bytes(case_name),
-                                      category, &result));
+    assert(!fixed_noun(data, head_for(data, locale, group), bytes(case_name), category, &result));
     assert(equal(result.noun, noun) && equal(result.locale, source));
     assert(result.form.field == QJS_INTL_UNIT_PATTERN && result.form.count == selected_count);
     assert(result.width == QJS_INTL_UNIT_LONG);
@@ -202,6 +208,8 @@ static void expect_noun(const QJSIntlUnitData *data, const char *locale, const c
 static void noun_selection(const QJSIntlUnitData *data)
 {
     QJSIntlSelectedUnitNoun result, zero = {0};
+    Rules rules = {0, 1, QJS_INTL_OK, QJS_INTL_UNIT_COUNT_OTHER};
+    QJSIntlUnitPatternRequest request = {{0}, category, &rules, QJS_INTL_UNIT_COUNT_NONE, -1};
     uint32_t head = head_for(data, "en-GB", "length-denominator"), compound;
     expect_noun(data, "en-GB", "length-denominator", "", QJS_INTL_UNIT_COUNT_ONE,
                 "DENOMINATOR_ONE", "en-GB", QJS_INTL_UNIT_COUNT_ONE);
@@ -222,28 +230,39 @@ static void noun_selection(const QJSIntlUnitData *data)
     expect_noun(data, "de", "length-child", "", QJS_INTL_UNIT_COUNT_ONE,
                 "CHILD_OTHER", "en-GB", QJS_INTL_UNIT_COUNT_OTHER);
     memset(&result, 0xff, sizeof(result));
-    assert(qjs_intl_unit_noun_select(data, head_for(data, "en-GB", "length-malformed"), bytes(""),
+    assert(fixed_noun(data, head_for(data, "en-GB", "length-malformed"), bytes(""),
                                       QJS_INTL_UNIT_COUNT_ONE, &result) == QJS_INTL_DATA_ERROR);
     assert(!memcmp(&result, &zero, sizeof(result)));
-    assert(qjs_intl_unit_noun_select(data, head, bytes(""), QJS_INTL_UNIT_COUNT_EXACT_ONE, &result) ==
+    assert(fixed_noun(data, head, bytes(""), QJS_INTL_UNIT_COUNT_EXACT_ONE, &result) ==
            QJS_INTL_INVALID_ARGUMENT);
     assert(!memcmp(&result, &zero, sizeof(result)));
-    assert(qjs_intl_unit_noun_select(data, head, bytes("GENITIVE"), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+    assert(fixed_noun(data, head, bytes("GENITIVE"), QJS_INTL_UNIT_COUNT_ONE, &result) ==
            QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_unit_noun_select(NULL, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+    assert(fixed_noun(NULL, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
            QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_unit_noun_select(data, data->node_count + 1, bytes(""), QJS_INTL_UNIT_COUNT_ONE,
+    assert(fixed_noun(data, data->node_count + 1, bytes(""), QJS_INTL_UNIT_COUNT_ONE,
                                       &result) == QJS_INTL_INVALID_ARGUMENT);
-    assert(qjs_intl_unit_noun_select(data, 0, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+    assert(fixed_noun(data, 0, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
            QJS_INTL_UNSUPPORTED);
     assert(!memcmp(&result, &zero, sizeof(result)));
-    assert(qjs_intl_unit_noun_select(data, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, NULL) ==
+    assert(fixed_noun(data, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, NULL) ==
            QJS_INTL_INVALID_ARGUMENT);
     assert(!qjs_intl_unit_group_find(data, QJS_INTL_UNIT_GROUP_COMPOUND, bytes("per"), &compound));
     assert(!qjs_intl_unit_overlay_head(data, locale_id(&data->data, "root"), QJS_INTL_UNIT_LONG,
                                        compound, &head));
-    assert(qjs_intl_unit_noun_select(data, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
+    assert(fixed_noun(data, head, bytes(""), QJS_INTL_UNIT_COUNT_ONE, &result) ==
            QJS_INTL_INVALID_ARGUMENT);
+    head = head_for(data, "en-GB", "length-source-category");
+    assert(!qjs_intl_unit_noun_select(data, head, &request, &result));
+    assert(equal(result.noun, "PARENT_TWO") && equal(result.locale, "en") && rules.calls == 2);
+    request.exact = 1;
+    assert(qjs_intl_unit_noun_select(data, head, &request, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    request.exact = -1;
+    rules.error = QJS_INTL_NO_MEMORY;
+    assert(qjs_intl_unit_noun_select(data, head, &request, &result) == QJS_INTL_NO_MEMORY);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    assert(qjs_intl_unit_noun_select(data, head, NULL, &result) == QJS_INTL_INVALID_ARGUMENT);
 }
 
 static uint32_t template_head(const QJSIntlUnitData *data, const char *locale, QJSIntlUnitWidth width,
