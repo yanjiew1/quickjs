@@ -363,7 +363,7 @@ plural fallback, currency availability, display style or formatter behavior.
 It keeps the requesting locale separate from the current parent/source state,
 resolves iteratively and shares immutable inherited maps. Collectors own their
 group/field inventories and XPath interpretation; the resolver does not inspect
-XML. Compact patterns use it, and unit data can reuse the same alias semantics.
+XML. Compact patterns and unit data share the same alias semantics.
 
 `number_layout.py` resolves miscellaneous range/approximation/at-least/at-most
 templates, currency-name unit templates, currency-spacing match sets/insertion
@@ -407,6 +407,43 @@ C identifier helper performs exact case-sensitive lookup and accepts either
 one sanctioned unit or precisely two joined by `-per-`. It does not accept
 arbitrary CLDR units, aliases, multiplication or localized names. The helper
 allocates nothing; source collection and formatting remain separate work.
+
+`unit_patterns.py` collects long/short/narrow display names, unit patterns with
+their exact plural/case selectors, grammatical gender, per-unit patterns and
+division compound layouts. It preserves all source single-unit data identifiers;
+that inventory is broader than the sanctioned API list. Sparse shared maps
+resolve unit/width aliases in requesting-locale or explicit-source context.
+Absent fields, blocked fields, explicit empty text and inheritance remain
+distinct. No case/plural/width formatting fallback is invented by collection.
+
+Digital duration layouts, coordinate formatting and arbitrary product/power
+composition have separate consumers. CI audits all authenticated relevant unit
+records; collecting those source facts does not publish unit formatter support.
+
+Section 21 stores those sparse unit forms. Its directory count is the shared
+locale count. Six little-endian header words contain schema version 1, group,
+case, shared-row, shared-map and entry counts. Group records contain kind
+(`compound=0`, `unit=1`) and a name string reference; only division `per` is a
+compound group. Sorted case string references start with the empty default case.
+One row index per locale precedes sorted unique rows, each containing one map
+index for every width (long/short/narrow) and group combination.
+
+Sorted unique maps have contiguous `(offset, count)` descriptors into two-word
+entries. An entry holds a selector and text reference. The selector's high eight
+bits identify the collector field, the next eight identify absent count (0) or
+one of its eight count selectors (1–8), and the low sixteen hold a case index.
+Entries are strictly sorted by selector. Absence means no entry; `0xfffffffe`
+is blocked text, and string index zero is explicitly empty. Inheritance/block
+markers cannot be ordinary pooled text. Unit and compound fields cannot mix
+or be assigned to the wrong group family. Rows/maps and non-default cases must
+all be referenced. Projection removes unused maps/cases while preserving the
+global source group inventory; that inventory is not API availability.
+
+`src/intl/unit/data.c` validates section 21 against the unchanged shared data
+view, including selector identities, map families, complete ownership and
+canonical ordering. Indexed and exact queries borrow immutable storage and
+allocate nothing. They preserve missing, blocked and explicitly empty forms;
+grammatical/plural/width fallback and formatter capability belong to consumers.
 
 ## Numeric options and exact plural relations
 
