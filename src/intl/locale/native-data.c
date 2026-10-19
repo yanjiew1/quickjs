@@ -454,3 +454,63 @@ QJSIntlStatus qjs_intl_locale_metadata_open(const QJSIntlData *data,
     *out = view;
     return QJS_INTL_OK;
 }
+
+QJSIntlStatus qjs_intl_locale_type_at(const QJSIntlLocaleMetadata *data, uint32_t index,
+                                    QJSIntlLocaleType *out)
+{
+    uint32_t flags;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!out || !data || !data->types.bytes || index >= data->types.count)
+        return QJS_INTL_INVALID_ARGUMENT;
+    text_at(data, field(&data->types, 8, index, 0), &out->extension);
+    text_at(data, field(&data->types, 8, index, 1), &out->key);
+    text_at(data, field(&data->types, 8, index, 2), &out->name);
+    text_at(data, field(&data->types, 8, index, 3), &out->aliases);
+    text_at(data, field(&data->types, 8, index, 4), &out->preferred);
+    flags = field(&data->types, 8, index, 5);
+    out->deprecated = !!(flags & 1);
+    out->variable = !!(flags & 2);
+    text_at(data, field(&data->types, 8, index, 6), &out->iana);
+    text_at(data, field(&data->types, 8, index, 7), &out->region);
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_locale_type_find(const QJSIntlLocaleMetadata *data, QJSIntlBytes extension,
+                                      QJSIntlBytes key, QJSIntlBytes name, uint32_t *out)
+{
+    QJSIntlBytes wanted[] = {extension, key, name};
+    uint32_t low = 0, high;
+    unsigned int column;
+    if (out)
+        *out = 0;
+    if (!out || !data || !data->types.bytes)
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (column = 0; column < 3; column++) {
+        if (!wanted[column].data && wanted[column].length)
+            return QJS_INTL_INVALID_ARGUMENT;
+    }
+    high = data->types.count;
+    while (low < high) {
+        uint32_t mid = low + (high - low) / 2;
+        int order = 0;
+        for (column = 0; column < 3 && !order; column++) {
+            QJSIntlBytes actual;
+            size_t length;
+            text_at(data, field(&data->types, 8, mid, column), &actual);
+            length = actual.length < wanted[column].length ? actual.length : wanted[column].length;
+            order = length ? memcmp(actual.data, wanted[column].data, length) : 0;
+            if (!order)
+                order = (actual.length > wanted[column].length) - (actual.length < wanted[column].length);
+        }
+        if (order < 0)
+            low = mid + 1;
+        else if (order > 0)
+            high = mid;
+        else {
+            *out = mid;
+            return QJS_INTL_OK;
+        }
+    }
+    return QJS_INTL_UNSUPPORTED;
+}
