@@ -39,7 +39,7 @@ jobs:
   intl-source-data:
     name: Pinned native Intl source data
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v7
     - name: Verify offline acquisition contracts
@@ -81,9 +81,17 @@ jobs:
       run: |
         timeout 120s python3 tools/intl/compact_pattern_syntax.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit raw date and time pattern syntax
+      run: |
+        timeout 120s python3 tools/intl/date_pattern_syntax.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Audit currency names and fraction metadata
       run: |
         timeout 120s python3 tools/intl/currencies.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit inherited calendar date and time styles
+      run: |
+        timeout 120s python3 tools/intl/date_patterns.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Audit number range and currency layouts
       run: |
@@ -96,7 +104,7 @@ jobs:
     - name: Reproduce prepared native and minimal Intl sections
       run: |
         for profile in minimal native; do
-          timeout 120s python3 tools/intl/generate.py \
+          timeout 180s python3 tools/intl/generate.py \
             --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" \
             --profile "$profile" \
             --output "$RUNNER_TEMP/intl-$profile.bin" \
