@@ -30,7 +30,8 @@ typedef enum QJSIntlNumberNotation {
 typedef enum QJSIntlNumberStyle {
     QJS_INTL_NUMBER_DECIMAL,
     QJS_INTL_NUMBER_PERCENT,
-    QJS_INTL_NUMBER_CURRENCY
+    QJS_INTL_NUMBER_CURRENCY,
+    QJS_INTL_NUMBER_UNIT
 } QJSIntlNumberStyle;
 
 typedef enum QJSIntlNumberCurrencyDisplay {
@@ -45,6 +46,12 @@ typedef enum QJSIntlNumberCurrencySign {
     QJS_INTL_NUMBER_CURRENCY_ACCOUNTING
 } QJSIntlNumberCurrencySign;
 
+typedef enum QJSIntlNumberUnitDisplay {
+    QJS_INTL_NUMBER_UNIT_SHORT,
+    QJS_INTL_NUMBER_UNIT_NARROW,
+    QJS_INTL_NUMBER_UNIT_LONG
+} QJSIntlNumberUnitDisplay;
+
 typedef struct QJSIntlNumberOptions {
     QJSIntlNumberStyle style;
     QJSIntlNumberNotation notation;
@@ -56,13 +63,15 @@ typedef struct QJSIntlNumberOptions {
     QJSIntlBytes currency; /* Canonical uppercase code; copied when used. */
     QJSIntlNumberCurrencyDisplay currency_display;
     QJSIntlNumberCurrencySign currency_sign;
+    QJSIntlBytes unit; /* Sanctioned single identifier; not retained. */
+    QJSIntlNumberUnitDisplay unit_display;
 } QJSIntlNumberOptions;
 
 typedef struct QJSIntlNumberService QJSIntlNumberService;
 typedef struct QJSIntlNumberFormatter QJSIntlNumberFormatter;
 
-/* This internal service implements decimal/percent/currency formatting with
-   standard, scientific, engineering and compact notation. Units and
+/* This internal service implements decimal/percent/currency/single-unit formatting
+   with standard, scientific, engineering and compact notation. Compound units and
    ranges are still required before the complete Intl.NumberFormat binding can register.
    Bindings must not register NumberFormat on the strength of this subset.
 
