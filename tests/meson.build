@@ -948,6 +948,38 @@ if intl_enabled
     },
   }]
 
+  intl_date_field_owner_sources = files(
+    'test_intl_date_field_data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/datetime/field-data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  intl_date_field_fixture = custom_target(
+    'intl-date-field-authored-fixture',
+    output: 'intl-date-field-authored-fixture.c',
+    command: [python, files('intl_date_field_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_field_names.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_field_authored = {
+    'name': 'test_intl_date_field_authored',
+    'sources': intl_date_field_owner_sources + [intl_date_field_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_AUTHORED=1']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_field_authored,
+    'name': 'intl-date-field-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_duration_owner_sources = files(
     'test_intl_duration_data.c',
     '../src/cutils/cutils.c',
@@ -1585,6 +1617,21 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_relative_test,
       'name': ('intl-relative-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_field_test = {
+      'name': ('test_intl_date_field_data_' + profile),
+      'sources': intl_date_field_owner_sources,
+      'c_args': (host_args + ['-DTEST_INTL_AUTHORED=0']),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_field_test,
+      'name': ('intl-date-field-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2308,6 +2355,22 @@ if intl_enabled
     'intl-duration-tables',
     python,
     args: files('test_intl_duration_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-date-field-tables',
+    python,
+    args: files('test_intl_date_field_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-date-field-names',
+    python,
+    args: files('test_intl_date_field_names.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
