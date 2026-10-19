@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../../cutils/cutils.h"
 #include "../../unicode/libunicode.h"
-#include "../native/data.h"
+#include "data.h"
 #include "list.h"
 #include "native-engine.h"
 #include <string.h>
@@ -10,6 +10,7 @@
 struct QJSIntlListService {
     QJSIntlAllocator allocator;
     QJSIntlData data;
+    QJSIntlListData patterns;
     QJSIntlBytes *available;
     uint32_t root;
 };
@@ -36,7 +37,10 @@ QJSIntlStatus qjs_intl_list_open(const QJSIntlAllocator *allocator,
                                 allocator, &service->data);
     if (status)
         goto fail;
-    if (!service->data.lists.bytes || !service->data.list_contexts.bytes ||
+    status = qjs_intl_list_data_open(&service->data, allocator, &service->patterns);
+    if (status)
+        goto fail;
+    if (!service->patterns.list_contexts.bytes ||
         service->data.locales.count < 2) {
         status = QJS_INTL_DATA_ERROR;
         goto fail;
@@ -169,11 +173,11 @@ QJSIntlStatus qjs_intl_list_formatter_open(const QJSIntlListService *service,
     index = locale + (locale >= service->root);
     variant = type * 3 + style;
     for (part = 0; part < 4; part++) {
-        qjs_intl_data_list_template(&service->data, index, variant, part,
+        qjs_intl_list_data_template(&service->patterns, index, variant, part,
                                     &templates.base[part]);
     }
     status =
-        qjs_intl_data_list_context(&service->data, index, variant, &kind,
+        qjs_intl_list_data_context(&service->patterns, index, variant, &kind,
                                    &templates.alternate[0], &templates.alternate[1]);
     if (status)
         return status;
