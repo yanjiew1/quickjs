@@ -1,8 +1,8 @@
 {
-  "bytes": 332220,
+  "bytes": 332356,
   "complete_services": [],
   "format": 1,
-  "generation": "11eb72f649c8c3657149fbe3b6f5b9b1c20e7b0a6d0d11b4cbc466e86f22ab1b",
+  "generation": "5834e6ff96ee7e3c05f21a1a844e61b0ac57bd88fb7ce708de0ec2d2390eb74b",
   "inputs": {
     "cldr": {
       "archive": {
@@ -16,7 +16,7 @@
       "release": "49-beta4",
       "tag": "release-49-beta4"
     },
-    "policy": "standard variants; all published draft states; exact text; checked alias/parent resolution",
+    "policy": "standard variants; all published draft states; exact text; checked alias/parent resolution; CLDR ListPatterns context policy 1",
     "profile": "minimal",
     "schema": [
       1,
@@ -34,6 +34,10 @@
       "11": {
         "count": 184,
         "sha256": "3c3efbe30b6b4e9928c7612152d1729211bf62b3e90309d857bb2845a8c338bb"
+      },
+      "12": {
+        "count": 2,
+        "sha256": "939ad11b0a55ef10955d7d1c7912d40e0e0b34a20162d6e114966c398e4c45d3"
       },
       "2": {
         "count": 2,
@@ -1244,6 +1248,6 @@
   },
   "locales": 2,
   "note": "Prepared locale metadata, preferences and list templates; not formatter capability or full Intl coverage.",
-  "sha256": "9e3ff7a5c99b471339ca680bde5576f71a2bd1d9562d06746172698d9a28ba69",
+  "sha256": "f86c1b2d6aecb5b8605a6a3e98458684cbb554213ea0390b3503516e1acfec31",
   "strings": 18703
 }
