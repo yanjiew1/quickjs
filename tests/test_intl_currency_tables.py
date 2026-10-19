@@ -34,6 +34,7 @@ class CurrencyTableTests(unittest.TestCase):
         result = wire.decode(section, pool, graph().tags)
         self.assertEqual(self.semantics(data), self.semantics(result))
         self.assertEqual(result['fractions'], data['fractions'])
+        self.assertEqual(result['root_names'], data['root_names'])
         self.assertEqual(result['codes'], ('CHF', 'JPY', 'USD'))
         self.assertIsNone(wire.decode(None, pool, graph().tags))
         tags = ('en-GB', 'root')
@@ -43,7 +44,7 @@ class CurrencyTableTests(unittest.TestCase):
 
     def test_supplemental_only_code_has_no_invented_name(self):
         data, pool, ids = self.fixture()
-        data = dict(data, maps=((),), rows=tuple((tag, 0) for tag in graph().tags))
+        data = dict(data, maps=((),), rows=tuple((tag, 0) for tag in graph().tags), root_names=())
         section = wire.encode(data, graph().tags, ids)
         self.assertEqual(struct.unpack_from('<I', section[1], 12)[0], 0) # No field vectors.
         result = wire.decode(section, pool, graph().tags)
@@ -88,7 +89,7 @@ class CurrencyTableTests(unittest.TestCase):
             struct.pack_into('<I', changed, index * 4, value)
             with self.assertRaises(ValueError, msg=str((index, value))):
                 wire.decode((count, bytes(changed)), pool, graph().tags)
-        for start, width, rows in ((map_start, codes, maps), (vector_start, wire.FIELD_COUNT, vectors)):
+        for start, width, rows in ((map_start, codes, maps), (vector_start, wire.VECTOR_WIDTH, vectors)):
             self.assertGreater(rows, 1)
             changed = bytearray(raw)
             changed[(start + width) * 4:(start + width * 2) * 4] = changed[start * 4:(start + width) * 4]
@@ -105,13 +106,42 @@ class CurrencyTableTests(unittest.TestCase):
         version, codes, fractions, vectors, maps = struct.unpack_from('<5I', raw)
         at = wire.HEADER + codes + fractions * 5 + count + maps * codes
         # Increasing the final literal reference preserves canonical ordering.
-        field = max(i for i in range(at, at + vectors * wire.FIELD_COUNT)
+        field = max(at + row * wire.VECTOR_WIDTH + col
+                    for row in range(vectors) for col in range(wire.FIELD_COUNT)
+                    for i in (at + row * wire.VECTOR_WIDTH + col,)
                     if 0 < struct.unpack_from('<I', raw, i * 4)[0] < len(pool))
         for marker in (BLOCK, INHERIT):
             changed = bytearray(raw)
             struct.pack_into('<I', changed, field * 4, len(pool))
             with self.assertRaisesRegex(ValueError, 'invalid currency text reference'):
                 wire.decode((count, bytes(changed)), pool + (marker,), graph().tags)
+
+    def test_provenance_only_difference_survives_sharing_and_projection(self):
+        source = Sources()
+        source.set('en', '<currency type="USD"><displayName count="other">US dollars</displayName></currency>')
+        data = currencies.collect(source, graph())
+        self.assertEqual(len(data['maps']), 1)
+        pool = tuple(sorted(wire.strings(data) | {''}, key=lambda value: value.encode('utf-8')))
+        ids = {text: index for index, text in enumerate(pool)}
+        selected = wire.select(data, ('de', 'en', 'en-GB'))
+        result = wire.decode(wire.encode(selected, ('de', 'en', 'en-GB'), ids), pool,
+                             ('de', 'en', 'en-GB'))
+        self.assertEqual(result['root_names'], (('de', (('USD', 'other'),)),))
+        self.assertEqual(self.semantics(result), self.semantics(selected))
+        count, raw = wire.encode(data, graph().tags, ids)
+        _, codes, fractions, vectors, maps = struct.unpack_from('<5I', raw)
+        start = wire.HEADER + codes + fractions * 5 + count + maps * codes
+        for bit in (1, 1 << 9, 1 << 1): # Uncounted, non-name, absent counted field.
+            changed = bytearray(raw)
+            struct.pack_into('<I', changed, (start + wire.FIELD_COUNT) * 4, bit)
+            with self.assertRaises(ValueError):
+                wire.decode((count, bytes(changed)), pool, graph().tags)
+        for roots in ((('unknown', (('USD', 'other'),)),),
+                      (('en', (('USD', ''),)),),
+                      (('en', (('USD', 'one'),)),),
+                      (('en', (('USD', 'other'), ('USD', 'other'))),)):
+            with self.assertRaises(ValueError):
+                wire.encode(dict(data, root_names=roots), graph().tags, ids)
 
 
 if __name__ == '__main__':
