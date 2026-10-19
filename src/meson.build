@@ -136,6 +136,8 @@ if intl_enabled
     'intl/locale/native.c',
     'intl/locale/native-data.c',
     'intl/locale/native-id.c',
+    'intl/locale/preference-data.c',
+    'intl/locale/preferences.c',
     'intl/native/data.c',
     'intl/native/pack.c',
   )

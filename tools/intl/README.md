@@ -102,6 +102,25 @@ Unknown relevant structures, mixed aliases, duplicate fields and missing or
 blocked required templates are errors. These templates do not alone implement
 context-sensitive list behavior or install a JavaScript formatter.
 
+## Region and script preferences
+
+```sh
+python3 tools/intl/preferences.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The preference collector reads regional week boundaries, calendar orders,
+language/region hour-cycle overrides, and script direction metadata. World
+week defaults fill missing fields; wraparound weekends become sorted ISO
+weekday lists. Standard first-day records take precedence over alternate
+variants. Hour cycles retain the preferred cycle first and deduplicate the
+remaining allowed patterns without losing their preference order. Unknown
+script direction remains distinct from left-to-right.
+
+These source records do not establish formatter availability. Consumers still
+apply locale region/subdivision precedence, calendar aliases and supported
+calendar/formatter capabilities. Tests use authored fixtures and need no
+network access.
+
 ## Binary envelope
 
 `bundle.py` and `src/intl/native/pack.c` define the same QJIN 1.0 envelope.
@@ -125,9 +144,11 @@ python3 tools/intl/generate.py --sources /path/to/intl-cache/cldr-49-beta4 \
   --profile native --output /path/to/native.bin --manifest /path/to/native.json
 ```
 
-The initial sections contain sorted UTF-8 strings, a checked locale-parent
-registry, and deduplicated sets of resolved list templates. `--profile minimal`
-selects English and its parents; `native` retains the full graph. Section IDs
+The sections contain sorted UTF-8 strings, a checked locale-parent registry,
+locale identity metadata, regional/script preferences, and deduplicated sets
+of resolved list templates. Both profiles retain all identity and preference
+metadata. `--profile minimal` selects English and its parents for formatter
+records; `native` retains the full graph. Section IDs
 and string IDs are stable within a generation, not across source upgrades.
 The manifest records exact source reads, policy, pin and section hashes. These
 inputs determine the generation identity without local paths or timestamps.
@@ -147,6 +168,26 @@ text slices. Temporary graph-validation memory is freed before return, including
 on errors. Separate C repository tests consume both real prepared profiles, so
 the Python encoder and C reader are checked together on every test platform.
 The reader does not authenticate data or provide BCP47 canonicalization.
+
+Preference sections 7, 8, 9 and 11 hold regional week records, calendar orders,
+hour-cycle orders and script directions. Tables use sorted pooled keys; week
+records contain first weekday, minimum week days and a seven-bit weekend set.
+Ordered calendar/hour lists share pooled strings with checked token counts.
+Script directions use a distinct unknown value. The preference owner validates
+these schemas separately from the common envelope and locale identity tables.
+The C owner in `src/intl/locale/preference-data.c` checks all four required
+tables before publishing a borrowed view. Shared lists are validated once per
+table, including token uniqueness; exact-key lookups use binary search and
+distinguish absent data from malformed input and allocation failure. Tests for
+both prepared profiles cover corruption, unaligned input and every temporary
+allocation failure.
+
+`src/intl/locale/preferences.c` applies the fixed ECMA-402 rules above the
+selected backend's exact data queries. Region selection preserves explicit
+regions, subdivision regions and likely-subtag fallback, with an independent
+`rg` override. Unknown scripts retain an undefined direction. The JavaScript
+binding supplies observable internal keyword slots and creates fresh result
+objects in the method's realm; it does not expose native wire views.
 
 ## Locale metadata audit
 
