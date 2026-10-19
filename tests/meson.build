@@ -1104,6 +1104,14 @@ endif
 
 if intl_enabled
   test(
+    'intl-numbering-metadata',
+    python,
+    args: files('test_intl_numbering.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
     'intl-locale-preferences',
     python,
     args: files('test_intl_preferences.py'),
