@@ -5,6 +5,7 @@ import copy
 from pathlib import Path
 
 import acquire
+import availability
 import bundle
 import list_patterns
 import locale_metadata
@@ -35,7 +36,7 @@ def generate(sources, profile):
         raise ValueError('unknown native Intl data profile')
     inputs_read = Inputs(sources)
     inputs_read.read('LICENSE')
-    graph = parents.load(inputs_read)
+    graph, fallback_aliases = availability.complete(parents.load(inputs_read))
     locale_data = locale_metadata.collect(inputs_read, graph)
     preference_data = preferences.collect(inputs_read)
     lists = list_patterns.collect(inputs_read, graph)
@@ -57,7 +58,8 @@ def generate(sources, profile):
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
               'sources': {name: sources.manifest['files'][name] for name in sorted(inputs_read.consumed)},
-              'policy': lists['policy'],
+              'policy': lists['policy'] + '; formatter fallback registry policy 1',
+              'formatter_fallbacks': tuple(row for row in fallback_aliases if row[0] in selected_tags),
               'sections': {str(identity): {'count': count, 'sha256': acquire.digest(data)}
                            for identity, (count, data) in sorted(sections.items())}}
     generation = bytes.fromhex(acquire.digest(acquire.json_bytes(inputs)))
