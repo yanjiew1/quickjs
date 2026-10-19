@@ -948,6 +948,79 @@ if intl_enabled
     },
   }]
 
+  intl_display_selection_fixture = custom_target(
+    'intl-display-selection-fixture',
+    output: 'intl-display-selection-fixture.c',
+    command: [python, files('intl_display_fixture.py'), '--selection', '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_display_names.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_display_selection_test = {
+    'name': 'test_intl_display_selection',
+    'sources': files(
+      'test_intl_display_selection.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/display/data.c',
+      '../src/intl/display/select.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_display_selection_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_display_selection_test,
+    'name': 'intl-display-selection',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_display_owner_sources = files(
+    'test_intl_display_data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/display/data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  foreach fixture : ['authored', 'empty']
+    fixture_args = []
+    if fixture == 'empty'
+      fixture_args = ['--empty']
+    endif
+    intl_display_fixture = custom_target(
+      'intl-display-' + fixture + '-fixture',
+      output: 'intl-display-' + fixture + '-fixture.c',
+      command: [python, files('intl_display_fixture.py'), '--output', '@OUTPUT@'] + fixture_args,
+      depend_files: intl_tool_dependencies + files(
+        'test_intl_display_names.py',
+        'test_intl_list_patterns.py',
+      ),
+    )
+    intl_display_test = {
+      'name': ('test_intl_display_' + fixture),
+      'sources': intl_display_owner_sources + [intl_display_fixture],
+      'c_args': (host_args + [
+        '-DTEST_INTL_PREPARED=0',
+        ('-DTEST_INTL_EMPTY=' + ((fixture == 'empty') ? '1' : '0'))
+      ]),
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_display_test,
+      'name': ('intl-display-' + fixture),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+  endforeach
+
   intl_date_field_owner_sources = files(
     'test_intl_date_field_data.c',
     '../src/intl/common/locale-grammar.c',
@@ -1632,6 +1705,21 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_date_field_test,
       'name': ('intl-date-field-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_display_test = {
+      'name': ('test_intl_display_data_' + profile),
+      'sources': intl_display_owner_sources,
+      'c_args': (host_args + ['-DTEST_INTL_PREPARED=1', '-DTEST_INTL_EMPTY=0']),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_display_test,
+      'name': ('intl-display-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2372,6 +2460,14 @@ if intl_enabled
     'intl-date-field-names',
     python,
     args: files('test_intl_date_field_names.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-display-tables',
+    python,
+    args: files('test_intl_display_tables.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
