@@ -15,6 +15,18 @@ on:
       - '*'
 
 jobs:
+  intl-source-data:
+    name: Pinned native Intl source data
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify offline acquisition contracts
+        run: python3 tests/test_intl_sources.py
+      - name: Acquire and authenticate pinned CLDR data
+        run: |
+          timeout 180s python3 tools/intl/acquire.py \
+            --cache "$RUNNER_TEMP/intl-cache"
   temporal-configurations:
     name: Temporal ${{ matrix.profile }} configuration
     runs-on: ubuntu-latest
