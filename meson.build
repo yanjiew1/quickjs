@@ -358,6 +358,8 @@ if intl_enabled
       'tools/intl/compact_tables.py',
       'tools/intl/currencies.py',
       'tools/intl/currency_tables.py',
+      'tools/intl/number_layout.py',
+      'tools/intl/number_layout_tables.py',
       'tools/intl/plural_rules.py',
       'tools/intl/plural_tables.py',
       'tools/intl/parents.py',
