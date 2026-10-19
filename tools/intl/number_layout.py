@@ -137,11 +137,11 @@ def collect(sources, graph=None):
                                 leaf(locale, system, side.tag + '-' + value.tag, value)
                     elif node.tag not in ('currencyFormatLength', 'default', 'special'):
                         raise DataError('unknown currency layout group child')
-    rows = []
+    rows, root_fields = [], []
     for locale in graph.tags:
         for system in systems:
-            values = []
-            for field in FIELDS:
+            values, root_mask = [], 0
+            for index, field in enumerate(FIELDS):
                 result = records.resolve(locale, (system, field))
                 if field in REQUIRED and (result is None or result.blocked):
                     raise DataError('missing/blocked required number layout field: ' +
@@ -150,8 +150,13 @@ def collect(sources, graph=None):
                 if field in REQUIRED and not value and not field.endswith('-insertBetween'):
                     raise DataError('empty required number layout field')
                 values.append(value)
+                if field.startswith('currency-unit-') and result is not None and result.locale == 'root':
+                    root_mask |= 1 << index
             rows.append((locale, system, tuple(values)))
+            if root_mask:
+                root_fields.append((locale, system, root_mask))
     return {'systems': systems, 'fields': FIELDS, 'rows': tuple(rows),
+            'root_fields': tuple(root_fields),
             'source_records': len(records.values), 'source_aliases': len(records.aliases),
             'skipped_alternates': skipped}
 

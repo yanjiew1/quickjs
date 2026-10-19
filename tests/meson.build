@@ -647,6 +647,8 @@ intl_currency_fixture = custom_target(
   output: 'intl-currency-authored-fixture.c',
   command: [python, files('intl_currency_fixture.py'), '--output', '@OUTPUT@'],
   depend_files: files(
+    'test_intl_currencies.py',
+    'test_intl_list_patterns.py',
     '../tools/intl/acquire.py',
     '../tools/intl/bundle.py',
     '../tools/intl/cldr_xml.py',
@@ -685,6 +687,27 @@ intl_currency_authored = executable(
 test(
   'intl-currency-authored',
   intl_currency_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_currency_display_test = executable(
+  'test_intl_currency_display',
+  files(
+    'test_intl_currency_display.c',
+    '../src/intl/currency/data.c',
+    '../src/intl/currency/display.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_currency_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-currency-display',
+  intl_currency_display_test,
   suite: ['repo', 'native'],
   timeout: 30,
 )
