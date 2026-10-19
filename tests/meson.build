@@ -565,6 +565,31 @@ test(
   timeout: 30,
 )
 
+intl_number_compact_test = executable(
+  'test_intl_number_compact',
+  files(
+    'test_intl_number_compact.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/locale/numbering-data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    '../src/intl/number/body.c',
+    '../src/intl/number/compact-data.c',
+    '../src/intl/number/compact-format.c',
+  ) + [intl_compact_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-number-compact',
+  intl_number_compact_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_currency_owner_sources = files(
   'test_intl_currency_data.c',
   '../src/intl/currency/data.c',
@@ -1041,10 +1066,15 @@ foreach profile : ['minimal', 'native']
       '../src/intl/native/pack.c',
       '../src/intl/number/affix.c',
       '../src/intl/number/body.c',
+      '../src/intl/number/compact-data.c',
+      '../src/intl/number/compact-format.c',
       '../src/intl/number/native.c',
       '../src/intl/number/pattern-data.c',
       '../src/intl/number/round.c',
       '../src/intl/number/symbol-data.c',
+      '../src/intl/plural/data.c',
+      '../src/intl/plural/native-engine.c',
+      '../src/intl/plural/rules.c',
     ],
     c_args: host_args + ['-DTEST_INTL_PROFILE=' + (profile == 'native' ? '1' : '0')],
     include_directories: inc,
