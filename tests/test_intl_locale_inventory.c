@@ -103,7 +103,7 @@ int main(void)
             assert(contains(&data, (QJSIntlBytes){key, length}));
         }
     }
-    assert(data.pack.profile ? count > 1000 : count == 1);
+    assert(data.pack.profile ? count > 1000 : count == 2);
     assert(!state.live);
     return 0;
 }
