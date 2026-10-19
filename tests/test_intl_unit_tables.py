@@ -26,10 +26,23 @@ class UnitTableTests(unittest.TestCase):
     def semantics(self, data):
         return {row[:-1]: data['maps'][row[-1]] for row in data['rows']}
 
+    def overlay_semantics(self, data):
+        result = {}
+        for row in data['overlay_rows']:
+            head, nodes = row[-1], []
+            while head:
+                node = data['overlay_nodes'][head - 1]
+                nodes.append(node[:-2] + (data['overlay_maps'][node[-2]],))
+                head = node[-1]
+            result[row[:-1]] = tuple(nodes)
+        return result
+
     def test_roundtrip_states_and_projection(self):
         data, pool, ids = self.fixture()
         result = wire.decode(wire.encode(data, graph().tags, ids), pool, graph().tags)
-        self.assertEqual(result, {key: data[key] for key in ('widths', 'groups', 'fields', 'counts', 'maps', 'rows')})
+        keys = ('widths', 'groups', 'fields', 'counts', 'maps', 'rows')
+        self.assertEqual({key: result[key] for key in keys}, {key: data[key] for key in keys})
+        self.assertEqual(self.overlay_semantics(result), self.overlay_semantics(data))
         self.assertIsNone(wire.decode(None, pool, graph().tags))
         tags = ('en', 'root')
         selected = wire.select(data, tags)
@@ -40,6 +53,59 @@ class UnitTableTests(unittest.TestCase):
         self.assertIn(('unitPattern', 'one', 'genitive', BLOCK), values)
         self.assertIn(('unitPattern', 'two', '', ''), values)
         self.assertNotIn(('unitPattern', 'few', '', ''), values)
+
+    def test_overlay_projection_retains_hidden_maps_and_external_origins(self):
+        source = Sources()
+        source.set('en', '''<unitLength type="long"><unit type="length-meter">
+          <unitPattern count="other">HIDDEN_PARENT {0}</unitPattern></unit></unitLength>''')
+        source.set('en_GB', '''<unitLength type="long"><unit type="length-meter">
+          <unitPattern count="other">CHILD_OTHER {0}</unitPattern></unit></unitLength>''')
+        source.set('de', '''<unitLength type="narrow"><alias source="en_GB"
+          path="../unitLength[@type='long']"/></unitLength>''')
+        data = unit_patterns.collect(source, graph())
+        tags = ('de', 'root')
+        selected = wire.select(data, tags)
+        self.assertNotIn('HIDDEN_PARENT {0}', {entry[-1] for entries in selected['maps'] for entry in entries})
+        pool = tuple(sorted(wire.strings(selected), key=lambda text: text.encode('utf-8')))
+        self.assertIn('HIDDEN_PARENT {0}', pool)
+        self.assertIn('en-GB', pool)
+        ids = {text: i for i, text in enumerate(pool)}
+        encoded = wire.encode(selected, tags, ids)
+        result = wire.decode(encoded, pool, tags)
+        self.assertEqual(self.semantics(result), self.semantics(selected))
+        self.assertEqual(self.overlay_semantics(result), self.overlay_semantics(selected))
+        layers = self.overlay_semantics(result)[('de', 'narrow', 'unit', 'length-meter')]
+        self.assertEqual([layer[0] for layer in layers], ['en-GB', 'en', 'root'])
+        self.assertEqual(wire.encode(result, tags, ids), encoded)
+
+    def test_invalid_overlay_sources_coverage_and_ownership(self):
+        data, pool, ids = self.fixture()
+        node = data['overlay_nodes'][0]
+        changes = [dict(data, overlay_rows=data['overlay_rows'][:-1]),
+                   dict(data, overlay_rows=data['overlay_rows'] + data['overlay_rows'][:1]),
+                   dict(data, overlay_rows=tuple(row[:-1] + (0,) for row in data['overlay_rows'])),
+                   dict(data, overlay_maps=data['overlay_maps'] + ((),))]
+        for bad in (('bad_TAG',) + node[1:], node[:-1] + (1,),
+                    node[:-2] + (len(data['overlay_maps']), 0)):
+            changes.append(dict(data, overlay_nodes=(bad,) + data['overlay_nodes'][1:]))
+        changes.append(dict(data, overlay_nodes=data['overlay_nodes'] + (node,)))
+        for changed in changes:
+            with self.assertRaises(ValueError):
+                wire.encode(changed, graph().tags, ids)
+
+    def test_compiled_duplicate_nodes_are_rejected(self):
+        data, pool, ids = self.fixture()
+        head = next(head for *key, head in data['overlay_rows']
+                    if head and sum(row[-1] == head for row in data['overlay_rows']) > 1)
+        node = data['overlay_nodes'][head - 1]
+        maps = data['overlay_maps'] + (data['overlay_maps'][node[-2]],)
+        nodes = data['overlay_nodes'] + (node[:-2] + (len(maps) - 1, node[-1]),)
+        rows = list(data['overlay_rows'])
+        row = next(i for i, row in enumerate(rows) if row[-1] == head)
+        rows[row] = rows[row][:-1] + (len(nodes),)
+        with self.assertRaisesRegex(ValueError, 'duplicate compiled'):
+            wire.encode(dict(data, overlay_maps=maps, overlay_nodes=nodes, overlay_rows=tuple(rows)),
+                        graph().tags, ids)
 
     def test_invalid_source_inventory_selectors_and_family(self):
         data, pool, ids = self.fixture()
@@ -70,7 +136,9 @@ class UnitTableTests(unittest.TestCase):
 
     def test_empty_form_inventory(self):
         data, pool, ids = self.fixture()
-        data = dict(data, maps=((),), rows=tuple(row[:-1] + (0,) for row in data['rows']))
+        data = dict(data, maps=((),), rows=tuple(row[:-1] + (0,) for row in data['rows']),
+                    overlay_maps=(), overlay_nodes=(),
+                    overlay_rows=tuple(row[:-1] + (0,) for row in data['overlay_rows']))
         result = wire.decode(wire.encode(data, graph().tags, ids), pool, graph().tags)
         self.assertEqual(result['maps'], ((),))
         self.assertTrue(all(index == 0 for locale, width, kind, name, index in result['rows']))
@@ -78,13 +146,13 @@ class UnitTableTests(unittest.TestCase):
     def test_malformed_dimensions_spans_order_and_selector_words(self):
         data, pool, ids = self.fixture()
         count, raw = wire.encode(data, graph().tags, ids)
-        version, groups, cases, rows, maps, entries = struct.unpack_from('<6I', raw)
+        version, groups, cases, rows, maps, entries, overlays, nodes = struct.unpack_from('<8I', raw)
         case_start = wire.HEADER + groups * 2
         locale_start = case_start + cases
         row_start = locale_start + count
-        map_start = row_start + rows * groups * 3
+        map_start = row_start + (rows + overlays) * groups * 3 + count + nodes * 4
         entry_start = map_start + maps * 2
-        changes = [(i, 0) for i in range(6)] + [(i, 0xffffffff) for i in range(6)]
+        changes = [(i, 0) for i in range(8)] + [(i, 0xffffffff) for i in range(8)]
         changes += [(wire.HEADER, 2), (wire.HEADER + 1, len(pool)),
                     (case_start, ids['genitive']), (locale_start, rows),
                     (row_start, maps), (map_start, 1), (map_start + 1, entries + 1),
@@ -108,8 +176,9 @@ class UnitTableTests(unittest.TestCase):
     def test_markers_cannot_be_ordinary_text_references(self):
         data, pool, ids = self.fixture()
         count, raw = wire.encode(data, graph().tags, ids)
-        version, groups, cases, rows, maps, entries = struct.unpack_from('<6I', raw)
-        start = wire.HEADER + groups * 2 + cases + count + rows * groups * 3 + maps * 2
+        version, groups, cases, rows, maps, entries, overlays, nodes = struct.unpack_from('<8I', raw)
+        start = (wire.HEADER + groups * 2 + cases + count * 2 +
+                 (rows + overlays) * groups * 3 + nodes * 4 + maps * 2)
         last = max(index for index in range(start + 1, start + entries * 2, 2)
                    if struct.unpack_from('<I', raw, index * 4)[0] < len(pool))
         changed = bytearray(raw)
@@ -117,6 +186,31 @@ class UnitTableTests(unittest.TestCase):
         for marker in (BLOCK, INHERIT):
             with self.assertRaisesRegex(ValueError, 'invalid unit text reference'):
                 wire.decode((count, bytes(changed)), pool + (marker,), graph().tags)
+
+    def test_overlay_wire_corruption(self):
+        data, pool, ids = self.fixture()
+        count, raw = wire.encode(data, graph().tags, ids)
+        version, groups, cases, rows, maps, entries, overlays, nodes = struct.unpack_from('<8I', raw)
+        locale_start = wire.HEADER + groups * 2 + cases + count + rows * groups * 3
+        row_start = locale_start + count
+        node_start = row_start + overlays * groups * 3
+        changes = [(locale_start, overlays), (row_start, nodes + 1),
+                   (node_start, len(pool)), (node_start + 1, groups * 3),
+                   (node_start + 2, maps), (node_start + 3, 1)]
+        for index, value in changes:
+            changed = bytearray(raw)
+            struct.pack_into('<I', changed, index * 4, value)
+            with self.assertRaises(ValueError):
+                wire.decode((count, bytes(changed)), pool, graph().tags)
+        changed = bytearray(raw)
+        changed[(node_start + 4) * 4:(node_start + 8) * 4] = changed[node_start * 4:(node_start + 4) * 4]
+        with self.assertRaises(ValueError):
+            wire.decode((count, bytes(changed)), pool, graph().tags)
+        changed = bytearray(raw)
+        for i in range(overlays * groups * 3):
+            struct.pack_into('<I', changed, (row_start + i) * 4, 0)
+        with self.assertRaises(ValueError):
+            wire.decode((count, bytes(changed)), pool, graph().tags)
 
 
 if __name__ == '__main__':
