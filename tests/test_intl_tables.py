@@ -32,6 +32,7 @@ from test_intl_number_layout import Sources as LayoutSources
 from test_intl_unit_patterns import Sources as UnitSources
 from test_intl_unit_grammar import Sources as GrammarSources
 from test_intl_relative_patterns import Sources as RelativeSources
+from test_intl_duration_patterns import Sources as DurationSources
 import number_patterns
 import number_pattern_syntax
 from resolve import BLOCK
@@ -120,6 +121,12 @@ class VerifiedFixture(Sources):
         unit_dtd = re.sub(br'<!ATTLIST (?:alias (?:source|path)|unitPattern (?:count|case|alt)) [^>]*>',
                           b'', unit_source.files['common/dtd/ldml.dtd'])
         self.files['common/dtd/ldml.dtd'] += unit_dtd
+        duration_source = DurationSources()
+        self.files['common/dtd/ldml.dtd'] += (
+            b'<!ELEMENT durationUnit' + duration_source.files['common/dtd/ldml.dtd'].split(
+                b'<!ELEMENT durationUnit', 1)[1].split(b'<!ELEMENT alias', 1)[0])
+        root.find('units').extend(ET.fromstring(
+            duration_source.files['common/main/root.xml']).find('units'))
         root.find('numbers').append(ET.fromstring(
             currency_source.files['common/main/root.xml']).find('./numbers/currencies'))
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT currencies ANY>
