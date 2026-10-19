@@ -30,10 +30,11 @@ class LayoutTableTests(unittest.TestCase):
         data, systems, pool, ids = self.fixture()
         section = wire.encode(data, graph().tags, systems, ids)
         self.assertEqual(wire.decode(section, pool, graph().tags, systems),
-                         {key: data[key] for key in ('systems', 'fields', 'rows')})
+                         {key: data[key] for key in ('systems', 'fields', 'rows', 'root_fields')})
         self.assertIsNone(wire.decode(None, pool, graph().tags, systems))
         tags = ('en', 'root')
-        data = dict(data, rows=tuple(row for row in data['rows'] if row[0] in tags))
+        data = dict(data, rows=tuple(row for row in data['rows'] if row[0] in tags),
+                    root_fields=tuple(row for row in data['root_fields'] if row[0] in tags))
         result = wire.decode(wire.encode(data, tags, systems, ids), pool, tags, systems)
         self.assertEqual(result['rows'], data['rows'])
         english = dict(zip(result['fields'], result['rows'][0][2]))
@@ -78,7 +79,7 @@ class LayoutTableTests(unittest.TestCase):
             with self.assertRaises(ValueError, msg=str((field, value))):
                 wire.decode((count, bytes(changed)), pool, graph().tags, systems)
         for start, width, amount in ((map_start, system_count, rows),
-                                      (vector_start, wire.WIDTH, vectors)):
+                                      (vector_start, wire.VECTOR_WIDTH, vectors)):
             self.assertGreater(amount, 1)
             changed = bytearray(raw)
             changed[(start + width) * 4:(start + width * 2) * 4] = changed[start * 4:(start + width) * 4]
@@ -96,13 +97,31 @@ class LayoutTableTests(unittest.TestCase):
         count, raw = wire.encode(data, graph().tags, systems, ids)
         version, system_count, vectors, rows = struct.unpack_from('<4I', raw)
         start = wire.HEADER + system_count + count + rows * system_count
-        last = max(index for index in range(start, start + vectors * wire.WIDTH)
+        last = max(start + row * wire.VECTOR_WIDTH + field
+                   for row in range(vectors) for field in range(wire.WIDTH)
+                   for index in (start + row * wire.VECTOR_WIDTH + field,)
                    if struct.unpack_from('<I', raw, index * 4)[0] < len(pool))
         changed = bytearray(raw)
         struct.pack_into('<I', changed, last * 4, len(pool))
         for marker in (BLOCK, INHERIT):
             with self.assertRaisesRegex(ValueError, 'invalid number layout text reference'):
                 wire.decode((count, bytes(changed)), pool + (marker,), graph().tags, systems)
+
+    def test_provenance_masks_reject_reserved_and_absent_fields(self):
+        data, systems, pool, ids = self.fixture()
+        count, raw = wire.encode(data, graph().tags, systems, ids)
+        _, system_count, vectors, rows = struct.unpack_from('<4I', raw)
+        start = wire.HEADER + system_count + count + rows * system_count
+        for mask in (1, 1 << 18, 1 << 4):
+            changed = bytearray(raw)
+            struct.pack_into('<I', changed, (start + wire.WIDTH) * 4, mask)
+            with self.assertRaises(ValueError):
+                wire.decode((count, bytes(changed)), pool, graph().tags, systems)
+        for roots in ((('unknown', 'latn', 1 << 11),), (('en', 'unknown', 1 << 11),),
+                      (('en', 'latn', True),), (('en', 'latn', 1),),
+                      (('en', 'latn', 1 << 4),), (('en', 'latn', 0),)):
+            with self.assertRaises(ValueError):
+                wire.encode(dict(data, root_fields=roots), graph().tags, systems, ids)
 
 
 if __name__ == '__main__':
