@@ -217,7 +217,20 @@ missing range maps and pairs remain absent. The consumer applies the pinned
 LDML range policy (CLDR 49 specifies the end category for absent pairs).
 Endpoint-omitting range records require a reviewed mapping before admission;
 the pinned release contains explicit endpoints. These collected records are
-audited in CI but are not yet packed or advertised as PluralRules capability.
+audited in CI and packed for both profiles without advertising PluralRules capability.
+
+Section 16 packs these records for each prepared profile. Its directory count
+is the shared locale count. Two little-endian header words give the condition
+and range vector counts. Each locale then has two pairs of word indexes
+(cardinal then ordinal), selecting a condition vector and a range vector.
+Condition vectors contain six pooled string indexes in category order, with
+`0xffffffff` marking absent categories; `other` is present and empty. Range
+vectors contain 36 bytes in start/end category order, with `0xff` marking
+absent pairs and values 0 through 5 naming the result category. Unique vectors
+are sorted and all must be referenced. The typed decoder validates coverage,
+extents, references, grammar and canonical records. Missing pairs stay explicit
+until the consumer applies its range policy. The packed data establishes no
+PluralRules capability by itself.
 
 ## Locale lookup
 
