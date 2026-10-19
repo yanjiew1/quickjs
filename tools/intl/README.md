@@ -991,10 +991,11 @@ compares every byte of the binaries and manifests. These initial files contain
 only the sections documented above, not yet the complete Intl data inventory.
 
 `embed.py` validates a prepared pack and emits one immutable C array in the
-build directory. The typed C reader validates UTF-8/string ordering, record
-extents, references, the parent graph and list templates before exposing borrowed
-text slices. Temporary graph-validation memory is freed before return, including
-on errors. Separate C repository tests consume both real prepared profiles, so
+build directory. The shared C reader validates UTF-8/string ordering, shared
+record extents, references and the parent graph. Each service data owner then
+validates its own sections before exposing borrowed records. Temporary
+validation memory is freed before return, including on errors. Separate C
+repository tests consume both real prepared profiles, so
 the Python encoder and C reader are checked together on every test platform.
 The reader does not authenticate data or provide BCP47 canonicalization.
 
@@ -1022,7 +1023,7 @@ Every set is referenced. The decoder checks this structure and template syntax;
 selection of the appropriate language, variant and exact-default replacement
 belongs to the authenticated-source collector. A structurally valid pack alone
 does not prove these linguistic rules or advertise a complete ListFormat service.
-The C reader additionally checks every locale/variant against its base templates
+The ListFormat data owner additionally checks every locale/variant against its base templates
 and these exact-default rules before exposing the contextual records. Unknown
 optional sections remain distinct from validated contextual capability.
 
@@ -1056,7 +1057,11 @@ Both prepared profiles retain the same complete locale identity metadata, even
 though their formatter locale selections differ. Aliases, likely subtags,
 extension keys and extension types are an atomic group of sections (3–6).
 Python checks their schemas, references, ordering and preferred-name chains.
-The shared C table reader handles sections 1, 2 and 10. The locale owner uses
+The shared C table reader handles only strings/locales in sections 1 and 2.
+`list/data` owns sections 10 and 12, validating templates and their exact
+contextual admission rules before list consumers use them. Other services do
+not validate or depend on list sections when opening the shared data view.
+The locale owner uses
 `qjs_intl_locale_metadata_open()` to check sections 3–6, including scoped
 preferred-name graphs, before a runtime locale service can consume them.
 
