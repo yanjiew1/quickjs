@@ -116,6 +116,24 @@ actual supported locales and options. A functional module may also serve other
 modules: plural evaluation remains in `plural/`, rather than moving into a
 generic common directory merely because several formatters use it.
 
+`Locale.getCalendars()` follows that coordination rule. Shared locale preference
+selection returns the first raw language-region/region list; the binding then
+canonicalizes, deduplicates and filters against DateTimeFormat's global calendar
+capability. It does not retry region selection after filtering. An explicit
+calendar slot bypasses capability filtering, and an empty filtered list falls
+back to Gregorian. Raw preference readers do not depend on DateTimeFormat.
+Canonical availability is distinct from negotiation acceptance: generic islamic
+is accepted for negotiation and resolves to islamic-tbla, but is not advertised
+by AvailableCalendars or included in implicit regional preference results.
+
+`Locale.getTimeZones()` uses only the locale's explicit region, without
+maximization or rg/sd/tz keyword overrides. Shared metadata enumerates terminal
+CLDR timezone identities and their source territories; the binding then resolves
+supported primary identifiers through the selected timezone facade, deduplicates
+and sorts them. Determine territory before resolving links, so a source's country
+is not inferred from its target. No region yields undefined; an unknown explicit
+region yields a fresh empty array.
+
 ECMAScript-defined semantics belong to the common contract. Fixed pure
 algorithms normally have a shared implementation. A service operation may
 delegate a complete calculation to its backend when the observable behavior
