@@ -32,6 +32,10 @@ QJSIntlStatus qjs_intl_relative_default_system(const QJSIntlRelativeService *, s
                                                QJSIntlBytes *);
 QJSIntlStatus qjs_intl_relative_system_supported(const QJSIntlRelativeService *, size_t locale,
                                                  QJSIntlBytes system, int *supported);
+/* Global repertoire across admitted locales, without allocation or fallback.
+   Unknown names are OK/false; errors clear non-NULL output. */
+QJSIntlStatus qjs_intl_relative_system_available(const QJSIntlRelativeService *,
+                                                 QJSIntlBytes system, int *supported);
 /* Exact available index; empty system selects default. Unsupported explicit
    numbering systems do not fallback. Formatter owns its handles and may
    outlive the service. Copy options; retain no supplied string storage.
