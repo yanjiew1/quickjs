@@ -183,6 +183,7 @@ if intl_enabled
     'intl/datetime/program-adapt.c',
     'intl/datetime/single-program.c',
     'intl/datetime/ordinary-programs.c',
+    'intl/datetime/date-clock-programs.c',
     'intl/datetime/source-candidate.c',
     'intl/datetime/style-data.c',
     'intl/datetime/style-date.c',
