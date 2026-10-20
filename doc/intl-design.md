@@ -707,6 +707,13 @@ along a parent chain, while retaining the semantic name family. The wire never
 flattens those chains or selects lateral fallback. Profile projection retains
 reachable source nodes outside the selected requesting locales. Canonical
 sharing, typed references and reachability are checked before consumption.
+The immutable C owner in `datetime/name-data.[ch]` validates the section using
+temporary depth, coverage and source-string scratch, released before return.
+Exact group/head/node/entry queries borrow pack storage and allocate nothing.
+Family-level and era-string validation caches bound repeated shared-data work.
+The reader has authored C fixtures, including external source locales, empty
+inventories, unaligned bytes and allocation-failure retries. Prepared-profile
+and formatter integration follow separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
