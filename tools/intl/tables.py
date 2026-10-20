@@ -7,6 +7,7 @@ import compact_tables
 import currency_tables
 import timezone_name_tables
 import timezone_presentation_tables
+import dayperiod_tables
 import date_interval_tables
 import date_available_tables
 import number_layout_tables
@@ -246,6 +247,7 @@ def validate(binary):
             'timezone_names': timezone_name_tables.decode(sections.get(bundle.TIMEZONE_NAMES), strings, tags),
             'timezone_presentation': timezone_presentation_tables.decode(
                 sections.get(bundle.TIMEZONE_PRESENTATION), strings),
+            'dayperiod_rules': dayperiod_tables.decode(sections.get(bundle.DAYPERIOD_RULES), strings),
             'date_intervals': date_interval_tables.decode(sections.get(bundle.DATE_INTERVALS), strings, tags),
             'date_available_formats': date_available_tables.decode(sections.get(bundle.DATE_AVAILABLE_FORMATS),
                                                                   strings, tags)}
