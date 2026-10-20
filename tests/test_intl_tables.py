@@ -180,6 +180,17 @@ class VerifiedFixture(Sources):
         ET.SubElement(intervals, 'intervalFormatFallback').text = '{0}–{1}'
         interval = ET.SubElement(intervals, 'intervalFormatItem', id='yMd')
         ET.SubElement(interval, 'greatestDifference', id='d').text = 'M/d/y – M/d/y'
+        self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT timeZoneNames ANY>
+          <!ELEMENT gmtFormat (#PCDATA)><!ATTLIST gmtFormat alt NMTOKENS #IMPLIED>
+          <!ELEMENT regionFormat (#PCDATA)><!ATTLIST regionFormat type CDATA #IMPLIED>
+          <!ELEMENT zone ANY><!ATTLIST zone type CDATA #REQUIRED>
+          <!ELEMENT exemplarCity (#PCDATA)>'''
+        zone_names = ET.SubElement(root.find('dates'), 'timeZoneNames')
+        ET.SubElement(zone_names, 'gmtFormat').text = 'GMT{0}'
+        ET.SubElement(zone_names, 'gmtFormat', alt='utc').text = 'UTC{0}'
+        ET.SubElement(zone_names, 'regionFormat', type='standard').text = '{0} Standard Time'
+        zone = ET.SubElement(zone_names, 'zone', type='Europe/Paris')
+        ET.SubElement(zone, 'exemplarCity').text = 'Paris'
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT months ANY>
           <!ELEMENT monthContext ANY><!ATTLIST monthContext type NMTOKEN #REQUIRED>
           <!ELEMENT monthWidth ANY><!ATTLIST monthWidth type NMTOKEN #REQUIRED>
@@ -310,6 +321,18 @@ class TableTests(unittest.TestCase):
                     break
             else:
                 self.fail('prepared English interval source is missing yMd/d')
+            zone_names = view['timezone_names']
+            self.assertIsNotNone(zone_names)
+            key = ('metazone-name', 'America_Pacific', '', 'long', '')
+            head = next(head for tag, group, head in zone_names['rows'] if (tag, group) == ('en', key))
+            while head:
+                origin, group, index, head = zone_names['nodes'][head - 1]
+                names = [field[3] for field in zone_names['maps'][index] if field[:3] == ('generic', '', '')]
+                if names:
+                    self.assertEqual((origin, group, names), ('en', key, ['Pacific Time']))
+                    break
+            else:
+                self.fail('prepared English timezone source is missing Pacific generic name')
             names = view['display_names']
             self.assertEqual(len(names['rows']), len(view['locales']) * len(names['groups']))
             head = next(head for tag, group, head in names['rows']
@@ -458,6 +481,15 @@ class TableTests(unittest.TestCase):
         minimal, minimal_manifest = generate.generate(VerifiedFixture(), 'minimal')
         minimal_view = tables.validate(minimal)
         self.assertEqual(minimal_view['locales'], ('en', 'root'))
+        for view in (full_view, minimal_view):
+            zone_names = view['timezone_names']
+            self.assertIsNotNone(zone_names)
+            key = ('format', '', '', '', '')
+            head = next(head for tag, group, head in zone_names['rows'] if (tag, group) == ('en', key))
+            origin, group, index, parent = zone_names['nodes'][head - 1]
+            self.assertEqual(origin, 'root')
+            self.assertIn(('gmtFormat', '', 'utc', 'UTC{0}'), zone_names['maps'][index])
+            self.assertIn(('regionFormat', 'standard', '', '{0} Standard Time'), zone_names['maps'][index])
         self.assertEqual(full_view['number_symbols']['systems'], ('latn', 'mathbold'))
         self.assertEqual(minimal_view['number_symbols']['rows'],
                          tuple(row for row in full_view['number_symbols']['rows']
