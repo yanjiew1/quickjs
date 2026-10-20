@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #ifndef QJS_INTL_DATETIME_CHRONOLOGY_H
 #define QJS_INTL_DATETIME_CHRONOLOGY_H
-#include "numeric.h"
+#include "fields.h"
 #include "../../calendar/types.h"
 
 typedef struct QJSIntlDateCalendarFields {
