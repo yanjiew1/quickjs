@@ -171,6 +171,7 @@ if intl_enabled
     'intl/datetime/single-program.c',
     'intl/datetime/source-candidate.c',
     'intl/datetime/style-data.c',
+    'intl/datetime/style-date.c',
     'intl/datetime/style-hour.c',
     'intl/datetime/style-program.c',
     'intl/datetime/timezone-name-data.c',
