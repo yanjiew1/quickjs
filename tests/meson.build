@@ -1727,6 +1727,34 @@ if intl_enabled
     },
   }]
 
+  intl_calendar_era_sources = files(
+    'test_intl_calendar_era_data.c',
+    '../src/intl/datetime/era-data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+    '../src/intl/common/locale-grammar.c',
+  )
+  intl_calendar_era_fixture = custom_target(
+    'intl-calendar-era-authored-fixture',
+    output: 'intl-calendar-era-authored-fixture.c',
+    command: [python, files('intl_calendar_era_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files('test_intl_calendar_eras.py'),
+  )
+  intl_calendar_era_authored = {
+    'name': 'test_intl_calendar_era_authored',
+    'sources': intl_calendar_era_sources + [intl_calendar_era_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_ERA_AUTHORED=1']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_calendar_era_authored,
+    'name': 'intl-calendar-era-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_dayperiod_fixture = custom_target(
     'intl-dayperiod-authored-fixture',
     output: 'intl-dayperiod-authored-fixture.c',
@@ -1976,6 +2004,7 @@ if intl_enabled
     'sources': files(
       'test_intl_unit_pattern.c',
       '../src/intl/common/pair-pattern.c',
+      '../src/intl/common/unary-pattern.c',
       '../src/intl/unit/pattern.c',
       '../src/cutils/cutils.c',
       '../src/intl/unit/data.c',
@@ -2015,6 +2044,7 @@ if intl_enabled
       '../src/intl/unit/grammar-data.c',
       '../src/intl/unit/identifier.c',
       '../src/intl/common/pair-pattern.c',
+      '../src/intl/common/unary-pattern.c',
       '../src/intl/unit/pattern.c',
     ) + [intl_unit_fixture],
     'c_args': host_args,
@@ -2028,6 +2058,16 @@ if intl_enabled
       'timeout': 30,
     },
   }]
+
+  intl_date_text_fixture = custom_target(
+    'intl-date-text-authored-fixture',
+    output: 'intl-date-text-authored-fixture.c',
+    command: [python, files('intl_date_text_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_calendar_names.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
 
   intl_number_service_sources = files(
     '../src/cutils/cutils.c',
@@ -2056,6 +2096,7 @@ if intl_enabled
     '../src/intl/unit/grammar-data.c',
     '../src/intl/unit/identifier.c',
     '../src/intl/common/pair-pattern.c',
+    '../src/intl/common/unary-pattern.c',
     '../src/intl/unit/pattern.c',
     '../src/intl/unit/format.c',
     '../src/intl/number/pattern-data.c',
@@ -2091,6 +2132,21 @@ if intl_enabled
       # Avoid reprocessing the same large immutable array at every LTO test link.
       override_options: ['b_lto=false'],
     )
+    intl_calendar_era_test = {
+      'name': ('test_intl_calendar_era_' + profile),
+      'sources': intl_calendar_era_sources,
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_calendar_era_test,
+      'name': ('intl-calendar-era-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_data_test = {
       'name': ('test_intl_data_' + profile),
       'sources': files(
@@ -2357,6 +2413,60 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_list_test,
       'name': ('intl-list-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_text_test = {
+      'name': ('test_intl_date_text_' + profile),
+      'sources': intl_number_service_sources + files(
+        'test_intl_date_text.c',
+        '../src/intl/datetime/text.c',
+        '../src/intl/datetime/numeric.c',
+        '../src/intl/datetime/pattern.c',
+        '../src/intl/datetime/pattern-info.c',
+        '../src/intl/datetime/calendar-identity.c',
+        '../src/intl/datetime/available-data.c',
+        '../src/intl/datetime/combination-data.c',
+        '../src/intl/datetime/interval-data.c',
+        '../src/intl/datetime/style-data.c',
+        '../src/intl/datetime/name-data.c',
+        '../src/intl/datetime/name-select.c',
+        '../src/intl/datetime/era-data.c',
+        '../src/intl/datetime/dayperiod-code.c',
+        '../src/intl/datetime/dayperiod-data.c',
+        '../src/intl/datetime/dayperiod.c',
+        '../src/intl/locale/native-data.c',
+        '../src/intl/locale/type-identity.c',
+      ) + [intl_date_text_fixture] + calendar_test_sources,
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_text_test,
+      'name': ('intl-date-text-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_numeric_test = {
+      'name': ('test_intl_date_numeric_' + profile),
+      'sources': intl_number_service_sources + files(
+        'test_intl_date_numeric.c',
+        '../src/intl/datetime/numeric.c',
+        '../src/intl/datetime/pattern.c',
+        '../src/intl/datetime/pattern-info.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_numeric_test,
+      'name': ('intl-date-numeric-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2850,6 +2960,10 @@ standalone = {
 }
 if intl_enabled
   standalone += {
+    'test_intl_date_calendar': files(
+      'test_intl_date_calendar.c',
+      '../src/intl/datetime/chronology.c',
+    ) + calendar_test_sources,
     'test_intl_currency_boundary': files(
       'test_intl_currency_boundary.c',
       '../src/intl/currency/boundary.c',
@@ -3499,6 +3613,14 @@ if intl_enabled
     'intl-date-field-tables',
     python,
     args: files('test_intl_date_field_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-calendar-eras',
+    python,
+    args: files('test_intl_calendar_eras.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
