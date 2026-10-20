@@ -864,6 +864,53 @@ stored selector and the independent family-row addressing, English provenance,
 unaligned storage and validation allocation failures. Runtime formatting
 integration follows separately.
 
+`timezone_presentation.py` collects locale-independent metazone periods,
+preferred metazone/territory zones, dominant `primaryZones` and active metazone
+ID metadata. Periods are half-open UTC second ranges with distinct unbounded
+endpoints; actual Monrovia input includes seconds despite the DTD's minute-only
+annotation. Gregorian parsing uses integer arithmetic without host timezone
+conversion. Intentional gaps remain gaps. Standard/daylight offset overrides
+remain independently optional and may classify display names without changing
+the engine's DST designation. One golden zone may represent different
+metazones in different periods; only the metazone/territory key is unique.
+
+References use BCP47 first-alias CLDR stable IDs, with timezone and metazone
+namespaces kept separate. Dominant zones are location-label policy, unrelated
+to ECMA primary-identifier selection. The small shared `timezone_syntax.py`
+keeps identifier grammar independent of either localized or supplemental
+collectors. Unreviewed deprecated/preferred metazone-ID forms fail explicitly;
+metadata release fields remain source facts. Binary and runtime integration of
+these supplemental records follow separately.
+
+Optional section 33 encodes these global runtime facts with separate active-ID,
+zone-span, period, preferred-zone and dominant-zone tables. Four independent
+presence flags distinguish finite endpoints and standard/daylight overrides
+from absence, including numeric zero; absent numeric words must be zero.
+Finite wire timestamps accept all signed 64-bit epoch seconds, independently
+of the collector's narrower textual grammar. Periods retain their source
+boundaries, including adjacent equal assignments and intentional gaps.
+
+The codec explicitly projects release metadata out of runtime columns and
+retains it in source provenance. Empty timezone spans, unused active IDs and
+dominant targets without an explicit metazone row remain valid source facts.
+Canonical validation checks exact physical order, namespace-specific identities,
+contiguous spans, nonoverlap and historical golden-zone membership. It does not
+promise BCP47 cross-section or formatter-capability admission; the collector
+checks stable-ID membership, and service admission must check its complete
+semantic dependencies. This small global section needs no locale projection.
+The immutable `datetime/timezone-presentation-data.[ch]` owner validates physical
+records and releases all scratch storage before return. Full signed timestamps
+are decoded without out-of-range casts; historical membership uses sorted
+physical zone/metazone pairs, and syntax checks are cached per string. Exact
+allocation-free queries preserve gaps and do not introduce territory fallback.
+The source identity grammar is shared with localized timezone-name validation.
+Both prepared profiles carry these global supplemental facts without locale
+projection. Generation reuses the shared locale identity result and records the
+authenticated supplemental source in provenance. Profile tests exercise every
+physical period's inclusive start and exclusive end, source gaps, second-precise
+Monrovia data, Irish offset overrides and exact preferred/dominant queries.
+These records do not install or advertise a DateTimeFormat service.
+
 `datetime/components.h` defines the standard's DateTimeFormat option-field
 records separately from DisplayNames field codes and raw CLDR pattern symbols.
 Zero-initialized records have no requested components. The shared
