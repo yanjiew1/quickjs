@@ -2648,6 +2648,38 @@ foreach profile : ['minimal', 'native']
 endforeach
 
 standalone = {
+  'test_intl_date_local_core': [
+    'test_intl_date_local.c',
+    '../src/intl/datetime/local-time.c',
+    '../src/intl/datetime/chronology.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-minimal.c',
+    '../src/calendar/iso.c',
+    '../src/timezone/timezone.c',
+    '../src/timezone/timezone-minimal.c',
+  ],
+  'test_intl_date_local_native': [
+    'test_intl_date_local.c',
+    '../src/intl/datetime/local-time.c',
+    '../src/intl/datetime/chronology.c',
+    '../src/calendar/astronomy.c',
+    '../src/calendar/calendar.c',
+    '../src/calendar/calendar-native.c',
+    '../src/calendar/data.c',
+    '../src/calendar/eras.c',
+    '../src/calendar/hebrew.c',
+    '../src/calendar/islamic.c',
+    '../src/calendar/iso.c',
+    '../src/calendar/lunisolar.c',
+    '../src/calendar/native-months.c',
+    '../src/calendar/persian.c',
+    '../src/calendar/solar.c',
+    '../src/timezone/timezone.c',
+    '../src/timezone/timezone-native.c',
+    '../src/timezone/tzif.c',
+    calendar_data,
+    timezone_data,
+  ],
   'test_intl_date_calendar_core': [
     'test_intl_date_calendar.c',
     '../src/intl/datetime/chronology.c',
