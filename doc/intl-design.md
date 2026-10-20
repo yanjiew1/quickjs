@@ -747,6 +747,26 @@ pattern provenance and validation allocation failures. The reader is compiled
 in production Intl builds. These checks do not implement pattern matching or
 template rendering.
 
+`date_intervals.py` owns interval fallback templates, greatest-difference
+patterns and range-example templates; numeric separators retain a separate
+owner. Groups retain calendar, interval-container alternate, family, skeleton
+and item alternate. Exact leaves retain the difference field or range type and
+their own alternate. There is no plural selector. Typed ancestor/item/range
+aliases preserve requesting/explicit-source anchors and source provenance.
+Both interval and other sparse collectors use the resolver's common layer
+freezing mechanism; their source grammars and selectors remain separate.
+
+The interval pattern lexer preserves optional `earliestFirst:`/`latestFirst:`
+ordering directives without splitting repeated logical fields. Fallback and
+range templates use literal `{0}`/`{1}` substitution, sharing the host pair
+validator with ListFormat rather than using date-pattern quoting or field
+rules. Empty, missing, inherited and blocked records remain distinct. CLDR's
+numeric/non-numeric/mixed `intervalFormatRange` templates are for synthesized
+comparison examples, explicitly not production interval data; they must not
+become production `formatRange` synthesis policy. Matching, source-root stopping,
+field equivalence, greatest-difference calculation and rendering remain consumer
+responsibilities. Binary/runtime integration follows separately.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
