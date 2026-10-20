@@ -16,7 +16,11 @@
    pool indexes identify available sources and SIZE_MAX denotes the own style.
    ZONE_APPEND records synthesis from a bare clock, not an authored whole source.
    Return UNSUPPORTED when a complete counterpart cannot be proven by these
-   tiers; AM/PM-layout synthesis and final range/rendering admission are separate.
+   tiers. As a final AM/PM fallback, invert the actual Timezone template with
+   token-for-token recomposition proof. Use the recovered complete clock, or
+   replace the single hour in a proven hour-only h+a layout with the authoritative
+   clock. Never remove unproved literal text. Record extraction/layout flags;
+   final range/rendering admission remains separate.
    Require malloc/free and fresh disjoint output; reset and unwind failures.
    Clear with single_programs_clear; no source/pool/inventory storage is retained. */
 QJSIntlStatus qjs_intl_date_style_time_programs_open(const QJSIntlDateStyleSource *time,
