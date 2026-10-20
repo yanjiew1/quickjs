@@ -34,7 +34,7 @@ static void assert_embedding_error(JSContext *ctx, const char *expected)
     JS_FreeValue(ctx, error);
 }
 
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
 static JSValue embedding_eval(JSContext *ctx, const char *source)
 {
     JSValue result = JS_Eval(ctx, source, strlen(source), "default-zone-test", JS_EVAL_TYPE_GLOBAL);
@@ -248,7 +248,7 @@ static void test_date_boundaries(void)
 
 int main(void)
 {
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
     test_default_zone();
     test_date_boundaries();
 #else
