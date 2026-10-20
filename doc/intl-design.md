@@ -671,6 +671,14 @@ it owns neither calendar computation nor format selection and retains no heap
 state. Pattern/skeleton text and numbering overrides stay uninterpreted at this
 boundary, ready for the later native date-format compiler.
 
+`calendar_sources.py` shares structural XML traversal and alias validation
+between style and connector collection. Typed key inventories, subtree ownership
+and alias-path mappings remain with their collectors. `date_combinations.py`
+resolves standard/atTime/relative source connectors independently at each style
+width, preserving raw overrides and terminal provenance through calendar,
+group and form aliases. It leaves form fallback to the consuming formatter,
+and establishes host-side facts before a separate wire/C-owner stage.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is

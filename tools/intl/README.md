@@ -185,6 +185,27 @@ opening retains no allocation and requires no teardown. Missing, blocked and
 empty values remain distinct. Authored C tests exercise every query selector,
 unaligned input, corrupt records/dimensions and allocation failure with retry.
 
+## Date/time combination source records
+
+```sh
+python3 tools/intl/date_combinations.py --sources /path/to/intl-cache/cldr-49-beta4
+```
+
+The typed connector collector retains standard, atTime and relative forms at
+each calendar/style width, including alternate identities, raw numbering
+overrides and terminal provenance. It maps whole-calendar, dateTimeFormats and
+per-form aliases to typed keys, preserving requesting-locale and explicit-source
+resolution. Missing, blocked, inherited and explicitly empty values stay distinct.
+Unsupported structures, mixed aliases, duplicate records and cycles fail.
+
+`calendar_sources.py` owns structural calendar traversal and alias/container
+validation shared with the style collector; individual collectors own their
+subtrees, typed keys and XPath mappings. Combination patterns use date-pattern
+apostrophe rules, not the shared unit/list pair-template grammar. Selection of
+atTime/relative versus standard is consumer policy after inheritance, not a
+collector fallback. These host-side records are not emitted in prepared binary
+profiles yet and do not install DateTimeFormat or establish calendar capability.
+
 ## Relative-time source records
 
 ```sh
