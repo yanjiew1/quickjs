@@ -410,6 +410,29 @@ JS_SetMemoryLimit. Do not install ICU4C global allocator hooks or call
 `u_cleanup()` during runtime teardown. Embedders must keep ICU4C initialized while
 dependent engines/handles exist.
 
+### Shared locale-key negotiation
+
+`locale/resolve.[ch]` owns the fixed ResolveLocale key-processing algorithm after
+matching. The caller provides the matched base, requested Unicode extension,
+ordered relevant keys, supported defaults and membership callbacks for its own
+service/locale. Keep observable option getters and capability inventories with
+the frontend/service. Resolve all relevant keys before composing one final
+locale; repeated single-key composition would discard other retained keys.
+
+Null is distinct from an absent option and from an empty Boolean extension
+keyword. In particular DateTimeFormat's hour12 option can explicitly override hc
+with null, while an empty kn keyword requests true. Canonicalize option aliases
+before SameValue and membership: equal or rejected options retain a supported
+extension, accepted different options remove it. Operational callback errors
+never become unsupported-value fallback. Preserve input key order in returned
+values and canonicalize the retained extension together only once.
+
+Copy all result strings into the output allocator, freeing identity-service
+canonicalization scratch with its original allocator. Results can outlive the
+identity service. The existing one-key Number/RelativeTime/Duration bindings use
+a thin wrapper over this shared algorithm; no service queries another service's
+capability inventory implicitly.
+
 ## Public embedding APIs
 
 Proposed additions, to be finalized with their owning feature commits:
