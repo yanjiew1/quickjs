@@ -65,7 +65,7 @@ struct JSRuntime {
     struct QJSIntlDisplayService *intl_display;
     char *intl_default_locale;
 #endif
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
     char *default_time_zone;
 #endif
 
