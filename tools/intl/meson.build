@@ -28,6 +28,7 @@ intl_tool_dependencies = files(
   'date_style_tables.py',
   'dayperiod_codes.py',
   'dayperiod_rules.py',
+  'dayperiod_tables.py',
   'display_names.py',
   'display_tables.py',
   'duration_patterns.py',

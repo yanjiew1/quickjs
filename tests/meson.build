@@ -2948,6 +2948,14 @@ test(
 )
 
 test(
+  'intl-dayperiod-tables',
+  python,
+  args: files('test_intl_dayperiod_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-date-style-tables',
   python,
   args: files('test_intl_date_style_tables.py'),

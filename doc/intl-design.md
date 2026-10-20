@@ -921,6 +921,18 @@ Rounding, fractional exact-point eligibility, `a`/`b`/`B` token policy and missi
 AM/PM fallback belong to the formatter. Binary/runtime integration follows;
 source collection alone does not establish DateTimeFormat capability.
 
+Optional section 34 retains explicit day-period origins in global kind/locale
+rows and interns shared immutable rule lists. The version-1 closed code enum
+follows `dayperiod_codes.CODES`; forms distinguish exact points and half-open
+intervals. Its header is `(version, map_count, rule_count)`; directory count is
+the number of three-word kind/locale/map rows. Two-word map spans address
+four-word code/form/start/end rules. Maps have contiguous physical spans, at most twelve unique types,
+canonical ordering and complete reachability. Empty/point-only lists remain
+source facts. A list shared by formatting and selection must satisfy both
+referencing kinds, including formatting's clock-hour uniqueness constraint.
+Do not expand these small tables into the prepared locale inventory or infer
+service support from their presence. C ownership and profile integration follow.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
