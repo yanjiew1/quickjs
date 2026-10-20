@@ -12,6 +12,29 @@ static QJSIntlDateCalendarFields fields(QJSCalendarId calendar, int64_t day)
     return result;
 }
 
+static int era_domain_contains(QJSCalendarId calendar, const char *code)
+{
+    const char *name = "unchanged", *previous;
+    size_t i, j;
+    int found = 0, error;
+    for (i = 0; ; i++) {
+        previous = name;
+        error = qjs_calendar_era_at(calendar, i, &name);
+        if (error) {
+            assert(error == QJS_CAL_UNSUPPORTED && name == previous);
+            return found;
+        }
+        assert(name && *name);
+        if (!strcmp(name, code))
+            found = 1;
+        for (j = 0; j < i; j++) {
+            const char *other;
+            assert(!qjs_calendar_era_at(calendar, j, &other));
+            assert(strcmp(name, other));
+        }
+    }
+}
+
 static QJSIntlDateCalendarFields calendar_date(QJSCalendarId calendar, int year, int month)
 {
     int64_t day;
@@ -79,6 +102,7 @@ static void signed_years(void)
         for (year = -1; year <= 1; year++) {
             QJSIntlDateCalendarFields value = calendar_date(calendars[i], year, 1);
             assert(value.numeric.year == year && value.arithmetic_year == year);
+            assert(value.has_era && era_domain_contains(calendars[i], value.era_code));
         }
     }
 }
@@ -129,11 +153,13 @@ int main(void)
             value = fields(QJS_CAL_JAPANESE, japanese[i].day);
             assert(value.numeric.year == japanese[i].year && !strcmp(value.era_code, japanese[i].era));
             assert(value.era_calendar == (i ? QJS_CAL_JAPANESE : QJS_CAL_GREGORY));
+            assert(era_domain_contains(QJS_CAL_JAPANESE, value.era_code));
         }
         value = fields(QJS_CAL_ROC, -21550);
         assert(value.numeric.year == 0 && value.era_year == 1 && !strcmp(value.era_code, "broc"));
         value = fields(QJS_CAL_ETHIOPIC, -716732);
         assert(value.arithmetic_year == 0 && value.numeric.year == 5500 && !strcmp(value.era_code, "aa"));
+        assert(era_domain_contains(QJS_CAL_ETHIOPIC, value.era_code));
         value = fields(QJS_CAL_ETHIOPIC, -2725973);
         assert(value.arithmetic_year == -5501 && value.numeric.year == -1);
         value = fields(QJS_CAL_ETHIOPIC, -2725607);
@@ -157,6 +183,7 @@ int main(void)
         for (i = 0; i < QJS_CAL_COUNT; i++) {
             QJSCalendarDate date;
             assert(!qjs_calendar_from_epoch_day(i, 0, &date));
+            assert(era_domain_contains(i, date.era) == date.has_era);
             value = fields(i, 0);
             assert(value.weekday == 4 && value.arithmetic_year == date.year && value.numeric.day == (unsigned int)date.day);
             assert(!value.numeric.hour && !value.numeric.minute && !value.numeric.second && !value.numeric.millisecond);
@@ -173,5 +200,13 @@ int main(void)
     assert(!memcmp(&value, &zero, sizeof(value)));
     assert(qjs_intl_date_calendar_fields(QJS_CAL_ISO8601, 0, NULL) == QJS_INTL_INVALID_ARGUMENT);
     bounds_and_errors();
+    {
+        const char *name = "unchanged";
+        assert(qjs_calendar_era_at(QJS_CAL_COUNT, 0, &name) == QJS_CAL_RANGE);
+        assert(!strcmp(name, "unchanged"));
+        assert(qjs_calendar_era_at(QJS_CAL_ISO8601, 0, &name) == QJS_CAL_UNSUPPORTED);
+        assert(!strcmp(name, "unchanged"));
+        assert(qjs_calendar_era_at(QJS_CAL_ISO8601, 0, NULL) == QJS_CAL_RANGE);
+    }
     return 0;
 }
