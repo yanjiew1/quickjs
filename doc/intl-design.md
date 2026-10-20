@@ -763,6 +763,13 @@ allocation. This source inventory is separate from usable native candidates and
 final ECMA Format Records, including duplicate-component grouping and hour-cycle
 pairing. A counted `other` key is never an uncounted fallback.
 
+Compiled patterns can be copied into independent owned storage or combined
+by expanding the decoded connector's time/date slots. Token-level composition
+preserves quoted slot text and source field widths without reparsing inserted
+literals. Adjacent literals coalesce even across substitution boundaries.
+This syntax operation does not choose styles or adapt hour cycles; those
+choices remain with native format construction.
+
 `datetime/source-candidate.[ch]` compiles the visible ordinary pattern family
 for an explicitly selected leaf alternate and uncounted keys. It selects no
 alternate or plural fallback. Blocked/empty leaves, unsupported projections and

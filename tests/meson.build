@@ -1142,6 +1142,24 @@ test(
   timeout: 30,
 )
 
+intl_date_pattern_compose_test = executable(
+  'test_intl_date_pattern_compose',
+  files(
+    'test_intl_date_pattern_compose.c',
+    '../src/intl/datetime/pattern.c',
+  ),
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-date-pattern-compose',
+  intl_date_pattern_compose_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_date_pattern_info_test = executable(
   'test_intl_date_pattern_info',
   files(
