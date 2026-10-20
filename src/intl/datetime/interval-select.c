@@ -86,16 +86,25 @@ static QJSIntlStatus admit(const QJSIntlDateIntervalProgram *program, QJSCalenda
     return status;
 }
 
-static int compatible_periods(const QJSIntlDateIntervalProgram *program,
-                               const QJSIntlDatePatternInfo *ordinary)
+static int compatible_semantics(const QJSIntlDateIntervalProgram *program,
+                                 const QJSIntlDatePatternInfo *ordinary)
 {
+    unsigned int years = 0;
     size_t i;
     for (i = 0; i < program->pattern.count; i++) {
         unsigned int symbol = program->pattern.tokens[i].symbol;
         if ((symbol == 'a' || symbol == 'b' || symbol == 'B') && symbol != ordinary->period_symbol)
             return 0;
+        if (symbol == 'y')
+            years |= QJS_INTL_DATE_YEAR_CALENDAR;
+        else if (symbol == 'r')
+            years |= QJS_INTL_DATE_YEAR_RELATED;
+        else if (symbol == 'U')
+            years |= QJS_INTL_DATE_YEAR_CYCLIC;
     }
-    return 1;
+    /* Equal public year components can represent different raw fields.
+       Keep the ordinary representation instead of silently losing r or U. */
+    return !(ordinary->year_kinds & ~years);
 }
 
 static int represents_difference(const QJSIntlDateIntervalProgram *program, char code)
@@ -239,7 +248,7 @@ QJSIntlStatus qjs_intl_date_interval_set_open(const QJSIntlDateIntervalData *dat
                ordinary period semantics used by the comparison kernel; adding
                a different flexible-period system could invalidate sharing. */
             if (!status && (!represents_difference(&program, codes[j].symbol) ||
-                            !compatible_periods(&program, &info)))
+                            !compatible_semantics(&program, &info)))
                 status = QJS_INTL_UNSUPPORTED;
             if (!status)
                 status = admit(&program, arithmetic_calendar, names, admission);
