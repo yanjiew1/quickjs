@@ -2318,10 +2318,7 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
-  intl_date_format_test = executable(
-    'test_intl_date_format_' + profile,
-    intl_number_service_sources + files(
-      'test_intl_date_format.c',
+  intl_date_format_sources = intl_number_service_sources + files(
       '../src/intl/datetime/format.c',
       '../src/intl/datetime/local-time.c',
       '../src/intl/datetime/chronology.c',
@@ -2350,13 +2347,18 @@ foreach profile : ['minimal', 'native']
       '../src/intl/locale/type-identity.c',
       '../src/intl/locale/timezone-identity.c',
       '../src/calendar/calendar.c',
-      '../src/calendar/calendar-minimal.c',
       '../src/calendar/iso.c',
       '../src/timezone/identifier.c',
       '../src/timezone/timezone.c',
       '../src/timezone/timezone-native.c',
       '../src/timezone/tzif.c',
-    ) + [timezone_data],
+    ) + [timezone_data]
+  intl_date_format_test = executable(
+    'test_intl_date_format_' + profile,
+    intl_date_format_sources + files(
+      'test_intl_date_format.c',
+      '../src/calendar/calendar-minimal.c',
+    ),
     c_args: host_args,
     include_directories: inc,
     dependencies: host_deps,
@@ -2366,6 +2368,50 @@ foreach profile : ['minimal', 'native']
   test(
     'intl-date-format-' + profile,
     intl_date_format_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
+  intl_date_service_test = executable(
+    'test_intl_date_service_' + profile,
+    intl_date_format_sources + files(
+      'test_intl_date_service.c',
+      '../src/calendar/astronomy.c',
+      '../src/calendar/calendar-native.c',
+      '../src/calendar/data.c',
+      '../src/calendar/eras.c',
+      '../src/calendar/hebrew.c',
+      '../src/calendar/islamic.c',
+      '../src/calendar/lunisolar.c',
+      '../src/calendar/native-months.c',
+      '../src/calendar/persian.c',
+      '../src/calendar/solar.c',
+      '../src/intl/datetime/native.c',
+      '../src/intl/datetime/available-source.c',
+      '../src/intl/datetime/basic-match.c',
+      '../src/intl/datetime/format-source.c',
+      '../src/intl/datetime/ordinary-programs.c',
+      '../src/intl/datetime/source-candidate.c',
+      '../src/intl/datetime/single-program.c',
+      '../src/intl/datetime/program-adapt.c',
+      '../src/intl/datetime/style-date.c',
+      '../src/intl/datetime/style-hour.c',
+      '../src/intl/datetime/style-program.c',
+      '../src/intl/locale/identifier.c',
+      '../src/intl/locale/matching.c',
+      '../src/intl/locale/native.c',
+      '../src/intl/locale/native-id.c',
+      '../src/intl/locale/preference-data.c',
+      '../src/intl/locale/preferences.c',
+    ) + [calendar_data],
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-date-service-' + profile,
+    intl_date_service_test,
     suite: ['repo', 'native'],
     timeout: 30,
   )
