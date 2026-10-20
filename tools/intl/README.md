@@ -163,8 +163,16 @@ blocked records retain provenance with empty text and numbering override.
 validates exact coverage, ordering, reachability, dimensions and references.
 Profile projection retains source identities outside the selected locale list.
 This optional codec is not yet emitted in the prepared production profiles;
-the C owner and runtime integration follow separately. Pattern text and numbering
+the prepared-profile integration follows separately. Pattern text and numbering
 overrides remain source facts for the later date-format compiler to interpret.
+
+`src/intl/datetime/style-data.c` validates the optional section against an opened
+shared data owner. It checks bounded dimensions, calendar/alternate registries,
+canonical row/record sharing, reachability, states and source identities. Queries
+borrow immutable text, raw numbering overrides and provenance without allocating;
+opening retains no allocation and requires no teardown. Missing, blocked and
+empty values remain distinct. Authored C tests exercise every query selector,
+unaligned input, corrupt records/dimensions and allocation failure with retry.
 
 ## Relative-time source records
 

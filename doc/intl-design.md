@@ -660,7 +660,11 @@ retaining independent pattern/skeleton values and numbering overrides. Its
 calendar and alternate registries describe raw source identities. Profile
 projection preserves external source provenance; runtime formatters must still
 establish arithmetic and formatting capabilities independently. Validate the C
-owner before adding this section to prepared production profiles.
+owner before adding this section to prepared production profiles. The C style
+owner is an immutable view with exact queries and temporary validation scratch;
+it owns neither calendar computation nor format selection and retains no heap
+state. Pattern/skeleton text and numbering overrides stay uninterpreted at this
+boundary, ready for the later native date-format compiler.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
