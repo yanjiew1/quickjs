@@ -40,8 +40,9 @@ void qjs_intl_date_style_source_clear(QJSIntlDateStyleSource *source);
 /* DateTimeStyleFormat's single-date composition, before range construction.
    At least one source is required. Time requires its complete prepared pair
    with matching component/period semantics; no-hour date is copied unchanged.
-   Inputs are unchanged source_open results and a complete single-program pair,
-   not fake available-source candidates. Inputs can be cleared after this call.
+   Inputs are unchanged source_open results (or style-date's prepared DATE
+   style) and a complete single-program pair, not fake available candidates.
+   Inputs can be cleared after this call.
    With both sources use the connector owner's independent locale/calendar
    indexes, ordinary alternate and DATE's requested width: prefer usable atTime,
    then standard, never relative/another width or a masked parent. Without both
