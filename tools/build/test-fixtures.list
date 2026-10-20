@@ -180,6 +180,7 @@ tests/test_intl_locale_object.js
 tests/test_intl_list_format.js
 tests/test_intl_plural_rules.js
 tests/test_intl_number_format.js
+tests/test_intl_date_time_format.js
 tests/test_intl_relative_time_format.js
 tests/test_intl_duration_format.js
 tests/test_intl_display_names.js
