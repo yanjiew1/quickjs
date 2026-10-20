@@ -65,6 +65,14 @@ QJSIntlStatus qjs_intl_date_available_head(const QJSIntlDateAvailableData *data,
                                            uint32_t locale, uint32_t group, uint32_t *out);
 QJSIntlStatus qjs_intl_date_available_node(const QJSIntlDateAvailableData *data,
                                            uint32_t index, QJSIntlDateAvailableNode *out);
+/* Enumerate an immutable physical map without decoding its wire layout.
+   Map/entry indexes and returned start are zero-based. Entries retain exact
+   code, plural and leaf-alt keys, including blocked and explicitly empty text.
+   These queries select no parent fallback and reset outputs on failure. */
+QJSIntlStatus qjs_intl_date_available_map(const QJSIntlDateAvailableData *data,
+                                          uint32_t index, uint32_t *start, uint32_t *count);
+QJSIntlStatus qjs_intl_date_available_entry_at(const QJSIntlDateAvailableData *data,
+                                               uint32_t index, QJSIntlDateAvailableEntry *out);
 /* Exact lookup in one layer: do not walk parents or choose plural/alternate
    fallback. NO_PLURAL is distinct from OTHER. Missing returns UNSUPPORTED and
    zero output; blocked and explicit empty text return OK. Aliases may change
