@@ -13,7 +13,7 @@ static const char *const fields[] = {"years", "months", "weeks", "days", "hours"
                                     "milliseconds", "microseconds", "nanoseconds"};
 static const char *const units[] = {"year", "month", "week", "day", "hour", "minute", "second",
                                    "millisecond", "microsecond", "nanosecond"};
-static const char *const part_names[QJS_INTL_PART_COUNT] = {
+static const char *const part_names[QJS_INTL_PART_NUMBER_COUNT] = {
     "literal", "element", "integer", "group", "decimal", "fraction", "nan", "infinity",
     "minusSign", "plusSign", "percentSign", "currency", "exponentSeparator", "exponentMinusSign",
     "exponentInteger", "compact", "unit", "approximatelySign"};
@@ -218,7 +218,7 @@ static JSValue duration_parts(JSContext *ctx, const QJSIntlDurationFormatted *fo
         const QJSIntlDurationPart *span = &formatted->parts[i];
         JSValue part;
         if (span->start != end || span->end < end || span->end > formatted->length ||
-            (unsigned int)span->type >= QJS_INTL_PART_COUNT || span->type == QJS_INTL_PART_ELEMENT ||
+            (unsigned int)span->type >= QJS_INTL_PART_NUMBER_COUNT || span->type == QJS_INTL_PART_ELEMENT ||
             (unsigned int)span->unit > QJS_TEMPORAL_UNIT_COUNT)
             goto invalid;
         end = span->end;
