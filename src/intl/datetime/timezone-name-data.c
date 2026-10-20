@@ -1,6 +1,6 @@
 /* Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "timezone-name-data.h"
-#include "timezone-syntax.h"
+#include "../common/timezone-syntax.h"
 #include "../common/source-locale.h"
 #include "../native/wire.h"
 #include <string.h>
