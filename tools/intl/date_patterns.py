@@ -6,25 +6,20 @@ from pathlib import Path
 import re
 
 import acquire
-from cldr_xml import DataError, Schema, read_xml
+from cldr_xml import DataError, Schema
+import calendar_sources
+from calendar_sources import CALENDAR_ALIAS, CALENDAR_CHILDREN, WIDTHS
 import date_pattern_syntax
 import parents
 from resolve import BLOCK, INHERIT, Records
 
 FAMILIES = ('date', 'time')
-WIDTHS = ('full', 'long', 'medium', 'short')
 FIELDS = ('pattern', 'skeleton')
-CALENDAR = re.compile(r'[a-z][a-z0-9]*(?:-[a-z0-9]+)*')
-CALENDAR_ALIAS = re.compile(r"\.\./calendar\[@type=(['\"])([a-z0-9-]+)\1\]")
 GROUP_ALIAS = re.compile(
     r"\.\./\.\./calendar\[@type=(['\"])([a-z0-9-]+)\1\]/(date|time)Formats")
 # These calendar children have separate semantic owners. They must not become
 # style patterns merely because they contain text or a child named pattern.
-OTHER_CALENDAR_CHILDREN = frozenset((
-    'months', 'monthNames', 'monthAbbr', 'monthPatterns', 'dayOfMonths',
-    'days', 'dayNames', 'dayAbbr', 'quarters', 'week', 'am', 'pm',
-    'dayPeriods', 'eras', 'cyclicNameSets', 'dateTimeFormats', 'fields',
-))
+OTHER_CALENDAR_CHILDREN = CALENDAR_CHILDREN - {'dateFormats', 'timeFormats'}
 
 
 def collect(sources, graph=None):
@@ -34,118 +29,77 @@ def collect(sources, graph=None):
     source_aliases = 0
 
     def children(node, selectors=()):
-        attributes = schema.attributes(node)
-        if any(name not in selectors and schema.fields[node.tag][name].role != 'metadata'
-               for name in attributes):
-            raise DataError('unsupported date-style container selector')
-        if (node.text and node.text.strip(' \t\r\n') or
-                any(child.tail and child.tail.strip(' \t\r\n') for child in node)):
-            raise DataError('unexpected date-style container text')
-        return attributes, [child for child in node if child.tag != 'special']
+        return calendar_sources.children(schema, node, selectors)
 
     def alias(nodes):
-        targets = [node for node in nodes if node.tag == 'alias']
-        if not targets:
-            return None
-        node = targets[0]
-        attributes = schema.attributes(node)
-        if (len(nodes) != 1 or len(node) or set(attributes) != {'source', 'path'} or
-                node.text and node.text.strip(' \t\r\n')):
-            raise DataError('mixed/unsupported date-style alias')
-        source = attributes['source']
-        return attributes['path'], None if source == 'locale' else parents.locale_id(source)
+        return calendar_sources.alias(schema, nodes)
 
-    for filename in sorted(sources.paths('common/main/')):
-        if not filename.endswith('.xml'):
+    for locale, calendar, nodes in calendar_sources.calendars(sources, schema):
+        calendars.add(calendar)
+        target = alias(nodes)
+        if target:
+            match = CALENDAR_ALIAS.fullmatch(target[0])
+            if not match:
+                raise DataError('unsupported date-style calendar alias')
+            for family in FAMILIES:
+                aliases.append((locale, calendar, family, match.group(2), target[1]))
+            source_aliases += 1
             continue
-        locale = parents.locale_id(Path(filename).stem)
-        root = read_xml(sources, filename, 'ldml')
-        dates = root.findall('dates')
-        if len(dates) > 1:
-            raise DataError('repeated date-style dates container')
-        if not dates:
-            continue
-        nodes = children(dates[0])[1]
-        if any(node.tag == 'alias' for node in nodes):
-            raise DataError('dates alias requires reviewed date-style mapping')
-        groups = [node for node in nodes if node.tag == 'calendars']
-        if len(groups) > 1:
-            raise DataError('repeated date-style calendars container')
-        seen_calendars = set()
-        for group in groups:
-            for node in children(group)[1]:
-                if node.tag != 'calendar':
-                    raise DataError('unknown date-style calendars child/alias')
-                attributes, nodes = children(node, ('type',))
-                calendar = attributes.get('type', '')
-                if not CALENDAR.fullmatch(calendar) or calendar in seen_calendars:
-                    raise DataError('invalid/repeated date-style calendar')
-                seen_calendars.add(calendar)
-                calendars.add(calendar)
-                target = alias(nodes)
-                if target:
-                    match = CALENDAR_ALIAS.fullmatch(target[0])
-                    if not match:
-                        raise DataError('unsupported date-style calendar alias')
-                    for family in FAMILIES:
-                        aliases.append((locale, calendar, family, match.group(2), target[1]))
-                    source_aliases += 1
-                    continue
-                seen_families = set()
-                for family_node in nodes:
-                    if family_node.tag in OTHER_CALENDAR_CHILDREN:
-                        continue
-                    family = family_node.tag[:-7] if family_node.tag.endswith('Formats') else ''
-                    if family not in FAMILIES or family in seen_families:
-                        raise DataError('unknown/repeated date-style family')
-                    seen_families.add(family)
-                    lengths = children(family_node)[1]
-                    target = alias(lengths)
-                    if target:
-                        match = GROUP_ALIAS.fullmatch(target[0])
-                        if target[0] == '../' + family + 'Formats':
-                            target_calendar = calendar
-                        elif match and match.group(3) == family:
-                            target_calendar = match.group(2)
-                        else:
-                            raise DataError('unsupported date-style family alias')
-                        aliases.append((locale, calendar, family, target_calendar, target[1]))
-                        source_aliases += 1
-                        continue
-                    seen_widths = set()
-                    for length in lengths:
-                        if length.tag != family + 'FormatLength':
-                            raise DataError('unknown date-style length child/alias')
-                        attributes, formats = children(length, ('type',))
-                        width = attributes.get('type')
-                        if width not in WIDTHS or width in seen_widths:
-                            raise DataError('unknown/repeated date-style length')
-                        seen_widths.add(width)
-                        seen_format = False
-                        for form in formats:
-                            if form.tag != family + 'Format' or seen_format:
-                                raise DataError('unknown/repeated date-style format/alias')
-                            seen_format = True
-                            attributes, leaves = children(form, ('type',))
-                            if attributes.get('type', 'standard') != 'standard':
-                                raise DataError('unsupported date-style format type')
-                            for leaf in leaves:
-                                if leaf.tag not in ('pattern', 'datetimeSkeleton') or len(leaf):
-                                    raise DataError('unknown/structured date-style leaf')
-                                attributes = schema.attributes(leaf)
-                                allowed = ('alt', 'numbers', 'type') if leaf.tag == 'pattern' else ('alt', 'numbers')
-                                if (any(name not in allowed and schema.fields[leaf.tag][name].role != 'metadata'
-                                        for name in attributes) or
-                                        attributes.get('type', 'standard') != 'standard'):
-                                    raise DataError('unsupported date-style leaf selector')
-                                alt = attributes.get('alt', '')
-                                alternates.add(alt)
-                                text = leaf.text or ''
-                                if leaf.tag == 'pattern' and text and text not in (BLOCK, INHERIT):
-                                    date_pattern_syntax.compile_pattern(text)
-                                field = 'pattern' if leaf.tag == 'pattern' else 'skeleton'
-                                value = text if text in (BLOCK, INHERIT) else (text, attributes.get('numbers', ''))
-                                raw.append((locale, (calendar, family, width, field, alt), value))
+        seen_families = set()
+        for family_node in nodes:
+            if family_node.tag in OTHER_CALENDAR_CHILDREN:
+                continue
+            family = family_node.tag[:-7] if family_node.tag.endswith('Formats') else ''
+            if family not in FAMILIES or family in seen_families:
+                raise DataError('unknown/repeated date-style family')
+            seen_families.add(family)
+            lengths = children(family_node)[1]
+            target = alias(lengths)
+            if target:
+                match = GROUP_ALIAS.fullmatch(target[0])
+                if target[0] == '../' + family + 'Formats':
+                    target_calendar = calendar
+                elif match and match.group(3) == family:
+                    target_calendar = match.group(2)
+                else:
+                    raise DataError('unsupported date-style family alias')
+                aliases.append((locale, calendar, family, target_calendar, target[1]))
+                source_aliases += 1
+                continue
+            seen_widths = set()
+            for length in lengths:
+                if length.tag != family + 'FormatLength':
+                    raise DataError('unknown date-style length child/alias')
+                attributes, formats = children(length, ('type',))
+                width = attributes.get('type')
+                if width not in WIDTHS or width in seen_widths:
+                    raise DataError('unknown/repeated date-style length')
+                seen_widths.add(width)
+                seen_format = False
+                for form in formats:
+                    if form.tag != family + 'Format' or seen_format:
+                        raise DataError('unknown/repeated date-style format/alias')
+                    seen_format = True
+                    attributes, leaves = children(form, ('type',))
+                    if attributes.get('type', 'standard') != 'standard':
+                        raise DataError('unsupported date-style format type')
+                    for leaf in leaves:
+                        if leaf.tag not in ('pattern', 'datetimeSkeleton') or len(leaf):
+                            raise DataError('unknown/structured date-style leaf')
+                        attributes = schema.attributes(leaf)
+                        allowed = ('alt', 'numbers', 'type') if leaf.tag == 'pattern' else ('alt', 'numbers')
+                        if (any(name not in allowed and schema.fields[leaf.tag][name].role != 'metadata'
+                                for name in attributes) or
+                                attributes.get('type', 'standard') != 'standard'):
+                            raise DataError('unsupported date-style leaf selector')
+                        alt = attributes.get('alt', '')
+                        alternates.add(alt)
+                        text = leaf.text or ''
+                        if leaf.tag == 'pattern' and text and text not in (BLOCK, INHERIT):
+                            date_pattern_syntax.compile_pattern(text)
+                        field = 'pattern' if leaf.tag == 'pattern' else 'skeleton'
+                        value = text if text in (BLOCK, INHERIT) else (text, attributes.get('numbers', ''))
+                        raw.append((locale, (calendar, family, width, field, alt), value))
 
     calendars, alternates = tuple(sorted(calendars)), tuple(sorted(alternates))
     keys = tuple((calendar, family, width, field, alt) for calendar in calendars
