@@ -905,6 +905,22 @@ It allocates nothing and depends on neither locale data nor a selected backend.
 Native candidate compilation and best-fit policy remain separate consumers;
 providing this algorithm does not install a DateTimeFormat constructor.
 
+Supplemental day-period rules are a separate local-clock data owner from
+translated calendar names. Both collectors share only the day-period vocabulary
+in `dayperiod_codes.py`. `dayperiod_rules.py` preserves explicit formatting
+and selection groups, fixed noon/midnight points, half-open wrapping intervals
+and minute precision. Fixed points may overlap the complete variable partition;
+fixed AM/PM retain their standard meanings. Unknown/deprecated endpoint forms
+fail explicitly rather than being silently changed to inclusive/exclusive forms.
+Formatting intervals must not repeat twelve-hour hour labels, including when
+minute-aligned endpoints touch more hour buckets than their duration suggests.
+Rule inheritance uses simple locale truncation and selects an entire rule list,
+independently of the exceptional main-data parents used by localized names.
+Keep that source origin and do not merge missing period codes from a parent.
+Rounding, fractional exact-point eligibility, `a`/`b`/`B` token policy and missing-label
+AM/PM fallback belong to the formatter. Binary/runtime integration follows;
+source collection alone does not establish DateTimeFormat capability.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is

@@ -2940,6 +2940,14 @@ test(
 )
 
 test(
+  'intl-dayperiod-rules',
+  python,
+  args: files('test_intl_dayperiod_rules.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-date-style-tables',
   python,
   args: files('test_intl_date_style_tables.py'),
