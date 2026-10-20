@@ -120,10 +120,13 @@ static void test_failures(int operation)
 static void test_preference_failures(const char *method, const char *tag, int kind)
 {
     size_t step, calls = 0, failed = 0;
+    OOMTestAllocator allocator;
+    /* Reuse the large immutable DateTimeFormat reader across calendar-binding
+       samples. Fresh contexts still isolate each injected failure. */
+    JSRuntime *shared_rt = kind == 3 ? oom_test_runtime(&allocator) : NULL;
 
     for (step = 0; step <= calls; step++) {
-        OOMTestAllocator allocator;
-        JSRuntime *rt = oom_test_runtime(&allocator);
+        JSRuntime *rt = shared_rt ? shared_rt : oom_test_runtime(&allocator);
         JSContext *ctx = JS_NewContextRaw(rt);
         JSValue global, object, constructor, argument, locale, function, result;
         JSValueConst borrowed;
@@ -140,6 +143,13 @@ static void test_preference_failures(const char *method, const char *tag, int ki
         assert(!JS_IsException(locale));
         function = JS_GetPropertyStr(ctx, locale, method);
         assert(JS_IsFunction(ctx, function));
+        if (kind == 3) {
+            /* Exhaust the small binding path after DateTimeFormat's immutable
+               source owner is open; its cold reader has separate OOM tests. */
+            result = JS_Call(ctx, function, locale, 0, NULL);
+            assert(!JS_IsException(result));
+            JS_FreeValue(ctx, result);
+        }
         padding = test_pool_padding(rt);
         oom_test_begin(&allocator, step);
         result = JS_Call(ctx, function, locale, 0, NULL);
@@ -170,7 +180,8 @@ static void test_preference_failures(const char *method, const char *tag, int ki
             JSValue value = kind == 1 ? JS_GetPropertyStr(ctx, result, "direction")
                                      : JS_GetPropertyUint32(ctx, result, 0);
             const char *text = JS_ToCString(ctx, value);
-            assert(text && !strcmp(text, kind == 1 ? "rtl" : "h23"));
+            assert(text && !strcmp(text, kind == 1 ? "rtl" : kind == 3 ? "gregory" :
+                                         kind == 4 ? "Asia/Singapore" : "h23"));
             JS_FreeCString(ctx, text);
             JS_FreeValue(ctx, value);
         }
@@ -182,7 +193,13 @@ static void test_preference_failures(const char *method, const char *tag, int ki
         JS_FreeValue(ctx, object);
         JS_FreeValue(ctx, global);
         JS_FreeContext(ctx);
-        JS_FreeRuntime(rt);
+        if (!shared_rt) {
+            JS_FreeRuntime(rt);
+            assert(!allocator.live);
+        }
+    }
+    if (shared_rt) {
+        JS_FreeRuntime(shared_rt);
         assert(!allocator.live);
     }
     assert(failed);
@@ -231,6 +248,10 @@ int main(void)
     test_preference_failures("getWeekInfo", "fa-u-sd-inka-rg-afzzzz", 0);
     test_preference_failures("getTextInfo", "ar", 1);
     test_preference_failures("getHourCycles", "en-u-rg-jpzzzz", 2);
+    test_preference_failures("getCalendars", "en", 3);
+#ifdef CONFIG_TIMEZONE_NATIVE
+    test_preference_failures("getTimeZones", "en-SG", 4);
+#endif
 #endif
     return 0;
 }
