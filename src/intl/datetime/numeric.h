@@ -3,19 +3,8 @@
 #ifndef QJS_INTL_DATETIME_NUMERIC_H
 #define QJS_INTL_DATETIME_NUMERIC_H
 #include "pattern-info.h"
+#include "fields.h"
 #include "../number/number.h"
-
-typedef enum QJSIntlDateHourCycle {
-    QJS_INTL_DATE_H11,
-    QJS_INTL_DATE_H12,
-    QJS_INTL_DATE_H23,
-    QJS_INTL_DATE_H24
-} QJSIntlDateHourCycle;
-
-typedef struct QJSIntlDateNumericFields {
-    int32_t year, related_year;
-    unsigned int month, day, hour, minute, second, millisecond;
-} QJSIntlDateNumericFields;
 
 typedef struct QJSIntlDateNumberFormats {
     const QJSIntlNumberFormatter *numeric, *two_digit;
