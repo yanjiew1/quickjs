@@ -1138,6 +1138,38 @@ if intl_enabled
     }]
   endforeach
 
+  intl_date_combination_fixture = custom_target(
+    'intl-date-combination-authored-fixture',
+    output: 'intl-date-combination-authored-fixture.c',
+    command: [python, files('intl_date_combination_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_combinations.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_combination_authored = {
+    'name': 'test_intl_date_combination_authored',
+    'sources': files(
+      'test_intl_date_combination_data.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/combination-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_combination_fixture],
+    'c_args': (host_args + ['-DTEST_INTL_AUTHORED=1']),
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_combination_authored,
+    'name': 'intl-date-combination-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_style_fixture = custom_target(
     'intl-date-style-authored-fixture',
     output: 'intl-date-style-authored-fixture.c',
@@ -1864,6 +1896,28 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_relative_test,
       'name': ('intl-relative-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_combination_test = {
+      'name': ('test_intl_date_combination_data_' + profile),
+      'sources': files(
+        'test_intl_date_combination_data.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/common/source-locale.c',
+        '../src/intl/datetime/combination-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+      ),
+      'c_args': (host_args + ['-DTEST_INTL_AUTHORED=0']),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_combination_test,
+      'name': ('intl-date-combination-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2713,6 +2767,22 @@ if intl_enabled
     'intl-date-style-tables',
     python,
     args: files('test_intl_date_style_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-date-combination-tables',
+    python,
+    args: files('test_intl_date_combination_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-date-combinations',
+    python,
+    args: files('test_intl_date_combinations.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
