@@ -689,6 +689,18 @@ the width selector in `datetime/style-types.h`; their records, states and query
 interfaces retain distinct owners. Missing, blocked and explicit empty records
 remain distinct across source, wire and runtime queries.
 
+`calendar_names.py` collects months, weekdays, quarters, day periods, eras,
+cyclic names and month templates in sparse child-first layers. Its typed group
+is calendar/family/cyclic-set/context/width; leaf identities separately retain
+the source identifier, month year type and alternate. Ancestor aliases map
+typed prefixes, retaining requesting or explicit-source locale anchors and
+terminal provenance. Missing groups, blocked leaves and explicit empty text
+remain distinct. Month templates have their own numeric/all selectors and are
+not parsed as date patterns. Raw CLDR era IDs remain source identities until
+the calendar integration maps them through supplemental era codes. Neither
+localized names nor inventory entries establish calendar arithmetic support.
+This host collector precedes its separate wire and runtime-query stages.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is

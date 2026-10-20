@@ -6,6 +6,7 @@ intl_tool_dependencies = files(
   'acquire.py',
   'availability.py',
   'bundle.py',
+  'calendar_names.py',
   'calendar_sources.py',
   'cldr_xml.py',
   'compact_pattern_syntax.py',
