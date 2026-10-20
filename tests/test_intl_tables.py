@@ -168,6 +168,14 @@ class VerifiedFixture(Sources):
         length = ET.SubElement(formats, 'dateTimeFormatLength', type='long')
         form = ET.SubElement(length, 'dateTimeFormat')
         ET.SubElement(form, 'pattern').text = "{1} 'at' {0}"
+        self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT months ANY>
+          <!ELEMENT monthContext ANY><!ATTLIST monthContext type NMTOKEN #REQUIRED>
+          <!ELEMENT monthWidth ANY><!ATTLIST monthWidth type NMTOKEN #REQUIRED>
+          <!ELEMENT month (#PCDATA)><!ATTLIST month type NMTOKEN #REQUIRED>'''
+        months = ET.SubElement(calendar, 'months')
+        context = ET.SubElement(months, 'monthContext', type='format')
+        width = ET.SubElement(context, 'monthWidth', type='wide')
+        ET.SubElement(width, 'month', type='1').text = 'January'
         self.files['common/dtd/ldml.dtd'] += b'''<!ELEMENT localeDisplayNames ANY>
           <!ELEMENT languages ANY><!ELEMENT language (#PCDATA)>
           <!ATTLIST language type NMTOKEN #REQUIRED>'''
@@ -253,6 +261,19 @@ class TableTests(unittest.TestCase):
                        if row[:3] == ('en', 'gregorian', 'long') and not row[4]}
             self.assertEqual(english['standard'][:3], ('value', '{1}, {0}', ''))
             self.assertEqual(english['atTime'][1], "{1} 'at' {0}")
+            calendar_names = view['calendar_names']
+            self.assertIsNotNone(calendar_names)
+            key = ('gregorian', 'months', '', 'format', 'wide')
+            head = next(head for tag, group, head in calendar_names['rows']
+                        if (tag, group) == ('en', key))
+            while head:
+                locale, group, index, head = calendar_names['nodes'][head - 1]
+                january = [field[3] for field in calendar_names['maps'][index] if field[:3] == ('1', '', '')]
+                if january:
+                    self.assertEqual((locale, group, january), ('en', key, ['January']))
+                    break
+            else:
+                self.fail('prepared English calendar-name source is missing January')
             names = view['display_names']
             self.assertEqual(len(names['rows']), len(view['locales']) * len(names['groups']))
             head = next(head for tag, group, head in names['rows']
