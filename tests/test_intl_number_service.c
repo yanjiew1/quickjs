@@ -190,7 +190,7 @@ static void range_expected(const QJSIntlFormattedRange *result, const char *text
     for (i = 0; i < result->part_count; i++) {
         const QJSIntlRangePart *part = &result->parts[i];
         assert(part->start == at && part->end >= at && part->end <= result->length);
-        assert((unsigned int)part->type < QJS_INTL_PART_COUNT);
+        assert((unsigned int)part->type < QJS_INTL_PART_NUMBER_COUNT);
         assert((unsigned int)part->source <= QJS_INTL_RANGE_END);
         at = part->end;
         starts += part->source == QJS_INTL_RANGE_START;
