@@ -934,6 +934,29 @@ resolution preserves missing/BLOCK/empty and original alias provenance; it does
 not perform name-type, width, metazone or territory fallback. Those are still
 required for complete native specific/generic zone presentation.
 
+`datetime/ordinary-programs.[ch]` prepares a finite owned set of ordinary
+single-date programs. Retain complete useful source pairs in stable group
+order; deduplicate by the full standard component vector. Add all fourteen
+required component-presence subsets using actual locale/calendar evidence:
+era-free M/Md programs plus the Year and Day-Of-Week append templates, exact
+SHORT standard date/time connectors, and second fields followed by the selected
+numbering system's decimal separator and one-to-three fractional digits.
+Reproject each transformed program and verify normal/twelve fields and year
+kinds agree; never relabel a G-bearing source as an era-free format.
+
+When plain twelve-hour hm/hms evidence is absent, a whole compatible flexible-B
+clock can supply the literal position of a newly constructed AM/PM a field.
+This is a separate plain-clock record with explicit construction provenance;
+original B-bearing source and public dayPeriod records remain unchanged. Do
+not strip a source field and guess which surrounding punctuation belongs to it.
+
+Programs own token/literal storage independently of input pools. Retain source
+indexes, exact append/connector provenance and backward construction links;
+borrow only provenance slices from unchanged packs. Missing/BLOCK/empty evidence
+is unsupported rather than a hardcoded English pattern. This closes mandatory
+single-date shape construction; arithmetic/name capability admission, range
+programs and the public service still have their own requirements.
+
 `datetime/zone-name.[ch]` renders all six standard zone styles over borrowed
 rule handles and validated name, presentation and locale metadata owners. It
 keeps accepted IANA spellings/primary IDs separate from CLDR's stable first-alias
