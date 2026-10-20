@@ -2145,21 +2145,39 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_locale_sources = files(
+    '../src/intl/locale/identifier.c',
+    '../src/intl/locale/matching.c',
+    '../src/intl/locale/native.c',
+    '../src/intl/locale/native-id.c',
+    '../src/intl/locale/native-data.c',
+    '../src/intl/locale/preference-data.c',
+    '../src/intl/locale/preferences.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  intl_locale_resolve_test = executable(
+    'test_intl_locale_resolve_' + profile,
+    intl_locale_sources + files(
+      'test_intl_locale_resolve.c',
+      '../src/intl/locale/resolve.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-locale-resolve-' + profile,
+    intl_locale_resolve_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_locale_test = executable(
     'test_intl_locale_id_' + profile,
-    [
-      'test_intl_native_locale_id.c',
-      '../src/intl/locale/identifier.c',
-      '../src/intl/locale/matching.c',
-      '../src/intl/locale/native.c',
-      '../src/intl/locale/native-id.c',
-      '../src/intl/locale/native-data.c',
-      '../src/intl/locale/preference-data.c',
-      '../src/intl/locale/preferences.c',
-      '../src/intl/common/locale-grammar.c',
-      '../src/intl/native/data.c',
-      '../src/intl/native/pack.c',
-    ],
+    intl_locale_sources + files('test_intl_native_locale_id.c'),
     c_args: host_args,
     include_directories: inc,
     dependencies: host_deps,
