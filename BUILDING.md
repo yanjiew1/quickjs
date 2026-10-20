@@ -33,6 +33,12 @@ meson test -C build-gc --suite gc-stress --print-errorlogs
 meson setup build-iteration -Dmalloc_iter=true
 ```
 
+LTO applies to engine code, including the VM, compiler and support algorithms.
+Generated Unicode, calendar, timezone, Windows timezone-map and Intl data are
+compiled as ordinary objects with LTO disabled, then included in the same engine
+library. Their target architecture, sanitizer instrumentation, visibility and
+shared-library PIC settings still match that library.
+
 `--num-processes` controls concurrent repository tests. Use `--timeout-multiplier`
 for slow emulators or instrumentation. The `threading` suite selects concurrency
 tests; `--repeat` can repeat a focused test. Compile-only `CONFIG_CHECK_JSVALUE`

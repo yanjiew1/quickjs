@@ -88,8 +88,11 @@ support_sources = files(
   'quickjs-libc/worker.c',
 )
 
-support_sources += unicode_tables
+# Immutable generated tables have their own object target without LTO.
+data_sources = []
+data_sources += unicode_tables
 windows_timezone_sources = []
+windows_timezone_data_sources = []
 
 # The coordinator also provides disabled-build public API stubs.
 engine_sources += files(
@@ -203,7 +206,7 @@ if intl_enabled
     'intl/unit/grammar-data.c',
     'intl/unit/pattern.c',
   )
-  support_sources += intl_data
+  data_sources += intl_data
 endif
 if get_option('temporal') or intl_enabled
   engine_sources += files('quickjs/builtins/duration-value.c')
@@ -255,7 +258,7 @@ if get_option('temporal')
       'calendar/persian.c',
       'calendar/solar.c',
     )
-    support_sources += calendar_data
+    data_sources += calendar_data
   else
     support_sources += files('calendar/calendar-minimal.c')
   endif
@@ -264,9 +267,9 @@ if get_option('temporal')
       'timezone/timezone-native.c',
       'timezone/tzif.c',
     )
-    support_sources += timezone_data
+    data_sources += timezone_data
     windows_timezone_sources = files('timezone/windows-zone.c')
-    windows_timezone_sources += windows_timezone_data
+    windows_timezone_data_sources += windows_timezone_data
   else
     support_sources += files('timezone/timezone-minimal.c')
   endif
