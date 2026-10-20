@@ -4,6 +4,10 @@ These Python 3.6 or newer host tools prepare immutable source data for native
 Intl generation. Normal builds use prepared binary data and do not download
 or parse XML.
 
+See [the binary format guide](../../doc/intl-data-format.md) and
+[section reference](../../doc/intl-data-sections.md) for the envelope, exact wire
+layouts, size reductions and format maintenance rules.
+
 ## Acquire the pinned inputs
 
 ```sh
