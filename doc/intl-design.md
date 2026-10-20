@@ -833,8 +833,18 @@ and used physical rows/maps/nodes, marker states, compatible alias chains and
 reverse reachability. It validates stored head rows once and expands only present
 heads for the host source view. Raw format text remains source data: collection
 validates its grammar, while token compilation and formatting policy remain
-separate from structural wire admission. The immutable C owner and prepared
-profiles follow separately; this section alone does not provide a formatter.
+separate from structural wire admission.
+
+The immutable C owner in `datetime/timezone-name-data.[ch]` validates physical
+family blocks, selector identities, compatible source chains, canonical maps
+and full reachability. Per-string source/identity/code checks are cached during
+opening. All scratch is released before return; exact group/head/node/leaf
+queries allocate nothing and borrow the unchanged pack. Authored C fixtures
+cover both alias directions, external source locales, independent alternates,
+empty/blocked values, absent families, hostile records, unaligned storage and
+allocation-failure retries. The owner does not choose primary identifiers,
+metazone periods, standard/daylight names, offsets or renderer fallback.
+Prepared profiles and runtime formatting integration follow separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
