@@ -158,6 +158,7 @@ if intl_enabled
     'intl/datetime/interval-data.c',
     'intl/datetime/name-data.c',
     'intl/datetime/style-data.c',
+    'intl/datetime/timezone-name-data.c',
     'intl/display/calendar-names.c',
     'intl/display/data.c',
     'intl/display/language-format.c',
