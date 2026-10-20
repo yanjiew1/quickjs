@@ -163,92 +163,24 @@ int js_intl_unicode_type_option(JSContext *ctx, JSValueConst options, const char
     return 0;
 }
 
-static int same_bytes(QJSIntlBytes first, QJSIntlBytes last)
-{
-    return first.length == last.length &&
-           (!first.length || !memcmp(first.data, last.data, first.length));
-}
-
 int js_intl_resolve_locale_key(JSContext *ctx, QJSIntlBytes base, QJSIntlBytes extension,
                                const char key[2], QJSIntlBytes default_value, QJSIntlBytes option,
                                JSIntlLocaleValueSupported *supported, void *opaque,
                                JSIntlResolvedKeyword *out)
 {
-    QJSIntlLocaleComponents components = {0};
-    QJSIntlBytes requested, value = default_value;
-    QJSIntlLocaleService *identity = NULL;
+    QJSIntlLocaleService *identity = js_intl_locale_service(ctx);
     QJSIntlAllocator allocator = js_intl_allocator(ctx->rt);
-    JSIntlResolvedKeyword result = {0};
-    char *canonical_option = NULL, *with_key = NULL;
-    QJSIntlStatus status;
-    int accepted, retain = 0;
+    QJSIntlLocaleResolveKey request = {{key[0], key[1]}, default_value, option, 0, supported, opaque};
+    QJSIntlResolvedLocale resolved;
     memset(out, 0, sizeof(*out));
-    components.unicode_extension = extension;
-    requested = qjs_intl_locale_keyword(&components, key);
-    if (requested.data && requested.length) {
-        if (js_intl_error(ctx, supported(opaque, requested, &accepted), "locale keyword"))
-            goto fail;
-        if (accepted) {
-            value = requested;
-            retain = 1;
-        }
-    } else if (requested.data) {
-        QJSIntlBytes truth = {"true", 4};
-        if (js_intl_error(ctx, supported(opaque, truth, &accepted), "locale keyword"))
-            goto fail;
-        if (accepted) {
-            value = truth;
-            retain = 1;
-        }
-    }
-    if (option.data) {
-        identity = js_intl_locale_service(ctx);
-        if (!identity || js_intl_error(ctx,
-                qjs_intl_locale_canonicalize_uvalue(identity, (QJSIntlBytes){key, 2},
-                                                      option, &canonical_option),
-                "locale keyword canonicalization"))
-            goto fail;
-        option = canonical_option[0] ? (QJSIntlBytes){canonical_option, strlen(canonical_option)}
-                                    : (QJSIntlBytes){"true", 4};
-        if (!same_bytes(option, value)) {
-            if (js_intl_error(ctx, supported(opaque, option, &accepted), "locale keyword"))
-                goto fail;
-            if (accepted) {
-                value = option;
-                retain = 0;
-            }
-        }
-    }
-    result.value = js_strndup(ctx, value.data, value.length);
-    if (!result.value)
-        goto fail;
-    if (retain) {
-        QJSIntlLocaleKeyword keyword = {{key[0], key[1]}, requested};
-        if (!identity)
-            identity = js_intl_locale_service(ctx);
-        if (!identity)
-            goto fail;
-        status = qjs_intl_locale_replace_keywords(&allocator, base, &keyword, 1, &with_key);
-        if (js_intl_error(ctx, status, "locale keyword insertion") ||
-            js_intl_error(ctx, qjs_intl_locale_canonicalize(identity,
-                              (QJSIntlBytes){with_key, strlen(with_key)}, &result.locale),
-                            "locale keyword insertion"))
-            goto fail;
-    } else {
-        result.locale = js_strndup(ctx, base.data, base.length);
-        if (!result.locale)
-            goto fail;
-    }
-    js_free(ctx, with_key);
-    js_free(ctx, canonical_option);
-    *out = result;
+    if (!identity || js_intl_error(ctx, qjs_intl_resolve_locale_keys(identity, &allocator,
+                         base, extension, &request, 1, &resolved), "locale keyword resolution"))
+        return -1;
+    out->locale = resolved.locale;
+    out->value = resolved.values[0];
+    resolved.locale = resolved.values[0] = NULL;
+    qjs_intl_resolved_locale_clear(&resolved);
     return 0;
-fail:
-    js_free(ctx, with_key);
-    js_free(ctx, canonical_option);
-    js_free(ctx, result.value);
-    js_free(ctx, result.locale);
-    return -1;
 }
 
 JSValue js_intl_filter_locales(JSContext *ctx, const QJSIntlBytes *available,
