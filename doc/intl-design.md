@@ -712,8 +712,9 @@ temporary depth, coverage and source-string scratch, released before return.
 Exact group/head/node/entry queries borrow pack storage and allocate nothing.
 Family-level and era-string validation caches bound repeated shared-data work.
 The reader has authored C fixtures, including external source locales, empty
-inventories, unaligned bytes and allocation-failure retries. Prepared-profile
-and formatter integration follow separately.
+inventories, unaligned bytes and allocation-failure retries. Both prepared
+profiles include section 29 and compile its production reader, with separate
+prepared-data C tests. Formatter integration follows separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled

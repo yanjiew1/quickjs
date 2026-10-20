@@ -1609,6 +1609,28 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_calendar_name_data_test = executable(
+    'test_intl_calendar_name_data_' + profile,
+    files(
+      'test_intl_calendar_name_profiles.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/name-data.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-calendar-name-data-' + profile,
+    intl_calendar_name_data_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_date_combination_test = executable(
     'test_intl_date_combination_data_' + profile,
     files(
