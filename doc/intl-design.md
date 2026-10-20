@@ -792,6 +792,20 @@ English `hm` and `Hm`, for example, have different hour widths, requiring
 explicit width adaptation before pairing normal and 12-hour programs. Flexible
 day periods, ranges and required-subset synthesis also remain separate steps.
 
+`datetime/single-program.[ch]` prepares owned normal/12-hour programs for one
+source group before range construction and renderer admission. A fixed table
+of year-kind and period classes finds compatible whole-source pairs without
+pair enumeration. Require identical year kinds and b/B selection semantics;
+a class must occur in the group. Prefer direct hour families, exact hour widths
+and then stable source indexes. Cross-family b/B copies use representative H/h,
+retain all non-hour tokens and literals, and record adaptations separately from
+original metadata. Re-project copies to the unchanged target components. The
+renderer must apply the resolved h11/h12/h23/h24 cycle. Missing complementary
+programs return unsupported without allocation; do not strip AM/PM punctuation
+or revive masked sources. No-hour groups copy one source without a 12-hour
+program. Copied programs survive releasing both input owners; diagnostic source
+indexes require the original pool for any later provenance lookup.
+
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.
