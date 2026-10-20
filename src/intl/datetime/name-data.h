@@ -100,4 +100,13 @@ QJSIntlStatus qjs_intl_calendar_name_node(const QJSIntlCalendarNameData *, uint3
 QJSIntlStatus qjs_intl_calendar_name_lookup(const QJSIntlCalendarNameData *, uint32_t node,
                                             QJSIntlBytes code, QJSIntlCalendarNameYear,
                                             QJSIntlBytes alt, QJSIntlCalendarNameEntry *);
+/* Resolve that exact key along the prepared parent chain, retaining the first
+   entry and its actual origin group. BLOCK and empty text stop inheritance.
+   Choose no year/alternate/width/context/calendar fallback. Zero head means
+   missing (UNSUPPORTED). Allocate nothing and borrow unchanged pack bytes;
+   require disjoint outputs and reset all non-NULL outputs on failure. */
+QJSIntlStatus qjs_intl_calendar_name_resolve(const QJSIntlCalendarNameData *, uint32_t head,
+                                             QJSIntlBytes code, QJSIntlCalendarNameYear,
+                                             QJSIntlBytes alt, QJSIntlCalendarNameEntry *,
+                                             QJSIntlCalendarNameNode *origin);
 #endif
