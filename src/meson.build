@@ -155,6 +155,8 @@ if intl_enabled
     'intl/datetime/available-data.c',
     'intl/datetime/basic-match.c',
     'intl/datetime/combination-data.c',
+    'intl/datetime/dayperiod-code.c',
+    'intl/datetime/dayperiod-data.c',
     'intl/datetime/field-data.c',
     'intl/datetime/field.c',
     'intl/datetime/interval-data.c',
