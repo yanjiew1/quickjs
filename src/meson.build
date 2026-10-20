@@ -134,6 +134,7 @@ if intl_enabled
     'intl/datetime/dayperiod-code.c',
     'intl/datetime/dayperiod-data.c',
     'intl/datetime/dayperiod.c',
+    'intl/datetime/era-data.c',
     'intl/datetime/field-data.c',
     'intl/datetime/field.c',
     'intl/datetime/format-source.c',

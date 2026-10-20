@@ -878,6 +878,15 @@ full renderer with chronology/name/zone services. The shared output vocabulary
 now distinguishes date-field parts; number-bearing consumers retain their
 original number-only type bound.
 
+`datetime/era-data.[ch]` owns explicit CLDR canonical-era to raw name-key
+metadata from supplemental calendarData, independently of localized-name and
+calendar-arithmetic owners. Optional section 35 keeps raw calendar identities
+and arbitrary decimal name keys; it never derives Japanese IDs from era order
+or creates named eras from Chinese/Dangi sequential epoch records. Era boundaries,
+inherited Gregorian presentation and canonical aliases remain consumer policy.
+Opening validates each shared string once per grammar domain and checks both
+mapping domains; ordinary lookup allocates nothing and borrows the unchanged pack.
+
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.

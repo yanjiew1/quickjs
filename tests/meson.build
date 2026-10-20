@@ -1417,6 +1417,34 @@ test(
   timeout: 30,
 )
 
+intl_calendar_era_sources = files(
+  'test_intl_calendar_era_data.c',
+  '../src/intl/datetime/era-data.c',
+  '../src/intl/native/data.c',
+  '../src/intl/native/pack.c',
+  '../src/intl/common/locale-grammar.c',
+)
+intl_calendar_era_fixture = custom_target(
+  'intl-calendar-era-authored-fixture',
+  output: 'intl-calendar-era-authored-fixture.c',
+  command: [python, files('intl_calendar_era_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files('test_intl_calendar_eras.py'),
+)
+intl_calendar_era_authored = executable(
+  'test_intl_calendar_era_authored',
+  intl_calendar_era_sources + [intl_calendar_era_fixture],
+  c_args: host_args + ['-DTEST_INTL_ERA_AUTHORED=1'],
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-calendar-era-authored',
+  intl_calendar_era_authored,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_dayperiod_fixture = custom_target(
   'intl-dayperiod-authored-fixture',
   output: 'intl-dayperiod-authored-fixture.c',
@@ -1783,6 +1811,21 @@ foreach profile : ['minimal', 'native']
     dependencies: host_deps,
     # Avoid reprocessing the same large immutable array at every LTO test link.
     override_options: ['b_lto=false'],
+  )
+  intl_calendar_era_test = executable(
+    'test_intl_calendar_era_' + profile,
+    intl_calendar_era_sources,
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-calendar-era-' + profile,
+    intl_calendar_era_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
   )
   intl_data_test = executable(
     'test_intl_data_' + profile,
@@ -3409,6 +3452,14 @@ test(
   'intl-date-field-tables',
   python,
   args: files('test_intl_date_field_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
+  'intl-calendar-eras',
+  python,
+  args: files('test_intl_calendar_eras.py'),
   suite: ['repo', 'native'],
   timeout: 30,
 )
