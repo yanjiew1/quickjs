@@ -7,6 +7,7 @@
 #include "style-date.h"
 #include "style-hour.h"
 #include "interval-data.h"
+#include "interval-select.h"
 #include "name-select.h"
 #include "../common/range-compose.h"
 #include "../locale/preference-data.h"
@@ -52,6 +53,7 @@ struct QJSIntlDateTimeService {
 typedef struct DateRecord {
     QJSIntlDatePattern pattern;
     QJSIntlDateTimeComponents components;
+    const QJSIntlDateIntervalSet *intervals; /* Borrows a formatter-owned set. */
 } DateRecord;
 
 /* Views borrow the permanent compiled pack, not the service. Interior format
@@ -68,6 +70,8 @@ struct QJSIntlDateTimeFormatter {
     QJSCalendarId calendar;
     QJSIntlBytes system;
     QJSIntlPairPattern range_fallback;
+    unsigned int intervals_prepared;
+    QJSIntlDateIntervalSet interval_sets[QJS_INTL_DATE_VALUE_KIND_COUNT];
     char territory[4];
     DateRecord records[QJS_INTL_DATE_VALUE_KIND_COUNT];
 };
@@ -807,8 +811,10 @@ void qjs_intl_datetime_formatter_close(QJSIntlDateTimeFormatter *formatter)
     if (formatter) {
         QJSIntlAllocator allocator = formatter->allocator;
         unsigned int i;
-        for (i = 0; i < QJS_INTL_DATE_VALUE_KIND_COUNT; i++)
+        for (i = 0; i < QJS_INTL_DATE_VALUE_KIND_COUNT; i++) {
+            qjs_intl_date_interval_set_clear(&formatter->interval_sets[i]);
             qjs_intl_date_pattern_clear(&allocator, &formatter->records[i].pattern);
+        }
         for (i = 0; i < 3; i++)
             qjs_intl_number_formatter_close((QJSIntlNumberFormatter *)formatter->numbers.fraction[i]);
         qjs_intl_date_offset_clear(&formatter->offset);
@@ -1000,6 +1006,67 @@ done:
     return status;
 }
 
+static int same_pattern(const QJSIntlDatePattern *a, const QJSIntlDatePattern *b)
+{
+    size_t i;
+    if (a->count != b->count)
+        return 0;
+    for (i = 0; i < a->count; i++) {
+        const QJSIntlDatePatternToken *x = &a->tokens[i], *y = &b->tokens[i];
+        if (x->symbol != y->symbol || x->width != y->width || !equal(x->literal, y->literal))
+            return 0;
+    }
+    return 1;
+}
+
+QJSIntlStatus qjs_intl_datetime_formatter_prepare_ranges(QJSIntlDateTimeFormatter *formatter)
+{
+    QJSIntlDateIntervalSet sets[QJS_INTL_DATE_VALUE_KIND_COUNT] = {0};
+    uint8_t owners[QJS_INTL_DATE_VALUE_KIND_COUNT] = {0};
+    QJSIntlDateNameAdmission admission = {0};
+    QJSIntlStatus status;
+    uint32_t calendar;
+    size_t i, j;
+    if (!formatter)
+        return QJS_INTL_INVALID_ARGUMENT;
+    if (formatter->intervals_prepared)
+        return QJS_INTL_OK;
+    status = qjs_intl_date_interval_calendar_index(&formatter->data.metadata, &formatter->data.intervals,
+                 bytes(qjs_calendar_identifier(formatter->calendar)), &calendar);
+    if (status)
+        return status;
+    for (i = 0; i < QJS_INTL_DATE_VALUE_KIND_COUNT; i++) {
+        if (!formatter->records[i].pattern.count)
+            continue;
+        /* Several value kinds select the same ordinary program. Their zone
+           interpretation differs at rendering, not during interval matching. */
+        for (j = 0; j < i; j++)
+            if (same_pattern(&formatter->records[i].pattern, &formatter->records[j].pattern))
+                break;
+        owners[i] = j < i ? owners[j] : i;
+        if (j < i)
+            continue;
+        status = qjs_intl_date_interval_set_open(&formatter->data.intervals, formatter->format.text.locale,
+                     calendar, &formatter->records[i].pattern, formatter->options.hour_cycle,
+                     formatter->calendar, &formatter->format.text, &admission, &formatter->allocator, &sets[i]);
+        if (status)
+            goto done;
+    }
+    /* Publish all kind-specific sets together. A failed preparation leaves a
+       usable single-value formatter and no partially installed interval cache. */
+    for (i = 0; i < QJS_INTL_DATE_VALUE_KIND_COUNT; i++) {
+        formatter->interval_sets[i] = sets[i];
+        memset(&sets[i], 0, sizeof(sets[i]));
+        if (formatter->records[i].pattern.count)
+            formatter->records[i].intervals = &formatter->interval_sets[owners[i]];
+    }
+    formatter->intervals_prepared = 1;
+done:
+    for (i = 0; i < QJS_INTL_DATE_VALUE_KIND_COUNT; i++)
+        qjs_intl_date_interval_set_clear(&sets[i]);
+    return status;
+}
+
 QJSIntlStatus qjs_intl_datetime_formatter_info(const QJSIntlDateTimeFormatter *formatter,
                                                QJSIntlBytes *calendar, QJSIntlBytes *system,
                                                const char **zone, QJSIntlDateTimeComponents *components)
@@ -1040,11 +1107,6 @@ QJSIntlStatus qjs_intl_datetime_format(const QJSIntlDateTimeFormatter *formatter
                                  formatter->options.maximum_output_length, out);
 }
 
-enum DateRangeField {
-    RANGE_ERA, RANGE_YEAR, RANGE_MONTH, RANGE_DAY, RANGE_AM_PM, RANGE_DAY_PERIOD,
-    RANGE_HOUR, RANGE_MINUTE, RANGE_SECOND, RANGE_FRACTION
-};
-
 static QJSIntlStatus range_period(const QJSIntlDateTextData *data, const QJSIntlDatePatternInfo *info,
                                   const QJSIntlDateLocalTime *local, QJSIntlBytes *out)
 {
@@ -1068,24 +1130,20 @@ static QJSIntlStatus range_period(const QJSIntlDateTextData *data, const QJSIntl
     return QJS_INTL_OK;
 }
 
-static QJSIntlStatus range_fields_equal(const QJSIntlDateTimeFormatter *formatter, const DateRecord *record,
+static QJSIntlStatus range_difference(const QJSIntlDateTimeFormatter *formatter, const DateRecord *record,
                                         const QJSTimeZoneIdentifier *zone,
                                         int64_t first_seconds, uint32_t first_nanosecond,
                                         int64_t last_seconds, uint32_t last_nanosecond, int *out)
 {
-    static const int levels[QJS_INTL_DATETIME_COMPONENT_COUNT] = {
-        RANGE_DAY, RANGE_ERA, RANGE_YEAR, RANGE_MONTH, RANGE_DAY, RANGE_DAY_PERIOD,
-        RANGE_HOUR, RANGE_MINUTE, RANGE_SECOND, RANGE_FRACTION, -1,
-    };
     QJSIntlDatePatternInfo info;
     QJSIntlDateLocalTime local[2];
     QJSIntlBytes periods[2];
     QJSIntlStatus status = qjs_intl_date_pattern_info(&record->pattern, &info);
     const QJSTimeZone *named = zone->is_offset ? NULL : zone->named;
     int32_t minutes = zone->is_offset ? zone->offset_nanoseconds / INT64_C(60000000000) : 0;
-    int i, finest = -1, same = 1;
+    int i, finest = qjs_intl_date_range_last_field(&record->components), same = 1;
     unsigned int precision, divisor;
-    *out = 0;
+    *out = -1;
     if (!status)
         status = qjs_intl_date_local_time(formatter->calendar, first_seconds, first_nanosecond,
                                            named, minutes, &local[0]);
@@ -1094,25 +1152,20 @@ static QJSIntlStatus range_fields_equal(const QJSIntlDateTimeFormatter *formatte
                                            named, minutes, &local[1]);
     if (status)
         return status;
-    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
-        if (record->components.values[i] && levels[i] > finest)
-            finest = levels[i];
-    if (finest < 0)
-        finest = RANGE_FRACTION;
     precision = info.components.values[QJS_INTL_DATETIME_FRACTION];
     divisor = precision == 1 ? 100 : precision == 2 ? 10 : 1;
     /* Define fallback records densely through the finest displayed field.
        Missing collapsed CLDR intervals must not make a visible finer field
        disappear from comparison; below displayed precision is irrelevant. */
-    for (i = RANGE_ERA; same && i <= finest; i++) {
+    for (i = QJS_INTL_DATE_RANGE_ERA; same && i <= finest; i++) {
         const QJSIntlDateCalendarFields *a = &local[0].fields, *b = &local[1].fields;
         switch (i) {
-        case RANGE_ERA: same = !strcmp(a->era_code, b->era_code); break;
-        case RANGE_YEAR: same = a->arithmetic_year == b->arithmetic_year; break;
-        case RANGE_MONTH: same = !strcmp(a->month_code, b->month_code); break;
-        case RANGE_DAY: same = a->numeric.day == b->numeric.day; break;
-        case RANGE_AM_PM: same = (a->numeric.hour < 12) == (b->numeric.hour < 12); break;
-        case RANGE_DAY_PERIOD:
+        case QJS_INTL_DATE_RANGE_ERA: same = !strcmp(a->era_code, b->era_code); break;
+        case QJS_INTL_DATE_RANGE_YEAR: same = a->arithmetic_year == b->arithmetic_year; break;
+        case QJS_INTL_DATE_RANGE_MONTH: same = !strcmp(a->month_code, b->month_code); break;
+        case QJS_INTL_DATE_RANGE_DAY: same = a->numeric.day == b->numeric.day; break;
+        case QJS_INTL_DATE_RANGE_AM_PM: same = (a->numeric.hour < 12) == (b->numeric.hour < 12); break;
+        case QJS_INTL_DATE_RANGE_DAY_PERIOD:
             status = range_period(&formatter->format.text, &info, &local[0], &periods[0]);
             if (!status)
                 status = range_period(&formatter->format.text, &info, &local[1], &periods[1]);
@@ -1120,15 +1173,18 @@ static QJSIntlStatus range_fields_equal(const QJSIntlDateTimeFormatter *formatte
                 return status;
             same = equal(periods[0], periods[1]);
             break;
-        case RANGE_HOUR: same = a->numeric.hour == b->numeric.hour; break;
-        case RANGE_MINUTE: same = a->numeric.minute == b->numeric.minute; break;
-        case RANGE_SECOND: same = a->numeric.second == b->numeric.second; break;
-        case RANGE_FRACTION:
+        case QJS_INTL_DATE_RANGE_HOUR: same = a->numeric.hour == b->numeric.hour; break;
+        case QJS_INTL_DATE_RANGE_MINUTE: same = a->numeric.minute == b->numeric.minute; break;
+        case QJS_INTL_DATE_RANGE_SECOND: same = a->numeric.second == b->numeric.second; break;
+        case QJS_INTL_DATE_RANGE_FRACTION:
             same = a->numeric.millisecond / divisor == b->numeric.millisecond / divisor;
             break;
         }
+        if (!same) {
+            *out = i;
+            break;
+        }
     }
-    *out = same;
     return QJS_INTL_OK;
 }
 
@@ -1138,6 +1194,55 @@ QJSIntlStatus qjs_intl_datetime_check_value_format(const QJSIntlDateTimeFormatte
     if (!formatter || (unsigned int)kind >= QJS_INTL_DATE_VALUE_KIND_COUNT)
         return QJS_INTL_INVALID_ARGUMENT;
     return formatter->records[kind].pattern.count ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED;
+}
+
+static QJSIntlStatus render_interval(const QJSIntlDateTimeFormatter *formatter,
+                                     const QJSIntlDateIntervalProgram *program,
+                                     const QJSTimeZoneIdentifier *zone,
+                                     int64_t first_seconds, uint32_t first_nanosecond,
+                                     int64_t last_seconds, uint32_t last_nanosecond,
+                                     QJSIntlFormattedRange *out)
+{
+    /* Each admitted half has at most the ordinary field/token bound. Group
+       consecutive sources so literals and their adjacent fields stay together. */
+    enum { MAX_PIECES = 2 * (2 * (QJS_INTL_DATETIME_COMPONENT_COUNT + 2) + 1) };
+    QJSIntlFormatted values[MAX_PIECES] = {0};
+    QJSIntlRangePiece pieces[MAX_PIECES] = {0};
+    QJSIntlStatus status;
+    size_t at = 0, count = 0, total = 0;
+    if (program->pattern.count > MAX_PIECES)
+        return QJS_INTL_DATA_ERROR;
+    while (at < program->pattern.count) {
+        QJSIntlDatePattern view = {0};
+        size_t first = at;
+        QJSIntlRangeSource source = program->sources[at];
+        int end = source == QJS_INTL_RANGE_END;
+        if (total == formatter->options.maximum_output_length) {
+            status = QJS_INTL_OVERFLOW;
+            goto done;
+        }
+        do {
+            at++;
+        } while (at < program->pattern.count && program->sources[at] == source);
+        view.tokens = program->pattern.tokens + first;
+        view.count = at - first;
+        status = qjs_intl_date_format(&formatter->allocator, &view, formatter->calendar,
+                     end ? last_seconds : first_seconds, end ? last_nanosecond : first_nanosecond,
+                     formatter->options.hour_cycle, &formatter->numbers, &formatter->format, zone,
+                     formatter->options.maximum_output_length - total, &values[count]);
+        if (status)
+            goto done;
+        total += values[count].length;
+        pieces[count].body = &values[count];
+        pieces[count].source = source;
+        count++;
+    }
+    status = qjs_intl_range_compose(&formatter->allocator, pieces, count,
+                                   formatter->options.maximum_output_length, out);
+done:
+    for (at = 0; at < MAX_PIECES; at++)
+        qjs_intl_formatted_clear(&formatter->allocator, &values[at]);
+    return status;
 }
 
 QJSIntlStatus qjs_intl_datetime_format_range(const QJSIntlDateTimeFormatter *formatter,
@@ -1151,7 +1256,7 @@ QJSIntlStatus qjs_intl_datetime_format_range(const QJSIntlDateTimeFormatter *for
     const QJSTimeZoneIdentifier *zone;
     const QJSIntlPairPattern *layout;
     QJSIntlStatus status;
-    int same;
+    int difference;
     unsigned int first;
     if (out)
         memset(out, 0, sizeof(*out));
@@ -1165,15 +1270,22 @@ QJSIntlStatus qjs_intl_datetime_format_range(const QJSIntlDateTimeFormatter *for
        plain clocks during a DST overlap, while rendering ignores that zone. */
     zone = kind == QJS_INTL_DATE_VALUE_DATE || kind == QJS_INTL_DATE_VALUE_INSTANT ?
            &formatter->zone : &formatter->utc;
-    status = range_fields_equal(formatter, &formatter->records[kind], zone,
-                                first_seconds, first_nanosecond, last_seconds, last_nanosecond, &same);
+    status = range_difference(formatter, &formatter->records[kind], zone,
+                              first_seconds, first_nanosecond, last_seconds, last_nanosecond, &difference);
+    if (!status && difference >= 0) {
+        const QJSIntlDateIntervalProgram *program =
+            qjs_intl_date_interval_set_get(formatter->records[kind].intervals, difference);
+        if (program)
+            return render_interval(formatter, program, zone, first_seconds, first_nanosecond,
+                                    last_seconds, last_nanosecond, out);
+    }
     if (!status)
         status = qjs_intl_datetime_format(formatter, kind, first_seconds, first_nanosecond, &values[0]);
-    if (!status && !same)
+    if (!status && difference >= 0)
         status = qjs_intl_datetime_format(formatter, kind, last_seconds, last_nanosecond, &values[1]);
     if (status)
         goto done;
-    if (same) {
+    if (difference < 0) {
         pieces[0] = (QJSIntlRangePiece){&values[0], {0}, 0, QJS_INTL_RANGE_SHARED};
     } else {
         layout = &formatter->range_fallback;
@@ -1184,7 +1296,7 @@ QJSIntlStatus qjs_intl_datetime_format_range(const QJSIntlDateTimeFormatter *for
         pieces[3] = (QJSIntlRangePiece){&values[1 - first], {0}, 0, first ? QJS_INTL_RANGE_START : QJS_INTL_RANGE_END};
         pieces[4] = (QJSIntlRangePiece){NULL, layout->suffix, QJS_INTL_PART_LITERAL, QJS_INTL_RANGE_SHARED};
     }
-    status = qjs_intl_range_compose(&formatter->allocator, pieces, same ? 1 : 5,
+    status = qjs_intl_range_compose(&formatter->allocator, pieces, difference < 0 ? 1 : 5,
                                    formatter->options.maximum_output_length, out);
 done:
     qjs_intl_formatted_clear(&formatter->allocator, &values[0]);

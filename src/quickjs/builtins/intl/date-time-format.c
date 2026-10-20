@@ -326,6 +326,10 @@ static JSValue datetime_constructor(JSContext *ctx, JSValueConst active_function
                          QJS_INTL_DATE_REQUIRE_ANY, QJS_INTL_DATE_DEFAULT_DATE, NULL);
     if (!state)
         goto fail;
+    if (js_intl_error(ctx, qjs_intl_datetime_formatter_prepare_ranges(state->formatter), "date/time intervals")) {
+        free_state(ctx->rt, state);
+        goto fail;
+    }
     JS_SetOpaque(object, state);
     if (!construct) {
         int instance = JS_OrdinaryIsInstanceOf(ctx, this_val, ctx->intl_datetime_ctor);

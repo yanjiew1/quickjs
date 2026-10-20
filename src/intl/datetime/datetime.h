@@ -86,6 +86,11 @@ QJSIntlStatus qjs_intl_datetime_formatter_open(const QJSIntlDateTimeService *ser
                                                const QJSIntlDateTimeOptions *options,
                                                QJSIntlDateTimeFormatter **out);
 void qjs_intl_datetime_formatter_close(QJSIntlDateTimeFormatter *formatter);
+/* Complete optional collapsed interval programs before publishing a formatter.
+   Requires exclusive access, then formatting stays immutable. Idempotent on
+   success; failure preserves single-value/fallback state and permits retry.
+   Internal single-value locale methods can omit this construction step. */
+QJSIntlStatus qjs_intl_datetime_formatter_prepare_ranges(QJSIntlDateTimeFormatter *formatter);
 /* Borrow immutable resolved facts until formatter close. Value-kind records
    may differ; resolvedOptions uses the ordinary Date component record. */
 QJSIntlStatus qjs_intl_datetime_formatter_info(const QJSIntlDateTimeFormatter *formatter,

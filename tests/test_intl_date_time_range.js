@@ -63,6 +63,16 @@ assert(parts.some(part => part.source === 'endRange'), true);
 parts = check(date, first, first);
 assert(parts.every(part => part.source === 'shared'), true);
 assert(parts.map(part => part.value).join(''), date.format(first));
+// A genuine CLDR interval shares month/year, retaining both endpoint days.
+const shortDate = new DTF('en', {timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric'});
+parts = check(shortDate, first, last);
+for (const type of ['month', 'year']) {
+    const field = parts.filter(part => part.type === type);
+    assert(field.length, 1);
+    assert(field[0].source, 'shared');
+}
+assertArrayEquals(parts.filter(part => part.type === 'day').map(part => part.source),
+    ['startRange', 'endRange']);
 parts = check(date, -.9, 0);
 assert(parts.every(part => part.source === 'shared'), true);
 

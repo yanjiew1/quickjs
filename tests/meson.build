@@ -1683,6 +1683,21 @@ intl_date_interval_fixture = custom_target(
     'test_intl_list_patterns.py',
   ),
 )
+intl_date_interval_selector_fixture = custom_target(
+  'intl-date-interval-selector-fixture',
+  output: 'intl-date-interval-selector-fixture.c',
+  command: [
+    python,
+    files('intl_date_interval_fixture.py'),
+    '--output', '@OUTPUT@',
+    '--prefix', 'qjs_intl_interval_selector_fixture',
+  ],
+  depend_files: intl_tool_dependencies + files(
+    'test_intl_date_intervals.py',
+    'test_intl_date_patterns.py',
+    'test_intl_list_patterns.py',
+  ),
+)
 intl_date_interval_authored = executable(
   'test_intl_date_interval_authored',
   intl_date_interval_sources + [intl_date_interval_fixture],
@@ -2408,6 +2423,8 @@ foreach profile : ['minimal', 'native']
       '../src/calendar/persian.c',
       '../src/calendar/solar.c',
       '../src/intl/datetime/native.c',
+      '../src/intl/datetime/interval-program.c',
+      '../src/intl/datetime/interval-select.c',
       '../src/intl/datetime/available-source.c',
       '../src/intl/datetime/basic-match.c',
       '../src/intl/datetime/format-source.c',
@@ -2424,7 +2441,7 @@ foreach profile : ['minimal', 'native']
       '../src/intl/locale/native-id.c',
       '../src/intl/locale/preference-data.c',
       '../src/intl/locale/preferences.c',
-    ) + [calendar_data],
+    ) + [calendar_data, intl_date_interval_selector_fixture],
     c_args: host_args,
     include_directories: inc,
     dependencies: host_deps,
