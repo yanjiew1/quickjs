@@ -2,6 +2,7 @@
 import struct
 
 import bundle
+import calendar_name_tables
 import compact_tables
 import currency_tables
 import number_layout_tables
@@ -236,4 +237,5 @@ def validate(binary):
             'date_field_names': date_field_tables.decode(sections.get(bundle.DATE_FIELD_NAMES), strings, tags),
             'display_names': display_tables.decode(sections.get(bundle.DISPLAY_NAMES), strings, tags),
             'date_styles': date_style_tables.decode(sections.get(bundle.DATE_STYLES), strings, tags),
-            'date_combinations': date_combination_tables.decode(sections.get(bundle.DATE_COMBINATIONS), strings, tags)}
+            'date_combinations': date_combination_tables.decode(sections.get(bundle.DATE_COMBINATIONS), strings, tags),
+            'calendar_names': calendar_name_tables.decode(sections.get(bundle.CALENDAR_NAMES), strings, tags)}
