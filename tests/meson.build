@@ -1022,6 +1022,24 @@ test(
   timeout: 30,
 )
 
+intl_datetime_basic_match = executable(
+  'test_intl_datetime_basic_match',
+  files(
+    'test_intl_datetime_basic_match.c',
+    '../src/intl/datetime/basic-match.c',
+  ),
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-datetime-basic-match',
+  intl_datetime_basic_match,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_timezone_name_sources = files(
   'test_intl_timezone_name_data.c',
   '../src/intl/common/locale-grammar.c',
