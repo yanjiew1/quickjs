@@ -918,7 +918,7 @@ Rule inheritance uses simple locale truncation and selects an entire rule list,
 independently of the exceptional main-data parents used by localized names.
 Keep that source origin and do not merge missing period codes from a parent.
 Rounding, fractional exact-point eligibility, `a`/`b`/`B` token policy and missing-label
-AM/PM fallback belong to the formatter. Binary/runtime integration follows;
+AM/PM fallback belong to the formatter. Profile and formatter integration follow;
 source collection alone does not establish DateTimeFormat capability.
 
 Optional section 34 retains explicit day-period origins in global kind/locale
@@ -931,7 +931,16 @@ canonical ordering and complete reachability. Empty/point-only lists remain
 source facts. A list shared by formatting and selection must satisfy both
 referencing kinds, including formatting's clock-hour uniqueness constraint.
 Do not expand these small tables into the prepared locale inventory or infer
-service support from their presence. C ownership and profile integration follow.
+service support from their presence.
+
+The immutable owner in `datetime/dayperiod-data.[ch]` validates physical bounds,
+canonical row/map order, source locale syntax, exact code/form constraints and
+variable-day partitions. Format restrictions apply if any formatting origin
+references a shared list. Validation releases all scratch on success and failure;
+exact-origin, map and rule queries allocate nothing and borrow pack storage.
+`datetime/dayperiod-code.[ch]` owns the common C vocabulary used independently
+by calendar-name admission and clock-rule decoding. Profile integration follows;
+this reader supplies no locale inheritance, period selection or formatter API.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled

@@ -876,6 +876,7 @@ intl_calendar_name_authored = executable(
     'test_intl_calendar_name_data.c',
     '../src/intl/common/locale-grammar.c',
     '../src/intl/common/source-locale.c',
+    '../src/intl/datetime/dayperiod-code.c',
     '../src/intl/datetime/name-data.c',
     '../src/intl/native/data.c',
     '../src/intl/native/pack.c',
@@ -1036,6 +1037,35 @@ intl_datetime_basic_match = executable(
 test(
   'intl-datetime-basic-match',
   intl_datetime_basic_match,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+intl_dayperiod_fixture = custom_target(
+  'intl-dayperiod-authored-fixture',
+  output: 'intl-dayperiod-authored-fixture.c',
+  command: [python, files('intl_dayperiod_fixture.py'), '--output', '@OUTPUT@'],
+  depend_files: intl_tool_dependencies + files('test_intl_dayperiod_rules.py'),
+)
+intl_dayperiod_authored = executable(
+  'test_intl_dayperiod_authored',
+  files(
+    'test_intl_dayperiod_data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/datetime/dayperiod-code.c',
+    '../src/intl/datetime/dayperiod-data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  ) + [intl_dayperiod_fixture],
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-dayperiod-authored',
+  intl_dayperiod_authored,
   suite: ['repo', 'native'],
   timeout: 30,
 )
@@ -1847,6 +1877,7 @@ foreach profile : ['minimal', 'native']
       'test_intl_calendar_name_profiles.c',
       '../src/intl/common/locale-grammar.c',
       '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/dayperiod-code.c',
       '../src/intl/datetime/name-data.c',
       '../src/intl/native/data.c',
       '../src/intl/native/pack.c',
