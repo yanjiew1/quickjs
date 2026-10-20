@@ -132,6 +132,7 @@ if intl_enabled
     'intl/datetime/dayperiod-data.c',
     'intl/datetime/field-data.c',
     'intl/datetime/field.c',
+    'intl/datetime/format-source.c',
     'intl/datetime/interval-data.c',
     'intl/datetime/name-data.c',
     'intl/datetime/pattern.c',

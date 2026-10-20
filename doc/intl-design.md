@@ -782,6 +782,16 @@ unchanged pack. The input source index can be released independently. Distinct
 skeletons and hour cycles remain distinct even when component vectors match;
 these are source candidates, not the final ECMA format list or capability proof.
 
+`datetime/format-source.[ch]` groups source candidates by all eleven public
+component values while retaining every original source index. Groups follow
+first input occurrence; members follow original source order, independently of
+allocation addresses or sort stability. Two owned index/group blocks borrow no
+pattern ownership or caller-view address. The original candidate pool remains
+alive for resolving indexes. Grouping does not finalize an ECMA Format Record:
+English `hm` and `Hm`, for example, have different hour widths, requiring
+explicit width adaptation before pairing normal and 12-hour programs. Flexible
+day periods, ranges and required-subset synthesis also remain separate steps.
+
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.
