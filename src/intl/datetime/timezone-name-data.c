@@ -456,3 +456,35 @@ QJSIntlStatus qjs_intl_timezone_name_lookup(const QJSIntlTimeZoneNameData *data,
         qjs_intl_data_string(&data->data, word(entry, 3), &out->text);
     return QJS_INTL_OK;
 }
+
+QJSIntlStatus qjs_intl_timezone_name_resolve(const QJSIntlTimeZoneNameData *data, uint32_t head,
+                                             QJSIntlBytes code, QJSIntlTimeZoneNameType type,
+                                             QJSIntlBytes alt, QJSIntlTimeZoneNameEntry *out,
+                                             QJSIntlTimeZoneNameNode *origin)
+{
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (origin)
+        memset(origin, 0, sizeof(*origin));
+    if (!out || !origin || !data || !data->section.bytes || head > data->node_count ||
+        (!code.data && code.length) || (!alt.data && alt.length) ||
+        (unsigned int)type >= QJS_INTL_TIMEZONE_NAME_TYPE_COUNT)
+        return QJS_INTL_INVALID_ARGUMENT;
+    while (head) {
+        QJSIntlTimeZoneNameEntry entry;
+        QJSIntlTimeZoneNameNode node;
+        QJSIntlStatus status = qjs_intl_timezone_name_node(data, head, &node);
+        if (status)
+            return status;
+        status = qjs_intl_timezone_name_lookup(data, head, code, type, alt, &entry);
+        if (!status) {
+            *out = entry;
+            *origin = node;
+            return QJS_INTL_OK;
+        }
+        if (status != QJS_INTL_UNSUPPORTED)
+            return status;
+        head = node.parent;
+    }
+    return QJS_INTL_UNSUPPORTED;
+}
