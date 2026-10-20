@@ -17,16 +17,6 @@ typedef struct Build {
     size_t capacity;
 } Build;
 
-static unsigned int mask(const QJSIntlDateTimeComponents *components)
-{
-    unsigned int result = 0;
-    size_t i;
-    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
-        if (components->values[i])
-            result |= 1U << i;
-    return result;
-}
-
 static int equal(const QJSIntlDateTimeComponents *a, const QJSIntlDateTimeComponents *b)
 {
     size_t i;
@@ -40,9 +30,27 @@ static size_t find(const Build *build, unsigned int wanted)
 {
     size_t i;
     for (i = 0; i < build->result.count; i++)
-        if (mask(&build->result.records[i].single.components) == wanted)
+        if (qjs_intl_datetime_component_mask(&build->result.records[i].single.components) == wanted)
             return i;
     return SIZE_MAX;
+}
+
+static size_t date_base(const Build *build, unsigned int wanted)
+{
+    size_t i;
+    /* Default date/clock and date/zone combinations prefer a whole numeric
+       date. Keep its actual padding in the metadata for final matching. */
+    if ((wanted & ~BIT(ERA)) == DATE_MASK) {
+        for (i = 0; i < build->result.count; i++) {
+            const QJSIntlDateTimeComponents *components = &build->result.records[i].single.components;
+            if (qjs_intl_datetime_component_mask(components) == wanted &&
+                components->values[QJS_INTL_DATETIME_YEAR] == QJS_INTL_DATETIME_NUMERIC &&
+                components->values[QJS_INTL_DATETIME_MONTH] <= QJS_INTL_DATETIME_NUMERIC &&
+                components->values[QJS_INTL_DATETIME_DAY] <= QJS_INTL_DATETIME_NUMERIC)
+                return i;
+        }
+    }
+    return find(build, wanted);
 }
 
 static void initialize(Build *build, QJSIntlDateOrdinaryProgram *record)
@@ -211,12 +219,19 @@ static QJSIntlStatus append_field(Build *build, size_t base, const char *key,
     QJSIntlDateOrdinaryProgram record;
     QJSIntlDatePatternToken token = {{0}, width, symbol};
     QJSIntlDatePattern field = {0};
+    QJSIntlDatePatternInfo info;
     QJSIntlPairPattern layout;
     QJSIntlStatus status = QJS_INTL_UNSUPPORTED;
     size_t i;
     initialize(build, &record);
     field.tokens = &token;
     field.count = 1;
+    status = qjs_intl_date_pattern_info(&field, &info);
+    if (status)
+        return status;
+    if (qjs_intl_datetime_component_mask(&info.components) &
+        qjs_intl_datetime_component_mask(&build->result.records[base].single.components))
+        return QJS_INTL_INVALID_ARGUMENT;
     for (i = 0; i < build->append->count; i++) {
         QJSIntlDateAvailableGroup group;
         status = qjs_intl_date_available_source_at(build->append, i, &record.append, &record.origin);
@@ -240,9 +255,11 @@ static QJSIntlStatus append_field(Build *build, size_t base, const char *key,
             return status;
         record.first = base;
         record.single.components = build->result.records[base].single.components;
-        record.single.components.values[symbol == 'y' ? QJS_INTL_DATETIME_YEAR :
-                                                        QJS_INTL_DATETIME_WEEKDAY] =
-            symbol == 'y' ? QJS_INTL_DATETIME_NUMERIC : QJS_INTL_DATETIME_SHORT;
+        /* Derive metadata from the actual field token, including zone style,
+           rather than from the append item's key or punctuation. */
+        for (size_t component = 0; component < QJS_INTL_DATETIME_COMPONENT_COUNT; component++)
+            if (info.components.values[component])
+                record.single.components.values[component] = info.components.values[component];
         record.construction = QJS_INTL_DATE_ORDINARY_APPEND;
         return add(build, &record);
     }
@@ -260,7 +277,7 @@ static QJSIntlStatus plain_clock(Build *build, unsigned int wanted)
     initialize(build, &record);
     for (i = 0; i < build->pool->count; i++) {
         const QJSIntlDatePatternInfo *info = &build->pool->records[i].info;
-        unsigned int fields = mask(&info->components);
+        unsigned int fields = qjs_intl_datetime_component_mask(&info->components);
         if (fields == wanted && !info->period_symbol && normal == SIZE_MAX) {
             normal = i;
             target = info->components;
@@ -411,13 +428,13 @@ static QJSIntlStatus ensure(Build *build, unsigned int wanted)
         return status ? status : fraction(build, find(build, wanted & ~BIT(FRACTION)));
     }
     if ((wanted & DATE_MASK) && (wanted & BIT(HOUR))) {
-        unsigned int date = wanted & (DATE_MASK | BIT(WEEKDAY)), time = wanted & ~date;
+        unsigned int date = wanted & (DATE_MASK | BIT(WEEKDAY) | BIT(ERA)), time = wanted & ~date;
         status = ensure(build, date);
         if (!status)
             status = ensure(build, time);
         if (status)
             return status;
-        first = find(build, date);
+        first = date_base(build, date);
         second = find(build, time);
         return combine(build, first, second);
     }
@@ -487,8 +504,14 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     };
     static const unsigned int date_clocks[] = {
         DATE_MASK | BIT(HOUR) | BIT(MINUTE), DATE_MASK | CLOCK_MASK,
-        DATE_MASK | CLOCK_MASK | BIT(FRACTION)
+        DATE_MASK | CLOCK_MASK | BIT(FRACTION),
+        BIT(ERA) | DATE_MASK | BIT(HOUR) | BIT(MINUTE), BIT(ERA) | DATE_MASK | CLOCK_MASK,
+        BIT(ERA) | DATE_MASK | CLOCK_MASK | BIT(FRACTION)
     };
+    static const struct { unsigned int symbol; size_t width; } date_zones[] = {
+        {'z', 1}, {'z', 4}, {'O', 1}, {'O', 4}, {'v', 1}, {'v', 4}
+    };
+    static const size_t period_widths[] = {1, 4, 5};
     Build build = {0};
     QJSIntlFormatBuilder check = {0};
     QJSIntlStatus status;
@@ -510,10 +533,15 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     build.locale = locale;
     build.calendar = calendar;
     build.decimal = decimal;
-    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 43)
+    if (groups->count > SIZE_MAX / sizeof(*build.result.records) - 55)
         return QJS_INTL_OVERFLOW;
-    /* Reserve room for derived clocks, dates and day-period-only programs. */
-    build.capacity = groups->count + 43;
+    /* Fourteen required targets, with up to two additional widths for each
+       of the four fractional targets, fit within 32 extra records. Reserve
+       three more for optional minute/second-only fractional patterns and
+       eleven for whole date/clock combinations (including an optional era-date),
+       six for date-only programs with an appended timezone name, and three
+       for single flexible-day-period fields. */
+    build.capacity = groups->count + 55;
     build.result.records = allocator->malloc(allocator->opaque, build.capacity * sizeof(*build.result.records));
     if (!build.result.records)
         return QJS_INTL_NO_MEMORY;
@@ -543,9 +571,18 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
     }
     /* Required mixed subsets contain a weekday. Also join the genuine date
        and clock programs directly, so ordinary date/time requests need not
-       acquire that extra field. Reuse the locale's exact connector. */
+       acquire that extra field. Include whole era-bearing dates when available;
+       calendars without them remain supported. Reuse the exact connector. */
     for (i = 0; i < sizeof(date_clocks) / sizeof(*date_clocks); i++) {
         status = ensure(&build, date_clocks[i]);
+        if (status && status != QJS_INTL_UNSUPPORTED)
+            goto fail;
+    }
+    /* TR35 uses Date-Timezone when the time side contains only a zone. Keep
+       that real two-slot layout; do not borrow clock separators or strip fields. */
+    for (i = 0; i < sizeof(date_zones) / sizeof(*date_zones); i++) {
+        status = append_field(&build, date_base(&build, DATE_MASK), "Date-Timezone",
+                                date_zones[i].symbol, date_zones[i].width);
         if (status && status != QJS_INTL_UNSUPPORTED)
             goto fail;
     }
@@ -557,13 +594,10 @@ QJSIntlStatus qjs_intl_date_ordinary_programs_open(const QJSIntlDateSourceCandid
         if (status)
             goto fail;
     }
-    {
-        static const size_t period_widths[] = {1, 4, 5};
-        for (i = 0; i < sizeof(period_widths) / sizeof(*period_widths); i++) {
-            status = day_period(&build, period_widths[i]);
-            if (status)
-                goto fail;
-        }
+    for (i = 0; i < sizeof(period_widths) / sizeof(*period_widths); i++) {
+        status = day_period(&build, period_widths[i]);
+        if (status)
+            goto fail;
     }
     *out = build.result;
     return QJS_INTL_OK;
