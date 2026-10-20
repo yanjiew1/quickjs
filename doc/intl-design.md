@@ -961,6 +961,19 @@ numbering overrides and hour-family adaptation require separate consumer policy.
 In particular, retain `a` versus `b`/`B`, `M` versus `L`, all weekday name widths,
 all four hour symbols and `r` plus `U` until the renderer has used their meaning.
 
+The allocation-free native projection in `datetime/pattern-info.[ch]` maps an
+ordinary compiled pattern to public component widths while separately retaining
+its hour cycle, period kind and calendar/related/cyclic year flags. `a` supplies
+AM/PM metadata without adding flexible `dayPeriod`; `r` plus `U` share the YEAR
+component while retaining distinct output semantics. Numeric `yyyy` does not
+impose four-digit ECMA padding, and `rr` or `UU` do not imply two-digit output.
+Recognized fields outside the current projection subset return UNSUPPORTED,
+not malformed source. Literal-only and AM/PM-only metadata remains valid here;
+semantic admission belongs to candidate construction. Raw tokens retain month
+context and weekday width 6 for rendering. The initial z/v/O zone subset must
+be extended or explicitly synthesized for the pinned Persian generic Z pattern;
+Z must not be silently interpreted as z or O.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
