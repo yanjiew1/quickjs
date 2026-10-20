@@ -6,6 +6,7 @@
 #ifdef CONFIG_INTL
 #include "../../intl/locale/locale.h"
 #include "../../intl/locale/matching.h"
+#include "../../intl/locale/resolve.h"
 #include "../../intl/list/list.h"
 #include "../../intl/plural/plural.h"
 #include "../../intl/number/number.h"
@@ -58,7 +59,7 @@ int js_intl_resolve_locale_index(JSContext *ctx, const QJSIntlBytes *available,
    owned with JS_FreeCString, including after failure (which resets outputs). */
 int js_intl_unicode_type_option(JSContext *ctx, JSValueConst options, const char *name,
                                  QJSIntlBytes *out, const char **owned);
-typedef QJSIntlStatus JSIntlLocaleValueSupported(void *opaque, QJSIntlBytes value, int *supported);
+typedef QJSIntlLocaleValueSupported JSIntlLocaleValueSupported;
 typedef struct JSIntlResolvedKeyword {
     char *locale, *value;
 } JSIntlResolvedKeyword;
@@ -69,7 +70,7 @@ typedef struct JSIntlResolvedKeyword {
    OK with supported=0 means unsupported, non-OK means an operational error.
    Returned strings use js_free; inputs and callbacks are borrowed. Reset out
    on failure. Canonicalize option aliases before comparing/retaining a key.
-   Multi-key resolution and null defaults require additional orchestration. */
+   Multi-key/null resolution uses the shared locale resolver directly. */
 int js_intl_resolve_locale_key(JSContext *ctx, QJSIntlBytes base, QJSIntlBytes extension,
                                const char key[2], QJSIntlBytes default_value, QJSIntlBytes option,
                                JSIntlLocaleValueSupported *supported, void *opaque,
