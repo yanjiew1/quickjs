@@ -6,6 +6,7 @@ import calendar_name_tables
 import compact_tables
 import currency_tables
 import timezone_name_tables
+import timezone_presentation_tables
 import date_interval_tables
 import date_available_tables
 import number_layout_tables
@@ -243,6 +244,8 @@ def validate(binary):
             'date_combinations': date_combination_tables.decode(sections.get(bundle.DATE_COMBINATIONS), strings, tags),
             'calendar_names': calendar_name_tables.decode(sections.get(bundle.CALENDAR_NAMES), strings, tags),
             'timezone_names': timezone_name_tables.decode(sections.get(bundle.TIMEZONE_NAMES), strings, tags),
+            'timezone_presentation': timezone_presentation_tables.decode(
+                sections.get(bundle.TIMEZONE_PRESENTATION), strings),
             'date_intervals': date_interval_tables.decode(sections.get(bundle.DATE_INTERVALS), strings, tags),
             'date_available_formats': date_available_tables.decode(sections.get(bundle.DATE_AVAILABLE_FORMATS),
                                                                   strings, tags)}
