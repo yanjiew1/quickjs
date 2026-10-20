@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_DATETIME_PATTERN_H
 #define QJS_INTL_DATETIME_PATTERN_H
 #include "../common/types.h"
+#include "../common/pair-pattern.h"
 
 typedef enum QJSIntlDateIntervalOrder {
     QJS_INTL_DATE_INTERVAL_DEFAULT,
@@ -58,5 +59,13 @@ QJSIntlStatus qjs_intl_date_pattern_combine(const QJSIntlAllocator *allocator,
                                           const QJSIntlDatePattern *connector,
                                           const QJSIntlDatePattern *time,
                                           const QJSIntlDatePattern *date, QJSIntlDatePattern *out);
+/* Apply a parsed two-operand literal template to ordinary compiled programs.
+   Unlike LDML combination sources, template letters and apostrophes are literal.
+   Require a pair-pattern parse over validated scalar UTF-8, unchanged inputs and
+   fresh disjoint output. Own one copied allocation; reset output on failure. */
+QJSIntlStatus qjs_intl_date_pattern_join(const QJSIntlAllocator *allocator,
+                                       const QJSIntlPairPattern *layout,
+                                       const QJSIntlDatePattern *first,
+                                       const QJSIntlDatePattern *second, QJSIntlDatePattern *out);
 void qjs_intl_date_pattern_clear(const QJSIntlAllocator *allocator, QJSIntlDatePattern *pattern);
 #endif
