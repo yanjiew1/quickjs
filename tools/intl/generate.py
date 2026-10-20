@@ -107,6 +107,8 @@ def generate(sources, profile):
     calendar_era_data = calendar_eras.collect(inputs_read)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
+    # Only formatter locale rows are reduced for minimal. Global identity,
+    # preferences and timezone metadata retain their full source coverage.
     if profile == 'native':
         tags = graph.tags
     else:
