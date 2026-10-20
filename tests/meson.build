@@ -1616,6 +1616,47 @@ if intl_enabled
     },
   }]
 
+  intl_date_ordinary_fixture = custom_target(
+    'intl-date-ordinary-authored-fixture',
+    output: 'intl-date-ordinary-authored-fixture.c',
+    command: [python, files('intl_date_ordinary_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies,
+  )
+  intl_date_ordinary_sources = files(
+    'test_intl_date_ordinary.c',
+    '../src/cutils/cutils.c',
+    '../src/intl/common/format-builder.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/pair-pattern.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/datetime/available-data.c',
+    '../src/intl/datetime/available-source.c',
+    '../src/intl/datetime/combination-data.c',
+    '../src/intl/datetime/format-source.c',
+    '../src/intl/datetime/ordinary-programs.c',
+    '../src/intl/datetime/pattern.c',
+    '../src/intl/datetime/pattern-info.c',
+    '../src/intl/datetime/program-adapt.c',
+    '../src/intl/datetime/single-program.c',
+    '../src/intl/datetime/source-candidate.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  intl_date_ordinary_test = {
+    'name': 'test_intl_date_ordinary',
+    'sources': intl_date_ordinary_sources + [intl_date_ordinary_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_ordinary_test,
+    'name': 'intl-date-ordinary',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_single_program_test = {
     'name': 'test_intl_date_single_program',
     'sources': files(
@@ -2420,6 +2461,23 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_list_test,
       'name': ('intl-list-service-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_ordinary_profile_test = {
+      'name': ('test_intl_date_ordinary_' + profile),
+      'sources': intl_date_ordinary_sources + [intl_date_ordinary_fixture],
+      'c_args': (host_args + [
+        ('-DTEST_INTL_ORDINARY_PROFILE=' + ((profile == 'native') ? '1' : '0'))
+      ]),
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_ordinary_profile_test,
+      'name': ('intl-date-ordinary-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
