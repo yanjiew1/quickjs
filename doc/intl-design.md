@@ -778,6 +778,13 @@ allocation. This source inventory is separate from usable native candidates and
 final ECMA Format Records, including duplicate-component grouping and hour-cycle
 pairing. A counted `other` key is never an uncounted fallback.
 
+Compiled patterns can be copied into independent owned storage or combined
+by expanding the decoded connector's time/date slots. Token-level composition
+preserves quoted slot text and source field widths without reparsing inserted
+literals. Adjacent literals coalesce even across substitution boundaries.
+This syntax operation does not choose styles or adapt hour cycles; those
+choices remain with native format construction.
+
 `datetime/source-candidate.[ch]` compiles the visible ordinary pattern family
 for an explicitly selected leaf alternate and uncounted keys. It selects no
 alternate or plural fallback. Blocked/empty leaves, unsupported projections and
@@ -789,6 +796,30 @@ tokens are owned, while skeletons, raw text and source provenance borrow the
 unchanged pack. The input source index can be released independently. Distinct
 skeletons and hour cycles remain distinct even when component vectors match;
 these are source candidates, not the final ECMA format list or capability proof.
+
+`datetime/format-source.[ch]` groups source candidates by all eleven public
+component values while retaining every original source index. Groups follow
+first input occurrence; members follow original source order, independently of
+allocation addresses or sort stability. Two owned index/group blocks borrow no
+pattern ownership or caller-view address. The original candidate pool remains
+alive for resolving indexes. Grouping does not finalize an ECMA Format Record:
+English `hm` and `Hm`, for example, have different hour widths, requiring
+explicit width adaptation before pairing normal and 12-hour programs. Flexible
+day periods, ranges and required-subset synthesis also remain separate steps.
+
+`datetime/single-program.[ch]` prepares owned normal/12-hour programs for one
+source group before range construction and renderer admission. A fixed table
+of year-kind and period classes finds compatible whole-source pairs without
+pair enumeration. Require identical year kinds and b/B selection semantics;
+a class must occur in the group. Prefer direct hour families, exact hour widths
+and then stable source indexes. Cross-family b/B copies use representative H/h,
+retain all non-hour tokens and literals, and record adaptations separately from
+original metadata. Re-project copies to the unchanged target components. The
+renderer must apply the resolved h11/h12/h23/h24 cycle. Missing complementary
+programs return unsupported without allocation; do not strip AM/PM punctuation
+or revive masked sources. No-hour groups copy one source without a 12-hour
+program. Copied programs survive releasing both input owners; diagnostic source
+indexes require the original pool for any later provenance lookup.
 
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
