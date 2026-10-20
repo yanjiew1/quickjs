@@ -431,6 +431,22 @@ QJSIntlStatus qjs_intl_datetime_system_supported(const QJSIntlDateTimeService *s
     return qjs_intl_number_system_supported(service->number, service->locales[locale].number, system, out);
 }
 
+QJSIntlStatus qjs_intl_datetime_system_available(const QJSIntlDateTimeService *service,
+                                                 QJSIntlBytes system, int *out)
+{
+    size_t i;
+    if (out)
+        *out = 0;
+    if (!service || !out || (!system.data && system.length))
+        return QJS_INTL_INVALID_ARGUMENT;
+    for (i = 0; i < service->count; i++) {
+        QJSIntlStatus status = qjs_intl_datetime_system_supported(service, i, system, out);
+        if (status || *out)
+            return status;
+    }
+    return QJS_INTL_OK;
+}
+
 QJSIntlStatus qjs_intl_datetime_hour_preferences(const QJSIntlDateTimeService *service,
                                                  size_t locale, QJSIntlDateHourPreferences *out)
 {
