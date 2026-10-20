@@ -765,7 +765,23 @@ numeric/non-numeric/mixed `intervalFormatRange` templates are for synthesized
 comparison examples, explicitly not production interval data; they must not
 become production `formatRange` synthesis policy. Matching, source-root stopping,
 field equivalence, greatest-difference calculation and rendering remain consumer
-responsibilities. Binary/runtime integration follows separately.
+responsibilities.
+
+Optional section 31 stores interval layers using shared dense calendar blocks.
+The seven-word header gives version, calendar/suffix/block/map/node/entry counts.
+Calendars and four-word suffixes (container alternate, family, skeleton, item
+alternate) form a rectangular inventory; the product must fit a uint32 source
+identity. Locale/calendar pairs reference shared suffix-head blocks. Sparse
+maps use three-word leaves (code, leaf alternate, text-or-blocked), and four-word
+source nodes retain origin locale, global source group, map and parent. Aliases
+may change calendar and all alternate/skeleton selectors within a family.
+
+The host codec validates canonical sharing and complete reachability without
+scanning an implicit locale/calendar/suffix cube. Its decoded inventory stays
+factored; source rows are expanded only for nonzero heads. Projection retains
+reachable source locales outside the requester inventory. This layout is local
+to interval data; existing section 29/30 formats are unchanged. The immutable C
+reader, prepared profiles and range formatter integration follow separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled

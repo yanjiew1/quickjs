@@ -2802,6 +2802,14 @@ test(
 )
 
 test(
+  'intl-date-interval-tables',
+  python,
+  args: files('test_intl_date_interval_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-date-intervals',
   python,
   args: files('test_intl_date_intervals.py'),

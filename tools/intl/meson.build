@@ -21,6 +21,7 @@ intl_tool_dependencies = files(
   'date_combinations.py',
   'date_field_names.py',
   'date_field_tables.py',
+  'date_interval_tables.py',
   'date_intervals.py',
   'date_pattern_syntax.py',
   'date_patterns.py',
