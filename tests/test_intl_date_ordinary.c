@@ -159,6 +159,12 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlDateSourceC
     assert(record->connector.origin_width == QJS_INTL_DATE_STYLE_SHORT &&
            record->connector.origin_form == QJS_INTL_DATE_COMBINATION_STANDARD);
     pattern_equal(allocator, &record->single.twelve.pattern, "EEE', 'y' [year] 'M/d' at 'a h:mm:ss");
+    /* Whole date/clock composition must not import the mandatory subset's
+       weekday, and fraction insertion must retain the locale connector. */
+    record = find(programs, 476, 0);
+    pattern_equal(allocator, &record->single.twelve.pattern, "y' [year] 'M/d' at 'a h:mm:ss");
+    record = find(programs, 988, 2);
+    pattern_equal(allocator, &record->single.normal.pattern, "y' [year] 'M/d' at 'H:mm:ss\xd9\xabSS");
     for (i = 0; i < pool->count; i++)
         if (pool->records[i].source.code.length == 3 && !memcmp(pool->records[i].source.code.data, "Bhm", 3)) {
             assert(pool->records[i].info.period_symbol == 'B');
