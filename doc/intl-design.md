@@ -789,8 +789,11 @@ All validation scratch is released before return; exact calendar/group/head/
 node/leaf queries borrow pack storage without allocation. Authored fixtures
 cover source aliases, external origins, all difference/range selectors, empty
 and blocked leaves, shared long skeletons, unaligned storage, malformed records
-and allocation-failure retries. Prepared profiles and formatter integration
-follow separately.
+and allocation-failure retries. Both prepared profiles include this section,
+with the C reader compiled in production Intl builds. Prepared-data tests check
+all stored selectors, calendar-block indexing, English provenance, unaligned
+storage and validation allocation failures. Range formatter integration follows
+separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
