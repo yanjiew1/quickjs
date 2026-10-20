@@ -2149,6 +2149,26 @@ foreach profile : ['minimal', 'native']
     suite: ['repo', 'native'],
     timeout: 30,
   )
+  intl_date_offset_test = executable(
+    'test_intl_date_offset_' + profile,
+    intl_number_service_sources + files(
+      'test_intl_date_offset.c',
+      '../src/intl/datetime/zone-offset.c',
+      '../src/intl/datetime/timezone-name-data.c',
+      '../src/intl/datetime/pattern.c',
+    ),
+    c_args: host_args,
+    include_directories: inc,
+    dependencies: host_deps,
+    link_with: intl_fixture_library,
+    override_options: ['b_ndebug=false'],
+  )
+  test(
+    'intl-date-offset-' + profile,
+    intl_date_offset_test,
+    suite: ['repo', 'native'],
+    timeout: 30,
+  )
   intl_date_text_test = executable(
     'test_intl_date_text_' + profile,
     intl_number_service_sources + files(
