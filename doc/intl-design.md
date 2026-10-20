@@ -710,6 +710,9 @@ sharing, typed references and reachability are checked before consumption.
 The immutable C owner in `datetime/name-data.[ch]` validates the section using
 temporary depth, coverage and source-string scratch, released before return.
 Exact group/head/node/entry queries borrow pack storage and allocate nothing.
+An exact-key resolve query follows only prepared parents and retains the actual
+origin group. Blocked and explicitly empty leaves stop inheritance; year,
+alternate, width, context and calendar fallback remain consumer policy.
 Family-level and era-string validation caches bound repeated shared-data work.
 The reader has authored C fixtures, including external source locales, empty
 inventories, unaligned bytes and allocation-failure retries. Both prepared
