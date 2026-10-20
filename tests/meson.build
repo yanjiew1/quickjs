@@ -3623,6 +3623,7 @@ if intl_enabled
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
     'intl-date-time-format': ['-m', 'tests/test_intl_date_time_format.js'],
+    'intl-date-time-range': ['-m', 'tests/test_intl_date_time_range.js'],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
     'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
     'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],

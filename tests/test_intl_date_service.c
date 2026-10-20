@@ -181,6 +181,56 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
     state->calls = state->fail_at = 0;
 }
 
+static void ranges(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service, size_t locale)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlDateTimeOptions options = {0};
+    QJSIntlDateTimeFormatter *formatter;
+    QJSIntlFormattedRange result, zero = {0};
+    size_t baseline, calls, i, at;
+    options.hour_cycle = QJS_INTL_DATE_H23;
+    options.maximum_output_length = 1000;
+    formatter = open_formatter(service, locale, &options);
+    baseline = state->live;
+    assert(!qjs_intl_datetime_check_value_format(formatter, QJS_INTL_DATE_VALUE_DATE));
+    /* Sweep distinct endpoints and the independently allocated shared-result
+       path without repeating expensive JS realm setup at every failure. */
+    for (unsigned int shared = 0; shared < 2; shared++) {
+        int64_t last = shared ? 1719835200 : 1719921600;
+        state->calls = 0;
+        assert(!qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                                               1719835200, 0, last, 0, &result));
+        calls = state->calls;
+        qjs_intl_formatted_range_clear(allocator, &result);
+        assert(state->live == baseline && calls);
+        for (i = 1; i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            memset(&result, 0xff, sizeof(result));
+            assert(qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                       1719835200, 0, last, 0, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        }
+        state->calls = state->fail_at = 0;
+    }
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+               0, 1000000000, 0, 0, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+    assert(!qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                                           1719835200, 0, 1719921600, 0, &result));
+    qjs_intl_datetime_formatter_close(formatter);
+    at = 0;
+    for (i = 0; i < result.part_count; i++) {
+        const QJSIntlRangePart *part = &result.parts[i];
+        assert(part->start == at && part->end > at && part->end <= result.length &&
+               (unsigned int)part->source <= QJS_INTL_RANGE_END);
+        at = part->end;
+    }
+    assert(at == result.length && result.text[0]);
+    qjs_intl_formatted_range_clear(allocator, &result);
+}
+
 /* The full prepared corpus is an explicit audit mode; ordinary repository
    tests keep the same proof over all calendars of their English locale. */
 static size_t styles(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service,
@@ -303,6 +353,7 @@ int main(int argc, char **argv)
     defaults(&allocator, service, en);
     incompatible_kind(&allocator, service, en);
     adjusted_date_style(&allocator, service, en);
+    ranges(&allocator, service, en);
     capabilities(&allocator, service, en, tags[en]);
     for (unsigned int c = 0; c < QJS_CAL_COUNT; c++)
         styles(&allocator, service, en, tags[en], bytes(qjs_calendar_identifier(c)));

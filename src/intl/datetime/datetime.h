@@ -98,4 +98,18 @@ QJSIntlStatus qjs_intl_datetime_formatter_info(const QJSIntlDateTimeFormatter *f
 QJSIntlStatus qjs_intl_datetime_format(const QJSIntlDateTimeFormatter *formatter,
                                        QJSIntlDateValueKind kind, int64_t epoch_seconds,
                                        uint32_t nanosecond, QJSIntlFormatted *out);
+/* Check the per-kind null record without rendering or allocation. This lets
+   the frontend finish the first ValueFormatRecord before checking the second. */
+QJSIntlStatus qjs_intl_datetime_check_value_format(const QJSIntlDateTimeFormatter *formatter,
+                                                   QJSIntlDateValueKind kind);
+/* Endpoints already have the same Date/Temporal kind and passed frontend
+   coercion, TimeClip and calendar checks. Descending endpoints are permitted.
+   Compare plain wall clocks in UTC, preserve displayed fractional precision,
+   and compose fallback endpoints with the locale's real interval template.
+   Result owns its text/parts; reset errors and use formatted_range_clear. */
+QJSIntlStatus qjs_intl_datetime_format_range(const QJSIntlDateTimeFormatter *formatter,
+                                             QJSIntlDateValueKind kind,
+                                             int64_t first_seconds, uint32_t first_nanosecond,
+                                             int64_t last_seconds, uint32_t last_nanosecond,
+                                             QJSIntlFormattedRange *out);
 #endif
