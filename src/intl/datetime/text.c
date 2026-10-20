@@ -142,6 +142,201 @@ selected_name:
     return QJS_INTL_OK;
 }
 
+static void small_key(char out[3], unsigned int number)
+{
+    if (number < 10) {
+        out[0] = '0' + number;
+        out[1] = 0;
+    } else {
+        out[0] = '0' + number / 10;
+        out[1] = '0' + number % 10;
+        out[2] = 0;
+    }
+}
+
+static QJSIntlStatus probe_name(const QJSIntlDateTextData *data,
+                                const QJSIntlDateCalendarFields *local,
+                                const QJSIntlDatePatternToken *token, unsigned int fraction)
+{
+    Piece piece = {0};
+    return named(data, local, fraction, token, &piece);
+}
+
+static QJSIntlStatus admit_eras(const QJSIntlDateTextData *data, QJSCalendarId calendar,
+                                const QJSIntlDatePatternToken *token)
+{
+    QJSIntlDateCalendarFields local = {0};
+    size_t i;
+    local.has_era = 1;
+    for (i = 0; ; i++) {
+        const char *code;
+        int error;
+        QJSIntlStatus status;
+        local.era_calendar = calendar;
+        if (calendar == QJS_CAL_ISO8601 || calendar == QJS_CAL_GREGORY) {
+            if (i == 2)
+                return QJS_INTL_OK;
+            code = i ? "bce" : "ce";
+            local.era_calendar = QJS_CAL_GREGORY;
+        } else {
+            error = qjs_calendar_era_at(calendar, i, &code);
+            if (error == QJS_CAL_UNSUPPORTED)
+                return i ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED;
+            if (error)
+                return error == QJS_CAL_MEMORY ? QJS_INTL_NO_MEMORY : QJS_INTL_DATA_ERROR;
+            if (calendar == QJS_CAL_JAPANESE && (!strcmp(code, "ce") || !strcmp(code, "bce")))
+                local.era_calendar = QJS_CAL_GREGORY;
+        }
+        if (strlen(code) >= sizeof(local.era_code))
+            return QJS_INTL_DATA_ERROR;
+        strcpy(local.era_code, code);
+        status = probe_name(data, &local, token, 0);
+        if (status)
+            return status;
+    }
+}
+
+static QJSIntlStatus probe_clock(const QJSIntlDateTextData *data,
+                                 const QJSIntlDatePatternToken *token, uint32_t second)
+{
+    QJSIntlDateCalendarFields local = {0};
+    QJSIntlStatus status;
+    local.numeric.hour = second / 3600;
+    local.numeric.minute = second / 60 % 60;
+    local.numeric.second = second % 60;
+    status = probe_name(data, &local, token, 0);
+    return status ? status : probe_name(data, &local, token, 1);
+}
+
+static QJSIntlStatus admit_periods(const QJSIntlDateTextData *data,
+                                   const QJSIntlDatePatternToken *token)
+{
+    QJSIntlStatus status = probe_clock(data, token, 0);
+    uint32_t i;
+    if (!status)
+        status = probe_clock(data, token, 43200);
+    if (status || token->symbol != 'B' || !data->period_rules)
+        return status;
+    /* Rule boundaries and the AM/PM boundary partition every possible clock
+       outcome. A fractional probe removes an exact-point override, exposing
+       the variable-range or fallback result underneath it. */
+    for (i = 0; i < data->period_rules->count; i++) {
+        QJSIntlDayPeriodRule rule;
+        status = qjs_intl_dayperiod_rule(data->periods, data->period_rules->start + i, &rule);
+        if (!status)
+            status = probe_clock(data, token, rule.start % 86400);
+        if (!status)
+            status = probe_clock(data, token, rule.end % 86400);
+        if (status)
+            return status;
+    }
+    return QJS_INTL_OK;
+}
+
+static QJSIntlStatus admit_field(const QJSIntlDateTextData *data, QJSCalendarId calendar,
+                                 const QJSIntlDatePatternToken *token)
+{
+    QJSIntlDateCalendarFields local = {0};
+    QJSIntlStatus status;
+    unsigned int i, leap;
+    if (token->symbol == 'G')
+        return admit_eras(data, calendar, token);
+    if (token->symbol == 'a' || token->symbol == 'b' || token->symbol == 'B')
+        return admit_periods(data, token);
+    if (token->symbol == 'E' || token->symbol == 'e' || token->symbol == 'c') {
+        for (i = 0; i < 7; i++) {
+            local.weekday = i;
+            status = probe_name(data, &local, token, 0);
+            if (status)
+                return status;
+        }
+        return QJS_INTL_OK;
+    }
+    if (token->symbol == 'U') {
+        if (calendar != QJS_CAL_CHINESE && calendar != QJS_CAL_DANGI)
+            return QJS_INTL_UNSUPPORTED;
+        local.has_cyclic_year = 1;
+        for (i = 1; i <= 60; i++) {
+            small_key(local.cyclic_key, i);
+            status = probe_name(data, &local, token, 0);
+            if (status)
+                return status;
+        }
+        return QJS_INTL_OK;
+    }
+    if (token->symbol == 'M' || token->symbol == 'L') {
+        unsigned int last = calendar == QJS_CAL_COPTIC || calendar == QJS_CAL_ETHIOAA ||
+                            calendar == QJS_CAL_ETHIOPIC || calendar == QJS_CAL_HEBREW ? 13 : 12;
+        for (i = 1; i <= last; i++) {
+            small_key(local.month_key, i);
+            for (leap = 0; leap <= 1; leap++) {
+                if (calendar == QJS_CAL_HEBREW && i == 6 && !leap)
+                    continue;
+                local.in_leap_year = leap;
+                status = probe_name(data, &local, token, 0);
+                if (status)
+                    return status;
+            }
+        }
+        if (calendar == QJS_CAL_CHINESE || calendar == QJS_CAL_DANGI) {
+            QJSIntlUnaryPattern affix;
+            return leap_affix(data, token, &affix);
+        }
+    }
+    return QJS_INTL_OK;
+}
+
+QJSIntlStatus qjs_intl_date_names_admit(const QJSIntlDatePattern *pattern,
+                                       QJSCalendarId calendar, const QJSIntlDateTextData *data,
+                                       QJSIntlDateNameAdmission *cache)
+{
+    static const char symbols[] = "GMLEecUabB";
+    QJSIntlDatePatternInfo info;
+    QJSIntlStatus status;
+    size_t i;
+    if ((unsigned int)calendar >= QJS_CAL_COUNT)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_date_pattern_info(pattern, &info);
+    if (status)
+        return status;
+    if ((info.year_kinds & QJS_INTL_DATE_YEAR_RELATED) &&
+        calendar != QJS_CAL_CHINESE && calendar != QJS_CAL_DANGI)
+        return QJS_INTL_UNSUPPORTED;
+    if (cache) {
+        if (cache->data && (cache->data != data || cache->calendar != calendar))
+            return QJS_INTL_INVALID_ARGUMENT;
+        cache->data = data;
+        cache->calendar = calendar;
+    }
+    for (i = 0; i < pattern->count; i++) {
+        const QJSIntlDatePatternToken *token = &pattern->tokens[i];
+        const char *found;
+        size_t field;
+        if (!token->symbol || ((token->symbol == 'M' || token->symbol == 'L') && token->width <= 2))
+            continue;
+        found = strchr(symbols, token->symbol);
+        if (!found)
+            continue;
+        if (!data || !data->names || !data->names->section.bytes ||
+            data->locale >= data->names->section.count || data->calendar >= data->names->calendar_count)
+            return QJS_INTL_INVALID_ARGUMENT;
+        field = found - symbols;
+        if (token->width >= 7)
+            return QJS_INTL_UNSUPPORTED;
+        if (cache && cache->fields[field][token->width]) {
+            if (cache->fields[field][token->width] == 2)
+                return QJS_INTL_UNSUPPORTED;
+            continue;
+        }
+        status = admit_field(data, calendar, token);
+        if (cache && (status == QJS_INTL_OK || status == QJS_INTL_UNSUPPORTED))
+            cache->fields[field][token->width] = status ? 2 : 1;
+        if (status)
+            return status;
+    }
+    return QJS_INTL_OK;
+}
+
 static QJSIntlStatus emit(QJSIntlFormatBuilder *builder, const QJSIntlDatePattern *pattern,
                           const Piece *pieces)
 {
