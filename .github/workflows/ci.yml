@@ -85,6 +85,8 @@ jobs:
       run: |
         timeout 120s python3 tools/intl/date_pattern_syntax.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+        timeout 120s python3 tools/intl/date_pattern_syntax.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4" --combinations
     - name: Audit currency names and fraction metadata
       run: |
         timeout 120s python3 tools/intl/currencies.py \
@@ -92,6 +94,10 @@ jobs:
     - name: Audit inherited calendar date and time styles
       run: |
         timeout 120s python3 tools/intl/date_patterns.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
+    - name: Audit inherited date and time style connectors
+      run: |
+        timeout 120s python3 tools/intl/date_combinations.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49-beta4"
     - name: Audit number range and currency layouts
       run: |
