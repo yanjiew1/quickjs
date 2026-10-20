@@ -15,7 +15,7 @@ import tables
 from test_intl_dayperiod_rules import Sources
 
 
-def pack(empty=False):
+def pack(empty=False, mixed=False):
     rows = list(source.collect(Sources())['rows'])
     by_key = {(kind, tag): rules for kind, tag, rules in rows}
     points = (('midnight', 'at', 0, 0),)
@@ -26,6 +26,8 @@ def pack(empty=False):
                  ('format', 'fr', ()), ('format', 'gsw', points),
                  ('format', 'xx', midnight_range), ('selection', 'fr', ()),
                  ('selection', 'gsw', points), ('selection', 'zz', long_range)))
+    if mixed:
+        rows.append(('format', 'yy', by_key['format', 'en'] + by_key['format', 'root']))
     data = {'rows': () if empty else tuple(sorted(rows))}
     pool = tuple(sorted(wire.strings(data) | {'root', 'bad_tag', 'en-us', 'en-1901-1901'}))
     ids = {text: index for index, text in enumerate(pool)}
@@ -39,4 +41,5 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     text = embed.render(pack()) + '\n' + embed.render(pack(True)).replace('qjs_intl_native', 'dayperiod_empty')
+    text += '\n' + embed.render(pack(mixed=True)).replace('qjs_intl_native', 'dayperiod_mixed')
     atomic_write(args.output, text.encode('ascii'))
