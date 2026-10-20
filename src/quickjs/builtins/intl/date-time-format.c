@@ -326,6 +326,10 @@ static JSValue datetime_constructor(JSContext *ctx, JSValueConst active_function
                          QJS_INTL_DATE_REQUIRE_ANY, QJS_INTL_DATE_DEFAULT_DATE, NULL);
     if (!state)
         goto fail;
+    if (js_intl_error(ctx, qjs_intl_datetime_formatter_prepare_ranges(state->formatter), "date/time intervals")) {
+        free_state(ctx->rt, state);
+        goto fail;
+    }
     JS_SetOpaque(object, state);
     if (!construct) {
         int instance = JS_OrdinaryIsInstanceOf(ctx, this_val, ctx->intl_datetime_ctor);
@@ -573,6 +577,44 @@ static JSValue datetime_format(JSContext *ctx, JSValueConst this_val, int argc,
     return format_input(ctx, state, &input, operation);
 }
 
+static JSValue datetime_range(JSContext *ctx, JSValueConst this_val, int argc,
+                              JSValueConst *argv, int parts)
+{
+    JSIntlDateTimeFormat *state = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_DATE_TIME_FORMAT);
+    QJSIntlAllocator allocator = js_intl_allocator(ctx->rt);
+    QJSIntlFormattedRange formatted = {0};
+    DateInput input[2];
+    int64_t seconds[2];
+    uint32_t nanosecond[2];
+    QJSIntlStatus status;
+    JSValue result = JS_EXCEPTION;
+    if (!state)
+        return result;
+    if (argc < 2 || JS_IsUndefined(argv[0]) || JS_IsUndefined(argv[1]))
+        return JS_ThrowTypeError(ctx, "range endpoints must not be undefined");
+    if (read_input(ctx, argv[0], &input[0]) || read_input(ctx, argv[1], &input[1]))
+        return result;
+    if (input[0].kind != input[1].kind)
+        return JS_ThrowTypeError(ctx, "range endpoints must have the same Temporal type");
+    if (input_epoch(ctx, state, &input[0], &seconds[0], &nanosecond[0]))
+        return result;
+    /* A null first record must throw before the second calendar check. Both
+       ToDateTimeFormattable conversions have already completed above. */
+    status = qjs_intl_datetime_check_value_format(state->formatter, input[0].kind);
+    if (status == QJS_INTL_UNSUPPORTED)
+        return JS_ThrowTypeError(ctx, "format options do not support this Temporal type");
+    if (js_intl_error(ctx, status, "date/time range record") ||
+        input_epoch(ctx, state, &input[1], &seconds[1], &nanosecond[1]))
+        return result;
+    status = qjs_intl_datetime_format_range(state->formatter, input[0].kind,
+                 seconds[0], nanosecond[0], seconds[1], nanosecond[1], &formatted);
+    if (!js_intl_error(ctx, status, "date/time range formatting"))
+        result = parts ? js_intl_format_parts(ctx, NULL, &formatted, part_names, countof(part_names)) :
+                         JS_NewStringUTF16(ctx, formatted.text, formatted.length);
+    qjs_intl_formatted_range_clear(&allocator, &formatted);
+    return result;
+}
+
 JSValue js_intl_format_date_time(JSContext *ctx, JSValueConst receiver, int argc, JSValueConst *argv,
                                  QJSIntlDateRequired required, QJSIntlDateDefaults defaults)
 {
@@ -735,6 +777,8 @@ static const JSCFunctionListEntry datetime_statics[] = {
 static const JSCFunctionListEntry datetime_properties[] = {
     JS_CGETSET_DEF("format", datetime_format_get, NULL),
     JS_CFUNC_MAGIC_DEF("formatToParts", 1, datetime_format, 0),
+    JS_CFUNC_MAGIC_DEF("formatRange", 2, datetime_range, 0),
+    JS_CFUNC_MAGIC_DEF("formatRangeToParts", 2, datetime_range, 1),
     JS_CFUNC_DEF("resolvedOptions", 0, datetime_resolved),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Intl.DateTimeFormat", JS_PROP_CONFIGURABLE),
 };
