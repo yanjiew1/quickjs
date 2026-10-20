@@ -844,7 +844,10 @@ cover both alias directions, external source locales, independent alternates,
 empty/blocked values, absent families, hostile records, unaligned storage and
 allocation-failure retries. The owner does not choose primary identifiers,
 metazone periods, standard/daylight names, offsets or renderer fallback.
-Prepared profiles and runtime formatting integration follow separately.
+Both prepared profiles include these source layers. Their C tests query every
+stored selector and the independent family-row addressing, English provenance,
+unaligned storage and validation allocation failures. Runtime formatting
+integration follows separately.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
