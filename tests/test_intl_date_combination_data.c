@@ -49,6 +49,7 @@ static uint32_t locale_id(const QJSIntlData *data, const char *name)
     abort();
 }
 
+#if TEST_INTL_AUTHORED
 static uint32_t string_id(const QJSIntlData *data, const char *name)
 {
     uint32_t i;
@@ -102,6 +103,7 @@ static void duplicate(const QJSIntlDateCombinationData *owner, const QJSIntlAllo
     free(copy);
 }
 
+#endif
 
 static uint32_t calendar_id(const QJSIntlDateCombinationData *owner, const char *name)
 {
@@ -115,6 +117,7 @@ static uint32_t calendar_id(const QJSIntlDateCombinationData *owner, const char 
     abort();
 }
 
+#if TEST_INTL_AUTHORED
 static void check_corruption(const QJSIntlDateCombinationData *owner, const QJSIntlAllocator *allocator)
 {
     const uint8_t *value = NULL, *missing = NULL, *blocked = NULL;
@@ -167,7 +170,7 @@ static void check_corruption(const QJSIntlDateCombinationData *owner, const QJSI
     corrupt(owner, allocator, owner->locale_rows, qjs_intl_read_u32(owner->locale_rows + 4));
 }
 
-
+#endif
 
 static void get(const QJSIntlDateCombinationData *owner, const char *locale, const char *calendar,
                 QJSIntlDateCombinationForm form, uint32_t alternate, QJSIntlDateCombinationRecord *out)
@@ -182,10 +185,12 @@ static void check_queries(const QJSIntlDateCombinationData *owner)
     QJSIntlDateCombinationRecord record, zero = {0};
     QJSIntlBytes text, empty = {0};
     uint32_t locale, index;
+#if TEST_INTL_AUTHORED
     assert(owner->calendar_count == 3 && owner->alternate_count == 2);
     assert(!qjs_intl_date_combination_calendar_at(owner, 0, &text) && equal(text, "generic"));
     assert(!qjs_intl_date_combination_alternate_at(owner, 0, &text) && equal(text, ""));
     assert(!qjs_intl_date_combination_alternate_at(owner, 1, &text) && equal(text, "variant"));
+#endif
     for (locale = 0; locale < owner->section.count; locale++) {
         for (index = 0; index < owner->row_width; index++) {
             uint32_t selector = index, alternate = selector % owner->alternate_count;
@@ -220,6 +225,7 @@ static void check_queries(const QJSIntlDateCombinationData *owner)
             }
         }
     }
+#if TEST_INTL_AUTHORED
     get(owner, "en-GB", "japanese", QJS_INTL_DATE_COMBINATION_STANDARD, 0, &record);
     assert(equal(record.text, "{0} – {1}") && equal(record.origin_locale, "en-GB"));
     assert(equal(record.origin_calendar, "gregorian") && !record.numbers.length);
@@ -235,6 +241,15 @@ static void check_queries(const QJSIntlDateCombinationData *owner)
     assert(!memcmp(&record, &zero, sizeof(record)));
     get(owner, "de", "gregorian", QJS_INTL_DATE_COMBINATION_STANDARD, 0, &record);
     assert(equal(record.text, "{1} 'external' 😀 {0}") && equal(record.origin_locale, "en-1901-1996"));
+#else
+    get(owner, "en", "gregorian", QJS_INTL_DATE_COMBINATION_STANDARD, 0, &record);
+    assert(record.state == QJS_INTL_DATE_COMBINATION_VALUE && equal(record.text, "{1}, {0}"));
+    assert(!record.numbers.length && equal(record.origin_locale, "en"));
+    get(owner, "en", "gregorian", QJS_INTL_DATE_COMBINATION_AT_TIME, 0, &record);
+    assert(equal(record.text, "{1} 'at' {0}"));
+    get(owner, "en", "gregorian", QJS_INTL_DATE_COMBINATION_RELATIVE, 0, &record);
+    assert(equal(record.text, "{1} 'at' {0}"));
+#endif
     memset(&record, 0xff, sizeof(record));
     assert(qjs_intl_date_combination_record_at(owner, UINT32_MAX, 0, 0, 0, 0, &record) == QJS_INTL_INVALID_ARGUMENT);
     assert(!memcmp(&record, &zero, sizeof(record)));
@@ -268,10 +283,14 @@ int main(void)
     assert(!qjs_intl_date_combination_data_open(&data, &allocator, &owner) && !state.live);
     calls = state.calls;
     assert(calls);
+#if TEST_INTL_AUTHORED
     assert(calls >= 2);
+#endif
     check_queries(&owner);
     assert(state.calls == calls);
+#if TEST_INTL_AUTHORED
     check_corruption(&owner, &allocator);
+#endif
     for (step = 1; step <= calls; step++) {
         state.calls = 0;
         state.fail_at = step;

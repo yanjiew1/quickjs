@@ -680,8 +680,9 @@ group and form aliases. It leaves form fallback to the consuming formatter,
 and establishes host-side facts before a separate wire/C-owner stage.
 Optional connector section 28 pools records and locale rows over calendar,
 width, form and alternate selectors. Eight-word records preserve raw overrides
-and typed terminal provenance independently of consumer fallback. Validate its
-C owner before adding it to production profiles. The immutable connector owner
+and typed terminal provenance independently of consumer fallback. Both production
+profiles include this section and have corresponding C reader tests. The immutable
+connector owner
 checks canonical sharing and references, frees all validation scratch, and
 provides exact queries that allocate nothing. Pattern and connector data share
 the width selector in `datetime/style-types.h`; their records, states and query

@@ -203,8 +203,8 @@ validation shared with the style collector; individual collectors own their
 subtrees, typed keys and XPath mappings. Combination patterns use date-pattern
 apostrophe rules, not the shared unit/list pair-template grammar. Selection of
 atTime/relative versus standard is consumer policy after inheritance, not a
-collector fallback. These host-side records are not emitted in prepared binary
-profiles yet and do not install DateTimeFormat or establish calendar capability.
+collector fallback. Both prepared profiles include these source records; they
+do not install DateTimeFormat or establish calendar capability.
 
 Section 28 is the optional canonical connector schema. Its little-endian header
 contains version, calendar count, alternate count, shared-row count and shared-
@@ -219,8 +219,8 @@ references and reachability; projection retains origins outside selected locales
 immutable owner, using temporary scratch with no retained allocation. Queries
 return exact borrowed text, overrides and source metadata without allocation or
 form fallback. Authored C tests cover every selector, corrupt tables, unaligned
-input and validation allocation failure with retry. Integrate prepared profiles
-only after this owner is validated; the optional section is not emitted yet.
+input and validation allocation failure with retry. Prepared-profile C tests
+exercise every selector and representative English connector forms.
 
 ## Relative-time source records
 
