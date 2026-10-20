@@ -9,6 +9,8 @@ import availability
 import bundle
 import calendar_names
 import calendar_name_tables
+import calendar_eras
+import calendar_era_tables
 import compact_patterns
 import compact_tables
 import currencies
@@ -102,6 +104,7 @@ def generate(sources, profile):
     timezone_presentation_data = timezone_presentation_tables.runtime_records(
         timezone_presentation.collect(inputs_read, locale_data))
     dayperiod_data = dayperiod_rules.collect(inputs_read)
+    calendar_era_data = calendar_eras.collect(inputs_read)
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
     # Only formatter locale rows are reduced for minimal. Global identity,
@@ -163,6 +166,7 @@ def generate(sources, profile):
     pool_strings.update(timezone_name_tables.strings(timezone_name_data))
     pool_strings.update(timezone_presentation_tables.strings(timezone_presentation_data))
     pool_strings.update(dayperiod_tables.strings(dayperiod_data))
+    pool_strings.update(calendar_era_tables.strings(calendar_era_data))
     pool_strings.update(display_tables.strings(display_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
@@ -198,6 +202,7 @@ def generate(sources, profile):
     sections[bundle.TIMEZONE_NAMES] = timezone_name_tables.encode(timezone_name_data, tags, string_ids)
     sections[bundle.TIMEZONE_PRESENTATION] = timezone_presentation_tables.encode(timezone_presentation_data, string_ids)
     sections[bundle.DAYPERIOD_RULES] = dayperiod_tables.encode(dayperiod_data, string_ids)
+    sections[bundle.CALENDAR_ERAS] = calendar_era_tables.encode(calendar_era_data, string_ids)
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
@@ -217,7 +222,7 @@ def generate(sources, profile):
                          'compact maps, currency/layout/unit facts, division grammar, relative/duration '
                          'source facts, date-field labels, date/time styles and connectors, calendar names, '
                          'available date patterns, append templates, interval and localized timezone source layers, '
-                         'supplemental metazone presentation and day-period clock facts, '
+                         'supplemental metazone presentation, day-period clock facts and explicit era name keys, '
                          'layered display names and plural rules; '
                          'not formatter capability '
                          'or full Intl coverage.')}
