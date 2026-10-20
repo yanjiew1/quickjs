@@ -4,6 +4,7 @@
 #include "range.h"
 #include "number.h"
 #include "../common/format-builder.h"
+#include "../common/range-compose.h"
 #include <string.h>
 
 QJSIntlStatus qjs_intl_number_range_separator(QJSIntlBytes pattern, QJSIntlBytes *out)
@@ -35,61 +36,6 @@ QJSIntlStatus qjs_intl_number_range_separator(QJSIntlBytes pattern, QJSIntlBytes
     return status;
 }
 
-typedef struct RangeWriter {
-    QJSIntlFormatBuilder text; /* Its ordinary-part output stays NULL. */
-    QJSIntlRangePart *parts;
-} RangeWriter;
-
-static QJSIntlStatus literal(RangeWriter *writer, QJSIntlBytes value, QJSIntlPartType type)
-{
-    size_t start = writer->text.length;
-    QJSIntlStatus status = qjs_intl_format_builder_text(&writer->text, value, NULL, NULL);
-    if (status || start == writer->text.length)
-        return status;
-    if (writer->text.count == SIZE_MAX / sizeof(*writer->parts))
-        return QJS_INTL_OVERFLOW;
-    if (writer->parts)
-        writer->parts[writer->text.count] = (QJSIntlRangePart){start, writer->text.length,
-                                                              type, QJS_INTL_RANGE_SHARED};
-    writer->text.count++;
-    return QJS_INTL_OK;
-}
-
-static QJSIntlStatus body(RangeWriter *writer, const QJSIntlFormatted *value, QJSIntlRangeSource source)
-{
-    size_t i, start = writer->text.length, count = writer->text.count;
-    QJSIntlStatus status;
-    if (value->part_count > SIZE_MAX / sizeof(*writer->parts) - count)
-        return QJS_INTL_OVERFLOW;
-    status = qjs_intl_format_builder_body(&writer->text, value);
-    if (!status && writer->parts) {
-        for (i = 0; i < value->part_count; i++) {
-            const QJSIntlPart *part = &value->parts[i];
-            writer->parts[count + i] = (QJSIntlRangePart){part->start + start, part->end + start,
-                                                          part->type, source};
-        }
-    }
-    return status;
-}
-
-static QJSIntlStatus emit(RangeWriter *writer, QJSIntlBytes separator, QJSIntlBytes approximately,
-                          const QJSIntlFormatted *start, const QJSIntlFormatted *end, int equal)
-{
-    QJSIntlStatus status;
-    if (equal) {
-        status = literal(writer, approximately, QJS_INTL_PART_APPROXIMATELY_SIGN);
-        if (!status)
-            status = body(writer, start, QJS_INTL_RANGE_SHARED);
-    } else {
-        status = body(writer, start, QJS_INTL_RANGE_START);
-        if (!status)
-            status = literal(writer, separator, QJS_INTL_PART_LITERAL);
-        if (!status)
-            status = body(writer, end, QJS_INTL_RANGE_END);
-    }
-    return status;
-}
-
 static int body_valid(const QJSIntlFormatted *value)
 {
     size_t i, at = 0;
@@ -109,15 +55,7 @@ static int body_valid(const QJSIntlFormatted *value)
 
 void qjs_intl_number_range_result_clear(const QJSIntlAllocator *allocator, QJSIntlFormattedRange *out)
 {
-    if (!out)
-        return;
-    if (allocator && allocator->free) {
-        if (out->text)
-            allocator->free(allocator->opaque, out->text);
-        if (out->parts)
-            allocator->free(allocator->opaque, out->parts);
-    }
-    memset(out, 0, sizeof(*out));
+    qjs_intl_formatted_range_clear(allocator, out);
 }
 
 QJSIntlStatus qjs_intl_number_range_compose(const QJSIntlAllocator *allocator, QJSIntlBytes separator,
@@ -125,9 +63,8 @@ QJSIntlStatus qjs_intl_number_range_compose(const QJSIntlAllocator *allocator, Q
                                           const QJSIntlFormatted *start, const QJSIntlFormatted *end,
                                           size_t limit, QJSIntlFormattedRange *out)
 {
-    RangeWriter writer = {0};
-    QJSIntlFormattedRange result = {0};
-    QJSIntlStatus status;
+    QJSIntlRangePiece pieces[3] = {0};
+    size_t count;
     int equal;
     if (out)
         memset(out, 0, sizeof(*out));
@@ -140,30 +77,15 @@ QJSIntlStatus qjs_intl_number_range_compose(const QJSIntlAllocator *allocator, Q
         return QJS_INTL_OVERFLOW;
     equal = start->length == end->length &&
             !memcmp(start->text, end->text, start->length * sizeof(*start->text));
-    writer.text.limit = limit;
-    status = emit(&writer, separator, approximately, start, end, equal);
-    if (status)
-        return status;
-    if (writer.text.length > SIZE_MAX / sizeof(*result.text))
-        return QJS_INTL_OVERFLOW;
-    result.length = writer.text.length;
-    result.part_count = writer.text.count;
-    result.text = allocator->malloc(allocator->opaque, result.length * sizeof(*result.text));
-    if (!result.text)
-        return QJS_INTL_NO_MEMORY;
-    result.parts = allocator->malloc(allocator->opaque, result.part_count * sizeof(*result.parts));
-    if (!result.parts) {
-        qjs_intl_number_range_result_clear(allocator, &result);
-        return QJS_INTL_NO_MEMORY;
+    if (equal) {
+        pieces[0] = (QJSIntlRangePiece){NULL, approximately, QJS_INTL_PART_APPROXIMATELY_SIGN, QJS_INTL_RANGE_SHARED};
+        pieces[1] = (QJSIntlRangePiece){start, {0}, 0, QJS_INTL_RANGE_SHARED};
+        count = 2;
+    } else {
+        pieces[0] = (QJSIntlRangePiece){start, {0}, 0, QJS_INTL_RANGE_START};
+        pieces[1] = (QJSIntlRangePiece){NULL, separator, QJS_INTL_PART_LITERAL, QJS_INTL_RANGE_SHARED};
+        pieces[2] = (QJSIntlRangePiece){end, {0}, 0, QJS_INTL_RANGE_END};
+        count = 3;
     }
-    writer.text.result.text = result.text;
-    writer.parts = result.parts;
-    writer.text.length = writer.text.count = 0;
-    status = emit(&writer, separator, approximately, start, end, equal);
-    if (status) {
-        qjs_intl_number_range_result_clear(allocator, &result);
-        return status;
-    }
-    *out = result;
-    return QJS_INTL_OK;
+    return qjs_intl_range_compose(allocator, pieces, count, limit, out);
 }
