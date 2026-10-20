@@ -762,10 +762,49 @@ pattern provenance and validation allocation failures. The reader is compiled
 in production Intl builds. These checks do not implement pattern matching or
 template rendering.
 
-Physical map-span and entry-at queries expose all exact keys for candidate enumeration without
-leaking wire decoding into the builder. Enumeration does not choose inheritance,
+Physical map-span and entry-at queries expose all exact keys for candidate
+enumeration without leaking wire decoding into the builder. Enumeration does not choose inheritance,
 plural or alternate fallback; a consumer must retain child-key shadowing even
 when that child's pattern is blocked, empty or not renderable.
+
+`datetime/available-source.[ch]` resolves visible exact keys along one source
+chain without interpreting patterns or append templates. Nearest blocked, empty
+and unusable source text still shadows the same code/plural/leaf-alt parent key.
+It skips repeated physical maps, gathers at most the owner's physical entries,
+then sorts and selects deterministic nearest records. The retained index owns
+one allocation and borrows the unchanged pack through a copied owner view;
+queries allocate nothing and preserve origin groups. Head zero needs no
+allocation. This source inventory is separate from usable native candidates and
+final ECMA Format Records, including duplicate-component grouping and hour-cycle
+pairing. A counted `other` key is never an uncounted fallback.
+
+`datetime/source-candidate.[ch]` compiles the visible ordinary pattern family
+for an explicitly selected leaf alternate and uncounted keys. It selects no
+alternate or plural fallback. Blocked/empty leaves, unsupported projections and
+literal-only/AM-PM-only patterns contribute no direct candidate; child masking
+has already taken effect. Flexible day-period-only patterns remain candidates.
+Eligible malformed syntax and allocation failures propagate and unwind all owned
+patterns. Filtered keys are not syntax-validated by this operation. Compiled
+tokens are owned, while skeletons, raw text and source provenance borrow the
+unchanged pack. The input source index can be released independently. Distinct
+skeletons and hour cycles remain distinct even when component vectors match;
+these are source candidates, not the final ECMA format list or capability proof.
+
+`locale/type-identity.[ch]` resolves exact metadata names and complete legacy
+alias tokens to a terminal preferred identity, without applying Unicode-type
+syntax to raw source spellings. The scan is restricted to one extension/key.
+Aliases converging on one terminal are valid; conflicting terminals are data
+errors. Variable rows establish no identity. This shared operation allocates
+nothing and does not infer any service capability.
+
+`datetime/calendar-identity.[ch]` applies that equivalence independently to
+available-pattern, style, connector, calendar-name and interval catalogs. Each
+query returns the selected owner's raw index; catalogs need not have matching
+contents or ordering. Ambiguous multiple raw keys for one identity are rejected.
+Gregorian `gregory` maps through metadata to `gregorian`, while `iso8601` keeps
+its own source inventory and `generic` stays source-only. Existing source alias
+chains and origin calendars are unchanged. Arithmetic support, locale calendar
+preferences and renderer admission remain separate from this projection.
 
 `date_intervals.py` owns interval fallback templates, greatest-difference
 patterns and range-example templates; numeric separators retain a separate

@@ -1148,6 +1148,39 @@ if intl_enabled
       'test_intl_list_patterns.py',
     ),
   )
+  intl_date_available_source_fixture = custom_target(
+    'intl-date-available-source-fixture',
+    output: 'intl-date-available-source-fixture.c',
+    command: [python, files('intl_date_available_source_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_available_formats.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_available_source_test = {
+    'name': 'test_intl_date_available_source',
+    'sources': files(
+      'test_intl_date_available_source.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/available-source.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_available_source_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_available_source_test,
+    'name': 'intl-date-available-source',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_available_authored = {
     'name': 'test_intl_date_available_authored',
     'sources': files(
@@ -1345,6 +1378,74 @@ if intl_enabled
   component_test_specs += [{
     'target': intl_datetime_basic_match,
     'name': 'intl-datetime-basic-match',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_date_calendar_identity_fixture = custom_target(
+    'intl-date-calendar-identity-fixture',
+    output: 'intl-date-calendar-identity-fixture.c',
+    command: [python, files('intl_date_calendar_identity_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies,
+  )
+  intl_date_calendar_identity_test = {
+    'name': 'test_intl_date_calendar_identity',
+    'sources': files(
+      'test_intl_date_calendar_identity.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/calendar-identity.c',
+      '../src/intl/datetime/combination-data.c',
+      '../src/intl/datetime/dayperiod-code.c',
+      '../src/intl/datetime/interval-data.c',
+      '../src/intl/datetime/name-data.c',
+      '../src/intl/datetime/style-data.c',
+      '../src/intl/locale/native-data.c',
+      '../src/intl/locale/type-identity.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_calendar_identity_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_calendar_identity_test,
+    'name': 'intl-date-calendar-identity',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_date_source_candidate_fixture = custom_target(
+    'intl-date-source-candidate-fixture',
+    output: 'intl-date-source-candidate-fixture.c',
+    command: [python, files('intl_date_source_candidate_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies,
+  )
+  intl_date_source_candidate_test = {
+    'name': 'test_intl_date_source_candidate',
+    'sources': files(
+      'test_intl_date_source_candidate.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/available-data.c',
+      '../src/intl/datetime/available-source.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+      '../src/intl/datetime/source-candidate.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_source_candidate_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_source_candidate_test,
+    'name': 'intl-date-source-candidate',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
