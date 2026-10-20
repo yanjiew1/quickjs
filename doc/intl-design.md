@@ -864,6 +864,15 @@ stored selector and the independent family-row addressing, English provenance,
 unaligned storage and validation allocation failures. Runtime formatting
 integration follows separately.
 
+`datetime/components.h` defines the standard's DateTimeFormat option-field
+records separately from DisplayNames field codes and raw CLDR pattern symbols.
+Zero-initialized records have no requested components. The shared
+`datetime/basic-match.[ch]` implements BasicFormatMatcher penalties, validates
+field-specific value domains and retains the earliest equal-scoring candidate.
+It allocates nothing and depends on neither locale data nor a selected backend.
+Native candidate compilation and best-fit policy remain separate consumers;
+providing this algorithm does not install a DateTimeFormat constructor.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
