@@ -55,9 +55,11 @@ if intl_enabled
 endif
 if get_option('temporal')
   common_args += '-DCONFIG_TEMPORAL'
-  if get_option('calendars') == 'native'
-    common_args += '-DCONFIG_CALENDAR_NATIVE'
-  endif
+endif
+if (get_option('temporal') or intl_enabled) and get_option('calendars') == 'native'
+  common_args += '-DCONFIG_CALENDAR_NATIVE'
+endif
+if get_option('temporal')
   if get_option('timezone_backend') == 'native'
     common_args += '-DCONFIG_TIMEZONE_NATIVE'
   endif
