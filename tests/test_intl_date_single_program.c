@@ -114,6 +114,9 @@ int main(void)
     static const char *const incompatible[] = {"h a", "HH:mm"};
     static const char *const cyclic[] = {"r(U) h a", "r(U) HH"};
     static const char *const no_hour[] = {"LLLL d"};
+    static const char *const year_choice[] = {"M/d/U", "M/d/r"};
+    static const char *const year_pairs[] = {"U H", "U h a", "r H", "r h a"};
+    static const char *const cyclic_fallback[] = {"U H", "U h a", "r H"};
     static const char *const missing[] = {"h a", "H"};
     Allocation input = {0}, output = {0};
     QJSIntlAllocator a = {&input, allocate, NULL, release};
@@ -263,6 +266,36 @@ int main(void)
         qjs_intl_date_format_sources_clear(&groups);
         qjs_intl_date_source_candidates_clear(&pool);
     }
+    /* Equal public components must not let source ordering hide a genuine
+       numeric year. Preserve cyclic-only sources when there is no alternative. */
+    for (i = 1; i <= 2; i++) {
+        pool_open(&a, year_choice, i, &pool, &groups);
+        assert(groups.count == 1);
+        assert(!qjs_intl_date_single_programs_open(&pool, &groups, 0, &b, &programs));
+        verify(&programs);
+        assert(programs.normal.source_index == i - 1);
+        assert(programs.normal.source_info.year_kinds ==
+               (i == 1 ? QJS_INTL_DATE_YEAR_CYCLIC : QJS_INTL_DATE_YEAR_RELATED));
+        assert(programs.normal.pattern.tokens[4].symbol == (i == 1 ? 'U' : 'r'));
+        qjs_intl_date_single_programs_clear(&programs);
+        qjs_intl_date_format_sources_clear(&groups);
+        qjs_intl_date_source_candidates_clear(&pool);
+    }
+    pool_open(&a, year_pairs, 4, &pool, &groups);
+    assert(!qjs_intl_date_single_programs_open(&pool, &groups, 0, &b, &programs));
+    verify(&programs);
+    assert(programs.normal.source_index == 2 && programs.twelve.source_index == 3);
+    qjs_intl_date_single_programs_clear(&programs);
+    qjs_intl_date_format_sources_clear(&groups);
+    qjs_intl_date_source_candidates_clear(&pool);
+    pool_open(&a, cyclic_fallback, 3, &pool, &groups);
+    assert(!qjs_intl_date_single_programs_open(&pool, &groups, 0, &b, &programs));
+    verify(&programs);
+    assert(programs.normal.source_index == 0 && programs.twelve.source_index == 1);
+    qjs_intl_date_single_programs_clear(&programs);
+    qjs_intl_date_format_sources_clear(&groups);
+    qjs_intl_date_source_candidates_clear(&pool);
+
     pool_open(&a, no_hour, 1, &pool, &groups);
     calls = output.calls;
     assert(!qjs_intl_date_single_programs_open(&pool, &groups, 0, &b, &programs));
