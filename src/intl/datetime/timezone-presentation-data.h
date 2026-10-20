@@ -14,7 +14,8 @@ enum {
 typedef struct QJSIntlTimeZonePeriod {
     int64_t start, end; /* UTC seconds, meaningful only when the flag is set. */
     int32_t standard_offset, daylight_offset; /* Presentation overrides only. */
-    uint32_t metazone, flags;
+    uint32_t metazone; /* Zero-based presentation identity index, not a string ID. */
+    uint32_t flags;
 } QJSIntlTimeZonePeriod;
 
 typedef struct QJSIntlTimeZonePresentationData {
@@ -34,6 +35,7 @@ QJSIntlStatus qjs_intl_timezone_presentation_data_open(const QJSIntlData *data,
 /* Queries allocate nothing and borrow pack storage. Indexes are zero-based.
    Missing records return UNSUPPORTED. All non-NULL outputs reset on failure.
    Preferred/dominant lookups are exact; consumers own territory fallback. */
+/* Metazone identity, independent of the timezone indexes used by zone/at. */
 QJSIntlStatus qjs_intl_timezone_presentation_identity(const QJSIntlTimeZonePresentationData *data,
                                                       uint32_t index, QJSIntlBytes *long_id,
                                                       QJSIntlBytes *short_id);
