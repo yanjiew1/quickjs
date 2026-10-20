@@ -1486,6 +1486,26 @@ test(
   timeout: 30,
 )
 
+intl_date_interval_program_test = executable(
+  'test_intl_date_interval_program',
+  files(
+    'test_intl_date_interval_program.c',
+    '../src/intl/datetime/interval-program.c',
+    '../src/intl/datetime/pattern.c',
+    '../src/intl/datetime/pattern-info.c',
+  ),
+  c_args: host_args,
+  include_directories: inc,
+  dependencies: host_deps,
+  override_options: ['b_ndebug=false'],
+)
+test(
+  'intl-date-interval-program',
+  intl_date_interval_program_test,
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
 intl_date_pattern_test = executable(
   'test_intl_date_pattern',
   files(
