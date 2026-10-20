@@ -143,10 +143,13 @@ QJSIntlStatus qjs_intl_locale_week_info(const QJSIntlLocaleService *service,
     return QJS_INTL_OK;
 }
 
-QJSIntlStatus qjs_intl_locale_hour_cycles(const QJSIntlLocaleService *service,
-                                          QJSIntlBytes tag, QJSIntlBytes *out,
-                                          uint32_t *count)
+static QJSIntlStatus regional_list(const QJSIntlLocaleService *service,
+                                   QJSIntlBytes tag, int hours, QJSIntlBytes *out,
+                                   uint32_t *count)
 {
+    QJSIntlStatus (*query)(const QJSIntlLocaleService *, QJSIntlBytes,
+                            QJSIntlBytes *, uint32_t *) =
+        hours ? qjs_intl_locale_hour_data : qjs_intl_locale_calendar_data;
     QJSIntlRegionPreference preference;
     QJSIntlLocaleComponents parts;
     const char *regions[2];
@@ -174,17 +177,37 @@ QJSIntlStatus qjs_intl_locale_hour_cycles(const QJSIntlLocaleService *service,
         memcpy(key, parts.language.data, parts.language.length);
         key[parts.language.length] = '-';
         memcpy(key + parts.language.length + 1, regions[i], length);
-        status = qjs_intl_locale_hour_data(
-            service, (QJSIntlBytes){key, parts.language.length + 1 + length}, out,
-            count);
+        status = query(service, (QJSIntlBytes){key, parts.language.length + 1 + length},
+                        out, count);
         if (status == QJS_INTL_UNSUPPORTED)
-            status = qjs_intl_locale_hour_data(service, bytes(regions[i]), out, count);
+            status = query(service, bytes(regions[i]), out, count);
         if (status != QJS_INTL_UNSUPPORTED)
             return status;
     }
-    *out = bytes("h23");
-    *count = 1;
-    return QJS_INTL_OK;
+    return QJS_INTL_UNSUPPORTED;
+}
+
+QJSIntlStatus qjs_intl_locale_hour_cycles(const QJSIntlLocaleService *service,
+                                          QJSIntlBytes tag, QJSIntlBytes *out,
+                                          uint32_t *count)
+{
+    QJSIntlStatus status = regional_list(service, tag, 1, out, count);
+    if (status == QJS_INTL_UNSUPPORTED) {
+        *out = bytes("h23");
+        *count = 1;
+        return QJS_INTL_OK;
+    }
+    return status;
+}
+
+QJSIntlStatus qjs_intl_locale_calendar_preferences(const QJSIntlLocaleService *service,
+                                                   QJSIntlBytes tag, QJSIntlBytes *out,
+                                                   uint32_t *count)
+{
+    QJSIntlStatus status = regional_list(service, tag, 0, out, count);
+    /* Fallback occurs after canonicalization and capability filtering, not
+       through a second preference search after an unsupported first list. */
+    return status == QJS_INTL_UNSUPPORTED ? QJS_INTL_OK : status;
 }
 
 QJSIntlStatus qjs_intl_locale_text_direction(const QJSIntlLocaleService *service,
