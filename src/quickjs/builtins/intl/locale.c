@@ -8,6 +8,8 @@
 #include "../../../intl/locale/identifier.h"
 #include "../../../intl/locale/preferences.h"
 #include "../../../intl/common/locale-grammar.h"
+#include "../../../timezone/timezone.h"
+#include <stdlib.h>
 
 enum {
     SLOT_CA,
@@ -439,6 +441,179 @@ static JSValue locale_numbering_systems(JSContext *ctx, JSValueConst this_val,
     return result;
 }
 
+static JSValue locale_calendars(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
+{
+    JSIntlLocale *locale = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_LOCALE);
+    QJSIntlLocaleService *identity;
+    QJSIntlDateTimeService *dates;
+    QJSIntlBytes list;
+    uint32_t count, i, used = 0;
+    size_t start = 0;
+    JSValue result, value;
+
+    if (!locale)
+        return JS_EXCEPTION;
+    result = JS_NewArray(ctx);
+    if (JS_IsException(result))
+        return result;
+    /* Explicit slots are returned even when unknown or empty. Formatter
+       support filters only the preference-derived list. */
+    if (locale->slots[SLOT_CA]) {
+        value = JS_NewString(ctx, locale->slots[SLOT_CA]);
+        if (JS_IsException(value) || JS_DefinePropertyValueUint32(ctx, result, 0, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+        return result;
+    }
+    identity = js_intl_locale_service(ctx);
+    dates = identity ? js_intl_datetime_service(ctx) : NULL;
+    if (!dates || js_intl_error(ctx, qjs_intl_locale_calendar_preferences(identity,
+            (QJSIntlBytes){locale->tag, strlen(locale->tag)}, &list, &count),
+            "locale calendar preferences"))
+        goto fail;
+    for (i = 0; i < count; i++) {
+        QJSIntlBytes source, canonical;
+        QJSIntlStatus status;
+        size_t end = start;
+        uint32_t j;
+        int supported;
+        while (end < list.length && list.data[end] != ' ')
+            end++;
+        source = (QJSIntlBytes){list.data + start, end - start};
+        /* CLDR preferences use legacy aliases such as gregorian, which are
+           metadata source names rather than public Unicode keyword input. */
+        status = qjs_intl_locale_source_type(identity, (QJSIntlBytes){"ca", 2}, source, &canonical);
+        if (status == QJS_INTL_UNSUPPORTED) {
+            canonical = source;
+            status = QJS_INTL_OK;
+        }
+        if (js_intl_error(ctx, status, "calendar identifier") ||
+            js_intl_error(ctx, qjs_intl_datetime_calendar_available(dates, canonical,
+                &supported), "calendar support"))
+            goto fail;
+        start = end + 1;
+        if (!supported)
+            continue;
+        value = JS_NewStringLen(ctx, canonical.data, canonical.length);
+        if (JS_IsException(value))
+            goto fail;
+        /* Only our own fresh array's string elements are inspected. No user
+           getter or array method participates in canonical deduplication. */
+        for (j = 0; j < used; j++) {
+            JSValue previous = JS_GetPropertyUint32(ctx, result, j);
+            int same;
+            if (JS_IsException(previous)) {
+                JS_FreeValue(ctx, value);
+                goto fail;
+            }
+            same = JS_SameValue(ctx, value, previous);
+            JS_FreeValue(ctx, previous);
+            if (same)
+                break;
+        }
+        if (j < used) {
+            JS_FreeValue(ctx, value);
+            continue;
+        }
+        if (JS_DefinePropertyValueUint32(ctx, result, used++, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    }
+    if (!used) {
+        value = JS_NewString(ctx, "gregory");
+        if (JS_IsException(value) || JS_DefinePropertyValueUint32(ctx, result, 0, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    }
+    return result;
+fail:
+    JS_FreeValue(ctx, result);
+    return JS_EXCEPTION;
+}
+
+static int compare_zones(const void *left, const void *right)
+{
+    return strcmp(*(const char *const *)left, *(const char *const *)right);
+}
+
+static JSValue locale_timezones(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
+{
+    JSIntlLocale *locale = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_LOCALE);
+    QJSIntlLocaleComponents parts;
+    QJSIntlLocaleService *service;
+    const char **zones = NULL;
+    uint32_t count, cursor = 0, used = 0, i, output = 0;
+    QJSIntlStatus status;
+    JSValue result = JS_UNDEFINED;
+
+    if (!locale)
+        return JS_EXCEPTION;
+    if (js_intl_error(ctx, qjs_intl_locale_components(
+            (QJSIntlBytes){locale->tag, strlen(locale->tag)}, &parts), "locale components"))
+        return JS_EXCEPTION;
+    /* TimeZonesOfLocale deliberately uses only an explicit region. Neither
+       maximization nor rg/sd/tz keywords supply or replace that region. */
+    if (!parts.region.data)
+        return JS_UNDEFINED;
+    service = js_intl_locale_service(ctx);
+    if (!service || js_intl_error(ctx, qjs_intl_locale_timezone_count(service,
+            parts.region, &count), "locale timezone territory"))
+        return JS_EXCEPTION;
+    if (count) {
+        if (sizeof(*zones) > SIZE_MAX / count) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
+        zones = js_malloc(ctx, (size_t)count * sizeof(*zones));
+        if (!zones)
+            goto fail;
+    }
+    for (;;) {
+        QJSIntlBytes source;
+        const QJSTimeZone *zone;
+        int error;
+        status = qjs_intl_locale_timezone_next(service, parts.region, &cursor, &source);
+        if (status == QJS_INTL_UNSUPPORTED)
+            break;
+        if (js_intl_error(ctx, status, "locale timezone source"))
+            goto fail;
+        /* Match the source's territory before resolving an IANA link; country
+           ownership must not be inferred from a link target's spelling. */
+        error = qjs_timezone_lookup(&zone, source.data, source.length);
+        if (error == QJS_TZ_RANGE || error == QJS_TZ_UNSUPPORTED)
+            continue;
+        if (error) {
+            js_intl_error(ctx, error == QJS_TZ_MEMORY ? QJS_INTL_NO_MEMORY : QJS_INTL_DATA_ERROR,
+                          "locale timezone support");
+            goto fail;
+        }
+        assert(used < count);
+        zones[used++] = qjs_timezone_primary_identifier(zone);
+    }
+    if (used > 1)
+        qsort(zones, used, sizeof(*zones), compare_zones);
+    result = JS_NewArray(ctx);
+    if (JS_IsException(result))
+        goto fail;
+    for (i = 0; i < used; i++) {
+        JSValue value;
+        if (i && !strcmp(zones[i - 1], zones[i]))
+            continue;
+        value = JS_NewString(ctx, zones[i]);
+        if (JS_IsException(value) || JS_DefinePropertyValueUint32(ctx, result, output++, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    }
+    js_free(ctx, zones);
+    return result;
+fail:
+    js_free(ctx, zones);
+    JS_FreeValue(ctx, result);
+    return JS_EXCEPTION;
+}
+
 enum { INFO_WEEK, INFO_TEXT, INFO_HOURS };
 
 static JSValue locale_info(JSContext *ctx, JSValueConst this_val, int argc,
@@ -559,6 +734,8 @@ static const JSCFunctionListEntry locale_properties[] = {
     JS_CFUNC_MAGIC_DEF("getTextInfo", 0, locale_info, INFO_TEXT),
     JS_CFUNC_MAGIC_DEF("getHourCycles", 0, locale_info, INFO_HOURS),
     JS_CFUNC_DEF("getNumberingSystems", 0, locale_numbering_systems),
+    JS_CFUNC_DEF("getCalendars", 0, locale_calendars),
+    JS_CFUNC_DEF("getTimeZones", 0, locale_timezones),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Intl.Locale",
                        JS_PROP_CONFIGURABLE),
 };
