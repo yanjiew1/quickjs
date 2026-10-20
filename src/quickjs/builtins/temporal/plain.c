@@ -3,6 +3,7 @@
  */
 #include "../../../calendar/calendar.h"
 #include "calendar-fields.h"
+#include "../intl.h"
 #include "../../internal/object.h"
 #include "../../../temporal/civil.h"
 #include "../../../temporal/relative.h"
@@ -1074,7 +1075,13 @@ static JSValue plain_locale_string(JSContext *ctx, JSValueConst this_val,
     PlainValue value;
     if (get_plain(ctx, this_val, kind, &value, TRUE))
         return JS_EXCEPTION;
+#ifdef CONFIG_INTL
+    return js_intl_format_date_time(ctx, this_val, argc, argv,
+               kind == PLAIN_DATETIME ? QJS_INTL_DATE_REQUIRE_ANY : QJS_INTL_DATE_REQUIRE_DATE,
+               kind == PLAIN_DATETIME ? QJS_INTL_DATE_DEFAULT_ALL : QJS_INTL_DATE_DEFAULT_DATE);
+#else
     return plain_string(ctx, this_val, 0, NULL, (kind << 8) | 1);
+#endif
 }
 
 static JSValue plain_value_of(JSContext *ctx, JSValueConst this_val,
