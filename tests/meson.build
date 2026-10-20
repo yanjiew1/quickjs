@@ -2418,6 +2418,26 @@ if intl_enabled
         'timeout': 30,
       },
     }]
+    intl_date_offset_test = {
+      'name': ('test_intl_date_offset_' + profile),
+      'sources': intl_number_service_sources + files(
+        'test_intl_date_offset.c',
+        '../src/intl/datetime/zone-offset.c',
+        '../src/intl/datetime/timezone-name-data.c',
+        '../src/intl/datetime/pattern.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_offset_test,
+      'name': ('intl-date-offset-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
     intl_date_text_test = {
       'name': ('test_intl_date_text_' + profile),
       'sources': intl_number_service_sources + files(
