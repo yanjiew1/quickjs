@@ -150,6 +150,10 @@ static void authored(const QJSIntlAllocator *allocator, const QJSIntlDateSourceC
     record = find(programs, 960, 3); /* clock with localized fractional separator */
     pattern_equal(allocator, &record->single.normal.pattern, "H:mm:ss\xd9\xabSSS");
     pattern_equal(allocator, &record->single.twelve.pattern, "a h:mm:ss\xd9\xabSSS");
+    record = find(programs, (1U << QJS_INTL_DATETIME_MINUTE) | (1U << QJS_INTL_DATETIME_SECOND) |
+                            (1U << QJS_INTL_DATETIME_FRACTION), 2);
+    pattern_equal(allocator, &record->single.normal.pattern, "mm:ss\xd9\xabSS");
+    assert(!record->single.twelve.pattern.count);
     record = find(programs, 477, 0); /* complete date + clock, exact connector */
     assert(record->construction == QJS_INTL_DATE_ORDINARY_COMBINE);
     assert(record->connector.origin_width == QJS_INTL_DATE_STYLE_SHORT &&
