@@ -2867,6 +2867,14 @@ test(
 )
 
 test(
+  'intl-timezone-name-tables',
+  python,
+  args: files('test_intl_timezone_name_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-timezone-names',
   python,
   args: files('test_intl_timezone_names.py'),
