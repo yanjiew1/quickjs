@@ -41,16 +41,6 @@ static QJSIntlStatus skeleton_info(QJSIntlBytes source, QJSIntlDatePatternInfo *
     return view.count ? qjs_intl_date_pattern_info(&view, out) : QJS_INTL_UNSUPPORTED;
 }
 
-static unsigned int component_mask(const QJSIntlDateTimeComponents *components)
-{
-    unsigned int result = 0;
-    size_t i;
-    for (i = 0; i < QJS_INTL_DATETIME_COMPONENT_COUNT; i++)
-        if (components->values[i])
-            result |= 1U << i;
-    return result;
-}
-
 static QJSIntlStatus resolve(const QJSIntlDateIntervalData *data, uint32_t head,
                              char symbol, QJSIntlDateIntervalEntry *out)
 {
@@ -199,7 +189,7 @@ QJSIntlStatus qjs_intl_date_interval_set_open(const QJSIntlDateIntervalData *dat
     status = qjs_intl_date_pattern_info(ordinary, &info);
     if (status)
         return status;
-    wanted = component_mask(&info.components);
+    wanted = qjs_intl_datetime_component_mask(&info.components);
     last_field = qjs_intl_date_range_last_field(&info.components);
     result.allocator = *allocator;
     for (j = 0; j < QJS_INTL_DATE_RANGE_FIELD_COUNT; j++)
@@ -242,7 +232,7 @@ QJSIntlStatus qjs_intl_date_interval_set_open(const QJSIntlDateIntervalData *dat
                 continue;
             if (!status)
                 status = qjs_intl_date_interval_program_open(allocator, entry.text, &info, cycle, &program);
-            if (!status && (wanted & ~component_mask(&program.components)))
+            if (!status && (wanted & ~qjs_intl_datetime_component_mask(&program.components)))
                 status = QJS_INTL_UNSUPPORTED;
             /* A changed field must actually expose both endpoints. Keep the
                ordinary period semantics used by the comparison kernel; adding
