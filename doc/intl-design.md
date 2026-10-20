@@ -879,6 +879,68 @@ without guessing punctuation. Unmatched templates or larger incomplete layouts
 remain unsupported; extraction and layout expansion have explicit provenance
 flags. Successful style pairs do not establish final range/renderer capability.
 
+`datetime/numeric.[ch]` executes numeric/literal single-date programs against
+fully specified local numeric fields. It uses selected NumberFormat instances
+with grouping off and prescribed minimum integer widths, collapses each result
+to one date-field part, and keeps its complete localized text. Two-digit output
+retains the last two Unicode code points; supplementary digits occupy two UTF-16
+units each. Calendar years at or below zero use 1-year, related years retain their
+sign, resolved hour cycles override raw h/H/K/k, and fractional milliseconds are
+truncated before formatting. Own output independently of programs and number
+services; unwind all temporary numeric results on failure. Named/zone fields
+remain explicitly unsupported by this numeric kernel, to be composed by the
+full renderer with chronology/name/zone services. The shared output vocabulary
+now distinguishes date-field parts; number-bearing consumers retain their
+original number-only type bound.
+
+`datetime/text.[ch]` composes numeric fields with native localized era, month,
+weekday, cyclic-year and day-period names into owned UTF-16 and typed parts.
+Reuse the numeric kernel one field at a time; do not duplicate its digit,
+year/hour or fractional rules. Resolve names and unary leap affixes once before
+bounded two-pass emission. A complete decorated named month is one month part;
+apostrophes in CLDR unary templates are literal, unlike LDML pattern quotes.
+The grammar-only unary parser lives in `common`, shared with unit formatting.
+
+Era codes use explicit metadata rather than arithmetic on raw CLDR IDs. ISO's
+localized catalog stays distinct from its Gregorian era mapping; historical
+Japanese uses Gregorian labels. Hebrew names use their independent raw keys and
+year selectors. Only Chinese/Dangi's repeated nominal months receive the exact
+inherited named-month leap template. Numeric months still go directly through
+FormatNumeric: the pinned ECMA-402 numeric branch does not specify CLDR's numeric
+leap decoration, so it is not silently inserted. Flexible day periods consume
+resolved format rules and a separate full-precision subsecond fact; noon plus
+one nanosecond must not use an exact-noon point. Missing/blocked/empty names or
+required templates return unsupported here, without invented lateral fallbacks.
+The final service owns admission and the standard's permitted unavailable-name
+fallback policy. Zones, complete service admission and the public constructor
+remain separate work; this renderer alone does not advertise DateTimeFormat.
+
+`datetime/chronology.[ch]` converts checked local epoch days through the shared
+calendar facade, then projects native formatting fields without allocating or
+borrowing localized data. Keep arithmetic/era years separate and let the numeric
+renderer apply nonpositive-year adjustment only once. Modern Japanese and
+Ethiopic formatting use era-relative years; historical Japanese uses Gregorian
+era presentation. Mandatory Gregorian formatting uses core ISO arithmetic even
+without native calendar extensions. Hebrew numeric months remain ordinal while
+raw name keys follow monthCode; Chinese/Dangi numeric months are nominal, with
+separate leap decoration and mathematical cyclic-year modulo. Preserve related
+years independently. The calendar algorithms/data link for either Intl or
+Temporal consumers, without requiring Temporal's JavaScript bindings.
+
+Non-Gregorian ToLocalTime calculations remain implementation-defined in the
+pinned draft. Its unconditional nonpositive-year formatting step can differ
+from ICU for negative single-era years; this implementation follows the specified
+formatting step rather than silently introducing another era or skipping it.
+
+`datetime/era-data.[ch]` owns explicit CLDR canonical-era to raw name-key
+metadata from supplemental calendarData, independently of localized-name and
+calendar-arithmetic owners. Optional section 35 keeps raw calendar identities
+and arbitrary decimal name keys; it never derives Japanese IDs from era order
+or creates named eras from Chinese/Dangi sequential epoch records. Era boundaries,
+inherited Gregorian presentation and canonical aliases remain consumer policy.
+Opening validates each shared string once per grammar domain and checks both
+mapping domains; ordinary lookup allocates nothing and borrows the unchanged pack.
+
 `locale/type-identity.[ch]` resolves exact metadata names and complete legacy
 alias tokens to a terminal preferred identity, without applying Unicode-type
 syntax to raw source spellings. The scan is restricted to one extension/key.

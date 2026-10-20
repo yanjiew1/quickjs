@@ -36,7 +36,7 @@ static int body_valid(const QJSIntlFormatted *body)
     for (i = 0; i < body->part_count; i++) {
         const QJSIntlPart *part = &body->parts[i];
         if (part->start != at || part->end < at || part->end > body->length ||
-            part->type == QJS_INTL_PART_ELEMENT || (unsigned int)part->type >= QJS_INTL_PART_COUNT)
+            part->type == QJS_INTL_PART_ELEMENT || (unsigned int)part->type >= QJS_INTL_PART_NUMBER_COUNT)
             return 0;
         at = part->end;
     }
