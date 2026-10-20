@@ -101,6 +101,10 @@ jobs:
           --sources "$RUNNER_TEMP/intl-cache/cldr-49"
         timeout 120s python3 tools/intl/date_pattern_syntax.py \
           --sources "$RUNNER_TEMP/intl-cache/cldr-49" --combinations
+    - name: Audit localized timezone-name sources
+      run: |
+        timeout 120s python3 tools/intl/timezone_names.py \
+          --sources "$RUNNER_TEMP/intl-cache/cldr-49"
     - name: Audit currency names and fraction metadata
       run: |
         timeout 120s python3 tools/intl/currencies.py \
