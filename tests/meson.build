@@ -1580,6 +1580,8 @@ if intl_enabled
       c_args: host_args,
       include_directories: inc,
       dependencies: host_deps,
+      # Avoid reprocessing the same large immutable array at every LTO test link.
+      override_options: ['b_lto=false'],
     )
     intl_data_test = {
       'name': ('test_intl_data_' + profile),
