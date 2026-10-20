@@ -1003,6 +1003,14 @@ This is a separate plain-clock record with explicit construction provenance;
 original B-bearing source and public dayPeriod records remain unchanged. Do
 not strip a source field and guess which surrounding punctuation belongs to it.
 
+Native ordinary formats also include single B, BBBB and BBBBB field programs,
+as permitted by TR35's flexible-day-period skeletons. Their metadata retains
+the actual short/long/narrow width, and their construction provenance does not
+claim a CLDR available-format source. Existing real records keep precedence.
+These programs still use format-context names and formatting rules, including
+exact midnight/noon; absence of an hour does not select stand-alone-context
+names or selection rules. Name capability admission remains a later step.
+
 Programs own token/literal storage independently of input pools. Retain source
 indexes, exact append/connector provenance and backward construction links;
 borrow only provenance slices from unchanged packs. Missing/BLOCK/empty evidence
