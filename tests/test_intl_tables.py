@@ -345,6 +345,12 @@ class TableTests(unittest.TestCase):
             self.assertIn(('midnight', 'at', 0, 0), groups['selection', 'gsw'])
             self.assertIn(('format', 'hi-Latn'), groups)
             self.assertNotIn(('format', 'sr-Latn'), groups)
+            eras = view['calendar_eras']
+            self.assertIsNotNone(eras)
+            self.assertEqual(len(eras['rows']), 27)
+            self.assertIn(('japanese', 'reiwa', '236'), eras['rows'])
+            self.assertIn(('coptic', 'am', '1'), eras['rows'])
+            self.assertIn(('hebrew', 'am', '0'), eras['rows'])
             zone_names = view['timezone_names']
             self.assertIsNotNone(zone_names)
             presentation = view['timezone_presentation']
@@ -564,6 +570,8 @@ class TableTests(unittest.TestCase):
         self.assertEqual(full_view['numbering'], minimal_view['numbering'])
         self.assertEqual(full_view['timezone_presentation'], minimal_view['timezone_presentation'])
         self.assertEqual(full_view['dayperiod_rules'], minimal_view['dayperiod_rules'])
+        self.assertEqual(full_view['calendar_eras'], {'rows': ()})
+        self.assertEqual(full_view['calendar_eras'], minimal_view['calendar_eras'])
         self.assertEqual(full_view['dayperiod_rules'], dayperiod_rules.collect(DayPeriodSources()))
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
