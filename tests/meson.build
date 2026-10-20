@@ -2459,6 +2459,8 @@ if intl_enabled
       '../src/intl/locale/native-data.c',
       '../src/intl/locale/preference-data.c',
       '../src/intl/locale/preferences.c',
+      '../src/intl/locale/type-identity.c',
+      '../src/intl/locale/timezone-identity.c',
       '../src/intl/common/locale-grammar.c',
       '../src/intl/native/data.c',
       '../src/intl/native/pack.c',
@@ -3208,6 +3210,33 @@ if intl_enabled
       },
     }]
   endforeach
+
+  intl_locale_info_fixture = custom_target(
+    'intl-locale-info-authored-fixture',
+    output: 'intl-locale-info-authored-fixture.c',
+    command: [
+      python,
+      files('intl_locale_info_fixture.py'),
+      '--output', '@OUTPUT@',
+    ],
+    depend_files: intl_tool_dependencies,
+  )
+  intl_locale_info_test = {
+    'name': 'test_intl_locale_info',
+    'sources': intl_locale_sources + files(
+      'test_intl_locale_info.c',
+    ) + [intl_locale_info_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_locale_info_test,
+    'name': 'intl-locale-info-sources',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
 endif
 
 # Preserve authored synthetic providers; ordinary tests use the selected sources.
