@@ -96,8 +96,9 @@ static void check_entries(const QJSIntlDateAvailableData *data)
         QJSIntlDateAvailableNode node;
         uint32_t start, count;
         assert(!qjs_intl_date_available_node(data, i, &node));
-        start = qjs_intl_read_u32(data->maps + (size_t)node.map * 8);
-        count = qjs_intl_read_u32(data->maps + (size_t)node.map * 8 + 4);
+        assert(!qjs_intl_date_available_map(data, node.map, &start, &count));
+        assert(start == qjs_intl_read_u32(data->maps + (size_t)node.map * 8));
+        assert(count == qjs_intl_read_u32(data->maps + (size_t)node.map * 8 + 4));
         for (j = 0; j < count; j++) {
             const uint8_t *field = data->entries + ((size_t)start + j) * 16;
             QJSIntlBytes code, alt, text;
@@ -106,7 +107,16 @@ static void check_entries(const QJSIntlDateAvailableData *data)
             uint32_t value = qjs_intl_read_u32(field + 12);
             assert(!qjs_intl_data_string(&data->data, qjs_intl_read_u32(field), &code));
             assert(!qjs_intl_data_string(&data->data, qjs_intl_read_u32(field + 8), &alt));
-            assert(!qjs_intl_date_available_lookup(data, i, code, plural, alt, &entry));
+            {
+                QJSIntlDateAvailableEntry indexed;
+                assert(!qjs_intl_date_available_entry_at(data, start + j, &indexed));
+                assert(indexed.plural == plural && indexed.code.length == code.length && indexed.alt.length == alt.length);
+                assert(!memcmp(indexed.code.data, code.data, code.length));
+                assert(!alt.length || !memcmp(indexed.alt.data, alt.data, alt.length));
+                assert(!qjs_intl_date_available_lookup(data, i, code, plural, alt, &entry));
+                assert(indexed.blocked == entry.blocked && indexed.text.length == entry.text.length);
+                assert(!entry.text.length || !memcmp(indexed.text.data, entry.text.data, entry.text.length));
+            }
             assert(entry.plural == plural && entry.code.length == code.length && entry.alt.length == alt.length);
             assert(!memcmp(entry.code.data, code.data, code.length));
             assert(!alt.length || !memcmp(entry.alt.data, alt.data, alt.length));
