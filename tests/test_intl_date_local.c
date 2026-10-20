@@ -125,6 +125,12 @@ static void named(void)
 
 int main(void)
 {
+    {
+        const QJSTimeZone *utc;
+        int constant = 0;
+        assert(!qjs_timezone_lookup(&utc, "UTC", 3));
+        assert(!qjs_timezone_info_is_constant(utc, INT64_MIN, INT64_MAX, &constant) && constant);
+    }
     core();
     named();
     errors();
