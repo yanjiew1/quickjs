@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Authored field labels and templates independent of prepared CLDR data."""
+import argparse
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools' / 'intl'))
+from acquire import atomic_write
+import bundle
+import calendar_names
+import calendar_name_tables as names_wire
+import calendar_era_tables as era_wire
+import embed
+from resolve import BLOCK
+import tables
+from test_intl_calendar_names import Sources, calendar, group
+from test_intl_list_patterns import graph
+
+
+def pack():
+    source = Sources()
+    eras = '<eras><eraAbbr><era type="0">BCE</era><era type="1">CE</era></eraAbbr></eras>'
+    lunar = '''<months><monthContext type="format"><monthWidth type="wide">
+      <month type="2">second月</month></monthWidth>
+      <monthWidth type="abbreviated"><month type="2">second-abbr</month></monthWidth></monthContext>
+      <monthContext type="stand-alone"><monthWidth type="wide"><month type="2">standalone月</month>
+      </monthWidth></monthContext></months>
+      <monthPatterns><monthPatternContext type="format"><monthPatternWidth type="wide">
+      <monthPattern type="leap">閏'{0}'!</monthPattern></monthPatternWidth>
+      <monthPatternWidth type="abbreviated"><monthPattern type="leap">{1}</monthPattern>
+      </monthPatternWidth></monthPatternContext>
+      <monthPatternContext type="stand-alone"><monthPatternWidth type="wide">
+      <monthPattern type="leap">({0})閏</monthPattern></monthPatternWidth>
+      </monthPatternContext></monthPatterns>
+      <cyclicNameSets><cyclicNameSet type="years"><cyclicNameContext type="format">
+      <cyclicNameWidth type="abbreviated"><cyclicName type="40">cycle四十</cyclicName>
+      </cyclicNameWidth></cyclicNameContext></cyclicNameSet></cyclicNameSets>'''
+    source.set('root', calendar('gregorian', eras +
+        group('months', '<month type="1">January</month>') +
+        '<days><dayContext type="format"><dayWidth type="wide"><day type="sun">Sunday</day>'
+        '</dayWidth><dayWidth type="abbreviated"><day type="sun">Sun</day></dayWidth>'
+        '</dayContext></days>' +
+        group('dayPeriods', '<dayPeriod type="am">AM</dayPeriod><dayPeriod type="pm">PM</dayPeriod>'
+              '<dayPeriod type="noon">NOON</dayPeriod><dayPeriod type="morning1">morning</dayPeriod>',
+              width='abbreviated')) +
+        calendar('iso8601', eras.replace('>CE</era>', '>ISO-CE</era>')) +
+        calendar('japanese', '<eras><eraAbbr><era type="236">Reiwa</era>'
+                 '<era type="999">Future</era></eraAbbr></eras>') +
+        calendar('hebrew', group('months', '<month type="6">Adar I</month>'
+                 '<month type="7" yeartype="leap">Adar II</month><month type="7">Adar</month>')) +
+        calendar('chinese', lunar) + calendar('dangi', lunar))
+    source.set('en', calendar('gregorian', group('months', '<month type="2">' + BLOCK + '</month>'
+               '<month type="3"/>') + group('dayPeriods', '<dayPeriod type="noon"/>', width='abbreviated')))
+    tags = graph().tags
+    names = names_wire.select(calendar_names.collect(source, graph()), tags)
+    eras = {'rows': (('gregorian', 'bce', '0'), ('gregorian', 'ce', '1'),
+                     ('japanese', 'next-era', '999'), ('japanese', 'reiwa', '236'))}
+    pool = tuple(sorted(names_wire.strings(names) | era_wire.strings(eras) | set(tags),
+                        key=lambda text: text.encode('utf-8')))
+    ids = {text: i for i, text in enumerate(pool)}
+    binary = bundle.pack({bundle.STRINGS: tables.encode_strings(pool),
+                          bundle.LOCALES: tables.encode_locales(tags, graph(), ids),
+                          bundle.CALENDAR_NAMES: names_wire.encode(names, tags, ids),
+                          bundle.CALENDAR_ERAS: era_wire.encode(eras, ids)}, bytes(32), 'minimal')
+    tables.validate(binary)
+    return binary
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    text = embed.render(pack()).replace('qjs_intl_native', 'qjs_intl_date_text_fixture')
+    atomic_write(args.output, text.encode('ascii'))
