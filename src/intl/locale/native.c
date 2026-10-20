@@ -4,6 +4,8 @@
 #include "native-id.h"
 #include "preference-data.h"
 #include "matching.h"
+#include "type-identity.h"
+#include "timezone-identity.h"
 #include <string.h>
 
 struct QJSIntlLocaleService {
@@ -110,6 +112,56 @@ QJSIntlStatus qjs_intl_locale_hour_data(const QJSIntlLocaleService *service,
 {
     return qjs_intl_preference_list(service ? &service->preferences : NULL, 1, key, out,
                                     count);
+}
+
+QJSIntlStatus qjs_intl_locale_calendar_data(const QJSIntlLocaleService *service,
+                                            QJSIntlBytes key, QJSIntlBytes *out,
+                                            uint32_t *count)
+{
+    return qjs_intl_preference_list(service ? &service->preferences : NULL, 0, key,
+                                    out, count);
+}
+
+QJSIntlStatus qjs_intl_locale_source_type(const QJSIntlLocaleService *service,
+                                          QJSIntlBytes key, QJSIntlBytes value,
+                                          QJSIntlBytes *out)
+{
+    QJSIntlLocaleType type;
+    uint32_t index;
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!service || !out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_locale_type_identity(&service->metadata, (QJSIntlBytes){"u", 1},
+                                           key, value, &index);
+    if (!status)
+        status = qjs_intl_locale_type_at(&service->metadata, index, &type);
+    if (!status)
+        *out = type.name;
+    return status;
+}
+
+QJSIntlStatus qjs_intl_locale_timezone_count(const QJSIntlLocaleService *service,
+                                             QJSIntlBytes territory, uint32_t *out)
+{
+    return qjs_intl_timezone_region_count(service ? &service->metadata : NULL, territory, out);
+}
+
+QJSIntlStatus qjs_intl_locale_timezone_next(const QJSIntlLocaleService *service,
+                                            QJSIntlBytes territory, uint32_t *cursor,
+                                            QJSIntlBytes *out)
+{
+    QJSIntlTimeZoneIdentity identity;
+    QJSIntlStatus status;
+    if (out)
+        memset(out, 0, sizeof(*out));
+    if (!service || !out)
+        return QJS_INTL_INVALID_ARGUMENT;
+    status = qjs_intl_timezone_region_next(&service->metadata, territory, cursor, &identity);
+    if (!status)
+        *out = identity.identifier;
+    return status;
 }
 
 QJSIntlStatus qjs_intl_locale_script_direction(const QJSIntlLocaleService *service,
