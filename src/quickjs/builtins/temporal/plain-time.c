@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include "temporal-internal.h"
+#include "../intl.h"
 #include "../../../temporal/duration.h"
 #include "../../../temporal/time.h"
 
@@ -457,6 +458,11 @@ static JSValue js_temporal_plain_time_to_string(JSContext *ctx,
     time = JS_GetOpaque2(ctx, this_val, JS_CLASS_TEMPORAL_PLAIN_TIME);
     if (!time)
         return JS_EXCEPTION;
+#ifdef CONFIG_INTL
+    if (kind == 2)
+        return js_intl_format_date_time(ctx, this_val, argc, argv,
+                                          QJS_INTL_DATE_REQUIRE_TIME, QJS_INTL_DATE_DEFAULT_TIME);
+#endif
     result = *time;
     precision.precision = -1;
     if (kind == 0) {
