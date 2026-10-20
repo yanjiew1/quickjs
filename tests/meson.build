@@ -1236,6 +1236,40 @@ if intl_enabled
     },
   }]
 
+  intl_date_name_select_fixture = custom_target(
+    'intl-date-name-select-authored-fixture',
+    output: 'intl-date-name-select-authored-fixture.c',
+    command: [python, files('intl_date_name_select_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_calendar_names.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_name_select_test = {
+    'name': 'test_intl_date_name_select',
+    'sources': files(
+      'test_intl_date_name_select.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/dayperiod-code.c',
+      '../src/intl/datetime/name-data.c',
+      '../src/intl/datetime/name-select.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_date_name_select_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_name_select_test,
+    'name': 'intl-date-name-select',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_combination_fixture = custom_target(
     'intl-date-combination-authored-fixture',
     output: 'intl-date-combination-authored-fixture.c',
@@ -1585,6 +1619,30 @@ if intl_enabled
   component_test_specs += [{
     'target': intl_dayperiod_authored,
     'name': 'intl-dayperiod-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
+  intl_dayperiod_select_test = {
+    'name': 'test_intl_dayperiod_select',
+    'sources': files(
+      'test_intl_dayperiod_select.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/common/source-locale.c',
+      '../src/intl/datetime/dayperiod-code.c',
+      '../src/intl/datetime/dayperiod-data.c',
+      '../src/intl/datetime/dayperiod.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+    ) + [intl_dayperiod_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_dayperiod_select_test,
+    'name': 'intl-dayperiod-select',
     'options': {
       'suite': ['repo', 'native'],
       'timeout': 30,
