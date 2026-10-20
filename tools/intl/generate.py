@@ -17,6 +17,8 @@ import date_intervals
 import date_interval_tables
 import timezone_names
 import timezone_name_tables
+import timezone_presentation
+import timezone_presentation_tables
 import date_available_formats
 import date_available_tables
 import date_field_names
@@ -95,8 +97,12 @@ def generate(sources, profile):
     date_available_data = date_available_formats.collect(inputs_read, graph)
     date_interval_data = date_intervals.collect(inputs_read, graph)
     timezone_name_data = timezone_names.collect(inputs_read, graph)
+    timezone_presentation_data = timezone_presentation_tables.runtime_records(
+        timezone_presentation.collect(inputs_read, locale_data))
     display_data = display_names.collect(inputs_read, graph)
     lists = list_patterns.collect(inputs_read, graph)
+    # Only formatter locale rows are reduced for minimal. Global identity,
+    # preferences and timezone metadata retain their full source coverage.
     if profile == 'native':
         tags = graph.tags
     else:
@@ -152,6 +158,7 @@ def generate(sources, profile):
     pool_strings.update(date_available_tables.strings(date_available_data))
     pool_strings.update(date_interval_tables.strings(date_interval_data))
     pool_strings.update(timezone_name_tables.strings(timezone_name_data))
+    pool_strings.update(timezone_presentation_tables.strings(timezone_presentation_data))
     pool_strings.update(display_tables.strings(display_data))
     pool_strings.update(text for locale, variant, values in selected for text in values)
     pool_strings.update(text for locale, variant, kind, pair, end in contexts
@@ -185,6 +192,7 @@ def generate(sources, profile):
     sections[bundle.DATE_AVAILABLE_FORMATS] = date_available_tables.encode(date_available_data, tags, string_ids)
     sections[bundle.DATE_INTERVALS] = date_interval_tables.encode(date_interval_data, tags, string_ids)
     sections[bundle.TIMEZONE_NAMES] = timezone_name_tables.encode(timezone_name_data, tags, string_ids)
+    sections[bundle.TIMEZONE_PRESENTATION] = timezone_presentation_tables.encode(timezone_presentation_data, string_ids)
     sections[bundle.DISPLAY_NAMES] = display_tables.encode(display_data, tags, string_ids)
     inputs = {'schema': list(bundle.VERSION), 'profile': profile,
               'cldr': copy.deepcopy(sources.pin),
@@ -204,6 +212,7 @@ def generate(sources, profile):
                          'compact maps, currency/layout/unit facts, division grammar, relative/duration '
                          'source facts, date-field labels, date/time styles and connectors, calendar names, '
                          'available date patterns, append templates, interval and localized timezone source layers, '
+                         'supplemental metazone presentation facts, '
                          'layered display names and plural rules; '
                          'not formatter capability '
                          'or full Intl coverage.')}
