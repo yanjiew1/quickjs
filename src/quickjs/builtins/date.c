@@ -33,6 +33,7 @@
 #include "../internal/error.h"
 #include "../internal/function-list.h"
 #include "date.h"
+#include "intl.h"
 #include "../internal/default-time-zone.h"
 #ifdef CONFIG_TEMPORAL
 #include "temporal/temporal-internal.h"
@@ -571,6 +572,20 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
     fmt = (magic >> 4) & 0x0F;
     part = magic & 0x0F;
 
+#ifdef CONFIG_INTL
+    if (fmt == 3) {
+        double value;
+        if (JS_ThisDateValue(ctx, &value, this_val))
+            return JS_EXCEPTION;
+        if (isnan(value))
+            return js_new_string8(ctx, "Invalid Date");
+        return js_intl_format_date_time(ctx, JS_NewFloat64(ctx, value), argc, argv,
+                   part == 1 ? QJS_INTL_DATE_REQUIRE_DATE :
+                   part == 2 ? QJS_INTL_DATE_REQUIRE_TIME : QJS_INTL_DATE_REQUIRE_ANY,
+                   part == 1 ? QJS_INTL_DATE_DEFAULT_DATE :
+                   part == 2 ? QJS_INTL_DATE_DEFAULT_TIME : QJS_INTL_DATE_DEFAULT_ALL);
+    }
+#endif
     res = get_date_fields(ctx, this_val, fields, fmt & 1, 0);
     if (res < 0)
         return JS_EXCEPTION;
@@ -678,21 +693,21 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
     return JS_NewStringLen(ctx, buf, pos);
 }
 
-#ifdef CONFIG_TEMPORAL
-/* Floor and clamp the shared host clock directly to milliseconds. */
-static __exception int date_now(JSContext *ctx, int64_t *result)
+__exception int js_date_now(JSContext *ctx, int64_t *result)
 {
+#ifdef CONFIG_TEMPORAL
+    /* Floor and clamp the shared host clock directly to milliseconds. */
     int error = qjs_temporal_system_milliseconds(result);
     return date_backend_error(ctx, error ? QJS_TZ_DATA : 0);
-}
 #else
-/* OS dependent: return the UTC time in ms since 1970. */
-static int64_t date_now(void) {
+    /* OS dependent: return the UTC time in ms since 1970. */
     struct timeval tv;
+    (void)ctx;
     gettimeofday(&tv, NULL);
-    return (int64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
-}
+    *result = (int64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
+    return 0;
 #endif
+}
 
 static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
                                    int argc, JSValueConst *argv)
@@ -708,14 +723,10 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
     }
     n = argc;
     if (n == 0) {
-#ifdef CONFIG_TEMPORAL
         int64_t milliseconds;
-        if (date_now(ctx, &milliseconds))
+        if (js_date_now(ctx, &milliseconds))
             return JS_EXCEPTION;
         val = (double)milliseconds;
-#else
-        val = date_now();
-#endif
     } else if (n == 1) {
         JSValue v, dv;
         if (JS_VALUE_GET_TAG(argv[0]) == JS_TAG_OBJECT) {
@@ -1344,14 +1355,10 @@ static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv)
 {
     // now()
-#ifdef CONFIG_TEMPORAL
     int64_t milliseconds;
-    if (date_now(ctx, &milliseconds))
+    if (js_date_now(ctx, &milliseconds))
         return JS_EXCEPTION;
     return JS_NewInt64(ctx, milliseconds);
-#else
-    return JS_NewInt64(ctx, date_now());
-#endif
 }
 
 static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,

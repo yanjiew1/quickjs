@@ -13,6 +13,7 @@
 #include "../../intl/relative/relative.h"
 #include "../../intl/duration/duration.h"
 #include "../../intl/display/display.h"
+#include "../../intl/datetime/datetime.h"
 
 typedef struct JSIntlLocaleList {
     char **items;
@@ -32,6 +33,11 @@ int js_intl_init_number_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_relative_time_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_duration_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_display_names(JSContext *ctx, JSValueConst namespace_object);
+int js_intl_init_date_time_format(JSContext *ctx, JSValueConst namespace_object);
+/* Locale-method callers first brand-check their receiver (and handle Date
+   NaN). Supply that Temporal receiver or the stored primitive Date value. */
+JSValue js_intl_format_date_time(JSContext *ctx, JSValueConst receiver, int argc, JSValueConst *argv,
+                                 QJSIntlDateRequired required, QJSIntlDateDefaults defaults);
 /* Convert one native partition without coercion. Exactly one result is present;
    names is the service's part-type whitelist, with NULL for disallowed types.
    Native results remain owned by the caller on success and failure. */
