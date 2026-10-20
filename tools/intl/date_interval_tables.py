@@ -9,7 +9,7 @@ import bundle
 from calendar_sources import CALENDAR
 import date_intervals as source
 from parents import locale_id
-from resolve import BLOCK, INHERIT
+from resolve import BLOCK, INHERIT, select_overlays
 
 VERSION, HEADER, SUFFIX_WIDTH, NODE_WIDTH, ENTRY_WIDTH = 1, 7, 4, 4, 3
 BLOCKED = 0xfffffffe
@@ -17,32 +17,7 @@ FAMILIES = source.FAMILIES
 
 
 def select(data, tags):
-    selected = set(tags)
-    rows = tuple(row for row in data['rows'] if row[0] in selected)
-    used = set()
-    for tag, group, head in rows:
-        if type(head) is not int or not 1 <= head <= len(data['nodes']):
-            raise ValueError('invalid interval chain reference')
-        while head:
-            if type(head) is not int or not 1 <= head <= len(data['nodes']):
-                raise ValueError('invalid interval chain reference')
-            if head in used:
-                break
-            used.add(head)
-            parent = data['nodes'][head - 1][3]
-            if type(parent) is not int or not 0 <= parent < head:
-                raise ValueError('invalid interval parent reference')
-            head = parent
-    nodes = tuple(sorted(used))
-    maps = sorted({data['nodes'][index - 1][2] for index in nodes})
-    if any(type(index) is not int or not 0 <= index < len(data['maps']) for index in maps):
-        raise ValueError('invalid interval map reference')
-    node_ids = {old: index + 1 for index, old in enumerate(nodes)}
-    map_ids = {old: index for index, old in enumerate(maps)}
-    return dict(data, maps=tuple(data['maps'][index] for index in maps),
-                nodes=tuple((locale, group, map_ids[index], node_ids.get(parent, 0))
-                            for old in nodes for locale, group, index, parent in (data['nodes'][old - 1],)),
-                rows=tuple((tag, group, node_ids[head]) for tag, group, head in rows))
+    return select_overlays(data, tags, 'interval')
 
 
 def valid_tags(tags):
