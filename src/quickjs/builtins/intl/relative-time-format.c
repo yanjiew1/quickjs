@@ -8,7 +8,7 @@
 static const char *const widths[] = {"long", "short", "narrow"};
 static const char *const numerics[] = {"always", "auto"};
 static const char *const units[] = {"second", "minute", "hour", "day", "week", "month", "quarter", "year"};
-static const char *const part_names[QJS_INTL_PART_COUNT] = {
+static const char *const part_names[QJS_INTL_PART_NUMBER_COUNT] = {
     "literal", "element", "integer", "group", "decimal", "fraction", "nan", "infinity",
     "minusSign", "plusSign", "percentSign", "currency", "exponentSeparator", "exponentMinusSign",
     "exponentInteger", "compact", "unit", "approximatelySign"};
@@ -175,7 +175,7 @@ static JSValue relative_parts(JSContext *ctx, const QJSIntlRelativeFormatted *fo
         const QJSIntlRelativePart *span = &formatted->parts[i];
         JSValue part;
         if (span->start != end || span->end < end || span->end > formatted->length ||
-            (unsigned int)span->type >= QJS_INTL_PART_COUNT || span->type == QJS_INTL_PART_ELEMENT ||
+            (unsigned int)span->type >= QJS_INTL_PART_NUMBER_COUNT || span->type == QJS_INTL_PART_ELEMENT ||
             (unsigned int)span->unit > QJS_INTL_RELATIVE_UNIT_COUNT)
             goto invalid;
         end = span->end;
