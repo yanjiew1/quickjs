@@ -22,7 +22,7 @@ def pack(blocked=False, hints=False):
     ordinary, append = ('gregorian', 'availableFormats', ''), ('gregorian', 'appendItems', '')
     patterns = (('M', 'L'), ('Md', 'M/d'), ('GyM', 'y M G'), ('GyMd', 'y M d G'),
                 ('Hm', 'H:mm'), ('Hms', 'H:mm:ss'), ('Bh', 'B h'), ('Bhm', 'B h:mm'),
-                ('Bhms', 'B h:mm:ss'), ('Eh', 'E h a'))
+                ('Bhms', 'B h:mm:ss'), ('Eh', 'E h a'), ('ms', 'mm:ss'))
     if hints:
         patterns += (('yMd', 'd MMM y'), ('yMMMd', 'd MMM y'))
     source = dict(calendars=('gregorian',), groups=tuple(sorted((ordinary, append))),
