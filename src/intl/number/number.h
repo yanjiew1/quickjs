@@ -94,6 +94,15 @@ QJSIntlStatus qjs_intl_number_default_system(const QJSIntlNumberService *, size_
    Empty names are unsupported. Reset supported on failure. */
 QJSIntlStatus qjs_intl_number_system_supported(const QJSIntlNumberService *, size_t locale,
                                                QJSIntlBytes name, int *supported);
+/* Global executable repertoire: supported in at least one admitted locale.
+   No allocation or metadata-only/algorithmic entries. next enumerates sorted
+   unique names borrowed until close. Start cursor at zero; success/exhaustion
+   advances it, other errors preserve it. Exhaustion is UNSUPPORTED. Non-NULL
+   outputs are cleared on errors; callers use fresh disjoint output storage. */
+QJSIntlStatus qjs_intl_number_system_available(const QJSIntlNumberService *,
+                                               QJSIntlBytes name, int *out);
+QJSIntlStatus qjs_intl_number_system_next(const QJSIntlNumberService *,
+                                          uint32_t *cursor, QJSIntlBytes *out);
 /* CurrencyDigits for a canonical uppercase code, including unknown codes.
    Return regular fraction digits, never cash digits or a rounding increment.
    The frontend uses this to resolve digit options before formatter_open.
