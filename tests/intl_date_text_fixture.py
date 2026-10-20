@@ -35,6 +35,21 @@ def pack():
       <cyclicNameSets><cyclicNameSet type="years"><cyclicNameContext type="format">
       <cyclicNameWidth type="abbreviated"><cyclicName type="40">cycle四十</cyclicName>
       </cyclicNameWidth></cyclicNameContext></cyclicNameSet></cyclicNameSets>'''
+    # Complete reachable lunar domains while retaining the special month/year
+    # labels used by rendering regressions below.
+    other = ''.join('<month type="' + str(i) + '">month' + str(i) + '</month>'
+                    for i in range(1, 13) if i != 2)
+    lunar = lunar.replace('<month type="2">second月</month>', other + '<month type="2">second月</month>')
+    lunar = lunar.replace('<month type="2">second-abbr</month>', other + '<month type="2">second-abbr</month>')
+    lunar = lunar.replace('<month type="2">standalone月</month>', other + '<month type="2">standalone月</month>')
+    cycles = ''.join('<cyclicName type="' + str(i) + '">cycle' + str(i) + '</cyclicName>'
+                     for i in range(1, 61) if i != 40)
+    lunar = lunar.replace('<cyclicName type="40">', cycles + '<cyclicName type="40">')
+    hebrew = ''.join('<month type="' + str(i) + '">month' + str(i) + '</month>'
+                     for i in range(1, 14) if i not in (6, 7))
+    periods = ''.join('<dayPeriod type="' + code + '">' + code + '</dayPeriod>'
+                      for code in ('midnight', 'noon', 'morning1', 'morning2', 'afternoon1',
+                                   'afternoon2', 'evening1', 'evening2', 'night1', 'night2'))
     source.set('root', calendar('gregorian', eras +
         group('months', '<month type="1">January</month>') +
         '<days><dayContext type="format"><dayWidth type="wide"><day type="sun">Sunday</day>'
@@ -46,9 +61,10 @@ def pack():
         calendar('iso8601', eras.replace('>CE</era>', '>ISO-CE</era>')) +
         calendar('japanese', '<eras><eraAbbr><era type="236">Reiwa</era>'
                  '<era type="999">Future</era></eraAbbr></eras>') +
-        calendar('hebrew', group('months', '<month type="6">Adar I</month>'
+        calendar('hebrew', group('months', hebrew + '<month type="6" yeartype="leap">Adar I</month>'
                  '<month type="7" yeartype="leap">Adar II</month><month type="7">Adar</month>')) +
-        calendar('chinese', lunar) + calendar('dangi', lunar))
+        calendar('chinese', lunar) + calendar('dangi', lunar) +
+        calendar('periodonly', group('dayPeriods', periods, width='abbreviated')))
     source.set('en', calendar('gregorian', group('months', '<month type="2">' + BLOCK + '</month>'
                '<month type="3"/>') + group('dayPeriods', '<dayPeriod type="noon"/>', width='abbreviated')))
     tags = graph().tags
