@@ -946,6 +946,18 @@ separate leap decoration and mathematical cyclic-year modulo. Preserve related
 years independently. The calendar algorithms/data link for either Intl or
 Temporal consumers, without requiring Temporal's JavaScript bindings.
 
+`datetime/local-time.[ch]` applies either an immutable named-zone rule or a
+fixed minute offset to normalized epoch seconds plus nanoseconds, then derives
+all calendar/clock fields from the same local day. Negative instants use floor
+division; historical named offsets retain seconds. Preserve the complete
+nanosecond remainder and a separate subsecond fact while deriving truncated
+milliseconds for numeric display. Return the raw rule DST designation for later
+presentation policy; CLDR offset overrides belong to zone-name selection, not
+this arithmetic bridge. Check addition bounds before applying an offset, and
+reset output on every failure. Input coercion and Date/Temporal range policy
+remain with the frontend. Shared timezone core, selected backend and generated
+data link for Intl or Temporal; Temporal JS bindings remain optional.
+
 Non-Gregorian ToLocalTime calculations remain implementation-defined in the
 pinned draft. Its unconditional nonpositive-year formatting step can differ
 from ICU for negative single-era years; this implementation follows the specified
