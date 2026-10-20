@@ -82,4 +82,12 @@ QJSIntlStatus qjs_intl_timezone_name_lookup(const QJSIntlTimeZoneNameData *data,
                                             uint32_t index, QJSIntlBytes code,
                                             QJSIntlTimeZoneNameType type, QJSIntlBytes alt,
                                             QJSIntlTimeZoneNameEntry *out);
+/* Resolve one exact key along the prepared chain; aliases retain their source
+   identity. BLOCK/empty stop inheritance. Zero head means missing. No alternate,
+   width, type or zone fallback. Allocate nothing, borrow unchanged pack text,
+   reset disjoint outputs on failure. */
+QJSIntlStatus qjs_intl_timezone_name_resolve(const QJSIntlTimeZoneNameData *data, uint32_t head,
+                                             QJSIntlBytes code, QJSIntlTimeZoneNameType type,
+                                             QJSIntlBytes alt, QJSIntlTimeZoneNameEntry *out,
+                                             QJSIntlTimeZoneNameNode *origin);
 #endif
