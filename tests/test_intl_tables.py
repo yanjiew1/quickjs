@@ -33,6 +33,7 @@ from test_intl_unit_patterns import Sources as UnitSources
 from test_intl_unit_grammar import Sources as GrammarSources
 from test_intl_relative_patterns import Sources as RelativeSources
 from test_intl_duration_patterns import Sources as DurationSources
+from test_intl_timezone_presentation import DTD as TIMEZONE_PRESENTATION_DTD
 import number_patterns
 import number_pattern_syntax
 from resolve import BLOCK
@@ -223,6 +224,17 @@ class VerifiedFixture(Sources):
         ET.SubElement(supplemental, 'parentLocales', component='plurals grammaticalFeatures')
         supplemental.append(ET.fromstring(currency_source.files[name]).find('currencyData'))
         self.files[name] = ET.tostring(supplemental, encoding='utf-8')
+        self.files['common/dtd/ldmlSupplemental.dtd'] += TIMEZONE_PRESENTATION_DTD
+        self.files['common/supplemental/metaZones.xml'] = b'''<supplementalData>
+          <metaZones><metazoneInfo><timezone type="Asia/Calcutta">
+            <usesMetazone mzone="India" stdOffset="+05:30"/>
+          </timezone></metazoneInfo><metazoneIds>
+            <metazoneId shortId="indi" longId="India"/>
+          </metazoneIds><mapTimezones typeVersion="authored">
+            <mapZone other="India" territory="001" type="Asia/Calcutta"/>
+          </mapTimezones></metaZones><primaryZones>
+            <primaryZone iso3166="IN">Asia/Calcutta</primaryZone>
+          </primaryZones></supplementalData>'''
         self.consumed = set()
         self.pin = {'release': 'authored-fixture', 'commit': '0' * 40,
                     'archive': {'sha256': '0' * 64}}
@@ -323,6 +335,12 @@ class TableTests(unittest.TestCase):
                 self.fail('prepared English interval source is missing yMd/d')
             zone_names = view['timezone_names']
             self.assertIsNotNone(zone_names)
+            presentation = view['timezone_presentation']
+            self.assertIsNotNone(presentation)
+            self.assertIn(('Africa/Monrovia', 63593070, None, 'GMT', None, None), presentation['periods'])
+            self.assertIn(('Europe/Dublin', 57722400, None, 'Irish', 0, 3600), presentation['periods'])
+            self.assertIn(('America_Pacific', '001', 'America/Los_Angeles'), presentation['preferred'])
+            self.assertIn(('CN', 'Asia/Shanghai'), presentation['primary'])
             key = ('metazone-name', 'America_Pacific', '', 'long', '')
             head = next(head for tag, group, head in zone_names['rows'] if (tag, group) == ('en', key))
             while head:
@@ -482,6 +500,10 @@ class TableTests(unittest.TestCase):
         minimal_view = tables.validate(minimal)
         self.assertEqual(minimal_view['locales'], ('en', 'root'))
         for view in (full_view, minimal_view):
+            presentation = view['timezone_presentation']
+            self.assertEqual(presentation['zones'], ('Asia/Calcutta',))
+            self.assertEqual(presentation['periods'], (('Asia/Calcutta', None, None, 'India', 19800, None),))
+            self.assertEqual(presentation['ids'], (('indi', 'India'),))
             zone_names = view['timezone_names']
             self.assertIsNotNone(zone_names)
             key = ('format', '', '', '', '')
@@ -528,6 +550,7 @@ class TableTests(unittest.TestCase):
         self.assertEqual(full_view['locale_metadata'], minimal_view['locale_metadata'])
         self.assertEqual(full_view['preferences'], minimal_view['preferences'])
         self.assertEqual(full_view['numbering'], minimal_view['numbering'])
+        self.assertEqual(full_view['timezone_presentation'], minimal_view['timezone_presentation'])
         for row in minimal_view['lists']:
             self.assertEqual(row, (' {0}\u00a0& {1} ',) * 36)
         changed = VerifiedFixture()
@@ -538,7 +561,7 @@ class TableTests(unittest.TestCase):
         source.pin['archive']['sha256'] = '2' * 64
         self.assertEqual(acquire.json_bytes(manifest), original)
         for name in ('supplementalData', 'supplementalMetadata', 'likelySubtags', 'numberingSystems',
-                     'grammaticalFeatures'):
+                     'grammaticalFeatures', 'metaZones'):
             self.assertIn('common/supplemental/' + name + '.xml', manifest['inputs']['sources'])
 
     def test_preference_wire_roundtrip_and_invalid_fields(self):
