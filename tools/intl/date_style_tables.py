@@ -3,6 +3,7 @@ import re
 import struct
 
 import bundle
+from calendar_sources import CALENDAR
 import date_patterns as source
 from parents import locale_id
 from resolve import BLOCK, INHERIT
@@ -24,7 +25,7 @@ def strings(data):
 
 def valid_inventories(calendars, alternates):
     if (not isinstance(calendars, tuple) or not calendars or
-            any(not isinstance(value, str) or not source.CALENDAR.fullmatch(value)
+            any(not isinstance(value, str) or not CALENDAR.fullmatch(value)
                 for value in calendars) or calendars != tuple(sorted(set(calendars)))):
         raise ValueError('invalid date-style calendar inventory')
     if (not isinstance(alternates, tuple) or not alternates or alternates[0] != '' or
