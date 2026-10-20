@@ -425,6 +425,7 @@ typedef struct Programs {
     QJSIntlDateSourceCandidates pool;
     QJSIntlDateAvailableSources append;
     QJSIntlDateOrdinaryPrograms ordinary;
+    QJSIntlDatePreparedStyle dates[QJS_INTL_DATE_STYLE_WIDTH_COUNT];
     QJSIntlDateNameAdmission names;
     unsigned char *admitted;
     uint32_t style_calendar, connector_calendar;
@@ -441,6 +442,9 @@ static unsigned int mask(const QJSIntlDateTimeComponents *components)
 
 static void programs_clear(const QJSIntlAllocator *allocator, Programs *programs)
 {
+    unsigned int i;
+    for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++)
+        qjs_intl_date_prepared_style_clear(&programs->dates[i]);
     if (programs->admitted)
         allocator->free(allocator->opaque, programs->admitted);
     qjs_intl_date_ordinary_programs_clear(&programs->ordinary);
@@ -552,6 +556,21 @@ static QJSIntlStatus programs_open(QJSIntlDateTimeFormatter *formatter, uint32_t
                 seen |= 1U << j;
     }
     status = seen == (1U << (sizeof(required) / sizeof(*required))) - 1 ? QJS_INTL_OK : QJS_INTL_UNSUPPORTED;
+    /* Real date styles are additional whole format records. In particular,
+       plain-value style adjustment can retain a wide weekday/month date even
+       when the available skeleton inventory contains only abbreviated forms. */
+    for (i = 0; !status && i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
+        QJSIntlDatePreparedStyle *date = &out->dates[i];
+        status = qjs_intl_date_style_date_open(&data->styles, locale, out->style_calendar, i, 0,
+                                               &out->pool, allocator, date);
+        if (!status)
+            status = qjs_intl_date_names_admit(&date->style.pattern, formatter->calendar,
+                                              &formatter->format.text, &out->names);
+        if (status == QJS_INTL_UNSUPPORTED) {
+            qjs_intl_date_prepared_style_clear(date);
+            status = QJS_INTL_OK;
+        }
+    }
 done:
     qjs_intl_date_format_sources_clear(&groups);
     qjs_intl_date_available_sources_clear(&patterns);
@@ -574,6 +593,8 @@ static QJSIntlStatus copy_record(QJSIntlDateTimeFormatter *formatter,
 static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Programs *programs,
                                   const QJSIntlDateTimeComponents *request, DateRecord *out)
 {
+    /* The native best-fit policy is BasicFormatMatcher. Both options retain
+       source order on equal scores. */
     int best = INT_MIN;
     size_t i, selected = SIZE_MAX;
     for (i = 0; i < programs->ordinary.count; i++) {
@@ -588,6 +609,27 @@ static QJSIntlStatus match_record(QJSIntlDateTimeFormatter *formatter, const Pro
         if (score > best) {
             best = score;
             selected = i;
+        }
+    }
+    {
+        size_t style = SIZE_MAX;
+        for (i = 0; i < QJS_INTL_DATE_STYLE_WIDTH_COUNT; i++) {
+            const QJSIntlDateStyleSource *date = &programs->dates[i].style;
+            QJSIntlStatus status;
+            int score;
+            if (!date->pattern.count)
+                continue;
+            status = qjs_intl_datetime_basic_score(request, &date->info.components, &score);
+            if (status)
+                return status;
+            if (score > best) {
+                best = score;
+                style = i;
+            }
+        }
+        if (style != SIZE_MAX) {
+            const QJSIntlDateStyleSource *date = &programs->dates[style].style;
+            return copy_record(formatter, &date->info.components, &date->pattern, NULL, out);
         }
     }
     if (selected == SIZE_MAX)
