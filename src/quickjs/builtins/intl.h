@@ -32,6 +32,12 @@ int js_intl_init_number_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_relative_time_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_duration_format(JSContext *ctx, JSValueConst namespace_object);
 int js_intl_init_display_names(JSContext *ctx, JSValueConst namespace_object);
+/* Convert one native partition without coercion. Exactly one result is present;
+   names is the service's part-type whitelist, with NULL for disallowed types.
+   Native results remain owned by the caller on success and failure. */
+JSValue js_intl_format_parts(JSContext *ctx, const QJSIntlFormatted *ordinary,
+                             const QJSIntlFormattedRange *range,
+                             const char *const *names, size_t name_count);
 /* value is a validated Temporal.Duration receiver; use the intrinsic ctor. */
 JSValue js_intl_format_duration(JSContext *ctx, JSValueConst value, int argc, JSValueConst *argv);
 /* Intrinsic Number/BigInt locale formatting. value is a validated primitive;
