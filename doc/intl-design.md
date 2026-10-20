@@ -115,6 +115,14 @@ capability. It does not retry region selection after filtering. An explicit
 calendar slot bypasses capability filtering, and an empty filtered list falls
 back to Gregorian. Raw preference readers do not depend on DateTimeFormat.
 
+`Locale.getTimeZones()` uses only the locale's explicit region, without
+maximization or rg/sd/tz keyword overrides. Shared metadata enumerates terminal
+CLDR timezone identities and their source territories; the binding then resolves
+supported primary identifiers through the selected timezone facade, deduplicates
+and sorts them. Determine territory before resolving links, so a source's country
+is not inferred from its target. No region yields undefined; an unknown explicit
+region yields a fresh empty array.
+
 ECMAScript-defined semantics belong to the common contract. Fixed pure
 algorithms normally have a shared implementation. A service operation may
 delegate a complete calculation to its backend when the observable behavior

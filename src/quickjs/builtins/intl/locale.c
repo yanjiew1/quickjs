@@ -8,6 +8,8 @@
 #include "../../../intl/locale/identifier.h"
 #include "../../../intl/locale/preferences.h"
 #include "../../../intl/common/locale-grammar.h"
+#include "../../../timezone/timezone.h"
+#include <stdlib.h>
 
 enum {
     SLOT_CA,
@@ -530,6 +532,88 @@ fail:
     return JS_EXCEPTION;
 }
 
+static int compare_zones(const void *left, const void *right)
+{
+    return strcmp(*(const char *const *)left, *(const char *const *)right);
+}
+
+static JSValue locale_timezones(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
+{
+    JSIntlLocale *locale = JS_GetOpaque2(ctx, this_val, JS_CLASS_INTL_LOCALE);
+    QJSIntlLocaleComponents parts;
+    QJSIntlLocaleService *service;
+    const char **zones = NULL;
+    uint32_t count, cursor = 0, used = 0, i, output = 0;
+    QJSIntlStatus status;
+    JSValue result = JS_UNDEFINED;
+
+    if (!locale)
+        return JS_EXCEPTION;
+    if (js_intl_error(ctx, qjs_intl_locale_components(
+            (QJSIntlBytes){locale->tag, strlen(locale->tag)}, &parts), "locale components"))
+        return JS_EXCEPTION;
+    /* TimeZonesOfLocale deliberately uses only an explicit region. Neither
+       maximization nor rg/sd/tz keywords supply or replace that region. */
+    if (!parts.region.data)
+        return JS_UNDEFINED;
+    service = js_intl_locale_service(ctx);
+    if (!service || js_intl_error(ctx, qjs_intl_locale_timezone_count(service,
+            parts.region, &count), "locale timezone territory"))
+        return JS_EXCEPTION;
+    if (count) {
+        if (sizeof(*zones) > SIZE_MAX / count) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
+        zones = js_malloc(ctx, (size_t)count * sizeof(*zones));
+        if (!zones)
+            goto fail;
+    }
+    for (;;) {
+        QJSIntlBytes source;
+        const QJSTimeZone *zone;
+        int error;
+        status = qjs_intl_locale_timezone_next(service, parts.region, &cursor, &source);
+        if (status == QJS_INTL_UNSUPPORTED)
+            break;
+        if (js_intl_error(ctx, status, "locale timezone source"))
+            goto fail;
+        /* Match the source's territory before resolving an IANA link; country
+           ownership must not be inferred from a link target's spelling. */
+        error = qjs_timezone_lookup(&zone, source.data, source.length);
+        if (error == QJS_TZ_RANGE || error == QJS_TZ_UNSUPPORTED)
+            continue;
+        if (error) {
+            js_intl_error(ctx, error == QJS_TZ_MEMORY ? QJS_INTL_NO_MEMORY : QJS_INTL_DATA_ERROR,
+                          "locale timezone support");
+            goto fail;
+        }
+        assert(used < count);
+        zones[used++] = qjs_timezone_primary_identifier(zone);
+    }
+    if (used > 1)
+        qsort(zones, used, sizeof(*zones), compare_zones);
+    result = JS_NewArray(ctx);
+    if (JS_IsException(result))
+        goto fail;
+    for (i = 0; i < used; i++) {
+        JSValue value;
+        if (i && !strcmp(zones[i - 1], zones[i]))
+            continue;
+        value = JS_NewString(ctx, zones[i]);
+        if (JS_IsException(value) || JS_DefinePropertyValueUint32(ctx, result, output++, value,
+                JS_PROP_C_W_E | JS_PROP_THROW) < 0)
+            goto fail;
+    }
+    js_free(ctx, zones);
+    return result;
+fail:
+    js_free(ctx, zones);
+    JS_FreeValue(ctx, result);
+    return JS_EXCEPTION;
+}
+
 enum { INFO_WEEK, INFO_TEXT, INFO_HOURS };
 
 static JSValue locale_info(JSContext *ctx, JSValueConst this_val, int argc,
@@ -651,6 +735,7 @@ static const JSCFunctionListEntry locale_properties[] = {
     JS_CFUNC_MAGIC_DEF("getHourCycles", 0, locale_info, INFO_HOURS),
     JS_CFUNC_DEF("getNumberingSystems", 0, locale_numbering_systems),
     JS_CFUNC_DEF("getCalendars", 0, locale_calendars),
+    JS_CFUNC_DEF("getTimeZones", 0, locale_timezones),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "Intl.Locale",
                        JS_PROP_CONFIGURABLE),
 };
