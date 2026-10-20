@@ -22,7 +22,7 @@ def pack(blocked=False):
     ordinary, append = ('gregorian', 'availableFormats', ''), ('gregorian', 'appendItems', '')
     patterns = (('M', 'L'), ('Md', 'M/d'), ('GyM', 'y M G'), ('GyMd', 'y M d G'),
                 ('Hm', 'H:mm'), ('Hms', 'H:mm:ss'), ('Bh', 'B h'), ('Bhm', 'B h:mm'),
-                ('Bhms', 'B h:mm:ss'), ('Eh', 'E h a'))
+                ('Bhms', 'B h:mm:ss'), ('Eh', 'E h a'), ('ms', 'mm:ss'))
     source = dict(calendars=('gregorian',), groups=tuple(sorted((ordinary, append))),
                   maps=(tuple((key, '', '', value) for key, value in patterns),
                         (('Year', '', '', BLOCK if blocked else '{1} [year] {0}'),
