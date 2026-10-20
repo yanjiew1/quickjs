@@ -232,6 +232,122 @@ static void check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailable
     qjs_intl_date_source_candidates_clear(&pool);
     assert(!state->live);
 }
+static void recovery_check(const QJSIntlDateStyleData *styles, const QJSIntlDateAvailableData *available,
+                            QJSIntlAllocator *allocator)
+{
+    static const struct { const char *calendar, *source, *expected; } cases[] = {
+        {"plain", "h:mm:ss a v", "hh:mm:ss a z"},
+        {"paren", "h:mm:ss a (v)", "hh:mm:ss a (z)"},
+        {"reverse", "v h:mm:ss a", "z hh:mm:ss a"},
+        {"comma", "h:mm:ss a, v", "hh:mm:ss a, z"},
+        {"cyrillic", "h:mm:ss a ч. v", "hh:mm:ss a ч. z"},
+        {"letters", "'''at''' h:mm:ss a + v", "'''at''' hh:mm:ss a + z"}
+    };
+    static const char *const hour_layout[] = {("h\xe2\x80\xaf" "a v")};
+    static const char *const before[] = {"a h v"};
+    static const char *const false_layouts[] = {"h a [v]", "h:mm a v"};
+    static const char *const expected[] = {
+        ("hh:mm:ss\xe2\x80\xaf" "a zzzz"), ("hh:mm:ss\xe2\x80\xaf" "a z"),
+        ("hh:mm:ss\xe2\x80\xaf" "a"), ("hh:mm\xe2\x80\xaf" "a")
+    };
+    Allocation *state = allocator->opaque;
+    QJSIntlDateSourceCandidates pool;
+    QJSIntlDateAvailableSources append;
+    QJSIntlDateStyleSource source;
+    QJSIntlDateSinglePrograms result, zero = {0};
+    QJSIntlDatePattern repeated, replacement, replaced, pattern_zero = {0};
+    uint32_t en = locale_id(&styles->data, "en-GB");
+    size_t i, j, calls, live;
+    for (i = 0; i < sizeof(cases) / sizeof(*cases); i++) {
+        pool_open(allocator, &cases[i].source, 1, &pool);
+        source = style(styles, en, calendar_id(styles, cases[i].calendar), QJS_INTL_DATE_STYLE_LONG, allocator);
+        append_open(available, en, cases[i].calendar, allocator, &append);
+        state->calls = 0;
+        assert(!qjs_intl_date_style_time_programs_open(&source, &pool, &append, allocator, &result));
+        calls = state->calls;
+        verify(&result);
+        assert(calls >= 4 && calls <= 16);
+        assert(result.twelve.source_index == 0 && result.normal.source_index == SIZE_MAX);
+        assert(result.twelve.adaptations == (QJS_INTL_DATE_ADAPT_HOUR_WIDTH |
+                                               QJS_INTL_DATE_ADAPT_ZONE_EXTRACT | QJS_INTL_DATE_ADAPT_ZONE_APPEND));
+        pattern_equal(allocator, &result.twelve.pattern, cases[i].expected);
+        pattern_equal(allocator, &pool.records[0].pattern, cases[i].source);
+        live = state->live;
+        for (j = 1; j <= calls; j++) {
+            QJSIntlDateSinglePrograms failed;
+            state->calls = 0;
+            state->fail_at = j;
+            assert(qjs_intl_date_style_time_programs_open(&source, &pool, &append, allocator, &failed) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&failed, &zero, sizeof(failed)) && state->live == live);
+            state->fail_at = 0;
+        }
+        qjs_intl_date_source_candidates_clear(&pool);
+        qjs_intl_date_style_source_clear(&source);
+        qjs_intl_date_available_sources_clear(&append);
+        pattern_equal(allocator, &result.twelve.pattern, cases[i].expected);
+        qjs_intl_date_single_programs_clear(&result);
+    }
+    pool_open(allocator, hour_layout, 1, &pool);
+    append_open(available, en, "recovery", allocator, &append);
+    for (i = 0; i < 4; i++) {
+        source = style(styles, en, calendar_id(styles, "recovery"), (QJSIntlDateStyleWidth)i, allocator);
+        state->calls = 0;
+        assert(!qjs_intl_date_style_time_programs_open(&source, &pool, &append, allocator, &result));
+        calls = state->calls;
+        assert(calls >= 4 && calls <= 16);
+        verify(&result);
+        assert(result.twelve.adaptations & QJS_INTL_DATE_ADAPT_PERIOD_LAYOUT);
+        pattern_equal(allocator, &result.twelve.pattern, expected[i]);
+        live = state->live;
+        for (j = 1; j <= calls; j++) {
+            QJSIntlDateSinglePrograms failed;
+            state->calls = 0;
+            state->fail_at = j;
+            assert(qjs_intl_date_style_time_programs_open(&source, &pool, &append, allocator, &failed) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&failed, &zero, sizeof(failed)) && state->live == live);
+            state->fail_at = 0;
+        }
+        qjs_intl_date_single_programs_clear(&result);
+        qjs_intl_date_style_source_clear(&source);
+    }
+    qjs_intl_date_source_candidates_clear(&pool);
+    qjs_intl_date_available_sources_clear(&append);
+    pool_open(allocator, before, 1, &pool);
+    append_open(available, en, "plain", allocator, &append);
+    source = style(styles, en, calendar_id(styles, "plain"), QJS_INTL_DATE_STYLE_MEDIUM, allocator);
+    assert(!qjs_intl_date_style_time_programs_open(&source, &pool, &append, allocator, &result));
+    pattern_equal(allocator, &result.twelve.pattern, "a h:m:s");
+    qjs_intl_date_single_programs_clear(&result);
+    qjs_intl_date_source_candidates_clear(&pool);
+    for (i = 0; i < sizeof(false_layouts) / sizeof(*false_layouts); i++) {
+        pool_open(allocator, &false_layouts[i], 1, &pool);
+        assert(qjs_intl_date_style_time_programs_open(&source, &pool, &append, allocator, &result) == QJS_INTL_UNSUPPORTED);
+        assert(!memcmp(&result, &zero, sizeof(result)));
+        qjs_intl_date_source_candidates_clear(&pool);
+    }
+    qjs_intl_date_style_source_clear(&source);
+    qjs_intl_date_available_sources_clear(&append);
+    pool_open(allocator, hour_layout, 1, &pool);
+    append_open(available, en, "unmatched", allocator, &append);
+    source = style(styles, en, calendar_id(styles, "unmatched"), QJS_INTL_DATE_STYLE_LONG, allocator);
+    assert(qjs_intl_date_style_time_programs_open(&source, &pool, &append, allocator, &result) == QJS_INTL_UNSUPPORTED);
+    assert(!memcmp(&result, &zero, sizeof(result)));
+    pattern_equal(allocator, &source.pattern, "HH:mm:ss [z]");
+    qjs_intl_date_source_candidates_clear(&pool);
+    qjs_intl_date_style_source_clear(&source);
+    qjs_intl_date_available_sources_clear(&append);
+    /* The pattern owner's splice also rejects ambiguous or absent targets. */
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("h h"), &repeated));
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("HH:mm"), &replacement));
+    live = state->live;
+    assert(qjs_intl_date_pattern_replace(allocator, &repeated, 'h', &replacement, &replaced) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!memcmp(&replaced, &pattern_zero, sizeof(replaced)) && state->live == live);
+    assert(qjs_intl_date_pattern_replace(allocator, &repeated, 'm', &replacement, &replaced) == QJS_INTL_INVALID_ARGUMENT);
+    assert(qjs_intl_date_pattern_replace(allocator, &repeated, '0', &replacement, &replaced) == QJS_INTL_INVALID_ARGUMENT);
+    qjs_intl_date_pattern_clear(allocator, &repeated);
+    qjs_intl_date_pattern_clear(allocator, &replacement);
+    assert(!state->live);
+}
 int main(void)
 {
     Allocation state = {0};
@@ -243,5 +359,6 @@ int main(void)
     assert(!qjs_intl_date_style_data_open(&shared, &allocator, &styles));
     assert(!qjs_intl_date_available_data_open(&shared, &allocator, &available));
     check(&styles, &available, &allocator);
+    recovery_check(&styles, &available, &allocator);
     return 0;
 }
