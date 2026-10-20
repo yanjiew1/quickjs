@@ -1,6 +1,7 @@
 /* DateTimeFormat owner: selection, independent handles and input-kind records.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/datetime/datetime.h"
+#include "../src/intl/datetime/interval-select.h"
 #include "../src/calendar/calendar.h"
 #include <assert.h>
 #include <stdio.h>
@@ -8,6 +9,9 @@
 #include <string.h>
 
 typedef struct Allocation { size_t calls, fail_at, live; } Allocation;
+
+extern const uint8_t qjs_intl_interval_selector_fixture_bytes[];
+extern const size_t qjs_intl_interval_selector_fixture_length;
 
 static void *allocate(void *opaque, size_t size)
 {
@@ -46,6 +50,95 @@ static void release(void *opaque, void *ptr)
 }
 
 static QJSIntlBytes bytes(const char *text) { return (QJSIntlBytes){text, strlen(text)}; }
+
+static void selector_authored(const QJSIntlAllocator *allocator)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlData pack;
+    QJSIntlDateIntervalData data;
+    QJSIntlDatePattern ordinary;
+    QJSIntlDateTextData names = {0}; /* Numeric sources need no localized names. */
+    QJSIntlDateNameAdmission admission = {0};
+    QJSIntlDateIntervalSet set, zero = {0};
+    const QJSIntlDateIntervalProgram *program;
+    uint32_t locale, calendar, parent;
+    size_t calls, i, baseline;
+    QJSIntlBytes tag;
+    assert(!qjs_intl_data_open(qjs_intl_interval_selector_fixture_bytes,
+                              qjs_intl_interval_selector_fixture_length, allocator, &pack));
+    assert(!qjs_intl_date_interval_data_open(&pack, allocator, &data));
+    for (locale = 0; locale < pack.locales.count; locale++) {
+        assert(!qjs_intl_data_locale(&pack, locale, &tag, &parent));
+        if (tag.length == 5 && !memcmp(tag.data, "en-GB", 5))
+            break;
+    }
+    for (calendar = 0; calendar < data.calendar_count; calendar++) {
+        assert(!qjs_intl_date_interval_calendar_at(&data, calendar, &tag));
+        if (tag.length == 7 && !memcmp(tag.data, "generic", 7))
+            break;
+    }
+    assert(locale < pack.locales.count && calendar < data.calendar_count);
+    assert(!qjs_intl_date_pattern_compile(allocator, bytes("M/d"), &ordinary));
+    baseline = state->live;
+    state->calls = 0;
+    assert(!qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
+                                           QJS_CAL_GREGORY, &names, &admission, allocator, &set));
+    calls = state->calls;
+    program = qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_MONTH);
+    assert(set.count == 1 && program && program->sources[0] == QJS_INTL_RANGE_END);
+    /* The generic alias restarts at the requesting locale's Gregorian data.
+       Its blocked Md day leaf must not resurrect the root's usable program. */
+    assert(!qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_DAY));
+    assert(!qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_YEAR));
+    qjs_intl_date_interval_set_clear(&set);
+    assert(state->live == baseline && calls);
+    for (i = 1; i <= calls; i++) {
+        state->calls = 0;
+        state->fail_at = i;
+        memset(&set, 0xff, sizeof(set));
+        assert(qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
+                   QJS_CAL_GREGORY, &names, &admission, allocator, &set) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&set, &zero, sizeof(set)) && state->live == baseline);
+    }
+    state->calls = state->fail_at = 0;
+    qjs_intl_date_pattern_clear(allocator, &ordinary);
+
+    /* A better-scored source repeats U but shares r. Use real cyclic names
+       so rejection cannot accidentally be explained by unavailable name data. */
+    {
+        QJSIntlData name_pack;
+        QJSIntlCalendarNameData name_data;
+        assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &name_pack));
+        assert(!qjs_intl_calendar_name_data_open(&name_pack, allocator, &name_data));
+        names.names = &name_data;
+        for (names.locale = 0; names.locale < name_pack.locales.count; names.locale++) {
+            assert(!qjs_intl_data_locale(&name_pack, names.locale, &tag, &parent));
+            if (tag.length == 2 && !memcmp(tag.data, "en", 2))
+                break;
+        }
+        for (names.calendar = 0; names.calendar < name_data.calendar_count; names.calendar++) {
+            assert(!qjs_intl_calendar_name_calendar_at(&name_data, names.calendar, &tag));
+            if (tag.length == 7 && !memcmp(tag.data, "chinese", 7))
+                break;
+        }
+        for (calendar = 0; calendar < data.calendar_count; calendar++) {
+            assert(!qjs_intl_date_interval_calendar_at(&data, calendar, &tag));
+            if (tag.length == 7 && !memcmp(tag.data, "chinese", 7))
+                break;
+        }
+        assert(names.locale < name_pack.locales.count && names.calendar < name_data.calendar_count &&
+               calendar < data.calendar_count);
+        memset(&admission, 0, sizeof(admission));
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes("r U"), &ordinary));
+        assert(!qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
+                                               QJS_CAL_CHINESE, &names, &admission, allocator, &set));
+        program = qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_YEAR);
+        assert(set.count == 1 && program && program->pattern.count == 7);
+        assert(program->sources[0] == QJS_INTL_RANGE_START && program->sources[4] == QJS_INTL_RANGE_END);
+        qjs_intl_date_interval_set_clear(&set);
+        qjs_intl_date_pattern_clear(allocator, &ordinary);
+    }
+}
 
 static void part(const QJSIntlFormatted *result, QJSIntlPartType type, const char *value)
 {
@@ -187,10 +280,133 @@ static void failures(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
     state->calls = state->fail_at = 0;
 }
 
+static void prepared_ranges(const QJSIntlAllocator *allocator,
+                            const QJSIntlDateTimeService *service, size_t locale)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlDateTimeOptions options = {0};
+    QJSIntlDateTimeFormatter *formatter;
+    QJSIntlFormattedRange result, zero = {0};
+    size_t calls, baseline, before = state->live, i;
+    unsigned int months = 0, years = 0, days = 0;
+    options.hour_cycle = QJS_INTL_DATE_H23;
+    options.maximum_output_length = 1000;
+    options.components.values[QJS_INTL_DATETIME_YEAR] = QJS_INTL_DATETIME_NUMERIC;
+    options.components.values[QJS_INTL_DATETIME_MONTH] = QJS_INTL_DATETIME_SHORT;
+    options.components.values[QJS_INTL_DATETIME_DAY] = QJS_INTL_DATETIME_NUMERIC;
+    formatter = open_formatter(service, locale, &options);
+    state->calls = 0;
+    assert(!qjs_intl_datetime_formatter_prepare_ranges(formatter));
+    calls = state->calls;
+    qjs_intl_datetime_formatter_close(formatter);
+    assert(calls && state->live == before);
+    formatter = open_formatter(service, locale, &options);
+    baseline = state->live;
+    for (i = 1; i <= calls; i++) {
+        state->calls = 0;
+        state->fail_at = i;
+        assert(qjs_intl_datetime_formatter_prepare_ranges(formatter) == QJS_INTL_NO_MEMORY);
+        assert(state->live == baseline);
+    }
+    /* Failed preparation must remain retryable; a successful second call is
+       idempotent and performs no allocation or interval ownership transfer. */
+    state->calls = state->fail_at = 0;
+    assert(!qjs_intl_datetime_formatter_prepare_ranges(formatter));
+    calls = state->calls;
+    assert(!qjs_intl_datetime_formatter_prepare_ranges(formatter) && state->calls == calls);
+    state->calls = 0;
+    assert(!qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                                           1719835200, 0, 1720008000, 0, &result));
+    calls = state->calls;
+    for (i = 0; i < result.part_count; i++) {
+        const QJSIntlRangePart *part = &result.parts[i];
+        if (part->type == QJS_INTL_PART_MONTH) {
+            months++;
+            assert(part->source == QJS_INTL_RANGE_SHARED);
+        } else if (part->type == QJS_INTL_PART_YEAR) {
+            years++;
+            assert(part->source == QJS_INTL_RANGE_SHARED);
+        } else if (part->type == QJS_INTL_PART_DAY) {
+            days++;
+            assert(part->source != QJS_INTL_RANGE_SHARED);
+        }
+    }
+    assert(months == 1 && years == 1 && days == 2 && result.text[0]);
+    qjs_intl_formatted_range_clear(allocator, &result);
+    /* This confirmed collapsed program has several source runs; fail every
+       fragment/composition allocation, not only the full-endpoint fallback. */
+    baseline = state->live;
+    for (i = 1; i <= calls; i++) {
+        state->calls = 0;
+        state->fail_at = i;
+        memset(&result, 0xff, sizeof(result));
+        assert(qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                   1719835200, 0, 1720008000, 0, &result) == QJS_INTL_NO_MEMORY);
+        assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+    }
+    state->calls = state->fail_at = 0;
+    assert(!qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                                           1719835200, 0, 1720008000, 0, &result));
+    qjs_intl_datetime_formatter_close(formatter);
+    assert(result.text[0] && result.part_count);
+    qjs_intl_formatted_range_clear(allocator, &result);
+    assert(state->live == before);
+}
+
+static void ranges(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service, size_t locale)
+{
+    Allocation *state = allocator->opaque;
+    QJSIntlDateTimeOptions options = {0};
+    QJSIntlDateTimeFormatter *formatter;
+    QJSIntlFormattedRange result, zero = {0};
+    size_t baseline, calls, i, at;
+    options.hour_cycle = QJS_INTL_DATE_H23;
+    options.maximum_output_length = 1000;
+    formatter = open_formatter(service, locale, &options);
+    baseline = state->live;
+    assert(!qjs_intl_datetime_check_value_format(formatter, QJS_INTL_DATE_VALUE_DATE));
+    /* Sweep distinct endpoints and the independently allocated shared-result
+       path without repeating expensive JS realm setup at every failure. */
+    for (unsigned int shared = 0; shared < 2; shared++) {
+        int64_t last = shared ? 1719835200 : 1719921600;
+        state->calls = 0;
+        assert(!qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                                               1719835200, 0, last, 0, &result));
+        calls = state->calls;
+        qjs_intl_formatted_range_clear(allocator, &result);
+        assert(state->live == baseline && calls);
+        for (i = 1; i <= calls; i++) {
+            state->calls = 0;
+            state->fail_at = i;
+            memset(&result, 0xff, sizeof(result));
+            assert(qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                       1719835200, 0, last, 0, &result) == QJS_INTL_NO_MEMORY);
+            assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+        }
+        state->calls = state->fail_at = 0;
+    }
+    memset(&result, 0xff, sizeof(result));
+    assert(qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+               0, 1000000000, 0, 0, &result) == QJS_INTL_INVALID_ARGUMENT);
+    assert(!memcmp(&result, &zero, sizeof(result)) && state->live == baseline);
+    assert(!qjs_intl_datetime_format_range(formatter, QJS_INTL_DATE_VALUE_DATE,
+                                           1719835200, 0, 1719921600, 0, &result));
+    qjs_intl_datetime_formatter_close(formatter);
+    at = 0;
+    for (i = 0; i < result.part_count; i++) {
+        const QJSIntlRangePart *part = &result.parts[i];
+        assert(part->start == at && part->end > at && part->end <= result.length &&
+               (unsigned int)part->source <= QJS_INTL_RANGE_END);
+        at = part->end;
+    }
+    assert(at == result.length && result.text[0]);
+    qjs_intl_formatted_range_clear(allocator, &result);
+}
+
 /* The full prepared corpus is an explicit audit mode; ordinary repository
    tests keep the same proof over all calendars of their English locale. */
 static size_t styles(const QJSIntlAllocator *allocator, const QJSIntlDateTimeService *service,
-                     size_t locale, QJSIntlBytes tag, QJSIntlBytes calendar)
+                     size_t locale, QJSIntlBytes tag, QJSIntlBytes calendar, int intervals)
 {
     QJSIntlDateTimeOptions options = {0};
     QJSIntlBytes system;
@@ -211,6 +427,8 @@ static size_t styles(const QJSIntlAllocator *allocator, const QJSIntlDateTimeSer
             options.date_style = date;
             options.time_style = time;
             status = qjs_intl_datetime_formatter_open(service, locale, calendar, system, &zone, &options, &formatter);
+            if (!status && intervals)
+                status = qjs_intl_datetime_formatter_prepare_ranges(formatter);
             if (status)
                 fprintf(stderr, "style %.*s/%.*s %u/%u open status %d\n", (int)tag.length, tag.data,
                         (int)calendar.length, calendar.data, date, time, status);
@@ -249,6 +467,7 @@ static size_t capabilities(const QJSIntlAllocator *allocator, const QJSIntlDateT
         if (status)
             fprintf(stderr, "capability %.*s/%s open status %d\n", (int)tag.length, tag.data, name, status);
         assert(!status);
+        assert(!qjs_intl_datetime_formatter_prepare_ranges(formatter));
         assert(!qjs_intl_datetime_format(formatter, QJS_INTL_DATE_VALUE_INSTANT, 1719835200, 0, &result));
         qjs_intl_formatted_clear(allocator, &result);
         qjs_intl_datetime_formatter_close(formatter);
@@ -288,7 +507,7 @@ int main(int argc, char **argv)
             QJSIntlBytes preferred;
             checked += capabilities(&allocator, service, index, tags[index]);
             assert(!qjs_intl_datetime_default_calendar(service, index, &preferred));
-            styled += styles(&allocator, service, index, tags[index], preferred);
+            styled += styles(&allocator, service, index, tags[index], preferred, 1);
         }
         qjs_intl_datetime_close(service);
         assert(!state.live);
@@ -307,14 +526,17 @@ int main(int argc, char **argv)
     assert(hours.preferred == QJS_INTL_DATE_H12 && hours.twelve == QJS_INTL_DATE_H12 &&
            hours.twenty_four == QJS_INTL_DATE_H23);
     defaults(&allocator, service, en);
+    selector_authored(&allocator);
     incompatible_kind(&allocator, service, en);
     adjusted_date_style(&allocator, service, en);
+    ranges(&allocator, service, en);
+    prepared_ranges(&allocator, service, en);
     capabilities(&allocator, service, en, tags[en]);
     for (unsigned int c = 0; c < QJS_CAL_COUNT; c++) {
         QJSIntlBytes identifier = bytes(qjs_calendar_identifier(c));
-        assert(!qjs_intl_datetime_calendar_supported(service, en, identifier, &supported));
+        assert(!qjs_intl_datetime_calendar_supported(service, identifier, &supported));
         if (supported)
-            styles(&allocator, service, en, tags[en], identifier);
+            styles(&allocator, service, en, tags[en], identifier, 0);
     }
     failures(&allocator, service, en);
     options.maximum_output_length = 1000;
