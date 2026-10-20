@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Emit tiny authored metadata for language/region calendar list selection."""
+"""Emit tiny authored locale preference and timezone territory metadata."""
 from pathlib import Path
 import argparse
 import sys
@@ -17,8 +17,13 @@ def render():
     # The world entry is intentionally distinct: an absent exact preference
     # must remain absent instead of silently reviving the world list.
     metadata = dict(aliases=(), likely=(('en', 'en-Latn-US'), ('und', 'en-Latn-US')),
-                    keys=(('u', 'ca', 'single', (), '', False),),
-                    types=(('u', 'ca', 'foo', ('oldfoo',), '', False, False, '', ''),))
+                    keys=(('u', 'ca', 'single', (), '', False),
+                          ('u', 'tz', 'single', (), '', False)),
+                    types=(('u', 'ca', 'foo', ('oldfoo',), '', False, False, '', ''),
+                           ('u', 'tz', 'oldny', (), 'usnyc', True, False, '', ''),
+                           ('u', 'tz', 'usnyc', ('America/New_York', 'US/Eastern'), '', False, False, '', ''),
+                           ('u', 'tz', 'ustest', ('America/Detroit',), '', False, False, '', 'CA'),
+                           ('u', 'tz', 'utc', ('Etc/UTC',), '', False, False, '', '')))
     preferences = dict(weeks=(('001', 1, 1, (6, 7)),),
                        calendars=(('001', ('world',)), ('TH', ('buddhist', 'gregorian')),
                                   ('US', ('gregorian',)),

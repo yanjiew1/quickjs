@@ -49,4 +49,14 @@ qjs_intl_locale_canonicalize_uvalue(const QJSIntlLocaleService *service,
 QJSIntlStatus qjs_intl_locale_source_type(const QJSIntlLocaleService *service,
                                           QJSIntlBytes key, QJSIntlBytes value,
                                           QJSIntlBytes *out);
+/* Exact territory source facts, without maximizing a locale or consulting a
+   timezone backend. Borrow immutable CLDR identifiers. The consumer resolves
+   backend support and primary names after preserving source territory identity.
+   Use uppercase two-letter/three-digit regions; unknown regions are empty.
+   next follows timezone-identity.h's cursor protocol; reset output on errors. */
+QJSIntlStatus qjs_intl_locale_timezone_count(const QJSIntlLocaleService *service,
+                                             QJSIntlBytes territory, uint32_t *out);
+QJSIntlStatus qjs_intl_locale_timezone_next(const QJSIntlLocaleService *service,
+                                            QJSIntlBytes territory, uint32_t *cursor,
+                                            QJSIntlBytes *out);
 #endif

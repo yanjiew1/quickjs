@@ -180,7 +180,8 @@ static void test_preference_failures(const char *method, const char *tag, int ki
             JSValue value = kind == 1 ? JS_GetPropertyStr(ctx, result, "direction")
                                      : JS_GetPropertyUint32(ctx, result, 0);
             const char *text = JS_ToCString(ctx, value);
-            assert(text && !strcmp(text, kind == 1 ? "rtl" : kind == 3 ? "gregory" : "h23"));
+            assert(text && !strcmp(text, kind == 1 ? "rtl" : kind == 3 ? "gregory" :
+                                         kind == 4 ? "Asia/Singapore" : "h23"));
             JS_FreeCString(ctx, text);
             JS_FreeValue(ctx, value);
         }
@@ -248,6 +249,9 @@ int main(void)
     test_preference_failures("getTextInfo", "ar", 1);
     test_preference_failures("getHourCycles", "en-u-rg-jpzzzz", 2);
     test_preference_failures("getCalendars", "en", 3);
+#ifdef CONFIG_TIMEZONE_NATIVE
+    test_preference_failures("getTimeZones", "en-SG", 4);
+#endif
 #endif
     return 0;
 }

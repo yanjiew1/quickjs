@@ -1,4 +1,4 @@
-/* Exact preference-source selection is separate from formatting capability.
+/* Locale preference/territory source selection precedes service capability.
  * Copyright (c) 2026 Yan-Jie Wang. MIT license; see LICENSE. */
 #include "../src/intl/locale/preferences.h"
 #include <assert.h>
@@ -30,7 +30,7 @@ int main(void)
     QJSIntlAllocator allocator = {NULL, allocate, resize, release};
     QJSIntlLocaleService *service;
     QJSIntlBytes list;
-    uint32_t count;
+    uint32_t count, cursor;
     assert(!qjs_intl_locale_open(&allocator, &service));
     check(service, "en", "gregorian", 1); /* Likely US. */
     check(service, "en-TH", "oldfoo foo unavailable", 3);
@@ -53,6 +53,30 @@ int main(void)
            == QJS_INTL_INVALID_ARGUMENT && !list.data && !count);
     assert(qjs_intl_locale_calendar_preferences(service, bytes("en"), NULL, &count)
            == QJS_INTL_INVALID_ARGUMENT && !count);
+    /* The explicit CA override wins over the US-looking short identifier;
+       deprecated aliases are not additional timezone identities. */
+    assert(!qjs_intl_locale_timezone_count(service, bytes("US"), &count) && count == 1);
+    cursor = 0;
+    assert(!qjs_intl_locale_timezone_next(service, bytes("US"), &cursor, &list));
+    assert(list.length == 16 && !memcmp(list.data, "America/New_York", 16));
+    assert(qjs_intl_locale_timezone_next(service, bytes("US"), &cursor, &list)
+           == QJS_INTL_UNSUPPORTED && !list.data);
+    {
+        uint32_t exhausted = cursor;
+        assert(qjs_intl_locale_timezone_next(service, bytes("US"), &cursor, &list)
+               == QJS_INTL_UNSUPPORTED && !list.data && cursor == exhausted);
+    }
+    cursor = 0;
+    assert(!qjs_intl_locale_timezone_next(service, bytes("CA"), &cursor, &list));
+    assert(list.length == 15 && !memcmp(list.data, "America/Detroit", 15));
+    assert(!qjs_intl_locale_timezone_count(service, bytes("001"), &count) && !count);
+    assert(!qjs_intl_locale_timezone_count(service, bytes("ZZ"), &count) && !count);
+    cursor = 0;
+    assert(qjs_intl_locale_timezone_next(service, bytes("us"), &cursor, &list)
+           == QJS_INTL_INVALID_ARGUMENT && !list.data && !cursor);
+    cursor = UINT32_MAX;
+    assert(qjs_intl_locale_timezone_next(service, bytes("US"), &cursor, &list)
+           == QJS_INTL_INVALID_ARGUMENT && !list.data && cursor == UINT32_MAX);
     qjs_intl_locale_close(service);
     return 0;
 }

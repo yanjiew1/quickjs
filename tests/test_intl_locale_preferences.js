@@ -85,8 +85,27 @@ assert(new Intl.Locale("en").getCalendars().join(","), "gregory");
 for (const tag of ["en-EG", "en-IR", "en-SA"])
     assert(new Intl.Locale(tag).getCalendars().includes("islamic"), false);
 
-const locale = new Intl.Locale("ar");
-for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumberingSystems", "getCalendars"]) {
+// Zone preferences use explicit region only, rather than calendar/hour rules.
+for (const tag of ["en", "en-u-rg-uszzzz", "en-u-sd-usca", "en-u-tz-usnyc"])
+    assert(new Intl.Locale(tag).getTimeZones(), undefined);
+assert(new Intl.Locale("en-001").getTimeZones().join(","), "");
+assert(new Intl.Locale("en-ZZ").getTimeZones().join(","), "");
+const usZones = new Intl.Locale("en-US").getTimeZones();
+assert(new Intl.Locale("en-US-u-rg-jpzzzz-sd-th10-tz-jptyo").getTimeZones().join(","), usZones.join(","));
+assert(new Set(usZones).size, usZones.length);
+assert([...usZones].sort().join(","), usZones.join(","));
+// Minimal UTC-only timezone builds have no US regional zone capability.
+if (usZones.length) {
+    assert(usZones.includes("America/New_York"));
+    assert(new Intl.Locale("en-IN").getTimeZones().includes("Asia/Kolkata"));
+    assert(new Intl.Locale("en-UA").getTimeZones().includes("Europe/Kyiv"));
+}
+const originalZones = usZones.join(",");
+usZones.length = 0;
+assert(new Intl.Locale("en-US").getTimeZones().join(","), originalZones);
+
+const locale = new Intl.Locale("ar-US");
+for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumberingSystems", "getCalendars", "getTimeZones"]) {
     const method = Intl.Locale.prototype[name];
     assert(method.name, name);
     assert(method.length, 0);
@@ -102,7 +121,7 @@ for (const name of ["getWeekInfo", "getTextInfo", "getHourCycles", "getNumbering
     const foreign = std.createRealm();
     const foreignMethod = foreign.global.Intl.Locale.prototype[name];
     const result = foreignMethod.call(locale);
-    assert(Object.getPrototypeOf(result), ["getHourCycles", "getNumberingSystems", "getCalendars"].includes(name)
+    assert(Object.getPrototypeOf(result), ["getHourCycles", "getNumberingSystems", "getCalendars", "getTimeZones"].includes(name)
         ? foreign.global.Array.prototype : foreign.global.Object.prototype);
 }
 const first = locale.getWeekInfo();
@@ -115,10 +134,11 @@ for (const key of ["direction", "firstDay", "weekend", "0"]) {
 }
 try {
     assert(locale.getTextInfo().direction, "rtl");
-    assert(locale.getWeekInfo().firstDay, 6);
+    assert(locale.getWeekInfo().firstDay, 7);
     assert(locale.getHourCycles().length > 0);
     assert(locale.getNumberingSystems().length, 1);
     assert(locale.getCalendars().length > 0);
+    assert(Array.isArray(locale.getTimeZones()));
 } finally {
     for (const key of ["direction", "firstDay", "weekend", "0"])
         delete Object.prototype[key];
