@@ -3,6 +3,7 @@
 #ifndef QJS_INTL_DATETIME_TEXT_H
 #define QJS_INTL_DATETIME_TEXT_H
 #include "chronology.h"
+#include "numeric.h"
 #include "calendar-identity.h"
 #include "dayperiod.h"
 #include "era-data.h"
@@ -15,6 +16,24 @@ typedef struct QJSIntlDateTextData {
     const QJSIntlDayPeriodRuleList *period_rules;
     uint32_t locale, calendar; /* Indexes in names, not other source owners. */
 } QJSIntlDateTextData;
+
+/* Zero-initialize once for one unchanged locale/calendar/data/rule binding.
+   Numeric-only calls with null data do not bind the cache. Cache only name
+   proofs, not arithmetic, numeric or zone capabilities. */
+typedef struct QJSIntlDateNameAdmission {
+    const QJSIntlDateTextData *data;
+    QJSCalendarId calendar;
+    unsigned char fields[10][7];
+} QJSIntlDateNameAdmission;
+
+/* Prove every reachable name selection for the program using the renderer's
+   own selectors. Allocate nothing; missing names return UNSUPPORTED, while
+   operational/data errors propagate. Numeric-only programs do not require
+   optional era/day-period metadata. Check both normal and twelve programs.
+   A cache is optional and must not be rebound to another immutable input. */
+QJSIntlStatus qjs_intl_date_names_admit(const QJSIntlDatePattern *pattern,
+                                       QJSCalendarId calendar, const QJSIntlDateTextData *data,
+                                       QJSIntlDateNameAdmission *cache);
 
 /* Render an admitted ordinary non-zone program to owned UTF-16 and date parts.
    Supply chronology's unchanged calendar fields, with clock fields filled from
