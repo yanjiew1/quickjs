@@ -1332,6 +1332,39 @@ if intl_enabled
     },
   }]
 
+  intl_date_interval_sources = files(
+    'test_intl_date_interval_data.c',
+    '../src/intl/common/locale-grammar.c',
+    '../src/intl/common/source-locale.c',
+    '../src/intl/datetime/interval-data.c',
+    '../src/intl/native/data.c',
+    '../src/intl/native/pack.c',
+  )
+  intl_date_interval_fixture = custom_target(
+    'intl-date-interval-authored-fixture',
+    output: 'intl-date-interval-authored-fixture.c',
+    command: [python, files('intl_date_interval_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_intervals.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_interval_authored = {
+    'name': 'test_intl_date_interval_authored',
+    'sources': intl_date_interval_sources + [intl_date_interval_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_interval_authored,
+    'name': 'intl-date-interval-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_relative_owner_sources = files(
     'test_intl_relative_data.c',
     '../src/intl/common/locale-grammar.c',
@@ -1960,6 +1993,28 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_relative_test,
       'name': ('intl-relative-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_date_interval_data_test = {
+      'name': ('test_intl_date_interval_data_' + profile),
+      'sources': files(
+        'test_intl_date_interval_profiles.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/common/source-locale.c',
+        '../src/intl/datetime/interval-data.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_date_interval_data_test,
+      'name': ('intl-date-interval-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -2909,6 +2964,22 @@ if intl_enabled
     'intl-calendar-names',
     python,
     args: files('test_intl_calendar_names.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-date-interval-tables',
+    python,
+    args: files('test_intl_date_interval_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-date-intervals',
+    python,
+    args: files('test_intl_date_intervals.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
