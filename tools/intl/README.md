@@ -106,7 +106,9 @@ context-sensitive list behavior or install a JavaScript formatter.
 
 ```sh
 python3 tools/intl/date_pattern_syntax.py --pattern "yyyy-MM-dd 'at' HH:mm"
+python3 tools/intl/date_pattern_syntax.py --combination "{1} 'at' {0}"
 python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4
+python3 tools/intl/date_pattern_syntax.py --sources /path/to/intl-cache/cldr-49-beta4 --combinations
 ```
 
 The DateTimeFormat data compiler's lexical prerequisite decodes TR35 apostrophe
@@ -123,6 +125,15 @@ does not validate field widths, interpret `numbers` overrides, select formats,
 establish locale coverage or install DateTimeFormat. Those operations belong to
 the subsequent typed collector/compiler and native service. Authored tests run
 in the repository suite; CI also audits the pinned CLDR source patterns.
+
+`compile_combination` handles date/time style connectors separately. It requires
+one `{0}` time slot and one `{1}` date slot, preserves their order, and applies
+date-pattern apostrophe quoting to the surrounding text and braces. Slots are
+tokens with symbol `0` or `1`, zero width and empty text; fields and decoded
+literals retain the ordinary token representation. Quoted markers remain literal
+text. The `--combinations` audit checks raw style connectors across calendars,
+forms and alternates, distinguishing inheritance/block markers from patterns.
+Alias resolution, style selection and placeholder substitution have later owners.
 
 ## Date/time style source records
 

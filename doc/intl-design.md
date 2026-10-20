@@ -647,6 +647,11 @@ stage, which must resolve calendar aliases, retain source identities and handle
 numbering overrides, names, skeletons and intervals. Compilation must distinguish
 these date patterns from date-time combination templates; shared pair templates
 do not use the date-pattern apostrophe rules.
+The lexical compiler provides separate `compile_combination` tokens for exactly
+one time and one date slot, applying apostrophe quoting to fields and braces.
+Its raw-source audit covers style connectors without resolving aliases or
+choosing standard/atTime/relative fallback policy. Slot tokens keep substituted
+date/time patterns separate from decoded connector literals and field runs.
 
 `tools/intl/date_patterns.py` owns the first typed date/time style facts. It
 resolves length styles and their independent skeleton records across calendar
