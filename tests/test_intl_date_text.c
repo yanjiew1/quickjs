@@ -219,6 +219,8 @@ static void admission(const QJSIntlAllocator *allocator, QJSIntlDateTextData dat
     admit(allocator, &data, QJS_CAL_GREGORY, "B", QJS_INTL_OK); /* Complete rules need no unused a names. */
     admit(allocator, &data, QJS_CAL_GREGORY, "a", QJS_INTL_UNSUPPORTED);
     {
+        /* A point-only rule leaves uncovered times needing AM/PM fallback;
+           this fixture deliberately has no such fallback labels. */
         QJSIntlDayPeriodRuleList point;
         uint32_t i;
         int found = 0;

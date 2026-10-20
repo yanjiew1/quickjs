@@ -107,6 +107,8 @@ def encode(data, tags, ids):
     maps = tuple(sorted(set(compiled.values())))
     map_ids = {fields: index for index, fields in enumerate(maps)}
     node_ids, nodes = {0: 0}, []
+    # Number parents before children, then sort/deduplicate each depth so IDs
+    # do not depend on collection order. The reader traverses IDs in reverse.
     for depth in sorted(by_depth):
         candidates = []
         for old in by_depth[depth]:
