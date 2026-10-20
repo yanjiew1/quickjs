@@ -425,6 +425,19 @@ the old default on failure. A null locale resets the runtime to its documented
 host-default policy. The getter returns a new JS string. Reuse existing
 JS_SetDefaultTimeZone/JS_GetDefaultTimeZone rather than adding Intl-only zone
 settings. Feature-disabled behavior and initialization/OOM rollback are tested.
+The shared default policy is available when either Temporal or Intl is compiled,
+without requiring either namespace to be initialized in the requesting context.
+When both features are disabled, these existing APIs report TypeError.
+
+`timezone/identifier.[ch]` owns canonical named/fixed-minute identifiers independently
+of Temporal bindings and parsing. Temporal adapts the common record/errors to
+its exact epoch-nanosecond operations. Date resolves local milliseconds through
+floor seconds plus an unchanged nonnegative millisecond remainder, preserving
+historical second offsets and nonzero-offset recovery at TimeClip boundaries.
+Date uses the earliest overlap candidate and the pre-transition gap offset, as
+specified by UTC(t); do not replace Temporal's separate disambiguation algorithm
+with this Date-specific operation. Host discovery, primary default IDs and the
+transactional runtime snapshot remain shared for Date, Temporal and Intl.
 
 Enabled JS_NewContext installs Intl and the corresponding locale-sensitive
 integrations. JS_NewContextRaw does not; JS_AddIntrinsicIntl requires initialized

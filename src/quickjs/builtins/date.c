@@ -40,7 +40,7 @@
 
 /* Date */
 
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
 /* Date, Temporal and Intl share runtime time-zone policy and rule data. */
 static int date_system_zone(JSContext *ctx, QJSTimeZoneIdentifier *result)
 {
@@ -317,7 +317,7 @@ static __exception int get_date_fields_from_time(JSContext *ctx, double dval,
     } else {
         d = dval;     /* assuming -8.64e15 <= dval <= -8.64e15 */
         if (is_local) {
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
             if (date_local_offset(ctx, d, &tz))
                 return -1;
 #else
@@ -437,7 +437,7 @@ static __exception int make_date_fields(JSContext *ctx,
 
     /* adjust for local time and clip */
     if (is_local) {
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
         if (date_utc(ctx, tv, &tv))
             return -1;
 #else
@@ -591,7 +591,7 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
     wd = fields[7];
     offset = fields[8];
     offset_sign = offset < 0 ? '-' : '+';
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
     /* Stage 4 TimeZoneString formats the signed truncated minute offset. */
     tz_sign = offset / 60000 < 0 ? '-' : '+';
 #else
@@ -654,7 +654,7 @@ JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
             /* tz is >= 0, can use % */
             pos += snprintf(buf + pos, sizeof(buf) - pos,
                             "%02d%02d", tz / 60, tz % 60);
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
             /* Keep the required GMT+HHMM form. An exact offset name lets
                Date.parse recover seconds omitted from that form. */
             if (offset % 60000) {
@@ -1203,7 +1203,7 @@ static BOOL js_date_parse_otherstring(const uint8_t *sp,
     return TRUE;
 }
 
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
 /* Recognize only our complete toString layout and matching exact offset name.
    Return the signed seconds omitted from GMT+HHMM; other comments stay ignored. */
 static int js_date_parse_second_offset(const uint8_t *sp, JSString *original)
@@ -1262,7 +1262,7 @@ static int js_date_parse_second_offset(const uint8_t *sp, JSString *original)
         h != hh || m != mm ||
         h > 23 || m > 59 || s < 1 || s > 59)
         return 0;
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
     if (sign != (name_sign == '-' && (h || m) ? '-' : '+'))
         return 0;
 #else
@@ -1327,7 +1327,7 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
             if (make_date_fields(ctx, fields1, is_local, &d)) {
                 rv = JS_EXCEPTION;
             } else {
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
                 d -= js_date_parse_second_offset(buf, sp) * 1000;
 #endif
                 d = time_clip(d - fields[8] * 60000);
@@ -1395,7 +1395,7 @@ static JSValue js_date_getTimezoneOffset(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     if (isnan(v))
         return JS_NAN;
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
     else {
         int64_t offset;
         if (date_local_offset(ctx, (int64_t)trunc(v), &offset))
