@@ -25,7 +25,7 @@
 #include "../timezone/timezone.h"
 #include "../timezone/system-zone.h"
 
-#ifdef CONFIG_TEMPORAL
+#if defined(CONFIG_TEMPORAL) || defined(CONFIG_INTL)
 /* Runtime host defaults use primary names. Explicit Temporal time-zone inputs continue
    to preserve their canonical alias identifier in their existing parser. */
 static int default_zone_primary(QJSTimeZoneIdentifier *zone)
