@@ -9,7 +9,7 @@ import acquire
 import calendar_sources
 from cldr_xml import DataError, Schema
 import date_pattern_syntax
-import pair_template
+import literal_template
 import parents
 from resolve import BLOCK, INHERIT, SparseMaps, freeze_overlays
 
@@ -89,7 +89,7 @@ def leaf(schema, node, family):
         if family == 'item':
             date_pattern_syntax.compile_interval(text)
         else:
-            pair_template.validate(text)
+            literal_template.validate(text, 2)
     return (code, attributes.get('alt', '')), text
 
 
