@@ -543,6 +543,10 @@ int main(int argc, char **argv)
     assert(!qjs_intl_datetime_calendar_available(service, bytes("islamicc"), &supported) && !supported);
     assert(!qjs_intl_datetime_default_system(service, en, &system));
     assert(!qjs_intl_datetime_system_supported(service, en, system, &supported) && supported);
+    assert(!qjs_intl_datetime_system_available(service, system, &supported) && supported);
+    assert(!qjs_intl_datetime_system_available(service, bytes("roman"), &supported) && !supported);
+    assert(qjs_intl_datetime_system_available(NULL, system, &supported)
+           == QJS_INTL_INVALID_ARGUMENT && !supported);
     assert(!qjs_intl_datetime_hour_preferences(service, en, &hours));
     assert(hours.preferred == QJS_INTL_DATE_H12 && hours.twelve == QJS_INTL_DATE_H12 &&
            hours.twenty_four == QJS_INTL_DATE_H23);
