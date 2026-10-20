@@ -1705,6 +1705,26 @@ if intl_enabled
     },
   }]
 
+  intl_date_interval_program_test = {
+    'name': 'test_intl_date_interval_program',
+    'sources': files(
+      'test_intl_date_interval_program.c',
+      '../src/intl/datetime/interval-program.c',
+      '../src/intl/datetime/pattern.c',
+      '../src/intl/datetime/pattern-info.c',
+    ),
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_date_interval_program_test,
+    'name': 'intl-date-interval-program',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_date_pattern_test = {
     'name': 'test_intl_date_pattern',
     'sources': files(
@@ -1876,6 +1896,21 @@ if intl_enabled
     'intl-date-interval-authored-fixture',
     output: 'intl-date-interval-authored-fixture.c',
     command: [python, files('intl_date_interval_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies + files(
+      'test_intl_date_intervals.py',
+      'test_intl_date_patterns.py',
+      'test_intl_list_patterns.py',
+    ),
+  )
+  intl_date_interval_selector_fixture = custom_target(
+    'intl-date-interval-selector-fixture',
+    output: 'intl-date-interval-selector-fixture.c',
+    command: [
+      python,
+      files('intl_date_interval_fixture.py'),
+      '--output', '@OUTPUT@',
+      '--prefix', 'qjs_intl_interval_selector_fixture',
+    ],
     depend_files: intl_tool_dependencies + files(
       'test_intl_date_intervals.py',
       'test_intl_date_patterns.py',
@@ -2094,6 +2129,7 @@ if intl_enabled
     '../src/intl/number/layout-data.c',
     '../src/intl/number/native.c',
     '../src/intl/number/range.c',
+    '../src/intl/common/range-compose.c',
     '../src/intl/number/unit.c',
     '../src/intl/unit/data.c',
     '../src/intl/unit/grammar-data.c',
@@ -2592,6 +2628,8 @@ if intl_enabled
       'sources': intl_date_format_sources + files(
         'test_intl_date_service.c',
         '../src/intl/datetime/native.c',
+        '../src/intl/datetime/interval-program.c',
+        '../src/intl/datetime/interval-select.c',
         '../src/intl/datetime/available-source.c',
         '../src/intl/datetime/basic-match.c',
         '../src/intl/datetime/format-source.c',
@@ -2608,7 +2646,7 @@ if intl_enabled
         '../src/intl/locale/native-id.c',
         '../src/intl/locale/preference-data.c',
         '../src/intl/locale/preferences.c',
-      ) + [],
+      ) + [intl_date_interval_selector_fixture],
       'c_args': host_args,
       'link_with': intl_fixture_library,
       'override_options': ['b_ndebug=false'],
@@ -3165,6 +3203,13 @@ if intl_enabled
     'test_intl_number_range': files(
       'test_intl_number_range.c',
       '../src/intl/number/range.c',
+      '../src/intl/common/range-compose.c',
+      '../src/intl/common/format-builder.c',
+      '../src/cutils/cutils.c',
+    ),
+    'test_intl_range_compose': files(
+      'test_intl_range_compose.c',
+      '../src/intl/common/range-compose.c',
       '../src/intl/common/format-builder.c',
       '../src/cutils/cutils.c',
     ),
@@ -3567,6 +3612,7 @@ if intl_enabled
     'intl-plural-rules': ['-m', 'tests/test_intl_plural_rules.js'],
     'intl-number-format': ['-m', 'tests/test_intl_number_format.js'],
     'intl-date-time-format': ['-m', 'tests/test_intl_date_time_format.js'],
+    'intl-date-time-range': ['-m', 'tests/test_intl_date_time_range.js', get_option('calendars'), get_option('timezone_backend')],
     'intl-relative-time-format': ['-m', 'tests/test_intl_relative_time_format.js'],
     'intl-duration-format': ['-m', 'tests/test_intl_duration_format.js'],
     'intl-display-names-api': ['-m', 'tests/test_intl_display_names.js'],
