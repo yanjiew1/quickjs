@@ -2608,6 +2608,14 @@ test(
 )
 
 test(
+  'intl-date-combination-tables',
+  python,
+  args: files('test_intl_date_combination_tables.py'),
+  suite: ['repo', 'native'],
+  timeout: 30,
+)
+
+test(
   'intl-date-combinations',
   python,
   args: files('test_intl_date_combinations.py'),

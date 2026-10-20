@@ -206,6 +206,17 @@ atTime/relative versus standard is consumer policy after inheritance, not a
 collector fallback. These host-side records are not emitted in prepared binary
 profiles yet and do not install DateTimeFormat or establish calendar capability.
 
+Section 28 is the optional canonical connector schema. Its little-endian header
+contains version, calendar count, alternate count, shared-row count and shared-
+record count. Calendar/alternate string references precede per-locale row indices.
+Rows use calendar, full/long/medium/short width, standard/atTime/relative form and
+alternate as nested selectors. Eight-word records retain state, text, numbering
+override, source locale and source calendar/width/form/alternate indices. Missing
+is all zero; blocked retains provenance with empty text and numbering override.
+`date_combination_tables.py` validates exact coverage, canonical pooling, all
+references and reachability; projection retains origins outside selected locales.
+Add a C owner and validate it before emitting the section in prepared profiles.
+
 ## Relative-time source records
 
 ```sh

@@ -678,6 +678,11 @@ resolves standard/atTime/relative source connectors independently at each style
 width, preserving raw overrides and terminal provenance through calendar,
 group and form aliases. It leaves form fallback to the consuming formatter,
 and establishes host-side facts before a separate wire/C-owner stage.
+Optional connector section 28 pools records and locale rows over calendar,
+width, form and alternate selectors. Eight-word records preserve raw overrides
+and typed terminal provenance independently of consumer fallback. Validate its
+C owner before adding it to production profiles. Missing, blocked and explicit
+empty records remain distinct across source, wire and future runtime queries.
 
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
