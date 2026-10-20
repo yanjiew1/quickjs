@@ -1350,6 +1350,33 @@ if intl_enabled
     },
   }]
 
+  intl_timezone_presentation_fixture = custom_target(
+    'intl-timezone-presentation-authored-fixture',
+    output: 'intl-timezone-presentation-authored-fixture.c',
+    command: [python, files('intl_timezone_presentation_fixture.py'), '--output', '@OUTPUT@'],
+    depend_files: intl_tool_dependencies,
+  )
+  intl_timezone_presentation_authored = {
+    'name': 'test_intl_timezone_presentation_authored',
+    'sources': files(
+      'test_intl_timezone_presentation_data.c',
+      '../src/intl/common/locale-grammar.c',
+      '../src/intl/native/data.c',
+      '../src/intl/native/pack.c',
+      '../src/intl/datetime/timezone-presentation-data.c',
+    ) + [intl_timezone_presentation_fixture],
+    'c_args': host_args,
+    'override_options': ['b_ndebug=false'],
+  }
+  component_test_specs += [{
+    'target': intl_timezone_presentation_authored,
+    'name': 'intl-timezone-presentation-authored',
+    'options': {
+      'suite': ['repo', 'native'],
+      'timeout': 30,
+    },
+  }]
+
   intl_timezone_name_sources = files(
     'test_intl_timezone_name_data.c',
     '../src/intl/common/locale-grammar.c',
@@ -2046,6 +2073,27 @@ if intl_enabled
     component_test_specs += [{
       'target': intl_relative_test,
       'name': ('intl-relative-data-' + profile),
+      'options': {
+        'suite': ['repo', 'native'],
+        'timeout': 30,
+      },
+    }]
+    intl_timezone_presentation_data_test = {
+      'name': ('test_intl_timezone_presentation_data_' + profile),
+      'sources': files(
+        'test_intl_timezone_presentation_profiles.c',
+        '../src/intl/common/locale-grammar.c',
+        '../src/intl/native/data.c',
+        '../src/intl/native/pack.c',
+        '../src/intl/datetime/timezone-presentation-data.c',
+      ),
+      'c_args': host_args,
+      'link_with': intl_fixture_library,
+      'override_options': ['b_ndebug=false'],
+    }
+    component_test_specs += [{
+      'target': intl_timezone_presentation_data_test,
+      'name': ('intl-timezone-presentation-data-' + profile),
       'options': {
         'suite': ['repo', 'native'],
         'timeout': 30,
@@ -3054,6 +3102,22 @@ if intl_enabled
     'intl-timezone-name-tables',
     python,
     args: files('test_intl_timezone_name_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-timezone-presentation-tables',
+    python,
+    args: files('test_intl_timezone_presentation_tables.py'),
+    suite: ['repo', 'native', 'unit'],
+    timeout: 30,
+  )
+
+  test(
+    'intl-timezone-presentation',
+    python,
+    args: files('test_intl_timezone_presentation.py'),
     suite: ['repo', 'native', 'unit'],
     timeout: 30,
   )
