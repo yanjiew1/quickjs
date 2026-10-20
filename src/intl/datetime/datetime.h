@@ -76,6 +76,10 @@ QJSIntlStatus qjs_intl_datetime_default_system(const QJSIntlDateTimeService *ser
                                                size_t locale, QJSIntlBytes *out);
 QJSIntlStatus qjs_intl_datetime_system_supported(const QJSIntlDateTimeService *service,
                                                  size_t locale, QJSIntlBytes system, int *out);
+/* Global capability across this service's admitted locales. No allocation;
+   unknown systems are OK/false, operational errors reset output. */
+QJSIntlStatus qjs_intl_datetime_system_available(const QJSIntlDateTimeService *service,
+                                                 QJSIntlBytes system, int *out);
 QJSIntlStatus qjs_intl_datetime_hour_preferences(const QJSIntlDateTimeService *service,
                                                  size_t locale, QJSIntlDateHourPreferences *out);
 
