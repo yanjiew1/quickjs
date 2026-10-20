@@ -810,6 +810,30 @@ all stored selectors, calendar-block indexing, English provenance, unaligned
 storage and validation allocation failures. Range formatter integration follows
 separately.
 
+`timezone_names.py` owns localized timezone presentation source, independently
+of the timezone engine's identifiers, offsets, DST designation and transitions.
+Its finite sparse groups distinguish format templates, exemplar cities, named
+zone overrides and metazone names. Entity, entity alternate, width and width
+alternate remain separate selectors; each leaf retains its field, optional
+region-format type and leaf alternate. Only observed source groups are stored;
+there is no calendar-style Cartesian registry of unrelated zone/metazone IDs.
+Name-width aliases preserve requester/explicit-source anchors and exact source
+identities, including slash-bearing zone IDs. Unreviewed ancestor aliases fail
+explicitly. Missing, inherited, blocked and explicit empty values stay distinct.
+
+The shared host literal-template validator handles fixed one/two operand GMT,
+region, fallback and dual-offset templates as well as ListFormat/interval pairs.
+Apostrophes are literal in these substitution templates. Hour formats have their
+own lexer for two quoted hour/minute subpatterns; signs, directional marks,
+spacing and source field widths survive unchanged. Names, cities and unknown
+GMT text are literal strings. CLDR 49 beta4 has no `gmtZeroFormat`; the collector
+does not manufacture one. Runtime zero-offset and localized digit policy belong
+to the renderer. Supplemental metazone periods, golden zones and primary-zone
+presentation maps have a separate owner; their standard/daylight offset hints
+must not redefine the timezone engine's DST designation. CLDR stable name keys
+also do not redefine ECMA primary identifiers. Wire/runtime integration follows
+separately from this host source boundary.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
