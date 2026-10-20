@@ -915,6 +915,25 @@ The final service owns admission and the standard's permitted unavailable-name
 fallback policy. Zones, complete service admission and the public constructor
 remain separate work; this renderer alone does not advertise DateTimeFormat.
 
+`datetime/zone-offset.[ch]` prepares localized GMT presentation independently
+of timezone rule arithmetic and named-zone selection. Copy exact inherited
+hourFormat and gmtFormat sources, preserving signs, bidi marks, quoted hour
+literals and separators. The short representation uses an unpadded hour and
+omits zero minutes unless seconds are present; long retains two-digit hours and
+minutes. Historical nonzero seconds reuse the source H/m separator. Numeric
+pieces use selected decimal formatters and the whole result is one timeZoneName
+part, without leaking number subparts. The owner and results have independent
+lifetimes, bounded output and allocation-failure cleanup.
+
+A supplied gmtZeroFormat remains authoritative. The pinned CLDR 49 beta4 data
+omits this source; absent, blocked or empty zero labels use the positive numeric
+GMT template rather than inventing a language-independent standalone label.
+This follows its accompanying TR35 examples GMT+00:00 and UTC+0. Source-only
+legacy zero leaves remain preserved by the binary data owner. Exact chain
+resolution preserves missing/BLOCK/empty and original alias provenance; it does
+not perform name-type, width, metazone or territory fallback. Those are still
+required for complete native specific/generic zone presentation.
+
 `datetime/chronology.[ch]` converts checked local epoch days through the shared
 calendar facade, then projects native formatting fields without allocating or
 borrowing localized data. Keep arithmetic/era years separate and let the numeric
