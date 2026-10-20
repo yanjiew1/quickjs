@@ -945,6 +945,17 @@ their locale inventory. Each profile uses its own shared string pool and records
 the consumed source in provenance. This reader supplies no locale inheritance,
 period selection or formatter API.
 
+The C source compiler in `datetime/pattern.[ch]` separately decodes ordinary
+LDML patterns, date/time combination slots and interval ordering directives.
+It preserves recognized field symbols, full run lengths and repetitions, while
+coalescing decoded literal text into one owned allocation. Input storage may be
+released after compilation. Scalar text, quotes and combination slot counts are
+validated before allocation. Lexical validity does not imply ECMA candidate
+admission: quarter/week fields, long fractions, literal-only patterns, raw
+numbering overrides and hour-family adaptation require separate consumer policy.
+In particular, retain `a` versus `b`/`B`, `M` versus `L`, all weekday name widths,
+all four hour symbols and `r` plus `U` until the renderer has used their meaning.
+
 Within each service, implement the common binding/contract, native algorithms
 and data coverage as coherent tested increments. Use feature-disabled
 or explicitly incomplete development configurations until the claimed profile is
