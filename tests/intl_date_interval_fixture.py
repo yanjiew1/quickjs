@@ -25,6 +25,10 @@ def pack(empty=False):
     if empty:
         source.set('root', data_calendar(formats('')))
     else:
+        # The better-scored Chinese source shares r incorrectly on a year
+        # difference; a lower-scored source represents both complete endpoints.
+        year_cases = item(leaf('greatestDifference', 'r U – U', id='y'), skeleton='y')
+        year_cases += item(leaf('greatestDifference', 'r U – r U', id='y'), skeleton='yy')
         source.set('root', data_calendar(formats(leaf('intervalFormatFallback', '{0}–{1}') +
             item(''.join(leaf('greatestDifference', 'd–d', id=code) for code in sorted('BGHahm')) +
                  leaf('greatestDifference', "latestFirst:M d – M d", id='M') +
@@ -35,7 +39,7 @@ def pack(empty=False):
             formats(item(leaf('greatestDifference', 'dd–dd', id='d', alt='variant'), alt='ascii'), alt='variant')) +
             data_calendar(formats(alias("../../../calendar[@type='gregorian']/dateTimeFormats/intervalFormats")),
                           code='generic') +
-            data_calendar(formats(item(leaf('greatestDifference', 'd–d', id='d'), skeleton='y' * 4096)) +
+            data_calendar(formats(item(leaf('greatestDifference', 'd–d', id='d'), skeleton='y' * 4096) + year_cases) +
                           formats(item(leaf('greatestDifference', 'dd–dd', id='d'), skeleton='y' * 4096), alt='variant'),
                           code='chinese'))
         source.set('en', data_calendar(formats(item(leaf('greatestDifference', "'child'", id='d', alt='variant')) +

@@ -102,6 +102,42 @@ static void selector_authored(const QJSIntlAllocator *allocator)
     }
     state->calls = state->fail_at = 0;
     qjs_intl_date_pattern_clear(allocator, &ordinary);
+
+    /* A better-scored source repeats U but shares r. Use real cyclic names
+       so rejection cannot accidentally be explained by unavailable name data. */
+    {
+        QJSIntlData name_pack;
+        QJSIntlCalendarNameData name_data;
+        assert(!qjs_intl_data_open(qjs_intl_native_bytes, qjs_intl_native_length, allocator, &name_pack));
+        assert(!qjs_intl_calendar_name_data_open(&name_pack, allocator, &name_data));
+        names.names = &name_data;
+        for (names.locale = 0; names.locale < name_pack.locales.count; names.locale++) {
+            assert(!qjs_intl_data_locale(&name_pack, names.locale, &tag, &parent));
+            if (tag.length == 2 && !memcmp(tag.data, "en", 2))
+                break;
+        }
+        for (names.calendar = 0; names.calendar < name_data.calendar_count; names.calendar++) {
+            assert(!qjs_intl_calendar_name_calendar_at(&name_data, names.calendar, &tag));
+            if (tag.length == 7 && !memcmp(tag.data, "chinese", 7))
+                break;
+        }
+        for (calendar = 0; calendar < data.calendar_count; calendar++) {
+            assert(!qjs_intl_date_interval_calendar_at(&data, calendar, &tag));
+            if (tag.length == 7 && !memcmp(tag.data, "chinese", 7))
+                break;
+        }
+        assert(names.locale < name_pack.locales.count && names.calendar < name_data.calendar_count &&
+               calendar < data.calendar_count);
+        memset(&admission, 0, sizeof(admission));
+        assert(!qjs_intl_date_pattern_compile(allocator, bytes("r U"), &ordinary));
+        assert(!qjs_intl_date_interval_set_open(&data, locale, calendar, &ordinary, QJS_INTL_DATE_H23,
+                                               QJS_CAL_CHINESE, &names, &admission, allocator, &set));
+        program = qjs_intl_date_interval_set_get(&set, QJS_INTL_DATE_RANGE_YEAR);
+        assert(set.count == 1 && program && program->pattern.count == 7);
+        assert(program->sources[0] == QJS_INTL_RANGE_START && program->sources[4] == QJS_INTL_RANGE_END);
+        qjs_intl_date_interval_set_clear(&set);
+        qjs_intl_date_pattern_clear(allocator, &ordinary);
+    }
 }
 
 static void part(const QJSIntlFormatted *result, QJSIntlPartType type, const char *value)

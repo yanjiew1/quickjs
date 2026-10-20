@@ -109,11 +109,19 @@ static int compatible_semantics(const QJSIntlDateIntervalProgram *program,
 
 static int represents_difference(const QJSIntlDateIntervalProgram *program, char code)
 {
-    unsigned int seen = 0;
+    unsigned int seen = 0, years = 0, first_years = 0, last_years = 0;
     size_t i;
     for (i = 0; i < program->pattern.count; i++) {
         unsigned int symbol = program->pattern.tokens[i].symbol;
+        unsigned int year = symbol == 'y' ? QJS_INTL_DATE_YEAR_CALENDAR :
+                            symbol == 'r' ? QJS_INTL_DATE_YEAR_RELATED :
+                            symbol == 'U' ? QJS_INTL_DATE_YEAR_CYCLIC : 0;
         int matches;
+        years |= year;
+        if (program->sources[i] == QJS_INTL_RANGE_START)
+            first_years |= year;
+        else if (program->sources[i] == QJS_INTL_RANGE_END)
+            last_years |= year;
         switch (code) {
         case 'y': matches = symbol == 'y' || symbol == 'r' || symbol == 'U'; break;
         case 'M': matches = symbol == 'M' || symbol == 'L'; break;
@@ -126,6 +134,10 @@ static int represents_difference(const QJSIntlDateIntervalProgram *program, char
         if (matches)
             seen |= 1U << program->sources[i];
     }
+    /* A repeated cyclic name does not prove that a singly occurring related
+       year is shared. On a year difference expose each raw year at both ends. */
+    if (code == 'y' && (years & ~(first_years & last_years)))
+        return 0;
     return (seen & ((1U << QJS_INTL_RANGE_START) | (1U << QJS_INTL_RANGE_END))) ==
                   ((1U << QJS_INTL_RANGE_START) | (1U << QJS_INTL_RANGE_END));
 }
