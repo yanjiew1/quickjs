@@ -200,6 +200,7 @@ if intl_enabled
     'intl/duration/options.c',
     'intl/locale/identifier.c',
     'intl/locale/matching.c',
+    'intl/locale/resolve.c',
     'intl/locale/native.c',
     'intl/locale/native-data.c',
     'intl/locale/native-id.c',
