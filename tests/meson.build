@@ -1877,6 +1877,7 @@ intl_number_service_sources = [
   '../src/intl/number/layout-data.c',
   '../src/intl/number/native.c',
   '../src/intl/number/range.c',
+  '../src/intl/common/range-compose.c',
   '../src/intl/number/unit.c',
   '../src/intl/unit/data.c',
   '../src/intl/unit/grammar-data.c',
@@ -2986,6 +2987,13 @@ standalone = {
   'test_intl_number_range': [
     'test_intl_number_range.c',
     '../src/intl/number/range.c',
+    '../src/intl/common/range-compose.c',
+    '../src/intl/common/format-builder.c',
+    '../src/cutils/cutils.c',
+  ],
+  'test_intl_range_compose': [
+    'test_intl_range_compose.c',
+    '../src/intl/common/range-compose.c',
     '../src/intl/common/format-builder.c',
     '../src/cutils/cutils.c',
   ],

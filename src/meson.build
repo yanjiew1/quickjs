@@ -121,6 +121,7 @@ if intl_enabled
   support_sources += files(
     'intl/common/decimal.c',
     'intl/common/format-builder.c',
+    'intl/common/range-compose.c',
     'intl/common/locale-grammar.c',
     'intl/common/source-locale.c',
     'intl/common/number-decimal.c',
