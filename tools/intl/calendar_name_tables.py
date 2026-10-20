@@ -5,7 +5,7 @@ import bundle
 import calendar_names as source
 from calendar_sources import CALENDAR
 from parents import locale_id
-from resolve import BLOCK, INHERIT
+from resolve import BLOCK, INHERIT, select_overlays
 
 VERSION, HEADER, GROUP_WIDTH, NODE_WIDTH, ENTRY_WIDTH = 1, 7, 5, 4, 4
 BLOCKED = 0xfffffffe
@@ -19,32 +19,7 @@ SUFFIXES = frozenset(key for key, path, tag in source.group_paths())
 
 
 def select(data, tags):
-    selected = set(tags)
-    rows = tuple(row for row in data['rows'] if row[0] in selected)
-    used = set()
-    for tag, group, head in rows:
-        if type(head) is not int or not 1 <= head <= len(data['nodes']):
-            raise ValueError('invalid calendar-name chain reference')
-        while head:
-            if type(head) is not int or not 1 <= head <= len(data['nodes']):
-                raise ValueError('invalid calendar-name chain reference')
-            if head in used:
-                break
-            used.add(head)
-            parent = data['nodes'][head - 1][3]
-            if type(parent) is not int or not 0 <= parent < head:
-                raise ValueError('invalid calendar-name parent reference')
-            head = parent
-    nodes = tuple(sorted(used))
-    maps = sorted({data['nodes'][index - 1][2] for index in nodes})
-    if any(type(index) is not int or not 0 <= index < len(data['maps']) for index in maps):
-        raise ValueError('invalid calendar-name map reference')
-    node_ids = {old: index + 1 for index, old in enumerate(nodes)}
-    map_ids = {old: index for index, old in enumerate(maps)}
-    return dict(data, maps=tuple(data['maps'][index] for index in maps),
-                nodes=tuple((locale, group, map_ids[index], node_ids.get(parent, 0))
-                            for old in nodes for locale, group, index, parent in (data['nodes'][old - 1],)),
-                rows=tuple((tag, group, node_ids[head]) for tag, group, head in rows))
+    return select_overlays(data, tags, 'calendar-name')
 
 
 def strings(data):
