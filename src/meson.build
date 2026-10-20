@@ -179,6 +179,7 @@ if intl_enabled
     'intl/datetime/style-date.c',
     'intl/datetime/style-hour.c',
     'intl/datetime/style-program.c',
+    'intl/datetime/zone-offset.c',
     'intl/datetime/timezone-name-data.c',
     'intl/datetime/timezone-presentation-data.c',
     'intl/display/calendar-names.c',
