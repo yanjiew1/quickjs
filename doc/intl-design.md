@@ -934,6 +934,38 @@ resolution preserves missing/BLOCK/empty and original alias provenance; it does
 not perform name-type, width, metazone or territory fallback. Those are still
 required for complete native specific/generic zone presentation.
 
+`datetime/zone-name.[ch]` renders all six standard zone styles over borrowed
+rule handles and validated name, presentation and locale metadata owners. It
+keeps accepted IANA spellings/primary IDs separate from CLDR's stable first-alias
+identity. Shared `locale/timezone-identity.[ch]` resolves that identity and its
+associated territory using explicit region overrides before the five-character
+short-ID rule. Shared source syntax belongs in `common/`, not the formatter.
+
+Resolve exact zone translations before the instant's half-open metazone period;
+do not bridge gaps by reviving an earlier period. Metazone indexes belong to the
+presentation identity table, not the shared string table or timezone table.
+Presentation standard/daylight offsets override raw DST designation when they
+identify an unambiguous type; this handles Dublin's negative-DST rules. Missing
+specific names fall back to localized GMT. Generic names use preferred-zone
+qualification for the locale territory, then 001, with country/city and literal
+fallback templates. Missing generic names use a primary/single-zone country or
+exemplar city and regionFormat. Raw geographic city fallback alone replaces
+underscores. Non-geographic POSIX zones can use the localized Etc/Unknown city;
+Etc offset zones retain localized GMT. BLOCK/empty never resurrect a parent
+translation, and literal apostrophes/template operand order remain intact.
+
+Type fallback without a daylight label follows the CLDR generic-then-standard
+rule. When daylight names exist, substitute standard for generic only after
+proving constant offset/raw-DST information and compatible effective-standard
+presentation throughout the closed +/-184-day window, including every period
+and gap. This is a sufficient native fallback policy: it does not infer a
+saving amount from TZif or claim exhaustive TR35 substitution for perpetual
+nonzero daylight saving. Without proof, use the location/GMT alternatives.
+Every output is one independently owned bounded timeZoneName part; numeric
+formatters retain responsibility for localized offset digits. The public
+DateTimeFormat owner will cache immutable identity/territory facts and perform
+locale admission; this leaf has no host discovery, coercion or locale matching.
+
 `datetime/chronology.[ch]` converts checked local epoch days through the shared
 calendar facade, then projects native formatting fields without allocating or
 borrowing localized data. Keep arithmetic/era years separate and let the numeric
@@ -945,6 +977,16 @@ raw name keys follow monthCode; Chinese/Dangi numeric months are nominal, with
 separate leap decoration and mathematical cyclic-year modulo. Preserve related
 years independently. The calendar algorithms/data link for either Intl or
 Temporal consumers, without requiring Temporal's JavaScript bindings.
+
+The shared timezone facade also exposes an exact closed-window stability
+query for total UTC offset and raw DST designation. Walk real explicit and
+periodic boundaries rather than comparing endpoints: a period may contain
+changes and return to its initial state. Include same-offset DST changes and
+explicit/footer handoff, while ignoring abbreviation-only changes. Existing
+Temporal transition queries continue to report only UTC-offset changes. This
+primitive is one proof input for generic-name fallback, not proof of unchanged
+CLDR presentation or a particular daylight-saving amount; presentation overrides
+and metazone policy remain with the zone renderer.
 
 `datetime/local-time.[ch]` applies either an immutable named-zone rule or a
 fixed minute offset to normalized epoch seconds plus nanoseconds, then derives
